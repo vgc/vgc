@@ -224,8 +224,9 @@ void Workspace::onDestroyed() {
     vac_->onNodeAboutToBeRemoved().disconnect(this);
     for (const auto& p : elements_) {
         Element* e = p.second.get();
-        if (e->isVacElement()) {
-            static_cast<VacElement*>(e)->vacNode_ = nullptr;
+        VacElement* ve = e->toVacElement();
+        if (ve) {
+            ve->vacNode_ = nullptr;
         }
     }
     vac_ = nullptr;
@@ -254,9 +255,9 @@ WorkspacePtr Workspace::create(dom::DocumentPtr document) {
     std::call_once(initOnceFlag, []() {
         registerElementClass(ds::vgc, &makeUniqueElement<Layer>);
         registerElementClass(ds::layer, &makeUniqueElement<Layer>);
-        registerElementClass(ds::vertex, &makeUniqueElement<KeyVertex>);
+        registerElementClass(ds::vertex, &makeUniqueElement<VacKeyVertex>);
         //registerElementClass(ds::edge, &makeUniqueElement<KeyEdge>);
-        registerElementClass(ds::edge, &makeUniqueElement<KeyEdge>);
+        registerElementClass(ds::edge, &makeUniqueElement<VacKeyEdge>);
     });
 
     return WorkspacePtr(new Workspace(document));
@@ -446,9 +447,13 @@ void Workspace::onVacNodeAboutToBeRemoved_(topology::VacNode* node) {
     auto it = elements_.find(node->id());
     if (it != elements_.end()) {
         Element* element = it->second.get();
-        if (element->isVacElement()) {
-            static_cast<VacElement*>(element)->vacNode_ = nullptr;
-            elementsToUpdateFromDom_.emplaceLast(element);
+        VacElement* vacElement = element->toVacElement();
+        if (vacElement && vacElement->vacNode_) {
+            vacElement->vacNode_ = nullptr;
+            vacElement->onVacNodeRemoved_();
+            if (!element->isBeingUpdated_) {
+                elementsToUpdateFromDom_.emplaceLast(element);
+            }
         }
     }
 }
@@ -638,7 +643,12 @@ void Workspace::updateVacHierarchyFromTree_() {
 //    Element* ev0 = getElementFromPathAttribute(domElem, ds::startvertex, ds::vertex);
 //    Element* ev1 = getElementFromPathAttribute(domElem, ds::endvertex, ds::vertex);
 //
-//    topology::KeyEdge* kv = node->toCellUnchecked()->toKeyEdgeUnchecked();
+//    vacomplex::Node* node = vacNode();
+//    topology::KeyEdge* kv = node ? node->toCellUnchecked()->toKeyEdgeUnchecked() : nullptr;
+//    if (!kv) {
+//        return false;
+//    }
+//
 //    if (ev0) {
 //        if (ev0->vacNode() != kv->startVertex()) {
 //            return true;
@@ -690,6 +700,7 @@ void Workspace::updateTreeAndVacFromDom_(const dom::Diff& diff) {
         if (element) {
             Element* parent = element->parent();
             VGC_ASSERT(parent);
+            // reparent children to element's parent
             for (Element* child : *element) {
                 parent->appendChild(child);
             }

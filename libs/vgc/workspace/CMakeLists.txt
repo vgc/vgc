@@ -10,7 +10,7 @@ vgc_add_library(workspace
         element.h
         layer.h
         logcategories.h
-        vertex.cpp
+        vertex.h
         workspace.h
 
     CPP_FILES

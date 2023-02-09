@@ -130,11 +130,18 @@ public:
         return domElement_;
     }
 
+    bool isVgcElement() const {
+        return false;
+    }
+
     bool isVacElement() const {
         return isVacElement_;
     }
 
-    inline topology::VacNode* vacNode() const;
+    inline VacElement* toVacElement();
+    inline const VacElement* toVacElement() const;
+
+    inline vacomplex::Node* vacNode() const;
 
     core::StringId tagName() const {
         return domElement_->tagName();
@@ -222,14 +229,16 @@ protected:
     virtual ElementStatus updateFromDom_(Workspace* workspace);
 
     void addDependency(Element* dependency);
-    void replaceDependency(Element* oldDependency, Element* newDependency);
+    /// Both `oldDependency` and `newDependency` can be null. Returns true if `oldDependency != newDependency`, false otherwise.
+    bool replaceDependency(Element* oldDependency, Element* newDependency);
     void removeDependency(Element* dependency);
     void clearDependencies();
 
-    void notifyChanges();
-
-    virtual void onDependencyChanged_(Element* dependency);
     virtual void onDependencyBeingDestroyed_(Element* dependency);
+
+    /// dependent may be being destroyed, only use its pointer as key.
+    virtual void onDependentElementRemoved_(Element* dependent);
+    virtual void onDependentElementAdded_(Element* dependent);
 
     virtual void
     preparePaint_(core::AnimTime t = {}, PaintOptions flags = PaintOption::None);
@@ -289,24 +298,40 @@ public:
 
 public:
     // the returned pointer can be dangling if the workspace is not synced with its vac
-    topology::VacNode* vacNode() const {
+    vacomplex::Node* vacNode() const {
         return vacNode_;
     }
 
 protected:
-    // this pointer is not safe to use when tree is not synced with vac
-    topology::VacNode* vacNode_ = nullptr;
+    vacomplex::Cell* vacCellUnchecked() const {
+        return vacNode_ ? vacNode_->toCellUnchecked() : nullptr;
+    }
 
     void removeVacNode();
+    void setVacNode(vacomplex::Node* vacNode);
+
+    virtual void onVacNodeRemoved_();
+
+private:
+    // this pointer is not safe to use when tree is not synced with vac
+    vacomplex::Node* vacNode_ = nullptr;
 };
 
-topology::VacNode* Element::vacNode() const {
+vacomplex::Node* Element::vacNode() const {
     return isVacElement() ? static_cast<const VacElement*>(this)->vacNode() : nullptr;
 }
 
 VacElement* Element::parentVacElement() const {
     Element* e = parent();
-    return e->isVacElement() ? static_cast<VacElement*>(e) : nullptr;
+    return (e && e->isVacElement()) ? static_cast<VacElement*>(e) : nullptr;
+}
+
+VacElement* Element::toVacElement() {
+    return isVacElement_ ? static_cast<VacElement*>(this) : nullptr;
+}
+
+const VacElement* Element::toVacElement() const {
+    return isVacElement_ ? static_cast<const VacElement*>(this) : nullptr;
 }
 
 } // namespace vgc::workspace
