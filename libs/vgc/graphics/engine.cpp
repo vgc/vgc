@@ -14,6 +14,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#include <vgc/core/profile.h>
 #include <vgc/graphics/engine.h>
 
 #include <tuple> // std::tuple_size
@@ -263,7 +264,7 @@ Engine::createImage(const ImageCreateInfo& createInfo, core::Array<char> initial
     queueLambdaCommandWithParameters_<CommandParameters>(
         "initImage",
         [](Engine* engine, const CommandParameters& p) {
-            Span<const char> m0 = {p.initialData.data(), p.initialData.length()};
+            core::Span<const char> m0 = {p.initialData.data(), p.initialData.length()};
             engine->initImage_(p.image.get(), &m0, 1);
         },
         image,
@@ -868,7 +869,12 @@ void Engine::onWindowResize(const SwapChainPtr& swapChain, Int width, Int height
         swapChain.get(), core::int_cast<UInt32>(width), core::int_cast<UInt32>(height));
 }
 
-void Engine::draw(const GeometryViewPtr& geometryView, Int numIndices) {
+void Engine::draw(
+    const GeometryViewPtr& geometryView,
+    Int numIndices,
+    Int startIndex,
+    Int baseVertex) {
+
     if (!checkResourceIsValid_(geometryView)) {
         return;
     }
@@ -876,23 +882,34 @@ void Engine::draw(const GeometryViewPtr& geometryView, Int numIndices) {
         return;
     }
     syncState_();
-    Int n = (numIndices >= 0) ? numIndices : geometryView->numIndices();
-    UInt un = core::int_cast<UInt>(n);
-
-    if (un) {
-        queueLambdaCommandWithParameters_<GeometryViewPtr>(
-            "draw",
-            [=](Engine* engine, const GeometryViewPtr& gv) {
-                engine->draw_(gv.get(), un, 0);
-            },
-            geometryView);
+    Int n = numIndices;
+    if (n < 0) {
+        if (geometryView->indexBuffer()) {
+            n = geometryView->numIndices() - startIndex;
+        }
+        else {
+            n = geometryView->numVertices() - (startIndex + baseVertex);
+        }
     }
+    if (n <= 0) {
+        return;
+    }
+
+    UInt un = core::int_cast<UInt>(n);
+    queueLambdaCommandWithParameters_<GeometryViewPtr>(
+        "draw",
+        [=](Engine* engine, const GeometryViewPtr& gv) {
+            engine->draw_(gv.get(), un, 0, startIndex, baseVertex);
+        },
+        geometryView);
 }
 
 void Engine::drawInstanced(
     const GeometryViewPtr& geometryView,
     Int numIndices,
-    Int numInstances) {
+    Int numInstances,
+    Int startIndex,
+    Int baseVertex) {
 
     if (!checkResourceIsValid_(geometryView)) {
         return;
@@ -901,19 +918,32 @@ void Engine::drawInstanced(
         return;
     }
     syncState_();
-    Int n = (numIndices >= 0) ? numIndices : geometryView->numIndices();
-    UInt un = core::int_cast<UInt>(n);
-    Int k = (numInstances >= 0) ? numInstances : geometryView->numInstances();
-    UInt uk = core::int_cast<UInt>(k);
-
-    if (un) {
-        queueLambdaCommandWithParameters_<GeometryViewPtr>(
-            "draw",
-            [=](Engine* engine, const GeometryViewPtr& gv) {
-                engine->draw_(gv.get(), un, uk);
-            },
-            geometryView);
+    Int n = numIndices;
+    if (n < 0) {
+        if (geometryView->indexBuffer()) {
+            n = geometryView->numIndices() - startIndex;
+        }
+        else {
+            n = geometryView->numVertices() - (startIndex + baseVertex);
+        }
     }
+    if (n <= 0) {
+        return;
+    }
+
+    Int k = (numInstances >= 0) ? numInstances : geometryView->numInstances();
+    if (k <= 0) {
+        return;
+    }
+
+    UInt un = core::int_cast<UInt>(n);
+    UInt uk = core::int_cast<UInt>(k);
+    queueLambdaCommandWithParameters_<GeometryViewPtr>(
+        "drawInstanced",
+        [=](Engine* engine, const GeometryViewPtr& gv) {
+            engine->draw_(gv.get(), un, uk, startIndex, baseVertex);
+        },
+        geometryView);
 }
 
 void Engine::clear(const core::Color& color) {
@@ -1178,25 +1208,41 @@ void Engine::renderThreadProc_() {
             return;
         }
 
-        // else commandQueue_ is not empty, so prepare some work
-        CommandList commandList = std::move(commandQueue_.first());
-        commandQueue_.removeFirst();
+        {
+            //VGC_PROFILE_SCOPE("RenderThread:CommandListExecution");
 
-        lock.unlock();
+            // else commandQueue_ is not empty, so prepare some work
+            CommandList commandList = std::move(commandQueue_.first());
+            commandQueue_.removeFirst();
 
-        // execute commands
-        for (const CommandUPtr& command : commandList.commands) {
-            command->execute(this);
+            lock.unlock();
+
+            // execute commands
+            for (const CommandUPtr& command : commandList.commands) {
+                //VGC_PROFILE_SCOPE(command->name().data());
+                command->execute(this);
+            }
+
+            {
+                //VGC_PROFILE_SCOPE("RenderThread:NotifyEndOfCommandListExecution");
+
+                {
+                    //VGC_PROFILE_SCOPE("RenderThread:Lock");
+                    lock.lock();
+                }
+                ++lastExecutedCommandListId_;
+                lock.unlock();
+
+                renderThreadEventConditionVariable_.notify_all();
+            }
+
+            {
+                //VGC_PROFILE_SCOPE("RenderThread:GarbageCollection");
+
+                // release garbaged resources (locking)
+                resourceRegistry_->releaseAndDeleteGarbagedResources(this);
+            }
         }
-
-        lock.lock();
-        ++lastExecutedCommandListId_;
-        lock.unlock();
-
-        renderThreadEventConditionVariable_.notify_all();
-
-        // release garbaged resources (locking)
-        resourceRegistry_->releaseAndDeleteGarbagedResources(this);
     }
 }
 
@@ -1252,6 +1298,11 @@ void Engine::waitCommandListTranslationFinished_(Int commandListId) {
     lock.unlock();
 }
 
+bool Engine::hasSubmittedCommandListPendingForTranslation_() {
+    std::unique_lock<std::mutex> lock(mutex_);
+    return lastExecutedCommandListId_ != lastSubmittedCommandListId_;
+}
+
 void Engine::sanitize_(SwapChainCreateInfo& /*createInfo*/) {
     // XXX
 }
@@ -1263,7 +1314,8 @@ void Engine::sanitize_(BufferCreateInfo& createInfo) {
         if (createInfo.isMipGenerationEnabled()) {
             VGC_WARNING(
                 LogVgcGraphics,
-                "ResourceMiscFlag::GenerateMips is set but usage is Usage::Immutable. "
+                "ResourceMiscFlag::GenerateMips is set but usage is "
+                "Usage::Immutable. "
                 "The ResourceMiscFlag in question is being unset automatically.");
             ResourceMiscFlags resourceMiscFlags = createInfo.resourceMiscFlags();
             resourceMiscFlags.unset(ResourceMiscFlag::GenerateMips);
@@ -1300,15 +1352,15 @@ void Engine::sanitize_(ImageCreateInfo& createInfo) {
         if (createInfo.rank() == ImageRank::_1D) {
             VGC_WARNING(
                 LogVgcGraphics,
-                "Number of samples ignored: multisampling is not available for 1D "
-                "images.");
+                "Number of samples ignored: "
+                "multisampling is not available for 1D images.");
             createInfo.setNumSamples(1);
         }
         if (createInfo.numMipLevels() != 1) {
             VGC_WARNING(
                 LogVgcGraphics,
-                "Number of mip levels ignored: multisampled image can only have level "
-                "0.");
+                "Number of mip levels ignored: "
+                "multisampled image can only have level 0.");
             createInfo.setNumMipLevels(1);
         }
     }
@@ -1318,9 +1370,10 @@ void Engine::sanitize_(ImageCreateInfo& createInfo) {
         if (createInfo.isMipGenerationEnabled()) {
             VGC_WARNING(
                 LogVgcGraphics,
-                "ResourceMiscFlag::GenerateMips is set but usage is Usage::Immutable. "
-                "The ResourceMiscFlag in question is being unset automatically, and "
-                "numMipLevels is set to 1 if it was 0.");
+                "ResourceMiscFlag::GenerateMips is set but "
+                "usage is Usage::Immutable. "
+                "The ResourceMiscFlag in question is being unset automatically, "
+                "and numMipLevels is set to 1 if it was 0.");
             ResourceMiscFlags resourceMiscFlags = createInfo.resourceMiscFlags();
             resourceMiscFlags.unset(ResourceMiscFlag::GenerateMips);
             createInfo.setResourceMiscFlags(resourceMiscFlags);
@@ -1353,8 +1406,8 @@ void Engine::sanitize_(ImageCreateInfo& createInfo) {
     else if (createInfo.numMipLevels() == 0) {
         VGC_WARNING(
             LogVgcGraphics,
-            "Automatic number of mip levels resolves to 1 since mip generation is not "
-            "enabled.");
+            "Automatic number of mip levels resolves to 1 since "
+            "mip generation is not enabled.");
         createInfo.setNumMipLevels(1);
     }
 

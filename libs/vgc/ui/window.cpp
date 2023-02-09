@@ -25,6 +25,7 @@
 
 #include <vgc/core/os.h>
 #include <vgc/core/paths.h>
+#include <vgc/core/profile.h>
 #include <vgc/geometry/camera2d.h>
 #include <vgc/graphics/d3d11/d3d11engine.h>
 #include <vgc/graphics/text.h>
@@ -36,6 +37,9 @@
 namespace vgc::ui {
 
 namespace {
+
+inline constexpr QEvent::Type presentCalledEvent =
+    static_cast<QEvent::Type>(core::toUnderlying(QEvent::User) + 1000);
 
 std::string debugTime(const core::Stopwatch& stopwatch) {
     std::string res;
@@ -683,6 +687,10 @@ void Window::paint(bool sync) {
 
     VGC_WINDOW_DEBUG("paint(({}, {}), sync={})", width_, height_, sync);
 
+    if (updateDeferred_) {
+        return;
+    }
+
     if (!isExposed()) {
         return;
     }
@@ -700,7 +708,6 @@ void Window::paint(bool sync) {
         updateDeferred_ = true;
         return;
     }
-    updateDeferred_ = false;
 
     engine_->beginFrame(swapChain_, graphics::FrameKind::Window);
 
@@ -717,7 +724,11 @@ void Window::paint(bool sync) {
         widget_->updateGeometry();
     }
 
-    widget_->paint(engine_.get());
+    {
+        //VGC_PROFILE_SCOPE("Window:MainWidgetPaint");
+        widget_->paint(engine_.get());
+    }
+
 
 #if defined(VGC_QOPENGL_EXPERIMENT)
     static int frameIdx = 0;
@@ -730,11 +741,16 @@ void Window::paint(bool sync) {
     frameIdx++;
 #endif
 
-    // XXX make it endInlineFrame in QglEngine and copy its code into Engine::present()
-    engine_->endFrame(sync ? 1 : 0 + 0);
+    {
+        //VGC_PROFILE_SCOPE("Window:EndFrame");
+        // XXX make it endInlineFrame in QglEngine and copy its code into Engine::present()
+        engine_->endFrame(sync ? 1 : 0 + 0);
+    }
 }
 
 bool Window::event(QEvent* event) {
+    VGC_WARNING_PUSH
+    VGC_WARNING_MSVC_DISABLE(4063) // invalid switch value (custom event types)
     switch (event->type()) {
     case QEvent::InputMethodQuery:
         inputMethodQueryEvent(static_cast<QInputMethodQueryEvent*>(event));
@@ -754,10 +770,18 @@ bool Window::event(QEvent* event) {
     case QEvent::ShortcutOverride:
         event->accept();
         break;
+    // custom event types
+    case presentCalledEvent:
+        if (updateDeferred_) {
+            updateDeferred_ = false;
+            updateRequestEvent(event);
+        }
+        break;
     default:
         break;
     }
     return QWindow::event(event);
+    VGC_WARNING_POP
 }
 
 // These events may not exist on some Qt versions and OSs.
@@ -1012,9 +1036,7 @@ void Window::initEngine_() {
     }
 
     engine_->setPresentCallback([=](UInt64) {
-        if (updateDeferred_) {
-            QCoreApplication::postEvent(this, new QEvent(QEvent::UpdateRequest), 0);
-        }
+        QCoreApplication::postEvent(this, new QEvent(presentCalledEvent), 0);
     });
 }
 

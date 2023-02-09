@@ -1287,7 +1287,7 @@ void QglEngine::initBuffer_(Buffer* aBuffer, const char* data, Int lengthInBytes
 
 void QglEngine::initImage_(
     Image* aImage,
-    const Span<const char>* mipLevelDataSpans,
+    const core::Span<const char>* mipLevelDataSpans,
     Int count) {
 
     QglImage* image = static_cast<QglImage*>(aImage);
@@ -1774,10 +1774,16 @@ void QglEngine::generateMips_(const ImageViewPtr& aImageView) {
 
 // should do init at beginFrame if needed..
 
-void QglEngine::draw_(GeometryView* aView, UInt numIndices, UInt numInstances) {
+void QglEngine::draw_(
+    GeometryView* aView,
+    UInt numIndices,
+    UInt numInstances,
+    UInt startIndex,
+    Int baseVertex) {
 
     GLsizei nIdx = core::int_cast<GLsizei>(numIndices);
     GLsizei nInst = core::int_cast<GLsizei>(numInstances);
+    GLint baseVtx = core::int_cast<GLint>(baseVertex);
 
     if (nIdx == 0) {
         return;
@@ -1830,9 +1836,12 @@ void QglEngine::draw_(GeometryView* aView, UInt numIndices, UInt numInstances) {
     QglBuffer* indexBuffer = view->indexBuffer().get_static_cast<QglBuffer>();
 
     if (indexBuffer) {
-        GLenum indexFormat = (view->indexFormat() == IndexFormat::UInt16)
-                                 ? GL_UNSIGNED_SHORT
-                                 : GL_UNSIGNED_INT;
+        GLenum indexFormat = GL_UNSIGNED_INT;
+        UInt indexSize = 4;
+        if (view->indexFormat() == IndexFormat::UInt16) {
+            indexFormat = GL_UNSIGNED_SHORT;
+            indexSize = 2;
+        }
 
         if (indexFormat != lastIndexFormat_) {
             switch (indexFormat) {
@@ -1847,21 +1856,26 @@ void QglEngine::draw_(GeometryView* aView, UInt numIndices, UInt numInstances) {
             lastIndexFormat_ = indexFormat;
         }
 
+        const GLvoid* indicesOffset = reinterpret_cast<GLvoid*>(startIndex * indexSize);
+        api_->glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, indexBuffer->object());
+
         if (numInstances == 0) {
-            api_->glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, indexBuffer->object());
-            api_->glDrawElements(view->drawMode_, nIdx, indexFormat, 0);
+            api_->glDrawElementsBaseVertex(
+                view->drawMode_, nIdx, indexFormat, indicesOffset, baseVtx);
         }
         else {
-            api_->glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, indexBuffer->object());
-            api_->glDrawElementsInstanced(view->drawMode_, nIdx, indexFormat, 0, nInst);
+            api_->glDrawElementsInstancedBaseVertex(
+                view->drawMode_, nIdx, indexFormat, indicesOffset, nInst, baseVtx);
         }
     }
     else {
+        GLint first = core::int_cast<GLint>(startIndex) + baseVtx;
+
         if (numInstances == 0) {
-            api_->glDrawArrays(view->drawMode_, 0, nIdx);
+            api_->glDrawArrays(view->drawMode_, first, nIdx);
         }
         else {
-            api_->glDrawArraysInstanced(view->drawMode_, 0, nIdx, nInst);
+            api_->glDrawArraysInstanced(view->drawMode_, first, nIdx, nInst);
         }
     }
 }

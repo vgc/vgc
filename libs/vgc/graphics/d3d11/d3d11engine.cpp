@@ -416,12 +416,6 @@ void D3d11Framebuffer::release_(Engine* engine) {
     }
 }
 
-#    ifdef USE_DXGI_VERSION_1_2
-using IDXGISwapChainX = IDXGISwapChain1;
-#    else
-using IDXGISwapChainX = IDXGISwapChain;
-#    endif
-
 class D3d11SwapChain : public SwapChain {
 protected:
     friend D3d11Engine;
@@ -429,8 +423,12 @@ protected:
     using SwapChain::SwapChain;
 
 public:
-    IDXGISwapChainX* dxgiSwapChain() const {
-        return dxgiSwapChain_.get();
+    IDXGISwapChain1* dxgiSwapChain1() const {
+        return dxgiSwapChain1_.get();
+    }
+
+    IDXGISwapChain2* dxgiSwapChain2() const {
+        return dxgiSwapChain2_;
     }
 
     ID3D11RenderTargetView* rtvObject() {
@@ -441,12 +439,20 @@ protected:
     void release_(Engine* engine) override {
         SwapChain::release_(engine);
         rtv_.reset();
-        dxgiSwapChain_.reset();
+        dxgiSwapChain1_.reset();
+        dxgiSwapChain2_ = nullptr;
+        if (frameLatencyWaitableObject_ != NULL) {
+            CloseHandle(frameLatencyWaitableObject_);
+            frameLatencyWaitableObject_ = NULL;
+        }
     }
 
 private:
-    ComPtr<IDXGISwapChainX> dxgiSwapChain_;
+    ComPtr<IDXGISwapChain1> dxgiSwapChain1_;
+    IDXGISwapChain2* dxgiSwapChain2_ = nullptr;
+    HANDLE frameLatencyWaitableObject_ = NULL;
     ComPtr<ID3D11RenderTargetView> rtv_;
+    UINT flags_;
 };
 
 // ENUM CONVERSIONS
@@ -708,11 +714,10 @@ D3d11Engine::D3d11Engine(const EngineCreateInfo& createInfo)
         deviceCtx_.releaseAndGetAddressOf());
 
     // Retrieve DXGI factory from device.
-    ComPtr<IDXGIDevice> dxgiDevice;
     ComPtr<IDXGIAdapter> dxgiAdapter;
-    device_->QueryInterface(IID_PPV_ARGS(dxgiDevice.releaseAndGetAddressOf()));
-    dxgiDevice->GetParent(IID_PPV_ARGS(dxgiAdapter.releaseAndGetAddressOf()));
-    dxgiAdapter->GetParent(IID_PPV_ARGS(factory_.releaseAndGetAddressOf()));
+    device_->QueryInterface(IID_PPV_ARGS(dxgiDevice2_.releaseAndGetAddressOf()));
+    dxgiDevice2_->GetParent(IID_PPV_ARGS(dxgiAdapter.releaseAndGetAddressOf()));
+    dxgiAdapter->GetParent(IID_PPV_ARGS(dxgiFactory2_.releaseAndGetAddressOf()));
 
     //createBuiltinResources_();
 }
@@ -1048,68 +1053,107 @@ SwapChainPtr D3d11Engine::constructSwapChain_(const SwapChainCreateInfo& createI
     UINT numBuffers = static_cast<UINT>(wscFormat.numBuffers());
     PixelFormat wpFormat = wscFormat.pixelFormat();
     HWND hWnd = static_cast<HWND>(createInfo.windowNativeHandle());
+    UINT flags = DXGI_SWAP_CHAIN_FLAG_ALLOW_MODE_SWITCH;
 
-    ComPtr<IDXGISwapChainX> dxgiSwapChain;
+    ComPtr<IDXGISwapChain1> dxgiSwapChain1;
 
-#    ifdef USE_DXGI_VERSION_1_2
-    DXGI_SWAP_CHAIN_DESC1 sd = {};
-    sd.Width = width;
-    sd.Height = height;
-    sd.Format = pixelFormatToDxgiFormat(wpFormat);
-    sd.Stereo = FALSE;
-    if (numSamples > 1) {
-        VGC_WARNING(
-            LogVgcGraphics, "Flip model swapchains do not support multisampling.");
-    }
-    sd.SampleDesc.Count = 1;
-    sd.SampleDesc.Quality = 0;
-    // do we need DXGI_SWAP_CHAIN_FLAG_FRAME_LATENCY_WAITABLE_OBJECT ?
-    sd.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
-    sd.BufferCount = numBuffers;
-    sd.Scaling = DXGI_SCALING_NONE; // not supported on windows 7
-    sd.SwapEffect = DXGI_SWAP_EFFECT_FLIP_SEQUENTIAL;
-    sd.AlphaMode = DXGI_ALPHA_MODE_UNSPECIFIED;
-    sd.Flags = DXGI_SWAP_CHAIN_FLAG_ALLOW_MODE_SWITCH;
+#    if 0
+    if (!dxgiSwapChain1) {
+        // Windows 8.1+
+        // FLIP_SEQUENTIAL + FRAME_LATENCY_WAITABLE_OBJECT
 
-    if (factory_->CreateSwapChainForHwnd(
-            device_.get(), hWnd, &sd, NULL, NULL, dxgiSwapChain.releaseAndGetAddressOf())
-        != S_OK) {
-        throw core::LogicError("D3d11Engine: could not create DXGI_1.2 swap chain.");
-    }
-#    else
-    DXGI_SWAP_CHAIN_DESC sd = {};
-    sd.BufferCount = numBuffers;
-    sd.BufferDesc.Width = width;
-    sd.BufferDesc.Height = height;
-    sd.BufferDesc.Format = pixelFormatToDxgiFormat(wpFormat);
-    sd.BufferDesc.RefreshRate.Numerator = 0;
-    sd.BufferDesc.RefreshRate.Denominator = 1;
-    sd.Flags = DXGI_SWAP_CHAIN_FLAG_ALLOW_MODE_SWITCH;
-    // do we need DXGI_SWAP_CHAIN_FLAG_FRAME_LATENCY_WAITABLE_OBJECT ?
-    sd.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
-    sd.OutputWindow = hWnd;
-    sd.SampleDesc.Count = numSamples;
-    sd.SampleDesc.Quality = 0;
-    sd.Windowed = true;
-    sd.SwapEffect = DXGI_SWAP_EFFECT_SEQUENTIAL;
+        DXGI_SWAP_CHAIN_DESC1 sd = {};
+        sd.Width = width;
+        sd.Height = height;
+        sd.Format = pixelFormatToDxgiFormat(wpFormat);
+        sd.Stereo = FALSE;
+        if (numSamples > 1) {
+            VGC_WARNING(
+                LogVgcGraphics, "Flip model swapchains do not support multisampling.");
+        }
+        sd.SampleDesc.Count = 1;
+        sd.SampleDesc.Quality = 0;
+        // do we need DXGI_SWAP_CHAIN_FLAG_FRAME_LATENCY_WAITABLE_OBJECT ?
+        sd.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
+        sd.BufferCount = numBuffers;
+        sd.Scaling = DXGI_SCALING_NONE;
+        sd.SwapEffect = DXGI_SWAP_EFFECT_FLIP_DISCARD; // DXGI_SWAP_EFFECT_FLIP_SEQUENTIAL
+        sd.AlphaMode = DXGI_ALPHA_MODE_UNSPECIFIED;
+        sd.Flags = 0; // DXGI_SWAP_CHAIN_FLAG_ALLOW_MODE_SWITCH
+        /* |*/ DXGI_SWAP_CHAIN_FLAG_FRAME_LATENCY_WAITABLE_OBJECT;
+        flags = sd.Flags;
 
-    if (factory_->CreateSwapChain(
-            device_.get(), &sd, dxgiSwapChain.releaseAndGetAddressOf())
-        < 0) {
-        throw core::LogicError("D3d11Engine: could not create DXGI_1.0 swap chain.");
+        if (dxgiFactory2_->CreateSwapChainForHwnd(
+                device_.get(),
+                hWnd,
+                &sd,
+                NULL,
+                NULL,
+                dxgiSwapChain1.releaseAndGetAddressOf())
+            != S_OK) {
+            // fallback below
+        }
     }
 #    endif
 
+    if (!dxgiSwapChain1) {
+        DXGI_SWAP_CHAIN_DESC1 sd = {};
+        sd.Width = width;
+        sd.Height = height;
+        sd.Format = pixelFormatToDxgiFormat(wpFormat);
+        sd.Stereo = FALSE;
+        sd.SampleDesc.Count = numSamples;
+        sd.SampleDesc.Quality = 0;
+        sd.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
+        sd.BufferCount = numBuffers;
+        sd.Scaling = DXGI_SCALING_STRETCH;
+        sd.SwapEffect = DXGI_SWAP_EFFECT_SEQUENTIAL;
+        sd.AlphaMode = DXGI_ALPHA_MODE_UNSPECIFIED;
+        sd.Flags = 0; // DXGI_SWAP_CHAIN_FLAG_ALLOW_MODE_SWITCH;
+        flags = sd.Flags;
+
+        if (dxgiFactory2_->CreateSwapChainForHwnd(
+                device_.get(),
+                hWnd,
+                &sd,
+                NULL,
+                NULL,
+                dxgiSwapChain1.releaseAndGetAddressOf())
+            != S_OK) {
+            throw core::LogicError("D3d11Engine: could not create DXGI_1.2 swap chain.");
+        }
+    }
+
+    // prevents mode switch since alt+tab freezes the app when fullscreen...
+    dxgiFactory2_->MakeWindowAssociation(hWnd, DXGI_MWA_NO_ALT_ENTER);
+
+    ComPtr<IDXGISwapChain2> dxgiSwapChain2;
+    dxgiSwapChain1->QueryInterface(IID_PPV_ARGS(dxgiSwapChain2.releaseAndGetAddressOf()));
+
     ComPtr<ID3D11Texture2D> backBuffer;
-    dxgiSwapChain->GetBuffer(0, IID_PPV_ARGS(backBuffer.releaseAndGetAddressOf()));
+    dxgiSwapChain1->GetBuffer(0, IID_PPV_ARGS(backBuffer.releaseAndGetAddressOf()));
 
     ComPtr<ID3D11RenderTargetView> backBufferView;
     device_->CreateRenderTargetView(
         backBuffer.get(), NULL, backBufferView.releaseAndGetAddressOf());
 
     auto swapChain = makeUnique<D3d11SwapChain>(resourceRegistry_, createInfo);
-    swapChain->dxgiSwapChain_ = dxgiSwapChain;
+    swapChain->dxgiSwapChain1_ = std::move(dxgiSwapChain1);
     swapChain->rtv_ = backBufferView;
+    swapChain->flags_ = flags;
+
+    if (dxgiSwapChain2) {
+        swapChain->dxgiSwapChain2_ = dxgiSwapChain2.get();
+        if (flags & DXGI_SWAP_CHAIN_FLAG_FRAME_LATENCY_WAITABLE_OBJECT) {
+            swapChain->frameLatencyWaitableObject_ =
+                dxgiSwapChain2->GetFrameLatencyWaitableObject();
+            UINT maxFrameLatency = 0;
+            if (dxgiSwapChain2->GetMaximumFrameLatency(&maxFrameLatency) == S_OK) {
+                VGC_DEBUG_TMP("maxFrameLatency:{}", maxFrameLatency);
+            }
+            dxgiSwapChain2->SetMaximumFrameLatency(1);
+        }
+    }
 
     return SwapChainPtr(swapChain.release());
 }
@@ -1251,16 +1295,18 @@ D3d11Engine::constructRasterizerState_(const RasterizerStateCreateInfo& createIn
 
 void D3d11Engine::onWindowResize_(SwapChain* swapChain, UInt32 width, UInt32 height) {
     D3d11SwapChain* d3dSwapChain = static_cast<D3d11SwapChain*>(swapChain);
-    IDXGISwapChainX* dxgiSwapChain = d3dSwapChain->dxgiSwapChain();
+    IDXGISwapChain1* dxgiSwapChain1 = d3dSwapChain->dxgiSwapChain1();
 
     d3dSwapChain->rtv_.reset();
-    HRESULT hres = dxgiSwapChain->ResizeBuffers(0, width, height, DXGI_FORMAT_UNKNOWN, 0);
+    HRESULT hres = dxgiSwapChain1->ResizeBuffers(
+        0, width, height, DXGI_FORMAT_UNKNOWN, d3dSwapChain->flags_);
+
     if (hres < 0) {
         throw core::LogicError("D3d11Engine: could not resize swap chain buffers.");
     }
 
     ComPtr<ID3D11Texture2D> backBuffer;
-    dxgiSwapChain->GetBuffer(0, IID_PPV_ARGS(backBuffer.releaseAndGetAddressOf()));
+    dxgiSwapChain1->GetBuffer(0, IID_PPV_ARGS(backBuffer.releaseAndGetAddressOf()));
 
     ComPtr<ID3D11RenderTargetView> backBufferView;
     device_->CreateRenderTargetView(
@@ -1297,7 +1343,7 @@ void D3d11Engine::initBuffer_(Buffer* buffer, const char* data, Int lengthInByte
 
 void D3d11Engine::initImage_(
     Image* image_,
-    const Span<const char>* mipLevelDataSpans,
+    const core::Span<const char>* mipLevelDataSpans,
     Int count) {
 
     D3d11Image* image = static_cast<D3d11Image*>(image_);
@@ -1355,12 +1401,12 @@ void D3d11Engine::initImage_(
     core::Array<D3D11_SUBRESOURCE_DATA> initData(numMipLevels * numLayers);
     if (count > 0) {
         VGC_CORE_ASSERT(numMipLevels > 0);
-        initData.resize(numMipLevels * numLayers);
+        initData.resize(static_cast<Int>(numMipLevels) * numLayers);
         UINT levelWidth = width;
         UINT levelHeight = height;
         UINT bpp = image->bytesPerPixel();
         for (Int mipLevel = 0; mipLevel < count; ++mipLevel) {
-            const Span<const char>& mipLevelDataSpan = mipLevelDataSpans[mipLevel];
+            const core::Span<const char>& mipLevelDataSpan = mipLevelDataSpans[mipLevel];
             // each span has all layers
             Int layerStride = mipLevelDataSpan.length() / numLayers;
             VGC_CORE_ASSERT(layerStride * numLayers == mipLevelDataSpan.length());
@@ -1931,10 +1977,17 @@ void D3d11Engine::generateMips_(const ImageViewPtr& aImageView) {
     }
 }
 
-void D3d11Engine::draw_(GeometryView* view, UInt numIndices, UInt numInstances) {
+void D3d11Engine::draw_(
+    GeometryView* view,
+    UInt numIndices,
+    UInt numInstances,
+    UInt startIndex,
+    Int baseVertex) {
 
     UINT nIdx = core::int_cast<UINT>(numIndices);
     UINT nInst = core::int_cast<UINT>(numInstances);
+    UINT startIdx = core::int_cast<UINT>(startIndex);
+    INT baseVtx = core::int_cast<INT>(baseVertex);
 
     if (nIdx == 0) {
         return;
@@ -1988,22 +2041,22 @@ void D3d11Engine::draw_(GeometryView* view, UInt numIndices, UInt numInstances) 
                                   ? DXGI_FORMAT_R16_UINT
                                   : DXGI_FORMAT_R32_UINT;
 
-    if (numInstances == 0) {
-        if (indexBuffer) {
-            deviceCtx_->IASetIndexBuffer(indexBuffer->object(), indexFormat, 0);
-            deviceCtx_->DrawIndexed(nIdx, 0, 0);
+    if (indexBuffer) {
+        deviceCtx_->IASetIndexBuffer(indexBuffer->object(), indexFormat, 0);
+        if (numInstances == 0) {
+            deviceCtx_->DrawIndexed(nIdx, startIdx, baseVtx);
         }
         else {
-            deviceCtx_->Draw(nIdx, 0);
+            deviceCtx_->IASetIndexBuffer(indexBuffer->object(), indexFormat, 0);
+            deviceCtx_->DrawIndexedInstanced(nIdx, nInst, startIdx, baseVtx, 0);
         }
     }
     else {
-        if (indexBuffer) {
-            deviceCtx_->IASetIndexBuffer(indexBuffer->object(), indexFormat, 0);
-            deviceCtx_->DrawIndexedInstanced(nIdx, nInst, 0, 0, 0);
+        if (numInstances == 0) {
+            deviceCtx_->Draw(nIdx, startIdx + baseVtx);
         }
         else {
-            deviceCtx_->DrawInstanced(nIdx, nInst, 0, 0);
+            deviceCtx_->DrawInstanced(nIdx, nInst, startIdx + baseVtx, 0);
         }
     }
 }
@@ -2027,8 +2080,12 @@ void D3d11Engine::clear_(const core::Color& color) {
 
 UInt64
 D3d11Engine::present_(SwapChain* swapChain, UInt32 syncInterval, PresentFlags /*flags*/) {
+
     D3d11SwapChain* d3dSwapChain = static_cast<D3d11SwapChain*>(swapChain);
-    d3dSwapChain->dxgiSwapChain()->Present(syncInterval, 0);
+    IDXGISwapChain1* dxgiSwapChain1 = d3dSwapChain->dxgiSwapChain1();
+    if (dxgiSwapChain1->Present(syncInterval, 0) != S_OK) {
+        VGC_ERROR(LogVgcGraphics, "Could not present frame.");
+    }
     return std::chrono::nanoseconds(std::chrono::steady_clock::now() - engineStartTime())
         .count();
 }
