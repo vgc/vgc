@@ -45,6 +45,7 @@ namespace vgc::ui {
 VGC_DECLARE_OBJECT(Action);
 VGC_DECLARE_OBJECT(OverlayArea);
 VGC_DECLARE_OBJECT(Widget);
+VGC_DECLARE_OBJECT(Window);
 
 // clang-format off
 
@@ -455,6 +456,12 @@ public:
     float height() const {
         updateRootGeometry_();
         return size_[1];
+    }
+
+    /// Returns the window that contains the widget.
+    ///
+    Window* window() const {
+        return root()->window_;
     }
 
     /// Returns whether the content of this widget is automatically clipped
@@ -1318,8 +1325,11 @@ protected:
     virtual void onPaintDestroy(graphics::Engine* engine);
 
 private:
+    friend Window;
+
     WidgetList* children_ = nullptr;
     ActionList* actions_ = nullptr;
+    Window* window_ = nullptr;
 
     bool isReparentingWithinSameTree_ = false;
 

@@ -28,6 +28,7 @@
 #include <vgc/geometry/camera2d.h>
 #include <vgc/graphics/d3d11/d3d11engine.h>
 #include <vgc/graphics/text.h>
+#include <vgc/ui/cursor.h>
 #include <vgc/ui/logcategories.h>
 #include <vgc/ui/qtutil.h>
 
@@ -134,6 +135,7 @@ Window::Window(const WidgetPtr& widget)
     //widget_->focusRequested().connect([this](){ this->onFocusRequested(); });
     widget_->widgetAddedToTree().connect(onWidgetAddedToTreeSlot_());
     widget_->widgetRemovedFromTree().connect(onWidgetRemovedFromTreeSlot_());
+    widget_->window_ = this;
 
     initEngine_();
     addShortcuts_(widget_.get());
@@ -159,6 +161,12 @@ void Window::onDestroyed() {
 
 WindowPtr Window::create(const WidgetPtr& widget) {
     return WindowPtr(new Window(widget));
+}
+
+geometry::Vec2f Window::mapFromGlobal(const geometry::Vec2f& globalPosition) const {
+    QPointF qGlobalPosition = toQt(globalPosition);
+    QPoint qRes = this->QWindow::mapFromGlobal(qGlobalPosition.toPoint());
+    return geometry::Vec2f(qRes.x(), qRes.y());
 }
 
 void Window::enterEvent(QEvent* event) {
