@@ -161,6 +161,8 @@ ScopeProfiler::~ScopeProfiler() {
 
     Array<ProfilerEntry>& entries = g.entries;
 
+    static Clock::time_point start = Clock::now();
+
     entries.emplaceLast(Clock::now(), name_, correspondingIndex_);
     entries[correspondingIndex_].correspondingIndex = entries.length() - 1;
 
@@ -173,6 +175,9 @@ ScopeProfiler::~ScopeProfiler() {
             printTimestamps(out, entries);
         }
         else {
+            out.append("Start time:");
+            printDuration(out, entries[0].timestamp - start);
+            out.append("\n");
             printDurations(out, entries);
         }
         entries.clear();
