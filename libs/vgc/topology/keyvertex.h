@@ -27,7 +27,7 @@ namespace vgc::topology {
 //           provider could have a dirty flag to not update data, especially important for
 //           big value types like curve geometry in edges.
 
-class VGC_TOPOLOGY_API KeyVertex : public SpatioTemporalCell<VertexCell, KeyCell> {
+class VGC_TOPOLOGY_API KeyVertex final : public SpatioTemporalCell<VertexCell, KeyCell> {
 private:
     friend detail::Operations;
 
@@ -37,6 +37,10 @@ private:
 
 public:
     VGC_TOPOLOGY_DEFINE_SPATIOTEMPORAL_CELL_CAST_METHODS(Key, Vertex)
+
+    constexpr geometry::Vec2d position() const {
+        return position_;
+    }
 
     geometry::Vec2d position(core::AnimTime /*t*/) const override {
         return position_;

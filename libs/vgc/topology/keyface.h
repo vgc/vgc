@@ -22,7 +22,7 @@
 
 namespace vgc::topology {
 
-class VGC_TOPOLOGY_API KeyFace : public SpatioTemporalCell<FaceCell, KeyCell> {
+class VGC_TOPOLOGY_API KeyFace final : public SpatioTemporalCell<FaceCell, KeyCell> {
 private:
     friend detail::Operations;
 

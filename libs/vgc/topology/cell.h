@@ -40,6 +40,7 @@ class Operations;
 
 } // namespace detail
 
+/*
 VGC_DECLARE_OBJECT(Vgc);
 
 class VgcCell;
@@ -47,6 +48,7 @@ class VgcCell;
 class Vertex;
 class Edge;
 class Face;
+*/
 
 VGC_DECLARE_OBJECT(Vac);
 
@@ -609,16 +611,16 @@ constexpr To* dynamic_cell_cast(From* p);
     constexpr const To* VGC_TOPOLOGY_UNSAFE_CAST_METHOD_NAME(To)() const = delete;
 
 #define VGC_TOPOLOGY_DEFINE_CELL_UPCAST_METHOD(To)                                       \
-    template<typename To_ = To, VGC_REQUIRES(std::is_same_v<To_, To>)>                   \
-    To* VGC_TOPOLOGY_SAFE_CAST_METHOD_NAME(To)() {                                       \
-        return static_cell_cast<To_>(this);                                              \
-    }                                                                                    \
-    template<typename To_ = To, VGC_REQUIRES(std::is_same_v<To_, To>)>                   \
+    To* VGC_TOPOLOGY_SAFE_CAST_METHOD_NAME(To)() { return static_cell_cast<To>(this); }  \
     const To* VGC_TOPOLOGY_SAFE_CAST_METHOD_NAME(To)() const {                           \
-        return static_cell_cast<const To_>(this);                                        \
+        return static_cell_cast<const To>(this);                                         \
     }                                                                                    \
-    To* VGC_TOPOLOGY_UNSAFE_CAST_METHOD_NAME(To)() = delete;                             \
-    const To* VGC_TOPOLOGY_UNSAFE_CAST_METHOD_NAME(To)() const = delete;
+    To* VGC_TOPOLOGY_UNSAFE_CAST_METHOD_NAME(To)() {                                     \
+        return static_cell_cast<To>(this);                                               \
+    }                                                                                    \
+    const To* VGC_TOPOLOGY_UNSAFE_CAST_METHOD_NAME(To)() const {                         \
+        return static_cell_cast<const To>(this);                                         \
+    }
 
 #define VGC_TOPOLOGY_SPATIAL_NAME_ALTERNATIVE_Vertex_1 Edge
 #define VGC_TOPOLOGY_SPATIAL_NAME_ALTERNATIVE_Vertex_2 Face
@@ -698,10 +700,15 @@ constexpr To* dynamic_cell_cast(From* p);
 #define VGC_TOPOLOGY_DEFINE_SPATIOTEMPORAL_CELL_CAST_METHODS(TName, SName)               \
     /* toVacCell() inherited */                                                          \
     using TName##Cell::toKeyCell;                                                        \
+    using TName##Cell::toKeyCellUnchecked;                                               \
     using TName##Cell::toInbetweenCell;                                                  \
+    using TName##Cell::toInbetweenCellUnchecked;                                         \
     using SName##Cell::toVertexCell;                                                     \
+    using SName##Cell::toVertexCellUnchecked;                                            \
     using SName##Cell::toEdgeCell;                                                       \
+    using SName##Cell::toEdgeCellUnchecked;                                              \
     using SName##Cell::toFaceCell;                                                       \
+    using SName##Cell::toFaceCellUnchecked;                                              \
     VGC_TOPOLOGY_DEFINE_CELL_UPCAST_METHOD(TName##SName)                                 \
     VGC_TOPOLOGY_DEFINE_SPATIOTEMPORAL_CELL_CAST_DELETED_METHODS_(                       \
         TName,                                                                           \
@@ -1016,6 +1023,9 @@ public:
     VGC_TOPOLOGY_DEFINE_SPATIAL_CELL_CAST_METHODS(Edge)
 
     // virtual api
+
+    virtual bool isStartVertex(VertexCell* v) const = 0;
+    virtual bool isEndVertex(VertexCell* v) const = 0;
 
     // note: Looks best to return an object so that we can change its impl
     //       if we want to share the data. The straight forward implementation

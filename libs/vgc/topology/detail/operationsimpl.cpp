@@ -23,7 +23,7 @@ namespace vgc::topology::detail {
 VacGroup* Operations::createRootGroup(Vac* vac, core::Id id) {
 
     VacGroup* p = new VacGroup(vac, id);
-    vac->nodes_[p->id_] = std::unique_ptr<VacGroup>(p);
+    vac->insertNode(id, std::unique_ptr<VacGroup>(p));
 
     // diff
     vac->incrementVersion();
@@ -39,7 +39,7 @@ Operations::createVacGroup(core::Id id, VacGroup* parentGroup, VacNode* nextSibl
 
     Vac* vac = parentGroup->vac();
     VacGroup* p = new VacGroup(vac, id);
-    vac->nodes_[p->id_] = std::unique_ptr<VacGroup>(p);
+    vac->insertNode(id, std::unique_ptr<VacGroup>(p));
     parentGroup->insertChildUnchecked(nextSibling, p);
 
     // diff
@@ -60,7 +60,7 @@ KeyVertex* Operations::createKeyVertex(
 
     Vac* vac = parentGroup->vac();
     KeyVertex* p = new KeyVertex(id, t);
-    vac->nodes_[p->id_] = std::unique_ptr<KeyVertex>(p);
+    vac->insertNode(id, std::unique_ptr<KeyVertex>(p));
     parentGroup->insertChildUnchecked(nextSibling, p);
 
     // diff
@@ -83,7 +83,7 @@ KeyEdge* Operations::createKeyOpenEdge(
 
     Vac* vac = parentGroup->vac();
     KeyEdge* p = new KeyEdge(id, t);
-    vac->nodes_[p->id_] = std::unique_ptr<KeyEdge>(p);
+    vac->insertNode(id, std::unique_ptr<KeyEdge>(p));
     parentGroup->insertChildUnchecked(nextSibling, p);
 
     // init cell
@@ -116,7 +116,7 @@ KeyEdge* Operations::createKeyClosedEdge(
 
     Vac* vac = parentGroup->vac();
     KeyEdge* p = new KeyEdge(id, t);
-    vac->nodes_[p->id_] = std::unique_ptr<KeyEdge>(p);
+    vac->insertNode(id, std::unique_ptr<KeyEdge>(p));
     parentGroup->insertChildUnchecked(nextSibling, p);
 
     // init cell
