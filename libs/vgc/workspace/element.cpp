@@ -39,39 +39,41 @@ void Element::addDependency(Element* element) {
     if (element && !dependencies_.contains(element)) {
         dependencies_.emplaceLast(element);
         element->dependents_.emplaceLast(this);
+        element->onDependentElementAdded_(this);
     }
 }
 
-void Element::replaceDependency(Element* oldDependency, Element* newDependency) {
+bool Element::replaceDependency(Element* oldDependency, Element* newDependency) {
     if (oldDependency != newDependency) {
         removeDependency(oldDependency);
         addDependency(newDependency);
+        return true;
     }
+    return false;
 }
 
 void Element::removeDependency(Element* element) {
     if (element && dependencies_.removeOne(element)) {
         element->dependents_.removeOne(this);
+        element->onDependentElementRemoved_(this);
     }
 }
 
 void Element::clearDependencies() {
     for (Element* dep : dependencies_) {
         dep->dependents_.removeOne(this);
+        dep->onDependentElementRemoved_(this);
     }
     dependencies_.clear();
 }
 
-void Element::notifyChanges() {
-    for (Element* dependent : dependents_) {
-        dependent->onDependencyChanged_(this);
-    }
-}
-
-void Element::onDependencyChanged_(Element* /*dependency*/) {
-}
-
 void Element::onDependencyBeingDestroyed_(Element* /*dependency*/) {
+}
+
+void Element::onDependentElementRemoved_(Element* /*dependent*/) {
+}
+
+void Element::onDependentElementAdded_(Element* /*dependent*/) {
 }
 
 ElementStatus Element::updateFromDom_(Workspace* /*workspace*/) {
@@ -98,17 +100,27 @@ VacElement* Element::findFirstSiblingVacElement_(Element* start) {
 }
 
 VacElement::~VacElement() {
-    if (vacNode_) {
-        topology::ops::removeNode(vacNode_, false);
-        vacNode_ = nullptr;
-    }
+    removeVacNode();
 }
 
 void VacElement::removeVacNode() {
     if (vacNode_) {
-        topology::ops::removeNode(vacNode_, false);
+        // We set vacNode_ to null before calling removeNode because
+        // the workspace would consider it as an external event otherwise
+        // and would both call onVacNodeRemoved_ and schedule this element for update.
+        vacomplex::Node* tmp = vacNode_;
         vacNode_ = nullptr;
+        topology::ops::removeNode(tmp, false);
+        onVacNodeRemoved_();
     }
+}
+
+void VacElement::setVacNode(vacomplex::Node* vacNode) {
+    removeVacNode();
+    vacNode_ = vacNode;
+}
+
+void VacElement::onVacNodeRemoved_() {
 }
 
 } // namespace vgc::workspace

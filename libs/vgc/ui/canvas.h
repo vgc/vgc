@@ -229,6 +229,7 @@ protected:
     // XXX This is a temporary quick method to switch between
     // tesselation modes. A more engineered method will come later.
     int requestedTesselationMode_ = 2; // 0: none; 1: uniform; 2: adaptive
+    bool reTesselate = false;
 
     // XXX This is a temporary test, will be deferred to separate classes. Here
     // is an example of how responsibilities could be separated:

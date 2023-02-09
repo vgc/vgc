@@ -28,14 +28,11 @@ geometry::Rect2d Layer::boundingBox(core::AnimTime /*t*/) const {
 ElementStatus Layer::updateFromDom_(Workspace* /*workspace*/) {
     dom::Element* const domElement = this->domElement();
 
-    topology::VacGroup* g = nullptr;
-    if (!vacNode_) {
+    topology::VacGroup* g = vacNode()->toCellUnchecked()->toGroupUnchecked();
+    if (!g) {
         g = topology::ops::createVacGroup(
             domElement->internalId(), parentVacElement()->vacNode()->toGroupUnchecked());
-        vacNode_ = g;
-    }
-    else {
-        g = vacNode()->toCellUnchecked()->toGroupUnchecked();
+        setVacNode(g);
     }
 
     // todo: set attributes

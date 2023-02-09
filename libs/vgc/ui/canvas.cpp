@@ -173,6 +173,7 @@ bool Canvas::onKeyPress(KeyEvent* event) {
         break;
     case Key::I:
         requestedTesselationMode_ = (requestedTesselationMode_ + 1) % 3;
+        reTesselate = true;
         requestRepaint();
         break;
     case Key::P:
@@ -268,6 +269,12 @@ void Canvas::continueCurve_(const geometry::Vec2d& p, double width) {
     edge_->setAttribute(ds::widths, widths_);
 
     workspace_->sync();
+
+    workspace::Element* edgeElement = workspace_->find(edge_);
+    auto edgeCell = dynamic_cast<workspace::VacKeyEdge*>(edgeElement);
+    if (edgeCell) {
+        edgeCell->setTesselationMode(0);
+    }
 }
 
 // Reimplementation of Widget virtual methods
@@ -405,6 +412,15 @@ bool Canvas::onMouseRelease(MouseEvent* event) {
         return false;
     }
 
+    if (isSketching_) {
+        workspace::Element* edgeElement = workspace_->find(edge_);
+        auto edgeCell = dynamic_cast<workspace::VacKeyEdge*>(edgeElement);
+        if (edgeCell) {
+            edgeCell->setTesselationMode(requestedTesselationMode_);
+        }
+        requestRepaint();
+    }
+
     isSketching_ = false;
     isRotating_ = false;
     isPanning_ = false;
@@ -501,28 +517,35 @@ void Canvas::onPaintDraw(graphics::Engine* engine, PaintOptions /*options*/) {
     //  - use transforms
     //  - setup target for layers (painting a layer means using its result)
     bool paintOutline = showControlPoints_;
-    workspace_->visitDepthFirst(
-        [=](workspace::Element* /*e*/, Int /*depth*/) {
-            // we always visit children for now
-            return true;
-        },
-        [=](workspace::Element* e, Int /*depth*/) {
-            if (!e) {
-                return;
-            }
-            if (e->isVacElement()) {
-                // todo: should we use an enum to avoid dynamic_cast ?
-                // if an error happens with the Element creation we cannot rely on vac node type.
-                auto edge = dynamic_cast<workspace::KeyEdge*>(e);
-                if (edge) {
-                    edge->setTesselationMode(requestedTesselationMode_);
+    {
+        //VGC_PROFILE_SCOPE("Canvas:WorkspaceVisit");
+        workspace_->visitDepthFirst(
+            [](workspace::Element* /*e*/, Int /*depth*/) {
+                // we always visit children for now
+                return true;
+            },
+            [=](workspace::Element* e, Int /*depth*/) {
+                if (!e) {
+                    return;
                 }
-            }
-            e->paint(engine);
-            if (paintOutline) {
-                e->paint(engine, {}, workspace::PaintOption::Outline);
-            }
-        });
+                //const char* profileName = "Canvas:WorkspaceDrawElement";
+                if (e->isVacElement()) {
+                    // todo: should we use an enum to avoid dynamic_cast ?
+                    // if an error happens with the Element creation we cannot rely on vac node type.
+                    auto edge = dynamic_cast<workspace::VacKeyEdge*>(e);
+                    if (edge && reTesselate) {
+                        //profileName = "Canvas:WorkspaceDrawEdgeElement";
+                        edge->setTesselationMode(requestedTesselationMode_);
+                    }
+                }
+                //VGC_PROFILE_SCOPE(profileName);
+                e->paint(engine);
+                if (paintOutline) {
+                    e->paint(engine, {}, workspace::PaintOption::Outline);
+                }
+            });
+        reTesselate = false;
+    }
 
     // Draw temporary tip of curve between mouse event position and actual current cursor
     // position to reduce visual lag.
