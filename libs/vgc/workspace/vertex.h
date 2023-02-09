@@ -61,7 +61,7 @@ public:
 
 private:
     VacEdgeCell* edgeCell_;
-    Int32 group_;
+    //Int32 group_;
     bool isReverse_;
 };
 
