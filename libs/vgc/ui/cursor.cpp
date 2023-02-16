@@ -114,6 +114,11 @@ geometry::Vec2f globalCursorPosition() {
     return fromQtf(globalPos);
 }
 
+void setGlobalCursorPosition(const geometry::Vec2f& position) {
+    // TODO: use iround<int>() instead (not implemented as of writing this).
+    QCursor::setPos(core::ifloor<int>(position.x()), core::ifloor<int>(position.y()));
+}
+
 core::Color colorUnderCursor() {
     if (!qApp) {
         return core::colors::black;

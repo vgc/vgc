@@ -69,6 +69,11 @@ private:
 ///
 geometry::Vec2f globalCursorPosition();
 
+/// Sets the global position of the mouse cursor in device-independent
+/// pixels.
+///
+void setGlobalCursorPosition(const geometry::Vec2f& position);
+
 /// Returns the color under the mouse cursor. Returns a black color in
 /// case of errors (e.g., failed to queried which screen was under the cursor).
 ///
