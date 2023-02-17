@@ -52,20 +52,22 @@ bool NumberEdit::onMouseLeave() {
     return true;
 }
 
-bool NumberEdit::onMouseMove(MouseEvent* event) {
+bool NumberEdit::onMouseMove(MouseEvent* /*event*/) {
     if (isSettingCursorPosition_) {
+        isSettingCursorPosition_ = false;
         return false;
     }
     if (!isMousePressed_) {
         return false;
     }
-    geometry::Vec2f mousePosition = event->position();
-    float newpositionX_ = mousePosition.x();
+    geometry::Vec2f newGlobalCursorPosition = globalCursorPosition();
+    deltaPositionX += newGlobalCursorPosition.x() - globalCursorPositionOnMousePress_.x();
+
+    isSettingCursorPosition_ = true;
+    setGlobalCursorPosition(globalCursorPositionOnMousePress_);
 
     float speed = 1;
-
-    double newValue_ = valueOnMousePress_ + speed * (newpositionX_ - positionX_);
-
+    double newValue_ = valueOnMousePress_ + speed * deltaPositionX;
     setValue(newValue_);
 
     return true;
@@ -76,14 +78,13 @@ bool NumberEdit::onMousePress(MouseEvent* event) {
     if (event->button() != MouseButton::Left) {
         return false;
     }
-
-    deltaMousePostion_ = 0;
-    cursorChangerOnValueDrag_.set(Qt::BlankCursor);
-    valueOnMousePress_ = value_;
-    globalCursorPositionOnPress_ = globalCursorPosition();
-    geometry::Vec2f mousePosition = event->position();
-    positionX_ = mousePosition.x();
+    isSettingCursorPosition_ = false;
     isMousePressed_ = true;
+    valueOnMousePress_ = value_;
+    globalCursorPositionOnMousePress_ = globalCursorPosition();
+    deltaPositionX = 0;
+    isSettingCursorPosition_ = false;
+    cursorChangerOnValueDrag_.set(Qt::BlankCursor);
     return true;
 }
 

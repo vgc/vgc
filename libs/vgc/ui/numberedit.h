@@ -54,12 +54,13 @@ public:
 
 private:
     double value_ = 0;
-    double valueOnMousePress_;
-    float positionX_;
+
     bool isMousePressed_ = false;
+    double valueOnMousePress_;
+    geometry::Vec2f globalCursorPositionOnMousePress_;
+    float deltaPositionX = 0;
+
     bool isSettingCursorPosition_ = false;
-    float deltaMousePostion_;
-    geometry::Vec2f globalCursorPositionOnPress_;
 
     ui::CursorChanger cursorChangerOnMouseHover_;
     ui::CursorChanger cursorChangerOnValueDrag_;
