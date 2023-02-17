@@ -12,8 +12,8 @@
     text-selection-background-color: rgb(11, 82, 172);
 }
 
-.PanelArea > .Flex,
-.PanelArea > .Flex > .Flex,
+.Panel,
+.Panel > .Flex,
 .root.Flex,
 .root.Flex > .Flex {
     row-gap: 8dp;

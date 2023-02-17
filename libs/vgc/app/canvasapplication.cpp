@@ -139,14 +139,8 @@ private:
 
 namespace detail {
 
-Panel* createPanel(ui::PanelArea* panelArea) {
-    Panel* panel = panelArea->createChild<Panel>();
-    panel->addStyleClass(ui::strings::Panel);
-    return panel;
-}
-
-Panel* createPanelWithPadding(ui::PanelArea* panelArea) {
-    Panel* panel = createPanel(panelArea);
+ui::Panel* createPanelWithPadding(ui::PanelArea* panelArea, std::string_view panelTitle) {
+    ui::Panel* panel = panelArea->createPanel(panelTitle);
     panel->addStyleClass(with_padding);
     return panel;
 }
@@ -338,8 +332,6 @@ void CanvasApplication::openDocument_(QString filename) {
 
 void CanvasApplication::createWidgets_() {
 
-    using Panel = detail::Panel;
-    using detail::createPanel;
     using detail::createPanelWithPadding;
 
     createActions_(window_->mainWidget());
@@ -353,8 +345,8 @@ void CanvasApplication::createWidgets_() {
     ui::PanelArea* middleArea = ui::PanelArea::createTabs(mainArea);
 
     // Create panels
-    Panel* leftPanel = createPanelWithPadding(leftArea);
-    Panel* middlePanel = createPanel(middleArea);
+    ui::Panel* leftPanel = createPanelWithPadding(leftArea);
+    ui::Panel* middlePanel = middleArea->createPanel();
 
     // Create widgets inside panels
     createColorPalette_(leftPanel);

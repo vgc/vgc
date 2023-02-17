@@ -122,8 +122,6 @@ private:
 
     void createTestWidgets_() {
 
-        using Panel = app::detail::Panel;
-        using app::detail::createPanel;
         using app::detail::createPanelWithPadding;
 
         // Create panel areas
@@ -133,8 +131,8 @@ private:
         ui::PanelArea* rightBottomArea = ui::PanelArea::createTabs(rightArea);
 
         // Create panels
-        Panel* rightTopPanel = createPanelWithPadding(rightTopArea);
-        Panel* rightBottomPanel = createPanelWithPadding(rightBottomArea);
+        ui::Panel* rightTopPanel = createPanelWithPadding(rightTopArea);
+        ui::Panel* rightBottomPanel = createPanelWithPadding(rightBottomArea);
 
         // Create widgets inside panels
         createPlot2d_(rightTopPanel);

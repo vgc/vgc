@@ -18,6 +18,7 @@
 #define VGC_UI_PANELAREA_H
 
 #include <vgc/ui/cursor.h>
+#include <vgc/ui/panel.h>
 #include <vgc/ui/widget.h>
 
 namespace vgc::ui {
@@ -35,6 +36,8 @@ VGC_UI_API
 VGC_DECLARE_ENUM(PanelAreaType)
 
 VGC_DECLARE_OBJECT(PanelArea);
+VGC_DECLARE_OBJECT(PanelStack);
+VGC_DECLARE_OBJECT(PanelTabs);
 
 namespace detail {
 
@@ -169,6 +172,30 @@ public:
         return isSplit_(type_);
     }
 
+    /// Adds a `Panel` to this `PanelArea`. A warning is emitted if this
+    /// `PanelArea` is not of type `Tabs`.
+    ///
+    Panel* createPanel(std::string_view panelTitle = "Untitled");
+
+    /// Returns the number of panels in this `PanelArea`.
+    ///
+    /// If the type of this `PanelArea` is `Tabs`, this is equal to the number of tabs.
+    ///
+    /// Otherwise, it is the recursive total of all panels in all child areas of
+    /// this `PanelArea`.
+    ///
+    Int numPanels() const;
+
+    /// Returns the `PanelTabs` of this `PanelArea`. Return `nullptr` if this
+    /// area is not of type `Tabs`.
+    ///
+    PanelTabs* tabs() const;
+
+    /// Returns the `PanelStack` of this `PanelArea`. Return `nullptr` if this
+    /// area is not of type `Tabs`.
+    ///
+    PanelStack* panels() const;
+
     // Implementation of StylableObject interface
     static void populateStyleSpecTable(style::SpecTable* table);
     void populateStyleSpecTableVirtual(style::SpecTable* table) override {
@@ -233,6 +260,9 @@ private:
     void startDragging_(const geometry::Vec2f& position);
     void continueDragging_(const geometry::Vec2f& position);
     void stopDragging_(const geometry::Vec2f& position);
+
+    // Creates / Updates PanelTabs widget when necessary (i.e., when type = Tabs).
+    void updateTabs_();
 };
 
 } // namespace vgc::ui

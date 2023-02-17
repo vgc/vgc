@@ -34,12 +34,36 @@ private:
     VGC_OBJECT(Panel, Widget)
 
 protected:
-    Panel();
+    Panel(std::string_view title);
 
 public:
-    /// Creates a PanelArea.
+    /// Creates a `Panel`.
     ///
-    static PanelPtr create();
+    static PanelPtr create(std::string_view title = "Untitled Panel");
+
+    /// Returns the title of the `Panel`.
+    ///
+    std::string_view title() const {
+        return title_;
+    }
+
+    /// Sets the title of the `Panel`.
+    ///
+    void setTitle(std::string_view title);
+
+    /// This signal is emitted whenever the title of this `Panel` changed.
+    ///
+    VGC_SIGNAL(titleChanged)
+
+    /// Returns the body widget of the `Panel`.
+    ///
+    Widget* body() const {
+        return firstChild();
+    }
+
+    /// Sets the body of the `Panel`.
+    ///
+    void setBody(Widget* body);
 
     // reimpl
     float preferredWidthForHeight(float height) const override;
@@ -50,6 +74,9 @@ protected:
     void onWidgetRemoved(Widget* child) override;
     geometry::Vec2f computePreferredSize() const override;
     void updateChildrenGeometry() override;
+
+private:
+    std::string title_;
 };
 
 } // namespace vgc::ui

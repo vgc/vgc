@@ -37,14 +37,12 @@ namespace vgc::app {
 
 namespace detail {
 
-// XXX actually create ui::Panel instances as children of Tabs areas
-using Panel = ui::Column;
+using Panel = ui::Panel;
 
 VGC_APP_API
-Panel* createPanel(ui::PanelArea* panelArea);
-
-VGC_APP_API
-Panel* createPanelWithPadding(ui::PanelArea* panelArea);
+Panel* createPanelWithPadding(
+    ui::PanelArea* panelArea,
+    std::string_view panelTitle = "Untitled");
 
 } // namespace detail
 

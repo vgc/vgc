@@ -41,6 +41,8 @@ VGC_UI_API extern const core::StringId MessageDialog;
 VGC_UI_API extern const core::StringId NumberEdit;
 VGC_UI_API extern const core::StringId Panel;
 VGC_UI_API extern const core::StringId PanelArea;
+VGC_UI_API extern const core::StringId PanelStack;
+VGC_UI_API extern const core::StringId PanelTabs;
 VGC_UI_API extern const core::StringId Plot2d;
 VGC_UI_API extern const core::StringId Widget;
 

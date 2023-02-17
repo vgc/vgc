@@ -14,13 +14,18 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#include <list>
+
 #include <vgc/ui/panelarea.h>
 
 #include <vgc/core/colors.h>
 #include <vgc/graphics/strings.h>
 #include <vgc/style/parse.h>
+#include <vgc/ui/column.h>
 #include <vgc/ui/cursor.h>
 #include <vgc/ui/logcategories.h>
+#include <vgc/ui/panelstack.h>
+#include <vgc/ui/paneltabs.h>
 #include <vgc/ui/strings.h>
 
 #include <vgc/ui/detail/paintutil.h>
@@ -38,29 +43,107 @@ PanelArea::PanelArea(PanelAreaType type)
     , type_(type) {
 
     addStyleClass(strings::PanelArea);
+    updateTabs_();
 }
 
 PanelAreaPtr PanelArea::create(PanelAreaType type) {
     return PanelAreaPtr(new PanelArea(type));
 }
 
-void PanelArea::setType(PanelAreaType type) {
-    if (isSplit_(type_) != isSplit_(type) && numChildren() > 0) {
-        VGC_WARNING(
-            LogVgcUi,
-            "Changing the type of {} from {} to {}. This is only possible for panel "
-            "areas without children, so all current children ({}) are destroyed.",
-            ptr(this),
-            type_,
-            type,
-            numChildren());
+void PanelArea::setType(PanelAreaType newType) {
+
+    PanelAreaType oldType = type_;
+    if (oldType == newType) {
+        return;
+    }
+    if (oldType == PanelAreaType::Tabs) {
+        // Converting from Tabs to HorizontalSplit or VerticalSplit
+        Int nPanels = numPanels();
+        if (nPanels > 0) {
+            VGC_WARNING(
+                LogVgcUi,
+                "Changing the type of {} from {} to {}. This is only possible for panel "
+                "areas without panels, so all current panels ({}) are destroyed.",
+                ptr(this),
+                oldType,
+                newType,
+                nPanels);
+            // Note: we may want to be a bit less destructive, and instead
+            // automatically create a child PanelArea of type Tabs that holds
+            // the pre-existing tabs.
+        }
+        // Destroy all children. Note that we need to do this even if
+        // numPanels == 0, since there are other intermediate children.
         while (lastChild()) {
             lastChild()->destroy();
         }
     }
-    type_ = type;
+    else if (newType == PanelAreaType::Tabs) {
+        // Converting HorizontalSplit or VerticalSplit to Tabs
+        Int numSubAreas = numChildren();
+        if (numSubAreas > 0) {
+            VGC_WARNING(
+                LogVgcUi,
+                "Changing the type of {} from {} to {}. This is only possible for panel "
+                "areas without child areas, so all current child areas ({}) are "
+                "destroyed.",
+                ptr(this),
+                oldType,
+                newType,
+                numSubAreas);
+            while (lastChild()) {
+                lastChild()->destroy();
+            }
+            // Note: we may want to be a bit less destructive, and instead
+            // automatically get all descendant panels and make them sibling panels
+            // of this Tabs area.
+        }
+    }
+    type_ = newType;
+    updateTabs_(); // Note: this needs to be called after type_ = newType.
     requestGeometryUpdate();
     requestRepaint();
+}
+
+Panel* PanelArea::createPanel(std::string_view panelTitle) {
+    if (type() != PanelAreaType::Tabs) {
+        VGC_WARNING(
+            LogVgcUi, "Cannot create a Panel in a PanelArea which is not of type Tabs.");
+        return nullptr;
+    }
+    updateTabs_();
+    Widget* column = firstChild(); // guaranteed non-null by updateTabs()
+    return column->createChild<Panel>(panelTitle);
+}
+
+Int PanelArea::numPanels() const {
+    PanelStack* panels_ = panels();
+    if (panels_) {
+        // Case Tabs
+        return panels_->numChildren();
+    }
+    else {
+        // Case HorizontalSplit or VerticalSplit
+        return numChildren();
+    }
+}
+
+PanelTabs* PanelArea::tabs() const {
+    if (type() == PanelAreaType::Tabs) {
+        return static_cast<PanelTabs*>(firstChild()->firstChild());
+    }
+    else {
+        return nullptr;
+    }
+}
+
+PanelStack* PanelArea::panels() const {
+    if (type() == PanelAreaType::Tabs) {
+        return static_cast<PanelStack*>(firstChild()->lastChild());
+    }
+    else {
+        return nullptr;
+    }
 }
 
 namespace {
@@ -467,11 +550,11 @@ void PanelArea::updateChildrenGeometry() {
 
     // Handle Tabs case
     if (type() == PanelAreaType::Tabs) {
-        // For now, we assume there is only one tab, and we simply draw the widget
-        // as the full size.
-        Widget* child = firstChild();
-        if (child) {
-            child->updateGeometry(rect());
+        // There should be only one child, the column layout holding the tabs
+        // and the panels. We let the column class do the layout computation.
+        Widget* column = firstChild();
+        if (column) {
+            column->updateGeometry(rect());
         }
         return;
     }
@@ -781,6 +864,23 @@ void PanelArea::continueDragging_(const geometry::Vec2f& position) {
 
 void PanelArea::stopDragging_(const geometry::Vec2f& position) {
     updateHoveredSplitHandle_(position);
+}
+
+// post-condition: if type is `Tabs`, the first child exists and is of type "Column",
+// which has at least one child, and the first child is of type "PanelTabs".
+//
+void PanelArea::updateTabs_() {
+    if (type() == PanelAreaType::Tabs) {
+        if (!firstChild()) { // TODO: handle other cases where we should re-build column+stack+tabs
+            Widget* column = createChild<Column>();
+            PanelStack* stack = column->createChild<PanelStack>();
+            PanelTabs* tabs = column->createChild<PanelTabs>(stack);
+            column->insertChild(Int(0), tabs); // Reorder tabs as first child
+        }
+    }
+    else {
+        // TODO
+    }
 }
 
 } // namespace vgc::ui
