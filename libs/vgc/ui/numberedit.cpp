@@ -26,8 +26,8 @@ namespace vgc::ui {
 NumberEdit::NumberEdit()
     : LineEdit("") {
 
-    setFocusPolicy(FocusPolicy::Never);
     addStyleClass(strings::NumberEdit);
+    setTextMode(false);
     setTextFromValue_();
 }
 
@@ -40,21 +40,44 @@ void NumberEdit::setValue(double v) {
     setTextFromValue_();
 }
 
-void NumberEdit::setTextFromValue_() {
-    setText(core::format("{}", value_));
+void NumberEdit::setTextMode(bool isTextMode) {
+    isTextMode_ = isTextMode;
+    if (isTextMode_) {
+        setFocusPolicy(FocusPolicy::Click | FocusPolicy::Tab);
+    }
+    else {
+        setFocusPolicy(FocusPolicy::Never);
+    }
 }
 
 bool NumberEdit::onMouseEnter() {
+
+    // Delegate to LineEdit in case of text mode
+    if (isTextMode_) {
+        return LineEdit::onMouseEnter();
+    }
+
     cursorChangerOnMouseHover_.set(Qt::SizeHorCursor);
     return true;
 }
 
 bool NumberEdit::onMouseLeave() {
+
+    // Delegate to LineEdit in case of text mode
+    if (isTextMode_) {
+        return LineEdit::onMouseLeave();
+    }
+
     cursorChangerOnMouseHover_.clear();
     return true;
 }
 
 bool NumberEdit::onMouseMove(MouseEvent* event) {
+
+    // Delegate to LineEdit in case of text mode
+    if (isTextMode_) {
+        return LineEdit::onMouseMove(event);
+    }
 
     // When dragging in absolute mode, calling setGlobalCursorPosition() might
     // generate a mouse event in some platforms. Skipping one mouse event prevents
@@ -67,7 +90,7 @@ bool NumberEdit::onMouseMove(MouseEvent* event) {
         return false;
     }
 
-    if (!hasDragStarted_) {
+    if (!isDragInitiated_) {
         return false;
     }
 
@@ -104,6 +127,11 @@ bool NumberEdit::onMouseMove(MouseEvent* event) {
 
 bool NumberEdit::onMousePress(MouseEvent* event) {
 
+    // Delegate to LineEdit in case of text mode
+    if (isTextMode_) {
+        return LineEdit::onMousePress(event);
+    }
+
     // Only drag on left mouse button
     if (event->button() != MouseButton::Left) {
         return false;
@@ -111,7 +139,7 @@ bool NumberEdit::onMousePress(MouseEvent* event) {
 
     // Store current value and enter drag mode
     valueOnMousePress_ = value_;
-    hasDragStarted_ = true;
+    isDragInitiated_ = true;
     isDragEpsilonReached_ = false;
 
     // Detect whether we should perform dragging by using the absolute cursor
@@ -149,16 +177,57 @@ bool NumberEdit::onMousePress(MouseEvent* event) {
 
 bool NumberEdit::onMouseRelease(MouseEvent* event) {
 
+    // Delegate to LineEdit in case of text mode
+    if (isTextMode_) {
+        return LineEdit::onMouseRelease(event);
+    }
+
     // Only drag on left mouse button
     if (MouseButton::Left != event->button()) {
         return false;
     }
 
+    if (isDragInitiated_ && !isDragEpsilonReached_) {
+        setTextMode(true);
+        cursorChangerOnValueDrag_.clear();
+        cursorChangerOnMouseHover_.clear();
+        // TODO: How to set the line edit ibeam cursor?
+        //       How to go back to no text mode? (onKeyboardFocusLost?)
+        // => There is onFocusIn() / onFocusOut().
+        // Although we need to be mindful of the focus reason: what do we want to
+        // do if the current window lose focus, but the number edit was in text mode
+        // and still had the focus within the tree? Should we turn it to no text mode
+        // automatically?
+
+        // TODO: automatically select all the text? (like in Blender)
+        // Or set the cursor where the user clicked?
+
+        // TODO: set numeric value from entered text value.
+    }
+    else {
+        // TODO: Anything here?
+    }
+
     cursorChangerOnValueDrag_.clear();
-    hasDragStarted_ = false;
+    isDragInitiated_ = false;
     isDragEpsilonReached_ = false;
     skipNextMouseMove_ = false;
     return true;
+}
+
+bool NumberEdit::onFocusIn(FocusReason reason) {
+    // TODO: Is this correct?
+    return LineEdit::onFocusIn(reason);
+}
+
+bool NumberEdit::onFocusOut(FocusReason reason) {
+    // TODO: Is this correct?
+    setTextMode(false);
+    return LineEdit::onFocusOut(reason);
+}
+
+void NumberEdit::setTextFromValue_() {
+    setText(core::format("{}", value_));
 }
 
 } // namespace vgc::ui

@@ -38,31 +38,52 @@ public:
     ///
     static NumberEditPtr create();
 
-public:
-    //Setter
+    /// Sets the value of this `NumberEdit`.
+    ///
     void setValue(double v);
 
-    //Getter
+    /// Returns the value of this `NumberEdit`.
+    ///
     double value() const {
         return value_;
     }
+
+private:
+    /// Returns whether the `NumberEdit` is in text mode.
+    ///
+    // XXX Should this be public or not? Or should we just
+    // give the keyboard focus, and therefore, isTextMode()
+    // is synonymous with "hasKeyboardFocus". Do we want to allow
+    // the number edit to be in text mode without the keyboard
+    // focus?
+    //
+    void setTextMode(bool isTextMode);
+
+protected:
+    // Reimplementation of Widget virtual methods
     bool onMouseEnter() override;
     bool onMouseLeave() override;
     bool onMouseMove(MouseEvent* event) override;
     bool onMousePress(MouseEvent* event) override;
     bool onMouseRelease(MouseEvent* event) override;
+    bool onFocusIn(FocusReason reason) override;
+    bool onFocusOut(FocusReason reason) override;
 
 private:
     double value_ = 0;
 
+    // Drag mode
     bool isAbsoluteMode_ = true;
-    bool hasDragStarted_ = false;
+    bool isDragInitiated_ = false;
     double valueOnMousePress_;
     geometry::Vec2f mousePositionOnMousePress_;
     float deltaPositionX_ = 0;
     float dragEpsilon_ = 3;
     bool isDragEpsilonReached_ = false;
     bool skipNextMouseMove_ = false;
+
+    // Text mode
+    bool isTextMode_ = true;
 
     ui::CursorChanger cursorChangerOnMouseHover_;
     ui::CursorChanger cursorChangerOnValueDrag_;
