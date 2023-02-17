@@ -18,8 +18,8 @@
 
 #include <string>
 
+#include <vgc/geometry/vec2f.h>
 #include <vgc/ui/cursor.h>
-#include <vgc\geometry\vec2f.h>
 
 namespace vgc::ui {
 
@@ -54,7 +54,6 @@ bool NumberEdit::onMouseLeave() {
 
 bool NumberEdit::onMouseMove(MouseEvent* event) {
     if (isSettingCursorPosition_) {
-        VGC_DEBUG("Hello");
         return false;
     }
     if (!isMousePressed_) {
@@ -65,7 +64,7 @@ bool NumberEdit::onMouseMove(MouseEvent* event) {
 
     float speed = 1;
 
-    float newValue_ = valueOnMousePress_ + speed * (newpositionX_ - positionX_);
+    double newValue_ = valueOnMousePress_ + speed * (newpositionX_ - positionX_);
 
     setValue(newValue_);
 
