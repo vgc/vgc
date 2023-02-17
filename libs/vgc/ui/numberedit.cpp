@@ -26,6 +26,8 @@ namespace vgc::ui {
 NumberEdit::NumberEdit()
     : LineEdit("") {
 
+    setFocusPolicy(FocusPolicy::Never);
+    addStyleClass(strings::NumberEdit);
     setTextFromValue_();
 }
 

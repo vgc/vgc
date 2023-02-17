@@ -35,6 +35,7 @@ const core::StringId LineEdit("LineEdit");
 const core::StringId Menu("Menu");
 const core::StringId MenuBar("MenuBar");
 const core::StringId MenuButton("MenuButton");
+const core::StringId NumberEdit("NumberEdit");
 const core::StringId Panel("Panel");
 const core::StringId PanelArea("PanelArea");
 const core::StringId Plot2d("Plot2d");
