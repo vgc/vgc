@@ -55,12 +55,14 @@ public:
 private:
     double value_ = 0;
 
-    bool isMousePressed_ = false;
+    bool isAbsoluteMode_ = true;
+    bool hasDragStarted_ = false;
     double valueOnMousePress_;
-    geometry::Vec2f globalCursorPositionOnMousePress_;
-    float deltaPositionX = 0;
-
-    bool isSettingCursorPosition_ = false;
+    geometry::Vec2f mousePositionOnMousePress_;
+    float deltaPositionX_ = 0;
+    float dragEpsilon_ = 3;
+    bool isDragEpsilonReached_ = false;
+    bool skipNextMouseMove_ = false;
 
     ui::CursorChanger cursorChangerOnMouseHover_;
     ui::CursorChanger cursorChangerOnValueDrag_;

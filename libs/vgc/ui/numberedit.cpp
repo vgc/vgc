@@ -54,49 +54,110 @@ bool NumberEdit::onMouseLeave() {
     return true;
 }
 
-bool NumberEdit::onMouseMove(MouseEvent* /*event*/) {
-    if (isSettingCursorPosition_) {
-        isSettingCursorPosition_ = false;
+bool NumberEdit::onMouseMove(MouseEvent* event) {
+
+    // When dragging in absolute mode, calling setGlobalCursorPosition() might
+    // generate a mouse event in some platforms. Skipping one mouse event prevents
+    // infinite loops (possibly at the cause of missing real useful mouse events,
+    // but it's more important to prevent infinite loops and there is no perfect
+    // solution for this problem).
+    //
+    if (isAbsoluteMode_ && skipNextMouseMove_) {
+        skipNextMouseMove_ = false;
         return false;
     }
-    if (!isMousePressed_) {
+
+    if (!hasDragStarted_) {
         return false;
     }
-    geometry::Vec2f newGlobalCursorPosition = globalCursorPosition();
-    deltaPositionX += newGlobalCursorPosition.x() - globalCursorPositionOnMousePress_.x();
 
-    isSettingCursorPosition_ = true;
-    setGlobalCursorPosition(globalCursorPositionOnMousePress_);
+    if (isAbsoluteMode_) {
+        geometry::Vec2f newMousePosition = globalCursorPosition();
+        deltaPositionX_ += newMousePosition.x() - mousePositionOnMousePress_.x();
+        skipNextMouseMove_ = true;
+        setGlobalCursorPosition(mousePositionOnMousePress_);
+    }
+    else {
+        geometry::Vec2f newMousePosition = event->position();
+        deltaPositionX_ = newMousePosition.x() - mousePositionOnMousePress_.x();
+    }
 
-    float speed = 1;
-    double newValue_ = valueOnMousePress_ + speed * deltaPositionX;
-    setValue(newValue_);
+    if (isDragEpsilonReached_) {
+        float speed = 1;
+        double newValue_ = valueOnMousePress_ + speed * deltaPositionX_;
+        setValue(newValue_);
+    }
+    else if (std::abs(deltaPositionX_) > dragEpsilon_) {
+        // TODO: is this correctly handling high-DPI screens?
+        // We may have to do dragEpsilon * scaleFactor() when not in absolute mode.
+        isDragEpsilonReached_ = true;
+        if (isAbsoluteMode_) {
+            deltaPositionX_ = 0;
+        }
+        else {
+            mousePositionOnMousePress_ = event->position();
+        }
+    }
 
     return true;
 }
 
 bool NumberEdit::onMousePress(MouseEvent* event) {
-    // Only support Left mouse button
+
+    // Only drag on left mouse button
     if (event->button() != MouseButton::Left) {
         return false;
     }
-    isSettingCursorPosition_ = false;
-    isMousePressed_ = true;
+
+    // Store current value and enter drag mode
     valueOnMousePress_ = value_;
-    globalCursorPositionOnMousePress_ = globalCursorPosition();
-    deltaPositionX = 0;
-    isSettingCursorPosition_ = false;
-    cursorChangerOnValueDrag_.set(Qt::BlankCursor);
+    hasDragStarted_ = true;
+    isDragEpsilonReached_ = false;
+
+    // Detect whether we should perform dragging by using the absolute cursor
+    // position (which enable infinite drag when using a mouse), or via using the
+    // local cursor position (which is typically necessary for graphics tablets).
+    //
+    if (event->hasPressure()) {
+        //     ^^^^^^^^^^^^^ TODO: Implement and use event->isAbsolute() instead?
+        // Example of scenarios that may not be properly supported right now:
+        // 1. A graphics tablet which does not have pressure
+        // 2. A graphics tablet which does have pressure but is in relative mode.
+        //
+        isAbsoluteMode_ = false;
+    }
+    else {
+        isAbsoluteMode_ = true;
+    }
+
+    // Initialize dragging
+    if (isAbsoluteMode_) {
+        mousePositionOnMousePress_ = globalCursorPosition();
+        deltaPositionX_ = 0;
+        skipNextMouseMove_ = false;
+
+        // Hide cursor
+        // Note: we intentially choose to keep it visible when not in absolute mode.
+        cursorChangerOnValueDrag_.set(Qt::BlankCursor);
+    }
+    else {
+        mousePositionOnMousePress_ = event->position();
+    }
+
     return true;
 }
 
 bool NumberEdit::onMouseRelease(MouseEvent* event) {
-    // Only support one mouse button at a time
+
+    // Only drag on left mouse button
     if (MouseButton::Left != event->button()) {
         return false;
     }
+
     cursorChangerOnValueDrag_.clear();
-    isMousePressed_ = false;
+    hasDragStarted_ = false;
+    isDragEpsilonReached_ = false;
+    skipNextMouseMove_ = false;
     return true;
 }
 
