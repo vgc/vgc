@@ -555,6 +555,10 @@ Int parseInt_(LineEdit* lineEdit, bool& isValid) {
         isValid = false;
         return 0;
     }
+    catch (const core::RangeError&) {
+        isValid = false;
+        return 0;
+    }
 }
 
 // If the lineEdit is a valid hex color, this keeps `isValid` unchanged and
