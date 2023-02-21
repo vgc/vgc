@@ -116,7 +116,6 @@ jobs:
         architecture: 'x64'
 
     - name: Install most dependencies
-      working-directory: ${{runner.workspace}}
       run: |
         apt-get install -y libgl1-mesa-dev
         apt-get install -y libxkbcommon-x11-0 # For Qt plugins/platforms/libqxcb.so
@@ -124,29 +123,28 @@ jobs:
         apt-get install -y libharfbuzz-dev
 
     - name: Install Qt
-      working-directory: ${{runner.workspace}}
       run: |
         wget --progress=dot:giga https://www.vgc.io/releases/qt/opt-qt-$QT_VERSION-gcc_64.tar.gz
-        tar -xzf opt-qt-$QT_VERSION-gcc_64.tar.gz -C ${{runner.workspace}}
+        tar -xzf opt-qt-$QT_VERSION-gcc_64.tar.gz -C "$GITHUB_WORKSPACE"
 
     - name: Configure
-      working-directory: ${{runner.workspace}}
+      working-directory: ${{github.workspace}}
       run: |
         mkdir build
         cd build
         cmake --version
-        cmake "$GITHUB_WORKSPACE" -DCMAKE_BUILD_TYPE="$BUILD_TYPE" -DVGC_COMMIT_BRANCH="$COMMIT_BRANCH" -DPython_ROOT_DIR="$pythonLocation" -DQt5_DIR="${{runner.workspace}}/qt/$QT_VERSION/gcc_64/lib/cmake/Qt5" -DVGC_PEDANTIC=ON -DVGC_WERROR=ON
+        cmake "$GITHUB_WORKSPACE" -DCMAKE_BUILD_TYPE="$BUILD_TYPE" -DVGC_COMMIT_BRANCH="$COMMIT_BRANCH" -DPython_ROOT_DIR="$pythonLocation" -DQt5_DIR="$GITHUB_WORKSPACE/qt/$QT_VERSION/gcc_64/lib/cmake/Qt5" -DVGC_PEDANTIC=ON -DVGC_WERROR=ON
 
     - name: Build
-      working-directory: ${{runner.workspace}}/build
+      working-directory: ${{github.workspace}}/build
       run: cmake --build . --parallel $PARALLEL_JOBS
 
     - name: Test
-      working-directory: ${{runner.workspace}}/build
+      working-directory: ${{github.workspace}}/build
       run: cmake --build . --target check --parallel $PARALLEL_JOBS
 
     - name: Deploy
-      working-directory: ${{runner.workspace}}/build
+      working-directory: ${{github.workspace}}/build
       env:
         VGC_GITHUB_KEY: ${{secrets.VGC_GITHUB_KEY}}
       run: cmake --build . --target deploy --parallel $PARALLEL_JOBS
