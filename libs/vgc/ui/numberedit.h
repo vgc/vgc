@@ -49,16 +49,6 @@ public:
     }
 
 private:
-    /// Returns whether the `NumberEdit` is in text mode.
-    ///
-    // XXX Should this be public or not? Or should we just
-    // give the keyboard focus, and therefore, isTextMode()
-    // is synonymous with "hasKeyboardFocus". Do we want to allow
-    // the number edit to be in text mode without the keyboard
-    // focus?
-    //
-    void setTextMode(bool isTextMode);
-
 protected:
     // Reimplementation of Widget virtual methods
     bool onMouseEnter() override;
@@ -68,27 +58,35 @@ protected:
     bool onMouseRelease(MouseEvent* event) override;
     bool onFocusIn(FocusReason reason) override;
     bool onFocusOut(FocusReason reason) override;
+    bool onKeyPress(KeyEvent* event) override;
 
 private:
+    // Current value
     double value_ = 0;
+
+    // Value before drag or text editing starts
+    double oldValue_;
 
     // Drag mode
     bool isAbsoluteMode_ = true;
     bool isDragInitiated_ = false;
-    double valueOnMousePress_;
-    geometry::Vec2f mousePositionOnMousePress_;
-    float deltaPositionX_ = 0;
-    float dragEpsilon_ = 3;
     bool isDragEpsilonReached_ = false;
     bool skipNextMouseMove_ = false;
+    geometry::Vec2f mousePositionOnMousePress_;
+    float deltaPositionX_ = 0;
 
     // Text mode
-    bool isTextMode_ = true;
+    void setTextFromValue_();
+    void setValueFromText_();
 
+    // Switch between modes
+    bool isTextMode_ = true;
+    void setTextMode_(bool isTextMode);
+
+    // Cursor Handling
     ui::CursorChanger cursorChangerOnMouseHover_;
     ui::CursorChanger cursorChangerOnValueDrag_;
-
-    void setTextFromValue_();
+    void updateCursor_();
 };
 
 } // namespace vgc::ui

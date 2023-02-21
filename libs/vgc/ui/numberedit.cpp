@@ -27,7 +27,7 @@ NumberEdit::NumberEdit()
     : LineEdit("") {
 
     addStyleClass(strings::NumberEdit);
-    setTextMode(false);
+    setTextMode_(false);
     setTextFromValue_();
 }
 
@@ -40,35 +40,20 @@ void NumberEdit::setValue(double v) {
     setTextFromValue_();
 }
 
-void NumberEdit::setTextMode(bool isTextMode) {
-    isTextMode_ = isTextMode;
-    if (isTextMode_) {
-        setFocusPolicy(FocusPolicy::Click | FocusPolicy::Tab);
-    }
-    else {
-        setFocusPolicy(FocusPolicy::Never);
-    }
-}
-
 bool NumberEdit::onMouseEnter() {
 
-    // Delegate to LineEdit in case of text mode
-    if (isTextMode_) {
-        return LineEdit::onMouseEnter();
-    }
-
-    cursorChangerOnMouseHover_.set(Qt::SizeHorCursor);
+    // Call the base method first, to ensure that the IBeam cursor is on the
+    // cursor stack, so that we can transition from drag mode to text mode by
+    // simply clearing the NumberEdit custom cursors.
+    //
+    LineEdit::onMouseEnter();
+    updateCursor_();
     return true;
 }
 
 bool NumberEdit::onMouseLeave() {
-
-    // Delegate to LineEdit in case of text mode
-    if (isTextMode_) {
-        return LineEdit::onMouseLeave();
-    }
-
     cursorChangerOnMouseHover_.clear();
+    LineEdit::onMouseLeave();
     return true;
 }
 
@@ -105,9 +90,11 @@ bool NumberEdit::onMouseMove(MouseEvent* event) {
         deltaPositionX_ = newMousePosition.x() - mousePositionOnMousePress_.x();
     }
 
+    constexpr float dragEpsilon_ = 3;
+
     if (isDragEpsilonReached_) {
         float speed = 1;
-        double newValue_ = valueOnMousePress_ + speed * deltaPositionX_;
+        double newValue_ = oldValue_ + speed * deltaPositionX_;
         setValue(newValue_);
     }
     else if (std::abs(deltaPositionX_) > dragEpsilon_) {
@@ -138,7 +125,7 @@ bool NumberEdit::onMousePress(MouseEvent* event) {
     }
 
     // Store current value and enter drag mode
-    valueOnMousePress_ = value_;
+    oldValue_ = value_;
     isDragInitiated_ = true;
     isDragEpsilonReached_ = false;
 
@@ -163,10 +150,7 @@ bool NumberEdit::onMousePress(MouseEvent* event) {
         mousePositionOnMousePress_ = globalCursorPosition();
         deltaPositionX_ = 0;
         skipNextMouseMove_ = false;
-
-        // Hide cursor
-        // Note: we intentially choose to keep it visible when not in absolute mode.
-        cursorChangerOnValueDrag_.set(Qt::BlankCursor);
+        updateCursor_();
     }
     else {
         mousePositionOnMousePress_ = event->position();
@@ -187,47 +171,114 @@ bool NumberEdit::onMouseRelease(MouseEvent* event) {
         return false;
     }
 
+    // Switch to text mode on click or drag < epsilon.
+    //
     if (isDragInitiated_ && !isDragEpsilonReached_) {
-        setTextMode(true);
-        cursorChangerOnValueDrag_.clear();
-        cursorChangerOnMouseHover_.clear();
-        // TODO: How to set the line edit ibeam cursor?
-        //       How to go back to no text mode? (onKeyboardFocusLost?)
-        // => There is onFocusIn() / onFocusOut().
-        // Although we need to be mindful of the focus reason: what do we want to
-        // do if the current window lose focus, but the number edit was in text mode
-        // and still had the focus within the tree? Should we turn it to no text mode
-        // automatically?
-
-        // TODO: automatically select all the text? (like in Blender)
-        // Or set the cursor where the user clicked?
-
-        // TODO: set numeric value from entered text value.
-    }
-    else {
-        // TODO: Anything here?
+        setTextMode_(true);
     }
 
-    cursorChangerOnValueDrag_.clear();
+    // Clear cursors and other values
     isDragInitiated_ = false;
     isDragEpsilonReached_ = false;
     skipNextMouseMove_ = false;
+    updateCursor_();
     return true;
 }
 
 bool NumberEdit::onFocusIn(FocusReason reason) {
-    // TODO: Is this correct?
     return LineEdit::onFocusIn(reason);
 }
 
 bool NumberEdit::onFocusOut(FocusReason reason) {
-    // TODO: Is this correct?
-    setTextMode(false);
+
+    if (reason != FocusReason::Window  //
+        && reason != FocusReason::Menu //
+        && reason != FocusReason::Popup) {
+
+        if (isTextMode_) {
+            setValueFromText_();
+            setTextMode_(false);
+        }
+    }
     return LineEdit::onFocusOut(reason);
+}
+
+bool NumberEdit::onKeyPress(KeyEvent* event) {
+    if (!isTextMode_) {
+        return false;
+    }
+    if (event->key() == Key::Escape) {
+        setValue(oldValue_);
+        setTextMode_(false);
+    }
+    if (event->key() == Key::Return) {
+        setValueFromText_();
+        setTextMode_(false);
+    }
+    else {
+        LineEdit::onKeyPress(event);
+    }
+    return true;
 }
 
 void NumberEdit::setTextFromValue_() {
     setText(core::format("{}", value_));
+}
+
+void NumberEdit::setValueFromText_() {
+    double newValue = oldValue_;
+    const std::string& newText = text();
+    if (newText.empty()) {
+        newValue = 0;
+    }
+    else {
+        try {
+            newValue = core::parse<double>(newText);
+        }
+        catch (const core::ParseError&) {
+            newValue = oldValue_;
+        }
+        catch (const core::RangeError&) {
+            newValue = oldValue_;
+        }
+    }
+    setValue(newValue);
+}
+
+void NumberEdit::setTextMode_(bool isTextMode) {
+    isTextMode_ = isTextMode;
+    if (isTextMode_) {
+        setFocusPolicy(FocusPolicy::Click | FocusPolicy::Tab);
+        moveCursor(graphics::RichTextMoveOperation::StartOfText);
+        moveCursor(graphics::RichTextMoveOperation::EndOfText, true);
+        setFocus(FocusReason::Mouse);
+    }
+    else {
+        setFocusPolicy(FocusPolicy::Never);
+        clearFocus(FocusReason::Other);
+    }
+    updateCursor_();
+}
+
+void NumberEdit::updateCursor_() {
+    if (isTextMode_) {
+        cursorChangerOnMouseHover_.clear();
+        cursorChangerOnValueDrag_.clear();
+    }
+    else {
+        if (isHovered()) {
+            cursorChangerOnMouseHover_.set(Qt::SizeHorCursor);
+        }
+        else {
+            cursorChangerOnMouseHover_.clear();
+        }
+        if (isDragInitiated_ && isAbsoluteMode_) {
+            cursorChangerOnValueDrag_.set(Qt::BlankCursor);
+        }
+        else {
+            cursorChangerOnValueDrag_.clear();
+        }
+    }
 }
 
 } // namespace vgc::ui
