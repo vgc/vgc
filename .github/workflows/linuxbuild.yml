@@ -16,12 +16,45 @@ defaults:
 
 jobs:
   build:
-    runs-on: ubuntu-18.04
+    runs-on: ubuntu-latest
+    container: ubuntu:18.04
 
     steps:
+
+    - name: Install and Configure Recent Git
+      run: |
+        apt-get update
+        apt-get install -y software-properties-common
+        add-apt-repository ppa:git-core/ppa
+        apt-get update
+        apt-get install -y git
+        git config --global --add safe.directory `pwd` # Fix "fatal: detected dubious ownership in repository at '/__w/<user>/<repo>'""
+
+    # See documentation at:
+    # - https://apt.kitware.com/
+    # - https://askubuntu.com/questions/355565/how-do-i-install-the-latest-version-of-cmake-from-the-command-line
+    #
+    - name: Install Recent CMake
+      run: |
+        apt-get install -y gpg wget
+        wget -O - https://apt.kitware.com/keys/kitware-archive-latest.asc 2>/dev/null | gpg --dearmor - | tee /etc/apt/trusted.gpg.d/kitware.gpg >/dev/null
+        apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 6AF7F09730B3F0A4
+        apt-add-repository "deb https://apt.kitware.com/ubuntu/ bionic main"
+        apt-get update
+        apt-get install -y cmake
+    - name: Install Other Dependencies
+      run: |
+        apt-get install -y build-essential libfreetype6-dev
+
+    # By default, actions/checkout will only check out the last commit. For
+    # pull requests, this is a temporary merge commit used to test integration
+    # against the master branch. Therefore, in order to get the actual commit
+    # message we are interested in, we need to fetch more than one commit.
+    # Getting more commits can also be helpful for computing human-readable
+    # commit ID, such as 2020-12-16.3 for the 4th commit of the day.
+    #
     - uses: actions/checkout@v2
       with:
-        # We need to fetch more than one commit to get the correct build name
         fetch-depth: 100
         submodules: 'recursive'
 
@@ -31,6 +64,7 @@ jobs:
     # In case of a push event, the commit we care about is simply HEAD.
     # The current branch name can be found by parsing GITHUB_REF, for example,
     # if we are on the master branch, then GITHUB_REF = refs/heads/master.
+    #
     - name: Get commit branch and commit message
       if: github.event_name == 'push'
       run: |
@@ -42,6 +76,7 @@ jobs:
     # In case of a pull_request event, the commit we care about is HEAD^2, that
     # is, the second parent of the pull request merge commit.
     # The current branch name is directly given by GITHUB_HEAD_REF
+    #
     - name: Get commit branch and commit message
       if: github.event_name == 'pull_request'
       run: |
