@@ -377,7 +377,6 @@ private:                                                                        
     using Object::appendChildObject_;                                                    \
     using Object::prependChildObject_;                                                   \
     using Object::insertChildObject_;                                                    \
-    using Object::insertChildObjectAfter_;                                               \
     using Object::removeChildObject_;                                                    \
     using Object::appendObjectToParent_;                                                 \
     using Object::prependObjectToParent_;                                                \
@@ -402,7 +401,7 @@ using ObjectListView = ObjListView<Object>;
 using ObjectPtr = ObjPtr<Object>;
 
 /// \enum vgc::core::ObjectStage
-/// \brief The different stages of construction / destruction of an Object
+/// \brief The different stages of construction / destruction of an `Object`.
 ///
 /// This enum describes the ordered sequence of stages an `Object` goes through
 /// during its lifetime.
