@@ -487,10 +487,6 @@ void Widget::paint(graphics::Engine* engine, PaintOptions options) {
 void Widget::onPaintCreate(graphics::Engine* engine) {
     triangles_ =
         engine->createDynamicTriangleListView(graphics::BuiltinGeometryLayout::XYRGB);
-
-    for (Widget* child : children()) {
-        child->onPaintCreate(engine);
-    }
 }
 
 void Widget::onPaintPrepare(graphics::Engine* engine, PaintOptions options) {
