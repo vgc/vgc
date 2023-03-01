@@ -1024,10 +1024,14 @@ public:
     }
 
     // Disconnects the slot identified by the given handle `h`.
-    // Returns true if a disconnection happened.
+    // Returns true and invalidates the handle if a disconnection happened.
     //
-    bool disconnect(ConnectionHandle h) const {
-        return SignalHub::disconnect(object_, id(), h);
+    bool disconnect(ConnectionHandle& h) const {
+        if (SignalHub::disconnect(object_, id(), h)) {
+            h.invalidate();
+            return true;
+        }
+        return false;
     }
 
     // Disconnects the given slot `slotRef`.

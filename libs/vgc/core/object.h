@@ -781,11 +781,17 @@ public:
 
     /// Removes the signal-slot connection corresponding to the given `handle`.
     ///
+    /// Returns `true` and invalidates `handle` if the connection is successfully
+    /// removed.
     /// Returns `false` if the connection wasn't an existing connection of this
     /// `Object`, and therefore couldn't be removed.
     ///
-    bool disconnect(ConnectionHandle handle) const {
-        return detail::SignalHub::disconnect(this, handle);
+    bool disconnect(ConnectionHandle& handle) const {
+        if (detail::SignalHub::disconnect(this, handle)) {
+            handle.invalidate();
+            return true;
+        }
+        return false;
     }
 
     /// Removes all the signal-slot connections between this `Object` and
