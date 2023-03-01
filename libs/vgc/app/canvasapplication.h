@@ -30,6 +30,7 @@
 #include <vgc/ui/menu.h>
 #include <vgc/ui/panel.h>
 #include <vgc/ui/panelarea.h>
+#include <vgc/ui/sketchtool.h>
 #include <vgc/workspace/workspace.h>
 
 namespace vgc::app {
@@ -122,6 +123,7 @@ private:
     core::ConnectionHandle documentHistoryHeadChangedConnectionHandle_;
     ui::ColorPalette* palette_ = nullptr;
     ui::Canvas* canvas_ = nullptr;
+    ui::SketchTool* tool_ = nullptr;
 
     void createWidgets_();
     void createActions_(ui::Widget* parent);

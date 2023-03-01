@@ -14,6 +14,7 @@ vgc_add_library(ui
         api.h
         button.h
         canvas.h
+        canvastool.h
         colorpalette.h
         column.h
         cursor.h
@@ -42,6 +43,7 @@ vgc_add_library(ui
         qtutil.h
         row.h
         shortcut.h
+        sketchtool.h
         strings.h
         widget.h
         window.h
@@ -55,6 +57,7 @@ vgc_add_library(ui
         actiongroup.cpp
         button.cpp
         canvas.cpp
+        canvastool.cpp
         colorpalette.cpp
         column.cpp
         cursor.cpp
@@ -83,6 +86,7 @@ vgc_add_library(ui
         qtutil.cpp
         row.cpp
         shortcut.cpp
+        sketchtool.cpp
         strings.cpp
         widget.cpp
         window.cpp

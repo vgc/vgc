@@ -41,12 +41,12 @@ SelectionListHistoryPtr SelectionListHistory::create() {
     return SelectionListHistoryPtr(new SelectionListHistory());
 }
 
-void SelectionListHistory::setSelection(const SelectionList& list) {
+void SelectionListHistory::pushSelection(const SelectionList& list) {
     lists_.emplaceLast(list);
     selectionChanged().emit();
 }
 
-void SelectionListHistory::setSelection(SelectionList&& list) {
+void SelectionListHistory::pushSelection(SelectionList&& list) {
     lists_.emplaceLast(std::move(list));
     selectionChanged().emit();
 }
@@ -199,87 +199,6 @@ void Canvas::onWorkspaceChanged_() {
 void Canvas::onDocumentChanged_(const dom::Diff& /*diff*/) {
 }
 
-void Canvas::startCurve_(const geometry::Vec2d& p, double width) {
-
-    if (!workspace_ || !workspace_->document()) {
-        return;
-    }
-
-    namespace ds = dom::strings;
-
-    // XXX CLEAN
-    static core::StringId Draw_Curve("Draw Curve");
-    core::History* history = workspace_->history();
-    if (history) {
-        drawCurveUndoGroup_ = history->createUndoGroup(Draw_Curve);
-        drawCurveUndoGroup_->undone().connect([this](core::UndoGroup*, bool /*isAbort*/) {
-            // isAbort should be true since we have no sub-group
-            isSketching_ = false;
-            drawCurveUndoGroup_ = nullptr;
-        });
-    }
-
-    workspace::Element* wVgc = workspace_->vgcElement();
-    dom::Element* dVgc = wVgc->domElement();
-
-    dom::Element* v0 = dom::Element::create(dVgc, ds::vertex);
-    dom::Element* v1 = dom::Element::create(dVgc, ds::vertex);
-    dom::Element* edge = dom::Element::create(dVgc, ds::edge);
-
-    v0->setAttribute(ds::position, p);
-    v1->setAttribute(ds::position, p);
-
-    edge->setAttribute(ds::positions, geometry::Vec2dArray());
-    edge->setAttribute(ds::widths, core::DoubleArray());
-    edge->setAttribute(ds::color, currentColor_);
-    edge->setAttribute(ds::startvertex, v0->getPathFromId());
-    edge->setAttribute(ds::endvertex, v1->getPathFromId());
-
-    endVertex_ = v1;
-    edge_ = edge;
-
-    continueCurve_(p, width);
-
-    minimalLatencyStrokePoints_[0] = p;
-    minimalLatencyStrokeWidths_[0] = width * 0.5;
-    minimalLatencyStrokePoints_[1] = p;
-    minimalLatencyStrokeWidths_[1] = width * 0.5;
-    minimalLatencyStrokeReload_ = true;
-}
-
-void Canvas::continueCurve_(const geometry::Vec2d& p, double width) {
-
-    if (!workspace_ || !workspace_->document()) {
-        return;
-    }
-
-    namespace ds = dom::strings;
-
-    if (!edge_) {
-        return;
-    }
-
-    if (!points_.isEmpty() && points_.last() == p) {
-        return;
-    }
-
-    points_.append(p);
-    widths_.append(width);
-
-    endVertex_->setAttribute(ds::position, p);
-
-    edge_->setAttribute(ds::positions, points_);
-    edge_->setAttribute(ds::widths, widths_);
-
-    workspace_->sync();
-
-    workspace::Element* edgeElement = workspace_->find(edge_);
-    auto edgeCell = dynamic_cast<workspace::VacKeyEdge*>(edgeElement);
-    if (edgeCell) {
-        edgeCell->setTesselationMode(0);
-    }
-}
-
 // Reimplementation of Widget virtual methods
 
 bool Canvas::onMouseMove(MouseEvent* event) {
@@ -295,22 +214,7 @@ bool Canvas::onMouseMove(MouseEvent* event) {
 
     geometry::Vec2f mousePosf = event->position();
     geometry::Vec2d mousePos = geometry::Vec2d(mousePosf.x(), mousePosf.y());
-    if (isSketching_) {
-        // XXX This is very inefficient (shouldn't use generic 4x4 matrix inversion,
-        // and should be cached), but let's keep it like this for now for testing.
-        geometry::Vec2d viewCoords = mousePos;
-        geometry::Vec2d worldCoords =
-            camera_.viewMatrix().inverted().transformPointAffine(viewCoords);
-        double width = width_(event);
-        continueCurve_(worldCoords, width);
-        minimalLatencyStrokePoints_[0] = minimalLatencyStrokePoints_[1];
-        minimalLatencyStrokeWidths_[0] = minimalLatencyStrokeWidths_[1];
-        minimalLatencyStrokePoints_[1] = worldCoords;
-        minimalLatencyStrokeWidths_[1] = width;
-        minimalLatencyStrokeReload_ = true;
-        return true;
-    }
-    else if (isPanning_) {
+    if (isPanning_) {
         geometry::Vec2d delta = mousePosAtPress_ - mousePos;
         camera_.setCenter(cameraAtPress_.center() + delta);
         requestRepaint();
@@ -368,24 +272,13 @@ bool Canvas::onMousePress(MouseEvent* event) {
     mousePressed_ = true;
     mouseButtonAtPress_ = event->button();
 
-    if (isSketching_ || isPanning_ || isRotating_ || isZooming_) {
+    if (isPanning_ || isRotating_ || isZooming_) {
         return true;
     }
 
     geometry::Vec2f mousePosf = event->position();
     geometry::Vec2d mousePos = geometry::Vec2d(mousePosf.x(), mousePosf.y());
-    if (event->modifierKeys().isEmpty() && event->button() == MouseButton::Left) {
-        isSketching_ = true;
-        // XXX This is very inefficient (shouldn't use generic 4x4 matrix inversion,
-        // and should be cached), but let's keep it like this for now for testing.
-        geometry::Vec2d viewCoords = mousePos;
-        geometry::Vec2d worldCoords =
-            camera_.viewMatrix().inverted().transformPointAffine(viewCoords);
-        startCurve_(worldCoords, width_(event));
-        return true;
-    }
-    else if (
-        event->modifierKeys() == ModifierKey::Alt
+    if (event->modifierKeys() == ModifierKey::Alt
         && event->button() == MouseButton::Left) {
         isRotating_ = true;
         mousePosAtPress_ = mousePos;
@@ -418,41 +311,19 @@ bool Canvas::onMouseRelease(MouseEvent* event) {
         return false;
     }
 
-    if (isSketching_) {
-        workspace::Element* edgeElement = workspace_->find(edge_);
-        auto edgeCell = dynamic_cast<workspace::VacKeyEdge*>(edgeElement);
-        if (edgeCell) {
-            edgeCell->setTesselationMode(requestedTesselationMode_);
-        }
-        requestRepaint();
-    }
-
-    isSketching_ = false;
     isRotating_ = false;
     isPanning_ = false;
     isZooming_ = false;
-
-    if (drawCurveUndoGroup_) {
-        drawCurveUndoGroup_->close();
-        drawCurveUndoGroup_ = nullptr;
-    }
-    endVertex_ = nullptr;
-    edge_ = nullptr;
-    points_.clear();
-    widths_.clear();
-
     mousePressed_ = false;
 
     return true;
 }
 
 bool Canvas::onMouseEnter() {
-    cursorChanger_.set(crossCursor());
     return false;
 }
 
 bool Canvas::onMouseLeave() {
-    cursorChanger_.clear();
     return false;
 }
 
@@ -478,12 +349,10 @@ void Canvas::onPaintCreate(graphics::Engine* engine) {
     createInfo.setFillMode(FillMode::Wireframe);
     wireframeRS_ = engine->createRasterizerState(createInfo);
     bgGeometry_ = engine->createDynamicTriangleStripView(BuiltinGeometryLayout::XYRGB);
-    minimalLatencyStrokeGeometry_ =
-        engine->createDynamicTriangleStripView(BuiltinGeometryLayout::XY_iRGBA);
     reload_ = true;
 }
 
-void Canvas::onPaintDraw(graphics::Engine* engine, PaintOptions /*options*/) {
+void Canvas::onPaintDraw(graphics::Engine* engine, PaintOptions options) {
 
     using namespace graphics;
     namespace gs = graphics::strings;
@@ -553,75 +422,34 @@ void Canvas::onPaintDraw(graphics::Engine* engine, PaintOptions /*options*/) {
         reTesselate = false;
     }
 
-    // Draw temporary tip of curve between mouse event position and actual current cursor
-    // position to reduce visual lag.
-    //
-    if (isSketching_) {
-
-        Window* w = window();
-        bool cursorMoved = false;
-        if (w) {
-            geometry::Vec2f pos(w->mapFromGlobal(globalCursorPosition()));
-            geometry::Vec2d posd(root()->mapTo(this, pos));
-            pos = geometry::Vec2f(
-                camera_.viewMatrix().inverted().transformPointAffine(posd));
-            if (lastImmediateCursorPos_ != pos) {
-                lastImmediateCursorPos_ = pos;
-                cursorMoved = true;
-                minimalLatencyStrokePoints_[2] = geometry::Vec2d(pos);
-                minimalLatencyStrokeWidths_[2] = minimalLatencyStrokeWidths_[1] * 0.5;
-            }
-        }
-
-        if (cursorMoved || minimalLatencyStrokeReload_) {
-
-            //core::Color color(1.f, 0.f, 0.f, 1.f);
-            core::Color color = currentColor_;
-            geometry::Vec2fArray strokeVertices;
-
-            geometry::Curve curve;
-            curve.setPositions(minimalLatencyStrokePoints_);
-            curve.setWidths(minimalLatencyStrokeWidths_);
-
-            geometry::CurveSamplingParameters samplingParams = {};
-            samplingParams.setMaxAngle(0.05);
-            samplingParams.setMinIntraSegmentSamples(10);
-            samplingParams.setMaxIntraSegmentSamples(20);
-            geometry::CurveSampleArray csa;
-            curve.sampleRange(samplingParams, csa, 1);
-
-            for (const geometry::CurveSample& s : csa) {
-                geometry::Vec2d p0 = s.leftPoint();
-                strokeVertices.emplaceLast(geometry::Vec2f(p0));
-                geometry::Vec2d p1 = s.rightPoint();
-                strokeVertices.emplaceLast(geometry::Vec2f(p1));
-            }
-
-            engine->updateBufferData(
-                minimalLatencyStrokeGeometry_->vertexBuffer(0), //
-                std::move(strokeVertices));
-
-            engine->updateBufferData(
-                minimalLatencyStrokeGeometry_->vertexBuffer(1), //
-                core::Array<float>({color.r(), color.g(), color.b(), color.a()}));
-
-            minimalLatencyStrokeReload_ = false;
-        }
-
-        engine->setProgram(graphics::BuiltinProgram::Simple);
-        engine->draw(minimalLatencyStrokeGeometry_);
-    }
-
     engine->popViewMatrix();
     engine->popPipelineParameters(modifiedParameters);
 
     drawTask_.stop();
+
+    for (Widget* widget : children()) {
+        if (!widget->isVisible()) {
+            continue;
+        }
+        engine->pushViewMatrix();
+        geometry::Mat4f m = engine->viewMatrix();
+        m.translate(widget->position());
+        engine->setViewMatrix(m);
+        widget->paint(engine, options);
+        engine->popViewMatrix();
+    }
 }
 
 void Canvas::onPaintDestroy(graphics::Engine*) {
     bgGeometry_.reset();
     fillRS_.reset();
     wireframeRS_.reset();
+}
+
+void Canvas::updateChildrenGeometry() {
+    for (auto c : children()) {
+        c->updateGeometry(rect());
+    }
 }
 
 } // namespace vgc::ui

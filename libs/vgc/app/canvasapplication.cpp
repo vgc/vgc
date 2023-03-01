@@ -505,7 +505,7 @@ void CanvasApplication::createColorPalette_(ui::Widget* parent) {
 
 void CanvasApplication::onColorChanged_() {
     if (canvas_ && palette_) {
-        canvas_->setCurrentColor(palette_->selectedColor());
+        tool_->setPenColor(palette_->selectedColor());
     }
 }
 
@@ -514,6 +514,7 @@ void CanvasApplication::createCanvas_(
     workspace::Workspace* workspace) {
 
     canvas_ = parent->createChild<ui::Canvas>(workspace);
+    tool_ = canvas_->createChild<ui::SketchTool>();
     onColorChanged_();
     if (palette_) {
         palette_->colorSelected().connect(onColorChangedSlot_());
