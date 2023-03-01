@@ -51,7 +51,23 @@ VacKeyEdge::~VacKeyEdge() {
 }
 
 geometry::Rect2d VacKeyEdge::boundingBox(core::AnimTime /*t*/) const {
-    return geometry::Rect2d::empty;
+    return bbox_;
+}
+
+bool VacKeyEdge::isSelectableAt(const geometry::Vec2d& pos, double tol, core::AnimTime t)
+    const {
+
+    VacEdgeCellFrameData* data = frameData(t);
+    if (data && bbox_.contains(pos)) {
+        for (const auto& sample : data->samples_) {
+            double width = (std::max)(sample.leftHalfwidth(), sample.rightHalfwidth());
+            double d = (width + tol);
+            if ((pos - sample.position()).squaredLength() < (d * d)) {
+                return true;
+            }
+        }
+    }
+    return false;
 }
 
 ElementStatus VacKeyEdge::updateFromDom_(Workspace* workspace) {
@@ -221,14 +237,6 @@ void VacKeyEdge::paint_(graphics::Engine* engine, core::AnimTime t, PaintOptions
         graphics.joinGeometry_ = engine->createDynamicTriangleStripView(
             BuiltinGeometryLayout::XY_iRGBA, IndexFormat::UInt32);
 
-        GeometryViewCreateInfo createInfo = {};
-        createInfo.setBuiltinGeometryLayout(BuiltinGeometryLayout::XY_iRGBA);
-        createInfo.setPrimitiveType(PrimitiveType::TriangleStrip);
-        createInfo.setVertexBuffer(0, graphics.strokeGeometry_->vertexBuffer(0));
-        BufferPtr selectionInstanceBuffer = engine->createVertexBuffer(Int(4) * 4);
-        createInfo.setVertexBuffer(1, selectionInstanceBuffer);
-        graphics.selectionGeometry_ = engine->createGeometryView(createInfo);
-
         core::Color color = domElement->getAttribute(ds::color).getColor();
 
         geometry::Vec2fArray strokeVertices;
@@ -328,18 +336,22 @@ void VacKeyEdge::paint_(graphics::Engine* engine, core::AnimTime t, PaintOptions
         engine->updateBufferData(
             graphics.joinGeometry_->indexBuffer(), //
             std::move(joinIndices));
-
-        engine->updateBufferData(
-            selectionInstanceBuffer, //
-            core::Array<float>(
-                {1.0f - color.r(), 1.0f - color.g(), 1.0f - color.b(), 1.0f}));
     }
 
-    constexpr PaintOptions centerlineOptions = {PaintOption::Outline};
+    constexpr PaintOptions centerlineOptions = {
+        PaintOption::Outline, PaintOption::Selected};
 
     if (flags.hasAny(centerlineOptions) && !graphics.centerlineGeometry_) {
         graphics.centerlineGeometry_ = engine->createDynamicTriangleStripView(
             BuiltinGeometryLayout::XYDxDy_iXYRotWRGBA);
+
+        GeometryViewCreateInfo createInfo = {};
+        createInfo.setBuiltinGeometryLayout(BuiltinGeometryLayout::XYDxDy_iXYRotWRGBA);
+        createInfo.setPrimitiveType(PrimitiveType::TriangleStrip);
+        createInfo.setVertexBuffer(0, graphics.centerlineGeometry_->vertexBuffer(0));
+        BufferPtr selectionInstanceBuffer = engine->createVertexBuffer(0);
+        createInfo.setVertexBuffer(1, selectionInstanceBuffer);
+        graphics.selectionGeometry_ = engine->createGeometryView(createInfo);
 
         core::FloatArray lineInstData;
         lineInstData.extend({0.f, 0.f, 1.f, 2.f, 0.02f, 0.64f, 1.0f, 1.f});
@@ -358,6 +370,23 @@ void VacKeyEdge::paint_(graphics::Engine* engine, core::AnimTime t, PaintOptions
             graphics.centerlineGeometry_->vertexBuffer(0), std::move(lineVertices));
         engine->updateBufferData(
             graphics.centerlineGeometry_->vertexBuffer(1), std::move(lineInstData));
+
+        core::Color color = domElement->getAttribute(ds::color).getColor();
+
+        core::FloatArray selectionInstData;
+        selectionInstData.extend(
+            {0.f,
+             0.f,
+             1.f,
+             1.f,
+             std::round(1.0f - color.r()),
+             std::round(1.0f - color.g()),
+             std::round(1.0f - color.b()),
+             1.f});
+
+        engine->updateBufferData(
+            selectionInstanceBuffer, //
+            std::move(selectionInstData));
     }
 
     constexpr PaintOptions pointsOptions = {PaintOption::Outline};
@@ -401,7 +430,7 @@ void VacKeyEdge::paint_(graphics::Engine* engine, core::AnimTime t, PaintOptions
     }
 
     if (flags.has(PaintOption::Selected)) {
-        engine->setProgram(graphics::BuiltinProgram::Simple);
+        engine->setProgram(graphics::BuiltinProgram::SreenSpaceDisplacement);
         engine->draw(graphics.selectionGeometry_);
     }
     else if (!flags.has(PaintOption::Outline)) {
@@ -473,6 +502,11 @@ void VacKeyEdge::computeStandaloneGeometry(VacEdgeCellFrameData& data) {
         samplingParams.setMinIntraSegmentSamples(minQuads - 1);
         samplingParams.setMaxIntraSegmentSamples(maxQuads - 1);
         curve.sampleRange(samplingParams, data.samples_);
+
+        bbox_ = geometry::Rect2d::empty;
+        for (auto sample : data.samples_) {
+            bbox_.uniteWith(sample.position());
+        }
     }
     else {
         data.triangulation_ = curve.triangulate(maxAngle, 1, 64);
@@ -522,6 +556,7 @@ void VacKeyEdge::computeGeometry(VacEdgeCellFrameData& data) {
 
 void VacKeyEdge::onInputGeometryChanged() {
     frameData_.clear();
+    bbox_ = geometry::Rect2d::empty;
     for (VertexInfo& vi : verticesInfo_) {
         if (vi.element) {
             vi.element->onJoinEdgeGeometryChanged_(this);

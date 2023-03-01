@@ -225,6 +225,9 @@ public:
 
     virtual geometry::Rect2d boundingBox(core::AnimTime t = {}) const;
 
+    virtual bool
+    isSelectableAt(const geometry::Vec2d& pos, double tol, core::AnimTime t = {}) const;
+
 protected:
     virtual ElementStatus updateFromDom_(Workspace* workspace);
 

@@ -78,12 +78,6 @@ Canvas::Canvas(workspace::Workspace* workspace)
     addStyleClass(strings::Canvas);
 }
 
-SelectionList Canvas::getSelectableItemsAt(const geometry::Vec2f& /*position*/) {
-    SelectionList l = {};
-
-    return l;
-}
-
 void Canvas::setWorkspace(workspace::Workspace* workspace) {
 
     if (workspace_) {
@@ -97,6 +91,7 @@ void Canvas::setWorkspace(workspace::Workspace* workspace) {
         workspace_->changed().connect(onWorkspaceChanged());
         // XXX to remove
         workspace_->document()->changed().connect(onDocumentChanged());
+        onWorkspaceChanged_();
     }
 
     requestRepaint();
@@ -140,6 +135,9 @@ bool Canvas::onKeyPress(KeyEvent* event) {
 }
 
 void Canvas::onWorkspaceChanged_() {
+
+    selectionCandidateElements_.clear();
+    selectedElementId_ = 0;
 
     // ask for redraw
     requestRepaint();
@@ -248,6 +246,42 @@ bool Canvas::onMousePress(MouseEvent* event) {
         isZooming_ = true;
         mousePosAtPress_ = mousePos;
         cameraAtPress_ = camera_;
+        return true;
+    }
+    else if (
+        event->modifierKeys() == ModifierKey::Ctrl
+        && event->button() == MouseButton::Left) {
+        if (mousePosAtPress_ != mousePos) {
+            mousePosAtPress_ = mousePos;
+            selectionCandidateElements_.clear();
+            selectedElementId_ = 0;
+
+            geometry::Vec2d viewCoords = mousePos;
+            geometry::Vec2d worldCoords =
+                camera_.viewMatrix().inverted().transformPointAffine(viewCoords);
+            double tol = 10.0 / camera_.zoom();
+
+            if (workspace_) {
+                workspace_->visitDepthFirst(
+                    [](workspace::Element*, Int) { return true; },
+                    [&, tol, worldCoords](workspace::Element* e, Int /*depth*/) {
+                        if (!e) {
+                            return;
+                        }
+                        if (e->isSelectableAt(worldCoords, tol)) {
+                            selectionCandidateElements_.append(e);
+                        }
+                    });
+                std::reverse(
+                    selectionCandidateElements_.begin(),
+                    selectionCandidateElements_.end());
+            }
+        }
+        else if (!selectionCandidateElements_.isEmpty()) {
+            selectedElementId_ =
+                (selectedElementId_ + 1) % selectionCandidateElements_.size();
+        }
+        requestRepaint();
         return true;
     }
 
@@ -369,6 +403,11 @@ void Canvas::onPaintDraw(graphics::Engine* engine, PaintOptions /*options*/) {
                 }
             });
         reTesselate = false;
+    }
+
+    if (selectionCandidateElements_.size()) {
+        workspace::Element* e = selectionCandidateElements_[selectedElementId_];
+        e->paint(engine, {}, workspace::PaintOption::Selected);
     }
 
     engine->popViewMatrix();
