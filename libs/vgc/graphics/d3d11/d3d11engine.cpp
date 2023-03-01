@@ -65,8 +65,8 @@ struct Vertex_XYRGBA {
     float x, y, r, g, b, a;
 };
 
-struct Vertex_XYRotRGBA {
-    float x, y, rot, r, g, b, a;
+struct Vertex_XYRotWRGBA {
+    float x, y, rot, offset, r, g, b, a;
 };
 
 struct Vertex_XYUVRGBA {
@@ -991,24 +991,26 @@ void D3d11Engine::createBuiltinShaders_() {
             vertexShader.releaseAndGetAddressOf());
         program->vertexShader_ = vertexShader;
 
-        // Create Input Layout for XYDxDy_iXYRotRGBA
+        // Create Input Layout for XYDxDy_iXYRotWRGBA
         {
             ComPtr<ID3D11InputLayout> inputLayout;
             UINT dxOffset = static_cast<UINT>(offsetof(Vertex_XYDxDy, dx));
-            UINT rOffset = static_cast<UINT>(offsetof(Vertex_XYRotRGBA, r));
+            UINT oOffset = static_cast<UINT>(offsetof(Vertex_XYRotWRGBA, offset));
+            UINT rOffset = static_cast<UINT>(offsetof(Vertex_XYRotWRGBA, r));
             D3D11_INPUT_ELEMENT_DESC layout[] = {
                 {"POSITION",     0, DXGI_FORMAT_R32G32_FLOAT,       0, 0,        D3D11_INPUT_PER_VERTEX_DATA,   0},
                 {"DISPLACEMENT", 0, DXGI_FORMAT_R32G32_FLOAT,       0, dxOffset, D3D11_INPUT_PER_VERTEX_DATA,   0},
                 {"POSITION",     1, DXGI_FORMAT_R32G32B32_FLOAT,    1, 0,        D3D11_INPUT_PER_INSTANCE_DATA, 1},
+                {"OFFSET",       0, DXGI_FORMAT_R32_FLOAT,          1, oOffset,  D3D11_INPUT_PER_INSTANCE_DATA, 1},
                 {"COLOR",        0, DXGI_FORMAT_R32G32B32A32_FLOAT, 1, rOffset,  D3D11_INPUT_PER_INSTANCE_DATA, 1},
             };
             device_->CreateInputLayout(
-                layout, 4,
+                layout, 5,
                 vertexShaderBlob->GetBufferPointer(),
                 vertexShaderBlob->GetBufferSize(),
                 inputLayout.releaseAndGetAddressOf());
 
-            constexpr Int8 layoutIndex = core::toUnderlying(BuiltinGeometryLayout::XYDxDy_iXYRotRGBA);
+            constexpr Int8 layoutIndex = core::toUnderlying(BuiltinGeometryLayout::XYDxDy_iXYRotWRGBA);
             program->builtinLayouts_[layoutIndex] = inputLayout;
         }
     }

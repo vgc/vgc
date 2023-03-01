@@ -46,12 +46,12 @@ void VacVertexCellFrameData::debugPaint(graphics::Engine* engine) {
 
     if (!debugLinesRenderGeometry_ && halfedgesData_.length()) {
         debugLinesRenderGeometry_ = engine->createDynamicTriangleStripView(
-            BuiltinGeometryLayout::XYDxDy_iXYRotRGBA, IndexFormat::UInt16);
+            BuiltinGeometryLayout::XYDxDy_iXYRotWRGBA, IndexFormat::UInt16);
 
         core::FloatArray lineInstData;
-        lineInstData.extend({0.f, 0.f, 1.f, 0.64f, 0.02f, 1.0f, 1.f, 0.f /*padding*/});
+        lineInstData.extend(
+            {0.f, 0.f, 1.f, 1.5f, 0.64f, 0.02f, 1.0f, 1.f});
 
-        float lineHalfWidth = 1.5f;
         float lineLength = 100.f;
 
         geometry::Vec4fArray lineVertices;
@@ -72,14 +72,14 @@ void VacVertexCellFrameData::debugPaint(graphics::Engine* engine) {
             geometry::Vec2f d(
                 static_cast<float>(std::cos(midAngle)),
                 static_cast<float>(std::sin(midAngle)));
-            geometry::Vec2f n = d.orthogonalized() * lineHalfWidth;
+            geometry::Vec2f n = d.orthogonalized();
             d *= lineLength;
             // clang-format off
             Int i = lineVertices.length();
-            lineVertices.emplaceLast(p.x(), p.y(), -n.x(), -n.y());
-            lineVertices.emplaceLast(p.x(), p.y(), n.x(), n.y());
+            lineVertices.emplaceLast(p.x(), p.y(), -n.x()        , -n.y()        );
+            lineVertices.emplaceLast(p.x(), p.y(),  n.x()        ,  n.y()        );
             lineVertices.emplaceLast(p.x(), p.y(), -n.x() + d.x(), -n.y() + d.y());
-            lineVertices.emplaceLast(p.x(), p.y(), n.x() + d.x(), n.y() + d.y());
+            lineVertices.emplaceLast(p.x(), p.y(),  n.x() + d.x(),  n.y() + d.y());
             lineIndices.extend(
                 {static_cast<UInt16>(i),
                 static_cast<UInt16>(i + 1),
