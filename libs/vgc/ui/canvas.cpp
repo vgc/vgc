@@ -125,6 +125,57 @@ bool Canvas::onKeyPress(KeyEvent* event) {
         showControlPoints_ = !showControlPoints_;
         requestRepaint();
         break;
+    case Key::Delete:
+        if (selectionCandidateElements_.size()) {
+            workspace::Element* e = selectionCandidateElements_[selectedElementId_];
+            // notes: vac elements have raw and smart delete, non-vac elements may have the same
+            // so it would be best to have the delete method virtual in workspace::Element.
+            // for now, edges have no dependents so we use the dom to remove them (moreover, the workspace
+            // update from vac is not implemented).
+            static core::StringId Delete_Element("Delete Element");
+            core::UndoGroup* undoGroup = nullptr;
+            core::History* history = workspace_->history();
+            if (history) {
+                undoGroup = history->createUndoGroup(Delete_Element);
+            }
+
+            // temporary impl
+            auto de = e->domElement();
+            if (de) {
+                de->remove();
+            }
+            auto vacNode = e->vacNode();
+            if (vacNode) {
+                auto cell = vacNode->toCell();
+                if (cell) {
+                    auto keyEdge = cell->toKeyEdge();
+                    if (keyEdge) {
+                        auto v0 = keyEdge->startVertex();
+                        if (v0 && v0->star().length() == 1) {
+                            auto e0 = workspace_->find(v0->id());
+                            de = e0->domElement();
+                            if (de) {
+                                de->remove();
+                            }
+                        }
+                        auto v1 = keyEdge->endVertex();
+                        if (v1 && v1->star().length() == 1) {
+                            auto e1 = workspace_->find(v1->id());
+                            de = e1->domElement();
+                            if (de) {
+                                de->remove();
+                            }
+                        }
+                    }
+                }
+            }
+
+            workspace_->sync();
+            if (undoGroup) {
+                undoGroup->close();
+            }
+        }
+        break;
     default:
         return false;
     }
