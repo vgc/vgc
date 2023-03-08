@@ -23,6 +23,8 @@ jobs:
         apt install -y libharfbuzz-dev
         apt install -y libgl1-mesa-dev    # For QtGui
         apt install -y libxkbcommon-x11-0 # For Qt plugins/platforms/libqxcb.so
+        apt install -y libfontconfig1     # For Qt plugins/platforms/libqxcb.so
+        apt install -y libxrender1        # For Qt plugins/platforms/libqxcb.so
 
     - name: Install and Configure Recent Git
       run: |
@@ -143,4 +145,6 @@ jobs:
       working-directory: ${{github.workspace}}/build
       env:
         VGC_GITHUB_KEY: ${{secrets.VGC_GITHUB_KEY}}
-      run: cmake --build . --target deploy --parallel $PARALLEL_JOBS
+      run: |
+        export APPIMAGE_EXTRACT_AND_RUN=1 # Needed for running AppImages within Docker containers
+        cmake --build . --target deploy --parallel $PARALLEL_JOBS
