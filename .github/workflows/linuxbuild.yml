@@ -7,21 +7,51 @@ env:
   QT_VERSION: 5.12.5
   PYTHON_VERSION: 3.7
   PARALLEL_JOBS: 5
-  CC: gcc-7
-  CXX: g++-7
-
-defaults:
-  run:
-    shell: bash
 
 jobs:
   build:
-    runs-on: ubuntu-18.04
+    runs-on: ubuntu-latest
+    container: ubuntu:18.04
 
     steps:
+
+    - name: Install Ubuntu-provided dependencies
+      run: |
+        apt update
+        apt install -y gpg wget software-properties-common build-essential
+        apt install -y libfreetype6-dev
+        apt install -y libharfbuzz-dev
+        apt install -y libgl1-mesa-dev    # For QtGui
+        apt install -y libxkbcommon-x11-0 # For Qt plugins/platforms/libqxcb.so
+        apt install -y libfontconfig1     # For Qt plugins/platforms/libqxcb.so
+        apt install -y libxrender1        # For Qt plugins/platforms/libqxcb.so
+
+    - name: Install and Configure Recent Git
+      run: |
+        add-apt-repository ppa:git-core/ppa
+        apt install -y git
+        git config --global --add safe.directory `pwd` # Fix "fatal: detected dubious ownership in repository at '/__w/<user>/<repo>'""
+
+    # See documentation at:
+    # - https://apt.kitware.com/
+    # - https://askubuntu.com/questions/355565/how-do-i-install-the-latest-version-of-cmake-from-the-command-line
+    #
+    - name: Install Recent CMake
+      run: |
+        wget -O - https://apt.kitware.com/keys/kitware-archive-latest.asc 2>/dev/null | gpg --dearmor - | tee /etc/apt/trusted.gpg.d/kitware.gpg >/dev/null
+        apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 6AF7F09730B3F0A4
+        apt-add-repository "deb https://apt.kitware.com/ubuntu/ bionic main"
+        apt install -y cmake
+
+    # By default, actions/checkout will only check out the last commit. For
+    # pull requests, this is a temporary merge commit used to test integration
+    # against the master branch. Therefore, in order to get the actual commit
+    # message we are interested in, we need to fetch more than one commit.
+    # Getting more commits can also be helpful for computing human-readable
+    # commit ID, such as 2020-12-16.3 for the 4th commit of the day.
+    #
     - uses: actions/checkout@v2
       with:
-        # We need to fetch more than one commit to get the correct build name
         fetch-depth: 100
         submodules: 'recursive'
 
@@ -31,6 +61,7 @@ jobs:
     # In case of a push event, the commit we care about is simply HEAD.
     # The current branch name can be found by parsing GITHUB_REF, for example,
     # if we are on the master branch, then GITHUB_REF = refs/heads/master.
+    #
     - name: Get commit branch and commit message
       if: github.event_name == 'push'
       run: |
@@ -42,6 +73,7 @@ jobs:
     # In case of a pull_request event, the commit we care about is HEAD^2, that
     # is, the second parent of the pull request merge commit.
     # The current branch name is directly given by GITHUB_HEAD_REF
+    #
     - name: Get commit branch and commit message
       if: github.event_name == 'pull_request'
       run: |
@@ -51,6 +83,13 @@ jobs:
         echo "EOF" >> $GITHUB_ENV
 
     # https://docs.github.com/en/free-pro-team@latest/actions/reference/environment-variables
+    #
+    # Note: in a Docker container, we have:
+    # - ${{github.workspace}} = /home/runner/work/test-cpp-github-actions/test-cpp-github-actions
+    # - $GITHUB_WORKSPACE     = /__w/test-cpp-github-actions/test-cpp-github-actions
+    #
+    # It's best to use ${{github.workspace}} in `working-directory`, and $GITHUB_WORKSPACE in `run`
+    #
     - name: Print useful environment variables
       if:
       run: |
@@ -74,44 +113,38 @@ jobs:
         echo "COMMIT_BRANCH:        $COMMIT_BRANCH"
         echo "COMMIT_MESSAGE:       $COMMIT_MESSAGE"
 
-    - name: Setup Python
-      uses: actions/setup-python@v2
-      with:
-        python-version: ${{env.PYTHON_VERSION}}
-        architecture: 'x64'
-
-    - name: Install most dependencies
-      working-directory: ${{runner.workspace}}
+    - name: Install Python
       run: |
-        sudo apt-get install -y libgl1-mesa-dev
-        sudo apt-get install -y libxkbcommon-x11-0 # For Qt plugins/platforms/libqxcb.so
-        sudo apt-get install -y libfreetype6-dev
-        sudo apt-get install -y libharfbuzz-dev
+        add-apt-repository ppa:deadsnakes/ppa && \
+        apt install -y python${PYTHON_VERSION} python${PYTHON_VERSION}-dev python${PYTHON_VERSION}-distutils && \
+        update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.6 1 && \
+        update-alternatives --install /usr/bin/python3 python3 /usr/bin/python${PYTHON_VERSION} 2
 
     - name: Install Qt
-      working-directory: ${{runner.workspace}}
       run: |
         wget --progress=dot:giga https://www.vgc.io/releases/qt/opt-qt-$QT_VERSION-gcc_64.tar.gz
-        tar -xzf opt-qt-$QT_VERSION-gcc_64.tar.gz -C ${{runner.workspace}}
+        tar -xzf opt-qt-$QT_VERSION-gcc_64.tar.gz -C "$GITHUB_WORKSPACE"
 
     - name: Configure
-      working-directory: ${{runner.workspace}}
+      working-directory: ${{github.workspace}}
       run: |
         mkdir build
         cd build
         cmake --version
-        cmake "$GITHUB_WORKSPACE" -DCMAKE_BUILD_TYPE="$BUILD_TYPE" -DVGC_COMMIT_BRANCH="$COMMIT_BRANCH" -DPython_ROOT_DIR="$pythonLocation" -DQt5_DIR="${{runner.workspace}}/qt/$QT_VERSION/gcc_64/lib/cmake/Qt5" -DVGC_PEDANTIC=ON -DVGC_WERROR=ON
+        cmake .. -DCMAKE_BUILD_TYPE="$BUILD_TYPE" -DVGC_COMMIT_BRANCH="$COMMIT_BRANCH" -DQt5_DIR="$GITHUB_WORKSPACE/qt/$QT_VERSION/gcc_64/lib/cmake/Qt5" -DVGC_PEDANTIC=ON -DVGC_WERROR=ON
 
     - name: Build
-      working-directory: ${{runner.workspace}}/build
+      working-directory: ${{github.workspace}}/build
       run: cmake --build . --parallel $PARALLEL_JOBS
 
     - name: Test
-      working-directory: ${{runner.workspace}}/build
+      working-directory: ${{github.workspace}}/build
       run: cmake --build . --target check --parallel $PARALLEL_JOBS
 
     - name: Deploy
-      working-directory: ${{runner.workspace}}/build
+      working-directory: ${{github.workspace}}/build
       env:
         VGC_GITHUB_KEY: ${{secrets.VGC_GITHUB_KEY}}
-      run: cmake --build . --target deploy --parallel $PARALLEL_JOBS
+      run: |
+        export APPIMAGE_EXTRACT_AND_RUN=1 # Needed for running AppImages within Docker containers
+        cmake --build . --target deploy --parallel $PARALLEL_JOBS
