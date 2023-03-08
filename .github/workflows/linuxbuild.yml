@@ -5,43 +5,19 @@ on: [push, pull_request]
 env:
   BUILD_TYPE: Release
   QT_VERSION: 5.12.5
-  PYTHON_VERSION: 3.7
   PARALLEL_JOBS: 5
 
 jobs:
   build:
     runs-on: ubuntu-latest
-    container: ubuntu:18.04
+    container: vgcsoftware/vgc-ci-ubuntu-18.04:2023-03-08.0
 
     steps:
 
-    - name: Install Ubuntu-provided dependencies
-      run: |
-        apt update
-        apt install -y gpg wget software-properties-common build-essential
-        apt install -y libfreetype6-dev
-        apt install -y libharfbuzz-dev
-        apt install -y libgl1-mesa-dev    # For QtGui
-        apt install -y libxkbcommon-x11-0 # For Qt plugins/platforms/libqxcb.so
-        apt install -y libfontconfig1     # For Qt plugins/platforms/libqxcb.so
-        apt install -y libxrender1        # For Qt plugins/platforms/libqxcb.so
-
-    - name: Install and Configure Recent Git
-      run: |
-        add-apt-repository ppa:git-core/ppa
-        apt install -y git
-        git config --global --add safe.directory `pwd` # Fix "fatal: detected dubious ownership in repository at '/__w/<user>/<repo>'""
-
-    # See documentation at:
-    # - https://apt.kitware.com/
-    # - https://askubuntu.com/questions/355565/how-do-i-install-the-latest-version-of-cmake-from-the-command-line
+    # Fix "fatal: detected dubious ownership in repository at '/__w/<user>/<repo>'""
     #
-    - name: Install Recent CMake
-      run: |
-        wget -O - https://apt.kitware.com/keys/kitware-archive-latest.asc 2>/dev/null | gpg --dearmor - | tee /etc/apt/trusted.gpg.d/kitware.gpg >/dev/null
-        apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 6AF7F09730B3F0A4
-        apt-add-repository "deb https://apt.kitware.com/ubuntu/ bionic main"
-        apt install -y cmake
+    - name: Add GitHub workspace to Git safe directories
+      run: git config --global --add safe.directory `pwd`
 
     # By default, actions/checkout will only check out the last commit. For
     # pull requests, this is a temporary merge commit used to test integration
@@ -113,25 +89,13 @@ jobs:
         echo "COMMIT_BRANCH:        $COMMIT_BRANCH"
         echo "COMMIT_MESSAGE:       $COMMIT_MESSAGE"
 
-    - name: Install Python
-      run: |
-        add-apt-repository ppa:deadsnakes/ppa && \
-        apt install -y python${PYTHON_VERSION} python${PYTHON_VERSION}-dev python${PYTHON_VERSION}-distutils && \
-        update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.6 1 && \
-        update-alternatives --install /usr/bin/python3 python3 /usr/bin/python${PYTHON_VERSION} 2
-
-    - name: Install Qt
-      run: |
-        wget --progress=dot:giga https://www.vgc.io/releases/qt/opt-qt-$QT_VERSION-gcc_64.tar.gz
-        tar -xzf opt-qt-$QT_VERSION-gcc_64.tar.gz -C "$GITHUB_WORKSPACE"
-
     - name: Configure
       working-directory: ${{github.workspace}}
       run: |
         mkdir build
         cd build
         cmake --version
-        cmake .. -DCMAKE_BUILD_TYPE="$BUILD_TYPE" -DVGC_COMMIT_BRANCH="$COMMIT_BRANCH" -DQt5_DIR="$GITHUB_WORKSPACE/qt/$QT_VERSION/gcc_64/lib/cmake/Qt5" -DVGC_PEDANTIC=ON -DVGC_WERROR=ON
+        cmake .. -DCMAKE_BUILD_TYPE="$BUILD_TYPE" -DVGC_COMMIT_BRANCH="$COMMIT_BRANCH" -DQt5_DIR="/opt/qt/$QT_VERSION/gcc_64/lib/cmake/Qt5" -DVGC_PEDANTIC=ON -DVGC_WERROR=ON
 
     - name: Build
       working-directory: ${{github.workspace}}/build
@@ -146,5 +110,4 @@ jobs:
       env:
         VGC_GITHUB_KEY: ${{secrets.VGC_GITHUB_KEY}}
       run: |
-        export APPIMAGE_EXTRACT_AND_RUN=1 # Needed for running AppImages within Docker containers
         cmake --build . --target deploy --parallel $PARALLEL_JOBS
