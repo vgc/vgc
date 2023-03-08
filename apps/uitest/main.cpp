@@ -87,7 +87,6 @@ private:
         Menu* menu1 = testMenu_->createSubMenu("Menu 1");
         Menu* menu2 = testMenu_->createSubMenu("Menu 2");
         Menu* menu3 = testMenu_->createSubMenu("Menu 3");
-        Menu* menu4 = testMenu_->createSubMenu("Menu 4");
 
         menu1->addItem(parent->createAction("Action #1.1", Shortcut({}, Key::G)));
         menu1->addItem(
@@ -233,7 +232,6 @@ private:
     }
 
     void createNumberEdits_(ui::Widget* parent) {
-
         ui::NumberEdit* numberEdit = parent->createChild<ui::NumberEdit>();
         numberEdit->setValue(0);
     }
