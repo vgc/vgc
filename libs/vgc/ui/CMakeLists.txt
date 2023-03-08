@@ -32,6 +32,7 @@ vgc_add_library(ui
         menubutton.h
         modifierkey.h
         mouseevent.h
+        numberedit.h
         overlayarea.h
         panel.h
         panelarea.h
@@ -59,6 +60,7 @@ vgc_add_library(ui
         cursor.cpp
         event.cpp
         exceptions.cpp
+        numberedit.cpp
         flex.cpp
         grid.cpp
         imagebox.cpp

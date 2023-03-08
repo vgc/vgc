@@ -36,6 +36,7 @@ VGC_UI_API extern const core::StringId LineEdit;
 VGC_UI_API extern const core::StringId Menu;
 VGC_UI_API extern const core::StringId MenuBar;
 VGC_UI_API extern const core::StringId MenuButton;
+VGC_UI_API extern const core::StringId NumberEdit;
 VGC_UI_API extern const core::StringId Panel;
 VGC_UI_API extern const core::StringId PanelArea;
 VGC_UI_API extern const core::StringId Plot2d;

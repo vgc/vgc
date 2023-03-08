@@ -21,6 +21,7 @@
 #include <vgc/ui/grid.h>
 #include <vgc/ui/imagebox.h>
 #include <vgc/ui/lineedit.h>
+#include <vgc/ui/numberedit.h>
 #include <vgc/ui/overlayarea.h>
 #include <vgc/ui/plot2d.h>
 #include <vgc/ui/row.h>
@@ -133,6 +134,7 @@ private:
         createGrid_(rightBottomPanel);
         createClickMePopups_(rightBottomPanel);
         createLineEdits_(rightBottomPanel);
+        createNumberEdits_(rightBottomPanel);
         createImageBox_(rightBottomPanel);
     }
 
@@ -227,6 +229,11 @@ private:
                 lineEdit->setText(std::string_view(lipsum).substr(begin, count));
             }
         }
+    }
+
+    void createNumberEdits_(ui::Widget* parent) {
+        ui::NumberEdit* numberEdit = parent->createChild<ui::NumberEdit>();
+        numberEdit->setValue(0);
     }
 
     void createClickMePopups_(ui::Widget* parent) {
