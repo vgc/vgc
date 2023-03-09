@@ -266,7 +266,7 @@ private:
     }
 
     void createImageBox_(ui::Widget* parent) {
-        std::string imagePath = core::resourcePath("apps/illustration/icons/512.png");
+        std::string imagePath = core::resourcePath("apps/uitest/icons/512.png");
         parent->createChild<ui::ImageBox>(imagePath);
     }
 };
