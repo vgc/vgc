@@ -49,8 +49,7 @@ void VacVertexCellFrameData::debugPaint(graphics::Engine* engine) {
             BuiltinGeometryLayout::XYDxDy_iXYRotWRGBA, IndexFormat::UInt16);
 
         core::FloatArray lineInstData;
-        lineInstData.extend(
-            {0.f, 0.f, 1.f, 1.5f, 0.64f, 0.02f, 1.0f, 1.f});
+        lineInstData.extend({0.f, 0.f, 1.f, 1.5f, 0.64f, 0.02f, 1.0f, 1.f});
 
         float lineLength = 100.f;
 
