@@ -56,6 +56,10 @@ public:
     ///
     void setValue(double value);
 
+    /// This signal is emitted whenever `value()` changes.
+    ///
+    VGC_SIGNAL(valueChanged, (double, value))
+
     /// Returns by how much should the value change when increasing it by one
     /// "step" (e.g., dragging by a few pixels, using the mouse wheel, clicking
     /// on the up arrow, etc.).
@@ -146,7 +150,7 @@ private:
     bool isDragEpsilonReached_ = false;
     bool skipNextMouseMove_ = false;
     geometry::Vec2f mousePositionOnMousePress_;
-    float deltaPositionX_ = 0;
+    float deltaPositionX_ = 0; // in device-independent pixels
 
     // Text mode
     void setTextFromValue_();

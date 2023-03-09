@@ -36,54 +36,66 @@ NumberEditPtr NumberEdit::create() {
 }
 
 void NumberEdit::setValue(double value) {
-    if (value_ != value) {
-        double newValue = clampedAndRoundedValue_(value);
-        if (value_ != newValue) {
-            value_ = newValue;
-            setTextFromValue_();
-        }
+
+    // Set new value
+    if (value_ == value) {
+        return;
     }
+    double newValue = clampedAndRoundedValue_(value);
+    if (value_ == newValue) {
+        return;
+    }
+    value_ = newValue;
+
+    // Update text and emit signal
+    setTextFromValue_();
+    valueChanged().emit(value_);
 }
 
 void NumberEdit::setStep(double step) {
-    if (step_ != step) {
-        step_ = step;
-    }
+    step_ = step;
 }
 
 void NumberEdit::setMinimum(double min) {
 
-    if (minimum_ != min) {
-        double newMin = roundedValue_(min);
-        if (minimum_ != newMin) {
-            minimum_ = newMin;
-
-            // Ensure range is valid (min <= max)
-            if (maximum_ < minimum_) {
-                setMaximum(minimum_);
-            }
-
-            // Fit value in new range
-            setValue(value_);
-        }
+    // Set new minimum
+    if (minimum_ == min) {
+        return;
     }
+    double newMin = roundedValue_(min);
+    if (minimum_ == newMin) {
+        return;
+    }
+    minimum_ = newMin;
+
+    // Ensure range is valid (min <= max)
+    if (maximum_ < minimum_) {
+        maximum_ = minimum_;
+    }
+
+    // Fit value in new range
+    setValue(value_);
 }
 
 void NumberEdit::setMaximum(double max) {
-    if (maximum_ != max) {
-        double newMax = roundedValue_(max);
-        if (maximum_ != newMax) {
-            maximum_ = newMax;
 
-            // Ensure range is valid (min <= max)
-            if (maximum_ < minimum_) {
-                setMinimum(maximum_);
-            }
-
-            // Fit value in new range
-            setValue(value_);
-        }
+    // Set new minimum
+    if (maximum_ == max) {
+        return;
     }
+    double newMax = roundedValue_(max);
+    if (maximum_ == newMax) {
+        return;
+    }
+    maximum_ = newMax;
+
+    // Ensure range is valid (min <= max)
+    if (maximum_ < minimum_) {
+        minimum_ = maximum_;
+    }
+
+    // Fit value in new range
+    setValue(value_);
 }
 
 bool NumberEdit::onMouseEnter() {
@@ -126,26 +138,25 @@ bool NumberEdit::onMouseMove(MouseEvent* event) {
     }
 
     if (isAbsoluteMode_) {
-        geometry::Vec2f newMousePosition = globalCursorPosition();
+        geometry::Vec2f newMousePosition = globalCursorPosition(); // in dp
         deltaPositionX_ += newMousePosition.x() - mousePositionOnMousePress_.x();
         skipNextMouseMove_ = true;
         setGlobalCursorPosition(mousePositionOnMousePress_);
     }
     else {
-        geometry::Vec2f newMousePosition = event->position();
+        geometry::Vec2f newMousePosition = event->position(); // in px
         deltaPositionX_ = newMousePosition.x() - mousePositionOnMousePress_.x();
+        deltaPositionX_ /= styleMetrics().scaleFactor();
     }
 
     constexpr float dragEpsilon_ = 3;
 
     if (isDragEpsilonReached_) {
-        double speed = step() * 0.25; // 4px per step. TODO: high-DPI screens?
+        double speed = step() * 0.25; // 4dp per step
         double newValue_ = oldValue_ + speed * static_cast<double>(deltaPositionX_);
         setValue(newValue_);
     }
     else if (std::abs(deltaPositionX_) > dragEpsilon_) {
-        // TODO: is this correctly handling high-DPI screens?
-        // We may have to do dragEpsilon * scaleFactor() when not in absolute mode.
         isDragEpsilonReached_ = true;
         if (isAbsoluteMode_) {
             deltaPositionX_ = 0;
