@@ -476,11 +476,13 @@ void Widget::paint(graphics::Engine* engine, PaintOptions options) {
         if (!scissorRect.isDegenerate()) {
             engine->pushScissorRect(scissorRect);
             onPaintDraw(engine, options);
+            paintChildren_(engine, options);
             engine->popScissorRect();
         }
     }
     else {
         onPaintDraw(engine, options);
+        paintChildren_(engine, options);
     }
 }
 
@@ -505,17 +507,6 @@ void Widget::onPaintDraw(graphics::Engine* engine, PaintOptions options) {
         }
         engine->setProgram(graphics::BuiltinProgram::Simple);
         engine->draw(triangles_);
-    }
-    for (Widget* widget : children()) {
-        if (!widget->isVisible()) {
-            continue;
-        }
-        engine->pushViewMatrix();
-        geometry::Mat4f m = engine->viewMatrix();
-        m.translate(widget->position());
-        engine->setViewMatrix(m);
-        widget->paint(engine, options);
-        engine->popViewMatrix();
     }
 }
 
@@ -1639,6 +1630,20 @@ void Widget::prePaintUpdateGeometry_() {
         // this widget.
         isRepaintRequested_ = true;
         updateGeometry();
+    }
+}
+
+void Widget::paintChildren_(graphics::Engine* engine, PaintOptions options) {
+    for (Widget* widget : children()) {
+        if (!widget->isVisible()) {
+            continue;
+        }
+        engine->pushViewMatrix();
+        geometry::Mat4f m = engine->viewMatrix();
+        m.translate(widget->position());
+        engine->setViewMatrix(m);
+        widget->paint(engine, options);
+        engine->popViewMatrix();
     }
 }
 

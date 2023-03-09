@@ -368,7 +368,11 @@ void SketchTool::onPaintDraw(graphics::Engine* engine, PaintOptions /*options*/)
     }
 
     engine->pushProgram(graphics::BuiltinProgram::Simple);
+    geometry::Mat4f vm = engine->viewMatrix();
+    geometry::Mat4f cameraViewf(canvas->camera().viewMatrix());
+    engine->pushViewMatrix(vm * cameraViewf);
     engine->draw(minimalLatencyStrokeGeometry_);
+    engine->popViewMatrix();
     engine->popProgram();
 }
 

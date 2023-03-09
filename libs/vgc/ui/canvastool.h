@@ -84,10 +84,10 @@ private:
     // 2. We ignore mouseReleaseEvent() if the value of event->button() is
     //    different from its value in mousePressEvent().
     //
-    MouseButtons pressedMouseButtons_ = {}; // whether there's been a mouse press event
-    // with no matching mouse release event.
+    MouseButtons pressedMouseButtons_ = {};  // whether there's been a mouse press event
+                                             // with no matching mouse release event.
     MouseButtons pressedTabletButtons_ = {}; // whether there's been a tablet press event
-    // with no matching tablet release event.
+                                             // with no matching tablet release event.
 };
 
 } // namespace vgc::ui

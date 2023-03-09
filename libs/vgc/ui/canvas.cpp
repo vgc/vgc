@@ -375,18 +375,6 @@ void Canvas::onPaintDraw(graphics::Engine* engine, PaintOptions options) {
     engine->popPipelineParameters(modifiedParameters);
 
     drawTask_.stop();
-
-    for (Widget* widget : children()) {
-        if (!widget->isVisible()) {
-            continue;
-        }
-        engine->pushViewMatrix();
-        geometry::Mat4f m = engine->viewMatrix();
-        m.translate(widget->position());
-        engine->setViewMatrix(m);
-        widget->paint(engine, options);
-        engine->popViewMatrix();
-    }
 }
 
 void Canvas::onPaintDestroy(graphics::Engine*) {

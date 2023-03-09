@@ -1309,13 +1309,13 @@ protected:
     /// be repainted. Subclasses should reimplement this, typically to update
     /// resources.
     ///
-    virtual void onPaintPrepare(graphics::Engine* engine, PaintOptions flags);
+    virtual void onPaintPrepare(graphics::Engine* engine, PaintOptions options);
 
     /// This virtual function is called whenever the widget needs to be
     /// repainted. Subclasses should reimplement this, typically by issuing
     /// draw calls.
     ///
-    virtual void onPaintDraw(graphics::Engine* engine, PaintOptions flags);
+    virtual void onPaintDraw(graphics::Engine* engine, PaintOptions options);
 
     /// This virtual function is called once after the last call to
     /// onPaintDraw(), for example before the widget is destructed, or if
@@ -1378,6 +1378,8 @@ private:
     }
 
     void prePaintUpdateGeometry_();
+
+    void paintChildren_(graphics::Engine* engine, PaintOptions options);
 
     // Background
     graphics::GeometryViewPtr triangles_;
