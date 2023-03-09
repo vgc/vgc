@@ -39,6 +39,17 @@ const VacEdgeCellFrameData* VacEdgeCell::computeGeometryAt(core::AnimTime t) {
     return data;
 }
 
+VacKeyEdge::~VacKeyEdge() {
+    for (Int i = 0; i < 2; ++i) {
+        VacKeyVertex* const vertex = verticesInfo_[i].element;
+        if (vertex) {
+            detail::VacJoinHalfedge he(this, i == 1, 0);
+            vertex->removeJoinHalfedge_(he);
+            verticesInfo_[i].element = nullptr;
+        }
+    }
+}
+
 geometry::Rect2d VacKeyEdge::boundingBox(core::AnimTime /*t*/) const {
     return geometry::Rect2d::empty;
 }

@@ -200,7 +200,7 @@ private:
     friend class VacKeyVertex;
 
 public:
-    ~VacKeyEdge() override = default;
+    ~VacKeyEdge() override;
 
     VacKeyEdge(Workspace* workspace, dom::Element* domElement)
         : VacEdgeCell(workspace, domElement) {
