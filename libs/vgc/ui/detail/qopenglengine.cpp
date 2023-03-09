@@ -59,8 +59,8 @@ struct Vertex_XYRGBA {
     float x, y, r, g, b, a;
 };
 
-struct Vertex_XYRotRGBA {
-    float x, y, rot, r, g, b, a;
+struct Vertex_XYRotWRGBA {
+    float x, y, rot, w, r, g, b, a;
 };
 
 struct Vertex_XYUVRGBA {
@@ -1214,15 +1214,16 @@ void QglEngine::initBuiltinResources_() {
         int xyLoc_ = prog->attributeLocation("pos");
         int dispLoc_ = prog->attributeLocation("disp");
         int xyiLoc_ = prog->attributeLocation("ipos");
+        int offLoc_ = prog->attributeLocation("offset");
         int rgbaLoc_ = prog->attributeLocation("col");
         api_->glUniformBlockBinding(prog->programId(), 0, 0);
 
         prog->release();
 
-        // Create Input Layout for XYDxDy_iXYRotRGBA
+        // Create Input Layout for XYDxDy_iXYRotWRGBA
         {
             constexpr Int8 layoutIndex =
-                core::toUnderlying(BuiltinGeometryLayout::XYDxDy_iXYRotRGBA);
+                core::toUnderlying(BuiltinGeometryLayout::XYDxDy_iXYRotWRGBA);
             core::Array<GlAttribPointerDesc>& layout =
                 program->builtinLayouts_[layoutIndex];
             GlAttribPointerDesc& xyDesc = layout.emplaceLast();
@@ -1246,17 +1247,26 @@ void QglEngine::initBuiltinResources_() {
             xyiDesc.numElements = 3;
             xyiDesc.elementType = GL_FLOAT;
             xyiDesc.normalized = false;
-            xyiDesc.stride = sizeof(Vertex_XYRotRGBA);
+            xyiDesc.stride = sizeof(Vertex_XYRotWRGBA);
             xyiDesc.offset = 0;
             xyiDesc.bufferIndex = 1;
             xyiDesc.isPerInstance = true;
+            GlAttribPointerDesc& offDesc = layout.emplaceLast();
+            offDesc.index = offLoc_;
+            offDesc.numElements = 1;
+            offDesc.elementType = GL_FLOAT;
+            offDesc.normalized = false;
+            offDesc.stride = sizeof(Vertex_XYRotWRGBA);
+            offDesc.offset = static_cast<uintptr_t>(offsetof(Vertex_XYRotWRGBA, w));
+            offDesc.bufferIndex = 1;
+            offDesc.isPerInstance = true;
             GlAttribPointerDesc& rgbaDesc = layout.emplaceLast();
             rgbaDesc.index = rgbaLoc_;
             rgbaDesc.numElements = 4;
             rgbaDesc.elementType = GL_FLOAT;
             rgbaDesc.normalized = false;
-            rgbaDesc.stride = sizeof(Vertex_XYRotRGBA);
-            rgbaDesc.offset = static_cast<uintptr_t>(offsetof(Vertex_XYRotRGBA, r));
+            rgbaDesc.stride = sizeof(Vertex_XYRotWRGBA);
+            rgbaDesc.offset = static_cast<uintptr_t>(offsetof(Vertex_XYRotWRGBA, r));
             rgbaDesc.bufferIndex = 1;
             rgbaDesc.isPerInstance = true;
         }

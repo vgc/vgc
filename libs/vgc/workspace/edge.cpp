@@ -328,20 +328,18 @@ void VacKeyEdge::paint_(graphics::Engine* engine, core::AnimTime t, PaintOptions
 
     if (flags.hasAny(centerlineOptions) && !graphics.centerlineGeometry_) {
         graphics.centerlineGeometry_ = engine->createDynamicTriangleStripView(
-            BuiltinGeometryLayout::XYDxDy_iXYRotRGBA);
+            BuiltinGeometryLayout::XYDxDy_iXYRotWRGBA);
 
         core::FloatArray lineInstData;
-        lineInstData.extend({0.f, 0.f, 1.f, 0.02f, 0.64f, 1.0f, 1.f, 0.f /*padding*/});
-
-        float lineHalfSize = 2.f;
+        lineInstData.extend({0.f, 0.f, 1.f, 2.f, 0.02f, 0.64f, 1.0f, 1.f});
 
         geometry::Vec4fArray lineVertices;
         for (const geometry::CurveSample& s : frameData_.samples_) {
             geometry::Vec2f p = geometry::Vec2f(s.position());
             geometry::Vec2f n = geometry::Vec2f(s.normal());
             // clang-format off
-            lineVertices.emplaceLast(p.x(), p.y(), -lineHalfSize * n.x(), -lineHalfSize * n.y());
-            lineVertices.emplaceLast(p.x(), p.y(),  lineHalfSize * n.x(),  lineHalfSize * n.y());
+            lineVertices.emplaceLast(p.x(), p.y(), -n.x(), -n.y());
+            lineVertices.emplaceLast(p.x(), p.y(),  n.x(),  n.y());
             // clang-format on
         }
 
@@ -355,7 +353,7 @@ void VacKeyEdge::paint_(graphics::Engine* engine, core::AnimTime t, PaintOptions
 
     if (flags.hasAny(pointsOptions) && !graphics.pointsGeometry_) {
         graphics.pointsGeometry_ = engine->createDynamicTriangleStripView(
-            BuiltinGeometryLayout::XYDxDy_iXYRotRGBA);
+            BuiltinGeometryLayout::XYDxDy_iXYRotWRGBA);
 
         float pointHalfSize = 5.f;
 
@@ -378,6 +376,7 @@ void VacKeyEdge::paint_(graphics::Engine* engine, core::AnimTime t, PaintOptions
                 {p.x(),
                  p.y(),
                  0.f,
+                 1.5f,
                  (l > 0.5f ? 2 * (1.f - l) : 1.f),
                  0.f,
                  (l < 0.5f ? 2 * l : 1.f),

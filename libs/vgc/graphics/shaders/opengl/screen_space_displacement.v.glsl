@@ -4,6 +4,7 @@ in vec2 pos;
 in vec2 disp;
 in vec4 col;
 in vec3 ipos;
+in float offset;
 
 layout(std140) uniform BuiltinConstants {
     mat4 proj;
@@ -17,7 +18,7 @@ out vec4 fCol;
 
 void main() {
     vec4 viewPos = view * vec4(pos + ipos.xy, 0.f, 1.f);
-    float dispMag = length(disp);
+    float dispMag = length(disp) * offset;
     vec2 dispDir = disp;
     // ipos.z is "Rot" and is a "float" boolean to enable the rotation of the displacement by the view matrix.
     if (ipos.z > 0) {

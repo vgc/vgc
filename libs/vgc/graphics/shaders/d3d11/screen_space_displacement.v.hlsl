@@ -11,6 +11,7 @@ struct VS_INPUT {
     float2 disp : DISPLACEMENT;
     float4 col : COLOR0;
     float3 ipos : POSITION1;
+    float offset : OFFSET0;
     uint vid : SV_VertexID;
     uint iid : SV_InstanceID;
 };
@@ -25,7 +26,7 @@ PS_INPUT main(VS_INPUT input) {
     PS_INPUT output;
 
     float4 viewPos = mul(viewMatrix, float4(input.pos + input.ipos.xy, 0.f, 1.f));
-    float dispMag = length(input.disp);
+    float dispMag = length(input.disp) * input.offset;
     float2 dispDir = input.disp;
     // input.ipos.z is "Rot" and is a "float" boolean to enable the rotation of the displacement by the view matrix.
     if (input.ipos.z > 0) {
