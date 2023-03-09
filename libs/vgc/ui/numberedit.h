@@ -38,17 +38,83 @@ public:
     ///
     static NumberEditPtr create();
 
-    /// Sets the value of this `NumberEdit`.
-    ///
-    void setValue(double v);
-
     /// Returns the value of this `NumberEdit`.
+    ///
+    /// \sa `setValue()`.
     ///
     double value() const {
         return value_;
     }
 
-private:
+    /// Sets the value of this `NumberEdit`.
+    ///
+    /// Note that after calling this function, `value()` may not be equal to
+    /// the given `value` as a result of rounding to the allowed precision and
+    /// clamping to the `minimum()` and `maximum()`.
+    ///
+    /// \sa `value()`.
+    ///
+    void setValue(double value);
+
+    /// Returns by how much should the value change when increasing it by one
+    /// "step" (e.g., dragging by a few pixels, using the mouse wheel, clicking
+    /// on the up arrow, etc.).
+    ///
+    /// \sa `setStep()`.
+    ///
+    double step() const {
+        return step_;
+    }
+
+    /// Sets by how much should the value change when increasing it by one
+    /// "step".
+    ///
+    /// \sa `step()`.
+    ///
+    void setStep(double step);
+
+    /// Returns the minimim value of this `NumberEdit`.
+    ///
+    /// \sa `setMinimum()`, maximum()`.
+    ///
+    double minimum() const {
+        return minimum_;
+    }
+
+    /// Sets the minimim value of this `NumberEdit`.
+    ///
+    /// The `maximum()` and `value()` may be automatically changed in order for
+    /// the range to stay valid (minimum <= maximum) and the value to fit in
+    /// the range.
+    ///
+    /// Note that after calling this function, `minimum()` may not be equal to
+    /// the given `min` as a result of rounding to the allowed precision.
+    ///
+    /// \sa `minimum()`, `setMaximum()`.
+    ///
+    void setMinimum(double min);
+
+    /// Returns the maximum value of this `NumberEdit`.
+    ///
+    /// \sa `setMaximum()`, minimum()`.
+    ///
+    double maximum() const {
+        return maximum_;
+    }
+
+    /// Sets the maximim value of this `NumberEdit`.
+    ///
+    /// The `minimum()` and `value()` may be automatically changed in order for
+    /// the range to stay valid (minimum <= maximum) and the value to fit in
+    /// the range.
+    ///
+    /// Note that after calling this function, `maximum()` may not be equal to
+    /// the given `max` as a result of rounding to the allowed precision.
+    ///
+    /// \sa `maximum()`, `setMinimum()`.
+    ///
+    void setMaximum(double max);
+
 protected:
     // Reimplementation of Widget virtual methods
     bool onMouseEnter() override;
@@ -63,6 +129,13 @@ protected:
 private:
     // Current value
     double value_ = 0;
+
+    // Parameters
+    double step_ = 1;
+    double minimum_ = 0;
+    double maximum_ = 100;
+    double roundedValue_(double v);
+    double clampedAndRoundedValue_(double v);
 
     // Value before drag or text editing starts
     double oldValue_;

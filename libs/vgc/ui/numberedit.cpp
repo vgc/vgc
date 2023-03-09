@@ -35,9 +35,55 @@ NumberEditPtr NumberEdit::create() {
     return NumberEditPtr(new NumberEdit());
 }
 
-void NumberEdit::setValue(double v) {
-    value_ = v;
-    setTextFromValue_();
+void NumberEdit::setValue(double value) {
+    if (value_ != value) {
+        double newValue = clampedAndRoundedValue_(value);
+        if (value_ != newValue) {
+            value_ = newValue;
+            setTextFromValue_();
+        }
+    }
+}
+
+void NumberEdit::setStep(double step) {
+    if (step_ != step) {
+        step_ = step;
+    }
+}
+
+void NumberEdit::setMinimum(double min) {
+
+    if (minimum_ != min) {
+        double newMin = roundedValue_(min);
+        if (minimum_ != newMin) {
+            minimum_ = newMin;
+
+            // Ensure range is valid (min <= max)
+            if (maximum_ < minimum_) {
+                setMaximum(minimum_);
+            }
+
+            // Fit value in new range
+            setValue(value_);
+        }
+    }
+}
+
+void NumberEdit::setMaximum(double max) {
+    if (maximum_ != max) {
+        double newMax = roundedValue_(max);
+        if (maximum_ != newMax) {
+            maximum_ = newMax;
+
+            // Ensure range is valid (min <= max)
+            if (maximum_ < minimum_) {
+                setMinimum(maximum_);
+            }
+
+            // Fit value in new range
+            setValue(value_);
+        }
+    }
 }
 
 bool NumberEdit::onMouseEnter() {
@@ -93,8 +139,8 @@ bool NumberEdit::onMouseMove(MouseEvent* event) {
     constexpr float dragEpsilon_ = 3;
 
     if (isDragEpsilonReached_) {
-        float speed = 1;
-        double newValue_ = oldValue_ + speed * deltaPositionX_;
+        double speed = step() * 0.25; // 4px per step. TODO: high-DPI screens?
+        double newValue_ = oldValue_ + speed * static_cast<double>(deltaPositionX_);
         setValue(newValue_);
     }
     else if (std::abs(deltaPositionX_) > dragEpsilon_) {
@@ -211,7 +257,7 @@ bool NumberEdit::onKeyPress(KeyEvent* event) {
         setValue(oldValue_);
         setTextMode_(false);
     }
-    if (event->key() == Key::Return) {
+    if (event->key() == Key::Enter || event->key() == Key::Return) {
         setValueFromText_();
         setTextMode_(false);
     }
@@ -219,6 +265,16 @@ bool NumberEdit::onKeyPress(KeyEvent* event) {
         LineEdit::onKeyPress(event);
     }
     return true;
+}
+
+double NumberEdit::roundedValue_(double v) {
+    // TODO: something like std::round(v / precision) * precision
+    return v;
+}
+
+double NumberEdit::clampedAndRoundedValue_(double v) {
+    double res = core::clamp(v, minimum(), maximum());
+    return roundedValue_(res);
 }
 
 void NumberEdit::setTextFromValue_() {
