@@ -193,7 +193,7 @@ public:
         return timestamp_;
     }
 
-    /// Returns whether there this event comes from a tablet.
+    /// Returns whether this event comes from a tablet.
     ///
     bool isTablet() const {
         return isTablet_;
