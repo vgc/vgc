@@ -90,7 +90,7 @@ SketchTool::SketchTool()
     setClippingEnabled(true);
 }
 
-bool SketchTool::onKeyPress(KeyEvent* event) {
+bool SketchTool::onKeyPress(KeyEvent* /*event*/) {
     //switch (event->key()) {
     //default:
     //    return false;
