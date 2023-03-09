@@ -57,8 +57,14 @@ geometry::Rect2d VacKeyEdge::boundingBox(core::AnimTime /*t*/) const {
 bool VacKeyEdge::isSelectableAt(const geometry::Vec2d& pos, double tol, core::AnimTime t)
     const {
 
+    geometry::Rect2d inflatedBbox = bbox_;
+    if (!inflatedBbox.isEmpty()) {
+        inflatedBbox.setPMin(inflatedBbox.pMin() - geometry::Vec2d(tol, tol));
+        inflatedBbox.setPMax(inflatedBbox.pMax() + geometry::Vec2d(tol, tol));
+    }
+
     VacEdgeCellFrameData* data = frameData(t);
-    if (data && bbox_.contains(pos)) {
+    if (data && inflatedBbox.contains(pos)) {
         for (const auto& sample : data->samples_) {
             double width = (std::max)(sample.leftHalfwidth(), sample.rightHalfwidth());
             double d = (width + tol);
