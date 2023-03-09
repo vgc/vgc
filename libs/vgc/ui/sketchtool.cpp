@@ -91,13 +91,14 @@ SketchTool::SketchTool()
 }
 
 bool SketchTool::onKeyPress(KeyEvent* event) {
+    //switch (event->key()) {
+    //default:
+    //    return false;
+    //}
+    //
+    //return true;
 
-    switch (event->key()) {
-    default:
-        return false;
-    }
-
-    return true;
+    return false;
 }
 
 void SketchTool::startCurve_(const geometry::Vec2d& p, double width) {
