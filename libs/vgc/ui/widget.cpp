@@ -497,7 +497,7 @@ void Widget::onPaintPrepare(graphics::Engine* engine, PaintOptions options) {
     }
 }
 
-void Widget::onPaintDraw(graphics::Engine* engine, PaintOptions options) {
+void Widget::onPaintDraw(graphics::Engine* engine, PaintOptions /*options*/) {
     if (backgroundColor_.a() > 0) {
         if (backgroundChanged_) {
             backgroundChanged_ = false;
