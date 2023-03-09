@@ -106,9 +106,7 @@ protected:
     core::Color penColor_ = core::Color(0, 0, 0, 1);
     double penWidth_ = 5.0;
 
-    double pressurePenWidth_(const MouseEvent* event) {
-        return event->hasPressure() ? 2 * event->pressure() * penWidth_ : penWidth_;
-    }
+    double pressurePenWidth_(const MouseEvent* event) const;
 };
 
 } // namespace vgc::ui

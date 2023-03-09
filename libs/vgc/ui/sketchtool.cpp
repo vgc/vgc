@@ -184,6 +184,10 @@ void SketchTool::continueCurve_(const geometry::Vec2d& p, double width) {
     }
 }
 
+double SketchTool::pressurePenWidth_(const MouseEvent* event) const {
+    return event->hasPressure() ? 2 * event->pressure() * penWidth_ : penWidth_;
+}
+
 // Reimplementation of Widget virtual methods
 
 bool SketchTool::onMouseMove(MouseEvent* event) {
