@@ -774,6 +774,10 @@ public:
         return container_.end();
     }
 
+    Int length() const {
+        return container_.length();
+    }
+
 private:
     const Container& container_;
 };
