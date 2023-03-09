@@ -35,20 +35,7 @@ namespace vgc::ui {
 VGC_DECLARE_OBJECT(SelectionListHistory);
 VGC_DECLARE_OBJECT(Canvas);
 
-class VGC_UI_API SelectableItem {
-    SelectableItem(dom::Element* element)
-        : element_(element) {
-    }
-
-    const dom::Element* element() const {
-        return element_.getIfAlive();
-    }
-
-private:
-    dom::ElementPtr element_;
-};
-
-using SelectionList = core::Array<SelectableItem>;
+using SelectionList = core::Array<core::Id>;
 
 class VGC_UI_API SelectionListHistory : public core::Object {
 private:
@@ -63,8 +50,8 @@ public:
         return lists_.last();
     }
 
-    void setSelection(const SelectionList& list);
-    void setSelection(SelectionList&& list);
+    void pushSelection(const SelectionList& list);
+    void pushSelection(SelectionList&& list);
 
     VGC_SIGNAL(selectionChanged)
 
@@ -96,11 +83,6 @@ public:
         return workspace_;
     }
 
-    // XXX temporary. Will be deferred to separate class.
-    void setCurrentColor(const core::Color& color) {
-        currentColor_ = color;
-    }
-
     SelectionList getSelectableItemsAt(const geometry::Vec2f& position);
 
     /// Sets the observed document workspace.
@@ -116,6 +98,16 @@ public:
     /// parent, if any.
     ///
     void stopLoggingUnder(core::PerformanceLog* parent);
+
+    int requestedTesselationMode() const {
+        return requestedTesselationMode_;
+    }
+
+    /// Returns the camera used to view the workspace.
+    ///
+    const geometry::Camera2d& camera() const {
+        return camera_;
+    }
 
     VGC_SIGNAL(changed);
 
@@ -134,6 +126,7 @@ protected:
     void onPaintCreate(graphics::Engine* engine) override;
     void onPaintDraw(graphics::Engine* engine, PaintOptions options) override;
     void onPaintDestroy(graphics::Engine* engine) override;
+    void updateChildrenGeometry() override;
     //
 
     VGC_SLOT(onWorkspaceChanged, onWorkspaceChanged_)
@@ -143,40 +136,21 @@ protected:
     // Flags
     bool reload_ = true;
 
-    // Cursor
-    CursorChanger cursorChanger_;
-
     // Camera (provides view matrix + projection matrix)
     geometry::Camera2d camera_;
 
     // Scene
-    workspace::Workspace* workspace_;
+    workspace::Workspace* workspace_ = nullptr;
 
     void onWorkspaceChanged_();
     void onDocumentChanged_(const dom::Diff& diff);
 
     // Moving camera
-    bool isSketching_ = false;
     bool isPanning_ = false;
     bool isRotating_ = false;
     bool isZooming_ = false;
     geometry::Vec2d mousePosAtPress_ = {};
     geometry::Camera2d cameraAtPress_;
-
-    // Curve draw
-    core::UndoGroup* drawCurveUndoGroup_ = nullptr;
-    dom::Element* endVertex_ = nullptr;
-    dom::Element* edge_ = nullptr;
-    geometry::Vec2dArray points_;
-    core::DoubleArray widths_;
-    // for now we just get cursor pos at the end of the paint, there are still widgets
-    // to draw after that but our current architecture doesn't let us have deferred
-    // widget draws.. widget does not even know it's window.
-    std::array<geometry::Vec2d, 3> minimalLatencyStrokePoints_;
-    std::array<double, 3> minimalLatencyStrokeWidths_;
-    graphics::GeometryViewPtr minimalLatencyStrokeGeometry_;
-    bool minimalLatencyStrokeReload_ = false;
-    geometry::Vec2f lastImmediateCursorPos_ = {};
 
     // Graphics resources
     // VgcGraph
@@ -230,18 +204,6 @@ protected:
     // tesselation modes. A more engineered method will come later.
     int requestedTesselationMode_ = 2; // 0: none; 1: uniform; 2: adaptive
     bool reTesselate = false;
-
-    // XXX This is a temporary test, will be deferred to separate classes. Here
-    // is an example of how responsibilities could be separated:
-    //
-    // Widget: Creates an OpenGL context, receive graphical user input.
-    // Renderer: Renders the workspace to the given OpenGL context.
-    // Controller: Modifies the workspace based on user input (could be in the
-    // form of "Action" instances).
-    //
-    void startCurve_(const geometry::Vec2d& p, double width = 1.0);
-    void continueCurve_(const geometry::Vec2d& p, double width = 1.0);
-    core::Color currentColor_;
 
     // Performance logging
     core::PerformanceLogTask renderTask_;
