@@ -1524,12 +1524,15 @@ void QglEngine::setSwapChain_(const SwapChainPtr& aSwapChain) {
         updateViewportAndScissorRect_(scHeight_);
     }
     ctx_->makeCurrent(surface_);
-    api_->glEnable(GL_SCISSOR_TEST);      // always enabled in graphics::Engine
-    api_->glEnable(GL_PRIMITIVE_RESTART); // always enabled in graphics::Engine
+    api_->glEnable(GL_SCISSOR_TEST); // always enabled in graphics::Engine
 
     // XXX temporary: see comment in preBeginFrame_
     api_->glDisable(GL_DEPTH_TEST);
     api_->glDisable(GL_STENCIL_TEST);
+
+    api_->glDisable(GL_PRIMITIVE_RESTART);
+    isPrimitiveRestartEnabled_ = false;
+    lastIndexFormat_ = 0;
 }
 
 void QglEngine::setFramebuffer_(const FramebufferPtr& aFramebuffer) {
@@ -1866,6 +1869,11 @@ void QglEngine::draw_(
             lastIndexFormat_ = indexFormat;
         }
 
+        if (!isPrimitiveRestartEnabled_) {
+            api_->glEnable(GL_PRIMITIVE_RESTART);
+            isPrimitiveRestartEnabled_ = true;
+        }
+
         const GLvoid* indicesOffset = reinterpret_cast<GLvoid*>(startIndex * indexSize);
         api_->glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, indexBuffer->object());
 
@@ -1880,6 +1888,11 @@ void QglEngine::draw_(
     }
     else {
         GLint first = core::int_cast<GLint>(startIndex) + baseVtx;
+
+        if (isPrimitiveRestartEnabled_) {
+            api_->glDisable(GL_PRIMITIVE_RESTART);
+            isPrimitiveRestartEnabled_ = false;
+        }
 
         if (numInstances == 0) {
             api_->glDrawArrays(view->drawMode_, first, nIdx);

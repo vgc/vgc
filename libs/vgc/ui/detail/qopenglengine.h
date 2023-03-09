@@ -222,6 +222,7 @@ private:
     RasterizerStatePtr boundRasterizerState_;
     ProgramPtr boundProgram_;
     GLenum lastIndexFormat_ = GL_NONE;
+    bool isPrimitiveRestartEnabled_ = false;
 
     static constexpr UInt32 numTextureUnits = maxSamplersPerStage * numShaderStages;
     static_assert(maxSamplersPerStage == maxImageViewsPerStage);
