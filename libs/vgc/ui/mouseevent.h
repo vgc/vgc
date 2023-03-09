@@ -98,7 +98,8 @@ protected:
         const geometry::Vec2f& position,
         ModifierKeys modifierKeys,
         uint64_t timestamp,
-        double pressure);
+        double pressure,
+        bool isTablet);
 
 public:
     /// Creates a MouseEvent.
@@ -108,7 +109,8 @@ public:
         const geometry::Vec2f& position,
         ModifierKeys modifierKeys,
         uint64_t timestamp = 0,
-        double pressure = -1.0);
+        double pressure = -1.0,
+        bool isTablet = false);
 
     /// Returns the mouse button that caused a mouse press or mouse release event.
     /// Returns `MouseButton::None` for mouse move events.
@@ -191,6 +193,12 @@ public:
         return timestamp_;
     }
 
+    /// Returns whether this event comes from a tablet.
+    ///
+    bool isTablet() const {
+        return isTablet_;
+    }
+
     /// Returns whether there is pressure data associated with this event.
     ///
     bool hasPressure() const {
@@ -230,6 +238,7 @@ private:
     uint64_t timestamp_ = 0;
     double pressure_ = 0.f;
     bool hasPressure_ = false;
+    bool isTablet_ = false;
 };
 
 } // namespace vgc::ui

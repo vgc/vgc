@@ -23,7 +23,8 @@ MouseEvent::MouseEvent(
     const geometry::Vec2f& position,
     ModifierKeys modifierKeys,
     uint64_t timestamp,
-    double pressure)
+    double pressure,
+    bool isTablet)
 
     : Event()
     , button_(button)
@@ -31,7 +32,8 @@ MouseEvent::MouseEvent(
     , modifierKeys_(modifierKeys)
     , timestamp_(timestamp)
     , pressure_((std::max)(0.0, pressure))
-    , hasPressure_(pressure >= 0.0) {
+    , hasPressure_(pressure >= 0.0)
+    , isTablet_(isTablet) {
 }
 
 /* static */
@@ -40,10 +42,11 @@ MouseEventPtr MouseEvent::create(
     const geometry::Vec2f& position,
     ModifierKeys modifierKeys,
     uint64_t timestamp,
-    double pressure) {
+    double pressure,
+    bool isTablet) {
 
     return MouseEventPtr(
-        new MouseEvent(button, position, modifierKeys, timestamp, pressure));
+        new MouseEvent(button, position, modifierKeys, timestamp, pressure, isTablet));
 }
 
 } // namespace vgc::ui
