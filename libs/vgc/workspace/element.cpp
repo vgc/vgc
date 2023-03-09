@@ -35,8 +35,10 @@ geometry::Rect2d Element::boundingBox(core::AnimTime /*t*/) const {
     return geometry::Rect2d::empty;
 }
 
-bool Element::isSelectableAt(const geometry::Vec2d& pos, double tol, core::AnimTime t)
-    const {
+bool Element::isSelectableAt(
+    const geometry::Vec2d& /*pos*/,
+    double /*tol*/,
+    core::AnimTime /*t*/) const {
 
     return false;
 }
