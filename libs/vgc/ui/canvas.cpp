@@ -301,7 +301,7 @@ void Canvas::onPaintCreate(graphics::Engine* engine) {
     reload_ = true;
 }
 
-void Canvas::onPaintDraw(graphics::Engine* engine, PaintOptions options) {
+void Canvas::onPaintDraw(graphics::Engine* engine, PaintOptions /*options*/) {
 
     using namespace graphics;
     namespace gs = graphics::strings;
