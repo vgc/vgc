@@ -150,7 +150,7 @@ private:
     bool isDragEpsilonReached_ = false;
     bool skipNextMouseMove_ = false;
     geometry::Vec2f mousePositionOnMousePress_;
-    float deltaPositionX_ = 0; // in device-independent pixels
+    float deltaPositionX_ = 0;
 
     // Text mode
     void setTextFromValue_();
