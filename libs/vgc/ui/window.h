@@ -83,10 +83,33 @@ public:
             0, 0, static_cast<float>(width_), static_cast<float>(height_));
     }
 
+    /// The scale factor to apply when converting from global coordinates
+    /// (virtual space including all monitors) to window coordinates.
+    ///
+    /// ```cpp
+    /// sizeInWindowCoords = globalToWindowScale() * sizeInGlobalCoords;
+    /// ```
+    ///
+    /// Indeed, global coordinates and window coordinates may not always have
+    /// the same scale in order to support multi-monitor configurations with
+    /// varying DPI.
+    ///
+    float globalToWindowScale() const;
+
+    /// Converts a position from global coordinates (virtual space including
+    /// all monitors) to window coordinates.
+    ///
+    /// \sa `mapToGlobal()`, `globalToWindowScale()`.
+    ///
     geometry::Vec2f mapFromGlobal(const geometry::Vec2f& globalPosition) const;
 
+    /// Converts a position from window coordinates to global coordinates
+    /// (virtual space including all monitors).
     ///
-    /// Returns
+    /// \sa `mapFromGlobal()`, `globalToWindowScale()`.
+    ///
+    geometry::Vec2f mapToGlobal(const geometry::Vec2f& position) const;
+
     // ===================== Handle mouse/tablet input ========================
 
 protected:

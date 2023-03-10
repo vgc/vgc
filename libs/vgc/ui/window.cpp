@@ -167,10 +167,34 @@ WindowPtr Window::create(const WidgetPtr& widget) {
     return WindowPtr(new Window(widget));
 }
 
+float Window::globalToWindowScale() const {
+    return static_cast<float>(this->QWindow::devicePixelRatio());
+}
+
 geometry::Vec2f Window::mapFromGlobal(const geometry::Vec2f& globalPosition) const {
+    // Note: In Qt5, mapFromGlobal uses QPoint. In Qt6, QPointF overloads were added.
     QPointF qGlobalPosition = toQt(globalPosition);
-    QPoint qRes = this->QWindow::mapFromGlobal(qGlobalPosition.toPoint());
-    return geometry::Vec2f(qRes.x(), qRes.y());
+#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
+    QPointF qPosition = this->QWindow::mapFromGlobal(qGlobalPosition);
+#else
+    QPoint qPosition = this->QWindow::mapFromGlobal(qGlobalPosition.toPoint());
+#endif
+    geometry::Vec2f position = fromQtf(qPosition);
+    position *= globalToWindowScale();
+    return position;
+}
+
+geometry::Vec2f Window::mapToGlobal(const geometry::Vec2f& position) const {
+    // Note: In Qt5, mapFromGlobal uses QPoint. In Qt6, QPointF overloads were added.
+    QPointF qPosition = toQt(position);
+#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
+    QPointF qGlobalPosition = this->QWindow::mapToGlobal(qPosition);
+#else
+    QPoint qGlobalPosition = this->QWindow::mapToGlobal(qPosition.toPoint());
+#endif
+    geometry::Vec2f globalPosition = fromQtf(qGlobalPosition);
+    globalPosition /= globalToWindowScale();
+    return globalPosition;
 }
 
 void Window::enterEvent(QEvent* event) {
@@ -203,9 +227,9 @@ namespace {
 
 void prepareMouseEvent(Widget* root, MouseEvent* event, const Window* window) {
 
-    // Apply device pixel ratio
+    // Apply scaling between Qt coordinates our coordinates
     geometry::Vec2f position = event->position();
-    position *= static_cast<float>(window->devicePixelRatio());
+    position *= window->globalToWindowScale();
     event->setPosition(position);
 
     // Handle mouse captor

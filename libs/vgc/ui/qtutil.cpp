@@ -64,10 +64,18 @@ QPointF toQt(const geometry::Vec2f& v) {
 }
 
 geometry::Vec2d fromQtd(const QPointF& v) {
-    return geometry::Vec2d(v.x(), v.y());
+    return geometry::Vec2d(static_cast<double>(v.x()), static_cast<double>(v.y()));
+}
+
+geometry::Vec2d fromQtd(const QPoint& v) {
+    return geometry::Vec2d(static_cast<double>(v.x()), static_cast<double>(v.y()));
 }
 
 geometry::Vec2f fromQtf(const QPointF& v) {
+    return geometry::Vec2f(static_cast<float>(v.x()), static_cast<float>(v.y()));
+}
+
+geometry::Vec2f fromQtf(const QPoint& v) {
     return geometry::Vec2f(static_cast<float>(v.x()), static_cast<float>(v.y()));
 }
 
