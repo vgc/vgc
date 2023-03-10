@@ -82,10 +82,20 @@ QPointF toQt(const geometry::Vec2f& v);
 VGC_UI_API
 geometry::Vec2d fromQtd(const QPointF& v);
 
+/// Converts the given QPoint \p v into a vgc::geometry::Vec2d.
+///
+VGC_UI_API
+geometry::Vec2d fromQtd(const QPoint& v);
+
 /// Converts the given QPointF \p v into a vgc::geometry::Vec2f.
 ///
 VGC_UI_API
 geometry::Vec2f fromQtf(const QPointF& v);
+
+/// Converts the given QPoint \p v into a vgc::geometry::Vec2f.
+///
+VGC_UI_API
+geometry::Vec2f fromQtf(const QPoint& v);
 
 /// Converts the given `ui::ModifierKeys` to Qt modifier keys.
 ///
