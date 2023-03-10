@@ -161,8 +161,8 @@ bool NumberEdit::onMouseMove(MouseEvent* event) {
         geometry::Vec2f newMousePosition = globalCursorPosition();
         float dx = newMousePosition.x() - mousePositionOnMousePress_.x();
         if (std::abs(dx) > 0.5) {
-            Window* window_ = window();
-            float s = window_ ? window_->globalToWindowScale() : 1.0f;
+            Window* window = this->window();
+            float s = window ? window->globalToWindowScale() : 1.0f;
             deltaPositionX_ += s * dx;
             skipNextMouseMove_ = true;
             setGlobalCursorPosition(mousePositionOnMousePress_);
