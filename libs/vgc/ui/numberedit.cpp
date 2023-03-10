@@ -18,8 +18,10 @@
 
 #include <string>
 
+#include <vgc/core/os.h>
 #include <vgc/geometry/vec2f.h>
 #include <vgc/ui/cursor.h>
+#include <vgc/ui/window.h>
 
 namespace vgc::ui {
 
@@ -138,13 +140,36 @@ bool NumberEdit::onMouseMove(MouseEvent* event) {
     }
 
     if (isAbsoluteMode_) {
-        geometry::Vec2f newMousePosition = globalCursorPosition(); // in dp
-        deltaPositionX_ += newMousePosition.x() - mousePositionOnMousePress_.x();
-        skipNextMouseMove_ = true;
-        setGlobalCursorPosition(mousePositionOnMousePress_);
+
+        // Compute delta based on system-queried global cursor position.
+        //
+        // Note that currently, globalCursorPosition() is always an integer
+        // (because internally, we use QCursor::pos() returning an int), while
+        // mouse events can be subpixels. So we could have several mouse events
+        // before the value globalCursorPosition() actually changes.
+        //
+        //                       ----  event 1 -- event 2 -- event 2 ---->
+        //
+        //   actual cursor position     800        800.3      800.6
+        //   globalCursorPosition()     800        800        801
+        //
+        // Until such a change happen, it's important not to call
+        // setGlobalCursorPosition(mousePositionOnMousePress_), otherwise
+        // moving the cursor slowly might never change the value of the number
+        // edit. Hence the `if` test below.
+        //
+        geometry::Vec2f newMousePosition = globalCursorPosition();
+        float dx = newMousePosition.x() - mousePositionOnMousePress_.x();
+        if (std::abs(dx) > 0.5) {
+            Window* window_ = window();
+            float s = window_ ? window_->globalToWindowScale() : 1.0f;
+            deltaPositionX_ += s * dx;
+            skipNextMouseMove_ = true;
+            setGlobalCursorPosition(mousePositionOnMousePress_);
+        }
     }
     else {
-        geometry::Vec2f newMousePosition = event->position(); // in px
+        geometry::Vec2f newMousePosition = event->position();
         deltaPositionX_ = newMousePosition.x() - mousePositionOnMousePress_.x();
         deltaPositionX_ /= styleMetrics().scaleFactor();
     }
@@ -152,8 +177,11 @@ bool NumberEdit::onMouseMove(MouseEvent* event) {
     constexpr float dragEpsilon_ = 3;
 
     if (isDragEpsilonReached_) {
-        double speed = step() * 0.25; // 4dp per step
-        double newValue_ = oldValue_ + speed * static_cast<double>(deltaPositionX_);
+        using namespace style::literals;
+        style::Length lengthPerStep = 4_dp;
+        double pxPerStep = lengthPerStep.toPx(styleMetrics());
+        double deltaValue = deltaPositionX_ * step() / pxPerStep;
+        double newValue_ = oldValue_ + deltaValue;
         setValue(newValue_);
     }
     else if (std::abs(deltaPositionX_) > dragEpsilon_) {
@@ -334,7 +362,13 @@ void NumberEdit::updateCursor_() {
     }
     else {
         if (isHovered()) {
-            cursorChangerOnMouseHover_.set(Qt::SizeHorCursor);
+            Qt::CursorShape cursorShape = Qt::SizeHorCursor;
+#ifdef VGC_CORE_OS_MACOS
+            // SizeHorCursor is currently ugly on macOS, so we use another one
+            // (see https://github.com/vgc/vgc/issues/1131)
+            cursorShape = Qt::SplitHCursor;
+#endif
+            cursorChangerOnMouseHover_.set(cursorShape);
         }
         else {
             cursorChangerOnMouseHover_.clear();
