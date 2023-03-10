@@ -171,7 +171,6 @@ bool NumberEdit::onMouseMove(MouseEvent* event) {
     else {
         geometry::Vec2f newMousePosition = event->position();
         deltaPositionX_ = newMousePosition.x() - mousePositionOnMousePress_.x();
-        deltaPositionX_ /= styleMetrics().scaleFactor();
     }
 
     constexpr float dragEpsilon_ = 3;
