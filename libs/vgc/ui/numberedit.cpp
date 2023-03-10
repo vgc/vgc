@@ -18,8 +18,10 @@
 
 #include <string>
 
+#include <vgc/core/os.h>
 #include <vgc/geometry/vec2f.h>
 #include <vgc/ui/cursor.h>
+#include <vgc/ui/window.h>
 
 namespace vgc::ui {
 
@@ -35,9 +37,67 @@ NumberEditPtr NumberEdit::create() {
     return NumberEditPtr(new NumberEdit());
 }
 
-void NumberEdit::setValue(double v) {
-    value_ = v;
+void NumberEdit::setValue(double value) {
+
+    // Set new value
+    if (value_ == value) {
+        return;
+    }
+    double newValue = clampedAndRoundedValue_(value);
+    if (value_ == newValue) {
+        return;
+    }
+    value_ = newValue;
+
+    // Update text and emit signal
     setTextFromValue_();
+    valueChanged().emit(value_);
+}
+
+void NumberEdit::setStep(double step) {
+    step_ = step;
+}
+
+void NumberEdit::setMinimum(double min) {
+
+    // Set new minimum
+    if (minimum_ == min) {
+        return;
+    }
+    double newMin = roundedValue_(min);
+    if (minimum_ == newMin) {
+        return;
+    }
+    minimum_ = newMin;
+
+    // Ensure range is valid (min <= max)
+    if (maximum_ < minimum_) {
+        maximum_ = minimum_;
+    }
+
+    // Fit value in new range
+    setValue(value_);
+}
+
+void NumberEdit::setMaximum(double max) {
+
+    // Set new minimum
+    if (maximum_ == max) {
+        return;
+    }
+    double newMax = roundedValue_(max);
+    if (maximum_ == newMax) {
+        return;
+    }
+    maximum_ = newMax;
+
+    // Ensure range is valid (min <= max)
+    if (maximum_ < minimum_) {
+        minimum_ = maximum_;
+    }
+
+    // Fit value in new range
+    setValue(value_);
 }
 
 bool NumberEdit::onMouseEnter() {
@@ -80,10 +140,33 @@ bool NumberEdit::onMouseMove(MouseEvent* event) {
     }
 
     if (isAbsoluteMode_) {
+
+        // Compute delta based on system-queried global cursor position.
+        //
+        // Note that currently, globalCursorPosition() is always an integer
+        // (because internally, we use QCursor::pos() returning an int), while
+        // mouse events can be subpixels. So we could have several mouse events
+        // before the value globalCursorPosition() actually changes.
+        //
+        //                       ----  event 1 -- event 2 -- event 2 ---->
+        //
+        //   actual cursor position     800        800.3      800.6
+        //   globalCursorPosition()     800        800        801
+        //
+        // Until such a change happen, it's important not to call
+        // setGlobalCursorPosition(mousePositionOnMousePress_), otherwise
+        // moving the cursor slowly might never change the value of the number
+        // edit. Hence the `if` test below.
+        //
         geometry::Vec2f newMousePosition = globalCursorPosition();
-        deltaPositionX_ += newMousePosition.x() - mousePositionOnMousePress_.x();
-        skipNextMouseMove_ = true;
-        setGlobalCursorPosition(mousePositionOnMousePress_);
+        float dx = newMousePosition.x() - mousePositionOnMousePress_.x();
+        if (std::abs(dx) > 0.5) {
+            Window* window = this->window();
+            float s = window ? window->globalToWindowScale() : 1.0f;
+            deltaPositionX_ += s * dx;
+            skipNextMouseMove_ = true;
+            setGlobalCursorPosition(mousePositionOnMousePress_);
+        }
     }
     else {
         geometry::Vec2f newMousePosition = event->position();
@@ -93,13 +176,14 @@ bool NumberEdit::onMouseMove(MouseEvent* event) {
     constexpr float dragEpsilon_ = 3;
 
     if (isDragEpsilonReached_) {
-        float speed = 1;
-        double newValue_ = oldValue_ + speed * deltaPositionX_;
+        using namespace style::literals;
+        style::Length lengthPerStep = 4_dp;
+        double pxPerStep = lengthPerStep.toPx(styleMetrics());
+        double deltaValue = deltaPositionX_ * step() / pxPerStep;
+        double newValue_ = oldValue_ + deltaValue;
         setValue(newValue_);
     }
     else if (std::abs(deltaPositionX_) > dragEpsilon_) {
-        // TODO: is this correctly handling high-DPI screens?
-        // We may have to do dragEpsilon * scaleFactor() when not in absolute mode.
         isDragEpsilonReached_ = true;
         if (isAbsoluteMode_) {
             deltaPositionX_ = 0;
@@ -211,7 +295,7 @@ bool NumberEdit::onKeyPress(KeyEvent* event) {
         setValue(oldValue_);
         setTextMode_(false);
     }
-    if (event->key() == Key::Return) {
+    if (event->key() == Key::Enter || event->key() == Key::Return) {
         setValueFromText_();
         setTextMode_(false);
     }
@@ -219,6 +303,16 @@ bool NumberEdit::onKeyPress(KeyEvent* event) {
         LineEdit::onKeyPress(event);
     }
     return true;
+}
+
+double NumberEdit::roundedValue_(double v) {
+    // TODO: something like std::round(v / precision) * precision
+    return v;
+}
+
+double NumberEdit::clampedAndRoundedValue_(double v) {
+    double res = core::clamp(v, minimum(), maximum());
+    return roundedValue_(res);
 }
 
 void NumberEdit::setTextFromValue_() {
@@ -267,7 +361,13 @@ void NumberEdit::updateCursor_() {
     }
     else {
         if (isHovered()) {
-            cursorChangerOnMouseHover_.set(Qt::SizeHorCursor);
+            Qt::CursorShape cursorShape = Qt::SizeHorCursor;
+#ifdef VGC_CORE_OS_MACOS
+            // SizeHorCursor is currently ugly on macOS, so we use another one
+            // (see https://github.com/vgc/vgc/issues/1131)
+            cursorShape = Qt::SplitHCursor;
+#endif
+            cursorChangerOnMouseHover_.set(cursorShape);
         }
         else {
             cursorChangerOnMouseHover_.clear();
