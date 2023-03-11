@@ -311,6 +311,132 @@ TEST(TestArithmetic, Clamp) {
     //   constexpr int y = core::clamp(5, 2, 1);
 }
 
+TEST(TestArithmetic, Pow10) {
+    for (Int i = -100; i < 100; ++i) {
+        EXPECT_EQ(core::pow10f(i), std::pow(10.f, static_cast<float>(i)));
+        EXPECT_EQ(core::pow10d(i), std::pow(10., static_cast<double>(i)));
+    }
+}
+
+TEST(TestArithmetic, RoundToDecimals) {
+
+    EXPECT_EQ(core::roundToDecimals(483.14159, -4), 0.0);
+    EXPECT_EQ(core::roundToDecimals(483.14159, -3), 0.0);
+    EXPECT_EQ(core::roundToDecimals(483.14159, -2), 500.0);
+    EXPECT_EQ(core::roundToDecimals(483.14159, -1), 480.0);
+    EXPECT_EQ(core::roundToDecimals(483.14159, 0), 483.0);
+    EXPECT_EQ(core::roundToDecimals(483.14159, 1), 483.1);
+    EXPECT_EQ(core::roundToDecimals(483.14159, 2), 483.14);
+    EXPECT_EQ(core::roundToDecimals(483.14159, 3), 483.142);
+    EXPECT_EQ(core::roundToDecimals(483.14159, 4), 483.1416);
+    EXPECT_EQ(core::roundToDecimals(483.14159, 5), 483.14159);
+    EXPECT_EQ(core::roundToDecimals(483.14159, 6), 483.14159);
+
+    EXPECT_EQ(core::roundToDecimals(483.14159f, -4), 0.0f);
+    EXPECT_EQ(core::roundToDecimals(483.14159f, -3), 0.0f);
+    EXPECT_EQ(core::roundToDecimals(483.14159f, -2), 500.0f);
+    EXPECT_EQ(core::roundToDecimals(483.14159f, -1), 480.0f);
+    EXPECT_EQ(core::roundToDecimals(483.14159f, 0), 483.0f);
+    EXPECT_EQ(core::roundToDecimals(483.14159f, 1), 483.1f);
+    EXPECT_EQ(core::roundToDecimals(483.14159f, 2), 483.14f);
+    EXPECT_EQ(core::roundToDecimals(483.14159f, 3), 483.142f);
+    EXPECT_EQ(core::roundToDecimals(483.14159f, 4), 483.1416f);
+    EXPECT_EQ(core::roundToDecimals(483.14159f, 5), 483.14159f);
+    EXPECT_EQ(core::roundToDecimals(483.14159f, 6), 483.14159f);
+}
+
+TEST(TestArithmetic, RoundToSignificantDigits) {
+
+    EXPECT_EQ(core::roundToSignificantDigits(483.14159, -4), 0.0);
+    EXPECT_EQ(core::roundToSignificantDigits(483.14159, -3), 0.0);
+    EXPECT_EQ(core::roundToSignificantDigits(483.14159, -2), 0.0);
+    EXPECT_EQ(core::roundToSignificantDigits(483.14159, -1), 0.0);
+    EXPECT_EQ(core::roundToSignificantDigits(483.14159, 0), 0.0);
+    EXPECT_EQ(core::roundToSignificantDigits(483.14159, 1), 500.0);
+    EXPECT_EQ(core::roundToSignificantDigits(483.14159, 2), 480.0);
+    EXPECT_EQ(core::roundToSignificantDigits(483.14159, 3), 483.0);
+    EXPECT_EQ(core::roundToSignificantDigits(483.14159, 4), 483.1);
+    EXPECT_EQ(core::roundToSignificantDigits(483.14159, 5), 483.14);
+    EXPECT_EQ(core::roundToSignificantDigits(483.14159, 6), 483.142);
+
+    EXPECT_EQ(core::roundToSignificantDigits(483.14159f, -4), 0.0f);
+    EXPECT_EQ(core::roundToSignificantDigits(483.14159f, -3), 0.0f);
+    EXPECT_EQ(core::roundToSignificantDigits(483.14159f, -2), 0.0f);
+    EXPECT_EQ(core::roundToSignificantDigits(483.14159f, -1), 0.0f);
+    EXPECT_EQ(core::roundToSignificantDigits(483.14159f, 0), 0.0f);
+    EXPECT_EQ(core::roundToSignificantDigits(483.14159f, 1), 500.0f);
+    EXPECT_EQ(core::roundToSignificantDigits(483.14159f, 2), 480.0f);
+    EXPECT_EQ(core::roundToSignificantDigits(483.14159f, 3), 483.0f);
+    EXPECT_EQ(core::roundToSignificantDigits(483.14159f, 4), 483.1f);
+    EXPECT_EQ(core::roundToSignificantDigits(483.14159f, 5), 483.14f);
+    EXPECT_EQ(core::roundToSignificantDigits(483.14159f, 6), 483.142f);
+
+    EXPECT_EQ(core::roundToSignificantDigits(583.14159, -1), 0.0);
+    EXPECT_EQ(core::roundToSignificantDigits(583.14159, 0), 1000.0);
+    EXPECT_EQ(core::roundToSignificantDigits(583.14159, 1), 600.0);
+
+    EXPECT_EQ(core::roundToSignificantDigits(100.0, 2), 100.0);
+    EXPECT_EQ(core::roundToSignificantDigits(100.0, 1), 100.0);
+    EXPECT_EQ(core::roundToSignificantDigits(100.0, 0), 0.0);
+    EXPECT_EQ(core::roundToSignificantDigits(100.0, -1), 0.0);
+    EXPECT_EQ(core::roundToSignificantDigits(100.0, -2), 0.0);
+}
+
+TEST(TestArithmetic, RoundToPrecision) {
+
+    // clang-format off
+
+    EXPECT_EQ(core::round(483.14159, {core::PrecisionMode::Decimals, -4}), 0.0);
+    EXPECT_EQ(core::round(483.14159, {core::PrecisionMode::Decimals, -3}), 0.0);
+    EXPECT_EQ(core::round(483.14159, {core::PrecisionMode::Decimals, -2}), 500.0);
+    EXPECT_EQ(core::round(483.14159, {core::PrecisionMode::Decimals, -1}), 480.0);
+    EXPECT_EQ(core::round(483.14159, {core::PrecisionMode::Decimals, 0}), 483.0);
+    EXPECT_EQ(core::round(483.14159, {core::PrecisionMode::Decimals, 1}), 483.1);
+    EXPECT_EQ(core::round(483.14159, {core::PrecisionMode::Decimals, 2}), 483.14);
+    EXPECT_EQ(core::round(483.14159, {core::PrecisionMode::Decimals, 3}), 483.142);
+    EXPECT_EQ(core::round(483.14159, {core::PrecisionMode::Decimals, 4}), 483.1416);
+    EXPECT_EQ(core::round(483.14159, {core::PrecisionMode::Decimals, 5}), 483.14159);
+    EXPECT_EQ(core::round(483.14159, {core::PrecisionMode::Decimals, 6}), 483.14159);
+
+    EXPECT_EQ(core::round(483.14159f, {core::PrecisionMode::Decimals, -4}), 0.0f);
+    EXPECT_EQ(core::round(483.14159f, {core::PrecisionMode::Decimals, -3}), 0.0f);
+    EXPECT_EQ(core::round(483.14159f, {core::PrecisionMode::Decimals, -2}), 500.0f);
+    EXPECT_EQ(core::round(483.14159f, {core::PrecisionMode::Decimals, -1}), 480.0f);
+    EXPECT_EQ(core::round(483.14159f, {core::PrecisionMode::Decimals, 0}), 483.0f);
+    EXPECT_EQ(core::round(483.14159f, {core::PrecisionMode::Decimals, 1}), 483.1f);
+    EXPECT_EQ(core::round(483.14159f, {core::PrecisionMode::Decimals, 2}), 483.14f);
+    EXPECT_EQ(core::round(483.14159f, {core::PrecisionMode::Decimals, 3}), 483.142f);
+    EXPECT_EQ(core::round(483.14159f, {core::PrecisionMode::Decimals, 4}), 483.1416f);
+    EXPECT_EQ(core::round(483.14159f, {core::PrecisionMode::Decimals, 5}), 483.14159f);
+    EXPECT_EQ(core::round(483.14159f, {core::PrecisionMode::Decimals, 6}), 483.14159f);
+
+    EXPECT_EQ(core::round(483.14159, {core::PrecisionMode::SignificantDigits, -4}), 0.0);
+    EXPECT_EQ(core::round(483.14159, {core::PrecisionMode::SignificantDigits, -3}), 0.0);
+    EXPECT_EQ(core::round(483.14159, {core::PrecisionMode::SignificantDigits, -2}), 0.0);
+    EXPECT_EQ(core::round(483.14159, {core::PrecisionMode::SignificantDigits, -1}), 0.0);
+    EXPECT_EQ(core::round(483.14159, {core::PrecisionMode::SignificantDigits, 0}), 0.0);
+    EXPECT_EQ(core::round(483.14159, {core::PrecisionMode::SignificantDigits, 1}), 500.0);
+    EXPECT_EQ(core::round(483.14159, {core::PrecisionMode::SignificantDigits, 2}), 480.0);
+    EXPECT_EQ(core::round(483.14159, {core::PrecisionMode::SignificantDigits, 3}), 483.0);
+    EXPECT_EQ(core::round(483.14159, {core::PrecisionMode::SignificantDigits, 4}), 483.1);
+    EXPECT_EQ(core::round(483.14159, {core::PrecisionMode::SignificantDigits, 5}), 483.14);
+    EXPECT_EQ(core::round(483.14159, {core::PrecisionMode::SignificantDigits, 6}), 483.142);
+
+    EXPECT_EQ(core::round(483.14159f, {core::PrecisionMode::SignificantDigits, -4}), 0.0f);
+    EXPECT_EQ(core::round(483.14159f, {core::PrecisionMode::SignificantDigits, -3}), 0.0f);
+    EXPECT_EQ(core::round(483.14159f, {core::PrecisionMode::SignificantDigits, -2}), 0.0f);
+    EXPECT_EQ(core::round(483.14159f, {core::PrecisionMode::SignificantDigits, -1}), 0.0f);
+    EXPECT_EQ(core::round(483.14159f, {core::PrecisionMode::SignificantDigits, 0}), 0.0f);
+    EXPECT_EQ(core::round(483.14159f, {core::PrecisionMode::SignificantDigits, 1}), 500.0f);
+    EXPECT_EQ(core::round(483.14159f, {core::PrecisionMode::SignificantDigits, 2}), 480.0f);
+    EXPECT_EQ(core::round(483.14159f, {core::PrecisionMode::SignificantDigits, 3}), 483.0f);
+    EXPECT_EQ(core::round(483.14159f, {core::PrecisionMode::SignificantDigits, 4}), 483.1f);
+    EXPECT_EQ(core::round(483.14159f, {core::PrecisionMode::SignificantDigits, 5}), 483.14f);
+    EXPECT_EQ(core::round(483.14159f, {core::PrecisionMode::SignificantDigits, 6}), 483.142f);
+
+    // clang-format on
+}
+
 int main(int argc, char** argv) {
     ::testing::InitGoogleTest(&argc, argv);
     return RUN_ALL_TESTS();

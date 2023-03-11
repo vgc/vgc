@@ -49,6 +49,7 @@ vgc_add_library(core
     CPP_FILES
         algorithm.cpp
         animtime.cpp
+        arithmetic.cpp
         color.cpp
         exceptions.cpp
         format.cpp
