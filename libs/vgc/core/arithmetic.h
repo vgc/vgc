@@ -115,11 +115,12 @@
 /// haven't done it yet.
 ///
 
-#include <cmath>   // fabs, nextafter
+#include <cmath>   // fabs, nextafter, round, pow
 #include <cstdint> // int32_t, etc.
 #include <limits>  // min, max, infinity
 #include <type_traits>
 
+#include <vgc/core/api.h>
 #include <vgc/core/exceptions.h>
 #include <vgc/core/format.h>
 #include <vgc/core/logcategories.h>
@@ -1070,6 +1071,215 @@ IntType ifloor(FloatType x) {
     }
 }
 
+/// Returns a power of ten as a `float`.
+///
+/// This is equivalent to `std::pow(10.0f, static_cast<float>(exp))`, but much
+/// faster for small values of `exp` (between -10 and 10) which are optimized
+/// via a table lookup.
+///
+/// Note that the returned value is exact from 10^0 to 10^10, while none of the other
+/// powers of ten can be exactly represented as a `float`.
+///
+VGC_CORE_API
+float pow10f(Int exp);
+
+/// Returns a power of ten as a `double`.
+///
+/// This is equivalent to `std::pow(10.0, static_cast<double>(exp))`, but much
+/// faster for small values of `exp` (between -22 and 22) which are optimized
+/// via a table lookup.
+///
+/// Note that the returned value is exact from 10^0 to 10^22, while none of the other
+/// powers of ten can be exactly represented as a `double`.
+///
+VGC_CORE_API
+double pow10d(Int exp);
+
+/// Returns a power of ten as a floating point.
+///
+/// This is equivalent to:
+///
+/// ```cpp
+/// std::pow(static_cast<FloatType>(10), static_cast<FloatType>(exp))
+/// ```
+///
+/// but much faster for small values of `exp` which are optimized via a table lookup.
+///
+/// \sa `pow10f()`, `pow10d()`.
+///
+template<typename FloatType, VGC_REQUIRES(std::is_floating_point_v<FloatType>)>
+FloatType pow10(Int exp) {
+    // Generic implementation, e.g. for long double or extended floating-point types.
+    return std::pow(static_cast<FloatType>(10), static_cast<FloatType>(exp));
+}
+
+// float specialization of pow10()
+template<>
+inline float pow10<float>(Int exp) {
+    return pow10f(exp);
+}
+
+// double specialization of pow10()
+template<>
+inline double pow10<double>(Int exp) {
+    return pow10d(exp);
+}
+
+/// \enum vgc::core::PrecisionMode
+/// \brief Specifies a precision mode for rounding numbers.
+///
+/// \sa `Precision`, `round()`, `roundToDecimals()`, `roundToSignificantDigits()`.
+///
+enum class PrecisionMode : Int8 {
+
+    /// Round to a specified number of base-10 fractional digits.
+    ///
+    Decimals,
+
+    /// Round to a specified number of base-10 significant digits.
+    ///
+    SignificantDigits
+};
+// TODO? BinaryDecimals, BinarySignificantDigits
+
+/// \class vgc::core::Precision
+/// \brief Specifies a given precision mode and value for rounding numbers.
+///
+/// This class can be used to specify a given precision mode and value for
+/// rounding numbers.
+///
+/// ```cpp
+/// vgc::core::Precision precision(vgc::core::PrecisionMode::Decimals, 2);
+/// float pi = 3.1415;
+/// std::cout << vgc::core::round(pi, precision); // => 3.14
+/// ```
+///
+/// \sa `PrecisionMode`, `round()`, `roundToDecimals()`, `roundToSignificantDigits()`.
+///
+class Precision {
+public:
+    /// Specifies a `Precision` with the given `mode` and `value`.
+    ///
+    constexpr Precision(PrecisionMode mode, Int8 value)
+        : mode_(mode)
+        , value_(value) {
+    }
+
+    /// Returns the `PrecisionMode` of this `Precision`.
+    ///
+    constexpr PrecisionMode mode() const {
+        return mode_;
+    }
+
+    /// Sets the `PrecisionMode` of this `Precision`.
+    ///
+    constexpr void setMode(PrecisionMode mode) {
+        mode_ = mode;
+    }
+
+    /// Returns the precision value of this `Precision`.
+    ///
+    constexpr Int8 value() const {
+        return value_;
+    }
+
+    /// Sets the precision value of this precision `Precision`.
+    ///
+    constexpr void setValue(Int8 value) {
+        value_ = value;
+    }
+
+private:
+    PrecisionMode mode_;
+    Int8 value_;
+};
+
+/// Rounds the floating point `x` to the given number of base-10 fractional digits.
+///
+/// ```cpp
+/// float pi = 3.14159;
+/// std::cout << vgc::core::roundToDecimals(pi, 2); // => 3.14
+/// std::cout << vgc::core::roundToDecimals(428.3, -1); // => 430.0
+/// ```
+///
+/// \sa `round()`, `roundToDecimals()`, `roundToSignificantDigits()`.
+///
+template<typename FloatType, VGC_REQUIRES(std::is_floating_point_v<FloatType>)>
+FloatType roundToDecimals(FloatType x, Int numDigits) {
+    if (numDigits == 0) {
+        return std::round(x);
+    }
+    else if (numDigits > 0) {
+        FloatType s = pow10<FloatType>(numDigits); // exact for small numDigits
+        return std::round(x * s) / s;
+    }
+    else {
+        FloatType s = pow10<FloatType>(-numDigits); // exact for small (-numDigits)
+        return std::round(x / s) * s;
+    }
+}
+
+/// Rounds the floating point `x` to the given number of base-10 significant digits.
+///
+/// ```cpp
+/// float pi = 3.14159;
+/// float pj = 314.159;
+/// std::cout << vgc::core::roundToSignificantDigits(pi, 2); // => 3.1
+/// std::cout << vgc::core::roundToSignificantDigits(pj, 2); // => 310
+/// ```
+///
+/// If `numDigits` is negative, this always returns 0.
+///
+/// If `numDigits` is equal to zero, this returns either 0 or round to the next
+/// power of ten.
+///
+/// ```cpp
+/// vgc::core::roundToSignificantDigits(583.14159, 4); // =>  583.1
+/// vgc::core::roundToSignificantDigits(583.14159, 3); // =>  583.0
+/// vgc::core::roundToSignificantDigits(583.14159, 2); // =>  580.0
+/// vgc::core::roundToSignificantDigits(583.14159, 1); // =>  600.0
+/// vgc::core::roundToSignificantDigits(583.14159, 0); // => 1000.0
+/// vgc::core::roundToSignificantDigits(583.14159, 0); // =>    0.0
+/// ```
+///
+template<typename FloatType, VGC_REQUIRES(std::is_floating_point_v<FloatType>)>
+FloatType roundToSignificantDigits(FloatType x, Int numDigits) {
+
+    // Compute the "magnitude" of the number, that is, the highest
+    // non-null power of ten in the decimal representation of the number.
+    //
+    // Example: 876 = 8 x 10^2 + 7 x 10^1 + 6 x 10^0, so its magnitude is 2.
+    //
+    // Desired behavior at the boundary between magnitudes:
+    //
+    // magnitude(99)  == 1
+    // magnitude(100) == 2
+    // magnitude(101) == 2
+    //
+    // Note: we might be able to implement a faster version not using log10,
+    // since we do not need all the decimals provided by log10 (we only need
+    // the integer part).
+    //
+    Int magnitude = static_cast<Int>(std::floor(std::log10(std::abs(x))));
+
+    // Deduce how many decimals we need to round the number to.
+    //
+    return roundToDecimals(x, numDigits - magnitude - 1);
+}
+
+/// Rounds the floating point `x` to the given `precision`.
+///
+template<typename FloatType, VGC_REQUIRES(std::is_floating_point_v<FloatType>)>
+FloatType round(FloatType x, Precision precision) {
+    switch (precision.mode()) {
+    case PrecisionMode::Decimals:
+        return roundToDecimals(x, precision.value());
+    case PrecisionMode::SignificantDigits:
+        return roundToSignificantDigits(x, precision.value());
+    }
+    return x;
+}
+
 /// \struct vgc::core::NoInit
 /// \brief Tag to select a function overload that doesn't perform initialization.
 ///
@@ -1098,7 +1308,7 @@ inline constexpr NoInit noInit = {};
 /// (typically, a constructor) that doesn't perform checks.
 ///
 struct VGC_CORE_API UncheckedInit {};
-static constexpr UncheckedInit uncheckedInit = {};
+inline constexpr UncheckedInit uncheckedInit = {};
 
 /// Small epsilon value under which two doubles are considered
 /// indistinguishable.
