@@ -82,6 +82,11 @@ public:
     bool onFocusOut(FocusReason reason) override;
     bool onKeyPress(KeyEvent* event) override;
 
+    /// This signal is emitted whenever the text in the line edit changed,
+    /// either programmatically or during GUI interaction.
+    ///
+    VGC_SIGNAL(textChanged)
+
     /// This signal is emitted whenever the Enter or Return key is pressed or
     /// the line edit loses focus.
     ///
@@ -89,7 +94,7 @@ public:
 
     /// This signal is emitted whenever the text in the line edit has been
     /// edited graphically. This signal is not emitted when the text is changed
-    /// programatically, for example via setText() or clear().
+    /// programmatically via `setText()`.
     ///
     VGC_SIGNAL(textEdited)
 

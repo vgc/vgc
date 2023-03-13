@@ -31,6 +31,7 @@ NumberEdit::NumberEdit()
     addStyleClass(strings::NumberEdit);
     setTextMode_(false);
     setTextFromValue_();
+    textChanged().connect(onTextChangedSlot_());
 }
 
 NumberEditPtr NumberEdit::create() {
@@ -284,7 +285,8 @@ bool NumberEdit::onFocusOut(FocusReason reason) {
         && reason != FocusReason::Popup) {
 
         if (isTextMode_) {
-            setValueFromText_();
+            setValueFromText_(oldValue_);
+            setTextFromValue_();
             setTextMode_(false);
         }
     }
@@ -297,10 +299,12 @@ bool NumberEdit::onKeyPress(KeyEvent* event) {
     }
     if (event->key() == Key::Escape) {
         setValue(oldValue_);
+        setTextFromValue_();
         setTextMode_(false);
     }
     if (event->key() == Key::Enter || event->key() == Key::Return) {
-        setValueFromText_();
+        setValueFromText_(oldValue_);
+        setTextFromValue_();
         setTextMode_(false);
     }
     else {
@@ -322,8 +326,8 @@ void NumberEdit::setTextFromValue_() {
     setText(core::format("{}", value_));
 }
 
-void NumberEdit::setValueFromText_() {
-    double newValue = oldValue_;
+void NumberEdit::setValueFromText_(double valueIfInvalid) {
+    double newValue = valueIfInvalid;
     const std::string& newText = text();
     if (newText.empty()) {
         newValue = 0;
@@ -333,18 +337,30 @@ void NumberEdit::setValueFromText_() {
             newValue = core::parse<double>(newText);
         }
         catch (const core::ParseError&) {
-            newValue = oldValue_;
+            newValue = valueIfInvalid;
         }
         catch (const core::RangeError&) {
-            newValue = oldValue_;
+            newValue = valueIfInvalid;
         }
     }
     setValue(newValue);
 }
 
+void NumberEdit::onTextChanged_() {
+
+    // Handle case when the text is changed programatically via setText().
+    //
+    if (!isTextMode_) {
+        double valueIfInvalid = value();
+        setValueFromText_(valueIfInvalid);
+        setTextFromValue_();
+    }
+}
+
 void NumberEdit::setTextMode_(bool isTextMode) {
     isTextMode_ = isTextMode;
     if (isTextMode_) {
+        oldValue_ = value();
         setFocusPolicy(FocusPolicy::Click | FocusPolicy::Tab);
         moveCursor(graphics::RichTextMoveOperation::StartOfText);
         moveCursor(graphics::RichTextMoveOperation::EndOfText, true);

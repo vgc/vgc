@@ -74,6 +74,7 @@ LineEditPtr LineEdit::create(std::string_view text) {
 void LineEdit::setText(std::string_view text) {
     if (text != richText_->text()) {
         richText_->setText(text);
+        textChanged().emit();
         reload_ = true;
         requestRepaint();
     }
@@ -226,6 +227,8 @@ bool LineEdit::onMousePress(MouseEvent* event) {
             std::string t = clipboard->text(QClipboard::Selection).toStdString();
             richText_->insertText(t);
             resetSelectionInitialPair_();
+            textChanged().emit();
+            textEdited().emit();
         }
     }
 
@@ -387,6 +390,7 @@ bool LineEdit::onKeyPress(KeyEvent* event) {
     }
 
     if (handled && !isMoveOperation) {
+        textChanged().emit();
         textEdited().emit();
     }
 
