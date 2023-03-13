@@ -1294,6 +1294,12 @@ FloatType roundToDecimals(FloatType x, Int numDigits) {
 template<typename FloatType, VGC_REQUIRES(std::is_floating_point_v<FloatType>)>
 FloatType roundToSignificantDigits(FloatType x, Int numDigits) {
 
+    // Fast return if x equals zero, which doesn't have a magnitude.
+    //
+    if (x == 0) {
+        return x;
+    }
+
     // Compute the "magnitude" of the number, that is, the highest
     // non-null power of ten in the decimal representation of the number.
     //
