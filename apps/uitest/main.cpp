@@ -232,8 +232,23 @@ private:
     }
 
     void createNumberEdits_(ui::Widget* parent) {
-        ui::NumberEdit* numberEdit = parent->createChild<ui::NumberEdit>();
-        numberEdit->setValue(0);
+
+        ui::Row* row = parent->createChild<ui::Row>();
+
+        // Default NumberEdit: integer from 0 to 100
+        row->createChild<ui::NumberEdit>();
+
+        // NumberEdit in [12.5, 42] rounded to 1 decimal with 0.01 step.
+        ui::NumberEdit* numberEdit2 = row->createChild<ui::NumberEdit>();
+        numberEdit2->setDecimals(1);
+        numberEdit2->setStep(0.01);
+        numberEdit2->setMinimum(12.5);
+        numberEdit2->setMaximum(42);
+
+        // NumberEdit in [12.5, 42] rounded to 2 significant digits with 0.01 step.
+        ui::NumberEdit* numberEdit3 = row->createChild<ui::NumberEdit>();
+        numberEdit3->setSignificantDigits(2);
+        numberEdit3->setStep(0.001);
     }
 
     void createClickMePopups_(ui::Widget* parent) {

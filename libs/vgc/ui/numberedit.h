@@ -17,6 +17,7 @@
 #ifndef VGC_UI_NUMBEREDIT_H
 #define VGC_UI_NUMBEREDIT_H
 
+#include <vgc/core/arithmetic.h>
 #include <vgc/ui/lineedit.h>
 
 namespace vgc::ui {
@@ -34,7 +35,7 @@ protected:
     NumberEdit();
 
 public:
-    /// Creates a Label.
+    /// Creates a `NumberEdit`.
     ///
     static NumberEditPtr create();
 
@@ -119,6 +120,50 @@ public:
     ///
     void setMaximum(double max);
 
+    /// Returns the precision of this `NumberEdit`, that is, how many decimals
+    /// or significant digits input numbers are rounded to.
+    ///
+    core::Precision precision() const {
+        return precision_;
+    }
+
+    /// Sets the precision of this `NumberEdit`, that is, how many decimals or
+    /// significant digits input numbers are rounded to.
+    ///
+    /// The `value()`, `minimum()`, and `maximum()` are automatically rounded
+    /// to the new precision.
+    ///
+    void setPrecision(core::Precision precision);
+
+    /// Sets the precision of this `NumberEdit` to a fixed number of decimals.
+    ///
+    /// Note that the range of supported `numDecimals` is from `-128` to `127`.
+    ///
+    /// This is a convenient method equivalent to:
+    ///
+    /// ```
+    /// setPrecision(Precision(PrecisionMode::Decimals, numDecimals));
+    /// ```
+    ///
+    void setDecimals(Int numDecimals) {
+        setPrecision({core::PrecisionMode::Decimals, static_cast<Int8>(numDecimals)});
+    }
+
+    /// Sets the precision of this `NumberEdit` to a fixed number of significant digits.
+    ///
+    /// Note that the range of supported `numDigits` is from `-127` to `128`.
+    ///
+    /// This is a convenient method equivalent to:
+    ///
+    /// ```
+    /// setPrecision(Precision(PrecisionMode::SignificantDigits, numDigits));
+    /// ```
+    ///
+    void setSignificantDigits(Int numDigits) {
+        setPrecision(
+            {core::PrecisionMode::SignificantDigits, static_cast<Int8>(numDigits)});
+    }
+
 protected:
     // Reimplementation of Widget virtual methods
     bool onMouseEnter() override;
@@ -138,6 +183,7 @@ private:
     double step_ = 1;
     double minimum_ = 0;
     double maximum_ = 100;
+    core::Precision precision_ = {core::PrecisionMode::Decimals, 0};
     double roundedValue_(double v);
     double clampedAndRoundedValue_(double v);
 
