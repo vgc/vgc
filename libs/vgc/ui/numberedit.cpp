@@ -183,24 +183,18 @@ bool NumberEdit::onMouseMove(MouseEvent* event) {
         deltaPositionX_ = newMousePosition.x() - mousePositionOnMousePress_.x();
     }
 
-    constexpr float dragEpsilon_ = 3;
+    using namespace style::literals;
+    constexpr style::Length lengthPerStep = 4_dp;
+    float pxPerStep = lengthPerStep.toPx(styleMetrics());
 
+    if (std::abs(deltaPositionX_) > pxPerStep) {
+        isDragEpsilonReached_ = true;
+    }
     if (isDragEpsilonReached_) {
-        using namespace style::literals;
-        style::Length lengthPerStep = 4_dp;
-        double pxPerStep = lengthPerStep.toPx(styleMetrics());
-        double deltaValue = deltaPositionX_ * step() / pxPerStep;
+        float numSteps = std::trunc(deltaPositionX_ / pxPerStep);
+        double deltaValue = static_cast<double>(numSteps) * step();
         double newValue_ = oldValue_ + deltaValue;
         setValue(newValue_);
-    }
-    else if (std::abs(deltaPositionX_) > dragEpsilon_) {
-        isDragEpsilonReached_ = true;
-        if (isAbsoluteMode_) {
-            deltaPositionX_ = 0;
-        }
-        else {
-            mousePositionOnMousePress_ = event->position();
-        }
     }
 
     return true;
