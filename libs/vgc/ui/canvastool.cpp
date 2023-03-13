@@ -58,7 +58,7 @@ void CanvasTool::preMouseMove(MouseEvent* event) {
 
 void CanvasTool::preMousePress(MouseEvent* event) {
     if (event->isTablet()) {
-        if (!pressedMouseButtons_) {
+        if (pressedMouseButtons_) {
             event->stopPropagation();
         }
         else {
