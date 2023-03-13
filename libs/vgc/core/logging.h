@@ -48,7 +48,7 @@ namespace detail {
 VGC_CORE_API
 void appendPreambleToLogMessage(
     fmt::memory_buffer& message,
-    const StringId& categoryName,
+    StringId categoryName,
     LogLevel level);
 
 VGC_CORE_API
@@ -66,29 +66,23 @@ void printLogMessageToStderr(fmt::memory_buffer& message);
 //
 template<typename... T>
 VGC_FORCE_INLINE void
-log(const StringId& categoryName,
-    LogLevel level,
-    fmt::format_string<T...> fmt,
-    T&&... args) {
-
+log(StringId categoryName, LogLevel level, fmt::format_string<T...> fmt, T&&... args) {
     fmt::memory_buffer message;
     appendPreambleToLogMessage(message, categoryName, level);
     formatTo(std::back_inserter(message), fmt, std::forward<T>(args)...);
     printLogMessageToStderr(message);
 }
 
-VGC_FORCE_INLINE void
-log(const StringId& categoryName, LogLevel level, const char* cstring) {
+VGC_FORCE_INLINE void log(StringId categoryName, LogLevel level, const char* cstring) {
     log(categoryName, level, "{}", cstring);
 }
 
 VGC_FORCE_INLINE void
-log(const StringId& categoryName, LogLevel level, const std::string& string) {
+log(StringId categoryName, LogLevel level, const std::string& string) {
     log(categoryName, level, "{}", string.c_str());
 }
 
-VGC_FORCE_INLINE void
-log(const StringId& categoryName, LogLevel level, const StringId& stringId) {
+VGC_FORCE_INLINE void log(StringId categoryName, LogLevel level, StringId stringId) {
     log(categoryName, level, "{}", stringId.string().c_str());
 }
 
@@ -113,13 +107,13 @@ public:
     LogCategoryBase(const LogCategoryBase&) = delete;
     LogCategoryBase& operator=(const LogCategoryBase&) = delete;
 
-    const StringId& name() const {
+    StringId name() const {
         return name_;
     }
 
 protected:
     friend class LogCategoryRegistry;
-    LogCategoryBase(const StringId& name)
+    LogCategoryBase(StringId name)
         : name_(name) {
     }
 
@@ -134,7 +128,7 @@ template<LogLevel compileTimeEnabledLevels_>
 class LogCategory : public LogCategoryBase {
 protected:
     friend class LogCategoryRegistry;
-    LogCategory(const StringId& name)
+    LogCategory(StringId name)
         : LogCategoryBase(name) {
     }
 
@@ -186,7 +180,7 @@ private:
     : public ::vgc::core::LogCategory<::vgc::core::LogLevel::compileTimeEnabledLevels> { \
         friend class ::vgc::core::LogCategoryRegistry;                                   \
         static ClassName* instance_;                                                     \
-        ClassName(const ::vgc::core::StringId& name)                                     \
+        ClassName(::vgc::core::StringId name)                                            \
             : ::vgc::core::LogCategory<::vgc::core::LogLevel::compileTimeEnabledLevels>( \
                 name) {                                                                  \
         }                                                                                \

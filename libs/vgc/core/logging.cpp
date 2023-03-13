@@ -39,7 +39,7 @@ namespace detail {
 
 void appendPreambleToLogMessage(
     fmt::memory_buffer& message,
-    const StringId& categoryName,
+    StringId categoryName,
     LogLevel level) {
 
     if (!(categoryName == LogTmp::instance()->name())) {
