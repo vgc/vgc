@@ -154,7 +154,7 @@ public:
     /// Returns whether the two `StringId` are equal. This is equivalent to
     /// whether their underlying strings are equals.
     ///
-    bool operator==(const StringId& other) const noexcept {
+    bool operator==(StringId other) const noexcept {
         return stringPtr_ == other.stringPtr_;
     }
 
@@ -168,7 +168,7 @@ public:
 
     /// Returns whether the two `StringId` are different.
     ///
-    bool operator!=(const StringId& other) const noexcept {
+    bool operator!=(StringId other) const noexcept {
         return stringPtr_ != other.stringPtr_;
     }
 
@@ -182,13 +182,13 @@ public:
     /// typically only useful for storing `StringId` instances in a map. This is
     /// NOT the alphabetical order.
     ///
-    bool operator<(const StringId& other) const noexcept {
+    bool operator<(StringId other) const noexcept {
         return stringPtr_ < other.stringPtr_;
     }
 
     /// Returns the result of a lexicographical comparison with the `other` string.
     ///
-    int compare(const StringId& other) const noexcept {
+    int compare(StringId other) const noexcept {
         return string().compare(other.string());
     }
 
@@ -206,13 +206,13 @@ private:
 
 /// Returns whether the given `std::string_view` is equal to the given `StringId`.
 ///
-inline bool operator==(std::string_view s1, const StringId& s2) noexcept {
+inline bool operator==(std::string_view s1, StringId s2) noexcept {
     return s2 == s1;
 }
 
 /// Returns whether the given `std::string_view` is different from the given `StringId`.
 ///
-inline bool operator!=(std::string_view s1, const StringId& s2) noexcept {
+inline bool operator!=(std::string_view s1, StringId s2) noexcept {
     return s2 != s1;
 }
 
@@ -239,7 +239,7 @@ namespace std {
 // Implement hash function to make StringId compatible with std::unordered_map
 template<>
 struct hash<vgc::core::StringId> {
-    std::size_t operator()(const vgc::core::StringId& s) const {
+    std::size_t operator()(vgc::core::StringId s) const {
         return std::hash<const std::string*>()(s.stringPtr_);
     }
 };

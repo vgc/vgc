@@ -178,7 +178,7 @@ public:
     /// Returns whether this Value is of type Identifier or String and
     /// whose string value is equal the given string.
     ///
-    bool operator==(const core::StringId& other) const {
+    bool operator==(core::StringId other) const {
         return (type() == ValueType::Identifier || type() == ValueType::String)
                && std::any_cast<core::StringId>(value_) == other;
     }

@@ -213,7 +213,7 @@ public:
         return element_;
     }
 
-    const core::StringId& name() const {
+    core::StringId name() const {
         return name_;
     }
 
@@ -253,7 +253,7 @@ public:
         return element_;
     }
 
-    const core::StringId& name() const {
+    core::StringId name() const {
         return name_;
     }
 

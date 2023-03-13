@@ -202,7 +202,7 @@ private:
 public:
     /// Returns the property name of this declaration.
     ///
-    const core::StringId& property() {
+    core::StringId property() {
         return property_;
     }
 
