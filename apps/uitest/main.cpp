@@ -249,6 +249,7 @@ private:
         ui::NumberEdit* numberEdit3 = row->createChild<ui::NumberEdit>();
         numberEdit3->setSignificantDigits(2);
         numberEdit3->setStep(0.001);
+        numberEdit3->setText("0.0000234");
     }
 
     void createClickMePopups_(ui::Widget* parent) {

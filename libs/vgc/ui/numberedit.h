@@ -225,7 +225,9 @@ private:
 
     // Text mode
     void setTextFromValue_();
-    void setValueFromText_();
+    void setValueFromText_(double valueIfInvalid);
+    void onTextChanged_();
+    VGC_SLOT(onTextChangedSlot_, onTextChanged_)
 
     // Switch between modes
     bool isTextMode_ = true;
