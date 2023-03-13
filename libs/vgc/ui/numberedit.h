@@ -80,7 +80,7 @@ public:
 
     /// Returns the minimim value of this `NumberEdit`.
     ///
-    /// \sa  maximum()`, `setMinimum()`, `setMaximum()`, `setRange()`.
+    /// \sa `maximum()`, `setMinimum()`, `setMaximum()`, `setRange()`.
     ///
     double minimum() const {
         return minimum_;
