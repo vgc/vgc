@@ -80,7 +80,7 @@ public:
 
     /// Returns the minimim value of this `NumberEdit`.
     ///
-    /// \sa `setMinimum()`, maximum()`.
+    /// \sa `maximum()`, `setMinimum()`, `setMaximum()`, `setRange()`.
     ///
     double minimum() const {
         return minimum_;
@@ -95,13 +95,13 @@ public:
     /// Note that after calling this function, `minimum()` may not be equal to
     /// the given `min` as a result of rounding to the allowed precision.
     ///
-    /// \sa `minimum()`, `setMaximum()`.
+    /// \sa `minimum()`, `maximum()`, `setMaximum()`, `setRange()`.
     ///
     void setMinimum(double min);
 
     /// Returns the maximum value of this `NumberEdit`.
     ///
-    /// \sa `setMaximum()`, minimum()`.
+    /// \sa `minimum()`, `setMinimum()`, `setMaximum()`, `setRange()`.
     ///
     double maximum() const {
         return maximum_;
@@ -116,12 +116,30 @@ public:
     /// Note that after calling this function, `maximum()` may not be equal to
     /// the given `max` as a result of rounding to the allowed precision.
     ///
-    /// \sa `maximum()`, `setMinimum()`.
+    /// \sa `minimum()`, `maximum()`, `setMinimum()`, `setRange()`.
     ///
     void setMaximum(double max);
 
+    /// Sets the minimum and maximim value of this `NumberEdit`.
+    ///
+    /// This is a convenient function equivalent to:
+    ///
+    /// ```cpp
+    /// setMinimum(min);
+    /// setMaximum(max);
+    /// ```
+    ///
+    /// \sa `minimum()`, `maximum()`, `setMinimum()`, `setMaximum()`.
+    ///
+    void setRange(double min, double max) {
+        setMinimum(min);
+        setMaximum(max);
+    }
+
     /// Returns the precision of this `NumberEdit`, that is, how many decimals
     /// or significant digits input numbers are rounded to.
+    ///
+    /// \sa `setPrecision()`, `setDecimals()`, `setSignificantDigits()`.
     ///
     core::Precision precision() const {
         return precision_;
@@ -132,6 +150,8 @@ public:
     ///
     /// The `value()`, `minimum()`, and `maximum()` are automatically rounded
     /// to the new precision.
+    ///
+    /// \sa `precision()`, `setDecimals()`, `setSignificantDigits()`.
     ///
     void setPrecision(core::Precision precision);
 
@@ -145,11 +165,14 @@ public:
     /// setPrecision(Precision(PrecisionMode::Decimals, numDecimals));
     /// ```
     ///
+    /// \sa `precision()`, `setPrecision()`, `setSignificantDigits()`.
+    ///
     void setDecimals(Int numDecimals) {
         setPrecision({core::PrecisionMode::Decimals, static_cast<Int8>(numDecimals)});
     }
 
-    /// Sets the precision of this `NumberEdit` to a fixed number of significant digits.
+    /// Sets the precision of this `NumberEdit` to a fixed number of significant
+    /// digits.
     ///
     /// Note that the range of supported `numDigits` is from `-127` to `128`.
     ///
@@ -158,6 +181,8 @@ public:
     /// ```
     /// setPrecision(Precision(PrecisionMode::SignificantDigits, numDigits));
     /// ```
+    ///
+    /// \sa `precision()`, `setPrecision()`, `setDecimals()`.
     ///
     void setSignificantDigits(Int numDigits) {
         setPrecision(
