@@ -437,6 +437,47 @@ TEST(TestArithmetic, RoundToPrecision) {
     // clang-format on
 }
 
+TEST(TestArithmetic, PrecisionComparisons) {
+
+    using core::Precision;
+    using PM = core::PrecisionMode;
+
+    EXPECT_EQ(Precision(), Precision());
+
+    EXPECT_EQ(Precision(PM::Unrestricted), Precision(PM::Unrestricted));
+    EXPECT_EQ(Precision(PM::Decimals), Precision(PM::Decimals));
+    EXPECT_EQ(Precision(PM::SignificantDigits), Precision(PM::SignificantDigits));
+
+    EXPECT_EQ(Precision(PM::Unrestricted, 0), Precision(PM::Unrestricted, 0));
+    EXPECT_EQ(Precision(PM::Decimals, 0), Precision(PM::Decimals, 0));
+    EXPECT_EQ(Precision(PM::SignificantDigits, 0), Precision(PM::SignificantDigits, 0));
+
+    EXPECT_EQ(Precision(PM::Unrestricted, 2), Precision(PM::Unrestricted, 2));
+    EXPECT_EQ(Precision(PM::Decimals, 2), Precision(PM::Decimals, 2));
+    EXPECT_EQ(Precision(PM::SignificantDigits, 2), Precision(PM::SignificantDigits, 2));
+
+    EXPECT_EQ(Precision(PM::Unrestricted, -2), Precision(PM::Unrestricted, -2));
+    EXPECT_EQ(Precision(PM::Decimals, -2), Precision(PM::Decimals, -2));
+    EXPECT_EQ(Precision(PM::SignificantDigits, -2), Precision(PM::SignificantDigits, -2));
+
+    EXPECT_NE(Precision(PM::Unrestricted), Precision(PM::Decimals));
+    EXPECT_NE(Precision(PM::Unrestricted), Precision(PM::SignificantDigits));
+    EXPECT_NE(Precision(PM::Decimals), Precision(PM::Unrestricted));
+    EXPECT_NE(Precision(PM::Decimals), Precision(PM::SignificantDigits));
+    EXPECT_NE(Precision(PM::SignificantDigits), Precision(PM::Unrestricted));
+    EXPECT_NE(Precision(PM::SignificantDigits), Precision(PM::Decimals));
+
+    EXPECT_LT(Precision(PM::Unrestricted), Precision(PM::Decimals));
+    EXPECT_LT(Precision(PM::Decimals), Precision(PM::SignificantDigits));
+
+    EXPECT_LT(Precision(PM::Unrestricted, 8), Precision(PM::Decimals, 2));
+    EXPECT_LT(Precision(PM::Decimals, 5), Precision(PM::SignificantDigits, 1));
+
+    EXPECT_LT(Precision(PM::Unrestricted, 1), Precision(PM::Unrestricted, 2));
+    EXPECT_LT(Precision(PM::Decimals, 1), Precision(PM::Decimals, 2));
+    EXPECT_LT(Precision(PM::SignificantDigits, 1), Precision(PM::SignificantDigits, 2));
+}
+
 int main(int argc, char** argv) {
     ::testing::InitGoogleTest(&argc, argv);
     return RUN_ALL_TESTS();
