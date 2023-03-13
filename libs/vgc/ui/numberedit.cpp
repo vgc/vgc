@@ -76,7 +76,7 @@ void NumberEdit::setMinimum(double min) {
     }
 
     // Fit value in new range
-    setValue(value_);
+    setValue(clampedAndRoundedValue_(value_));
 }
 
 void NumberEdit::setMaximum(double max) {
@@ -97,7 +97,17 @@ void NumberEdit::setMaximum(double max) {
     }
 
     // Fit value in new range
-    setValue(value_);
+    setValue(clampedAndRoundedValue_(value_));
+}
+
+void NumberEdit::setPrecision(core::Precision precision) {
+    if (precision_ == precision) {
+        return;
+    }
+    precision_ = precision;
+    setMinimum(roundedValue_(minimum_));
+    setMaximum(roundedValue_(maximum_));
+    setValue(clampedAndRoundedValue_(value_));
 }
 
 bool NumberEdit::onMouseEnter() {
@@ -306,8 +316,7 @@ bool NumberEdit::onKeyPress(KeyEvent* event) {
 }
 
 double NumberEdit::roundedValue_(double v) {
-    // TODO: something like std::round(v / precision) * precision
-    return v;
+    return vgc::core::round(v, precision_);
 }
 
 double NumberEdit::clampedAndRoundedValue_(double v) {
