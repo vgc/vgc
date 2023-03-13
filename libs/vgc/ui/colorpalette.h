@@ -31,6 +31,7 @@ VGC_DECLARE_OBJECT(ColorPalette);
 VGC_DECLARE_OBJECT(ColorPaletteSelector);
 VGC_DECLARE_OBJECT(ColorPreview);
 VGC_DECLARE_OBJECT(LineEdit);
+VGC_DECLARE_OBJECT(NumberEdit);
 VGC_DECLARE_OBJECT(ScreenColorPickerButton);
 
 /// \class vgc::ui::ScreenColorPickerButton
@@ -120,12 +121,12 @@ private:
     Button* stepsButton_;
     Button* continuousButton_;
     ColorPaletteSelector* selector_;
-    LineEdit* hStepsEdit_;
-    LineEdit* sStepsEdit_;
-    LineEdit* lStepsEdit_;
-    LineEdit* rEdit_;
-    LineEdit* gEdit_;
-    LineEdit* bEdit_;
+    NumberEdit* hStepsEdit_;
+    NumberEdit* sStepsEdit_;
+    NumberEdit* lStepsEdit_;
+    NumberEdit* rEdit_;
+    NumberEdit* gEdit_;
+    NumberEdit* bEdit_;
     LineEdit* hEdit_;
     LineEdit* sEdit_;
     LineEdit* lEdit_;

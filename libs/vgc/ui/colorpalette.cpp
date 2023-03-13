@@ -30,6 +30,7 @@
 #include <vgc/ui/label.h>
 #include <vgc/ui/lineedit.h>
 #include <vgc/ui/margins.h>
+#include <vgc/ui/numberedit.h>
 #include <vgc/ui/row.h>
 #include <vgc/ui/strings.h>
 
@@ -417,6 +418,21 @@ void createThreeLineEdits_(
     addFirstLastStyleClasses_({a, b, c});
 }
 
+void createThreeNumberEdits_(
+    Widget* parent,
+    core::StringId styleClass,
+    std::string_view labelText,
+    NumberEdit*& a,
+    NumberEdit*& b,
+    NumberEdit*& c) {
+
+    Widget* group = createFieldRowLabelAndGroup(parent, styleClass, labelText);
+    a = group->createChild<NumberEdit>();
+    b = group->createChild<NumberEdit>();
+    c = group->createChild<NumberEdit>();
+    addFirstLastStyleClasses_({a, b, c});
+}
+
 void createOneLineEdit_(
     Widget* parent,
     core::StringId styleClass,
@@ -452,14 +468,20 @@ ColorPalette::ColorPalette()
     stepsActionGroup_ = ActionGroup::create(CheckPolicy::ExactlyOne);
     stepsActionGroup_->addAction(stepsButton_->action());
     stepsActionGroup_->addAction(continuousButton_->action());
-    createThreeLineEdits_(
+    createThreeNumberEdits_(
         this, strings_::steps, "Steps:", hStepsEdit_, sStepsEdit_, lStepsEdit_);
+    hStepsEdit_->setRange(2, 98); // See ColorPaletteSelector::setHslSteps() for
+    sStepsEdit_->setRange(2, 99); // an explanation of the ranges.
+    lStepsEdit_->setRange(3, 99);
 
     // Main color selector
     selector_ = createChild<ColorPaletteSelector>();
 
     // Color line edits
-    createThreeLineEdits_(this, strings_::rgb, "RGB:", rEdit_, gEdit_, bEdit_);
+    createThreeNumberEdits_(this, strings_::rgb, "RGB:", rEdit_, gEdit_, bEdit_);
+    rEdit_->setRange(0, 255);
+    gEdit_->setRange(0, 255);
+    bEdit_->setRange(0, 255);
     createThreeLineEdits_(this, strings_::hsl, "HSL:", hEdit_, sEdit_, lEdit_);
     createOneLineEdit_(this, strings_::hex, "Hex:", hexEdit_);
 
@@ -476,15 +498,20 @@ ColorPalette::ColorPalette()
     paletteButtons->createChild<Button>(removeFromPaletteAction);
     colorListView_ = createChild<ColorListView>();
 
+    // Init
+    onContinuousChanged_();
+    updateStepsLineEdits_();
+    setSelectedColorNoCheckNoEmit_(initialColor.rounded8b());
+
     // Connections
     continuousButton_->action()->checkStateChanged().connect(onContinuousChangedSlot_());
-    hStepsEdit_->editingFinished().connect(onStepsEditedSlot_());
-    sStepsEdit_->editingFinished().connect(onStepsEditedSlot_());
-    lStepsEdit_->editingFinished().connect(onStepsEditedSlot_());
+    hStepsEdit_->valueChanged().connect(onStepsEditedSlot_());
+    sStepsEdit_->valueChanged().connect(onStepsEditedSlot_());
+    lStepsEdit_->valueChanged().connect(onStepsEditedSlot_());
     selector_->colorSelected().connect(onSelectorSelectedColorSlot_());
-    rEdit_->editingFinished().connect(onRgbEditedSlot_());
-    gEdit_->editingFinished().connect(onRgbEditedSlot_());
-    bEdit_->editingFinished().connect(onRgbEditedSlot_());
+    rEdit_->valueChanged().connect(onRgbEditedSlot_());
+    gEdit_->valueChanged().connect(onRgbEditedSlot_());
+    bEdit_->valueChanged().connect(onRgbEditedSlot_());
     hEdit_->editingFinished().connect(onHslEditedSlot_());
     sEdit_->editingFinished().connect(onHslEditedSlot_());
     lEdit_->editingFinished().connect(onHslEditedSlot_());
@@ -495,11 +522,6 @@ ColorPalette::ColorPalette()
     pickScreenButton->pickingCancelled().connect(onPickScreenCancelledSlot_());
     pickScreenButton->colorHovered().connect(onPickScreenColorHoveredSlot_());
     colorListView_->selectedColorChanged().connect(onColorListViewSelectedColorSlot_());
-
-    // Init
-    onContinuousChanged_();
-    updateStepsLineEdits_();
-    setSelectedColorNoCheckNoEmit_(initialColor.rounded8b());
 
     // Style class
     addStyleClass(strings::ColorPalette);
@@ -588,41 +610,28 @@ void ColorPalette::onContinuousChanged_() {
 }
 
 void ColorPalette::onStepsEdited_() {
-
-    // Try to parse the new steps from the line edits.
-    //
-    bool isValid = true;
-    Int numHueSteps = parseInt_(hStepsEdit_, isValid);
-    Int numSaturationSteps = parseInt_(sStepsEdit_, isValid);
-    Int numLightnessSteps = parseInt_(lStepsEdit_, isValid);
-
-    // Check if the input was valid.
-    //
-    if (isValid) {
-        selector_->setHslSteps(numHueSteps, numSaturationSteps, numLightnessSteps);
-    }
+    Int numHueSteps = static_cast<Int>(hStepsEdit_->value());
+    Int numSaturationSteps = static_cast<Int>(sStepsEdit_->value());
+    Int numLightnessSteps = static_cast<Int>(lStepsEdit_->value());
+    selector_->setHslSteps(numHueSteps, numSaturationSteps, numLightnessSteps);
     updateStepsLineEdits_();
 }
 
 void ColorPalette::onRgbEdited_() {
 
-    // Try to parse the new color from the line edit.
+    // Convert from NumberEdit values to color.
     //
-    bool isValid = true;
-    Int r_ = parseInt_(rEdit_, isValid);
-    Int g_ = parseInt_(gEdit_, isValid);
-    Int b_ = parseInt_(bEdit_, isValid);
-
-    // Check if the input was valid.
+    // Note: the number edits are configured such that only integers between 0
+    // and 255 are allowed, so the static_cast<Int> is safe.
     //
-    core::Color color = selectedColor_;
-    if (isValid) {
-        float r = core::Color::mapFrom255(r_);
-        float g = core::Color::mapFrom255(g_);
-        float b = core::Color::mapFrom255(b_);
-        color = core::Color(r, g, b);
-        color.round8b();
-    }
+    Int r_ = static_cast<Int>(rEdit_->value());
+    Int g_ = static_cast<Int>(gEdit_->value());
+    Int b_ = static_cast<Int>(bEdit_->value());
+    float r = core::Color::mapFrom255(r_);
+    float g = core::Color::mapFrom255(g_);
+    float b = core::Color::mapFrom255(b_);
+    core::Color color(r, g, b);
+    color.round8b();
 
     // Set `color` as the new `selectedColor_` unconditionally, and update
     // child widgets accordingly. This rollbacks the line edits to previous
@@ -717,9 +726,9 @@ void ColorPalette::onRemoveFromPalette_() {
 }
 
 void ColorPalette::updateStepsLineEdits_() {
-    hStepsEdit_->setText(core::toString(selector_->numHueSteps()));
-    sStepsEdit_->setText(core::toString(selector_->numSaturationSteps()));
-    lStepsEdit_->setText(core::toString(selector_->numLightnessSteps()));
+    hStepsEdit_->setValue(selector_->numHueSteps());
+    sStepsEdit_->setValue(selector_->numSaturationSteps());
+    lStepsEdit_->setValue(selector_->numLightnessSteps());
 }
 
 // This function is the same as setSelectedColor(), except that it
@@ -743,9 +752,9 @@ void ColorPalette::setSelectedColorNoCheckNoEmit_(const core::Color& color) {
     selector_->setSelectedColor(selectedColor_);
 
     // Update RGB line edits
-    rEdit_->setText(core::toString(static_cast<Int>(std::round(color.r() * 255))));
-    gEdit_->setText(core::toString(static_cast<Int>(std::round(color.g() * 255))));
-    bEdit_->setText(core::toString(static_cast<Int>(std::round(color.b() * 255))));
+    rEdit_->setValue(std::round(color.r() * 255));
+    gEdit_->setValue(std::round(color.g() * 255));
+    bEdit_->setValue(std::round(color.b() * 255));
 
     // Update HSL line edits
     // For now, we round to the nearest integer. Later, we may
@@ -1099,6 +1108,31 @@ void ColorPaletteSelector::onPaintDraw(graphics::Engine* engine, PaintOptions op
         }
         float dhue = 360.0f / hSteps;
         float hue = isContinuous_ ? selectedHue_ : selectedHueIndex_ * dhue;
+
+        // Design Note 1: in the line above, we intentionally check
+        // `isContinuous` and not `isContinuous || !isSelectedColorExact_`. The
+        // idea in steps mode, even if the color is not exact, we want the SL
+        // selector to use the closest selectable hue (`selectedHueIndex_ *
+        // dhue`, where `selectedHueIndex_` means "closest selectable hue
+        // index" in this case) rather than the current selected hue. This way,
+        // by clicking in the SL selector, we change both SL but also hue, so
+        // that we get a "selectable color" in the discretized HSL space.
+        //
+        // The above designed behavior may seem a little strange in some cases
+        // though, especially when editing the steps line edits (the hue of the
+        // SL selector keeps changing to snap to the closest selectable hue,
+        // which feels like a bug at first). So perhaps a better design is to
+        // keep "SL" and "Hue" truly separate, and ensure that when clicking on
+        // the SL selector, we do not change the hue, even if this means that
+        // the chosen color is not part of the discretized HSL space (it is
+        // only part of the discretized SL space, but keeps the previous Hue
+        // which is not anymore in the discretized Hue space). In fact, we may
+        // imagine a design where "isContinuous" is not a global mode, but
+        // per-channel, e.g., isHueContinuous, isSaturationContinuous,
+        // isLightnessContinuous.
+        //
+        // If you want to change this behavior, search for "Design Note 1"
+        // in this file for other places where changes are required.
 
         // Radius of Saturation-Lightness cursor in continuous mode
         using namespace style::literals;
@@ -1802,7 +1836,13 @@ void ColorPaletteSelector::drawHueSelector_(core::FloatArray& a) {
                 selectedSaturationIndex_,
                 selectedLightnessIndex_);
 
-            core::Color::hsl(hue, selectedSaturation_, selectedLightness_);
+            // Note: see "Design Note 1" longer comment in onPaintDraw().
+            // If we want to make SL and Hue discretization more independant,
+            // we may want to use the following instead:
+            //
+            // core::Color color1 = core::Color::hsl(hue, selectedSaturation_, selectedLightness_);
+            //
+
             core::Color color2 = core::Color::hsl(hue, 1.0f, 0.5f);
             insertHuePie_(a, hues_, hueVecs, hue1, hue2, color1, r1, r3, m.hinting);
             insertHuePie_(a, hues_, hueVecs, hue1, hue2, color2, r3, r5, m.hinting);
