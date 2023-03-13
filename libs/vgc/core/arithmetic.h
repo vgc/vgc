@@ -1132,6 +1132,10 @@ inline double pow10<double>(Int exp) {
 ///
 enum class PrecisionMode : Int8 {
 
+    /// Do not round, that is, keep numbers with their current precision.
+    ///
+    Unrestricted,
+
     /// Round to a specified number of base-10 fractional digits.
     ///
     Decimals,
@@ -1160,7 +1164,7 @@ class Precision {
 public:
     /// Specifies a `Precision` with the given `mode` and `value`.
     ///
-    constexpr Precision(PrecisionMode mode, Int8 value)
+    constexpr Precision(PrecisionMode mode = PrecisionMode::Unrestricted, Int8 value = 0)
         : mode_(mode)
         , value_(value) {
     }
@@ -1187,6 +1191,51 @@ public:
     ///
     constexpr void setValue(Int8 value) {
         value_ = value;
+    }
+
+    /// Returns whether the two precisons `p1` and `p2` are equal, that is,
+    /// whether they have the same mode and the same value.
+    ///
+    friend bool operator==(Precision p1, Precision p2) {
+        return p1.mode_ == p2.mode_ && p1.value_ == p2.value_;
+    }
+
+    /// Returns whether the two precisons `p1` and `p2` are different.
+    ///
+    friend bool operator!=(Precision p1, Precision p2) {
+        return !(p1 == p2);
+    }
+
+    /// Compares the two precisions `p1` and `p2` using the lexicographic order
+    /// on (`mode()`, `value()`).
+    ///
+    friend bool operator<(Precision p1, Precision p2) {
+        // clang-format off
+        return ( (p1.mode_ < p2.mode_) ||
+                (!(p2.mode_ < p1.mode_) &&
+                 ( (p1.value_ < p2.value_))));
+        // clang-format on
+    }
+
+    /// Compares the two precisions `p1` and `p2` using the lexicographic order
+    /// on (`mode()`, `value()`).
+    ///
+    friend bool operator<=(Precision p1, Precision p2) {
+        return !(p2 < p1);
+    }
+
+    /// Compares the two precisions `p1` and `p2` using the lexicographic order
+    /// on (`mode()`, `value()`).
+    ///
+    friend bool operator>(Precision p1, Precision p2) {
+        return p2 < p1;
+    }
+
+    /// Compares the two precisions `p1` and `p2` using the lexicographic order
+    /// on (`mode()`, `value()`).
+    ///
+    friend bool operator>=(Precision p1, Precision p2) {
+        return !(p1 < p2);
     }
 
 private:
@@ -1272,6 +1321,8 @@ FloatType roundToSignificantDigits(FloatType x, Int numDigits) {
 template<typename FloatType, VGC_REQUIRES(std::is_floating_point_v<FloatType>)>
 FloatType round(FloatType x, Precision precision) {
     switch (precision.mode()) {
+    case PrecisionMode::Unrestricted:
+        return x;
     case PrecisionMode::Decimals:
         return roundToDecimals(x, precision.value());
     case PrecisionMode::SignificantDigits:
