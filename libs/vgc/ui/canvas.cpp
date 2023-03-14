@@ -268,7 +268,7 @@ bool Canvas::onMousePress(MouseEvent* event) {
                         if (!e) {
                             return;
                         }
-                        if (e->isSelectableAt(worldCoords, tol)) {
+                        if (e->isSelectableAt(worldCoords, false, tol)) {
                             selectionCandidateElements_.append(e);
                         }
                     });

@@ -54,25 +54,98 @@ geometry::Rect2d VacKeyEdge::boundingBox(core::AnimTime /*t*/) const {
     return bbox_;
 }
 
-bool VacKeyEdge::isSelectableAt(const geometry::Vec2d& pos, double tol, core::AnimTime t)
-    const {
+bool VacKeyEdge::isSelectableAt(
+    const geometry::Vec2d& p,
+    bool outlineOnly,
+    double tol,
+    core::AnimTime t) const {
 
-    geometry::Rect2d inflatedBbox = bbox_;
-    if (!inflatedBbox.isEmpty()) {
-        inflatedBbox.setPMin(inflatedBbox.pMin() - geometry::Vec2d(tol, tol));
-        inflatedBbox.setPMax(inflatedBbox.pMax() + geometry::Vec2d(tol, tol));
+    using Vec2d = geometry::Vec2d;
+
+    if (bbox_.isEmpty()) {
+        return false;
     }
 
+    geometry::Rect2d inflatedBbox = bbox_;
+    inflatedBbox.setPMin(inflatedBbox.pMin() - Vec2d(tol, tol));
+    inflatedBbox.setPMax(inflatedBbox.pMax() + Vec2d(tol, tol));
+    if (!inflatedBbox.contains(p)) {
+        return false;
+    }
+    // use "binary search"-style tree/array of bboxes?
+
     VacEdgeCellFrameData* data = frameData(t);
-    if (data && inflatedBbox.contains(pos)) {
-        for (const auto& sample : data->samples_) {
-            double width = (std::max)(sample.leftHalfwidth(), sample.rightHalfwidth());
-            double d = (width + tol);
-            if ((pos - sample.position()).squaredLength() < (d * d)) {
-                return true;
+    if (!data || data->samples_.isEmpty()) {
+        return false;
+    }
+
+    auto it1 = data->samples_.begin();
+    // is p in sample outline-mode-selection disk?
+    if (it1->position().isNear(p, tol)) {
+        return true;
+    }
+
+    auto it0 = it1++;
+    double maxHalfwidth0 = (std::max)(it0->leftHalfwidth(), it0->rightHalfwidth());
+    for (auto it0 = it1++; it1 != data->samples_.end(); it0 = it1++) {
+        // is p in sample outline-mode-selection disk?
+        if (it1->position().isNear(p, tol)) {
+            return true;
+        }
+
+        // check projection works as expected
+        //static_assert(Vec2d(1, 1).dot(Vec2d(0, 1)) == 1.0);
+        //static_assert(Vec2d(1, 1).det(Vec2d(-1, 1)) == 2.0);
+
+        // in segment outline-mode-selection box?
+        const Vec2d p0 = it0->position();
+        const Vec2d p1 = it1->position();
+        const Vec2d seg = (p1 - p0);
+        const double seglen = seg.length();
+        if (seglen > 0) { // if capsule is not a disk
+            const Vec2d segdir = seg / seglen;
+            const Vec2d p0p = p - p0;
+            const double tx = p0p.dot(segdir);
+            // does p project in segment?
+            if (tx >= 0 && tx <= seglen) {
+                const double ty = p0p.det(segdir);
+                // does p project in slice?
+                if (std::abs(ty) <= tol) {
+                    return true;
+                }
+            }
+        }
+
+        if (!outlineOnly) {
+            // does p belongs to quad ?
+            // only works for convex or hourglass quads atm
+            const Vec2d r0 = it0->sidePoint(0);
+            const Vec2d r0p = p - r0;
+            if (it0->normal().det(r0p) <= 0) {
+                const Vec2d l1 = it1->sidePoint(1);
+                const Vec2d l1p = p - l1;
+                if (it1->normal().det(l1p) >= 0) {
+                    const Vec2d r1r0 = (r0 - it1->sidePoint(0));
+                    const Vec2d l0l1 = (l1 - it0->sidePoint(1));
+                    const bool a = r1r0.det(r0p) >= 0;
+                    const bool b = l0l1.det(l1p) >= 0;
+                    // approximate detection of hourglass case
+                    // (false-positives but no false-negatives)
+                    //if (r1r0.dot(l0l1) > 0) {
+                    //    // naive test for "p in quad?" in the hourglass case
+                    //    if (a || b) {
+                    //        return true;
+                    //    }
+                    //}
+                    //else
+                    if (a && b) {
+                        return true;
+                    }
+                }
             }
         }
     }
+
     return false;
 }
 
