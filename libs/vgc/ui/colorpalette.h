@@ -127,11 +127,28 @@ private:
     NumberEdit* rEdit_;
     NumberEdit* gEdit_;
     NumberEdit* bEdit_;
-    LineEdit* hEdit_;
-    LineEdit* sEdit_;
-    LineEdit* lEdit_;
+    NumberEdit* hEdit_;
+    NumberEdit* sEdit_;
+    NumberEdit* lEdit_;
     LineEdit* hexEdit_;
     ColorListView* colorListView_;
+
+    // Prevent infinite loops: RGB changed -> color changed -> HSL changed -> ...
+    //
+    // Another design would be to add the NumberEdit::valueEdited() signal,
+    // which would be similar to NumberEdit::valueChanged(), except that it
+    // would not be edited when the value is edited programmatically (similarly
+    // to LineEdit textChanged() vs textEdited()).
+    //
+    enum class ColorChangeOrigin {
+        None,
+        RgbNumberEdit,
+        HslNumberEdit,
+        HexLineEdit,
+        PublicSetter,
+        PrivateSetter
+    };
+    ColorChangeOrigin colorChangeOrigin_ = ColorChangeOrigin::None;
 
     void onSelectorSelectedColor_();
     VGC_SLOT(onSelectorSelectedColorSlot_, onSelectorSelectedColor_)
@@ -142,14 +159,14 @@ private:
     void onContinuousChanged_();
     VGC_SLOT(onContinuousChangedSlot_, onContinuousChanged_)
 
-    void onStepsEdited_();
-    VGC_SLOT(onStepsEditedSlot_, onStepsEdited_)
+    void onStepsValueChanged_();
+    VGC_SLOT(onStepsValueChangedSlot_, onStepsValueChanged_)
 
-    void onRgbEdited_();
-    VGC_SLOT(onRgbEditedSlot_, onRgbEdited_)
+    void onRgbValueChanged_();
+    VGC_SLOT(onRgbValueChangedSlot_, onRgbValueChanged_)
 
-    void onHslEdited_();
-    VGC_SLOT(onHslEditedSlot_, onHslEdited_)
+    void onHslValueChanged_();
+    VGC_SLOT(onHslValueChangedSlot_, onHslValueChanged_)
 
     void onHexEdited_();
     VGC_SLOT(onHexEditedSlot_, onHexEdited_)

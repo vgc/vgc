@@ -403,21 +403,6 @@ void addFirstLastStyleClasses_(std::initializer_list<Widget*> widgets) {
     }
 }
 
-void createThreeLineEdits_(
-    Widget* parent,
-    core::StringId styleClass,
-    std::string_view labelText,
-    LineEdit*& a,
-    LineEdit*& b,
-    LineEdit*& c) {
-
-    Widget* group = createFieldRowLabelAndGroup(parent, styleClass, labelText);
-    a = group->createChild<LineEdit>();
-    b = group->createChild<LineEdit>();
-    c = group->createChild<LineEdit>();
-    addFirstLastStyleClasses_({a, b, c});
-}
-
 void createThreeNumberEdits_(
     Widget* parent,
     core::StringId styleClass,
@@ -482,7 +467,10 @@ ColorPalette::ColorPalette()
     rEdit_->setRange(0, 255);
     gEdit_->setRange(0, 255);
     bEdit_->setRange(0, 255);
-    createThreeLineEdits_(this, strings_::hsl, "HSL:", hEdit_, sEdit_, lEdit_);
+    createThreeNumberEdits_(this, strings_::hsl, "HSL:", hEdit_, sEdit_, lEdit_);
+    hEdit_->setRange(0, 360);
+    sEdit_->setRange(0, 255);
+    lEdit_->setRange(0, 255);
     createOneLineEdit_(this, strings_::hex, "Hex:", hexEdit_);
 
     // Pick screen
@@ -505,16 +493,16 @@ ColorPalette::ColorPalette()
 
     // Connections
     continuousButton_->action()->checkStateChanged().connect(onContinuousChangedSlot_());
-    hStepsEdit_->valueChanged().connect(onStepsEditedSlot_());
-    sStepsEdit_->valueChanged().connect(onStepsEditedSlot_());
-    lStepsEdit_->valueChanged().connect(onStepsEditedSlot_());
+    hStepsEdit_->valueChanged().connect(onStepsValueChangedSlot_());
+    sStepsEdit_->valueChanged().connect(onStepsValueChangedSlot_());
+    lStepsEdit_->valueChanged().connect(onStepsValueChangedSlot_());
     selector_->colorSelected().connect(onSelectorSelectedColorSlot_());
-    rEdit_->valueChanged().connect(onRgbEditedSlot_());
-    gEdit_->valueChanged().connect(onRgbEditedSlot_());
-    bEdit_->valueChanged().connect(onRgbEditedSlot_());
-    hEdit_->editingFinished().connect(onHslEditedSlot_());
-    sEdit_->editingFinished().connect(onHslEditedSlot_());
-    lEdit_->editingFinished().connect(onHslEditedSlot_());
+    rEdit_->valueChanged().connect(onRgbValueChangedSlot_());
+    gEdit_->valueChanged().connect(onRgbValueChangedSlot_());
+    bEdit_->valueChanged().connect(onRgbValueChangedSlot_());
+    hEdit_->valueChanged().connect(onHslValueChangedSlot_());
+    sEdit_->valueChanged().connect(onHslValueChangedSlot_());
+    lEdit_->valueChanged().connect(onHslValueChangedSlot_());
     hexEdit_->editingFinished().connect(onHexEditedSlot_());
     addToPaletteAction->triggered().connect(onAddToPaletteSlot_());
     removeFromPaletteAction->triggered().connect(onRemoveFromPaletteSlot_());
@@ -533,7 +521,9 @@ ColorPalettePtr ColorPalette::create() {
 
 void ColorPalette::setSelectedColor(const core::Color& color) {
     if (selectedColor_ != color) {
+        colorChangeOrigin_ = ColorChangeOrigin::PublicSetter;
         setSelectedColorNoCheckNoEmit_(color);
+        colorChangeOrigin_ = ColorChangeOrigin::None;
     }
 }
 
@@ -548,40 +538,6 @@ void ColorPalette::onColorListViewSelectedColor_() {
 }
 
 namespace {
-
-// If the lineEdit is empty, this function sets it to "0", keeps `isValid`
-// unchanged, and returns `0`.
-//
-// If the lineEdit is non-empty and is a valid integer, this function keeps the
-// line edit and `isValid` unchanged, and returns the integer.
-//
-// If the lineEdit is non-empty and is not a valid integer, this function sets `isValid` to false,
-// leaves the line edit unchanged, and returns `0`.
-//
-Int parseInt_(LineEdit* lineEdit, bool& isValid) {
-    try {
-        const std::string& text = lineEdit->text();
-        if (text.empty()) {
-            // If a user deletes the whole text, then we snap to zero and place the
-            // cursor after the zero, so that doing [select all] [delete] [1] [2]
-            // results in `12`, not `120`.
-            lineEdit->setText("0");
-            lineEdit->moveCursor(graphics::RichTextMoveOperation::EndOfText);
-            return 0;
-        }
-        else {
-            return core::parse<Int>(text);
-        }
-    }
-    catch (const core::ParseError&) {
-        isValid = false;
-        return 0;
-    }
-    catch (const core::RangeError&) {
-        isValid = false;
-        return 0;
-    }
-}
 
 // If the lineEdit is a valid hex color, this keeps `isValid` unchanged and
 // returns the corresponding color.
@@ -609,7 +565,7 @@ void ColorPalette::onContinuousChanged_() {
     selector_->setContinuous(isContinuous);
 }
 
-void ColorPalette::onStepsEdited_() {
+void ColorPalette::onStepsValueChanged_() {
     Int numHueSteps = static_cast<Int>(hStepsEdit_->value());
     Int numSaturationSteps = static_cast<Int>(sStepsEdit_->value());
     Int numLightnessSteps = static_cast<Int>(lStepsEdit_->value());
@@ -617,7 +573,14 @@ void ColorPalette::onStepsEdited_() {
     updateStepsLineEdits_();
 }
 
-void ColorPalette::onRgbEdited_() {
+void ColorPalette::onRgbValueChanged_() {
+
+    // Set RGB as origin or ignore if not originated from RGB.
+    //
+    if (colorChangeOrigin_ != ColorChangeOrigin::None) {
+        return;
+    }
+    colorChangeOrigin_ = ColorChangeOrigin::RgbNumberEdit;
 
     // Convert from NumberEdit values to color.
     //
@@ -641,6 +604,8 @@ void ColorPalette::onRgbEdited_() {
     core::Color oldColor = selectedColor_;
     setSelectedColorNoCheckNoEmit_(color);
 
+    colorChangeOrigin_ = ColorChangeOrigin::None;
+
     // Emit the signal only if the color actually changed.
     //
     if (selectedColor_ != oldColor) {
@@ -648,26 +613,28 @@ void ColorPalette::onRgbEdited_() {
     }
 }
 
-void ColorPalette::onHslEdited_() {
+void ColorPalette::onHslValueChanged_() {
 
-    // Try to parse the new color from the line edit.
+    // Set HSL as origin or ignore if not originated from HSL.
     //
-    bool isValid = true;
-    Int h_ = parseInt_(hEdit_, isValid);
-    Int s_ = parseInt_(sEdit_, isValid);
-    Int l_ = parseInt_(lEdit_, isValid);
-
-    // Check if the input was valid.
-    //
-    core::Color color = selectedColor_;
-    if (isValid) {
-        // Note: Color::hsl() already does mod-360 hue
-        float h = static_cast<float>(h_);
-        float s = core::Color::mapFrom255(s_);
-        float l = core::Color::mapFrom255(l_);
-        color = core::Color::hsl(h, s, l);
-        color.round8b();
+    if (colorChangeOrigin_ != ColorChangeOrigin::None) {
+        return;
     }
+    colorChangeOrigin_ = ColorChangeOrigin::HslNumberEdit;
+
+    // Convert from NumberEdit values to color.
+    //
+    // Note: the number edits are configured such that only integers are
+    // allowed, so the static_cast<Int> is safe.
+    //
+    Int h_ = static_cast<Int>(hEdit_->value());
+    Int s_ = static_cast<Int>(sEdit_->value());
+    Int l_ = static_cast<Int>(lEdit_->value());
+    float h = static_cast<float>(h_);
+    float s = core::Color::mapFrom255(s_);
+    float l = core::Color::mapFrom255(l_);
+    core::Color color = core::Color::hsl(h, s, l);
+    color.round8b();
 
     // Set `color` as the new `selectedColor_` unconditionally, and update
     // child widgets accordingly. This rollbacks the line edits to previous
@@ -677,6 +644,8 @@ void ColorPalette::onHslEdited_() {
     core::Color oldColor = selectedColor_;
     setSelectedColorNoCheckNoEmit_(color);
 
+    colorChangeOrigin_ = ColorChangeOrigin::None;
+
     // Emit the signal only if the color actually changed.
     //
     if (selectedColor_ != oldColor) {
@@ -685,6 +654,13 @@ void ColorPalette::onHslEdited_() {
 }
 
 void ColorPalette::onHexEdited_() {
+
+    // Set Hex as origin or ignore if not originated from Hex.
+    //
+    if (colorChangeOrigin_ != ColorChangeOrigin::None) {
+        return;
+    }
+    colorChangeOrigin_ = ColorChangeOrigin::HexLineEdit;
 
     core::Color newColor = selectedColor_;
     core::Color oldColor = selectedColor_;
@@ -696,6 +672,9 @@ void ColorPalette::onHexEdited_() {
     }
 
     setSelectedColorNoCheckNoEmit_(newColor);
+
+    colorChangeOrigin_ = ColorChangeOrigin::None;
+
     if (selectedColor_ != oldColor) {
         colorSelected().emit();
     }
@@ -736,7 +715,11 @@ void ColorPalette::updateStepsLineEdits_() {
 //
 void ColorPalette::selectColor_(const core::Color& color) {
     if (selectedColor_ != color) {
+        if (colorChangeOrigin_ == ColorChangeOrigin::None) {
+            colorChangeOrigin_ = ColorChangeOrigin::PrivateSetter;
+        }
         setSelectedColorNoCheckNoEmit_(color);
+        colorChangeOrigin_ = ColorChangeOrigin::None;
         colorSelected().emit();
     }
 }
@@ -752,17 +735,21 @@ void ColorPalette::setSelectedColorNoCheckNoEmit_(const core::Color& color) {
     selector_->setSelectedColor(selectedColor_);
 
     // Update RGB line edits
-    rEdit_->setValue(std::round(color.r() * 255));
-    gEdit_->setValue(std::round(color.g() * 255));
-    bEdit_->setValue(std::round(color.b() * 255));
+    if (colorChangeOrigin_ != ColorChangeOrigin::RgbNumberEdit) {
+        rEdit_->setValue(std::round(color.r() * 255));
+        gEdit_->setValue(std::round(color.g() * 255));
+        bEdit_->setValue(std::round(color.b() * 255));
+    }
 
     // Update HSL line edits
     // For now, we round to the nearest integer. Later, we may
     // want to show the first digit
-    auto [h, s, l] = color.toHsl();
-    hEdit_->setText(core::toString(static_cast<Int>(std::round(h))));
-    sEdit_->setText(core::toString(static_cast<Int>(std::round(s * 255))));
-    lEdit_->setText(core::toString(static_cast<Int>(std::round(l * 255))));
+    if (colorChangeOrigin_ != ColorChangeOrigin::HslNumberEdit) {
+        auto [h, s, l] = color.toHsl();
+        hEdit_->setValue(std::round(h));
+        sEdit_->setValue(std::round(s * 255));
+        lEdit_->setValue(std::round(l * 255));
+    }
 
     // Update Hex line edit
     hexEdit_->setText(color.toHex());
