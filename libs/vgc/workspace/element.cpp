@@ -35,6 +35,16 @@ geometry::Rect2d Element::boundingBox(core::AnimTime /*t*/) const {
     return geometry::Rect2d::empty;
 }
 
+bool Element::isSelectableAt(
+    const geometry::Vec2d& /*pos*/,
+    bool /*outlineOnly*/,
+    double /*tol*/,
+    double* /*outDistance*/,
+    core::AnimTime /*t*/) const {
+
+    return false;
+}
+
 void Element::addDependency(Element* element) {
     if (element && !dependencies_.contains(element)) {
         dependencies_.emplaceLast(element);

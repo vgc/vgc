@@ -106,6 +106,15 @@ public:
         return position_ - normal_ * width_[1];
     }
 
+    // ┌─── x
+    // │  ↑ side 1
+    // │ ─segment─→
+    // y  ↓ side 0
+    //
+    Vec2d sidePoint(Int side) const {
+        return side ? leftPoint() : rightPoint();
+    }
+
     double s() const {
         return s_;
     }

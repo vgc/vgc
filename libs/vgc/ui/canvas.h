@@ -83,8 +83,6 @@ public:
         return workspace_;
     }
 
-    SelectionList getSelectableItemsAt(const geometry::Vec2f& position);
-
     /// Sets the observed document workspace.
     ///
     void setWorkspace(workspace::Workspace* workspace);
@@ -151,6 +149,10 @@ protected:
     bool isZooming_ = false;
     geometry::Vec2d mousePosAtPress_ = {};
     geometry::Camera2d cameraAtPress_;
+
+    // Selection
+    core::Array<std::pair<workspace::Element*, double>> selectionCandidateElements_;
+    Int selectedElementId_ = 0;
 
     // Graphics resources
     // VgcGraph

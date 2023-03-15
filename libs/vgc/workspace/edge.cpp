@@ -51,7 +51,107 @@ VacKeyEdge::~VacKeyEdge() {
 }
 
 geometry::Rect2d VacKeyEdge::boundingBox(core::AnimTime /*t*/) const {
-    return geometry::Rect2d::empty;
+    return bbox_;
+}
+
+bool VacKeyEdge::isSelectableAt(
+    const geometry::Vec2d& p,
+    bool outlineOnly,
+    double tol,
+    double* outDistance,
+    core::AnimTime t) const {
+
+    using Vec2d = geometry::Vec2d;
+
+    if (bbox_.isEmpty()) {
+        return false;
+    }
+
+    geometry::Rect2d inflatedBbox = bbox_;
+    inflatedBbox.setPMin(inflatedBbox.pMin() - Vec2d(tol, tol));
+    inflatedBbox.setPMax(inflatedBbox.pMax() + Vec2d(tol, tol));
+    if (!inflatedBbox.contains(p)) {
+        return false;
+    }
+    // use "binary search"-style tree/array of bboxes?
+
+    VacEdgeCellFrameData* data = frameData(t);
+    if (!data || data->samples_.isEmpty()) {
+        return false;
+    }
+
+    double shortestDistance = core::DoubleInfinity;
+
+    auto it1 = data->samples_.begin();
+    // is p in sample outline-mode-selection disk?
+    shortestDistance = (std::min)(shortestDistance, (it1->position() - p).length());
+
+    for (auto it0 = it1++; it1 != data->samples_.end(); it0 = it1++) {
+        // is p in sample outline-mode-selection disk?
+        shortestDistance = (std::min)(shortestDistance, (it1->position() - p).length());
+
+        // check projection works as expected
+        //static_assert(Vec2d(1, 1).dot(Vec2d(0, 1)) == 1.0);
+        //static_assert(Vec2d(1, 1).det(Vec2d(-1, 1)) == 2.0);
+
+        // in segment outline-mode-selection box?
+        const Vec2d p0 = it0->position();
+        const Vec2d p1 = it1->position();
+        const Vec2d seg = (p1 - p0);
+        const double seglen = seg.length();
+        if (seglen > 0) { // if capsule is not a disk
+            const Vec2d segdir = seg / seglen;
+            const Vec2d p0p = p - p0;
+            const double tx = p0p.dot(segdir);
+            // does p project in segment?
+            if (tx >= 0 && tx <= seglen) {
+                const double ty = p0p.det(segdir);
+                // does p project in slice?
+                shortestDistance = (std::min)(shortestDistance, std::abs(ty));
+            }
+        }
+
+        if (!outlineOnly) {
+            // does p belongs to quad ?
+            // only works for convex or hourglass quads atm
+            const Vec2d r0 = it0->sidePoint(0);
+            const Vec2d r0p = p - r0;
+            if (it0->normal().det(r0p) <= 0) {
+                const Vec2d l1 = it1->sidePoint(1);
+                const Vec2d l1p = p - l1;
+                if (it1->normal().det(l1p) >= 0) {
+                    const Vec2d r1r0 = (r0 - it1->sidePoint(0));
+                    const Vec2d l0l1 = (l1 - it0->sidePoint(1));
+                    const bool a = r1r0.det(r0p) >= 0;
+                    const bool b = l0l1.det(l1p) >= 0;
+                    // approximate detection of hourglass case
+                    // (false-positives but no false-negatives)
+                    //if (r1r0.dot(l0l1) > 0) {
+                    //    // naive test for "p in quad?" in the hourglass case
+                    //    if (a || b) {
+                    //        return true;
+                    //    }
+                    //}
+                    //else
+                    if (a && b) {
+                        if (outDistance) {
+                            *outDistance = 0;
+                        }
+                        return true;
+                    }
+                }
+            }
+        }
+    }
+
+    if (shortestDistance < tol) {
+        if (outDistance) {
+            *outDistance = shortestDistance;
+        }
+        return true;
+    }
+
+    return false;
 }
 
 ElementStatus VacKeyEdge::updateFromDom_(Workspace* workspace) {
@@ -221,14 +321,6 @@ void VacKeyEdge::paint_(graphics::Engine* engine, core::AnimTime t, PaintOptions
         graphics.joinGeometry_ = engine->createDynamicTriangleStripView(
             BuiltinGeometryLayout::XY_iRGBA, IndexFormat::UInt32);
 
-        GeometryViewCreateInfo createInfo = {};
-        createInfo.setBuiltinGeometryLayout(BuiltinGeometryLayout::XY_iRGBA);
-        createInfo.setPrimitiveType(PrimitiveType::TriangleStrip);
-        createInfo.setVertexBuffer(0, graphics.strokeGeometry_->vertexBuffer(0));
-        BufferPtr selectionInstanceBuffer = engine->createVertexBuffer(Int(4) * 4);
-        createInfo.setVertexBuffer(1, selectionInstanceBuffer);
-        graphics.selectionGeometry_ = engine->createGeometryView(createInfo);
-
         core::Color color = domElement->getAttribute(ds::color).getColor();
 
         geometry::Vec2fArray strokeVertices;
@@ -328,18 +420,22 @@ void VacKeyEdge::paint_(graphics::Engine* engine, core::AnimTime t, PaintOptions
         engine->updateBufferData(
             graphics.joinGeometry_->indexBuffer(), //
             std::move(joinIndices));
-
-        engine->updateBufferData(
-            selectionInstanceBuffer, //
-            core::Array<float>(
-                {1.0f - color.r(), 1.0f - color.g(), 1.0f - color.b(), 1.0f}));
     }
 
-    constexpr PaintOptions centerlineOptions = {PaintOption::Outline};
+    constexpr PaintOptions centerlineOptions = {
+        PaintOption::Outline, PaintOption::Selected};
 
     if (flags.hasAny(centerlineOptions) && !graphics.centerlineGeometry_) {
         graphics.centerlineGeometry_ = engine->createDynamicTriangleStripView(
             BuiltinGeometryLayout::XYDxDy_iXYRotWRGBA);
+
+        GeometryViewCreateInfo createInfo = {};
+        createInfo.setBuiltinGeometryLayout(BuiltinGeometryLayout::XYDxDy_iXYRotWRGBA);
+        createInfo.setPrimitiveType(PrimitiveType::TriangleStrip);
+        createInfo.setVertexBuffer(0, graphics.centerlineGeometry_->vertexBuffer(0));
+        BufferPtr selectionInstanceBuffer = engine->createVertexBuffer(0);
+        createInfo.setVertexBuffer(1, selectionInstanceBuffer);
+        graphics.selectionGeometry_ = engine->createGeometryView(createInfo);
 
         core::FloatArray lineInstData;
         lineInstData.extend({0.f, 0.f, 1.f, 2.f, 0.02f, 0.64f, 1.0f, 1.f});
@@ -358,6 +454,23 @@ void VacKeyEdge::paint_(graphics::Engine* engine, core::AnimTime t, PaintOptions
             graphics.centerlineGeometry_->vertexBuffer(0), std::move(lineVertices));
         engine->updateBufferData(
             graphics.centerlineGeometry_->vertexBuffer(1), std::move(lineInstData));
+
+        core::Color color = domElement->getAttribute(ds::color).getColor();
+
+        core::FloatArray selectionInstData;
+        selectionInstData.extend(
+            {0.f,
+             0.f,
+             1.f,
+             1.f,
+             std::round(1.0f - color.r()),
+             std::round(1.0f - color.g()),
+             std::round(1.0f - color.b()),
+             1.f});
+
+        engine->updateBufferData(
+            selectionInstanceBuffer, //
+            std::move(selectionInstData));
     }
 
     constexpr PaintOptions pointsOptions = {PaintOption::Outline};
@@ -401,7 +514,7 @@ void VacKeyEdge::paint_(graphics::Engine* engine, core::AnimTime t, PaintOptions
     }
 
     if (flags.has(PaintOption::Selected)) {
-        engine->setProgram(graphics::BuiltinProgram::Simple);
+        engine->setProgram(graphics::BuiltinProgram::SreenSpaceDisplacement);
         engine->draw(graphics.selectionGeometry_);
     }
     else if (!flags.has(PaintOption::Outline)) {
@@ -473,6 +586,11 @@ void VacKeyEdge::computeStandaloneGeometry(VacEdgeCellFrameData& data) {
         samplingParams.setMinIntraSegmentSamples(minQuads - 1);
         samplingParams.setMaxIntraSegmentSamples(maxQuads - 1);
         curve.sampleRange(samplingParams, data.samples_);
+
+        bbox_ = geometry::Rect2d::empty;
+        for (auto sample : data.samples_) {
+            bbox_.uniteWith(sample.position());
+        }
     }
     else {
         data.triangulation_ = curve.triangulate(maxAngle, 1, 64);
@@ -522,6 +640,7 @@ void VacKeyEdge::computeGeometry(VacEdgeCellFrameData& data) {
 
 void VacKeyEdge::onInputGeometryChanged() {
     frameData_.clear();
+    bbox_ = geometry::Rect2d::empty;
     for (VertexInfo& vi : verticesInfo_) {
         if (vi.element) {
             vi.element->onJoinEdgeGeometryChanged_(this);
