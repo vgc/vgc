@@ -91,6 +91,8 @@ protected:
     dom::Element* edge_ = nullptr;
     geometry::Vec2dArray points_;
     core::DoubleArray widths_;
+    // smoothing
+    core::Array<geometry::Vec2d> lastInputPoints_;
     // for now we just get cursor pos at the end of the paint, there are still widgets
     // to draw after that but our current architecture doesn't let us have deferred
     // widget draws.. widget does not even know it's window.
