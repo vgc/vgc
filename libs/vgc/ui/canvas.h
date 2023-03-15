@@ -151,7 +151,7 @@ protected:
     geometry::Camera2d cameraAtPress_;
 
     // Selection
-    core::Array<workspace::Element*> selectionCandidateElements_;
+    core::Array<std::pair<workspace::Element*, double>> selectionCandidateElements_;
     Int selectedElementId_ = 0;
 
     // Graphics resources

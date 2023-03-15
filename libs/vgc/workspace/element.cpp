@@ -39,6 +39,7 @@ bool Element::isSelectableAt(
     const geometry::Vec2d& /*pos*/,
     bool /*outlineOnly*/,
     double /*tol*/,
+    double* /*outDistance*/,
     core::AnimTime /*t*/) const {
 
     return false;

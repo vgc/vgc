@@ -259,7 +259,9 @@ bool Canvas::onMousePress(MouseEvent* event) {
             geometry::Vec2d viewCoords = mousePos;
             geometry::Vec2d worldCoords =
                 camera_.viewMatrix().inverted().transformPointAffine(viewCoords);
-            double tol = 10.0 / camera_.zoom();
+            using namespace style::literals;
+            style::Length dpTol = 7.0_dp;
+            double tol = dpTol.toPx(styleMetrics()) / camera_.zoom();
 
             if (workspace_) {
                 workspace_->visitDepthFirst(
@@ -268,13 +270,20 @@ bool Canvas::onMousePress(MouseEvent* event) {
                         if (!e) {
                             return;
                         }
-                        if (e->isSelectableAt(worldCoords, false, tol)) {
-                            selectionCandidateElements_.append(e);
+                        double dist = 0;
+                        if (e->isSelectableAt(worldCoords, false, tol, &dist)) {
+                            selectionCandidateElements_.emplaceLast(e, dist);
                         }
                     });
+                // order from front to back
                 std::reverse(
                     selectionCandidateElements_.begin(),
                     selectionCandidateElements_.end());
+                // sort by selection distance, stable to keep Z order priority
+                std::stable_sort(
+                    selectionCandidateElements_.begin(),
+                    selectionCandidateElements_.end(),
+                    [](const auto& a, const auto& b) { return a.second < b.second; });
             }
         }
         else if (!selectionCandidateElements_.isEmpty()) {
@@ -406,7 +415,7 @@ void Canvas::onPaintDraw(graphics::Engine* engine, PaintOptions /*options*/) {
     }
 
     if (selectionCandidateElements_.size()) {
-        workspace::Element* e = selectionCandidateElements_[selectedElementId_];
+        workspace::Element* e = selectionCandidateElements_[selectedElementId_].first;
         e->paint(engine, {}, workspace::PaintOption::Selected);
     }
 

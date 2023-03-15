@@ -225,10 +225,20 @@ public:
 
     virtual geometry::Rect2d boundingBox(core::AnimTime t = {}) const;
 
+    /// Returns whether the element is selectable, that is:
+    /// - `pos` is inside the element graphics geometry, or
+    /// - `pos` is at a distance less than `tol` from the element outline.
+    ///
+    /// If `outlineOnly` is true then the element graphics geometry is not considered.
+    ///
+    /// Additionally if the result is true, then `outDistance` is set to an approximate distance
+    /// to the element outline or 0 if `pos` is inside the graphics geometry.
+    ///
     virtual bool isSelectableAt(
         const geometry::Vec2d& pos,
         bool outlineOnly,
         double tol,
+        double* outDistance = nullptr,
         core::AnimTime t = {}) const;
 
 protected:

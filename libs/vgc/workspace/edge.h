@@ -225,6 +225,7 @@ public:
         const geometry::Vec2d& pos,
         bool outlineOnly,
         double tol,
+        double* outDistance = nullptr,
         core::AnimTime t = {}) const override;
 
 protected:

@@ -58,6 +58,7 @@ bool VacKeyEdge::isSelectableAt(
     const geometry::Vec2d& p,
     bool outlineOnly,
     double tol,
+    double* outDistance,
     core::AnimTime t) const {
 
     using Vec2d = geometry::Vec2d;
@@ -79,17 +80,15 @@ bool VacKeyEdge::isSelectableAt(
         return false;
     }
 
+    double shortestDistance = core::DoubleInfinity;
+
     auto it1 = data->samples_.begin();
     // is p in sample outline-mode-selection disk?
-    if (it1->position().isNear(p, tol)) {
-        return true;
-    }
+    shortestDistance = (std::min)(shortestDistance, (it1->position() - p).length());
 
     for (auto it0 = it1++; it1 != data->samples_.end(); it0 = it1++) {
         // is p in sample outline-mode-selection disk?
-        if (it1->position().isNear(p, tol)) {
-            return true;
-        }
+        shortestDistance = (std::min)(shortestDistance, (it1->position() - p).length());
 
         // check projection works as expected
         //static_assert(Vec2d(1, 1).dot(Vec2d(0, 1)) == 1.0);
@@ -108,9 +107,7 @@ bool VacKeyEdge::isSelectableAt(
             if (tx >= 0 && tx <= seglen) {
                 const double ty = p0p.det(segdir);
                 // does p project in slice?
-                if (std::abs(ty) <= tol) {
-                    return true;
-                }
+                shortestDistance = (std::min)(shortestDistance, std::abs(ty));
             }
         }
 
@@ -137,11 +134,21 @@ bool VacKeyEdge::isSelectableAt(
                     //}
                     //else
                     if (a && b) {
+                        if (outDistance) {
+                            *outDistance = 0;
+                        }
                         return true;
                     }
                 }
             }
         }
+    }
+
+    if (shortestDistance < tol) {
+        if (outDistance) {
+            *outDistance = shortestDistance;
+        }
+        return true;
     }
 
     return false;
