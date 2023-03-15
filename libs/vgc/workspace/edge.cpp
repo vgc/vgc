@@ -85,7 +85,6 @@ bool VacKeyEdge::isSelectableAt(
         return true;
     }
 
-    auto it0 = it1++;
     for (auto it0 = it1++; it1 != data->samples_.end(); it0 = it1++) {
         // is p in sample outline-mode-selection disk?
         if (it1->position().isNear(p, tol)) {
