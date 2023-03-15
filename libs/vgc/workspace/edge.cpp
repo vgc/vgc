@@ -86,7 +86,6 @@ bool VacKeyEdge::isSelectableAt(
     }
 
     auto it0 = it1++;
-    double maxHalfwidth0 = (std::max)(it0->leftHalfwidth(), it0->rightHalfwidth());
     for (auto it0 = it1++; it1 != data->samples_.end(); it0 = it1++) {
         // is p in sample outline-mode-selection disk?
         if (it1->position().isNear(p, tol)) {
