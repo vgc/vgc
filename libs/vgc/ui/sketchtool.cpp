@@ -163,11 +163,38 @@ void SketchTool::continueCurve_(const geometry::Vec2d& p, double width) {
     }
 
     if (!points_.isEmpty() && points_.last() == p) {
+        // skip duplicate point
         return;
     }
 
     points_.append(p);
     widths_.append(width);
+
+    lastInputPoints_.prepend(p);
+    if (lastInputPoints_.length() > 5) {
+        lastInputPoints_.removeLast();
+    }
+
+    if (lastInputPoints_.length() >= 3) {
+        // 1 2 1
+        // clang-format off
+        points_[points_.size() - 2] =
+            (1 / 4.0) * lastInputPoints_[0] +
+            (2 / 4.0) * lastInputPoints_[1] +
+            (1 / 4.0) * lastInputPoints_[2];
+        // clang-format on
+    }
+    if (lastInputPoints_.length() >= 5) {
+        // 1 4 6 4 1
+        // clang-format off
+        points_[points_.size() - 3] =
+            (1 / 16.0) * lastInputPoints_[0] +
+            (4 / 16.0) * lastInputPoints_[1] +
+            (6 / 16.0) * lastInputPoints_[2] +
+            (4 / 16.0) * lastInputPoints_[3] +
+            (1 / 16.0) * lastInputPoints_[4];
+        // clang-format on
+    }
 
     endVertex_->setAttribute(ds::position, p);
 
@@ -264,6 +291,7 @@ bool SketchTool::onMouseRelease(MouseEvent* event) {
             isSketching_ = false;
             endVertex_ = nullptr;
             edge_ = nullptr;
+            lastInputPoints_.clear();
             points_.clear();
             widths_.clear();
             requestRepaint();
