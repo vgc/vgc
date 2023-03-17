@@ -1027,14 +1027,14 @@ void QglEngine::initBuiltinResources_() {
 
     // Builtin layouts
     struct VertexAttribDesc {
-        const char* name = "";
-        GLint numElements = 0;
-        GLenum elementType = GL_FLOAT;
-        uintptr_t bufferIndex = 0;
-        uintptr_t offset = 0;
-        bool isPerInstance = false;
-        GLboolean normalized = false;
-        GLsizei stride = 0;
+        const char* name;
+        GLint numElements;
+        GLenum elementType;
+        uintptr_t bufferIndex;
+        uintptr_t offset;
+        bool isPerInstance;
+        GLboolean normalized;
+        GLsizei stride;
     };
 
 #define VGC_QGL_CREATE_BUILTIN_INPUT_LAYOUT(layout_tag)                                  \
@@ -1058,34 +1058,34 @@ void QglEngine::initBuiltinResources_() {
 
     // clang-format off
     GlAttribPointerDesc layout_XYRGB[] = {
-        {"pos",    2, GL_FLOAT, 0, 0,                                false, 0},
-        {"col",    3, GL_FLOAT, 0, offsetof(Vertex_XYRGB, r),        false, 0},
+        {"pos",    2, GL_FLOAT, 0, 0,                                false, false, sizeof(Vertex_XYRGB)},
+        {"col",    3, GL_FLOAT, 0, offsetof(Vertex_XYRGB, r),        false, false, sizeof(Vertex_XYRGB)},
     };
     GlAttribPointerDesc layout_XYRGBA[] = {
-        {"pos",    2, GL_FLOAT, 0, 0,                                false, 0},
-        {"col",    4, GL_FLOAT, 0, offsetof(Vertex_XYRGBA, r),       false, 0},
+        {"pos",    2, GL_FLOAT, 0, 0,                                false, false, sizeof(Vertex_XYRGBA)},
+        {"col",    4, GL_FLOAT, 0, offsetof(Vertex_XYRGBA, r),       false, false, sizeof(Vertex_XYRGBA)},
     };                                                               
     GlAttribPointerDesc layout_XY_iRGBA[] = {                        
-        {"pos",    2, GL_FLOAT, 0, 0,                                false, 0},
-        {"col",    4, GL_FLOAT, 1, 0,                                true,  0},
+        {"pos",    2, GL_FLOAT, 0, 0,                                false, false, sizeof(Vertex_XY)},
+        {"col",    4, GL_FLOAT, 1, 0,                                true,  false, sizeof(Vertex_RGBA)},
     };                                                               
     GlAttribPointerDesc layout_XYUVRGBA[] = {                        
-        {"pos",    2, GL_FLOAT, 0, 0,                                false, 0},
-        {"uv",     2, GL_FLOAT, 0, offsetof(Vertex_XYUVRGBA, u),     false, 0},
-        {"col",    4, GL_FLOAT, 0, offsetof(Vertex_XYUVRGBA, r),     false, 0},
+        {"pos",    2, GL_FLOAT, 0, 0,                                false, false, sizeof(Vertex_XYUVRGBA)},
+        {"uv",     2, GL_FLOAT, 0, offsetof(Vertex_XYUVRGBA, u),     false, false, sizeof(Vertex_XYUVRGBA)},
+        {"col",    4, GL_FLOAT, 0, offsetof(Vertex_XYUVRGBA, r),     false, false, sizeof(Vertex_XYUVRGBA)},
     };                                                               
     GlAttribPointerDesc layout_XYUV_iRGBA[] = {                      
-        {"pos",    2, GL_FLOAT, 0, 0,                                false, 0},
-        {"uv",     2, GL_FLOAT, 0, offsetof(Vertex_XYUV, u),         false, 0},
-        {"col",    4, GL_FLOAT, 1, 0,                                true,  0},
+        {"pos",    2, GL_FLOAT, 0, 0,                                false, false, sizeof(Vertex_XYUV)},
+        {"uv",     2, GL_FLOAT, 0, offsetof(Vertex_XYUV, u),         false, false, sizeof(Vertex_XYUV)},
+        {"col",    4, GL_FLOAT, 1, 0,                                true,  false, sizeof(Vertex_RGBA)},
     };
     GlAttribPointerDesc layout_XYDxDy_iXYRotWRGBA[] = {
-        {"pos",    2, GL_FLOAT, 0, 0,                                false, 0, },
-        {"disp",   2, GL_FLOAT, 0, offsetof(Vertex_XYDxDy, dx),      false, 0, },
-        {"ipos",   2, GL_FLOAT, 1, 0,                                true,  1, sizeof(Vertex_XYRotWRGBA)},
-        {"rotate", 1, GL_FLOAT, 1, offsetof(Vertex_XYRotWRGBA, rot), true,  1, sizeof(Vertex_XYRotWRGBA)},
-        {"offset", 1, GL_FLOAT, 1, offsetof(Vertex_XYRotWRGBA, w),   true,  1, sizeof(Vertex_XYRotWRGBA)},
-        {"col",    4, GL_FLOAT, 1, offsetof(Vertex_XYRotWRGBA, r),   true,  1, sizeof(Vertex_XYRotWRGBA)},
+        {"pos",    2, GL_FLOAT, 0, 0,                                false, false, sizeof(Vertex_XYDxDy)},
+        {"disp",   2, GL_FLOAT, 0, offsetof(Vertex_XYDxDy, dx),      false, false, sizeof(Vertex_XYDxDy)},
+        {"ipos",   2, GL_FLOAT, 1, 0,                                true,  false, sizeof(Vertex_XYRotWRGBA)},
+        {"rotate", 1, GL_FLOAT, 1, offsetof(Vertex_XYRotWRGBA, rot), true,  false, sizeof(Vertex_XYRotWRGBA)},
+        {"offset", 1, GL_FLOAT, 1, offsetof(Vertex_XYRotWRGBA, w),   true,  false, sizeof(Vertex_XYRotWRGBA)},
+        {"col",    4, GL_FLOAT, 1, offsetof(Vertex_XYRotWRGBA, r),   true,  false, sizeof(Vertex_XYRotWRGBA)},
     };
     // clang-format on
 
