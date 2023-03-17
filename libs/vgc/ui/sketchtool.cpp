@@ -37,6 +37,10 @@
 
 namespace vgc::ui {
 
+using namespace style::literals;
+inline constexpr style::Length snapRadius = 14.0_dp;
+inline constexpr style::Length snapDeformationLength = 100.0_dp;
+
 SketchToolPtr SketchTool::create() {
     return SketchToolPtr(new SketchTool());
 }
@@ -125,13 +129,47 @@ void SketchTool::startCurve_(const geometry::Vec2d& p, double width) {
     workspace::Element* wVgc = workspace->vgcElement();
     dom::Element* dVgc = wVgc->domElement();
 
-    dom::Element* v0 = dom::Element::create(dVgc, ds::vertex);
+    // snapping to vertices
+    // in the future we can have the snapping candidates implemented in canvas to be shared by all tools
+    workspace::Element* closestVertex = nullptr;
+    if (isSnappingEnabled_) {
+        ui::Canvas* canvas = this->canvas();
+        const double zoom = canvas ? canvas->camera().zoom() : 1.0;
+        const double tol = snapRadius.toPx(styleMetrics()) / zoom;
+        double minDist = core::DoubleInfinity;
+        workspace->visitDepthFirst(
+            [](workspace::Element*, Int) { return true; },
+            [&, tol, p](workspace::Element* e, Int /*depth*/) {
+                if (!e || !e->isVacElement() || !e->vacNode()
+                    || !e->vacNode()->isCell()) {
+                    return;
+                }
+                if (!e->vacNode()->toCell()->toKeyVertex()) {
+                    return;
+                }
+                double dist = 0;
+                if (e->isSelectableAt(p, false, tol, &dist) && dist < minDist) {
+                    minDist = dist;
+                    closestVertex = e;
+                }
+            });
+    }
+
+    dom::Element* v0 = nullptr;
+    geometry::Vec2d snapPosition = p;
+    if (closestVertex) {
+        v0 = closestVertex->domElement();
+        snapPosition = closestVertex->vacNode()->toCell()->toKeyVertex()->position();
+    }
+    else {
+        v0 = dom::Element::create(dVgc, ds::vertex);
+        v0->setAttribute(ds::position, snapPosition);
+    }
+
     dom::Element* v1 = dom::Element::create(dVgc, ds::vertex);
+    v1->setAttribute(ds::position, snapPosition);
+
     dom::Element* edge = dom::Element::create(dVgc, ds::edge);
-
-    v0->setAttribute(ds::position, p);
-    v1->setAttribute(ds::position, p);
-
     edge->setAttribute(ds::positions, geometry::Vec2dArray());
     edge->setAttribute(ds::widths, core::DoubleArray());
     edge->setAttribute(ds::color, penColor_);
@@ -141,9 +179,10 @@ void SketchTool::startCurve_(const geometry::Vec2d& p, double width) {
     endVertex_ = v1;
     edge_ = edge;
 
+    snapPosition_ = snapPosition;
     continueCurve_(p, width);
 
-    minimalLatencyStrokePoints_[0] = p;
+    minimalLatencyStrokePoints_[0] = snapPosition;
     minimalLatencyStrokeWidths_[0] = width * 0.5;
     minimalLatencyStrokePoints_[1] = p;
     minimalLatencyStrokeWidths_[1] = width * 0.5;
@@ -162,11 +201,16 @@ void SketchTool::continueCurve_(const geometry::Vec2d& p, double width) {
         return;
     }
 
-    if (!points_.isEmpty() && points_.last() == p) {
-        // skip duplicate point
-        return;
+    geometry::Vec2d cursorOffset = {};
+
+    if (!lastInputPoints_.isEmpty()) {
+        if (lastInputPoints_.last() == p) {
+            // skip duplicate point
+            return;
+        }
     }
 
+    smoothedInputPoints_.append(p);
     points_.append(p);
     widths_.append(width);
 
@@ -175,10 +219,11 @@ void SketchTool::continueCurve_(const geometry::Vec2d& p, double width) {
         lastInputPoints_.removeLast();
     }
 
+    const Int num_points = smoothedInputPoints_.size();
     if (lastInputPoints_.length() >= 3) {
         // 1 2 1
         // clang-format off
-        points_[points_.size() - 2] =
+        smoothedInputPoints_[num_points - 2] =
             (1 / 4.0) * lastInputPoints_[0] +
             (2 / 4.0) * lastInputPoints_[1] +
             (1 / 4.0) * lastInputPoints_[2];
@@ -187,7 +232,7 @@ void SketchTool::continueCurve_(const geometry::Vec2d& p, double width) {
     if (lastInputPoints_.length() >= 5) {
         // 1 4 6 4 1
         // clang-format off
-        points_[points_.size() - 3] =
+        smoothedInputPoints_[smoothedInputPoints_.size() - 3] =
             (1 / 16.0) * lastInputPoints_[0] +
             (4 / 16.0) * lastInputPoints_[1] +
             (6 / 16.0) * lastInputPoints_[2] +
@@ -196,7 +241,36 @@ void SketchTool::continueCurve_(const geometry::Vec2d& p, double width) {
         // clang-format on
     }
 
-    endVertex_->setAttribute(ds::position, p);
+    if (isSnappingEnabled_) {
+        ui::Canvas* canvas = this->canvas();
+        const double zoom = canvas ? canvas->camera().zoom() : 1.0;
+        const double snapDeformationLengthInObjectSpace =
+            snapDeformationLength.toPx(styleMetrics()) / zoom;
+        double s = 0;
+        geometry::Vec2d previousPoint = smoothedInputPoints_[0];
+        geometry::Vec2d delta = snapPosition_ - previousPoint;
+        for (Int i = 0; i < smoothedInputPoints_.length(); ++i) {
+            geometry::Vec2d sp = smoothedInputPoints_[i];
+            s += (previousPoint - sp).length();
+            if (s < snapDeformationLengthInObjectSpace) {
+                // linear, introduces a non-smooth sync point
+                points_[i] = sp + delta * (1 - (s / snapDeformationLengthInObjectSpace));
+            }
+            else {
+                // highly redundant, maybe optimize that in the future
+                points_[i] = sp;
+            }
+            previousPoint = sp;
+        }
+    }
+    else {
+        for (Int i = 0; i < smoothedInputPoints_.length(); ++i) {
+            geometry::Vec2d sp = smoothedInputPoints_[i];
+            points_[i] = sp;
+        }
+    }
+
+    endVertex_->setAttribute(ds::position, points_.last());
 
     edge_->setAttribute(ds::positions, points_);
     edge_->setAttribute(ds::widths, widths_);
@@ -208,6 +282,95 @@ void SketchTool::continueCurve_(const geometry::Vec2d& p, double width) {
     auto edgeCell = dynamic_cast<workspace::VacKeyEdge*>(edgeElement);
     if (edgeCell) {
         edgeCell->setTesselationMode(0);
+    }
+}
+
+void SketchTool::finishCurve_() {
+    workspace::Workspace* workspace = this->workspace();
+    if (!workspace || !workspace->document()) {
+        return;
+    }
+
+    namespace ds = dom::strings;
+
+    if (!edge_) {
+        return;
+    }
+
+    workspace::Element* edgeElement = workspace->find(edge_);
+    auto edgeCell = dynamic_cast<workspace::VacKeyEdge*>(edgeElement);
+    if (edgeCell) {
+        edgeCell->setTesselationMode(canvas()->requestedTesselationMode());
+    }
+
+    const geometry::Vec2d lastInputPoint = lastInputPoints_[0];
+    const Int num_points = smoothedInputPoints_.size();
+    if (num_points > 1) {
+        // snapping to vertices
+        // in the future we can have the snapping candidates implemented in canvas to be shared by all tools
+        workspace::Element* closestVertex = nullptr;
+        if (isSnappingEnabled_) {
+            ui::Canvas* canvas = this->canvas();
+            const double zoom = canvas ? canvas->camera().zoom() : 1.0;
+            const double tol = snapRadius.toPx(styleMetrics()) / zoom;
+            double minDist = core::DoubleInfinity;
+
+            workspace->visitDepthFirst(
+                [](workspace::Element*, Int) { return true; },
+                [&, tol, lastInputPoint](workspace::Element* e, Int /*depth*/) {
+                    if (!e || (e->domElement() == endVertex_)) {
+                        return;
+                    }
+                    if (!e->vacNode() || !e->vacNode()->isCell()) {
+                        return;
+                    }
+                    if (!e->vacNode()->toCell()->toKeyVertex()) {
+                        return;
+                    }
+                    double dist = 0;
+                    if (e->isSelectableAt(lastInputPoint, false, tol, &dist)
+                        && dist < minDist) {
+
+                        minDist = dist;
+                        closestVertex = e;
+                    }
+                });
+
+            if (closestVertex) {
+                geometry::Vec2d snapPosition =
+                    closestVertex->vacNode()->toCell()->toKeyVertex()->position();
+
+                points_.last() = snapPosition;
+                double maxS = 0;
+                for (Int i = 1; i < smoothedInputPoints_.length(); ++i) {
+                    maxS +=
+                        (smoothedInputPoints_[i] - smoothedInputPoints_[i - 1]).length();
+                }
+
+                const double snapDeformationLengthInObjectSpace =
+                    (std::min)(snapDeformationLength.toPx(styleMetrics()) / zoom, maxS);
+                double s = 0;
+                geometry::Vec2d delta = snapPosition - lastInputPoint;
+                for (Int i = smoothedInputPoints_.length() - 2; i >= 0; --i) {
+                    s += (smoothedInputPoints_[i + 1] - smoothedInputPoints_[i]).length();
+                    if (s < snapDeformationLengthInObjectSpace) {
+                        // linear, introduces a non-smooth sync point
+                        points_[i] +=
+                            delta * (1 - (s / snapDeformationLengthInObjectSpace));
+                    }
+                    else {
+                        break;
+                    }
+                }
+
+                endVertex_->remove();
+                endVertex_ = closestVertex->domElement();
+                edge_->setAttribute(ds::positions, points_);
+                edge_->setAttribute(ds::endvertex, endVertex_->getPathFromId());
+
+                workspace->sync();
+            }
+        }
     }
 }
 
@@ -274,26 +437,22 @@ bool SketchTool::onMousePress(MouseEvent* event) {
 
 bool SketchTool::onMouseRelease(MouseEvent* event) {
     if (event->button() == MouseButton::Left) {
+        if (isSketching_) {
+            finishCurve_();
+        }
         if (drawCurveUndoGroup_) {
             drawCurveUndoGroup_->close();
             drawCurveUndoGroup_->undone().disconnect(drawCurveUndoGroupConnectionHandle_);
             drawCurveUndoGroup_ = nullptr;
         }
         if (isSketching_) {
-            workspace::Workspace* workspace = this->workspace();
-            if (workspace) {
-                workspace::Element* edgeElement = workspace->find(edge_);
-                auto edgeCell = dynamic_cast<workspace::VacKeyEdge*>(edgeElement);
-                if (edgeCell) {
-                    edgeCell->setTesselationMode(canvas()->requestedTesselationMode());
-                }
-            }
             isSketching_ = false;
             endVertex_ = nullptr;
             edge_ = nullptr;
-            lastInputPoints_.clear();
             points_.clear();
             widths_.clear();
+            lastInputPoints_.clear();
+            smoothedInputPoints_.clear();
             requestRepaint();
             return true;
         }

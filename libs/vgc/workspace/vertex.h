@@ -210,6 +210,13 @@ public:
 
     geometry::Rect2d boundingBox(core::AnimTime t) const override;
 
+    bool isSelectableAt(
+        const geometry::Vec2d& pos,
+        bool outlineOnly,
+        double tol,
+        double* outDistance = nullptr,
+        core::AnimTime t = {}) const override;
+
 protected:
     ElementStatus updateFromDom_(Workspace* workspace) override;
 };

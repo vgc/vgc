@@ -60,6 +60,10 @@ public:
         penWidth_ = width;
     }
 
+    void setSnappingEnabled(bool enabled) {
+        isSnappingEnabled_ = enabled;
+    }
+
 protected:
     // Reimplementation of Widget virtual methods
     bool onKeyPress(KeyEvent* event) override;
@@ -91,8 +95,12 @@ protected:
     dom::Element* edge_ = nullptr;
     geometry::Vec2dArray points_;
     core::DoubleArray widths_;
-    // smoothing
+    // smoothing & snapping
+    bool isSnappingEnabled_ = false;
     core::Array<geometry::Vec2d> lastInputPoints_;
+    core::Array<geometry::Vec2d> smoothedInputPoints_;
+    geometry::Vec2d snapPosition_;
+
     // for now we just get cursor pos at the end of the paint, there are still widgets
     // to draw after that but our current architecture doesn't let us have deferred
     // widget draws.. widget does not even know it's window.
@@ -104,6 +112,7 @@ protected:
 
     void startCurve_(const geometry::Vec2d& p, double width = 1.0);
     void continueCurve_(const geometry::Vec2d& p, double width = 1.0);
+    void finishCurve_();
 
     core::Color penColor_ = core::Color(0, 0, 0, 1);
     double penWidth_ = 5.0;

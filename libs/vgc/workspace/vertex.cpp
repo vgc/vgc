@@ -119,6 +119,27 @@ geometry::Rect2d VacKeyVertex::boundingBox(core::AnimTime /*t*/) const {
     return geometry::Rect2d::empty;
 }
 
+bool VacKeyVertex::isSelectableAt(
+    const geometry::Vec2d& p,
+    bool /*outlineOnly*/,
+    double tol,
+    double* outDistance,
+    core::AnimTime /*t*/) const {
+
+    vacomplex::KeyVertex* kv = vacKeyVertexNode();
+    if (kv) {
+        geometry::Vec2d pos = vacKeyVertexNode()->position();
+        double d = (p - pos).length();
+        if (d < tol) {
+            if (outDistance) {
+                *outDistance = d;
+            }
+            return true;
+        }
+    }
+    return false;
+}
+
 void VacVertexCell::computeJoin(core::AnimTime t) {
     detail::VacVertexCellFrameData* c = frameData(t);
     if (c) {
