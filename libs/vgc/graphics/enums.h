@@ -279,6 +279,7 @@ enum class BuiltinProgram : Int8 {
     NotBuiltin = -1,
     Simple = 0,
     SimpleTextured,
+    SimpleTexturedDebug,
     SreenSpaceDisplacement,
     // XXX publicize ?
     //GlyphAtlas,

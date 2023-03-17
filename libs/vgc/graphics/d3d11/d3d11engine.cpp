@@ -743,6 +743,53 @@ void D3d11Engine::createBuiltinShaders_() {
         new D3d11Program(resourceRegistry_, BuiltinProgram::Simple));
     simpleProgram_ = simpleProgram;
 
+    // Builtin layouts
+#define VGC_D3D11_CREATE_BUILTIN_INPUT_LAYOUT(layout_tag)                                \
+    do {                                                                                 \
+        ComPtr<ID3D11InputLayout> inputLayout;                                           \
+        device_->CreateInputLayout(                                                      \
+            layout_##layout_tag,                                                         \
+            sizeof(layout_##layout_tag) / sizeof(D3D11_INPUT_ELEMENT_DESC),              \
+            vertexShaderBlob->GetBufferPointer(),                                        \
+            vertexShaderBlob->GetBufferSize(),                                           \
+            inputLayout.releaseAndGetAddressOf());                                       \
+                                                                                         \
+        constexpr Int8 layoutIndex =                                                     \
+            core::toUnderlying(BuiltinGeometryLayout::##layout_tag);                     \
+        program->builtinLayouts_[layoutIndex] = inputLayout;                             \
+    } while (0)
+
+    D3D11_INPUT_ELEMENT_DESC layout_XYRGB[] = {
+        {"POSITION", 0, DXGI_FORMAT_R32G32_FLOAT,       0, 0,                                   D3D11_INPUT_PER_VERTEX_DATA, 0},
+        {"COLOR",    0, DXGI_FORMAT_R32G32B32_FLOAT,    0, offsetof(Vertex_XYRGB, r),           D3D11_INPUT_PER_VERTEX_DATA, 0},
+    };
+    D3D11_INPUT_ELEMENT_DESC layout_XYRGBA[] = {
+        {"POSITION", 0, DXGI_FORMAT_R32G32_FLOAT,       0, 0,                                   D3D11_INPUT_PER_VERTEX_DATA, 0},
+        {"COLOR",    0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, offsetof(Vertex_XYRGBA, r),          D3D11_INPUT_PER_VERTEX_DATA, 0},
+    };
+    D3D11_INPUT_ELEMENT_DESC layout_XY_iRGBA[] = {
+        {"POSITION", 0, DXGI_FORMAT_R32G32_FLOAT,       0, 0,                                   D3D11_INPUT_PER_VERTEX_DATA,   0},
+        {"COLOR",    0, DXGI_FORMAT_R32G32B32A32_FLOAT, 1, 0,                                   D3D11_INPUT_PER_INSTANCE_DATA, 0},
+    };
+    D3D11_INPUT_ELEMENT_DESC layout_XYUVRGBA[] = {
+        {"POSITION", 0, DXGI_FORMAT_R32G32_FLOAT,       0, 0,                                   D3D11_INPUT_PER_VERTEX_DATA, 0},
+        {"TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT,       0, offsetof(Vertex_XYUVRGBA, u),        D3D11_INPUT_PER_VERTEX_DATA, 0},
+        {"COLOR",    0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, offsetof(Vertex_XYUVRGBA, r),        D3D11_INPUT_PER_VERTEX_DATA, 0},
+    };
+    D3D11_INPUT_ELEMENT_DESC layout_XYUV_iRGBA[] = {
+        {"POSITION", 0, DXGI_FORMAT_R32G32_FLOAT,       0, 0,                                   D3D11_INPUT_PER_VERTEX_DATA,   0},
+        {"TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT,       0, offsetof(Vertex_XYUV, u),            D3D11_INPUT_PER_VERTEX_DATA,   0},
+        {"COLOR",    0, DXGI_FORMAT_R32G32B32A32_FLOAT, 1, 0,                                   D3D11_INPUT_PER_INSTANCE_DATA, 0},
+    };
+    D3D11_INPUT_ELEMENT_DESC layout_XYDxDy_iXYRotWRGBA[] = {
+        {"POSITION", 0, DXGI_FORMAT_R32G32_FLOAT,       0, 0,                                   D3D11_INPUT_PER_VERTEX_DATA,   0},
+        {"DISP",     0, DXGI_FORMAT_R32G32_FLOAT,       0, offsetof(Vertex_XYDxDy, dx),         D3D11_INPUT_PER_VERTEX_DATA,   0},
+        {"POSITION", 1, DXGI_FORMAT_R32G32_FLOAT,       1, 0,                                   D3D11_INPUT_PER_INSTANCE_DATA, 1},
+        {"ROT",      0, DXGI_FORMAT_R32_FLOAT,          1, offsetof(Vertex_XYRotWRGBA, rot),    D3D11_INPUT_PER_INSTANCE_DATA, 1},
+        {"OFFSET",   0, DXGI_FORMAT_R32_FLOAT,          1, offsetof(Vertex_XYRotWRGBA, offset), D3D11_INPUT_PER_INSTANCE_DATA, 1},
+        {"COLOR",    0, DXGI_FORMAT_R32G32B32A32_FLOAT, 1, offsetof(Vertex_XYRotWRGBA, r),      D3D11_INPUT_PER_INSTANCE_DATA, 1},
+    };
+
     // Create the simple shader (vertex)
     {
         D3d11Program* program = simpleProgram.get();
@@ -771,58 +818,11 @@ void D3d11Engine::createBuiltinShaders_() {
             vertexShader.releaseAndGetAddressOf());
         program->vertexShader_ = vertexShader;
 
-        // Create Input Layout for XYRGB
-        {
-            ComPtr<ID3D11InputLayout> inputLayout;
-            UINT rOffset = static_cast<UINT>(offsetof(Vertex_XYRGB, r));
-            D3D11_INPUT_ELEMENT_DESC layout[] = {
-                {"POSITION", 0, DXGI_FORMAT_R32G32_FLOAT,    0, 0,       D3D11_INPUT_PER_VERTEX_DATA, 0},
-                {"COLOR",    0, DXGI_FORMAT_R32G32B32_FLOAT, 0, rOffset, D3D11_INPUT_PER_VERTEX_DATA, 0},
-            };
-            device_->CreateInputLayout(
-                layout, 2,
-                vertexShaderBlob->GetBufferPointer(),
-                vertexShaderBlob->GetBufferSize(),
-                inputLayout.releaseAndGetAddressOf());
-
-            constexpr Int8 layoutIndex = core::toUnderlying(BuiltinGeometryLayout::XYRGB);
-            program->builtinLayouts_[layoutIndex] = inputLayout;
-        }
-
-        // Create Input Layout for XYRGBA
-        {
-            ComPtr<ID3D11InputLayout> inputLayout;
-            UINT rOffset = static_cast<UINT>(offsetof(Vertex_XYRGBA, r));
-            D3D11_INPUT_ELEMENT_DESC layout[] = {
-                {"POSITION", 0, DXGI_FORMAT_R32G32_FLOAT,       0, 0,       D3D11_INPUT_PER_VERTEX_DATA, 0},
-                {"COLOR",    0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, rOffset, D3D11_INPUT_PER_VERTEX_DATA, 0},
-            };
-            device_->CreateInputLayout(
-                layout, 2,
-                vertexShaderBlob->GetBufferPointer(),
-                vertexShaderBlob->GetBufferSize(),
-                inputLayout.releaseAndGetAddressOf());
-
-            constexpr Int8 layoutIndex = core::toUnderlying(BuiltinGeometryLayout::XYRGBA);
-            program->builtinLayouts_[layoutIndex] = inputLayout;
-        }
-
-        // Create Input Layout for XY_iRGBA
-        {
-            ComPtr<ID3D11InputLayout> inputLayout;
-            D3D11_INPUT_ELEMENT_DESC layout[] = {
-                {"POSITION", 0, DXGI_FORMAT_R32G32_FLOAT,       0, 0, D3D11_INPUT_PER_VERTEX_DATA,   0},
-                {"COLOR",    0, DXGI_FORMAT_R32G32B32A32_FLOAT, 1, 0, D3D11_INPUT_PER_INSTANCE_DATA, 0},
-            };
-            device_->CreateInputLayout(
-                layout, 2,
-                vertexShaderBlob->GetBufferPointer(),
-                vertexShaderBlob->GetBufferSize(),
-                inputLayout.releaseAndGetAddressOf());
-
-            constexpr Int8 layoutIndex = core::toUnderlying(BuiltinGeometryLayout::XY_iRGBA);
-            program->builtinLayouts_[layoutIndex] = inputLayout;
-        }
+        VGC_D3D11_CREATE_BUILTIN_INPUT_LAYOUT(XYRGB);
+        VGC_D3D11_CREATE_BUILTIN_INPUT_LAYOUT(XYRGBA);
+        VGC_D3D11_CREATE_BUILTIN_INPUT_LAYOUT(XY_iRGBA);
+        VGC_D3D11_CREATE_BUILTIN_INPUT_LAYOUT(XYUVRGBA);
+        VGC_D3D11_CREATE_BUILTIN_INPUT_LAYOUT(XYUV_iRGBA);
     }
 
     // Create the simple shader (fragment)
@@ -859,10 +859,12 @@ void D3d11Engine::createBuiltinShaders_() {
         new D3d11Program(resourceRegistry_, BuiltinProgram::SimpleTextured));
     simpleTexturedProgram_ = simpleTexturedProgram;
 
+    D3d11ProgramPtr simpleTexturedDebugProgram(
+        new D3d11Program(resourceRegistry_, BuiltinProgram::SimpleTexturedDebug));
+    simpleTexturedDebugProgram_ = simpleTexturedDebugProgram;
+
     // Create the simple textured shader (vertex)
     {
-        D3d11Program* program = simpleTexturedProgram.get();
-
         ComPtr<ID3DBlob> errorBlob;
         ComPtr<ID3DBlob> vertexShaderBlob;
         HRESULT hres = D3DCompileFromFile(
@@ -886,45 +888,18 @@ void D3d11Engine::createBuiltinShaders_() {
             vertexShaderBlob->GetBufferSize(),
             NULL,
             vertexShader.releaseAndGetAddressOf());
-        program->vertexShader_ = vertexShader;
 
-        // Create Input Layout for XYUVRGBA
         {
-            ComPtr<ID3D11InputLayout> inputLayout;
-            UINT uOffset = static_cast<UINT>(offsetof(Vertex_XYUVRGBA, u));
-            UINT rOffset = static_cast<UINT>(offsetof(Vertex_XYUVRGBA, r));
-            D3D11_INPUT_ELEMENT_DESC layout[] = {
-                {"POSITION", 0, DXGI_FORMAT_R32G32_FLOAT,    0, 0,       D3D11_INPUT_PER_VERTEX_DATA, 0},
-                {"TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT,    0, uOffset, D3D11_INPUT_PER_VERTEX_DATA, 0},
-                {"COLOR",    0, DXGI_FORMAT_R32G32B32_FLOAT, 0, rOffset, D3D11_INPUT_PER_VERTEX_DATA, 0},
-            };
-            device_->CreateInputLayout(
-                layout, 3,
-                vertexShaderBlob->GetBufferPointer(),
-                vertexShaderBlob->GetBufferSize(),
-                inputLayout.releaseAndGetAddressOf());
-
-            constexpr Int8 layoutIndex = core::toUnderlying(BuiltinGeometryLayout::XYUVRGBA);
-            program->builtinLayouts_[layoutIndex] = inputLayout;
+            D3d11Program* program = simpleTexturedProgram.get();
+            program->vertexShader_ = vertexShader;
+            VGC_D3D11_CREATE_BUILTIN_INPUT_LAYOUT(XYUVRGBA);
+            VGC_D3D11_CREATE_BUILTIN_INPUT_LAYOUT(XYUV_iRGBA);
         }
-
-        // Create Input Layout for XYUV_iRGBA
         {
-            ComPtr<ID3D11InputLayout> inputLayout;
-            UINT uOffset = static_cast<UINT>(offsetof(Vertex_XYUV, u));
-            D3D11_INPUT_ELEMENT_DESC layout[] = {
-                {"POSITION", 0, DXGI_FORMAT_R32G32_FLOAT,       0, 0,       D3D11_INPUT_PER_VERTEX_DATA,   0},
-                {"TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT,       0, uOffset, D3D11_INPUT_PER_VERTEX_DATA,   0},
-                {"COLOR",    0, DXGI_FORMAT_R32G32B32A32_FLOAT, 1, 0,       D3D11_INPUT_PER_INSTANCE_DATA, 0},
-            };
-            device_->CreateInputLayout(
-                layout, 3,
-                vertexShaderBlob->GetBufferPointer(),
-                vertexShaderBlob->GetBufferSize(),
-                inputLayout.releaseAndGetAddressOf());
-
-            constexpr Int8 layoutIndex = core::toUnderlying(BuiltinGeometryLayout::XYUV_iRGBA);
-            program->builtinLayouts_[layoutIndex] = inputLayout;
+            D3d11Program* program = simpleTexturedDebugProgram.get();
+            program->vertexShader_ = vertexShader;
+            VGC_D3D11_CREATE_BUILTIN_INPUT_LAYOUT(XYUVRGBA);
+            VGC_D3D11_CREATE_BUILTIN_INPUT_LAYOUT(XYUV_iRGBA);
         }
     }
 
@@ -958,8 +933,38 @@ void D3d11Engine::createBuiltinShaders_() {
         program->pixelShader_ = pixelShader;
     }
 
+    // Create the simple textured shader (fragment)
+    {
+        D3d11Program* program = simpleTexturedDebugProgram.get();
+        ComPtr<ID3DBlob> errorBlob;
+        ComPtr<ID3DBlob> pixelShaderBlob;
+
+        HRESULT hres = D3DCompileFromFile(
+            shaderPath_("simple_textured_debug.f.hlsl").wstring().c_str(),
+            NULL, NULL, "main", "ps_4_0", 0, 0,
+            pixelShaderBlob.releaseAndGetAddressOf(),
+            errorBlob.releaseAndGetAddressOf());
+
+        if (hres < 0) {
+            std::string errString =
+                (errorBlob ? std::string(
+                    static_cast<const char*>(errorBlob->GetBufferPointer()))
+                    : core::format("unknown D3DCompile error (0x{:X}).", hres));
+            throw core::RuntimeError(errString);
+        }
+        errorBlob.reset();
+
+        ComPtr<ID3D11PixelShader> pixelShader;
+        device_->CreatePixelShader(
+            pixelShaderBlob->GetBufferPointer(),
+            pixelShaderBlob->GetBufferSize(),
+            NULL,
+            pixelShader.releaseAndGetAddressOf());
+        program->pixelShader_ = pixelShader;
+    }
+
     D3d11ProgramPtr sreenSpaceDisplacementProgram(
-        new D3d11Program(resourceRegistry_, BuiltinProgram::SimpleTextured));
+        new D3d11Program(resourceRegistry_, BuiltinProgram::SreenSpaceDisplacement));
     sreenSpaceDisplacementProgram_ = sreenSpaceDisplacementProgram;
 
     // Create the sreen-space displacement shader (vertex)
@@ -991,28 +996,7 @@ void D3d11Engine::createBuiltinShaders_() {
             vertexShader.releaseAndGetAddressOf());
         program->vertexShader_ = vertexShader;
 
-        // Create Input Layout for XYDxDy_iXYRotWRGBA
-        {
-            ComPtr<ID3D11InputLayout> inputLayout;
-            UINT dxOffset = static_cast<UINT>(offsetof(Vertex_XYDxDy, dx));
-            UINT oOffset = static_cast<UINT>(offsetof(Vertex_XYRotWRGBA, offset));
-            UINT rOffset = static_cast<UINT>(offsetof(Vertex_XYRotWRGBA, r));
-            D3D11_INPUT_ELEMENT_DESC layout[] = {
-                {"POSITION",     0, DXGI_FORMAT_R32G32_FLOAT,       0, 0,        D3D11_INPUT_PER_VERTEX_DATA,   0},
-                {"DISPLACEMENT", 0, DXGI_FORMAT_R32G32_FLOAT,       0, dxOffset, D3D11_INPUT_PER_VERTEX_DATA,   0},
-                {"POSITION",     1, DXGI_FORMAT_R32G32B32_FLOAT,    1, 0,        D3D11_INPUT_PER_INSTANCE_DATA, 1},
-                {"OFFSET",       0, DXGI_FORMAT_R32_FLOAT,          1, oOffset,  D3D11_INPUT_PER_INSTANCE_DATA, 1},
-                {"COLOR",        0, DXGI_FORMAT_R32G32B32A32_FLOAT, 1, rOffset,  D3D11_INPUT_PER_INSTANCE_DATA, 1},
-            };
-            device_->CreateInputLayout(
-                layout, 5,
-                vertexShaderBlob->GetBufferPointer(),
-                vertexShaderBlob->GetBufferSize(),
-                inputLayout.releaseAndGetAddressOf());
-
-            constexpr Int8 layoutIndex = core::toUnderlying(BuiltinGeometryLayout::XYDxDy_iXYRotWRGBA);
-            program->builtinLayouts_[layoutIndex] = inputLayout;
-        }
+        VGC_D3D11_CREATE_BUILTIN_INPUT_LAYOUT(XYDxDy_iXYRotWRGBA);
     }
 
     // Create the simple instanced shader (fragment)
@@ -1035,6 +1019,8 @@ void D3d11Engine::createBuiltinShaders_() {
         device_->CreateDepthStencilState(
             &desc, depthStencilState_.releaseAndGetAddressOf());
     }
+
+#undef VGC_D3D11_CREATE_BUILTIN_INPUT_LAYOUT
 }
 
 // clang-format on

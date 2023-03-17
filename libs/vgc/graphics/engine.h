@@ -537,6 +537,7 @@ protected:
     // The builtin programs are created by api-specific engine implementations.
     ProgramPtr simpleProgram_;
     ProgramPtr simpleTexturedProgram_;
+    ProgramPtr simpleTexturedDebugProgram_;
     ProgramPtr sreenSpaceDisplacementProgram_;
 
     // -- builtin batching early impl --

@@ -188,12 +188,10 @@ protected:
         BuiltinGeometryLayout builtinLayout = info.builtinGeometryLayout();
         if (builtinLayout != BuiltinGeometryLayout::NotBuiltin) {
             VertexSizes s = vertexSizes(builtinLayout);
-            if (info_.strides_[0] == 0) {
-                info_.strides_[0] = s[0];
-            }
-            if (info_.strides_[1] == 0) {
-                info_.strides_[1] = s[1];
-            }
+            for (Int i = 0; i < std::tuple_size_v<VertexSizes>; ++i)
+                if (info_.strides_[i] == 0) {
+                    info_.strides_[i] = s[i];
+                }
         }
     }
 
