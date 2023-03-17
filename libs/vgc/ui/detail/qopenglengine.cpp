@@ -1027,14 +1027,14 @@ void QglEngine::initBuiltinResources_() {
 
     // Builtin layouts
     struct VertexAttribDesc {
-        const char* name;
-        GLint numElements;
-        GLenum elementType;
-        uintptr_t bufferIndex;
-        uintptr_t offset;
-        bool isPerInstance;
-        GLboolean normalized;
-        GLsizei stride;
+        const char* name = "";
+        GLint numElements = 0;
+        GLenum elementType = GL_FLOAT;
+        uintptr_t bufferIndex = 0;
+        uintptr_t offset = 0;
+        bool isPerInstance = false;
+        GLboolean normalized = false;
+        GLsizei stride = 0;
     };
 
 #define VGC_QGL_CREATE_BUILTIN_INPUT_LAYOUT(layout_tag)                                  \
