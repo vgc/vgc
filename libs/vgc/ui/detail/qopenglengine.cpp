@@ -1040,7 +1040,7 @@ void QglEngine::initBuiltinResources_() {
 #define VGC_QGL_CREATE_BUILTIN_INPUT_LAYOUT(layout_tag)                                  \
     do {                                                                                 \
         constexpr Int8 layoutIndex =                                                     \
-            core::toUnderlying(BuiltinGeometryLayout::##layout_tag);                     \
+            core::toUnderlying(BuiltinGeometryLayout::layout_tag);                       \
         core::Array<GlAttribPointerDesc>& layout =                                       \
             program->builtinLayouts_[layoutIndex];                                       \
         for (const auto& desc : layout_##layout_tag) {                                   \

@@ -755,7 +755,7 @@ void D3d11Engine::createBuiltinShaders_() {
             inputLayout.releaseAndGetAddressOf());                                       \
                                                                                          \
         constexpr Int8 layoutIndex =                                                     \
-            core::toUnderlying(BuiltinGeometryLayout::##layout_tag);                     \
+            core::toUnderlying(BuiltinGeometryLayout::layout_tag);                       \
         program->builtinLayouts_[layoutIndex] = inputLayout;                             \
     } while (0)
 
