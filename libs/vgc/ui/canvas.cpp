@@ -127,7 +127,7 @@ bool Canvas::onKeyPress(KeyEvent* event) {
         break;
     case Key::Delete:
         if (selectionCandidateElements_.size()) {
-            workspace::Element* e = selectionCandidateElements_[selectedElementId_];
+            workspace::Element* e = selectionCandidateElements_[selectedElementId_].first;
             // notes: vac elements have raw and smart delete, non-vac elements may have the same
             // so it would be best to have the delete method virtual in workspace::Element.
             // for now, edges have no dependents so we use the dom to remove them (moreover, the workspace
