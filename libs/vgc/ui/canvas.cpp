@@ -151,15 +151,16 @@ bool Canvas::onKeyPress(KeyEvent* event) {
                     auto keyEdge = cell->toKeyEdge();
                     if (keyEdge) {
                         auto v0 = keyEdge->startVertex();
-                        if (v0 && v0->star().length() == 1) {
+                        auto v1 = keyEdge->endVertex();
+                        Int expectedStarLength = (v0 == v1) ? 2 : 1;
+                        if (v0 && v0->star().length() == expectedStarLength) {
                             auto e0 = workspace_->find(v0->id());
                             de = e0->domElement();
                             if (de) {
                                 de->remove();
                             }
                         }
-                        auto v1 = keyEdge->endVertex();
-                        if (v1 && v1->star().length() == 1) {
+                        if (v1 && v1->star().length() == expectedStarLength) {
                             auto e1 = workspace_->find(v1->id());
                             de = e1->domElement();
                             if (de) {
