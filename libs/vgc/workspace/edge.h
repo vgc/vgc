@@ -231,7 +231,7 @@ public:
 protected:
     ElementStatus updateFromDom_(Workspace* workspace) override;
 
-    void onDependencyBeingDestroyed_(Element* dependency) override;
+    void onDependencyRemoved_(Element* dependency) override;
 
     void preparePaint_(core::AnimTime t, PaintOptions flags) override;
 
@@ -239,8 +239,6 @@ protected:
         graphics::Engine* engine,
         core::AnimTime t,
         PaintOptions flags = PaintOption::None) const override;
-
-    void onVacNodeRemoved_() override;
 
     VacEdgeCellFrameData* frameData(core::AnimTime t) const override;
     void computeStandaloneGeometry(VacEdgeCellFrameData& data) override;

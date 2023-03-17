@@ -24,11 +24,6 @@ namespace vgc::workspace {
 
 Element::~Element() {
     clearDependencies();
-    for (Element* dependent : dependents_) {
-        dependent->onDependencyBeingDestroyed_(this);
-        dependent->dependencies_.removeOne(this);
-    }
-    dependents_.clear();
 }
 
 geometry::Rect2d Element::boundingBox(core::AnimTime /*t*/) const {
@@ -64,20 +59,22 @@ bool Element::replaceDependency(Element* oldDependency, Element* newDependency) 
 
 void Element::removeDependency(Element* element) {
     if (element && dependencies_.removeOne(element)) {
+        onDependencyRemoved_(element);
         element->dependents_.removeOne(this);
         element->onDependentElementRemoved_(this);
     }
 }
 
 void Element::clearDependencies() {
-    for (Element* dep : dependencies_) {
+    while (!dependencies_.isEmpty()) {
+        Element* dep = dependencies_.pop();
+        onDependencyRemoved_(dep);
         dep->dependents_.removeOne(this);
         dep->onDependentElementRemoved_(this);
     }
-    dependencies_.clear();
 }
 
-void Element::onDependencyBeingDestroyed_(Element* /*dependency*/) {
+void Element::onDependencyRemoved_(Element* /*dependency*/) {
 }
 
 void Element::onDependentElementRemoved_(Element* /*dependent*/) {
@@ -110,27 +107,24 @@ VacElement* Element::findFirstSiblingVacElement_(Element* start) {
 }
 
 VacElement::~VacElement() {
+    // safe ?
     removeVacNode();
 }
 
 void VacElement::removeVacNode() {
     if (vacNode_) {
         // We set vacNode_ to null before calling removeNode because
-        // the workspace would consider it as an external event otherwise
-        // and would both call onVacNodeRemoved_ and schedule this element for update.
+        // the workspace would otherwise consider it as an external event
+        // and schedule this element for update.
         vacomplex::Node* tmp = vacNode_;
         vacNode_ = nullptr;
         topology::ops::removeNode(tmp, false);
-        onVacNodeRemoved_();
     }
 }
 
 void VacElement::setVacNode(vacomplex::Node* vacNode) {
     removeVacNode();
     vacNode_ = vacNode;
-}
-
-void VacElement::onVacNodeRemoved_() {
 }
 
 } // namespace vgc::workspace
