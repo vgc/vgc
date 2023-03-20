@@ -1709,7 +1709,7 @@ public:
     /// ```cpp
     /// vgc::core::Array<double> a = {8, 10, 42, 12, 15};
     /// a.removeRange(1, 3);   // => [8, 12, 15]
-    /// a.removeRange(2, 3);   // => [42, 12]
+    /// a.removeRange(2, 3);   // => [8, 12]
     /// a.removeRange(1, 0);   // => vgc::core::IndexError!
     /// a.removeRange(-1, 0);  // => vgc::core::IndexError!
     /// a.removeRange(2, 3);   // => vgc::core::IndexError!
@@ -2278,6 +2278,13 @@ private:
         }
         else {
             // (0 <= i <= length()) and (i != oldLen) => (oldLen > 0)
+
+            // Create the to-be-emplaced value now, in case `args` includes a
+            // reference to an element already in the Array, in which case
+            // move_backward may modify the pointed-to value before use.
+            //
+            T tmp(std::forward<Args>(args)...);
+
             const pointer last = data + oldLen;
             const pointer back = last - 1;
             // *last is uninitialized!
@@ -2285,7 +2292,7 @@ private:
             // Ranges overlap -> Move backward
             std::move_backward(newElementPtr, back, last);
             // Emplace new element
-            *newElementPtr = T(std::forward<Args>(args)...);
+            *newElementPtr = std::move(tmp);
         }
 
         ++length_;
@@ -2388,11 +2395,18 @@ private:
         const pointer uBeg = data_ + j;
         const pointer insertBeg = data_ + i;
         const pointer insertEnd = insertBeg + n;
+
+        // Make a copy of the value, in case it is a reference to an element
+        // already in the Array, in which case fill/uninitialized_fill may
+        // modify the pointed-to value before use.
+        //
+        T tmp(value);
+
         if (insertBeg < uBeg) {
-            std::fill(insertBeg, uBeg, value);
+            std::fill(insertBeg, uBeg, tmp);
         }
         if (uBeg < insertEnd) {
-            std::uninitialized_fill(uBeg, insertEnd, value);
+            std::uninitialized_fill(uBeg, insertEnd, tmp);
         }
 
         return insertBeg;
