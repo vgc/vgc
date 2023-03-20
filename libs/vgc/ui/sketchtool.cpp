@@ -320,8 +320,7 @@ void SketchTool::finishCurve_() {
     }
 
     const geometry::Vec2d lastInputPoint = lastInputPoints_[0];
-    const Int num_points = smoothedInputPoints_.size();
-    if (num_points > 1) {
+    if (smoothedInputPoints_.length() > 1) {
         // snapping to vertices
         // in the future we can have the snapping candidates implemented in canvas to be shared by all tools
         workspace::Element* closestVertex = nullptr;
