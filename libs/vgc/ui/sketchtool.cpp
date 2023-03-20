@@ -217,11 +217,27 @@ void SketchTool::continueCurve_(const geometry::Vec2d& p, double width) {
         lastInputPoints_.removeLast();
     }
 
-    const Int num_points = smoothedInputPoints_.size();
+    // Note: below, we use getUnchecked() to silence GCC zealous warning:
+    //
+    //   warning: assuming signed overflow does not occur when assuming that
+    //   (X - c) <= X is always true [-Wstrict-overflow]
+    //
+    // The warning is caused by GCC deducing that in Array::operator[], the
+    // check `i < length()` (part of `(i >= 0 && i < length())`) is
+    // unnecessary when `i = length() - 2`. GCC is not smart enough to
+    // understand that this is caused by its own inlining and that in
+    // general, the check `i < length()` is important to keep.
+    //
+    // As a workaround, we perform the check `i >= 0` explicitly, then use
+    // getUnchecked() to bypass the check `i < length()` which we know is
+    // always true in this case.
+
     if (lastInputPoints_.length() >= 3) {
         // 1 2 1
         // clang-format off
-        smoothedInputPoints_[num_points - 2] =
+        Int i = smoothedInputPoints_.length() - 2;
+        VGC_ASSERT(i >= 0);
+        smoothedInputPoints_.getUnchecked(i) =
             (1 / 4.0) * lastInputPoints_[0] +
             (2 / 4.0) * lastInputPoints_[1] +
             (1 / 4.0) * lastInputPoints_[2];
@@ -230,7 +246,9 @@ void SketchTool::continueCurve_(const geometry::Vec2d& p, double width) {
     if (lastInputPoints_.length() >= 5) {
         // 1 4 6 4 1
         // clang-format off
-        smoothedInputPoints_[smoothedInputPoints_.size() - 3] =
+        Int i = smoothedInputPoints_.length() - 3;
+        VGC_ASSERT(i >= 0);
+        smoothedInputPoints_.getUnchecked(i) =
             (1 / 16.0) * lastInputPoints_[0] +
             (4 / 16.0) * lastInputPoints_[1] +
             (6 / 16.0) * lastInputPoints_[2] +
