@@ -75,8 +75,8 @@ public:
     /// `static_cast` on each of its coordinates.
     ///
     /// ```cpp
-    /// vgc::geometrt::Vec2d vd(1, 2);
-    /// vgc::geometrt::Vec2f vf(vd); // cast from double to float
+    /// vgc::geometry::Vec2d vd(1, 2);
+    /// vgc::geometry::Vec2f vf(vd); // cast from double to float
     /// ```
     ///
     template<typename TVec2,
@@ -282,8 +282,16 @@ public:
     ///
     Vec2x normalized(bool* isNormalizable = nullptr, float epsilon = 0.0f) const;
 
-    /// Rotates this Vec2x by 90° counter-clockwise, assuming a left-handed
-    /// coordinate system.
+    /// Rotates this Vec2x by 90°, transforming the X-axis unit vector into the Y-axis unit vector.
+    ///
+    /// In a top-left origin system (X right, Y down) it is clockwise.
+    ///
+    /// In a bottom-left origin system (X right, Y up) it is counter-clockwise.
+    /// 
+    /// ```cpp
+    /// Vec2x v(10, 20);
+    /// v.orthogonalize(); // => (-20, 10)
+    /// ```
     ///
     constexpr Vec2x& orthogonalize() {
         float tmp = data_[0];
@@ -292,8 +300,16 @@ public:
         return *this;
     }
 
-    /// Returns a copy of this Vec2x rotated 90° counter-clockwise, assuming a
-    /// left-handed coordinate system.
+    /// Returns a copy of this Vec2x rotated 90°, transforming the X-axis unit vector into the Y-axis unit vector.
+    ///
+    /// In a top-left origin system (X right, Y down) it is clockwise.
+    ///
+    /// In a bottom-left origin system (X right, Y up) it is counter-clockwise.
+    ///
+    /// ```cpp
+    /// Vec2x v1(10, 20);
+    /// Vec2x v2 = v1.orthogonalized(); // => v2:(-20, 10)
+    /// ```
     ///
     constexpr Vec2x orthogonalized() const {
         return Vec2x(*this).orthogonalize();
@@ -386,6 +402,33 @@ public:
     float angle(const Vec2x& b) const {
         const Vec2x& a = *this;
         return std::atan2(a.det(b), a.dot(b));
+    }
+
+    /// Returns the angle, in radians and in the interval (−π, π], between the X
+    /// axis and this Vec2x `a`.
+    ///
+    /// ```cpp
+    /// Vec2x a(1, 1);
+    /// float d = a.angle(); // returns π/4 (= 45 deg)
+    /// ```
+    ///
+    /// This value is computed using the following formula:
+    ///
+    /// ```cpp
+    /// float angle = atan2(a[1], a[0]);
+    /// ```
+    ///
+    /// It is equivalent to calling:
+    ///
+    /// ```cpp
+    /// float angle = Vec2x(1, 0).angle(a);
+    /// ```
+    ///
+    /// \sa det(), dot()
+    ///
+    float angle() const {
+        const Vec2x& a = *this;
+        return std::atan2(a[1], a[0]);
     }
 
     /// Returns whether this Vec2x `a` and the given Vec2x `b` are almost equal
