@@ -44,7 +44,11 @@ public:
     }
     VGC_WARNING_POP
 
-    constexpr CurveSample(Vec2d position, Vec2d normal, double halfwidth = 0.5) noexcept
+    constexpr CurveSample(
+        const Vec2d& position,
+        const Vec2d& normal,
+        double halfwidth = 0.5) noexcept
+
         : position_(position)
         , normal_(normal)
         , halfwidths_(halfwidth, halfwidth)
@@ -52,10 +56,11 @@ public:
     }
 
     constexpr CurveSample(
-        Vec2d position,
-        Vec2d normal,
-        Vec2d halfwidths,
+        const Vec2d& position,
+        const Vec2d& normal,
+        const Vec2d& halfwidths,
         double s) noexcept
+
         : position_(position)
         , normal_(normal)
         , halfwidths_(halfwidths)
