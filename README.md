@@ -176,7 +176,7 @@ sudo apt install git cmake build-essential python3-dev libglu1-mesa-dev libfreet
 
 # Download, build, and run VGC
 git clone --recurse-submodules https://github.com/vgc/vgc.git
-cd vg && mkdir build && cd build
+cd vgc && mkdir build && cd build
 cmake .. \
     -DCMAKE_BUILD_TYPE=Release \
     -DQt5_DIR="~/Qt/5.15.2/gcc_64/lib/cmake/Qt5"
