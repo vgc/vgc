@@ -47,8 +47,19 @@ public:
     constexpr CurveSample(Vec2d position, Vec2d normal, double halfwidth = 0.5) noexcept
         : position_(position)
         , normal_(normal)
-        , width_(halfwidth, halfwidth)
+        , halfwidths_(halfwidth, halfwidth)
         , s_(0) {
+    }
+
+    constexpr CurveSample(
+        Vec2d position,
+        Vec2d normal,
+        Vec2d halfwidths,
+        double s) noexcept
+        : position_(position)
+        , normal_(normal)
+        , halfwidths_(halfwidths)
+        , s_(s) {
     }
 
     const Vec2d& position() const {
@@ -75,35 +86,72 @@ public:
         normal_ = normal;
     }
 
+    // ┌─── x
+    // │ ─segment─→
+    // │  ↓ right
+    // y
+    //
     double rightHalfwidth() const {
-        return width_[0];
+        return halfwidths_[0];
     }
 
+    // ┌─── x
+    // │  ↑ left
+    // │ ─segment─→
+    // y
+    //
     double leftHalfwidth() const {
-        return width_[1];
+        return halfwidths_[1];
+    }
+
+    // ┌─── x
+    // │  ↑ halfwidths[1]
+    // │ ─segment─→
+    // y  ↓ halfwidths[0]
+    //
+    const Vec2d& halfwidths() const {
+        return halfwidths_;
+    }
+
+    // ┌─── x
+    // │  ↑ halfwidth(1)
+    // │ ─segment─→
+    // y  ↓ halfwidth(0)
+    //
+    double halfwidth(Int side) const {
+        return halfwidths_[side];
+    }
+
+    // ┌─── x
+    // │  ↑ halfwidths[1]
+    // │ ─segment─→
+    // y  ↓ halfwidths[0]
+    //
+    void setHalfwidths(const Vec2d& halfwidths) {
+        halfwidths_ = halfwidths;
     }
 
     void setWidth(double rightHalfwidth, double leftHalfwidth) {
-        width_[0] = rightHalfwidth;
-        width_[1] = leftHalfwidth;
+        halfwidths_[0] = rightHalfwidth;
+        halfwidths_[1] = leftHalfwidth;
     }
 
     // ┌─── x
-    // │  ↑ left
     // │ ─segment─→
-    // y  ↓ right
+    // │  ↓ right
+    // y
     //
     Vec2d rightPoint() const {
-        return position_ + normal_ * width_[0];
+        return position_ + normal_ * halfwidths_[0];
     }
 
     // ┌─── x
     // │  ↑ left
     // │ ─segment─→
-    // y  ↓ right
+    // y
     //
     Vec2d leftPoint() const {
-        return position_ - normal_ * width_[1];
+        return position_ - normal_ * halfwidths_[1];
     }
 
     // ┌─── x
@@ -126,7 +174,7 @@ public:
 private:
     Vec2d position_;
     Vec2d normal_;
-    Vec2d width_;
+    Vec2d halfwidths_;
     double s_; // total arclength from start point
 };
 
