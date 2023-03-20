@@ -2278,8 +2278,13 @@ private:
         }
         else {
             // (0 <= i <= length()) and (i != oldLen) => (oldLen > 0)
-            // handle aliasing
+
+            // Create the to-be-emplaced value now, in case `args` includes a
+            // reference to an element already in the Array, in which case
+            // move_backward may modify the pointed-to value before use.
+            //
             T tmp(std::forward<Args>(args)...);
+
             const pointer last = data + oldLen;
             const pointer back = last - 1;
             // *last is uninitialized!
@@ -2390,13 +2395,17 @@ private:
         const pointer uBeg = data_ + j;
         const pointer insertBeg = data_ + i;
         const pointer insertEnd = insertBeg + n;
-        // handle aliasing
+
+        // Make a copy of the value, in case it is a reference to an element
+        // already in the Array, in which case fill/uninitialized_fill may
+        // modify the pointed-to value before use.
+        //
         T tmp(value);
+
         if (insertBeg < uBeg) {
             std::fill(insertBeg, uBeg, tmp);
         }
         if (uBeg < insertEnd) {
-            // handle aliasing
             std::uninitialized_fill(uBeg, insertEnd, tmp);
         }
 
