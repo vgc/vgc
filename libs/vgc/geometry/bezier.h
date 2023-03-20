@@ -84,7 +84,15 @@ public:
     template<VGC_REQUIRES(degree >= 2)>
     T derivative() {
         constexpr size_t i = levelOffset_<degree - 1>;
-        return Scalar(degree) * (values_[i + 1] - values_[i]);
+        const Scalar n = static_cast<Scalar>(degree);
+        return n * (values_[i + 1] - values_[i]);
+    }
+
+    template<VGC_REQUIRES(degree >= 3)>
+    T secondDerivative() {
+        constexpr size_t i = levelOffset_<degree - 2>;
+        const Scalar n = static_cast<Scalar>(degree);
+        return n * (n - 1) * (values_[i + 2] - 2 * values_[i + 1] + values_[i]);
     }
 
     template<
