@@ -20,7 +20,26 @@
 
 namespace vgc::topology {
 
+void VacDiff::merge(const VacDiff& other) {
+    for (auto& p : other.nodeDiffs_) {
+        const VacNodeDiff& nextDiff = p.second;
+        VacNodeDiff& nodeDiff = nodeDiffs_[p.first];
+        nodeDiff.setNode(nextDiff.node());
+        if (nextDiff.flags().has(VacNodeDiffFlag::Removed)) {
+            nodeDiff.setFlags(VacNodeDiffFlag::Removed);
+        }
+        else if (nextDiff.flags().has(VacNodeDiffFlag::Removed)) {
+            nodeDiff.setFlags(nextDiff.flags());
+        }
+        else {
+            nodeDiff.setFlags(nodeDiff.flags() | nextDiff.flags());
+        }
+    }
+}
+
 void Vac::onDestroyed() {
+    clear();
+    isDiffEnabled_ = false;
 }
 
 VacPtr Vac::create() {
@@ -28,15 +47,29 @@ VacPtr Vac::create() {
 }
 
 void Vac::clear() {
-    for (const auto& it : nodes_) {
-        onNodeAboutToBeRemoved().emit(it.second.get());
+    isBeingCleared_ = true;
+    if (isDiffEnabled_) {
+        for (const auto& it : nodes_) {
+            VacGroup* parentGroup = it.second->parentGroup();
+            if (parentGroup) {
+                diff_.onNodeDiff(parentGroup, VacNodeDiffFlag::ChildrenChanged);
+                diff_.onNodeDiff(it.second.get(), VacNodeDiffFlag::Removed);
+            }
+        }
+    }
+    for (const auto& node : nodes_) {
+        onNodeAboutToBeRemoved().emit(node.second.get());
     }
     nodes_.clear();
+    isBeingCleared_ = false;
     root_ = nullptr;
     ++version_;
 }
 
 VacGroup* Vac::resetRoot(core::Id id) {
+    if (isBeingCleared_) {
+        return nullptr;
+    }
     clear();
     root_ = detail::Operations::createRootGroup(this, id);
     return root_;
@@ -64,10 +97,20 @@ bool Vac::containsNode(core::Id id) const {
 bool Vac::emitPendingDiff() {
     if (!diff_.isEmpty()) {
         changed().emit(diff_);
-        diff_.reset();
+        diff_.clear();
         return true;
     }
     return false;
+}
+
+bool Vac::insertNode(core::Id id, std::unique_ptr<VacNode>&& node) {
+    if (isDiffEnabled_) {
+        return false;
+    }
+    if (!nodes_.try_emplace(id, std::move(node)).second) {
+        throw IdCollisionError("Id collision error.");
+    }
+    return true;
 }
 
 } // namespace vgc::topology

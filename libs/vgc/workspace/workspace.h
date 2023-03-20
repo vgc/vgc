@@ -134,6 +134,7 @@ private:
 
     dom::DocumentPtr document_;
     topology::VacPtr vac_;
+    topology::VacDiff pendingVacDiff_;
     bool isDomBeingUpdated_ = false;
     bool isVacBeingUpdated_ = false;
     core::Id lastSyncedDomVersionId_ = {};

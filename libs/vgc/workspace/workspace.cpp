@@ -220,15 +220,24 @@ Workspace::Workspace(dom::DocumentPtr document)
 
 void Workspace::onDestroyed() {
 
-    vac_->changed().disconnect(this);
-    vac_->onNodeAboutToBeRemoved().disconnect(this);
     for (const auto& p : elements_) {
         Element* e = p.second.get();
         VacElement* ve = e->toVacElement();
         if (ve) {
+            // the whole vac is cleared afterwards
             ve->vacNode_ = nullptr;
         }
+        while (!e->dependents_.isEmpty()) {
+            Element* dependent = e->dependents_.pop();
+            dependent->dependencies_.removeOne(e);
+            dependent->onDependencyRemoved_(e);
+            e->onDependentElementRemoved_(dependent);
+        }
     }
+    elements_.clear();
+    vgcElement_ = nullptr;
+    elementsWithError_.clear();
+    elementsToUpdateFromDom_.clear();
     vac_ = nullptr;
     document_ = nullptr;
 
@@ -333,9 +342,11 @@ void Workspace::onDocumentDiff_(const dom::Diff& diff) {
 
 void Workspace::onVacDiff_(const topology::VacDiff& diff) {
     if (isVacBeingUpdated_) {
-        // workspace is doing the changes, no need to see the diff.
+        // Needed to know which cells break when updating from dom
+        pendingVacDiff_.merge(diff);
         return;
     }
+    pendingVacDiff_.clear();
 
     bool domChanged = document_ && (document_->versionId() != lastSyncedDomVersionId_);
     if (domChanged) {
@@ -367,11 +378,32 @@ void Workspace::removeElement_(core::Id id) {
         if (element->hasPendingUpdate()) {
             elementsToUpdateFromDom_.removeOne(element);
         }
+        // Note:  don't simply erase it since elements' destructor can indirectly use
+        // elements_ via callbacks (e.g. onVacNodeAboutToBeRemoved_).
+        std::unique_ptr<Element> uptr = std::move(it->second);
         elements_.erase(it);
+        while (!element->dependents_.isEmpty()) {
+            Element* dependent = element->dependents_.pop();
+            dependent->dependencies_.removeOne(element);
+            dependent->onDependencyRemoved_(element);
+            element->onDependentElementRemoved_(dependent);
+        }
+        uptr.reset();
     }
 }
 
 void Workspace::clearElements_() {
+    // Note: elements_.clear() indirectly calls onVacNodeAboutToBeRemoved_() and thus fills
+    // elementsToUpdateFromDom_. So it is important to clear the latter after the former.
+    for (const auto& p : elements_) {
+        Element* e = p.second.get();
+        while (!e->dependents_.isEmpty()) {
+            Element* dependent = e->dependents_.pop();
+            dependent->dependencies_.removeOne(e);
+            dependent->onDependencyRemoved_(e);
+            e->onDependentElementRemoved_(dependent);
+        }
+    }
     elements_.clear();
     vgcElement_ = nullptr;
     elementsWithError_.clear();
@@ -450,8 +482,8 @@ void Workspace::onVacNodeAboutToBeRemoved_(topology::VacNode* node) {
         VacElement* vacElement = element->toVacElement();
         if (vacElement && vacElement->vacNode_) {
             vacElement->vacNode_ = nullptr;
-            vacElement->onVacNodeRemoved_();
             if (!element->isBeingUpdated_) {
+                element->hasPendingUpdate_ = true;
                 elementsToUpdateFromDom_.emplaceLast(element);
             }
         }
@@ -529,6 +561,7 @@ void Workspace::rebuildTreeFromDom_() {
         detail::ScopedTemporaryBoolSet bgVac(isVacBeingUpdated_);
         vac_->clear();
         vac_->emitPendingDiff();
+        pendingVacDiff_.clear();
         lastSyncedVacVersion_ = -1;
     }
 
@@ -583,9 +616,6 @@ void Workspace::rebuildVacFromTree_() {
 
     // reset vac
     vac_->clear();
-    vac_->emitPendingDiff();
-    lastSyncedVacVersion_ = -1;
-
     vac_->resetRoot(vgcElement_->id());
     vgcElement_->vacNode_ = vac_->rootGroup();
 
@@ -598,6 +628,10 @@ void Workspace::rebuildVacFromTree_() {
     }
 
     updateVacHierarchyFromTree_();
+
+    // flush vac diff
+    vac_->emitPendingDiff();
+    pendingVacDiff_.clear();
 
     lastSyncedDomVersionId_ = document_->versionId();
     lastSyncedVacVersion_ = vac_->version();
@@ -732,6 +766,7 @@ void Workspace::updateTreeAndVacFromDom_(const dom::Diff& diff) {
         parentsToOrderSync.insert(parent);
     }
 
+    // Collect all parents with reordered children.
     for (dom::Node* node : diff.reparentedNodes()) {
         dom::Element* domElement = dom::Element::cast(node);
         if (!domElement) {
@@ -746,7 +781,6 @@ void Workspace::updateTreeAndVacFromDom_(const dom::Diff& diff) {
             parentsToOrderSync.insert(parent);
         }
     }
-
     for (dom::Node* node : diff.childrenReorderedNodes()) {
         dom::Element* domElement = dom::Element::cast(node);
         if (!domElement) {
@@ -760,7 +794,7 @@ void Workspace::updateTreeAndVacFromDom_(const dom::Diff& diff) {
         parentsToOrderSync.insert(element);
     }
 
-    // update tree hierarchy from dom
+    // Update tree hierarchy from dom.
     for (Element* element : parentsToOrderSync) {
         Element* child = element->firstChild();
         dom::Element* domChild = element->domElement()->firstChildElement();
@@ -776,9 +810,9 @@ void Workspace::updateTreeAndVacFromDom_(const dom::Diff& diff) {
         }
     }
 
-    // update everything (paths may have changed.. etc)
     if (needsFullUpdate) {
-        // flag all elements with error for update
+        // Update everything (paths may have changed.. etc).
+        // Flag all elements with error for update.
         for (Element* element : elementsWithError_) {
             element->hasPendingUpdate_ = true;
         }
@@ -791,18 +825,25 @@ void Workspace::updateTreeAndVacFromDom_(const dom::Diff& diff) {
         }
     }
     else {
-        core::Array<Element*> toUpdate = elementsToUpdateFromDom_;
+        // Otherwise we update the elements flagged as modified
         for (const auto& it : diff.modifiedElements()) {
             Element* element = find(it.first);
+            // If the element has already an update pending it will be
+            // taken care of in the update loop further below.
             if (element && !element->hasPendingUpdate_) {
                 element->hasPendingUpdate_ = true;
-                toUpdate.emplaceLast(element);
+                updateElementFromDom(element);
             }
         }
-        // should not remove elements during this loop
-        for (Element* element : toUpdate) {
-            updateElementFromDom(element);
-        }
+    }
+
+    // An update can schedule another so we try to exhaust the list
+    // instead of simply traversing it.
+    while (!elementsToUpdateFromDom_.isEmpty()) {
+        // There is no need to pop the element since updateElementFromDom is
+        // in charge of removing it from the list when updated.
+        Element* element = elementsToUpdateFromDom_.last();
+        updateElementFromDom(element);
     }
 
     updateVacHierarchyFromTree_();

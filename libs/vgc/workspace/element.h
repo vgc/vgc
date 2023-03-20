@@ -250,7 +250,7 @@ protected:
     void removeDependency(Element* dependency);
     void clearDependencies();
 
-    virtual void onDependencyBeingDestroyed_(Element* dependency);
+    virtual void onDependencyRemoved_(Element* dependency);
 
     /// dependent may be being destroyed, only use its pointer as key.
     virtual void onDependentElementRemoved_(Element* dependent);
@@ -325,8 +325,6 @@ protected:
 
     void removeVacNode();
     void setVacNode(vacomplex::Node* vacNode);
-
-    virtual void onVacNodeRemoved_();
 
 private:
     // this pointer is not safe to use when tree is not synced with vac

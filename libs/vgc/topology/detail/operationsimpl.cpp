@@ -27,7 +27,7 @@ VacGroup* Operations::createRootGroup(Vac* vac, core::Id id) {
 
     // diff
     vac->incrementVersion();
-    if (vac->diffEnabled_) {
+    if (vac->isDiffEnabled_) {
         vac->diff_.onNodeDiff(p, VacNodeDiffFlag::Created);
     }
 
@@ -44,7 +44,7 @@ Operations::createVacGroup(core::Id id, VacGroup* parentGroup, VacNode* nextSibl
 
     // diff
     vac->incrementVersion();
-    if (vac->diffEnabled_) {
+    if (vac->isDiffEnabled_) {
         vac->diff_.onNodeDiff(p, VacNodeDiffFlag::Created);
         vac->diff_.onNodeDiff(parentGroup, VacNodeDiffFlag::ChildrenChanged);
     }
@@ -65,7 +65,7 @@ KeyVertex* Operations::createKeyVertex(
 
     // diff
     vac->incrementVersion();
-    if (vac->diffEnabled_) {
+    if (vac->isDiffEnabled_) {
         vac->diff_.onNodeDiff(p, VacNodeDiffFlag::Created);
         vac->diff_.onNodeDiff(parentGroup, VacNodeDiffFlag::ChildrenChanged);
     }
@@ -98,7 +98,7 @@ KeyEdge* Operations::createKeyOpenEdge(
 
     // diff
     vac->incrementVersion();
-    if (vac->diffEnabled_) {
+    if (vac->isDiffEnabled_) {
         vac->diff_.onNodeDiff(p, VacNodeDiffFlag::Created);
         vac->diff_.onNodeDiff(parentGroup, VacNodeDiffFlag::ChildrenChanged);
         vac->diff_.onNodeDiff(startVertex, VacNodeDiffFlag::StarChanged);
@@ -124,7 +124,7 @@ KeyEdge* Operations::createKeyClosedEdge(
 
     // diff
     vac->incrementVersion();
-    if (vac->diffEnabled_) {
+    if (vac->isDiffEnabled_) {
         vac->diff_.onNodeDiff(p, VacNodeDiffFlag::Created);
         vac->diff_.onNodeDiff(parentGroup, VacNodeDiffFlag::ChildrenChanged);
     }
@@ -136,7 +136,7 @@ void Operations::removeNode(VacNode* node, bool removeFreeVertices) {
 
     Vac* vac = node->vac();
     VacDiff& diff = vac->diff_;
-    const bool diffEnabled = vac->diffEnabled_;
+    const bool diffEnabled = vac->isDiffEnabled_;
     const bool isRoot = (vac->rootGroup() == node);
 
     std::unordered_set<VacNode*> toRemoveNodes;
@@ -228,10 +228,6 @@ void Operations::removeNode(VacNode* node, bool removeFreeVertices) {
     }
 
     for (VacNode* n : toRemoveNodes) {
-        vac->onNodeAboutToBeRemoved().emit(n);
-    }
-
-    for (VacNode* n : toRemoveNodes) {
         if (diffEnabled) {
             VacGroup* parentGroup = n->parentGroup();
             if (parentGroup) {
@@ -240,6 +236,8 @@ void Operations::removeNode(VacNode* node, bool removeFreeVertices) {
             diff.onNodeRemoved(n);
         }
         n->unlink();
+        // Note: must not cause recursion.
+        vac->onNodeAboutToBeRemoved().emit(n);
         vac->nodes_.erase(n->id());
     }
 
@@ -271,7 +269,7 @@ void Operations::moveToGroup(VacNode* node, VacGroup* parentGroup, VacNode* next
 
     // diff
     vac->incrementVersion();
-    if (vac->diffEnabled_) {
+    if (vac->isDiffEnabled_) {
         if (oldParent != parentGroup) {
             vac->diff_.onNodeDiff(node, VacNodeDiffFlag::Reparented);
         }
@@ -288,7 +286,7 @@ void Operations::setKeyVertexPosition(KeyVertex* v, const geometry::Vec2d& pos) 
         // inc version
         vac->incrementVersion();
         // update diff
-        if (vac->diffEnabled_) {
+        if (vac->isDiffEnabled_) {
             vac->diff_.onNodeDiff(v, VacNodeDiffFlag::GeometryChanged);
         }
     }
@@ -311,7 +309,7 @@ void Operations::setKeyEdgeCurvePoints(
         // inc version
         vac->incrementVersion();
         // update diff
-        if (vac->diffEnabled_) {
+        if (vac->isDiffEnabled_) {
             vac->diff_.onNodeDiff(e, VacNodeDiffFlag::GeometryChanged);
         }
     }
@@ -334,7 +332,7 @@ void Operations::setKeyEdgeCurveWidths(
         // inc version
         vac->incrementVersion();
         // update diff
-        if (vac->diffEnabled_) {
+        if (vac->isDiffEnabled_) {
             vac->diff_.onNodeDiff(e, VacNodeDiffFlag::GeometryChanged);
         }
     }

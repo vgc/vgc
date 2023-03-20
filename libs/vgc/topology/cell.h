@@ -394,18 +394,12 @@ private:
     static constexpr UInt8 notACell = static_cast<UInt8>(-1);
 
 protected:
-    VacNode(core::Id id) noexcept
-        : id_(id)
-        , cellType_(notACell) {
-    }
+    VacNode(core::Id id) noexcept;
 
-    VacNode(core::Id id, VacCellType cellType) noexcept
-        : id_(id)
-        , cellType_(static_cast<UInt8>(cellType)) {
-    }
+    VacNode(core::Id id, VacCellType cellType) noexcept;
 
 public:
-    virtual ~VacNode() = default;
+    virtual ~VacNode();
 
     VacNode(const VacNode&) = delete;
     VacNode& operator=(const VacNode&) = delete;
@@ -793,22 +787,13 @@ private:
     friend EdgeCell;
     friend FaceCell;
 
-    VacCell()
-        : VacNode(-1, VacCellType::KeyVertex) {
-
-        throw core::LogicError(
-            "Calling vgc::topology::VacCell default constructor. "
-            "This constructor is reserved as unused default constructor in the context "
-            "of virtual inheritance.");
-    }
+    VacCell();
 
 protected:
     VacCell(
         core::Id id,
         CellSpatialType spatialType,
-        CellTemporalType temporalType) noexcept
-        : VacNode(id, detail::vacCellTypeCombine(spatialType, temporalType)) {
-    }
+        CellTemporalType temporalType) noexcept;
 
 public:
     ~VacCell() override = default;

@@ -168,12 +168,19 @@ ElementStatus VacKeyEdge::updateFromDom_(Workspace* workspace) {
     std::array<VacKeyVertex*, 2> newVertices = {};
     for (Int i = 0; i < 2; ++i) {
         VacKeyVertex* const oldVertex = verticesInfo_[i].element;
+        VacKeyVertex* const otherVertex = verticesInfo_[1 - i].element;
         Element* const newVertexElement = verticesOpt[i].value_or(nullptr);
         // XXX impl custom safe cast
         VacKeyVertex* const newVertex = dynamic_cast<VacKeyVertex*>(newVertexElement);
         oldVertices[i] = oldVertex;
         newVertices[i] = newVertex;
-        if (replaceDependency(oldVertex, newVertex)) {
+        if (oldVertex != newVertex) {
+            if (oldVertex != otherVertex) {
+                removeDependency(oldVertex);
+            }
+            if (newVertex != otherVertex) {
+                addDependency(newVertex);
+            }
             detail::VacJoinHalfedge he(this, i == 1, 0);
             if (oldVertex) {
                 oldVertex->removeJoinHalfedge_(he);
@@ -236,7 +243,7 @@ ElementStatus VacKeyEdge::updateFromDom_(Workspace* workspace) {
     if (ke) {
         vacomplex::KeyVertex* oldKv0 = ke->startVertex();
         vacomplex::KeyVertex* oldKv1 = ke->endVertex();
-        if (vacKvs[0] != oldKv0 || vacKvs[0] != oldKv1) {
+        if (vacKvs[0] != oldKv0 || vacKvs[1] != oldKv1) {
             removeVacNode();
             ke = nullptr;
         }
@@ -278,7 +285,7 @@ ElementStatus VacKeyEdge::updateFromDom_(Workspace* workspace) {
     return ElementStatus::InvalidAttribute;
 }
 
-void VacKeyEdge::onDependencyBeingDestroyed_(Element* dependency) {
+void VacKeyEdge::onDependencyRemoved_(Element* dependency) {
     for (VertexInfo& vi : verticesInfo_) {
         if (vi.element == dependency) {
             vi.element = nullptr;
@@ -295,7 +302,7 @@ void VacKeyEdge::paint_(graphics::Engine* engine, core::AnimTime t, PaintOptions
     const {
 
     topology::KeyEdge* ke = vacKeyEdgeNode();
-    if (t != ke->time()) {
+    if (!ke || t != ke->time()) {
         return;
     }
 
@@ -528,10 +535,6 @@ void VacKeyEdge::paint_(graphics::Engine* engine, core::AnimTime t, PaintOptions
         engine->draw(graphics.centerlineGeometry_);
         engine->drawInstanced(graphics.pointsGeometry_);
     }
-}
-
-void VacKeyEdge::onVacNodeRemoved_() {
-    onInputGeometryChanged();
 }
 
 VacEdgeCellFrameData* VacKeyEdge::frameData(core::AnimTime t) const {

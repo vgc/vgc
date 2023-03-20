@@ -113,7 +113,7 @@ void VacVertexCellFrameData::debugPaint(graphics::Engine* engine) {
 geometry::Rect2d VacKeyVertex::boundingBox(core::AnimTime /*t*/) const {
     vacomplex::KeyVertex* kv = vacKeyVertexNode();
     if (kv) {
-        geometry::Vec2d pos = vacKeyVertexNode()->position({});
+        geometry::Vec2d pos = vacKeyVertexNode()->position();
         return geometry::Rect2d(pos, pos);
     }
     return geometry::Rect2d::empty;

@@ -18,6 +18,35 @@
 
 namespace vgc::topology {
 
+VacNode::VacNode(core::Id id) noexcept
+    : id_(id)
+    , cellType_(notACell) {
+}
+
+VacNode::VacNode(core::Id id, VacCellType cellType) noexcept
+    : id_(id)
+    , cellType_(static_cast<UInt8>(cellType)) {
+}
+
+VacNode::~VacNode() {
+}
+
+VacCell::VacCell()
+    : VacNode(-1, VacCellType::KeyVertex) {
+
+    throw core::LogicError(
+        "Calling vgc::topology::VacCell default constructor. "
+        "This constructor is reserved as unused default constructor in the context "
+        "of virtual inheritance.");
+}
+
+VacCell::VacCell(
+    core::Id id,
+    CellSpatialType spatialType,
+    CellTemporalType temporalType) noexcept
+    : VacNode(id, detail::vacCellTypeCombine(spatialType, temporalType)) {
+}
+
 Transform VacGroup::computeInverseTransformTo(VacGroup* ancestor) const {
     Transform t = inverseTransform_;
     VacGroup* g = parentGroup();

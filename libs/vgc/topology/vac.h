@@ -19,6 +19,7 @@
 
 #include <functional>
 #include <unordered_map>
+#include <unordered_set>
 
 #include <vgc/core/array.h>
 #include <vgc/core/flags.h>
@@ -40,58 +41,75 @@ VGC_DECLARE_OBJECT(Vac);
 // clang-format off
 enum class VacNodeDiffFlag {
     Created                 = 0x01,
-    Reparented              = 0x02,
-    ChildrenChanged         = 0x04,
-    AttributeChanged        = 0x08,
-    GeometryChanged         = 0x10,
-    StarChanged             = 0x20,
+    Removed                 = 0x02,
+    Reparented              = 0x04,
+    ChildrenChanged         = 0x08,
+    AttributeChanged        = 0x10,
+    GeometryChanged         = 0x20,
+    StarChanged             = 0x40,
 };
 VGC_DEFINE_FLAGS(VacNodeDiffFlags, VacNodeDiffFlag)
 // clang-format on
+
+class VGC_TOPOLOGY_API VacNodeDiff {
+public:
+    VacNode* node() const {
+        return node_;
+    }
+
+    VacNodeDiffFlags flags() const {
+        return flags_;
+    }
+
+    void setNode(VacNode* node) {
+        node_ = node;
+    }
+
+    void setFlags(VacNodeDiffFlags flags) {
+        flags_ = flags;
+    }
+
+private:
+    VacNode* node_ = nullptr;
+    VacNodeDiffFlags flags_ = {};
+};
 
 class VGC_TOPOLOGY_API VacDiff {
 public:
     VacDiff() = default;
 
-    void reset() {
-        removedNodes_.clear();
+    void clear() {
         nodeDiffs_.clear();
     }
 
     bool isEmpty() const {
-        return removedNodes_.empty() && nodeDiffs_.empty();
+        return nodeDiffs_.empty();
     }
 
-    const std::unordered_map<VacNode*, VacNodeDiffFlags>& nodeDiffs() const {
+    const std::unordered_map<core::Id, VacNodeDiff>& nodeDiffs() const {
         return nodeDiffs_;
     }
 
-    const core::Array<core::Id>& removedNodes() const {
-        return removedNodes_;
-    }
+    void merge(const VacDiff& other);
 
-    // XXX ops helpers
+private:
+    friend class vgc::topology::detail::Operations;
+    friend class vgc::topology::Vac;
+
+    std::unordered_map<core::Id, VacNodeDiff> nodeDiffs_;
+
+    // ops helpers
 
     void onNodeRemoved(VacNode* node) {
-        nodeDiffs_.erase(node);
-        removedNodes_.append(node->id());
-        // XXX can it happen that we re-add a node with a same id ?
+        auto& it = nodeDiffs_[node->id()];
+        it.setNode(node);
     }
 
     void onNodeDiff(VacNode* node, VacNodeDiffFlags diffFlags) {
-        // XXX can it happen that we re-add a node with a same id as a removed node ?
-        nodeDiffs_[node].set(diffFlags);
+        VacNodeDiff& nodeDiff = nodeDiffs_[node->id()];
+        nodeDiff.setFlags(nodeDiff.flags() | diffFlags);
     }
-
-private:
-    std::unordered_map<VacNode*, VacNodeDiffFlags> nodeDiffs_;
-    core::Array<core::Id> removedNodes_;
 };
-
-//class VGC_TOPOLOGY_API Tree {
-//public:
-//private:
-//};
 
 /// \class vgc::dom::Vac
 /// \brief Represents a VAC.
@@ -148,15 +166,7 @@ protected:
         ++version_;
     }
 
-    void insertNode(core::Id id, std::unique_ptr<VacNode>&& node) {
-        if (!nodes_.try_emplace(id, std::move(node)).second) {
-            throw IdCollisionError("Id collision error.");
-        }
-    }
-
-    // graphics...
-
-    // diff
+    bool insertNode(core::Id id, std::unique_ptr<VacNode>&& node);
 
 private:
     Int64 version_ = 0;
@@ -164,7 +174,8 @@ private:
     // TODO: maybe store the root in the map.
     VacGroup* root_;
     VacDiff diff_ = {};
-    bool diffEnabled_ = false;
+    bool isDiffEnabled_ = false;
+    bool isBeingCleared_ = false;
 };
 
 } // namespace vgc::topology
