@@ -208,6 +208,10 @@ class TestVec2(unittest.TestCase):
             self.assertAlmostEqual(v1.angle(v4), -3*pi/4, places=places)
             self.assertAlmostEqual(v2.angle(v4), pi, places=places)
             self.assertAlmostEqual(v4.angle(v3), -pi/4, places=places)
+            self.assertEqual(v1.angle(), 0)
+            self.assertAlmostEqual(v2.angle(), pi/4, places=places)
+            self.assertAlmostEqual(v3.angle(), pi, places=places)
+            self.assertAlmostEqual(v4.angle(), -3*pi/4, places=places)
 
     def testParse(self):
         for Vec2x in Vec2Types:
