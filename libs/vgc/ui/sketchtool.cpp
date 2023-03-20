@@ -201,8 +201,6 @@ void SketchTool::continueCurve_(const geometry::Vec2d& p, double width) {
         return;
     }
 
-    geometry::Vec2d cursorOffset = {};
-
     if (!lastInputPoints_.isEmpty()) {
         if (lastInputPoints_.last() == p) {
             // skip duplicate point
