@@ -20,29 +20,117 @@
 #include <QCursor>
 #include <QPainter>
 
-#include <vgc/core/array.h>
-#include <vgc/core/paths.h>
-#include <vgc/core/stopwatch.h>
 #include <vgc/core/stringid.h>
 #include <vgc/geometry/curve.h>
 #include <vgc/graphics/strings.h>
 #include <vgc/ui/cursor.h>
-#include <vgc/ui/logcategories.h>
-#include <vgc/ui/qtutil.h>
-#include <vgc/ui/strings.h>
 #include <vgc/ui/window.h>
 #include <vgc/workspace/edge.h>
 
-#include <vgc/ui/detail/paintutil.h>
-
 namespace vgc::ui {
 
-using namespace style::literals;
-inline constexpr style::Length snapRadius = 14.0_dp;
-inline constexpr style::Length snapDeformationLength = 100.0_dp;
+SketchTool::SketchTool()
+    : CanvasTool() {
+
+    setFocusPolicy(FocusPolicy::Click);
+    setClippingEnabled(true);
+}
 
 SketchToolPtr SketchTool::create() {
     return SketchToolPtr(new SketchTool());
+}
+
+bool SketchTool::onKeyPress(KeyEvent* /*event*/) {
+    return false;
+}
+
+namespace {
+
+double pressurePenWidth(double baseWidth, const MouseEvent* event) {
+    return event->hasPressure() ? 2 * event->pressure() * baseWidth : baseWidth;
+}
+
+} // namespace
+
+bool SketchTool::onMouseMove(MouseEvent* event) {
+    if (!isSketching_) {
+        return false;
+    }
+
+    ui::Canvas* canvas = this->canvas();
+    if (!canvas) {
+        return false;
+    }
+
+    // Note: event.button() is always NoButton for move events. This is why
+    // we use the variable isPanning_ and isSketching_ to remember the current
+    // mouse action. In the future, we'll abstract this mechanism in a separate
+    // class.
+
+    geometry::Vec2f mousePosf = event->position();
+    geometry::Vec2d mousePos = geometry::Vec2d(mousePosf.x(), mousePosf.y());
+
+    // XXX This is very inefficient (shouldn't use generic 4x4 matrix inversion,
+    // and should be cached), but let's keep it like this for now for testing.
+    geometry::Vec2d viewCoords = mousePos;
+    geometry::Vec2d worldCoords =
+        canvas->camera().viewMatrix().inverted().transformPointAffine(viewCoords);
+    double width = pressurePenWidth(penWidth_, event);
+    continueCurve_(worldCoords, width);
+    minimalLatencyStrokePoints_[0] = minimalLatencyStrokePoints_[1];
+    minimalLatencyStrokeWidths_[0] = minimalLatencyStrokeWidths_[1];
+    minimalLatencyStrokePoints_[1] = worldCoords;
+    minimalLatencyStrokeWidths_[1] = width;
+    minimalLatencyStrokeReload_ = true;
+    return true;
+}
+
+bool SketchTool::onMousePress(MouseEvent* event) {
+    if (isSketching_ || event->button() != MouseButton::Left || event->modifierKeys()) {
+        return false;
+    }
+
+    ui::Canvas* canvas = this->canvas();
+    if (!canvas) {
+        return false;
+    }
+
+    isSketching_ = true;
+
+    geometry::Vec2f mousePosf = event->position();
+    geometry::Vec2d mousePos = geometry::Vec2d(mousePosf.x(), mousePosf.y());
+
+    geometry::Vec2d viewCoords = mousePos;
+    geometry::Vec2d worldCoords =
+        canvas->camera().viewMatrix().inverted().transformPointAffine(viewCoords);
+    startCurve_(worldCoords, pressurePenWidth(penWidth_, event));
+    return true;
+}
+
+bool SketchTool::onMouseRelease(MouseEvent* event) {
+    if (event->button() == MouseButton::Left) {
+        if (isSketching_) {
+            finishCurve_();
+        }
+        if (drawCurveUndoGroup_) {
+            drawCurveUndoGroup_->close();
+            drawCurveUndoGroup_->undone().disconnect(drawCurveUndoGroupConnectionHandle_);
+            drawCurveUndoGroup_ = nullptr;
+        }
+        if (isSketching_) {
+            isSketching_ = false;
+            endVertex_ = nullptr;
+            edge_ = nullptr;
+            points_.clear();
+            widths_.clear();
+            lastInputPoints_.clear();
+            smoothedInputPoints_.clear();
+            requestRepaint();
+            return true;
+        }
+    }
+
+    return false;
 }
 
 namespace {
@@ -85,25 +173,113 @@ QCursor crossCursor() {
 
 } // namespace
 
-SketchTool::SketchTool()
-    : CanvasTool() {
-
-    // Set ClickFocus policy to be able to accept keyboard events (default
-    // policy is NoFocus).
-    setFocusPolicy(FocusPolicy::Click);
-    setClippingEnabled(true);
-}
-
-bool SketchTool::onKeyPress(KeyEvent* /*event*/) {
-    //switch (event->key()) {
-    //default:
-    //    return false;
-    //}
-    //
-    //return true;
-
+bool SketchTool::onMouseEnter() {
+    cursorChanger_.set(crossCursor());
     return false;
 }
+
+bool SketchTool::onMouseLeave() {
+    cursorChanger_.clear();
+    return false;
+}
+
+void SketchTool::onResize() {
+    reload_ = true;
+}
+
+void SketchTool::onPaintCreate(graphics::Engine* engine) {
+    using namespace graphics;
+    minimalLatencyStrokeGeometry_ =
+        engine->createDynamicTriangleStripView(BuiltinGeometryLayout::XY_iRGBA);
+    reload_ = true;
+}
+
+void SketchTool::onPaintDraw(graphics::Engine* engine, PaintOptions /*options*/) {
+    if (!isSketching_) {
+        return;
+    }
+
+    using namespace graphics;
+    namespace gs = graphics::strings;
+
+    ui::Canvas* canvas = this->canvas();
+    if (!canvas) {
+        return;
+    }
+
+    // Draw temporary tip of curve between mouse event position and actual current cursor
+    // position to reduce visual lag.
+    //
+    Window* w = window();
+    bool cursorMoved = false;
+    if (w) {
+        geometry::Vec2f pos(w->mapFromGlobal(globalCursorPosition()));
+        geometry::Vec2d posd(root()->mapTo(this, pos));
+        pos = geometry::Vec2f(
+            canvas->camera().viewMatrix().inverted().transformPointAffine(posd));
+        if (lastImmediateCursorPos_ != pos) {
+            lastImmediateCursorPos_ = pos;
+            cursorMoved = true;
+            minimalLatencyStrokePoints_[2] = geometry::Vec2d(pos);
+            minimalLatencyStrokeWidths_[2] = minimalLatencyStrokeWidths_[1] * 0.5;
+        }
+    }
+
+    if (cursorMoved || minimalLatencyStrokeReload_) {
+
+        //core::Color color(1.f, 0.f, 0.f, 1.f);
+        core::Color color = penColor_;
+        geometry::Vec2fArray strokeVertices;
+
+        geometry::Curve curve;
+        curve.setPositions(minimalLatencyStrokePoints_);
+        curve.setWidths(minimalLatencyStrokeWidths_);
+
+        geometry::CurveSamplingParameters samplingParams = {};
+        samplingParams.setMaxAngle(0.05);
+        samplingParams.setMinIntraSegmentSamples(10);
+        samplingParams.setMaxIntraSegmentSamples(20);
+        geometry::CurveSampleArray csa;
+        curve.sampleRange(samplingParams, csa, 1);
+
+        for (const geometry::CurveSample& s : csa) {
+            geometry::Vec2d p0 = s.leftPoint();
+            strokeVertices.emplaceLast(geometry::Vec2f(p0));
+            geometry::Vec2d p1 = s.rightPoint();
+            strokeVertices.emplaceLast(geometry::Vec2f(p1));
+        }
+
+        engine->updateBufferData(
+            minimalLatencyStrokeGeometry_->vertexBuffer(0), //
+            std::move(strokeVertices));
+
+        engine->updateBufferData(
+            minimalLatencyStrokeGeometry_->vertexBuffer(1), //
+            core::Array<float>({color.r(), color.g(), color.b(), color.a()}));
+
+        minimalLatencyStrokeReload_ = false;
+    }
+
+    engine->pushProgram(graphics::BuiltinProgram::Simple);
+    geometry::Mat4f vm = engine->viewMatrix();
+    geometry::Mat4f cameraViewf(canvas->camera().viewMatrix());
+    engine->pushViewMatrix(vm * cameraViewf);
+    engine->draw(minimalLatencyStrokeGeometry_);
+    engine->popViewMatrix();
+    engine->popProgram();
+}
+
+void SketchTool::onPaintDestroy(graphics::Engine*) {
+    minimalLatencyStrokeGeometry_.reset();
+}
+
+namespace {
+
+using namespace style::literals;
+inline constexpr style::Length snapRadius = 14.0_dp;
+inline constexpr style::Length snapDeformationLength = 100.0_dp;
+
+} // namespace
 
 void SketchTool::startCurve_(const geometry::Vec2d& p, double width) {
     workspace::Workspace* workspace = this->workspace();
@@ -387,199 +563,6 @@ void SketchTool::finishCurve_() {
             }
         }
     }
-}
-
-double SketchTool::pressurePenWidth_(const MouseEvent* event) const {
-    return event->hasPressure() ? 2 * event->pressure() * penWidth_ : penWidth_;
-}
-
-// Reimplementation of Widget virtual methods
-
-bool SketchTool::onMouseMove(MouseEvent* event) {
-    if (!isSketching_) {
-        return false;
-    }
-
-    ui::Canvas* canvas = this->canvas();
-    if (!canvas) {
-        return false;
-    }
-
-    // Note: event.button() is always NoButton for move events. This is why
-    // we use the variable isPanning_ and isSketching_ to remember the current
-    // mouse action. In the future, we'll abstract this mechanism in a separate
-    // class.
-
-    geometry::Vec2f mousePosf = event->position();
-    geometry::Vec2d mousePos = geometry::Vec2d(mousePosf.x(), mousePosf.y());
-
-    // XXX This is very inefficient (shouldn't use generic 4x4 matrix inversion,
-    // and should be cached), but let's keep it like this for now for testing.
-    geometry::Vec2d viewCoords = mousePos;
-    geometry::Vec2d worldCoords =
-        canvas->camera().viewMatrix().inverted().transformPointAffine(viewCoords);
-    double width = pressurePenWidth_(event);
-    continueCurve_(worldCoords, width);
-    minimalLatencyStrokePoints_[0] = minimalLatencyStrokePoints_[1];
-    minimalLatencyStrokeWidths_[0] = minimalLatencyStrokeWidths_[1];
-    minimalLatencyStrokePoints_[1] = worldCoords;
-    minimalLatencyStrokeWidths_[1] = width;
-    minimalLatencyStrokeReload_ = true;
-    return true;
-}
-
-bool SketchTool::onMousePress(MouseEvent* event) {
-    if (isSketching_ || event->button() != MouseButton::Left || event->modifierKeys()) {
-        return false;
-    }
-
-    ui::Canvas* canvas = this->canvas();
-    if (!canvas) {
-        return false;
-    }
-
-    isSketching_ = true;
-
-    geometry::Vec2f mousePosf = event->position();
-    geometry::Vec2d mousePos = geometry::Vec2d(mousePosf.x(), mousePosf.y());
-
-    geometry::Vec2d viewCoords = mousePos;
-    geometry::Vec2d worldCoords =
-        canvas->camera().viewMatrix().inverted().transformPointAffine(viewCoords);
-    startCurve_(worldCoords, pressurePenWidth_(event));
-    return true;
-}
-
-bool SketchTool::onMouseRelease(MouseEvent* event) {
-    if (event->button() == MouseButton::Left) {
-        if (isSketching_) {
-            finishCurve_();
-        }
-        if (drawCurveUndoGroup_) {
-            drawCurveUndoGroup_->close();
-            drawCurveUndoGroup_->undone().disconnect(drawCurveUndoGroupConnectionHandle_);
-            drawCurveUndoGroup_ = nullptr;
-        }
-        if (isSketching_) {
-            isSketching_ = false;
-            endVertex_ = nullptr;
-            edge_ = nullptr;
-            points_.clear();
-            widths_.clear();
-            lastInputPoints_.clear();
-            smoothedInputPoints_.clear();
-            requestRepaint();
-            return true;
-        }
-    }
-
-    return false;
-}
-
-bool SketchTool::onMouseEnter() {
-    cursorChanger_.set(crossCursor());
-    return false;
-}
-
-bool SketchTool::onMouseLeave() {
-    cursorChanger_.clear();
-    return false;
-}
-
-void SketchTool::onVisible() {
-}
-
-void SketchTool::onHidden() {
-}
-
-void SketchTool::onResize() {
-    reload_ = true;
-}
-
-void SketchTool::onPaintCreate(graphics::Engine* engine) {
-    using namespace graphics;
-    minimalLatencyStrokeGeometry_ =
-        engine->createDynamicTriangleStripView(BuiltinGeometryLayout::XY_iRGBA);
-    reload_ = true;
-}
-
-void SketchTool::onPaintDraw(graphics::Engine* engine, PaintOptions /*options*/) {
-    if (!isSketching_) {
-        return;
-    }
-
-    using namespace graphics;
-    namespace gs = graphics::strings;
-
-    ui::Canvas* canvas = this->canvas();
-    if (!canvas) {
-        return;
-    }
-
-    // Draw temporary tip of curve between mouse event position and actual current cursor
-    // position to reduce visual lag.
-    //
-    Window* w = window();
-    bool cursorMoved = false;
-    if (w) {
-        geometry::Vec2f pos(w->mapFromGlobal(globalCursorPosition()));
-        geometry::Vec2d posd(root()->mapTo(this, pos));
-        pos = geometry::Vec2f(
-            canvas->camera().viewMatrix().inverted().transformPointAffine(posd));
-        if (lastImmediateCursorPos_ != pos) {
-            lastImmediateCursorPos_ = pos;
-            cursorMoved = true;
-            minimalLatencyStrokePoints_[2] = geometry::Vec2d(pos);
-            minimalLatencyStrokeWidths_[2] = minimalLatencyStrokeWidths_[1] * 0.5;
-        }
-    }
-
-    if (cursorMoved || minimalLatencyStrokeReload_) {
-
-        //core::Color color(1.f, 0.f, 0.f, 1.f);
-        core::Color color = penColor_;
-        geometry::Vec2fArray strokeVertices;
-
-        geometry::Curve curve;
-        curve.setPositions(minimalLatencyStrokePoints_);
-        curve.setWidths(minimalLatencyStrokeWidths_);
-
-        geometry::CurveSamplingParameters samplingParams = {};
-        samplingParams.setMaxAngle(0.05);
-        samplingParams.setMinIntraSegmentSamples(10);
-        samplingParams.setMaxIntraSegmentSamples(20);
-        geometry::CurveSampleArray csa;
-        curve.sampleRange(samplingParams, csa, 1);
-
-        for (const geometry::CurveSample& s : csa) {
-            geometry::Vec2d p0 = s.leftPoint();
-            strokeVertices.emplaceLast(geometry::Vec2f(p0));
-            geometry::Vec2d p1 = s.rightPoint();
-            strokeVertices.emplaceLast(geometry::Vec2f(p1));
-        }
-
-        engine->updateBufferData(
-            minimalLatencyStrokeGeometry_->vertexBuffer(0), //
-            std::move(strokeVertices));
-
-        engine->updateBufferData(
-            minimalLatencyStrokeGeometry_->vertexBuffer(1), //
-            core::Array<float>({color.r(), color.g(), color.b(), color.a()}));
-
-        minimalLatencyStrokeReload_ = false;
-    }
-
-    engine->pushProgram(graphics::BuiltinProgram::Simple);
-    geometry::Mat4f vm = engine->viewMatrix();
-    geometry::Mat4f cameraViewf(canvas->camera().viewMatrix());
-    engine->pushViewMatrix(vm * cameraViewf);
-    engine->draw(minimalLatencyStrokeGeometry_);
-    engine->popViewMatrix();
-    engine->popProgram();
-}
-
-void SketchTool::onPaintDestroy(graphics::Engine*) {
-    minimalLatencyStrokeGeometry_.reset();
 }
 
 } // namespace vgc::ui

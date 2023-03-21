@@ -95,8 +95,6 @@ protected:
     bool onMouseRelease(MouseEvent* event) override;
     bool onMouseEnter() override;
     bool onMouseLeave() override;
-    void onVisible() override;
-    void onHidden() override;
     void onResize() override;
     void onPaintCreate(graphics::Engine* engine) override;
     void onPaintDraw(graphics::Engine* engine, PaintOptions options) override;
@@ -143,11 +141,9 @@ protected:
     bool minimalLatencyStrokeReload_ = false;
     geometry::Vec2f lastImmediateCursorPos_ = {};
 
-    void startCurve_(const geometry::Vec2d& p, double width = 1.0);
-    void continueCurve_(const geometry::Vec2d& p, double width = 1.0);
+    void startCurve_(const geometry::Vec2d& p, double width);
+    void continueCurve_(const geometry::Vec2d& p, double width);
     void finishCurve_();
-
-    double pressurePenWidth_(const MouseEvent* event) const;
 
     /*
     workspace::Element* computeClosestVertex_(
