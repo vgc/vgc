@@ -117,17 +117,31 @@ protected:
     core::ConnectionHandle drawCurveUndoGroupConnectionHandle_ = {};
     dom::Element* endVertex_ = nullptr;
     dom::Element* edge_ = nullptr;
-    geometry::Vec2dArray points_;
+
+    // Raw input.
+    //
+    // Notes:
+    // - input points are stored in reverse order, and only the last 5 are kept
+    // - for now, we do not smooth widths
+    //
+    geometry::Vec2dArray lastInputPoints_;
     core::DoubleArray widths_;
 
-    // Smoothing and Snapping
-    bool isSnappingEnabled_ = false;
-    geometry::Vec2dArray lastInputPoints_;
+    // Smoothing. Invariant: both arrays have the same length.
     geometry::Vec2dArray smoothedInputPoints_;
-    geometry::Vec2d snapPosition_;
+    core::DoubleArray smoothedInputArclengths_;
+    void updateSmoothedData_();
 
-    // Draw additional stroke tip based on global cursor position to reduce
-    // perceived input lag.
+    // Snapping
+    bool isSnappingEnabled_ = false; // may change between startCurve() and finishCurve()
+    bool hasStartSnap_ = false;      // computed once in startCurve()
+    geometry::Vec2d startSnapPosition_;
+
+    // Final points
+    geometry::Vec2dArray points_;
+
+    // Draw additional points at the stroke tip, based on global cursor
+    // position, to reduce perceived input lag.
     //
     // Note: for now, we get the global cursor position at the end of the
     // paint, which is not perfect since there may still be widgets to be
@@ -145,11 +159,11 @@ protected:
     void continueCurve_(const geometry::Vec2d& p, double width);
     void finishCurve_();
 
-    /*
-    workspace::Element* computeClosestVertex_(
-        const geometry::Vec2d& position,
-        dom::Element* excludedElement_);
-*/
+    // The length of curve that snapping is allowed to deform
+    double snapDeformationLength() const;
+
+    workspace::Element*
+    computeSnapVertex_(const geometry::Vec2d& position, dom::Element* excludedElement_);
 };
 
 } // namespace vgc::ui

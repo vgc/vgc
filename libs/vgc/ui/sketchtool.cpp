@@ -53,6 +53,7 @@ double pressurePenWidth(double baseWidth, const MouseEvent* event) {
 } // namespace
 
 bool SketchTool::onMouseMove(MouseEvent* event) {
+
     if (!isSketching_) {
         return false;
     }
@@ -86,6 +87,7 @@ bool SketchTool::onMouseMove(MouseEvent* event) {
 }
 
 bool SketchTool::onMousePress(MouseEvent* event) {
+
     if (isSketching_ || event->button() != MouseButton::Left || event->modifierKeys()) {
         return false;
     }
@@ -108,6 +110,7 @@ bool SketchTool::onMousePress(MouseEvent* event) {
 }
 
 bool SketchTool::onMouseRelease(MouseEvent* event) {
+
     if (event->button() == MouseButton::Left) {
         if (isSketching_) {
             finishCurve_();
@@ -125,6 +128,7 @@ bool SketchTool::onMouseRelease(MouseEvent* event) {
             widths_.clear();
             lastInputPoints_.clear();
             smoothedInputPoints_.clear();
+            smoothedInputArclengths_.clear();
             requestRepaint();
             return true;
         }
@@ -195,6 +199,7 @@ void SketchTool::onPaintCreate(graphics::Engine* engine) {
 }
 
 void SketchTool::onPaintDraw(graphics::Engine* engine, PaintOptions /*options*/) {
+
     if (!isSketching_) {
         return;
     }
@@ -227,7 +232,6 @@ void SketchTool::onPaintDraw(graphics::Engine* engine, PaintOptions /*options*/)
 
     if (cursorMoved || minimalLatencyStrokeReload_) {
 
-        //core::Color color(1.f, 0.f, 0.f, 1.f);
         core::Color color = penColor_;
         geometry::Vec2fArray strokeVertices;
 
@@ -273,15 +277,61 @@ void SketchTool::onPaintDestroy(graphics::Engine*) {
     minimalLatencyStrokeGeometry_.reset();
 }
 
-namespace {
+void SketchTool::updateSmoothedData_() {
 
-using namespace style::literals;
-inline constexpr style::Length snapRadius = 14.0_dp;
-inline constexpr style::Length snapDeformationLength = 100.0_dp;
+    // Add the latest raw input points to smoothed data.
+    //
+    if (lastInputPoints_.length() > 0) {
+        smoothedInputPoints_.append(lastInputPoints_.first());
+    }
+    else {
+        return;
+    }
+    Int numInputPoints = lastInputPoints_.length();
+    Int numSmoothedPoints = smoothedInputPoints_.length();
+    VGC_ASSERT(numSmoothedPoints > 0);
+    VGC_ASSERT(numSmoothedPoints >= numInputPoints);
 
-} // namespace
+    // Apply gaussian smoothing. We only need to update at most 2 points.
+    //
+    Int lastUnchangedIndex = 0;
+    if (numInputPoints >= 3) {
+        smoothedInputPoints_.getUnchecked(numSmoothedPoints - 2) = //
+            (1 / 4.0) * lastInputPoints_.getUnchecked(0) +         //
+            (2 / 4.0) * lastInputPoints_.getUnchecked(1) +         //
+            (1 / 4.0) * lastInputPoints_.getUnchecked(2);
+        lastUnchangedIndex = numSmoothedPoints - 3;
+    }
+    if (numInputPoints >= 5) {
+        smoothedInputPoints_.getUnchecked(numSmoothedPoints - 3) = //
+            (1 / 16.0) * lastInputPoints_.getUnchecked(0) +        //
+            (4 / 16.0) * lastInputPoints_.getUnchecked(1) +        //
+            (6 / 16.0) * lastInputPoints_.getUnchecked(2) +        //
+            (4 / 16.0) * lastInputPoints_.getUnchecked(3) +        //
+            (1 / 16.0) * lastInputPoints_.getUnchecked(4);
+        lastUnchangedIndex = numSmoothedPoints - 4;
+    }
+    VGC_ASSERT(lastUnchangedIndex >= 0);
+
+    // Update arclengths.
+    //
+    smoothedInputArclengths_.resizeNoInit(numSmoothedPoints);
+    if (numSmoothedPoints == 1) {
+        smoothedInputArclengths_[0] = 0;
+    }
+    else {
+        double s = smoothedInputArclengths_[lastUnchangedIndex];
+        geometry::Vec2d p = smoothedInputPoints_[lastUnchangedIndex];
+        for (Int i = lastUnchangedIndex + 1; i < numSmoothedPoints; ++i) {
+            geometry::Vec2d q = smoothedInputPoints_[i];
+            s += (q - p).length();
+            smoothedInputArclengths_[i] = s;
+        }
+    }
+}
 
 void SketchTool::startCurve_(const geometry::Vec2d& p, double width) {
+
     workspace::Workspace* workspace = this->workspace();
     if (!workspace || !workspace->document()) {
         return;
@@ -305,168 +355,127 @@ void SketchTool::startCurve_(const geometry::Vec2d& p, double width) {
     workspace::Element* wVgc = workspace->vgcElement();
     dom::Element* dVgc = wVgc->domElement();
 
-    // snapping to vertices
-    // in the future we can have the snapping candidates implemented in canvas to be shared by all tools
-    workspace::Element* closestVertex = nullptr;
+    // Compute start vertex to snap to
+    workspace::Element* snapVertex = nullptr;
+    hasStartSnap_ = false;
+    startSnapPosition_ = p;
     if (isSnappingEnabled_) {
-        ui::Canvas* canvas = this->canvas();
-        const double zoom = canvas ? canvas->camera().zoom() : 1.0;
-        const double tol = snapRadius.toPx(styleMetrics()) / zoom;
-        double minDist = core::DoubleInfinity;
-        workspace->visitDepthFirst(
-            [](workspace::Element*, Int) { return true; },
-            [&, tol, p](workspace::Element* e, Int /*depth*/) {
-                if (!e || !e->isVacElement() || !e->vacNode()
-                    || !e->vacNode()->isCell()) {
-                    return;
-                }
-                if (!e->vacNode()->toCell()->toKeyVertex()) {
-                    return;
-                }
-                double dist = 0;
-                if (e->isSelectableAt(p, false, tol, &dist) && dist < minDist) {
-                    minDist = dist;
-                    closestVertex = e;
-                }
-            });
+        workspace::Element* snapVertex = computeSnapVertex_(p, nullptr);
+        if (snapVertex) {
+            hasStartSnap_ = true;
+            startSnapPosition_ =
+                snapVertex->vacNode()->toCell()->toKeyVertex()->position();
+        }
     }
 
-    dom::Element* v0 = nullptr;
-    geometry::Vec2d snapPosition = p;
-    if (closestVertex) {
-        v0 = closestVertex->domElement();
-        snapPosition = closestVertex->vacNode()->toCell()->toKeyVertex()->position();
+    // Get or create start vertex
+    dom::Element* startVertex = nullptr;
+    if (snapVertex) {
+        // TODO: What to do if there is no DOM element corresponding to this
+        // start vertex, e.g., composite shapes? For now, computeSnapVertex_()
+        // simply ensures that this is never the case.
+        startVertex = snapVertex->domElement();
     }
     else {
-        v0 = dom::Element::create(dVgc, ds::vertex);
-        v0->setAttribute(ds::position, snapPosition);
+        startVertex = dom::Element::create(dVgc, ds::vertex);
+        startVertex->setAttribute(ds::position, startSnapPosition_);
     }
 
-    dom::Element* v1 = dom::Element::create(dVgc, ds::vertex);
-    v1->setAttribute(ds::position, snapPosition);
+    // Create end vertex
+    endVertex_ = dom::Element::create(dVgc, ds::vertex);
+    endVertex_->setAttribute(ds::position, startSnapPosition_);
 
-    dom::Element* edge = dom::Element::create(dVgc, ds::edge);
-    edge->setAttribute(ds::positions, geometry::Vec2dArray());
-    edge->setAttribute(ds::widths, core::DoubleArray());
-    edge->setAttribute(ds::color, penColor_);
-    edge->setAttribute(ds::startvertex, v0->getPathFromId());
-    edge->setAttribute(ds::endvertex, v1->getPathFromId());
+    // Create edge
+    edge_ = dom::Element::create(dVgc, ds::edge);
+    edge_->setAttribute(ds::positions, geometry::Vec2dArray());
+    edge_->setAttribute(ds::widths, core::DoubleArray());
+    edge_->setAttribute(ds::color, penColor_);
+    edge_->setAttribute(ds::startvertex, startVertex->getPathFromId());
+    edge_->setAttribute(ds::endvertex, endVertex_->getPathFromId());
 
-    endVertex_ = v1;
-    edge_ = edge;
-
-    snapPosition_ = snapPosition;
+    // Append start point to geometry
     continueCurve_(p, width);
 
-    minimalLatencyStrokePoints_[0] = snapPosition;
+    // Update stroke tip
+    minimalLatencyStrokePoints_[0] = startSnapPosition_;
     minimalLatencyStrokeWidths_[0] = width * 0.5;
     minimalLatencyStrokePoints_[1] = p;
     minimalLatencyStrokeWidths_[1] = width * 0.5;
     minimalLatencyStrokeReload_ = true;
 }
 
+namespace {
+
+// Note: for now, the deformation is linear, which introduce a non-smooth
+// point at s = snapDeformationLength.
+//
+geometry::Vec2d snapDeformation(
+    const geometry::Vec2d& position,
+    const geometry::Vec2d& delta,
+    double s,
+    double snapDeformationLength) {
+
+    return position + delta * (1 - (s / snapDeformationLength));
+}
+
+} // namespace
+
 void SketchTool::continueCurve_(const geometry::Vec2d& p, double width) {
+
     workspace::Workspace* workspace = this->workspace();
     if (!workspace || !workspace->document()) {
         return;
     }
 
-    namespace ds = dom::strings;
-
     if (!edge_) {
         return;
     }
 
+    // Skip duplicate points
     if (!lastInputPoints_.isEmpty()) {
         if (lastInputPoints_.last() == p) {
-            // skip duplicate point
             return;
         }
     }
 
-    smoothedInputPoints_.append(p);
-    points_.append(p);
+    // Append raw new data
     widths_.append(width);
-
     lastInputPoints_.prepend(p);
     if (lastInputPoints_.length() > 5) {
         lastInputPoints_.removeLast();
     }
 
-    // Note: below, we use getUnchecked() to silence GCC zealous warning:
-    //
-    //   warning: assuming signed overflow does not occur when assuming that
-    //   (X - c) <= X is always true [-Wstrict-overflow]
-    //
-    // The warning is caused by GCC deducing that in Array::operator[], the
-    // check `i < length()` (part of `(i >= 0 && i < length())`) is
-    // unnecessary when `i = length() - 2`. GCC is not smart enough to
-    // understand that this is caused by its own inlining and that in
-    // general, the check `i < length()` is important to keep.
-    //
-    // As a workaround, we perform the check `i >= 0` explicitly, then use
-    // getUnchecked() to bypass the check `i < length()` which we know is
-    // always true in this case.
+    // Update smoothed data from raw data
+    updateSmoothedData_();
 
-    if (lastInputPoints_.length() >= 3) {
-        // 1 2 1
-        // clang-format off
-        Int i = smoothedInputPoints_.length() - 2;
-        VGC_ASSERT(i >= 0);
-        smoothedInputPoints_.getUnchecked(i) =
-            (1 / 4.0) * lastInputPoints_[0] +
-            (2 / 4.0) * lastInputPoints_[1] +
-            (1 / 4.0) * lastInputPoints_[2];
-        // clang-format on
-    }
-    if (lastInputPoints_.length() >= 5) {
-        // 1 4 6 4 1
-        // clang-format off
-        Int i = smoothedInputPoints_.length() - 3;
-        VGC_ASSERT(i >= 0);
-        smoothedInputPoints_.getUnchecked(i) =
-            (1 / 16.0) * lastInputPoints_[0] +
-            (4 / 16.0) * lastInputPoints_[1] +
-            (6 / 16.0) * lastInputPoints_[2] +
-            (4 / 16.0) * lastInputPoints_[3] +
-            (1 / 16.0) * lastInputPoints_[4];
-        // clang-format on
-    }
+    // Handle snapping
+    if (hasStartSnap_) {
 
-    if (isSnappingEnabled_) {
-        ui::Canvas* canvas = this->canvas();
-        const double zoom = canvas ? canvas->camera().zoom() : 1.0;
-        const double snapDeformationLengthInObjectSpace =
-            snapDeformationLength.toPx(styleMetrics()) / zoom;
-        double s = 0;
-        geometry::Vec2d previousPoint = smoothedInputPoints_[0];
-        geometry::Vec2d delta = snapPosition_ - previousPoint;
-        for (Int i = 0; i < smoothedInputPoints_.length(); ++i) {
+        Int numPoints = smoothedInputPoints_.length();
+        double snapDeformationLength_ = snapDeformationLength();
+        geometry::Vec2d delta = startSnapPosition_ - smoothedInputPoints_[0];
+
+        points_.resizeNoInit(numPoints);
+        for (Int i = 0; i < numPoints; ++i) {
             geometry::Vec2d sp = smoothedInputPoints_[i];
-            s += (previousPoint - sp).length();
-            if (s < snapDeformationLengthInObjectSpace) {
-                // linear, introduces a non-smooth sync point
-                points_[i] = sp + delta * (1 - (s / snapDeformationLengthInObjectSpace));
+            double s = smoothedInputArclengths_[i];
+            if (s < snapDeformationLength_) {
+                points_[i] = snapDeformation(sp, delta, s, snapDeformationLength_);
             }
             else {
-                // highly redundant, maybe optimize that in the future
-                points_[i] = sp;
+                points_[i] = sp; // maybe optimize in the future
             }
-            previousPoint = sp;
         }
     }
     else {
-        for (Int i = 0; i < smoothedInputPoints_.length(); ++i) {
-            geometry::Vec2d sp = smoothedInputPoints_[i];
-            points_[i] = sp;
-        }
+        points_ = smoothedInputPoints_;
     }
 
+    // Update DOM and workspace
+    namespace ds = dom::strings;
     endVertex_->setAttribute(ds::position, points_.last());
-
     edge_->setAttribute(ds::positions, points_);
     edge_->setAttribute(ds::widths, widths_);
-
     workspace->sync();
 
     // set it to fast tesselation to minimize lag
@@ -478,12 +487,11 @@ void SketchTool::continueCurve_(const geometry::Vec2d& p, double width) {
 }
 
 void SketchTool::finishCurve_() {
+
     workspace::Workspace* workspace = this->workspace();
     if (!workspace || !workspace->document()) {
         return;
     }
-
-    namespace ds = dom::strings;
 
     if (!edge_) {
         return;
@@ -497,72 +505,105 @@ void SketchTool::finishCurve_() {
 
     const geometry::Vec2d lastInputPoint = lastInputPoints_[0];
     if (smoothedInputPoints_.length() > 1) {
-        // snapping to vertices
-        // in the future we can have the snapping candidates implemented in canvas to be shared by all tools
-        workspace::Element* closestVertex = nullptr;
         if (isSnappingEnabled_) {
-            ui::Canvas* canvas = this->canvas();
-            const double zoom = canvas ? canvas->camera().zoom() : 1.0;
-            const double tol = snapRadius.toPx(styleMetrics()) / zoom;
-            double minDist = core::DoubleInfinity;
 
-            workspace->visitDepthFirst(
-                [](workspace::Element*, Int) { return true; },
-                [&, tol, lastInputPoint](workspace::Element* e, Int /*depth*/) {
-                    if (!e || (e->domElement() == endVertex_)) {
-                        return;
-                    }
-                    if (!e->vacNode() || !e->vacNode()->isCell()) {
-                        return;
-                    }
-                    if (!e->vacNode()->toCell()->toKeyVertex()) {
-                        return;
-                    }
-                    double dist = 0;
-                    if (e->isSelectableAt(lastInputPoint, false, tol, &dist)
-                        && dist < minDist) {
+            // Compute start vertex to snap to
+            workspace::Element* snapVertex =
+                computeSnapVertex_(lastInputPoint, endVertex_);
 
-                        minDist = dist;
-                        closestVertex = e;
-                    }
-                });
+            // If found, do the snapping
+            if (snapVertex) {
 
-            if (closestVertex) {
-                geometry::Vec2d snapPosition =
-                    closestVertex->vacNode()->toCell()->toKeyVertex()->position();
+                // Cap snap deformation length to ensure start point isn't modified
+                double maxS = smoothedInputArclengths_.last();
+                double snapDeformationLength_ = (std::min)(snapDeformationLength(), maxS);
 
-                points_.last() = snapPosition;
-                double maxS = 0;
-                for (Int i = 1; i < smoothedInputPoints_.length(); ++i) {
-                    maxS +=
-                        (smoothedInputPoints_[i] - smoothedInputPoints_[i - 1]).length();
-                }
-
-                const double snapDeformationLengthInObjectSpace =
-                    (std::min)(snapDeformationLength.toPx(styleMetrics()) / zoom, maxS);
+                // Deform end of stroke to match snap position
                 double s = 0;
+                geometry::Vec2d snapPosition =
+                    snapVertex->vacNode()->toCell()->toKeyVertex()->position();
                 geometry::Vec2d delta = snapPosition - lastInputPoint;
+                points_.last() = snapPosition;
                 for (Int i = smoothedInputPoints_.length() - 2; i >= 0; --i) {
-                    s += (smoothedInputPoints_[i + 1] - smoothedInputPoints_[i]).length();
-                    if (s < snapDeformationLengthInObjectSpace) {
-                        // linear, introduces a non-smooth sync point
-                        points_[i] +=
-                            delta * (1 - (s / snapDeformationLengthInObjectSpace));
+                    s = maxS - smoothedInputArclengths_[i];
+                    if (s < snapDeformationLength_) {
+                        points_[i] =
+                            snapDeformation(points_[i], delta, s, snapDeformationLength_);
                     }
                     else {
                         break;
                     }
                 }
 
+                // Update DOM and workspace
+                namespace ds = dom::strings;
                 endVertex_->remove();
-                endVertex_ = closestVertex->domElement();
+                endVertex_ = snapVertex->domElement();
                 edge_->setAttribute(ds::positions, points_);
                 edge_->setAttribute(ds::endvertex, endVertex_->getPathFromId());
-
                 workspace->sync();
             }
         }
     }
+}
+
+double SketchTool::snapDeformationLength() const {
+
+    using namespace style::literals;
+    constexpr style::Length snapDeformationLength_ = 100.0_dp;
+
+    ui::Canvas* canvas = this->canvas();
+    double zoom = canvas ? canvas->camera().zoom() : 1.0;
+
+    return snapDeformationLength_.toPx(styleMetrics()) / zoom;
+}
+
+// Note: in the future we may want to have the snapping candidates implemented
+// in canvas to be shared by all tools.
+
+workspace::Element* SketchTool::computeSnapVertex_(
+    const geometry::Vec2d& position,
+    dom::Element* excludedElement_) {
+
+    using namespace style::literals;
+    constexpr style::Length snapRadius_ = 14.0_dp;
+
+    workspace::Workspace* workspace = this->workspace();
+    if (!workspace) {
+        return nullptr;
+    }
+
+    ui::Canvas* canvas = this->canvas();
+    double zoom = canvas ? canvas->camera().zoom() : 1.0;
+    double snapRadius = snapRadius_.toPx(styleMetrics()) / zoom;
+    double minDist = core::DoubleInfinity;
+
+    workspace::Element* res = nullptr;
+
+    workspace->visitDepthFirst(
+        [](workspace::Element*, Int) { return true; },
+        [&, snapRadius, position](workspace::Element* e, Int /*depth*/) {
+            if (!e || !e->domElement() || e->domElement() == excludedElement_) {
+                //    ^^^^^^^^^^^^^^^^
+                //    For now, we forbid snapping to vertices with no corresponding
+                //    DOM elements, e.g., vertices that belong to composite shapes.
+                //
+                return;
+            }
+            if (!e->vacNode() || !e->vacNode()->isCell()) {
+                return;
+            }
+            if (!e->vacNode()->toCell()->toKeyVertex()) {
+                return;
+            }
+            double dist = 0;
+            if (e->isSelectableAt(position, false, snapRadius, &dist) && dist < minDist) {
+                minDist = dist;
+                res = e;
+            }
+        });
+
+    return res;
 }
 
 } // namespace vgc::ui
