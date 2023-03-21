@@ -296,6 +296,7 @@ getBuiltinLayoutDescription(BuiltinGeometryLayout layoutTag) {
         };
     }
     // clang-format on
+    return {};
 }
 
 void compileShader(
@@ -390,7 +391,7 @@ private:
         ComPtr<ID3D11InputLayout> inputLayout;
         device->CreateInputLayout(
             layoutDesc.data(),
-            layoutDesc.size(),
+            static_cast<UINT>(layoutDesc.size()),
             shaderBlob->GetBufferPointer(),
             shaderBlob->GetBufferSize(),
             inputLayout.releaseAndGetAddressOf());

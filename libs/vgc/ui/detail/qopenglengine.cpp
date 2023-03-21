@@ -389,6 +389,7 @@ getBuiltinLayoutDescription(BuiltinGeometryLayout layoutTag) {
         };
     }
     // clang-format on
+    return {};
 }
 
 class QglProgram : public Program {
