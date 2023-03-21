@@ -772,6 +772,23 @@ struct IsCallable<T, RequiresValid<typename CallableTraits<T>::CallSignature>>
 template<typename T>
 inline constexpr bool isCallable = IsCallable<T>::value;
 
+/// Type trait for `isUnaryPredicate<T>`.
+///
+template<typename Pred, typename T, typename SFINAE = void>
+struct IsUnaryPredicate : std::false_type {};
+
+template<typename Pred, typename T>
+struct IsUnaryPredicate<Pred, T, Requires<std::is_invocable_r_v<bool, Pred, const T&>>>
+    : std::true_type {};
+
+/// Checks whether the given type `Pred` is a unary predicate callable for type `T`,
+/// that is: returns a type convertible to `bool` and accepts a single argument `const T&`.
+///
+/// \sa `IsUnaryPredicate<T>`.
+///
+template<typename Pred, typename T>
+inline constexpr bool isUnaryPredicate = IsUnaryPredicate<Pred, T>::value;
+
 namespace detail {
 
 template<template<typename...> typename Base, typename... Ts>

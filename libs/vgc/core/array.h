@@ -1045,12 +1045,12 @@ public:
     /// Returns an iterator to the first element for which `predicate(element)`
     /// returns `true`, or the end iterator if there is no such element.
     ///
-    template<typename UnaryPredicate>
+    template<typename UnaryPredicate, VGC_REQUIRES(isUnaryPredicate<UnaryPredicate, T>)>
     iterator find(UnaryPredicate predicate) {
         T* p = data_;
         T* end = p + length_;
         for (; p != end; ++p) {
-            if (predicate(*p)) {
+            if (predicate(*const_cast<const T*>(p))) {
                 break;
             }
         }
@@ -1061,7 +1061,7 @@ public:
     /// `predicate(element)` returns `true`, or the end const iterator if there
     /// is no such element.
     ///
-    template<typename UnaryPredicate>
+    template<typename UnaryPredicate, VGC_REQUIRES(isUnaryPredicate<UnaryPredicate, T>)>
     const_iterator find(UnaryPredicate predicate) const {
         return const_cast<Array*>(this)->search(predicate);
     }
@@ -1090,12 +1090,12 @@ public:
     /// Returns a pointer to the first element for which `predicate(element)`
     /// returns `true`, or `nullptr` if there is no such element.
     ///
-    template<typename UnaryPredicate>
+    template<typename UnaryPredicate, VGC_REQUIRES(isUnaryPredicate<UnaryPredicate, T>)>
     T* search(UnaryPredicate predicate) {
         T* p = data_;
         T* end = p + length_;
         for (; p != end; ++p) {
-            if (predicate(*p)) {
+            if (predicate(*const_cast<const T*>(p))) {
                 return p;
             }
         }
@@ -1106,7 +1106,7 @@ public:
     /// `predicate(element)` returns `true`, or `nullptr` if there is no such
     /// element.
     ///
-    template<typename UnaryPredicate>
+    template<typename UnaryPredicate, VGC_REQUIRES(isUnaryPredicate<UnaryPredicate, T>)>
     const T* search(UnaryPredicate predicate) const {
         return const_cast<Array*>(this)->search(predicate);
     }
@@ -1115,8 +1115,8 @@ public:
     /// `value`, or `-1` if there is no such element.
     ///
     Int index(const T& value) const {
-        const T* p = data_;
-        const T* end = p + length_;
+        T* p = data_;
+        T* end = p + length_;
         for (; p != end; ++p) {
             if (*p == value) {
                 // invariant: smaller than length()
@@ -1129,12 +1129,12 @@ public:
     /// Returns the index of the first element for which `predicate(element)`
     /// returns `true`, or `-1` if there is no such element.
     ///
-    template<typename UnaryPredicate>
+    template<typename UnaryPredicate, VGC_REQUIRES(isUnaryPredicate<UnaryPredicate, T>)>
     Int index(UnaryPredicate predicate) const {
-        const T* p = data_;
-        const T* end = p + length_;
+        T* p = data_;
+        T* end = p + length_;
         for (; p != end; ++p) {
-            if (predicate(*p)) {
+            if (predicate(*const_cast<const T*>(p))) {
                 // invariant: smaller than length()
                 return static_cast<Int>(p - data_);
             }
