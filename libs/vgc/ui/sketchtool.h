@@ -17,13 +17,10 @@
 #ifndef VGC_UI_SKETCHTOOL_H
 #define VGC_UI_SKETCHTOOL_H
 
-#include <variant>
-
 #include <vgc/core/array.h>
 #include <vgc/core/color.h>
-#include <vgc/core/object.h>
-#include <vgc/core/performancelog.h>
-#include <vgc/geometry/camera2d.h>
+#include <vgc/core/history.h>
+#include <vgc/dom/element.h>
 #include <vgc/geometry/vec2d.h>
 #include <vgc/ui/api.h>
 #include <vgc/ui/canvastool.h>
@@ -35,7 +32,7 @@ namespace vgc::ui {
 VGC_DECLARE_OBJECT(SketchTool);
 
 /// \class vgc::ui::SketchTool
-/// \brief A canvas sketch tool widget.
+/// \brief A CanvasTool that implements sketching strokes.
 ///
 class VGC_UI_API SketchTool : public CanvasTool {
 private:
@@ -43,23 +40,49 @@ private:
 
 protected:
     /// This is an implementation details.
-    /// Please use Canvas::create() instead.
+    /// Please use `SketchTool::create()` instead.
     ///
     SketchTool();
 
 public:
-    /// Creates a Canvas.
+    /// Creates a `SketchTool`.
     ///
     static SketchToolPtr create();
 
+    /// Returns the pen color of the tool.
+    ///
+    core::Color penColor() const {
+        return penColor_;
+    }
+
+    /// Sets the pen color of the tool.
+    ///
     void setPenColor(const core::Color& color) {
         penColor_ = color;
     }
 
+    /// Returns the width of the tool.
+    ///
+    double penWidth() const {
+        return penWidth_;
+    }
+
+    /// Sets the pen width of the tool.
+    ///
     void setPenWidth(double width) {
         penWidth_ = width;
     }
 
+    /// Returns whether sketched strokes are automatically snapped to end
+    /// points of existing strokes.
+    ///
+    bool isSnappingEnabled() const {
+        return isSnappingEnabled_;
+    }
+
+    /// Sets whether sketched strokes are automatically snapped
+    /// to end points of existing strokes.
+    ///
     void setSnappingEnabled(bool enabled) {
         isSnappingEnabled_ = enabled;
     }
@@ -78,9 +101,12 @@ protected:
     void onPaintCreate(graphics::Engine* engine) override;
     void onPaintDraw(graphics::Engine* engine, PaintOptions options) override;
     void onPaintDestroy(graphics::Engine* engine) override;
-    //
 
 protected:
+    // Stroke style
+    core::Color penColor_ = core::Color(0, 0, 0, 1);
+    double penWidth_ = 5.0;
+
     // Flags
     bool reload_ = true;
 
@@ -95,15 +121,22 @@ protected:
     dom::Element* edge_ = nullptr;
     geometry::Vec2dArray points_;
     core::DoubleArray widths_;
-    // smoothing & snapping
+
+    // Smoothing and Snapping
     bool isSnappingEnabled_ = false;
-    core::Array<geometry::Vec2d> lastInputPoints_;
-    core::Array<geometry::Vec2d> smoothedInputPoints_;
+    geometry::Vec2dArray lastInputPoints_;
+    geometry::Vec2dArray smoothedInputPoints_;
     geometry::Vec2d snapPosition_;
 
-    // for now we just get cursor pos at the end of the paint, there are still widgets
-    // to draw after that but our current architecture doesn't let us have deferred
-    // widget draws.. widget does not even know it's window.
+    // Draw additional stroke tip based on global cursor position to reduce
+    // perceived input lag.
+    //
+    // Note: for now, we get the global cursor position at the end of the
+    // paint, which is not perfect since there may still be widgets to be
+    // drawn. Unfortunately, our current architecture doesn't allow us to do
+    // better, for example by having deferred widget draws which we would
+    // enable for the Canvas.
+    //
     std::array<geometry::Vec2d, 3> minimalLatencyStrokePoints_;
     std::array<double, 3> minimalLatencyStrokeWidths_;
     graphics::GeometryViewPtr minimalLatencyStrokeGeometry_;
@@ -114,10 +147,13 @@ protected:
     void continueCurve_(const geometry::Vec2d& p, double width = 1.0);
     void finishCurve_();
 
-    core::Color penColor_ = core::Color(0, 0, 0, 1);
-    double penWidth_ = 5.0;
-
     double pressurePenWidth_(const MouseEvent* event) const;
+
+    /*
+    workspace::Element* computeClosestVertex_(
+        const geometry::Vec2d& position,
+        dom::Element* excludedElement_);
+*/
 };
 
 } // namespace vgc::ui
