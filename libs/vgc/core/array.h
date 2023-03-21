@@ -1045,7 +1045,7 @@ public:
     /// Returns an iterator to the first element for which `predicate(element)`
     /// returns `true`, or the end iterator if there is no such element.
     ///
-    template<typename UnaryPredicate>
+    template<typename UnaryPredicate, VGC_REQUIRES(isCallable<UnaryPredicate>)>
     iterator find(UnaryPredicate predicate) {
         T* p = data_;
         T* end = p + length_;
@@ -1061,7 +1061,7 @@ public:
     /// `predicate(element)` returns `true`, or the end const iterator if there
     /// is no such element.
     ///
-    template<typename UnaryPredicate>
+    template<typename UnaryPredicate, VGC_REQUIRES(isCallable<UnaryPredicate>)>
     const_iterator find(UnaryPredicate predicate) const {
         return const_cast<Array*>(this)->search(predicate);
     }
@@ -1090,7 +1090,7 @@ public:
     /// Returns a pointer to the first element for which `predicate(element)`
     /// returns `true`, or `nullptr` if there is no such element.
     ///
-    template<typename UnaryPredicate>
+    template<typename UnaryPredicate, VGC_REQUIRES(isCallable<UnaryPredicate>)>
     T* search(UnaryPredicate predicate) {
         T* p = data_;
         T* end = p + length_;
@@ -1106,7 +1106,7 @@ public:
     /// `predicate(element)` returns `true`, or `nullptr` if there is no such
     /// element.
     ///
-    template<typename UnaryPredicate>
+    template<typename UnaryPredicate, VGC_REQUIRES(isCallable<UnaryPredicate>)>
     const T* search(UnaryPredicate predicate) const {
         return const_cast<Array*>(this)->search(predicate);
     }
@@ -1129,7 +1129,7 @@ public:
     /// Returns the index of the first element for which `predicate(element)`
     /// returns `true`, or `-1` if there is no such element.
     ///
-    template<typename UnaryPredicate>
+    template<typename UnaryPredicate, VGC_REQUIRES(isCallable<UnaryPredicate>)>
     Int index(UnaryPredicate predicate) const {
         const T* p = data_;
         const T* end = p + length_;
