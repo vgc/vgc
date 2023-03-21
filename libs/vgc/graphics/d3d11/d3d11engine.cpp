@@ -77,8 +77,6 @@ struct Vertex_RGBA {
     float r, g, b, a;
 };
 
-} // namespace
-
 class D3d11ImageView;
 class D3d11Framebuffer;
 
@@ -249,6 +247,115 @@ private:
 };
 using D3d11GeometryViewPtr = ResourcePtr<D3d11GeometryView>;
 
+std::vector<D3D11_INPUT_ELEMENT_DESC>
+getBuiltinLayoutDescription(BuiltinGeometryLayout layoutTag) {
+    // clang-format off
+    switch (layoutTag) {
+    case BuiltinGeometryLayout::NotBuiltin:
+    case BuiltinGeometryLayout::End_:
+        return {};
+    case BuiltinGeometryLayout::XY:
+        return {
+            {"POSITION", 0, DXGI_FORMAT_R32G32_FLOAT,       0, 0,                                   D3D11_INPUT_PER_VERTEX_DATA, 0},
+        };
+    case BuiltinGeometryLayout::XYRGB:
+        return {
+            {"POSITION", 0, DXGI_FORMAT_R32G32_FLOAT,       0, 0,                                   D3D11_INPUT_PER_VERTEX_DATA, 0},
+            {"COLOR",    0, DXGI_FORMAT_R32G32B32_FLOAT,    0, offsetof(Vertex_XYRGB, r),           D3D11_INPUT_PER_VERTEX_DATA, 0},
+        };
+    case BuiltinGeometryLayout::XYRGBA:
+        return {
+            {"POSITION", 0, DXGI_FORMAT_R32G32_FLOAT,       0, 0,                                   D3D11_INPUT_PER_VERTEX_DATA, 0},
+            {"COLOR",    0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, offsetof(Vertex_XYRGBA, r),          D3D11_INPUT_PER_VERTEX_DATA, 0},
+        };
+    case BuiltinGeometryLayout::XYUVRGBA:
+        return {
+            {"POSITION", 0, DXGI_FORMAT_R32G32_FLOAT,       0, 0,                                   D3D11_INPUT_PER_VERTEX_DATA, 0},
+            {"TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT,       0, offsetof(Vertex_XYUVRGBA, u),        D3D11_INPUT_PER_VERTEX_DATA, 0},
+            {"COLOR",    0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, offsetof(Vertex_XYUVRGBA, r),        D3D11_INPUT_PER_VERTEX_DATA, 0},
+        };
+    case BuiltinGeometryLayout::XY_iRGBA:
+        return {
+            {"POSITION", 0, DXGI_FORMAT_R32G32_FLOAT,       0, 0,                                   D3D11_INPUT_PER_VERTEX_DATA,   0},
+            {"COLOR",    0, DXGI_FORMAT_R32G32B32A32_FLOAT, 1, 0,                                   D3D11_INPUT_PER_INSTANCE_DATA, 0},
+        };
+    case BuiltinGeometryLayout::XYUV_iRGBA:
+        return {
+            {"POSITION", 0, DXGI_FORMAT_R32G32_FLOAT,       0, 0,                                   D3D11_INPUT_PER_VERTEX_DATA,   0},
+            {"TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT,       0, offsetof(Vertex_XYUV, u),            D3D11_INPUT_PER_VERTEX_DATA,   0},
+            {"COLOR",    0, DXGI_FORMAT_R32G32B32A32_FLOAT, 1, 0,                                   D3D11_INPUT_PER_INSTANCE_DATA, 0},
+        };
+    case BuiltinGeometryLayout::XYDxDy_iXYRotWRGBA:
+        return {
+            {"POSITION", 0, DXGI_FORMAT_R32G32_FLOAT,       0, 0,                                   D3D11_INPUT_PER_VERTEX_DATA,   0},
+            {"DISP",     0, DXGI_FORMAT_R32G32_FLOAT,       0, offsetof(Vertex_XYDxDy, dx),         D3D11_INPUT_PER_VERTEX_DATA,   0},
+            {"POSITION", 1, DXGI_FORMAT_R32G32_FLOAT,       1, 0,                                   D3D11_INPUT_PER_INSTANCE_DATA, 1},
+            {"ROT",      0, DXGI_FORMAT_R32_FLOAT,          1, offsetof(Vertex_XYRotWRGBA, rot),    D3D11_INPUT_PER_INSTANCE_DATA, 1},
+            {"OFFSET",   0, DXGI_FORMAT_R32_FLOAT,          1, offsetof(Vertex_XYRotWRGBA, offset), D3D11_INPUT_PER_INSTANCE_DATA, 1},
+            {"COLOR",    0, DXGI_FORMAT_R32G32B32A32_FLOAT, 1, offsetof(Vertex_XYRotWRGBA, r),      D3D11_INPUT_PER_INSTANCE_DATA, 1},
+        };
+    }
+    // clang-format on
+    return {};
+}
+
+void compileShader(
+    ComPtr<ID3DBlob>& shaderBlob,
+    const char* fileName,
+    const char* entrypoint,
+    const char* target) {
+
+    ComPtr<ID3DBlob> errorBlob;
+    HRESULT hres = D3DCompileFromFile(
+        shaderPath_(fileName).wstring().c_str(),
+        NULL,
+        NULL,
+        entrypoint,
+        target,
+        0,
+        0,
+        shaderBlob.releaseAndGetAddressOf(),
+        errorBlob.releaseAndGetAddressOf());
+
+    if (hres < 0) {
+        std::string errString =
+            (errorBlob
+                 ? std::string(static_cast<const char*>(errorBlob->GetBufferPointer()))
+                 : core::format("unknown D3DCompile error (0x{:X}).", hres));
+        throw core::RuntimeError(errString);
+    }
+}
+
+ComPtr<ID3D11VertexShader> compileAndCreateVertexShader(
+    ComPtr<ID3DBlob>& shaderBlob,
+    const ComPtr<ID3D11Device>& device,
+    const char* fileName) {
+
+    ComPtr<ID3D11VertexShader> shader;
+    compileShader(shaderBlob, fileName, "main", "vs_4_0");
+    device->CreateVertexShader(
+        shaderBlob->GetBufferPointer(),
+        shaderBlob->GetBufferSize(),
+        NULL,
+        shader.releaseAndGetAddressOf());
+    return shader;
+}
+
+ComPtr<ID3D11PixelShader> compileAndCreatePixelShader(
+    ComPtr<ID3DBlob>& shaderBlob,
+    const ComPtr<ID3D11Device>& device,
+    const char* fileName) {
+
+    ComPtr<ID3D11PixelShader> shader;
+    compileShader(shaderBlob, fileName, "main", "ps_4_0");
+    device->CreatePixelShader(
+        shaderBlob->GetBufferPointer(),
+        shaderBlob->GetBufferSize(),
+        NULL,
+        shader.releaseAndGetAddressOf());
+    return shader;
+}
+
 class D3d11Program : public Program {
 protected:
     friend D3d11Engine;
@@ -273,6 +380,25 @@ private:
     ComPtr<ID3D11GeometryShader> geometryShader_;
     ComPtr<ID3D11PixelShader> pixelShader_;
     std::array<ComPtr<ID3D11InputLayout>, numBuiltinGeometryLayouts> builtinLayouts_;
+
+    void initBuiltinLayout(
+        const ComPtr<ID3D11Device>& device,
+        const ComPtr<ID3DBlob>& shaderBlob,
+        BuiltinGeometryLayout layoutTag) {
+
+        std::vector<D3D11_INPUT_ELEMENT_DESC> layoutDesc =
+            getBuiltinLayoutDescription(layoutTag);
+        ComPtr<ID3D11InputLayout> inputLayout;
+        device->CreateInputLayout(
+            layoutDesc.data(),
+            static_cast<UINT>(layoutDesc.size()),
+            shaderBlob->GetBufferPointer(),
+            shaderBlob->GetBufferSize(),
+            inputLayout.releaseAndGetAddressOf());
+
+        const Int8 layoutIndex = core::toUnderlying(layoutTag);
+        builtinLayouts_[layoutIndex] = inputLayout;
+    }
 };
 using D3d11ProgramPtr = ResourcePtr<D3d11Program>;
 
@@ -679,6 +805,8 @@ D3D11_CULL_MODE cullModeToD3DCullMode(CullMode mode) {
     return map[index];
 }
 
+} // namespace
+
 // ENGINE FUNCTIONS
 
 D3d11Engine::D3d11Engine(const EngineCreateInfo& createInfo)
@@ -735,9 +863,9 @@ D3d11EnginePtr D3d11Engine::create(const EngineCreateInfo& createInfo) {
 
 // USER THREAD pimpl functions
 
-// clang-format off
-
 void D3d11Engine::createBuiltinShaders_() {
+
+    using Bgl = BuiltinGeometryLayout;
 
     D3d11ProgramPtr simpleProgram(
         new D3d11Program(resourceRegistry_, BuiltinProgram::Simple));
@@ -746,279 +874,89 @@ void D3d11Engine::createBuiltinShaders_() {
     // Create the simple shader (vertex)
     {
         D3d11Program* program = simpleProgram.get();
-        ComPtr<ID3DBlob> errorBlob;
-        ComPtr<ID3DBlob> vertexShaderBlob;
-        HRESULT hres = D3DCompileFromFile(
-            shaderPath_("simple.v.hlsl").wstring().c_str(),
-            NULL, NULL, "main", "vs_4_0", 0, 0,
-            vertexShaderBlob.releaseAndGetAddressOf(),
-            errorBlob.releaseAndGetAddressOf());
 
-        if (hres < 0) {
-            std::string errString =
-                (errorBlob ? std::string(
-                     static_cast<const char*>(errorBlob->GetBufferPointer()))
-                           : core::format("unknown D3DCompile error (0x{:X}).", hres));
-            throw core::RuntimeError(errString);
-        }
-        errorBlob.reset();
+        ComPtr<ID3DBlob> shaderBlob;
+        program->vertexShader_ =
+            compileAndCreateVertexShader(shaderBlob, device_, "simple.v.hlsl");
 
-        ComPtr<ID3D11VertexShader> vertexShader;
-        device_->CreateVertexShader(
-            vertexShaderBlob->GetBufferPointer(),
-            vertexShaderBlob->GetBufferSize(),
-            NULL,
-            vertexShader.releaseAndGetAddressOf());
-        program->vertexShader_ = vertexShader;
-
-        // Create Input Layout for XYRGB
-        {
-            ComPtr<ID3D11InputLayout> inputLayout;
-            UINT rOffset = static_cast<UINT>(offsetof(Vertex_XYRGB, r));
-            D3D11_INPUT_ELEMENT_DESC layout[] = {
-                {"POSITION", 0, DXGI_FORMAT_R32G32_FLOAT,    0, 0,       D3D11_INPUT_PER_VERTEX_DATA, 0},
-                {"COLOR",    0, DXGI_FORMAT_R32G32B32_FLOAT, 0, rOffset, D3D11_INPUT_PER_VERTEX_DATA, 0},
-            };
-            device_->CreateInputLayout(
-                layout, 2,
-                vertexShaderBlob->GetBufferPointer(),
-                vertexShaderBlob->GetBufferSize(),
-                inputLayout.releaseAndGetAddressOf());
-
-            constexpr Int8 layoutIndex = core::toUnderlying(BuiltinGeometryLayout::XYRGB);
-            program->builtinLayouts_[layoutIndex] = inputLayout;
-        }
-
-        // Create Input Layout for XYRGBA
-        {
-            ComPtr<ID3D11InputLayout> inputLayout;
-            UINT rOffset = static_cast<UINT>(offsetof(Vertex_XYRGBA, r));
-            D3D11_INPUT_ELEMENT_DESC layout[] = {
-                {"POSITION", 0, DXGI_FORMAT_R32G32_FLOAT,       0, 0,       D3D11_INPUT_PER_VERTEX_DATA, 0},
-                {"COLOR",    0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, rOffset, D3D11_INPUT_PER_VERTEX_DATA, 0},
-            };
-            device_->CreateInputLayout(
-                layout, 2,
-                vertexShaderBlob->GetBufferPointer(),
-                vertexShaderBlob->GetBufferSize(),
-                inputLayout.releaseAndGetAddressOf());
-
-            constexpr Int8 layoutIndex = core::toUnderlying(BuiltinGeometryLayout::XYRGBA);
-            program->builtinLayouts_[layoutIndex] = inputLayout;
-        }
-
-        // Create Input Layout for XY_iRGBA
-        {
-            ComPtr<ID3D11InputLayout> inputLayout;
-            D3D11_INPUT_ELEMENT_DESC layout[] = {
-                {"POSITION", 0, DXGI_FORMAT_R32G32_FLOAT,       0, 0, D3D11_INPUT_PER_VERTEX_DATA,   0},
-                {"COLOR",    0, DXGI_FORMAT_R32G32B32A32_FLOAT, 1, 0, D3D11_INPUT_PER_INSTANCE_DATA, 0},
-            };
-            device_->CreateInputLayout(
-                layout, 2,
-                vertexShaderBlob->GetBufferPointer(),
-                vertexShaderBlob->GetBufferSize(),
-                inputLayout.releaseAndGetAddressOf());
-
-            constexpr Int8 layoutIndex = core::toUnderlying(BuiltinGeometryLayout::XY_iRGBA);
-            program->builtinLayouts_[layoutIndex] = inputLayout;
-        }
+        program->initBuiltinLayout(device_, shaderBlob, Bgl::XYRGB);
+        program->initBuiltinLayout(device_, shaderBlob, Bgl::XYRGBA);
+        program->initBuiltinLayout(device_, shaderBlob, Bgl::XY_iRGBA);
+        program->initBuiltinLayout(device_, shaderBlob, Bgl::XYUVRGBA);
+        program->initBuiltinLayout(device_, shaderBlob, Bgl::XYUV_iRGBA);
     }
 
     // Create the simple shader (fragment)
     {
         D3d11Program* program = simpleProgram.get();
-        ComPtr<ID3DBlob> errorBlob;
-        ComPtr<ID3DBlob> pixelShaderBlob;
-
-        HRESULT hres = D3DCompileFromFile(
-            shaderPath_("simple.f.hlsl").wstring().c_str(),
-            NULL, NULL, "main", "ps_4_0", 0, 0,
-            pixelShaderBlob.releaseAndGetAddressOf(),
-            errorBlob.releaseAndGetAddressOf());
-
-        if (hres < 0) {
-            std::string errString =
-                (errorBlob ? std::string(
-                     static_cast<const char*>(errorBlob->GetBufferPointer()))
-                           : core::format("unknown D3DCompile error (0x{:X}).", hres));
-            throw core::RuntimeError(errString);
-        }
-        errorBlob.reset();
-
-        ComPtr<ID3D11PixelShader> pixelShader;
-        device_->CreatePixelShader(
-            pixelShaderBlob->GetBufferPointer(),
-            pixelShaderBlob->GetBufferSize(),
-            NULL,
-            pixelShader.releaseAndGetAddressOf());
-        program->pixelShader_ = pixelShader;
+        ComPtr<ID3DBlob> shaderBlob;
+        program->pixelShader_ =
+            compileAndCreatePixelShader(shaderBlob, device_, "simple.f.hlsl");
     }
 
     D3d11ProgramPtr simpleTexturedProgram(
         new D3d11Program(resourceRegistry_, BuiltinProgram::SimpleTextured));
     simpleTexturedProgram_ = simpleTexturedProgram;
 
-    // Create the simple textured shader (vertex)
+    D3d11ProgramPtr simpleTexturedDebugProgram(
+        new D3d11Program(resourceRegistry_, BuiltinProgram::SimpleTexturedDebug));
+    simpleTexturedDebugProgram_ = simpleTexturedDebugProgram;
+
+    // Create the simple textured standard and debug shader (vertex)
     {
-        D3d11Program* program = simpleTexturedProgram.get();
+        ComPtr<ID3DBlob> shaderBlob;
+        ComPtr<ID3D11VertexShader> shader =
+            compileAndCreateVertexShader(shaderBlob, device_, "simple_textured.v.hlsl");
 
-        ComPtr<ID3DBlob> errorBlob;
-        ComPtr<ID3DBlob> vertexShaderBlob;
-        HRESULT hres = D3DCompileFromFile(
-            shaderPath_("simple_textured.v.hlsl").wstring().c_str(),
-            NULL, NULL, "main", "vs_4_0", 0, 0,
-            vertexShaderBlob.releaseAndGetAddressOf(),
-            errorBlob.releaseAndGetAddressOf());
-
-        if (hres < 0) {
-            std::string errString =
-                (errorBlob ? std::string(
-                    static_cast<const char*>(errorBlob->GetBufferPointer()))
-                    : core::format("unknown D3DCompile error (0x{:X}).", hres));
-            throw core::RuntimeError(errString);
-        }
-        errorBlob.reset();
-
-        ComPtr<ID3D11VertexShader> vertexShader;
-        device_->CreateVertexShader(
-            vertexShaderBlob->GetBufferPointer(),
-            vertexShaderBlob->GetBufferSize(),
-            NULL,
-            vertexShader.releaseAndGetAddressOf());
-        program->vertexShader_ = vertexShader;
-
-        // Create Input Layout for XYUVRGBA
         {
-            ComPtr<ID3D11InputLayout> inputLayout;
-            UINT uOffset = static_cast<UINT>(offsetof(Vertex_XYUVRGBA, u));
-            UINT rOffset = static_cast<UINT>(offsetof(Vertex_XYUVRGBA, r));
-            D3D11_INPUT_ELEMENT_DESC layout[] = {
-                {"POSITION", 0, DXGI_FORMAT_R32G32_FLOAT,    0, 0,       D3D11_INPUT_PER_VERTEX_DATA, 0},
-                {"TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT,    0, uOffset, D3D11_INPUT_PER_VERTEX_DATA, 0},
-                {"COLOR",    0, DXGI_FORMAT_R32G32B32_FLOAT, 0, rOffset, D3D11_INPUT_PER_VERTEX_DATA, 0},
-            };
-            device_->CreateInputLayout(
-                layout, 3,
-                vertexShaderBlob->GetBufferPointer(),
-                vertexShaderBlob->GetBufferSize(),
-                inputLayout.releaseAndGetAddressOf());
-
-            constexpr Int8 layoutIndex = core::toUnderlying(BuiltinGeometryLayout::XYUVRGBA);
-            program->builtinLayouts_[layoutIndex] = inputLayout;
+            D3d11Program* program = simpleTexturedProgram.get();
+            program->vertexShader_ = shader;
+            program->initBuiltinLayout(device_, shaderBlob, Bgl::XYUVRGBA);
+            program->initBuiltinLayout(device_, shaderBlob, Bgl::XYUV_iRGBA);
         }
-
-        // Create Input Layout for XYUV_iRGBA
         {
-            ComPtr<ID3D11InputLayout> inputLayout;
-            UINT uOffset = static_cast<UINT>(offsetof(Vertex_XYUV, u));
-            D3D11_INPUT_ELEMENT_DESC layout[] = {
-                {"POSITION", 0, DXGI_FORMAT_R32G32_FLOAT,       0, 0,       D3D11_INPUT_PER_VERTEX_DATA,   0},
-                {"TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT,       0, uOffset, D3D11_INPUT_PER_VERTEX_DATA,   0},
-                {"COLOR",    0, DXGI_FORMAT_R32G32B32A32_FLOAT, 1, 0,       D3D11_INPUT_PER_INSTANCE_DATA, 0},
-            };
-            device_->CreateInputLayout(
-                layout, 3,
-                vertexShaderBlob->GetBufferPointer(),
-                vertexShaderBlob->GetBufferSize(),
-                inputLayout.releaseAndGetAddressOf());
-
-            constexpr Int8 layoutIndex = core::toUnderlying(BuiltinGeometryLayout::XYUV_iRGBA);
-            program->builtinLayouts_[layoutIndex] = inputLayout;
+            D3d11Program* program = simpleTexturedDebugProgram.get();
+            program->vertexShader_ = shader;
+            program->initBuiltinLayout(device_, shaderBlob, Bgl::XYUVRGBA);
+            program->initBuiltinLayout(device_, shaderBlob, Bgl::XYUV_iRGBA);
         }
     }
 
     // Create the simple textured shader (fragment)
     {
         D3d11Program* program = simpleTexturedProgram.get();
-        ComPtr<ID3DBlob> errorBlob;
-        ComPtr<ID3DBlob> pixelShaderBlob;
 
-        HRESULT hres = D3DCompileFromFile(
-            shaderPath_("simple_textured.f.hlsl").wstring().c_str(),
-            NULL, NULL, "main", "ps_4_0", 0, 0,
-            pixelShaderBlob.releaseAndGetAddressOf(),
-            errorBlob.releaseAndGetAddressOf());
+        ComPtr<ID3DBlob> shaderBlob;
+        program->pixelShader_ =
+            compileAndCreatePixelShader(shaderBlob, device_, "simple_textured.f.hlsl");
+    }
 
-        if (hres < 0) {
-            std::string errString =
-                (errorBlob ? std::string(
-                    static_cast<const char*>(errorBlob->GetBufferPointer()))
-                    : core::format("unknown D3DCompile error (0x{:X}).", hres));
-            throw core::RuntimeError(errString);
-        }
-        errorBlob.reset();
+    // Create the simple textured debug shader (fragment)
+    {
+        D3d11Program* program = simpleTexturedDebugProgram.get();
 
-        ComPtr<ID3D11PixelShader> pixelShader;
-        device_->CreatePixelShader(
-            pixelShaderBlob->GetBufferPointer(),
-            pixelShaderBlob->GetBufferSize(),
-            NULL,
-            pixelShader.releaseAndGetAddressOf());
-        program->pixelShader_ = pixelShader;
+        ComPtr<ID3DBlob> shaderBlob;
+        program->pixelShader_ = compileAndCreatePixelShader(
+            shaderBlob, device_, "simple_textured_debug.f.hlsl");
     }
 
     D3d11ProgramPtr sreenSpaceDisplacementProgram(
-        new D3d11Program(resourceRegistry_, BuiltinProgram::SimpleTextured));
+        new D3d11Program(resourceRegistry_, BuiltinProgram::SreenSpaceDisplacement));
     sreenSpaceDisplacementProgram_ = sreenSpaceDisplacementProgram;
 
     // Create the sreen-space displacement shader (vertex)
     {
         D3d11Program* program = sreenSpaceDisplacementProgram.get();
 
-        ComPtr<ID3DBlob> errorBlob;
-        ComPtr<ID3DBlob> vertexShaderBlob;
-        HRESULT hres = D3DCompileFromFile(
-            shaderPath_("screen_space_displacement.v.hlsl").wstring().c_str(),
-            NULL, NULL, "main", "vs_4_0", 0, 0,
-            vertexShaderBlob.releaseAndGetAddressOf(),
-            errorBlob.releaseAndGetAddressOf());
+        ComPtr<ID3DBlob> shaderBlob;
+        program->vertexShader_ = compileAndCreateVertexShader(
+            shaderBlob, device_, "screen_space_displacement.v.hlsl");
 
-        if (hres < 0) {
-            std::string errString =
-                (errorBlob ? std::string(
-                    static_cast<const char*>(errorBlob->GetBufferPointer()))
-                    : core::format("unknown D3DCompile error (0x{:X}).", hres));
-            throw core::RuntimeError(errString);
-        }
-        errorBlob.reset();
-
-        ComPtr<ID3D11VertexShader> vertexShader;
-        device_->CreateVertexShader(
-            vertexShaderBlob->GetBufferPointer(),
-            vertexShaderBlob->GetBufferSize(),
-            NULL,
-            vertexShader.releaseAndGetAddressOf());
-        program->vertexShader_ = vertexShader;
-
-        // Create Input Layout for XYDxDy_iXYRotWRGBA
-        {
-            ComPtr<ID3D11InputLayout> inputLayout;
-            UINT dxOffset = static_cast<UINT>(offsetof(Vertex_XYDxDy, dx));
-            UINT oOffset = static_cast<UINT>(offsetof(Vertex_XYRotWRGBA, offset));
-            UINT rOffset = static_cast<UINT>(offsetof(Vertex_XYRotWRGBA, r));
-            D3D11_INPUT_ELEMENT_DESC layout[] = {
-                {"POSITION",     0, DXGI_FORMAT_R32G32_FLOAT,       0, 0,        D3D11_INPUT_PER_VERTEX_DATA,   0},
-                {"DISPLACEMENT", 0, DXGI_FORMAT_R32G32_FLOAT,       0, dxOffset, D3D11_INPUT_PER_VERTEX_DATA,   0},
-                {"POSITION",     1, DXGI_FORMAT_R32G32B32_FLOAT,    1, 0,        D3D11_INPUT_PER_INSTANCE_DATA, 1},
-                {"OFFSET",       0, DXGI_FORMAT_R32_FLOAT,          1, oOffset,  D3D11_INPUT_PER_INSTANCE_DATA, 1},
-                {"COLOR",        0, DXGI_FORMAT_R32G32B32A32_FLOAT, 1, rOffset,  D3D11_INPUT_PER_INSTANCE_DATA, 1},
-            };
-            device_->CreateInputLayout(
-                layout, 5,
-                vertexShaderBlob->GetBufferPointer(),
-                vertexShaderBlob->GetBufferSize(),
-                inputLayout.releaseAndGetAddressOf());
-
-            constexpr Int8 layoutIndex = core::toUnderlying(BuiltinGeometryLayout::XYDxDy_iXYRotWRGBA);
-            program->builtinLayouts_[layoutIndex] = inputLayout;
-        }
+        program->initBuiltinLayout(device_, shaderBlob, Bgl::XYDxDy_iXYRotWRGBA);
     }
 
     // Create the simple instanced shader (fragment)
-    {
-        sreenSpaceDisplacementProgram->pixelShader_ = simpleProgram->pixelShader_;
-    }
+    { sreenSpaceDisplacementProgram->pixelShader_ = simpleProgram->pixelShader_; }
 
     // Create depth-stencil State
     {
@@ -1036,8 +974,6 @@ void D3d11Engine::createBuiltinShaders_() {
             &desc, depthStencilState_.releaseAndGetAddressOf());
     }
 }
-
-// clang-format on
 
 SwapChainPtr D3d11Engine::constructSwapChain_(const SwapChainCreateInfo& createInfo) {
     if (!device_) {
@@ -2094,7 +2030,9 @@ D3d11Engine::present_(SwapChain* swapChain, UInt32 syncInterval, PresentFlags /*
 
 // Private methods
 
-bool D3d11Engine::loadBuffer_(D3d11Buffer* buffer, const void* data, Int dataSize) {
+bool D3d11Engine::loadBuffer_(Buffer* buffer_, const void* data, Int dataSize) {
+    D3d11Buffer* buffer = static_cast<D3d11Buffer*>(buffer_);
+
     ComPtr<ID3D11Buffer>& object = buffer->object_;
     D3D11_BUFFER_DESC& desc = buffer->desc_;
     if (dataSize == 0) {
@@ -2134,7 +2072,8 @@ bool D3d11Engine::loadBuffer_(D3d11Buffer* buffer, const void* data, Int dataSiz
     return true;
 }
 
-void D3d11Engine::onBufferRecreated_(D3d11Buffer* buffer) {
+void D3d11Engine::onBufferRecreated_(Buffer* buffer_) {
+    D3d11Buffer* buffer = static_cast<D3d11Buffer*>(buffer_);
 
     // do rebinds
     for (Int i = 0; i < numShaderStages; ++i) {

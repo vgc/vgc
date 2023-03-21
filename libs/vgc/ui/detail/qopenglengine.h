@@ -237,7 +237,7 @@ private:
     }
 
     void makeCurrent_();
-    bool loadBuffer_(class QglBuffer* buffer, const void* data, Int dataSize);
+    bool loadBuffer_(Buffer* buffer, const void* data, Int dataSize);
 
     bool hasAnisotropicFilteringSupport_ = false;
     float maxTextureMaxAnisotropy = 0;

@@ -71,8 +71,6 @@ struct Vertex_RGBA {
     float r, g, b, a;
 };
 
-} // namespace
-
 inline constexpr GLuint nullGLuint = 0;
 inline constexpr GLuint badGLuint = (std::numeric_limits<GLuint>::max)();
 inline constexpr GLenum badGLenum = (std::numeric_limits<GLenum>::max)();
@@ -315,11 +313,12 @@ private:
     using BuiltinProgramVao_ = std::array<GLuint, numBuiltinGeometryLayouts>;
 
     GLenum drawMode_ = badGLenum;
-    std::array<BuiltinProgramVao_, numBuiltinPrograms> builtinProgramVaos_;
+    std::array<BuiltinProgramVao_, numBuiltinPrograms> builtinProgramVaos_ = {};
 };
 using QglGeometryViewPtr = ResourcePtr<QglGeometryView>;
 
 struct GlAttribPointerDesc {
+    const char* name;
     GLuint index;
     GLint numElements;
     GLenum elementType;
@@ -329,6 +328,69 @@ struct GlAttribPointerDesc {
     uintptr_t bufferIndex;
     bool isPerInstance;
 };
+
+struct VertexAttribDesc {
+    const char* name;
+    GLint numElements;
+    GLenum elementType;
+    uintptr_t bufferIndex;
+    uintptr_t offset;
+    bool isPerInstance;
+    GLboolean normalized;
+    GLsizei stride;
+};
+
+std::vector<VertexAttribDesc>
+getBuiltinLayoutDescription(BuiltinGeometryLayout layoutTag) {
+    // clang-format off
+    switch (layoutTag) {
+    case BuiltinGeometryLayout::NotBuiltin:
+    case BuiltinGeometryLayout::End_:
+        return {};
+    case BuiltinGeometryLayout::XY:
+        return {
+            {"pos",    2, GL_FLOAT, 0, 0,                                false, GL_FALSE, sizeof(Vertex_XY)},
+        };
+    case BuiltinGeometryLayout::XYRGB:
+        return {
+            {"pos",    2, GL_FLOAT, 0, 0,                                false, GL_FALSE, sizeof(Vertex_XYRGB)},
+            {"col",    3, GL_FLOAT, 0, offsetof(Vertex_XYRGB, r),        false, GL_FALSE, sizeof(Vertex_XYRGB)},
+        };
+    case BuiltinGeometryLayout::XYRGBA:
+        return {
+            {"pos",    2, GL_FLOAT, 0, 0,                                false, GL_FALSE, sizeof(Vertex_XYRGBA)},
+            {"col",    4, GL_FLOAT, 0, offsetof(Vertex_XYRGBA, r),       false, GL_FALSE, sizeof(Vertex_XYRGBA)},
+        };
+    case BuiltinGeometryLayout::XYUVRGBA:
+        return {
+            {"pos",    2, GL_FLOAT, 0, 0,                                false, GL_FALSE, sizeof(Vertex_XYUVRGBA)},
+            {"uv",     2, GL_FLOAT, 0, offsetof(Vertex_XYUVRGBA, u),     false, GL_FALSE, sizeof(Vertex_XYUVRGBA)},
+            {"col",    4, GL_FLOAT, 0, offsetof(Vertex_XYUVRGBA, r),     false, GL_FALSE, sizeof(Vertex_XYUVRGBA)},
+        };
+    case BuiltinGeometryLayout::XY_iRGBA:
+        return {
+            {"pos",    2, GL_FLOAT, 0, 0,                                false, GL_FALSE, sizeof(Vertex_XY)},
+            {"col",    4, GL_FLOAT, 1, 0,                                true,  GL_FALSE, sizeof(Vertex_RGBA)},
+        };
+    case BuiltinGeometryLayout::XYUV_iRGBA:
+        return {
+            {"pos",    2, GL_FLOAT, 0, 0,                                false, GL_FALSE, sizeof(Vertex_XYUV)},
+            {"uv",     2, GL_FLOAT, 0, offsetof(Vertex_XYUV, u),         false, GL_FALSE, sizeof(Vertex_XYUV)},
+            {"col",    4, GL_FLOAT, 1, 0,                                true,  GL_FALSE, sizeof(Vertex_RGBA)},
+        };
+    case BuiltinGeometryLayout::XYDxDy_iXYRotWRGBA:
+        return {
+            {"pos",    2, GL_FLOAT, 0, 0,                                false, GL_FALSE, sizeof(Vertex_XYDxDy)},
+            {"disp",   2, GL_FLOAT, 0, offsetof(Vertex_XYDxDy, dx),      false, GL_FALSE, sizeof(Vertex_XYDxDy)},
+            {"ipos",   2, GL_FLOAT, 1, 0,                                true,  GL_FALSE, sizeof(Vertex_XYRotWRGBA)},
+            {"rotate", 1, GL_FLOAT, 1, offsetof(Vertex_XYRotWRGBA, rot), true,  GL_FALSE, sizeof(Vertex_XYRotWRGBA)},
+            {"offset", 1, GL_FLOAT, 1, offsetof(Vertex_XYRotWRGBA, w),   true,  GL_FALSE, sizeof(Vertex_XYRotWRGBA)},
+            {"col",    4, GL_FLOAT, 1, offsetof(Vertex_XYRotWRGBA, r),   true,  GL_FALSE, sizeof(Vertex_XYRotWRGBA)},
+        };
+    }
+    // clang-format on
+    return {};
+}
 
 class QglProgram : public Program {
 protected:
@@ -348,6 +410,23 @@ private:
         core::Array<GlAttribPointerDesc>,
         core::toUnderlying(BuiltinGeometryLayout::Max_) + 1>
         builtinLayouts_;
+
+    void initBuiltinLayout(BuiltinGeometryLayout layoutTag) {
+        const Int8 layoutIndex = core::toUnderlying(layoutTag);
+        core::Array<GlAttribPointerDesc>& layout = builtinLayouts_[layoutIndex];
+        std::vector<VertexAttribDesc> layoutDesc = getBuiltinLayoutDescription(layoutTag);
+        for (const auto& desc : layoutDesc) {
+            GlAttribPointerDesc& desc2 = layout.emplaceLast();
+            desc2.index = prog_->attributeLocation(desc.name);
+            desc2.numElements = desc.numElements;
+            desc2.elementType = desc.elementType;
+            desc2.normalized = desc.normalized;
+            desc2.stride = desc.stride;
+            desc2.offset = desc.offset;
+            desc2.bufferIndex = desc.bufferIndex;
+            desc2.isPerInstance = desc.isPerInstance;
+        }
+    }
 };
 using QglProgramPtr = ResourcePtr<QglProgram>;
 
@@ -724,6 +803,8 @@ GLenum minMipFilterModesToGLenum(FilterMode minMode, FilterMode mipMode) {
     return map[combinedIndex];
 }
 
+} // namespace
+
 // ENGINE FUNCTIONS
 
 QglEngine::QglEngine(const EngineCreateInfo& createInfo, QOpenGLContext* ctx)
@@ -820,6 +901,10 @@ void QglEngine::createBuiltinShaders_() {
         new QglProgram(resourceRegistry_, BuiltinProgram::SimpleTextured));
     simpleTexturedProgram_ = simpleTexturedProgram;
 
+    QglProgramPtr simpleTexturedDebugProgram(
+        new QglProgram(resourceRegistry_, BuiltinProgram::SimpleTexturedDebug));
+    simpleTexturedDebugProgram_ = simpleTexturedDebugProgram;
+
     QglProgramPtr sreenSpaceDisplacementProgram(
         new QglProgram(resourceRegistry_, BuiltinProgram::SreenSpaceDisplacement));
     sreenSpaceDisplacementProgram_ = sreenSpaceDisplacementProgram;
@@ -857,12 +942,14 @@ FramebufferPtr QglEngine::constructFramebuffer_(const ImageViewPtr& colorImageVi
 }
 
 BufferPtr QglEngine::constructBuffer_(const BufferCreateInfo& createInfo) {
+    processResourceMiscFlags(createInfo.resourceMiscFlags());
     auto buffer = makeUnique<QglBuffer>(resourceRegistry_, createInfo);
     buffer->usage_ = usageToGLenum(createInfo.usage(), createInfo.cpuAccessFlags());
     return BufferPtr(buffer.release());
 }
 
 ImagePtr QglEngine::constructImage_(const ImageCreateInfo& createInfo) {
+    processResourceMiscFlags(createInfo.resourceMiscFlags());
     auto image = makeUnique<QglImage>(resourceRegistry_, createInfo);
     image->glFormat_ = pixelFormatToGlFormat(createInfo.pixelFormat());
     return ImagePtr(image.release());
@@ -1031,82 +1118,14 @@ void QglEngine::initBuiltinResources_() {
             QOpenGLShader::Fragment, shaderPath_("simple.f.glsl"));
         prog->link();
         prog->bind();
-        int xyLoc_ = prog->attributeLocation("pos");
-        int rgbaLoc_ = prog->attributeLocation("col");
         api_->glUniformBlockBinding(prog->programId(), 0, 0);
         prog->release();
 
-        // Create Input Layout for XYRGB
-        {
-            constexpr Int8 layoutIndex = core::toUnderlying(BuiltinGeometryLayout::XYRGB);
-            core::Array<GlAttribPointerDesc>& layout =
-                program->builtinLayouts_[layoutIndex];
-            GlAttribPointerDesc& xyDesc = layout.emplaceLast();
-            xyDesc.index = xyLoc_;
-            xyDesc.numElements = 2;
-            xyDesc.elementType = GL_FLOAT;
-            xyDesc.normalized = false;
-            xyDesc.stride = sizeof(Vertex_XYRGB);
-            xyDesc.offset = 0;
-            xyDesc.bufferIndex = 0;
-            GlAttribPointerDesc& rgbDesc = layout.emplaceLast();
-            rgbDesc.index = rgbaLoc_;
-            rgbDesc.numElements = 3;
-            rgbDesc.elementType = GL_FLOAT;
-            rgbDesc.normalized = false;
-            rgbDesc.stride = sizeof(Vertex_XYRGB);
-            rgbDesc.offset = static_cast<uintptr_t>(offsetof(Vertex_XYRGB, r));
-            rgbDesc.bufferIndex = 0;
-        }
-
-        // Create Input Layout for XYRGBA
-        {
-            constexpr Int8 layoutIndex =
-                core::toUnderlying(BuiltinGeometryLayout::XYRGBA);
-            core::Array<GlAttribPointerDesc>& layout =
-                program->builtinLayouts_[layoutIndex];
-            GlAttribPointerDesc& xyDesc = layout.emplaceLast();
-            xyDesc.index = xyLoc_;
-            xyDesc.numElements = 2;
-            xyDesc.elementType = GL_FLOAT;
-            xyDesc.normalized = false;
-            xyDesc.stride = sizeof(Vertex_XYRGBA);
-            xyDesc.offset = 0;
-            xyDesc.bufferIndex = 0;
-            GlAttribPointerDesc& rgbaDesc = layout.emplaceLast();
-            rgbaDesc.index = rgbaLoc_;
-            rgbaDesc.numElements = 4;
-            rgbaDesc.elementType = GL_FLOAT;
-            rgbaDesc.normalized = false;
-            rgbaDesc.stride = sizeof(Vertex_XYRGBA);
-            rgbaDesc.offset = static_cast<uintptr_t>(offsetof(Vertex_XYRGBA, r));
-            rgbaDesc.bufferIndex = 0;
-        }
-
-        // Create Input Layout for XY_iRGBA
-        {
-            constexpr Int8 layoutIndex =
-                core::toUnderlying(BuiltinGeometryLayout::XY_iRGBA);
-            core::Array<GlAttribPointerDesc>& layout =
-                program->builtinLayouts_[layoutIndex];
-            GlAttribPointerDesc& xyDesc = layout.emplaceLast();
-            xyDesc.index = xyLoc_;
-            xyDesc.numElements = 2;
-            xyDesc.elementType = GL_FLOAT;
-            xyDesc.normalized = false;
-            xyDesc.stride = sizeof(Vertex_XY);
-            xyDesc.offset = 0;
-            xyDesc.bufferIndex = 0;
-            GlAttribPointerDesc& rgbaDesc = layout.emplaceLast();
-            rgbaDesc.index = rgbaLoc_;
-            rgbaDesc.numElements = 4;
-            rgbaDesc.elementType = GL_FLOAT;
-            rgbaDesc.normalized = false;
-            rgbaDesc.stride = sizeof(Vertex_RGBA);
-            rgbaDesc.offset = 0;
-            rgbaDesc.bufferIndex = 1;
-            rgbaDesc.isPerInstance = true;
-        }
+        program->initBuiltinLayout(BuiltinGeometryLayout::XYRGB);
+        program->initBuiltinLayout(BuiltinGeometryLayout::XYRGBA);
+        program->initBuiltinLayout(BuiltinGeometryLayout::XY_iRGBA);
+        program->initBuiltinLayout(BuiltinGeometryLayout::XYUVRGBA);
+        program->initBuiltinLayout(BuiltinGeometryLayout::XYUV_iRGBA);
     }
 
     // Initialize the simple textured shader
@@ -1120,9 +1139,6 @@ void QglEngine::initBuiltinResources_() {
             QOpenGLShader::Fragment, shaderPath_("simple_textured.f.glsl"));
         prog->link();
         prog->bind();
-        int xyLoc_ = prog->attributeLocation("pos");
-        int uvLoc_ = prog->attributeLocation("uv");
-        int rgbaLoc_ = prog->attributeLocation("col");
         api_->glUniformBlockBinding(prog->programId(), 0, 0);
 
         // XXX temporary
@@ -1134,69 +1150,26 @@ void QglEngine::initBuiltinResources_() {
 
         prog->release();
 
-        // Create Input Layout for XYUVRGBA
-        {
-            constexpr Int8 layoutIndex =
-                core::toUnderlying(BuiltinGeometryLayout::XYUVRGBA);
-            core::Array<GlAttribPointerDesc>& layout =
-                program->builtinLayouts_[layoutIndex];
-            GlAttribPointerDesc& xyDesc = layout.emplaceLast();
-            xyDesc.index = xyLoc_;
-            xyDesc.numElements = 2;
-            xyDesc.elementType = GL_FLOAT;
-            xyDesc.normalized = false;
-            xyDesc.stride = sizeof(Vertex_XYUVRGBA);
-            xyDesc.offset = 0;
-            xyDesc.bufferIndex = 0;
-            GlAttribPointerDesc& uvDesc = layout.emplaceLast();
-            uvDesc.index = uvLoc_;
-            uvDesc.numElements = 2;
-            uvDesc.elementType = GL_FLOAT;
-            uvDesc.normalized = false;
-            uvDesc.stride = sizeof(Vertex_XYUVRGBA);
-            uvDesc.offset = static_cast<uintptr_t>(offsetof(Vertex_XYUVRGBA, u));
-            uvDesc.bufferIndex = 0;
-            GlAttribPointerDesc& rgbaDesc = layout.emplaceLast();
-            rgbaDesc.index = rgbaLoc_;
-            rgbaDesc.numElements = 4;
-            rgbaDesc.elementType = GL_FLOAT;
-            rgbaDesc.normalized = false;
-            rgbaDesc.stride = sizeof(Vertex_XYUVRGBA);
-            rgbaDesc.offset = static_cast<uintptr_t>(offsetof(Vertex_XYUVRGBA, r));
-            rgbaDesc.bufferIndex = 0;
-        }
+        program->initBuiltinLayout(BuiltinGeometryLayout::XYUVRGBA);
+        program->initBuiltinLayout(BuiltinGeometryLayout::XYUV_iRGBA);
+    }
 
-        // Create Input Layout for XYUV_iRGBA
-        {
-            constexpr Int8 layoutIndex =
-                core::toUnderlying(BuiltinGeometryLayout::XYUV_iRGBA);
-            core::Array<GlAttribPointerDesc>& layout =
-                program->builtinLayouts_[layoutIndex];
-            GlAttribPointerDesc& xyDesc = layout.emplaceLast();
-            xyDesc.index = xyLoc_;
-            xyDesc.numElements = 2;
-            xyDesc.elementType = GL_FLOAT;
-            xyDesc.normalized = false;
-            xyDesc.stride = sizeof(Vertex_XYUV);
-            xyDesc.offset = 0;
-            xyDesc.bufferIndex = 0;
-            GlAttribPointerDesc& uvDesc = layout.emplaceLast();
-            uvDesc.index = uvLoc_;
-            uvDesc.numElements = 2;
-            uvDesc.elementType = GL_FLOAT;
-            uvDesc.normalized = false;
-            uvDesc.stride = sizeof(Vertex_XYUV);
-            uvDesc.offset = static_cast<uintptr_t>(offsetof(Vertex_XYUV, u));
-            GlAttribPointerDesc& rgbaDesc = layout.emplaceLast();
-            rgbaDesc.index = rgbaLoc_;
-            rgbaDesc.numElements = 4;
-            rgbaDesc.elementType = GL_FLOAT;
-            rgbaDesc.normalized = false;
-            rgbaDesc.stride = sizeof(Vertex_RGBA);
-            rgbaDesc.offset = 0;
-            rgbaDesc.bufferIndex = 1;
-            rgbaDesc.isPerInstance = true;
-        }
+    // Initialize the simple textured debug shader
+    {
+        QglProgram* program = simpleTexturedDebugProgram_.get_static_cast<QglProgram>();
+        program->prog_.reset(new QOpenGLShaderProgram());
+        QOpenGLShaderProgram* prog = program->prog_.get();
+        prog->addShaderFromSourceFile(
+            QOpenGLShader::Vertex, shaderPath_("simple_textured.v.glsl"));
+        prog->addShaderFromSourceFile(
+            QOpenGLShader::Fragment, shaderPath_("simple_textured_debug.f.glsl"));
+        prog->link();
+        prog->bind();
+        api_->glUniformBlockBinding(prog->programId(), 0, 0);
+        prog->release();
+
+        program->initBuiltinLayout(BuiltinGeometryLayout::XYUVRGBA);
+        program->initBuiltinLayout(BuiltinGeometryLayout::XYUV_iRGBA);
     }
 
     // Initialize the sreen-space displacement shader
@@ -1211,65 +1184,10 @@ void QglEngine::initBuiltinResources_() {
             QOpenGLShader::Fragment, shaderPath_("simple.f.glsl"));
         prog->link();
         prog->bind();
-        int xyLoc_ = prog->attributeLocation("pos");
-        int dispLoc_ = prog->attributeLocation("disp");
-        int xyiLoc_ = prog->attributeLocation("ipos");
-        int offLoc_ = prog->attributeLocation("offset");
-        int rgbaLoc_ = prog->attributeLocation("col");
         api_->glUniformBlockBinding(prog->programId(), 0, 0);
-
         prog->release();
 
-        // Create Input Layout for XYDxDy_iXYRotWRGBA
-        {
-            constexpr Int8 layoutIndex =
-                core::toUnderlying(BuiltinGeometryLayout::XYDxDy_iXYRotWRGBA);
-            core::Array<GlAttribPointerDesc>& layout =
-                program->builtinLayouts_[layoutIndex];
-            GlAttribPointerDesc& xyDesc = layout.emplaceLast();
-            xyDesc.index = xyLoc_;
-            xyDesc.numElements = 2;
-            xyDesc.elementType = GL_FLOAT;
-            xyDesc.normalized = false;
-            xyDesc.stride = sizeof(Vertex_XYDxDy);
-            xyDesc.offset = 0;
-            xyDesc.bufferIndex = 0;
-            GlAttribPointerDesc& dispDesc = layout.emplaceLast();
-            dispDesc.index = dispLoc_;
-            dispDesc.numElements = 2;
-            dispDesc.elementType = GL_FLOAT;
-            dispDesc.normalized = false;
-            dispDesc.stride = sizeof(Vertex_XYDxDy);
-            dispDesc.offset = static_cast<uintptr_t>(offsetof(Vertex_XYDxDy, dx));
-            dispDesc.bufferIndex = 0;
-            GlAttribPointerDesc& xyiDesc = layout.emplaceLast();
-            xyiDesc.index = xyiLoc_;
-            xyiDesc.numElements = 3;
-            xyiDesc.elementType = GL_FLOAT;
-            xyiDesc.normalized = false;
-            xyiDesc.stride = sizeof(Vertex_XYRotWRGBA);
-            xyiDesc.offset = 0;
-            xyiDesc.bufferIndex = 1;
-            xyiDesc.isPerInstance = true;
-            GlAttribPointerDesc& offDesc = layout.emplaceLast();
-            offDesc.index = offLoc_;
-            offDesc.numElements = 1;
-            offDesc.elementType = GL_FLOAT;
-            offDesc.normalized = false;
-            offDesc.stride = sizeof(Vertex_XYRotWRGBA);
-            offDesc.offset = static_cast<uintptr_t>(offsetof(Vertex_XYRotWRGBA, w));
-            offDesc.bufferIndex = 1;
-            offDesc.isPerInstance = true;
-            GlAttribPointerDesc& rgbaDesc = layout.emplaceLast();
-            rgbaDesc.index = rgbaLoc_;
-            rgbaDesc.numElements = 4;
-            rgbaDesc.elementType = GL_FLOAT;
-            rgbaDesc.normalized = false;
-            rgbaDesc.stride = sizeof(Vertex_XYRotWRGBA);
-            rgbaDesc.offset = static_cast<uintptr_t>(offsetof(Vertex_XYRotWRGBA, r));
-            rgbaDesc.bufferIndex = 1;
-            rgbaDesc.isPerInstance = true;
-        }
+        program->initBuiltinLayout(BuiltinGeometryLayout::XYDxDy_iXYRotWRGBA);
     }
 }
 
@@ -1991,7 +1909,8 @@ void QglEngine::makeCurrent_() {
     ctx_->makeCurrent(ctx_->surface());
 }
 
-bool QglEngine::loadBuffer_(class QglBuffer* buffer, const void* data, Int dataSize) {
+bool QglEngine::loadBuffer_(Buffer* buffer_, const void* data, Int dataSize) {
+    QglBuffer* buffer = static_cast<QglBuffer*>(buffer_);
 
     if (dataSize == 0) {
         return false;

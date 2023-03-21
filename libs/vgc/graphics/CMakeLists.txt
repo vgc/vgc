@@ -74,6 +74,7 @@ vgc_add_library(graphics
         shaders/d3d11/simple.v.hlsl
         shaders/d3d11/simple_textured.f.hlsl
         shaders/d3d11/simple_textured.v.hlsl
+        shaders/d3d11/simple_textured_debug.f.hlsl
         shaders/opengl/screen_space_displacement.v.glsl
         shaders/opengl/shader.f.glsl
         shaders/opengl/shader.v.glsl
@@ -81,6 +82,7 @@ vgc_add_library(graphics
         shaders/opengl/simple.v.glsl
         shaders/opengl/simple_textured.f.glsl
         shaders/opengl/simple_textured.v.glsl
+        shaders/opengl/simple_textured_debug.f.glsl
 )
 
 add_subdirectory(wraps)
