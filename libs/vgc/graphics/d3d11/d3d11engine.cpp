@@ -252,6 +252,7 @@ getBuiltinLayoutDescription(BuiltinGeometryLayout layoutTag) {
     // clang-format off
     switch (layoutTag) {
     case BuiltinGeometryLayout::NotBuiltin:
+    case BuiltinGeometryLayout::End_:
         return {};
     case BuiltinGeometryLayout::XY:
         return {
