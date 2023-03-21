@@ -942,12 +942,14 @@ FramebufferPtr QglEngine::constructFramebuffer_(const ImageViewPtr& colorImageVi
 }
 
 BufferPtr QglEngine::constructBuffer_(const BufferCreateInfo& createInfo) {
+    processResourceMiscFlags(createInfo.resourceMiscFlags());
     auto buffer = makeUnique<QglBuffer>(resourceRegistry_, createInfo);
     buffer->usage_ = usageToGLenum(createInfo.usage(), createInfo.cpuAccessFlags());
     return BufferPtr(buffer.release());
 }
 
 ImagePtr QglEngine::constructImage_(const ImageCreateInfo& createInfo) {
+    processResourceMiscFlags(createInfo.resourceMiscFlags());
     auto image = makeUnique<QglImage>(resourceRegistry_, createInfo);
     image->glFormat_ = pixelFormatToGlFormat(createInfo.pixelFormat());
     return ImagePtr(image.release());
