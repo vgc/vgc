@@ -183,14 +183,31 @@ private:
     double s_; // total arclength from start point
 };
 
+/// Returns a new sample with each attribute linearly interpolated.
+///
+/// Please note that due to the linear interpolation the new normal may
+/// no longer be of length 1. Use `nlerp()` if you want it re-normalized.
+///
 inline geometry::CurveSample
 lerp(const geometry::CurveSample& a, const geometry::CurveSample& b, double t) {
     const double ot = (1 - t);
     return geometry::CurveSample(
         a.position() * ot + b.position() * t,
-        (a.normal() * ot + b.normal() * t).normalized(),
+        a.normal() * ot + b.normal() * t,
         a.halfwidths() * ot + b.halfwidths() * t,
         a.s() * ot + b.s() * t);
+}
+
+/// Returns a new sample with each attribute linearly interpolated and
+/// the normal also re-normalized.
+///
+/// Use `lerp()` if you don't need the re-normalization.
+///
+inline geometry::CurveSample
+nlerp(const geometry::CurveSample& a, const geometry::CurveSample& b, double t) {
+    geometry::CurveSample ret = lerp(a, b, t);
+    ret.setNormal(ret.normal().normalized());
+    return ret;
 }
 
 /// Alias for `vgc::core::Array<vgc::geometry::CurveSample>`.
