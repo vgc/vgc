@@ -19,5 +19,6 @@
 namespace vgc::ui {
 
 VGC_DEFINE_LOG_CATEGORY(LogVgcUi, "vgc.ui")
+VGC_DEFINE_LOG_CATEGORY(LogVgcToolsSketch, "vgc.tools.sketch")
 
 } // namespace vgc::ui

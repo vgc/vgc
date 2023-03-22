@@ -384,7 +384,7 @@ void Canvas::onPaintDraw(graphics::Engine* engine, PaintOptions /*options*/) {
     //  - use transforms
     //  - setup target for layers (painting a layer means using its result)
     bool paintOutline = showControlPoints_;
-    {
+    if (workspace_) {
         //VGC_PROFILE_SCOPE("Canvas:WorkspaceVisit");
         workspace_->visitDepthFirst(
             [](workspace::Element* /*e*/, Int /*depth*/) {

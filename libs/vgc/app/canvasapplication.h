@@ -113,6 +113,10 @@ public:
         return document_;
     }
 
+    ui::CanvasTool* currentTool() const {
+        return tool_;
+    }
+
 private:
     std::string applicationName_;
     MainWindowPtr window_;
