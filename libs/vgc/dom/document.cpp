@@ -93,7 +93,7 @@ bool isNameChar_(char c) {
     // XML files are allowed to have quite fancy characters in names.
     // However, we disallow those in VGC files.
     //
-    return isNameStartChar_(c) || c == '-' || c == '.' || ('a' <= c && c <= 'z');
+    return isNameStartChar_(c) || c == '-' || c == '.' || ('0' <= c && c <= '9');
 }
 
 class Parser {
