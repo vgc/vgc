@@ -191,9 +191,9 @@ void deleteElement(workspace::Element* element, workspace::Workspace* workspace)
     // Note that due to signals, one removal may trigger other removals,
     // so it's safer to check if they're still alive.
     //
-    for (const dom::ElementPtr& element : elementsToDelete) {
-        if (element.isAlive()) {
-            element->remove();
+    for (const dom::ElementPtr& e : elementsToDelete) {
+        if (e.isAlive()) {
+            e->remove();
         }
     }
 
