@@ -360,7 +360,7 @@ void SketchTool::startCurve_(const geometry::Vec2d& p, double width) {
     hasStartSnap_ = false;
     startSnapPosition_ = p;
     if (isSnappingEnabled_) {
-        workspace::Element* snapVertex = computeSnapVertex_(p, nullptr);
+        snapVertex = computeSnapVertex_(p, nullptr);
         if (snapVertex) {
             hasStartSnap_ = true;
             startSnapPosition_ =
