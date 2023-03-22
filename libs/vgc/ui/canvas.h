@@ -153,6 +153,7 @@ protected:
     // Selection
     core::Array<std::pair<workspace::Element*, double>> selectionCandidateElements_;
     Int selectedElementId_ = 0;
+    workspace::Element* selectedElement_() const;
 
     // Graphics resources
     // VgcGraph
