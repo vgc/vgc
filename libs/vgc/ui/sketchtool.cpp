@@ -24,6 +24,7 @@
 #include <vgc/geometry/curve.h>
 #include <vgc/graphics/strings.h>
 #include <vgc/ui/cursor.h>
+#include <vgc/ui/logcategories.h>
 #include <vgc/ui/window.h>
 #include <vgc/workspace/edge.h>
 
@@ -330,81 +331,24 @@ void SketchTool::updateSmoothedData_() {
     }
 }
 
-void SketchTool::startCurve_(const geometry::Vec2d& p, double width) {
+namespace {
 
-    workspace::Workspace* workspace = this->workspace();
-    if (!workspace || !workspace->document()) {
-        return;
-    }
-
-    namespace ds = dom::strings;
-
-    // XXX CLEAN
-    static core::StringId Draw_Curve("Draw Curve");
-    core::History* history = workspace->history();
-    if (history) {
-        drawCurveUndoGroup_ = history->createUndoGroup(Draw_Curve);
-        drawCurveUndoGroupConnectionHandle_ = drawCurveUndoGroup_->undone().connect(
-            [this](core::UndoGroup*, bool /*isAbort*/) {
-                // isAbort should be true since we have no sub-group
-                isSketching_ = false;
-                drawCurveUndoGroup_ = nullptr;
-            });
-    }
-
-    workspace::Element* wVgc = workspace->vgcElement();
-    dom::Element* dVgc = wVgc->domElement();
-
-    // Compute start vertex to snap to
-    workspace::Element* snapVertex = nullptr;
-    hasStartSnap_ = false;
-    startSnapPosition_ = p;
-    if (isSnappingEnabled_) {
-        snapVertex = computeSnapVertex_(p, nullptr);
-        if (snapVertex) {
-            hasStartSnap_ = true;
-            startSnapPosition_ =
-                snapVertex->vacNode()->toCell()->toKeyVertex()->position();
+geometry::Vec2d getSnapPosition(workspace::Element* snapVertex) {
+    vacomplex::Node* node = snapVertex->vacNode();
+    if (node) {
+        vacomplex::Cell* cell = node->toCell();
+        if (cell) {
+            vacomplex::KeyVertex* keyVertex = cell->toKeyVertex();
+            if (keyVertex) {
+                return keyVertex->position();
+            }
         }
     }
-
-    // Get or create start vertex
-    dom::Element* startVertex = nullptr;
-    if (snapVertex) {
-        // TODO: What to do if there is no DOM element corresponding to this
-        // start vertex, e.g., composite shapes? For now, computeSnapVertex_()
-        // simply ensures that this is never the case.
-        startVertex = snapVertex->domElement();
-    }
-    else {
-        startVertex = dom::Element::create(dVgc, ds::vertex);
-        startVertex->setAttribute(ds::position, startSnapPosition_);
-    }
-
-    // Create end vertex
-    endVertex_ = dom::Element::create(dVgc, ds::vertex);
-    endVertex_->setAttribute(ds::position, startSnapPosition_);
-
-    // Create edge
-    edge_ = dom::Element::create(dVgc, ds::edge);
-    edge_->setAttribute(ds::positions, geometry::Vec2dArray());
-    edge_->setAttribute(ds::widths, core::DoubleArray());
-    edge_->setAttribute(ds::color, penColor_);
-    edge_->setAttribute(ds::startvertex, startVertex->getPathFromId());
-    edge_->setAttribute(ds::endvertex, endVertex_->getPathFromId());
-
-    // Append start point to geometry
-    continueCurve_(p, width);
-
-    // Update stroke tip
-    minimalLatencyStrokePoints_[0] = startSnapPosition_;
-    minimalLatencyStrokeWidths_[0] = width * 0.5;
-    minimalLatencyStrokePoints_[1] = p;
-    minimalLatencyStrokeWidths_[1] = width * 0.5;
-    minimalLatencyStrokeReload_ = true;
+    VGC_WARNING(
+        LogVgcToolsSketch,
+        "Snap vertex didn't have an associated KeyVertex: using (0, 0) as position.");
+    return geometry::Vec2d();
 }
-
-namespace {
 
 // Note: for now, the deformation is linear, which introduce a non-smooth
 // point at s = snapDeformationLength.
@@ -420,14 +364,99 @@ geometry::Vec2d snapDeformation(
 
 } // namespace
 
-void SketchTool::continueCurve_(const geometry::Vec2d& p, double width) {
+void SketchTool::startCurve_(const geometry::Vec2d& p, double width) {
 
+    // Fast return if missing required context
     workspace::Workspace* workspace = this->workspace();
     if (!workspace || !workspace->document()) {
         return;
     }
+    dom::Element* parentDomElement = workspace->vgcElement()->domElement();
+    if (!parentDomElement) {
+        return;
+    }
 
-    if (!edge_) {
+    // Create undo group.
+    // XXX: Cleanup this?
+    static core::StringId Draw_Curve("Draw Curve");
+    core::History* history = workspace->history();
+    if (history) {
+        drawCurveUndoGroup_ = history->createUndoGroup(Draw_Curve);
+        drawCurveUndoGroupConnectionHandle_ = drawCurveUndoGroup_->undone().connect(
+            [this](core::UndoGroup*, bool /*isAbort*/) {
+                // isAbort should be true since we have no sub-group
+                isSketching_ = false;
+                drawCurveUndoGroup_ = nullptr;
+            });
+    }
+
+    // Compute start vertex to snap to
+    workspace::Element* snapVertex = nullptr;
+    hasStartSnap_ = false;
+    startSnapPosition_ = p;
+    if (isSnappingEnabled_) {
+        snapVertex = computeSnapVertex_(p, nullptr);
+        if (snapVertex) {
+            hasStartSnap_ = true;
+            startSnapPosition_ = getSnapPosition(snapVertex);
+        }
+    }
+
+    // Get or create start vertex
+    //
+    // XXX What to do if snapVertex is non-null, but if there is no DOM element
+    // corresponding to this workspace element, e.g., due to composite shapes?
+    //
+    // For now, computeSnapVertex_() ensures that snapVertex->domElement() is
+    // never null, but we do not rely on it here. If snapVertex->domElement()
+    // is null, we create a new DOM vertex but keep hasStartSnap to true.
+    //
+    namespace ds = dom::strings;
+    dom::Element* startVertex = nullptr;
+    if (snapVertex) {
+        startVertex = snapVertex->domElement();
+    }
+    if (!startVertex) {
+        startVertex = dom::Element::create(parentDomElement, ds::vertex);
+        startVertex->setAttribute(ds::position, startSnapPosition_);
+    }
+
+    // Create end vertex
+    endVertex_ = dom::Element::create(parentDomElement, ds::vertex);
+    endVertex_->setAttribute(ds::position, startSnapPosition_);
+
+    // Create edge
+    edge_ = dom::Element::create(parentDomElement, ds::edge);
+    edge_->setAttribute(ds::positions, geometry::Vec2dArray());
+    edge_->setAttribute(ds::widths, core::DoubleArray());
+    edge_->setAttribute(ds::color, penColor_);
+    edge_->setAttribute(ds::startvertex, startVertex->getPathFromId());
+    edge_->setAttribute(ds::endvertex, endVertex_->getPathFromId());
+
+    // Append start point to geometry
+    continueCurve_(p, width);
+
+    // Set curve to fast tesselation to minimize lag. We do this after
+    // continueCurve_() to rely on workspace->sync() called there.
+    workspace::Element* edgeElement = workspace->find(edge_);
+    auto edgeCell = dynamic_cast<workspace::VacKeyEdge*>(edgeElement);
+    if (edgeCell) {
+        edgeCell->setTesselationMode(0);
+    }
+
+    // Update stroke tip
+    minimalLatencyStrokePoints_[0] = startSnapPosition_;
+    minimalLatencyStrokeWidths_[0] = width * 0.5;
+    minimalLatencyStrokePoints_[1] = p;
+    minimalLatencyStrokeWidths_[1] = width * 0.5;
+    minimalLatencyStrokeReload_ = true;
+}
+
+void SketchTool::continueCurve_(const geometry::Vec2d& p, double width) {
+
+    // Fast return if missing required context
+    workspace::Workspace* workspace = this->workspace();
+    if (!workspace || !workspace->document() || !edge_ || !endVertex_) {
         return;
     }
 
@@ -477,72 +506,60 @@ void SketchTool::continueCurve_(const geometry::Vec2d& p, double width) {
     edge_->setAttribute(ds::positions, points_);
     edge_->setAttribute(ds::widths, widths_);
     workspace->sync();
-
-    // set it to fast tesselation to minimize lag
-    workspace::Element* edgeElement = workspace->find(edge_);
-    auto edgeCell = dynamic_cast<workspace::VacKeyEdge*>(edgeElement);
-    if (edgeCell) {
-        edgeCell->setTesselationMode(0);
-    }
 }
 
 void SketchTool::finishCurve_() {
 
+    // Fast return if missing required context
     workspace::Workspace* workspace = this->workspace();
-    if (!workspace || !workspace->document()) {
+    if (!workspace || !workspace->document() || !edge_ || !endVertex_) {
         return;
     }
 
-    if (!edge_) {
-        return;
-    }
-
+    // Set curve to final requested tesselation mode
     workspace::Element* edgeElement = workspace->find(edge_);
     auto edgeCell = dynamic_cast<workspace::VacKeyEdge*>(edgeElement);
-    if (edgeCell) {
+    if (edgeCell && canvas()) {
         edgeCell->setTesselationMode(canvas()->requestedTesselationMode());
     }
 
-    const geometry::Vec2d lastInputPoint = lastInputPoints_[0];
-    if (smoothedInputPoints_.length() > 1) {
-        if (isSnappingEnabled_) {
+    // Compute end vertex snapping
+    if (isSnappingEnabled_ && smoothedInputPoints_.length() > 1) {
 
-            // Compute start vertex to snap to
-            workspace::Element* snapVertex =
-                computeSnapVertex_(lastInputPoint, endVertex_);
+        // Compute start vertex to snap to
+        geometry::Vec2d lastInputPoint = lastInputPoints_[0];
+        workspace::Element* snapVertex = computeSnapVertex_(lastInputPoint, endVertex_);
 
-            // If found, do the snapping
-            if (snapVertex) {
+        // If found, do the snapping
+        if (snapVertex) {
 
-                // Cap snap deformation length to ensure start point isn't modified
-                double maxS = smoothedInputArclengths_.last();
-                double snapDeformationLength_ = (std::min)(snapDeformationLength(), maxS);
+            // Cap snap deformation length to ensure start point isn't modified
+            double maxS = smoothedInputArclengths_.last();
+            double snapDeformationLength_ = (std::min)(snapDeformationLength(), maxS);
 
-                // Deform end of stroke to match snap position
-                double s = 0;
-                geometry::Vec2d snapPosition =
-                    snapVertex->vacNode()->toCell()->toKeyVertex()->position();
-                geometry::Vec2d delta = snapPosition - lastInputPoint;
-                points_.last() = snapPosition;
-                for (Int i = smoothedInputPoints_.length() - 2; i >= 0; --i) {
-                    s = maxS - smoothedInputArclengths_[i];
-                    if (s < snapDeformationLength_) {
-                        points_[i] =
-                            snapDeformation(points_[i], delta, s, snapDeformationLength_);
-                    }
-                    else {
-                        break;
-                    }
+            // Deform end of stroke to match snap position
+            double s = 0;
+            geometry::Vec2d snapPosition = getSnapPosition(snapVertex);
+            geometry::Vec2d delta = snapPosition - lastInputPoint;
+            points_.last() = snapPosition;
+            for (Int i = smoothedInputPoints_.length() - 2; i >= 0; --i) {
+                s = maxS - smoothedInputArclengths_[i];
+                if (s < snapDeformationLength_) {
+                    points_[i] =
+                        snapDeformation(points_[i], delta, s, snapDeformationLength_);
                 }
-
-                // Update DOM and workspace
-                namespace ds = dom::strings;
-                endVertex_->remove();
-                endVertex_ = snapVertex->domElement();
-                edge_->setAttribute(ds::positions, points_);
-                edge_->setAttribute(ds::endvertex, endVertex_->getPathFromId());
-                workspace->sync();
+                else {
+                    break;
+                }
             }
+
+            // Update DOM and workspace
+            namespace ds = dom::strings;
+            endVertex_->remove();
+            endVertex_ = snapVertex->domElement();
+            edge_->setAttribute(ds::positions, points_);
+            edge_->setAttribute(ds::endvertex, endVertex_->getPathFromId());
+            workspace->sync();
         }
     }
 }
