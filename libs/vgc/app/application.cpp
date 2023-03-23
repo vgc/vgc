@@ -133,19 +133,20 @@ QApplicationImpl::QApplicationImpl(int& argc, char** argv, Application* app)
 // `Application::exec()`
 //
 bool QApplicationImpl::notify(QObject* receiver, QEvent* event) {
+#ifdef VGC_DEBUG_BUILD
+    // Let exceptions go through up to the debugger to get
+    // a more useful call stack.
+    return QApplication::notify(receiver, event);
+#else
+    // Catch exceptions, let applications do last-minute save, and terminate.
     try {
         return QApplication::notify(receiver, event);
     }
     catch (...) {
-        std::exception_ptr ex = std::current_exception();
-        bool handled = app_->onUnhandledException();
-        if (!handled) {
-            std::terminate();
-        }
-        else {
-            return true;
-        }
+        app_->onUnhandledException();
+        std::terminate();
     }
+#endif
 };
 
 }; // namespace detail
@@ -189,8 +190,7 @@ void Application::setWindowIconFromResource(std::string_view rpath) {
     setWindowIcon(core::resourcePath(rpath));
 }
 
-bool Application::onUnhandledException() {
-    return false;
+void Application::onUnhandledException() {
 }
 
 } // namespace vgc::app

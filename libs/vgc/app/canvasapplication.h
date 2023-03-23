@@ -121,7 +121,7 @@ public:
 
 protected:
     // Reimplementation
-    bool onUnhandledException() override;
+    void onUnhandledException() override;
 
 private:
     std::string applicationName_;

@@ -173,12 +173,12 @@ CanvasApplication::create(int argc, char* argv[], std::string_view applicationNa
     return CanvasApplicationPtr(new CanvasApplication(argc, argv, applicationName));
 }
 
-bool CanvasApplication::onUnhandledException() {
+void CanvasApplication::onUnhandledException() {
 
     // Nothing to save if no document.
     //
     if (!document_) {
-        return false;
+        return;
     }
 
     // Determine where to save the recovery file.
@@ -230,20 +230,17 @@ bool CanvasApplication::onUnhandledException() {
     // Show error to the user.
     //
     std::string message = core::format(
-        "Critical error: {}\n\n"
+        "{}\n\n"
         "The software will now be closed.\n\n"
         "A recovery file was saved to: {}",
         errorMessage,
         ui::fromQt(filename_));
-    QMessageBox::critical(nullptr, "Critical error.", ui::toQt(message));
+    QMessageBox::critical(
+        nullptr, "Critical error.", QString("Critical Error: ") + ui::toQt(message));
 
     // Log the error.
     //
-    VGC_ERROR(LogVgcApp, message);
-
-    // Terminate the application.
-    //
-    return false;
+    VGC_CRITICAL(LogVgcApp, message);
 }
 
 void CanvasApplication::openDocument_(QString filename) {

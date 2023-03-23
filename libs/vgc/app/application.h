@@ -93,17 +93,11 @@ protected:
     /// saving the current document to a recovery file) if an unhandled
     /// exception is encountered during the execution of the application.
     ///
-    /// Return `false` if you cannot recover from the error, in which case the
-    /// application will be terminated.
-    ///
-    /// Return `true` if you recovered from the error, and wish the applicaiton
-    /// to continue running as usual.
-    ///
     /// You can use the following idiom to be able to perform a switch based on
     /// the exception type:
     ///
     /// ```cpp
-    /// bool MyApplication::onUnhandledException() {
+    /// void MyApplication::onUnhandledException() {
     ///     std::exception_ptr ex = std::current_exception();
     ///     try {
     ///         std::rethrow_exception(ex);
@@ -114,13 +108,12 @@ protected:
     ///     catch (...) {
     ///         std::cout << "Unknown error encountered" << std::endl;
     ///     }
-    ///     return false;
     /// }
     /// ```
     ///
-    /// The default implementation does nothing and returns false.
+    /// The default implementation does nothing.
     ///
-    virtual bool onUnhandledException();
+    virtual void onUnhandledException();
 
 private:
     friend class detail::QApplicationImpl;

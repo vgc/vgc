@@ -48,7 +48,7 @@ void appendPreambleToLogMessage(
     }
     switch (level) {
     case LogLevel::Critical:
-        appendStringToLogMessage(message, "Critical: ");
+        appendStringToLogMessage(message, "Critical Error: ");
         break;
     case LogLevel::Error:
         appendStringToLogMessage(message, "Error: ");
