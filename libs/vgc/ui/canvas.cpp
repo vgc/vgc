@@ -24,6 +24,7 @@
 #include <vgc/core/paths.h>
 #include <vgc/core/stopwatch.h>
 #include <vgc/core/stringid.h>
+#include <vgc/dom/strings.h>
 #include <vgc/geometry/curve.h>
 #include <vgc/graphics/strings.h>
 #include <vgc/ui/cursor.h>
@@ -109,6 +110,102 @@ void Canvas::stopLoggingUnder(core::PerformanceLog* parent) {
     drawTask_.stopLoggingUnder(renderLog.get());
 }
 
+namespace {
+
+void deleteVertexIfBecomesIsolated(
+    vacomplex::KeyVertex* v,
+    const workspace::Workspace* workspace,
+    core::Array<dom::ElementPtr>& elementsToDelete) {
+
+    if (v && v->star().length() == 1) {
+        workspace::Element* workspaceElement = workspace->find(v->id());
+        if (workspaceElement) {
+            elementsToDelete.append(workspaceElement->domElement());
+        }
+    }
+}
+
+// Note: VAC elements have raw and smart delete, non-VAC elements may have the
+// same, so it would be best to have the delete method virtual in
+// workspace::Element.
+//
+// For now, since the workspace update from VAC is not implemented, we only
+// handle deletion of edges that have no incident face, and delete them via DOM
+// operations. Later, deletion should be done by the VAC itself.
+//
+void deleteElement(workspace::Element* element, workspace::Workspace* workspace) {
+
+    // For now, only handle deletion of edges
+    if (!element || element->tagName() != dom::strings::edge) {
+        return;
+    }
+
+    // By default, delete the element (if no corresponding node, cell, or key edge)
+    bool shouldDeleteEdge = true;
+
+    // Determine which DOM objects to delete, and append them to a list of
+    // elements to delete. We defer deletion to ensure that no signals are
+    // emitted in this loop, potentially modifying the DOM.
+    //
+    core::Array<dom::ElementPtr> elementsToDelete;
+    vacomplex::Node* node = element->vacNode();
+    if (node) {
+        vacomplex::Cell* cell = node->toCell();
+        if (cell) {
+            vacomplex::KeyEdge* keyEdge = cell->toKeyEdge();
+            if (keyEdge) {
+                if (keyEdge->star().length() == 0) {
+
+                    // Remove isolated vertices. This is not mandatory from a
+                    // topological perspective, but is typically better for
+                    // users.
+                    //
+                    vacomplex::KeyVertex* v0 = keyEdge->startVertex();
+                    vacomplex::KeyVertex* v1 = keyEdge->endVertex();
+                    deleteVertexIfBecomesIsolated(v0, workspace, elementsToDelete);
+                    if (v1 != v0) {
+                        deleteVertexIfBecomesIsolated(v1, workspace, elementsToDelete);
+                    }
+                }
+                else {
+                    // Do not delete if the edge has incident faces.
+                    shouldDeleteEdge = false;
+                }
+            }
+        }
+    }
+    if (shouldDeleteEdge) {
+        elementsToDelete.prepend(element->domElement());
+    }
+
+    // Open history group
+    static core::StringId Delete_Element("Delete Element");
+    core::UndoGroup* undoGroup = nullptr;
+    core::History* history = workspace->history();
+    if (history) {
+        undoGroup = history->createUndoGroup(Delete_Element);
+    }
+
+    // Actually delete the elements via DOM modifications.
+    //
+    // Note that due to signals, one removal may trigger other removals,
+    // so it's safer to check if they're still alive.
+    //
+    for (const dom::ElementPtr& e : elementsToDelete) {
+        if (e.isAlive()) {
+            e->remove();
+        }
+    }
+
+    // Sync workspace and close operation.
+    workspace->sync();
+    if (undoGroup) {
+        undoGroup->close();
+    }
+}
+
+} // namespace
+
 bool Canvas::onKeyPress(KeyEvent* event) {
 
     switch (event->key()) {
@@ -124,6 +221,10 @@ bool Canvas::onKeyPress(KeyEvent* event) {
     case Key::P:
         showControlPoints_ = !showControlPoints_;
         requestRepaint();
+        break;
+    case Key::Backspace:
+    case Key::Delete:
+        deleteElement(selectedElement_(), workspace());
         break;
     default:
         return false;
@@ -414,9 +515,9 @@ void Canvas::onPaintDraw(graphics::Engine* engine, PaintOptions /*options*/) {
         reTesselate = false;
     }
 
-    if (selectionCandidateElements_.size()) {
-        workspace::Element* e = selectionCandidateElements_[selectedElementId_].first;
-        e->paint(engine, {}, workspace::PaintOption::Selected);
+    workspace::Element* selectedElement = selectedElement_();
+    if (selectedElement) {
+        selectedElement->paint(engine, {}, workspace::PaintOption::Selected);
     }
 
     engine->popViewMatrix();
@@ -434,6 +535,15 @@ void Canvas::onPaintDestroy(graphics::Engine*) {
 void Canvas::updateChildrenGeometry() {
     for (auto c : children()) {
         c->updateGeometry(rect());
+    }
+}
+
+workspace::Element* Canvas::selectedElement_() const {
+    if (selectionCandidateElements_.size()) {
+        return selectionCandidateElements_[selectedElementId_].first;
+    }
+    else {
+        return nullptr;
     }
 }
 
