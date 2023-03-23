@@ -24,10 +24,23 @@
 
 namespace vgc::app {
 
+class Application;
+
 namespace detail {
 
 struct VGC_APP_API PreInitializer {
     PreInitializer();
+};
+
+class VGC_APP_API QApplicationImpl : public QApplication {
+public:
+    QApplicationImpl(int& argc, char** argv, Application* app);
+
+    // Reimplements notify to handle exceptions.
+    bool notify(QObject* receiver, QEvent* event) override;
+
+private:
+    Application* app_;
 };
 
 } // namespace detail
@@ -75,7 +88,43 @@ public:
     ///
     void setWindowIconFromResource(std::string_view rpath);
 
+protected:
+    /// Overrides this function to perform any last minute operations (e.g.,
+    /// saving the current document to a recovery file) if an unhandled
+    /// exception is encountered during the execution of the application.
+    ///
+    /// Return `false` if you cannot recover from the error, in which case the
+    /// application will be terminated.
+    ///
+    /// Return `true` if you recovered from the error, and wish the applicaiton
+    /// to continue running as usual.
+    ///
+    /// You can use the following idiom to be able to perform a switch based on
+    /// the exception type:
+    ///
+    /// ```cpp
+    /// bool MyApplication::onUnhandledException() {
+    ///     std::exception_ptr ex = std::current_exception();
+    ///     try {
+    ///         std::rethrow_exception(ex);
+    ///     }
+    ///     catch (const core::IndexError& error) {
+    ///         std::cout << "Index error encountered" << std::endl;
+    ///     }
+    ///     catch (...) {
+    ///         std::cout << "Unknown error encountered" << std::endl;
+    ///     }
+    ///     return false;
+    /// }
+    /// ```
+    ///
+    /// The default implementation does nothing and returns false.
+    ///
+    virtual bool onUnhandledException();
+
 private:
+    friend class detail::QApplicationImpl;
+
     // Performs pre-initialization. Must be located before QApplication.
     detail::PreInitializer preInitializer_;
 
@@ -84,7 +133,7 @@ private:
     // are QWidgets and require an instance of QApplication.
     //
     int argc_; // we need to copy it because QApplication needs a reference.
-    QApplication application_;
+    detail::QApplicationImpl application_;
 };
 
 } // namespace vgc::app
