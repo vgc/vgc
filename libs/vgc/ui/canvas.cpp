@@ -222,6 +222,7 @@ bool Canvas::onKeyPress(KeyEvent* event) {
         showControlPoints_ = !showControlPoints_;
         requestRepaint();
         break;
+    case Key::Backspace:
     case Key::Delete:
         deleteElement(selectedElement_(), workspace());
         break;
