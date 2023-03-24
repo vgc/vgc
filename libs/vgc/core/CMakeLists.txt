@@ -16,6 +16,7 @@ vgc_add_library(core
         color.h
         colors.h
         compiler.h
+        datetime.h
         dll.h
         enum.h
         exceptions.h
@@ -51,6 +52,7 @@ vgc_add_library(core
         animtime.cpp
         arithmetic.cpp
         color.cpp
+        datetime.cpp
         exceptions.cpp
         format.cpp
         history.cpp
