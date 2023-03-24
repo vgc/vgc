@@ -16,15 +16,12 @@
 
 #include <vgc/app/canvasapplication.h>
 
-#include <ctime>
-
-#include <fmt/chrono.h>
-
 #include <QFileDialog>
 #include <QMessageBox>
 #include <QStandardPaths>
 
 #include <vgc/app/logcategories.h>
+#include <vgc/core/datetime.h>
 #include <vgc/dom/strings.h>
 #include <vgc/ui/qtutil.h>
 #include <vgc/ui/shortcut.h>
@@ -188,9 +185,8 @@ void CanvasApplication::onUnhandledException() {
     QString suffix;   // ".vgci"
     if (filename_.isEmpty()) {
         dir = QDir(QStandardPaths::writableLocation(QStandardPaths::HomeLocation));
-        std::time_t now = time(NULL);
-        std::tm* tm = localtime(&now);
-        basename = ui::toQt(core::format("vgc-recovered-file-{:%Y-%m-%d}", *tm));
+        core::DateTime now = core::DateTime::now().toLocalTime();
+        basename = ui::toQt(core::format("vgc-recovered-file-{:%Y-%m-%d}", now));
         suffix = ".vgci";
     }
     else {
