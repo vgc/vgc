@@ -43,6 +43,19 @@ enum class TimeMode : UInt8 {
 /// \class vgc::core::DateTime
 /// \brief Stores a date and time, in local time, UTC, or a given time zone.
 ///
+/// Example usage:
+///
+/// ```cpp
+/// vgc::core::DateTime utc = vgc::core::DateTime::now();
+/// vgc::core::DateTime local = utc.toLocalTime();
+/// std::string utcString = vgc::core::format("{:%Y-%m-%d %H:%M:%S}", utc);
+/// std::string localString = vgc::core::format("{:%Y-%m-%d %H:%M:%S}", local);
+///
+/// // Possible output:
+/// // utcString   = "2023-03-24 18:23:42"
+/// // localString = "2023-03-24 19:23:42"
+/// ```
+///
 /// Note: this class is currently very minimal, but should be improved in the
 /// future, once all C++ compilers supported by VGC implement C++20 calendar
 /// and time zones features (utc_clock, time_zone, etc.)
