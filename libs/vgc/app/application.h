@@ -89,12 +89,12 @@ public:
     void setWindowIconFromResource(std::string_view rpath);
 
 protected:
-    /// Overrides this function to perform any last minute operations (e.g.,
+    /// Override this function to perform any last minute operations (e.g.,
     /// saving the current document to a recovery file) if an unhandled
     /// exception is encountered during the execution of the application.
     ///
-    /// You can use the following idiom to be able to perform a switch based on
-    /// the exception type:
+    /// You can use the following idiom if you wish to retrieve the exception
+    /// message or perform different actions based on the exception type:
     ///
     /// ```cpp
     /// void MyApplication::onUnhandledException() {
@@ -103,10 +103,10 @@ protected:
     ///         std::rethrow_exception(ex);
     ///     }
     ///     catch (const core::IndexError& error) {
-    ///         std::cout << "Index error encountered" << std::endl;
+    ///         std::cout << "Index error encountered: " << error.what() << std::endl;
     ///     }
     ///     catch (...) {
-    ///         std::cout << "Unknown error encountered" << std::endl;
+    ///         std::cout << "Unknown error encountered." << std::endl;
     ///     }
     /// }
     /// ```
