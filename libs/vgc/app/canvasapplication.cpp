@@ -21,6 +21,7 @@
 #include <QStandardPaths>
 
 #include <vgc/app/logcategories.h>
+#include <vgc/core/datetime.h>
 #include <vgc/dom/strings.h>
 #include <vgc/ui/qtutil.h>
 #include <vgc/ui/shortcut.h>
@@ -167,6 +168,75 @@ CanvasApplication::CanvasApplication(
 CanvasApplicationPtr
 CanvasApplication::create(int argc, char* argv[], std::string_view applicationName) {
     return CanvasApplicationPtr(new CanvasApplication(argc, argv, applicationName));
+}
+
+void CanvasApplication::onUnhandledException() {
+
+    // Nothing to save if no document.
+    //
+    if (!document_) {
+        return;
+    }
+
+    // Determine where to save the recovery file.
+    //
+    QDir dir;         // "/home/user/Documents/MyPictures"
+    QString basename; // "cat"
+    QString suffix;   // ".vgci"
+    if (filename_.isEmpty()) {
+        dir = QDir(QStandardPaths::writableLocation(QStandardPaths::HomeLocation));
+        core::DateTime now = core::DateTime::now().toLocalTime();
+        basename = ui::toQt(core::format("vgc-recovered-file-{:%Y-%m-%d}", now));
+        suffix = ".vgci";
+    }
+    else {
+        QFileInfo info(filename_);
+        dir = info.dir();
+        basename = info.baseName();
+        suffix = "." + info.completeSuffix();
+    }
+
+    // Try to append ~1, ~2, 3, etc. to the filename until we find a filename
+    // that doesn't exist yet, and save the recovery file there.
+    //
+    int maxRecoverVersion = 10000;
+    for (int i = 1; i <= maxRecoverVersion; ++i) {
+        QString name = basename + "~" + QString::number(i) + suffix;
+        if (!dir.exists(name)) {
+            filename_ = dir.absoluteFilePath(name);
+            doSave_();
+            break;
+        }
+    }
+
+    // Get error message if possible.
+    //
+    std::exception_ptr ex = std::current_exception();
+    std::string errorMessage;
+    try {
+        std::rethrow_exception(ex);
+    }
+    catch (const std::exception& error) {
+        errorMessage = error.what();
+    }
+    catch (...) {
+        errorMessage = "Unknown error.";
+    }
+
+    // Show error to the user.
+    //
+    std::string message = core::format(
+        "{}\n\n"
+        "The software will now be closed.\n\n"
+        "A recovery file was saved to: {}",
+        errorMessage,
+        ui::fromQt(filename_));
+    QMessageBox::critical(
+        nullptr, "Critical error.", QString("Critical Error: ") + ui::toQt(message));
+
+    // Log the error.
+    //
+    VGC_CRITICAL(LogVgcApp, message);
 }
 
 void CanvasApplication::openDocument_(QString filename) {

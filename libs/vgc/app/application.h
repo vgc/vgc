@@ -24,10 +24,23 @@
 
 namespace vgc::app {
 
+class Application;
+
 namespace detail {
 
 struct VGC_APP_API PreInitializer {
     PreInitializer();
+};
+
+class VGC_APP_API QApplicationImpl : public QApplication {
+public:
+    QApplicationImpl(int& argc, char** argv, Application* app);
+
+    // Reimplements notify to handle exceptions.
+    bool notify(QObject* receiver, QEvent* event) override;
+
+private:
+    Application* app_;
 };
 
 } // namespace detail
@@ -75,7 +88,36 @@ public:
     ///
     void setWindowIconFromResource(std::string_view rpath);
 
+protected:
+    /// Override this function to perform any last minute operations (e.g.,
+    /// saving the current document to a recovery file) if an unhandled
+    /// exception is encountered during the execution of the application.
+    ///
+    /// You can use the following idiom if you wish to retrieve the exception
+    /// message or perform different actions based on the exception type:
+    ///
+    /// ```cpp
+    /// void MyApplication::onUnhandledException() {
+    ///     std::exception_ptr ex = std::current_exception();
+    ///     try {
+    ///         std::rethrow_exception(ex);
+    ///     }
+    ///     catch (const core::IndexError& error) {
+    ///         std::cout << "Index error encountered: " << error.what() << std::endl;
+    ///     }
+    ///     catch (...) {
+    ///         std::cout << "Unknown error encountered." << std::endl;
+    ///     }
+    /// }
+    /// ```
+    ///
+    /// The default implementation does nothing.
+    ///
+    virtual void onUnhandledException();
+
 private:
+    friend class detail::QApplicationImpl;
+
     // Performs pre-initialization. Must be located before QApplication.
     detail::PreInitializer preInitializer_;
 
@@ -84,7 +126,7 @@ private:
     // are QWidgets and require an instance of QApplication.
     //
     int argc_; // we need to copy it because QApplication needs a reference.
-    QApplication application_;
+    detail::QApplicationImpl application_;
 };
 
 } // namespace vgc::app

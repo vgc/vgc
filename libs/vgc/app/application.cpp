@@ -114,12 +114,47 @@ PreInitializer::PreInitializer() {
     setAttribute(Qt::AA_DisableHighDpiScaling, true);
 }
 
+QApplicationImpl::QApplicationImpl(int& argc, char** argv, Application* app)
+    : QApplication(argc, argv)
+    , app_(app) {
+}
+
+// Letting exceptions unhandled though QApplication::exec() causes the
+// following Qt warning:
+//
+// « Qt has caught an exception thrown from an event handler. Throwing
+// exceptions from an event handler is not supported in Qt.
+// You must not let any exception whatsoever propagate through Qt code.
+// If that is not possible, in Qt 5 you must at least reimplement
+// QCoreApplication::notify() and catch all exceptions there. »
+//
+// Therefore, the try-catch below should be done here in notify(),
+// than around `application_.exec()` in the implementation of
+// `Application::exec()`
+//
+bool QApplicationImpl::notify(QObject* receiver, QEvent* event) {
+#ifdef VGC_DEBUG_BUILD
+    // Let exceptions go through up to the debugger to get
+    // a more useful call stack.
+    return QApplication::notify(receiver, event);
+#else
+    // Catch exceptions, let applications do last-minute save, and terminate.
+    try {
+        return QApplication::notify(receiver, event);
+    }
+    catch (...) {
+        app_->onUnhandledException();
+        std::terminate();
+    }
+#endif
+};
+
 }; // namespace detail
 
 Application::Application(int argc, char* argv[])
     : preInitializer_()
     , argc_(argc)
-    , application_(argc_, argv) {
+    , application_(argc_, argv, this) {
 
     setBasePath();
 
@@ -153,6 +188,9 @@ void Application::setWindowIcon(std::string_view iconPath) {
 
 void Application::setWindowIconFromResource(std::string_view rpath) {
     setWindowIcon(core::resourcePath(rpath));
+}
+
+void Application::onUnhandledException() {
 }
 
 } // namespace vgc::app

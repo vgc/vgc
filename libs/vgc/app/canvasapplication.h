@@ -113,9 +113,15 @@ public:
         return document_;
     }
 
+    /// Returns the current `CanvasTool`.
+    ///
     ui::CanvasTool* currentTool() const {
         return tool_;
     }
+
+protected:
+    // Reimplementation
+    void onUnhandledException() override;
 
 private:
     std::string applicationName_;
