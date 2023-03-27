@@ -237,7 +237,7 @@ void CanvasApplication::showCrashPopup_(
     if (wasRecoverySaved) {
         msg += "<p>Good news, we saved your work here:</p>";
         msg += "<p><b>";
-        msg += filename_.toHtmlEscaped();
+        msg += QDir::toNativeSeparators(filename_).toHtmlEscaped();
         msg += "</b></p>";
     }
     msg += "<p>We would love to fix this bug. "
