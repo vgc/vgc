@@ -172,6 +172,24 @@ PreInitializer::PreInitializer() {
 QApplicationImpl::QApplicationImpl(int& argc, char** argv, Application* app)
     : QApplication(argc, argv)
     , app_(app) {
+
+#ifdef VGC_CORE_OS_MACOS
+    // Fix all text in message boxes being bold in macOS.
+    //
+    // Also note that in Qt 5.15.2 (fixed in 5.15.3 and Qt6), there are
+    // incorrect kernings with some fonts, especially the space after
+    // commas/periods in the default SF Pro font starting macOS 11, see:
+    //
+    // https://bugreports.qt.io/browse/QTBUG-88495
+    //
+    // Using Helvetica Neue works around this issue.
+    //
+    setStyleSheet("QMessageBox QLabel {"
+                  "    font-family: Helvetica Neue;"
+                  "    font-size: 12pt;"
+                  "    font-weight: 300;"
+                  "}");
+#endif
 }
 
 // Letting exceptions unhandled though QApplication::exec() causes the
