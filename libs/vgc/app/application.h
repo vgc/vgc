@@ -39,9 +39,14 @@ public:
     // Reimplements notify to handle exceptions.
     bool notify(QObject* receiver, QEvent* event) override;
 
+    // Handles a system signal by calling app_->onSystemSignalReceived
+    void onSystemSignalReceived(std::string_view errorMessage, int sig);
+
 private:
     Application* app_;
 };
+
+void systemSignalHandler(int sig);
 
 } // namespace detail
 
@@ -93,8 +98,13 @@ protected:
     /// saving the current document to a recovery file) if an unhandled
     /// exception is encountered during the execution of the application.
     ///
-    /// You can use the following idiom if you wish to retrieve the exception
-    /// message or perform different actions based on the exception type:
+    /// The default implementation logs the error via `VGC_CRITICAL()`.
+    ///
+    /// It is recommended to call the default implementation at the end of your
+    /// override using `SuperClass::onUnhandledException(errorMessage)`.
+    ///
+    /// You can use the following idiom if you wish to perform different
+    /// actions based on the exception type, for example:
     ///
     /// ```cpp
     /// void MyApplication::onUnhandledException() {
@@ -111,9 +121,34 @@ protected:
     /// }
     /// ```
     ///
-    /// The default implementation does nothing.
+    virtual void onUnhandledException(std::string_view errorMessage);
+
+    /// Override this function to perform any last minute operations (e.g.,
+    /// saving the current document to a recovery file) if the application
+    /// receives a system signal, i.e. one of:
     ///
-    virtual void onUnhandledException();
+    /// - SIGTERM: Termination request sent to the program.
+    /// - SIGSEGV: Invalid memory access (segmentation fault).
+    /// - SIGINT: External interrupt, usually initiated by the user.
+    /// - SIGILL: invalid program image, such as invalid instruction.
+    /// - SIGABRT: abnormal termination condition (e.g., initiated by `abort()`).
+    /// - SIGFPE: erroneous arithmetic operation (e.g., divide by zero).
+    ///
+    /// The default implementation logs the error via `VGC_CRITICAL()` then
+    /// calls `exit(1)`.
+    ///
+    /// It is recommended to call the base implementation at the end of your
+    /// override using `SuperClass::onSystemSignalReceived(errorMessage)`.
+    ///
+    /// Note that the C++ standard provides very little guarantees on what
+    /// functions you are allowed to call here (e.g., no dynamic allocation,
+    /// see [1]), but in practice, in the operating systems supported by VGC,
+    /// it is generally okay to save a file and/or show a message box, which is
+    /// much preferrable than crashing without attempting these things.
+    ///
+    /// [1] https://en.cppreference.com/w/cpp/utility/program/signal)
+    ///
+    virtual void onSystemSignalReceived(std::string_view errorMessage, int sig);
 
 private:
     friend class detail::QApplicationImpl;

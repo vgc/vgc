@@ -121,7 +121,8 @@ public:
 
 protected:
     // Reimplementation
-    void onUnhandledException() override;
+    void onUnhandledException(std::string_view errorMessage) override;
+    void onSystemSignalReceived(std::string_view errorMessage, int sig) override;
 
 private:
     std::string applicationName_;
@@ -134,6 +135,10 @@ private:
     ui::ColorPalette* palette_ = nullptr;
     ui::Canvas* canvas_ = nullptr;
     ui::SketchTool* tool_ = nullptr;
+
+    bool recoverySave_();
+    void showCrashPopup_(std::string_view errorMessage, bool wasRecoverySaved);
+    void crashHandler_(std::string_view errorMessage);
 
     void createWidgets_();
     void createActions_(ui::Widget* parent);

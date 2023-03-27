@@ -16,6 +16,8 @@
 
 #include <vgc/app/application.h>
 
+#include <csignal> // signal, SIGABRT, SIGFPE, SIGILL, SIGINT, SIGSEGV, SIGTERM
+
 #include <string_view>
 
 #include <QDir>
@@ -27,12 +29,49 @@
 #    include <Windows.h>
 #endif
 
+#include <vgc/app/logcategories.h>
 #include <vgc/core/paths.h>
 #include <vgc/ui/qtutil.h>
 
 namespace vgc::app {
 
 namespace {
+
+const char* signalName(int sig) {
+    switch (sig) {
+    case SIGTERM:
+        return "SIGTERM";
+    case SIGSEGV:
+        return "SIGSEGV";
+    case SIGINT:
+        return "SIGINT";
+    case SIGILL:
+        return "SIGILL";
+    case SIGABRT:
+        return "SIGABRT";
+    case SIGFPE:
+        return "SIGFPE";
+    }
+    return "Unknown signal";
+}
+
+const char* signalDescription(int sig) {
+    switch (sig) {
+    case SIGTERM:
+        return "Termination request sent to the program.";
+    case SIGSEGV:
+        return "Invalid memory access (segmentation fault).";
+    case SIGINT:
+        return "External interrupt."; // usually initiated by the user
+    case SIGILL:
+        return "Invalid program image."; // such as invalid instruction
+    case SIGABRT:
+        return "Abnormal termination condition."; // e.g. initiated by std::abort()";
+    case SIGFPE:
+        return "Erroneous arithmetic operation (e.g., divide by zero).";
+    }
+    return "An error happened.";
+}
 
 #ifdef VGC_QOPENGL_EXPERIMENT
 // test fix for white artefacts during Windows window resizing.
@@ -100,6 +139,15 @@ void setBasePath() {
     core::setBasePath(basePath);
 }
 
+// Prevent showing the error message twice to the user:
+// - Once in onUnhandledException()
+// - Once in systemSignalHandler(SIGABRT), caused by
+//   std::terminate() called after onUnhandledException().
+//
+// See QApplicationImpl::notify() and systemSignalHandler().
+//
+static bool isUnhandledException_ = false;
+
 } // namespace
 
 namespace detail {
@@ -107,6 +155,13 @@ namespace detail {
 // Initializations that must happen before creating the QGuiApplication.
 //
 PreInitializer::PreInitializer() {
+
+    // Setup a signal handler to do something meaningful on segfault, etc.
+    for (int sig : {SIGABRT, SIGFPE, SIGILL, SIGINT, SIGSEGV, SIGTERM}) {
+        std::signal(sig, detail::systemSignalHandler);
+    }
+
+    // Set various application attributes
     if (qopenglExperiment) {
         setAttribute(Qt::AA_ShareOpenGLContexts);
     }
@@ -117,6 +172,24 @@ PreInitializer::PreInitializer() {
 QApplicationImpl::QApplicationImpl(int& argc, char** argv, Application* app)
     : QApplication(argc, argv)
     , app_(app) {
+
+#ifdef VGC_CORE_OS_MACOS
+    // Fix all text in message boxes being bold in macOS.
+    //
+    // Also note that in Qt 5.15.2 (fixed in 5.15.3 and Qt6), there are
+    // incorrect kernings with some fonts, especially the space after
+    // commas/periods in the default SF Pro font starting macOS 11, see:
+    //
+    // https://bugreports.qt.io/browse/QTBUG-88495
+    //
+    // Using Helvetica Neue works around this issue.
+    //
+    setStyleSheet("QMessageBox QLabel {"
+                  "    font-family: Helvetica Neue;"
+                  "    font-size: 12pt;"
+                  "    font-weight: 300;"
+                  "}");
+#endif
 }
 
 // Letting exceptions unhandled though QApplication::exec() causes the
@@ -132,6 +205,12 @@ QApplicationImpl::QApplicationImpl(int& argc, char** argv, Application* app)
 // than around `application_.exec()` in the implementation of
 // `Application::exec()`
 //
+// XXX Instead of #ifdef VGC_DEBUG_BUILD, one option might be to check, at the
+// start of the application (or each invokation of notify(), depending on how
+// slow it is in each platform), whether a debugger is currently attached to
+// the application. We would keep the try {} catch {} blocks only if no
+// debugger is attached.
+//
 bool QApplicationImpl::notify(QObject* receiver, QEvent* event) {
 #ifdef VGC_DEBUG_BUILD
     // Let exceptions go through up to the debugger to get
@@ -142,12 +221,39 @@ bool QApplicationImpl::notify(QObject* receiver, QEvent* event) {
     try {
         return QApplication::notify(receiver, event);
     }
+    catch (const std::exception& error) {
+        isUnhandledException_ = true;
+        app_->onUnhandledException(error.what());
+        std::terminate();
+    }
     catch (...) {
-        app_->onUnhandledException();
+        isUnhandledException_ = true;
+        app_->onUnhandledException("Unknown error.");
         std::terminate();
     }
 #endif
 };
+
+void QApplicationImpl::onSystemSignalReceived(std::string_view errorMessage, int sig) {
+    app_->onSystemSignalReceived(errorMessage, sig);
+}
+
+// TODO: get stacktrace, e.g., via https://github.com/bombela/backward-cpp
+void systemSignalHandler(int sig) {
+    if (isUnhandledException_) {
+        exit(1);
+    }
+    std::string errorMessage =
+        core::format("{}: {}", signalName(sig), signalDescription(sig));
+    if (qApp) {
+        static_cast<detail::QApplicationImpl*>(qApp)->onSystemSignalReceived(
+            errorMessage, sig);
+    }
+    else {
+        VGC_CRITICAL(LogVgcApp, errorMessage);
+        exit(1);
+    }
+}
 
 }; // namespace detail
 
@@ -190,7 +296,13 @@ void Application::setWindowIconFromResource(std::string_view rpath) {
     setWindowIcon(core::resourcePath(rpath));
 }
 
-void Application::onUnhandledException() {
+void Application::onUnhandledException(std::string_view errorMessage) {
+    VGC_CRITICAL(LogVgcApp, "Unhandled exception: {}", errorMessage);
+}
+
+void Application::onSystemSignalReceived(std::string_view errorMessage, int /*sig*/) {
+    VGC_CRITICAL(LogVgcApp, errorMessage);
+    exit(1);
 }
 
 } // namespace vgc::app

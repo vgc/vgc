@@ -170,12 +170,22 @@ CanvasApplication::create(int argc, char* argv[], std::string_view applicationNa
     return CanvasApplicationPtr(new CanvasApplication(argc, argv, applicationName));
 }
 
-void CanvasApplication::onUnhandledException() {
+void CanvasApplication::onUnhandledException(std::string_view errorMessage) {
+    crashHandler_(errorMessage);
+    SuperClass::onUnhandledException(errorMessage);
+}
+
+void CanvasApplication::onSystemSignalReceived(std::string_view errorMessage, int sig) {
+    crashHandler_(errorMessage);
+    SuperClass::onSystemSignalReceived(errorMessage, sig);
+}
+
+bool CanvasApplication::recoverySave_() {
 
     // Nothing to save if no document.
     //
     if (!document_) {
-        return;
+        return false;
     }
 
     // Determine where to save the recovery file.
@@ -205,38 +215,62 @@ void CanvasApplication::onUnhandledException() {
         if (!dir.exists(name)) {
             filename_ = dir.absoluteFilePath(name);
             doSave_();
-            break;
+            return true;
         }
     }
 
-    // Get error message if possible.
+    // Failed to save.
     //
-    std::exception_ptr ex = std::current_exception();
-    std::string errorMessage;
-    try {
-        std::rethrow_exception(ex);
+    return false;
+}
+
+void CanvasApplication::showCrashPopup_(
+    std::string_view errorMessage,
+    bool wasRecoverySaved) {
+
+    // Construct error message to show to the user.
+    //
+    QString title = "Oops! Something went wrong";
+    QString msg;
+    msg += "<p>We're very sorry, a bug occured and the application will now be closed."
+           " It's totally our fault, not yours.</p>";
+    if (wasRecoverySaved) {
+        msg += "<p>Good news, we saved your work here:</p>";
+        msg += "<p><b>";
+        msg += QDir::toNativeSeparators(filename_).toHtmlEscaped();
+        msg += "</b></p>";
     }
-    catch (const std::exception& error) {
-        errorMessage = error.what();
-    }
-    catch (...) {
-        errorMessage = "Unknown error.";
-    }
+    msg += "<p>We would love to fix this bug. "
+           "You can help us by describing what happened at:</p>"
+           "<p><a href='https://github.com/vgc/vgc/issues/new/choose'>"
+           "https://github.com/vgc/vgc/issues</a></p>"
+           "<p>On behalf of all users, thank you.</p>";
+    msg += "<p>More details:</p><p>";
+    msg += ui::toQt(errorMessage).toHtmlEscaped();
+    msg += "</p>";
 
     // Show error to the user.
     //
-    std::string message = core::format(
-        "{}\n\n"
-        "The software will now be closed.\n\n"
-        "A recovery file was saved to: {}",
-        errorMessage,
-        ui::fromQt(filename_));
-    QMessageBox::critical(
-        nullptr, "Critical error.", QString("Critical Error: ") + ui::toQt(message));
+    QMessageBox messageBox(nullptr);
+    messageBox.setWindowTitle(title);
+    messageBox.setTextFormat(Qt::RichText); // makes the links clickable
+    messageBox.setText(msg);
+    messageBox.exec();
+}
 
-    // Log the error.
-    //
-    VGC_CRITICAL(LogVgcApp, message);
+// In debug builds, we silently show the location of the saved file instead of
+// using a popup, since having to close the popup each time when debugging is a
+// bit annoying.
+//
+void CanvasApplication::crashHandler_([[maybe_unused]] std::string_view errorMessage) {
+    bool wasRecoverySaved = recoverySave_();
+#ifdef VGC_DEBUG_BUILD
+    if (wasRecoverySaved) {
+        VGC_INFO(LogVgcApp, "Recovery file saved to: {}.", ui::fromQt(filename_));
+    }
+#else
+    showCrashPopup_(errorMessage, wasRecoverySaved);
+#endif
 }
 
 void CanvasApplication::openDocument_(QString filename) {
