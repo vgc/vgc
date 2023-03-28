@@ -8,6 +8,9 @@ vgc_add_library(ui
         dom
         workspace
 
+    MACOS_DEPENDENCIES
+        "-framework ApplicationServices"
+
     CPP_HEADER_FILES
         action.h
         actiongroup.h
@@ -93,6 +96,9 @@ vgc_add_library(ui
 
         detail/paintutil.cpp
         detail/qopenglengine.cpp
+
+    OBJCPP_FILES
+        cursor_macos.mm
 
     RESOURCE_FILES
         stylesheets/default.vgcss
