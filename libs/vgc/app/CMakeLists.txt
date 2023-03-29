@@ -5,7 +5,7 @@ vgc_add_library(app
     VGC_DEPENDENCIES
         ui
 
-    HEADER_FILES
+    CPP_HEADER_FILES
         application.h
         canvasapplication.h
         logcategories.h
@@ -13,7 +13,7 @@ vgc_add_library(app
         mainwidget.h
         nativemenubar.h
 
-    CPP_FILES
+    CPP_SOURCE_FILES
         application.cpp
         canvasapplication.cpp
         logcategories.cpp

@@ -8,7 +8,7 @@ vgc_add_library(ui
         dom
         workspace
 
-    HEADER_FILES
+    CPP_HEADER_FILES
         action.h
         actiongroup.h
         api.h
@@ -28,6 +28,7 @@ vgc_add_library(ui
         label.h
         lineedit.h
         logcategories.h
+        macospermissions.h
         margins.h
         menu.h
         menubutton.h
@@ -52,7 +53,7 @@ vgc_add_library(ui
         detail/paintutil.h
         detail/qopenglengine.h
 
-    CPP_FILES
+    CPP_SOURCE_FILES
         action.cpp
         actiongroup.cpp
         button.cpp

@@ -52,12 +52,12 @@ endfunction()
 #     VGC_DEPENDENCIES
 #         myvgclib2
 #
-#     HEADER_FILES
+#     CPP_HEADER_FILES
 #         class1.h
 #         class2.h
 #         headeronlyclass.h
 #
-#     CPP_FILES
+#     CPP_SOURCE_FILES
 #         class1.cpp
 #         class2.cpp
 #
@@ -77,15 +77,21 @@ function(vgc_add_library LIB_NAME)
     set(multiValueArgs
             THIRD_DEPENDENCIES
             VGC_DEPENDENCIES
-            HEADER_FILES
-            CPP_FILES
+            MACOS_DEPENDENCIES
+            CPP_HEADER_FILES
+            CPP_SOURCE_FILES
+            OBJCPP_HEADER_FILES
+            OBJCPP_SOURCE_FILES
             COMPILE_DEFINITIONS
             RESOURCE_FILES
             NATVIS_FILES)
     cmake_parse_arguments(ARG "${options}" "${oneValueArgs}" "${multiValueArgs}" ${ARGN})
 
     # Create library target "vgc_<libname>_lib"
-    add_library(${LIB_TARGET} SHARED ${ARG_HEADER_FILES} ${ARG_CPP_FILES} ${ARG_NATVIS_FILES})
+    add_library(${LIB_TARGET} SHARED ${ARG_CPP_HEADER_FILES} ${ARG_CPP_SOURCE_FILES} ${ARG_NATVIS_FILES})
+    if(APPLE)
+        target_sources(${LIB_TARGET} PRIVATE ${ARG_OBJCPP_HEADER_FILES} ${ARG_OBJCPP_SOURCE_FILES})
+    endif()
 
     # Set library output directory and filenames.
     #
@@ -136,6 +142,11 @@ function(vgc_add_library LIB_NAME)
 
     # Add dependencies to third-party dependencies
     target_link_libraries(${LIB_TARGET} PUBLIC ${ARG_THIRD_DEPENDENCIES})
+
+    # Add macOS dependencies
+    if(APPLE)
+        target_link_libraries(${LIB_TARGET} PRIVATE ${ARG_MACOS_DEPENDENCIES})
+    endif()
 
     # Set compile definitions, that is, values given to preprocessor variables
     # These are public, that is, they propagate to dependent libraries.
@@ -447,7 +458,7 @@ endfunction()
 #     VGC_DEPENDENCIES
 #         vgclib1
 #
-#     CPP_FILES
+#     CPP_SOURCE_FILES
 #         main.cpp
 # )
 #
@@ -458,11 +469,11 @@ function(vgc_add_app APP_NAME)
 
     set(options "")
     set(oneValueArgs "")
-    set(multiValueArgs THIRD_DEPENDENCIES VGC_DEPENDENCIES CPP_FILES COMPILE_DEFINITIONS RESOURCE_FILES)
+    set(multiValueArgs THIRD_DEPENDENCIES VGC_DEPENDENCIES CPP_SOURCE_FILES COMPILE_DEFINITIONS RESOURCE_FILES)
     cmake_parse_arguments(ARG "${options}" "${oneValueArgs}" "${multiValueArgs}" ${ARGN})
     
     # Add executable
-    add_executable(${APP_TARGET} WIN32 ${ARG_CPP_FILES})
+    add_executable(${APP_TARGET} WIN32 ${ARG_CPP_SOURCE_FILES})
 
     # VGC dependencies. We need to:
     # - link to all dependent libs

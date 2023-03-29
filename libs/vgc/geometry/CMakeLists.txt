@@ -5,7 +5,7 @@ vgc_add_library(geometry
     VGC_DEPENDENCIES
         core
 
-    HEADER_FILES
+    CPP_HEADER_FILES
         api.h
         bezier.h
         bezierspline.h
@@ -39,7 +39,7 @@ vgc_add_library(geometry
         vec4d.h
         vec4f.h
 
-    CPP_FILES
+    CPP_SOURCE_FILES
         camera2d.cpp
         curve.cpp
         curves2d.cpp

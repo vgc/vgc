@@ -4,7 +4,7 @@ vgc_add_library(dom
     VGC_DEPENDENCIES
         geometry
 
-    HEADER_FILES
+    CPP_HEADER_FILES
         api.h
         attribute.h
         document.h
@@ -20,7 +20,7 @@ vgc_add_library(dom
         value.h
         xmlformattingstyle.h
 
-    CPP_FILES
+    CPP_SOURCE_FILES
         attribute.cpp
         document.cpp
         element.cpp
