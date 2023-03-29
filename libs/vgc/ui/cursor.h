@@ -36,9 +36,8 @@ namespace vgc::ui {
 ///
 /// \sa popCursor(), CursorChanger
 ///
-VGC_UI_API
 VGC_NODISCARD("You need to store the cursor id in order to be able to pop it later.")
-Int pushCursor(const QCursor& cursor);
+VGC_UI_API Int pushCursor(const QCursor& cursor);
 
 /// Pops the given cursor ID from the cursor stack.
 ///

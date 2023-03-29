@@ -222,8 +222,10 @@ bool NumberEdit::onMousePress(MouseEvent* event) {
     // position (which enable infinite drag when using a mouse), or via using the
     // local cursor position (which is typically necessary for graphics tablets).
     //
-    if (canSetGlobalCursorPosition() || event->hasPressure()) {
-        //     ^^^^^^^^^^^^^ TODO: Implement and use event->isAbsolute() instead?
+    if (!canSetGlobalCursorPosition() || event->hasPressure()) {
+        //                               ^^^^^^^^^^^^^^^^^^^^
+        //            TODO: Implement and use event->isAbsolute() instead?
+        //
         // Example of scenarios that may not be properly supported right now:
         // 1. A graphics tablet which does not have pressure
         // 2. A graphics tablet which does have pressure but is in relative mode.
