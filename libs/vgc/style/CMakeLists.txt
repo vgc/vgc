@@ -4,7 +4,7 @@ vgc_add_library(style
     VGC_DEPENDENCIES
         core
 
-    HEADER_FILES
+    CPP_HEADER_FILES
         api.h
         logcategories.h
         metrics.h
@@ -17,7 +17,7 @@ vgc_add_library(style
         types.h
         value.h
 
-    CPP_FILES
+    CPP_SOURCE_FILES
         logcategories.cpp
         parse.cpp
         sheet.cpp

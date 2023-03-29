@@ -124,6 +124,11 @@ include(tools/VgcTools.cmake)
 # Use C++17
 set(CMAKE_CXX_STANDARD 17)
 
+# On macOS, also use Objective-C++. Requires CMake 3.16+.
+if(APPLE)
+    enable_language(OBJCXX)
+endif()
+
 # Tell CMake where to find our FindFoobar.cmake modules.
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}/tools")
 

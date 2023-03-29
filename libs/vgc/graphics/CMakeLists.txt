@@ -8,7 +8,7 @@ vgc_add_library(graphics
         geometry
         style
 
-    HEADER_FILES
+    CPP_HEADER_FILES
         api.h
         batch.h
         blendstate.h
@@ -41,7 +41,7 @@ vgc_add_library(graphics
         detail/pipelinestate.h
         detail/pixelformats.h
 
-    CPP_FILES
+    CPP_SOURCE_FILES
         engine.cpp
         exceptions.cpp
         font.cpp

@@ -2,7 +2,7 @@ vgc_add_library(topology
     VGC_DEPENDENCIES
         geometry
 
-    HEADER_FILES
+    CPP_HEADER_FILES
         api.h
         cell.h
         dataobject.h
@@ -21,7 +21,7 @@ vgc_add_library(topology
 
         detail/operationsimpl.h
 
-    CPP_FILES
+    CPP_SOURCE_FILES
         cell.cpp
         edgegeometry.cpp
         exceptions.cpp

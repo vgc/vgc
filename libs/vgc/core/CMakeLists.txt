@@ -6,7 +6,7 @@ vgc_add_library(core
 
     VGC_DEPENDENCIES
 
-    HEADER_FILES
+    CPP_HEADER_FILES
         algorithm.h
         animtime.h
         api.h
@@ -47,7 +47,7 @@ vgc_add_library(core
         detail/containerutil.h
         detail/signal.h
 
-    CPP_FILES
+    CPP_SOURCE_FILES
         algorithm.cpp
         animtime.cpp
         arithmetic.cpp

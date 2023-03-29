@@ -2,7 +2,7 @@ vgc_add_app(uitest
     VGC_DEPENDENCIES
         app
 
-    CPP_FILES
+    CPP_SOURCE_FILES
         main.cpp
 
     RESOURCE_FILES

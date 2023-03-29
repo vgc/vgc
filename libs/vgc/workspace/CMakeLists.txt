@@ -4,7 +4,7 @@ vgc_add_library(workspace
         graphics
         topology
 
-    HEADER_FILES
+    CPP_HEADER_FILES
         api.h
         edge.h
         element.h
@@ -13,7 +13,7 @@ vgc_add_library(workspace
         vertex.h
         workspace.h
 
-    CPP_FILES
+    CPP_SOURCE_FILES
         edge.cpp
         element.cpp
         layer.cpp
