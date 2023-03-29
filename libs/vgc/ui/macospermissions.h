@@ -1,4 +1,4 @@
-// Copyright 2021 The VGC Developers
+// Copyright 2023 The VGC Developers
 // See the COPYRIGHT file at the top-level directory of this distribution
 // and at https://github.com/vgc/vgc/blob/master/COPYRIGHT
 //
@@ -18,6 +18,7 @@
 #define VGC_UI_MACOSPERMISSIONS_H
 
 #include <vgc/core/os.h>
+#include <vgc/ui/api.h>
 
 #ifdef VGC_CORE_OS_MACOS
 
@@ -31,6 +32,7 @@ namespace vgc::ui {
 ///
 /// This function is only available on macOS.
 ///
+VGC_UI_API
 bool hasAccessibilityPermissions();
 
 } // namespace vgc::ui
