@@ -22,6 +22,7 @@
 
 #include <vgc/core/colors.h>
 #include <vgc/ui/logcategories.h>
+#include <vgc/ui/macospermissions.h>
 #include <vgc/ui/qtutil.h>
 
 namespace vgc::ui {
@@ -117,6 +118,14 @@ geometry::Vec2f globalCursorPosition() {
 void setGlobalCursorPosition(const geometry::Vec2f& position) {
     // TODO: use iround<int>() instead (not implemented as of writing this).
     QCursor::setPos(core::ifloor<int>(position.x()), core::ifloor<int>(position.y()));
+}
+
+bool canSetGlobalCursorPosition() {
+#ifdef VGC_CORE_OS_MACOS
+    return hasAccessibilityPermissions();
+#else
+    return true;
+#endif
 }
 
 core::Color colorUnderCursor() {

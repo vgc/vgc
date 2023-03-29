@@ -31,6 +31,7 @@ vgc_add_library(ui
         label.h
         lineedit.h
         logcategories.h
+        macospermissions.h
         margins.h
         menu.h
         menubutton.h
@@ -97,8 +98,8 @@ vgc_add_library(ui
         detail/paintutil.cpp
         detail/qopenglengine.cpp
 
-    OBJCPP_FILES
-        cursor_macos.mm
+    OBJCPP_SOURCE_FILES
+        macospermissions.mm
 
     RESOURCE_FILES
         stylesheets/default.vgcss

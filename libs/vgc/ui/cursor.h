@@ -72,22 +72,21 @@ geometry::Vec2f globalCursorPosition();
 /// Sets the global position of the mouse cursor in device-independent
 /// pixels.
 ///
-/// In macOS, this can only be used if the user has granted accessibility
-/// permissions to your application. See `hasAccessibilityPermissions()`.
+/// In some platforms, or depending on app permissions, this may not be
+/// allowed, in which case this function does nothing. You can use
+/// `canSetGlobalCursorPosition()` beforehand to check whether this function
+/// has any effect. For example, on macOS, setting the global cursor position
+/// requires accessibility permissions (see `hasAccessibilityPermissions()`).
 ///
 void setGlobalCursorPosition(const geometry::Vec2f& position);
 
-// XXX have the function available on all platforms, and return true
-// elsewhere than macOS?
-#ifdef VGC_CORE_OS_MACOS
-
-/// Returns whether the user has granted accessibility permissions to your
-/// your application. These permissions are required for
-/// `setGlobalCursorPosition()` to work.
+/// Whether the application is allowed to set the global cursor position
+/// via `setGlobalCursorPosition()`.
 ///
-bool hasAccessibilityPermissions();
-
-#endif
+/// For example, on macOS, setting the global cursor position requires
+/// accessibility permissions" (see `hasAccessibilityPermissions()`).
+///
+bool canSetGlobalCursorPosition();
 
 /// Returns the color under the mouse cursor. Returns a black color in
 /// case of errors (e.g., failed to queried which screen was under the cursor).

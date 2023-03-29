@@ -222,11 +222,7 @@ bool NumberEdit::onMousePress(MouseEvent* event) {
     // position (which enable infinite drag when using a mouse), or via using the
     // local cursor position (which is typically necessary for graphics tablets).
     //
-    bool hasSetGlobalCursorPosition = true;
-#ifdef VGC_CORE_OS_MACOS
-    hasSetGlobalCursorPosition = hasAccessibilityPermissions();
-#endif
-    if (!hasSetGlobalCursorPosition || event->hasPressure()) {
+    if (canSetGlobalCursorPosition() || event->hasPressure()) {
         //     ^^^^^^^^^^^^^ TODO: Implement and use event->isAbsolute() instead?
         // Example of scenarios that may not be properly supported right now:
         // 1. A graphics tablet which does not have pressure
