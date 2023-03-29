@@ -135,13 +135,13 @@ bool NumberEdit::onMouseMove(MouseEvent* event) {
         return LineEdit::onMouseMove(event);
     }
 
-    // When dragging in absolute mode, calling setGlobalCursorPosition() might
+    // When dragging in infinite mode, calling setGlobalCursorPosition() might
     // generate a mouse event in some platforms. Skipping one mouse event prevents
-    // infinite loops (possibly at the cause of missing real useful mouse events,
+    // infinite loops (possibly at the risk of missing real useful mouse events,
     // but it's more important to prevent infinite loops and there is no perfect
     // solution for this problem).
     //
-    if (isAbsoluteMode_ && skipNextMouseMove_) {
+    if (isDragInfiniteMode_ && skipNextMouseMove_) {
         skipNextMouseMove_ = false;
         return false;
     }
@@ -150,7 +150,7 @@ bool NumberEdit::onMouseMove(MouseEvent* event) {
         return false;
     }
 
-    if (isAbsoluteMode_) {
+    if (isDragInfiniteMode_) {
 
         // Compute delta based on system-queried global cursor position.
         //
@@ -218,24 +218,38 @@ bool NumberEdit::onMousePress(MouseEvent* event) {
     isDragInitiated_ = true;
     isDragEpsilonReached_ = false;
 
-    // Detect whether we should perform dragging by using the absolute cursor
-    // position (which enable infinite drag when using a mouse), or via using the
-    // local cursor position (which is typically necessary for graphics tablets).
+    // Detect whether to use:
     //
-    if (event->hasPressure()) {
-        //     ^^^^^^^^^^^^^ TODO: Implement and use event->isAbsolute() instead?
+    // 1. "standard dragging", where the cursor stays visible and can
+    //    get stuck at the edge of the screen.
+    //
+    // 2. "infinite dragging", where we hide the cursor and restore it to its
+    //    initial position after each move, remembering the deltas.
+    //
+    // Infinite mode requires the ability to set the global cursor position,
+    // which is not always possible depending on the platform and app
+    // permissions.
+    //
+    // Infinite mode is not possible when using a graphics tablet in "absolute
+    // mode" (the typical mode), that is, when there is a mapping between the
+    // physical pen location and the cursor location.
+    //
+    if (canSetGlobalCursorPosition() && !event->hasPressure()) {
+        //                              ^^^^^^^^^^^^^^^^^^^^^
+        //            TODO: Implement and use !event->isAbsolute() instead?
+        //
         // Example of scenarios that may not be properly supported right now:
         // 1. A graphics tablet which does not have pressure
         // 2. A graphics tablet which does have pressure but is in relative mode.
         //
-        isAbsoluteMode_ = false;
+        isDragInfiniteMode_ = true;
     }
     else {
-        isAbsoluteMode_ = true;
+        isDragInfiniteMode_ = false;
     }
 
     // Initialize dragging
-    if (isAbsoluteMode_) {
+    if (isDragInfiniteMode_) {
         mousePositionOnMousePress_ = globalCursorPosition();
         deltaPositionX_ = 0;
         skipNextMouseMove_ = false;
@@ -391,7 +405,7 @@ void NumberEdit::updateCursor_() {
         else {
             cursorChangerOnMouseHover_.clear();
         }
-        if (isDragInitiated_ && isAbsoluteMode_) {
+        if (isDragInitiated_ && isDragInfiniteMode_) {
             cursorChangerOnValueDrag_.set(Qt::BlankCursor);
         }
         else {

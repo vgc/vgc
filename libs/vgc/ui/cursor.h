@@ -21,6 +21,7 @@
 
 #include <vgc/core/color.h>
 #include <vgc/geometry/vec2f.h>
+#include <vgc/ui/api.h>
 
 namespace vgc::ui {
 
@@ -36,18 +37,19 @@ namespace vgc::ui {
 /// \sa popCursor(), CursorChanger
 ///
 VGC_NODISCARD("You need to store the cursor id in order to be able to pop it later.")
-Int pushCursor(const QCursor& cursor);
+VGC_UI_API Int pushCursor(const QCursor& cursor);
 
 /// Pops the given cursor ID from the cursor stack.
 ///
 /// \sa pushCursor(), CursorChanger
 ///
+VGC_UI_API
 void popCursor(Int id);
 
 /// \class vgc::ui::CursorChanger
 /// \brief A helper class to push/pop cursors
 ///
-class CursorChanger {
+class VGC_UI_API CursorChanger {
 public:
     /// Changes the current cursor to the given cursor.
     ///
@@ -67,18 +69,36 @@ private:
 /// Returns the global position of the mouse cursor in device-independent
 /// pixels.
 ///
+VGC_UI_API
 geometry::Vec2f globalCursorPosition();
 
 /// Sets the global position of the mouse cursor in device-independent
 /// pixels.
 ///
+/// Depending or the platform or app permissions, this may not be allowed, in
+/// which case this function does nothing. You can use
+/// `canSetGlobalCursorPosition()` beforehand to check whether this function
+/// has any effect. For example, on macOS, setting the global cursor position
+/// requires accessibility permissions (see `hasAccessibilityPermissions()`).
+///
+VGC_UI_API
 void setGlobalCursorPosition(const geometry::Vec2f& position);
+
+/// Whether the application is allowed to set the global cursor position
+/// via `setGlobalCursorPosition()`.
+///
+/// For example, on macOS, setting the global cursor position requires
+/// accessibility permissions" (see `hasAccessibilityPermissions()`).
+///
+VGC_UI_API
+bool canSetGlobalCursorPosition();
 
 /// Returns the color under the mouse cursor. Returns a black color in
 /// case of errors (e.g., failed to queried which screen was under the cursor).
 ///
 /// Warning: this can be an expensive operation.
 ///
+VGC_UI_API
 core::Color colorUnderCursor();
 
 } // namespace vgc::ui

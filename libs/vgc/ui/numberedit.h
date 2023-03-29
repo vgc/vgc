@@ -216,7 +216,7 @@ private:
     double oldValue_;
 
     // Drag mode
-    bool isAbsoluteMode_ = true;
+    bool isDragInfiniteMode_ = false;
     bool isDragInitiated_ = false;
     bool isDragEpsilonReached_ = false;
     bool skipNextMouseMove_ = false;
