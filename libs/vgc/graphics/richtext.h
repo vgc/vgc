@@ -389,7 +389,7 @@ private:
     geometry::Vec2f advance_(Int position) const;
     float maxCursorHorizontalAdvance_() const;
     void updateScroll_();
-    void insertText_(std::string_view text);
+    bool insertText_(std::string_view text);
 };
 
 } // namespace vgc::graphics

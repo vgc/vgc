@@ -184,16 +184,19 @@ void RichText::setText(std::string_view text) {
         // Remembers old cursor position
         Int oldSelectionEnd = selectionEnd_;
 
-        // Set text empty. We need to provide a valid selection as it is a
-        // precondition of insertText_(). However, we don't need to set
-        // shapedText_.setText() now since it is done anyway by insertText_().
-        //
-        text_.clear();
+        // Setup valid state for insertText_().
+        // For now, shapedText_ still contains the old text.
         selectionStart_ = 0;
         selectionEnd_ = 0;
+        text_.clear();
 
-        // Delegate insertion to insertText_()
-        insertText_(text);
+        // Delegate most of the work to insertText_()
+        bool inserted = insertText_(text);
+
+        // If nothing was inserted, clear shapedText_ now
+        if (!inserted) {
+            shapedText_.setText(text_);
+        }
 
         // Rollback cursor position
         Int minPosition = shapedText_.minPosition();
@@ -694,7 +697,7 @@ void RichText::updateScroll_() {
 // Inserts text at the current cursor position. The new cursor position
 // becomes the end of the inserted text and the selection is cleared.
 //
-void RichText::insertText_(std::string_view textToInsert) {
+bool RichText::insertText_(std::string_view textToInsert) {
 
     // Get number of bytes to insert after removing unsupported characters
     size_t numBytesToInsert = 0;
@@ -747,6 +750,8 @@ void RichText::insertText_(std::string_view textToInsert) {
 
     // Clear selection
     selectionStart_ = selectionEnd_;
+
+    return numBytesToInsert > 0;
 }
 
 } // namespace vgc::graphics
