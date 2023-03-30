@@ -21,6 +21,7 @@
 #include <vgc/ui/grid.h>
 #include <vgc/ui/imagebox.h>
 #include <vgc/ui/lineedit.h>
+#include <vgc/ui/messagedialog.h>
 #include <vgc/ui/numberedit.h>
 #include <vgc/ui/overlayarea.h>
 #include <vgc/ui/plot2d.h>
@@ -137,6 +138,7 @@ private:
         createPlot2d_(rightTopPanel);
         createGrid_(rightBottomPanel);
         createClickMePopups_(rightBottomPanel);
+        createMessageDialogButtons_(rightBottomPanel);
         createLineEdits_(rightBottomPanel);
         createNumberEdits_(rightBottomPanel);
         createImageBox_(rightBottomPanel);
@@ -283,6 +285,14 @@ private:
                 });
             }
         }
+    }
+
+    void createMessageDialogButtons_(ui::Widget* parent) {
+
+        ui::Flex* row = parent->createChild<ui::Flex>(ui::FlexDirection::Row);
+
+        ui::MessageDialog* dialog = row->createChild<ui::MessageDialog>();
+        dialog->addText("Hello dialog");
     }
 
     void createImageBox_(ui::Widget* parent) {

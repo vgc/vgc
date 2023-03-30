@@ -222,6 +222,20 @@
     padding-left: 5dp;
 }
 
+.Dialog {
+    background-color: rgb(249, 51, 53);
+    /*
+    padding-right: 15dp;
+    padding-left: 15dp;
+    padding-top: 15dp;
+    padding-bottom: 15dp;
+    */
+    border-top-left-radius: 8dp;
+    border-top-right-radius: 8dp;
+    border-bottom-right-radius: 8dp;
+    border-bottom-left-radius: 8dp;
+}
+
 .ColorPreview {
     border-width: 1dp;
     border-top-left-radius: 3dp;

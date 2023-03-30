@@ -21,6 +21,7 @@ vgc_add_library(ui
         colorpalette.h
         column.h
         cursor.h
+        dialog.h
         event.h
         exceptions.h
         flex.h
@@ -35,6 +36,7 @@ vgc_add_library(ui
         margins.h
         menu.h
         menubutton.h
+        messagedialog.h
         modifierkey.h
         mouseevent.h
         numberedit.h
@@ -65,9 +67,9 @@ vgc_add_library(ui
         colorpalette.cpp
         column.cpp
         cursor.cpp
+        dialog.cpp
         event.cpp
         exceptions.cpp
-        numberedit.cpp
         flex.cpp
         grid.cpp
         imagebox.cpp
@@ -79,8 +81,10 @@ vgc_add_library(ui
         margins.cpp
         menu.cpp
         menubutton.cpp
+        messagedialog.cpp
         modifierkey.cpp
         mouseevent.cpp
+        numberedit.cpp
         overlayarea.cpp
         panel.cpp
         panelarea.cpp
