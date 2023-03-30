@@ -34,7 +34,7 @@ OverlayAreaPtr OverlayArea::create() {
 void OverlayArea::setAreaWidget(Widget* widget) {
     if (widget != areaWidget_) {
         if (areaWidget_) {
-            areaWidget_->replace(widget);
+            widget->replace(areaWidget_);
         }
         areaWidget_ = widget;
     }

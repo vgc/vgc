@@ -272,14 +272,14 @@ public:
     /// Returns whether `replacedWidget` can be replaced by this widget. See `replace()`
     /// for details.
     ///
-    bool canReplace(Widget* oldWidget);
+    bool canReplace(Widget* replacedWidget);
 
     /// Replaces the given `replacedWidget` with this widget. This destroys
     /// `replacedWidget` and all its descendants, except this widget and all
     /// its descendants. Does nothing if `replacedWidget` is this widget
     /// itself.
     ///
-    /// A `NullError` exception is raised if `oldWidget` is `nullptr`.
+    /// A `NullError` exception is raised if `replacedWidget` is `nullptr`.
     ///
     /// A `ChildCycleError` exception is raised if `replacedWidget` is a
     /// (strict) descendant this widget.
