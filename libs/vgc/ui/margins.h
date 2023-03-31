@@ -313,6 +313,27 @@ inline geometry::Rect2f operator-(const geometry::Rect2f& rect, const Margins& m
         rect.yMax() - margins.bottom());
 }
 
+/// Reads a `Margins` from the input stream, and stores it in the given output
+/// parameter `m`. Leading whitespaces are allowed. Raises `ParseError` if the
+/// stream does not start with a `Vec4d`. Raises `RangeError` if one of its
+/// coordinates is outside the representable range of a double.
+///
+template<typename IStream>
+void readTo(Margins& m, IStream& in) {
+    vgc::geometry::Vec4f v;
+    readTo(v, in);
+    m = Margins(v);
+}
+
 } // namespace vgc::ui
+
+// see https://fmt.dev/latest/api.html#formatting-user-defined-types
+template<>
+struct fmt::formatter<vgc::ui::Margins> : fmt::formatter<vgc::geometry::Vec4f> {
+    template<typename FormatContext>
+    auto format(const vgc::ui::Margins& m, FormatContext& ctx) {
+        return fmt::formatter<vgc::geometry::Vec4f>::format(m.toVec4f(), ctx);
+    }
+};
 
 #endif // VGC_UI_MARGINS_H

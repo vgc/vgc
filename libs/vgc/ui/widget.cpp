@@ -283,18 +283,36 @@ geometry::Rect2f Widget::mapTo(Widget* other, const geometry::Rect2f& rect) cons
     return res;
 }
 
-geometry::Rect2f Widget::contentRect() const {
-    namespace ss = style::strings;
-    using detail::getLengthInPx;
-    using detail::getLengthOrPercentageInPx;
+// Note: by design, when margins are expressed in percentage, they are
+// relative to the size of this widget, not the parent widget. This makes
+// it easy for designers to provide equal values for margins and padding.
+// If/when designers want to create spacing between widgets relative to the
+// size of parent, they can always choose a combination of padding and gap.
+//
+Margins Widget::margin() const {
     geometry::Vec2f s = size();
-    Margins border(getLengthInPx(this, ss::border_width));
-    Margins padding(
-        getLengthOrPercentageInPx(this, ss::padding_top, s[1]),
-        getLengthOrPercentageInPx(this, ss::padding_right, s[0]),
-        getLengthOrPercentageInPx(this, ss::padding_bottom, s[1]),
-        getLengthOrPercentageInPx(this, ss::padding_left, s[0]));
-    geometry::Rect2f res = rect() - border - padding;
+    return Margins(
+        detail::getLengthOrPercentageInPx(this, style::strings::margin_top, s[1]),
+        detail::getLengthOrPercentageInPx(this, style::strings::margin_right, s[0]),
+        detail::getLengthOrPercentageInPx(this, style::strings::margin_bottom, s[1]),
+        detail::getLengthOrPercentageInPx(this, style::strings::margin_left, s[0]));
+}
+
+Margins Widget::padding() const {
+    geometry::Vec2f s = size();
+    return Margins(
+        detail::getLengthOrPercentageInPx(this, style::strings::padding_top, s[1]),
+        detail::getLengthOrPercentageInPx(this, style::strings::padding_right, s[0]),
+        detail::getLengthOrPercentageInPx(this, style::strings::padding_bottom, s[1]),
+        detail::getLengthOrPercentageInPx(this, style::strings::padding_left, s[0]));
+}
+
+Margins Widget::border() const {
+    return Margins(detail::getLengthInPx(this, style::strings::border_width));
+}
+
+geometry::Rect2f Widget::contentRect() const {
+    geometry::Rect2f res = rect() - border() - padding();
     if (res.xMin() > res.xMax()) {
         float x = 0.5f * (res.xMin() + res.xMax());
         res.setXMin(x);
