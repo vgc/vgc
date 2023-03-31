@@ -65,7 +65,22 @@ public:
         return relative_;
     }
 
+    // returns the length required for the sum of the contributions to be equal
+    // to that length, when relative contributions are considered relative to
+    // that length.
+    //
+    // This is essentially equal to `absolute() / (1 - relative())`, with some
+    // extra safeguard in case `relative()` is negative or equal or greater
+    // than 1.
+    //
     float compute() const;
+
+    // returns the sum of the contributions when relative contributions are
+    // considered relative to the given `length`.
+    //
+    // This is equal to `absolute() + length * relative()`.
+    //
+    float computeFor(float length) const;
 
 private:
     float absolute_ = 0.0f;
@@ -213,7 +228,7 @@ public:
     }
 
     /// Adds the given value in px to the "absolute" part of the preferred
-    /// width.
+    /// height.
     ///
     void addHeight(float absoluteHeight) {
         heightContributions_.addAbsolute(absoluteHeight);
@@ -381,6 +396,244 @@ private:
     detail::LengthContributions widthContributions_;
     detail::LengthContributions heightContributions_;
     style::LengthOrPercentageOrAuto preferredWidth_;
+    style::LengthOrPercentageOrAuto preferredHeight_;
+    bool hint_;
+};
+
+/// \class vgc::ui:::PreferredWidthForHeightCalculator
+/// \brief A helper class to compute a widget's preferred width for height.
+///
+/// Implementing the virtual method `Widget::preferredWidthForHeight()` can be
+/// tricky and/or repetitive, since some of the lengths can be given in
+/// percentage of the widget itself, and one should not forget to add the
+/// padding and border, which can also be given in percentage.
+///
+/// This helper class makes it easier.
+///
+// TODO: apply hinting
+class VGC_UI_API PreferredWidthForHeightCalculator {
+public:
+    /// Creates a `PreferredWidthForHeightCalculator` for the given `widget` and `targetHeight`.
+    ///
+    PreferredWidthForHeightCalculator(const Widget* widget, float targetHeight);
+
+    /// Returns the widget associated with this `PreferredWidthForHeightCalculator`.
+    ///
+    const Widget* widget() const {
+        return widget_;
+    }
+
+    /// Returns the target height associated with this `PreferredWidthForHeightCalculator`.
+    ///
+    float targetHeight() const {
+        return targetHeight_;
+    }
+
+    /// Returns the remaining height for children after removing this widget's
+    /// border and padding from `targetHeight()`.
+    ///
+    /// This function ensures that the returned value is never negative.
+    ///
+    float getChildrenTargetHeight();
+
+    /// Returns whether the `preferred-width` style property of `widget()` is
+    /// `auto`.
+    ///
+    bool isWidthAuto() const {
+        return preferredWidth_.isAuto();
+    }
+
+    /// Returns the "absolute" part of the preferred width added so far to the
+    /// calculator.
+    ///
+    float absoluteWidth() const {
+        return widthContributions_.absolute();
+    }
+
+    /// Returns the "relative" part of the preferred width added so far to the
+    /// calculator.
+    ///
+    float relativeWidth() const {
+        return widthContributions_.relative();
+    }
+
+    /// Adds the given value in px to the "absolute" part of the preferred
+    /// width.
+    ///
+    void addWidth(float absoluteWidth) {
+        widthContributions_.addAbsolute(absoluteWidth);
+    }
+
+    /// Adds the given value to the "relative" part of the preferred width.
+    /// This should be a value between 0 and 1 representing a percentage of the
+    /// width of the border box of the `widget()`.
+    ///
+    void addRelativeWidth(float relativeWidth) {
+        widthContributions_.addRelative(relativeWidth);
+    }
+
+    /// Adds the given style value to the preferred width, multiplied by
+    /// `count`.
+    ///
+    void addWidth(
+        const style::Metrics& metrics,
+        const style::Value& value,
+        float count = 1.0f) {
+
+        widthContributions_.add(metrics, value, count);
+    }
+
+    /// Adds the given style `property` of the given stylable object `obj` to
+    /// the preferred width, mutliplied by `count`.
+    ///
+    void addWidth(
+        const style::StylableObject* obj,
+        core::StringId property,
+        float count = 1.0f) {
+
+        addWidth(obj->styleMetrics(), obj->style(property), count);
+    }
+
+    /// Adds the given style `property` of `widget()` to the preferred width,
+    /// mutliplied by `count`.
+    ///
+    void addWidth(core::StringId property, float count = 1.0f) {
+        addWidth(widget_, property, count);
+    }
+
+    /// Adds the padding and border of the widget to the preferred width.
+    ///
+    void addPaddingAndBorder();
+
+    /// Computes and returns the preferred width based on the given absolute
+    /// and relative lengths as well as the style property `preferred-width` of
+    /// the widget.
+    ///
+    float compute() const;
+
+private:
+    const Widget* widget_;
+    float targetHeight_;
+    detail::LengthContributions widthContributions_;
+    style::LengthOrPercentageOrAuto preferredWidth_;
+    bool hint_;
+};
+
+/// \class vgc::ui:::PreferredHeightForWidthCalculator
+/// \brief A helper class to compute a widget's preferred height for width.
+///
+/// Implementing the virtual method `Widget::preferredHeightForWidth()` can be
+/// tricky and/or repetitive, since some of the lengths can be given in
+/// percentage of the widget itself, and one should not forget to add the
+/// padding and border, which can also be given in percentage.
+///
+/// This helper class makes it easier.
+///
+// TODO: apply hinting
+class VGC_UI_API PreferredHeightForWidthCalculator {
+public:
+    /// Creates a `PreferredHeightForWidthCalculator` for the given `widget` and `targetWidth`.
+    ///
+    PreferredHeightForWidthCalculator(const Widget* widget, float targetWidth);
+
+    /// Returns the widget associated with this `PreferredHeightForWidthCalculator`.
+    ///
+    const Widget* widget() const {
+        return widget_;
+    }
+
+    /// Returns the target width associated with this `PreferredHeightForWidthCalculator`.
+    ///
+    float targetWidth() const {
+        return targetWidth_;
+    }
+
+    /// Returns the remaining width for children after removing this widget's
+    /// border and padding from `targetWidth()`.
+    ///
+    /// This function ensures that the returned value is never negative.
+    ///
+    float getChildrenTargetWidth();
+
+    /// Returns whether the `preferred-height` style property of `widget()` is
+    /// `auto`.
+    ///
+    bool isHeightAuto() const {
+        return preferredHeight_.isAuto();
+    }
+
+    /// Returns the "absolute" part of the preferred height added so far to the
+    /// calculator.
+    ///
+    float absoluteHeight() const {
+        return heightContributions_.absolute();
+    }
+
+    /// Returns the "relative" part of the preferred height added so far to the
+    /// calculator.
+    ///
+    float relativeHeight() const {
+        return heightContributions_.relative();
+    }
+
+    /// Adds the given value in px to the "absolute" part of the preferred
+    /// width.
+    ///
+    void addHeight(float absoluteHeight) {
+        heightContributions_.addAbsolute(absoluteHeight);
+    }
+
+    /// Adds the given value to the "relative" part of the preferred height.
+    /// This should be a value between 0 and 1 representing a percentage of the
+    /// height of the border box of the `widget()`.
+    ///
+    void addRelativeHeight(float relativeHeight) {
+        heightContributions_.addRelative(relativeHeight);
+    }
+
+    /// Adds the given style value to the preferred height, multiplied by
+    /// `count`.
+    ///
+    void addHeight(
+        const style::Metrics& metrics,
+        const style::Value& value,
+        float count = 1.0f) {
+
+        heightContributions_.add(metrics, value, count);
+    }
+
+    /// Adds the given style `property` of the given stylable object `obj` to
+    /// the preferred height, mutliplied by `count`.
+    ///
+    void addHeight(
+        const style::StylableObject* obj,
+        core::StringId property,
+        float count = 1.0f) {
+
+        addHeight(obj->styleMetrics(), obj->style(property), count);
+    }
+
+    /// Adds the given style `property` of `widget()` to the preferred height,
+    /// mutliplied by `count`.
+    ///
+    void addHeight(core::StringId property, float count = 1.0f) {
+        addHeight(widget_, property, count);
+    }
+
+    /// Adds the padding and border of the widget to the preferred height.
+    ///
+    void addPaddingAndBorder();
+
+    /// Computes and returns the preferred size based on the given absolute and
+    /// relative lengths as well as the style properties `preferred-width` and
+    /// `preferred-height` of the widget.
+    ///
+    float compute() const;
+
+private:
+    const Widget* widget_;
+    float targetWidth_;
+    detail::LengthContributions heightContributions_;
     style::LengthOrPercentageOrAuto preferredHeight_;
     bool hint_;
 };

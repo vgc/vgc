@@ -60,6 +60,10 @@ float LengthContributions::compute() const {
     return absolute_ / (1.0f - r);
 }
 
+float LengthContributions::computeFor(float length) const {
+    return absolute_ + length * relative_;
+}
+
 } // namespace detail
 
 namespace {
@@ -67,6 +71,22 @@ namespace {
 bool isHinted(const Widget* widget) {
     namespace gs = graphics::strings;
     return widget->style(gs::pixel_hinting) == gs::normal;
+}
+
+float compute_(
+    const style::Metrics& metrics,
+    const style::LengthOrPercentageOrAuto& preferredSize,
+    const detail::LengthContributions& contributions) {
+
+    if (preferredSize.isAuto()) {
+        return contributions.compute();
+    }
+    else {
+        // TODO: support percentages
+        float refLength = 0.0f;
+        float valueIfAuto = 0.0f;
+        return preferredSize.toPx(metrics, refLength, valueIfAuto);
+    }
 }
 
 } // namespace
@@ -87,26 +107,6 @@ void PreferredSizeCalculator::addPaddingAndBorder() {
     addHeight(style::strings::border_width, 2);
 }
 
-namespace {
-
-float compute_(
-    const style::Metrics& metrics,
-    const style::LengthOrPercentageOrAuto& preferredSize,
-    const detail::LengthContributions& contributions) {
-
-    if (preferredSize.isAuto()) {
-        return contributions.compute();
-    }
-    else {
-        // TODO: support percentages
-        float refLength = 0.0f;
-        float valueIfAuto = 0.0f;
-        return preferredSize.toPx(metrics, refLength, valueIfAuto);
-    }
-}
-
-} // namespace
-
 geometry::Vec2f PreferredSizeCalculator::compute() const {
     const style::Metrics& metrics = widget_->styleMetrics();
     geometry::Vec2f res(
@@ -115,6 +115,80 @@ geometry::Vec2f PreferredSizeCalculator::compute() const {
     if (hint_) {
         res[0] = std::round(res[0]);
         res[1] = std::round(res[1]);
+    }
+    return res;
+
+    // TODO: also hint in the add() functions.
+}
+
+PreferredWidthForHeightCalculator::PreferredWidthForHeightCalculator(
+    const Widget* widget,
+    float targetHeight)
+
+    : widget_(widget)
+    , targetHeight_(targetHeight)
+    , preferredWidth_(widget->preferredWidth())
+    , hint_(isHinted(widget)) {
+}
+
+float PreferredWidthForHeightCalculator::getChildrenTargetHeight() {
+    using namespace style::strings;
+    detail::LengthContributions contributions;
+    contributions.add(widget_->styleMetrics(), widget_->style(padding_top));
+    contributions.add(widget_->styleMetrics(), widget_->style(padding_bottom));
+    contributions.add(widget_->styleMetrics(), widget_->style(border_width), 2);
+    float removedHeight = contributions.computeFor(targetHeight_);
+    return (std::max)(0.0f, targetHeight_ - removedHeight);
+}
+
+void PreferredWidthForHeightCalculator::addPaddingAndBorder() {
+    addWidth(style::strings::padding_left);
+    addWidth(style::strings::padding_right);
+    addWidth(style::strings::border_width, 2);
+}
+
+float PreferredWidthForHeightCalculator::compute() const {
+    const style::Metrics& metrics = widget_->styleMetrics();
+    float res = compute_(metrics, preferredWidth_, widthContributions_);
+    if (hint_) {
+        res = std::round(res);
+    }
+    return res;
+
+    // TODO: also hint in the add() functions.
+}
+
+PreferredHeightForWidthCalculator::PreferredHeightForWidthCalculator(
+    const Widget* widget,
+    float targetWidth)
+
+    : widget_(widget)
+    , targetWidth_(targetWidth)
+    , preferredHeight_(widget->preferredHeight())
+    , hint_(isHinted(widget)) {
+}
+
+float PreferredHeightForWidthCalculator::getChildrenTargetWidth() {
+    using namespace style::strings;
+    detail::LengthContributions contributions;
+    contributions.add(widget_->styleMetrics(), widget_->style(padding_left));
+    contributions.add(widget_->styleMetrics(), widget_->style(padding_right));
+    contributions.add(widget_->styleMetrics(), widget_->style(border_width), 2);
+    float removedWidth = contributions.computeFor(targetWidth_);
+    return (std::max)(0.0f, targetWidth_ - removedWidth);
+}
+
+void PreferredHeightForWidthCalculator::addPaddingAndBorder() {
+    addHeight(style::strings::padding_top);
+    addHeight(style::strings::padding_bottom);
+    addHeight(style::strings::border_width, 2);
+}
+
+float PreferredHeightForWidthCalculator::compute() const {
+    const style::Metrics& metrics = widget_->styleMetrics();
+    float res = compute_(metrics, preferredHeight_, heightContributions_);
+    if (hint_) {
+        res = std::round(res);
     }
     return res;
 
