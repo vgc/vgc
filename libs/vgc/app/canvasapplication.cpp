@@ -388,6 +388,10 @@ void CanvasApplication::createActions_(ui::Widget* parent) {
     actionRedo_ = createAction("Redo", Shortcut(ctrl | shift, Key::Z));
     actionRedo_->triggered().connect(onActionRedoSlot_());
 
+    actionDebugWidgetSizing_ =
+        createAction("Debug Widget Sizing", Shortcut(ctrl | shift, Key::W));
+    actionDebugWidgetSizing_->triggered().connect(onActionDebugWidgetSizingSlot_());
+
     updateUndoRedoActionState_();
 }
 
@@ -601,6 +605,49 @@ void CanvasApplication::updateUndoRedoActionState_() {
     if (actionRedo_) {
         actionRedo_->setEnabled(history ? history->canRedo() : false);
     }
+}
+
+namespace {
+
+void printWidgetSizing(ui::Widget* w, ui::Widget* root) {
+
+    // TODO: have our class formatters support string format syntax (e.g.,
+    // {:<12}) so that we don't need the intermediate calls to core::format().
+    //
+    VGC_DEBUG(
+        LogVgcApp,
+        "{:<24} "
+        "position = {:<12} "
+        "size = {:<12} "
+        "preferredSize = {:<12} "
+        "margin = {:<16} "
+        "padding = {:<16} "
+        "border = {:<16}",
+        w->className(),
+        core::format("{}", w->mapTo(root, w->position())),
+        core::format("{}", w->size()),
+        core::format("{}", w->preferredSize()),
+        core::format("{}", w->margin()),
+        core::format("{}", w->padding()),
+        core::format("{}", w->border()));
+}
+
+} // namespace
+
+void CanvasApplication::onActionDebugWidgetSizing_() {
+
+    if (!mainWindow() || !mainWidget()) {
+        return;
+    }
+
+    VGC_DEBUG(LogVgcApp, "Position and size information about hovered widgets:");
+    ui::Widget* root = mainWidget();
+    ui::Widget* widget = root;
+    while (widget) {
+        printWidgetSizing(widget, root);
+        widget = widget->hoverChainChild();
+    }
+    VGC_DEBUG(LogVgcApp, "");
 }
 
 void CanvasApplication::createColorPalette_(ui::Widget* parent) {
