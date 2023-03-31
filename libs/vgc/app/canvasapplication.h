@@ -180,6 +180,10 @@ private:
     void updateUndoRedoActionState_();
     VGC_SLOT(updateUndoRedoActionStateSlot_, updateUndoRedoActionState_)
 
+    ui::Action* actionDebugWidgetSizing_ = nullptr;
+    VGC_SLOT(onActionDebugWidgetSizingSlot_, onActionDebugWidgetSizing_);
+    void onActionDebugWidgetSizing_();
+
     void createColorPalette_(ui::Widget* parent);
     void onColorChanged_();
     VGC_SLOT(onColorChangedSlot_, onColorChanged_)
