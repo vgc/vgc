@@ -37,6 +37,7 @@
 #include <vgc/ui/exceptions.h>
 #include <vgc/ui/keyevent.h>
 #include <vgc/ui/logcategories.h>
+#include <vgc/ui/margins.h>
 #include <vgc/ui/mouseevent.h>
 #include <vgc/ui/shortcut.h>
 
@@ -380,8 +381,20 @@ public:
         return geometry::Rect2f::fromPositionSize(0, 0, size_);
     }
 
+    /// Returns the computed margin of this widget.
+    ///
+    Margins margin() const;
+
+    /// Returns the computed padding of this widget.
+    ///
+    Margins padding() const;
+
+    /// Returns the computed border of this widget.
+    ///
+    Margins border() const;
+
     /// Returns the content rect of this widget. This is equal to `rect()` with
-    /// border and padding removed.
+    /// `borders()` and `padding()` removed.
     ///
     geometry::Rect2f contentRect() const;
 
