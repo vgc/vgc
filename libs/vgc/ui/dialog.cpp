@@ -61,82 +61,23 @@ void Dialog::showAt(Widget* widget) {
     }
 }
 
-namespace {
-
-// TODO: publicize this class
-class PreferredXForYCalculator {
-public:
-    PreferredXForYCalculator(const Widget* self, float y)
-        : self_(self)
-        , y_(y) {
-
-        borderWidth_ = detail::getLengthInPx(self, style::strings::border_width);
-        absolute_ += 2 * borderWidth_;
-    }
-
-    float getChildY(Widget* content, core::StringId padY1_, core::StringId padY2_) {
-        if (!content) {
-            return 0;
-        }
-        float padY1 = detail::getLengthOrPercentageInPx(self_, padY1_, y_);
-        float padY2 = detail::getLengthOrPercentageInPx(self_, padY2_, y_);
-        float childY = y_ - padY1 - padY2 - 2 * borderWidth_;
-        childY = (std::max)(0.0f, childY);
-        return childY;
-    }
-
-    void addChildPreferredX(float childPreferredX) {
-        absolute_ += childPreferredX;
-    }
-
-    void addPadX(core::StringId padX) {
-        style::LengthOrPercentage lp = detail::getLengthOrPercentage(self_, padX);
-        if (lp.isPercentage()) {
-            relative_ += lp.value();
-        }
-        else {
-            float dummyRefLength = 1.0f;
-            absolute_ += lp.toPx(self_->styleMetrics(), dummyRefLength);
-        }
-    }
-
-    float compute() {
-        constexpr float maxRelative = 0.99f;
-        relative_ = core::clamp(relative_, 0.f, maxRelative);
-        return absolute_ / (1.0f - relative_);
-    }
-
-private:
-    float y_;
-    const Widget* self_;
-    float borderWidth_ = 0;
-    float absolute_ = 0;
-    float relative_ = 0;
-};
-
-} // namespace
-
 float Dialog::preferredWidthForHeight(float height) const {
-    namespace ss = style::strings;
-    PreferredXForYCalculator calc(this, height);
+    PreferredWidthForHeightCalculator calc(this, height);
     if (content()) {
-        float childY = calc.getChildY(content(), ss::padding_top, ss::padding_bottom);
-        calc.addChildPreferredX(content()->preferredWidthForHeight(childY));
+        float contentTargetHeight = calc.getChildrenTargetHeight();
+        calc.addWidth(content()->preferredWidthForHeight(contentTargetHeight));
     }
-    calc.addPadX(ss::padding_left);
-    calc.addPadX(ss::padding_right);
+    calc.addPaddingAndBorder();
     return calc.compute();
 }
 
 float Dialog::preferredHeightForWidth(float width) const {
-    namespace ss = style::strings;
-    PreferredXForYCalculator calc(this, width);
+    PreferredHeightForWidthCalculator calc(this, width);
     if (content()) {
-        float childY = calc.getChildY(content(), ss::padding_left, ss::padding_right);
-        calc.addChildPreferredX(content()->preferredHeightForWidth(childY));
+        float contentTargetWidth = calc.getChildrenTargetWidth();
+        calc.addHeight(content()->preferredHeightForWidth(contentTargetWidth));
     }
-    calc.addPadX(ss::padding_top);
-    calc.addPadX(ss::padding_bottom);
+    calc.addPaddingAndBorder();
     return calc.compute();
 }
 
