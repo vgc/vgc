@@ -52,11 +52,15 @@ void Dialog::setContent(Widget* widget) {
     }
 }
 
-void Dialog::showAt(Widget* widget) {
+void Dialog::showAt(Widget* widget, DialogLocation location) {
     if (widget) {
         OverlayArea* overlayArea = widget->topmostOverlayArea();
         if (overlayArea) {
             overlayArea->addOverlayWidget(this);
+            geometry::Vec2f areaSize = overlayArea->size();
+            geometry::Vec2f dialogSize = preferredSize();
+            geometry::Vec2f dialogPosition = 0.5 * (areaSize - dialogSize);
+            updateGeometry(dialogPosition, dialogSize);
         }
     }
 }

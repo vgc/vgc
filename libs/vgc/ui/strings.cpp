@@ -101,6 +101,10 @@ const core::StringId enabled("enabled");
 const core::StringId disabled("disabled");
 
 // Dialog
+const core::StringId body("body");
+const core::StringId buttons("buttons");
+const core::StringId centered("centered");
 const core::StringId content("content");
+const core::StringId title("title");
 
 } // namespace vgc::ui::strings

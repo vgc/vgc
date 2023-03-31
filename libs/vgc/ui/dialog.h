@@ -21,27 +21,25 @@
 
 namespace vgc::ui {
 
-/*
-enum class DialogPosition : Int8 {
+enum class DialogLocation : Int8 {
     WindowCenter
 
-// TODO?
-//
-//    VCenter,
-//    TopAlign,
-//    BottomAlign,
-//    Above,
-//    Below
-//
-//    x
-//
-//    HCenter,
-//    LeftAlign,
-//    RightAlign,
-//    ToTheRight,
-//    ToTheLeft
+    // TODO?
+    //
+    //    VCenter,
+    //    TopAlign,
+    //    BottomAlign,
+    //    Above,
+    //    Below
+    //
+    //    x
+    //
+    //    HCenter,
+    //    LeftAlign,
+    //    RightAlign,
+    //    ToTheRight,
+    //    ToTheLeft
 };
-*/
 
 VGC_DECLARE_OBJECT(Dialog);
 
@@ -119,7 +117,7 @@ public:
     ///
     /// TODO: next to widget, to the right, below, etc.
     ///
-    void showAt(Widget* widget);
+    void showAt(Widget* widget, DialogLocation position = DialogLocation::WindowCenter);
 
     // reimpl
     float preferredWidthForHeight(float height) const override;

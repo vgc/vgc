@@ -43,51 +43,56 @@ public:
     ///
     static MessageDialogPtr create();
 
+    /// Removes all elements in this dialog, making it empty (no title, no body,
+    /// no buttons).
+    ///
+    void clear();
+
+    /// Removes the title of this dialog.
+    ///
+    void clearTitle();
+
+    /// Removes all elements in the body of this dialog.
+    ///
+    void clearBody();
+
+    /// Removes all buttons of this dialog.
+    ///
+    void clearButtons();
+
+    /// Sets the title of this dialog.
+    ///
+    void setTitle(std::string_view text);
+
     /// Adds a paragraph of text to the body of this dialog.
     ///
     void addText(std::string_view text);
 
+    /// Adds a centered paragraph of text to the body of this dialog.
+    ///
+    void addCenteredText(std::string_view text);
+
+    /// Adds a button to this dialog, calling the given function on click.
+    ///
+    template<typename Function>
+    void addButton(std::string_view text, Function onClick) {
+        Action* action = addButton_(text);
+        if (action) {
+            action->triggered().connect(onClick);
+        }
+    }
+
 private:
     FlexPtr content_;
-    FlexPtr body_;
-
-    /*
     LabelPtr title_;
     FlexPtr body_;
-    FlexPtr stretch_;
     FlexPtr buttons_;
     core::Array<ActionPtr> actions_;
-*/
+
     void updateSize_();
     void createBodyIfNotCreated_();
-
-    /*
-    void createButtonsIfNotCreated_() {
-        if (!stretch_) {
-            stretch_ = createChild<Flex>(FlexDirection::Column);
-            stretch_->addStyleClass(core::StringId("stretch"));
-        }
-        if (!buttons_) {
-            buttons_ = createChild<Flex>(FlexDirection::Row);
-            buttons_->addStyleClass(core::StringId("buttons"));
-        }
-    }
-
-    void clampSizeToMinMax_(geometry::Vec2f& size) {
-        using detail::getLengthOrPercentageInPx;
-        geometry::Vec2f parentSize = parent()->size();
-        float minW = getLengthOrPercentageInPx(this, strings::min_width, parentSize[0]);
-        float minH = getLengthOrPercentageInPx(this, strings::min_height, parentSize[0]);
-        float maxW = getLengthOrPercentageInPx(this, strings::max_width, parentSize[0]);
-        float maxH = getLengthOrPercentageInPx(this, strings::max_height, parentSize[0]);
-        maxW = std::abs(maxW);
-        maxH = std::abs(maxH);
-        minW = core::clamp(minW, 0, maxW);
-        minH = core::clamp(minH, 0, maxH);
-        size[0] = core::clamp(size[0], minW, maxW);
-        size[1] = core::clamp(size[1], minH, maxH);
-    }
-    */
+    void createButtonsIfNotCreated_();
+    Action* addButton_(std::string_view text);
 };
 
 } // namespace vgc::ui

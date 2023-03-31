@@ -291,8 +291,16 @@ private:
 
         ui::Flex* row = parent->createChild<ui::Flex>(ui::FlexDirection::Row);
 
-        ui::MessageDialog* dialog = row->createChild<ui::MessageDialog>();
-        dialog->addText("Hello dialog");
+        ui::Action* action = parent->createAction("Quit?");
+        ui::Button* button = row->createChild<ui::Button>(action);
+        action->triggered().connect([=]() {
+            auto dialog = ui::MessageDialog::create();
+            dialog->setTitle("Quit");
+            dialog->addText("Are you sure you want to quit the application?");
+            dialog->addButton("No", [=]() { dialog->destroy(); });
+            dialog->addButton("Yes", [=]() { quit(); });
+            dialog->showAt(button);
+        });
     }
 
     void createImageBox_(ui::Widget* parent) {

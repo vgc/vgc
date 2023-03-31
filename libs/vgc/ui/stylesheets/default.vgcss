@@ -171,8 +171,12 @@
     background-color: rgb(41, 112, 202);
 }
 
-.Menu {
+.Menu,
+.Dialog {
     background-color: rgb(49, 51, 53);
+}
+
+.Menu {
     font-size: 12dp;
     font-ascent: 12dp;
     font-descent: 3dp;
@@ -223,17 +227,53 @@
 }
 
 .Dialog {
-    background-color: rgb(249, 51, 53);
-    /*
-    padding-right: 15dp;
-    padding-left: 15dp;
-    padding-top: 15dp;
-    padding-bottom: 15dp;
-    */
     border-top-left-radius: 8dp;
     border-top-right-radius: 8dp;
     border-bottom-right-radius: 8dp;
     border-bottom-left-radius: 8dp;
+    padding-right: 14dp;
+    padding-left: 14dp;
+    padding-top: 14dp;
+    padding-bottom: 14dp;
+    min-width: 300dp;
+}
+
+.MessageDialog > .content {
+    row-gap: 10dp;
+}
+
+.MessageDialog .title {
+    text-horizontal-align: center;
+}
+
+.MessageDialog .body {
+    vertical-stretch: 1;
+    main-alignment: start;
+    main-spacing: packed;
+}
+
+.MessageDialog .body > .Label {
+    text-horizontal-align: left;
+}
+
+.MessageDialog .body > .Label.centered {
+    text-horizontal-align: center;
+}
+
+.MessageDialog .buttons {
+    main-alignment: end;
+    main-spacing: packed;
+    column-gap: 10dp;
+    vertical-stretch: 0;
+    vertical-shrink: 0;
+    margin-top: 6dp;
+}
+
+.MessageDialog .buttons > .Button {
+    horizontal-stretch: 0;
+    horizontal-shrink: 0;
+    padding-left: 20dp;
+    padding-right: 20dp;
 }
 
 .ColorPreview {

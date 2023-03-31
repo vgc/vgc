@@ -16,9 +16,10 @@
 
 #include <vgc/ui/messagedialog.h>
 
+#include <vgc/ui/button.h>
 #include <vgc/ui/strings.h>
 
-#include <vgc/ui/detail/paintutil.h>
+#include <vgc/ui/detail/paintutil.h> // getLengthOrPercentageInPx
 
 namespace vgc::ui {
 
@@ -33,113 +34,72 @@ MessageDialogPtr MessageDialog::create() {
     return MessageDialogPtr(new MessageDialog());
 }
 
-/*
-static MessageDialogPtr createFrom(Widget* initiator) {
-    ui::OverlayArea* overlayArea = initiator->topmostOverlayArea();
-    return overlayArea->createOverlayWidget<Popup>(ui::OverlayResizePolicy::None);
-}
-
-void clear() {
+void MessageDialog::clear() {
     clearTitle();
     clearBody();
     clearButtons();
 }
 
-void clearTitle() {
+void MessageDialog::clearTitle() {
     if (title_) {
         title_->destroy();
         title_ = LabelPtr();
-        updateSize();
+        updateSize_();
     }
 }
 
-void clearBody() {
+void MessageDialog::clearBody() {
     if (body_) {
         body_->destroy();
         body_ = FlexPtr();
-        updateSize();
+        updateSize_();
     }
 }
 
-void clearButtons() {
+void MessageDialog::clearButtons() {
     bool shouldUpdateSize = false;
     if (buttons_) {
         buttons_->destroy();
         buttons_ = FlexPtr();
         shouldUpdateSize = true;
     }
-    if (stretch_) {
-        stretch_->destroy();
-        stretch_ = FlexPtr();
-        shouldUpdateSize = true;
-    }
     actions_.clear();
     if (shouldUpdateSize) {
-        updateSize();
-    }
-}
-
-void setTitle(std::string_view text) {
-    if (!title_) {
-        title_ = createChild<Label>();
-        title_->addStyleClass(core::StringId("title"));
-        // TODO: move before all other siblings
-    }
-    title_->setText(text);
-    updateSize();
-}
-*/
-
-void MessageDialog::addText(std::string_view text) {
-    if (content_) {
-        createBodyIfNotCreated_();
-        body_->createChild<Label>(text);
         updateSize_();
     }
 }
 
-/*
-void addCenteredText(std::string_view text) {
-    createBodyIfNotCreated_();
-    Label* label = body_->createChild<Label>(text);
-    label->addStyleClass(core::StringId("centered"));
-    updateSize();
+void MessageDialog::setTitle(std::string_view text) {
+    if (content_) {
+        if (!title_) {
+            title_ = content_->createChild<Label>();
+            title_->addStyleClass(strings::title);
+            // Move as first child
+            content_->insertChild(content_->firstChild(), title_.get());
+        }
+        title_->setText(text);
+        updateSize_();
+    }
 }
 
-template<typename Function>
-void addButton(std::string_view text, Function onClick) {
-    createButtonsIfNotCreated_();
-
-    // Currently, we can't remove existing actions from a widget, so we
-    // don't create the action as a children of this Popup, but instead
-    // create it as root object.
-    //
-    // TODO: better system to create/destroy actions.
-    // How to assign shortcuts? (e.g., Enter key for OK, etc.).
-    //
-    ActionPtr action = Action::create(text);
-    actions_.append(action);
-    buttons_->createChild<Button>(action.get());
-    action->triggered().connect(onClick);
-    updateSize();
+void MessageDialog::addText(std::string_view text) {
+    if (content_) {
+        createBodyIfNotCreated_();
+        if (body_) {
+            body_->createChild<Label>(text);
+            updateSize_();
+        }
+    }
 }
 
-void initPositionAndSize(geometry::Vec2f mousePosition, Widget* relativeTo) {
-    // TODO: better positionning (e.g., see Menu).
-    // For now we open the popup to the right of the mouse position.
-    using namespace style::literals;
-    style::Length popupMargin = 10_dp;
-    float popupMarginInPx = popupMargin.toPx(styleMetrics());
-    geometry::Vec2f popupPosition = mousePosition;
-    popupPosition += geometry::Vec2f(popupMarginInPx, 0);
-    popupPosition = relativeTo->mapTo(parent(), popupPosition);
-    popupPosition[0] = std::round(popupPosition[0]);
-    popupPosition[1] = std::round(popupPosition[1]);
-    geometry::Vec2f popupSize = preferredSize();
-    clampSizeToMinMax_(popupSize);
-    updateGeometry(popupPosition, popupSize);
+void MessageDialog::addCenteredText(std::string_view text) {
+    if (content_) {
+        createBodyIfNotCreated_();
+        Label* label = body_->createChild<Label>(text);
+        label->addStyleClass(strings::centered);
+        updateSize_();
+    }
 }
-*/
 
 namespace {
 
@@ -149,6 +109,7 @@ geometry::Vec2f clampSizeToMinMax(const Widget* widget, const geometry::Vec2f& s
     if (widget->parent()) {
         refSize = widget->parent()->size();
     }
+    // TODO: add minSize()/maxSize() to Widget
     float minW = getLengthOrPercentageInPx(widget, strings::min_width, refSize[0]);
     float minH = getLengthOrPercentageInPx(widget, strings::min_height, refSize[1]);
     float maxW = getLengthOrPercentageInPx(widget, strings::max_width, refSize[0]);
@@ -167,32 +128,53 @@ geometry::Vec2f clampSizeToMinMax(const Widget* widget, const geometry::Vec2f& s
 void MessageDialog::updateSize_() {
     geometry::Vec2f oldSize = size();
     geometry::Vec2f newSize = preferredSize();
-    clampSizeToMinMax(this, newSize);
+    newSize = clampSizeToMinMax(this, newSize);
     geometry::Vec2f oldPos = position();
     geometry::Vec2f newPos = oldPos + 0.5f * (oldSize - newSize);
     updateGeometry(newPos, newSize);
 }
 
 void MessageDialog::createBodyIfNotCreated_() {
-    if (!body_) {
+    if (content_ && !body_) {
         body_ = content_->createChild<Flex>(FlexDirection::Column);
-        body_->addStyleClass(core::StringId("body"));
-        // TODO: move just after title
+        body_->addStyleClass(strings::body);
+        if (title_) {
+            // move just after title
+            content_->insertChild(title_->nextSibling(), title_.get());
+        }
+        else {
+            // Move as first child
+            content_->insertChild(content_->firstChild(), title_.get());
+        }
     }
 }
 
-/*
 void MessageDialog::createButtonsIfNotCreated_() {
-    if (!stretch_) {
-        stretch_ = createChild<Flex>(FlexDirection::Column);
-        stretch_->addStyleClass(core::StringId("stretch"));
-    }
-    if (!buttons_) {
-        buttons_ = createChild<Flex>(FlexDirection::Row);
-        buttons_->addStyleClass(core::StringId("buttons"));
+    if (content_ && !buttons_) {
+        buttons_ = content_->createChild<Flex>(FlexDirection::Row);
+        buttons_->addStyleClass(strings::buttons);
     }
 }
 
-*/
+Action* MessageDialog::addButton_(std::string_view text) {
+    if (content_) {
+
+        // Currently, we can't remove existing actions from widgets, so we don't
+        // create the action as child of this dialog, but instead as root object.
+        //
+        // TODO: better system to create/destroy actions.
+        // How to assign shortcuts? (e.g., Enter key for OK, etc.).
+        //
+        createButtonsIfNotCreated_();
+        ActionPtr action = Action::create(text);
+        actions_.append(action);
+        buttons_->createChild<Button>(action.get());
+        updateSize_();
+        return action.get();
+    }
+    else {
+        return nullptr;
+    }
+}
 
 } // namespace vgc::ui
