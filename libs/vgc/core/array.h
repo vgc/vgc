@@ -1656,7 +1656,7 @@ public:
     /// ```
     ///
     template<typename Pred>
-    Int removeOneIf(Pred pred) {
+    bool removeOneIf(Pred pred) {
         const auto end_ = end();
         auto it = std::find_if(begin(), end_, pred);
         if (it != end_) {
