@@ -209,7 +209,7 @@ public:
         return last ? last->previousAlternative() : nullptr;
     }
 
-    /// Returns the number of child group this group has.
+    /// Returns the number of child groups this group has.
     ///
     /// Child groups are alternative futures in the context of the History.
     ///
@@ -300,13 +300,13 @@ public:
         return p;
     }
 
-    /// Return the root undo group of this history.
+    /// Returns the root undo group of this history.
     ///
     UndoGroup* root() const {
         return root_;
     }
 
-    /// Return the head undo group of this history.
+    /// Returns the head undo group of this history.
     ///
     /// It is the group that, if open, will be appended with
     /// new operations, or new sub-groups.
