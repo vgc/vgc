@@ -246,13 +246,13 @@ public:
     ///
     void addChild(Widget* child);
 
-    /// Adds the given `widget` to this widget children at `position`.
+    /// Adds the given `child` to this widget children before `nextSibling`.
     ///
-    void insertChild(Widget* position, Widget* widget);
+    void insertChild(Widget* nextSibling, Widget* child);
 
-    /// Adds the given `widget` to this widget children at position `i`.
+    /// Adds the given `child` to this widget children at position `i`.
     ///
-    void insertChild(Int i, Widget* widget);
+    void insertChild(Int i, Widget* child);
 
     /// Returns whether this Widget can be reparented with the given `newParent`.
     /// See `reparent()` for details.

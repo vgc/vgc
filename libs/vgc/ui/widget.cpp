@@ -96,7 +96,7 @@ void Widget::addChild(Widget* child) {
     insertChild(nullptr, child);
 }
 
-void Widget::insertChild(Widget* position, Widget* child) {
+void Widget::insertChild(Widget* nextSibling, Widget* child) {
 
     // Check whether reparenting is possible
     checkCanReparent_(this, child);
@@ -110,7 +110,7 @@ void Widget::insertChild(Widget* position, Widget* child) {
     }
 
     // Perform the reparenting
-    children_->insert(position, child);
+    children_->insert(nextSibling, child);
 
     // Restore data members
     child->isReparentingWithinSameTree_ = false;
