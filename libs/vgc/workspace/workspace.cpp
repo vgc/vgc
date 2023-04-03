@@ -81,7 +81,7 @@ void iterDfsPreOrderSkipChildren(Node*& it, Int& depth, core::TypeIdentity<Node>
     Node* next = nullptr;
     // breadth next
     while (it) {
-        next = TreeLinksGetter::next(it);
+        next = TreeLinksGetter::nextSibling(it);
         if (next) {
             it = next;
             return;
@@ -170,7 +170,7 @@ void visitDfs(
         // breadth next
         Node* next = nullptr;
         while (node) {
-            next = TreeLinksGetter::next(node);
+            next = TreeLinksGetter::nextSibling(node);
             if (next) {
                 node = next;
                 break;
@@ -655,7 +655,7 @@ void Workspace::updateVacHierarchyFromTree_() {
             }
 
             if (e->parent()) {
-                VacElement* next = e->nextVacElement();
+                VacElement* next = e->nextSiblingVacElement();
                 topology::ops::moveToGroup(
                     node, node->parentGroup(), (next ? next->vacNode() : nullptr));
             }
@@ -805,7 +805,7 @@ void Workspace::updateTreeAndVacFromDom_(const dom::Diff& diff) {
                 element->insertChildUnchecked(child, firstChild);
                 child = firstChild;
             }
-            child = child->nextVacElement();
+            child = child->nextSiblingVacElement();
             domChild = domChild->nextSiblingElement();
         }
     }

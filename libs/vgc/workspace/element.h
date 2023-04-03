@@ -173,16 +173,16 @@ public:
 
     inline VacElement* parentVacElement() const;
 
-    Element* previous() const {
-        return Base::previous();
+    Element* previousSibling() const {
+        return Base::previousSibling();
     }
 
-    Element* next() const {
-        return Base::next();
+    Element* nextSibling() const {
+        return Base::nextSibling();
     }
 
-    VacElement* nextVacElement() const {
-        Element* e = next();
+    VacElement* nextSiblingVacElement() const {
+        Element* e = nextSibling();
         return findFirstSiblingVacElement_(e);
     }
 
