@@ -262,10 +262,18 @@ void readTo(Path& v, IStream& in) {
         std::string s;
         // appends '#' first
         s.push_back(c);
-        bool allowed = in.get(c) && isValidIdFirstChar(c);
-        while (allowed) {
-            s.push_back(c);
-            allowed = in.get(c) && isValidIdChar(c);
+        if (in.get(c)) {
+            bool allowed = isValidIdFirstChar(c);
+            while (allowed) {
+                s.push_back(c);
+                if (!in.get(c)) {
+                    break;
+                }
+                allowed = isValidIdChar(c);
+            }
+            if (!allowed) {
+                in.unget();
+            }
         }
         v = Path(s);
         return;
