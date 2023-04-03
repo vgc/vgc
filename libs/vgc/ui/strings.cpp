@@ -28,6 +28,7 @@ const core::StringId ColorListViewItem("ColorListViewItem");
 const core::StringId ColorPalette("ColorPalette");
 const core::StringId ColorPaletteSelector("ColorPaletteSelector");
 const core::StringId ColorPreview("ColorPreview");
+const core::StringId Dialog("Dialog");
 const core::StringId Flex("Flex");
 const core::StringId Grid("Grid");
 const core::StringId Label("Label");
@@ -35,6 +36,7 @@ const core::StringId LineEdit("LineEdit");
 const core::StringId Menu("Menu");
 const core::StringId MenuBar("MenuBar");
 const core::StringId MenuButton("MenuButton");
+const core::StringId MessageDialog("MessageDialog");
 const core::StringId NumberEdit("NumberEdit");
 const core::StringId Panel("Panel");
 const core::StringId PanelArea("PanelArea");
@@ -97,5 +99,12 @@ const core::StringId pressed("pressed");
 const core::StringId active("active");
 const core::StringId enabled("enabled");
 const core::StringId disabled("disabled");
+
+// Dialog
+const core::StringId body("body");
+const core::StringId buttons("buttons");
+const core::StringId centered("centered");
+const core::StringId content("content");
+const core::StringId title("title");
 
 } // namespace vgc::ui::strings

@@ -119,6 +119,10 @@ public:
         return tool_;
     }
 
+    /// Quits the application.
+    ///
+    void quit();
+
 protected:
     // Reimplementation
     void onUnhandledException(std::string_view errorMessage) override;

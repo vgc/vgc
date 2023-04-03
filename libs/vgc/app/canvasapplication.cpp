@@ -170,6 +170,12 @@ CanvasApplication::create(int argc, char* argv[], std::string_view applicationNa
     return CanvasApplicationPtr(new CanvasApplication(argc, argv, applicationName));
 }
 
+void CanvasApplication::quit() {
+    if (window_) {
+        window_->close();
+    }
+}
+
 void CanvasApplication::onUnhandledException(std::string_view errorMessage) {
     crashHandler_(errorMessage);
     SuperClass::onUnhandledException(errorMessage);
@@ -574,9 +580,7 @@ void CanvasApplication::doSave_() {
 }
 
 void CanvasApplication::onActionQuit_() {
-    if (window_) {
-        window_->close();
-    }
+    quit();
 }
 
 void CanvasApplication::onActionUndo_() {

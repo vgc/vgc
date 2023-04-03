@@ -29,6 +29,7 @@ VGC_UI_API extern const core::StringId ColorListViewItem;
 VGC_UI_API extern const core::StringId ColorPalette;
 VGC_UI_API extern const core::StringId ColorPaletteSelector;
 VGC_UI_API extern const core::StringId ColorPreview;
+VGC_UI_API extern const core::StringId Dialog;
 VGC_UI_API extern const core::StringId Flex;
 VGC_UI_API extern const core::StringId Grid;
 VGC_UI_API extern const core::StringId Label;
@@ -36,6 +37,7 @@ VGC_UI_API extern const core::StringId LineEdit;
 VGC_UI_API extern const core::StringId Menu;
 VGC_UI_API extern const core::StringId MenuBar;
 VGC_UI_API extern const core::StringId MenuButton;
+VGC_UI_API extern const core::StringId MessageDialog;
 VGC_UI_API extern const core::StringId NumberEdit;
 VGC_UI_API extern const core::StringId Panel;
 VGC_UI_API extern const core::StringId PanelArea;
@@ -89,6 +91,12 @@ VGC_UI_API extern const core::StringId pressed;
 VGC_UI_API extern const core::StringId active;
 VGC_UI_API extern const core::StringId enabled;
 VGC_UI_API extern const core::StringId disabled;
+
+VGC_UI_API extern const core::StringId body;
+VGC_UI_API extern const core::StringId buttons;
+VGC_UI_API extern const core::StringId centered;
+VGC_UI_API extern const core::StringId content;
+VGC_UI_API extern const core::StringId title;
 
 } // namespace vgc::ui::strings
 
