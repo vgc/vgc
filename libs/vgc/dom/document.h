@@ -364,6 +364,10 @@ public:
 
 protected:
     VGC_SLOT(onHistoryHeadChanged, onHistoryHeadChanged_)
+    VGC_SLOT(onHistoryAboutToUndo, onHistoryAboutToUndo_)
+    VGC_SLOT(onHistoryUndone, onHistoryUndone_)
+    VGC_SLOT(onHistoryAboutToRedo, onHistoryAboutToRedo_)
+    VGC_SLOT(onHistoryRedone, onHistoryRedone_)
 
 private:
     // XML declaration
@@ -398,7 +402,14 @@ private:
     std::unordered_map<Node*, NodeRelatives> previousRelativesMap_;
 
     void onHistoryHeadChanged_();
+    void onHistoryAboutToUndo_();
+    void onHistoryUndone_();
+    void onHistoryAboutToRedo_();
+    void onHistoryRedone_();
 
+    // TODO: differentiate history head changes from user changes
+    // For instance, we don't want a plugin to perform an automatic
+    // DOM modification in response to DOM changes caused by an undo.
     void onCreateNode_(Node* node);
     void onRemoveNode_(Node* node);
     void onMoveNode_(Node* node, const NodeRelatives& savedRelatives);

@@ -831,6 +831,10 @@ core::History* Document::enableHistory(core::StringId entrypointName) {
     if (!history_) {
         history_ = core::History::create(entrypointName);
         history_->headChanged().connect(onHistoryHeadChanged());
+        history_->aboutToUndo().connect(onHistoryAboutToUndo());
+        history_->undone().connect(onHistoryUndone());
+        history_->aboutToRedo().connect(onHistoryAboutToRedo());
+        history_->redone().connect(onHistoryRedone());
     }
     return history_.get();
 }
@@ -895,7 +899,27 @@ bool Document::emitPendingDiff() {
 }
 
 void Document::onHistoryHeadChanged_() {
+    //emitPendingDiff();
+}
+
+void Document::onHistoryAboutToUndo_() {
     emitPendingDiff();
+    pendingDiff_.isUndoOrRedo_ = true;
+}
+
+void Document::onHistoryUndone_() {
+    emitPendingDiff();
+    pendingDiff_.isUndoOrRedo_ = false;
+}
+
+void Document::onHistoryAboutToRedo_() {
+    emitPendingDiff();
+    pendingDiff_.isUndoOrRedo_ = true;
+}
+
+void Document::onHistoryRedone_() {
+    emitPendingDiff();
+    pendingDiff_.isUndoOrRedo_ = false;
 }
 
 void Document::onCreateNode_(Node* node) {

@@ -22,8 +22,8 @@
 
 namespace vgc::dom {
 
-// XXX todos:
-// - check create/remove conflicts in diff
+// XXX TODO:
+// - Check create/remove conflicts in diff
 //     -> if remove is followed by create then remove the elem from diff
 //     -> if there is a remove or create, remove the attribute changes
 
