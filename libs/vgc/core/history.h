@@ -116,10 +116,14 @@ public:
     UndoGroup(const UndoGroup&) = delete;
     UndoGroup& operator=(const UndoGroup&) = delete;
 
+    /// Returns the name of this group, given at construction.
+    ///
     core::StringId name() const {
         return name_;
     }
 
+    /// Returns the index of this group. It is unique per program execution.
+    ///
     UndoGroupIndex index() const {
         return index_;
     }
@@ -152,11 +156,13 @@ public:
         return openAncestor_ == this;
     }
 
+    /// Returns whether this group has an open ancestor.
+    ///
     bool isPartOfAnOpenGroup() const {
         return openAncestor_ != nullptr;
     }
 
-    /// Returns whether this group is undone, that is all its operations have been undone.
+    /// Returns whether this group is undone, that is, all its operations have been undone.
     ///
     bool isUndone() const {
         return isUndone_;
@@ -179,35 +185,61 @@ public:
         return openAncestor_;
     }
 
+    /// Returns the parent group of this group.
+    ///
     UndoGroup* parent() const {
         return static_cast<UndoGroup*>(this->parentObject());
     }
 
+    /// Returns the child group of this group which is the preferred
+    /// child to redo next.
+    ///
     UndoGroup* mainChild() const {
         return lastChild();
     }
 
+    /// Returns the child group of this group which is the preferred alternative
+    /// child to redo next.
+    ///
     UndoGroup* secondaryChild() const {
         auto last = lastChild();
         return last ? last->previousAlternative() : nullptr;
     }
 
+    /// Returns the number of child group this group has.
+    ///
+    /// Child groups are alternative futures in the context of the History.
+    ///
     Int numChildren() const {
         return this->numChildObjects();
     }
 
+    /// Returns the last child group of this group.
+    ///
     UndoGroup* lastChild() const {
         return static_cast<UndoGroup*>(this->lastChildObject());
     }
 
+    /// Returns the first child group of this group.
+    ///
     UndoGroup* firstChild() const {
         return static_cast<UndoGroup*>(this->firstChildObject());
     }
 
+    /// Returns the previous sibling group of this group.
+    ///
+    /// A sibling group is an alternative future of its parent
+    /// in the context of the History.
+    ///
     UndoGroup* previousAlternative() const {
         return static_cast<UndoGroup*>(this->previousSiblingObject());
     }
 
+    /// Returns the next sibling group of this group.
+    ///
+    /// A sibling group is an alternative future of its parent
+    /// in the context of the History.
+    ///
     UndoGroup* nextAlternative() const {
         return static_cast<UndoGroup*>(this->nextSiblingObject());
     }
@@ -262,10 +294,17 @@ public:
         return p;
     }
 
+    /// Return the root undo group of this history.
+    ///
     UndoGroup* root() const {
         return root_;
     }
 
+    /// Return the head undo group of this history.
+    ///
+    /// It is the group that, if open, will be appended with
+    /// new operations, or new sub-groups.
+    ///
     UndoGroup* head() const {
         return head_;
     }
@@ -291,20 +330,46 @@ public:
     // XXX todos:
     // - design a coalescing system
 
+    /// Reverts the operations of the main open undo group and its sub-groups, resets the
+    /// head to its parent group, then destroys it and its sub-groups.
+    ///
     bool abort();
+
+    /// Reverts the operations of the head group and its parent group becomes the new head
+    /// group.
+    ///
+    /// If it is open and has no closed sub-group it is then the reverted group is also
+    /// destroyed (similar to abort).
+    ///
     bool undo();
+
+    /// Repeats the operations of the main child of the head group and this child becomes
+    /// the new head group.
+    ///
     bool redo();
 
+    /// Returns whether it is possible to undo the head group.
+    ///
     bool canUndo() const {
         return head_ != root_;
     }
 
+    /// Returns whether it is possible to redo the main child of the head group.
+    ///
     bool canRedo() const {
         return head_->mainChild() != nullptr;
     }
 
+    /// Undoes all groups between the head group and its common ancestor with `node`, ancestor
+    /// excluded. Then redoes all groups between this common ancestor and `node`, `node`
+    /// included but ancestor excluded.
+    ///
     void goTo(UndoGroup* node);
 
+    /// Opens a new undo group, child of the current head group.
+    ///
+    /// Throws LogicError if the current head group is open and already has operations.
+    ///
     UndoGroup* createUndoGroup(core::StringId name);
 
     template<
