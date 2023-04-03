@@ -98,6 +98,9 @@ private:
     }
 };
 
+/// \class vgc::core::UndoGroup
+/// \brief Represents a group of undoable operations.
+///
 class VGC_CORE_API UndoGroup : public Object {
 private:
     VGC_OBJECT(UndoGroup, Object)
@@ -130,18 +133,20 @@ public:
 
     /// Closes this undo group.
     ///
-    /// Throws LogicError if:
-    ///  - this node is not open, or
-    ///  - this node is undone, or
-    ///  - this node is not the first open node in the path
-    ///    from head to root in the history.
-    ///
     /// If `tryAmendParent` is true then:
     /// - If the parent node of this node is
     /// both closed and has a single child, then the parent node
     /// is amended with the operations of this node and this node is
     /// removed.
     /// - Otherwise, this node is simply closed as if `tryAmendParent` was false.
+    ///
+    /// Throws `LogicError` if:
+    ///  - this node is not open, or
+    ///  - this node is undone, or
+    ///  - this node is not the first open node in the path
+    ///    from head to root in the history.
+    ///
+    /// Throws `LogicError` if the history is undergoing an undo or redo operation.
     ///
     bool close(bool tryAmendParent = false);
 
@@ -269,6 +274,9 @@ private:
     void redo_();
 };
 
+/// \class vgc::core::History
+/// \brief Represents a tree of grouped operations for undo/redo purposes.
+///
 class VGC_CORE_API History : public Object {
 private:
     VGC_OBJECT(History, Object)
@@ -331,6 +339,8 @@ public:
     /// Reverts the operations of the main open undo group and its sub-groups, resets the
     /// head to its parent group, then destroys it and its sub-groups.
     ///
+    /// Throws `LogicError` if the history is undergoing an undo or redo operation.
+    ///
     bool abort();
 
     /// Reverts the operations of the head group and its parent group becomes the new head
@@ -342,6 +352,8 @@ public:
     /// If it is open and has no closed sub-group then the reverted group is also
     /// destroyed (similar to abort).
     ///
+    /// Throws `LogicError` if the history is undergoing an undo or redo operation.
+    ///
     bool undo();
 
     /// Redoes the operations of the main child of the head group and this child becomes
@@ -349,6 +361,8 @@ public:
     ///
     /// Returns false if there is nothing to redo, that is, the head group has no children.
     /// Otherwise returns true.
+    ///
+    /// Throws `LogicError` if the history is undergoing an undo or redo operation.
     ///
     bool redo();
 
@@ -368,11 +382,15 @@ public:
     /// excluded. Then redoes all groups between this common ancestor and `node`, `node`
     /// included but ancestor excluded.
     ///
+    /// Throws `LogicError` if the history is undergoing an undo or redo operation.
+    ///
     void goTo(UndoGroup* node);
 
     /// Opens a new undo group, child of the current head group.
     ///
-    /// Throws LogicError if the current head group is open and already has operations.
+    /// Throws `LogicError` if the current head group is open and already has operations.
+    ///
+    /// Throws `LogicError` if the history is undergoing an undo or redo operation.
     ///
     UndoGroup* createUndoGroup(core::StringId name);
 
