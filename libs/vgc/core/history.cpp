@@ -208,7 +208,7 @@ void History::goTo(UndoGroup* node) {
 UndoGroup* History::createUndoGroup(core::StringId name) {
     if (isUndoingOrRedoing_) {
         throw LogicError("Cannot create an undo group when the history is already doing "
-            "an undo/redo.");
+                         "an undo/redo.");
     }
 
     // Check current ongoing node (if any) doesn't have recorded operations.
