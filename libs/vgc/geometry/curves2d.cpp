@@ -451,18 +451,32 @@ void Curves2d::stroke(
 
 namespace {
 
+int getTessWindingRule(WindingRule windingRule) {
+    switch (windingRule) {
+    case WindingRule::Odd:
+        return TESS_WINDING_ODD;
+    case WindingRule::NonZero:
+        return TESS_WINDING_NONZERO;
+    case WindingRule::Positive:
+        return TESS_WINDING_POSITIVE;
+    case WindingRule::Negative:
+        return TESS_WINDING_NEGATIVE;
+    }
+    return TESS_WINDING_NONZERO;
+}
+
 template<typename TFloat>
-void fill_(core::Array<TFloat>& data, const Curves2d& samples) {
+void fill_(core::Array<TFloat>& data, const Curves2d& samples, WindingRule windingRule_) {
     // Triangulate using libtess2
     TESSalloc* alloc = nullptr; // Default allocator
     int vertexSize = 2;         // Number of coordinates per vertex (must be 2 or 3)
-    int windingRule = TESS_WINDING_NONZERO; // Winding rule
+    int windingRule = getTessWindingRule(windingRule_); // Winding rule
     int elementType = TESS_POLYGONS;
     // ^ Use sequence of polygons as output. Note: we could use
     // TESS_CONNECTED_POLYGONS to detect which edges have no neighbor
     // polygons, which can be useful for anti-aliasing.
-    int maxPolySize = 3;              // Triangles only
-    const TESSreal* normal = nullptr; // Automatically compute polygon normal
+    int maxPolySize = 3;                 // Triangles only
+    const TESSreal normal[] = {0, 0, 1}; // Normal for 2D points is the Z unit vector
     TESStesselator* tess = tessNewTess(alloc);
     core::Array<TESSreal> coords;
     for (Curves2dCommandRef c : samples.commands()) {
@@ -536,12 +550,20 @@ void fill_(core::Array<TFloat>& data, const Curves2d& samples) {
 
 } // namespace
 
-void Curves2d::fill(core::DoubleArray& data, const Curves2dSampleParams& params) const {
-    fill_(data, sample(params));
+void Curves2d::fill(
+    core::DoubleArray& data,
+    const Curves2dSampleParams& params,
+    WindingRule windingRule) const {
+
+    fill_(data, sample(params), windingRule);
 }
 
-void Curves2d::fill(core::FloatArray& data, const Curves2dSampleParams& params) const {
-    fill_(data, sample(params));
+void Curves2d::fill(
+    core::FloatArray& data,
+    const Curves2dSampleParams& params,
+    WindingRule windingRule) const {
+
+    fill_(data, sample(params), windingRule);
 }
 
 } // namespace vgc::geometry

@@ -344,6 +344,16 @@ private:
     Int maxSamplesPerSegment_;
 };
 
+/// \class vgc::geometry::WindingRule
+/// \brief Specifies which area of polygons must be considered filled in case of overlaps.
+///
+enum class WindingRule {
+    Odd,
+    NonZero,
+    Positive,
+    Negative,
+};
+
 /// \class vgc::geometry::Curves2d
 /// \brief Sequence of double-precision 2D curves.
 ///
@@ -494,11 +504,17 @@ public:
     ///
     // TODO: add winding rule, anti-aliasing options, auto-closing open subcurves, etc.
     //
-    void fill(core::DoubleArray& data, const Curves2dSampleParams& params) const;
+    void fill(
+        core::DoubleArray& data,
+        const Curves2dSampleParams& params,
+        WindingRule windingRule = WindingRule::NonZero) const;
 
     /// \overload
     ///
-    void fill(core::FloatArray& data, const Curves2dSampleParams& params) const;
+    void fill(
+        core::FloatArray& data,
+        const Curves2dSampleParams& params,
+        WindingRule windingRule = WindingRule::NonZero) const;
 
 private:
     friend Curves2dCommandRef;
