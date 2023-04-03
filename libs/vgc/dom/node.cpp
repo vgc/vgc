@@ -101,6 +101,11 @@ bool checkCanReparent_(
 
 } // namespace
 
+void Node::insertChild(Node* nextSibling, Node* child) {
+    core::History::do_<MoveNodeOperation>(
+        document()->history(), child, this, nextSibling);
+}
+
 bool Node::canReparent(Node* newParent) {
     const bool simulate = true;
     return checkCanReparent_(newParent, this, simulate);
