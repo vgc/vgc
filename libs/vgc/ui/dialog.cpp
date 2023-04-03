@@ -59,7 +59,12 @@ void Dialog::showAt(Widget* widget, DialogLocation location) {
             overlayArea->addOverlayWidget(this);
             geometry::Vec2f areaSize = overlayArea->size();
             geometry::Vec2f dialogSize = preferredSize();
-            geometry::Vec2f dialogPosition = 0.5 * (areaSize - dialogSize);
+            geometry::Vec2f dialogPosition;
+            switch (location) {
+            case DialogLocation::WindowCenter:
+                dialogPosition = 0.5 * (areaSize - dialogSize);
+                break;
+            }
             updateGeometry(dialogPosition, dialogSize);
         }
     }
