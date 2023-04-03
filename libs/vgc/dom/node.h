@@ -224,6 +224,10 @@ public:
         return NodeListView(firstChild(), nullptr);
     }
 
+    /// Adds the given `child` to this node children before `nextSibling`.
+    ///
+    void insertChild(Node* nextSibling, Node* child);
+
     /// Returns whether this Node can be reparented with the given \p newParent.
     /// See reparent() for details.
     ///
