@@ -126,6 +126,8 @@ public:
 
     bool close();
 
+    bool amend();
+
     bool isOpen() const {
         return openAncestor_ == this;
     }
@@ -157,6 +159,10 @@ public:
     UndoGroup* secondaryChild() const {
         auto last = lastChild();
         return last ? last->previousAlternative() : nullptr;
+    }
+
+    Int numChildren() const {
+        return this->numChildObjects();
     }
 
     UndoGroup* lastChild() const {
@@ -296,6 +302,10 @@ public:
     }
 
     VGC_SIGNAL(headChanged, (UndoGroup*, newNode))
+    VGC_SIGNAL(aboutToUndo)
+    VGC_SIGNAL(undone)
+    VGC_SIGNAL(aboutToRedo)
+    VGC_SIGNAL(redone)
 
 private:
     Int maxLevels_ = 1000;
@@ -304,14 +314,18 @@ private:
     UndoGroup* head_ = nullptr;
     Int numNodes_ = 0;
     Int numLevels_ = 0;
+    bool isUndoingOrRedoing_ = false;
 
-    // Assumes head_ is undoable.
+    // Assumes head_ is undoable. Does not emit headChanged().
     void undoOne_(bool forceAbort = false);
 
-    // Assumes head_->mainChild() exists.
+    // Assumes head_->mainChild() exists. Does not emit headChanged().
     void redoOne_();
 
     bool closeUndoGroup_(UndoGroup* node);
+    bool closeUndoGroupUnchecked_(UndoGroup* node);
+    bool amendUndoGroup_(UndoGroup* node);
+
     void prune_();
 };
 
