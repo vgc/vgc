@@ -143,7 +143,7 @@ public:
     }
 
     TreeChildrenIterator& operator++() {
-        p_ = p_->next();
+        p_ = p_->nextSibling();
         return *this;
     }
 
@@ -182,12 +182,12 @@ private:
     friend TreeChildrenIterator<TreeChildBase>;
 
 protected:
-    Child* previous() const {
-        return previous_;
+    Child* previousSibling() const {
+        return previousSibling_;
     }
 
-    Child* next() const {
-        return next_;
+    Child* nextSibling() const {
+        return nextSibling_;
     }
 
     Parent* parent() const {
@@ -197,8 +197,8 @@ protected:
     void unlink();
 
 private:
-    Child* previous_ = nullptr;
-    Child* next_ = nullptr;
+    Child* previousSibling_ = nullptr;
+    Child* nextSibling_ = nullptr;
     Parent* parent_ = nullptr;
 };
 
@@ -252,50 +252,51 @@ protected:
     // assumes nextSibling is nullptr or a child of this
     bool insertChildUnchecked(Child* nextSibling, Child* child) {
 
-        Child* const newNext = nextSibling;
-        if (child == newNext) {
+        Child* const newNextSibling = nextSibling;
+        if (child == newNextSibling) {
             return false;
         }
 
-        Child* const newPrevious = newNext ? newNext->previous_ : lastChild_;
-        if (child == newPrevious) {
+        Child* const newPreviousSibling =
+            newNextSibling ? newNextSibling->previousSibling_ : lastChild_;
+        if (child == newPreviousSibling) {
             return false;
         }
 
         Parent* const oldParent = child->parent_;
-        Child* const oldPrevious = child->previous_;
-        Child* const oldNext = child->next_;
+        Child* const oldPreviousSibling = child->previousSibling_;
+        Child* const oldNextSibling = child->nextSibling_;
 
-        if (oldPrevious) {
-            oldPrevious->next_ = oldNext;
+        if (oldPreviousSibling) {
+            oldPreviousSibling->nextSibling_ = oldNextSibling;
         }
         else if (oldParent) {
-            oldParent->firstChild_ = oldNext;
+            oldParent->firstChild_ = oldNextSibling;
         }
 
-        if (oldNext) {
-            oldNext->previous_ = oldPrevious;
+        if (oldNextSibling) {
+            oldNextSibling->previousSibling_ = oldPreviousSibling;
         }
         else if (oldParent) {
-            oldParent->lastChild_ = oldPrevious;
+            oldParent->lastChild_ = oldPreviousSibling;
         }
 
-        if (newPrevious) {
-            newPrevious->next_ = child;
+        if (newPreviousSibling) {
+            newPreviousSibling->nextSibling_ = child;
         }
         else {
             firstChild_ = child;
         }
 
-        if (newNext) {
-            newNext->previous_ = child;
+        if (newNextSibling) {
+            newNextSibling->previousSibling_ = child;
         }
         else {
             lastChild_ = child;
         }
 
-        child->previous_ = newPrevious;
-        child->next_ = newNext;
+        child->previousSibling_ = newPreviousSibling;
+        child->nextSibling_ = newNextSibling;
 
         if (oldParent != this) {
             child->parent_ = static_cast<Parent*>(this);
@@ -318,23 +319,23 @@ template<typename Derived, typename Parent>
 void TreeChildBase<Derived, Parent>::unlink() {
 
     Parent* const oldParent = parent_;
-    Derived* const oldPrevious = previous_;
-    Derived* const oldNext = next_;
+    Derived* const oldPreviousSibling = previousSibling_;
+    Derived* const oldNextSibling = nextSibling_;
 
-    if (oldPrevious) {
-        oldPrevious->next_ = oldNext;
-        previous_ = nullptr;
+    if (oldPreviousSibling) {
+        oldPreviousSibling->nextSibling_ = oldNextSibling;
+        previousSibling_ = nullptr;
     }
     else if (oldParent) {
-        oldParent->firstChild_ = oldNext;
+        oldParent->firstChild_ = oldNextSibling;
     }
 
-    if (oldNext) {
-        oldNext->previous_ = oldPrevious;
-        next_ = nullptr;
+    if (oldNextSibling) {
+        oldNextSibling->previousSibling_ = oldPreviousSibling;
+        nextSibling_ = nullptr;
     }
     else if (oldParent) {
-        oldParent->lastChild_ = oldPrevious;
+        oldParent->lastChild_ = oldPreviousSibling;
     }
 
     if (oldParent) {
@@ -348,11 +349,11 @@ struct DefaultTreeLinksGetter {
     static Node* parent(Node* n) {
         return n->parent();
     }
-    static Node* previous(Node* n) {
-        return n->previous();
+    static Node* previousSibling(Node* n) {
+        return n->previousSibling();
     }
-    static Node* next(Node* n) {
-        return n->next();
+    static Node* nextSibling(Node* n) {
+        return n->nextSibling();
     }
     static Node* firstChild(Node* n) {
         return n->firstChild();
@@ -404,12 +405,12 @@ public:
     VacNode(const VacNode&) = delete;
     VacNode& operator=(const VacNode&) = delete;
 
-    VacNode* previous() const {
-        return TreeChildBase::previous();
+    VacNode* previousSibling() const {
+        return TreeChildBase::previousSibling();
     }
 
-    VacNode* next() const {
-        return TreeChildBase::next();
+    VacNode* nextSibling() const {
+        return TreeChildBase::nextSibling();
     }
 
     VacGroup* parentGroup() const {

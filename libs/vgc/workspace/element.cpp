@@ -101,7 +101,7 @@ void Element::paint_(
 VacElement* Element::findFirstSiblingVacElement_(Element* start) {
     Element* e = start;
     while (e && !e->isVacElement()) {
-        e = e->next();
+        e = e->nextSibling();
     }
     return static_cast<VacElement*>(e);
 }
