@@ -136,14 +136,12 @@ public:
     ///  - this node is not the first open node in the path
     ///    from head to root in the history.
     ///
-    /// If `tryAmendParent` is true and the parent node of this node is
+    /// If `tryAmendParent` is true then:
+    /// - If the parent node of this node is
     /// both closed and has a single child, then the parent node
     /// is amended with the operations of this node and this node is
     /// removed.
-    ///
-    /// If `tryAmendParent` is true and this node has no parent or its parent
-    /// is open or has multiple children, then this node is simply closed as if
-    /// `tryAmendParent` was false.
+    /// - Otherwise, this node is simply closed as if `tryAmendParent` was false.
     ///
     bool close(bool tryAmendParent = false);
 
@@ -338,13 +336,19 @@ public:
     /// Reverts the operations of the head group and its parent group becomes the new head
     /// group.
     ///
-    /// If it is open and has no closed sub-group it is then the reverted group is also
+    /// Returns false if there is nothing to undo, that is, the head group is the root group.
+    /// Otherwise returns true.
+    ///
+    /// If it is open and has no closed sub-group then the reverted group is also
     /// destroyed (similar to abort).
     ///
     bool undo();
 
-    /// Repeats the operations of the main child of the head group and this child becomes
+    /// Redoes the operations of the main child of the head group and this child becomes
     /// the new head group.
+    ///
+    /// Returns false if there is nothing to redo, that is, the head group has no children.
+    /// Otherwise returns true.
     ///
     bool redo();
 
