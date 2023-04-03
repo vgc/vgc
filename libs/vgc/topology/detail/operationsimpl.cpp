@@ -20,26 +20,28 @@
 
 namespace vgc::topology::detail {
 
-VacGroup* Operations::createRootGroup(Vac* vac, core::Id id) {
+VacGroup* Operations::createRootGroup(Vac* vac) {
+    const core::Id id = core::genId();
 
     VacGroup* p = new VacGroup(vac, id);
-    vac->insertNode(id, std::unique_ptr<VacGroup>(p));
+    vac->insertNode(std::unique_ptr<VacGroup>(p));
 
     // diff
     vac->incrementVersion();
     if (vac->isDiffEnabled_) {
         vac->diff_.onNodeDiff(p, VacNodeDiffFlag::Created);
     }
+    vac->nodeCreated().emit(p, {});
 
     return p;
 }
 
-VacGroup*
-Operations::createVacGroup(core::Id id, VacGroup* parentGroup, VacNode* nextSibling) {
+VacGroup* Operations::createVacGroup(VacGroup* parentGroup, VacNode* nextSibling) {
+    const core::Id id = core::genId();
 
     Vac* vac = parentGroup->vac();
     VacGroup* p = new VacGroup(vac, id);
-    vac->insertNode(id, std::unique_ptr<VacGroup>(p));
+    vac->insertNode(std::unique_ptr<VacGroup>(p));
     parentGroup->insertChildUnchecked(nextSibling, p);
 
     // diff
@@ -48,19 +50,23 @@ Operations::createVacGroup(core::Id id, VacGroup* parentGroup, VacNode* nextSibl
         vac->diff_.onNodeDiff(p, VacNodeDiffFlag::Created);
         vac->diff_.onNodeDiff(parentGroup, VacNodeDiffFlag::ChildrenChanged);
     }
+    vac->nodeCreated().emit(p, {});
 
     return p;
 }
 
 KeyVertex* Operations::createKeyVertex(
-    core::Id id,
+    const geometry::Vec2d& position,
     VacGroup* parentGroup,
     VacNode* nextSibling,
     core::AnimTime t) {
 
+    const core::Id id = core::genId();
+
     Vac* vac = parentGroup->vac();
     KeyVertex* p = new KeyVertex(id, t);
-    vac->insertNode(id, std::unique_ptr<KeyVertex>(p));
+    p->position_ = position;
+    vac->insertNode(std::unique_ptr<KeyVertex>(p));
     parentGroup->insertChildUnchecked(nextSibling, p);
 
     // diff
@@ -69,26 +75,32 @@ KeyVertex* Operations::createKeyVertex(
         vac->diff_.onNodeDiff(p, VacNodeDiffFlag::Created);
         vac->diff_.onNodeDiff(parentGroup, VacNodeDiffFlag::ChildrenChanged);
     }
+    vac->nodeCreated().emit(p, {});
 
     return p;
 }
 
 KeyEdge* Operations::createKeyOpenEdge(
-    core::Id id,
-    VacGroup* parentGroup,
     KeyVertex* startVertex,
     KeyVertex* endVertex,
+    const geometry::SharedConstVec2dArray& points,
+    const core::SharedConstDoubleArray& widths,
+    VacGroup* parentGroup,
     VacNode* nextSibling,
     core::AnimTime t) {
 
+    const core::Id id = core::genId();
+
     Vac* vac = parentGroup->vac();
     KeyEdge* p = new KeyEdge(id, t);
-    vac->insertNode(id, std::unique_ptr<KeyEdge>(p));
+    vac->insertNode(std::unique_ptr<KeyEdge>(p));
     parentGroup->insertChildUnchecked(nextSibling, p);
 
     // init cell
     p->startVertex_ = startVertex;
     p->endVertex_ = endVertex;
+    p->points_ = points.getShared();
+    p->widths_ = widths.getShared();
     p->boundary_.assign({startVertex, endVertex});
     // add edge to new vertices star
     startVertex->star_.emplaceLast(p);
@@ -104,19 +116,25 @@ KeyEdge* Operations::createKeyOpenEdge(
         vac->diff_.onNodeDiff(startVertex, VacNodeDiffFlag::StarChanged);
         vac->diff_.onNodeDiff(endVertex, VacNodeDiffFlag::StarChanged);
     }
+    vac->nodeCreated().emit(p, {});
 
     return p;
 }
 
 KeyEdge* Operations::createKeyClosedEdge(
-    core::Id id,
+    const geometry::SharedConstVec2dArray& points,
+    const core::SharedConstDoubleArray& widths,
     VacGroup* parentGroup,
     VacNode* nextSibling,
     core::AnimTime t) {
 
+    const core::Id id = core::genId();
+
     Vac* vac = parentGroup->vac();
     KeyEdge* p = new KeyEdge(id, t);
-    vac->insertNode(id, std::unique_ptr<KeyEdge>(p));
+    p->points_ = points.getShared();
+    p->widths_ = widths.getShared();
+    vac->insertNode(std::unique_ptr<KeyEdge>(p));
     parentGroup->insertChildUnchecked(nextSibling, p);
 
     // init cell
@@ -128,6 +146,7 @@ KeyEdge* Operations::createKeyClosedEdge(
         vac->diff_.onNodeDiff(p, VacNodeDiffFlag::Created);
         vac->diff_.onNodeDiff(parentGroup, VacNodeDiffFlag::ChildrenChanged);
     }
+    vac->nodeCreated().emit(p, {});
 
     return p;
 }
@@ -237,7 +256,7 @@ void Operations::removeNode(VacNode* node, bool removeFreeVertices) {
         }
         n->unlink();
         // Note: must not cause recursion.
-        vac->onNodeAboutToBeRemoved().emit(n);
+        vac->nodeAboutToBeRemoved().emit(n);
         vac->nodes_.erase(n->id());
     }
 

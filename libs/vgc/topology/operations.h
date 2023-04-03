@@ -29,26 +29,20 @@ namespace vgc::topology::ops {
 // Indeed functions in detail::Operations do not throw and are unchecked.
 
 /// Throws `NotAChildError` if `nextSibling` is not a child of `parentGroup` or `nullptr`.
-/// Throws `IdCollisionError` if `id` is already used by a node of the `Vac` of `parentGroup`.
+/// Throws `LogicError` if `parentGroup` is nullptr.
 ///
-inline VacGroup*
-createVacGroup(core::Id id, VacGroup* parentGroup, VacNode* nextSibling = nullptr) {
+inline VacGroup* createVacGroup(VacGroup* parentGroup, VacNode* nextSibling = nullptr) {
     if (!parentGroup) {
         throw LogicError("createVacGroup: parentGroup is nullptr.");
     }
-    return detail::Operations::createVacGroup(id, parentGroup, nextSibling);
+    return detail::Operations::createVacGroup(parentGroup, nextSibling);
 }
 
 /// Throws `NotAChildError` if `nextSibling` is not a child of `parentGroup` or `nullptr`.
-inline VacGroup* createVacGroup(VacGroup* parentGroup, VacNode* nextSibling = nullptr) {
-    return createVacGroup(core::genId(), parentGroup, nextSibling);
-}
-
-/// Throws `NotAChildError` if `nextSibling` is not a child of `parentGroup` or `nullptr`.
-/// Throws `IdCollisionError` if `id` is already used by a node of the `Vac` of `parentGroup`.
+/// Throws `LogicError` if `parentGroup` is nullptr.
 ///
 inline KeyVertex* createKeyVertex(
-    core::Id id,
+    const geometry::Vec2d& position,
     VacGroup* parentGroup,
     VacNode* nextSibling = nullptr,
     core::AnimTime t = {}) {
@@ -56,47 +50,28 @@ inline KeyVertex* createKeyVertex(
     if (!parentGroup) {
         throw LogicError("createKeyVertex: parentGroup is nullptr.");
     }
-    return detail::Operations::createKeyVertex(id, parentGroup, nextSibling, t);
+    return detail::Operations::createKeyVertex(position, parentGroup, nextSibling, t);
 }
 
 /// Throws `NotAChildError` if `nextSibling` is not a child of `parentGroup` or `nullptr`.
-inline KeyVertex* createKeyVertex(
-    VacGroup* parentGroup,
-    VacNode* nextSibling = nullptr,
-    core::AnimTime t = {}) {
-
-    return createKeyVertex(core::genId(), parentGroup, nextSibling, t);
-}
-
-/// Throws `NotAChildError` if `nextSibling` is not a child of `parentGroup` or `nullptr`.
-/// Throws `IdCollisionError` if `id` is already used by a node of the `Vac` of `parentGroup`.
+/// Throws `LogicError` if `parentGroup`, `startVertex`, or `endVertex` is nullptr.
 ///
 VGC_TOPOLOGY_API
 KeyEdge* createKeyOpenEdge(
-    core::Id id,
-    VacGroup* parentGroup,
     KeyVertex* startVertex,
     KeyVertex* endVertex,
+    const geometry::SharedConstVec2dArray& points,
+    const core::SharedConstDoubleArray& widths,
+    VacGroup* parentGroup,
     VacNode* nextSibling = nullptr,
     core::AnimTime t = {});
 
 /// Throws `NotAChildError` if `nextSibling` is not a child of `parentGroup` or `nullptr`.
-inline KeyEdge* createKeyOpenEdge(
-    VacGroup* parentGroup,
-    KeyVertex* startVertex,
-    KeyVertex* endVertex,
-    VacNode* nextSibling = nullptr,
-    core::AnimTime t = {}) {
-
-    return createKeyOpenEdge(
-        core::genId(), parentGroup, startVertex, endVertex, nextSibling, t);
-}
-
-/// Throws `NotAChildError` if `nextSibling` is not a child of `parentGroup` or `nullptr`.
-/// Throws `IdCollisionError` if `id` is already used by a node of the `Vac` of `parentGroup`.
+/// Throws `LogicError` if `parentGroup` is nullptr.
 ///
 inline KeyEdge* createKeyClosedEdge(
-    core::Id id,
+    const geometry::SharedConstVec2dArray& points,
+    const core::SharedConstDoubleArray& widths,
     VacGroup* parentGroup,
     VacNode* nextSibling = nullptr,
     core::AnimTime t = {}) {
@@ -104,16 +79,8 @@ inline KeyEdge* createKeyClosedEdge(
     if (!parentGroup) {
         throw LogicError("createKeyClosedEdge: parentGroup is nullptr.");
     }
-    return detail::Operations::createKeyClosedEdge(id, parentGroup, nextSibling, t);
-}
-
-/// Throws `NotAChildError` if `nextSibling` is not a child of `parentGroup` or `nullptr`.
-inline KeyEdge* createKeyClosedEdge(
-    VacGroup* parentGroup,
-    VacNode* nextSibling = nullptr,
-    core::AnimTime t = {}) {
-
-    return createKeyClosedEdge(core::genId(), parentGroup, nextSibling, t);
+    return detail::Operations::createKeyClosedEdge(
+        points, widths, parentGroup, nextSibling, t);
 }
 
 inline void removeNode(VacNode* node, bool removeFreeVertices) {

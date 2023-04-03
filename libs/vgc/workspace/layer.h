@@ -34,21 +34,23 @@ private:
 public:
     ~Layer() override = default;
 
-    Layer(Workspace* workspace, dom::Element* domElement)
-        : VacElement(workspace, domElement) {
+    Layer(Workspace* workspace)
+        : VacElement(workspace) {
     }
+
+    std::optional<core::StringId> domTagName() const override;
 
     geometry::Rect2d boundingBox(core::AnimTime t) const override;
 
 protected:
-    ElementStatus updateFromDom_(Workspace* workspace) override;
-
-    void paint_(
+    void onPaintDraw(
         graphics::Engine* engine,
         core::AnimTime t,
         PaintOptions flags = PaintOption::None) const override;
 
 private:
+    ElementStatus updateFromDom_(Workspace* workspace) override;
+    void updateFromVac_() override;
 };
 
 } // namespace vgc::workspace

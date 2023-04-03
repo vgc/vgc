@@ -42,6 +42,10 @@ public:
     bool isEndVertex(VertexCell* /*v*/) const override {
         return false;
     }
+
+    bool isClosed() const override {
+        return false;
+    }
 };
 
 } // namespace vgc::topology

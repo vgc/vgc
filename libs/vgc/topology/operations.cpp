@@ -21,10 +21,11 @@
 namespace vgc::topology::ops {
 
 KeyEdge* createKeyOpenEdge(
-    core::Id id,
-    VacGroup* parentGroup,
     KeyVertex* startVertex,
     KeyVertex* endVertex,
+    const geometry::SharedConstVec2dArray& points,
+    const core::SharedConstDoubleArray& widths,
+    VacGroup* parentGroup,
     VacNode* nextSibling,
     core::AnimTime t) {
 
@@ -59,7 +60,7 @@ KeyEdge* createKeyOpenEdge(
     }
 
     return detail::Operations::createKeyOpenEdge(
-        id, parentGroup, startVertex, endVertex, nextSibling, t);
+        startVertex, endVertex, points, widths, parentGroup, nextSibling, t);
 }
 
 } // namespace vgc::topology::ops

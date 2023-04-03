@@ -194,25 +194,16 @@ void visitDfs(
 
 } // namespace
 
-void Workspace::visitDepthFirstPreOrder(
-    const std::function<void(Element*, Int)>& preOrderFn) {
-    workspace::visitDfsPreOrder<Element>(vgcElement(), preOrderFn);
-}
-
-void Workspace::visitDepthFirst(
-    const std::function<bool(Element*, Int)>& preOrderFn,
-    const std::function<void(Element*, Int)>& postOrderFn) {
-    workspace::visitDfs<Element>(vgcElement(), preOrderFn, postOrderFn);
-}
-
 Workspace::Workspace(dom::DocumentPtr document)
     : document_(document) {
 
     document->changed().connect(onDocumentDiff());
 
-    vac_ = topology::Vac::create();
-    vac_->changed().connect(onVacDiff());
-    vac_->onNodeAboutToBeRemoved().connect(onVacNodeAboutToBeRemoved());
+    vac_ = vacomplex::Complex::create();
+    vac_->nodeAboutToBeRemoved().connect(onVacNodeAboutToBeRemoved());
+    vac_->nodeCreated().connect(onVacNodeCreated());
+    vac_->nodeMoved().connect(onVacNodeMoved());
+    vac_->cellModified().connect(onVacCellModified());
 
     rebuildTreeFromDom_();
     rebuildVacFromTree_();
@@ -220,6 +211,7 @@ Workspace::Workspace(dom::DocumentPtr document)
 
 void Workspace::onDestroyed() {
 
+    elementByVacInternalId_.clear();
     for (const auto& p : elements_) {
         Element* e = p.second.get();
         VacElement* ve = e->toVacElement();
@@ -249,9 +241,8 @@ namespace {
 std::once_flag initOnceFlag;
 
 template<typename T>
-std::unique_ptr<Element>
-makeUniqueElement(Workspace* workspace, dom::Element* domElement) {
-    return std::make_unique<T>(workspace, domElement);
+std::unique_ptr<Element> makeUniqueElement(Workspace* workspace) {
+    return std::make_unique<T>(workspace);
 }
 
 } // namespace
@@ -267,42 +258,60 @@ WorkspacePtr Workspace::create(dom::DocumentPtr document) {
         registerElementClass(ds::vertex, &makeUniqueElement<VacKeyVertex>);
         //registerElementClass(ds::edge, &makeUniqueElement<KeyEdge>);
         registerElementClass(ds::edge, &makeUniqueElement<VacKeyEdge>);
+        //registerElementClass(ds::face, &makeUniqueElement<VacKeyFace>);
     });
 
     return WorkspacePtr(new Workspace(document));
-}
-
-std::unordered_map<core::StringId, Workspace::ElementCreator>&
-Workspace::elementCreators() {
-    static std::unordered_map<core::StringId, Workspace::ElementCreator>* instance_ =
-        new std::unordered_map<core::StringId, Workspace::ElementCreator>();
-    return *instance_;
 }
 
 void Workspace::registerElementClass(
     core::StringId tagName,
     ElementCreator elementCreator) {
 
-    elementCreators()[tagName] = elementCreator;
+    elementCreators_()[tagName] = elementCreator;
 }
 
 void Workspace::sync() {
-    // slots do check if a rebuild is necessary
     document_->emitPendingDiff();
-    vac_->emitPendingDiff();
 }
 
 void Workspace::rebuildFromDom() {
-    // disable update-on-diff
-    detail::ScopedTemporaryBoolSet bgDom(isDomBeingUpdated_);
-    detail::ScopedTemporaryBoolSet bgVac(isVacBeingUpdated_);
-    // flush dom diffs
-    document_->emitPendingDiff();
-    // rebuild
+    { // flush dom diffs
+        shouldSkipNextDomDiff_ = true;
+        document_->emitPendingDiff();
+    }
     rebuildTreeFromDom_();
-    rebuildVacFromTree_();
-    // flush vac diffs
-    vac_->emitPendingDiff();
+    { // rebuild vac
+        detail::ScopedTemporaryBoolSet sbVac(isCreatingVacElementsFromDom_);
+        rebuildVacFromTree_();
+    }
+}
+
+bool Workspace::updateElementFromDom(Element* element) {
+    if (element->isBeingUpdated_) {
+        VGC_ERROR(LogVgcWorkspace, "Cyclic update dependency detected.");
+        return false;
+    }
+    if (element->hasPendingUpdate_) {
+        element->isBeingUpdated_ = true;
+        const ElementStatus oldStatus = element->status_;
+        const ElementStatus newStatus = element->updateFromDom_(this);
+
+        if (!newStatus) {
+            if (oldStatus == ElementStatus::Ok) {
+                elementsWithError_.emplaceLast(element);
+            }
+        }
+        else if (!oldStatus) {
+            elementsWithError_.removeOne(element);
+        }
+
+        element->status_ = newStatus;
+        element->isBeingUpdated_ = false;
+        element->hasPendingUpdate_ = false;
+        elementsToUpdateFromDom_.removeOne(element);
+    }
+    return true;
 }
 
 Element* Workspace::getElementFromPathAttribute(
@@ -321,44 +330,22 @@ Element* Workspace::getElementFromPathAttribute(
     return it->second.get();
 }
 
-void Workspace::onDocumentDiff_(const dom::Diff& diff) {
-    if (isDomBeingUpdated_) {
-        // workspace is doing the changes, no need to see the diff.
-        return;
-    }
-
-    bool vacChanged = vac_->version() != lastSyncedVacVersion_;
-    if (vacChanged) {
-        VGC_ERROR(
-            LogVgcWorkspace,
-            "Both DOM and VAC of workspace have been edited since last synchronization. "
-            "Rebuilding VAC from DOM.");
-        rebuildFromDom();
-        return;
-    }
-
-    updateTreeAndVacFromDom_(diff);
+void Workspace::visitDepthFirstPreOrder(
+    const std::function<void(Element*, Int)>& preOrderFn) {
+    workspace::visitDfsPreOrder<Element>(vgcElement(), preOrderFn);
 }
 
-void Workspace::onVacDiff_(const topology::VacDiff& diff) {
-    if (isVacBeingUpdated_) {
-        // Needed to know which cells break when updating from dom
-        pendingVacDiff_.merge(diff);
-        return;
-    }
-    pendingVacDiff_.clear();
+void Workspace::visitDepthFirst(
+    const std::function<bool(Element*, Int)>& preOrderFn,
+    const std::function<void(Element*, Int)>& postOrderFn) {
+    workspace::visitDfs<Element>(vgcElement(), preOrderFn, postOrderFn);
+}
 
-    bool domChanged = document_ && (document_->versionId() != lastSyncedDomVersionId_);
-    if (domChanged) {
-        VGC_ERROR(
-            LogVgcWorkspace,
-            "Both DOM and VAC of workspace have been edited since last synchronization. "
-            "Rebuilding VAC from DOM.");
-        rebuildFromDom();
-        return;
-    }
-
-    updateTreeAndDomFromVac_(diff);
+std::unordered_map<core::StringId, Workspace::ElementCreator>&
+Workspace::elementCreators_() {
+    static std::unordered_map<core::StringId, Workspace::ElementCreator>* instance_ =
+        new std::unordered_map<core::StringId, Workspace::ElementCreator>();
+    return *instance_;
 }
 
 void Workspace::removeElement_(Element* element) {
@@ -410,86 +397,6 @@ void Workspace::clearElements_() {
     elementsToUpdateFromDom_.clear();
 }
 
-Element* Workspace::createAppendElement_(dom::Element* domElement, Element* parent) {
-    if (!domElement) {
-        return nullptr;
-    }
-
-    std::unique_ptr<Element> u = {};
-    auto& creators = elementCreators();
-    auto it = creators.find(domElement->tagName());
-    if (it != creators.end()) {
-        u = it->second(this, domElement);
-        if (!u) {
-            VGC_ERROR(
-                LogVgcWorkspace,
-                "Element creator for \"{}\" failed to create the element.",
-                domElement->tagName());
-            // XXX throw or fallback to UnsupportedElement or nullptr ?
-            u = std::make_unique<UnsupportedElement>(this, domElement);
-        }
-    }
-    else {
-        u = std::make_unique<UnsupportedElement>(this, domElement);
-    }
-
-    Element* e = u.get();
-    const auto& p = elements_.emplace(domElement->internalId(), std::move(u));
-    if (!p.second) {
-        // XXX should probably throw
-        return nullptr;
-    }
-
-    e->id_ = domElement->internalId();
-    if (parent) {
-        parent->appendChild(e);
-    }
-
-    return e;
-}
-
-bool Workspace::updateElementFromDom(Element* element) {
-    if (element->isBeingUpdated_) {
-        VGC_ERROR(LogVgcWorkspace, "Cyclic update dependency detected.");
-        return false;
-    }
-    if (element->hasPendingUpdate_) {
-        element->isBeingUpdated_ = true;
-        const ElementStatus oldStatus = element->status_;
-        const ElementStatus newStatus = element->updateFromDom_(this);
-
-        if (!newStatus) {
-            if (oldStatus == ElementStatus::Ok) {
-                elementsWithError_.emplaceLast(element);
-            }
-        }
-        else if (!oldStatus) {
-            elementsWithError_.removeOne(element);
-        }
-
-        element->status_ = newStatus;
-        element->isBeingUpdated_ = false;
-        element->hasPendingUpdate_ = false;
-        elementsToUpdateFromDom_.removeOne(element);
-    }
-    return true;
-}
-
-void Workspace::onVacNodeAboutToBeRemoved_(topology::VacNode* node) {
-    auto it = elements_.find(node->id());
-    if (it != elements_.end()) {
-        Element* element = it->second.get();
-        VacElement* vacElement = element->toVacElement();
-        if (vacElement && vacElement->vacNode_) {
-            vacElement->vacNode_ = nullptr;
-            if (!element->isBeingUpdated_) {
-                element->hasPendingUpdate_ = true;
-                elementsToUpdateFromDom_.emplaceLast(element);
-            }
-        }
-    }
-}
-
 void Workspace::fillVacElementListsUsingTagName_(
     Element* root,
     detail::VacElementLists& ce) const {
@@ -516,6 +423,237 @@ void Workspace::fillVacElementListsUsingTagName_(
 
         iterDfsPreOrder(e, depth, root, skipChildren);
     }
+}
+
+void Workspace::debugPrintTree_() {
+    visitDepthFirstPreOrder([](Element* e, Int depth) {
+        VGC_DEBUG_TMP("{:>{}}<{} id=\"{}\">", "", depth * 2, e->tagName(), e->id());
+    });
+}
+
+void Workspace::preUpdateDomFromVac_() {
+    shouldSkipNextDomDiff_ = true;
+    document_->emitPendingDiff();
+}
+
+void Workspace::postUpdateDomFromVac_() {
+    // TODO: delay for batch vac-to-dom updates
+    document_->emitPendingDiff();
+}
+
+void Workspace::rebuildDomFromTree_() {
+    // todo later
+    throw core::RuntimeError("not implemented");
+}
+
+void Workspace::onVacNodeAboutToBeRemoved_(vacomplex::Node* node) {
+    // Note: Should we bypass the following logic if deletion comes from workspace ?
+    //       Currently it is done by erasing the workspace element from elements_
+    //       before doing the vac element removal so that this whole callback is not called.
+    VacElement* vacElement = findVacElement(node);
+    if (vacElement && vacElement->vacNode_) {
+        vacElement->vacNode_ = nullptr;
+        if (!vacElement->isBeingUpdated_) {
+            // TODO: only clear graphics and append to corrupt list (elementsWithError_)
+            vacElement->hasPendingUpdate_ = true;
+            elementsToUpdateFromDom_.emplaceLast(vacElement);
+        }
+    }
+}
+
+void Workspace::onVacNodeCreated_(
+    vacomplex::Node* node,
+    core::Span<vacomplex::Node*> /*operationSourceNodes*/) {
+
+    namespace ds = dom::strings;
+
+    if (isCreatingVacElementsFromDom_) {
+        return;
+    }
+
+    // TODO: check id conflict
+
+    Element* parent = findVacElement(node->parentGroup());
+    if (!parent) {
+        VGC_ERROR(LogVgcWorkspace, "Unexpected vacomplex::Node parent.");
+        return;
+    }
+
+    // TODO: add constructors expecting operationSourceNodes
+
+    // create the workspace and dom elements
+    std::unique_ptr<Element> u = {};
+    if (node->isGroup()) {
+        //vacomplex::Group* group = node->toGroup();
+        u = makeUniqueElement<Layer>(this);
+    }
+    else {
+        vacomplex::Cell* cell = node->toCell();
+        switch (cell->cellType()) {
+        case vacomplex::CellType::KeyVertex:
+            u = makeUniqueElement<VacKeyVertex>(this);
+            break;
+        case vacomplex::CellType::KeyEdge:
+            u = makeUniqueElement<VacKeyEdge>(this);
+            break;
+        case vacomplex::CellType::KeyFace:
+        case vacomplex::CellType::InbetweenVertex:
+        case vacomplex::CellType::InbetweenEdge:
+        case vacomplex::CellType::InbetweenFace:
+            break;
+        }
+    }
+
+    VacElement* element = u->toVacElement();
+    if (!element) {
+        // TODO: error ?
+        return;
+    }
+
+    Element* nextSibling = findVacElement(node->nextSibling());
+    parent->insertChildUnchecked(nextSibling, element);
+
+    // dom update
+
+    dom::Element* domParent = parent->domElement();
+    if (!domParent) {
+        VGC_ERROR(LogVgcWorkspace, "Parent has no dom::Element.");
+        return;
+    }
+
+    preUpdateDomFromVac_();
+
+    dom::ElementPtr domElement =
+        dom::Element::create(domParent, element->domTagName().value());
+    const core::Id id = domElement->internalId();
+
+    const auto& p = elements_.emplace(id, std::move(u));
+    if (!p.second) {
+        // TODO: throw ?
+        postUpdateDomFromVac_();
+        return;
+    }
+
+    element->domElement_ = domElement.get();
+    element->id_ = id;
+    element->setVacNode(node);
+
+    element->updateFromVac_();
+
+    postUpdateDomFromVac_();
+}
+
+void Workspace::onVacNodeMoved_(vacomplex::Node* /*node*/) {
+    if (isCreatingVacElementsFromDom_) {
+        return;
+    }
+
+    throw core::LogicError(
+        "Moving Vac Nodes is not supported yet. It requires updating paths.");
+
+    /*
+    VacElement* vacElement = findVacElement(node->id());
+    if (!vacElement) {
+        VGC_ERROR(LogVgcWorkspace, "Unexpected vacomplex::Node");
+        // TODO: recover from error by creating the Cell in workspace and DOM ?
+        return;
+    }
+
+    Element* parent = findVacElement(node->parentGroup());
+    if (!parent) {
+        VGC_ERROR(LogVgcWorkspace, "Unexpected vacomplex::Node parent.");
+        return;
+    }
+
+    Element* nextSibling = findVacElement(node->nextSibling());
+    parent->insertChildUnchecked(nextSibling, vacElement);
+
+    // dom update
+
+    dom::Element* domElement = vacElement->domElement();
+    if (!domElement) {
+        VGC_ERROR(LogVgcWorkspace, "VacElement has no dom::Element.");
+        return;
+    }
+
+    dom::Element* domParent = parent->domElement();
+    if (!domParent) {
+        VGC_ERROR(LogVgcWorkspace, "Parent has no dom::Element.");
+        return;
+    }
+
+    dom::Element* domNext = nullptr;
+    if (nextSibling) {
+        domNext = nextSibling->domElement();
+        if (!domNext) {
+            VGC_ERROR(LogVgcWorkspace, "Next VacElement has no dom::Element.");
+            return;
+        }
+    }
+
+    preUpdateDomFromVac_();
+    domParent->insertChild(domNext, domElement);
+    postUpdateDomFromVac_();
+    */
+}
+
+void Workspace::onVacCellModified_(vacomplex::Cell* cell) {
+    if (isCreatingVacElementsFromDom_) {
+        return;
+    }
+
+    VacElement* vacElement = findVacElement(cell->id());
+    if (!vacElement) {
+        VGC_ERROR(LogVgcWorkspace, "Unexpected vacomplex::Cell");
+        // TODO: recover from error by creating the Cell in workspace and DOM ?
+        return;
+    }
+
+    // dom update
+
+    preUpdateDomFromVac_();
+    vacElement->updateFromVac_();
+    postUpdateDomFromVac_();
+}
+
+Element*
+Workspace::createAppendElementFromDom_(dom::Element* domElement, Element* parent) {
+    if (!domElement) {
+        return nullptr;
+    }
+
+    std::unique_ptr<Element> u = {};
+    auto& creators = elementCreators_();
+    auto it = creators.find(domElement->tagName());
+    if (it != creators.end()) {
+        u = it->second(this);
+        if (!u) {
+            VGC_ERROR(
+                LogVgcWorkspace,
+                "Element creator for \"{}\" failed to create the element.",
+                domElement->tagName());
+            // XXX throw or fallback to UnsupportedElement or nullptr ?
+            u = std::make_unique<UnsupportedElement>(this);
+        }
+    }
+    else {
+        u = std::make_unique<UnsupportedElement>(this);
+    }
+
+    Element* e = u.get();
+    e->domElement_ = domElement;
+    const auto& p = elements_.emplace(domElement->internalId(), std::move(u));
+    if (!p.second) {
+        // TODO: should probably throw
+        return nullptr;
+    }
+    e->id_ = domElement->internalId();
+
+    if (parent) {
+        parent->appendChild(e);
+    }
+
+    return e;
 }
 
 namespace {
@@ -558,11 +696,9 @@ void Workspace::rebuildTreeFromDom_() {
 
     // reset vac
     {
-        detail::ScopedTemporaryBoolSet bgVac(isVacBeingUpdated_);
+        detail::ScopedTemporaryBoolSet bgVac(isCreatingVacElementsFromDom_);
         vac_->clear();
-        vac_->emitPendingDiff();
-        pendingVacDiff_.clear();
-        lastSyncedVacVersion_ = -1;
+        //vac_->emitPendingDiff();
     }
 
     if (!document_) {
@@ -571,7 +707,7 @@ void Workspace::rebuildTreeFromDom_() {
 
     // flush dom diff
     {
-        detail::ScopedTemporaryBoolSet bgDom(isDomBeingUpdated_);
+        detail::ScopedTemporaryBoolSet bgDom(isCreatingDomElementsFromVac_);
         document_->emitPendingDiff();
     }
 
@@ -580,7 +716,7 @@ void Workspace::rebuildTreeFromDom_() {
         return;
     }
 
-    Element* vgcElement = createAppendElement_(domVgcElement, nullptr);
+    Element* vgcElement = createAppendElementFromDom_(domVgcElement, nullptr);
     VGC_ASSERT(vgcElement->isVacElement());
     vgcElement_ = static_cast<VacElement*>(vgcElement);
 
@@ -588,21 +724,11 @@ void Workspace::rebuildTreeFromDom_() {
     Element* e = vgcElement_;
     dom::Element* domElement = rebuildTreeFromDomIter(e, p);
     while (domElement) {
-        e = createAppendElement_(domElement, p);
+        e = createAppendElementFromDom_(domElement, p);
         domElement = rebuildTreeFromDomIter(e, p);
     }
 
     // children should already be in the correct order.
-}
-
-void Workspace::rebuildDomFromTree_() {
-    // todo later
-    throw core::RuntimeError("not implemented");
-}
-
-void Workspace::rebuildTreeFromVac_() {
-    // todo later
-    throw core::RuntimeError("not implemented");
 }
 
 void Workspace::rebuildVacFromTree_() {
@@ -612,12 +738,12 @@ void Workspace::rebuildVacFromTree_() {
 
     //namespace ds = dom::strings;
 
-    detail::ScopedTemporaryBoolSet bgVac(isVacBeingUpdated_);
+    detail::ScopedTemporaryBoolSet bgVac(isCreatingVacElementsFromDom_);
 
     // reset vac
     vac_->clear();
-    vac_->resetRoot(vgcElement_->id());
-    vgcElement_->vacNode_ = vac_->rootGroup();
+    vac_->resetRoot();
+    vgcElement_->setVacNode(vac_->rootGroup());
 
     Element* root = vgcElement_;
     Element* element = root->firstChild();
@@ -629,12 +755,7 @@ void Workspace::rebuildVacFromTree_() {
 
     updateVacHierarchyFromTree_();
 
-    // flush vac diff
-    vac_->emitPendingDiff();
-    pendingVacDiff_.clear();
-
     lastSyncedDomVersionId_ = document_->versionId();
-    lastSyncedVacVersion_ = vac_->version();
     changed().emit();
 }
 
@@ -644,12 +765,12 @@ void Workspace::updateVacHierarchyFromTree_() {
     Element* e = root;
     Int depth = 0;
     while (e) {
-        topology::VacNode* node = e->vacNode();
+        vacomplex::Node* node = e->vacNode();
         if (node) {
             if (node->isGroup()) {
                 VacElement* child = e->firstChildVacElement();
                 if (child) {
-                    topology::VacGroup* g = static_cast<topology::VacGroup*>(node);
+                    vacomplex::Group* g = static_cast<vacomplex::Group*>(node);
                     topology::ops::moveToGroup(child->vacNode(), g, g->firstChild());
                 }
             }
@@ -666,7 +787,7 @@ void Workspace::updateVacHierarchyFromTree_() {
 }
 
 //bool Workspace::haveKeyEdgeBoundaryPathsChanged_(Element* e) {
-//    topology::VacNode* node = e->vacNode();
+//    vacomplex::Node* node = e->vacNode();
 //    if (!node) {
 //        return false;
 //    }
@@ -678,7 +799,7 @@ void Workspace::updateVacHierarchyFromTree_() {
 //    Element* ev1 = getElementFromPathAttribute(domElem, ds::endvertex, ds::vertex);
 //
 //    vacomplex::Node* node = vacNode();
-//    topology::KeyEdge* kv = node ? node->toCellUnchecked()->toKeyEdgeUnchecked() : nullptr;
+//    vacomplex::KeyEdge* kv = node ? node->toCellUnchecked()->toKeyEdgeUnchecked() : nullptr;
 //    if (!kv) {
 //        return false;
 //    }
@@ -708,9 +829,7 @@ void Workspace::updateTreeAndVacFromDom_(const dom::Diff& diff) {
         return;
     }
 
-    detail::ScopedTemporaryBoolSet bgVac(isVacBeingUpdated_);
-
-    VGC_ASSERT(vac_->version() == lastSyncedVacVersion_);
+    detail::ScopedTemporaryBoolSet bgVac(isCreatingVacElementsFromDom_);
 
     namespace ds = dom::strings;
 
@@ -718,8 +837,9 @@ void Workspace::updateTreeAndVacFromDom_(const dom::Diff& diff) {
     //            we want the vac to be valid -> using only its operators
     //            limits bugs to their implementation.
 
-    bool needsFullUpdate =
+    bool hasModifiedPaths =
         (diff.removedNodes().length() > 0) || (diff.reparentedNodes().size() > 0);
+    bool hasNewPaths = (diff.createdNodes().length() > 0);
 
     std::set<Element*> parentsToOrderSync;
 
@@ -760,7 +880,7 @@ void Workspace::updateTreeAndVacFromDom_(const dom::Diff& diff) {
             continue;
         }
         // will be reordered afterwards
-        Element* element = createAppendElement_(domElement, parent);
+        Element* element = createAppendElementFromDom_(domElement, parent);
         element->hasPendingUpdate_ = true;
         elementsToUpdateFromDom_.emplaceLast(element);
         parentsToOrderSync.insert(parent);
@@ -800,27 +920,48 @@ void Workspace::updateTreeAndVacFromDom_(const dom::Diff& diff) {
         dom::Element* domChild = element->domElement()->firstChildElement();
         while (domChild) {
             if (!child || child->domElement() != domChild) {
-                Element* firstChild = find(domChild);
-                VGC_ASSERT(firstChild);
-                element->insertChildUnchecked(child, firstChild);
-                child = firstChild;
+                Element* missingChild = find(domChild);
+                while (!missingChild) {
+                    domChild = domChild->nextSiblingElement();
+                    if (!domChild) {
+                        break;
+                    }
+                    missingChild = find(domChild);
+                }
+                if (!domChild) {
+                    break;
+                }
+                element->insertChildUnchecked(child, missingChild);
+                child = missingChild;
             }
-            child = child->nextSiblingVacElement();
+            child = child->nextSibling();
             domChild = domChild->nextSiblingElement();
         }
     }
 
-    if (needsFullUpdate) {
-        // Update everything (paths may have changed.. etc).
+    if (hasNewPaths || hasModifiedPaths) {
         // Flag all elements with error for update.
         for (Element* element : elementsWithError_) {
-            element->hasPendingUpdate_ = true;
+            if (!element->hasPendingUpdate_) {
+                element->hasPendingUpdate_ = true;
+                elementsToUpdateFromDom_.emplaceLast(element);
+            }
         }
+    }
+
+    if (hasModifiedPaths) {
+        // Update everything for now.
+        // TODO: An element dependent on a Path should have it in its dependencies
+        // so we could force path reevaluation to the dependents of an element that moved,
+        // as well as errored elements.
         Element* root = vgcElement_;
         Element* element = root;
         Int depth = 0;
         while (element) {
-            updateElementFromDom(element);
+            if (!element->hasPendingUpdate_) {
+                element->hasPendingUpdate_ = true;
+                elementsToUpdateFromDom_.emplaceLast(element);
+            }
             iterDfsPreOrder(element, depth, root);
         }
     }
@@ -832,6 +973,7 @@ void Workspace::updateTreeAndVacFromDom_(const dom::Diff& diff) {
             // taken care of in the update loop further below.
             if (element && !element->hasPendingUpdate_) {
                 element->hasPendingUpdate_ = true;
+                // TODO: pass the set of modified attributes ids to the Element
                 updateElementFromDom(element);
             }
         }
@@ -849,26 +991,28 @@ void Workspace::updateTreeAndVacFromDom_(const dom::Diff& diff) {
     updateVacHierarchyFromTree_();
 
     lastSyncedDomVersionId_ = document_->versionId();
-    lastSyncedVacVersion_ = vac_->version();
     changed().emit();
 }
 
-void Workspace::updateTreeAndDomFromVac_(const topology::VacDiff& /*diff*/) {
-    if (!document_) {
-        VGC_ERROR(LogVgcWorkspace, "DOM is null.")
+//void Workspace::updateTreeAndDomFromVac_(const vacomplex::Diff& /*diff*/) {
+//    if (!document_) {
+//        VGC_ERROR(LogVgcWorkspace, "DOM is null.")
+//        return;
+//    }
+//
+//    detail::ScopedTemporaryBoolSet bgDom(isCreatingDomElementsFromVac_);
+//
+//    // todo later
+//    throw core::RuntimeError("not implemented");
+//}
+
+void Workspace::onDocumentDiff_(const dom::Diff& diff) {
+    if (shouldSkipNextDomDiff_) {
+        // It means workspace did the changes, no need to see the diff.
+        shouldSkipNextDomDiff_ = false;
         return;
     }
-
-    detail::ScopedTemporaryBoolSet bgDom(isDomBeingUpdated_);
-
-    // todo later
-    throw core::RuntimeError("not implemented");
-}
-
-void Workspace::debugPrintTree_() {
-    visitDepthFirstPreOrder([](Element* e, Int depth) {
-        VGC_DEBUG_TMP("{:>{}}<{} id=\"{}\">", "", depth * 2, e->tagName(), e->id());
-    });
+    updateTreeAndVacFromDom_(diff);
 }
 
 } // namespace vgc::workspace

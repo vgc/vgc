@@ -1022,6 +1022,7 @@ public:
 
     virtual bool isStartVertex(VertexCell* v) const = 0;
     virtual bool isEndVertex(VertexCell* v) const = 0;
+    virtual bool isClosed() const = 0;
 
     // note: Looks best to return an object so that we can change its impl
     //       if we want to share the data. The straight forward implementation

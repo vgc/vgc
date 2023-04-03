@@ -22,6 +22,5 @@ namespace vgc::topology {
 
 VGC_CORE_EXCEPTIONS_DEFINE_ANCHOR(LogicError)
 VGC_CORE_EXCEPTIONS_DEFINE_ANCHOR(RuntimeError)
-VGC_CORE_EXCEPTIONS_DEFINE_ANCHOR(IdCollisionError)
 
 } // namespace vgc::topology

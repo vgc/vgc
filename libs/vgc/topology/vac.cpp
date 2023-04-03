@@ -58,7 +58,7 @@ void Vac::clear() {
         }
     }
     for (const auto& node : nodes_) {
-        onNodeAboutToBeRemoved().emit(node.second.get());
+        nodeAboutToBeRemoved().emit(node.second.get());
     }
     nodes_.clear();
     isBeingCleared_ = false;
@@ -66,12 +66,12 @@ void Vac::clear() {
     ++version_;
 }
 
-VacGroup* Vac::resetRoot(core::Id id) {
+VacGroup* Vac::resetRoot() {
     if (isBeingCleared_) {
         return nullptr;
     }
     clear();
-    root_ = detail::Operations::createRootGroup(this, id);
+    root_ = detail::Operations::createRootGroup(this);
     return root_;
 }
 
@@ -94,21 +94,18 @@ bool Vac::containsNode(core::Id id) const {
     return find(id) != nullptr;
 }
 
-bool Vac::emitPendingDiff() {
-    if (!diff_.isEmpty()) {
-        changed().emit(diff_);
-        diff_.clear();
-        return true;
-    }
-    return false;
-}
+//bool Vac::emitPendingDiff() {
+//    if (!diff_.isEmpty()) {
+//        changed().emit(diff_);
+//        diff_.clear();
+//        return true;
+//    }
+//    return false;
+//}
 
-bool Vac::insertNode(core::Id id, std::unique_ptr<VacNode>&& node) {
-    if (isDiffEnabled_) {
-        return false;
-    }
-    if (!nodes_.try_emplace(id, std::move(node)).second) {
-        throw IdCollisionError("Id collision error.");
+bool Vac::insertNode(std::unique_ptr<VacNode>&& node) {
+    if (!nodes_.try_emplace(node->id(), std::move(node)).second) {
+        throw LogicError("Id collision error.");
     }
     return true;
 }

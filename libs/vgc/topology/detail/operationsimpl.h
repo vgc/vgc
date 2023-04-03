@@ -28,15 +28,15 @@ class VGC_TOPOLOGY_API Operations {
     //using VacGroupChildrenConstIterator = decltype(VacGroup::children_)::const_iterator;
 
 public:
-    static VacGroup* createRootGroup(Vac* vac, core::Id id);
+    static VacGroup* createRootGroup(Vac* vac);
 
     /// Assumes `nextSibling` is either `nullptr` or a child of `parentGroup`.
     static VacGroup*
-    createVacGroup(core::Id id, VacGroup* parentGroup, VacNode* nextSibling = nullptr);
+    createVacGroup(VacGroup* parentGroup, VacNode* nextSibling = nullptr);
 
     /// Assumes `nextSibling` is either `nullptr` or a child of `parentGroup`.
     static KeyVertex* createKeyVertex(
-        core::Id id,
+        const geometry::Vec2d& position,
         VacGroup* parentGroup,
         VacNode* nextSibling = nullptr,
         core::AnimTime t = {});
@@ -46,16 +46,18 @@ public:
     /// Assumes `endVertex` is from the same `Vac` as `parentGroup`.
     ///
     static KeyEdge* createKeyOpenEdge(
-        core::Id id,
-        VacGroup* parentGroup,
         KeyVertex* startVertex,
         KeyVertex* endVertex,
+        const geometry::SharedConstVec2dArray& points,
+        const core::SharedConstDoubleArray& widths,
+        VacGroup* parentGroup,
         VacNode* nextSibling = nullptr,
         core::AnimTime t = {});
 
     /// Assumes `nextSibling` is either `nullptr` or a child of `parentGroup`.
     static KeyEdge* createKeyClosedEdge(
-        core::Id id,
+        const geometry::SharedConstVec2dArray& points,
+        const core::SharedConstDoubleArray& widths,
         VacGroup* parentGroup,
         VacNode* nextSibling = nullptr,
         core::AnimTime t = {});
