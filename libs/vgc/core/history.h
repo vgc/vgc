@@ -124,10 +124,30 @@ public:
         return index_;
     }
 
-    bool close();
+    /// Closes this undo group.
+    ///
+    /// Throws LogicError if:
+    ///  - this node is not open, or
+    ///  - this node is undone, or
+    ///  - this node is not the first open node in the path
+    ///    from head to root in the history.
+    ///
+    /// If `tryAmendParent` is true and the parent node of this node is
+    /// both closed and has a single child, then the parent node
+    /// is amended with the operations of this node and this node is
+    /// removed.
+    ///
+    /// If `tryAmendParent` is true and this node has no parent or its parent
+    /// is open or has multiple children, then this node is simply closed as if
+    /// `tryAmendParent` was false.
+    ///
+    bool close(bool tryAmendParent = false);
 
-    bool amend();
-
+    /// Returns whether this group is still open.
+    ///
+    /// An open group that is the head of the history is appended with new operations.
+    /// An open group without a closed child group is considered aborted when undone.
+    ///
     bool isOpen() const {
         return openAncestor_ == this;
     }
@@ -136,14 +156,25 @@ public:
         return openAncestor_ != nullptr;
     }
 
+    /// Returns whether this group is undone, that is all its operations have been undone.
+    ///
     bool isUndone() const {
         return isUndone_;
     }
 
+    /// Returns the number of operations stored in this group.
+    ///
+    /// If this node is open and has children nodes it always returns 0.
+    ///
     Int numOperations() const {
         return operations_.size();
     }
 
+    /// Returns the first ancestor node that is open.
+    ///
+    /// When the ancestor is going to be closed, this node's operations will
+    /// be merged in and this node will be removed.
+    ///
     UndoGroup* openAncestor() const {
         return openAncestor_;
     }
@@ -322,9 +353,9 @@ private:
     // Assumes head_->mainChild() exists. Does not emit headChanged().
     void redoOne_();
 
-    bool closeUndoGroup_(UndoGroup* node);
+    bool closeUndoGroup_(UndoGroup* node, bool tryAmendParent);
     bool closeUndoGroupUnchecked_(UndoGroup* node);
-    bool amendUndoGroup_(UndoGroup* node);
+    bool amendUndoGroupUnchecked_(UndoGroup* amendNode);
 
     void prune_();
 };

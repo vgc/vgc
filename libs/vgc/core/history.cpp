@@ -29,12 +29,8 @@ UndoGroupIndex genUndoGroupIndex() {
     return ++lastId;
 }
 
-bool UndoGroup::close() {
-    return history_->closeUndoGroup_(this);
-}
-
-bool UndoGroup::amend() {
-    return history_->amendUndoGroup_(this);
+bool UndoGroup::close(bool tryAmendParent) {
+    return history_->closeUndoGroup_(this, tryAmendParent);
 }
 
 void UndoGroup::undo_(bool isAbort) {
@@ -266,16 +262,16 @@ void History::redoOne_() {
     head_ = child;
 }
 
-bool History::closeUndoGroup_(UndoGroup* node) {
+bool History::closeUndoGroup_(UndoGroup* node, bool tryAmendParent) {
     if (isUndoingOrRedoing_) {
         throw LogicError(
             "Cannot close an undo group when the history is doing an undo/redo.");
     }
 
     // Requirements:
-    // - `node` is ongoing
+    // - `node` is open
     // - `node` is not undone (implies node is in main branch)
-    // - `node` is the first ongoing node in the path from head_ to root
+    // - `node` is the first open node in the path from head_ to root
 
     if (!node->isOpen()) {
         throw LogicError("Cannot close an undo group which is already closed.");
@@ -291,6 +287,14 @@ bool History::closeUndoGroup_(UndoGroup* node) {
         if (x->isOpen()) {
             throw LogicError(
                 "Cannot close an undo group before its nested ones are closed.");
+        }
+    }
+
+    if (tryAmendParent) {
+        // Get previous node if valid for amend, or fallback to closing this node.
+        UndoGroup* amendNode = node->parent();
+        if (amendNode && amendNode->numChildObjects() == 1) {
+            return amendUndoGroupUnchecked_(amendNode);
         }
     }
 
@@ -328,39 +332,7 @@ bool History::closeUndoGroupUnchecked_(UndoGroup* node) {
     return true;
 }
 
-bool History::amendUndoGroup_(UndoGroup* node) {
-    if (isUndoingOrRedoing_) {
-        throw LogicError(
-            "Cannot amend an undo group when the history is doing an undo/redo.");
-    }
-
-    // Requirements:
-    // - `node` is ongoing
-    // - `node` is not undone (implies node is in main branch)
-    // - `node` is the first ongoing node in the path from head_ to root
-
-    if (!node->isOpen()) {
-        throw LogicError("Cannot amend an undo group which is already closed.");
-    }
-
-    if (node->isUndone()) {
-        throw LogicError("Cannot amend an undo group that is currently undone.");
-    }
-
-    // Visit nodes between `node` and head_ to check that there is no active
-    // nested ongoing node.
-    for (UndoGroup* x = head_; x != node; x = x->parent()) {
-        if (x->isOpen()) {
-            throw LogicError(
-                "Cannot amend an undo group before its nested ones are closed.");
-        }
-    }
-
-    // Get previous node if valid for amend, or fallback to closing this node.
-    UndoGroup* amendNode = node->parent();
-    if (!amendNode || amendNode->numChildObjects() > 1) {
-        return closeUndoGroupUnchecked_(node);
-    }
+bool History::amendUndoGroupUnchecked_(UndoGroup* amendNode) {
 
     // Collect all operations in descendant nodes to form a single one.
     for (UndoGroup* x = amendNode; x != head_;) {
