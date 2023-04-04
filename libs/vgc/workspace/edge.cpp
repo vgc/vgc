@@ -183,10 +183,9 @@ VacKeyEdge::~VacKeyEdge() {
     }
 }
 
-void VacKeyEdge::setTesselationMode(int mode) {
-    int newMode = core::clamp(mode, 0, 3);
-    if (edgeTesselationModeRequested_ != newMode) {
-        edgeTesselationModeRequested_ = newMode;
+void VacKeyEdge::setTesselationMode(EdgeSubdivisionQuality mode) {
+    if (edgeTesselationMode_ != mode) {
+        edgeTesselationMode_ = mode;
         dirtyInputSampling_();
     }
 }
@@ -760,22 +759,39 @@ bool VacKeyEdge::computeInputSampling_() {
     double maxAngle = 0.05;
     Int minQuads = 1;
     Int maxQuads = 64;
-    switch (edgeTesselationModeRequested_) {
-    case 0:
-        break;
-    case 1:
+
+    switch (edgeTesselationMode_) {
+    case EdgeSubdivisionQuality::Disabled:
+        maxAngle = 100;
+        minQuads = 1;
         maxQuads = 1;
         break;
-    case 2:
-        minQuads = 2;
+    case EdgeSubdivisionQuality::UniformLow:
+        maxAngle = 100;
+        minQuads = 4;
+        maxQuads = 4;
+        break;
+    case EdgeSubdivisionQuality::AdaptiveLow:
+        maxAngle = 0.1;
+        minQuads = 1;
         maxQuads = 8;
         break;
-    default:
+    case EdgeSubdivisionQuality::UniformHigh:
+        maxAngle = 100;
+        minQuads = 32;
+        maxQuads = 32;
+        break;
+    case EdgeSubdivisionQuality::AdaptiveHigh:
+        maxAngle = 0.05;
+        minQuads = 1;
+        maxQuads = 64;
+        break;
+    case EdgeSubdivisionQuality::UniformVeryHigh:
+        maxAngle = 100;
         minQuads = 64;
         maxQuads = 64;
         break;
     }
-    edgeTesselationMode_ = edgeTesselationModeRequested_;
 
     geometry::Curve curve;
     curve.setPositions(ke->points());
@@ -894,7 +910,7 @@ void VacKeyEdge::dirtyInputSampling_(bool notifyDependents) {
         controlPoints_.clear();
         controlPointsGeometry_.reset();
         inputSamples_.clear();
-        edgeTesselationMode_ = -1;
+        edgeTesselationMode_ = EdgeSubdivisionQuality::Disabled;
         dirtyPreJoinGeometry_(notifyDependents);
         isInputSamplingDirty_ = true;
     }

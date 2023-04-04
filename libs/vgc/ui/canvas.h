@@ -28,6 +28,7 @@
 #include <vgc/ui/api.h>
 #include <vgc/ui/cursor.h>
 #include <vgc/ui/widget.h>
+#include <vgc/workspace/edge.h>
 #include <vgc/workspace/workspace.h>
 
 namespace vgc::ui {
@@ -97,7 +98,7 @@ public:
     ///
     void stopLoggingUnder(core::PerformanceLog* parent);
 
-    int requestedTesselationMode() const {
+    workspace::EdgeSubdivisionQuality requestedTesselationMode() const {
         return requestedTesselationMode_;
     }
 
@@ -205,7 +206,8 @@ protected:
     // Tesselation mode. This is selected with the i/u/a keys.
     // XXX This is a temporary quick method to switch between
     // tesselation modes. A more engineered method will come later.
-    int requestedTesselationMode_ = 2; // 0: none; 1: uniform; 2: adaptive
+    workspace::EdgeSubdivisionQuality requestedTesselationMode_ =
+        workspace::EdgeSubdivisionQuality::AdaptiveHigh;
     bool reTesselate = false;
 
     // Performance logging

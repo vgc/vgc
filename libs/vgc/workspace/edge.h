@@ -172,6 +172,15 @@ loadMeshGraphics(graphics::Engine* engine, const StuvMesh2d& mesh);
 
 } // namespace detail
 
+enum class EdgeSubdivisionQuality {
+    Disabled,
+    UniformLow,
+    AdaptiveLow,
+    UniformHigh,
+    AdaptiveHigh,
+    UniformVeryHigh
+};
+
 class VGC_WORKSPACE_API EdgeGraphics {
 public:
     void clear() {
@@ -403,7 +412,7 @@ public:
         return cell ? cell->toKeyEdgeUnchecked() : nullptr;
     }
 
-    void setTesselationMode(int mode);
+    void setTesselationMode(EdgeSubdivisionQuality mode);
 
     std::optional<core::StringId> domTagName() const override;
 
@@ -441,8 +450,7 @@ private:
     mutable graphics::GeometryViewPtr controlPointsGeometry_;
     geometry::CurveSampleArray inputSamples_;
     Int samplingVersion_ = -1;
-    int edgeTesselationMode_ = -1;
-    int edgeTesselationModeRequested_ = 2;
+    EdgeSubdivisionQuality edgeTesselationMode_ = EdgeSubdivisionQuality::AdaptiveHigh;
     bool isInputSamplingDirty_ = true;
 
     void onDependencyChanged_(Element* dependency, ChangeFlags changes) override;
