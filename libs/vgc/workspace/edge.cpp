@@ -778,13 +778,13 @@ bool VacKeyEdge::computeInputSampling_() {
         break;
     case EdgeSubdivisionQuality::UniformHigh:
         maxAngle = 100;
-        minQuads = 32;
-        maxQuads = 32;
+        minQuads = 16;
+        maxQuads = 16;
         break;
     case EdgeSubdivisionQuality::AdaptiveHigh:
         maxAngle = 0.05;
         minQuads = 1;
-        maxQuads = 64;
+        maxQuads = 32;
         break;
     case EdgeSubdivisionQuality::UniformVeryHigh:
         maxAngle = 100;
@@ -797,7 +797,7 @@ bool VacKeyEdge::computeInputSampling_() {
     curve.setPositions(ke->points());
     curve.setWidths(ke->widths());
     geometry::CurveSamplingParameters samplingParams = {};
-    samplingParams.setMaxAngle(maxAngle * 0.5); // matches triangulate()
+    samplingParams.setMaxAngle(maxAngle);
     samplingParams.setMinIntraSegmentSamples(minQuads - 1);
     samplingParams.setMaxIntraSegmentSamples(maxQuads - 1);
     curve.sampleRange(samplingParams, inputSamples_);
@@ -910,7 +910,6 @@ void VacKeyEdge::dirtyInputSampling_(bool notifyDependents) {
         controlPoints_.clear();
         controlPointsGeometry_.reset();
         inputSamples_.clear();
-        edgeTesselationMode_ = EdgeSubdivisionQuality::Disabled;
         dirtyPreJoinGeometry_(notifyDependents);
         isInputSamplingDirty_ = true;
     }
