@@ -596,8 +596,6 @@ ElementStatus VacKeyEdge::updateFromDom_(Workspace* workspace) {
 
     vacomplex::KeyEdge* ke = vacKeyEdgeNode();
 
-    ChangeFlags changeFlags = {};
-
     const auto& points = domElement->getAttribute(ds::positions).getVec2dArray();
     const auto& widths = domElement->getAttribute(ds::widths).getDoubleArray();
 

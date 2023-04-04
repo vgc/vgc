@@ -315,7 +315,7 @@ void VacKeyVertex::computeJoin_() {
     data.isComputing_ = true;
 
     detail::VacJoinFrameData& joinData = data.joinData_;
-    geometry::Vec2d vertexPosition = data.position();
+    //geometry::Vec2d vertexPosition = data.position();
 
     // collect standalone edge data and halfwidths at join
     for (const VacJoinHalfedge& he : joinHalfedges()) {
