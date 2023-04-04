@@ -727,6 +727,14 @@ void VacKeyEdge::updateVertices_(const std::array<VacKeyVertex*, 2>& newVertices
     }
 }
 
+// TODO: handle the following case:
+//  1) dirty without notify: pendingNotifyChanges_.set(A)
+//  2) computeA: alreadyNotifiedChanges_.unset(A)
+//     -> does nothing
+//  3) notify: alreadyNotifiedChanges_.set(pendingNotifyChanges_)
+//     -> corrupts the flags and the requester of computeA won't know about the
+//        next dirty.
+//
 void VacKeyEdge::notifyChanges_() {
     pendingNotifyChanges_.unset(alreadyNotifiedChanges_);
     if (pendingNotifyChanges_) {
@@ -739,6 +747,7 @@ void VacKeyEdge::notifyChanges_() {
                 }
             }
         }
+        pendingNotifyChanges_.clear();
     }
 }
 
