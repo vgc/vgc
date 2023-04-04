@@ -101,12 +101,22 @@ private:
     // ops helpers
 
     void onNodeRemoved(VacNode* node) {
-        auto& it = nodeDiffs_[node->id()];
-        it.setNode(node);
+        auto it = nodeDiffs_.try_emplace(node->id()).first;
+        VacNodeDiff& nodeDiff = it->second;
+        if (nodeDiff.flags().has(VacNodeDiffFlag::Created)) {
+            // If this node was created then removed as part of the same diff,
+            // we simply consider that it was never created in the first place.
+            nodeDiffs_.erase(it);
+        }
+        else {
+            nodeDiff.setNode(node);
+            nodeDiff.setFlags(nodeDiff.flags() | VacNodeDiffFlag::Removed);
+        }
     }
 
     void onNodeDiff(VacNode* node, VacNodeDiffFlags diffFlags) {
         VacNodeDiff& nodeDiff = nodeDiffs_[node->id()];
+        nodeDiff.setNode(node);
         nodeDiff.setFlags(nodeDiff.flags() | diffFlags);
     }
 };
