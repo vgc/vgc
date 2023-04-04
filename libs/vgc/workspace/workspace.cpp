@@ -253,18 +253,18 @@ WorkspacePtr Workspace::create(dom::DocumentPtr document) {
     namespace ds = dom::strings;
 
     std::call_once(initOnceFlag, []() {
-        registerElementClass(ds::vgc, &makeUniqueElement<Layer>);
-        registerElementClass(ds::layer, &makeUniqueElement<Layer>);
-        registerElementClass(ds::vertex, &makeUniqueElement<VacKeyVertex>);
+        registerElementClass_(ds::vgc, &makeUniqueElement<Layer>);
+        registerElementClass_(ds::layer, &makeUniqueElement<Layer>);
+        registerElementClass_(ds::vertex, &makeUniqueElement<VacKeyVertex>);
         //registerElementClass(ds::edge, &makeUniqueElement<KeyEdge>);
-        registerElementClass(ds::edge, &makeUniqueElement<VacKeyEdge>);
+        registerElementClass_(ds::edge, &makeUniqueElement<VacKeyEdge>);
         //registerElementClass(ds::face, &makeUniqueElement<VacKeyFace>);
     });
 
     return WorkspacePtr(new Workspace(document));
 }
 
-void Workspace::registerElementClass(
+void Workspace::registerElementClass_(
     core::StringId tagName,
     ElementCreator elementCreator) {
 

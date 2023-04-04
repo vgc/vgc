@@ -42,9 +42,39 @@ struct VacElementLists;
 } // namespace detail
 
 /// \class vgc::workspace::Workspace
-/// \brief Represents a workspace to manage, manipulate and visit a vector graphics scene.
+/// \brief High-level interface to manipulate and render a vector graphics document.
 ///
-/// This implementation is still preliminary and the API may change significantly.
+/// A vector graphics document can be described as a `dom::Document`, providing
+/// a simple low-level representation which is very useful for serialization,
+/// undo/redo, or low-level editing in a DOM editor.
+///
+/// However, the DOM representation by itself does not provide any means to
+/// render the scene, nor convenient methods to edit the underlying topological
+/// objects described in the DOM. For such use cases, you can use a
+/// `Workspace`.
+///
+/// A workspace takes as input a given `dom::Document` and creates two other
+/// parallel tree-like structures which are all kept synchronized:
+///
+/// 1. A topological complex (`vacomplex::Complex`), representing the explicit
+///    or implicit vertices, edges, and faces described in the document.
+///
+/// 2. A workspace tree, unifying both the topological complex and the DOM document.
+///
+/// By visiting the workspace tree, you can iterate not only on all the
+/// elements in the DOM (including those not in the topological complex, e.g.,
+/// text), but also on all the elements in the topological complex (including
+/// those not in the DOM, e.g., implicit vertices, edges, and faces).
+///
+/// The elements in the workspace tree (`workspace::Element`) store pointers to
+/// their corresponding `dom::Element` (if any), and their corresponding
+/// `vacomplex::Node` (if any).
+///
+/// The elements in the workspace tree also store all the graphics resources
+/// required to render the vector graphics document. These graphics resources
+/// are computed from the base geometry provided by `vacomplex::Complex`, on
+/// top of which is applied styling and compositing. For example, the workspace
+/// is responsible for the computation of edge joins.
 ///
 class VGC_WORKSPACE_API Workspace : public core::Object {
 private:
@@ -55,12 +85,7 @@ private:
     void onDestroyed() override;
 
 public:
-    using ElementCreator = std::unique_ptr<Element> (*)(Workspace*);
-
     static WorkspacePtr create(dom::DocumentPtr document);
-
-    static void
-    registerElementClass(core::StringId tagName, ElementCreator elementCreator);
 
     dom::Document* document() const {
         return document_.get();
@@ -124,7 +149,20 @@ public:
 
 private:
     friend VacElement;
+
+    // Factory methods to create a workspace element from a DOM tag name.
+    //
+    // An ElementCreator is a function taking a `Workspace*` as input and
+    // returning an std::unique_ptr<Element>. This might be publicized later
+    // for extensibility, but should then be adapted to allow interoperability
+    // with Python.
+    //
+    using ElementCreator = std::unique_ptr<Element> (*)(Workspace*);
+
     static std::unordered_map<core::StringId, ElementCreator>& elementCreators_();
+
+    static void
+    registerElementClass_(core::StringId tagName, ElementCreator elementCreator);
 
     // This is the <vgc> element (the root).
     VacElement* vgcElement_;
