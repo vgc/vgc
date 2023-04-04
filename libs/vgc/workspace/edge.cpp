@@ -756,9 +756,9 @@ bool VacKeyEdge::computeInputSampling_() {
 
     data.isComputing_ = true;
 
-    double maxAngle = 0.05;
+    double maxAngle = 1;
     Int minQuads = 1;
-    Int maxQuads = 64;
+    Int maxQuads = 1;
 
     switch (edgeTesselationMode_) {
     case EdgeSubdivisionQuality::Disabled:
@@ -772,7 +772,7 @@ bool VacKeyEdge::computeInputSampling_() {
         maxQuads = 4;
         break;
     case EdgeSubdivisionQuality::AdaptiveLow:
-        maxAngle = 0.1;
+        maxAngle = 0.05;
         minQuads = 1;
         maxQuads = 8;
         break;
@@ -782,7 +782,7 @@ bool VacKeyEdge::computeInputSampling_() {
         maxQuads = 16;
         break;
     case EdgeSubdivisionQuality::AdaptiveHigh:
-        maxAngle = 0.05;
+        maxAngle = 0.025;
         minQuads = 1;
         maxQuads = 32;
         break;
