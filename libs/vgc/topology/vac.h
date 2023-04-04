@@ -186,8 +186,9 @@ protected:
     bool insertNode(std::unique_ptr<VacNode>&& node);
 
 private:
+    using NodePtrMap = std::unordered_map<core::Id, std::unique_ptr<VacNode>>;
     Int64 version_ = 0;
-    std::unordered_map<core::Id, std::unique_ptr<VacNode>> nodes_;
+    NodePtrMap nodes_;
     // TODO: maybe store the root in the map.
     VacGroup* root_;
     VacDiff diff_ = {};

@@ -47,20 +47,25 @@ VacPtr Vac::create() {
 }
 
 void Vac::clear() {
+
     isBeingCleared_ = true;
-    if (isDiffEnabled_) {
-        for (const auto& it : nodes_) {
-            VacGroup* parentGroup = it.second->parentGroup();
-            if (parentGroup) {
-                diff_.onNodeDiff(parentGroup, VacNodeDiffFlag::ChildrenChanged);
-                diff_.onNodeDiff(it.second.get(), VacNodeDiffFlag::Removed);
-            }
-        }
-    }
+
+    // Emit about to be removed for all the nodes
     for (const auto& node : nodes_) {
         nodeAboutToBeRemoved().emit(node.second.get());
     }
-    nodes_.clear();
+
+    // Remove all the nodes
+    auto nodesCopy = std::move(nodes_);
+    nodes_ = NodePtrMap();
+
+    // Add the removal of all the nodes to the diff
+    if (isDiffEnabled_) {
+        for (const auto& node : nodesCopy) {
+            diff_.onNodeRemoved(node.second.get());
+        }
+    }
+
     isBeingCleared_ = false;
     root_ = nullptr;
     ++version_;
