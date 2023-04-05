@@ -621,38 +621,40 @@ Workspace::createAppendElementFromDom_(dom::Element* domElement, Element* parent
         return nullptr;
     }
 
-    std::unique_ptr<Element> u = {};
+    std::unique_ptr<Element> createdElementPtr = {};
     auto& creators = elementCreators_();
     auto it = creators.find(domElement->tagName());
     if (it != creators.end()) {
-        u = it->second(this);
-        if (!u) {
+        auto& creator = it->second;
+        createdElementPtr = std::invoke(creator, this);
+        if (!createdElementPtr) {
             VGC_ERROR(
                 LogVgcWorkspace,
                 "Element creator for \"{}\" failed to create the element.",
                 domElement->tagName());
             // XXX throw or fallback to UnsupportedElement or nullptr ?
-            u = std::make_unique<UnsupportedElement>(this);
+            createdElementPtr = std::make_unique<UnsupportedElement>(this);
         }
     }
     else {
-        u = std::make_unique<UnsupportedElement>(this);
+        createdElementPtr = std::make_unique<UnsupportedElement>(this);
     }
 
-    Element* e = u.get();
-    e->domElement_ = domElement;
-    const auto& p = elements_.emplace(domElement->internalId(), std::move(u));
-    if (!p.second) {
+    core::Id id = domElement->internalId();
+    Element* createdElement = createdElementPtr.get();
+    bool emplaced = elements_.try_emplace(id, std::move(createdElementPtr)).second;
+    if (!emplaced) {
         // TODO: should probably throw
         return nullptr;
     }
-    e->id_ = domElement->internalId();
+    createdElement->domElement_ = domElement;
+    createdElement->id_ = id;
 
     if (parent) {
-        parent->appendChild(e);
+        parent->appendChild(createdElement);
     }
 
-    return e;
+    return createdElement;
 }
 
 namespace {
