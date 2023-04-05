@@ -44,22 +44,22 @@ struct VacElementLists;
 /// \class vgc::workspace::Workspace
 /// \brief High-level interface to manipulate and render a vector graphics document.
 ///
-/// A vector graphics document can be described as a `dom::Document`, providing
-/// a simple low-level representation which is very useful for serialization,
-/// undo/redo, or low-level editing in a DOM editor.
+/// A vector graphics document can be described as a DOM (`dom::Document`),
+/// providing a simple low-level representation which is very useful for
+/// serialization, undo/redo, or low-level editing in a DOM editor.
 ///
 /// However, the DOM representation by itself does not provide any means to
 /// render the scene, nor convenient methods to edit the underlying topological
 /// objects described in the DOM. For such use cases, you can use a
 /// `Workspace`.
 ///
-/// A workspace takes as input a given `dom::Document` and creates two other
-/// parallel tree-like structures which are all kept synchronized:
+/// A workspace takes as input a given DOM (`dom::Document`) and creates two
+/// other parallel tree-like structures which are all kept synchronized:
 ///
 /// 1. A topological complex (`vacomplex::Complex`), representing the explicit
-///    or implicit vertices, edges, and faces described in the document.
+///    or implicit vertices, edges, and faces described in the DOM.
 ///
-/// 2. A workspace tree, unifying both the topological complex and the DOM document.
+/// 2. A workspace tree, unifying both the topological complex and the DOM.
 ///
 /// By visiting the workspace tree, you can iterate not only on all the
 /// elements in the DOM (including those not in the topological complex, e.g.,
@@ -85,60 +85,200 @@ private:
     void onDestroyed() override;
 
 public:
+    /// Creates a `Workspace` operating on the given `document`.
+    ///
     static WorkspacePtr create(dom::DocumentPtr document);
 
+    /// Returns the DOM that this workspace is operating on.
+    ///
+    /// \sa `vac()`.
+    ///
     dom::Document* document() const {
         return document_.get();
     }
 
-    const topology::Vac* vac() const {
+    /// Returns the topological complex corresponding to the DOM that this
+    /// workspace is operating on.
+    ///
+    /// This topological complex stores all the explicit and implicit vertices,
+    /// edges, and faces described in the DOM.
+    ///
+    /// You can operate on this topological complex by using the topological
+    /// operators available in the `vacomplex::ops` namespace. The DOM is
+    /// always automatically updated to reflect these changes.
+    ///
+    /// However, note that modifications of the DOM do not cause an automatic
+    /// update of the topological complex. After editing the DOM, you must
+    /// explicitly call `workspace->sync()` or `document->emitPendingDiff()` in
+    /// order to update the topological complex. This design protects against
+    /// unsafe retroaction loops, improves performance, and makes it possible
+    /// for the DOM to be temporarilly in an invalid state (topologically
+    /// speaking) during a sequence of multiple edits from one valid state to
+    /// another valid state.
+    ///
+    /// \sa `document()`.
+    ///
+    vacomplex::Complex* vac() const {
         return vac_.get();
     }
 
+    /// If the `document()` of this workspace has enabled support for undo/redo
+    /// via a `core::History()`, this function returns this history.
+    ///
+    /// Otherwise, returns `nullptr`.
+    ///
     core::History* history() const {
         return document_.get()->history();
     }
 
+    /// Returns the root workspace element, that is, the workspace element
+    /// corresponding to the `<vgc>` root DOM element.
+    ///
     Element* vgcElement() const {
         return vgcElement_;
     }
 
+    /// Returns the workspace element corresponding to the given ID, if any.
+    ///
+    /// Returns `nullptr` if no element corresponds to this ID.
+    ///
     Element* find(core::Id elementId) const {
         auto it = elements_.find(elementId);
         return it != elements_.end() ? it->second.get() : nullptr;
     }
 
+    /// Returns the workspace element corresponding to the given DOM element, if
+    /// any.
+    ///
+    /// Returns `nullptr` if no element corresponds to the given DOM element.
+    /// This can happen if the DOM still has pending changes that have not been
+    /// synchronized. If you call this function just after `sync()`, there
+    /// should normally always be a `workspace::Element` corresponding to any
+    /// `dom::Element`.
+    ///
     Element* find(const dom::Element* element) const {
         return element ? find(element->internalId()) : nullptr;
     }
 
+    /// Returns the workspace element of subtype `workspace::VacElement`
+    /// corresponding to the given topological node ID (that is,
+    /// `vacomplex::Node::id()`), if any.
+    ///
+    /// Returns `nullptr` if no `workspace::VacElement` corresponds to the
+    /// given topological node ID.
+    ///
     VacElement* findVacElement(core::Id nodeId) const {
         auto it = elementByVacInternalId_.find(nodeId);
         return it != elementByVacInternalId_.end() ? it->second : nullptr;
     }
 
+    /// Returns the workspace element of subtype `workspace::VacElement`
+    /// corresponding to the given topological `node`, if any.
+    ///
+    /// Under most circumstances, this function shouldn't return `nullptr` as
+    /// long as the given `node` is non-null and is part of the topological
+    /// complex managed by this workspace (i.e., if `node->vac() ==
+    /// workspace->vac()`).
+    ///
+    /// However, this function might still return `nullptr` if it called as
+    /// part of a slot connected to the `vacomplex::Complex::nodeCreated()`
+    /// signal, if such slot is called before the workspace's own slot
+    /// performing the synchronization between the topological complex and the
+    /// workspace tree.
+    ///
     VacElement* findVacElement(const vacomplex::Node* node) const {
+        // XXX: warning if returns nullptr despite `node` being non-null?
         return node ? findVacElement(node->id()) : nullptr;
     }
 
+    /// Explicitly synchronizes the DOM, workspace tree, and topological complex
+    /// together.
+    ///
     void sync();
-    void rebuildFromDom();
-    //void rebuildFromVac();
 
+    /// Rebuilds the workspace tree and the topological complex from scratch, based
+    /// on the current state of the DOM.
+    ///
+    /// This function is useful temporarily while the implementation of this
+    /// class is not complete. For example, we currently do not properly
+    /// support path updates from the DOM, so in case of id/name changes, the
+    /// `sync()` function wouldn't work properly and it is required to rebuild
+    /// from scratch.
+    ///
+    void rebuildFromDom();
+
+    /// Requests the workspace to update a specific workspace element (and its
+    /// corresponding topological node, if any) based on its current
+    /// description in the DOM.
+    ///
+    /// This function is meant to be called in reimplementations of
+    /// `Element::updateFromDom()`, whenever another element must be updated
+    /// first. For example, the implementation of `VacKeyEdge::updateFromDom()`
+    /// calls `workspace->updateElement(vertex)` for each of its start and end
+    /// vertices.
+    ///
+    /// If a cyclic update dependency is detected, then this function emits an
+    /// error and does not perform the update.
+    ///
+    // XXX make it instead a (non-virtual) protected method of Element, e.g.,
+    // updateDependencyFromDom(Element* dependency)? Or perhaps
+    // Element::updateFromDom() can be renamed Element::onUpdateFromDom(), and
+    // this function be Element::updateFromDom(Element* dependency).
+    //
     bool updateElementFromDom(Element* element);
 
+    /// Resolves the path stored in the attribute `attrName` of `domElement`,
+    /// and returns its corresponding workspace element, if any.
+    ///
+    /// If `tagNameFilter` is not empty, and the tag name of the found element
+    /// is not equal to `tagNameFilter`, then this function emits a warning and
+    /// returns `nullptr`.
+    ///
+    /// Throws an exception if the attribute does not exist, or exist but is
+    /// not of type `dom::ValueType::Path` or `dom::ValueType::NoneOrPath`.
+    ///
+    /// The behavior is undefined if `domElement`
+    /// Example:
+    ///
+    /// ```cpp
+    /// Element* startVertexWorkspaceElement = workspace->getElementFromPathAttribute(
+    ///     edgeDomElement,
+    ///     dom::strings::startvertex,
+    ///     dom::strings::vertex);
+    /// ```
+    ///
     Element* getElementFromPathAttribute(
         dom::Element* domElement,
         core::StringId attrName,
         core::StringId tagNameFilter = {}) const;
 
+    /// Traverses all elements in the workspace tree in a depth-first order.
+    ///
+    /// For each visited element, `preOrderFn(element, depth)` is called before
+    /// visiting any of its children.
+    ///
     void visitDepthFirstPreOrder(const std::function<void(Element*, Int)>& preOrderFn);
+
+    /// Traverses all elements in the workspace tree in a depth-first order.
+    ///
+    /// For each visited element, `preOrderFn(element, depth)` is called before
+    /// visiting any of its children, and `postOrderFn(element, depth)` is called
+    /// after having visited all of its children.
+    ///
+    /// If `preOrderFn(element, depth)` returns false, then the children of
+    /// `element` are not visited, allowing you to skip subtrees.
+    ///
     void visitDepthFirst(
         const std::function<bool(Element*, Int)>& preOrderFn,
         const std::function<void(Element*, Int)>& postOrderFn);
 
+    /// This signal is emitted whenever the workspace changes, either
+    /// as a result of the DOM changing, or the topological complex
+    /// changing.
+    ///
     VGC_SIGNAL(changed);
 
+private:
     // updates from dom are deferred
     VGC_SLOT(onDocumentDiff, onDocumentDiff_);
     // updates from vac are direct (after each atomic operation)
@@ -147,7 +287,6 @@ public:
     VGC_SLOT(onVacNodeMoved, onVacNodeMoved_);
     VGC_SLOT(onVacCellModified, onVacCellModified_);
 
-private:
     friend VacElement;
 
     // Factory methods to create a workspace element from a DOM tag name.

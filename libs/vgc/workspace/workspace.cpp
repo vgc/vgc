@@ -205,8 +205,7 @@ Workspace::Workspace(dom::DocumentPtr document)
     vac_->nodeMoved().connect(onVacNodeMoved());
     vac_->cellModified().connect(onVacCellModified());
 
-    rebuildTreeFromDom_();
-    rebuildVacFromTree_();
+    rebuildFromDom();
 }
 
 void Workspace::onDestroyed() {

@@ -532,6 +532,9 @@ ElementStatus VacKeyEdge::updateFromDom_(Workspace* workspace) {
     }
 
     // update dependencies
+    // XXX Do we need std::optional here? getElementFromPathAttribute currently
+    // does not return an std::optional<Element*>, but directly a nullptr, so
+    // the "or" part of "value_or" below is in fact never used.
     std::array<std::optional<Element*>, 2> verticesOpt = {
         workspace->getElementFromPathAttribute(domElement, ds::startvertex, ds::vertex),
         workspace->getElementFromPathAttribute(domElement, ds::endvertex, ds::vertex)};

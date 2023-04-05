@@ -175,7 +175,7 @@ public:
         return hasPendingUpdate_;
     }
 
-    const Workspace* workspace() const {
+    Workspace* workspace() const {
         return workspace_;
     }
 
@@ -281,7 +281,8 @@ protected:
         PaintOptions flags = PaintOption::None) const;
 
 private:
-    const Workspace* workspace_;
+    Workspace* workspace_;
+
     // uniquely identifies an element
     // if vacNode_ != nullptr then vacNode_->id() == id_.
     core::Id id_ = -1;
@@ -309,6 +310,9 @@ private:
     virtual void onDependentElementRemoved_(Element* dependent);
     virtual void onDependentElementAdded_(Element* dependent);
 
+    // XXX We pass workspace as argument because historically, Element::workspace()
+    // was returning a `const Workspace*`, not a `Workspace*`. We may want to now
+    // remove this argument.
     virtual ElementStatus updateFromDom_(Workspace* workspace);
 };
 
