@@ -85,6 +85,10 @@ public:
         return v == endVertex_;
     }
 
+    bool isClosed() const override {
+        return !startVertex_;
+    }
+
 private:
     KeyVertex* startVertex_ = nullptr;
     KeyVertex* endVertex_ = nullptr;

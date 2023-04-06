@@ -26,6 +26,10 @@ Element::~Element() {
     clearDependencies();
 }
 
+std::optional<core::StringId> Element::domTagName() const {
+    return {};
+}
+
 geometry::Rect2d Element::boundingBox(core::AnimTime /*t*/) const {
     return geometry::Rect2d::empty;
 }
@@ -74,23 +78,16 @@ void Element::clearDependencies() {
     }
 }
 
-void Element::onDependencyRemoved_(Element* /*dependency*/) {
+void Element::notifyChangesToDependents(ChangeFlags changes) {
+    for (Element* e : dependents_) {
+        e->onDependencyChanged_(this, changes);
+    }
 }
 
-void Element::onDependentElementRemoved_(Element* /*dependent*/) {
+void Element::onPaintPrepare(core::AnimTime /*t*/, PaintOptions /*flags*/) {
 }
 
-void Element::onDependentElementAdded_(Element* /*dependent*/) {
-}
-
-ElementStatus Element::updateFromDom_(Workspace* /*workspace*/) {
-    return ElementStatus::Ok;
-}
-
-void Element::preparePaint_(core::AnimTime /*t*/, PaintOptions /*flags*/) {
-}
-
-void Element::paint_(
+void Element::onPaintDraw(
     graphics::Engine* /*engine*/,
     core::AnimTime /*t*/,
     PaintOptions /*flags*/) const {
@@ -106,6 +103,34 @@ VacElement* Element::findFirstSiblingVacElement_(Element* start) {
     return static_cast<VacElement*>(e);
 }
 
+ElementStatus Element::updateFromDom_(Workspace* /*workspace*/) {
+    return ElementStatus::Ok;
+}
+
+ElementStatus
+Element::onDependencyChanged_(Element* /*dependency*/, ChangeFlags /*changes*/) {
+    return status_;
+}
+
+ElementStatus Element::onDependencyRemoved_(Element* /*dependency*/) {
+    // child classes typically have to invalidate data when a dependency is removed
+    ElementStatus status = this->status();
+    if (status == ElementStatus::Ok) {
+        status = ElementStatus::UnresolvedDependency;
+    }
+    return status;
+}
+
+void Element::onDependencyMoved_(Element* /*dependency*/) {
+    // child classes typically have to update paths when a dependency moves
+}
+
+void Element::onDependentElementRemoved_(Element* /*dependent*/) {
+}
+
+void Element::onDependentElementAdded_(Element* /*dependent*/) {
+}
+
 VacElement::~VacElement() {
     // safe ?
     removeVacNode();
@@ -119,11 +144,17 @@ void VacElement::removeVacNode() {
         vacomplex::Node* tmp = vacNode_;
         vacNode_ = nullptr;
         topology::ops::removeNode(tmp, false);
+        const_cast<Workspace*>(workspace())->elementByVacInternalId_.erase(tmp->id());
     }
 }
 
 void VacElement::setVacNode(vacomplex::Node* vacNode) {
     removeVacNode();
+    if (vacNode) {
+        const_cast<Workspace*>(workspace())
+            ->elementByVacInternalId_.emplace(vacNode->id(), this);
+    }
+    //workspace()->elementByVacInternalId_
     vacNode_ = vacNode;
 }
 

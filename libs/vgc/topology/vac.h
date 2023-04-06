@@ -44,9 +44,10 @@ enum class VacNodeDiffFlag {
     Removed                 = 0x02,
     Reparented              = 0x04,
     ChildrenChanged         = 0x08,
-    AttributeChanged        = 0x10,
+    TransformChanged        = 0x10,
     GeometryChanged         = 0x20,
-    StarChanged             = 0x40,
+    BoundaryChanged         = 0x40,
+    StarChanged             = 0x80,
 };
 VGC_DEFINE_FLAGS(VacNodeDiffFlags, VacNodeDiffFlag)
 // clang-format on
@@ -101,12 +102,22 @@ private:
     // ops helpers
 
     void onNodeRemoved(VacNode* node) {
-        auto& it = nodeDiffs_[node->id()];
-        it.setNode(node);
+        auto it = nodeDiffs_.try_emplace(node->id()).first;
+        VacNodeDiff& nodeDiff = it->second;
+        if (nodeDiff.flags().has(VacNodeDiffFlag::Created)) {
+            // If this node was created then removed as part of the same diff,
+            // we simply consider that it was never created in the first place.
+            nodeDiffs_.erase(it);
+        }
+        else {
+            nodeDiff.setNode(node);
+            nodeDiff.setFlags(nodeDiff.flags() | VacNodeDiffFlag::Removed);
+        }
     }
 
     void onNodeDiff(VacNode* node, VacNodeDiffFlags diffFlags) {
         VacNodeDiff& nodeDiff = nodeDiffs_[node->id()];
+        nodeDiff.setNode(node);
         nodeDiff.setFlags(nodeDiff.flags() | diffFlags);
     }
 };
@@ -122,7 +133,7 @@ private:
 
 protected:
     Vac() {
-        resetRoot(core::genId());
+        resetRoot();
     }
 
     void onDestroyed() override;
@@ -132,7 +143,7 @@ public:
 
     void clear();
 
-    VacGroup* resetRoot(core::Id id);
+    VacGroup* resetRoot();
 
     VacGroup* rootGroup() const {
         return root_;
@@ -152,25 +163,33 @@ public:
         return version_;
     }
 
-    const VacDiff& pendingDiff() {
-        return diff_;
-    }
+    //const VacDiff& pendingDiff() {
+    //    return diff_;
+    //}
 
-    bool emitPendingDiff();
+    //bool emitPendingDiff();
 
-    VGC_SIGNAL(onNodeAboutToBeRemoved, (VacNode*, node))
-    VGC_SIGNAL(changed, (const VacDiff&, diff))
+    VGC_SIGNAL(
+        nodeCreated,
+        (VacNode*, node),
+        (core::Span<VacNode*>, operationSourceNodes))
+    VGC_SIGNAL(nodeAboutToBeRemoved, (VacNode*, node))
+    VGC_SIGNAL(nodeMoved, (VacNode*, node))
+    VGC_SIGNAL(nodeModified, (VacNode*, node), (VacNodeDiffFlags, diffs))
+
+    //VGC_SIGNAL(changed, (const VacDiff&, diff))
 
 protected:
     void incrementVersion() {
         ++version_;
     }
 
-    bool insertNode(core::Id id, std::unique_ptr<VacNode>&& node);
+    bool insertNode(std::unique_ptr<VacNode>&& node);
 
 private:
+    using NodePtrMap = std::unordered_map<core::Id, std::unique_ptr<VacNode>>;
     Int64 version_ = 0;
-    std::unordered_map<core::Id, std::unique_ptr<VacNode>> nodes_;
+    NodePtrMap nodes_;
     // TODO: maybe store the root in the map.
     VacGroup* root_;
     VacDiff diff_ = {};
@@ -183,16 +202,19 @@ private:
 namespace vgc::vacomplex {
 
 using Complex = topology::Vac;
+using ComplexPtr = topology::VacPtr;
+
+using Node = topology::VacNode;
 
 using Cell = topology::VacCell;
 using Group = topology::VacGroup;
-using Node = topology::VacNode;
 
 using CellType = topology::VacCellType;
 using topology::CellSpatialType;
 using topology::CellTemporalType;
 
 using NodeDiffFlag = topology::VacNodeDiffFlag;
+using NodeDiffFlags = topology::VacNodeDiffFlags;
 using Diff = topology::VacDiff;
 
 using topology::EdgeCell;

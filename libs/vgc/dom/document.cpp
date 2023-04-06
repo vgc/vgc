@@ -846,7 +846,39 @@ void Document::disableHistory() {
     }
 }
 
+bool Document::hasPendingDiff() {
+    return !pendingDiff_.isEmpty();
+}
+
 bool Document::emitPendingDiff() {
+
+    // Do nothing if there is no pending diff.
+    //
+    if (!hasPendingDiff()) {
+        return false;
+    }
+
+    // Compress the diff.
+    //
+    // Note that pendingDiff_ might be non-empty before compression, but empty
+    // after compression. If pendingDiff_ is empty after compression, we still
+    // emits this empty diff since we want to provide the invariant that if
+    // hasPendingDiff() is true, then a signal is emitted. This allows clients
+    // to ignore the "next" document changed() signal if they know that the
+    // change comes from them.
+    //
+    compressPendingDiff_();
+
+    // Emits the diff now.
+    //
+    changed().emit(pendingDiff_);
+    pendingDiff_.reset();
+    pendingDiffKeepAllocPointers_.clear();
+    return true;
+}
+
+void Document::compressPendingDiff_() {
+
     for (const auto& [node, oldRelatives] : previousRelativesMap_) {
         if (pendingDiff_.createdNodes_.contains(node)) {
             continue;
@@ -884,18 +916,6 @@ bool Document::emitPendingDiff() {
         }
         ++it;
     }
-
-    if (!pendingDiff_.isEmpty()) {
-
-        // XXX todo: emit node signals in here ?
-
-        changed().emit(pendingDiff_);
-        pendingDiff_.reset();
-        pendingDiffKeepAllocPointers_.clear();
-        return true;
-    }
-
-    return false;
 }
 
 void Document::onHistoryHeadChanged_() {

@@ -208,13 +208,34 @@ void deleteElement(workspace::Element* element, workspace::Workspace* workspace)
 
 bool Canvas::onKeyPress(KeyEvent* event) {
 
+    using workspace::EdgeSubdivisionQuality;
+
     switch (event->key()) {
     case Key::T:
         polygonMode_ = polygonMode_ ? 0 : 1;
         requestRepaint();
         break;
     case Key::I:
-        requestedTesselationMode_ = (requestedTesselationMode_ + 1) % 3;
+        switch (requestedTesselationMode_) {
+        case EdgeSubdivisionQuality::Disabled:
+            requestedTesselationMode_ = EdgeSubdivisionQuality::UniformLow;
+            break;
+        case EdgeSubdivisionQuality::UniformLow:
+            requestedTesselationMode_ = EdgeSubdivisionQuality::AdaptiveLow;
+            break;
+        case EdgeSubdivisionQuality::AdaptiveLow:
+            requestedTesselationMode_ = EdgeSubdivisionQuality::UniformHigh;
+            break;
+        case EdgeSubdivisionQuality::UniformHigh:
+            requestedTesselationMode_ = EdgeSubdivisionQuality::AdaptiveHigh;
+            break;
+        case EdgeSubdivisionQuality::AdaptiveHigh:
+            requestedTesselationMode_ = EdgeSubdivisionQuality::UniformVeryHigh;
+            break;
+        case EdgeSubdivisionQuality::UniformVeryHigh:
+            requestedTesselationMode_ = EdgeSubdivisionQuality::Disabled;
+            break;
+        }
         reTesselate = true;
         requestRepaint();
         break;

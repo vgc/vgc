@@ -89,11 +89,25 @@ VGC_DEFINE_FLAGS(ElementFlags, ElementFlag)
 
 enum class ElementStatus : Int8 {
     Ok,
+    Uninitialized,
+    InternalError,
     InvalidAttribute,
     UnresolvedDependency,
     ErrorInDependency,
     ErrorInParent,
 };
+
+enum class ChangeFlag : UInt {
+    None = 0x00,
+    VertexPosition = 0x01,
+    EdgePreJoinGeometry = 0x02,
+    EdgePostJoinGeometry = 0x04,
+    EdgeStrokeMesh = 0x08,
+    Color = 0x20,
+    Style = 0x40,
+    EdgeGeometry = EdgePreJoinGeometry | EdgePostJoinGeometry | EdgeStrokeMesh,
+};
+VGC_DEFINE_FLAGS(ChangeFlags, ChangeFlag)
 
 constexpr bool operator!(const ElementStatus& status) noexcept {
     return status != ElementStatus::Ok;
@@ -110,9 +124,8 @@ private:
     using Base = topology::detail::TreeNodeBase<Element>;
 
 protected:
-    Element(Workspace* workspace, dom::Element* domElement)
-        : workspace_(workspace)
-        , domElement_(domElement) {
+    Element(Workspace* workspace)
+        : workspace_(workspace) {
     }
 
 public:
@@ -163,7 +176,7 @@ public:
         return hasPendingUpdate_;
     }
 
-    const Workspace* workspace() const {
+    Workspace* workspace() const {
         return workspace_;
     }
 
@@ -215,13 +228,23 @@ public:
         return Base::end();
     }
 
+    const core::Array<Element*>& dependencies() const {
+        return dependencies_;
+    }
+
+    const core::Array<Element*>& dependents() const {
+        return dependents_;
+    }
+
     void paint(
         graphics::Engine* engine,
         core::AnimTime t = {},
         PaintOptions flags = PaintOption::None) const {
 
-        paint_(engine, t, flags);
+        onPaintDraw(engine, t, flags);
     }
+
+    virtual std::optional<core::StringId> domTagName() const;
 
     virtual geometry::Rect2d boundingBox(core::AnimTime t = {}) const;
 
@@ -242,48 +265,57 @@ public:
         core::AnimTime t = {}) const;
 
 protected:
-    virtual ElementStatus updateFromDom_(Workspace* workspace);
-
     void addDependency(Element* dependency);
     /// Both `oldDependency` and `newDependency` can be null. Returns true if `oldDependency != newDependency`, false otherwise.
     bool replaceDependency(Element* oldDependency, Element* newDependency);
     void removeDependency(Element* dependency);
     void clearDependencies();
 
-    virtual void onDependencyRemoved_(Element* dependency);
-
-    /// dependent may be being destroyed, only use its pointer as key.
-    virtual void onDependentElementRemoved_(Element* dependent);
-    virtual void onDependentElementAdded_(Element* dependent);
+    void notifyChangesToDependents(ChangeFlags changes);
 
     virtual void
-    preparePaint_(core::AnimTime t = {}, PaintOptions flags = PaintOption::None);
+    onPaintPrepare(core::AnimTime t = {}, PaintOptions flags = PaintOption::None);
 
-    virtual void paint_(
+    virtual void onPaintDraw(
         graphics::Engine* engine,
         core::AnimTime t = {},
         PaintOptions flags = PaintOption::None) const;
 
 private:
-    const Workspace* workspace_;
+    Workspace* workspace_;
+
     // uniquely identifies an element
     // if vacNode_ != nullptr then vacNode_->id() == id_.
     core::Id id_ = -1;
 
     // this pointer is not safe to use when tree is not synced with dom
-    dom::Element* domElement_;
+    dom::Element* domElement_ = nullptr;
 
     ElementFlags flags_;
     bool isVacElement_ = false;
 
-    bool hasPendingUpdate_ = true;
+    bool hasPendingUpdate_ = false;
     bool isBeingUpdated_ = false;
-    ElementStatus status_ = ElementStatus::Ok;
+    ElementStatus status_ = ElementStatus::Uninitialized;
 
     core::Array<Element*> dependencies_;
     core::Array<Element*> dependents_;
 
     static VacElement* findFirstSiblingVacElement_(Element* start);
+
+    virtual ElementStatus onDependencyChanged_(Element* dependency, ChangeFlags changes);
+    virtual ElementStatus onDependencyRemoved_(Element* dependency);
+    virtual void onDependencyMoved_(Element* dependency);
+
+    /// dependent may be being destroyed, only use its pointer as key.
+    virtual void onDependentElementRemoved_(Element* dependent);
+    virtual void onDependentElementAdded_(Element* dependent);
+
+    // XXX We pass workspace as argument because historically, Element::workspace()
+    // was returning a `const Workspace*`, not a `Workspace*`. We may want to now
+    // remove this argument.
+    // TODO: give the names of modified attributes or all (already done for diff)
+    virtual ElementStatus updateFromDom_(Workspace* workspace);
 };
 
 class VGC_WORKSPACE_API UnsupportedElement final : public Element {
@@ -293,8 +325,8 @@ private:
 public:
     ~UnsupportedElement() override = default;
 
-    UnsupportedElement(Workspace* workspace, dom::Element* domElement)
-        : Element(workspace, domElement) {
+    UnsupportedElement(Workspace* workspace)
+        : Element(workspace) {
     }
 };
 
@@ -305,8 +337,8 @@ private:
 public:
     ~VacElement() override;
 
-    VacElement(Workspace* workspace, dom::Element* domElement)
-        : Element(workspace, domElement)
+    VacElement(Workspace* workspace)
+        : Element(workspace)
         , vacNode_(nullptr) {
 
         isVacElement_ = true;
@@ -329,6 +361,8 @@ protected:
 private:
     // this pointer is not safe to use when tree is not synced with vac
     vacomplex::Node* vacNode_ = nullptr;
+
+    virtual void updateFromVac_(vacomplex::NodeDiffFlags diffs) = 0;
 };
 
 vacomplex::Node* Element::vacNode() const {

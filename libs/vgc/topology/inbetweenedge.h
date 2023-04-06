@@ -36,10 +36,17 @@ public:
     VGC_TOPOLOGY_DEFINE_SPATIOTEMPORAL_CELL_CAST_METHODS(Inbetween, Edge)
 
     bool isStartVertex(VertexCell* /*v*/) const override {
+        // TODO: check whether v is one of the start vertices of this inbetween edge.
         return false;
     }
 
     bool isEndVertex(VertexCell* /*v*/) const override {
+        // TODO: check whether v is one of the end vertices of this inbetween edge.
+        return false;
+    }
+
+    bool isClosed() const override {
+        // TODO: return whether this inbetween edge is open or closed.
         return false;
     }
 };

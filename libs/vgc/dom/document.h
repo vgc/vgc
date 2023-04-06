@@ -358,8 +358,36 @@ public:
         return versionId_;
     }
 
+    /// Returns whether some changes of the DOM have not yet been notified to
+    /// listeners of the `changed()` signal.
+    ///
+    /// \sa `changed()`, `emitPendingDiff()`.
+    ///
+    bool hasPendingDiff();
+
+    /// Notifies listeners of all the changes that happened since the last call
+    /// of `emitPendingDiff()`.
+    ///
+    /// If `hasPendingDiff()` is false, then this function does nothing and
+    /// returns false.
+    ///
+    /// If `hasPendingDiff()` is true, then the `changed()` signal is emitted
+    /// (even if the `Diff` is empty after compression), and this function
+    /// returns true.
+    ///
+    /// \sa `changed()`, `hasPendingDiff()`.
+    ///
     bool emitPendingDiff();
 
+    /// This signals is emitted to notify of changes in the DOM.
+    ///
+    /// Note that this signal is not emitted instantly when changes happen.
+    /// Instead, the DOM keeps track of all pending changes in a `Diff`, and
+    /// notify listeners to all these changes at once when `emitPendingDiff()`
+    /// is called.
+    ///
+    /// \sa `hasPendingDiff()`, `emitPendingDiff()`.
+    ///
     VGC_SIGNAL(changed, (const Diff&, diff))
 
 protected:
@@ -400,6 +428,8 @@ private:
     Diff pendingDiff_;
     core::Array<NodePtr> pendingDiffKeepAllocPointers_;
     std::unordered_map<Node*, NodeRelatives> previousRelativesMap_;
+
+    void compressPendingDiff_();
 
     void onHistoryHeadChanged_();
     void onHistoryAboutToUndo_();

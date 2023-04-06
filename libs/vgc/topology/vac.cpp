@@ -47,31 +47,36 @@ VacPtr Vac::create() {
 }
 
 void Vac::clear() {
+
     isBeingCleared_ = true;
+
+    // Emit about to be removed for all the nodes
+    for (const auto& node : nodes_) {
+        nodeAboutToBeRemoved().emit(node.second.get());
+    }
+
+    // Remove all the nodes
+    auto nodesCopy = std::move(nodes_);
+    nodes_ = NodePtrMap();
+
+    // Add the removal of all the nodes to the diff
     if (isDiffEnabled_) {
-        for (const auto& it : nodes_) {
-            VacGroup* parentGroup = it.second->parentGroup();
-            if (parentGroup) {
-                diff_.onNodeDiff(parentGroup, VacNodeDiffFlag::ChildrenChanged);
-                diff_.onNodeDiff(it.second.get(), VacNodeDiffFlag::Removed);
-            }
+        for (const auto& node : nodesCopy) {
+            diff_.onNodeRemoved(node.second.get());
         }
     }
-    for (const auto& node : nodes_) {
-        onNodeAboutToBeRemoved().emit(node.second.get());
-    }
-    nodes_.clear();
+
     isBeingCleared_ = false;
     root_ = nullptr;
     ++version_;
 }
 
-VacGroup* Vac::resetRoot(core::Id id) {
+VacGroup* Vac::resetRoot() {
     if (isBeingCleared_) {
         return nullptr;
     }
     clear();
-    root_ = detail::Operations::createRootGroup(this, id);
+    root_ = detail::Operations::createRootGroup(this);
     return root_;
 }
 
@@ -94,21 +99,18 @@ bool Vac::containsNode(core::Id id) const {
     return find(id) != nullptr;
 }
 
-bool Vac::emitPendingDiff() {
-    if (!diff_.isEmpty()) {
-        changed().emit(diff_);
-        diff_.clear();
-        return true;
-    }
-    return false;
-}
+//bool Vac::emitPendingDiff() {
+//    if (!diff_.isEmpty()) {
+//        changed().emit(diff_);
+//        diff_.clear();
+//        return true;
+//    }
+//    return false;
+//}
 
-bool Vac::insertNode(core::Id id, std::unique_ptr<VacNode>&& node) {
-    if (isDiffEnabled_) {
-        return false;
-    }
-    if (!nodes_.try_emplace(id, std::move(node)).second) {
-        throw IdCollisionError("Id collision error.");
+bool Vac::insertNode(std::unique_ptr<VacNode>&& node) {
+    if (!nodes_.try_emplace(node->id(), std::move(node)).second) {
+        throw LogicError("Id collision error.");
     }
     return true;
 }
