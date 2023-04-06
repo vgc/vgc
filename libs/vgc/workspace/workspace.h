@@ -279,14 +279,6 @@ public:
     VGC_SIGNAL(changed);
 
 private:
-    // updates from dom are deferred
-    VGC_SLOT(onDocumentDiff, onDocumentDiff_);
-    // updates from vac are direct (after each atomic operation)
-    VGC_SLOT(onVacNodeAboutToBeRemoved, onVacNodeAboutToBeRemoved_);
-    VGC_SLOT(onVacNodeCreated, onVacNodeCreated_);
-    VGC_SLOT(onVacNodeMoved, onVacNodeMoved_);
-    VGC_SLOT(onVacCellModified, onVacCellModified_);
-
     friend VacElement;
 
     // Factory methods to create a workspace element from a DOM tag name.
@@ -322,47 +314,68 @@ private:
     dom::DocumentPtr document_;
     vacomplex::ComplexPtr vac_;
 
-    void debugPrintTree_();
+    void debugPrintWorkspaceTree_();
 
     // ---------------
     // VAC -> DOM Sync
 
-    bool isCreatingDomElementsFromVac_ = false;
+    // Note: update from the VAC to the DOM are direct: they happen after
+    // each atomic operations.
+
+    bool isUpdatingDomFromVac_ = false;
+
+    // Signal-slot connections
+
+    void onVacNodeAboutToBeRemoved_(vacomplex::Node* node);
+    VGC_SLOT(onVacNodeAboutToBeRemoved, onVacNodeAboutToBeRemoved_);
+
+    using NodeSpan = core::Span<vacomplex::Node*>;
+    void onVacNodeCreated_(vacomplex::Node* node, NodeSpan operationSourceNodes);
+    VGC_SLOT(onVacNodeCreated, onVacNodeCreated_);
+
+    void onVacNodeMoved_(vacomplex::Node* node);
+    VGC_SLOT(onVacNodeMoved, onVacNodeMoved_);
+
+    void onVacCellModified_(vacomplex::Cell* cell);
+    VGC_SLOT(onVacCellModified, onVacCellModified_);
+
+    // Helper methods
 
     void preUpdateDomFromVac_();
     void postUpdateDomFromVac_();
 
-    void rebuildDomFromTree_();
+    // Full rebuild
 
-    void onVacNodeAboutToBeRemoved_(vacomplex::Node* node);
-    void onVacNodeCreated_(
-        vacomplex::Node* node,
-        core::Span<vacomplex::Node*> operationSourceNodes);
-    void onVacNodeMoved_(vacomplex::Node* node);
-    void onVacCellModified_(vacomplex::Cell* cell);
+    void rebuildDomFromWorkspaceTree_();
 
     // ---------------
     // DOM -> VAC Sync
 
-    bool isCreatingVacElementsFromDom_ = false;
+    // Note: update from the DOM to the VAC are deferred: they only happen
+    // when document->emitPendingDiff() is called.
+
+    bool isUpdatingVacFromDom_ = false;
     core::Id lastSyncedDomVersionId_ = {};
 
-    // Mechanism to ensure that the DOM doesn't contain pending
-    // changes, by emitting them but ignoring them. This is used
-    // when rebuilding from scratch from the DOM, or
-    //
+    // Signal-slot connections
+
+    void onDocumentDiff_(const dom::Diff& diff);
+    VGC_SLOT(onDocumentDiff, onDocumentDiff_);
+
+    // Helper methods
+
     Int numDocumentDiffToSkip_ = 0;
     void flushDomDiff_();
 
     Element* createAppendElementFromDom_(dom::Element* domElement, Element* parent);
 
-    void rebuildTreeFromDom_();
-    void rebuildVacFromTree_();
+    void updateVacFromDom_(const dom::Diff& diff);
+    void updateVacChildrenOrder_();
 
-    void updateVacHierarchyFromTree_();
-    void updateTreeAndVacFromDom_(const dom::Diff& diff);
+    // Full rebuild
 
-    void onDocumentDiff_(const dom::Diff& diff);
+    void rebuildWorkspaceTreeFromDom_();
+    void rebuildVacFromWorkspaceTree_();
 };
 
 } // namespace vgc::workspace

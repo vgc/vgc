@@ -275,12 +275,8 @@ void Workspace::sync() {
 }
 
 void Workspace::rebuildFromDom() {
-    flushDomDiff_();
-    rebuildTreeFromDom_();
-    { // rebuild vac
-        detail::ScopedTemporaryBoolSet sbVac(isCreatingVacElementsFromDom_);
-        rebuildVacFromTree_();
-    }
+    rebuildWorkspaceTreeFromDom_();
+    rebuildVacFromWorkspaceTree_();
 }
 
 bool Workspace::updateElementFromDom(Element* element) {
@@ -434,7 +430,7 @@ void Workspace::fillVacElementListsUsingTagName_(
     }
 }
 
-void Workspace::debugPrintTree_() {
+void Workspace::debugPrintWorkspaceTree_() {
     visitDepthFirstPreOrder([](Element* e, Int depth) {
         VGC_DEBUG(
             LogVgcWorkspace,
@@ -463,7 +459,7 @@ void Workspace::postUpdateDomFromVac_() {
     document_->emitPendingDiff();
 }
 
-void Workspace::rebuildDomFromTree_() {
+void Workspace::rebuildDomFromWorkspaceTree_() {
     // todo later
     throw core::RuntimeError("not implemented");
 }
@@ -480,13 +476,9 @@ void Workspace::onVacNodeAboutToBeRemoved_(vacomplex::Node* node) {
     }
 }
 
-void Workspace::onVacNodeCreated_(
-    vacomplex::Node* node,
-    core::Span<vacomplex::Node*> /*operationSourceNodes*/) {
+void Workspace::onVacNodeCreated_(vacomplex::Node* node, NodeSpan /*opSourceNodes*/) {
 
-    namespace ds = dom::strings;
-
-    if (isCreatingVacElementsFromDom_) {
+    if (isUpdatingVacFromDom_) {
         return;
     }
 
@@ -564,7 +556,7 @@ void Workspace::onVacNodeCreated_(
 }
 
 void Workspace::onVacNodeMoved_(vacomplex::Node* /*node*/) {
-    if (isCreatingVacElementsFromDom_) {
+    if (isUpdatingVacFromDom_) {
         return;
     }
 
@@ -618,7 +610,7 @@ void Workspace::onVacNodeMoved_(vacomplex::Node* /*node*/) {
 }
 
 void Workspace::onVacCellModified_(vacomplex::Cell* cell) {
-    if (isCreatingVacElementsFromDom_) {
+    if (isUpdatingVacFromDom_) {
         return;
     }
 
@@ -636,6 +628,18 @@ void Workspace::onVacCellModified_(vacomplex::Cell* cell) {
     postUpdateDomFromVac_();
 }
 
+void Workspace::onDocumentDiff_(const dom::Diff& diff) {
+    if (numDocumentDiffToSkip_ > 0) {
+        --numDocumentDiffToSkip_;
+    }
+    else {
+        updateVacFromDom_(diff);
+    }
+}
+
+// Flushing ensures that the DOM doesn't contain pending diff, by emitting
+// but ignoring them.
+//
 void Workspace::flushDomDiff_() {
     if (document_->hasPendingDiff()) {
         ++numDocumentDiffToSkip_;
@@ -643,15 +647,12 @@ void Workspace::flushDomDiff_() {
     }
 }
 
-void Workspace::onDocumentDiff_(const dom::Diff& diff) {
-    if (numDocumentDiffToSkip_ > 0) {
-        --numDocumentDiffToSkip_;
-    }
-    else {
-        updateTreeAndVacFromDom_(diff);
-    }
-}
-
+// This method creates the workspace element corresponding to a given
+// DOM element, but without initializing it yet (that is, it doesn't
+// create the corresponding VAC element)
+//
+// Initialization is perform later, by calling updateElementFromDom(element).
+//
 Element*
 Workspace::createAppendElementFromDom_(dom::Element* domElement, Element* parent) {
     if (!domElement) {
@@ -727,32 +728,26 @@ dom::Element* rebuildTreeFromDomIter(Element* it, Element*& parent) {
 
 } // namespace
 
-void Workspace::rebuildTreeFromDom_() {
+void Workspace::rebuildWorkspaceTreeFromDom_() {
 
-    namespace ds = dom::strings;
+    if (!document_) {
+        return;
+    }
 
     // reset tree
     clearElements_();
 
     // reset vac
     {
-        detail::ScopedTemporaryBoolSet bgVac(isCreatingVacElementsFromDom_);
+        detail::ScopedTemporaryBoolSet bgVac(isUpdatingVacFromDom_);
         vac_->clear();
         //vac_->emitPendingDiff();
     }
 
-    if (!document_) {
-        return;
-    }
-
-    // flush dom diff
-    {
-        detail::ScopedTemporaryBoolSet bgDom(isCreatingDomElementsFromVac_);
-        document_->emitPendingDiff();
-    }
+    flushDomDiff_();
 
     dom::Element* domVgcElement = document_->rootElement();
-    if (!domVgcElement || domVgcElement->tagName() != ds::vgc) {
+    if (!domVgcElement || domVgcElement->tagName() != dom::strings::vgc) {
         return;
     }
 
@@ -771,14 +766,12 @@ void Workspace::rebuildTreeFromDom_() {
     // children should already be in the correct order.
 }
 
-void Workspace::rebuildVacFromTree_() {
+void Workspace::rebuildVacFromWorkspaceTree_() {
     if (!document_ || !vgcElement_) {
         return;
     }
 
-    //namespace ds = dom::strings;
-
-    detail::ScopedTemporaryBoolSet bgVac(isCreatingVacElementsFromDom_);
+    detail::ScopedTemporaryBoolSet bgVac(isUpdatingVacFromDom_);
 
     // reset vac
     vac_->clear();
@@ -793,36 +786,37 @@ void Workspace::rebuildVacFromTree_() {
         iterDfsPreOrder(element, depth, root);
     }
 
-    updateVacHierarchyFromTree_();
+    updateVacChildrenOrder_();
 
     lastSyncedDomVersionId_ = document_->versionId();
     changed().emit();
 }
 
-void Workspace::updateVacHierarchyFromTree_() {
+void Workspace::updateVacChildrenOrder_() {
     // todo: sync children order in all groups
     Element* root = vgcElement_;
-    Element* e = root;
+    Element* element = root;
     Int depth = 0;
-    while (e) {
-        vacomplex::Node* node = e->vacNode();
+    while (element) {
+        vacomplex::Node* node = element->vacNode();
         if (node) {
             if (node->isGroup()) {
-                VacElement* child = e->firstChildVacElement();
+                VacElement* child = element->firstChildVacElement();
                 if (child) {
-                    vacomplex::Group* g = static_cast<vacomplex::Group*>(node);
-                    topology::ops::moveToGroup(child->vacNode(), g, g->firstChild());
+                    vacomplex::Group* group = static_cast<vacomplex::Group*>(node);
+                    topology::ops::moveToGroup(
+                        child->vacNode(), group, group->firstChild());
                 }
             }
 
-            if (e->parent()) {
-                VacElement* next = e->nextSiblingVacElement();
+            if (element->parent()) {
+                VacElement* next = element->nextSiblingVacElement();
                 topology::ops::moveToGroup(
                     node, node->parentGroup(), (next ? next->vacNode() : nullptr));
             }
         }
 
-        iterDfsPreOrder(e, depth, root);
+        iterDfsPreOrder(element, depth, root);
     }
 }
 
@@ -864,14 +858,11 @@ void Workspace::updateVacHierarchyFromTree_() {
 //    return false;
 //}
 
-void Workspace::updateTreeAndVacFromDom_(const dom::Diff& diff) {
+void Workspace::updateVacFromDom_(const dom::Diff& diff) {
     if (!document_) {
         return;
     }
-
-    detail::ScopedTemporaryBoolSet bgVac(isCreatingVacElementsFromDom_);
-
-    namespace ds = dom::strings;
+    detail::ScopedTemporaryBoolSet bgVac(isUpdatingVacFromDom_);
 
     // impl goal: we want to keep as much cached data as possible.
     //            we want the vac to be valid -> using only its operators
@@ -883,8 +874,9 @@ void Workspace::updateTreeAndVacFromDom_(const dom::Diff& diff) {
 
     std::set<Element*> parentsToOrderSync;
 
-    // first we remove what has to be removed
-    // this can remove dependent vac nodes (star).
+    // First, we remove what has to be removed.
+    // Note that this can recursively remove dependent vac nodes (star).
+    //
     for (dom::Node* node : diff.removedNodes()) {
         dom::Element* domElement = dom::Element::cast(node);
         if (!domElement) {
@@ -903,7 +895,9 @@ void Workspace::updateTreeAndVacFromDom_(const dom::Diff& diff) {
         }
     }
 
-    // create new elements
+    // Create new elements, but for now uninitialized and in a potentially
+    // incorrect child ordering.
+    //
     for (dom::Node* node : diff.createdNodes()) {
         dom::Element* domElement = dom::Element::cast(node);
         if (!domElement) {
@@ -919,12 +913,12 @@ void Workspace::updateTreeAndVacFromDom_(const dom::Diff& diff) {
             //            and <vgc> element should already exist.
             continue;
         }
-        // will be reordered afterwards
         createAppendElementFromDom_(domElement, parent);
         parentsToOrderSync.insert(parent);
     }
 
     // Collect all parents with reordered children.
+    //
     for (dom::Node* node : diff.reparentedNodes()) {
         dom::Element* domElement = dom::Element::cast(node);
         if (!domElement) {
@@ -952,7 +946,8 @@ void Workspace::updateTreeAndVacFromDom_(const dom::Diff& diff) {
         parentsToOrderSync.insert(element);
     }
 
-    // Update tree hierarchy from dom.
+    // Update children order between workspace elements.
+    //
     for (Element* element : parentsToOrderSync) {
         Element* child = element->firstChild();
         dom::Element* domChild = element->domElement()->firstChildElement();
@@ -1010,8 +1005,12 @@ void Workspace::updateTreeAndVacFromDom_(const dom::Diff& diff) {
         }
     }
 
-    // An update can schedule another so we try to exhaust the list
-    // instead of simply traversing it.
+    // Now that all workspace elements are created (or removed), we finally
+    // update all the elements by calling their updateFromDom() virtual method,
+    // which creates their corresponding VAC node if any, and transfers all the
+    // attributes from the DOM element to the workspace element and/or VAC
+    // node.
+    //
     while (!elementsToUpdateFromDom_.isEmpty()) {
         // There is no need to pop the element since updateElementFromDom is
         // in charge of removing it from the list when updated.
@@ -1019,8 +1018,12 @@ void Workspace::updateTreeAndVacFromDom_(const dom::Diff& diff) {
         updateElementFromDom(element);
     }
 
-    updateVacHierarchyFromTree_();
+    // Update children order between VAC nodes.
+    //
+    updateVacChildrenOrder_();
 
+    // Update Version ID and notify that the workspace changed.
+    //
     lastSyncedDomVersionId_ = document_->versionId();
     changed().emit();
 }
