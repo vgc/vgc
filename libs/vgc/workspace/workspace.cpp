@@ -451,8 +451,8 @@ void Workspace::preUpdateDomFromVac_() {
         VGC_ERROR(
             LogVgcWorkspace,
             "The topological complex has been edited while not being up to date with "
-            "the latest changes in the document. This is likely a bug: programmers must "
-            "call Document::emitPendingDiff()pending diff are ignored.");
+            "the latest changes in the document: the two may now be out of sync. "
+            "This is probably caused by a missing document.emitPendingDiff().");
         flushDomDiff_();
         // TODO: rebuild from DOM instead of ignoring the pending diffs?
     }
