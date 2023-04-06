@@ -309,6 +309,8 @@ private:
     std::unordered_map<core::Id, VacElement*> elementByVacInternalId_;
     core::Array<Element*> elementsWithError_;
     core::Array<Element*> elementsToUpdateFromDom_;
+    void setPendingUpdateFromDom_(Element* element);
+    void clearPendingUpdateFromDom_(Element* element);
 
     void removeElement_(Element* element);
     void removeElement_(core::Id id);
@@ -343,8 +345,14 @@ private:
     // DOM -> VAC Sync
 
     bool isCreatingVacElementsFromDom_ = false;
-    bool shouldSkipNextDomDiff_ = false;
     core::Id lastSyncedDomVersionId_ = {};
+
+    // Mechanism to ensure that the DOM doesn't contain pending
+    // changes, by emitting them but ignoring them. This is used
+    // when rebuilding from scratch from the DOM, or
+    //
+    Int numDocumentDiffToSkip_ = 0;
+    void flushDomDiff_();
 
     Element* createAppendElementFromDom_(dom::Element* domElement, Element* parent);
 

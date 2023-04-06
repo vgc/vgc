@@ -89,6 +89,7 @@ VGC_DEFINE_FLAGS(ElementFlags, ElementFlag)
 
 enum class ElementStatus : Int8 {
     Ok,
+    Uninitialized,
     InternalError,
     InvalidAttribute,
     UnresolvedDependency,
@@ -293,9 +294,9 @@ private:
     ElementFlags flags_;
     bool isVacElement_ = false;
 
-    bool hasPendingUpdate_ = true;
+    bool hasPendingUpdate_ = false;
     bool isBeingUpdated_ = false;
-    ElementStatus status_ = ElementStatus::Ok;
+    ElementStatus status_ = ElementStatus::Uninitialized;
 
     core::Array<Element*> dependencies_;
     core::Array<Element*> dependents_;

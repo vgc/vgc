@@ -275,10 +275,7 @@ void Workspace::sync() {
 }
 
 void Workspace::rebuildFromDom() {
-    { // flush dom diffs
-        shouldSkipNextDomDiff_ = true;
-        document_->emitPendingDiff();
-    }
+    flushDomDiff_();
     rebuildTreeFromDom_();
     { // rebuild vac
         detail::ScopedTemporaryBoolSet sbVac(isCreatingVacElementsFromDom_);
@@ -307,8 +304,7 @@ bool Workspace::updateElementFromDom(Element* element) {
 
         element->status_ = newStatus;
         element->isBeingUpdated_ = false;
-        element->hasPendingUpdate_ = false;
-        elementsToUpdateFromDom_.removeOne(element);
+        clearPendingUpdateFromDom_(element);
     }
     return true;
 }
@@ -396,6 +392,20 @@ void Workspace::clearElements_() {
     elementsToUpdateFromDom_.clear();
 }
 
+void Workspace::setPendingUpdateFromDom_(Element* element) {
+    if (!element->hasPendingUpdate_) {
+        element->hasPendingUpdate_ = true;
+        elementsToUpdateFromDom_.emplaceLast(element);
+    }
+}
+
+void Workspace::clearPendingUpdateFromDom_(Element* element) {
+    if (element->hasPendingUpdate_) {
+        element->hasPendingUpdate_ = false;
+        elementsToUpdateFromDom_.removeOne(element);
+    }
+}
+
 void Workspace::fillVacElementListsUsingTagName_(
     Element* root,
     detail::VacElementLists& ce) const {
@@ -426,13 +436,26 @@ void Workspace::fillVacElementListsUsingTagName_(
 
 void Workspace::debugPrintTree_() {
     visitDepthFirstPreOrder([](Element* e, Int depth) {
-        VGC_DEBUG_TMP("{:>{}}<{} id=\"{}\">", "", depth * 2, e->tagName(), e->id());
+        VGC_DEBUG(
+            LogVgcWorkspace,
+            "{:>{}}<{} id=\"{}\">",
+            "",
+            depth * 2,
+            e->tagName(),
+            e->id());
     });
 }
 
 void Workspace::preUpdateDomFromVac_() {
-    shouldSkipNextDomDiff_ = true;
-    document_->emitPendingDiff();
+    if (document_->hasPendingDiff()) {
+        VGC_ERROR(
+            LogVgcWorkspace,
+            "The topological complex has been edited while not being up to date with "
+            "the latest changes in the document. This is likely a bug: programmers must "
+            "call Document::emitPendingDiff()pending diff are ignored.");
+        flushDomDiff_();
+        // TODO: rebuild from DOM instead of ignoring the pending diffs?
+    }
 }
 
 void Workspace::postUpdateDomFromVac_() {
@@ -452,11 +475,8 @@ void Workspace::onVacNodeAboutToBeRemoved_(vacomplex::Node* node) {
     VacElement* vacElement = findVacElement(node);
     if (vacElement && vacElement->vacNode_) {
         vacElement->vacNode_ = nullptr;
-        if (!vacElement->isBeingUpdated_) {
-            // TODO: only clear graphics and append to corrupt list (elementsWithError_)
-            vacElement->hasPendingUpdate_ = true;
-            elementsToUpdateFromDom_.emplaceLast(vacElement);
-        }
+        setPendingUpdateFromDom_(vacElement);
+        // TODO: only clear graphics and append to corrupt list (elementsWithError_)
     }
 }
 
@@ -480,7 +500,7 @@ void Workspace::onVacNodeCreated_(
 
     // TODO: add constructors expecting operationSourceNodes
 
-    // create the workspace and dom elements
+    // Create the workspace element
     std::unique_ptr<Element> u = {};
     if (node->isGroup()) {
         //vacomplex::Group* group = node->toGroup();
@@ -522,6 +542,7 @@ void Workspace::onVacNodeCreated_(
 
     preUpdateDomFromVac_();
 
+    // Create the DOM element
     dom::ElementPtr domElement =
         dom::Element::create(domParent, element->domTagName().value());
     const core::Id id = domElement->internalId();
@@ -615,6 +636,22 @@ void Workspace::onVacCellModified_(vacomplex::Cell* cell) {
     postUpdateDomFromVac_();
 }
 
+void Workspace::flushDomDiff_() {
+    if (document_->hasPendingDiff()) {
+        ++numDocumentDiffToSkip_;
+        document_->emitPendingDiff();
+    }
+}
+
+void Workspace::onDocumentDiff_(const dom::Diff& diff) {
+    if (numDocumentDiffToSkip_ > 0) {
+        --numDocumentDiffToSkip_;
+    }
+    else {
+        updateTreeAndVacFromDom_(diff);
+    }
+}
+
 Element*
 Workspace::createAppendElementFromDom_(dom::Element* domElement, Element* parent) {
     if (!domElement) {
@@ -653,6 +690,8 @@ Workspace::createAppendElementFromDom_(dom::Element* domElement, Element* parent
     if (parent) {
         parent->appendChild(createdElement);
     }
+
+    setPendingUpdateFromDom_(createdElement);
 
     return createdElement;
 }
@@ -881,9 +920,7 @@ void Workspace::updateTreeAndVacFromDom_(const dom::Diff& diff) {
             continue;
         }
         // will be reordered afterwards
-        Element* element = createAppendElementFromDom_(domElement, parent);
-        element->hasPendingUpdate_ = true;
-        elementsToUpdateFromDom_.emplaceLast(element);
+        createAppendElementFromDom_(domElement, parent);
         parentsToOrderSync.insert(parent);
     }
 
@@ -943,10 +980,7 @@ void Workspace::updateTreeAndVacFromDom_(const dom::Diff& diff) {
     if (hasNewPaths || hasModifiedPaths) {
         // Flag all elements with error for update.
         for (Element* element : elementsWithError_) {
-            if (!element->hasPendingUpdate_) {
-                element->hasPendingUpdate_ = true;
-                elementsToUpdateFromDom_.emplaceLast(element);
-            }
+            setPendingUpdateFromDom_(element);
         }
     }
 
@@ -959,10 +993,7 @@ void Workspace::updateTreeAndVacFromDom_(const dom::Diff& diff) {
         Element* element = root;
         Int depth = 0;
         while (element) {
-            if (!element->hasPendingUpdate_) {
-                element->hasPendingUpdate_ = true;
-                elementsToUpdateFromDom_.emplaceLast(element);
-            }
+            setPendingUpdateFromDom_(element);
             iterDfsPreOrder(element, depth, root);
         }
     }
@@ -972,10 +1003,9 @@ void Workspace::updateTreeAndVacFromDom_(const dom::Diff& diff) {
             Element* element = find(it.first);
             // If the element has already an update pending it will be
             // taken care of in the update loop further below.
-            if (element && !element->hasPendingUpdate_) {
-                element->hasPendingUpdate_ = true;
+            if (element) {
+                setPendingUpdateFromDom_(element);
                 // TODO: pass the set of modified attributes ids to the Element
-                updateElementFromDom(element);
             }
         }
     }
@@ -1006,14 +1036,5 @@ void Workspace::updateTreeAndVacFromDom_(const dom::Diff& diff) {
 //    // todo later
 //    throw core::RuntimeError("not implemented");
 //}
-
-void Workspace::onDocumentDiff_(const dom::Diff& diff) {
-    if (shouldSkipNextDomDiff_) {
-        // It means workspace did the changes, no need to see the diff.
-        shouldSkipNextDomDiff_ = false;
-        return;
-    }
-    updateTreeAndVacFromDom_(diff);
-}
 
 } // namespace vgc::workspace
