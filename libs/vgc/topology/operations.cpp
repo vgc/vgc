@@ -60,7 +60,7 @@ KeyEdge* createKeyOpenEdge(
     }
 
     return detail::Operations::createKeyOpenEdge(
-        startVertex, endVertex, points, widths, parentGroup, nextSibling, t);
+        startVertex, endVertex, points, widths, parentGroup, nextSibling, {}, t);
 }
 
 } // namespace vgc::topology::ops

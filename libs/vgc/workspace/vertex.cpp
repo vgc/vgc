@@ -244,7 +244,7 @@ ElementStatus VacKeyVertex::updateFromDom_(Workspace* /*workspace*/) {
     return ElementStatus::Ok;
 }
 
-void VacKeyVertex::updateFromVac_() {
+void VacKeyVertex::updateFromVac_(vacomplex::NodeDiffFlags diffs) {
     namespace ds = dom::strings;
     vacomplex::KeyVertex* kv = vacKeyVertexNode();
     if (!kv) {
@@ -262,10 +262,13 @@ void VacKeyVertex::updateFromVac_() {
         return;
     }
 
-    const auto& position = domElement->getAttribute(ds::position).getVec2d();
-    if (kv->position() != position) {
-        domElement->setAttribute(ds::position, kv->position());
-        dirtyPosition_();
+    using vacomplex::NodeDiffFlag;
+    if (diffs.hasAny({NodeDiffFlag::GeometryChanged, NodeDiffFlag::Created})) {
+        const auto& position = domElement->getAttribute(ds::position).getVec2d();
+        if (kv->position() != position) {
+            domElement->setAttribute(ds::position, kv->position());
+            dirtyPosition_();
+        }
     }
 }
 

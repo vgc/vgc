@@ -50,7 +50,7 @@ protected:
 
 private:
     ElementStatus updateFromDom_(Workspace* workspace) override;
-    void updateFromVac_() override;
+    void updateFromVac_(vacomplex::NodeDiffFlags diffs) override;
 };
 
 } // namespace vgc::workspace

@@ -107,11 +107,18 @@ ElementStatus Element::updateFromDom_(Workspace* /*workspace*/) {
     return ElementStatus::Ok;
 }
 
-void Element::onDependencyChanged_(Element* /*dependency*/, ChangeFlags /*changes*/) {
+ElementStatus
+Element::onDependencyChanged_(Element* /*dependency*/, ChangeFlags /*changes*/) {
+    return status_;
 }
 
-void Element::onDependencyRemoved_(Element* /*dependency*/) {
+ElementStatus Element::onDependencyRemoved_(Element* /*dependency*/) {
     // child classes typically have to invalidate data when a dependency is removed
+    ElementStatus status = this->status();
+    if (status == ElementStatus::Ok) {
+        status = ElementStatus::UnresolvedDependency;
+    }
+    return status;
 }
 
 void Element::onDependencyMoved_(Element* /*dependency*/) {

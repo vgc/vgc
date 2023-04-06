@@ -22,6 +22,15 @@
 
 namespace vgc::workspace {
 
+VGC_DEFINE_ENUM(
+    EdgeSubdivisionQuality,
+    (Disabled, "Disabled"),
+    (UniformLow, "Uniform Low"),
+    (AdaptiveLow, "Adaptive Low"),
+    (UniformHigh, "Uniform High"),
+    (AdaptiveHigh, "Adaptive High"),
+    (UniformVeryHigh, "Uniform Very High"))
+
 bool VacEdgeCellFrameData::resetToStage(VacEdgeComputationStage stage) {
     if (stage >= stage_) {
         return false;
@@ -152,7 +161,7 @@ bool VacEdgeCellFrameData::isSelectableAt(
         }
     }
 
-    if (shortestDistance < tol) {
+    if (shortestDistance <= tol) {
         if (outDistance) {
             *outDistance = shortestDistance;
         }
@@ -507,18 +516,28 @@ void VacKeyEdge::onPaintDraw(
     }
 }
 
-void VacKeyEdge::onDependencyChanged_(Element* /*dependency*/, ChangeFlags changes) {
-    if (changes.has(ChangeFlag::VertexPosition)) {
-        dirtyPreJoinGeometry_();
+ElementStatus
+VacKeyEdge::onDependencyChanged_(Element* /*dependency*/, ChangeFlags changes) {
+    ElementStatus status = this->status();
+    if (status == ElementStatus::Ok) {
+        if (changes.has(ChangeFlag::VertexPosition)) {
+            dirtyPreJoinGeometry_();
+        }
     }
+    return status;
 }
 
-void VacKeyEdge::onDependencyRemoved_(Element* dependency) {
+ElementStatus VacKeyEdge::onDependencyRemoved_(Element* dependency) {
+    ElementStatus status = this->status();
     for (VertexInfo& vi : verticesInfo_) {
         if (vi.element == dependency) {
             vi.element = nullptr;
+            if (status == ElementStatus::Ok) {
+                status = ElementStatus::UnresolvedDependency;
+            }
         }
     }
+    return status;
 }
 
 ElementStatus VacKeyEdge::updateFromDom_(Workspace* workspace) {
@@ -567,13 +586,13 @@ ElementStatus VacKeyEdge::updateFromDom_(Workspace* workspace) {
     }
 
     // update vac to get vertex nodes
-    std::array<vacomplex::KeyVertex*, 2> vacKvs = {};
+    std::array<vacomplex::KeyVertex*, 2> kvs = {};
     for (Int i = 0; i < 2; ++i) {
-        VacKeyVertex* v = newVertices[i];
-        if (v) {
-            workspace->updateElementFromDom(v);
-            vacKvs[i] = v->vacKeyVertexNode();
-            if (v->hasError() || !vacKvs[i]) {
+        VacKeyVertex* kvElement = newVertices[i];
+        if (kvElement) {
+            workspace->updateElementFromDom(kvElement);
+            kvs[i] = kvElement->vacKeyVertexNode();
+            if (kvElement->hasError() || !kvs[i]) {
                 onUpdateError_();
                 return ElementStatus::ErrorInDependency;
             }
@@ -607,7 +626,7 @@ ElementStatus VacKeyEdge::updateFromDom_(Workspace* workspace) {
         if (&ke->points() == &points.get() && &ke->widths() == &widths.get()) {
             hasInputGeometryChanged = false;
         }
-        if (vacKvs[0] == ke->startVertex() && vacKvs[1] == ke->endVertex()) {
+        if (kvs[0] == ke->startVertex() && kvs[1] == ke->endVertex()) {
             hasBoundaryChanged = false;
         }
         else {
@@ -624,7 +643,7 @@ ElementStatus VacKeyEdge::updateFromDom_(Workspace* workspace) {
         }
         else {
             ke = topology::ops::createKeyOpenEdge(
-                vacKvs[0], vacKvs[1], points, widths, parentGroup);
+                kvs[0], kvs[1], points, widths, parentGroup);
         }
         if (!ke) {
             onUpdateError_();
@@ -649,14 +668,14 @@ ElementStatus VacKeyEdge::updateFromDom_(Workspace* workspace) {
     if (frameData_.color_ != color) {
         frameData_.color_ = color;
         frameData_.hasPendingColorChange_ = true;
-        pendingNotifyChanges_.set(ChangeFlag::Color);
+        notifyChanges_({ChangeFlag::Color}, false);
     }
 
-    notifyChanges_();
+    notifyChanges_({}, true);
     return ElementStatus::Ok;
 }
 
-void VacKeyEdge::updateFromVac_() {
+void VacKeyEdge::updateFromVac_(vacomplex::NodeDiffFlags /*diffs*/) {
     namespace ds = dom::strings;
     vacomplex::KeyEdge* ke = vacKeyEdgeNode();
     if (!ke) {
@@ -738,10 +757,11 @@ void VacKeyEdge::updateVertices_(const std::array<VacKeyVertex*, 2>& newVertices
 //     -> corrupts the flags and the requester of computeA won't know about the
 //        next dirty.
 //
-void VacKeyEdge::notifyChanges_() {
-    pendingNotifyChanges_.unset(alreadyNotifiedChanges_);
-    if (pendingNotifyChanges_) {
-        alreadyNotifiedChanges_.set(pendingNotifyChanges_);
+void VacKeyEdge::notifyChanges_(ChangeFlags changes, bool immediately) {
+    changes.unset(alreadyNotifiedChanges_);
+    alreadyNotifiedChanges_.set(changes);
+    pendingNotifyChanges_.set(changes);
+    if (immediately && pendingNotifyChanges_) {
         notifyChangesToDependents(pendingNotifyChanges_);
         if (pendingNotifyChanges_.has(ChangeFlag::EdgePreJoinGeometry)) {
             for (VertexInfo& vi : verticesInfo_) {
@@ -917,53 +937,46 @@ bool VacKeyEdge::computeStrokeMesh_() {
     return true;
 }
 
-void VacKeyEdge::dirtyInputSampling_(bool notifyDependents) {
+void VacKeyEdge::dirtyInputSampling_(bool notifyDependentsImmediately) {
     if (!isInputSamplingDirty_) {
         controlPoints_.clear();
         controlPointsGeometry_.reset();
         inputSamples_.clear();
-        dirtyPreJoinGeometry_(notifyDependents);
+        dirtyPreJoinGeometry_(notifyDependentsImmediately);
         isInputSamplingDirty_ = true;
     }
 }
 
-void VacKeyEdge::dirtyPreJoinGeometry_(bool notifyDependents) {
-    if (!alreadyNotifiedChanges_.has(ChangeFlag::EdgePreJoinGeometry)) {
+void VacKeyEdge::dirtyPreJoinGeometry_(bool notifyDependentsImmediately) {
+    if (frameData_.stage() > VacEdgeComputationStage::Clear) {
         frameData_.resetToStage(VacEdgeComputationStage::Clear);
-        pendingNotifyChanges_.set(
+        notifyChanges_(
             {ChangeFlag::EdgePreJoinGeometry,
              ChangeFlag::EdgePostJoinGeometry,
-             ChangeFlag::EdgeStrokeMesh});
-        if (notifyDependents) {
-            notifyChanges_();
-        }
+             ChangeFlag::EdgeStrokeMesh},
+            notifyDependentsImmediately);
     }
 }
 
-void VacKeyEdge::dirtyPostJoinGeometry_(bool notifyDependents) {
-    if (!alreadyNotifiedChanges_.has(ChangeFlag::EdgePostJoinGeometry)) {
+void VacKeyEdge::dirtyPostJoinGeometry_(bool notifyDependentsImmediately) {
+    if (frameData_.stage() > VacEdgeComputationStage::PreJoinGeometry) {
         frameData_.resetToStage(VacEdgeComputationStage::PreJoinGeometry);
-        pendingNotifyChanges_.set(
-            {ChangeFlag::EdgePostJoinGeometry, ChangeFlag::EdgeStrokeMesh});
-        if (notifyDependents) {
-            notifyChanges_();
-        }
+        notifyChanges_(
+            {ChangeFlag::EdgePostJoinGeometry, ChangeFlag::EdgeStrokeMesh},
+            notifyDependentsImmediately);
     }
 }
 
-void VacKeyEdge::dirtyStrokeMesh_(bool notifyDependents) {
-    if (!alreadyNotifiedChanges_.has(ChangeFlag::EdgeStrokeMesh)) {
+void VacKeyEdge::dirtyStrokeMesh_(bool notifyDependentsImmediately) {
+    if (frameData_.stage() > VacEdgeComputationStage::PostJoinGeometry) {
         frameData_.resetToStage(VacEdgeComputationStage::PostJoinGeometry);
-        pendingNotifyChanges_.set({ChangeFlag::EdgeStrokeMesh});
-        if (notifyDependents) {
-            notifyChanges_();
-        }
+        notifyChanges_({ChangeFlag::EdgeStrokeMesh}, notifyDependentsImmediately);
     }
 }
 
 // called by one of the end vertex
 void VacKeyEdge::dirtyJoinDataAtVertex_(const VacVertexCell* vertexCell) {
-    if (!alreadyNotifiedChanges_.has(ChangeFlag::EdgePreJoinGeometry)) {
+    if (frameData_.stage() > VacEdgeComputationStage::PreJoinGeometry) {
         dirtyPostJoinGeometry_(false);
         if (verticesInfo_[0].element == vertexCell) {
             frameData_.patches_[0].clear();
@@ -971,7 +984,7 @@ void VacKeyEdge::dirtyJoinDataAtVertex_(const VacVertexCell* vertexCell) {
         if (verticesInfo_[1].element == vertexCell) {
             frameData_.patches_[1].clear();
         }
-        notifyChanges_();
+        notifyChanges_({});
     }
 }
 

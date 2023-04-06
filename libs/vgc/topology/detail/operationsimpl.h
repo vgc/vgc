@@ -39,6 +39,7 @@ public:
         const geometry::Vec2d& position,
         VacGroup* parentGroup,
         VacNode* nextSibling = nullptr,
+        core::Span<VacNode*> operationSourceNodes = {},
         core::AnimTime t = {});
 
     /// Assumes `nextSibling` is either `nullptr` or a child of `parentGroup`.
@@ -52,6 +53,7 @@ public:
         const core::SharedConstDoubleArray& widths,
         VacGroup* parentGroup,
         VacNode* nextSibling = nullptr,
+        core::Span<VacNode*> operationSourceNodes = {},
         core::AnimTime t = {});
 
     /// Assumes `nextSibling` is either `nullptr` or a child of `parentGroup`.
@@ -60,6 +62,7 @@ public:
         const core::SharedConstDoubleArray& widths,
         VacGroup* parentGroup,
         VacNode* nextSibling = nullptr,
+        core::Span<VacNode*> operationSourceNodes = {},
         core::AnimTime t = {});
 
     static void removeNode(VacNode* node, bool removeFreeVertices);

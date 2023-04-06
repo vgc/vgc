@@ -44,9 +44,10 @@ enum class VacNodeDiffFlag {
     Removed                 = 0x02,
     Reparented              = 0x04,
     ChildrenChanged         = 0x08,
-    AttributeChanged        = 0x10,
+    TransformChanged        = 0x10,
     GeometryChanged         = 0x20,
-    StarChanged             = 0x40,
+    BoundaryChanged         = 0x40,
+    StarChanged             = 0x80,
 };
 VGC_DEFINE_FLAGS(VacNodeDiffFlags, VacNodeDiffFlag)
 // clang-format on
@@ -168,13 +169,13 @@ public:
 
     //bool emitPendingDiff();
 
-    VGC_SIGNAL(nodeAboutToBeRemoved, (VacNode*, node))
     VGC_SIGNAL(
         nodeCreated,
         (VacNode*, node),
         (core::Span<VacNode*>, operationSourceNodes))
+    VGC_SIGNAL(nodeAboutToBeRemoved, (VacNode*, node))
     VGC_SIGNAL(nodeMoved, (VacNode*, node))
-    VGC_SIGNAL(cellModified, (VacCell*, cell))
+    VGC_SIGNAL(nodeModified, (VacNode*, node), (VacNodeDiffFlags, diffs))
 
     //VGC_SIGNAL(changed, (const VacDiff&, diff))
 
@@ -213,6 +214,7 @@ using topology::CellSpatialType;
 using topology::CellTemporalType;
 
 using NodeDiffFlag = topology::VacNodeDiffFlag;
+using NodeDiffFlags = topology::VacNodeDiffFlags;
 using Diff = topology::VacDiff;
 
 using topology::EdgeCell;

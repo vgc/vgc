@@ -50,7 +50,7 @@ inline KeyVertex* createKeyVertex(
     if (!parentGroup) {
         throw LogicError("createKeyVertex: parentGroup is nullptr.");
     }
-    return detail::Operations::createKeyVertex(position, parentGroup, nextSibling, t);
+    return detail::Operations::createKeyVertex(position, parentGroup, nextSibling, {}, t);
 }
 
 /// Throws `NotAChildError` if `nextSibling` is not a child of `parentGroup` or `nullptr`.
@@ -80,7 +80,7 @@ inline KeyEdge* createKeyClosedEdge(
         throw LogicError("createKeyClosedEdge: parentGroup is nullptr.");
     }
     return detail::Operations::createKeyClosedEdge(
-        points, widths, parentGroup, nextSibling, t);
+        points, widths, parentGroup, nextSibling, {}, t);
 }
 
 inline void removeNode(VacNode* node, bool removeFreeVertices) {

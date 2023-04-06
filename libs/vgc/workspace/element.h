@@ -303,8 +303,8 @@ private:
 
     static VacElement* findFirstSiblingVacElement_(Element* start);
 
-    virtual void onDependencyChanged_(Element* dependency, ChangeFlags changes);
-    virtual void onDependencyRemoved_(Element* dependency);
+    virtual ElementStatus onDependencyChanged_(Element* dependency, ChangeFlags changes);
+    virtual ElementStatus onDependencyRemoved_(Element* dependency);
     virtual void onDependencyMoved_(Element* dependency);
 
     /// dependent may be being destroyed, only use its pointer as key.
@@ -314,6 +314,7 @@ private:
     // XXX We pass workspace as argument because historically, Element::workspace()
     // was returning a `const Workspace*`, not a `Workspace*`. We may want to now
     // remove this argument.
+    // TODO: give the names of modified attributes or all (already done for diff)
     virtual ElementStatus updateFromDom_(Workspace* workspace);
 };
 
@@ -361,7 +362,7 @@ private:
     // this pointer is not safe to use when tree is not synced with vac
     vacomplex::Node* vacNode_ = nullptr;
 
-    virtual void updateFromVac_() = 0;
+    virtual void updateFromVac_(vacomplex::NodeDiffFlags diffs) = 0;
 };
 
 vacomplex::Node* Element::vacNode() const {

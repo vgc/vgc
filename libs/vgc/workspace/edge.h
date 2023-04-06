@@ -22,6 +22,7 @@
 #include <vgc/core/arithmetic.h>
 #include <vgc/core/array.h>
 #include <vgc/core/color.h>
+#include <vgc/core/enum.h>
 #include <vgc/dom/element.h>
 #include <vgc/geometry/vec2d.h>
 #include <vgc/geometry/vec2f.h>
@@ -181,13 +182,16 @@ enum class EdgeSubdivisionQuality {
     UniformVeryHigh
 };
 
+VGC_WORKSPACE_API
+VGC_DECLARE_ENUM(EdgeSubdivisionQuality)
+
 class VGC_WORKSPACE_API EdgeGraphics {
 public:
     void clear() {
-        centerlineGeometry_.reset();
-        strokeGeometry_.reset();
-        joinGeometry_.reset();
-        selectionGeometry_.reset();
+        clearCenterlineGeometry();
+        clearStrokeGeometry();
+        clearJoinGeometry();
+        clearSelectionGeometry();
     }
 
     const graphics::GeometryViewPtr& centerlineGeometry() const {
@@ -323,6 +327,10 @@ public:
         return time_;
     }
 
+    const geometry::Rect2d& boundingBox() const {
+        return bbox_;
+    }
+
     const geometry::CurveSampleArray& preJoinSamples() const {
         return samples_;
     }
@@ -453,28 +461,28 @@ private:
     EdgeSubdivisionQuality edgeTesselationMode_ = EdgeSubdivisionQuality::AdaptiveHigh;
     bool isInputSamplingDirty_ = true;
 
-    void onDependencyChanged_(Element* dependency, ChangeFlags changes) override;
-    void onDependencyRemoved_(Element* dependency) override;
+    ElementStatus onDependencyChanged_(Element* dependency, ChangeFlags changes) override;
+    ElementStatus onDependencyRemoved_(Element* dependency) override;
 
     ElementStatus updateFromDom_(Workspace* workspace) override;
-    void updateFromVac_() override;
+    void updateFromVac_(vacomplex::NodeDiffFlags diffs) override;
 
     void updateVertices_(const std::array<VacKeyVertex*, 2>& newVertices);
 
     ChangeFlags alreadyNotifiedChanges_ = {};
     ChangeFlags pendingNotifyChanges_ = {};
 
-    void notifyChanges_();
+    void notifyChanges_(ChangeFlags changes, bool immediately = true);
 
     bool computeInputSampling_();
     bool computePreJoinGeometry_();
     bool computePostJoinGeometry_();
     bool computeStrokeMesh_();
 
-    void dirtyInputSampling_(bool notifyDependents = true);
-    void dirtyPreJoinGeometry_(bool notifyDependents = true);
-    void dirtyPostJoinGeometry_(bool notifyDependents = true);
-    void dirtyStrokeMesh_(bool notifyDependents = true);
+    void dirtyInputSampling_(bool notifyDependentsImmediately = true);
+    void dirtyPreJoinGeometry_(bool notifyDependentsImmediately = true);
+    void dirtyPostJoinGeometry_(bool notifyDependentsImmediately = true);
+    void dirtyStrokeMesh_(bool notifyDependentsImmediately = true);
 
     void dirtyJoinDataAtVertex_(const VacVertexCell* vertexCell) override;
 

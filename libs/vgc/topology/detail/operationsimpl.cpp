@@ -59,6 +59,7 @@ KeyVertex* Operations::createKeyVertex(
     const geometry::Vec2d& position,
     VacGroup* parentGroup,
     VacNode* nextSibling,
+    core::Span<VacNode*> operationSourceNodes,
     core::AnimTime t) {
 
     const core::Id id = core::genId();
@@ -75,7 +76,7 @@ KeyVertex* Operations::createKeyVertex(
         vac->diff_.onNodeDiff(p, VacNodeDiffFlag::Created);
         vac->diff_.onNodeDiff(parentGroup, VacNodeDiffFlag::ChildrenChanged);
     }
-    vac->nodeCreated().emit(p, {});
+    vac->nodeCreated().emit(p, operationSourceNodes);
 
     return p;
 }
@@ -87,6 +88,7 @@ KeyEdge* Operations::createKeyOpenEdge(
     const core::SharedConstDoubleArray& widths,
     VacGroup* parentGroup,
     VacNode* nextSibling,
+    core::Span<VacNode*> operationSourceNodes,
     core::AnimTime t) {
 
     const core::Id id = core::genId();
@@ -116,7 +118,7 @@ KeyEdge* Operations::createKeyOpenEdge(
         vac->diff_.onNodeDiff(startVertex, VacNodeDiffFlag::StarChanged);
         vac->diff_.onNodeDiff(endVertex, VacNodeDiffFlag::StarChanged);
     }
-    vac->nodeCreated().emit(p, {});
+    vac->nodeCreated().emit(p, operationSourceNodes);
 
     return p;
 }
@@ -126,6 +128,7 @@ KeyEdge* Operations::createKeyClosedEdge(
     const core::SharedConstDoubleArray& widths,
     VacGroup* parentGroup,
     VacNode* nextSibling,
+    core::Span<VacNode*> operationSourceNodes,
     core::AnimTime t) {
 
     const core::Id id = core::genId();
@@ -146,7 +149,7 @@ KeyEdge* Operations::createKeyClosedEdge(
         vac->diff_.onNodeDiff(p, VacNodeDiffFlag::Created);
         vac->diff_.onNodeDiff(parentGroup, VacNodeDiffFlag::ChildrenChanged);
     }
-    vac->nodeCreated().emit(p, {});
+    vac->nodeCreated().emit(p, operationSourceNodes);
 
     return p;
 }

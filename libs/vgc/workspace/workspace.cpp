@@ -203,7 +203,7 @@ Workspace::Workspace(dom::DocumentPtr document)
     vac_->nodeAboutToBeRemoved().connect(onVacNodeAboutToBeRemoved());
     vac_->nodeCreated().connect(onVacNodeCreated());
     vac_->nodeMoved().connect(onVacNodeMoved());
-    vac_->cellModified().connect(onVacCellModified());
+    vac_->nodeModified().connect(onVacNodeModified());
 
     rebuildFromDom();
 }
@@ -255,7 +255,6 @@ WorkspacePtr Workspace::create(dom::DocumentPtr document) {
         registerElementClass_(ds::vgc, &makeUniqueElement<Layer>);
         registerElementClass_(ds::layer, &makeUniqueElement<Layer>);
         registerElementClass_(ds::vertex, &makeUniqueElement<VacKeyVertex>);
-        //registerElementClass(ds::edge, &makeUniqueElement<KeyEdge>);
         registerElementClass_(ds::edge, &makeUniqueElement<VacKeyEdge>);
         //registerElementClass(ds::face, &makeUniqueElement<VacKeyFace>);
     });
@@ -550,7 +549,7 @@ void Workspace::onVacNodeCreated_(vacomplex::Node* node, NodeSpan /*opSourceNode
     element->id_ = id;
     element->setVacNode(node);
 
-    element->updateFromVac_();
+    element->updateFromVac_(vacomplex::NodeDiffFlag::Created);
 
     postUpdateDomFromVac_();
 }
@@ -609,14 +608,17 @@ void Workspace::onVacNodeMoved_(vacomplex::Node* /*node*/) {
     */
 }
 
-void Workspace::onVacCellModified_(vacomplex::Cell* cell) {
+void Workspace::onVacNodeModified_(
+    vacomplex::Node* node,
+    vacomplex::NodeDiffFlags diffs) {
+
     if (isUpdatingVacFromDom_) {
         return;
     }
 
-    VacElement* vacElement = findVacElement(cell->id());
+    VacElement* vacElement = findVacElement(node->id());
     if (!vacElement) {
-        VGC_ERROR(LogVgcWorkspace, "Unexpected vacomplex::Cell");
+        VGC_ERROR(LogVgcWorkspace, "Unexpected vacomplex::Node");
         // TODO: recover from error by creating the Cell in workspace and DOM ?
         return;
     }
@@ -624,7 +626,7 @@ void Workspace::onVacCellModified_(vacomplex::Cell* cell) {
     // dom update
 
     preUpdateDomFromVac_();
-    vacElement->updateFromVac_();
+    vacElement->updateFromVac_(diffs);
     postUpdateDomFromVac_();
 }
 
