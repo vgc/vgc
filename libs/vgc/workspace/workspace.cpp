@@ -801,18 +801,34 @@ void Workspace::updateVacChildrenOrder_() {
         vacomplex::Node* node = element->vacNode();
         if (node) {
             if (node->isGroup()) {
-                VacElement* child = element->firstChildVacElement();
-                if (child) {
-                    vacomplex::Group* group = static_cast<vacomplex::Group*>(node);
-                    topology::ops::moveToGroup(
-                        child->vacNode(), group, group->firstChild());
+                // synchronize first common child
+                VacElement* childVacElement = element->firstChildVacElement();
+                while (childVacElement) {
+                    if (childVacElement->vacNode()) {
+                        vacomplex::Group* group = static_cast<vacomplex::Group*>(node);
+                        topology::ops::moveToGroup(
+                            childVacElement->vacNode(), group, group->firstChild());
+                        break;
+                    }
+                    childVacElement = childVacElement->nextSiblingVacElement();
                 }
             }
 
             if (element->parent()) {
-                VacElement* next = element->nextSiblingVacElement();
-                topology::ops::moveToGroup(
-                    node, node->parentGroup(), (next ? next->vacNode() : nullptr));
+                // synchronize as previous sibling of next sibling vac node
+                VacElement* nextSiblingVacElement = element->nextSiblingVacElement();
+                while (nextSiblingVacElement) {
+                    if (nextSiblingVacElement->vacNode()) {
+                        topology::ops::moveToGroup(
+                            node, node->parentGroup(), nextSiblingVacElement->vacNode());
+                        break;
+                    }
+                    nextSiblingVacElement =
+                        nextSiblingVacElement->nextSiblingVacElement();
+                }
+                if (!nextSiblingVacElement) {
+                    topology::ops::moveToGroup(node, node->parentGroup(), nullptr);
+                }
             }
         }
 
