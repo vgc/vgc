@@ -18,7 +18,7 @@
 
 namespace vgc::topology {
 
-explicit KeyCycle::KeyCycle(core::Span<const KeyHalfedge> halfedges) noexcept
+KeyCycle::KeyCycle(core::Span<const KeyHalfedge> halfedges) noexcept
     : halfedges_(halfedges) {
 
     if (halfedges_.isEmpty()) {
