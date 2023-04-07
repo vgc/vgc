@@ -55,8 +55,17 @@ void core::StringId::init_(std::string_view s) {
 
     std::lock_guard<std::mutex> lock(*mutex);
 
-    // Insert in pool. Note: insertions in an unordered_set invalidates
+    // Insert in pool.
+    //
+    // Note 1: insertions in an unordered_set invalidates
     // iterators but does not invalidate pointers to elements.
+    //
+    // Note 2: if `s` already exists in the pool, the function below
+    // creates a temporary std::string in order to hash it and find it in the
+    // set. With C++20, we will be able to call pool->find<std::string_view>(s),
+    // which can do a lookup directly from the string_view without contructing
+    // an std::string.
+    //
     auto ret = pool->emplace(s);
 
     // Store pointer to std:string.
