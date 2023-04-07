@@ -378,10 +378,10 @@ void SketchTool::startCurve_(const geometry::Vec2d& p, double width) {
     if (history) {
         drawCurveUndoGroup_ = history->createUndoGroup(Draw_Curve);
         drawCurveUndoGroupConnectionHandle_ = drawCurveUndoGroup_->undone().connect(
-            [this](core::UndoGroup* ug, bool /*isAbort*/) {
+            [this]([[maybe_unused]] core::UndoGroup* undoGroup, bool /*isAbort*/) {
                 // isAbort should be true since we have no sub-group
                 if (drawCurveUndoGroup_) {
-                    VGC_ASSERT(ug == drawCurveUndoGroup_);
+                    VGC_ASSERT(undoGroup == drawCurveUndoGroup_);
                     drawCurveUndoGroup_->undone().disconnect(
                         drawCurveUndoGroupConnectionHandle_);
                     drawCurveUndoGroup_ = nullptr;
