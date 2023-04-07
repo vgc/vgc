@@ -270,6 +270,12 @@ public:
 
     /// Constructs a `Value` holding a `std::string`.
     ///
+    Value(const std::string& string)
+        : var_(string) {
+    }
+
+    /// Constructs a `Value` holding a `std::string`.
+    ///
     Value(std::string&& string)
         : var_(std::move(string)) {
     }

@@ -251,6 +251,12 @@ void write(OStream& out, std::string_view s) {
     out.write(s.data(), static_cast<std::streamsize>(n));
 }
 
+template<typename OStream>
+void write(OStream& out, const std::string& s) {
+    size_t n = s.size();
+    out.write(s.data(), static_cast<std::streamsize>(n));
+}
+
 /// Writes the decimal representation of the given integer to the given output
 /// stream.
 ///

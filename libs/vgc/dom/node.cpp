@@ -21,6 +21,7 @@
 #include <vgc/core/object.h>
 #include <vgc/dom/document.h>
 #include <vgc/dom/element.h>
+#include <vgc/dom/logcategories.h>
 #include <vgc/dom/strings.h>
 
 namespace vgc::dom {
@@ -151,7 +152,7 @@ bool Node::canReplace(Node* oldNode) {
 }
 
 void Node::replace(Node* oldNode) {
-    // XXX record atomic operations
+    // TODO: record atomic operations
 
     // newChid = this
     // willLoseAChild = ignored = this->parent()
@@ -169,7 +170,7 @@ void Node::replace(Node* oldNode) {
     Node* nextSibling = oldNode->nextSibling();
     core::ObjectPtr self = removeObjectFromParent_();
 
-    // XXX use remove, cuz this is currently not undoable
+    // TODO: use remove, because this is currently not undoable
     //parent->removeChildObject_()
 
     oldNode->destroyObject_();
@@ -178,56 +179,74 @@ void Node::replace(Node* oldNode) {
     parent->insertChildObject_(nextSibling, this);
 }
 
-Element* Node::elementFromPath(const Path& path) const {
-    Element* res = nullptr;
+Element* Node::getElementFromPath(const Path& path, core::StringId tagNameFilter) const {
+    Element* element = nullptr;
+    bool found = false;
     for (const PathSegment& seg : path.segments()) {
         switch (seg.type()) {
         case PathSegmentType::Root:
-            res = document()->rootElement();
+            element = document()->rootElement();
             break;
         case PathSegmentType::Id:
-            res = document()->elementById(seg.name());
+            element = document()->elementById(seg.name());
             break;
         case PathSegmentType::Element:
-            if (!res) {
-                res = Element::cast(const_cast<Node*>(this));
+            if (!element) {
+                element = Element::cast(const_cast<Node*>(this));
             }
-            if (res) {
-                Element* e = res->firstChildElement();
-                while (e) {
-                    if (e->name() == seg.name()) {
+            if (element) {
+                Element* newElement = element->firstChildElement();
+                while (newElement) {
+                    if (newElement->name() == seg.name()) {
                         break;
                     }
-                    e = e->nextSiblingElement();
+                    newElement = newElement->nextSiblingElement();
                 }
-                res = e;
+                element = newElement;
             }
             break;
         case PathSegmentType::Attribute:
-            if (!res) {
-                res = Element::cast(const_cast<Node*>(this));
+            if (!element) {
+                element = Element::cast(const_cast<Node*>(this));
             }
-            return res;
+            found = true;
         }
-        if (!res) {
-            // error
+        if (!element /* <- error */ || found) {
             break;
         }
     }
-    return res;
+    if (element && !tagNameFilter.isEmpty() && element->tagName() != tagNameFilter) {
+        VGC_WARNING(
+            LogVgcDom,
+            "Path `{}` resolved to an element `{}` but `{}` was expected.",
+            path,
+            element->tagName(),
+            tagNameFilter);
+        return nullptr;
+    }
+
+    return element;
 }
 
-Value Node::valueFromPath(const Path& path) const {
-    // XXX could check path is valid..
+Value Node::getValueFromPath(const Path& path, core::StringId tagNameFilter) const {
     if (path.isAttributePath()) {
-        Element* e = elementFromPath(path);
-        if (e) {
-            const PathSegment& seg = path.segments().last();
-            Value v = e->getAttribute(seg.name());
-            if (v.isValid() && seg.isIndexed()) {
-                v = v.getItemWrapped(seg.arrayIndex());
+        Element* element = getElementFromPath(path);
+        if (element) {
+            if (!tagNameFilter.isEmpty() && element->tagName() != tagNameFilter) {
+                VGC_WARNING(
+                    LogVgcDom,
+                    "Path `{}` resolved to an element `{}` but `{}` was expected.",
+                    path,
+                    element->tagName(),
+                    tagNameFilter);
+                return Value();
             }
-            return v;
+            const PathSegment& seg = path.segments().last();
+            Value value = element->getAttribute(seg.name());
+            if (value.isValid() && seg.isIndexed()) {
+                value = value.getItemWrapped(seg.arrayIndex());
+            }
+            return value;
         }
     }
     return Value();

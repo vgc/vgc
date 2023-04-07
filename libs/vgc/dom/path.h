@@ -251,12 +251,17 @@ constexpr bool isValidIdChar(char c) {
            || specials.find(c) != std::string::npos;
 }
 
+constexpr bool isValidPathFirstChar(char c) {
+    return (c == '#' || c == '@');
+}
+
 /// Reads a `Path` from the input stream, and stores it in the given output
 /// parameter `v`. Leading whitespaces are allowed. Raises `ParseError` if the
 /// stream does not start with a `Path`.
 ///
 template<typename IStream>
 void readTo(Path& v, IStream& in) {
+    core::skipWhitespaceCharacters(in);
     char c = core::readExpectedCharacter(in, {'#', '@'});
     if (c == '#') {
         std::string s;
