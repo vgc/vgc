@@ -208,7 +208,6 @@ void deleteElement(workspace::Element* element, workspace::Workspace* workspace)
 
 void Canvas::clearSelection_() {
     selectionCandidateElements_.clear();
-    canMergeColorChange_ = false;
     selectedElementId_ = 0;
 }
 
