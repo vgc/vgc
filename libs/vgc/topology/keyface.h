@@ -17,8 +17,11 @@
 #ifndef VGC_TOPOLOGY_KEYFACE_H
 #define VGC_TOPOLOGY_KEYFACE_H
 
+#include <initializer_list>
+
 #include <vgc/topology/api.h>
 #include <vgc/topology/cell.h>
+#include <vgc/topology/keycycle.h>
 
 namespace vgc::topology {
 
@@ -32,6 +35,13 @@ private:
 
 public:
     VGC_TOPOLOGY_DEFINE_SPATIOTEMPORAL_CELL_CAST_METHODS(Key, Face)
+
+    const core::Array<KeyCycle>& cycles() const {
+        return cycles_;
+    }
+
+private:
+    core::Array<KeyCycle> cycles_;
 };
 
 } // namespace vgc::topology

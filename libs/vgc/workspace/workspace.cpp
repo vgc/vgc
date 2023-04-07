@@ -23,6 +23,7 @@
 #include <vgc/topology/operations.h>
 #include <vgc/topology/vac.h>
 #include <vgc/workspace/edge.h>
+#include <vgc/workspace/face.h>
 #include <vgc/workspace/layer.h>
 #include <vgc/workspace/logcategories.h>
 #include <vgc/workspace/vertex.h>
@@ -256,7 +257,7 @@ WorkspacePtr Workspace::create(dom::DocumentPtr document) {
         registerElementClass_(ds::layer, &makeUniqueElement<Layer>);
         registerElementClass_(ds::vertex, &makeUniqueElement<VacKeyVertex>);
         registerElementClass_(ds::edge, &makeUniqueElement<VacKeyEdge>);
-        //registerElementClass(ds::face, &makeUniqueElement<VacKeyFace>);
+        registerElementClass_(ds::face, &makeUniqueElement<VacKeyFace>);
     });
 
     return WorkspacePtr(new Workspace(document));
@@ -507,6 +508,8 @@ void Workspace::onVacNodeCreated_(vacomplex::Node* node, NodeSpan /*opSourceNode
             u = makeUniqueElement<VacKeyEdge>(this);
             break;
         case vacomplex::CellType::KeyFace:
+            u = makeUniqueElement<VacKeyFace>(this);
+            break;
         case vacomplex::CellType::InbetweenVertex:
         case vacomplex::CellType::InbetweenEdge:
         case vacomplex::CellType::InbetweenFace:

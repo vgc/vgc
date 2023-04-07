@@ -30,6 +30,7 @@
 #include <vgc/topology/inbetweenedge.h>
 #include <vgc/topology/inbetweenface.h>
 #include <vgc/topology/inbetweenvertex.h>
+#include <vgc/topology/keycycle.h>
 #include <vgc/topology/keyedge.h>
 #include <vgc/topology/keyface.h>
 #include <vgc/topology/keyvertex.h>
@@ -233,6 +234,9 @@ using topology::InbetweenVertex;
 
 using topology::EdgeGeometry;
 using topology::FaceGeometry;
+
+using topology::KeyCycle;
+using topology::KeyHalfedge;
 
 } // namespace vgc::vacomplex
 

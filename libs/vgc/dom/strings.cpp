@@ -25,6 +25,7 @@ const core::StringId vgc("vgc");
 const core::StringId layer("layer");
 const core::StringId vertex("vertex");
 const core::StringId edge("edge");
+const core::StringId face("face");
 
 const core::StringId startvertex("startvertex");
 const core::StringId endvertex("endvertex");
@@ -32,6 +33,7 @@ const core::StringId position("position");
 const core::StringId positions("positions");
 const core::StringId widths("widths");
 const core::StringId color("color");
+const core::StringId cycles("cycles");
 
 const core::StringId New_Document("New Document");
 const core::StringId Open_Document("Open Document");

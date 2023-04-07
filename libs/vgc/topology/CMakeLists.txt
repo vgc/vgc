@@ -11,8 +11,10 @@ vgc_add_library(topology
         inbetweenedge.h
         inbetweenface.h
         inbetweenvertex.h
+        keycycle.h
         keyedge.h
         keyface.h
+        keyhalfedge.h
         keyvertex.h
         logcategories.h
         operations.h
@@ -25,6 +27,7 @@ vgc_add_library(topology
         cell.cpp
         edgegeometry.cpp
         exceptions.cpp
+        keycycle.cpp
         logcategories.cpp
         operations.cpp
         transform.cpp
