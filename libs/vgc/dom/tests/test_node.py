@@ -451,11 +451,11 @@ class TestNode(unittest.TestCase):
         n1id = n1.getOrCreateId()
         n2 = Element(n1, "path")
         n2.name = "n2Name"
-        self.assertEqual(doc.elementFromPath(Path(f"#{n1id}/n2Name")), n2)
-        self.assertEqual(doc.elementFromPath(Path(f"#{n1id}/n2Name.positions[-1]")), n2)
+        self.assertEqual(doc.getElementFromPath(Path(f"#{n1id}/n2Name")), n2)
+        self.assertEqual(doc.getElementFromPath(Path(f"#{n1id}/n2Name.positions[-1]")), n2)
         a = Vec2dArray(((1.5, 2.5), (3.2, 4.2)))
         n2.setAttribute(StringId("positions"), a)
-        self.assertEqual(doc.valueFromPath(Path(f"#{n1id}/n2Name.positions[-1]")), Vec2d(3.2, 4.2))
+        self.assertEqual(doc.getValueFromPath(Path(f"#{n1id}/n2Name.positions[-1]")), Vec2d(3.2, 4.2))
 
 if __name__ == '__main__':
     unittest.main()

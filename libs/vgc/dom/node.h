@@ -303,18 +303,26 @@ public:
     ///
     /// If the path refers to an attribute, this returns the element that owns
     /// the attribute.
+    ///
     /// If the path is empty, invalid, or does refer to an element that does not
     /// exist, this returns `nullptr`.
     ///
-    Element* elementFromPath(const Path& path) const;
+    /// If `tagNameFilter` is not empty and does not compare equal to the found
+    /// element tag name, this emits a warning and returns `nullptr`.
+    ///
+    Element*
+    getElementFromPath(const Path& path, core::StringId tagNameFilter = {}) const;
 
     /// Returns the `Value` of the attribute that the given `path` refers to.
     ///
     /// If the path is empty, invalid, does not refer to an attribute, or one of
     /// its segment cannot not be resolved, this returns `nullptr`.
     ///
+    /// If `tagNameFilter` is not empty and does not compare equal to the found
+    /// element tag name, this emits a warning and returns `Value()`.
+    ///
     // XXX Later, consider returning a ValuePtr or ValueRef.
-    Value valueFromPath(const Path& path) const;
+    Value getValueFromPath(const Path& path, core::StringId tagNameFilter = {}) const;
 
 private:
     // Operations
