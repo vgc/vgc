@@ -30,7 +30,7 @@ void checkIsChildOrNull(VacNode* node, VacGroup* expectedParent) {
 
 } // namespace
 
-VacGroup* createVacGroup(VacGroup* parentGroup, VacNode* nextSibling = nullptr) {
+VacGroup* createVacGroup(VacGroup* parentGroup, VacNode* nextSibling) {
     if (!parentGroup) {
         throw LogicError("createVacGroup: parentGroup is nullptr.");
     }
@@ -42,8 +42,8 @@ VacGroup* createVacGroup(VacGroup* parentGroup, VacNode* nextSibling = nullptr) 
 KeyVertex* createKeyVertex(
     const geometry::Vec2d& position,
     VacGroup* parentGroup,
-    VacNode* nextSibling = nullptr,
-    core::AnimTime t = {}) {
+    VacNode* nextSibling,
+    core::AnimTime t) {
 
     if (!parentGroup) {
         throw LogicError("createKeyVertex: parentGroup is nullptr.");
@@ -57,8 +57,8 @@ KeyEdge* createKeyClosedEdge(
     const geometry::SharedConstVec2dArray& points,
     const core::SharedConstDoubleArray& widths,
     VacGroup* parentGroup,
-    VacNode* nextSibling = nullptr,
-    core::AnimTime t = {}) {
+    VacNode* nextSibling,
+    core::AnimTime t) {
 
     if (!parentGroup) {
         throw LogicError("createKeyClosedEdge: parentGroup is nullptr.");
@@ -169,7 +169,7 @@ void removeNodeSmart(VacNode* node, bool removeFreeVertices) {
     detail::Operations::removeNodeSmart(node, removeFreeVertices);
 }
 
-void moveToGroup(VacNode* node, VacGroup* parentGroup, VacNode* nextSibling = nullptr) {
+void moveToGroup(VacNode* node, VacGroup* parentGroup, VacNode* nextSibling) {
     if (!node) {
         throw LogicError("moveToGroup: node is nullptr.");
     }
