@@ -236,6 +236,10 @@ bool Canvas::onKeyPress(KeyEvent* event) {
             requestedTesselationMode_ = EdgeSubdivisionQuality::Disabled;
             break;
         }
+        VGC_INFO(
+            LogVgcToolsSketch,
+            "Switched edge subdivision quality to: {}",
+            core::Enum::prettyName(requestedTesselationMode_));
         reTesselate = true;
         requestRepaint();
         break;
@@ -507,7 +511,25 @@ void Canvas::onPaintDraw(graphics::Engine* engine, PaintOptions /*options*/) {
     //  - setup target for layers (painting a layer means using its result)
     bool paintOutline = showControlPoints_;
     if (workspace_) {
+        workspace_->sync();
         //VGC_PROFILE_SCOPE("Canvas:WorkspaceVisit");
+        if (reTesselate) {
+            workspace_->visitDepthFirstPreOrder( //
+                [=](workspace::Element* e, Int /*depth*/) {
+                    if (!e) {
+                        return;
+                    }
+                    if (e->isVacElement()) {
+                        // todo: should we use an enum to avoid dynamic_cast ?
+                        // if an error happens with the Element creation we cannot rely on vac node type.
+                        auto edge = dynamic_cast<workspace::VacKeyEdge*>(e);
+                        if (edge) {
+                            //profileName = "Canvas:WorkspaceDrawEdgeElement";
+                            edge->setTesselationMode(requestedTesselationMode_);
+                        }
+                    }
+                });
+        }
         workspace_->visitDepthFirst(
             [](workspace::Element* /*e*/, Int /*depth*/) {
                 // we always visit children for now
@@ -517,17 +539,6 @@ void Canvas::onPaintDraw(graphics::Engine* engine, PaintOptions /*options*/) {
                 if (!e) {
                     return;
                 }
-                //const char* profileName = "Canvas:WorkspaceDrawElement";
-                if (e->isVacElement()) {
-                    // todo: should we use an enum to avoid dynamic_cast ?
-                    // if an error happens with the Element creation we cannot rely on vac node type.
-                    auto edge = dynamic_cast<workspace::VacKeyEdge*>(e);
-                    if (edge && reTesselate) {
-                        //profileName = "Canvas:WorkspaceDrawEdgeElement";
-                        edge->setTesselationMode(requestedTesselationMode_);
-                    }
-                }
-                //VGC_PROFILE_SCOPE(profileName);
                 e->paint(engine);
                 if (paintOutline) {
                     e->paint(engine, {}, workspace::PaintOption::Outline);
