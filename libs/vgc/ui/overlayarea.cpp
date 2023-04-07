@@ -33,6 +33,9 @@ OverlayAreaPtr OverlayArea::create() {
 
 void OverlayArea::setAreaWidget(Widget* widget) {
     if (widget != areaWidget_) {
+        // It is possible that widget was an overlay widget before entering this function.
+        overlays_.removeIf([=](const OverlayDesc& od) { return od.widget() == widget; });
+
         if (areaWidget_) {
             widget->replace(areaWidget_);
         }
@@ -113,17 +116,32 @@ void OverlayArea::updateChildrenGeometry() {
         areaWidget_->updateGeometry(areaRect);
     }
     for (OverlayDesc& od : overlays_) {
-        switch (od.resizePolicy()) {
-        case OverlayResizePolicy::Stretch: {
-            od.widget()->updateGeometry(areaRect);
-            break;
-        }
-        case OverlayResizePolicy::None:
-        default:
-            od.widget()->updateGeometry();
-            break;
+        od.setGeometryDirty(true);
+    }
+    bool hasUpdatedSomething = true;
+    while (hasUpdatedSomething) {
+        hasUpdatedSomething = false;
+        // Note: overlays_.length() may change during iteration.
+        for (Int i = 0; i < overlays_.length(); ++i) {
+            OverlayDesc& od = overlays_[i];
+            if (od.isGeometryDirty()) {
+                od.setGeometryDirty(false);
+                Widget* w = od.widget();
+                switch (od.resizePolicy()) {
+                case OverlayResizePolicy::Stretch: {
+                    w->updateGeometry(areaRect);
+                    break;
+                }
+                case OverlayResizePolicy::None:
+                default:
+                    w->updateGeometry();
+                    break;
+                }
+                hasUpdatedSomething = true;
+            }
         }
     }
+
     for (auto c : children()) {
         if (c != areaWidget_) {
             c->updateGeometry();

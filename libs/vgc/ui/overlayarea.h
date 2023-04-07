@@ -130,9 +130,18 @@ private:
             return resizePolicy_;
         }
 
+        bool isGeometryDirty() const {
+            return isGeometryDirty_;
+        }
+
+        void setGeometryDirty(bool isDirty) {
+            isGeometryDirty_ = isDirty;
+        }
+
     private:
         Widget* widget_ = nullptr;
         OverlayResizePolicy resizePolicy_ = {};
+        bool isGeometryDirty_ = true;
     };
 
     // order does not matter
