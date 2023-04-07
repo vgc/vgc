@@ -181,13 +181,14 @@ void Node::replace(Node* oldNode) {
 
 Element* Node::getElementFromPath(const Path& path, core::StringId tagNameFilter) const {
     Element* element = nullptr;
-    bool found = false;
+    bool firstAttributeEncountered = false;
     for (const PathSegment& seg : path.segments()) {
         switch (seg.type()) {
         case PathSegmentType::Root:
             element = document()->rootElement();
             break;
         case PathSegmentType::Id:
+            // nullptr if not found, handled out of switch
             element = document()->elementById(seg.name());
             break;
         case PathSegmentType::Element:
@@ -195,23 +196,25 @@ Element* Node::getElementFromPath(const Path& path, core::StringId tagNameFilter
                 element = Element::cast(const_cast<Node*>(this));
             }
             if (element) {
-                Element* newElement = element->firstChildElement();
-                while (newElement) {
-                    if (newElement->name() == seg.name()) {
+                Element* childElement = element->firstChildElement();
+                while (childElement) {
+                    if (childElement->name() == seg.name()) {
                         break;
                     }
-                    newElement = newElement->nextSiblingElement();
+                    childElement = childElement->nextSiblingElement();
                 }
-                element = newElement;
+                element = childElement; // nullptr if not found, handled out of switch
             }
             break;
         case PathSegmentType::Attribute:
             if (!element) {
                 element = Element::cast(const_cast<Node*>(this));
             }
-            found = true;
+            firstAttributeEncountered = true;
         }
-        if (!element /* <- error */ || found) {
+        // Break out of loop if there is an error or we reached the end of
+        // the "element part" of the path.
+        if (!element /* <- error */ || firstAttributeEncountered) {
             break;
         }
     }
