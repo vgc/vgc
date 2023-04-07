@@ -238,11 +238,15 @@ void write(OStream& out, const char* s) {
     out.write(s, static_cast<std::streamsize>(n));
 }
 
-/// Writes the given string to the given output stream.
+/// Writes the given `std::string_view` (or any type implicitly convertible to
+/// `std::string_view`) to the given output stream.
 ///
 /// ```cpp
-/// std::string s = "Hello World!";
+/// std::string_view s = "Hello World!";
 /// vgc::core::write(out, s);
+///
+/// vgc::dom::ValueType valueType = vgc::dom::ValueType::None;
+/// vgc::core::write(out, Enum::fullName(valueType));
 /// ```
 ///
 template<typename OStream>
@@ -251,6 +255,17 @@ void write(OStream& out, std::string_view s) {
     out.write(s.data(), static_cast<std::streamsize>(n));
 }
 
+/// Writes the given `std::string` to the given output stream.
+///
+/// ```cpp
+/// std::string s = "Hello World!";
+/// vgc::core::write(out, s);
+/// ```
+///
+// This overload is necessary since some types may have implicit conversion
+// from std::string (such as Value) which would cause ambiguous overload resolution
+// in the presence of `void write(OStream& out, std::string_view s)`.
+//
 template<typename OStream>
 void write(OStream& out, const std::string& s) {
     size_t n = s.size();
