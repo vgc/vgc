@@ -41,7 +41,7 @@ struct DomCycleComponent {
 
 template<typename IStream>
 void readTo(DomCycleComponent& component, IStream& in) {
-    readTo(v.path, in);
+    readTo(component.path, in);
     char c = -1;
     if (in.get(c)) {
         if (c == '*') {
