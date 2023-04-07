@@ -149,8 +149,8 @@ protected:
     // better, for example by having deferred widget draws which we would
     // enable for the Canvas.
     //
-    std::array<geometry::Vec2d, 3> minimalLatencyStrokePoints_;
-    std::array<double, 3> minimalLatencyStrokeWidths_;
+    std::array<geometry::Vec2d, 3> minimalLatencyStrokePoints_ = {};
+    std::array<double, 3> minimalLatencyStrokeWidths_ = {};
     graphics::GeometryViewPtr minimalLatencyStrokeGeometry_;
     bool minimalLatencyStrokeReload_ = false;
     geometry::Vec2f lastImmediateCursorPos_ = {};
@@ -158,6 +158,7 @@ protected:
     void startCurve_(const geometry::Vec2d& p, double width);
     void continueCurve_(const geometry::Vec2d& p, double width);
     void finishCurve_();
+    bool resetData_();
 
     // The length of curve that snapping is allowed to deform
     double snapDeformationLength() const;
