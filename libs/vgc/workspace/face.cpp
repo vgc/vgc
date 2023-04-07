@@ -28,24 +28,24 @@ namespace {
 
 struct DomCycleComponent {
     dom::Path path = {};
-    bool direction = false;
+    bool direction = true;
 
     template<typename OStream>
     friend void write(OStream& out, const DomCycleComponent& component) {
         write(out, component.path);
-        if (component.direction) {
+        if (!component.direction) {
             write(out, '*');
         }
     }
 };
 
 template<typename IStream>
-void readTo(DomCycleComponent& v, IStream& in) {
+void readTo(DomCycleComponent& component, IStream& in) {
     readTo(v.path, in);
     char c = -1;
     if (in.get(c)) {
         if (c == '*') {
-            v.direction = true;
+            component.direction = false;
         }
         else {
             in.unget();
@@ -72,15 +72,15 @@ struct DomCycle {
 };
 
 template<typename IStream>
-void readTo(DomCycle& v, IStream& in) {
+void readTo(DomCycle& cycle, IStream& in) {
     char c = -1;
     bool got = false;
-    readTo(v.components.emplaceLast(), in);
+    readTo(cycle.components.emplaceLast(), in);
     core::skipWhitespaceCharacters(in);
     got = bool(in.get(c));
     while (got && dom::isValidPathFirstChar(c)) {
         in.unget();
-        readTo(v.components.emplaceLast(), in);
+        readTo(cycle.components.emplaceLast(), in);
         core::skipWhitespaceCharacters(in);
         got = bool(in.get(c));
     }
@@ -586,7 +586,7 @@ bool VacKeyFace::computeFillMesh_() {
                     data.bbox_.uniteWith(edgeData->boundingBox());
                     const geometry::CurveSampleArray& samples =
                         edgeData->preJoinSamples();
-                    if (!khe.direction()) {
+                    if (khe.direction()) {
                         for (const geometry::CurveSample& s : samples) {
                             Vec2d p = s.position();
                             if (isFirst) {

@@ -27,43 +27,7 @@ namespace vgc::topology {
 
 class VGC_TOPOLOGY_API KeyCycle {
 public:
-    explicit KeyCycle(core::Span<const KeyHalfedge> halfedges) noexcept
-        : halfedges_(halfedges) {
-
-        if (halfedges_.isEmpty()) {
-            // invalid cycle
-        }
-        else if (halfedges_.first().isClosed()) {
-            KeyHalfedge h0 = halfedges_.first();
-            for (const KeyHalfedge& h : halfedges_) {
-                if (h0 != h) {
-                    // invalid cycle
-                    halfedges_.clear();
-                    break;
-                }
-            }
-        }
-        else {
-            // Note: there is no need to check that all halfedges
-            // have the same key time since each consecutive pair
-            // of halfedges share a vertex, and its time.
-            auto it = halfedges_.begin();
-            KeyVertex* firstStartVertex = it->startVertex();
-            KeyVertex* previousEndVertex = it->endVertex();
-            for (++it; it != halfedges_.end(); ++it) {
-                if (previousEndVertex != it->startVertex()) {
-                    // invalid cycle
-                    halfedges_.clear();
-                    break;
-                }
-                previousEndVertex = it->endVertex();
-            }
-            if (previousEndVertex != firstStartVertex) {
-                // invalid cycle
-                halfedges_.clear();
-            }
-        }
-    }
+    explicit KeyCycle(core::Span<const KeyHalfedge> halfedges) noexcept;
 
     explicit KeyCycle(std::initializer_list<KeyHalfedge> halfedges) noexcept
         : halfedges_(halfedges) {

@@ -26,7 +26,7 @@ namespace vgc::topology {
 
 class VGC_TOPOLOGY_API KeyHalfedge {
 public:
-    explicit KeyHalfedge(KeyEdge* edge, bool direction) noexcept
+    KeyHalfedge(KeyEdge* edge, bool direction) noexcept
         : edge_(edge)
         , direction_(direction) {
     }
@@ -40,11 +40,11 @@ public:
     }
 
     KeyVertex* startVertex() const {
-        return direction_ ? edge_->endVertex() : edge_->startVertex();
+        return direction_ ? edge_->startVertex() : edge_->endVertex();
     }
 
     KeyVertex* endVertex() const {
-        return direction_ ? edge_->startVertex() : edge_->endVertex();
+        return direction_ ? edge_->endVertex() : edge_->startVertex();
     }
 
     bool isClosed() const {
