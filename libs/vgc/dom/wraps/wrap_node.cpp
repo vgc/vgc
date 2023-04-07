@@ -24,6 +24,8 @@ void wrap_node(py::module& m) {
 
     using This = vgc::dom::Node;
 
+    using StringId = vgc::core::StringId;
+
     using NodeType = vgc::dom::NodeType;
     py::enum_<NodeType>(m, "NodeType")
         .value("Element", NodeType::Element)
@@ -47,6 +49,14 @@ void wrap_node(py::module& m) {
         .def("canReplace", &This::canReplace)
         .def("replace", &This::replace)
         .def("isDescendant", &This::isDescendant)
-        .def("getElementFromPath", &This::getElementFromPath)
-        .def("getValueFromPath", &This::getValueFromPath);
+        .def(
+            "getElementFromPath",
+            &This::getElementFromPath,
+            "path"_a,
+            "tagNameFilter"_a = StringId())
+        .def(
+            "getValueFromPath",
+            &This::getValueFromPath,
+            "path"_a,
+            "tagNameFilter"_a = StringId());
 }
