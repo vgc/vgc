@@ -30,6 +30,39 @@
 
 namespace vgc::ui {
 
+namespace {
+
+geometry::Vec2d getSnapPosition(workspace::Element* snapVertex) {
+    vacomplex::Node* node = snapVertex->vacNode();
+    if (node) {
+        vacomplex::Cell* cell = node->toCell();
+        if (cell) {
+            vacomplex::KeyVertex* keyVertex = cell->toKeyVertex();
+            if (keyVertex) {
+                return keyVertex->position();
+            }
+        }
+    }
+    VGC_WARNING(
+        LogVgcToolsSketch,
+        "Snap vertex didn't have an associated KeyVertex: using (0, 0) as position.");
+    return geometry::Vec2d();
+}
+
+// Note: for now, the deformation is linear, which introduce a non-smooth
+// point at s = snapDeformationLength.
+//
+geometry::Vec2d snapDeformation(
+    const geometry::Vec2d& position,
+    const geometry::Vec2d& delta,
+    double s,
+    double snapDeformationLength) {
+
+    return position + delta * (1 - (s / snapDeformationLength));
+}
+
+} // namespace
+
 SketchTool::SketchTool()
     : CanvasTool() {
 
@@ -81,7 +114,7 @@ bool SketchTool::onMouseMove(MouseEvent* event) {
     continueCurve_(worldCoords, width);
     minimalLatencyStrokePoints_[0] = minimalLatencyStrokePoints_[1];
     minimalLatencyStrokeWidths_[0] = minimalLatencyStrokeWidths_[1];
-    minimalLatencyStrokePoints_[1] = worldCoords;
+    minimalLatencyStrokePoints_[1] = points_.last();
     minimalLatencyStrokeWidths_[1] = width;
     minimalLatencyStrokeReload_ = true;
     return true;
@@ -113,24 +146,8 @@ bool SketchTool::onMousePress(MouseEvent* event) {
 bool SketchTool::onMouseRelease(MouseEvent* event) {
 
     if (event->button() == MouseButton::Left) {
-        if (isSketching_) {
-            finishCurve_();
-        }
-        if (drawCurveUndoGroup_) {
-            drawCurveUndoGroup_->close();
-            drawCurveUndoGroup_->undone().disconnect(drawCurveUndoGroupConnectionHandle_);
-            drawCurveUndoGroup_ = nullptr;
-        }
-        if (isSketching_) {
-            isSketching_ = false;
-            endVertex_ = nullptr;
-            edge_ = nullptr;
-            points_.clear();
-            widths_.clear();
-            lastInputPoints_.clear();
-            smoothedInputPoints_.clear();
-            smoothedInputArclengths_.clear();
-            requestRepaint();
+        finishCurve_();
+        if (resetData_()) {
             return true;
         }
     }
@@ -226,8 +243,19 @@ void SketchTool::onPaintDraw(graphics::Engine* engine, PaintOptions /*options*/)
         if (lastImmediateCursorPos_ != pos) {
             lastImmediateCursorPos_ = pos;
             cursorMoved = true;
-            minimalLatencyStrokePoints_[2] = geometry::Vec2d(pos);
+            geometry::Vec2d pos2d(pos);
+            minimalLatencyStrokePoints_[2] = pos2d;
             minimalLatencyStrokeWidths_[2] = minimalLatencyStrokeWidths_[1] * 0.5;
+            if (!smoothedInputPoints_.isEmpty()) {
+                double s = smoothedInputArclengths_.last()
+                           + (pos2d - smoothedInputPoints_.last()).length();
+                double snapDeformationLength_ = snapDeformationLength();
+                geometry::Vec2d delta = startSnapPosition_ - smoothedInputPoints_[0];
+                if (s < snapDeformationLength_) {
+                    minimalLatencyStrokePoints_[2] =
+                        snapDeformation(pos2d, delta, s, snapDeformationLength_);
+                }
+            }
         }
     }
 
@@ -331,39 +359,6 @@ void SketchTool::updateSmoothedData_() {
     }
 }
 
-namespace {
-
-geometry::Vec2d getSnapPosition(workspace::Element* snapVertex) {
-    vacomplex::Node* node = snapVertex->vacNode();
-    if (node) {
-        vacomplex::Cell* cell = node->toCell();
-        if (cell) {
-            vacomplex::KeyVertex* keyVertex = cell->toKeyVertex();
-            if (keyVertex) {
-                return keyVertex->position();
-            }
-        }
-    }
-    VGC_WARNING(
-        LogVgcToolsSketch,
-        "Snap vertex didn't have an associated KeyVertex: using (0, 0) as position.");
-    return geometry::Vec2d();
-}
-
-// Note: for now, the deformation is linear, which introduce a non-smooth
-// point at s = snapDeformationLength.
-//
-geometry::Vec2d snapDeformation(
-    const geometry::Vec2d& position,
-    const geometry::Vec2d& delta,
-    double s,
-    double snapDeformationLength) {
-
-    return position + delta * (1 - (s / snapDeformationLength));
-}
-
-} // namespace
-
 void SketchTool::startCurve_(const geometry::Vec2d& p, double width) {
 
     // Fast return if missing required context
@@ -383,10 +378,16 @@ void SketchTool::startCurve_(const geometry::Vec2d& p, double width) {
     if (history) {
         drawCurveUndoGroup_ = history->createUndoGroup(Draw_Curve);
         drawCurveUndoGroupConnectionHandle_ = drawCurveUndoGroup_->undone().connect(
-            [this](core::UndoGroup*, bool /*isAbort*/) {
+            [this](core::UndoGroup* ug, bool /*isAbort*/) {
                 // isAbort should be true since we have no sub-group
-                isSketching_ = false;
-                drawCurveUndoGroup_ = nullptr;
+                if (drawCurveUndoGroup_) {
+                    VGC_ASSERT(ug == drawCurveUndoGroup_);
+                    drawCurveUndoGroup_->undone().disconnect(
+                        drawCurveUndoGroupConnectionHandle_);
+                    drawCurveUndoGroup_ = nullptr;
+                }
+                resetData_();
+                requestRepaint();
             });
     }
 
@@ -447,7 +448,7 @@ void SketchTool::startCurve_(const geometry::Vec2d& p, double width) {
     // Update stroke tip
     minimalLatencyStrokePoints_[0] = startSnapPosition_;
     minimalLatencyStrokeWidths_[0] = width * 0.5;
-    minimalLatencyStrokePoints_[1] = p;
+    minimalLatencyStrokePoints_[1] = startSnapPosition_;
     minimalLatencyStrokeWidths_[1] = width * 0.5;
     minimalLatencyStrokeReload_ = true;
 }
@@ -510,6 +511,8 @@ void SketchTool::continueCurve_(const geometry::Vec2d& p, double width) {
 
 void SketchTool::finishCurve_() {
 
+    namespace ds = dom::strings;
+
     // Fast return if missing required context
     workspace::Workspace* workspace = this->workspace();
     if (!workspace || !workspace->document() || !edge_ || !endVertex_) {
@@ -554,7 +557,6 @@ void SketchTool::finishCurve_() {
             }
 
             // Update DOM and workspace
-            namespace ds = dom::strings;
             endVertex_->remove();
             endVertex_ = snapVertex->domElement();
             edge_->setAttribute(ds::positions, points_);
@@ -562,6 +564,28 @@ void SketchTool::finishCurve_() {
             workspace->sync();
         }
     }
+
+    requestRepaint();
+}
+
+bool SketchTool::resetData_() {
+    if (drawCurveUndoGroup_) {
+        drawCurveUndoGroup_->close();
+        drawCurveUndoGroup_->undone().disconnect(drawCurveUndoGroupConnectionHandle_);
+        drawCurveUndoGroup_ = nullptr;
+    }
+    if (isSketching_) {
+        isSketching_ = false;
+        endVertex_ = nullptr;
+        edge_ = nullptr;
+        points_.clear();
+        widths_.clear();
+        lastInputPoints_.clear();
+        smoothedInputPoints_.clear();
+        smoothedInputArclengths_.clear();
+        return true;
+    }
+    return false;
 }
 
 double SketchTool::snapDeformationLength() const {
