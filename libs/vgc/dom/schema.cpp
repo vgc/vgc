@@ -16,6 +16,8 @@
 
 #include <vgc/dom/schema.h>
 
+#include <string>
+
 #include <vgc/core/array.h>
 #include <vgc/core/colors.h>
 #include <vgc/dom/path.h>
@@ -115,6 +117,10 @@ const Schema& schema() {
             {"widths", core::DoubleArray()},
             {"startvertex", NoneOr<Path>()},
             {"endvertex", NoneOr<Path>()},
+        }},
+        { "face", "f", {
+            {"color", core::colors::black},
+            {"cycles", std::string()},
         }},
         { "user", {
             // No attributes

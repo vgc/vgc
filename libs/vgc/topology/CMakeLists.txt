@@ -11,8 +11,10 @@ vgc_add_library(topology
         inbetweenedge.h
         inbetweenface.h
         inbetweenvertex.h
+        keycycle.h
         keyedge.h
         keyface.h
+        keyhalfedge.h
         keyvertex.h
         logcategories.h
         operations.h

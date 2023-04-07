@@ -65,6 +65,16 @@ public:
         core::Span<VacNode*> operationSourceNodes = {},
         core::AnimTime t = {});
 
+    /// Assumes `cycles` are valid.
+    /// Assumes `nextSibling` is either `nullptr` or a child of `parentGroup`.
+    ///
+    static KeyFace* createKeyFace(
+        core::Array<KeyCycle> cycles,
+        VacGroup* parentGroup,
+        VacNode* nextSibling = nullptr,
+        core::Span<VacNode*> operationSourceNodes = {},
+        core::AnimTime t = {});
+
     static void removeNode(VacNode* node, bool removeFreeVertices);
     static void removeNodeSmart(VacNode* node, bool removeFreeVertices);
 

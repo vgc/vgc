@@ -8,6 +8,7 @@ vgc_add_library(workspace
         api.h
         edge.h
         element.h
+        face.h
         layer.h
         logcategories.h
         vertex.h
@@ -16,6 +17,7 @@ vgc_add_library(workspace
     CPP_SOURCE_FILES
         edge.cpp
         element.cpp
+        face.cpp
         layer.cpp
         logcategories.cpp
         vertex.cpp

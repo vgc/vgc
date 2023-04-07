@@ -103,6 +103,7 @@ enum class ChangeFlag : UInt {
     EdgePreJoinGeometry = 0x02,
     EdgePostJoinGeometry = 0x04,
     EdgeStrokeMesh = 0x08,
+    FaceFillMesh = 0x10,
     Color = 0x20,
     Style = 0x40,
     EdgeGeometry = EdgePreJoinGeometry | EdgePostJoinGeometry | EdgeStrokeMesh,

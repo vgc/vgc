@@ -83,6 +83,26 @@ inline KeyEdge* createKeyClosedEdge(
         points, widths, parentGroup, nextSibling, {}, t);
 }
 
+/// Throws `NotAChildError` if `nextSibling` is not a child of `parentGroup` or `nullptr`.
+/// Throws `LogicError` if `parentGroup` is nullptr or one of the given `cycles` is not valid.
+///
+VGC_TOPOLOGY_API
+KeyFace* createKeyFace(
+    core::Array<KeyCycle> cycles,
+    VacGroup* parentGroup,
+    VacNode* nextSibling = nullptr,
+    core::AnimTime t = {});
+
+/// Throws `NotAChildError` if `nextSibling` is not a child of `parentGroup` or `nullptr`.
+/// Throws `LogicError` if `parentGroup` is nullptr or one of the given `cycles` is not valid.
+///
+VGC_TOPOLOGY_API
+KeyFace* createKeyFace(
+    KeyCycle cycle,
+    VacGroup* parentGroup,
+    VacNode* nextSibling = nullptr,
+    core::AnimTime t = {});
+
 inline void removeNode(VacNode* node, bool removeFreeVertices) {
     if (!node) {
         throw LogicError("removeNode: node is nullptr.");
