@@ -330,6 +330,8 @@ void Widget::updateGeometry(
     const geometry::Vec2f& position,
     const geometry::Vec2f& size) {
 
+    WidgetPtr self(this);
+
     position_ = position;
     bool resized = false;
     if (!size_.allNear(size, 1e-6f)) {
@@ -341,11 +343,11 @@ void Widget::updateGeometry(
         updateGeometry_();
         updated = true;
     }
-    if (resized) {
+    if (self.isAlive() && resized) {
         onResize();
     }
 
-    if (updated && !parent()) {
+    if (self.isAlive() && updated && !parent()) {
         updateHoverChain();
     }
 }
@@ -356,13 +358,16 @@ void Widget::updateGeometry(const geometry::Vec2f& position) {
 }
 
 void Widget::updateGeometry() {
+
+    WidgetPtr self(this);
+
     bool updated = false;
     if (isGeometryUpdateRequested_) {
         updateGeometry_();
         updated = true;
     }
 
-    if (updated && !parent()) {
+    if (self.isAlive() && updated && !parent()) {
         updateHoverChain();
     }
 }
@@ -1232,6 +1237,8 @@ bool Widget::updateHoverChainChild(MouseEvent* event) {
     return setHoverChainChild(hcChild);
 }
 
+// TODO: fix recursion discovered with the "opened menu + window resize" crash.
+// updateGeometry->updateHoverChain->mapTo->position->updateRootGeometry_->updateGeometry->updateHoverChain
 bool Widget::updateHoverChain() {
     if (!isHovered()) {
         return false;
