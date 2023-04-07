@@ -22,6 +22,15 @@
 
 namespace vgc::topology {
 
+class VacNode;
+
+namespace detail {
+
+VGC_TOPOLOGY_API
+std::string notAChildMsg(const VacNode* node, const VacNode* expectedParent);
+
+} // namespace detail
+
 /// \class vgc::topology::LogicError
 /// \brief Raised when there is a logic error detected in vgc::topology.
 ///
@@ -57,6 +66,28 @@ public:
     ///
     explicit RuntimeError(const std::string& reason)
         : core::RuntimeError(reason) {
+    }
+};
+
+/// \class vgc::topology::NotAChildError
+/// \brief Raised when a given node is expected to be a child of another
+///        node, but isn't.
+///
+/// This exception is raised when a given node is expected to be a child of
+/// another node, but isn't. For example, it is raised when the `nextSibling`
+/// argument of `createKeyVertex(position, parent, nextSibling)` is non-null and
+/// isn't a child of `parent`.
+///
+class VGC_TOPOLOGY_API_EXCEPTION NotAChildError : public LogicError {
+private:
+    VGC_CORE_EXCEPTIONS_DECLARE_ANCHOR
+
+public:
+    /// Constructs a NotAChildError, informing that the given \p object is not a
+    /// child of the given \p expectedParent.
+    ///
+    NotAChildError(const VacNode* node, const VacNode* expectedParent)
+        : LogicError(detail::notAChildMsg(node, expectedParent)) {
     }
 };
 

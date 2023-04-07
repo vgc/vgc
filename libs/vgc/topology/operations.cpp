@@ -20,6 +20,55 @@
 
 namespace vgc::topology::ops {
 
+namespace {
+
+void checkIsChildOrNull(VacNode* node, VacGroup* expectedParent) {
+    if (node && node->parentGroup() != expectedParent) {
+        throw NotAChildError(node, expectedParent);
+    }
+}
+
+} // namespace
+
+VacGroup* createVacGroup(VacGroup* parentGroup, VacNode* nextSibling = nullptr) {
+    if (!parentGroup) {
+        throw LogicError("createVacGroup: parentGroup is nullptr.");
+    }
+    checkIsChildOrNull(nextSibling, parentGroup);
+
+    return detail::Operations::createVacGroup(parentGroup, nextSibling);
+}
+
+KeyVertex* createKeyVertex(
+    const geometry::Vec2d& position,
+    VacGroup* parentGroup,
+    VacNode* nextSibling = nullptr,
+    core::AnimTime t = {}) {
+
+    if (!parentGroup) {
+        throw LogicError("createKeyVertex: parentGroup is nullptr.");
+    }
+    checkIsChildOrNull(nextSibling, parentGroup);
+
+    return detail::Operations::createKeyVertex(position, parentGroup, nextSibling, {}, t);
+}
+
+KeyEdge* createKeyClosedEdge(
+    const geometry::SharedConstVec2dArray& points,
+    const core::SharedConstDoubleArray& widths,
+    VacGroup* parentGroup,
+    VacNode* nextSibling = nullptr,
+    core::AnimTime t = {}) {
+
+    if (!parentGroup) {
+        throw LogicError("createKeyClosedEdge: parentGroup is nullptr.");
+    }
+    checkIsChildOrNull(nextSibling, parentGroup);
+
+    return detail::Operations::createKeyClosedEdge(
+        points, widths, parentGroup, nextSibling, {}, t);
+}
+
 KeyEdge* createKeyOpenEdge(
     KeyVertex* startVertex,
     KeyVertex* endVertex,
@@ -32,6 +81,8 @@ KeyEdge* createKeyOpenEdge(
     if (!parentGroup) {
         throw LogicError("createKeyOpenEdge: parentGroup is nullptr.");
     }
+    checkIsChildOrNull(nextSibling, parentGroup);
+
     if (!startVertex) {
         throw LogicError("createKeyOpenEdge: startVertex is nullptr.");
     }
@@ -72,6 +123,8 @@ KeyFace* createKeyFace(
     if (!parentGroup) {
         throw LogicError("createKeyFace: parentGroup is nullptr.");
     }
+    checkIsChildOrNull(nextSibling, parentGroup);
+
     for (const KeyCycle& cycle : cycles) {
         if (!cycle.isValid()) {
             throw LogicError(
@@ -92,12 +145,61 @@ KeyFace* createKeyFace(
     if (!parentGroup) {
         throw LogicError("createKeyFace: parentGroup is nullptr.");
     }
+    checkIsChildOrNull(nextSibling, parentGroup);
+
     if (!cycle.isValid()) {
         throw LogicError("createKeyFace: the input cycle is not valid.");
     }
 
     return detail::Operations::createKeyFace(
         core::Array<KeyCycle>(1, std::move(cycle)), parentGroup, nextSibling, {}, t);
+}
+
+void removeNode(VacNode* node, bool removeFreeVertices) {
+    if (!node) {
+        throw LogicError("removeNode: node is nullptr.");
+    }
+    detail::Operations::removeNode(node, removeFreeVertices);
+}
+
+void removeNodeSmart(VacNode* node, bool removeFreeVertices) {
+    if (!node) {
+        throw LogicError("removeNodeSmart: node is nullptr.");
+    }
+    detail::Operations::removeNodeSmart(node, removeFreeVertices);
+}
+
+void moveToGroup(VacNode* node, VacGroup* parentGroup, VacNode* nextSibling = nullptr) {
+    if (!node) {
+        throw LogicError("moveToGroup: node is nullptr.");
+    }
+    if (!parentGroup) {
+        throw LogicError("moveToGroup: parentGroup is nullptr.");
+    }
+    checkIsChildOrNull(nextSibling, parentGroup);
+
+    return detail::Operations::moveToGroup(node, parentGroup, nextSibling);
+}
+
+void setKeyVertexPosition(KeyVertex* vertex, const geometry::Vec2d& pos) {
+    if (!vertex) {
+        throw LogicError("setKeyVertexPosition: vertex is nullptr.");
+    }
+    return detail::Operations::setKeyVertexPosition(vertex, pos);
+}
+
+void setKeyEdgeCurvePoints(KeyEdge* edge, const geometry::SharedConstVec2dArray& points) {
+    if (!edge) {
+        throw LogicError("setKeyEdgeCurvePoints: edge is nullptr.");
+    }
+    return detail::Operations::setKeyEdgeCurvePoints(edge, points);
+}
+
+void setKeyEdgeCurveWidths(KeyEdge* edge, const core::SharedConstDoubleArray& widths) {
+    if (!edge) {
+        throw LogicError("setKeyEdgeCurveWidths: edge is nullptr.");
+    }
+    return detail::Operations::setKeyEdgeCurveWidths(edge, widths);
 }
 
 } // namespace vgc::topology::ops

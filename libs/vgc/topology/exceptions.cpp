@@ -18,9 +18,25 @@
 
 #include <vgc/core/format.h>
 
+#include <vgc/topology/vac.h>
+
 namespace vgc::topology {
 
 VGC_CORE_EXCEPTIONS_DEFINE_ANCHOR(LogicError)
 VGC_CORE_EXCEPTIONS_DEFINE_ANCHOR(RuntimeError)
+VGC_CORE_EXCEPTIONS_DEFINE_ANCHOR(NotAChildError)
+
+namespace detail {
+
+std::string notAChildMsg(const VacNode* node, const VacNode* expectedParent) {
+    return core::format(
+        "VacNode {} (id: {}) is not a child of {} (id: {})",
+        core::asAddress(node),
+        node->id(),
+        core::asAddress(expectedParent),
+        expectedParent->id());
+}
+
+} // namespace detail
 
 } // namespace vgc::topology
