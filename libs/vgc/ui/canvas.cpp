@@ -206,6 +206,12 @@ void deleteElement(workspace::Element* element, workspace::Workspace* workspace)
 
 } // namespace
 
+void Canvas::clearSelection_() {
+    selectionCandidateElements_.clear();
+    canMergeColorChange_ = false;
+    selectedElementId_ = 0;
+}
+
 bool Canvas::onKeyPress(KeyEvent* event) {
 
     using workspace::EdgeSubdivisionQuality;
@@ -262,8 +268,8 @@ bool Canvas::onKeyPress(KeyEvent* event) {
 
 void Canvas::onWorkspaceChanged_() {
 
-    selectionCandidateElements_.clear();
-    selectedElementId_ = 0;
+    //selectionCandidateElements_.clear();
+    //selectedElementId_ = 0;
 
     // ask for redraw
     requestRepaint();
@@ -398,7 +404,7 @@ bool Canvas::onMousePress(MouseEvent* event) {
                         }
                         double dist = 0;
                         if (e->isSelectableAt(worldCoords, false, tol, &dist)) {
-                            selectionCandidateElements_.emplaceLast(e, dist);
+                            selectionCandidateElements_.emplaceLast(e->id(), dist);
                         }
                     });
                 // order from front to back
@@ -420,6 +426,8 @@ bool Canvas::onMousePress(MouseEvent* event) {
         return true;
     }
 
+    selectionCandidateElements_.clear();
+    selectedElementId_ = 0;
     return false;
 }
 
@@ -572,7 +580,7 @@ void Canvas::updateChildrenGeometry() {
 
 workspace::Element* Canvas::selectedElement_() const {
     if (selectionCandidateElements_.size()) {
-        return selectionCandidateElements_[selectedElementId_].first;
+        return workspace()->find(selectionCandidateElements_[selectedElementId_].first);
     }
     else {
         return nullptr;

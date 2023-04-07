@@ -97,6 +97,7 @@ bool SketchTool::onMousePress(MouseEvent* event) {
     if (!canvas) {
         return false;
     }
+    canvas->clearSelection_();
 
     isSketching_ = true;
 
