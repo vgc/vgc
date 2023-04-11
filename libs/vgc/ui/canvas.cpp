@@ -213,7 +213,7 @@ void Canvas::clearSelection_() {
 
 bool Canvas::onKeyPress(KeyEvent* event) {
 
-    using workspace::EdgeSubdivisionQuality;
+    using geometry::CurveSamplingQuality;
 
     switch (event->key()) {
     case Key::T:
@@ -222,23 +222,23 @@ bool Canvas::onKeyPress(KeyEvent* event) {
         break;
     case Key::I:
         switch (requestedTesselationMode_) {
-        case EdgeSubdivisionQuality::Disabled:
-            requestedTesselationMode_ = EdgeSubdivisionQuality::UniformLow;
+        case CurveSamplingQuality::Disabled:
+            requestedTesselationMode_ = CurveSamplingQuality::UniformLow;
             break;
-        case EdgeSubdivisionQuality::UniformLow:
-            requestedTesselationMode_ = EdgeSubdivisionQuality::AdaptiveLow;
+        case CurveSamplingQuality::UniformLow:
+            requestedTesselationMode_ = CurveSamplingQuality::AdaptiveLow;
             break;
-        case EdgeSubdivisionQuality::AdaptiveLow:
-            requestedTesselationMode_ = EdgeSubdivisionQuality::UniformHigh;
+        case CurveSamplingQuality::AdaptiveLow:
+            requestedTesselationMode_ = CurveSamplingQuality::UniformHigh;
             break;
-        case EdgeSubdivisionQuality::UniformHigh:
-            requestedTesselationMode_ = EdgeSubdivisionQuality::AdaptiveHigh;
+        case CurveSamplingQuality::UniformHigh:
+            requestedTesselationMode_ = CurveSamplingQuality::AdaptiveHigh;
             break;
-        case EdgeSubdivisionQuality::AdaptiveHigh:
-            requestedTesselationMode_ = EdgeSubdivisionQuality::UniformVeryHigh;
+        case CurveSamplingQuality::AdaptiveHigh:
+            requestedTesselationMode_ = CurveSamplingQuality::UniformVeryHigh;
             break;
-        case EdgeSubdivisionQuality::UniformVeryHigh:
-            requestedTesselationMode_ = EdgeSubdivisionQuality::Disabled;
+        case CurveSamplingQuality::UniformVeryHigh:
+            requestedTesselationMode_ = CurveSamplingQuality::Disabled;
             break;
         }
         VGC_INFO(

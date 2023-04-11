@@ -91,6 +91,8 @@ public:
 private:
     static void
     collectDependentNodes_(VacNode* node, std::unordered_set<VacNode*>& dependentNodes);
+
+    static void dirtyGeometry_(VacCell* cell);
 };
 
 } // namespace vgc::topology::detail

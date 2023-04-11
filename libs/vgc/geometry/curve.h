@@ -20,6 +20,7 @@
 #include <vgc/core/arithmetic.h>
 #include <vgc/core/array.h>
 #include <vgc/core/color.h>
+#include <vgc/core/enum.h>
 #include <vgc/core/object.h>
 #include <vgc/core/span.h>
 #include <vgc/geometry/api.h>
@@ -29,6 +30,18 @@
 namespace vgc::geometry {
 
 class Curve;
+
+enum class CurveSamplingQuality {
+    Disabled,
+    UniformLow,
+    AdaptiveLow,
+    UniformHigh,
+    AdaptiveHigh,
+    UniformVeryHigh
+};
+
+VGC_GEOMETRY_API
+VGC_DECLARE_ENUM(CurveSamplingQuality)
 
 class CurveSample {
 public:
@@ -221,9 +234,11 @@ using SharedConstCurveSampleArray = core::SharedConstArray<CurveSample>;
 /// \class vgc::geometry::CurveSamplingParameters
 /// \brief Parameters for the sampling.
 ///
-class CurveSamplingParameters {
+class VGC_GEOMETRY_API CurveSamplingParameters {
 public:
     CurveSamplingParameters() = default;
+
+    CurveSamplingParameters(CurveSamplingQuality quality);
 
     CurveSamplingParameters(
         double maxAngle,
@@ -257,6 +272,18 @@ public:
 
     void setMaxIntraSegmentSamples(Int maxIntraSegmentSamples) {
         maxIntraSegmentSamples_ = maxIntraSegmentSamples;
+    }
+
+    friend bool
+    operator==(const CurveSamplingParameters& a, const CurveSamplingParameters& b) {
+        return (a.maxAngle_ == b.maxAngle_)
+               && (a.minIntraSegmentSamples_ == b.minIntraSegmentSamples_)
+               && (a.maxIntraSegmentSamples_ == b.maxIntraSegmentSamples_);
+    }
+
+    friend bool
+    operator!=(const CurveSamplingParameters& a, const CurveSamplingParameters& b) {
+        return !(a == b);
     }
 
 private:

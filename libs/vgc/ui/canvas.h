@@ -98,7 +98,7 @@ public:
     ///
     void stopLoggingUnder(core::PerformanceLog* parent);
 
-    workspace::EdgeSubdivisionQuality requestedTesselationMode() const {
+    geometry::CurveSamplingQuality requestedTesselationMode() const {
         return requestedTesselationMode_;
     }
 
@@ -209,8 +209,8 @@ protected:
     // Tesselation mode. This is selected with the i/u/a keys.
     // XXX This is a temporary quick method to switch between
     // tesselation modes. A more engineered method will come later.
-    workspace::EdgeSubdivisionQuality requestedTesselationMode_ =
-        workspace::EdgeSubdivisionQuality::AdaptiveHigh;
+    geometry::CurveSamplingQuality requestedTesselationMode_ =
+        geometry::CurveSamplingQuality::AdaptiveHigh;
     bool reTesselate = false;
 
     // Performance logging

@@ -443,7 +443,7 @@ void SketchTool::startCurve_(const geometry::Vec2d& p, double width) {
     workspace::Element* edgeElement = workspace->find(edge_);
     auto edgeCell = dynamic_cast<workspace::VacKeyEdge*>(edgeElement);
     if (edgeCell) {
-        edgeCell->setTesselationMode(workspace::EdgeSubdivisionQuality::AdaptiveLow);
+        edgeCell->setTesselationMode(geometry::CurveSamplingQuality::AdaptiveLow);
     }
 
     // Update stroke tip

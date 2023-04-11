@@ -358,7 +358,14 @@ void Operations::moveToGroup(VacNode* node, VacGroup* parentGroup, VacNode* next
 // dev note: update boundary before star
 
 void Operations::setKeyVertexPosition(KeyVertex* v, const geometry::Vec2d& pos) {
+    if (pos == v->position_) {
+        // same data
+        return;
+    }
+
     v->position_ = pos;
+    dirtyGeometry_(v);
+
     Vac* vac = v->vac();
     if (vac) {
         // inc version
@@ -381,7 +388,10 @@ void Operations::setKeyEdgeCurvePoints(
     }
 
     e->points_ = std::move(sPoints);
+    e->dirtyInputSampling_();
+    dirtyGeometry_(e);
     ++e->dataVersion_;
+
     Vac* vac = e->vac();
     if (vac) {
         // inc version
@@ -404,7 +414,10 @@ void Operations::setKeyEdgeCurveWidths(
     }
 
     e->widths_ = std::move(sWidths);
+    e->dirtyInputSampling_();
+    dirtyGeometry_(e);
     ++e->dataVersion_;
+
     Vac* vac = e->vac();
     if (vac) {
         // inc version
@@ -413,6 +426,7 @@ void Operations::setKeyEdgeCurveWidths(
         if (vac->isDiffEnabled_) {
             vac->diff_.onNodeDiff(e, VacNodeDiffFlag::GeometryChanged);
         }
+        vac->nodeModified().emit(e, VacNodeDiffFlag::GeometryChanged);
     }
 }
 
@@ -434,6 +448,22 @@ void Operations::collectDependentNodes_(
             if (dependentNodes.insert(n).second) {
                 collectDependentNodes_(n, dependentNodes);
             }
+        }
+    }
+}
+
+void Operations::dirtyGeometry_(VacCell* cell) {
+    if (!cell->isGeometryDirty_) {
+        cell->isGeometryDirty_ = true;
+        Vac* vac = cell->vac();
+        if (vac) {
+            if (vac->isDiffEnabled_) {
+                vac->diff_.onNodeDiff(cell, VacNodeDiffFlag::GeometryChanged);
+            }
+            vac->nodeModified().emit(cell, VacNodeDiffFlag::GeometryChanged);
+        }
+        for (VacCell* starCell : cell->star_) {
+            dirtyGeometry_(starCell);
         }
     }
 }
