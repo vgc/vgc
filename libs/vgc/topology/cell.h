@@ -850,6 +850,9 @@ public:
     VGC_TOPOLOGY_DEFINE_CELL_CAST_METHOD(InbetweenEdge)
     VGC_TOPOLOGY_DEFINE_CELL_CAST_METHOD(InbetweenFace)
 
+protected:
+    mutable bool isGeometryDirty_ = false;
+
 private:
     core::Array<VacCell*> star_;
     core::Array<VacCell*> boundary_;

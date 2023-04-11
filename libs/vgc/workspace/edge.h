@@ -18,12 +18,13 @@
 #define VGC_WORKSPACE_EDGE_H
 
 #include <initializer_list>
+#include <memory>
 
 #include <vgc/core/arithmetic.h>
 #include <vgc/core/array.h>
 #include <vgc/core/color.h>
-#include <vgc/core/enum.h>
 #include <vgc/dom/element.h>
+#include <vgc/geometry/curve.h>
 #include <vgc/geometry/vec2d.h>
 #include <vgc/geometry/vec2f.h>
 #include <vgc/geometry/vec4d.h>
@@ -173,18 +174,6 @@ loadMeshGraphics(graphics::Engine* engine, const StuvMesh2d& mesh);
 
 } // namespace detail
 
-enum class EdgeSubdivisionQuality {
-    Disabled,
-    UniformLow,
-    AdaptiveLow,
-    UniformHigh,
-    AdaptiveHigh,
-    UniformVeryHigh
-};
-
-VGC_WORKSPACE_API
-VGC_DECLARE_ENUM(EdgeSubdivisionQuality)
-
 class VGC_WORKSPACE_API EdgeGraphics {
 public:
     void clear() {
@@ -332,7 +321,7 @@ public:
     }
 
     const geometry::CurveSampleArray& preJoinSamples() const {
-        return samples_;
+        return samples_ ? *samples_ : defaultSamples_;
     }
 
     const EdgeGraphics& graphics() const {
@@ -350,7 +339,8 @@ private:
     geometry::Rect2d bbox_ = {};
 
     // stage PreJoinGeometry
-    geometry::CurveSampleArray samples_;
+    std::shared_ptr<const geometry::CurveSampleArray> samples_;
+    geometry::CurveSampleArray defaultSamples_;
 
     // stage PostJoinGeometry
     // [0]: start patch
@@ -420,7 +410,7 @@ public:
         return cell ? cell->toKeyEdgeUnchecked() : nullptr;
     }
 
-    void setTesselationMode(EdgeSubdivisionQuality mode);
+    void setTesselationMode(geometry::CurveSamplingQuality mode);
 
     std::optional<core::StringId> domTagName() const override;
 
@@ -456,10 +446,9 @@ private:
     mutable VacKeyEdgeFrameData frameData_;
     geometry::Vec2dArray controlPoints_;
     mutable graphics::GeometryViewPtr controlPointsGeometry_;
-    geometry::CurveSampleArray inputSamples_;
-    Int samplingVersion_ = -1;
-    EdgeSubdivisionQuality edgeTesselationMode_ = EdgeSubdivisionQuality::AdaptiveHigh;
-    bool isInputSamplingDirty_ = true;
+
+    geometry::CurveSamplingQuality edgeTesselationMode_ =
+        geometry::CurveSamplingQuality::AdaptiveHigh;
 
     ElementStatus onDependencyChanged_(Element* dependency, ChangeFlags changes) override;
     ElementStatus onDependencyRemoved_(Element* dependency) override;
@@ -474,12 +463,10 @@ private:
 
     void notifyChanges_(ChangeFlags changes, bool immediately = true);
 
-    bool computeInputSampling_();
     bool computePreJoinGeometry_();
     bool computePostJoinGeometry_();
     bool computeStrokeMesh_();
 
-    void dirtyInputSampling_(bool notifyDependentsImmediately = true);
     void dirtyPreJoinGeometry_(bool notifyDependentsImmediately = true);
     void dirtyPostJoinGeometry_(bool notifyDependentsImmediately = true);
     void dirtyStrokeMesh_(bool notifyDependentsImmediately = true);

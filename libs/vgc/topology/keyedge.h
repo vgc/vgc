@@ -17,6 +17,8 @@
 #ifndef VGC_TOPOLOGY_KEYEDGE_H
 #define VGC_TOPOLOGY_KEYEDGE_H
 
+#include <memory>
+
 #include <vgc/core/arithmetic.h>
 #include <vgc/geometry/curve.h>
 #include <vgc/geometry/vec2d.h>
@@ -62,6 +64,9 @@ public:
     //    return EdgeSampling(-1);
     //}
 
+    const std::shared_ptr<const geometry::CurveSampleArray>&
+    computeSampling(const geometry::CurveSamplingParameters& parameters) const;
+
     // XXX temporary, we should use geometry_.
     const geometry::Vec2dArray& points() const {
         return points_ ? *points_ : fallbackPoints_;
@@ -105,6 +110,12 @@ private:
 
     std::unique_ptr<KeyEdgeGeometry> geometry_ = {};
     //bool isClosed_ = false;
+
+    mutable geometry::CurveSamplingParameters lastSamplingParameters_ = {};
+    mutable std::shared_ptr<const geometry::CurveSampleArray> sampling_ = {};
+    mutable std::shared_ptr<const geometry::CurveSampleArray> snappedSampling_ = {};
+
+    void dirtyInputSampling_();
 };
 
 } // namespace vgc::topology

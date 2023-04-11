@@ -28,6 +28,7 @@ vgc_add_library(topology
         edgegeometry.cpp
         exceptions.cpp
         keycycle.cpp
+        keyedge.cpp
         logcategories.cpp
         operations.cpp
         transform.cpp

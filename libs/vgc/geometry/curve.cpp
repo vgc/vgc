@@ -27,6 +27,15 @@
 
 namespace vgc::geometry {
 
+VGC_DEFINE_ENUM(
+    CurveSamplingQuality,
+    (Disabled, "Disabled"),
+    (UniformLow, "Uniform Low"),
+    (AdaptiveLow, "Adaptive Low"),
+    (UniformHigh, "Uniform High"),
+    (AdaptiveHigh, "Adaptive High"),
+    (UniformVeryHigh, "Uniform Very High"))
+
 namespace {
 
 using core::DoubleArray;
@@ -70,6 +79,45 @@ void computeSample(
 }
 
 } // namespace
+
+CurveSamplingParameters::CurveSamplingParameters(CurveSamplingQuality quality)
+    : maxAngle_(1)
+    , minIntraSegmentSamples_(1)
+    , maxIntraSegmentSamples_(1) {
+
+    switch (quality) {
+    case CurveSamplingQuality::Disabled:
+        maxAngle_ = 100;
+        minIntraSegmentSamples_ = 1;
+        maxIntraSegmentSamples_ = 1;
+        break;
+    case CurveSamplingQuality::UniformLow:
+        maxAngle_ = 100;
+        minIntraSegmentSamples_ = 4;
+        maxIntraSegmentSamples_ = 4;
+        break;
+    case CurveSamplingQuality::AdaptiveLow:
+        maxAngle_ = 0.05;
+        minIntraSegmentSamples_ = 1;
+        maxIntraSegmentSamples_ = 8;
+        break;
+    case CurveSamplingQuality::UniformHigh:
+        maxAngle_ = 100;
+        minIntraSegmentSamples_ = 16;
+        maxIntraSegmentSamples_ = 16;
+        break;
+    case CurveSamplingQuality::AdaptiveHigh:
+        maxAngle_ = 0.025;
+        minIntraSegmentSamples_ = 1;
+        maxIntraSegmentSamples_ = 32;
+        break;
+    case CurveSamplingQuality::UniformVeryHigh:
+        maxAngle_ = 100;
+        minIntraSegmentSamples_ = 64;
+        maxIntraSegmentSamples_ = 64;
+        break;
+    }
+}
 
 Curve::Curve(Type type)
     : type_(type)

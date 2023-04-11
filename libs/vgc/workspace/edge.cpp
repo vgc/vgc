@@ -22,15 +22,6 @@
 
 namespace vgc::workspace {
 
-VGC_DEFINE_ENUM(
-    EdgeSubdivisionQuality,
-    (Disabled, "Disabled"),
-    (UniformLow, "Uniform Low"),
-    (AdaptiveLow, "Adaptive Low"),
-    (UniformHigh, "Uniform High"),
-    (AdaptiveHigh, "Adaptive High"),
-    (UniformVeryHigh, "Uniform Very High"))
-
 bool VacEdgeCellFrameData::resetToStage(VacEdgeComputationStage stage) {
     if (stage >= stage_) {
         return false;
@@ -63,7 +54,7 @@ bool VacEdgeCellFrameData::resetToStage(VacEdgeComputationStage stage) {
         else {
             patches_[0].clear();
             patches_[1].clear();
-            samples_.clear();
+            samples_.reset();
             graphics_.clearCenterlineGeometry();
             graphics_.clearSelectionGeometry();
             [[fallthrough]];
@@ -95,18 +86,18 @@ bool VacEdgeCellFrameData::isSelectableAt(
     }
     // use "binary search"-style tree/array of bboxes?
 
-    if (samples_.isEmpty()) {
+    if (!samples_ || samples_->isEmpty()) {
         return false;
     }
 
     double shortestDistance = core::DoubleInfinity;
 
-    auto it1 = samples_.begin();
+    auto it1 = samples_->begin();
     // is p in sample outline-mode-selection disk?
     shortestDistance =
         (std::min)(shortestDistance, (it1->position() - position).length());
 
-    for (auto it0 = it1++; it1 != samples_.end(); it0 = it1++) {
+    for (auto it0 = it1++; it1 != samples_->end(); it0 = it1++) {
         // is p in sample outline-mode-selection disk?
         shortestDistance =
             (std::min)(shortestDistance, (it1->position() - position).length());
@@ -192,10 +183,10 @@ VacKeyEdge::~VacKeyEdge() {
     }
 }
 
-void VacKeyEdge::setTesselationMode(EdgeSubdivisionQuality mode) {
+void VacKeyEdge::setTesselationMode(geometry::CurveSamplingQuality mode) {
     if (edgeTesselationMode_ != mode) {
         edgeTesselationMode_ = mode;
-        dirtyInputSampling_();
+        dirtyPreJoinGeometry_();
     }
 }
 
@@ -304,14 +295,14 @@ void VacKeyEdge::onPaintDraw(
         geometry::Vec2fArray joinVertices;
         core::Array<UInt32> joinIndices;
 
-        if (data.samples_.size() >= 2) {
+        if (data.samples_ && data.samples_->size() >= 2) {
 
             const detail::EdgeJoinPatchMergeLocation& mergeLocation0 =
                 data.patches_[0].mergeLocation;
             const detail::EdgeJoinPatchMergeLocation& mergeLocation1 =
                 data.patches_[1].mergeLocation;
 
-            auto standaloneSamples = core::Span(data.samples_);
+            auto standaloneSamples = core::Span(*data.samples_);
 
             std::array<float, 2> mergeS = {
                 0, static_cast<float>(standaloneSamples.last().s())};
@@ -428,7 +419,7 @@ void VacKeyEdge::onPaintDraw(
         lineInstData.extend({0.f, 0.f, 1.f, 2.f, 0.02f, 0.64f, 1.0f, 1.f});
 
         geometry::Vec4fArray lineVertices;
-        for (const geometry::CurveSample& s : data.samples_) {
+        for (const geometry::CurveSample& s : data.preJoinSamples()) {
             geometry::Vec2f p = geometry::Vec2f(s.position());
             geometry::Vec2f n = geometry::Vec2f(s.normal());
             // clang-format off
@@ -657,10 +648,7 @@ ElementStatus VacKeyEdge::updateFromDom_(Workspace* workspace) {
     }
 
     // dirty cached data
-    if (hasInputGeometryChanged) {
-        dirtyInputSampling_(false);
-    }
-    else if (hasBoundaryChanged) {
+    if (hasInputGeometryChanged || hasBoundaryChanged) {
         dirtyPreJoinGeometry_(false);
     }
 
@@ -774,87 +762,6 @@ void VacKeyEdge::notifyChanges_(ChangeFlags changes, bool immediately) {
     }
 }
 
-bool VacKeyEdge::computeInputSampling_() {
-    VacKeyEdgeFrameData& data = frameData_;
-    if (!isInputSamplingDirty_) {
-        return true;
-    }
-    VGC_ASSERT(!data.isComputing_);
-
-    vacomplex::KeyEdge* ke = vacKeyEdgeNode();
-    if (!ke) {
-        return false;
-    }
-
-    data.isComputing_ = true;
-
-    double maxAngle = 1;
-    Int minQuads = 1;
-    Int maxQuads = 1;
-
-    switch (edgeTesselationMode_) {
-    case EdgeSubdivisionQuality::Disabled:
-        maxAngle = 100;
-        minQuads = 1;
-        maxQuads = 1;
-        break;
-    case EdgeSubdivisionQuality::UniformLow:
-        maxAngle = 100;
-        minQuads = 4;
-        maxQuads = 4;
-        break;
-    case EdgeSubdivisionQuality::AdaptiveLow:
-        maxAngle = 0.05;
-        minQuads = 1;
-        maxQuads = 8;
-        break;
-    case EdgeSubdivisionQuality::UniformHigh:
-        maxAngle = 100;
-        minQuads = 16;
-        maxQuads = 16;
-        break;
-    case EdgeSubdivisionQuality::AdaptiveHigh:
-        maxAngle = 0.025;
-        minQuads = 1;
-        maxQuads = 32;
-        break;
-    case EdgeSubdivisionQuality::UniformVeryHigh:
-        maxAngle = 100;
-        minQuads = 64;
-        maxQuads = 64;
-        break;
-    }
-
-    geometry::Curve curve;
-    curve.setPositions(ke->points());
-    curve.setWidths(ke->widths());
-    geometry::CurveSamplingParameters samplingParams = {};
-    samplingParams.setMaxAngle(maxAngle);
-    samplingParams.setMinIntraSegmentSamples(minQuads - 1);
-    samplingParams.setMaxIntraSegmentSamples(maxQuads - 1);
-    curve.sampleRange(samplingParams, inputSamples_);
-    if (inputSamples_.length()) {
-        auto it = inputSamples_.begin();
-        geometry::Vec2d lastPoint = it->position();
-        double s = 0;
-        for (++it; it != inputSamples_.end(); ++it) {
-            geometry::Vec2d point = it->position();
-            s += (point - lastPoint).length();
-            it->setS(s);
-            lastPoint = point;
-        }
-    }
-    samplingVersion_++;
-
-    for (const geometry::Vec2d& p : curve.positions()) {
-        controlPoints_.emplaceLast(geometry::Vec2f(p));
-    }
-
-    isInputSamplingDirty_ = false;
-    data.isComputing_ = false;
-    return true;
-}
-
 bool VacKeyEdge::computePreJoinGeometry_() {
     VacKeyEdgeFrameData& data = frameData_;
     if (data.stage_ >= VacEdgeComputationStage::PreJoinGeometry) {
@@ -867,17 +774,22 @@ bool VacKeyEdge::computePreJoinGeometry_() {
         return false;
     }
 
-    if (!computeInputSampling_()) {
-        return false;
+    geometry::CurveSamplingParameters samplingParams(edgeTesselationMode_);
+    const std::shared_ptr<const geometry::CurveSampleArray>& sampling =
+        ke->computeSampling(samplingParams);
+
+    for (const geometry::Vec2d& p : ke->points()) {
+        controlPoints_.emplaceLast(geometry::Vec2f(p));
     }
 
     data.isComputing_ = true;
 
-    // TODO: compute vertices pos and snap edge geometry
-    data.samples_ = inputSamples_;
+    data.samples_ = sampling;
     data.bbox_ = geometry::Rect2d::empty;
-    for (auto& sample : data.samples_) {
-        data.bbox_.uniteWith(sample.position());
+    if (data.samples_) {
+        for (const auto& sample : *data.samples_) {
+            data.bbox_.uniteWith(sample.position());
+        }
     }
 
     alreadyNotifiedChanges_.unset(ChangeFlag::EdgePreJoinGeometry);
@@ -937,18 +849,10 @@ bool VacKeyEdge::computeStrokeMesh_() {
     return true;
 }
 
-void VacKeyEdge::dirtyInputSampling_(bool notifyDependentsImmediately) {
-    if (!isInputSamplingDirty_) {
-        controlPoints_.clear();
-        controlPointsGeometry_.reset();
-        inputSamples_.clear();
-        dirtyPreJoinGeometry_(notifyDependentsImmediately);
-        isInputSamplingDirty_ = true;
-    }
-}
-
 void VacKeyEdge::dirtyPreJoinGeometry_(bool notifyDependentsImmediately) {
     if (frameData_.stage() > VacEdgeComputationStage::Clear) {
+        controlPoints_.clear();
+        controlPointsGeometry_.reset();
         frameData_.resetToStage(VacEdgeComputationStage::Clear);
         notifyChanges_(
             {ChangeFlag::EdgePreJoinGeometry,
@@ -990,7 +894,7 @@ void VacKeyEdge::dirtyJoinDataAtVertex_(const VacVertexCell* vertexCell) {
 
 void VacKeyEdge::onUpdateError_() {
     removeVacNode();
-    dirtyInputSampling_();
+    dirtyPreJoinGeometry_();
 }
 
 } // namespace vgc::workspace
