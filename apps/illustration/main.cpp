@@ -19,6 +19,8 @@
 int main(int argc, char* argv[]) {
     auto application =
         vgc::app::CanvasApplication::create(argc, argv, "VGC Illustration");
+    application->setOrganizationName("VGC Software");
+    application->setOrganizationDomain("vgc.io");
     application->setWindowIconFromResource("apps/illustration/icons/512.png");
     return application->exec();
 }

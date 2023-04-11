@@ -192,4 +192,12 @@ QMatrix4x4 toQt(const geometry::Mat4d& m) {
 
 // clang-format on
 
+QCoreApplication* qCoreApplication() {
+    return QCoreApplication::instance();
+}
+
+QGuiApplication* qGuiApplication() {
+    return qobject_cast<QGuiApplication*>(QCoreApplication::instance());
+}
+
 } // namespace vgc::ui

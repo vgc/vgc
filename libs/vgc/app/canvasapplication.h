@@ -20,8 +20,8 @@
 #include <QApplication>
 
 #include <vgc/app/api.h>
-#include <vgc/app/application.h>
 #include <vgc/app/mainwindow.h>
+#include <vgc/app/qtwidgetsapplication.h>
 #include <vgc/dom/document.h>
 #include <vgc/ui/action.h>
 #include <vgc/ui/canvas.h>
@@ -63,8 +63,8 @@ VGC_DECLARE_OBJECT(CanvasApplication);
 /// This class is used as a base for VGC Illustration but can also be used
 /// for other test applications.
 ///
-class VGC_APP_API CanvasApplication : public Application {
-    VGC_OBJECT(CanvasApplication, Application)
+class VGC_APP_API CanvasApplication : public QtWidgetsApplication {
+    VGC_OBJECT(CanvasApplication, QtWidgetsApplication)
 
 protected:
     CanvasApplication(int argc, char* argv[], std::string_view applicationName);
@@ -76,12 +76,6 @@ public:
         int argc,
         char* argv[],
         std::string_view applicationName = "Canvas Application");
-
-    /// Returns the name of the application.
-    ///
-    std::string_view applicationName() const {
-        return applicationName_;
-    }
 
     /// Returns the `MainWindow` of this application.
     ///
@@ -129,7 +123,6 @@ protected:
     void onSystemSignalReceived(std::string_view errorMessage, int sig) override;
 
 private:
-    std::string applicationName_;
     MainWindowPtr window_;
     dom::Document* document_;
     core::Id lastSavedDocumentVersionId = {};

@@ -49,6 +49,8 @@ protected:
     UiTestApplication(int argc, char* argv[])
         : app::CanvasApplication(argc, argv, "VGC UI Test") {
 
+        setOrganizationName("VGC Software");
+        setOrganizationDomain("vgc.io");
         setWindowIconFromResource("apps/illustration/icons/512.png");
         createTestActionsAndMenus_();
         createTestWidgets_();

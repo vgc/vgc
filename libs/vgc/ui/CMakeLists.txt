@@ -15,6 +15,7 @@ vgc_add_library(ui
         action.h
         actiongroup.h
         api.h
+        application.h
         button.h
         canvas.h
         canvastool.h
@@ -61,6 +62,7 @@ vgc_add_library(ui
     CPP_SOURCE_FILES
         action.cpp
         actiongroup.cpp
+        application.cpp
         button.cpp
         canvas.cpp
         canvastool.cpp

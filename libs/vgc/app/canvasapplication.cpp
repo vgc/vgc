@@ -158,8 +158,9 @@ CanvasApplication::CanvasApplication(
     char* argv[],
     std::string_view applicationName)
 
-    : Application(argc, argv) {
+    : QtWidgetsApplication(argc, argv) {
 
+    setApplicationName(applicationName);
     window_ = app::MainWindow::create(applicationName);
     openDocument_("");
     createWidgets_();
