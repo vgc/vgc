@@ -453,17 +453,25 @@ void Operations::collectDependentNodes_(
 }
 
 void Operations::dirtyGeometry_(VacCell* cell) {
+    core::Array<VacCell*> dirtyList;
+    dirtyGeometryRec_(cell, dirtyList);
+    Vac* vac = cell->vac();
+    if (vac) {
+        for (VacCell* dirtyCell : dirtyList) {
+            if (vac->isDiffEnabled_) {
+                vac->diff_.onNodeDiff(dirtyCell, VacNodeDiffFlag::GeometryChanged);
+            }
+            vac->nodeModified().emit(dirtyCell, VacNodeDiffFlag::GeometryChanged);
+        }
+    }
+}
+
+void Operations::dirtyGeometryRec_(VacCell* cell, core::Array<VacCell*>& dirtyList) {
     if (!cell->isGeometryDirty_) {
         cell->isGeometryDirty_ = true;
-        Vac* vac = cell->vac();
-        if (vac) {
-            if (vac->isDiffEnabled_) {
-                vac->diff_.onNodeDiff(cell, VacNodeDiffFlag::GeometryChanged);
-            }
-            vac->nodeModified().emit(cell, VacNodeDiffFlag::GeometryChanged);
-        }
+        dirtyList.append(cell);
         for (VacCell* starCell : cell->star_) {
-            dirtyGeometry_(starCell);
+            dirtyGeometryRec_(starCell, dirtyList);
         }
     }
 }
