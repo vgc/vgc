@@ -16,5 +16,5 @@
 
 #include <vgc/core/boolguard.h>
 
-// If you implement methods of BoolGuard here, don't forget to
-// add VGC_CORE_API to the class and remove this paragraph.
+// This file ensures that boolguard.h is in at least in one compilation unit of
+// the vgc::core module, so that its exported symbols are indeed exported.
