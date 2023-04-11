@@ -17,8 +17,8 @@
 #ifndef VGC_UI_APPLICATION_H
 #define VGC_UI_APPLICATION_H
 
-#include <vgc/app/api.h>
 #include <vgc/core/object.h>
+#include <vgc/ui/api.h>
 
 namespace vgc::ui {
 
@@ -50,7 +50,7 @@ Application* application();
 /// }
 /// ```
 ///
-class VGC_APP_API Application : public core::Object {
+class VGC_UI_API Application : public core::Object {
     VGC_OBJECT(Application, core::Object)
 
 protected:
