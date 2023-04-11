@@ -13,6 +13,7 @@ vgc_add_library(core
         arithmetic.h
         array.h
         assert.h
+        boolguard.h
         color.h
         colors.h
         compiler.h

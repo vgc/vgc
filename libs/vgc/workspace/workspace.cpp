@@ -19,6 +19,7 @@
 #include <functional>
 #include <memory>
 
+#include <vgc/core/boolguard.h>
 #include <vgc/dom/strings.h>
 #include <vgc/topology/operations.h>
 #include <vgc/topology/vac.h>
@@ -41,33 +42,6 @@ struct VacElementLists {
     core::Array<Element*> inbetweenVertices;
     core::Array<Element*> inbetweenEdges;
     core::Array<Element*> inbetweenFaces;
-};
-
-// This is a helper to manage a shared boolean status flag.
-//
-// Sets the given shared boolean to true on construction and restores it to its previous
-// value on destruction.
-//
-// For instance if function A and B want to signal that they are being executed, you can
-// construct a ScopedTemporaryBoolSet with the same boolean in both scopes. Whenever this
-// boolean is true, it means that either A or B is in the callstack.
-//
-class ScopedTemporaryBoolSet {
-public:
-    ScopedTemporaryBoolSet(bool& ref)
-        : old_(ref)
-        , ref_(ref) {
-
-        ref_ = true;
-    }
-
-    ~ScopedTemporaryBoolSet() {
-        ref_ = old_;
-    }
-
-private:
-    bool old_;
-    bool& ref_;
 };
 
 } // namespace detail
@@ -744,7 +718,7 @@ void Workspace::rebuildWorkspaceTreeFromDom_() {
 
     // reset vac
     {
-        detail::ScopedTemporaryBoolSet bgVac(isUpdatingVacFromDom_);
+        core::BoolGuard bgVac(isUpdatingVacFromDom_);
         vac_->clear();
         //vac_->emitPendingDiff();
     }
@@ -776,7 +750,7 @@ void Workspace::rebuildVacFromWorkspaceTree_() {
         return;
     }
 
-    detail::ScopedTemporaryBoolSet bgVac(isUpdatingVacFromDom_);
+    core::BoolGuard bgVac(isUpdatingVacFromDom_);
 
     // reset vac
     vac_->clear();
@@ -883,7 +857,7 @@ void Workspace::updateVacFromDom_(const dom::Diff& diff) {
     if (!document_) {
         return;
     }
-    detail::ScopedTemporaryBoolSet bgVac(isUpdatingVacFromDom_);
+    core::BoolGuard bgVac(isUpdatingVacFromDom_);
 
     // impl goal: we want to keep as much cached data as possible.
     //            we want the vac to be valid -> using only its operators
