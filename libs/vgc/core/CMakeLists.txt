@@ -52,6 +52,7 @@ vgc_add_library(core
         algorithm.cpp
         animtime.cpp
         arithmetic.cpp
+        boolguard.cpp
         color.cpp
         datetime.cpp
         exceptions.cpp
