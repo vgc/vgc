@@ -30,8 +30,25 @@ VGC_DECLARE_OBJECT(Application);
 ///
 Application* application();
 
-/// \class vgc::app::Application
-/// \brief Represents an instance of a VGC application
+/// \class vgc::ui::Application
+/// \brief Represents the global application object.
+///
+/// Note that for now, you must create a `QGuiApplication` before
+/// being able to call `exec()` on the `ui::Application` object or
+/// create any `ui::Window`.
+///
+/// You can choose to either create a `QGuiApplication` or a `QApplication`,
+/// depending on whether you need widgets or dialogs from QtWidgets.
+///
+/// Example:
+///
+/// ```
+/// int main(int argc, char* argv[]) {
+///     auto app = ui::Application::create(argc, argv);
+///     QGuiApplication qapp;
+///     return app.exec();
+/// }
+/// ```
 ///
 class VGC_APP_API Application : public core::Object {
     VGC_OBJECT(Application, core::Object)

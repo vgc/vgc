@@ -88,14 +88,14 @@ ApplicationPtr Application::create(int argc, char* argv[]) {
 
 int Application::exec() {
 
-    // For now, we require a QCoreApplication to exist before calling exec().
+    // For now, we require a QGuiApplication to exist before calling exec().
     // In the long-term future, we may want to remove the Qt dependency and
     // implement our own event loop.
     //
-    QCoreApplication* qapp = qCoreApplication();
+    QGuiApplication* qapp = qGuiApplication();
     if (!qapp) {
         throw core::LogicError(
-            "Cannot call vgc::ui::Application::exec(): no QCoreApplication created.");
+            "Cannot call vgc::ui::Application::exec(): no QGuiApplication created.");
     }
     using Qca = QCoreApplication;
     Qca::connect(qapp, &Qca::applicationNameChanged, onQApplicationNameChanged);
@@ -135,9 +135,9 @@ void Application::setOrganizationDomain(std::string_view domain) {
 }
 
 void Application::setWindowIcon(std::string_view iconPath) {
-    QGuiApplication* qguiApp = qGuiApplication();
-    if (qguiApp) {
-        qguiApp->setWindowIcon(QIcon(ui::toQt(iconPath)));
+    QGuiApplication* qapp = qGuiApplication();
+    if (qapp) {
+        qapp->setWindowIcon(QIcon(ui::toQt(iconPath)));
     }
 }
 
