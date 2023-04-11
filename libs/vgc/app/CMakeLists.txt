@@ -6,18 +6,18 @@ vgc_add_library(app
         ui
 
     CPP_HEADER_FILES
-        application.h
         canvasapplication.h
         logcategories.h
         mainwindow.h
         mainwidget.h
         nativemenubar.h
+        qtwidgetsapplication.h
 
     CPP_SOURCE_FILES
-        application.cpp
         canvasapplication.cpp
         logcategories.cpp
         mainwidget.cpp
         mainwindow.cpp
         nativemenubar.cpp
+        qtwidgetsapplication.cpp
 )

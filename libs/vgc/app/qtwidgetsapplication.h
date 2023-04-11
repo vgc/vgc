@@ -14,17 +14,17 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef VGC_APP_APPLICATION_H
-#define VGC_APP_APPLICATION_H
+#ifndef VGC_APP_QTWIDGETSAPPLICATION_H
+#define VGC_APP_QTWIDGETSAPPLICATION_H
 
 #include <QApplication>
 
 #include <vgc/app/api.h>
-#include <vgc/core/object.h>
+#include <vgc/ui/application.h>
 
 namespace vgc::app {
 
-class Application;
+class QtWidgetsApplication;
 
 namespace detail {
 
@@ -34,7 +34,7 @@ struct VGC_APP_API PreInitializer {
 
 class VGC_APP_API QApplicationImpl : public QApplication {
 public:
-    QApplicationImpl(int& argc, char** argv, Application* app);
+    QApplicationImpl(int& argc, char** argv, QtWidgetsApplication* app);
 
     // Reimplements notify to handle exceptions.
     bool notify(QObject* receiver, QEvent* event) override;
@@ -43,55 +43,29 @@ public:
     void onSystemSignalReceived(std::string_view errorMessage, int sig);
 
 private:
-    Application* app_;
+    QtWidgetsApplication* app_;
 };
 
 void systemSignalHandler(int sig);
 
 } // namespace detail
 
-VGC_DECLARE_OBJECT(Application);
+VGC_DECLARE_OBJECT(QtWidgetsApplication);
 
-/// \class vgc::app::Application
-/// \brief Represents an instance of a VGC application
+/// \class vgc::app::QtWidgetsApplication
+/// \brief A QtWidgets-based application.
 ///
-class VGC_APP_API Application : public core::Object {
-    VGC_OBJECT(Application, core::Object)
+class VGC_APP_API QtWidgetsApplication : public ui::Application {
+    VGC_OBJECT(QtWidgetsApplication, ui::Application)
 
 protected:
-    Application(int argc, char* argv[]);
+    QtWidgetsApplication(int argc, char* argv[]);
 
 public:
     /// Creates the application. Note that you must never create more than one
     /// application in a given process.
     ///
-    static ApplicationPtr create(int argc, char* argv[]);
-
-    /// Starts execution of the application.
-    ///
-    int exec();
-
-    /// Set the default window icons for all windows in this application.
-    ///
-    /// ```cpp
-    /// setWindowIcon(vgc::core::resourcePath("apps/illustration/icons/512.png")
-    /// ```
-    ///
-    void setWindowIcon(std::string_view iconPath);
-
-    /// This is equivalent to:
-    ///
-    /// ```cpp
-    /// setWindowIcon(vgc::core::resourcePath(rpath));
-    /// ```
-    ///
-    /// Example:
-    ///
-    /// ```cpp
-    /// setWindowIconFromResource("apps/illustration/icons/512.png");
-    /// ```
-    ///
-    void setWindowIconFromResource(std::string_view rpath);
+    QtWidgetsApplicationPtr create(int argc, char* argv[]);
 
 protected:
     /// Override this function to perform any last minute operations (e.g.,

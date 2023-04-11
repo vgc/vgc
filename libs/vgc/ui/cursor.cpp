@@ -129,11 +129,12 @@ bool canSetGlobalCursorPosition() {
 }
 
 core::Color colorUnderCursor() {
-    if (!qApp) {
+    QGuiApplication* qapp = qGuiApplication();
+    if (!qapp) {
         return core::colors::black;
     }
     QPoint globalPos = QCursor::pos();
-    QScreen* screen = qApp->screenAt(globalPos);
+    QScreen* screen = qapp->screenAt(globalPos);
     if (!screen) {
         return core::colors::black;
     }

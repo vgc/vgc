@@ -14,7 +14,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <vgc/app/application.h>
+#include <vgc/app/qtwidgetsapplication.h>
 
 #include <csignal> // signal, SIGABRT, SIGFPE, SIGILL, SIGINT, SIGSEGV, SIGTERM
 
@@ -169,7 +169,7 @@ PreInitializer::PreInitializer() {
     setAttribute(Qt::AA_DisableHighDpiScaling, true);
 }
 
-QApplicationImpl::QApplicationImpl(int& argc, char** argv, Application* app)
+QApplicationImpl::QApplicationImpl(int& argc, char** argv, QtWidgetsApplication* app)
     : QApplication(argc, argv)
     , app_(app) {
 
@@ -257,8 +257,9 @@ void systemSignalHandler(int sig) {
 
 }; // namespace detail
 
-Application::Application(int argc, char* argv[])
-    : preInitializer_()
+QtWidgetsApplication::QtWidgetsApplication(int argc, char* argv[])
+    : ui::Application(argc, argv)
+    , preInitializer_()
     , argc_(argc)
     , application_(argc_, argv, this) {
 
@@ -280,27 +281,15 @@ Application::Application(int argc, char* argv[])
 #endif
 }
 
-ApplicationPtr Application::create(int argc, char* argv[]) {
-    return ApplicationPtr(new Application(argc, argv));
+QtWidgetsApplicationPtr QtWidgetsApplication::create(int argc, char* argv[]) {
+    return QtWidgetsApplicationPtr(new QtWidgetsApplication(argc, argv));
 }
 
-int Application::exec() {
-    return application_.exec();
-}
-
-void Application::setWindowIcon(std::string_view iconPath) {
-    application_.setWindowIcon(QIcon(ui::toQt(iconPath)));
-}
-
-void Application::setWindowIconFromResource(std::string_view rpath) {
-    setWindowIcon(core::resourcePath(rpath));
-}
-
-void Application::onUnhandledException(std::string_view errorMessage) {
+void QtWidgetsApplication::onUnhandledException(std::string_view errorMessage) {
     VGC_CRITICAL(LogVgcApp, "Unhandled exception: {}", errorMessage);
 }
 
-void Application::onSystemSignalReceived(std::string_view errorMessage, int /*sig*/) {
+void QtWidgetsApplication::onSystemSignalReceived(std::string_view errorMessage, int) {
     VGC_CRITICAL(LogVgcApp, errorMessage);
     exit(1);
 }

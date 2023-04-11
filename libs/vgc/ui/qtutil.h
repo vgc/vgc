@@ -42,6 +42,9 @@ class QKeyEvent;
 class QMouseEvent;
 class QTabletEvent;
 
+class QCoreApplication;
+class QGuiApplication;
+
 namespace vgc::ui {
 
 VGC_DECLARE_OBJECT(KeyEvent);
@@ -131,6 +134,32 @@ QMatrix4x4 toQt(const geometry::Mat4f& m);
 ///
 VGC_UI_API
 QMatrix4x4 toQt(const geometry::Mat4d& m);
+
+/// Returns the global QCoreApplication, if any.
+///
+/// This is equivalent to `QCoreApplication::instance()`.
+///
+/// Note that using `qApp` or `qGuiApp` is in general unsafe to use. For
+/// example, if you happen to include the `<QGuiApplication>` header, but your
+/// `QCoreApplication::instance()` is not actually a `QGuiApplication`, then
+/// both `qApp` and `qGuiApp` are invalid pointers since they perform an
+/// unchecked static_cast to `QGuiApplication`.
+///
+VGC_UI_API
+QCoreApplication* qCoreApplication();
+
+/// Returns the global QGuiApplication, if any.
+///
+/// This is equivalent to `qobject_cast<QGuiApplication*>(QCoreApplication::instance())`.
+///
+/// Note that using `qApp` or `qGuiApp` is in general unsafe to use. For
+/// example, if you happen to include the `<QGuiApplication>` header, but your
+/// `QCoreApplication::instance()` is not actually a `QGuiApplication`, then
+/// both `qApp` and `qGuiApp` are invalid pointers since they perform an
+/// unchecked static_cast to `QGuiApplication`.
+///
+VGC_UI_API
+QGuiApplication* qGuiApplication();
 
 } // namespace vgc::ui
 
