@@ -49,6 +49,7 @@ vgc_add_library(ui
         preferredsizecalculator.h
         qtutil.h
         row.h
+        settings.h
         shortcut.h
         sketchtool.h
         strings.h
@@ -95,6 +96,7 @@ vgc_add_library(ui
         preferredsizecalculator.cpp
         qtutil.cpp
         row.cpp
+        settings.cpp
         shortcut.cpp
         sketchtool.cpp
         strings.cpp
