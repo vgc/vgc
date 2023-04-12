@@ -72,12 +72,15 @@ Settings* session();
 /// \class vgc::ui::Settings
 /// \brief Get and set user settings.
 ///
-/// This class provides a mechanism to store user preferences across
-/// sessions by writing them to a file.
+/// This class provides a mechanism to store user preferences, session state,
+/// or other settings, by writing them to a file in the JSON format.
 ///
-/// The free function `settings()` gives you access to a global `Settings`
-/// whose `filePath()` is pre-configured to a location where it is suitable
-/// to read/write user preferences based on the application name.
+/// Convenient global `Settings` objects are available for typical use cases:
+/// -`settings::preferences()`: for storing user preferences.
+/// -`settings::session()`: for storing session state.
+///
+/// These global `Settings` objects use a `filePath()` pre-configured to a
+/// standard location based on the application name.
 ///
 class VGC_UI_API Settings : public core::Object {
 private:
