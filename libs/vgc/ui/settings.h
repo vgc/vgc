@@ -260,4 +260,4 @@ private:
 
 } // namespace vgc::ui
 
-#endif // VGC_UI_COLUMNLAYOUT_H
+#endif // VGC_UI_SETTINGS_H
