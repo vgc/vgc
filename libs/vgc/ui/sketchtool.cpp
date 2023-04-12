@@ -25,6 +25,7 @@
 #include <vgc/graphics/strings.h>
 #include <vgc/ui/cursor.h>
 #include <vgc/ui/logcategories.h>
+#include <vgc/ui/settings.h>
 #include <vgc/ui/window.h>
 #include <vgc/workspace/edge.h>
 
@@ -66,6 +67,8 @@ geometry::Vec2d snapDeformation(
 SketchTool::SketchTool()
     : CanvasTool() {
 
+    Settings* session = ui::settings::session();
+    penWidth_ = session->getOrSetDoubleValue("tools.sketch.width", penWidth_);
     setFocusPolicy(FocusPolicy::Click);
     setClippingEnabled(true);
 }
