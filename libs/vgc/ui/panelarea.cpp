@@ -112,8 +112,9 @@ Panel* PanelArea::createPanel(std::string_view panelTitle) {
         return nullptr;
     }
     updateTabs_();
-    Widget* column = firstChild(); // guaranteed non-null by updateTabs()
-    return column->createChild<Panel>(panelTitle);
+    tabBar()->setText(panelTitle); // TODO: actually use tabs instead of a single Label
+    TabBody* parent = tabBody();   // guaranteed non-null by updateTabs_()
+    return parent->createChild<Panel>(panelTitle);
 }
 
 Int PanelArea::numPanels() const {
@@ -554,7 +555,7 @@ void PanelArea::updateChildrenGeometry() {
         // and the panels. We let the column class do the layout computation.
         Widget* column = firstChild();
         if (column) {
-            column->updateGeometry(rect());
+            column->updateGeometry(contentRect());
         }
         return;
     }
@@ -875,9 +876,8 @@ void PanelArea::updateTabs_() {
             // TODO: handle other cases where we should re-build
             //       Column + TabBar + TabBody
             Widget* column = createChild<Column>();
-            TabBar* tabBar = column->createChild<TabBar>();
-            TabBody* tabBody = column->createChild<TabBody>();
-            //column->insertChild(Int(0), tabs); // Reorder tabs as first child
+            column->createChild<TabBar>();
+            column->createChild<TabBody>();
         }
     }
     else {

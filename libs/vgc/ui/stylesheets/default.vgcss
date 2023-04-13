@@ -21,6 +21,10 @@
 }
 
 .PanelArea {
+    background-color: rgb(23, 25, 27);
+}
+
+.PanelArea {
     min-width: 30dp;
     min-height: 30dp;
     horizontal-stretch: 1;
@@ -28,6 +32,10 @@
     handle-size: 12dp;
     handle-hovered-size: 2dp;
     handle-hovered-color: rgb(110, 114, 118);
+    padding-top: 3dp;
+    padding-right: 3dp;
+    padding-bottom: 3dp;
+    padding-left: 3dp;
 }
 
 .PanelArea.left-sidebar {
@@ -37,15 +45,41 @@
 
 .Panel.with-padding,
 .root.Flex {
-    padding-top: 8dp;
+    padding-top: 0dp;
     padding-right: 8dp;
     padding-bottom: 8dp;
     padding-left: 8dp;
 }
 
-.PanelArea .TabBar {
+
+.PanelArea > .Flex {
+    background-color: rgb(55, 57, 59);
+    margin-top: 5dp;
+    margin-left: 5dp;
+    margin-right: 5dp;
+    margin-bottom: 0dp;
+    row-gap: 5dp;
+    border-top-left-radius: 3dp;
+    border-top-right-radius: 3dp;
+    border-bottom-right-radius: 3dp;
+    border-bottom-left-radius: 3dp;
+}
+
+.PanelArea > .Flex > .TabBar {
     vertical-stretch: 0;
-    background-color: rgb(255, 114, 118);
+    background-color: rgb(39, 41, 43);
+    border-top-left-radius: 3dp;
+    border-top-right-radius: 3dp;
+    border-bottom-right-radius: 0dp;
+    border-bottom-left-radius: 0dp;
+    preferred-height: 22dp;
+}
+
+.PanelArea > .Flex > .TabBody {
+    border-top-left-radius: 0dp;
+    border-top-right-radius: 0dp;
+    border-bottom-right-radius: 3dp;
+    border-bottom-left-radius: 3dp;
 }
 
 .Menu {
@@ -188,7 +222,7 @@
 }
 
 .Menu.main-menu-bar {
-    background-color: rgb(55, 57, 59);
+    background-color: rgb(39, 41, 43);
 }
 
 .MenuButton {

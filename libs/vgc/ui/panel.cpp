@@ -45,7 +45,7 @@ void Panel::setBody(Widget* newBody) {
         return;
     }
     if (oldBody) {
-        oldBody->replace(newBody);
+        newBody->replace(oldBody);
     }
     else {
         insertChild(firstChild(), newBody);
@@ -53,6 +53,7 @@ void Panel::setBody(Widget* newBody) {
 }
 
 float Panel::preferredWidthForHeight(float height) const {
+    // TODO: padding / border
     Widget* body_ = body();
     if (body()) {
         return body_->preferredWidthForHeight(height);
@@ -63,6 +64,7 @@ float Panel::preferredWidthForHeight(float height) const {
 }
 
 float Panel::preferredHeightForWidth(float width) const {
+    // TODO: padding / border
     Widget* body_ = body();
     if (body_) {
         return body_->preferredHeightForWidth(width);

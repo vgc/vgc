@@ -25,6 +25,7 @@
 #include <vgc/dom/strings.h>
 #include <vgc/ui/qtutil.h>
 #include <vgc/ui/shortcut.h>
+#include <vgc/ui/tabbar.h>
 
 namespace vgc::app {
 
@@ -345,8 +346,9 @@ void CanvasApplication::createWidgets_() {
     ui::PanelArea* middleArea = ui::PanelArea::createTabs(mainArea);
 
     // Create panels
-    ui::Panel* leftPanel = createPanelWithPadding(leftArea);
-    ui::Panel* middlePanel = middleArea->createPanel();
+    ui::Panel* leftPanel = createPanelWithPadding(leftArea, "Colors");
+    ui::Panel* middlePanel = middleArea->createPanel("Canvas");
+    middleArea->tabBar()->hide();
 
     // Create widgets inside panels
     createColorPalette_(leftPanel);
