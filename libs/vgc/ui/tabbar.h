@@ -14,49 +14,53 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef VGC_UI_PANELTABS_H
-#define VGC_UI_PANELTABS_H
+#ifndef VGC_UI_TABBAR_H
+#define VGC_UI_TABBAR_H
 
 #include <vgc/ui/label.h>
 #include <vgc/ui/widget.h>
 
 namespace vgc::ui {
 
-VGC_DECLARE_OBJECT(PanelStack);
-VGC_DECLARE_OBJECT(PanelTabs);
+VGC_DECLARE_OBJECT(TabBar);
+VGC_DECLARE_OBJECT(TabBody);
 
-/// \class vgc::ui::PanelTabs
-/// \brief The tab bar widget on top of `PanelArea` of type `Tabs`.
+/// \class vgc::ui::TabBar
+/// \brief A bar showing different tabs.
 ///
-class VGC_UI_API PanelTabs : public Label { // Inheriting from Label temporarily
+class VGC_UI_API TabBar : public Label { // Inheriting from Label temporarily
 private:
-    VGC_OBJECT(PanelTabs, Label)
+    VGC_OBJECT(TabBar, Label)
 
 protected:
-    PanelTabs(PanelStack* panels);
+    //TabBar(TabBody* panels);
+    TabBar();
 
 public:
     /// Creates a `PanelTabs`.
     ///
-    static PanelTabsPtr create(PanelStack* panels);
+    static TabBarPtr create();
+    //static TabBarPtr create(TabBody* panels);
 
+    /*
     /// Returns the `PanelStack` this `PanelTabs` refers to.
     ///
     /// Returns `nullptr` if this `PanelTabs` does not have any associated panels.
     ///
     // XXX Should this directly return panels->children() instead?
     //
-    PanelStack* panels() {
+    TabBody* panels() {
         return panels_;
     }
+*/
 
 private:
-    PanelStack* panels_ = nullptr;
+    //TabBody* panels_ = nullptr;
 
-    void onPanelsDestroyed_();
-    VGC_SLOT(onPanelsDestroyedSlot_, onPanelsDestroyed_)
+    //void onPanelsDestroyed_();
+    //VGC_SLOT(onPanelsDestroyedSlot_, onPanelsDestroyed_)
 };
 
 } // namespace vgc::ui
 
-#endif // VGC_UI_PANELTABS_H
+#endif // VGC_UI_TABBAR_H

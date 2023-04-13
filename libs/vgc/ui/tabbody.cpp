@@ -14,29 +14,29 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <vgc/ui/paneltabs.h>
-
-#include <vgc/ui/panelstack.h>
+#include <vgc/ui/tabbody.h>
 
 namespace vgc::ui {
 
-PanelTabs::PanelTabs(PanelStack* panels)
-    : Label("temp")
-    , panels_(panels) {
+TabBody::TabBody()
+    : Widget() {
 
-    addStyleClass(strings::PanelTabs);
-    if (panels_) {
-        panels_->aboutToBeDestroyed().connect(onPanelsDestroyedSlot_());
+    addStyleClass(strings::TabBody);
+}
+
+TabBodyPtr TabBody::create() {
+    return TabBodyPtr(new TabBody());
+}
+
+void TabBody::updateChildrenGeometry() {
+    Widget* activeWidget_ = activeWidget();
+    if (activeWidget_) {
+        activeWidget_->updateGeometry(contentRect());
     }
 }
 
-PanelTabsPtr PanelTabs::create(PanelStack* stack) {
-    return PanelTabsPtr(new PanelTabs(stack));
-}
-
-void PanelTabs::onPanelsDestroyed_() {
-    panels_->disconnect(this);
-    panels_ = nullptr;
-}
+void TabBody::onWidgetAdded(Widget* /*child*/, bool){
+    // TODO: auto-hide if not active
+};
 
 } // namespace vgc::ui

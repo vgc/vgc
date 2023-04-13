@@ -14,35 +14,39 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <vgc/ui/panelstack.h>
+#include <vgc/ui/tabbar.h>
+
+#include <vgc/ui/tabbody.h>
 
 namespace vgc::ui {
 
-PanelStack::PanelStack()
-    : Widget() {
+/*
+TabBar::TabBar(PanelStack* panels)
+    : Label("temp")
+    , panels_(panels) {
 
-    addStyleClass(strings::PanelStack);
-}
-
-PanelStackPtr PanelStack::create() {
-    return PanelStackPtr(new PanelStack());
-}
-
-void PanelStack::updateChildrenGeometry() {
-    Panel* activePanel_ = activePanel();
-    if (activePanel_) {
-        activePanel_->updateGeometry(contentRect());
+    addStyleClass(strings::PanelTabs);
+    if (panels_) {
+        panels_->aboutToBeDestroyed().connect(onPanelsDestroyedSlot_());
     }
 }
+*/
 
-void PanelStack::onWidgetAdded(Widget* child, bool) {
-    Panel* panel = dynamic_cast<Panel*>(child);
-    if (!panel) {
-        throw LogicError(core::format(
-            "Cannot add {} as child of {} : only widgets of type Panel are allowed.",
-            ptr(child),
-            ptr(this)));
-    }
-};
+TabBar::TabBar()
+    : Label("temp") {
+
+    addStyleClass(strings::TabBar);
+}
+
+TabBarPtr TabBar::create() {
+    return TabBarPtr(new TabBar());
+}
+
+/*
+void TabBar::onPanelsDestroyed_() {
+    panels_->disconnect(this);
+    panels_ = nullptr;
+}
+*/
 
 } // namespace vgc::ui

@@ -44,8 +44,6 @@ vgc_add_library(ui
         overlayarea.h
         panel.h
         panelarea.h
-        panelstack.h
-        paneltabs.h
         plot2d.h
         popuplayer.h
         preferredsizecalculator.h
@@ -55,6 +53,8 @@ vgc_add_library(ui
         shortcut.h
         sketchtool.h
         strings.h
+        tabbar.h
+        tabbody.h
         widget.h
         window.h
 
@@ -93,8 +93,6 @@ vgc_add_library(ui
         overlayarea.cpp
         panel.cpp
         panelarea.cpp
-        panelstack.cpp
-        paneltabs.cpp
         plot2d.cpp
         popuplayer.cpp
         preferredsizecalculator.cpp
@@ -104,6 +102,8 @@ vgc_add_library(ui
         shortcut.cpp
         sketchtool.cpp
         strings.cpp
+        tabbar.cpp
+        tabbody.cpp
         widget.cpp
         window.cpp
 

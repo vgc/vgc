@@ -24,9 +24,9 @@
 #include <vgc/ui/column.h>
 #include <vgc/ui/cursor.h>
 #include <vgc/ui/logcategories.h>
-#include <vgc/ui/panelstack.h>
-#include <vgc/ui/paneltabs.h>
 #include <vgc/ui/strings.h>
+#include <vgc/ui/tabbar.h>
+#include <vgc/ui/tabbody.h>
 
 #include <vgc/ui/detail/paintutil.h>
 
@@ -117,10 +117,10 @@ Panel* PanelArea::createPanel(std::string_view panelTitle) {
 }
 
 Int PanelArea::numPanels() const {
-    PanelStack* panels_ = panels();
-    if (panels_) {
+    TabBody* tabBody_ = tabBody();
+    if (tabBody_) {
         // Case Tabs
-        return panels_->numChildren();
+        return tabBody_->numChildren();
     }
     else {
         // Case HorizontalSplit or VerticalSplit
@@ -128,18 +128,18 @@ Int PanelArea::numPanels() const {
     }
 }
 
-PanelTabs* PanelArea::tabs() const {
+TabBar* PanelArea::tabBar() const {
     if (type() == PanelAreaType::Tabs) {
-        return static_cast<PanelTabs*>(firstChild()->firstChild());
+        return static_cast<TabBar*>(firstChild()->firstChild());
     }
     else {
         return nullptr;
     }
 }
 
-PanelStack* PanelArea::panels() const {
+TabBody* PanelArea::tabBody() const {
     if (type() == PanelAreaType::Tabs) {
-        return static_cast<PanelStack*>(firstChild()->lastChild());
+        return static_cast<TabBody*>(firstChild()->lastChild());
     }
     else {
         return nullptr;
@@ -871,11 +871,13 @@ void PanelArea::stopDragging_(const geometry::Vec2f& position) {
 //
 void PanelArea::updateTabs_() {
     if (type() == PanelAreaType::Tabs) {
-        if (!firstChild()) { // TODO: handle other cases where we should re-build column+stack+tabs
+        if (!firstChild()) {
+            // TODO: handle other cases where we should re-build
+            //       Column + TabBar + TabBody
             Widget* column = createChild<Column>();
-            PanelStack* stack = column->createChild<PanelStack>();
-            PanelTabs* tabs = column->createChild<PanelTabs>(stack);
-            column->insertChild(Int(0), tabs); // Reorder tabs as first child
+            TabBar* tabBar = column->createChild<TabBar>();
+            TabBody* tabBody = column->createChild<TabBody>();
+            //column->insertChild(Int(0), tabs); // Reorder tabs as first child
         }
     }
     else {

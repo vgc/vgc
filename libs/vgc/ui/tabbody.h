@@ -14,40 +14,38 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef VGC_UI_PANELSTACK_H
-#define VGC_UI_PANELSTACK_H
+#ifndef VGC_UI_TABBODY_H
+#define VGC_UI_TABBODY_H
 
-#include <vgc/ui/panel.h>
 #include <vgc/ui/widget.h>
 
 namespace vgc::ui {
 
-VGC_DECLARE_OBJECT(PanelStack);
+VGC_DECLARE_OBJECT(TabBody);
 
-/// \class vgc::ui::PanelList
-/// \brief A widget holding the stack of `Panel` of a `PanelArea` of type `Tabs`.
+/// \class vgc::ui::TabBody
+/// \brief Holds the content of different tabs, showing only the content for
+///        the active tab.
 ///
-class VGC_UI_API PanelStack : public Widget {
+class VGC_UI_API TabBody : public Widget {
 private:
-    VGC_OBJECT(PanelStack, Widget)
+    VGC_OBJECT(TabBody, Widget)
 
 protected:
-    PanelStack();
+    TabBody();
 
 public:
-    /// Creates a `PanelList`.
+    /// Creates a `TabBody`.
     ///
-    // XXX Improve API
-    //
-    static PanelStackPtr create();
+    static TabBodyPtr create();
 
-    /// Returns the active panel, that is, the panel which is currently visible.
+    /// Returns the active widget, that is, the widget which is currently visible.
     ///
-    /// Returns `nullptr` if there is no active panel.
+    /// Returns `nullptr` if there is no active widget.
     ///
-    Panel* activePanel() const {
-        return static_cast<Panel*>(firstChild());
-        // TODO: support multiple panels
+    Widget* activeWidget() const {
+        return static_cast<Widget*>(firstChild());
+        // TODO: support multiple widget
     }
 
 protected:
@@ -58,4 +56,4 @@ protected:
 
 } // namespace vgc::ui
 
-#endif // VGC_UI_PANELSTACK_H
+#endif // VGC_UI_TABBODY_H

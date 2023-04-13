@@ -36,8 +36,8 @@ VGC_UI_API
 VGC_DECLARE_ENUM(PanelAreaType)
 
 VGC_DECLARE_OBJECT(PanelArea);
-VGC_DECLARE_OBJECT(PanelStack);
-VGC_DECLARE_OBJECT(PanelTabs);
+VGC_DECLARE_OBJECT(TabBar);
+VGC_DECLARE_OBJECT(TabBody);
 
 namespace detail {
 
@@ -186,15 +186,15 @@ public:
     ///
     Int numPanels() const;
 
-    /// Returns the `PanelTabs` of this `PanelArea`. Return `nullptr` if this
+    /// Returns the `TabBar` of this `PanelArea`. Return `nullptr` if this
     /// area is not of type `Tabs`.
     ///
-    PanelTabs* tabs() const;
+    TabBar* tabBar() const;
 
-    /// Returns the `PanelStack` of this `PanelArea`. Return `nullptr` if this
+    /// Returns the `TabBody` of this `PanelArea`. Return `nullptr` if this
     /// area is not of type `Tabs`.
     ///
-    PanelStack* panels() const;
+    TabBody* tabBody() const;
 
     // Implementation of StylableObject interface
     static void populateStyleSpecTable(style::SpecTable* table);

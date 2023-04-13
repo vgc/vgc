@@ -40,9 +40,9 @@ const core::StringId MessageDialog("MessageDialog");
 const core::StringId NumberEdit("NumberEdit");
 const core::StringId Panel("Panel");
 const core::StringId PanelArea("PanelArea");
-const core::StringId PanelStack("PanelStack");
-const core::StringId PanelTabs("PanelTabs");
 const core::StringId Plot2d("Plot2d");
+const core::StringId TabBar("TabBar");
+const core::StringId TabBody("TabBody");
 const core::StringId Widget("Widget");
 
 // Properties

@@ -43,6 +43,11 @@
     padding-left: 8dp;
 }
 
+.PanelArea .TabBar {
+    vertical-stretch: 0;
+    background-color: rgb(255, 114, 118);
+}
+
 .Menu {
     padding-top: 5dp;
     padding-right: 0dp;
