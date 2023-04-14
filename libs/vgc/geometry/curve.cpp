@@ -99,7 +99,7 @@ DistanceToCurve distanceToCurve(const CurveSampleArray& samples, const Vec2d& po
         if (d > 0) {
             Vec2d p1p2 = p2 - p1;
             double l = p1p2.length();
-            if (l > 0) { // if capsule is not a disk
+            if (l > 0) {
                 Vec2d p1p2Dir = p1p2 / l;
                 double tx = p1p2Dir.dot(p1p);
                 if (tx >= 0 && tx <= l) { // does p project in segment?
@@ -116,6 +116,12 @@ DistanceToCurve distanceToCurve(const CurveSampleArray& samples, const Vec2d& po
                 }
             }
         }
+        else {
+            // (p == sample) => no better result can be found.
+            // The angle is ambiguous, we arbitrarily set to hpi.
+            result = DistanceToCurve(d, hpi);
+            return result;
+        }
     }
 
     auto testSample = [&](const CurveSample& sample) {
@@ -123,8 +129,16 @@ DistanceToCurve distanceToCurve(const CurveSampleArray& samples, const Vec2d& po
         Vec2d psp = position - ps;
         double d = psp.length();
         if (d < result.distance()) {
-            Vec2d tangent = -(sample.normal().orthogonalized());
-            result = DistanceToCurve(d, tangent.angle(psp));
+            if (d > 0) {
+                Vec2d tangent = -(sample.normal().orthogonalized());
+                result = DistanceToCurve(d, tangent.angle(psp));
+            }
+            else {
+                // (p == sample) => no better result can be found.
+                // The angle is ambiguous, we arbitrarily set to hpi.
+                result = DistanceToCurve(d, hpi);
+                return result;
+            }
         }
     };
 
