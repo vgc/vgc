@@ -208,6 +208,10 @@ void deleteElement(workspace::Element* element, workspace::Workspace* workspace)
 
 void Canvas::clearSelection() {
     selectedElementId_ = -1;
+    selectionCandidateElements_.clear();
+    paintCandidatePendingTriangles_.clear();
+    hasPaintCandidate_ = false;
+    requestRepaint();
 }
 
 void Canvas::selectAtPosition(const geometry::Vec2f& position) {
@@ -386,6 +390,10 @@ bool Canvas::onMouseMove(MouseEvent* event) {
         requestRepaint();
         return true;
     }
+    else if (isBucketPainting_) {
+        doBucketPaintTest_(mousePos);
+        return true;
+    }
 
     return false;
 }
@@ -398,7 +406,7 @@ bool Canvas::onMousePress(MouseEvent* event) {
     mousePressed_ = true;
     mouseButtonAtPress_ = event->button();
 
-    if (isPanning_ || isRotating_ || isZooming_) {
+    if (isPanning_ || isRotating_ || isZooming_ || isBucketPainting_) {
         return true;
     }
 
@@ -427,6 +435,55 @@ bool Canvas::onMousePress(MouseEvent* event) {
         cameraAtPress_ = camera_;
         return true;
     }
+    else if (
+        event->modifierKeys() == ModifierKey::Ctrl
+        && event->button() == MouseButton::Left) {
+        if (mousePosAtPress_ != mousePos) {
+            mousePosAtPress_ = mousePos;
+            clearSelection_();
+
+            geometry::Vec2d viewCoords = mousePos;
+            geometry::Vec2d worldCoords =
+                camera_.viewMatrix().inverted().transformPointAffine(viewCoords);
+            using namespace style::literals;
+            style::Length dpTol = 7.0_dp;
+            double tol = dpTol.toPx(styleMetrics()) / camera_.zoom();
+
+            if (workspace_) {
+                workspace_->visitDepthFirst(
+                    [](workspace::Element*, Int) { return true; },
+                    [&, tol, worldCoords](workspace::Element* e, Int /*depth*/) {
+                        if (!e) {
+                            return;
+                        }
+                        double dist = 0;
+                        if (e->isSelectableAt(worldCoords, false, tol, &dist)) {
+                            selectionCandidateElements_.emplaceLast(e->id(), dist);
+                        }
+                    });
+                // order from front to back
+                std::reverse(
+                    selectionCandidateElements_.begin(),
+                    selectionCandidateElements_.end());
+                // sort by selection distance, stable to keep Z order priority
+                std::stable_sort(
+                    selectionCandidateElements_.begin(),
+                    selectionCandidateElements_.end(),
+                    [](const auto& a, const auto& b) { return a.second < b.second; });
+            }
+        }
+        else if (!selectionCandidateElements_.isEmpty()) {
+            selectedElementId_ =
+                (selectedElementId_ + 1) % selectionCandidateElements_.size();
+        }
+        requestRepaint();
+        return true;
+    }
+    else if (event->button() == MouseButton::Right) {
+        isBucketPainting_ = true;
+        doBucketPaintTest_(mousePos);
+        return true;
+    }
 
     clearSelection();
     return false;
@@ -442,6 +499,7 @@ bool Canvas::onMouseRelease(MouseEvent* event) {
     isPanning_ = false;
     isZooming_ = false;
     mousePressed_ = false;
+    isBucketPainting_ = false;
 
     return true;
 }
@@ -480,6 +538,9 @@ void Canvas::onPaintCreate(graphics::Engine* engine) {
     createInfo.setFillMode(FillMode::Wireframe);
     wireframeRS_ = engine->createRasterizerState(createInfo);
     bgGeometry_ = engine->createDynamicTriangleStripView(BuiltinGeometryLayout::XYRGB);
+
+    paintCandidateFillGeometry_ =
+        engine->createDynamicTriangleListView(BuiltinGeometryLayout::XY_iRGBA);
 
     reload_ = true;
 }
@@ -571,6 +632,19 @@ void Canvas::onPaintDraw(graphics::Engine* engine, PaintOptions options) {
         selectedElement->paint(engine, {}, workspace::PaintOption::Selected);
     }
 
+    if (hasPaintCandidate_ && paintCandidateFillGeometry_) {
+        if (!paintCandidatePendingTriangles_.isEmpty()) {
+            engine->updateBufferData(
+                paintCandidateFillGeometry_->vertexBuffer(0), //
+                paintCandidatePendingTriangles_);
+            engine->updateBufferData(
+                paintCandidateFillGeometry_->vertexBuffer(1), //
+                core::Array<float>({1, 0, 0, 1}));
+        }
+        engine->setProgram(graphics::BuiltinProgram::SimplePreview);
+        engine->draw(paintCandidateFillGeometry_);
+    }
+
     engine->popViewMatrix();
     engine->popPipelineParameters(modifiedParameters);
 
@@ -583,6 +657,7 @@ void Canvas::onPaintDraw(graphics::Engine* engine, PaintOptions options) {
 void Canvas::onPaintDestroy(graphics::Engine* engine) {
     SuperClass::onPaintDestroy(engine);
     bgGeometry_.reset();
+    paintCandidateFillGeometry_.reset();
     fillRS_.reset();
     wireframeRS_.reset();
 }
@@ -637,6 +712,18 @@ workspace::Element* Canvas::selectedElement_() const {
     }
     else {
         return nullptr;
+    }
+}
+
+void Canvas::doBucketPaintTest_(const geometry::Vec2d& mousePos) {
+    geometry::Vec2d worldCoords =
+        camera_.viewMatrix().inverted().transformPointAffine(mousePos);
+    topology::detail::computeKeyFaceCandidateAt(
+        worldCoords, workspace()->vac()->rootGroup(), paintCandidatePendingTriangles_);
+    bool hadPaintCandidate = hasPaintCandidate_;
+    hasPaintCandidate_ = !paintCandidatePendingTriangles_.isEmpty();
+    if (hasPaintCandidate_ || hadPaintCandidate) {
+        requestRepaint();
     }
 }
 

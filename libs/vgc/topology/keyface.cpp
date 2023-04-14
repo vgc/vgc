@@ -23,7 +23,427 @@
 
 namespace vgc::topology {
 
+namespace {
+
+struct KeyHalfedgeCandidate {
+    KeyHalfedgeCandidate(
+        KeyEdge* edge,
+        bool direction,
+        double distance,
+        float angleScore,
+        bool isBackFacing) noexcept
+
+        : halfedge(edge, direction)
+        , distance(distance)
+        , angleScore(angleScore)
+        , isBackFacing(isBackFacing) {
+    }
+
+    KeyHalfedgeCandidate(const KeyHalfedge& he)
+        : halfedge(he) {
+    }
+
+    KeyHalfedge halfedge;
+    double distance = 0;
+    float angleScore = 0;
+    bool isBackFacing = false;
+    Int32 windingContribution = 0;
+    bool hasComputedWindingContribution = false;
+    // store tested cycle ?
+
+    bool operator==(const KeyHalfedgeCandidate& b) const {
+        return halfedge == b.halfedge;
+    }
+
+    bool operator==(const KeyHalfedge& b) const {
+        return halfedge == b;
+    }
+};
+
+struct KeyHalfedgeCandidateHash {
+    size_t operator()(const KeyHalfedgeCandidate& c) const noexcept {
+        return std::hash<vgc::topology::KeyHalfedge>{}(c.halfedge);
+    }
+};
+
+struct KeyHalfedgeCandidateCompare {
+    bool operator()(const KeyHalfedgeCandidate& a, const KeyHalfedgeCandidate& b) {
+        if (a.isBackFacing != b.isBackFacing) {
+            return b.isBackFacing;
+        }
+        else if (a.distance != b.distance) {
+            return a.distance < b.distance;
+        }
+        else {
+            return a.angleScore > b.angleScore;
+        }
+    }
+};
+
+/// Returns the contribution to the winding number at the given `position` of
+/// the given `keyHalfedge`.
+///
+/// The sum of the results of this function for all halfedges of a cycle is
+/// the winding number.
+///
+Int32 computeWindingContribution(
+    const KeyHalfedge& keyHalfedge,
+    const geometry::Vec2d& position) {
+
+    const KeyEdge* ke = keyHalfedge.edge();
+    const geometry::CurveSampleArray& samples = ke->sampling().samples();
+    const geometry::Rect2d& bbox = ke->samplingBoundingBox();
+
+    // The winding number of a closed curve C (cycle) at point P = (Px, Py)
+    // is the total number of times C travels positively around P.
+    //
+    // If Y points down and X points right, positive means clockwise.
+    //
+    // Example: the winding number of the trigonometric circle defined as
+    // C(t) = (cos(t), sin(t)), for t from 0 to 1, is 1 for any point inside,
+    // and 0 for points outside.
+    //
+    // It can be computed by looking for all intersections of C with a
+    // half line L starting at P. When C crosses L positively as seen from P
+    // we count +1, when it crosses L the other way we count -1.
+    //
+    // We use an axis-aligned half-line that simplifies the computation of
+    // intersections.
+    //
+    // In particular, for a vertical half-line L defined as
+    // {(x, y): x = Px, y >= Py}:
+    //
+    // - If the bounding box of a halfedge H is strictly on one side of P in X,
+    // or below P (box.maxY() <= Py), then it cannot cross the half-line and
+    // does not participate in the winding number (apart from being part of the
+    // cycle) whatever the shape of the halfedge H inside that box.
+    //
+    // - If the bounding box of a halfedge H is above P (box.minY() >= Py),
+    // then we know that the winding number would remain the same whatever the
+    // shape of the interior of the curve inside that box. We can thus use
+    // the straight line between its endpoints to compute the crossing with L.
+    // In fact, only the X component of its endpoints is relevant.
+    //
+    // - Otherwise, we have to intersect the halfedge curve with the half-line
+    // the usual way.
+    //
+    // To not miss a crossing nor count one twice, care must be taken about
+    // samples exactly on H. To deal with this problem we consider Hx to be
+    // between Px's floating point value and the next (core::nextafter(Px)).
+    //
+    // As future optimization, curves could implement an acceleration structure
+    // for intersections in the form of a tree of sub-spans and bounding boxes
+    // that we could benefit from. Such sub-spans would follow the same rules
+    // as halfedges (listed above).
+
+    double px = position.x();
+    double py = position.y();
+
+    if (bbox.xMax() + core::epsilon < px) {
+        return 0;
+    }
+
+    if (bbox.xMin() - core::epsilon > px) {
+        return 0;
+    }
+
+    if (bbox.yMax() < py) {
+        return 0;
+    }
+
+    // from here, bbox overlaps the half-line
+
+    Int32 contribution = 0;
+
+    if (bbox.yMin() > py) {
+        // bbox overlaps the half-line but does not contain P.
+        // => only X component of end points matters.
+
+        // Note: We assume first and last sample positions to exactly match the
+        // positions of start and end vertices.
+        geometry::Vec2d p1 = samples.first().position();
+        geometry::Vec2d p2 = samples.last().position();
+        double x1 = p1.x();
+        double x2 = p2.x();
+
+        // winding contribution:
+        // x1 <= px && x2 > px: -1
+        // x2 <= px && x1 > px: +1
+        // otherwise: 0
+        bool x1Side = x1 <= px;
+        bool x2Side = x2 <= px;
+        if (x1Side == x2Side) {
+            return 0;
+        }
+        else {
+            //       P┌────────→ x
+            //  true  │  false
+            //  Side  H  Side
+            //        │
+            //        │    winding
+            //        │    contribution:
+            //      ──│─→    -1
+            //      ←─│──    +1
+            //        │
+            //        y
+            //
+            contribution = 1 - 2 * x1Side;
+        }
+    }
+    else {
+        // bbox contains P.
+        // => compute intersections with curve.
+
+        // Note: We assume first and last sample positions to exactly match the
+        // positions of start and end vertices.
+        auto it = samples.begin();
+        geometry::Vec2d pi = it->position();
+        geometry::Vec2d pj = {};
+        bool xiSide = (pi.x() <= px);
+        bool xjSide = {};
+        for (++it; it != samples.end(); ++it) {
+            pj = it->position();
+            xjSide = (pj.x() <= px);
+            if (xiSide != xjSide) {
+                bool yiSide = pi.y() < py;
+                bool yjSide = pj.y() < py;
+                if (yiSide == yjSide) {
+                    if (!yiSide) {
+                        contribution += (1 - 2 * xiSide);
+                    }
+                }
+                else {
+                    const geometry::Vec2d segment = pj - pi;
+                    double delta = -segment.x();
+                    geometry::Vec2d ppi = pi - position;
+                    double inv_delta = 1 / delta;
+                    double yIntersect = ppi.det(segment) * inv_delta;
+                    if (yIntersect > py) {
+                        contribution += (1 - 2 * xiSide);
+                    }
+                }
+            }
+
+            pi = pj;
+            xiSide = xjSide;
+        }
+    }
+
+    return keyHalfedge.direction() ? contribution : -contribution;
+}
+
+} // namespace
+
 namespace detail {
+
+// todo: return the face mesh too
+core::Array<KeyCycle> computeKeyFaceCandidateAt(
+    geometry::Vec2d position,
+    vacomplex::Group* group,
+    core::FloatArray& trianglesBuffer,
+    geometry::WindingRule windingRule,
+    core::AnimTime t) {
+
+    using geometry::Vec2d;
+
+    core::Array<KeyCycle> result = {};
+
+    // From here, we try to find a list of cycles such that
+    // the corresponding face would intersect with the cursor.
+
+    std::unordered_set<KeyHalfedgeCandidate, KeyHalfedgeCandidateHash> heCandidates;
+
+    // Compute candidate halfedges existing at time t, and child of given group.
+    for (vacomplex::Node* child = group->firstChild(); child;
+         child = child->nextSibling()) {
+
+        vacomplex::Cell* cell = child->toCell();
+        if (!cell) {
+            continue;
+        }
+        vacomplex::KeyEdge* ke = cell->toKeyEdge();
+        if (ke && ke->existsAt(t)) {
+            const geometry::CurveSampleArray& sampling = ke->sampling().samples();
+            geometry::DistanceToCurve d = geometry::distanceToCurve(sampling, position);
+
+            constexpr double hpi = core::pi / 2;
+            double a = d.angleFromTangent();
+            float angleScore = static_cast<float>(hpi - std::abs(hpi - std::abs(a)));
+            if (a < 0) {
+                angleScore = -angleScore;
+            }
+
+            heCandidates.emplace(ke, true, d.distance(), angleScore, a < 0);
+            heCandidates.emplace(ke, false, d.distance(), -angleScore, a < 0);
+        }
+    }
+
+    // First, we try to create such a face assuming that the
+    // VGC is actually planar (cells are not overlapping).
+    {
+        // Find external boundary: the closest planar cycle containing mouse cursor.
+
+        struct CycleWithWinding {
+            core::Array<KeyHalfedge> cycle;
+            Int32 winding;
+        };
+
+        core::Array<CycleWithWinding> discardedCycles;
+        CycleWithWinding externalBoundaryCycle;
+
+        core::Array<KeyHalfedgeCandidate> planarCycleCandidate;
+        while (!heCandidates.empty()) {
+
+            // Find closest potential edge.
+            auto heCandidateIt = std::min_element(
+                heCandidates.begin(), heCandidates.end(), KeyHalfedgeCandidateCompare());
+            KeyHalfedgeCandidate heCandidate = *heCandidateIt;
+
+            planarCycleCandidate.clear();
+            planarCycleCandidate.append(heCandidate);
+            heCandidates.erase(heCandidateIt);
+
+            VGC_DEBUG_TMP("looking for cycle");
+
+            // Find the corresponding planar map cycle if halfedge is open.
+            if (!heCandidate.halfedge.isClosed()) {
+
+                KeyHalfedge heFirst = heCandidate.halfedge;
+                KeyHalfedge he = heFirst;
+
+                Int maxIter = 2 * heCandidates.size() + 2;
+                bool foundCycle = false;
+                for (Int i = 0; i < maxIter; ++i) {
+                    // Find next halfedge in cycle.
+                    he = he.next();
+                    KeyHalfedge heStop = he;
+                    auto heIt = heCandidates.find(KeyHalfedgeCandidate(he));
+                    // Iterate in ring until heFirst or a non-discarded
+                    // candidate is found.
+                    while (heIt == heCandidates.end()) {
+                        if (he == heFirst) {
+                            // Cycle completed: leave loop.
+                            foundCycle = true;
+                            break;
+                        }
+                        he = he.opposite().next();
+                        if (he == heStop) {
+                            // Exhausted ring. Dead end.
+                            break;
+                        }
+                        heIt = heCandidates.find(KeyHalfedgeCandidate(he));
+                    }
+                    if (foundCycle) {
+                        // Cycle completed: leave loop.
+                        break;
+                    }
+                    if (heIt == heCandidates.end()) {
+                        // Dead end.
+                        break;
+                    }
+
+                    // Insert and iterate.
+                    planarCycleCandidate.append(*heIt);
+                    heCandidates.erase(heIt);
+                }
+                if (!foundCycle) {
+                    // Something bad happened. We should have found a cycle since
+                    // (he.previous().next() == he).
+                    continue;
+                }
+            }
+
+            // Compute winding number to see if cursor is inside the cycle candidate.
+            // Build the cycle in the same loop.
+
+            core::Array<KeyHalfedge> cycle;
+            Int32 winding = 0;
+            for (KeyHalfedgeCandidate& hec : planarCycleCandidate) {
+                Int32 contribution = hec.windingContribution;
+                if (!hec.hasComputedWindingContribution) {
+                    contribution = computeWindingContribution(hec.halfedge, position);
+                    hec.windingContribution = contribution;
+                }
+                winding += contribution;
+                cycle.emplaceLast(hec.halfedge);
+            }
+
+            bool success = false;
+            switch (windingRule) {
+            case geometry::WindingRule::Odd:
+                success = (winding / 2 * 2) != winding;
+                break;
+            case geometry::WindingRule::NonZero:
+                success = winding != 0;
+                break;
+            case geometry::WindingRule::Positive:
+                success = winding > 0;
+                break;
+            case geometry::WindingRule::Negative:
+                success = winding < 0;
+                break;
+            }
+
+            if (success) {
+                externalBoundaryCycle.cycle = std::move(cycle);
+                externalBoundaryCycle.winding = winding;
+                break;
+            }
+
+            auto& discardedCycle = discardedCycles.emplaceLast();
+            discardedCycle.cycle = std::move(cycle);
+            discardedCycle.winding = winding;
+        }
+
+        //struct PreviewKeyFace {};
+        //PreviewKeyFace externalBoundary;
+
+        // TODO: find holes using discarded cycles then new cycles
+        // maybe compute max dist to P in current face to stop looking for new holes when the next closest
+        // candidate edge is too far away..
+
+        // We left the while loop, so either we found an external boundary, or there's no hope to find one
+        //if (foundExternalBoundary) {
+        //    // Great, so we know we have a valid planar face!
+        //    // Plus, it's already stored as a PreviewFace :)
+        //    *toBePaintedFace_ = externalBoundary;
+        //    foundPlanarFace = true;
+        //
+        //    // Now, let's try to add holes to the external boundary
+        //    QSet<KeyEdge*> potentialHoleEdges;
+        //    foreach (KeyEdge* e, instantEdges()) {
+        //        if (e->exists(time))
+        //            potentialHoleEdges.insert(e);
+        //    }
+        //    CellSet cellsInExternalBoundary = externalBoundary.cycles()[0].cells();
+        //    KeyEdgeSet edgesInExternalBoundary = cellsInExternalBoundary;
+        //    foreach (KeyEdge* e, edgesInExternalBoundary)
+        //        potentialHoleEdges.remove(e);
+        //    QList<PreviewKeyFace> holes;
+        //    while (!potentialHoleEdges.isEmpty()) {
+        //        // Ordered by distance to mouse cursor p, add planar cycles gamma which:
+        //        //   - Do not contain p
+        //        //   - Are contained in external boundary
+        //        //   - Are not contained in holes already added
+        //        addHoleToPaintedFace(
+        //            potentialHoleEdges, *toBePaintedFace_, distancesToEdges, x, y);
+        //    }
+        //}
+
+        result.emplaceLast(KeyCycle(std::move(externalBoundaryCycle.cycle)));
+        computeKeyFaceFillTriangles(result, trianglesBuffer, windingRule);
+
+    } // planar face search
+
+    //if (foundPlanarFace) {
+    //    // Great, nothing to do! Everything has already been taken care of.
+    //}
+    //else {
+    //    // TODO: try to find any valid face, even if it's not planar
+    //}
+
+    return result;
+}
 
 namespace {
 

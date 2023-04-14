@@ -187,6 +187,14 @@ protected:
     computeSelectionCandidates_(const geometry::Vec2f& position) const;
     workspace::Element* selectedElement_() const;
 
+    // Temporary: paint bucket tests
+    graphics::GeometryViewPtr paintCandidateFillGeometry_;
+    core::FloatArray paintCandidatePendingTriangles_;
+    bool hasPaintCandidate_ = false;
+    bool isBucketPainting_ = false;
+
+    void doBucketPaintTest_(const geometry::Vec2d& mousePos);
+
     // Graphics resources
     // VgcGraph
     //   -> hit tests (tesselation as needed)
