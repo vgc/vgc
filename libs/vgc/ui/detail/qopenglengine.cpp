@@ -897,6 +897,10 @@ void QglEngine::createBuiltinShaders_() {
         new QglProgram(resourceRegistry_, BuiltinProgram::Simple));
     simpleProgram_ = simpleProgram;
 
+    QglProgramPtr simplePreviewProgram(
+        new QglProgram(resourceRegistry_, BuiltinProgram::SimplePreview));
+    simplePreviewProgram_ = simplePreviewProgram;
+
     QglProgramPtr simpleTexturedProgram(
         new QglProgram(resourceRegistry_, BuiltinProgram::SimpleTextured));
     simpleTexturedProgram_ = simpleTexturedProgram;
@@ -1116,6 +1120,27 @@ void QglEngine::initBuiltinResources_() {
             QOpenGLShader::Vertex, shaderPath_("simple.v.glsl"));
         prog->addShaderFromSourceFile(
             QOpenGLShader::Fragment, shaderPath_("simple.f.glsl"));
+        prog->link();
+        prog->bind();
+        api_->glUniformBlockBinding(prog->programId(), 0, 0);
+        prog->release();
+
+        program->initBuiltinLayout(BuiltinGeometryLayout::XYRGB);
+        program->initBuiltinLayout(BuiltinGeometryLayout::XYRGBA);
+        program->initBuiltinLayout(BuiltinGeometryLayout::XY_iRGBA);
+        program->initBuiltinLayout(BuiltinGeometryLayout::XYUVRGBA);
+        program->initBuiltinLayout(BuiltinGeometryLayout::XYUV_iRGBA);
+    }
+
+    // Initialize the simple preview shader
+    {
+        QglProgram* program = simplePreviewProgram_.get_static_cast<QglProgram>();
+        program->prog_.reset(new QOpenGLShaderProgram());
+        QOpenGLShaderProgram* prog = program->prog_.get();
+        prog->addShaderFromSourceFile(
+            QOpenGLShader::Vertex, shaderPath_("simple.v.glsl"));
+        prog->addShaderFromSourceFile(
+            QOpenGLShader::Fragment, shaderPath_("simple_preview.f.glsl"));
         prog->link();
         prog->bind();
         api_->glUniformBlockBinding(prog->programId(), 0, 0);
