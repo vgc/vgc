@@ -18,44 +18,118 @@
 
 namespace vgc::topology {
 
-const std::shared_ptr<const geometry::CurveSampleArray>&
-KeyEdge::computeSampling(const geometry::CurveSamplingParameters& parameters) const {
+std::shared_ptr<const EdgeSampling> KeyEdge::samplingShared() const {
+    sampling();
+    return snappedSampling_;
+}
 
-    if (!sampling_ || parameters != lastSamplingParameters_) {
-        geometry::Curve curve;
-        geometry::CurveSampleArray sampling;
-        curve.setPositions(points());
-        curve.setWidths(widths());
-        curve.sampleRange(parameters, sampling);
-        if (sampling.length()) {
-            auto it = sampling.begin();
-            geometry::Vec2d lastPoint = it->position();
-            double s = 0;
-            for (++it; it != sampling.end(); ++it) {
-                geometry::Vec2d point = it->position();
-                s += (point - lastPoint).length();
-                it->setS(s);
-                lastPoint = point;
-            }
-        }
-        sampling_ =
-            std::make_shared<const geometry::CurveSampleArray>(std::move(sampling));
-        snappedSampling_.reset();
+const EdgeSampling& KeyEdge::sampling() const {
+
+    if (!isGeometryDirty_) {
+        return *snappedSampling_;
+    }
+
+    geometry::CurveSampleArray snappedSamples;
+
+    if (inputSamples_.isEmpty()) {
+        inputSamples_ = computeInputSamples_(samplingParameters_);
     }
 
     // TODO: transform and snap
 
-    if (isGeometryDirty_ || !snappedSampling_) {
-        snappedSampling_ = sampling_;
-        isGeometryDirty_ = false;
+    snappedSamples = inputSamples_;
+    if (!isClosed() && !snappedSamples.isEmpty()) {
+        snappedSamples.first().setPosition(startVertex_->position());
+        snappedSamples.last().setPosition(endVertex_->position());
     }
 
-    return snappedSampling_;
+    snappedSamplingBbox_ = geometry::Rect2d::empty;
+    for (const auto& sample : snappedSamples) {
+        snappedSamplingBbox_.uniteWith(sample.position());
+    }
+
+    snappedSampling_ = std::make_shared<EdgeSampling>(std::move(snappedSamples));
+    isGeometryDirty_ = false;
+
+    return *snappedSampling_;
+}
+
+const geometry::Rect2d& KeyEdge::samplingBoundingBox() const {
+    // update sampling
+    sampling();
+    return snappedSamplingBbox_;
+}
+
+/// Computes and returns a new array of samples for this edge according to the
+/// given `parameters`.
+///
+/// Unlike `sampling()`, this function does not cache the result.
+///
+geometry::CurveSampleArray
+KeyEdge::computeSampling(const geometry::CurveSamplingParameters& parameters) const {
+
+    if (samplingParameters_ == parameters) {
+        // return copy of cached sampling
+        return sampling().samples();
+    }
+
+    geometry::CurveSampleArray sampling = computeInputSamples_(parameters);
+
+    // TODO: transform and snap
+
+    return sampling;
+}
+
+double KeyEdge::startAngle() const {
+    sampling();
+    // TODO: guarantee at least one sample
+    if (!snappedSampling_->samples().isEmpty()) {
+        return snappedSampling_->samples().first().tangent().angle();
+    }
+    return 0;
+}
+
+double KeyEdge::endAngle() const {
+    sampling();
+    // TODO: guarantee at least one sample
+    if (!snappedSampling_->samples().isEmpty()) {
+        geometry::Vec2d endTangent = snappedSampling_->samples().last().tangent();
+        return (-endTangent).angle();
+    }
+    return 0;
 }
 
 void KeyEdge::dirtyInputSampling_() {
     snappedSampling_.reset();
-    sampling_.reset();
+    inputSamples_.clear();
+}
+
+geometry::CurveSampleArray
+KeyEdge::computeInputSamples_(const geometry::CurveSamplingParameters& parameters) const {
+
+    //VGC_DEBUG_TMP(
+    //    "[{}]::computeInputSampling_({{{}, {}, {}}})",
+    //    (void*)this,
+    //    parameters.maxAngle(),
+    //    parameters.minIntraSegmentSamples(),
+    //    parameters.maxIntraSegmentSamples());
+    geometry::Curve curve;
+    geometry::CurveSampleArray sampling;
+    curve.setPositions(points());
+    curve.setWidths(widths());
+    curve.sampleRange(parameters, sampling);
+    if (sampling.length()) {
+        auto it = sampling.begin();
+        geometry::Vec2d lastPoint = it->position();
+        double s = 0;
+        for (++it; it != sampling.end(); ++it) {
+            geometry::Vec2d point = it->position();
+            s += (point - lastPoint).length();
+            it->setS(s);
+            lastPoint = point;
+        }
+    }
+    return sampling;
 }
 
 } // namespace vgc::topology

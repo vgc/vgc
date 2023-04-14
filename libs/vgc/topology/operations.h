@@ -108,6 +108,11 @@ void setKeyEdgeCurvePoints(KeyEdge* edge, const geometry::SharedConstVec2dArray&
 VGC_TOPOLOGY_API
 void setKeyEdgeCurveWidths(KeyEdge* edge, const core::SharedConstDoubleArray& widths);
 
+VGC_TOPOLOGY_API
+void setKeyEdgeSamplingParameters(
+    KeyEdge* edge,
+    const geometry::CurveSamplingParameters& parameters);
+
 } // namespace vgc::topology::ops
 
 #endif // VGC_TOPOLOGY_OPERATIONS_H

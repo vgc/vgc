@@ -88,6 +88,10 @@ public:
         position_ = position;
     }
 
+    Vec2d tangent() const {
+        return -(normal_.orthogonalized());
+    }
+
     // ┌─── x
     // │ ─segment─→
     // y  ↓ normal
@@ -226,6 +230,14 @@ nlerp(const geometry::CurveSample& a, const geometry::CurveSample& b, double t) 
 /// Alias for `vgc::core::Array<vgc::geometry::CurveSample>`.
 ///
 using CurveSampleArray = core::Array<CurveSample>;
+
+struct DistanceToCurve {
+    double distance = 0.0;
+    double angleFromTangent = 0.0;
+};
+
+VGC_GEOMETRY_API
+DistanceToCurve distanceToCurve(const CurveSampleArray& samples, const Vec2d& position);
 
 /// Alias for `vgc::core::SharedConstArray<vgc::geometry::CurveSample>`.
 ///

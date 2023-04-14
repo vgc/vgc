@@ -563,69 +563,18 @@ bool VacKeyFace::computeFillMesh_() {
     data.isComputing_ = true;
     data.bbox_ = geometry::Rect2d::empty;
 
-    geometry::Curves2d curves2d;
-
-    for (const vacomplex::KeyCycle& cycle : kf->cycles()) {
-        KeyVertex* kv = cycle.steinerVertex();
-        if (kv) {
-            Vec2d p = kv->position();
-            curves2d.moveTo(p[0], p[1]);
-        }
-        else {
-            bool isFirst = true;
-            for (const KeyHalfedge& khe : cycle.halfedges()) {
-                const KeyEdge* ke = khe.edge();
-                Element* ve = workspace()->findVacElement(ke->id());
-                VacKeyEdge* vke = dynamic_cast<VacKeyEdge*>(ve);
-                const VacEdgeCellFrameData* edgeData = nullptr;
-                if (vke) {
-                    edgeData =
-                        vke->computeFrameData(VacEdgeComputationStage::PreJoinGeometry);
-                }
-                if (edgeData) {
-                    data.bbox_.uniteWith(edgeData->boundingBox());
-                    const geometry::CurveSampleArray& samples =
-                        edgeData->preJoinSamples();
-                    if (khe.direction()) {
-                        for (const geometry::CurveSample& s : samples) {
-                            Vec2d p = s.position();
-                            if (isFirst) {
-                                curves2d.moveTo(p[0], p[1]);
-                                isFirst = false;
-                            }
-                            else {
-                                curves2d.lineTo(p[0], p[1]);
-                            }
-                        }
-                    }
-                    else {
-                        for (auto it = samples.rbegin(); it != samples.rend(); ++it) {
-                            const geometry::CurveSample& s = *it;
-                            Vec2d p = s.position();
-                            if (isFirst) {
-                                curves2d.moveTo(p[0], p[1]);
-                                isFirst = false;
-                            }
-                            else {
-                                curves2d.lineTo(p[0], p[1]);
-                            }
-                        }
-                    }
-                }
-                else {
-                    // TODO: handle error
-                }
-            }
-        }
-        curves2d.close();
-    }
-
-    data.triangulation_.clear();
-    auto params = geometry::Curves2dSampleParams::adaptive();
-    curves2d.fill(data.triangulation_, params, geometry::WindingRule::Odd);
+    topology::detail::computeKeyFaceFillTriangles(
+        kf->cycles(), data.triangulation_, geometry::WindingRule::Odd);
 
     if (data.triangulation_.reservedLength() > data.triangulation_.length() * 3) {
         data.triangulation_.shrinkToFit();
+    }
+
+    core::Span<geometry::Vec2f> points(
+        reinterpret_cast<geometry::Vec2f*>(data.triangulation_.data()),
+        data.triangulation_.length() / 2);
+    for (const geometry::Vec2f& point : points) {
+        data.bbox_.uniteWith(geometry::Vec2d(point));
     }
 
     data.isFillMeshComputed_ = true;

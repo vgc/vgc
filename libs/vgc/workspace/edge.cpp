@@ -54,7 +54,7 @@ bool VacEdgeCellFrameData::resetToStage(VacEdgeComputationStage stage) {
         else {
             patches_[0].clear();
             patches_[1].clear();
-            samples_.reset();
+            sampling_.reset();
             graphics_.clearCenterlineGeometry();
             graphics_.clearSelectionGeometry();
             [[fallthrough]];
@@ -86,18 +86,19 @@ bool VacEdgeCellFrameData::isSelectableAt(
     }
     // use "binary search"-style tree/array of bboxes?
 
-    if (!samples_ || samples_->isEmpty()) {
+    if (!sampling_ || sampling_->samples().isEmpty()) {
         return false;
     }
 
     double shortestDistance = core::DoubleInfinity;
 
-    auto it1 = samples_->begin();
+    const geometry::CurveSampleArray& samples = sampling_->samples();
+    auto it1 = samples.begin();
     // is p in sample outline-mode-selection disk?
     shortestDistance =
         (std::min)(shortestDistance, (it1->position() - position).length());
 
-    for (auto it0 = it1++; it1 != samples_->end(); it0 = it1++) {
+    for (auto it0 = it1++; it1 != samples.end(); it0 = it1++) {
         // is p in sample outline-mode-selection disk?
         shortestDistance =
             (std::min)(shortestDistance, (it1->position() - position).length());
@@ -295,14 +296,14 @@ void VacKeyEdge::onPaintDraw(
         geometry::Vec2fArray joinVertices;
         core::Array<UInt32> joinIndices;
 
-        if (data.samples_ && data.samples_->size() >= 2) {
+        if (data.sampling_ && data.sampling_->samples().size() >= 2) {
 
             const detail::EdgeJoinPatchMergeLocation& mergeLocation0 =
                 data.patches_[0].mergeLocation;
             const detail::EdgeJoinPatchMergeLocation& mergeLocation1 =
                 data.patches_[1].mergeLocation;
 
-            auto standaloneSamples = core::Span(*data.samples_);
+            auto standaloneSamples = core::Span(data.sampling_->samples());
 
             std::array<float, 2> mergeS = {
                 0, static_cast<float>(standaloneSamples.last().s())};
@@ -775,8 +776,7 @@ bool VacKeyEdge::computePreJoinGeometry_() {
     }
 
     geometry::CurveSamplingParameters samplingParams(edgeTesselationMode_);
-    const std::shared_ptr<const geometry::CurveSampleArray>& sampling =
-        ke->computeSampling(samplingParams);
+    topology::ops::setKeyEdgeSamplingParameters(ke, samplingParams);
 
     for (const geometry::Vec2d& p : ke->points()) {
         controlPoints_.emplaceLast(geometry::Vec2f(p));
@@ -784,10 +784,10 @@ bool VacKeyEdge::computePreJoinGeometry_() {
 
     data.isComputing_ = true;
 
-    data.samples_ = sampling;
+    data.sampling_ = ke->samplingShared();
     data.bbox_ = geometry::Rect2d::empty;
-    if (data.samples_) {
-        for (const auto& sample : *data.samples_) {
+    if (data.sampling_) {
+        for (const auto& sample : data.sampling_->samples()) {
             data.bbox_.uniteWith(sample.position());
         }
     }

@@ -17,6 +17,7 @@
 #ifndef VGC_TOPOLOGY_KEYHALFEDGE_H
 #define VGC_TOPOLOGY_KEYHALFEDGE_H
 
+#include <functional>
 #include <initializer_list>
 
 #include <vgc/topology/api.h>
@@ -47,8 +48,25 @@ public:
         return direction_ ? edge_->endVertex() : edge_->startVertex();
     }
 
+    /// Returns the angle between the x-axis and the start tangent.
+    double startAngle() const {
+        return direction_ ? edge_->startAngle() : edge_->endAngle();
+    }
+
+    /// Returns the angle between the x-axis and the reversed end tangent.
+    double endAngle() const {
+        return direction_ ? edge_->endAngle() : edge_->startAngle();
+    }
+
     bool isClosed() const {
         return edge_->isClosed();
+    }
+
+    KeyHalfedge next() const;
+    KeyHalfedge previous() const;
+
+    KeyHalfedge opposite() const {
+        return KeyHalfedge(edge_, !direction_);
     }
 
     friend bool operator==(const KeyHalfedge& h1, const KeyHalfedge& h2) {
@@ -67,5 +85,13 @@ private:
 };
 
 } // namespace vgc::topology
+
+template<>
+struct std::hash<vgc::topology::KeyHalfedge> {
+    std::size_t operator()(const vgc::topology::KeyHalfedge& kh) const noexcept {
+        std::size_t h = std::hash<void*>{}(kh.edge());
+        return (h << 1) & (kh.direction() ? 1 : 0);
+    }
+};
 
 #endif // VGC_TOPOLOGY_KEYHALFEDGE_H

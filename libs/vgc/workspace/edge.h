@@ -321,7 +321,7 @@ public:
     }
 
     const geometry::CurveSampleArray& preJoinSamples() const {
-        return samples_ ? *samples_ : defaultSamples_;
+        return sampling_ ? sampling_->samples() : defaultSamples_;
     }
 
     const EdgeGraphics& graphics() const {
@@ -339,7 +339,7 @@ private:
     geometry::Rect2d bbox_ = {};
 
     // stage PreJoinGeometry
-    std::shared_ptr<const geometry::CurveSampleArray> samples_;
+    std::shared_ptr<const topology::EdgeSampling> sampling_;
     geometry::CurveSampleArray defaultSamples_;
 
     // stage PostJoinGeometry

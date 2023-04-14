@@ -27,6 +27,8 @@ namespace vgc::topology {
 
 class VGC_TOPOLOGY_API KeyCycle {
 public:
+    KeyCycle() noexcept = default;
+
     explicit KeyCycle(core::Span<const KeyHalfedge> halfedges) noexcept;
 
     explicit KeyCycle(std::initializer_list<KeyHalfedge> halfedges) noexcept
