@@ -25,6 +25,7 @@
 #include <vgc/core/performancelog.h>
 #include <vgc/geometry/camera2d.h>
 #include <vgc/geometry/vec2d.h>
+#include <vgc/topology/keycycle.h>
 #include <vgc/ui/api.h>
 #include <vgc/ui/cursor.h>
 #include <vgc/ui/widget.h>
@@ -117,6 +118,12 @@ public:
     // since the "current selection" can be shared across several canvases
     // in case of split view, etc.
     //
+    
+    // temporary method
+    void onColorChanged_(const core::Color& color);
+    // temporary method
+    void clearSelection_();
+    void clearPaintCandidate_();
 
     /// Deselects all selected elements and make the list of selection
     /// candidates empty.
@@ -145,6 +152,7 @@ protected:
     bool onKeyPress(KeyEvent* event) override;
     bool onMouseMove(MouseEvent* event) override;
     bool onMousePress(MouseEvent* event) override;
+    void preMousePress(MouseEvent* event) override;
     bool onMouseRelease(MouseEvent* event) override;
     bool onMouseEnter() override;
     bool onMouseLeave() override;
@@ -186,6 +194,16 @@ protected:
     core::Array<std::pair<core::Id, double>>
     computeSelectionCandidates_(const geometry::Vec2f& position) const;
     workspace::Element* selectedElement_() const;
+
+    // Temporary: paint bucket tests
+    graphics::GeometryViewPtr paintCandidateFillGeometry_;
+    core::FloatArray paintCandidatePendingTriangles_;
+    core::Array<topology::KeyCycle> paintCandidateCycles_;
+    bool hasPaintCandidate_ = false;
+    bool isBucketPainting_ = false;
+    core::Color paintColor_ = {};
+
+    void doBucketPaintTest_(const geometry::Vec2d& mousePos);
 
     // Graphics resources
     // VgcGraph
