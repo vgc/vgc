@@ -53,6 +53,8 @@ vgc_add_library(ui
         shortcut.h
         sketchtool.h
         strings.h
+        tabbar.h
+        tabbody.h
         widget.h
         window.h
 
@@ -100,6 +102,8 @@ vgc_add_library(ui
         shortcut.cpp
         sketchtool.cpp
         strings.cpp
+        tabbar.cpp
+        tabbody.cpp
         widget.cpp
         window.cpp
 

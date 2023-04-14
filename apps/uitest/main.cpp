@@ -122,8 +122,6 @@ private:
 
     void createTestWidgets_() {
 
-        using Panel = app::detail::Panel;
-        using app::detail::createPanel;
         using app::detail::createPanelWithPadding;
 
         // Create panel areas
@@ -133,17 +131,20 @@ private:
         ui::PanelArea* rightBottomArea = ui::PanelArea::createTabs(rightArea);
 
         // Create panels
-        Panel* rightTopPanel = createPanelWithPadding(rightTopArea);
-        Panel* rightBottomPanel = createPanelWithPadding(rightBottomArea);
+        ui::Panel* rightTopPanel = createPanelWithPadding(rightTopArea, "Plot 2D");
+        ui::Panel* rightBottomPanel =
+            createPanelWithPadding(rightBottomArea, "Misc Tests");
+        ui::Column* rightTopContent = rightTopPanel->createChild<ui::Column>();
+        ui::Column* rightBottomContent = rightBottomPanel->createChild<ui::Column>();
 
         // Create widgets inside panels
-        createPlot2d_(rightTopPanel);
-        createGrid_(rightBottomPanel);
-        createClickMePopups_(rightBottomPanel);
-        createMessageDialogButtons_(rightBottomPanel);
-        createLineEdits_(rightBottomPanel);
-        createNumberEdits_(rightBottomPanel);
-        createImageBox_(rightBottomPanel);
+        createPlot2d_(rightTopContent);
+        createGrid_(rightBottomContent);
+        createClickMePopups_(rightBottomContent);
+        createMessageDialogButtons_(rightBottomContent);
+        createLineEdits_(rightBottomContent);
+        createNumberEdits_(rightBottomContent);
+        createImageBox_(rightBottomContent);
     }
 
     void createPlot2d_(ui::Widget* parent) {

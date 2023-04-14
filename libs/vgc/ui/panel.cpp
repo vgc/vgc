@@ -20,20 +20,43 @@
 
 namespace vgc::ui {
 
-Panel::Panel()
-    : Widget() {
+Panel::Panel(std::string_view title)
+    : Widget()
+    , title_(title) {
 
     addStyleClass(strings::Panel);
 }
 
-PanelPtr Panel::create() {
-    return PanelPtr(new Panel());
+PanelPtr Panel::create(std::string_view title) {
+    return PanelPtr(new Panel(title));
+}
+
+void Panel::setTitle(std::string_view title) {
+    if (title_ == title) {
+        return;
+    }
+    title_ = title;
+    titleChanged().emit();
+}
+
+void Panel::setBody(Widget* newBody) {
+    Widget* oldBody = body();
+    if (oldBody == newBody) {
+        return;
+    }
+    if (oldBody) {
+        newBody->replace(oldBody);
+    }
+    else {
+        insertChild(firstChild(), newBody);
+    }
 }
 
 float Panel::preferredWidthForHeight(float height) const {
-    Widget* child = firstChild();
-    if (child) {
-        return child->preferredWidthForHeight(height);
+    // TODO: padding / border
+    Widget* body_ = body();
+    if (body()) {
+        return body_->preferredWidthForHeight(height);
     }
     else {
         return 0.0f;
@@ -41,9 +64,10 @@ float Panel::preferredWidthForHeight(float height) const {
 }
 
 float Panel::preferredHeightForWidth(float width) const {
-    Widget* child = firstChild();
-    if (child) {
-        return child->preferredHeightForWidth(width);
+    // TODO: padding / border
+    Widget* body_ = body();
+    if (body_) {
+        return body_->preferredHeightForWidth(width);
     }
     else {
         return 0.0f;
@@ -66,9 +90,9 @@ void Panel::onWidgetRemoved(Widget*) {
 }
 
 geometry::Vec2f Panel::computePreferredSize() const {
-    Widget* child = firstChild();
-    if (child) {
-        return child->preferredSize();
+    Widget* body_ = body();
+    if (body_) {
+        return body_->preferredSize();
     }
     else {
         return geometry::Vec2f();
@@ -76,9 +100,9 @@ geometry::Vec2f Panel::computePreferredSize() const {
 }
 
 void Panel::updateChildrenGeometry() {
-    Widget* child = firstChild();
-    if (child) {
-        child->updateGeometry(rect());
+    Widget* body_ = body();
+    if (body_) {
+        body_->updateGeometry(contentRect());
     }
 }
 

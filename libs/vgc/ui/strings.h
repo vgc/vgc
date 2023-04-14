@@ -42,6 +42,8 @@ VGC_UI_API extern const core::StringId NumberEdit;
 VGC_UI_API extern const core::StringId Panel;
 VGC_UI_API extern const core::StringId PanelArea;
 VGC_UI_API extern const core::StringId Plot2d;
+VGC_UI_API extern const core::StringId TabBar;
+VGC_UI_API extern const core::StringId TabBody;
 VGC_UI_API extern const core::StringId Widget;
 
 VGC_UI_API extern const core::StringId min_width;
