@@ -56,8 +56,6 @@ KeyHalfedge KeyHalfedge::next() const {
         }
     }
 
-    VGC_DEBUG_TMP("kv({}).next({}): {}", kv->position(), a, b);
-
     return result;
 }
 
