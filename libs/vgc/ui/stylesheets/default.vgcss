@@ -1,3 +1,7 @@
+/* ----------------------------------------------------------------------------
+ *                                 LAYOUT
+ */
+
 .root {
     pixel-hinting: normal;
 
@@ -5,23 +9,12 @@
     font-size: 11dp;
     font-ascent: 11dp;
     font-descent: 3dp;
-
-    caret-color: rgb(241, 241, 241);
-    text-color: rgb(241, 241, 241);
-    text-selection-color: rgb(241, 241, 241);
-    text-selection-background-color: rgb(11, 82, 172);
 }
 
-.Panel,
 .Panel > .Flex,
-.root.Flex,
-.root.Flex > .Flex {
+.Panel > .Flex > .Flex {
     row-gap: 8dp;
     column-gap: 8dp;
-}
-
-.PanelArea {
-    background-color: rgb(23, 25, 27);
 }
 
 .PanelArea {
@@ -29,9 +22,6 @@
     min-height: 30dp;
     horizontal-stretch: 1;
     vertical-stretch: 1;
-    handle-size: 12dp;
-    handle-hovered-size: 2dp;
-    handle-hovered-color: rgb(110, 114, 118);
     padding-top: 3dp;
     padding-right: 3dp;
     padding-bottom: 3dp;
@@ -43,22 +33,14 @@
     horizontal-stretch: 0;
 }
 
-.Panel.with-padding,
-.root.Flex {
-    padding-top: 0dp;
+.Panel.with-padding {
+    padding-top: 8dp;
     padding-right: 8dp;
     padding-bottom: 8dp;
     padding-left: 8dp;
 }
 
-
 .PanelArea > .Flex {
-    background-color: rgb(55, 57, 59);
-    margin-top: 5dp;
-    margin-left: 5dp;
-    margin-right: 5dp;
-    margin-bottom: 0dp;
-    row-gap: 5dp;
     border-top-left-radius: 3dp;
     border-top-right-radius: 3dp;
     border-bottom-right-radius: 3dp;
@@ -67,7 +49,6 @@
 
 .PanelArea > .Flex > .TabBar {
     vertical-stretch: 0;
-    background-color: rgb(39, 41, 43);
     border-top-left-radius: 3dp;
     border-top-right-radius: 3dp;
     border-bottom-right-radius: 0dp;
@@ -161,8 +142,25 @@
     border-bottom-left-radius: 0dp;
 }
 
-/* We use .Flex.Flex as a hack to increase specificity,
-   otherwise `.root.Flex > .Flex` is more specific */
+.Menu {
+    font-size: 12dp;
+    font-ascent: 12dp;
+    font-descent: 3dp;
+}
+
+.Menu.main-menu-bar > .MenuButton {
+    margin-top: 3dp;
+    border-top-left-radius: 3dp;
+    border-top-right-radius: 3dp;
+    border-bottom-right-radius: 3dp;
+    border-bottom-left-radius: 3dp;
+    preferred-height: 18dp;
+}
+
+.MenuButton {
+    column-gap: 20dp;
+}
+
 .Flex.Flex.field-row,
 .Flex.Flex.field-group {
     vertical-stretch: 0;
@@ -178,78 +176,6 @@
 .field-group > .not-last {
     border-top-right-radius: 0dp;
     border-bottom-right-radius: 0dp;
-}
-
-.LineEdit,
-.Plot2d {
-    background-color: rgb(34, 36, 37);
-}
-
-.Button {
-    background-color: rgb(90, 94, 98);
-    text-color: rgb(245, 245, 245);
-}
-
-.Button.hovered {
-    background-color: rgb(110, 114, 118);
-}
-
-.Button.pressed {
-    background-color: rgb(120, 124, 128);
-}
-
-.Button.checked {
-    background-color: rgb(11, 82, 172);
-}
-
-.Button.checked.hovered {
-    background-color: rgb(31, 102, 192);
-}
-
-.Button.checked.pressed {
-    background-color: rgb(41, 112, 202);
-}
-
-.Menu,
-.Dialog {
-    background-color: rgb(49, 51, 53);
-}
-
-.Menu {
-    font-size: 12dp;
-    font-ascent: 12dp;
-    font-descent: 3dp;
-}
-
-.Menu.main-menu-bar {
-    background-color: rgb(39, 41, 43);
-}
-
-.MenuButton {
-    column-gap: 20dp;
-    background-color: rgba(0, 0, 0, 0);
-    /* background-color drawn by .Menu */
-}
-
-.MenuButton.hovered {
-    background-color: rgb(11, 82, 172);
-}
-
-.MenuButton.active {
-    background-color: rgb(11, 82, 172);
-}
-
-.MenuButton > .Shortcut {
-    text-color: rgb(165, 165, 165);
-}
-
-.MenuButton.disabled {
-    text-color: rgb(125, 125, 125);
-    background-color: rgba(0, 0, 0, 0);
-}
-
-.MenuButton.disabled > .Shortcut {
-    text-color: rgb(105, 105, 105);
 }
 
 .MenuButton > .Text {
@@ -314,6 +240,101 @@
     padding-left: 20dp;
     padding-right: 20dp;
 }
+
+/* ----------------------------------------------------------------------------
+ *                                 COLORS
+*/
+
+.root {
+    caret-color: rgb(241, 241, 241);
+    text-color: rgb(241, 241, 241);
+    text-selection-color: rgb(241, 241, 241);
+    text-selection-background-color: rgb(11, 82, 172);
+}
+
+.PanelArea {
+    handle-size: 12dp;
+    handle-hovered-size: 2dp;
+    handle-hovered-color: rgb(110, 114, 118);
+}
+
+.PanelArea > .Flex {
+    background-color: rgb(55, 57, 59);
+}
+
+.PanelArea > .Flex > .TabBar {
+    background-color: rgb(39, 41, 43);
+}
+
+.Menu,
+.Dialog {
+    background-color: rgb(39, 41, 43);
+    /* Note: it's best not to be as dark as LineEdits,
+       so that LineEdits can be seen in Menu/Dialogs
+    */
+}
+
+.LineEdit,
+.Plot2d,
+.PanelArea,
+.Menu.main-menu-bar {
+    background-color: rgb(24, 26, 27);
+}
+
+.Button {
+    background-color: rgb(90, 94, 98);
+    text-color: rgb(245, 245, 245);
+}
+
+.Button.hovered {
+    background-color: rgb(110, 114, 118);
+}
+
+.Button.pressed {
+    background-color: rgb(120, 124, 128);
+}
+
+.Button.checked {
+    background-color: rgb(11, 82, 172);
+}
+
+.Button.checked.hovered {
+    background-color: rgb(31, 102, 192);
+}
+
+.Button.checked.pressed {
+    background-color: rgb(41, 112, 202);
+}
+
+.MenuButton {
+    background-color: rgba(0, 0, 0, 0);
+    /* background-color drawn by .Menu */
+}
+
+.MenuButton.hovered {
+    background-color: rgb(11, 82, 172);
+}
+
+.MenuButton.active {
+    background-color: rgb(11, 82, 172);
+}
+
+.MenuButton > .Shortcut {
+    text-color: rgb(165, 165, 165);
+}
+
+.MenuButton.disabled {
+    text-color: rgb(125, 125, 125);
+    background-color: rgba(0, 0, 0, 0);
+}
+
+.MenuButton.disabled > .Shortcut {
+    text-color: rgb(105, 105, 105);
+}
+
+/* ----------------------------------------------------------------------------
+ *                               COLOR PALETTE
+ */
 
 .ColorPreview {
     border-width: 1dp;
@@ -392,6 +413,10 @@
 .ColorListViewItem {
     border-width: 1dp;
 }
+
+/* ----------------------------------------------------------------------------
+ *                                PLOT 2D
+ */
 
 .Plot2d {
     background-color-on-hover: rgb(54, 56, 57);
