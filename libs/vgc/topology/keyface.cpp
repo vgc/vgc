@@ -303,8 +303,6 @@ core::Array<KeyCycle> computeKeyFaceCandidateAt(
             planarCycleCandidate.append(heCandidate);
             heCandidates.erase(heCandidateIt);
 
-            VGC_DEBUG_TMP("looking for cycle");
-
             // Find the corresponding planar map cycle if halfedge is open.
             if (!heCandidate.halfedge.isClosed()) {
 
