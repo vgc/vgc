@@ -278,6 +278,7 @@ inline constexpr auto numShaderStages = VGC_ENUM_COUNT(ShaderStage);
 enum class BuiltinProgram : Int8 {
     NotBuiltin = -1,
     Simple = 0,
+    SimplePreview,
     SimpleTextured,
     SimpleTexturedDebug,
     SreenSpaceDisplacement,

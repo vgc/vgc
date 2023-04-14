@@ -994,6 +994,8 @@ ProgramPtr Engine::builtinProgram(BuiltinProgram builtinProgram) {
     switch (builtinProgram) {
     case BuiltinProgram::Simple:
         return simpleProgram_;
+    case BuiltinProgram::SimplePreview:
+        return simplePreviewProgram_;
     case BuiltinProgram::SimpleTextured:
         return simpleTexturedProgram_;
     case BuiltinProgram::SimpleTexturedDebug:

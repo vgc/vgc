@@ -871,19 +871,37 @@ void D3d11Engine::createBuiltinShaders_() {
         new D3d11Program(resourceRegistry_, BuiltinProgram::Simple));
     simpleProgram_ = simpleProgram;
 
+    D3d11ProgramPtr simplePreviewProgram(
+        new D3d11Program(resourceRegistry_, BuiltinProgram::SimplePreview));
+    simplePreviewProgram_ = simplePreviewProgram;
+
     // Create the simple shader (vertex)
     {
-        D3d11Program* program = simpleProgram.get();
-
         ComPtr<ID3DBlob> shaderBlob;
-        program->vertexShader_ =
+        ComPtr<ID3D11VertexShader> shader =
             compileAndCreateVertexShader(shaderBlob, device_, "simple.v.hlsl");
 
-        program->initBuiltinLayout(device_, shaderBlob, Bgl::XYRGB);
-        program->initBuiltinLayout(device_, shaderBlob, Bgl::XYRGBA);
-        program->initBuiltinLayout(device_, shaderBlob, Bgl::XY_iRGBA);
-        program->initBuiltinLayout(device_, shaderBlob, Bgl::XYUVRGBA);
-        program->initBuiltinLayout(device_, shaderBlob, Bgl::XYUV_iRGBA);
+        {
+            D3d11Program* program = simpleProgram.get();
+            program->vertexShader_ = shader;
+
+            program->initBuiltinLayout(device_, shaderBlob, Bgl::XYRGB);
+            program->initBuiltinLayout(device_, shaderBlob, Bgl::XYRGBA);
+            program->initBuiltinLayout(device_, shaderBlob, Bgl::XY_iRGBA);
+            program->initBuiltinLayout(device_, shaderBlob, Bgl::XYUVRGBA);
+            program->initBuiltinLayout(device_, shaderBlob, Bgl::XYUV_iRGBA);
+        }
+
+        {
+            D3d11Program* program = simplePreviewProgram.get();
+            program->vertexShader_ = shader;
+
+            program->initBuiltinLayout(device_, shaderBlob, Bgl::XYRGB);
+            program->initBuiltinLayout(device_, shaderBlob, Bgl::XYRGBA);
+            program->initBuiltinLayout(device_, shaderBlob, Bgl::XY_iRGBA);
+            program->initBuiltinLayout(device_, shaderBlob, Bgl::XYUVRGBA);
+            program->initBuiltinLayout(device_, shaderBlob, Bgl::XYUV_iRGBA);
+        }
     }
 
     // Create the simple shader (fragment)
@@ -892,6 +910,15 @@ void D3d11Engine::createBuiltinShaders_() {
         ComPtr<ID3DBlob> shaderBlob;
         program->pixelShader_ =
             compileAndCreatePixelShader(shaderBlob, device_, "simple.f.hlsl");
+    }
+
+    // Create the simple preview shader (fragment)
+    {
+        D3d11Program* program = simplePreviewProgram.get();
+
+        ComPtr<ID3DBlob> shaderBlob;
+        program->pixelShader_ =
+            compileAndCreatePixelShader(shaderBlob, device_, "simple_preview.f.hlsl");
     }
 
     D3d11ProgramPtr simpleTexturedProgram(
