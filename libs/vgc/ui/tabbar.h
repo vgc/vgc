@@ -33,32 +33,12 @@ private:
     VGC_OBJECT(TabBar, Label)
 
 protected:
-    //TabBar(TabBody* panels);
     TabBar();
 
 public:
-    /// Creates a `PanelTabs`.
+    /// Creates a `TabBar`.
     ///
     static TabBarPtr create();
-    //static TabBarPtr create(TabBody* panels);
-
-    /*
-    /// Returns the `PanelStack` this `PanelTabs` refers to.
-    ///
-    /// Returns `nullptr` if this `PanelTabs` does not have any associated panels.
-    ///
-    // XXX Should this directly return panels->children() instead?
-    //
-    TabBody* panels() {
-        return panels_;
-    }
-*/
-
-private:
-    //TabBody* panels_ = nullptr;
-
-    //void onPanelsDestroyed_();
-    //VGC_SLOT(onPanelsDestroyedSlot_, onPanelsDestroyed_)
 };
 
 } // namespace vgc::ui

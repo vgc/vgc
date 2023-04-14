@@ -20,20 +20,8 @@
 
 namespace vgc::ui {
 
-/*
-TabBar::TabBar(PanelStack* panels)
-    : Label("temp")
-    , panels_(panels) {
-
-    addStyleClass(strings::PanelTabs);
-    if (panels_) {
-        panels_->aboutToBeDestroyed().connect(onPanelsDestroyedSlot_());
-    }
-}
-*/
-
 TabBar::TabBar()
-    : Label("temp") {
+    : Label("Untitled Tab") {
 
     addStyleClass(strings::TabBar);
 }
@@ -41,12 +29,5 @@ TabBar::TabBar()
 TabBarPtr TabBar::create() {
     return TabBarPtr(new TabBar());
 }
-
-/*
-void TabBar::onPanelsDestroyed_() {
-    panels_->disconnect(this);
-    panels_ = nullptr;
-}
-*/
 
 } // namespace vgc::ui

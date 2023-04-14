@@ -24,8 +24,7 @@ namespace vgc::ui {
 VGC_DECLARE_OBJECT(TabBody);
 
 /// \class vgc::ui::TabBody
-/// \brief Holds the content of different tabs, showing only the content for
-///        the active tab.
+/// \brief Manages the content of tabs, displaying the active tab.
 ///
 class VGC_UI_API TabBody : public Widget {
 private:
