@@ -37,10 +37,8 @@ namespace vgc::app {
 
 namespace detail {
 
-using Panel = ui::Panel;
-
 VGC_APP_API
-Panel* createPanelWithPadding(
+ui::Panel* createPanelWithPadding(
     ui::PanelArea* panelArea,
     std::string_view panelTitle = "Untitled");
 
