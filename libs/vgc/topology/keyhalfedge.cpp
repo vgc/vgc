@@ -21,7 +21,6 @@ namespace vgc::topology {
 KeyHalfedge KeyHalfedge::next() const {
     KeyHalfedge result = opposite();
     double a = endAngle();
-    double b = 0;
     double minAngle = core::DoubleInfinity;
     KeyVertex* kv = endVertex();
 
@@ -40,7 +39,6 @@ KeyHalfedge KeyHalfedge::next() const {
             if (ke->isStartVertex(kv) && (isOtherEdge || direction_)) {
                 double d = angleDist(ke->startAngle(), a);
                 if (d < minAngle) {
-                    b = ke->startAngle();
                     minAngle = d;
                     result = KeyHalfedge(ke, true);
                 }
@@ -48,7 +46,6 @@ KeyHalfedge KeyHalfedge::next() const {
             if (ke->isEndVertex(kv) && (isOtherEdge || !direction_)) {
                 double d = angleDist(ke->endAngle(), a);
                 if (d < minAngle) {
-                    b = ke->endAngle();
                     minAngle = d;
                     result = KeyHalfedge(ke, false);
                 }
