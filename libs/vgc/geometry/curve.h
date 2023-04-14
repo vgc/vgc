@@ -231,9 +231,24 @@ nlerp(const geometry::CurveSample& a, const geometry::CurveSample& b, double t) 
 ///
 using CurveSampleArray = core::Array<CurveSample>;
 
-struct DistanceToCurve {
-    double distance = 0.0;
-    double angleFromTangent = 0.0;
+class VGC_GEOMETRY_API DistanceToCurve {
+public:
+    DistanceToCurve(double distance, double angleFromTangent) noexcept
+        : distance_(distance)
+        , angleFromTangent_(angleFromTangent) {
+    }
+
+    double distance() const {
+        return distance_;
+    }
+
+    double angleFromTangent() const {
+        return angleFromTangent_;
+    }
+
+private:
+    double distance_ = 0.0;
+    double angleFromTangent_ = 0.0;
 };
 
 VGC_GEOMETRY_API

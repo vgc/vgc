@@ -82,7 +82,7 @@ void computeSample(
 
 DistanceToCurve distanceToCurve(const CurveSampleArray& samples, const Vec2d& position) {
 
-    DistanceToCurve result = {core::DoubleInfinity, 0};
+    DistanceToCurve result(core::DoubleInfinity, 0);
     constexpr double hpi = core::pi / 2;
 
     if (samples.isEmpty()) {
@@ -105,14 +105,14 @@ DistanceToCurve distanceToCurve(const CurveSampleArray& samples, const Vec2d& po
                 if (tx >= 0 && tx <= l) { // does p project in segment?
                     double ty = p1p2Dir.det(p1p);
                     d = std::abs(ty);
-                    if (d < result.distance) {
-                        result.distance = d;
-                        result.angleFromTangent = (ty < 0) ? -hpi : hpi;
+                    if (d < result.distance()) {
+                        double angleFromTangent = (ty < 0) ? -hpi : hpi;
+                        result = DistanceToCurve(d, angleFromTangent);
                     }
                 }
-                else if (d < result.distance) {
-                    result.distance = d;
-                    result.angleFromTangent = (it1->normal().dot(p1p) < 0) ? -hpi : hpi;
+                else if (d < result.distance()) {
+                    double angleFromTangent = (it1->normal().dot(p1p) < 0) ? -hpi : hpi;
+                    result = DistanceToCurve(d, angleFromTangent);
                 }
             }
         }
@@ -122,10 +122,9 @@ DistanceToCurve distanceToCurve(const CurveSampleArray& samples, const Vec2d& po
         Vec2d ps = samples.first().position();
         Vec2d psp = position - ps;
         double d = psp.length();
-        if (d < result.distance) {
+        if (d < result.distance()) {
             Vec2d tangent = -(sample.normal().orthogonalized());
-            result.distance = d;
-            result.angleFromTangent = tangent.angle(psp);
+            result = DistanceToCurve(d, tangent.angle(psp));
         }
     };
 
