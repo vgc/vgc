@@ -19,11 +19,23 @@
 
 #include <initializer_list>
 
+#include <vgc/geometry/curves2d.h>
+#include <vgc/geometry/vec2d.h>
 #include <vgc/topology/api.h>
 #include <vgc/topology/cell.h>
 #include <vgc/topology/keycycle.h>
 
 namespace vgc::topology {
+
+namespace detail {
+
+VGC_TOPOLOGY_API
+bool computeKeyFaceFillTriangles(
+    const core::Array<KeyCycle>& cycles,
+    core::FloatArray& trianglesBuffer,
+    geometry::WindingRule windingRule = geometry::WindingRule::Odd);
+
+} // namespace detail
 
 class VGC_TOPOLOGY_API KeyFace final : public SpatioTemporalCell<FaceCell, KeyCell> {
 private:

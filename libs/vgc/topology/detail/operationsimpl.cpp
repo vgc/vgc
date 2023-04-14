@@ -364,70 +364,66 @@ void Operations::setKeyVertexPosition(KeyVertex* v, const geometry::Vec2d& pos) 
     }
 
     v->position_ = pos;
-    dirtyGeometry_(v);
+    // inc version
+    v->vac()->incrementVersion();
 
-    Vac* vac = v->vac();
-    if (vac) {
-        // inc version
-        vac->incrementVersion();
-        // update diff
-        if (vac->isDiffEnabled_) {
-            vac->diff_.onNodeDiff(v, VacNodeDiffFlag::GeometryChanged);
-        }
-    }
+    dirtyGeometry_(v); // it also emits the geometry change event
 }
 
 void Operations::setKeyEdgeCurvePoints(
-    KeyEdge* e,
+    KeyEdge* edge,
     const geometry::SharedConstVec2dArray& points) {
 
     KeyEdge::SharedConstPoints sPoints = points.getShared();
-    if (sPoints == e->points_) {
+    if (sPoints == edge->points_) {
         // same data
         return;
     }
 
-    e->points_ = std::move(sPoints);
-    e->dirtyInputSampling_();
-    dirtyGeometry_(e);
-    ++e->dataVersion_;
+    edge->points_ = std::move(sPoints);
+    ++edge->dataVersion_;
+    // inc version
+    edge->vac()->incrementVersion();
 
-    Vac* vac = e->vac();
-    if (vac) {
-        // inc version
-        vac->incrementVersion();
-        // update diff
-        if (vac->isDiffEnabled_) {
-            vac->diff_.onNodeDiff(e, VacNodeDiffFlag::GeometryChanged);
-        }
-    }
+    edge->dirtyInputSampling_();
+    dirtyGeometry_(edge); // it also emits the geometry change event
 }
 
 void Operations::setKeyEdgeCurveWidths(
-    KeyEdge* e,
+    KeyEdge* edge,
     const core::SharedConstDoubleArray& widths) {
 
     KeyEdge::SharedConstWidths sWidths = widths.getShared();
-    if (sWidths == e->widths_) {
+    if (sWidths == edge->widths_) {
         // same data
         return;
     }
 
-    e->widths_ = std::move(sWidths);
-    e->dirtyInputSampling_();
-    dirtyGeometry_(e);
-    ++e->dataVersion_;
+    edge->widths_ = std::move(sWidths);
+    ++edge->dataVersion_;
+    // inc version
+    edge->vac()->incrementVersion();
 
-    Vac* vac = e->vac();
-    if (vac) {
-        // inc version
-        vac->incrementVersion();
-        // update diff
-        if (vac->isDiffEnabled_) {
-            vac->diff_.onNodeDiff(e, VacNodeDiffFlag::GeometryChanged);
-        }
-        vac->nodeModified().emit(e, VacNodeDiffFlag::GeometryChanged);
+    edge->dirtyInputSampling_();
+    dirtyGeometry_(edge); // it also emits the geometry change event
+}
+
+void Operations::setKeyEdgeSamplingParameters(
+    KeyEdge* edge,
+    const geometry::CurveSamplingParameters& parameters) {
+
+    if (parameters == edge->samplingParameters_) {
+        // same data
+        return;
     }
+
+    edge->samplingParameters_ = parameters;
+    ++edge->dataVersion_;
+    // inc version
+    edge->vac()->incrementVersion();
+
+    edge->dirtyInputSampling_();
+    dirtyGeometry_(edge); // it also emits the geometry change event
 }
 
 void Operations::collectDependentNodes_(
@@ -453,26 +449,30 @@ void Operations::collectDependentNodes_(
 }
 
 void Operations::dirtyGeometry_(VacCell* cell) {
+    if (cell->isGeometryDirty_) {
+        return;
+    }
+
     core::Array<VacCell*> dirtyList;
-    dirtyGeometryRec_(cell, dirtyList);
-    Vac* vac = cell->vac();
-    if (vac) {
-        for (VacCell* dirtyCell : dirtyList) {
-            if (vac->isDiffEnabled_) {
-                vac->diff_.onNodeDiff(dirtyCell, VacNodeDiffFlag::GeometryChanged);
-            }
-            vac->nodeModified().emit(dirtyCell, VacNodeDiffFlag::GeometryChanged);
+
+    dirtyList.append(cell);
+    cell->isGeometryDirty_ = true;
+
+    for (VacCell* starCell : cell->star_) {
+        if (!starCell->isGeometryDirty_) {
+            // There is no need to call dirtyGeometry_ for starCell
+            // since starCell.star() is a subset of cell.star().
+            dirtyList.append(starCell);
+            starCell->isGeometryDirty_ = true;
         }
     }
-}
 
-void Operations::dirtyGeometryRec_(VacCell* cell, core::Array<VacCell*>& dirtyList) {
-    if (!cell->isGeometryDirty_) {
-        cell->isGeometryDirty_ = true;
-        dirtyList.append(cell);
-        for (VacCell* starCell : cell->star_) {
-            dirtyGeometryRec_(starCell, dirtyList);
+    Vac* vac = cell->vac();
+    for (VacCell* dirtyCell : dirtyList) {
+        if (vac->isDiffEnabled_) {
+            vac->diff_.onNodeDiff(dirtyCell, VacNodeDiffFlag::GeometryChanged);
         }
+        vac->nodeModified().emit(dirtyCell, VacNodeDiffFlag::GeometryChanged);
     }
 }
 

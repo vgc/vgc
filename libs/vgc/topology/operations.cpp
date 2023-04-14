@@ -202,4 +202,15 @@ void setKeyEdgeCurveWidths(KeyEdge* edge, const core::SharedConstDoubleArray& wi
     return detail::Operations::setKeyEdgeCurveWidths(edge, widths);
 }
 
+VGC_TOPOLOGY_API
+void setKeyEdgeSamplingParameters(
+    KeyEdge* edge,
+    const geometry::CurveSamplingParameters& parameters) {
+
+    if (!edge) {
+        throw LogicError("setKeyEdgeSamplingParameters: edge is nullptr.");
+    }
+    return detail::Operations::setKeyEdgeSamplingParameters(edge, parameters);
+}
+
 } // namespace vgc::topology::ops

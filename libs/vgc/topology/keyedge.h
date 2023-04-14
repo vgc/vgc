@@ -21,6 +21,7 @@
 
 #include <vgc/core/arithmetic.h>
 #include <vgc/geometry/curve.h>
+#include <vgc/geometry/rect2d.h>
 #include <vgc/geometry/vec2d.h>
 #include <vgc/topology/api.h>
 #include <vgc/topology/cell.h>
@@ -29,12 +30,36 @@
 
 namespace vgc::topology {
 
+class VGC_TOPOLOGY_API EdgeSampling {
+public:
+    EdgeSampling() noexcept = default;
+
+    explicit EdgeSampling(const geometry::CurveSampleArray& samples)
+        : samples_(samples) {
+    }
+
+    explicit EdgeSampling(geometry::CurveSampleArray&& samples)
+        : samples_(std::move(samples)) {
+    }
+
+    EdgeSampling(const EdgeSampling&) = delete;
+    EdgeSampling& operator=(const EdgeSampling&) = delete;
+
+    const geometry::CurveSampleArray& samples() const {
+        return samples_;
+    }
+
+private:
+    geometry::CurveSampleArray samples_ = {};
+};
+
 class VGC_TOPOLOGY_API KeyEdge final : public SpatioTemporalCell<EdgeCell, KeyCell> {
 private:
     friend detail::Operations;
 
     explicit KeyEdge(core::Id id, core::AnimTime t) noexcept
-        : SpatioTemporalCell(id, t) {
+        : SpatioTemporalCell(id, t)
+        , samplingParameters_(geometry::CurveSamplingQuality::AdaptiveLow) {
     }
 
 public:
@@ -64,7 +89,25 @@ public:
     //    return EdgeSampling(-1);
     //}
 
-    const std::shared_ptr<const geometry::CurveSampleArray>&
+    //void
+    //setCachedSamplingParameters(const geometry::CurveSamplingParameters& parameters) {
+    //    cachedSamplingParameters_ = parameters;
+    //}
+
+    const geometry::CurveSamplingParameters& samplingParameters() const {
+        return samplingParameters_;
+    }
+
+    std::shared_ptr<const EdgeSampling> samplingShared() const;
+    const EdgeSampling& sampling() const;
+    const geometry::Rect2d& samplingBoundingBox() const;
+
+    /// Computes and returns a new array of samples for this edge according to the
+    /// given `parameters`.
+    ///
+    /// Unlike `sampling()`, this function does not cache the result.
+    ///
+    geometry::CurveSampleArray
     computeSampling(const geometry::CurveSamplingParameters& parameters) const;
 
     // XXX temporary, we should use geometry_.
@@ -94,6 +137,16 @@ public:
         return !startVertex_;
     }
 
+    /// Returns the angle, in radians and in the interval (-π, π],
+    /// between the X axis and the start tangent.
+    ///
+    double startAngle() const;
+
+    /// Returns the angle, in radians and in the interval (-π, π],
+    /// between the X axis and the reversed end tangent.
+    ///
+    double endAngle() const;
+
 private:
     KeyVertex* startVertex_ = nullptr;
     KeyVertex* endVertex_ = nullptr;
@@ -111,11 +164,15 @@ private:
     std::unique_ptr<KeyEdgeGeometry> geometry_ = {};
     //bool isClosed_ = false;
 
-    mutable geometry::CurveSamplingParameters lastSamplingParameters_ = {};
-    mutable std::shared_ptr<const geometry::CurveSampleArray> sampling_ = {};
-    mutable std::shared_ptr<const geometry::CurveSampleArray> snappedSampling_ = {};
+    geometry::CurveSamplingParameters samplingParameters_ = {};
+    mutable geometry::CurveSampleArray inputSamples_ = {};
+    mutable std::shared_ptr<const EdgeSampling> snappedSampling_ = {};
+    mutable geometry::Rect2d snappedSamplingBbox_ = {};
 
     void dirtyInputSampling_();
+
+    geometry::CurveSampleArray
+    computeInputSamples_(const geometry::CurveSamplingParameters& parameters) const;
 };
 
 } // namespace vgc::topology

@@ -80,6 +80,79 @@ void computeSample(
 
 } // namespace
 
+DistanceToCurve distanceToCurve(const CurveSampleArray& samples, const Vec2d& position) {
+
+    DistanceToCurve result(core::DoubleInfinity, 0);
+    constexpr double hpi = core::pi / 2;
+
+    if (samples.isEmpty()) {
+        return result;
+    }
+
+    auto it2 = samples.begin();
+    for (auto it1 = it2++; it2 != samples.end(); it1 = it2++) {
+        const Vec2d p1 = it1->position();
+        const Vec2d p2 = it2->position();
+
+        Vec2d p1p = position - p1;
+        double d = p1p.length();
+        if (d > 0) {
+            Vec2d p1p2 = p2 - p1;
+            double l = p1p2.length();
+            if (l > 0) {
+                Vec2d p1p2Dir = p1p2 / l;
+                double tx = p1p2Dir.dot(p1p);
+                if (tx >= 0 && tx <= l) { // does p project in segment?
+                    double ty = p1p2Dir.det(p1p);
+                    d = std::abs(ty);
+                    if (d < result.distance()) {
+                        if (d > 0) {
+                            double angleFromTangent = (ty < 0) ? -hpi : hpi;
+                            result = DistanceToCurve(d, angleFromTangent);
+                        }
+                        else {
+                            // (p on segment) => no better result can be found.
+                            // The angle is ambiguous, we arbitrarily set to hpi.
+                            return DistanceToCurve(d, hpi);
+                        }
+                    }
+                }
+                else if (d < result.distance()) {
+                    double angleFromTangent = (it1->normal().dot(p1p) < 0) ? -hpi : hpi;
+                    result = DistanceToCurve(d, angleFromTangent);
+                }
+            }
+        }
+        else {
+            // (p == sample) => no better result can be found.
+            // The angle is ambiguous, we arbitrarily set to hpi.
+            return DistanceToCurve(d, hpi);
+        }
+    }
+
+    auto testSample = [&](const CurveSample& sample) {
+        Vec2d ps = samples.first().position();
+        Vec2d psp = position - ps;
+        double d = psp.length();
+        if (d < result.distance()) {
+            if (d > 0) {
+                Vec2d tangent = -(sample.normal().orthogonalized());
+                result = DistanceToCurve(d, tangent.angle(psp));
+            }
+            else {
+                // (p == sample) => no better result can be found.
+                // The angle is ambiguous, we arbitrarily set to hpi.
+                result = DistanceToCurve(d, hpi);
+            }
+        }
+    };
+
+    testSample(samples.first());
+    testSample(samples.last());
+
+    return result;
+}
+
 CurveSamplingParameters::CurveSamplingParameters(CurveSamplingQuality quality)
     : maxAngle_(1)
     , minIntraSegmentSamples_(1)
