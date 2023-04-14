@@ -12,8 +12,10 @@ layout(std140) uniform BuiltinConstants {
 
 //out vec2 fUv;
 out vec4 fCol;
+out vec4 fClipPos;
 
 void main() {
     gl_Position = proj * view * pos;
+    fClipPos = gl_Position;
     fCol = col;
 }

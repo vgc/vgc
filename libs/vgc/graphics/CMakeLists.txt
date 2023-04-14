@@ -72,6 +72,7 @@ vgc_add_library(graphics
         shaders/d3d11/screen_space_displacement.v.hlsl
         shaders/d3d11/simple.f.hlsl
         shaders/d3d11/simple.v.hlsl
+        shaders/d3d11/simple_preview.f.hlsl
         shaders/d3d11/simple_textured.f.hlsl
         shaders/d3d11/simple_textured.v.hlsl
         shaders/d3d11/simple_textured_debug.f.hlsl
@@ -80,6 +81,7 @@ vgc_add_library(graphics
         shaders/opengl/shader.v.glsl
         shaders/opengl/simple.f.glsl
         shaders/opengl/simple.v.glsl
+        shaders/opengl/simple_preview.f.glsl
         shaders/opengl/simple_textured.f.glsl
         shaders/opengl/simple_textured.v.glsl
         shaders/opengl/simple_textured_debug.f.glsl

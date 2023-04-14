@@ -536,6 +536,7 @@ protected:
 
     // The builtin programs are created by api-specific engine implementations.
     ProgramPtr simpleProgram_;
+    ProgramPtr simplePreviewProgram_;
     ProgramPtr simpleTexturedProgram_;
     ProgramPtr simpleTexturedDebugProgram_;
     ProgramPtr sreenSpaceDisplacementProgram_;
