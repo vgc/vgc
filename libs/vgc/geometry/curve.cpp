@@ -106,8 +106,15 @@ DistanceToCurve distanceToCurve(const CurveSampleArray& samples, const Vec2d& po
                     double ty = p1p2Dir.det(p1p);
                     d = std::abs(ty);
                     if (d < result.distance()) {
-                        double angleFromTangent = (ty < 0) ? -hpi : hpi;
-                        result = DistanceToCurve(d, angleFromTangent);
+                        if (d > 0) {
+                            double angleFromTangent = (ty < 0) ? -hpi : hpi;
+                            result = DistanceToCurve(d, angleFromTangent);
+                        }
+                        else {
+                            // (p on segment) => no better result can be found.
+                            // The angle is ambiguous, we arbitrarily set to hpi.
+                            return DistanceToCurve(d, hpi);
+                        }
                     }
                 }
                 else if (d < result.distance()) {
@@ -119,8 +126,7 @@ DistanceToCurve distanceToCurve(const CurveSampleArray& samples, const Vec2d& po
         else {
             // (p == sample) => no better result can be found.
             // The angle is ambiguous, we arbitrarily set to hpi.
-            result = DistanceToCurve(d, hpi);
-            return result;
+            return DistanceToCurve(d, hpi);
         }
     }
 
@@ -136,8 +142,7 @@ DistanceToCurve distanceToCurve(const CurveSampleArray& samples, const Vec2d& po
             else {
                 // (p == sample) => no better result can be found.
                 // The angle is ambiguous, we arbitrarily set to hpi.
-                result = DistanceToCurve(d, hpi);
-                return result;
+                return DistanceToCurve(d, hpi);
             }
         }
     };
