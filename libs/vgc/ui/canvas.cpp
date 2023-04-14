@@ -468,16 +468,26 @@ geometry::Vec2f Canvas::computePreferredSize() const {
 }
 
 void Canvas::onPaintCreate(graphics::Engine* engine) {
+
+    SuperClass::onPaintCreate(engine);
+
     using namespace graphics;
+
     RasterizerStateCreateInfo createInfo = {};
     fillRS_ = engine->createRasterizerState(createInfo);
     createInfo.setFillMode(FillMode::Wireframe);
     wireframeRS_ = engine->createRasterizerState(createInfo);
     bgGeometry_ = engine->createDynamicTriangleStripView(BuiltinGeometryLayout::XYRGB);
+
     reload_ = true;
 }
 
-void Canvas::onPaintDraw(graphics::Engine* engine, PaintOptions /*options*/) {
+// Note: In this override, we intentionally not call SuperClass::onPaintDraw()
+// since we draw our own background. We call paintChildren() explicitly at the
+// end to call the `onPaintDraw()` method of the CanvasTool children of the
+// Canvas.
+//
+void Canvas::onPaintDraw(graphics::Engine* engine, PaintOptions options) {
 
     using namespace graphics;
     namespace gs = graphics::strings;
@@ -563,9 +573,13 @@ void Canvas::onPaintDraw(graphics::Engine* engine, PaintOptions /*options*/) {
     engine->popPipelineParameters(modifiedParameters);
 
     drawTask_.stop();
+
+    // Paint CanvasTool children overlays
+    paintChildren(engine, options);
 }
 
-void Canvas::onPaintDestroy(graphics::Engine*) {
+void Canvas::onPaintDestroy(graphics::Engine* engine) {
+    SuperClass::onPaintDestroy(engine);
     bgGeometry_.reset();
     fillRS_.reset();
     wireframeRS_.reset();

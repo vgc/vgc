@@ -128,8 +128,8 @@ void ImageBox::onPaintDraw(graphics::Engine* engine, PaintOptions options) {
 }
 
 void ImageBox::onPaintDestroy(graphics::Engine* engine) {
-    quad_.reset();
     SuperClass::onPaintDestroy(engine);
+    quad_.reset();
 }
 
 geometry::Vec2f ImageBox::computePreferredSize() const {

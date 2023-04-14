@@ -635,15 +635,47 @@ public:
     ///
     VGC_SIGNAL(repaintRequested)
 
-    /// This function is called by the widget container whenever the widget
-    /// needs to prepare to be repainted for a frame.
+    /// Initiates time-consuming precomputation of graphics resources that are
+    /// required for painting this widget.
     ///
-    void preparePaint(graphics::Engine* engine, PaintOptions flags = PaintOption::None);
+    /// This function does the following, in this order:
+    ///
+    /// 1. Ensures that this widget's geometry is up to date.
+    ///
+    /// 2. Checks whether the engine changed since the last paint, in which case
+    ///    `onPaintDestroy(oldEngine)` and `onPaintCreate(newEngine)` are called.
+    ///
+    /// 3. Calls `onPaintPrepare()`.
+    ///
+    /// 4. Calls `child->preparePaint()` for all children of this widget.
+    ///
+    void preparePaint(graphics::Engine* engine, PaintOptions options = PaintOption::None);
 
-    /// This function is called by the widget container whenever the widget
-    /// needs to be repainted for a frame.
+    /// Paints this widget.
     ///
-    void paint(graphics::Engine* engine, PaintOptions flags = PaintOption::None);
+    /// This function does the following, in this order:
+    ///
+    /// 1. Ensures that this widget's geometry is up to date.
+    ///
+    /// 2. Checks whether the engine changed since the last paint, in which case
+    ///    `onPaintDestroy(oldEngine)` and `onPaintCreate(newEngine)` are called.
+    ///
+    /// 3. Setup the engine's scissor rect, if `isClippingEnabled()` is `true`.
+    ///
+    /// 4. Calls `onPaintDraw()`.
+    ///
+    /// This function does nothing if `isVisible()` if `false`.
+    ///
+    /// If this widget is a root widget, then this function should typically be
+    /// called by its owner when the `repaintRequested` signal is emitted.
+    ///
+    /// If this widget has a parent widget, then this function should typically
+    /// be called in the `onPaintDraw()` implementation of its parent. This is
+    /// in fact done in the default implementation of `onPaintDraw()`, which
+    /// calls `paintChildren()`, which in turn calls `child->paint()` on all
+    /// visible children.
+    ///
+    void paint(graphics::Engine* engine, PaintOptions options = PaintOption::None);
 
     /// Returns the `background-color` style attribute of this widget.
     ///
@@ -1312,30 +1344,93 @@ protected:
     ///
     virtual void updateChildrenGeometry();
 
-    /// This virtual function is called once before the first call to
-    /// onPaintDraw(), and should be reimplemented to create required static GPU
-    /// resources.
+    /// This function is called once before the first call to
+    /// `onPaintPrepare()` or `onPaintDraw()` for any given `engine`.
+    ///
+    /// You can override this function to initialize any GPU resources needed
+    /// for painting.
+    ///
+    /// If you override this function, you must call the base implementation at
+    /// the start of your implementation, via `SuperClass::onPaintCreate(engine)`.
+    ///
+    /// The default implementation creates the GPU resources needed for all
+    /// widgets, for example those needed to paint the widget's background.
     ///
     virtual void onPaintCreate(graphics::Engine* engine);
 
-    /// This virtual function is called whenever the widget needs to prepare to
-    /// be repainted. Subclasses should reimplement this, typically to update
-    /// resources.
+    /// This function is called before `onPaintDraw()`.
+    ///
+    /// You can override this function to initiate time-consuming
+    /// precomputation of graphics resources that are required for painting
+    /// this widget. For example, you can start a computation in a separate
+    /// thread in `onPaintPrepare()`, then in `onPaintDraw()`, if the
+    /// computation is not finished, you could choose either to wait for the
+    /// computation to be finished, or decide to draw an approximation.
+    ///
+    /// If you override this function, you must call the base implementation at
+    /// the start of your implementation, via
+    /// `SuperClass::onPaintPrepare(engine, options)`.
+    ///
+    /// The default implementation does nothing.
     ///
     virtual void onPaintPrepare(graphics::Engine* engine, PaintOptions options);
 
-    /// This virtual function is called whenever the widget needs to be
-    /// repainted. Subclasses should reimplement this, typically by issuing
-    /// draw calls.
+    /// This function is called when the widget needs to be repainted.
+    ///
+    /// You can override this function to perform your paint operations.
+    ///
+    /// The default implementation is:
+    ///
+    /// ```
+    /// void Widget::onPaintDraw(graphics::Engine* engine, PaintOptions options) {
+    ///     paintBackground();
+    ///     paintChildren();
+    /// }
+    /// ```
+    ///
+    /// If you override this function, then depending on your needs you can:
+    ///
+    /// 1. Call the base implementation `SuperClass::onPaintDraw(engine, options)`
+    ///    at the start of your implementation, which is useful to draw overlays
+    ///    over children, or
+    ///
+    /// 2. Call the base implementation `SuperClass::onPaintDraw(engine, options)`
+    ///    at the end of your implementation, which is useful if you know that
+    ///    there is no background and want to draw something before drawing
+    ///    children, or
+    ///
+    /// 3. Decide not to call the base implementation at all and perform everything
+    ///    yourself, e.g., to draw something between the background and the children,
+    ///    or draw the children in a specific order, or some other custom needs.
     ///
     virtual void onPaintDraw(graphics::Engine* engine, PaintOptions options);
 
-    /// This virtual function is called once after the last call to
-    /// onPaintDraw(), for example before the widget is destructed, or if
-    /// switching graphics engine. It should be reimplemented to destroy the
-    /// created GPU resources.
+    /// This function is called once after the last call to `onPaintDraw()` for
+    /// any given `engine`, for example before the widget is destructed, or if
+    /// switching graphics engine.
+    ///
+    /// You can override this function to destroy any GPU resources that you have
+    /// previously initialized in `onPaintCreate()`, `onPaintPrepare()`, or
+    /// `onPaintDraw()`.
+    ///
+    /// If you override this function, you must call the base implementation at
+    /// the start of your implementation, via
+    /// `SuperClass::onPaintDestroy(engine, options)`.
     ///
     virtual void onPaintDestroy(graphics::Engine* engine);
+
+    /// Paints the background of this widget.
+    ///
+    /// This function is called in the default implementation of
+    /// `onPaintDraw()`, and you may also want to call it in your own
+    /// reimplementations if you decide not to call the base implementation.
+    ///
+    void paintBackground(graphics::Engine* engine, PaintOptions options);
+
+    /// Paints all visible children of this widget, by setting up their
+    /// appropriate view matrix and calling `child->paint(engine, options)`.
+    ///
+    void paintChildren(graphics::Engine* engine, PaintOptions options);
 
 private:
     friend Window;
@@ -1391,8 +1486,6 @@ private:
     }
 
     void prePaintUpdateGeometry_();
-
-    void paintChildren_(graphics::Engine* engine, PaintOptions options);
 
     // Background
     graphics::GeometryViewPtr triangles_;
