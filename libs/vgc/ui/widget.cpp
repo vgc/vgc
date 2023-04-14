@@ -476,6 +476,9 @@ void Widget::preparePaint(graphics::Engine* engine, PaintOptions options) {
     prePaintUpdateGeometry_();
     prePaintUpdateEngine_(engine);
     onPaintPrepare(engine, options);
+    for (Widget* widget : children()) {
+        widget->preparePaint(engine, options);
+    }
 }
 
 void Widget::paint(graphics::Engine* engine, PaintOptions options) {
@@ -499,28 +502,32 @@ void Widget::paint(graphics::Engine* engine, PaintOptions options) {
         if (!scissorRect.isDegenerate()) {
             engine->pushScissorRect(scissorRect);
             onPaintDraw(engine, options);
-            paintChildren_(engine, options);
             engine->popScissorRect();
         }
     }
     else {
         onPaintDraw(engine, options);
-        paintChildren_(engine, options);
     }
 }
 
 void Widget::onPaintCreate(graphics::Engine* engine) {
-    triangles_ =
-        engine->createDynamicTriangleListView(graphics::BuiltinGeometryLayout::XYRGB);
+    auto layout = graphics::BuiltinGeometryLayout::XYRGB;
+    triangles_ = engine->createDynamicTriangleListView(layout);
 }
 
-void Widget::onPaintPrepare(graphics::Engine* engine, PaintOptions options) {
-    for (Widget* widget : children()) {
-        widget->preparePaint(engine, options);
-    }
+void Widget::onPaintPrepare(graphics::Engine* /*engine*/, PaintOptions /*options*/) {
 }
 
-void Widget::onPaintDraw(graphics::Engine* engine, PaintOptions /*options*/) {
+void Widget::onPaintDraw(graphics::Engine* engine, PaintOptions options) {
+    paintBackground(engine, options);
+    paintChildren(engine, options);
+}
+
+void Widget::onPaintDestroy(graphics::Engine* /*engine*/) {
+    triangles_.reset();
+}
+
+void Widget::paintBackground(graphics::Engine* engine, PaintOptions /*options*/) {
     if (backgroundColor_.a() > 0) {
         if (backgroundChanged_) {
             backgroundChanged_ = false;
@@ -533,10 +540,17 @@ void Widget::onPaintDraw(graphics::Engine* engine, PaintOptions /*options*/) {
     }
 }
 
-void Widget::onPaintDestroy(graphics::Engine* engine) {
-    triangles_.reset();
-    for (Widget* child : children()) {
-        child->onPaintDestroy(engine);
+void Widget::paintChildren(graphics::Engine* engine, PaintOptions options) {
+    for (Widget* widget : children()) {
+        if (!widget->isVisible()) {
+            continue;
+        }
+        engine->pushViewMatrix();
+        geometry::Mat4f m = engine->viewMatrix();
+        m.translate(widget->position());
+        engine->setViewMatrix(m);
+        widget->paint(engine, options);
+        engine->popViewMatrix();
     }
 }
 
@@ -1658,20 +1672,6 @@ void Widget::prePaintUpdateGeometry_() {
     }
 }
 
-void Widget::paintChildren_(graphics::Engine* engine, PaintOptions options) {
-    for (Widget* widget : children()) {
-        if (!widget->isVisible()) {
-            continue;
-        }
-        engine->pushViewMatrix();
-        geometry::Mat4f m = engine->viewMatrix();
-        m.translate(widget->position());
-        engine->setViewMatrix(m);
-        widget->paint(engine, options);
-        engine->popViewMatrix();
-    }
-}
-
 void Widget::updateComputedVisibility_() {
     const Widget* p = parent();
     if (visibility_ == Visibility::Invisible) {
@@ -1719,12 +1719,12 @@ void Widget::setEngine_(graphics::Engine* engine) {
     }
     lastPaintEngine_ = engine;
     engine->aboutToBeDestroyed().connect(onEngineAboutToBeDestroyed_());
+    onPaintCreate(engine);
 }
 
 void Widget::prePaintUpdateEngine_(graphics::Engine* engine) {
     if (engine != lastPaintEngine_) {
         setEngine_(engine);
-        onPaintCreate(engine);
     }
 }
 

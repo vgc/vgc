@@ -214,13 +214,16 @@ void SketchTool::onResize() {
 }
 
 void SketchTool::onPaintCreate(graphics::Engine* engine) {
+    SuperClass::onPaintCreate(engine);
     using namespace graphics;
     minimalLatencyStrokeGeometry_ =
         engine->createDynamicTriangleStripView(BuiltinGeometryLayout::XY_iRGBA);
     reload_ = true;
 }
 
-void SketchTool::onPaintDraw(graphics::Engine* engine, PaintOptions /*options*/) {
+void SketchTool::onPaintDraw(graphics::Engine* engine, PaintOptions options) {
+
+    SuperClass::onPaintDraw(engine, options);
 
     if (!isSketching_) {
         return;
@@ -306,7 +309,8 @@ void SketchTool::onPaintDraw(graphics::Engine* engine, PaintOptions /*options*/)
     engine->popProgram();
 }
 
-void SketchTool::onPaintDestroy(graphics::Engine*) {
+void SketchTool::onPaintDestroy(graphics::Engine* engine) {
+    SuperClass::onPaintDestroy(engine);
     minimalLatencyStrokeGeometry_.reset();
 }
 
