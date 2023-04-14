@@ -49,13 +49,8 @@ public:
         return samples_;
     }
 
-    Int version() const {
-        return version_;
-    }
-
 private:
     geometry::CurveSampleArray samples_ = {};
-    Int version_ = 0;
 };
 
 class VGC_TOPOLOGY_API KeyEdge final : public SpatioTemporalCell<EdgeCell, KeyCell> {
