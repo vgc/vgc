@@ -14,8 +14,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <list>
-
 #include <vgc/ui/panelarea.h>
 
 #include <vgc/core/colors.h>
