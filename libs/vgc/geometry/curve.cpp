@@ -142,7 +142,7 @@ DistanceToCurve distanceToCurve(const CurveSampleArray& samples, const Vec2d& po
             else {
                 // (p == sample) => no better result can be found.
                 // The angle is ambiguous, we arbitrarily set to hpi.
-                return DistanceToCurve(d, hpi);
+                result = DistanceToCurve(d, hpi);
             }
         }
     };
