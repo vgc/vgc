@@ -273,8 +273,9 @@ core::Array<KeyCycle> computeKeyFaceCandidateAt(
                 angleScore = -angleScore;
             }
 
-            heCandidates.emplace(ke, true, d.distance(), angleScore, a < 0);
-            heCandidates.emplace(ke, false, d.distance(), -angleScore, a < 0);
+            bool isEdgeBackFacing = a < 0;
+            heCandidates.emplace(ke, true, d.distance(), angleScore, isEdgeBackFacing);
+            heCandidates.emplace(ke, false, d.distance(), -angleScore, !isEdgeBackFacing);
         }
     }
 
