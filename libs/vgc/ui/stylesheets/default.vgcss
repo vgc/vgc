@@ -22,10 +22,6 @@
     min-height: 30dp;
     horizontal-stretch: 1;
     vertical-stretch: 1;
-    padding-top: 3dp;
-    padding-right: 3dp;
-    padding-bottom: 3dp;
-    padding-left: 3dp;
 }
 
 .PanelArea.left-sidebar {
@@ -40,27 +36,9 @@
     padding-left: 8dp;
 }
 
-.PanelArea > .Flex {
-    border-top-left-radius: 3dp;
-    border-top-right-radius: 3dp;
-    border-bottom-right-radius: 3dp;
-    border-bottom-left-radius: 3dp;
-}
-
 .PanelArea > .Flex > .TabBar {
     vertical-stretch: 0;
-    border-top-left-radius: 3dp;
-    border-top-right-radius: 3dp;
-    border-bottom-right-radius: 0dp;
-    border-bottom-left-radius: 0dp;
-    preferred-height: 22dp;
-}
-
-.PanelArea > .Flex > .TabBody {
-    border-top-left-radius: 0dp;
-    border-top-right-radius: 0dp;
-    border-bottom-right-radius: 3dp;
-    border-bottom-left-radius: 3dp;
+    preferred-height: 20dp;
 }
 
 .Menu {
@@ -113,11 +91,7 @@
 }
 
 .MenuButton {
-    preferred-height: 23dp;
-}
-
-.main-menu-bar > .MenuButton {
-    preferred-height: 25dp;
+    preferred-height: 24dp;
 }
 
 .LineEdit {
@@ -146,15 +120,6 @@
     font-size: 12dp;
     font-ascent: 12dp;
     font-descent: 3dp;
-}
-
-.Menu.main-menu-bar > .MenuButton {
-    margin-top: 3dp;
-    border-top-left-radius: 3dp;
-    border-top-right-radius: 3dp;
-    border-bottom-right-radius: 3dp;
-    border-bottom-left-radius: 3dp;
-    preferred-height: 18dp;
 }
 
 .MenuButton {
@@ -258,27 +223,33 @@
     handle-hovered-color: rgb(110, 114, 118);
 }
 
+/* Main Panel Background color.
+ *
+ * Setting it here instead of in `.Panel` is slightly more generic since here
+ * it also includes any potential gap/margin/padding between the TabBar and
+ * TabBody, and also paint the TabBar if there is no set background color on
+ * the TabBar.
+*/
 .PanelArea > .Flex {
-    background-color: rgb(55, 57, 59);
+    background-color: rgb(65, 67, 69);
 }
 
 .PanelArea > .Flex > .TabBar {
-    background-color: rgb(39, 41, 43);
+    background-color: rgb(55, 57, 59);
 }
 
 .Menu,
 .Dialog {
-    background-color: rgb(39, 41, 43);
-    /* Note: it's best not to be as dark as LineEdits,
-       so that LineEdits can be seen in Menu/Dialogs
-    */
+    background-color: rgb(45, 47, 48);
+}
+
+.Menu.main-menu-bar {
+    background-color: rgb(49, 51, 53);
 }
 
 .LineEdit,
-.Plot2d,
-.PanelArea,
-.Menu.main-menu-bar {
-    background-color: rgb(24, 26, 27);
+.Plot2d {
+    background-color: rgb(34, 36, 37);
 }
 
 .Button {
