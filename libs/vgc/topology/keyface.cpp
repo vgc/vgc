@@ -49,7 +49,6 @@ struct KeyHalfedgeCandidate {
     bool isBackFacing = false;
     Int32 windingContribution = 0;
     bool hasComputedWindingContribution = false;
-    // store tested cycle ?
 
     bool operator==(const KeyHalfedgeCandidate& b) const {
         return halfedge == b.halfedge;
@@ -251,7 +250,8 @@ core::Array<KeyCycle> computeKeyFaceCandidateAt(
     // From here, we try to find a list of cycles such that
     // the corresponding face would intersect with the cursor.
 
-    std::unordered_set<KeyHalfedgeCandidate, KeyHalfedgeCandidateHash> heCandidates;
+    std::unordered_set<KeyHalfedgeCandidate, KeyHalfedgeCandidateHash>
+        cycleHalfedgeCandidates;
 
     // Compute candidate halfedges existing at time t, and child of given group.
     for (vacomplex::Node* child = group->firstChild(); child;
@@ -274,8 +274,10 @@ core::Array<KeyCycle> computeKeyFaceCandidateAt(
             }
 
             bool isEdgeBackFacing = a < 0;
-            heCandidates.emplace(ke, true, d.distance(), angleScore, isEdgeBackFacing);
-            heCandidates.emplace(ke, false, d.distance(), -angleScore, !isEdgeBackFacing);
+            cycleHalfedgeCandidates.emplace(
+                ke, true, d.distance(), angleScore, isEdgeBackFacing);
+            cycleHalfedgeCandidates.emplace(
+                ke, false, d.distance(), -angleScore, !isEdgeBackFacing);
         }
     }
 
@@ -283,6 +285,87 @@ core::Array<KeyCycle> computeKeyFaceCandidateAt(
     // VGC is actually planar (cells are not overlapping).
     {
         // Find external boundary: the closest planar cycle containing mouse cursor.
+
+        std::unordered_set<KeyHalfedgeCandidate, KeyHalfedgeCandidateHash>
+            planarCycleHalfedgeCandidates = cycleHalfedgeCandidates;
+        core::Array<KeyHalfedgeCandidate> planarCycleCandidate;
+        double maxKeyHalfedgeCandidateDistance = core::DoubleInfinity;
+
+        auto findNextPlanarCycleCandidate = [&]() -> bool {
+            planarCycleCandidate.clear();
+            while (!planarCycleHalfedgeCandidates.empty()) {
+                // Find closest potential edge.
+                auto it = std::min_element(
+                    planarCycleHalfedgeCandidates.begin(),
+                    planarCycleHalfedgeCandidates.end(),
+                    KeyHalfedgeCandidateCompare());
+                KeyHalfedgeCandidate keyHalfedgeCandidate = *it;
+
+                if (keyHalfedgeCandidate.distance > maxKeyHalfedgeCandidateDistance) {
+                    planarCycleHalfedgeCandidates.clear();
+                    break;
+                }
+
+                planarCycleCandidate.append(keyHalfedgeCandidate);
+                planarCycleHalfedgeCandidates.erase(it);
+
+                // Find the corresponding planar map cycle if halfedge is open.
+                if (!keyHalfedgeCandidate.halfedge.isClosed()) {
+
+                    KeyHalfedge heFirst = keyHalfedgeCandidate.halfedge;
+                    KeyHalfedge he = heFirst;
+                    bool foundCycle = false;
+
+                    Int maxIter = 2 * planarCycleHalfedgeCandidates.size() + 2;
+                    for (Int i = 0; i < maxIter; ++i) {
+                        // Find next halfedge in cycle.
+                        he = he.next();
+                        KeyHalfedge heStop = he;
+                        auto heIt =
+                            planarCycleHalfedgeCandidates.find(KeyHalfedgeCandidate(he));
+                        // Iterate in ring until heFirst or a non-discarded
+                        // candidate is found.
+                        while (heIt == planarCycleHalfedgeCandidates.end()) {
+                            if (he == heFirst) {
+                                // Cycle completed: leave loop.
+                                foundCycle = true;
+                                break;
+                            }
+                            he = he.opposite().next();
+                            if (he == heStop) {
+                                // Exhausted ring. Dead end.
+                                break;
+                            }
+                            heIt = planarCycleHalfedgeCandidates.find(
+                                KeyHalfedgeCandidate(he));
+                        }
+                        if (foundCycle) {
+                            // Cycle completed: leave loop.
+                            break;
+                        }
+                        if (heIt == planarCycleHalfedgeCandidates.end()) {
+                            // Dead end.
+                            break;
+                        }
+
+                        // Insert and iterate.
+                        planarCycleCandidate.append(*heIt);
+                        planarCycleHalfedgeCandidates.erase(heIt);
+                    }
+
+                    if (!foundCycle) {
+                        // Something bad happened. We should have found a cycle since
+                        // (he.previous().next() == he).
+                        planarCycleCandidate.clear();
+                        continue;
+                    }
+                }
+
+                // Cycle found, leave while loop.
+                break;
+            }
+            return !planarCycleCandidate.isEmpty();
+        };
 
         struct CycleWithWinding {
             core::Array<KeyHalfedge> cycle;
@@ -292,65 +375,7 @@ core::Array<KeyCycle> computeKeyFaceCandidateAt(
         core::Array<CycleWithWinding> discardedCycles;
         CycleWithWinding externalBoundaryCycle;
 
-        core::Array<KeyHalfedgeCandidate> planarCycleCandidate;
-        while (!heCandidates.empty()) {
-
-            // Find closest potential edge.
-            auto heCandidateIt = std::min_element(
-                heCandidates.begin(), heCandidates.end(), KeyHalfedgeCandidateCompare());
-            KeyHalfedgeCandidate heCandidate = *heCandidateIt;
-
-            planarCycleCandidate.clear();
-            planarCycleCandidate.append(heCandidate);
-            heCandidates.erase(heCandidateIt);
-
-            // Find the corresponding planar map cycle if halfedge is open.
-            if (!heCandidate.halfedge.isClosed()) {
-
-                KeyHalfedge heFirst = heCandidate.halfedge;
-                KeyHalfedge he = heFirst;
-
-                Int maxIter = 2 * heCandidates.size() + 2;
-                bool foundCycle = false;
-                for (Int i = 0; i < maxIter; ++i) {
-                    // Find next halfedge in cycle.
-                    he = he.next();
-                    KeyHalfedge heStop = he;
-                    auto heIt = heCandidates.find(KeyHalfedgeCandidate(he));
-                    // Iterate in ring until heFirst or a non-discarded
-                    // candidate is found.
-                    while (heIt == heCandidates.end()) {
-                        if (he == heFirst) {
-                            // Cycle completed: leave loop.
-                            foundCycle = true;
-                            break;
-                        }
-                        he = he.opposite().next();
-                        if (he == heStop) {
-                            // Exhausted ring. Dead end.
-                            break;
-                        }
-                        heIt = heCandidates.find(KeyHalfedgeCandidate(he));
-                    }
-                    if (foundCycle) {
-                        // Cycle completed: leave loop.
-                        break;
-                    }
-                    if (heIt == heCandidates.end()) {
-                        // Dead end.
-                        break;
-                    }
-
-                    // Insert and iterate.
-                    planarCycleCandidate.append(*heIt);
-                    heCandidates.erase(heIt);
-                }
-                if (!foundCycle) {
-                    // Something bad happened. We should have found a cycle since
-                    // (he.previous().next() == he).
-                    continue;
-                }
-            }
+        while (findNextPlanarCycleCandidate()) {
 
             // Compute winding number to see if cursor is inside the cycle candidate.
             // Build the cycle in the same loop.
@@ -396,6 +421,10 @@ core::Array<KeyCycle> computeKeyFaceCandidateAt(
 
         //struct PreviewKeyFace {};
         //PreviewKeyFace externalBoundary;
+
+        // Find holes for this cycle, from closest to farthest.
+        // Each new hole must lie ~50% inside the external boundary as well
+        // as the face triangulation with current holes.
 
         // TODO: find holes using discarded cycles then new cycles
         // maybe compute max dist to P in current face to stop looking for new holes when the next closest
