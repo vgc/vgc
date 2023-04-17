@@ -20,6 +20,20 @@
 
 namespace vgc::geometry {
 
+bool isWindingNumberSatisfyingRule(Int windingNumber, WindingRule rule) {
+    switch (rule) {
+    case geometry::WindingRule::Odd:
+        return (windingNumber / 2 * 2) != windingNumber;
+    case geometry::WindingRule::NonZero:
+        return windingNumber != 0;
+    case geometry::WindingRule::Positive:
+        return windingNumber > 0;
+    case geometry::WindingRule::Negative:
+        return windingNumber < 0;
+    }
+    return false;
+}
+
 void Curves2d::close() {
     commandData_.append({CurveCommandType::Close, data_.length()});
 }
