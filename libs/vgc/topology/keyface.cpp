@@ -367,13 +367,13 @@ core::Array<KeyCycle> computeKeyFaceCandidateAt(
             return !planarCycleCandidate.isEmpty();
         };
 
-        struct CycleWithWinding {
+        struct CycleWithWindingNumber {
             core::Array<KeyHalfedge> cycle;
-            Int32 winding;
+            Int32 windingNumber;
         };
 
-        core::Array<CycleWithWinding> discardedCycles;
-        CycleWithWinding externalBoundaryCycle;
+        core::Array<CycleWithWindingNumber> discardedCycles;
+        CycleWithWindingNumber externalBoundaryCycle;
 
         while (findNextPlanarCycleCandidate()) {
 
@@ -381,42 +381,26 @@ core::Array<KeyCycle> computeKeyFaceCandidateAt(
             // Build the cycle in the same loop.
 
             core::Array<KeyHalfedge> cycle;
-            Int32 winding = 0;
+            Int32 windingNumber = 0;
             for (KeyHalfedgeCandidate& hec : planarCycleCandidate) {
                 Int32 contribution = hec.windingContribution;
                 if (!hec.hasComputedWindingContribution) {
                     contribution = computeWindingContribution(hec.halfedge, position);
                     hec.windingContribution = contribution;
                 }
-                winding += contribution;
+                windingNumber += contribution;
                 cycle.emplaceLast(hec.halfedge);
             }
 
-            bool success = false;
-            switch (windingRule) {
-            case geometry::WindingRule::Odd:
-                success = (winding / 2 * 2) != winding;
-                break;
-            case geometry::WindingRule::NonZero:
-                success = winding != 0;
-                break;
-            case geometry::WindingRule::Positive:
-                success = winding > 0;
-                break;
-            case geometry::WindingRule::Negative:
-                success = winding < 0;
-                break;
-            }
-
-            if (success) {
+            if (geometry::isWindingNumberSatisfyingRule(windingNumber, windingRule)) {
                 externalBoundaryCycle.cycle = std::move(cycle);
-                externalBoundaryCycle.winding = winding;
+                externalBoundaryCycle.windingNumber = windingNumber;
                 break;
             }
 
             auto& discardedCycle = discardedCycles.emplaceLast();
             discardedCycle.cycle = std::move(cycle);
-            discardedCycle.winding = winding;
+            discardedCycle.windingNumber = windingNumber;
         }
 
         //struct PreviewKeyFace {};
