@@ -157,6 +157,7 @@ CanvasApplication::CanvasApplication(
 
     setApplicationName(applicationName);
     window_ = app::MainWindow::create(applicationName);
+    window_->setBackgroundPainted(false);
     openDocument_("");
     createWidgets_();
 }
