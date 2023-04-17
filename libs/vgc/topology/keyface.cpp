@@ -79,7 +79,7 @@ struct KeyHalfedgeCandidateCompare {
     }
 };
 
-/// Returns the contribution to the winding number at the given `position` of
+/// Returns the contribution to the winding number at the given `point` of
 /// the given `keyHalfedge`.
 ///
 /// The sum of the results of this function for all halfedges of a cycle is
@@ -87,7 +87,7 @@ struct KeyHalfedgeCandidateCompare {
 ///
 Int32 computeWindingContribution(
     const KeyHalfedge& keyHalfedge,
-    const geometry::Vec2d& position) {
+    const geometry::Vec2d& point) {
 
     const KeyEdge* ke = keyHalfedge.edge();
     const geometry::CurveSampleArray& samples = ke->sampling().samples();
@@ -135,8 +135,8 @@ Int32 computeWindingContribution(
     // that we could benefit from. Such sub-spans would follow the same rules
     // as halfedges (listed above).
 
-    double px = position.x();
-    double py = position.y();
+    double px = point.x();
+    double py = point.y();
 
     if (bbox.xMax() + core::epsilon < px) {
         return 0;
@@ -214,7 +214,7 @@ Int32 computeWindingContribution(
                 else {
                     const geometry::Vec2d segment = pj - pi;
                     double delta = -segment.x();
-                    geometry::Vec2d ppi = pi - position;
+                    geometry::Vec2d ppi = pi - point;
                     double inv_delta = 1 / delta;
                     double yIntersect = ppi.det(segment) * inv_delta;
                     if (yIntersect > py) {
