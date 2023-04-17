@@ -110,6 +110,48 @@ public:
     ///
     geometry::Vec2f mapToGlobal(const geometry::Vec2f& position) const;
 
+    /// Returns whether the background color should be painted.
+    ///
+    /// The default is true.
+    ///
+    /// \sa `setBackgroundPainted()`, `backgroundColor()`.
+    ///
+    bool isBackgroundPainted() const {
+        return isBackgroundPainted_;
+    }
+
+    /// Sets whether the background color should be painted.
+    ///
+    /// If `true`, this means that a call to `Engine::clear(backgroundColor())`
+    /// is performed.
+    ///
+    /// Using `false` makes it possible to improve performance by avoiding
+    /// overdraw when you know that the whole window will be covered anyway by
+    /// further painting operations. If some areas are not painted, then the
+    /// color of non-painted regions is undefined (on some platforms, it might
+    /// be the previous render buffer value, or might be some default color
+    /// such as black/white, or be some random color).
+    ///
+    /// \sa `isBackgroundPainted()`, `backgroundcolor()`.
+    ///
+    void setBackgroundPainted(bool isPainted);
+
+    /// Returns the background color of the window.
+    ///
+    /// The default is black (`Color(0, 0, 0, 1)`).
+    ///
+    /// \sa `setBackgroundColor()`, `isBackgroundPainted()`.
+    ///
+    core::Color backgroundColor() const {
+        return backgroundColor_;
+    }
+
+    /// Sets the background color of the window.
+    ///
+    /// \sa `backgroundColor()`, `isBackgroundPainted()`.
+    ///
+    void setBackgroundColor(const core::Color& color);
+
     // ===================== Handle mouse/tablet input ========================
 
 protected:
@@ -242,7 +284,9 @@ private:
     graphics::RasterizerStatePtr rasterizerState_;
     graphics::BlendStatePtr blendState_;
     geometry::Mat4f proj_;
-    core::Color clearColor_;
+
+    bool isBackgroundPainted_ = true;
+    core::Color backgroundColor_ = {};
 
     MouseButtons pressedMouseButtons_;
     MouseButtons pressedTabletButtons_;

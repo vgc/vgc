@@ -125,8 +125,7 @@ static constexpr bool debugEvents = false;
 Window::Window(const WidgetPtr& widget)
     : QWindow()
     , widget_(widget)
-    , proj_(geometry::Mat4f::identity)
-    , clearColor_(0.251f, 0.259f, 0.267f, 1.f) {
+    , proj_(geometry::Mat4f::identity) {
 
     connect((QWindow*)this, &QWindow::activeChanged, this, &Window::onActiveChanged_);
 
@@ -195,6 +194,16 @@ geometry::Vec2f Window::mapToGlobal(const geometry::Vec2f& position) const {
     geometry::Vec2f globalPosition = fromQtf(qGlobalPosition);
     globalPosition /= globalToWindowScale();
     return globalPosition;
+}
+
+void Window::setBackgroundPainted(bool isPainted) {
+    isBackgroundPainted_ = isPainted;
+    requestUpdate();
+}
+
+void Window::setBackgroundColor(const core::Color& color) {
+    backgroundColor_ = color;
+    requestUpdate();
 }
 
 void Window::enterEvent(QEvent* event) {
@@ -747,7 +756,9 @@ void Window::paint(bool sync) {
     engine_->setBlendState(blendState_, geometry::Vec4f());
     engine_->setViewport(0, 0, width_, height_);
     engine_->setScissorRect(rect());
-    engine_->clear(clearColor_);
+    if (isBackgroundPainted()) {
+        engine_->clear(backgroundColor());
+    }
     engine_->setProgram(graphics::BuiltinProgram::Simple);
     engine_->setProjectionMatrix(proj_);
     engine_->setViewMatrix(geometry::Mat4f::identity);
