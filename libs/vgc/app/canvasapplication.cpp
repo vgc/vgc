@@ -608,22 +608,21 @@ void CanvasApplication::updateUndoRedoActionState_() {
 
 namespace {
 
-void printWidgetSizing(ui::Widget* w, ui::Widget* root) {
+std::string widgetSizingInfo(ui::Widget* w, ui::Widget* root) {
 
     // TODO: have our class formatters support string format syntax (e.g.,
     // {:<12}) so that we don't need the intermediate calls to core::format().
     //
-    VGC_DEBUG(
-        LogVgcApp,
+    return core::format(
         "{:<24} "
         "position = {:<12} "
         "size = {:<12} "
         "preferredSize = {:<12} "
         "margin = {:<16} "
         "padding = {:<16} "
-        "border = {:<16}",
+        "border = {:<16}\n",
         w->className(),
-        core::format("{}", w->mapTo(root, w->position())),
+        core::format("{}", w->mapTo(root, geometry::Vec2f(0, 0))),
         core::format("{}", w->size()),
         core::format("{}", w->preferredSize()),
         core::format("{}", w->margin()),
@@ -639,14 +638,14 @@ void CanvasApplication::onActionDebugWidgetSizing_() {
         return;
     }
 
-    VGC_DEBUG(LogVgcApp, "Position and size information about hovered widgets:");
+    std::string out = "Position and size information about hovered widgets:\n";
     ui::Widget* root = mainWidget();
     ui::Widget* widget = root;
     while (widget) {
-        printWidgetSizing(widget, root);
+        out += widgetSizingInfo(widget, root);
         widget = widget->hoverChainChild();
     }
-    VGC_DEBUG(LogVgcApp, "");
+    VGC_DEBUG(LogVgcApp, out);
 }
 
 void CanvasApplication::createColorPalette_(ui::Widget* parent) {
