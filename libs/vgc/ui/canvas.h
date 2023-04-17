@@ -25,6 +25,7 @@
 #include <vgc/core/performancelog.h>
 #include <vgc/geometry/camera2d.h>
 #include <vgc/geometry/vec2d.h>
+#include <vgc/topology/keycycle.h>
 #include <vgc/ui/api.h>
 #include <vgc/ui/cursor.h>
 #include <vgc/ui/widget.h>
@@ -117,6 +118,10 @@ public:
     // since the "current selection" can be shared across several canvases
     // in case of split view, etc.
     //
+    
+    // temporary method
+    void clearSelection_();
+    void clearPaintCandidate_();
 
     /// Deselects all selected elements and make the list of selection
     /// candidates empty.
@@ -190,6 +195,7 @@ protected:
     // Temporary: paint bucket tests
     graphics::GeometryViewPtr paintCandidateFillGeometry_;
     core::FloatArray paintCandidatePendingTriangles_;
+    core::Array<topology::KeyCycle> paintCandidateCycles_;
     bool hasPaintCandidate_ = false;
     bool isBucketPainting_ = false;
 

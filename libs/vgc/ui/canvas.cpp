@@ -208,10 +208,19 @@ void deleteElement(workspace::Element* element, workspace::Workspace* workspace)
 
 void Canvas::clearSelection() {
     selectedElementId_ = -1;
-    selectionCandidateElements_.clear();
-    paintCandidatePendingTriangles_.clear();
-    hasPaintCandidate_ = false;
-    requestRepaint();
+    if (!selectionCandidateElements_.isEmpty()) {
+        selectionCandidateElements_.clear();
+        selectedElementId_ = 0;
+        requestRepaint();
+}
+
+void Canvas::clearPaintCandidate_() {
+    if (!paintCandidateCycles_.isEmpty()) {
+        paintCandidatePendingTriangles_.clear();
+        hasPaintCandidate_ = false;
+        paintCandidateCycles_.clear();
+        requestRepaint();
+    }
 }
 
 void Canvas::selectAtPosition(const geometry::Vec2f& position) {
@@ -327,6 +336,7 @@ void Canvas::onWorkspaceChanged_() {
 }
 
 void Canvas::onDocumentChanged_(const dom::Diff& /*diff*/) {
+    clearPaintCandidate_();
 }
 
 // Reimplementation of Widget virtual methods
@@ -441,6 +451,7 @@ bool Canvas::onMousePress(MouseEvent* event) {
         if (mousePosAtPress_ != mousePos) {
             mousePosAtPress_ = mousePos;
             clearSelection_();
+            clearPaintCandidate_();
 
             geometry::Vec2d viewCoords = mousePos;
             geometry::Vec2d worldCoords =
@@ -486,6 +497,7 @@ bool Canvas::onMousePress(MouseEvent* event) {
     }
 
     clearSelection();
+    clearPaintCandidate_();
     return false;
 }
 
@@ -716,12 +728,13 @@ workspace::Element* Canvas::selectedElement_() const {
 }
 
 void Canvas::doBucketPaintTest_(const geometry::Vec2d& mousePos) {
+    clearSelection_();
     geometry::Vec2d worldCoords =
         camera_.viewMatrix().inverted().transformPointAffine(mousePos);
-    topology::detail::computeKeyFaceCandidateAt(
+    paintCandidateCycles_ = topology::detail::computeKeyFaceCandidateAt(
         worldCoords, workspace()->vac()->rootGroup(), paintCandidatePendingTriangles_);
     bool hadPaintCandidate = hasPaintCandidate_;
-    hasPaintCandidate_ = !paintCandidatePendingTriangles_.isEmpty();
+    hasPaintCandidate_ = !paintCandidateCycles_.isEmpty();
     if (hasPaintCandidate_ || hadPaintCandidate) {
         requestRepaint();
     }

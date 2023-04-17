@@ -402,48 +402,53 @@ core::Array<KeyCycle> computeKeyFaceCandidateAt(
             discardedCycle.windingNumber = windingNumber;
         }
 
-        //struct PreviewKeyFace {};
-        //PreviewKeyFace externalBoundary;
+        if (!externalBoundaryCycle.cycle.isEmpty()) {
 
-        // Find holes for this cycle, from closest to farthest.
-        // Each new hole must lie ~50% inside the external boundary as well
-        // as the face triangulation with current holes.
+            // Find holes for this cycle, from closest to farthest.
+            // Each new hole must lie ~50% inside the external boundary as well
+            // as the face triangulation with current holes.
 
-        // TODO: find holes using discarded cycles then new cycles
-        // maybe compute max dist to P in current face to stop looking for new holes when the next closest
-        // candidate edge is too far away..
+            Int32 totalWindingNumber = externalBoundaryCycle.windingNumber;
+            core::Array<CycleWithWindingNumber> holeCycles; // accepted holes
+            // TODO: find holes using discarded cycles then new cycles
+            // maybe compute max dist to P in current face to stop looking for new holes when the next closest
+            // candidate edge is too far away..
 
-        // We left the while loop, so either we found an external boundary, or there's no hope to find one
-        //if (foundExternalBoundary) {
-        //    // Great, so we know we have a valid planar face!
-        //    // Plus, it's already stored as a PreviewFace :)
-        //    *toBePaintedFace_ = externalBoundary;
-        //    foundPlanarFace = true;
-        //
-        //    // Now, let's try to add holes to the external boundary
-        //    QSet<KeyEdge*> potentialHoleEdges;
-        //    foreach (KeyEdge* e, instantEdges()) {
-        //        if (e->exists(time))
-        //            potentialHoleEdges.insert(e);
-        //    }
-        //    CellSet cellsInExternalBoundary = externalBoundary.cycles()[0].cells();
-        //    KeyEdgeSet edgesInExternalBoundary = cellsInExternalBoundary;
-        //    foreach (KeyEdge* e, edgesInExternalBoundary)
-        //        potentialHoleEdges.remove(e);
-        //    QList<PreviewKeyFace> holes;
-        //    while (!potentialHoleEdges.isEmpty()) {
-        //        // Ordered by distance to mouse cursor p, add planar cycles gamma which:
-        //        //   - Do not contain p
-        //        //   - Are contained in external boundary
-        //        //   - Are not contained in holes already added
-        //        addHoleToPaintedFace(
-        //            potentialHoleEdges, *toBePaintedFace_, distancesToEdges, x, y);
-        //    }
-        //}
+            // We left the while loop, so either we found an external boundary, or there's no hope to find one
+            //if (foundExternalBoundary) {
+            //    // Great, so we know we have a valid planar face!
+            //    // Plus, it's already stored as a PreviewFace :)
+            //    *toBePaintedFace_ = externalBoundary;
+            //    foundPlanarFace = true;
+            //
+            //    // Now, let's try to add holes to the external boundary
+            //    QSet<KeyEdge*> potentialHoleEdges;
+            //    foreach (KeyEdge* e, instantEdges()) {
+            //        if (e->exists(time))
+            //            potentialHoleEdges.insert(e);
+            //    }
+            //    CellSet cellsInExternalBoundary = externalBoundary.cycles()[0].cells();
+            //    KeyEdgeSet edgesInExternalBoundary = cellsInExternalBoundary;
+            //    foreach (KeyEdge* e, edgesInExternalBoundary)
+            //        potentialHoleEdges.remove(e);
+            //    QList<PreviewKeyFace> holes;
+            //    while (!potentialHoleEdges.isEmpty()) {
+            //        // Ordered by distance to mouse cursor p, add planar cycles gamma which:
+            //        //   - Do not contain p
+            //        //   - Are contained in external boundary
+            //        //   - Are not contained in holes already added
+            //        addHoleToPaintedFace(
+            //            potentialHoleEdges, *toBePaintedFace_, distancesToEdges, x, y);
+            //    }
+            //}
 
-        result.emplaceLast(KeyCycle(std::move(externalBoundaryCycle.cycle)));
-        computeKeyFaceFillTriangles(result, trianglesBuffer, windingRule);
-
+            result.emplaceLast(KeyCycle(std::move(externalBoundaryCycle.cycle)));
+            for (CycleWithWindingNumber& holeCycle : holeCycles) {
+                result.emplaceLast(KeyCycle(std::move(holeCycle.cycle)));
+            }
+            computeKeyFaceFillTriangles(result, trianglesBuffer, windingRule);
+            return result;
+        }
     } // planar face search
 
     //if (foundPlanarFace) {
