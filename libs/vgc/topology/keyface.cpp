@@ -240,6 +240,66 @@ Int32 computeWindingNumber(
     return result;
 }
 
+void samplePointsOnCycleUniformly(
+    const core::Array<KeyHalfedge>& cycle,
+    Int numSamples,
+    core::Array<geometry::Vec2d>& outPoints) {
+
+    double totalS = 0;
+    for (const KeyHalfedge& khe : cycle) {
+        totalS += khe.edge()->sampling().samples().last().s();
+    }
+    double stepS = totalS / numSamples;
+    double nextStepS = stepS / 2;
+    for (const KeyHalfedge& khe : cycle) {
+        const geometry::CurveSampleArray& samples = khe.edge()->sampling().samples();
+        double heS = samples.last().s();
+        if (khe.direction()) {
+            auto it = samples.begin();
+            geometry::Vec2d previousP = it->position();
+            double previousS = 0;
+            ++it;
+            for (auto end = samples.end(); it != end; ++it) {
+                geometry::Vec2d p = it->position();
+                double nextS = it->s();
+                while (nextS >= nextStepS) {
+                    double t = (nextStepS - previousS) / (nextS - previousS);
+                    double ot = (1 - t);
+                    previousP = ot * previousP + t * p;
+                    previousS = nextStepS;
+                    nextStepS += stepS;
+                    outPoints.emplaceLast(previousP);
+                }
+                previousP = p;
+                previousS = nextS;
+            }
+        }
+        else {
+            auto rit = samples.rbegin();
+            geometry::Vec2d previousP = rit->position();
+            double previousS = heS - rit->s();
+            ++rit;
+            for (auto rend = samples.rend(); rit != rend; ++rit) {
+                geometry::Vec2d p = rit->position();
+                double nextS = heS - rit->s();
+                while (nextS >= nextStepS) {
+                    double t = (nextStepS - previousS) / (nextS - previousS);
+                    double ot = (1 - t);
+                    previousP = ot * previousP + t * p;
+                    previousS = nextStepS;
+                    nextStepS += stepS;
+                    outPoints.emplaceLast(previousP);
+                }
+                previousP = p;
+                previousS = nextS;
+            }
+        }
+        nextStepS -= heS;
+    }
+
+    //VGC_DEBUG_TMP("outPoints.length(): {}", outPoints.length());
+}
+
 } // namespace
 
 namespace detail {
@@ -408,12 +468,113 @@ core::Array<KeyCycle> computeKeyFaceCandidateAt(
             // Each new hole must lie ~50% inside the external boundary as well
             // as the face triangulation with current holes.
 
-            //Int32 totalWindingNumber = externalBoundaryCycle.windingNumber;
+            Int32 totalWindingNumber = externalBoundaryCycle.windingNumber;
             core::Array<CycleWithWindingNumber> holeCycles; // accepted holes
 
-            // TODO: find holes using discarded cycles then new cycles
-            // maybe compute max dist to P in current face to stop looking for new holes when the next closest
-            // candidate edge is too far away..
+            core::Array<geometry::Vec2d> holeCycleCandidatePoints;
+            auto isValidHoleCycle =
+                [&](const CycleWithWindingNumber& holeCycleCandidate) {
+                    Int32 newWindingNumber =
+                        totalWindingNumber + holeCycleCandidate.windingNumber;
+                    if (!geometry::isWindingNumberSatisfyingRule(
+                            newWindingNumber, windingRule)) {
+                        return false;
+                    }
+
+                    holeCycleCandidatePoints.clear();
+                    Int numPoints = 20;
+                    samplePointsOnCycleUniformly(
+                        holeCycleCandidate.cycle, numPoints, holeCycleCandidatePoints);
+
+                    Int successes = 0;
+                    Int fails = 0;
+                    for (const geometry::Vec2d& point : holeCycleCandidatePoints) {
+                        bool success = false;
+                        Int32 windingNumber =
+                            computeWindingNumber(externalBoundaryCycle.cycle, point);
+                        if (geometry::isWindingNumberSatisfyingRule(
+                                windingNumber, windingRule)) {
+                            for (const CycleWithWindingNumber& holeCycle : holeCycles) {
+                                windingNumber +=
+                                    computeWindingNumber(holeCycle.cycle, point);
+                            }
+                            if (geometry::isWindingNumberSatisfyingRule(
+                                    windingNumber, windingRule)) {
+                                success = true;
+                            }
+                        }
+                        if (success) {
+                            ++successes;
+                            if (static_cast<double>(successes) / numPoints >= 0.5) {
+                                return true;
+                            }
+                        }
+                        else {
+                            ++fails;
+                            if (static_cast<double>(fails) / numPoints > 0.5) {
+                                return false;
+                            }
+                        }
+                    }
+
+                    return false;
+                };
+
+            std::unordered_set<KeyEdge*> usedEdges; // needed to reuse discarded cycles
+
+            // erase opposite halfedges of external boundary cycle
+            for (const KeyHalfedge& khe : externalBoundaryCycle.cycle) {
+                usedEdges.insert(khe.edge());
+                planarCycleHalfedgeCandidates.erase(KeyHalfedgeCandidate(khe.opposite()));
+            }
+
+            // find holes in cycles discarded earlier
+            for (const CycleWithWindingNumber& cycle : discardedCycles) {
+                bool usesAlreadyUsedEdge = false;
+                for (const KeyHalfedge& khe : cycle.cycle) {
+                    if (usedEdges.find(khe.edge()) != usedEdges.end()) {
+                        usesAlreadyUsedEdge = true;
+                        break;
+                    }
+                }
+                if (!usesAlreadyUsedEdge && isValidHoleCycle(cycle)) {
+                    holeCycles.emplaceLast(cycle);
+                    for (const KeyHalfedge& khe : cycle.cycle) {
+                        usedEdges.insert(khe.edge());
+                        planarCycleHalfedgeCandidates.erase(
+                            KeyHalfedgeCandidate(khe.opposite()));
+                    }
+                }
+            }
+
+            // compute max distance from position to external boundary to limit search
+            maxKeyHalfedgeCandidateDistance = 0;
+            for (const KeyHalfedge& khe : externalBoundaryCycle.cycle) {
+                const geometry::Rect2d& bbox = khe.edge()->samplingBoundingBox();
+                for (Int i = 0; i < 4; ++i) {
+                    double d = (bbox.corner(i) - position).length();
+                    if (d > maxKeyHalfedgeCandidateDistance) {
+                        maxKeyHalfedgeCandidateDistance = d;
+                    }
+                }
+            }
+
+            // find holes in new cycles
+            while (findNextPlanarCycleCandidate()) {
+                Int32 windingNumber =
+                    computeWindingNumber(planarCycleCandidate, position);
+                CycleWithWindingNumber cycle = {};
+                cycle.cycle.swap(planarCycleCandidate);
+                cycle.windingNumber = windingNumber;
+                planarCycleCandidate = core::Array<KeyHalfedge>();
+                if (isValidHoleCycle(cycle)) {
+                    for (const KeyHalfedge& khe : cycle.cycle) {
+                        planarCycleHalfedgeCandidates.erase(
+                            KeyHalfedgeCandidate(khe.opposite()));
+                    }
+                    holeCycles.emplaceLast(std::move(cycle));
+                }
+            }
 
             // We left the while loop, so either we found an external boundary, or there's no hope to find one
             //if (foundExternalBoundary) {

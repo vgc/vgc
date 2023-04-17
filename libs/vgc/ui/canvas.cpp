@@ -206,6 +206,28 @@ void deleteElement(workspace::Element* element, workspace::Workspace* workspace)
 
 } // namespace
 
+// temporary method to test color change of element
+void Canvas::onColorChanged_(const core::Color& color) {
+    paintColor_ = color;
+    /*workspace::Element* element = selectedElement_();
+    core::History* history = workspace()->history();
+    if (element && element->domElement()) {
+        core::UndoGroup* ug = nullptr;
+        static core::StringId Change_Color("Change Color");
+        if (history) {
+            ug = history->createUndoGroup(Change_Color);
+        }
+        element->domElement()->setAttribute(dom::strings::color, color);
+        if (ug) {
+            ug->close(
+                canMergeColorChange_ && ug->parent()
+                && ug->parent()->name() == Change_Color);
+            canMergeColorChange_ = true;
+        }
+        workspace()->sync();
+    }*/
+}
+
 void Canvas::clearSelection() {
     selectedElementId_ = -1;
     if (!selectionCandidateElements_.isEmpty()) {
@@ -499,6 +521,34 @@ bool Canvas::onMousePress(MouseEvent* event) {
     clearSelection();
     clearPaintCandidate_();
     return false;
+}
+
+void Canvas::preMousePress(MouseEvent* event) {
+    if (isBucketPainting_ && event->button() == MouseButton::Left
+        && !paintCandidateCycles_.isEmpty()) {
+
+        core::History* history = workspace()->history();
+        static core::StringId Paint_Face("Paint Face");
+        core::UndoGroup* ug = nullptr;
+        if (history) {
+            ug = history->createUndoGroup(Paint_Face);
+        }
+
+        vacomplex::Group* group =
+            paintCandidateCycles_[0].halfedges().first().edge()->parentGroup();
+        vacomplex::KeyFace* kf = topology::ops::createKeyFace(
+            paintCandidateCycles_, group, group->firstChild());
+        workspace::VacElement* element = workspace()->findVacElement(kf);
+        element->domElement()->setAttribute(dom::strings::color, paintColor_);
+
+        workspace()->sync();
+        if (ug) {
+            ug->close();
+        }
+
+        clearPaintCandidate_();
+        event->stopPropagation();
+    }
 }
 
 bool Canvas::onMouseRelease(MouseEvent* event) {
