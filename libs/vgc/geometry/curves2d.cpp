@@ -31,6 +31,7 @@ bool isWindingNumberSatisfyingRule(Int windingNumber, WindingRule rule) {
     case geometry::WindingRule::Negative:
         return windingNumber < 0;
     }
+    return false;
 }
 
 void Curves2d::close() {
