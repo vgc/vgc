@@ -25,10 +25,13 @@ namespace vgc::topology {
 
 namespace detail {
 
+namespace {
+
 bool computeKeyFaceFillTriangles(
     const core::Array<KeyCycle>& cycles,
     core::FloatArray& trianglesBuffer,
-    geometry::WindingRule /*windingRule*/) {
+    const geometry::CurveSamplingParameters* parameters,
+    geometry::WindingRule windingRule) {
 
     trianglesBuffer.clear();
 
@@ -44,7 +47,9 @@ bool computeKeyFaceFillTriangles(
             for (const KeyHalfedge& khe : cycle.halfedges()) {
                 const KeyEdge* ke = khe.edge();
                 if (ke) {
-                    const geometry::CurveSampleArray& samples = ke->sampling().samples();
+                    const geometry::CurveSampleArray& samples =
+                        parameters ? ke->computeSampling(*parameters)
+                                   : ke->sampling().samples();
                     if (khe.direction()) {
                         for (const geometry::CurveSample& s : samples) {
                             geometry::Vec2d p = s.position();
@@ -81,9 +86,28 @@ bool computeKeyFaceFillTriangles(
     }
 
     auto params = geometry::Curves2dSampleParams::adaptive();
-    curves2d.fill(trianglesBuffer, params, geometry::WindingRule::Odd);
+    curves2d.fill(trianglesBuffer, params, windingRule);
 
     return true;
+}
+
+} // namespace
+
+bool computeKeyFaceFillTriangles(
+    const core::Array<KeyCycle>& cycles,
+    core::FloatArray& trianglesBuffer,
+    geometry::WindingRule windingRule) {
+
+    return computeKeyFaceFillTriangles(cycles, trianglesBuffer, nullptr, windingRule);
+}
+
+bool computeKeyFaceFillTriangles(
+    const core::Array<KeyCycle>& cycles,
+    core::FloatArray& trianglesBuffer,
+    const geometry::CurveSamplingParameters& parameters,
+    geometry::WindingRule windingRule) {
+
+    return computeKeyFaceFillTriangles(cycles, trianglesBuffer, &parameters, windingRule);
 }
 
 } // namespace detail

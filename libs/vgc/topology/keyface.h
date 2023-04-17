@@ -19,6 +19,7 @@
 
 #include <initializer_list>
 
+#include <vgc/geometry/curve.h>
 #include <vgc/geometry/curves2d.h>
 #include <vgc/geometry/vec2d.h>
 #include <vgc/topology/api.h>
@@ -33,6 +34,13 @@ VGC_TOPOLOGY_API
 bool computeKeyFaceFillTriangles(
     const core::Array<KeyCycle>& cycles,
     core::FloatArray& trianglesBuffer,
+    geometry::WindingRule windingRule = geometry::WindingRule::Odd);
+
+VGC_TOPOLOGY_API
+bool computeKeyFaceFillTriangles(
+    const core::Array<KeyCycle>& cycles,
+    core::FloatArray& trianglesBuffer,
+    const geometry::CurveSamplingParameters& parameters,
     geometry::WindingRule windingRule = geometry::WindingRule::Odd);
 
 } // namespace detail
