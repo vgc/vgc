@@ -446,7 +446,12 @@ core::Array<KeyCycle> computeKeyFaceCandidateAt(
             for (CycleWithWindingNumber& holeCycle : holeCycles) {
                 result.emplaceLast(KeyCycle(std::move(holeCycle.cycle)));
             }
-            computeKeyFaceFillTriangles(result, trianglesBuffer, windingRule);
+            computeKeyFaceFillTriangles(
+                result,
+                trianglesBuffer,
+                geometry::CurveSamplingParameters(
+                    geometry::CurveSamplingQuality::Disabled),
+                windingRule);
             return result;
         }
     } // planar face search
