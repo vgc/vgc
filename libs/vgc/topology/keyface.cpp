@@ -408,8 +408,9 @@ core::Array<KeyCycle> computeKeyFaceCandidateAt(
             // Each new hole must lie ~50% inside the external boundary as well
             // as the face triangulation with current holes.
 
-            Int32 totalWindingNumber = externalBoundaryCycle.windingNumber;
+            //Int32 totalWindingNumber = externalBoundaryCycle.windingNumber;
             core::Array<CycleWithWindingNumber> holeCycles; // accepted holes
+
             // TODO: find holes using discarded cycles then new cycles
             // maybe compute max dist to P in current face to stop looking for new holes when the next closest
             // candidate edge is too far away..
