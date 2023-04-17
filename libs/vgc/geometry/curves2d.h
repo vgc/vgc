@@ -354,6 +354,9 @@ enum class WindingRule {
     Negative,
 };
 
+VGC_GEOMETRY_API
+bool doesWindingSatisfyRule(Int winding, WindingRule rule);
+
 /// \class vgc::geometry::Curves2d
 /// \brief Sequence of double-precision 2D curves.
 ///
