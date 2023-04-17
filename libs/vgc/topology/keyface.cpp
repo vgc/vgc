@@ -47,8 +47,6 @@ struct KeyHalfedgeCandidate {
     double distance = 0;
     float angleScore = 0;
     bool isBackFacing = false;
-    Int32 windingContribution = 0;
-    bool hasComputedWindingContribution = false;
 
     bool operator==(const KeyHalfedgeCandidate& b) const {
         return halfedge == b.halfedge;
@@ -231,6 +229,17 @@ Int32 computeWindingContribution(
     return keyHalfedge.direction() ? contribution : -contribution;
 }
 
+Int32 computeWindingNumber(
+    const core::Array<KeyHalfedge>& cycle,
+    const geometry::Vec2d& point) {
+
+    Int32 result = 0;
+    for (const KeyHalfedge& keyHalfedge : cycle) {
+        result += computeWindingContribution(keyHalfedge, point);
+    }
+    return result;
+}
+
 } // namespace
 
 namespace detail {
@@ -288,7 +297,7 @@ core::Array<KeyCycle> computeKeyFaceCandidateAt(
 
         std::unordered_set<KeyHalfedgeCandidate, KeyHalfedgeCandidateHash>
             planarCycleHalfedgeCandidates = cycleHalfedgeCandidates;
-        core::Array<KeyHalfedgeCandidate> planarCycleCandidate;
+        core::Array<KeyHalfedge> planarCycleCandidate;
         double maxKeyHalfedgeCandidateDistance = core::DoubleInfinity;
 
         auto findNextPlanarCycleCandidate = [&]() -> bool {
@@ -306,7 +315,7 @@ core::Array<KeyCycle> computeKeyFaceCandidateAt(
                     break;
                 }
 
-                planarCycleCandidate.append(keyHalfedgeCandidate);
+                planarCycleCandidate.append(keyHalfedgeCandidate.halfedge);
                 planarCycleHalfedgeCandidates.erase(it);
 
                 // Find the corresponding planar map cycle if halfedge is open.
@@ -349,7 +358,7 @@ core::Array<KeyCycle> computeKeyFaceCandidateAt(
                         }
 
                         // Insert and iterate.
-                        planarCycleCandidate.append(*heIt);
+                        planarCycleCandidate.append(heIt->halfedge);
                         planarCycleHalfedgeCandidates.erase(heIt);
                     }
 
@@ -380,26 +389,16 @@ core::Array<KeyCycle> computeKeyFaceCandidateAt(
             // Compute winding number to see if cursor is inside the cycle candidate.
             // Build the cycle in the same loop.
 
-            core::Array<KeyHalfedge> cycle;
-            Int32 windingNumber = 0;
-            for (KeyHalfedgeCandidate& hec : planarCycleCandidate) {
-                Int32 contribution = hec.windingContribution;
-                if (!hec.hasComputedWindingContribution) {
-                    contribution = computeWindingContribution(hec.halfedge, position);
-                    hec.windingContribution = contribution;
-                }
-                windingNumber += contribution;
-                cycle.emplaceLast(hec.halfedge);
-            }
+            Int32 windingNumber = computeWindingNumber(planarCycleCandidate, position);
 
             if (geometry::isWindingNumberSatisfyingRule(windingNumber, windingRule)) {
-                externalBoundaryCycle.cycle = std::move(cycle);
+                externalBoundaryCycle.cycle.swap(planarCycleCandidate);
                 externalBoundaryCycle.windingNumber = windingNumber;
                 break;
             }
 
             auto& discardedCycle = discardedCycles.emplaceLast();
-            discardedCycle.cycle = std::move(cycle);
+            discardedCycle.cycle.swap(planarCycleCandidate);
             discardedCycle.windingNumber = windingNumber;
         }
 
