@@ -20,16 +20,16 @@
 
 namespace vgc::geometry {
 
-bool doesWindingSatisfyRule(Int winding, WindingRule rule) {
+bool isWindingNumberSatisfyingRule(Int windingNumber, WindingRule rule) {
     switch (rule) {
     case geometry::WindingRule::Odd:
-        return (winding / 2 * 2) != winding;
+        return (windingNumber / 2 * 2) != windingNumber;
     case geometry::WindingRule::NonZero:
-        return winding != 0;
+        return windingNumber != 0;
     case geometry::WindingRule::Positive:
-        return winding > 0;
+        return windingNumber > 0;
     case geometry::WindingRule::Negative:
-        return winding < 0;
+        return windingNumber < 0;
     }
 }
 
