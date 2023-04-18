@@ -115,10 +115,6 @@ bool SketchTool::onMouseMove(MouseEvent* event) {
         canvas->camera().viewMatrix().inverted().transformPointAffine(viewCoords);
     double width = pressurePenWidth(penWidth_, event);
     continueCurve_(worldCoords, width);
-    minimalLatencyStrokePoints_[0] = minimalLatencyStrokePoints_[1];
-    minimalLatencyStrokeWidths_[0] = minimalLatencyStrokeWidths_[1];
-    minimalLatencyStrokePoints_[1] = points_.last();
-    minimalLatencyStrokeWidths_[1] = width;
     minimalLatencyStrokeReload_ = true;
     return true;
 }
@@ -251,15 +247,14 @@ void SketchTool::onPaintDraw(graphics::Engine* engine, PaintOptions options) {
             lastImmediateCursorPos_ = pos;
             cursorMoved = true;
             geometry::Vec2d pos2d(pos);
-            minimalLatencyStrokePoints_[2] = pos2d;
-            minimalLatencyStrokeWidths_[2] = minimalLatencyStrokeWidths_[1] * 0.5;
+            minimalLatencySnappedCursor_ = pos2d;
             if (!smoothedInputPoints_.isEmpty()) {
                 double s = smoothedInputArclengths_.last()
                            + (pos2d - smoothedInputPoints_.last()).length();
                 double snapDeformationLength_ = snapDeformationLength();
                 geometry::Vec2d delta = startSnapPosition_ - smoothedInputPoints_[0];
                 if (s < snapDeformationLength_) {
-                    minimalLatencyStrokePoints_[2] =
+                    minimalLatencySnappedCursor_ =
                         snapDeformation(pos2d, delta, s, snapDeformationLength_);
                 }
             }
@@ -271,22 +266,34 @@ void SketchTool::onPaintDraw(graphics::Engine* engine, PaintOptions options) {
         core::Color color = penColor_;
         geometry::Vec2fArray strokeVertices;
 
-        geometry::Curve curve;
-        curve.setPositions(minimalLatencyStrokePoints_);
-        curve.setWidths(minimalLatencyStrokeWidths_);
+        workspace::Element* edgeElement = workspace()->find(edge_);
+        vacomplex::KeyEdge* ke = nullptr;
+        auto edgeCell = dynamic_cast<workspace::VacKeyEdge*>(edgeElement);
+        if (edgeCell) {
+            ke = edgeCell->vacKeyEdgeNode();
+        }
+        if (ke) {
+            const geometry::CurveSampleArray& samples = ke->sampling().samples();
+            // one sample is not enough to have a well-defined normal
+            if (samples.length() >= 2) {
+                geometry::CurveSample edgeLastSample = ke->sampling().samples().last();
+                geometry::Vec2d tipDir =
+                    minimalLatencySnappedCursor_ - edgeLastSample.position();
+                geometry::Vec2d tipNormal = tipDir.orthogonalized().normalized();
 
-        geometry::CurveSamplingParameters samplingParams = {};
-        samplingParams.setMaxAngle(0.05);
-        samplingParams.setMinIntraSegmentSamples(10);
-        samplingParams.setMaxIntraSegmentSamples(20);
-        geometry::CurveSampleArray csa;
-        curve.sampleRange(samplingParams, csa, 1);
+                double radiusRatio = 0.5;
+                geometry::Vec2d tipPoint0 =
+                    minimalLatencySnappedCursor_
+                    - tipNormal * radiusRatio * edgeLastSample.halfwidth(1);
+                geometry::Vec2d tipPoint1 =
+                    minimalLatencySnappedCursor_
+                    + tipNormal * radiusRatio * edgeLastSample.halfwidth(0);
 
-        for (const geometry::CurveSample& s : csa) {
-            geometry::Vec2d p0 = s.leftPoint();
-            strokeVertices.emplaceLast(geometry::Vec2f(p0));
-            geometry::Vec2d p1 = s.rightPoint();
-            strokeVertices.emplaceLast(geometry::Vec2f(p1));
+                strokeVertices.emplaceLast(geometry::Vec2f(edgeLastSample.leftPoint()));
+                strokeVertices.emplaceLast(geometry::Vec2f(edgeLastSample.rightPoint()));
+                strokeVertices.emplaceLast(geometry::Vec2f(tipPoint0));
+                strokeVertices.emplaceLast(geometry::Vec2f(tipPoint1));
+            }
         }
 
         engine->updateBufferData(
@@ -454,10 +461,6 @@ void SketchTool::startCurve_(const geometry::Vec2d& p, double width) {
     }
 
     // Update stroke tip
-    minimalLatencyStrokePoints_[0] = startSnapPosition_;
-    minimalLatencyStrokeWidths_[0] = width * 0.5;
-    minimalLatencyStrokePoints_[1] = startSnapPosition_;
-    minimalLatencyStrokeWidths_[1] = width * 0.5;
     minimalLatencyStrokeReload_ = true;
 }
 
