@@ -206,9 +206,54 @@ void deleteElement(workspace::Element* element, workspace::Workspace* workspace)
 
 } // namespace
 
-void Canvas::clearSelection_() {
-    selectionCandidateElements_.clear();
-    selectedElementId_ = 0;
+void Canvas::clearSelection() {
+    selectedElementId_ = -1;
+}
+
+void Canvas::selectAtPosition(const geometry::Vec2f& position) {
+    core::Array<std::pair<core::Id, double>> candidates = computeSelectionCandidates_(position);
+    if (candidates.isEmpty()) {
+        clearSelection();
+    }
+    else {
+        selectedElementId_ = candidates.first().first;
+    }
+}
+
+// Note: we recompute the selection candidates at each click. We could
+// optimize performance by keeping the candidates in cache for a given position, but:
+// - Alternate selection is a rare operation compared to normal selection.
+// - It isn't super important to make alternate selection faster than normal selection.
+// - The mouse position may move slighlty anyway.
+// - We would have to be careful to invalidate the cache when the workspace changes, etc.
+//
+// Therefore, it is not worth the added complexity and bug-proneness to keep the
+// candidates in cache.
+//
+void Canvas::selectAlternativeAtPosition(const geometry::Vec2f& position) {
+    core::Array<std::pair<core::Id, double>> candidates = computeSelectionCandidates_(position);
+    if (candidates.isEmpty()) {
+        clearSelection();
+    }
+    else {
+        // If there is a currently selected element, and if it is in the
+        // candidates, then we select the next candidate in order. Otherwise,
+        // we select the first candidate.
+        //
+        bool found = false;
+        if (selectedElementId_ != -1) {
+            for (Int i = 0; i < candidates.length(); ++i) {
+                if (candidates[i].first == selectedElementId_) {
+                    selectedElementId_ = (i + 1) % candidates.length();
+                    found = true;
+                    break;
+                }
+            }
+        }
+        if (!found) {
+            selectedElementId_ = candidates.first().first;
+        }
+    }
 }
 
 bool Canvas::onKeyPress(KeyEvent* event) {
@@ -379,54 +424,8 @@ bool Canvas::onMousePress(MouseEvent* event) {
         cameraAtPress_ = camera_;
         return true;
     }
-    else if (
-        event->modifierKeys() == ModifierKey::Ctrl
-        && event->button() == MouseButton::Left) {
-        if (mousePosAtPress_ != mousePos) {
-            mousePosAtPress_ = mousePos;
-            selectionCandidateElements_.clear();
-            selectedElementId_ = 0;
 
-            geometry::Vec2d viewCoords = mousePos;
-            geometry::Vec2d worldCoords =
-                camera_.viewMatrix().inverted().transformPointAffine(viewCoords);
-            using namespace style::literals;
-            style::Length dpTol = 7.0_dp;
-            double tol = dpTol.toPx(styleMetrics()) / camera_.zoom();
-
-            if (workspace_) {
-                workspace_->visitDepthFirst(
-                    [](workspace::Element*, Int) { return true; },
-                    [&, tol, worldCoords](workspace::Element* e, Int /*depth*/) {
-                        if (!e) {
-                            return;
-                        }
-                        double dist = 0;
-                        if (e->isSelectableAt(worldCoords, false, tol, &dist)) {
-                            selectionCandidateElements_.emplaceLast(e->id(), dist);
-                        }
-                    });
-                // order from front to back
-                std::reverse(
-                    selectionCandidateElements_.begin(),
-                    selectionCandidateElements_.end());
-                // sort by selection distance, stable to keep Z order priority
-                std::stable_sort(
-                    selectionCandidateElements_.begin(),
-                    selectionCandidateElements_.end(),
-                    [](const auto& a, const auto& b) { return a.second < b.second; });
-            }
-        }
-        else if (!selectionCandidateElements_.isEmpty()) {
-            selectedElementId_ =
-                (selectedElementId_ + 1) % selectionCandidateElements_.size();
-        }
-        requestRepaint();
-        return true;
-    }
-
-    selectionCandidateElements_.clear();
-    selectedElementId_ = 0;
+    clearSelection();
     return false;
 }
 
@@ -591,9 +590,49 @@ void Canvas::updateChildrenGeometry() {
     }
 }
 
+core::Array<std::pair<core::Id, double>> Canvas::computeSelectionCandidates_(const geometry::Vec2f& position) {
+
+    core::Array<std::pair<core::Id, double>> res;
+
+    geometry::Vec2d viewCoords(position);
+    geometry::Vec2d worldCoords =
+        camera_.viewMatrix().inverted().transformPointAffine(viewCoords);
+
+    using namespace style::literals;
+    style::Length dpTol = 7.0_dp;
+    double tol = dpTol.toPx(styleMetrics()) / camera_.zoom();
+
+    if (workspace_) {
+        workspace_->visitDepthFirst(
+            [](workspace::Element*, Int) { return true; },
+            [&, tol, worldCoords](workspace::Element* e, Int /*depth*/) {
+                if (!e) {
+                    return;
+                }
+                double dist = 0;
+                if (e->isSelectableAt(worldCoords, false, tol, &dist)) {
+                    res.emplaceLast(e->id(), dist);
+                }
+            });
+
+        // order from front to back
+        std::reverse(
+            res.begin(),
+            res.end());
+
+        // sort by selection distance, stable to keep Z order priority
+        std::stable_sort(
+            res.begin(),
+            res.end(),
+            [](const auto& a, const auto& b) { return a.second < b.second; });
+    }
+
+    return res;
+}
+
 workspace::Element* Canvas::selectedElement_() const {
-    if (selectionCandidateElements_.size()) {
-        return workspace()->find(selectionCandidateElements_[selectedElementId_].first);
+    if (workspace() && selectedElementId_ >= 0) {
+        return workspace()->find(selectedElementId_);
     }
     else {
         return nullptr;

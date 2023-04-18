@@ -106,7 +106,7 @@ public:
     /// Returns the current `CanvasTool`.
     ///
     ui::CanvasTool* currentTool() const {
-        return tool_;
+        return currentTool_;
     }
 
     /// Quits the application.
@@ -127,7 +127,9 @@ private:
     core::ConnectionHandle documentHistoryHeadChangedConnectionHandle_;
     ui::ColorPalette* palette_ = nullptr;
     ui::Canvas* canvas_ = nullptr;
-    ui::SketchTool* tool_ = nullptr;
+
+    ui::CanvasTool* currentTool_ = nullptr;
+    ui::SketchTool* sketchTool_ = nullptr;
 
     bool recoverySave_();
     void showCrashPopup_(std::string_view errorMessage, bool wasRecoverySaved);

@@ -26,6 +26,7 @@
 #include <vgc/ui/qtutil.h>
 #include <vgc/ui/shortcut.h>
 #include <vgc/ui/tabbar.h>
+#include <vgc/ui/selecttool.h>
 
 namespace vgc::app {
 
@@ -654,8 +655,8 @@ void CanvasApplication::createColorPalette_(ui::Widget* parent) {
 }
 
 void CanvasApplication::onColorChanged_() {
-    if (canvas_ && palette_) {
-        tool_->setPenColor(palette_->selectedColor());
+    if (canvas_ && palette_ && sketchTool_) {
+        sketchTool_->setPenColor(palette_->selectedColor());
     }
 }
 
@@ -663,8 +664,10 @@ void CanvasApplication::createCanvas_(
     ui::Widget* parent,
     workspace::Workspace* workspace) {
 
+    // XXX switch between tools
     canvas_ = parent->createChild<ui::Canvas>(workspace);
-    tool_ = canvas_->createChild<ui::SketchTool>();
+    //tool_ = canvas_->createChild<ui::SketchTool>();
+    currentTool_ = canvas_->createChild<ui::SelectTool>();
     onColorChanged_();
     if (palette_) {
         palette_->colorSelected().connect(onColorChangedSlot_());
