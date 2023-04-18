@@ -25,7 +25,7 @@ std::shared_ptr<const EdgeSampling> KeyEdge::samplingShared() const {
 
 const EdgeSampling& KeyEdge::sampling() const {
 
-    if (!isGeometryDirty_) {
+    if (!isGeometryDirty_ && snappedSampling_) {
         return *snappedSampling_;
     }
 
@@ -38,6 +38,11 @@ const EdgeSampling& KeyEdge::sampling() const {
     // TODO: transform and snap
 
     snappedSamples = inputSamples_;
+
+    // TODO: define guarantees.
+    // - what about a closed edge without points data ?
+    // - what about an open edge without points data and same end points ?
+    // - what about an open edge without points data but different end points ?
     if (!isClosed() && !snappedSamples.isEmpty()) {
         snappedSamples.first().setPosition(startVertex_->position());
         snappedSamples.last().setPosition(endVertex_->position());
