@@ -169,4 +169,4 @@ protected:
 
 } // namespace vgc::ui
 
-#endif // VGC_UI_CANVAS_H
+#endif // VGC_UI_SKETCHTOOL_H
