@@ -266,7 +266,6 @@ void SketchTool::onPaintDraw(graphics::Engine* engine, PaintOptions options) {
         core::Color color = penColor_;
         geometry::Vec2fArray strokeVertices;
 
-        geometry::CurveSample edgeLastSample = {};
         workspace::Element* edgeElement = workspace()->find(edge_);
         vacomplex::KeyEdge* ke = nullptr;
         auto edgeCell = dynamic_cast<workspace::VacKeyEdge*>(edgeElement);
