@@ -120,24 +120,22 @@ protected:
 
 private:
     MainWindowPtr window_;
-    dom::Document* document_;
-    core::Id lastSavedDocumentVersionId = {};
-    QString filename_;
-    workspace::WorkspacePtr workspace_;
-    core::ConnectionHandle documentHistoryHeadChangedConnectionHandle_;
-    ui::ColorPalette* palette_ = nullptr;
-    ui::Canvas* canvas_ = nullptr;
 
-    ui::CanvasTool* currentTool_ = nullptr;
-    ui::SketchTool* sketchTool_ = nullptr;
+    // ------------------------------------------------------------------------
+    //                       Crash recovery
 
     bool recoverySave_();
     void showCrashPopup_(std::string_view errorMessage, bool wasRecoverySaved);
     void crashHandler_(std::string_view errorMessage);
 
-    void createWidgets_();
-    void createActions_(ui::Widget* parent);
-    void createMenus_();
+    // ------------------------------------------------------------------------
+    //                       Document management
+
+    dom::Document* document_;
+    core::Id lastSavedDocumentVersionId = {};
+    QString filename_;
+    workspace::WorkspacePtr workspace_;
+    core::ConnectionHandle documentHistoryHeadChangedConnectionHandle_;
 
     void openDocument_(QString filename);
 
@@ -175,15 +173,54 @@ private:
     void updateUndoRedoActionState_();
     VGC_SLOT(updateUndoRedoActionStateSlot_, updateUndoRedoActionState_)
 
-    ui::Action* actionDebugWidgetSizing_ = nullptr;
-    VGC_SLOT(onActionDebugWidgetSizingSlot_, onActionDebugWidgetSizing_);
-    void onActionDebugWidgetSizing_();
+    // ------------------------------------------------------------------------
+    //                       Menu
+
+    void createActions_(ui::Widget* parent);
+    void createMenus_();
+
+    // ------------------------------------------------------------------------
+    //                       Canvas and tools
+
+    void createWidgets_();
+
+    // Canvas
+    ui::Canvas* canvas_ = nullptr;
+
+    void createCanvas_(ui::Widget* parent, workspace::Workspace* workspace);
+
+    // Canvas Tools
+    ui::ActionGroupPtr toolsActionGroup_;
+    std::map<ui::Action*, ui::CanvasToolPtr> toolMap_;
+    std::map<ui::CanvasTool*, ui::Action*> toolMapInv_;
+    ui::CanvasTool* currentTool_ = nullptr;
+    ui::SketchTool* sketchTool_ = nullptr;
+
+    void createTools_(ui::Widget* parent);
+    void registerTool_( //
+        ui::Widget* parent,
+        std::string_view toolName,
+        ui::CanvasToolPtr tool);
+
+    void clearCurrentTool_();
+    void setCurrentTool_(ui::CanvasTool* canvasTool);
+
+    void onToolCheckStateChanged_(ui::Action* toolAction, ui::CheckState checkState);
+    VGC_SLOT(onToolCheckStateChangedSlot_, onToolCheckStateChanged_);
+
+    // Palette
+    ui::ColorPalette* palette_ = nullptr;
 
     void createColorPalette_(ui::Widget* parent);
     void onColorChanged_();
     VGC_SLOT(onColorChangedSlot_, onColorChanged_)
 
-    void createCanvas_(ui::Widget* parent, workspace::Workspace* workspace);
+    // ------------------------------------------------------------------------
+    //                       Misc
+
+    ui::Action* actionDebugWidgetSizing_ = nullptr;
+    VGC_SLOT(onActionDebugWidgetSizingSlot_, onActionDebugWidgetSizing_);
+    void onActionDebugWidgetSizing_();
 };
 
 } // namespace vgc::app

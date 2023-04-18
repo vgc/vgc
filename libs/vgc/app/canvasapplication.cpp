@@ -24,9 +24,9 @@
 #include <vgc/core/datetime.h>
 #include <vgc/dom/strings.h>
 #include <vgc/ui/qtutil.h>
+#include <vgc/ui/selecttool.h>
 #include <vgc/ui/shortcut.h>
 #include <vgc/ui/tabbar.h>
-#include <vgc/ui/selecttool.h>
 
 namespace vgc::app {
 
@@ -160,6 +160,8 @@ CanvasApplication::CanvasApplication(
     window_ = app::MainWindow::create(applicationName);
     window_->setBackgroundPainted(false);
     openDocument_("");
+    createActions_(window_->mainWidget());
+    createMenus_();
     createWidgets_();
 }
 
@@ -331,90 +333,6 @@ void CanvasApplication::openDocument_(QString filename) {
     core::History* history = document_->enableHistory(dom::strings::New_Document);
     history->headChanged().connect(updateUndoRedoActionStateSlot_());
     updateUndoRedoActionState_();
-}
-
-void CanvasApplication::createWidgets_() {
-
-    using detail::createPanelWithPadding;
-
-    createActions_(window_->mainWidget());
-    createMenus_();
-
-    // Create panel areas
-    ui::PanelArea* mainArea = window_->mainWidget()->panelArea();
-    mainArea->setType(ui::PanelAreaType::HorizontalSplit);
-    ui::PanelArea* leftArea = ui::PanelArea::createTabs(mainArea);
-    leftArea->addStyleClass(left_sidebar);
-    ui::PanelArea* middleArea = ui::PanelArea::createTabs(mainArea);
-
-    // Create panels
-    ui::Panel* leftPanel = createPanelWithPadding(leftArea, "Colors");
-    ui::Panel* middlePanel = middleArea->createPanel("Canvas");
-    middleArea->tabBar()->hide();
-
-    // Create widgets inside panels
-    createColorPalette_(leftPanel);
-    createCanvas_(middlePanel, workspace_.get());
-}
-
-void CanvasApplication::createActions_(ui::Widget* parent) {
-
-    using ui::Key;
-    using ui::Shortcut;
-
-    ui::ModifierKey ctrl = ui::ModifierKey::Ctrl;
-    ui::ModifierKey shift = ui::ModifierKey::Shift;
-    ui::ShortcutContext context = ui::ShortcutContext::Window;
-
-    auto createAction = [=](std::string_view text, const Shortcut& shortcut) {
-        return parent->createAction(text, shortcut, context);
-    };
-
-    actionNew_ = createAction("New", Shortcut(ctrl, Key::N));
-    actionNew_->triggered().connect(onActionNewSlot_());
-
-    actionOpen_ = createAction("Open", Shortcut(ctrl, Key::O));
-    actionOpen_->triggered().connect(onActionOpenSlot_());
-
-    actionSave_ = createAction("Save", Shortcut(ctrl, Key::S));
-    actionSave_->triggered().connect(onActionSaveSlot_());
-
-    actionSaveAs_ = createAction("Save As...", Shortcut(ctrl | shift, Key::S));
-    actionSaveAs_->triggered().connect(onActionSaveAsSlot_());
-
-    actionQuit_ = createAction("Quit", Shortcut(ctrl, Key::Q));
-    actionQuit_->triggered().connect(onActionQuitSlot_());
-
-    actionUndo_ = createAction("Undo", Shortcut(ctrl, Key::Z));
-    actionUndo_->triggered().connect(onActionUndoSlot_());
-
-    actionRedo_ = createAction("Redo", Shortcut(ctrl | shift, Key::Z));
-    actionRedo_->triggered().connect(onActionRedoSlot_());
-
-    actionDebugWidgetSizing_ =
-        createAction("Debug Widget Sizing", Shortcut(ctrl | shift, Key::W));
-    actionDebugWidgetSizing_->triggered().connect(onActionDebugWidgetSizingSlot_());
-
-    updateUndoRedoActionState_();
-}
-
-void CanvasApplication::createMenus_() {
-
-    ui::Menu* menuBar = window_->mainWidget()->menuBar();
-
-    // XXX Do we need this? (was in UI Test)
-    //menuBar->setPopupEnabled(false);
-
-    ui::Menu* fileMenu = menuBar->createSubMenu("File");
-    fileMenu->addItem(actionNew_);
-    fileMenu->addItem(actionOpen_);
-    fileMenu->addItem(actionSave_);
-    fileMenu->addItem(actionSaveAs_);
-    fileMenu->addItem(actionQuit_);
-
-    ui::Menu* editMenu = menuBar->createSubMenu("Edit");
-    editMenu->addItem(actionUndo_);
-    editMenu->addItem(actionRedo_);
 }
 
 void CanvasApplication::onActionNew_() {
@@ -608,6 +526,175 @@ void CanvasApplication::updateUndoRedoActionState_() {
     }
 }
 
+void CanvasApplication::createActions_(ui::Widget* parent) {
+
+    using ui::Key;
+    using ui::Shortcut;
+
+    ui::ModifierKey ctrl = ui::ModifierKey::Ctrl;
+    ui::ModifierKey shift = ui::ModifierKey::Shift;
+    ui::ShortcutContext context = ui::ShortcutContext::Window;
+
+    auto createAction = [=](std::string_view text, const Shortcut& shortcut) {
+        return parent->createAction(text, shortcut, context);
+    };
+
+    actionNew_ = createAction("New", Shortcut(ctrl, Key::N));
+    actionNew_->triggered().connect(onActionNewSlot_());
+
+    actionOpen_ = createAction("Open", Shortcut(ctrl, Key::O));
+    actionOpen_->triggered().connect(onActionOpenSlot_());
+
+    actionSave_ = createAction("Save", Shortcut(ctrl, Key::S));
+    actionSave_->triggered().connect(onActionSaveSlot_());
+
+    actionSaveAs_ = createAction("Save As...", Shortcut(ctrl | shift, Key::S));
+    actionSaveAs_->triggered().connect(onActionSaveAsSlot_());
+
+    actionQuit_ = createAction("Quit", Shortcut(ctrl, Key::Q));
+    actionQuit_->triggered().connect(onActionQuitSlot_());
+
+    actionUndo_ = createAction("Undo", Shortcut(ctrl, Key::Z));
+    actionUndo_->triggered().connect(onActionUndoSlot_());
+
+    actionRedo_ = createAction("Redo", Shortcut(ctrl | shift, Key::Z));
+    actionRedo_->triggered().connect(onActionRedoSlot_());
+
+    actionDebugWidgetSizing_ =
+        createAction("Debug Widget Sizing", Shortcut(ctrl | shift, Key::W));
+    actionDebugWidgetSizing_->triggered().connect(onActionDebugWidgetSizingSlot_());
+
+    updateUndoRedoActionState_();
+}
+
+void CanvasApplication::createMenus_() {
+
+    ui::Menu* menuBar = window_->mainWidget()->menuBar();
+
+    // XXX Do we need this? (was in UI Test)
+    //menuBar->setPopupEnabled(false);
+
+    ui::Menu* fileMenu = menuBar->createSubMenu("File");
+    fileMenu->addItem(actionNew_);
+    fileMenu->addItem(actionOpen_);
+    fileMenu->addItem(actionSave_);
+    fileMenu->addItem(actionSaveAs_);
+    fileMenu->addItem(actionQuit_);
+
+    ui::Menu* editMenu = menuBar->createSubMenu("Edit");
+    editMenu->addItem(actionUndo_);
+    editMenu->addItem(actionRedo_);
+}
+
+void CanvasApplication::createWidgets_() {
+
+    using detail::createPanelWithPadding;
+
+    // Create panel areas
+    ui::PanelArea* mainArea = window_->mainWidget()->panelArea();
+    mainArea->setType(ui::PanelAreaType::HorizontalSplit);
+    ui::PanelArea* leftArea = ui::PanelArea::createVerticalSplit(mainArea);
+    ui::PanelArea* leftArea1 = ui::PanelArea::createTabs(leftArea);
+    ui::PanelArea* leftArea2 = ui::PanelArea::createTabs(leftArea);
+    leftArea->addStyleClass(left_sidebar);
+    leftArea1->addStyleClass(core::StringId("toolbox"));
+    ui::PanelArea* middleArea = ui::PanelArea::createTabs(mainArea);
+
+    // Create panels
+    ui::Panel* leftPanel1 = createPanelWithPadding(leftArea1, "Tools");
+    ui::Panel* leftPanel2 = createPanelWithPadding(leftArea2, "Colors");
+    ui::Panel* middlePanel = middleArea->createPanel("Canvas");
+    middleArea->tabBar()->hide();
+
+    // Create widgets inside panels
+    createCanvas_(middlePanel, workspace_.get());
+    createTools_(leftPanel1);
+    createColorPalette_(leftPanel2);
+}
+
+void CanvasApplication::createCanvas_(
+    ui::Widget* parent,
+    workspace::Workspace* workspace) {
+
+    canvas_ = parent->createChild<ui::Canvas>(workspace);
+}
+
+void CanvasApplication::createTools_(ui::Widget* parent) {
+
+    // Create action group ensuring only one tool is active at a time
+    toolsActionGroup_ = ui::ActionGroup::create(ui::CheckPolicy::ExactlyOne);
+
+    // Create and register all tools
+    ui::Column* tools = parent->createChild<ui::Column>();
+    ui::SelectToolPtr selectTool = ui::SelectTool::create();
+    ui::SketchToolPtr sketchTool = ui::SketchTool::create();
+    registerTool_(tools, "Select Tool", selectTool);
+    registerTool_(tools, "Sketch Tool", sketchTool);
+
+    // Keep pointer to sketch tool for handling color changes,
+    // and set it as default tool.
+    sketchTool_ = sketchTool.get();
+    setCurrentTool_(sketchTool_);
+}
+
+void CanvasApplication::registerTool_(
+    ui::Widget* parent,
+    std::string_view toolName,
+    ui::CanvasToolPtr tool) {
+
+    // Create tool action and add it to the action group
+    ui::Action* action = parent->createAction(toolName);
+    action->setCheckable(true);
+    action->checkStateChanged().connect(onToolCheckStateChangedSlot_());
+    toolsActionGroup_->addAction(action);
+
+    // Keeps the CanvasTool alive by storing it as an ObjPtr and
+    // remembers which CanvasTool corresponds to which tool action.
+    toolMap_[action] = tool;
+    toolMapInv_[tool.get()] = action;
+
+    // Create corresponding button in the Tools panel
+    parent->createChild<ui::Button>(action);
+}
+
+void CanvasApplication::clearCurrentTool_() {
+    if (currentTool_) {
+        currentTool_->reparent(nullptr);
+        currentTool_ = nullptr;
+    }
+}
+
+void CanvasApplication::setCurrentTool_(ui::CanvasTool* canvasTool) {
+    if (canvasTool != currentTool_) {
+        clearCurrentTool_();
+        currentTool_ = canvasTool;
+        canvas_->addChild(canvasTool);
+        toolMapInv_[canvasTool]->setChecked(true);
+    }
+}
+
+void CanvasApplication::onToolCheckStateChanged_(
+    ui::Action* toolAction,
+    ui::CheckState checkState) {
+
+    if (checkState == ui::CheckState::Checked) {
+        ui::CanvasTool* canvasTool = toolMap_[toolAction].get();
+        setCurrentTool_(canvasTool);
+    }
+}
+
+void CanvasApplication::createColorPalette_(ui::Widget* parent) {
+    palette_ = parent->createChild<ui::ColorPalette>();
+    palette_->colorSelected().connect(onColorChangedSlot_());
+    onColorChanged_();
+}
+
+void CanvasApplication::onColorChanged_() {
+    if (canvas_ && palette_ && sketchTool_) {
+        sketchTool_->setPenColor(palette_->selectedColor());
+    }
+}
+
 namespace {
 
 std::string widgetSizingInfo(ui::Widget* w, ui::Widget* root) {
@@ -648,30 +735,6 @@ void CanvasApplication::onActionDebugWidgetSizing_() {
         widget = widget->hoverChainChild();
     }
     VGC_DEBUG(LogVgcApp, out);
-}
-
-void CanvasApplication::createColorPalette_(ui::Widget* parent) {
-    palette_ = parent->createChild<ui::ColorPalette>();
-}
-
-void CanvasApplication::onColorChanged_() {
-    if (canvas_ && palette_ && sketchTool_) {
-        sketchTool_->setPenColor(palette_->selectedColor());
-    }
-}
-
-void CanvasApplication::createCanvas_(
-    ui::Widget* parent,
-    workspace::Workspace* workspace) {
-
-    // XXX switch between tools
-    canvas_ = parent->createChild<ui::Canvas>(workspace);
-    //tool_ = canvas_->createChild<ui::SketchTool>();
-    currentTool_ = canvas_->createChild<ui::SelectTool>();
-    onColorChanged_();
-    if (palette_) {
-        palette_->colorSelected().connect(onColorChangedSlot_());
-    }
 }
 
 } // namespace vgc::app

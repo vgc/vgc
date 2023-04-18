@@ -211,7 +211,8 @@ void Canvas::clearSelection() {
 }
 
 void Canvas::selectAtPosition(const geometry::Vec2f& position) {
-    core::Array<std::pair<core::Id, double>> candidates = computeSelectionCandidates_(position);
+    core::Array<std::pair<core::Id, double>> candidates =
+        computeSelectionCandidates_(position);
     if (candidates.isEmpty()) {
         clearSelection();
     }
@@ -231,7 +232,8 @@ void Canvas::selectAtPosition(const geometry::Vec2f& position) {
 // candidates in cache.
 //
 void Canvas::selectAlternativeAtPosition(const geometry::Vec2f& position) {
-    core::Array<std::pair<core::Id, double>> candidates = computeSelectionCandidates_(position);
+    core::Array<std::pair<core::Id, double>> candidates =
+        computeSelectionCandidates_(position);
     if (candidates.isEmpty()) {
         clearSelection();
     }
@@ -244,7 +246,8 @@ void Canvas::selectAlternativeAtPosition(const geometry::Vec2f& position) {
         if (selectedElementId_ != -1) {
             for (Int i = 0; i < candidates.length(); ++i) {
                 if (candidates[i].first == selectedElementId_) {
-                    selectedElementId_ = (i + 1) % candidates.length();
+                    Int j = (i + 1) % candidates.length();
+                    selectedElementId_ = candidates[j].first;
                     found = true;
                     break;
                 }
@@ -590,7 +593,8 @@ void Canvas::updateChildrenGeometry() {
     }
 }
 
-core::Array<std::pair<core::Id, double>> Canvas::computeSelectionCandidates_(const geometry::Vec2f& position) {
+core::Array<std::pair<core::Id, double>>
+Canvas::computeSelectionCandidates_(const geometry::Vec2f& position) {
 
     core::Array<std::pair<core::Id, double>> res;
 
@@ -616,15 +620,12 @@ core::Array<std::pair<core::Id, double>> Canvas::computeSelectionCandidates_(con
             });
 
         // order from front to back
-        std::reverse(
-            res.begin(),
-            res.end());
+        std::reverse(res.begin(), res.end());
 
         // sort by selection distance, stable to keep Z order priority
-        std::stable_sort(
-            res.begin(),
-            res.end(),
-            [](const auto& a, const auto& b) { return a.second < b.second; });
+        std::stable_sort(res.begin(), res.end(), [](const auto& a, const auto& b) {
+            return a.second < b.second;
+        });
     }
 
     return res;

@@ -304,6 +304,19 @@
 }
 
 /* ----------------------------------------------------------------------------
+ *                                 TOOLBOX
+*/
+
+/* XXX Hard-coded min-height for now.
+ * TODO: Implement non-stretchable vs stretchable Panels so that Toolbox can be
+ *     on auto-size.
+ */
+.toolbox {
+    vertical-stretch: 0;
+    min-height: 80dp;
+}
+
+/* ----------------------------------------------------------------------------
  *                               COLOR PALETTE
  */
 

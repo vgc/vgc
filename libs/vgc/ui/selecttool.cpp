@@ -32,7 +32,6 @@ bool SelectTool::onMouseMove(MouseEvent* event) {
 
 bool SelectTool::onMousePress(MouseEvent* event) {
 
-
     ui::Canvas* canvas = this->canvas();
     if (!canvas) {
         return false;
@@ -45,6 +44,7 @@ bool SelectTool::onMousePress(MouseEvent* event) {
         else {
             canvas->selectAtPosition(event->position());
         }
+        requestRepaint();
         return true;
     }
 
