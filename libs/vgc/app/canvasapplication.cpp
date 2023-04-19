@@ -32,12 +32,13 @@ namespace vgc::app {
 
 namespace {
 
-core::StringId left_sidebar("left-sidebar");
-core::StringId with_padding("with-padding");
-core::StringId user_("user");
-core::StringId colorpalette_("colorpalette");
-core::StringId colorpaletteitem_("colorpaletteitem");
-core::StringId color_("color");
+core::StringId s_left_sidebar("left-sidebar");
+core::StringId s_with_padding("with-padding");
+core::StringId s_user("user");
+core::StringId s_colorpalette("colorpalette");
+core::StringId s_colorpaletteitem("colorpaletteitem");
+core::StringId s_color("color");
+core::StringId s_tools("tools");
 
 void loadColorPalette_(
     ui::ColorPalette* palette,
@@ -58,19 +59,19 @@ core::Array<core::Color> getColorPalette_(dom::Document* doc) {
     // Get colors
     core::Array<core::Color> colors;
     dom::Element* root = doc->rootElement();
-    for (dom::Element* user : root->childElements(user_)) {
-        for (dom::Element* colorpalette : user->childElements(colorpalette_)) {
-            for (dom::Element* item : colorpalette->childElements(colorpaletteitem_)) {
-                core::Color color = item->getAttribute(color_).getColor();
+    for (dom::Element* user : root->childElements(s_user)) {
+        for (dom::Element* colorpalette : user->childElements(s_colorpalette)) {
+            for (dom::Element* item : colorpalette->childElements(s_colorpaletteitem)) {
+                core::Color color = item->getAttribute(s_color).getColor();
                 colors.append(color);
             }
         }
     }
 
     // Delete <user> element
-    dom::Element* user = root->firstChildElement(user_);
+    dom::Element* user = root->firstChildElement(s_user);
     while (user) {
-        dom::Element* nextUser = user->nextSiblingElement(user_);
+        dom::Element* nextUser = user->nextSiblingElement(s_user);
         user->remove();
         user = nextUser;
     }
@@ -114,12 +115,12 @@ public:
 
         // TODO: reuse existing colorpalette element instead of creating new one.
         dom::Element* root = doc->rootElement();
-        dom::Element* user = dom::Element::create(root, user_);
-        dom::Element* colorpalette = dom::Element::create(user, colorpalette_);
+        dom::Element* user = dom::Element::create(root, s_user);
+        dom::Element* colorpalette = dom::Element::create(user, s_colorpalette);
         for (Int i = 0; i < listView->numColors(); ++i) {
             const core::Color& color = listView->colorAt(i);
-            dom::Element* item = dom::Element::create(colorpalette, colorpaletteitem_);
-            item->setAttribute(color_, color);
+            dom::Element* item = dom::Element::create(colorpalette, s_colorpaletteitem);
+            item->setAttribute(s_color, color);
         }
     }
 
@@ -143,7 +144,7 @@ namespace detail {
 
 ui::Panel* createPanelWithPadding(ui::PanelArea* panelArea, std::string_view panelTitle) {
     ui::Panel* panel = panelArea->createPanel(panelTitle);
-    panel->addStyleClass(with_padding);
+    panel->addStyleClass(s_with_padding);
     return panel;
 }
 
@@ -583,8 +584,8 @@ void CanvasApplication::createWidgets_() {
     ui::PanelArea* leftArea = ui::PanelArea::createVerticalSplit(mainArea);
     ui::PanelArea* leftArea1 = ui::PanelArea::createTabs(leftArea);
     ui::PanelArea* leftArea2 = ui::PanelArea::createTabs(leftArea);
-    leftArea->addStyleClass(left_sidebar);
-    leftArea1->addStyleClass(core::StringId("toolbox"));
+    leftArea->addStyleClass(s_left_sidebar);
+    leftArea1->addStyleClass(s_tools);
     ui::PanelArea* middleArea = ui::PanelArea::createTabs(mainArea);
 
     // Create panels
