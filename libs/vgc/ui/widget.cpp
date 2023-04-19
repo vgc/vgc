@@ -136,7 +136,15 @@ bool Widget::canReparent(Widget* newParent) {
 }
 
 void Widget::reparent(Widget* newParent) {
-    newParent->addChild(this);
+    if (newParent) {
+        newParent->addChild(this);
+    }
+    else {
+        // Make the widget a root widget.
+        // This will destroy the widget if no ObjPtr manages it.
+        // XXX have a dedicated widget function for that, e.g. Widget::removeChild()?
+        removeObjectFromParent_();
+    }
 }
 
 namespace {
