@@ -336,16 +336,6 @@ void CanvasApplication::openDocument_(QString filename) {
 }
 
 void CanvasApplication::onActionNew_() {
-
-    // XXX TODO ask save current document
-
-    // XXX Fix following bug:
-    // - Draw something
-    // - Save As
-    // - New
-    // - Save => this saves to the previous file (effectively erasing its content,
-    //           with no possibility to undo and save again
-
     openDocument_("");
 }
 
@@ -571,9 +561,6 @@ void CanvasApplication::createMenus_() {
 
     ui::Menu* menuBar = window_->mainWidget()->menuBar();
 
-    // XXX Do we need this? (was in UI Test)
-    //menuBar->setPopupEnabled(false);
-
     ui::Menu* fileMenu = menuBar->createSubMenu("File");
     fileMenu->addItem(actionNew_);
     fileMenu->addItem(actionOpen_);
@@ -657,19 +644,22 @@ void CanvasApplication::registerTool_(
     parent->createChild<ui::Button>(action);
 }
 
-void CanvasApplication::clearCurrentTool_() {
-    if (currentTool_) {
-        currentTool_->reparent(nullptr);
-        currentTool_ = nullptr;
-    }
-}
-
 void CanvasApplication::setCurrentTool_(ui::CanvasTool* canvasTool) {
     if (canvasTool != currentTool_) {
-        clearCurrentTool_();
+        bool wasFocusedWidget = false;
+        if (currentTool_) {
+            wasFocusedWidget = currentTool_->isFocusedWidget();
+            currentTool_->clearFocus(ui::FocusReason::Other);
+            currentTool_->reparent(nullptr);
+        }
         currentTool_ = canvasTool;
-        canvas_->addChild(canvasTool);
-        toolMapInv_[canvasTool]->setChecked(true);
+        if (currentTool_) {
+            canvas_->addChild(canvasTool);
+            if (wasFocusedWidget) {
+                currentTool_->setFocus(ui::FocusReason::Other);
+            }
+            toolMapInv_[canvasTool]->setChecked(true);
+        }
     }
 }
 

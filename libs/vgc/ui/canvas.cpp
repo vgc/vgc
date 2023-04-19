@@ -594,7 +594,7 @@ void Canvas::updateChildrenGeometry() {
 }
 
 core::Array<std::pair<core::Id, double>>
-Canvas::computeSelectionCandidates_(const geometry::Vec2f& position) {
+Canvas::computeSelectionCandidates_(const geometry::Vec2f& position) const {
 
     core::Array<std::pair<core::Id, double>> res;
 

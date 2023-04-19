@@ -202,7 +202,6 @@ private:
         std::string_view toolName,
         ui::CanvasToolPtr tool);
 
-    void clearCurrentTool_();
     void setCurrentTool_(ui::CanvasTool* canvasTool);
 
     void onToolCheckStateChanged_(ui::Action* toolAction, ui::CheckState checkState);
