@@ -56,18 +56,32 @@ public:
         return canvas_;
     }
 
+    /// Returns the widget that control options for this tool.
+    ///
+    /// \sa createOptionsWidget().
+    ///
+    ui::Widget* optionsWidget() const;
+
 protected:
+    /// Creates the widget that control options for this tool.
+    ///
+    /// This will be called automatically.
+    ///
+    /// \sa `optionsWidget()`.
+    ///
+    virtual ui::WidgetPtr createOptionsWidget() const;
+
     // Reimplementation of Widget virtual methods
     void onParentWidgetChanged(Widget* newParent) override;
     void preMouseMove(MouseEvent* event) override;
     void preMousePress(MouseEvent* event) override;
     void preMouseRelease(MouseEvent* event) override;
     geometry::Vec2f computePreferredSize() const override;
-    //
 
 private:
-    // Scene
     ui::Canvas* canvas_ = nullptr;
+
+    mutable ui::WidgetPtr optionsWidget_;
 
     // Make sure to disallow concurrent usage of the mouse and the tablet to
     // avoid conflicts. This also acts as a work around the following Qt bugs:
