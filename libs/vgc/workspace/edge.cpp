@@ -785,12 +785,7 @@ bool VacKeyEdge::computePreJoinGeometry_() {
     data.isComputing_ = true;
 
     data.sampling_ = ke->samplingShared();
-    data.bbox_ = geometry::Rect2d::empty;
-    if (data.sampling_) {
-        for (const auto& sample : data.sampling_->samples()) {
-            data.bbox_.uniteWith(sample.position());
-        }
-    }
+    data.bbox_ = ke->samplingBoundingBox();
 
     alreadyNotifiedChanges_.unset(ChangeFlag::EdgePreJoinGeometry);
     data.stage_ = VacEdgeComputationStage::PreJoinGeometry;
