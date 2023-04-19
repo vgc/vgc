@@ -26,7 +26,7 @@ SelectToolPtr SelectTool::create() {
     return SelectToolPtr(new SelectTool());
 }
 
-bool SelectTool::onMouseMove(MouseEvent* event) {
+bool SelectTool::onMouseMove(MouseEvent* /*event*/) {
     return false;
 }
 
@@ -51,7 +51,7 @@ bool SelectTool::onMousePress(MouseEvent* event) {
     return false;
 }
 
-bool SelectTool::onMouseRelease(MouseEvent* event) {
+bool SelectTool::onMouseRelease(MouseEvent* /*event*/) {
     return false;
 }
 
