@@ -50,7 +50,8 @@ const EdgeSampling& KeyEdge::sampling() const {
 
     snappedSamplingBbox_ = geometry::Rect2d::empty;
     for (const auto& sample : snappedSamples) {
-        snappedSamplingBbox_.uniteWith(sample.position());
+        snappedSamplingBbox_.uniteWith(sample.sidePoint(0));
+        snappedSamplingBbox_.uniteWith(sample.sidePoint(1));
     }
 
     snappedSampling_ = std::make_shared<EdgeSampling>(std::move(snappedSamples));
