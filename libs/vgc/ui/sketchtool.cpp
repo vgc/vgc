@@ -69,8 +69,6 @@ SketchTool::SketchTool()
 
     Settings* session = ui::settings::session();
     penWidth_ = session->getOrSetDoubleValue("tools.sketch.width", penWidth_);
-    setFocusPolicy(FocusPolicy::Click);
-    setClippingEnabled(true);
 }
 
 SketchToolPtr SketchTool::create() {
@@ -129,7 +127,7 @@ bool SketchTool::onMousePress(MouseEvent* event) {
     if (!canvas) {
         return false;
     }
-    canvas->clearSelection_();
+    canvas->clearSelection();
 
     isSketching_ = true;
 

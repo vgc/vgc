@@ -110,8 +110,35 @@ public:
 
     VGC_SIGNAL(changed);
 
-    // temporary method
-    void clearSelection_();
+    //----------------------- Manage selection --------------------------------
+    //
+    // For now, we keep this in Canvas, but we may want to move this to a
+    // separate class (CanvasSelection? SelectionManager? WorkspaceSelection?)
+    // since the "current selection" can be shared across several canvases
+    // in case of split view, etc.
+    //
+
+    /// Deselects all selected elements and make the list of selection
+    /// candidates empty.
+    ///
+    void clearSelection();
+
+    /// Selects the element at the given `position` in canvas coordinates.
+    ///
+    // TODO: Split API in separate methods for more flexibility and let
+    //       the tool control what to do depending on whether Shift/Alt/etc.
+    //       is pressed:
+    //       - ElementId getElementAtPosition(position)
+    //       - addToSelection(elementId)
+    //       - setSelection(Array<ElementId>)
+    //       - ...
+    //
+    void selectAtPosition(const geometry::Vec2f& position);
+
+    /// Selects an alternative element at the given `position` in canvas
+    /// coordinates.
+    ///
+    void selectAlternativeAtPosition(const geometry::Vec2f& position);
 
 protected:
     // Reimplementation of Widget virtual methods
@@ -155,8 +182,9 @@ protected:
     geometry::Camera2d cameraAtPress_;
 
     // Selection
-    core::Array<std::pair<core::Id, double>> selectionCandidateElements_;
-    Int selectedElementId_ = 0;
+    core::Id selectedElementId_ = -1;
+    core::Array<std::pair<core::Id, double>>
+    computeSelectionCandidates_(const geometry::Vec2f& position) const;
     workspace::Element* selectedElement_() const;
 
     // Graphics resources

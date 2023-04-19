@@ -34,6 +34,30 @@ CanvasToolPtr CanvasTool::create() {
 CanvasTool::CanvasTool()
     : Widget() {
 
+    // Set Click+Sticky focus policy by default, so that:
+    // - clicking on the canvas gives the keyboard focus to the tool, and
+    // - the tool keeps the keyboard when clicking on widgets that don't
+    //   accept focus, such as a button.
+    //
+    // For example, sketching gives the focus to the sketch tool, and clicking
+    // on a button keeps the focus on the sketch tool.
+    //
+    // When clicking on a tool button to switch tools, the tool manager can
+    // then query if the current tool has the focus, in which case it transfers
+    // the focus to the new tool.
+    //
+    // Note: in the future, it's not clear that all tools (or any) really need
+    // the Click focus policy. It is currently necessary because a lot of the
+    // Canvas shortcuts (e.g., T to show the tessellation) are implemented
+    // directly in Canvas::onKeyPress(). Instead, these might be registered
+    // Action with ShortcutContext::Window (or ShortcutContext::Application),
+    // so that they can be trigerred with their shortcut even if the canvas
+    // doesn't have the focus.
+    //
+    setFocusPolicy(FocusPolicy::Click | FocusPolicy::Sticky);
+
+    // Enable clipping, so that tools don't draw outside the canvas.
+    //
     setClippingEnabled(true);
 }
 

@@ -304,6 +304,20 @@
 }
 
 /* ----------------------------------------------------------------------------
+ *                                 TOOLS PANEL
+*/
+
+/* XXX Hard-coded min-height for now.
+ * TODO: Implement non-stretchable vs stretchable Panels.
+ *       The Tools Panel should probably be non-stretchable, so that its size
+ *       is automatically computed from the number of tool buttons inside it.
+ */
+.tools {
+    vertical-stretch: 0;
+    min-height: 80dp;
+}
+
+/* ----------------------------------------------------------------------------
  *                               COLOR PALETTE
  */
 
