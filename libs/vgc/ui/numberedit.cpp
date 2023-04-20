@@ -82,7 +82,7 @@ void NumberEdit::setMinimum(double min) {
 
 void NumberEdit::setMaximum(double max) {
 
-    // Set new minimum
+    // Set new maximum
     if (maximum_ == max) {
         return;
     }
