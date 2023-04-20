@@ -39,6 +39,7 @@ core::StringId s_colorpalette("colorpalette");
 core::StringId s_colorpaletteitem("colorpaletteitem");
 core::StringId s_color("color");
 core::StringId s_tools("tools");
+core::StringId s_tool_options("tool-options");
 
 void loadColorPalette_(
     ui::ColorPalette* palette,
@@ -584,20 +585,23 @@ void CanvasApplication::createWidgets_() {
     ui::PanelArea* leftArea = ui::PanelArea::createVerticalSplit(mainArea);
     ui::PanelArea* leftArea1 = ui::PanelArea::createTabs(leftArea);
     ui::PanelArea* leftArea2 = ui::PanelArea::createTabs(leftArea);
+    ui::PanelArea* leftArea3 = ui::PanelArea::createTabs(leftArea);
     leftArea->addStyleClass(s_left_sidebar);
     leftArea1->addStyleClass(s_tools);
+    leftArea2->addStyleClass(s_tool_options);
     ui::PanelArea* middleArea = ui::PanelArea::createTabs(mainArea);
 
     // Create panels
     ui::Panel* leftPanel1 = createPanelWithPadding(leftArea1, "Tools");
-    ui::Panel* leftPanel2 = createPanelWithPadding(leftArea2, "Colors");
+    toolOptionsPanel_ = createPanelWithPadding(leftArea2, "Tool Options");
+    ui::Panel* leftPanel3 = createPanelWithPadding(leftArea3, "Colors");
     ui::Panel* middlePanel = middleArea->createPanel("Canvas");
     middleArea->tabBar()->hide();
 
     // Create widgets inside panels
     createCanvas_(middlePanel, workspace_.get());
     createTools_(leftPanel1);
-    createColorPalette_(leftPanel2);
+    createColorPalette_(leftPanel3);
 }
 
 void CanvasApplication::createCanvas_(
@@ -652,10 +656,12 @@ void CanvasApplication::setCurrentTool_(ui::CanvasTool* canvasTool) {
             wasFocusedWidget = currentTool_->isFocusedWidget();
             currentTool_->clearFocus(ui::FocusReason::Other);
             currentTool_->reparent(nullptr);
+            currentTool_->optionsWidget()->reparent(nullptr);
         }
         currentTool_ = canvasTool;
         if (currentTool_) {
             canvas_->addChild(canvasTool);
+            toolOptionsPanel_->addChild(currentTool_->optionsWidget());
             if (wasFocusedWidget) {
                 currentTool_->setFocus(ui::FocusReason::Other);
             }

@@ -28,7 +28,9 @@
 namespace vgc::ui {
 
 CanvasToolPtr CanvasTool::create() {
-    return CanvasToolPtr(new CanvasTool());
+    CanvasToolPtr res = new CanvasTool();
+    res->optionsWidget_ = res->createOptionsWidget();
+    return res;
 }
 
 CanvasTool::CanvasTool()
@@ -59,6 +61,21 @@ CanvasTool::CanvasTool()
     // Enable clipping, so that tools don't draw outside the canvas.
     //
     setClippingEnabled(true);
+}
+
+ui::Widget* CanvasTool::optionsWidget() const {
+    if (!optionsWidget_) {
+        // Create options widget if not already created.
+        // Note that we cannot do this in the constructor, since the
+        // virtual method would not call the derived implementation,
+        // which is why we defer creating the options widget until here.
+        optionsWidget_ = createOptionsWidget();
+    }
+    return optionsWidget_.get();
+}
+
+ui::WidgetPtr CanvasTool::createOptionsWidget() const {
+    return ui::Widget::create();
 }
 
 // Reimplementation of Widget virtual methods

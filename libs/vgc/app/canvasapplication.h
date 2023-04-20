@@ -195,6 +195,7 @@ private:
     std::map<ui::CanvasTool*, ui::Action*> toolMapInv_;
     ui::CanvasTool* currentTool_ = nullptr;
     ui::SketchTool* sketchTool_ = nullptr;
+    ui::Panel* toolOptionsPanel_ = nullptr;
 
     void createTools_(ui::Widget* parent);
     void registerTool_( //
