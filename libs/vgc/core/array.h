@@ -472,6 +472,7 @@ public:
     ///
     Array& operator=(Array&& other) noexcept {
         if (this != &other) {
+            destroyStorage_();
             data_ = other.data_;
             length_ = other.length_;
             reservedLength_ = other.reservedLength_;
