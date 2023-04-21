@@ -47,6 +47,12 @@ VGC_DEFINE_ENUM(
     (ForceStretch, "force-stretch"))
 
 VGC_DEFINE_ENUM( //
+    CrossAlignment,
+    (Start, "start"),
+    (End, "end"),
+    (Center, "center"))
+
+VGC_DEFINE_ENUM( //
     FlexWrap,
     (NoWrap, "nowrap"))
 
@@ -144,6 +150,38 @@ style::Value parseMainSpacing(style::TokenIterator begin, style::TokenIterator e
     return res;
 }
 
+style::Value parseCrossAlignment(style::TokenIterator begin, style::TokenIterator end_) {
+
+    using namespace strings;
+
+    style::Value res = style::Value::invalid();
+
+    // There must be exactly one token
+    if (end_ != begin + 1) {
+        return res;
+    }
+    style::TokenType t = begin->type();
+
+    // The token should be an identifier
+    if (t != style::TokenType::Identifier) {
+        return res;
+    }
+    std::string_view s = begin->stringValue();
+
+    // Converts the identifier to style::Value storing a MainAlignment enum value.
+    if (s == start) {
+        res = style::Value::custom(CrossAlignment::Start);
+    }
+    else if (s == end) {
+        res = style::Value::custom(CrossAlignment::End);
+    }
+    else if (s == center) {
+        res = style::Value::custom(CrossAlignment::Center);
+    }
+
+    return res;
+}
+
 } // namespace
 
 void Flex::populateStyleSpecTable(style::SpecTable* table) {
@@ -153,8 +191,10 @@ void Flex::populateStyleSpecTable(style::SpecTable* table) {
     using namespace strings;
     auto start_ma = style::Value::custom(MainAlignment::Start);
     auto packed_ms = style::Value::custom(MainSpacing::Packed);
+    auto center_ca = style::Value::custom(CrossAlignment::Center);
     table->insert(main_alignment, start_ma, false, &parseMainAlignment);
     table->insert(main_spacing, packed_ms, false, &parseMainSpacing);
+    table->insert(cross_alignment, center_ca, false, &parseCrossAlignment);
     SuperClass::populateStyleSpecTable(table);
 }
 
@@ -440,6 +480,7 @@ detail::FlexData computeData(Flex* flex) {
     res.isReverse = flex->isReverse();
     res.mainAlignment = flex->style<MainAlignment>(strings::main_alignment);
     res.mainSpacing = flex->style<MainSpacing>(strings::main_spacing);
+    res.crossAlignment = flex->style<CrossAlignment>(strings::cross_alignment);
     res.mainDir = 0;
     res.crossDir = 1;
     res.gap = getGap(res.isRow, flex, res.hinting);
@@ -486,6 +527,8 @@ detail::FlexChildData computeChildData(const detail::FlexData& data, Widget* chi
     res.minSize[0] = core::clamp(res.minSize[0], 0, res.maxSize[0]);
     res.minSize[1] = core::clamp(res.minSize[1], 0, res.maxSize[1]);
 
+    res.preferredSize = child->preferredSize();
+
     // TODO: handle percentages
     float refLength = 0;
     res.mainMargins = {
@@ -495,38 +538,85 @@ detail::FlexChildData computeChildData(const detail::FlexData& data, Widget* chi
         getLengthOrPercentageInPx(child, ss::margin_top, refLength),
         getLengthOrPercentageInPx(child, ss::margin_bottom, refLength)};
 
+    // Separate input data into main/cross attributes.
+    //
+    // Note: we can already set crossPreferredSize, but we need to compute
+    // crossSize (see below) before we can compute mainPreferredSize.
+    //
     if (isRow) {
-        res.shrink = child->horizontalShrink();
-        res.stretch = child->horizontalStretch();
         res.mainMinSize = res.minSize[0];
         res.mainMaxSize = res.maxSize[0];
+        res.mainShrink = child->horizontalShrink();
+        res.mainStretch = child->horizontalStretch();
 
-        float childCrossMargins = res.crossMargins[0] + res.crossMargins[1];
-        float childCrossSize =
-            (std::max)(0.0f, data.contentCrossSize - childCrossMargins);
-        res.mainPreferredSize = child->preferredWidthForHeight(childCrossSize);
+        res.crossMinSize = res.minSize[1];
+        res.crossMaxSize = res.maxSize[1];
+        res.crossShrink = child->verticalShrink();
+        res.crossStretch = child->verticalStretch();
+
+        res.crossPreferredSize = res.preferredSize[1];
     }
     else {
-        res.shrink = child->verticalShrink();
-        res.stretch = child->verticalStretch();
         res.mainMinSize = res.minSize[1];
         res.mainMaxSize = res.maxSize[1];
+        res.mainShrink = child->verticalShrink();
+        res.mainStretch = child->verticalStretch();
+
+        res.crossMinSize = res.minSize[0];
+        res.crossMaxSize = res.maxSize[0];
+        res.crossShrink = child->horizontalShrink();
+        res.crossStretch = child->horizontalStretch();
+
+        res.crossPreferredSize = res.preferredSize[0];
 
         std::swap(res.mainMargins, res.crossMargins);
+    }
 
-        float childCrossMargins = res.crossMargins[0] + res.crossMargins[1];
-        float childCrossSize =
-            (std::max)(0.0f, data.contentCrossSize - childCrossMargins);
-        res.mainPreferredSize = child->preferredHeightForWidth(childCrossSize);
+    // Compute child's cross available size, that is, how much cross space is
+    // available for the child after removing Flex's border and padding as well
+    // as the child's margins.
+    //
+    float crossMargins = res.crossMargins[0] + res.crossMargins[1];
+    float crossAvailableSize = (std::max)(0.0f, data.contentCrossSize - crossMargins);
+
+    // Compute child's cross size.
+    //
+    res.crossSize =
+        core::clamp(res.crossPreferredSize, res.crossMinSize, res.crossMaxSize);
+    if (res.crossSize > crossAvailableSize) {
+        if (res.crossShrink > 0) {
+            res.crossSize = crossAvailableSize;
+        }
+    }
+    else {
+        if (res.crossStretch > 0) {
+            res.crossSize = crossAvailableSize;
+        }
+    }
+
+    // Compute child's cross extra size, that is, how much extra space is still
+    // remaining after potentially stretching/shrinking the child cross size to
+    // its available size. This extra size can be negative, and will be later
+    // distributed based on the cross-alignment style property.
+    //
+    res.crossExtraSize = crossAvailableSize - res.crossSize;
+
+    // Compute main preferred size.
+    //
+    if (isRow) {
+        res.mainPreferredSize = child->preferredWidthForHeight(res.crossSize);
+    }
+    else {
+        res.mainPreferredSize = child->preferredHeightForWidth(res.crossSize);
     }
 
     // For non-stretchable or non-shrinkable child widgets, update their
-    // effective min/max size based on their preferred size
+    // effective min/max size based on their preferred size.
     //
-    if (res.shrink <= 0) {
+    if (res.mainShrink <= 0) {
         res.mainMinSize = (std::max)(res.mainMinSize, res.mainPreferredSize);
     }
-    if (res.stretch <= 0) {
+    if (res.mainStretch <= 0) {
         res.mainMaxSize = (std::min)(res.mainMaxSize, res.mainPreferredSize);
     }
 
@@ -560,12 +650,12 @@ void updateChildData(
     data.totalShrink = 0;
     data.totalStretch = 0;
     for (const detail::FlexChildData& d : childData) {
-        data.totalShrink += d.shrink;
-        data.totalStretch += d.stretch;
+        data.totalShrink += d.mainShrink;
+        data.totalStretch += d.mainStretch;
     }
     if (data.totalShrink <= 0) {
         for (detail::FlexChildData& d : childData) {
-            d.shrink = 1.0f;
+            d.mainShrink = 1.0f;
         }
         data.totalShrink = childData.length();
     }
@@ -606,7 +696,7 @@ void normalStretch(
     float remainingTotalStretch = 0;
     childSlacks.clear();
     for (detail::FlexChildData& d : childData) {
-        float stretch = d.stretch;
+        float stretch = d.mainStretch;
         float normalizedSlack = 0;
         if (stretch > 0) {
             float slack = d.mainMaxSize - d.mainPreferredSize;
@@ -707,10 +797,10 @@ void normalShrink(
         //                     = 1 / authoredShrink
         //
         float slack = d.mainPreferredSize - d.mainMinSize;
-        float shrink = slack * d.shrink;
+        float shrink = slack * d.mainShrink;
         float normalizedSlack = 0;
-        if (d.shrink > 0) {
-            normalizedSlack = 1.0f / d.shrink;
+        if (d.mainShrink > 0) {
+            normalizedSlack = 1.0f / d.mainShrink;
         }
         childSlacks.append({&d, shrink, normalizedSlack});
         remainingTotalShrink += shrink;
@@ -897,9 +987,8 @@ void Flex::updateChildrenGeometry() {
 
     // Compute children 2D sizes
     for (detail::FlexChildData& d : childData_) {
-        const float crossMargins = d.crossMargins[0] + d.crossMargins[1];
         d.size[data.mainDir] = d.mainSize;
-        d.size[data.crossDir] = data.contentCrossSize - crossMargins;
+        d.size[data.crossDir] = d.crossSize;
     }
 
     // Compute children 2D position
@@ -938,7 +1027,6 @@ void Flex::updateChildrenGeometry() {
         break;
     case MainAlignment::End:
         mainAlignmentStartSpace = remainingExtraSpace - mainAlignOffsetSpace;
-
         break;
     case MainAlignment::Center:
         mainAlignmentStartSpace = 0.5f * remainingExtraSpace;
@@ -963,6 +1051,21 @@ void Flex::updateChildrenGeometry() {
             mainPosition +=
                 d.mainSize + d.mainMargins[1] + data.gap + mainAlignBetweenSpace;
         }
+    }
+    switch (data.crossAlignment) {
+    case CrossAlignment::Start:
+        // nothing to do
+        break;
+    case CrossAlignment::End:
+        for (detail::FlexChildData& d : childData_) {
+            d.position[data.crossDir] += d.crossExtraSize;
+        }
+        break;
+    case CrossAlignment::Center:
+        for (detail::FlexChildData& d : childData_) {
+            d.position[data.crossDir] += 0.5f * d.crossExtraSize;
+        }
+        break;
     }
 
     // Compute hinting

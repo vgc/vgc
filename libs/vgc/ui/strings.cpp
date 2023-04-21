@@ -68,6 +68,7 @@ const core::StringId vertical_shrink("vertical-shrink");
 
 // Flex
 const core::StringId main_alignment("main-alignment");
+const core::StringId cross_alignment("cross-alignment");
 const core::StringId start("start");
 const core::StringId end("end");
 const core::StringId center("center");
