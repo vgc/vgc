@@ -23,8 +23,10 @@
 #include <vgc/core/stringid.h>
 #include <vgc/geometry/curve.h>
 #include <vgc/graphics/strings.h>
+#include <vgc/ui/column.h>
 #include <vgc/ui/cursor.h>
 #include <vgc/ui/logcategories.h>
+#include <vgc/ui/numbersettingedit.h>
 #include <vgc/ui/settings.h>
 #include <vgc/ui/window.h>
 #include <vgc/workspace/edge.h>
@@ -32,6 +34,16 @@
 namespace vgc::ui {
 
 namespace {
+
+namespace options {
+
+NumberSetting* penWidth() {
+    static NumberSettingPtr setting = createDecimalNumberSetting(
+        settings::session(), "tools.sketck.penWidth", "Pen Width", 5, 0, 1000);
+    return setting.get();
+}
+
+} // namespace options
 
 geometry::Vec2d getSnapPosition(workspace::Element* snapVertex) {
     vacomplex::Node* node = snapVertex->vacNode();
@@ -66,13 +78,24 @@ geometry::Vec2d snapDeformation(
 
 SketchTool::SketchTool()
     : CanvasTool() {
-
-    Settings* session = ui::settings::session();
-    penWidth_ = session->getOrSetDoubleValue("tools.sketch.width", penWidth_);
 }
 
 SketchToolPtr SketchTool::create() {
     return SketchToolPtr(new SketchTool());
+}
+
+double SketchTool::penWidth() const {
+    return options::penWidth()->value();
+}
+
+void SketchTool::setPenWidth(double width) {
+    options::penWidth()->setValue(width);
+}
+
+ui::WidgetPtr SketchTool::createOptionsWidget() const {
+    ui::WidgetPtr res = ui::Column::create();
+    res->createChild<ui::NumberSettingEdit>(options::penWidth());
+    return res;
 }
 
 bool SketchTool::onKeyPress(KeyEvent* /*event*/) {
@@ -81,7 +104,8 @@ bool SketchTool::onKeyPress(KeyEvent* /*event*/) {
 
 namespace {
 
-double pressurePenWidth(double baseWidth, const MouseEvent* event) {
+double pressurePenWidth(const MouseEvent* event) {
+    double baseWidth = options::penWidth()->value();
     return event->hasPressure() ? 2 * event->pressure() * baseWidth : baseWidth;
 }
 
@@ -111,7 +135,7 @@ bool SketchTool::onMouseMove(MouseEvent* event) {
     geometry::Vec2d viewCoords = mousePos;
     geometry::Vec2d worldCoords =
         canvas->camera().viewMatrix().inverted().transformPointAffine(viewCoords);
-    double width = pressurePenWidth(penWidth_, event);
+    double width = pressurePenWidth(event);
     continueCurve_(worldCoords, width);
     minimalLatencyStrokeReload_ = true;
     return true;
@@ -137,7 +161,7 @@ bool SketchTool::onMousePress(MouseEvent* event) {
     geometry::Vec2d viewCoords = mousePos;
     geometry::Vec2d worldCoords =
         canvas->camera().viewMatrix().inverted().transformPointAffine(viewCoords);
-    startCurve_(worldCoords, pressurePenWidth(penWidth_, event));
+    startCurve_(worldCoords, pressurePenWidth(event));
     return true;
 }
 
