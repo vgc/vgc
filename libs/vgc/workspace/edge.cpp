@@ -177,7 +177,7 @@ VacKeyEdge::~VacKeyEdge() {
     for (Int i = 0; i < 2; ++i) {
         VacKeyVertex* const vertex = verticesInfo_[i].element;
         if (vertex) {
-            VacJoinHalfedge he(this, i == 0, 0);
+            VacJoinHalfedge he(this, i > 0, 0);
             vertex->removeJoinHalfedge_(he);
             verticesInfo_[i].element = nullptr;
         }
@@ -1190,7 +1190,7 @@ void VacKeyEdge::updateVertices_(const std::array<VacKeyVertex*, 2>& newVertices
             if (newVertex != otherVertex) {
                 addDependency(newVertex);
             }
-            VacJoinHalfedge he(this, i == 0, 0);
+            VacJoinHalfedge he(this, i > 0, 0);
             if (oldVertex) {
                 oldVertex->removeJoinHalfedge_(he);
             }
@@ -1339,7 +1339,7 @@ void VacKeyEdge::dirtyStrokeMesh_(bool notifyDependentsImmediately) {
 
 // called by one of the end vertex
 void VacKeyEdge::dirtyJoinDataAtVertex_(const VacVertexCell* vertexCell) {
-    if (frameData_.stage() > VacEdgeComputationStage::PreJoinGeometry) {
+    if (frameData_.stage() >= VacEdgeComputationStage::PreJoinGeometry) {
         dirtyPostJoinGeometry_(false);
         if (verticesInfo_[0].element == vertexCell) {
             frameData_.patches_[0].clear();
