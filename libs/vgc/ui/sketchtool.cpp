@@ -315,6 +315,12 @@ void SketchTool::onPaintDraw(graphics::Engine* engine, PaintOptions options) {
                 strokeVertices.emplaceLast(geometry::Vec2f(edgeLastSample.rightPoint()));
                 strokeVertices.emplaceLast(geometry::Vec2f(tipPoint0));
                 strokeVertices.emplaceLast(geometry::Vec2f(tipPoint1));
+
+                double width = edgeLastSample.halfwidth(0) + edgeLastSample.halfwidth(1);
+                if (tipDir.length() < width) {
+                    // don't paint tip if it is too small
+                    strokeVertices.clear();
+                }
             }
         }
 
