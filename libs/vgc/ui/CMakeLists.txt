@@ -41,6 +41,8 @@ vgc_add_library(ui
         modifierkey.h
         mouseevent.h
         numberedit.h
+        numbersetting.h
+        numbersettingedit.h
         overlayarea.h
         panel.h
         panelarea.h
@@ -50,6 +52,8 @@ vgc_add_library(ui
         qtutil.h
         row.h
         selecttool.h
+        settingedit.h
+        setting.h
         settings.h
         shortcut.h
         sketchtool.h
@@ -91,6 +95,8 @@ vgc_add_library(ui
         modifierkey.cpp
         mouseevent.cpp
         numberedit.cpp
+        numbersetting.cpp
+        numbersettingedit.cpp
         overlayarea.cpp
         panel.cpp
         panelarea.cpp
@@ -100,6 +106,8 @@ vgc_add_library(ui
         qtutil.cpp
         row.cpp
         selecttool.cpp
+        settingedit.cpp
+        setting.cpp
         settings.cpp
         shortcut.cpp
         sketchtool.cpp
