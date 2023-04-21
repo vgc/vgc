@@ -301,20 +301,27 @@ void SketchTool::onPaintDraw(graphics::Engine* engine, PaintOptions options) {
                 geometry::CurveSample edgeLastSample = ke->sampling().samples().last();
                 geometry::Vec2d tipDir =
                     minimalLatencySnappedCursor_ - edgeLastSample.position();
-                geometry::Vec2d tipNormal = tipDir.orthogonalized().normalized();
+                double width = edgeLastSample.halfwidth(0) + edgeLastSample.halfwidth(1);
 
-                double radiusRatio = 0.5;
-                geometry::Vec2d tipPoint0 =
-                    minimalLatencySnappedCursor_
-                    - tipNormal * radiusRatio * edgeLastSample.halfwidth(1);
-                geometry::Vec2d tipPoint1 =
-                    minimalLatencySnappedCursor_
-                    + tipNormal * radiusRatio * edgeLastSample.halfwidth(0);
+                if (tipDir.length() > width) {
 
-                strokeVertices.emplaceLast(geometry::Vec2f(edgeLastSample.leftPoint()));
-                strokeVertices.emplaceLast(geometry::Vec2f(edgeLastSample.rightPoint()));
-                strokeVertices.emplaceLast(geometry::Vec2f(tipPoint0));
-                strokeVertices.emplaceLast(geometry::Vec2f(tipPoint1));
+                    geometry::Vec2d tipNormal = tipDir.orthogonalized().normalized();
+
+                    double radiusRatio = 0.5;
+                    geometry::Vec2d tipPoint0 =
+                        minimalLatencySnappedCursor_
+                        - tipNormal * radiusRatio * edgeLastSample.halfwidth(1);
+                    geometry::Vec2d tipPoint1 =
+                        minimalLatencySnappedCursor_
+                        + tipNormal * radiusRatio * edgeLastSample.halfwidth(0);
+
+                    strokeVertices.emplaceLast(
+                        geometry::Vec2f(edgeLastSample.leftPoint()));
+                    strokeVertices.emplaceLast(
+                        geometry::Vec2f(edgeLastSample.rightPoint()));
+                    strokeVertices.emplaceLast(geometry::Vec2f(tipPoint0));
+                    strokeVertices.emplaceLast(geometry::Vec2f(tipPoint1));
+                }
             }
         }
 
