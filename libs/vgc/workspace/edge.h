@@ -322,6 +322,7 @@ private:
     friend class VacKeyEdge;
     friend class VacInbetweenEdge;
     friend class VacVertexCell;
+    friend class VacKeyVertex;
 
 public:
     VacEdgeCellFrameData(const core::AnimTime& t) noexcept
