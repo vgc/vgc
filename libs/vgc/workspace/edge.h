@@ -178,6 +178,7 @@ class VGC_WORKSPACE_API EdgeGraphics {
 public:
     void clear() {
         clearCenterlineGeometry();
+        clearOffsetLinesGeometry();
         clearStrokeGeometry();
         clearJoinGeometry();
         clearSelectionGeometry();
@@ -193,6 +194,30 @@ public:
 
     void clearCenterlineGeometry() {
         centerlineGeometry_.reset();
+    }
+
+    // ┌─── x
+    // │  ↑ side 1
+    // │ ─segment─→
+    // y  ↓ side 0
+    //
+    const graphics::GeometryViewPtr& offsetLineGeometry(Int side) const {
+        return offsetLinesGeometry_[side];
+    }
+
+    // ┌─── x
+    // │  ↑ side 1
+    // │ ─segment─→
+    // y  ↓ side 0
+    //
+    void
+    setOffsetLineGeometry(Int side, const graphics::GeometryViewPtr& offsetLineGeometry) {
+        offsetLinesGeometry_[side] = offsetLineGeometry;
+    }
+
+    void clearOffsetLinesGeometry() {
+        offsetLinesGeometry_[0].reset();
+        offsetLinesGeometry_[1].reset();
     }
 
     const graphics::GeometryViewPtr& strokeGeometry() const {
@@ -234,6 +259,9 @@ public:
 private:
     // Centerline
     graphics::GeometryViewPtr centerlineGeometry_;
+
+    // OffsetLines
+    std::array<graphics::GeometryViewPtr, 2> offsetLinesGeometry_;
 
     // Stroke
     graphics::GeometryViewPtr strokeGeometry_;
