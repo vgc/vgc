@@ -19,6 +19,7 @@
 
 #include <vgc/core/object.h>
 #include <vgc/ui/api.h>
+#include <vgc/ui/settings.h>
 
 namespace vgc::ui {
 
