@@ -198,8 +198,6 @@ public:
 private:
     core::AnimTime time_;
     geometry::Vec2d position_ = core::noInit;
-    mutable graphics::GeometryViewPtr joinDebugLinesRenderGeometry_;
-    mutable graphics::GeometryViewPtr joinDebugQuadRenderGeometry_;
     detail::VacJoinFrameData joinData_;
     bool isPositionComputed_ = false;
     bool isJoinComputed_ = false;
@@ -212,8 +210,6 @@ private:
     void clearJoinData_() {
         joinData_.clear();
         isJoinComputed_ = false;
-        joinDebugLinesRenderGeometry_.reset();
-        joinDebugQuadRenderGeometry_.reset();
     }
 
     void debugPaint_(graphics::Engine* engine);

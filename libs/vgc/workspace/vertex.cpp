@@ -21,89 +21,10 @@
 
 namespace vgc::workspace {
 
-void VacVertexCellFrameData::debugPaint_(graphics::Engine* engine) {
+void VacVertexCellFrameData::debugPaint_(graphics::Engine* /*engine*/) {
 
     using namespace graphics;
     using detail::VacJoinHalfedgeFrameData;
-
-    if (!joinDebugQuadRenderGeometry_) {
-        joinDebugQuadRenderGeometry_ = engine->createDynamicTriangleStripView(
-            BuiltinGeometryLayout::XYRGB, IndexFormat::UInt16);
-        geometry::Vec2f p(position_);
-        core::FloatArray vertices({
-            p.x() - 5, p.y() - 5, 0, 0, 0, //
-            p.x() - 5, p.y() + 5, 0, 0, 0, //
-            p.x() + 5, p.y() - 5, 0, 0, 0, //
-            p.x() + 5, p.y() + 5, 0, 0, 0, //
-        });
-        engine->updateVertexBufferData(joinDebugQuadRenderGeometry_, std::move(vertices));
-        core::Array<UInt16> lineIndices({0, 1, 2, 3});
-        engine->updateBufferData(
-            joinDebugQuadRenderGeometry_->indexBuffer(), std::move(lineIndices));
-    }
-
-    if (!joinDebugLinesRenderGeometry_ && joinData_.halfedgesFrameData_.length()) {
-        joinDebugLinesRenderGeometry_ = engine->createDynamicTriangleStripView(
-            BuiltinGeometryLayout::XYDxDy_iXYRotWRGBA, IndexFormat::UInt16);
-
-        core::FloatArray lineInstData;
-        lineInstData.extend({0.f, 0.f, 1.f, 1.5f, 0.64f, 0.02f, 1.0f, 1.f});
-
-        float lineLength = 100.f;
-
-        geometry::Vec4fArray lineVertices;
-        core::Array<UInt16> lineIndices;
-
-        for (const VacJoinHalfedgeFrameData& heData : joinData_.halfedgesFrameData_) {
-            geometry::Vec2f p(position_);
-            double angle0 = heData.angle();
-            double angle1 = heData.angle() + heData.angleToNext();
-            double midAngle = angle0 + angle1;
-            if (angle0 > angle1) {
-                midAngle += core::pi * 2;
-            }
-            midAngle *= 0.5;
-            if (midAngle > core::pi * 2) {
-                midAngle -= core::pi * 2;
-            }
-            geometry::Vec2f d(
-                static_cast<float>(std::cos(midAngle)),
-                static_cast<float>(std::sin(midAngle)));
-            geometry::Vec2f n = d.orthogonalized();
-            d *= lineLength;
-            // clang-format off
-            Int i = lineVertices.length();
-            lineVertices.emplaceLast(p.x(), p.y(), -n.x()        , -n.y()        );
-            lineVertices.emplaceLast(p.x(), p.y(),  n.x()        ,  n.y()        );
-            lineVertices.emplaceLast(p.x(), p.y(), -n.x() + d.x(), -n.y() + d.y());
-            lineVertices.emplaceLast(p.x(), p.y(),  n.x() + d.x(),  n.y() + d.y());
-            lineIndices.extend(
-                {static_cast<UInt16>(i),
-                static_cast<UInt16>(i + 1),
-                static_cast<UInt16>(i + 2),
-                static_cast<UInt16>(i + 3),
-                static_cast<UInt16>(-1)});
-            // clang-format on
-        }
-
-        engine->updateBufferData(
-            joinDebugLinesRenderGeometry_->indexBuffer(), //
-            std::move(lineIndices));
-        engine->updateBufferData(
-            joinDebugLinesRenderGeometry_->vertexBuffer(0), std::move(lineVertices));
-        engine->updateBufferData(
-            joinDebugLinesRenderGeometry_->vertexBuffer(1), std::move(lineInstData));
-    }
-
-    if (joinDebugLinesRenderGeometry_) {
-        engine->setProgram(graphics::BuiltinProgram::SreenSpaceDisplacement);
-        engine->draw(joinDebugLinesRenderGeometry_);
-    }
-
-    if (joinDebugQuadRenderGeometry_ && joinData_.halfedgesFrameData_.length() == 1) {
-        engine->setProgram(graphics::BuiltinProgram::Simple);
-        engine->draw(joinDebugQuadRenderGeometry_);
-    }
 }
 
 void VacVertexCell::rebuildJoinHalfedgesArray() const {
