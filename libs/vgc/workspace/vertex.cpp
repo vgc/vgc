@@ -21,7 +21,7 @@
 
 namespace vgc::workspace {
 
-void VacVertexCellFrameData::debugPaint_(graphics::Engine* engine) {
+void VacVertexCellFrameData::debugPaint_(graphics::Engine* /*engine*/) {
 
     using namespace graphics;
     using detail::VacJoinHalfedgeFrameData;
