@@ -257,6 +257,8 @@ void VacKeyEdge::onPaintDraw(
         return;
     }
 
+    using geometry::Vec2d;
+
     // if not already done (should we leave preparePaint_ optional?)
     const_cast<VacKeyEdge*>(this)->computeStrokeMesh_();
 
@@ -279,8 +281,8 @@ void VacKeyEdge::onPaintDraw(
 
         hasNewStrokeGraphics = true;
 
-        graphics.setStrokeGeometry(
-            engine->createDynamicTriangleStripView(BuiltinGeometryLayout::XYUV_iRGBA));
+        graphics.setStrokeGeometry(engine->createDynamicTriangleStripView(
+            BuiltinGeometryLayout::XYUV_iRGBA, IndexFormat::UInt32));
         graphics.setJoinGeometry(engine->createDynamicTriangleStripView(
             BuiltinGeometryLayout::XYUV_iRGBA, IndexFormat::UInt32));
 
@@ -293,8 +295,10 @@ void VacKeyEdge::onPaintDraw(
         graphics.setSelectionGeometry(engine->createGeometryView(createInfo));
 
         geometry::Vec2fArray strokeVertices;
+        core::Array<UInt32> strokeIndices;
         geometry::Vec2fArray joinVertices;
         core::Array<UInt32> joinIndices;
+        UInt32 restartIndex = static_cast<UInt32>(-1);
 
         if (data.sampling_ && data.sampling_->samples().size() >= 2) {
 
@@ -308,17 +312,32 @@ void VacKeyEdge::onPaintDraw(
             std::array<float, 2> mergeS = {
                 0, static_cast<float>(standaloneSamples.last().s())};
 
+            UInt32 previousTrioStartIndex = 0;
+            UInt32 trioStartIndex = 0;
+            bool hasPreviousSample = false;
+
+            std::array<Vec2d, 3> ps = {};
+            double previousS = 0;
+
             if (mergeLocation0.halfedgeNextSampleIndex > 0 && mergeLocation0.t < 1.0) {
-                const geometry::CurveSample& s = mergeLocation0.sample;
-                mergeS[0] = static_cast<float>(s.s());
-                geometry::Vec2d p0 = s.leftPoint();
-                geometry::Vec2d p1 = s.rightPoint();
-                strokeVertices.emplaceLast(geometry::Vec2f(p0));
-                strokeVertices.emplaceLast(
-                    static_cast<float>(s.s()), static_cast<float>(-s.leftHalfwidth()));
-                strokeVertices.emplaceLast(geometry::Vec2f(p1));
-                strokeVertices.emplaceLast(
-                    static_cast<float>(s.s()), static_cast<float>(s.rightHalfwidth()));
+                const geometry::CurveSample& sample = mergeLocation0.sample;
+                float s = static_cast<float>(sample.s());
+                mergeS[0] = s;
+                std::array<Vec2d, 3> qs = {
+                    sample.sidePoint(0), sample.position(), sample.sidePoint(1)};
+
+                trioStartIndex = static_cast<UInt32>(strokeVertices.length() / 2);
+                strokeVertices.emplaceLast(geometry::Vec2f(qs[0]));
+                strokeVertices.emplaceLast(s, static_cast<float>(sample.halfwidth(0)));
+                strokeVertices.emplaceLast(geometry::Vec2f(qs[1]));
+                strokeVertices.emplaceLast(s, 0.f);
+                strokeVertices.emplaceLast(geometry::Vec2f(qs[2]));
+                strokeVertices.emplaceLast(s, static_cast<float>(-sample.halfwidth(1)));
+
+                previousTrioStartIndex = trioStartIndex;
+                ps = qs;
+                hasPreviousSample = true;
+                previousS = s;
             }
 
             if ((mergeLocation0.halfedgeNextSampleIndex
@@ -328,29 +347,403 @@ void VacKeyEdge::onPaintDraw(
                 auto coreSamples = core::Span(
                     standaloneSamples.begin() + mergeLocation0.halfedgeNextSampleIndex,
                     standaloneSamples.end() - mergeLocation1.halfedgeNextSampleIndex);
-                for (const geometry::CurveSample& s : coreSamples) {
-                    geometry::Vec2d p0 = s.leftPoint();
-                    geometry::Vec2d p1 = s.rightPoint();
-                    strokeVertices.emplaceLast(geometry::Vec2f(p0));
-                    strokeVertices.emplaceLast(static_cast<float>(s.s()), -1.f);
-                    //static_cast<float>(-s.leftHalfwidth()));
-                    strokeVertices.emplaceLast(geometry::Vec2f(p1));
-                    strokeVertices.emplaceLast(static_cast<float>(s.s()), 1.f);
-                    //static_cast<float>(s.rightHalfwidth()));
+
+                for (const geometry::CurveSample& sample : coreSamples) {
+                    float s = static_cast<float>(sample.s());
+                    std::array<Vec2d, 3> qs = {
+                        sample.sidePoint(0), sample.position(), sample.sidePoint(1)};
+
+                    trioStartIndex = static_cast<UInt32>(strokeVertices.length() / 2);
+                    strokeVertices.emplaceLast(geometry::Vec2f(qs[0]));
+                    strokeVertices.emplaceLast(
+                        s, 1.f); // static_cast<float>(sample.halfwidth(0)));
+                    strokeVertices.emplaceLast(geometry::Vec2f(qs[1]));
+                    strokeVertices.emplaceLast(s, 0.f);
+                    strokeVertices.emplaceLast(geometry::Vec2f(qs[2]));
+                    strokeVertices.emplaceLast(
+                        s, -1.f); // static_cast<float>(-sample.halfwidth(1)));
+
+                    if (!hasPreviousSample) {
+                        hasPreviousSample = true;
+                        previousTrioStartIndex = trioStartIndex;
+                        ps = qs;
+                        previousS = s;
+                        continue;
+                    }
+
+                    // There are 3 different cases:
+                    // - convex quad (most common)
+                    // - concave quad (a point is inside the triangle of the others)
+                    // - hourglass (2 opposite sides intersect)
+                    //
+                    // ┌─── x
+                    // │
+                    // │     p2 ──────── q2
+                    // y      │           │
+                    //    ── p1 ─ edge ─ q1──→
+                    //        │           │
+                    //       p0 ──────── q0
+                    //
+
+                    // We first check if it is convex.
+                    // It is the only case in which diagonals intersect each other.
+                    //
+                    // ┌─── x
+                    // │
+                    // │     p2 ───→─── q2
+                    // y      │          │
+                    //        │          │
+                    //       p0 ───→─── q0
+                    //
+
+                    Vec2d p0q0 = (qs[0] - ps[0]);
+                    Vec2d p0q2 = (qs[2] - ps[0]);
+                    Vec2d p0p2 = (ps[2] - ps[0]);
+                    Vec2d p2q0 = (qs[0] - ps[2]);
+                    Vec2d p2q2 = (qs[2] - ps[2]);
+
+                    double det_p0q2_p0q0 = p0q2.det(p0q0);
+                    double det_p0q2_p0p2 = p0q2.det(p0p2);
+                    double det_p2q0_p2q2 = p2q0.det(p2q2);
+                    double det_p2q0_p2p0 = p2q0.det(-p0p2);
+
+                    if ((det_p0q2_p0q0 >= 0 && det_p0q2_p0p2 <= 0) //
+                        && (det_p2q0_p2q2 <= 0 && det_p2q0_p2p0 >= 0)) {
+
+                        // regular quad
+                        strokeIndices.emplaceLast(restartIndex);
+                        for (UInt32 i = 0; i < 3; ++i) {
+                            strokeIndices.emplaceLast(previousTrioStartIndex + i); // pi
+                            strokeIndices.emplaceLast(trioStartIndex + i);         // qi
+                        }
+                    }
+                    else if (
+                        (det_p0q2_p0q0 <= 0 && det_p0q2_p0p2 >= 0) //
+                        && (det_p2q0_p2q2 >= 0 && det_p2q0_p2p0 <= 0)) {
+
+                        // backfacing regular quad
+                        strokeIndices.emplaceLast(restartIndex);
+                        for (UInt32 i = 0; i < 3; ++i) {
+                            strokeIndices.emplaceLast(trioStartIndex + i);         // qi
+                            strokeIndices.emplaceLast(previousTrioStartIndex + i); // pi
+                        }
+                    }
+                    else {
+                        // Otherwise it is a special case and we process each side of the centerline separately.
+
+                        for (UInt32 i = 0; i < 2; ++i) {
+
+                            // First, check convex cases.
+                            //
+                            // ┌─── x
+                            // │
+                            // │     a1 ───→─── b1
+                            // y      │          │
+                            //        │          │
+                            //       a0 ───→─── b0
+                            //
+
+                            Vec2d a0 = ps[0 + i];
+                            Vec2d b0 = qs[0 + i];
+                            Vec2d a1 = ps[1 + i];
+                            Vec2d b1 = qs[1 + i];
+                            double v0 = 1.f - i;
+                            double v1 = 0.f - i;
+                            UInt32 a0i = previousTrioStartIndex + i;
+                            UInt32 a1i = a0i + 1;
+                            UInt32 b0i = trioStartIndex + i;
+                            UInt32 b1i = b0i + 1;
+
+                            Vec2d a0b0 = (b0 - a0);
+                            Vec2d a0b1 = (b1 - a0);
+                            Vec2d a0a1 = (a1 - a0);
+                            Vec2d a1b0 = (b0 - a1);
+                            Vec2d a1b1 = (b1 - a1);
+                            Vec2d b0b1 = (b1 - b0);
+
+                            double det_a0b1_a0b0 = a0b1.det(a0b0);
+                            double det_a0b1_a0a1 = a0b1.det(a0a1);
+                            double det_a1b0_a1b1 = a1b0.det(a1b1);
+                            double det_a1b0_a1a0 = a1b0.det(-a0a1);
+
+                            if ((det_a0b1_a0b0 >= 0 && det_a0b1_a0a1 <= 0) //
+                                && (det_a1b0_a1b1 <= 0 && det_a1b0_a1a0 >= 0)) {
+
+                                // regular quad
+                                strokeIndices.extend({restartIndex, a0i, b0i, a1i, b1i});
+                                continue;
+                            }
+
+                            if ((det_a0b1_a0b0 <= 0 && det_a0b1_a0a1 >= 0) //
+                                && (det_a1b0_a1b1 >= 0 && det_a1b0_a1a0 <= 0)) {
+
+                                // backfacing regular quad
+                                strokeIndices.extend({restartIndex, b0i, a0i, b1i, a1i});
+                                continue;
+                            }
+
+                            // From here, we know that no 3 points are aligned
+
+                            // Check for the hourglass case.
+                            // There are 2 pairs of sides that can intersect, and in 2 directions.
+                            // That is 2*2 sub-cases.
+
+                            // Hourglass cases A and B
+                            //
+                            // ┌─── x
+                            // │
+                            // │    b1 ─←─ a1    a1 ─→─ b1
+                            // y     ╲     ╱      ╲     ╱
+                            //        ╲   ╱        ╲   ╱
+                            //         ╲ ╱          ╲ ╱
+                            //          ╳            ╳
+                            //         ╱ ╲          ╱ ╲
+                            //        ╱   ╲        ╱   ╲
+                            //       ╱     ╲      ╱     ╲
+                            //      a0 ─→─ b0    b0 ─←─ a0
+                            //
+                            //         (A)          (B)
+                            //
+
+                            double det_a0a1_a0b0 = a0a1.det(a0b0);
+                            double det_b0b1_b0a0 = b0b1.det(-a0b0);
+                            double det_b0b1_b0a1 = b0b1.det(-a1b0);
+
+                            bool a1a0b0_positive = det_a0a1_a0b0 >= 0;
+                            bool a1a0b1_positive = det_a0b1_a0a1 <= 0;
+                            bool b1b0a0_positive = det_b0b1_b0a0 >= 0;
+                            bool b1b0a1_positive = det_b0b1_b0a1 >= 0;
+
+                            if (a1a0b1_positive != a1a0b0_positive
+                                && b1b0a0_positive != b1b0a1_positive) {
+
+                                // In this case we compute the intersection
+                                // to build 2 triangles (+ 2 stitch triangles).
+
+                                // Solve 2x2 system using Cramer's rule.
+                                double delta = a0a1.det(b0b1);
+                                double inv_delta = 1 / delta;
+                                double x0 = a0b0.det(b0b1) * inv_delta;
+                                double x1 = a0b0.det(a0a1) * inv_delta;
+                                double a = a0.det(a1);
+                                double b = b0.det(b1);
+
+                                Vec2d c = (a0a1 * b - b0b1 * a) * inv_delta;
+
+                                double xm = (x0 + x1) * 0.5;
+                                double cv = v0 + xm * (v1 - v0);
+
+                                UInt32 pIndex =
+                                    static_cast<UInt32>(strokeVertices.length() / 2);
+                                strokeVertices.emplaceLast(geometry::Vec2f(c));
+                                strokeVertices.emplaceLast(
+                                    static_cast<float>((previousS + s) * 0.5),
+                                    static_cast<float>(cv));
+
+                                if (b1b0a1_positive) {
+                                    // case A
+                                    strokeIndices.extend(
+                                        {restartIndex, a0i, b0i, pIndex});
+                                    strokeIndices.extend(
+                                        {restartIndex, pIndex, a1i, b1i});
+                                }
+                                else {
+                                    // case B
+                                    strokeIndices.extend(
+                                        {restartIndex, b0i, a0i, pIndex});
+                                    strokeIndices.extend(
+                                        {restartIndex, pIndex, b1i, a1i});
+                                }
+
+                                // degenerate triangles are necessary to stitch the
+                                // geometry without leaving holes.
+
+                                strokeIndices.extend({restartIndex, a0i, pIndex, a1i});
+                                strokeIndices.extend({restartIndex, b0i, pIndex, b1i});
+
+                                continue;
+                            }
+
+                            // Hourglass cases C and D
+                            // (when centerline does a 180°)
+                            //
+                            // ┌─── x
+                            // │
+                            // │    a1      b0    b0      a1
+                            // y     │╲     ╱│     │╲     ╱│
+                            //       │ ╲   ╱ │     │ ╲   ╱ │
+                            //       │  ╲ ╱  │     │  ╲ ╱  │
+                            //       │   ╳   │     │   ╳   │
+                            //       │  ╱ ╲  │     │  ╱ ╲  │
+                            //       │ ╱   ╲ │     │ ╱   ╲ │
+                            //       │╱     ╲│     │╱     ╲│
+                            //      a0      b1    b1      a0
+                            //
+                            //         (C)           (D)
+                            //
+
+                            double det_a1b1_a1a0 = a1b1.det(-a0a1);
+
+                            double b0a0b1_positive = det_a0b1_a0b0 <= 0;
+                            double b0a0a1_positive = det_a0a1_a0b0 <= 0;
+                            double b1a1a0_positive = det_a1b1_a1a0 >= 0;
+                            double b1a1b0_positive = det_a1b0_a1b1 <= 0;
+
+                            if (b0a0b1_positive != b0a0a1_positive
+                                && b1a1a0_positive != b1a1b0_positive) {
+
+                                // In this case we consider the sample b to be
+                                // the discontinuity and stitch to it as if it
+                                // were in the opposite orientation for the
+                                // current quad (forming a regular quad).
+
+                                if (b0a0b1_positive) {
+                                    // case C
+                                    strokeIndices.extend(
+                                        {restartIndex, a0i, b1i, a1i, b0i});
+                                }
+                                else {
+                                    // case D
+                                    strokeIndices.extend(
+                                        {restartIndex, a0i, a1i, b0i, b1i});
+                                }
+
+                                continue;
+                            }
+
+                            // Remains the concave quad case.
+                            // There are 8 sub-cases: each point can be in the
+                            // triangle formed of the 3 others, and in 2 orientations.
+                            //
+                            // ┌─── x
+                            // │
+                            // │    b1             b0             a0             a1
+                            // y     │╲             │╲             │╲             │╲
+                            //       │ ╲            │ ╲            │ ╲            │ ╲
+                            //       │  b0 ─ a0     │  a0 ─ a1     │  a1 ─ b1     │  b1 ─ b0
+                            //       │     .`       │     .`       │     .`       │     .`
+                            //       │   .`         │   .`         │   .`         │   .`
+                            //       │ .`           │ .`           │ .`           │ .`
+                            //      a1   (A)       b1   (B)       b0   (C)       a0   (D)
+                            //
+                            //      a0             a1             b1             b0
+                            //       │╲             │╲             │╲             │╲
+                            //       │ ╲            │ ╲            │ ╲            │ ╲
+                            //       │  b0 ─ b1     │  a0 ─ b0     │  a1 ─ a0     │  b1 ─ a1
+                            //       │     .`       │     .`       │     .`       │     .`
+                            //       │   .`         │   .`         │   .`         │   .`
+                            //       │ .`           │ .`           │ .`           │ .`
+                            //      a1   (E)       b1   (F)       b0   (G)       a0   (H)
+                            //
+
+                            // We can reuse the dets computed for previous cases
+
+                            if (det_a0b1_a0b0 >= 0) {
+                                // b0 is on the positive side of a0b1
+                                // cases B, C, D, E
+                                if (det_a0b1_a0a1 >= 0) {
+                                    // a1 is on the positive side of a0b1
+                                    // cases C, E
+                                    if (det_a1b0_a1a0 >= 0) {
+                                        // a0 is on the positive side of a1b0
+                                        // case C
+                                        strokeIndices.extend(
+                                            {restartIndex, a0i, b0i, a1i, b1i});
+                                    }
+                                    else {
+                                        // a0 is on the negative side of a1b0
+                                        // case E
+                                        strokeIndices.extend(
+                                            {restartIndex, a0i, a1i, b0i, b1i});
+                                    }
+                                }
+                                else {
+                                    // a1 is on the negative side of a0b1
+                                    // cases B, D
+                                    if (det_a1b0_a1a0 >= 0) {
+                                        // a0 is on the positive side of a1b0
+                                        // case D
+                                        strokeIndices.extend(
+                                            {restartIndex, a1i, a0i, b1i, b0i});
+                                    }
+                                    else {
+                                        // a0 is on the negative side of a1b0
+                                        // case B
+                                        strokeIndices.extend(
+                                            {restartIndex, b0i, b1i, a0i, a1i});
+                                    }
+                                }
+                            }
+                            else {
+                                // b0 is on the negative side of a0b1
+                                // cases A, F, G, H
+                                if (det_a0b1_a0a1 <= 0) {
+                                    // a1 is on the negative side of a0b1
+                                    // cases A, G
+                                    if (det_a1b0_a1a0 >= 0) {
+                                        // a0 is on the positive side of a1b0
+                                        // case A
+                                        strokeIndices.extend(
+                                            {restartIndex, b1i, a1i, b0i, a0i});
+                                    }
+                                    else {
+                                        // a0 is on the negative side of a1b0
+                                        // case G
+                                        strokeIndices.extend(
+                                            {restartIndex, b1i, b0i, a1i, a0i});
+                                    }
+                                }
+                                else {
+                                    // a1 is on the positive side of a0b1
+                                    // cases F, H
+                                    if (det_a1b0_a1a0 >= 0) {
+                                        // a0 is on the positive side of a1b0
+                                        // case F
+                                        strokeIndices.extend(
+                                            {restartIndex, a1i, b1i, a0i, b0i});
+                                    }
+                                    else {
+                                        // a0 is on the negative side of a1b0
+                                        // case H
+                                        strokeIndices.extend(
+                                            {restartIndex, b0i, a0i, b1i, a1i});
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    previousTrioStartIndex = trioStartIndex;
+                    ps = qs;
+                    previousS = s;
                 }
             }
 
             if (mergeLocation1.halfedgeNextSampleIndex > 0 && mergeLocation1.t < 1.0) {
-                const geometry::CurveSample& s = mergeLocation1.sample;
-                mergeS[1] = static_cast<float>(s.s());
-                geometry::Vec2d p0 = s.leftPoint();
-                geometry::Vec2d p1 = s.rightPoint();
-                strokeVertices.emplaceLast(geometry::Vec2f(p0));
-                strokeVertices.emplaceLast(
-                    static_cast<float>(s.s()), static_cast<float>(-s.leftHalfwidth()));
-                strokeVertices.emplaceLast(geometry::Vec2f(p1));
-                strokeVertices.emplaceLast(
-                    static_cast<float>(s.s()), static_cast<float>(s.rightHalfwidth()));
+                const geometry::CurveSample& sample = mergeLocation1.sample;
+                float s = static_cast<float>(sample.s());
+                mergeS[1] = s;
+                std::array<geometry::Vec2d, 3> qs = {
+                    sample.sidePoint(0), sample.position(), sample.sidePoint(1)};
+
+                trioStartIndex = static_cast<UInt32>(strokeVertices.length() / 2);
+                strokeVertices.emplaceLast(geometry::Vec2f(qs[0]));
+                strokeVertices.emplaceLast(s, static_cast<float>(sample.halfwidth(0)));
+                strokeVertices.emplaceLast(geometry::Vec2f(qs[1]));
+                strokeVertices.emplaceLast(s, 0.f);
+                strokeVertices.emplaceLast(geometry::Vec2f(qs[2]));
+                strokeVertices.emplaceLast(s, static_cast<float>(-sample.halfwidth(1)));
+
+                strokeIndices.emplaceLast(-1);
+                for (UInt32 i = 0; i < 3; ++i) {
+                    strokeIndices.emplaceLast(previousTrioStartIndex + i);
+                    strokeIndices.emplaceLast(trioStartIndex + i);
+                }
+
+                previousTrioStartIndex = trioStartIndex;
+                ps = qs;
+                hasPreviousSample = true;
+                previousS = s;
             }
 
             UInt32 joinIndex = core::int_cast<UInt32>(joinVertices.length());
@@ -382,6 +775,9 @@ void VacKeyEdge::onPaintDraw(
         engine->updateBufferData(
             graphics.strokeGeometry()->vertexBuffer(0), //
             std::move(strokeVertices));
+        engine->updateBufferData(
+            graphics.strokeGeometry()->indexBuffer(), //
+            std::move(strokeIndices));
 
         engine->updateBufferData(
             graphics.joinGeometry()->vertexBuffer(0), //
@@ -496,7 +892,7 @@ void VacKeyEdge::onPaintDraw(
         engine->draw(graphics.selectionGeometry());
     }
     else if (!flags.has(PaintOption::Outline)) {
-        engine->setProgram(graphics::BuiltinProgram::Simple);
+        engine->setProgram(graphics::BuiltinProgram::Simple /*TexturedDebug*/);
         engine->draw(graphics.strokeGeometry());
         engine->draw(graphics.joinGeometry());
     }
