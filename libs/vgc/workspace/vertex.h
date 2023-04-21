@@ -128,6 +128,7 @@ private:
     geometry::Vec2d outgoingTangent_ = {};
     geometry::Vec2d halfwidths_ = {};
     geometry::Vec2d patchCutLimits_ = {};
+    geometry::CurveSample joinSample_;
     core::Array<geometry::CurveSample> inputSamples_;
     double angle_ = 0.0;
     double angleToNext_ = 0.0;

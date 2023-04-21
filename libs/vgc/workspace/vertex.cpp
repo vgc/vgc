@@ -343,11 +343,13 @@ void VacKeyVertex::computeJoin_() {
         if (!isReverse) {
             geometry::CurveSample sample = samples.first();
             heData.halfwidths_ = sample.halfwidths();
+            heData.joinSample_ = sample;
         }
         else {
             geometry::CurveSample sample = samples.last();
             heData.halfwidths_[0] = sample.halfwidth(1);
             heData.halfwidths_[1] = sample.halfwidth(0);
+            heData.joinSample_ = sample;
         }
     }
 
@@ -372,15 +374,99 @@ void VacKeyVertex::computeJoin_() {
         // nothing to do
     }
     else if (numHalfedges == 1) {
-        // cap, todo
-        //const detail::VacJoinHalfedgeFrameData& halfedgeData = data.halfedgesData_[0];
-        //Int basePatchIndex = halfedgeData.halfedge().isReverse() ? 2 : 0;
-        //VacEdgeCellFrameData* edgeData = halfedgeData.edgeData_;
-        //if (edgeData) {
-        //    Int numSamples = edgeData->samples_.length();
-        //    edgeData->patches_[basePatchIndex].sampleOverride_ = numSamples / 3;
-        //    edgeData->patches_[basePatchIndex + 1].sampleOverride_ = 0;
-        //}
+        // caps
+
+        detail::VacJoinHalfedgeFrameData& halfedgeData =
+            data.joinData_.halfedgesFrameData_[0];
+
+        // only "round" cap for now.
+
+        double maxHalfwidth =
+            (std::max)(halfedgeData.halfwidths_[0], halfedgeData.halfwidths_[1]);
+
+        geometry::CurveSample joinSample = halfedgeData.joinSample_;
+        geometry::Vec2d normal = halfedgeData.joinSample_.normal();
+        geometry::Vec2d dir = -halfedgeData.joinSample_.tangent();
+        if (halfedgeData.isReverse()) {
+            normal = -normal;
+            dir = -dir;
+        }
+
+        detail::EdgeJoinPatch& patch =
+            halfedgeData.edgeData_->patches_[halfedgeData.isReverse() ? 1 : 0];
+        patch.isCap = true;
+        //patch.sideSamples[0].clear();
+        //patch.sideSamples[1].clear();
+
+        float s = 0.f;
+        float u = 0.f;
+        if (halfedgeData.isReverse()) {
+            s = static_cast<float>(
+                halfedgeData.edgeData_->sampling_->samples().last().s());
+            u = 1.f;
+        }
+
+        geometry::Vec2d base = dir * maxHalfwidth;
+
+        bool isStyleRadial = true;
+        if (isStyleRadial) {
+            // constant S; radial gradient T, V
+            for (Int i = 0; i <= 32; ++i) {
+                detail::EdgeJoinPatchSample& ps0 = patch.sideSamples[0].emplaceLast();
+                detail::EdgeJoinPatchSample& ps1 = patch.sideSamples[1].emplaceLast();
+
+                double a = core::pi * 0.5 * i / 32.f;
+                double x = std::cos(a);
+                double y = std::sin(a);
+                double h0 = joinSample.halfwidth(0) * y;
+                double h1 = joinSample.halfwidth(1) * y;
+                geometry::Vec2d midPoint = joinSample.position() + x * base;
+
+                ps0.centerPoint = joinSample.position();
+                ps1.centerPoint = ps0.centerPoint;
+                ps0.centerSU = geometry::Vec2f{s, u};
+                ps1.centerSU = ps0.centerSU;
+
+                ps0.sidePoint = midPoint + h0 * normal;
+                ps1.sidePoint = midPoint - h1 * normal;
+                ps0.sideSTUV = geometry::Vec4f{
+                    s,
+                    static_cast<float>((ps0.sidePoint - ps0.centerPoint).length()),
+                    u,
+                    1.f};
+                ps1.sideSTUV = geometry::Vec4f{
+                    s,
+                    static_cast<float>((ps1.sidePoint - ps1.centerPoint).length()),
+                    u,
+                    1.f};
+            }
+        }
+        else {
+            // constant S; directional gradient T, V
+            for (Int i = 0; i <= 32; ++i) {
+                detail::EdgeJoinPatchSample& ps0 = patch.sideSamples[0].emplaceLast();
+                detail::EdgeJoinPatchSample& ps1 = patch.sideSamples[1].emplaceLast();
+
+                double a = core::pi * 0.5 * i / 32.f;
+                double x = std::sin(a);
+                double y = std::cos(a);
+                double h0 = joinSample.halfwidth(0) * y;
+                double h1 = joinSample.halfwidth(1) * y;
+                geometry::Vec2d midPoint = joinSample.position() + x * base;
+
+                ps0.centerPoint = midPoint;
+                ps1.centerPoint = ps0.centerPoint;
+                ps0.centerSU = geometry::Vec2f{s, u};
+                ps1.centerSU = ps0.centerSU;
+
+                ps0.sidePoint = midPoint + h0 * normal;
+                ps1.sidePoint = midPoint - h1 * normal;
+                ps0.sideSTUV =
+                    geometry::Vec4f{s, static_cast<float>(h0), u, static_cast<float>(y)};
+                ps1.sideSTUV =
+                    geometry::Vec4f{s, static_cast<float>(h1), u, static_cast<float>(y)};
+            }
+        }
     }
     else {
         // sort by incident angle

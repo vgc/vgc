@@ -755,6 +755,7 @@ void VacKeyEdge::onPaintDraw(
             for (Int i = 0; i < 2; ++i) {
                 const auto& patch = data.patches_[i];
                 for (Int side = 0; side < 2; ++side) {
+                    float sign = (side != i) ? -1.f : 1.f;
                     if (joinIndex > 0) {
                         joinIndices.emplaceLast(-1);
                     }
@@ -762,10 +763,9 @@ void VacKeyEdge::onPaintDraw(
                         geometry::Vec2d cp = s.centerPoint;
                         geometry::Vec2d sp = s.sidePoint;
                         geometry::Vec2f spf(sp);
-                        float sign = (side != i) ? -1.f : 1.f;
                         joinVertices.emplaceLast(spf);
                         joinVertices.emplaceLast(
-                            geometry::Vec2f(s.sideSTUV[0], sign * s.sideSTUV[1]));
+                            geometry::Vec2f(s.sideSTUV[0], sign * s.sideSTUV[3]));
                         joinVertices.emplaceLast(geometry::Vec2f(cp));
                         joinVertices.emplaceLast(s.centerSU[0], 0.f);
                         // XXX use isLeft to make the strip CCW.
@@ -798,7 +798,7 @@ void VacKeyEdge::onPaintDraw(
             core::Array<float>({color.r(), color.g(), color.b(), color.a()}));
         engine->updateBufferData(
             graphics.joinGeometry()->vertexBuffer(1), //
-            core::Array<float>({color.g(), color.b(), color.r(), color.a()}));
+            core::Array<float>({color.r(), color.g(), color.b(), color.a()}));
     }
 
     constexpr PaintOptions centerlineOptions = {
