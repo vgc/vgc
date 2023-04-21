@@ -168,7 +168,7 @@ style::Value parseCrossAlignment(style::TokenIterator begin, style::TokenIterato
     }
     std::string_view s = begin->stringValue();
 
-    // Converts the identifier to style::Value storing a MainAlignment enum value.
+    // Converts the identifier to style::Value storing a CrossAlignment enum value.
     if (s == start) {
         res = style::Value::custom(CrossAlignment::Start);
     }
