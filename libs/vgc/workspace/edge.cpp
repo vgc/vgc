@@ -584,10 +584,10 @@ void VacKeyEdge::onPaintDraw(
 
                             double det_a1b1_a1a0 = a1b1.det(-a0a1);
 
-                            double b0a0b1_positive = det_a0b1_a0b0 <= 0;
-                            double b0a0a1_positive = det_a0a1_a0b0 <= 0;
-                            double b1a1a0_positive = det_a1b1_a1a0 >= 0;
-                            double b1a1b0_positive = det_a1b0_a1b1 <= 0;
+                            bool b0a0b1_positive = det_a0b1_a0b0 <= 0;
+                            bool b0a0a1_positive = det_a0a1_a0b0 <= 0;
+                            bool b1a1a0_positive = det_a1b1_a1a0 >= 0;
+                            bool b1a1b0_positive = det_a1b0_a1b1 <= 0;
 
                             if (b0a0b1_positive != b0a0a1_positive
                                 && b1a1a0_positive != b1a1b0_positive) {
