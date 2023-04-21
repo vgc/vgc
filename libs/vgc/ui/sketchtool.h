@@ -25,6 +25,7 @@
 #include <vgc/ui/api.h>
 #include <vgc/ui/canvastool.h>
 #include <vgc/ui/cursor.h>
+#include <vgc/ui/numbersetting.h>
 #include <vgc/workspace/workspace.h>
 
 namespace vgc::ui {
@@ -63,15 +64,11 @@ public:
 
     /// Returns the width of the tool.
     ///
-    double penWidth() const {
-        return penWidth_;
-    }
+    double penWidth() const;
 
     /// Sets the pen width of the tool.
     ///
-    void setPenWidth(double width) {
-        penWidth_ = width;
-    }
+    void setPenWidth(double width);
 
     /// Returns whether sketched strokes are automatically snapped to end
     /// points of existing strokes.
@@ -88,6 +85,9 @@ public:
     }
 
 protected:
+    // Reimplementation of CanvasTool virtual methods
+    ui::WidgetPtr createOptionsWidget() const override;
+
     // Reimplementation of Widget virtual methods
     bool onKeyPress(KeyEvent* event) override;
     bool onMouseMove(MouseEvent* event) override;
@@ -103,7 +103,6 @@ protected:
 protected:
     // Stroke style
     core::Color penColor_ = core::Color(0, 0, 0, 1);
-    double penWidth_ = 5.0;
 
     // Flags
     bool reload_ = true;

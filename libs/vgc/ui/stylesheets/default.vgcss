@@ -311,6 +311,13 @@
  * TODO: Implement non-stretchable vs stretchable Panels.
  *       The Tools Panel should probably be non-stretchable, so that its size
  *       is automatically computed from the number of tool buttons inside it.
+ *
+ * For now, .tools-options refers to the PanelArea, since we want to set a
+ * min/max height for the PanelArea. However, in case of other sibling tabs to
+ * the Tool Options panel, it doesn't make sense. So in the future, we'll have
+ * .tool-options be a style class applied to the Panel, and the PanelArea
+ * should be smart enough to infer appropriate min/max/preferred sizes based on
+ * the min/max/preferred sizes of its tabs.
  */
 .tools {
     vertical-stretch: 0;
@@ -319,7 +326,31 @@
 
 .tool-options {
     vertical-stretch: 0;
-    max-height: 0dp; /* hide for now as there is no options */
+    min-height: 80dp;
+}
+
+.tool-options .Panel > .Flex {
+    vertical-stretch: 1;
+    main-alignment: start;
+    main-spacing: packed;
+}
+
+.tool-options .Panel .SettingEdit {
+    vertical-stretch: 0;
+    main-alignment: start;
+    main-spacing: packed;
+}
+
+.tool-options .Panel .SettingEdit > .Label {
+    horizontal-stretch: 1;
+    preferred-width: 80dp;
+    text-horizontal-align: left;
+}
+
+.tool-options .Panel .NumberSettingEdit > .NumberEdit {
+    horizontal-stretch: 1;
+    min-width: 10dp;
+    preferred-width: 40dp;
 }
 
 /* ----------------------------------------------------------------------------
