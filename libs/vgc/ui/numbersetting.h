@@ -34,19 +34,27 @@ private:
 
 protected:
     NumberSetting(
-        ui::Settings* settings,
+        Settings* settings,
         std::string_view key,
         std::string_view label,
-        double defaultValue);
+        double defaultValue,
+        double min,
+        double max,
+        core::Precision precision,
+        double step);
 
 public:
     /// Creates a `NumberSetting`.
     ///
     static NumberSettingPtr create(
-        ui::Settings* settings,
+        Settings* settings,
         std::string_view key,
         std::string_view label,
-        double defaultValue);
+        double defaultValue,
+        double min,
+        double max,
+        core::Precision precision,
+        double step);
 
     /// Returns the default value of this `NumberSetting`.
     ///
@@ -69,23 +77,6 @@ public:
     /// This signal is emitted whenever `value()` changes.
     ///
     VGC_SIGNAL(valueChanged, (double, value))
-
-    /// Returns by how much should the value change when increasing it by one
-    /// "step" (e.g., dragging by a few pixels, using the mouse wheel, clicking
-    /// on the up arrow, etc.).
-    ///
-    /// \sa `setStep()`.
-    ///
-    double step() const {
-        return step_;
-    }
-
-    /// Sets by how much should the value change when increasing it by one
-    /// "step".
-    ///
-    /// \sa `step()`.
-    ///
-    void setStep(double step);
 
     /// Returns the minimim value of this `NumberSetting`.
     ///
@@ -198,11 +189,28 @@ public:
             {core::PrecisionMode::SignificantDigits, static_cast<Int8>(numDigits)});
     }
 
+    /// Returns by how much should the value change when increasing it by one
+    /// "step" (e.g., dragging by a few pixels, using the mouse wheel, clicking
+    /// on the up arrow, etc.).
+    ///
+    /// \sa `setStep()`.
+    ///
+    double step() const {
+        return step_;
+    }
+
+    /// Sets by how much should the value change when increasing it by one
+    /// "step".
+    ///
+    /// \sa `step()`.
+    ///
+    void setStep(double step);
+
 private:
     double defaultValue_ = 0;
-    double step_ = 1;
     double minimum_ = 0;
     double maximum_ = 100;
+    double step_ = 1;
     core::Precision precision_ = {core::PrecisionMode::Decimals, 0};
 
     mutable bool isValueClampedAndRounded_ = false;
@@ -210,6 +218,53 @@ private:
     double roundedValue_(double v) const;
     double clampedAndRoundedValue_(double v) const;
 };
+
+/// Creates a `NumberSetting` whose precision is `PrecisionMode::Decimals`,
+/// with the given default value, range, number of decimals, and step.
+///
+inline NumberSettingPtr createDecimalNumberSetting(
+    Settings* settings,
+    std::string_view key,
+    std::string_view label,
+    double defaultValue = 0,
+    double min = 0,
+    double max = 100,
+    Int numDecimals = 10,
+    double step = 1) {
+
+    return NumberSetting::create(
+        settings,
+        key,
+        label,
+        defaultValue,
+        min,
+        max,
+        {core::PrecisionMode::Decimals, static_cast<Int8>(numDecimals)},
+        step);
+}
+
+/// Creates a `NumberSetting` whose precision is `{PrecisionMode::Decimals, 1}`
+/// (that is, an integer), with the given default value, range, and step.
+///
+inline NumberSettingPtr createIntegerNumberSetting(
+    Settings* settings,
+    std::string_view key,
+    std::string_view label,
+    double defaultValue = 0,
+    double min = 0,
+    double max = 100,
+    double step = 1) {
+
+    return NumberSetting::create(
+        settings,
+        key,
+        label,
+        defaultValue,
+        min,
+        max,
+        {core::PrecisionMode::Decimals, 1},
+        step);
+}
 
 } // namespace vgc::ui
 

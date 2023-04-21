@@ -24,19 +24,32 @@ NumberSetting::NumberSetting(
     Settings* settings,
     std::string_view key,
     std::string_view label,
-    double defaultValue)
+    double defaultValue,
+    double min,
+    double max,
+    core::Precision precision,
+    double step)
 
     : Setting(settings, key, label)
-    , defaultValue_(defaultValue) {
+    , defaultValue_(defaultValue)
+    , minimum_(min)
+    , maximum_(max)
+    , step_(step)
+    , precision_(precision) {
 }
 
 NumberSettingPtr NumberSetting::create(
     Settings* settings,
     std::string_view key,
     std::string_view label,
-    double defaultValue) {
+    double defaultValue,
+    double min,
+    double max,
+    core::Precision precision,
+    double step) {
 
-    return NumberSettingPtr(new NumberSetting(settings, key, label, defaultValue));
+    return NumberSettingPtr(
+        new NumberSetting(settings, key, label, defaultValue, min, max, precision, step));
 }
 
 double NumberSetting::value() const {
@@ -89,10 +102,6 @@ void NumberSetting::setValue(double newValue) {
     valueChanged().emit(value_);
 }
 
-void NumberSetting::setStep(double step) {
-    step_ = step;
-}
-
 void NumberSetting::setMinimum(double min) {
 
     // Set new minimum
@@ -143,6 +152,10 @@ void NumberSetting::setPrecision(core::Precision precision) {
     setMinimum(roundedValue_(minimum_));
     setMaximum(roundedValue_(maximum_));
     clampAndRound_();
+}
+
+void NumberSetting::setStep(double step) {
+    step_ = step;
 }
 
 void NumberSetting::clampAndRound_() {
