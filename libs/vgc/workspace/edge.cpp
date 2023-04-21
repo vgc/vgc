@@ -251,6 +251,11 @@ void VacKeyEdge::onPaintDraw(
     core::AnimTime t,
     PaintOptions flags) const {
 
+    bool isPaintingOffsetLine0 = false;
+    bool isPaintingOffsetLine1 = false;
+
+    // TODO: reuse buffers and geometry views
+
     VacKeyEdgeFrameData& data = frameData_;
     vacomplex::KeyEdge* ke = vacKeyEdgeNode();
     if (!ke || t != ke->time()) {
@@ -402,11 +407,29 @@ void VacKeyEdge::onPaintDraw(
 
     constexpr PaintOptions centerlineOptions = {
         PaintOption::Outline, PaintOption::Selected};
+
     bool hasNewCenterlineGraphics = false;
-    if (flags.hasAny(centerlineOptions) && !graphics.centerlineGeometry()) {
+
+    if ((flags.hasAny(centerlineOptions) || isPaintingOffsetLine0
+         || isPaintingOffsetLine1)
+        && !graphics.centerlineGeometry()) {
+
         hasNewCenterlineGraphics = true;
         graphics.setCenterlineGeometry(engine->createDynamicTriangleStripView(
             BuiltinGeometryLayout::XYDxDy_iXYRotWRGBA));
+
+        if (isPaintingOffsetLine0) {
+            graphics.setOffsetLineGeometry(
+                0,
+                engine->createDynamicTriangleStripView(
+                    BuiltinGeometryLayout::XYDxDy_iXYRotWRGBA));
+        }
+        if (isPaintingOffsetLine1) {
+            graphics.setOffsetLineGeometry(
+                1,
+                engine->createDynamicTriangleStripView(
+                    BuiltinGeometryLayout::XYDxDy_iXYRotWRGBA));
+        }
 
         GeometryViewCreateInfo createInfo = {};
         createInfo.setBuiltinGeometryLayout(BuiltinGeometryLayout::XYDxDy_iXYRotWRGBA);
@@ -416,16 +439,28 @@ void VacKeyEdge::onPaintDraw(
         createInfo.setVertexBuffer(1, selectionInstanceBuffer);
         graphics.setSelectionGeometry(engine->createGeometryView(createInfo));
 
-        core::FloatArray lineInstData;
-        lineInstData.extend({0.f, 0.f, 1.f, 2.f, 0.02f, 0.64f, 1.0f, 1.f});
+        // X, Y, Rot, Width, R, G, B, A
+        core::FloatArray lineInstData({0.f, 0.f, 1.f, 2.f, 0.02f, 0.64f, 1.0f, 1.f});
 
         geometry::Vec4fArray lineVertices;
+        geometry::Vec4fArray offsetLine0Vertices;
+        geometry::Vec4fArray offsetLine1Vertices;
         for (const geometry::CurveSample& s : data.preJoinSamples()) {
             geometry::Vec2f p = geometry::Vec2f(s.position());
             geometry::Vec2f n = geometry::Vec2f(s.normal());
             // clang-format off
             lineVertices.emplaceLast(p.x(), p.y(), -n.x(), -n.y());
             lineVertices.emplaceLast(p.x(), p.y(),  n.x(),  n.y());
+            if (isPaintingOffsetLine0) {
+                geometry::Vec2f p0 = geometry::Vec2f(s.sidePoint(0));
+                offsetLine0Vertices.emplaceLast(p0.x(), p0.y(), -n.x(), -n.y());
+                offsetLine0Vertices.emplaceLast(p0.x(), p0.y(),  n.x(),  n.y());
+            }
+            if (isPaintingOffsetLine1) {
+                geometry::Vec2f p1 = geometry::Vec2f(s.sidePoint(1));
+                offsetLine1Vertices.emplaceLast(p1.x(), p1.y(), -n.x(), -n.y());
+                offsetLine1Vertices.emplaceLast(p1.x(), p1.y(),  n.x(),  n.y());
+            }
             // clang-format on
         }
 
@@ -433,6 +468,29 @@ void VacKeyEdge::onPaintDraw(
             graphics.centerlineGeometry()->vertexBuffer(0), std::move(lineVertices));
         engine->updateBufferData(
             graphics.centerlineGeometry()->vertexBuffer(1), std::move(lineInstData));
+
+        if (isPaintingOffsetLine0) {
+            // X, Y, Rot, Width, R, G, B, A
+            core::FloatArray offsetLineInstData(
+                {0.f, 0.f, 1.f, 1.5f, 0.64f, 1.0f, 0.02f, 1.f});
+            engine->updateBufferData(
+                graphics.offsetLineGeometry(0)->vertexBuffer(0),
+                std::move(offsetLine0Vertices));
+            engine->updateBufferData(
+                graphics.offsetLineGeometry(0)->vertexBuffer(1),
+                std::move(offsetLineInstData));
+        }
+        if (isPaintingOffsetLine1) {
+            // X, Y, Rot, Width, R, G, B, A
+            core::FloatArray offsetLineInstData(
+                {0.f, 0.f, 1.f, 1.5f, 1.0f, 0.02f, 0.64f, 1.f});
+            engine->updateBufferData(
+                graphics.offsetLineGeometry(1)->vertexBuffer(0),
+                std::move(offsetLine1Vertices));
+            engine->updateBufferData(
+                graphics.offsetLineGeometry(1)->vertexBuffer(1),
+                std::move(offsetLineInstData));
+        }
     }
     if (graphics.selectionGeometry()
         && (data.hasPendingColorChange_ || hasNewCenterlineGraphics)) {
@@ -499,6 +557,16 @@ void VacKeyEdge::onPaintDraw(
         engine->setProgram(graphics::BuiltinProgram::Simple);
         engine->draw(graphics.strokeGeometry());
         engine->draw(graphics.joinGeometry());
+    }
+
+    if (isPaintingOffsetLine0) {
+        engine->setProgram(graphics::BuiltinProgram::SreenSpaceDisplacement);
+        engine->draw(graphics.offsetLineGeometry(0));
+    }
+
+    if (isPaintingOffsetLine1) {
+        engine->setProgram(graphics::BuiltinProgram::SreenSpaceDisplacement);
+        engine->draw(graphics.offsetLineGeometry(1));
     }
 
     if (flags.has(PaintOption::Outline)) {
