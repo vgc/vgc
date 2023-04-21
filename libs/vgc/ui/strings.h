@@ -64,6 +64,7 @@ VGC_UI_API extern const core::StringId vertical_stretch;
 VGC_UI_API extern const core::StringId vertical_shrink;
 
 VGC_UI_API extern const core::StringId main_alignment;
+VGC_UI_API extern const core::StringId cross_alignment;
 VGC_UI_API extern const core::StringId start;
 VGC_UI_API extern const core::StringId end;
 VGC_UI_API extern const core::StringId center;

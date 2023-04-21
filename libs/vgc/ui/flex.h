@@ -53,7 +53,7 @@ VGC_DECLARE_ENUM(FlexDirection)
 ///
 /// The default value is `start`.
 ///
-/// \sa `MainSpacing`
+/// \sa `MainSpacing`, `CrossAlignment`.
 ///
 enum class MainAlignment {
     Start,
@@ -103,7 +103,7 @@ VGC_DECLARE_ENUM(MainAlignment)
 ///
 /// The default value is `packed`.
 ///
-/// \sa `MainAlignment`
+/// \sa `MainAlignment`, `CrossAlignment`.
 ///
 enum class MainSpacing {
     Packed,
@@ -115,6 +115,34 @@ enum class MainSpacing {
 
 VGC_UI_API
 VGC_DECLARE_ENUM(MainAlignment)
+
+/// \enum vgc::ui::CrossAlignment
+/// \brief How to align the children of a Flex along the cross axis.
+///
+/// This enum class stores as an enum the value of the `cross-alignment` style
+/// property.
+///
+/// The `cross-alignment` style property is used to specify how to align non-stretchable widgets
+/// along the cross axis of a `Flex`.
+///
+/// - `start`: The widgets are aligned with the start of the cross axis.
+///
+/// - `end`: The widgets are aligned with the end of the cross axis.
+///
+/// - `center`: The widgets are centered on the middle of the cross axis.
+///
+/// The default value is `center`.
+///
+/// \sa `MainAlignment`, `MainSpacing`.
+///
+enum class CrossAlignment {
+    Start,
+    End,
+    Center
+};
+
+VGC_UI_API
+VGC_DECLARE_ENUM(CrossAlignment)
 
 /// \enum vgc::ui::FlexWrap
 /// \brief How to wrap widgets in a Flex
@@ -148,6 +176,7 @@ struct FlexData {
     bool isReverse;
     MainAlignment mainAlignment;
     MainSpacing mainSpacing;
+    CrossAlignment crossAlignment;
     Int mainDir;
     Int crossDir;
     float gap;
@@ -179,18 +208,30 @@ struct FlexChildData {
     Widget* child;
 
     // Input
-    float shrink;
-    float stretch;
-    float mainPreferredSize;
-    float mainMinSize;
-    float mainMaxSize;
     geometry::Vec2f minSize;
     geometry::Vec2f maxSize;
+
+    float mainMinSize;
+    float mainMaxSize;
+    float mainShrink;
+    float mainStretch;
     geometry::Vec2f mainMargins;
+
+    float crossMinSize;
+    float crossMaxSize;
+    float crossShrink;
+    float crossStretch;
     geometry::Vec2f crossMargins;
+
+    // Intermediate computation
+    geometry::Vec2f preferredSize;
+    float mainPreferredSize;
+    float crossPreferredSize;
+    float crossExtraSize;
 
     // Output
     float mainSize;
+    float crossSize;
     geometry::Vec2f position;
     geometry::Vec2f size;
 
