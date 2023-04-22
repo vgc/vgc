@@ -67,9 +67,13 @@
     padding-bottom: 0dp;
     padding-left: 10dp;
     horizontal-shrink: 0;
-    horizontal-stretch: 0;
+    horizontal-stretch: 1;
     vertical-shrink: 0;
     vertical-stretch: 0;
+}
+
+.Menu.horizontal > .MenuButton {
+    horizontal-stretch: 0;
 }
 
 .Button,
