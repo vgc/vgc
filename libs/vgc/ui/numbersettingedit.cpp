@@ -16,8 +16,6 @@
 
 #include <vgc/ui/numbersettingedit.h>
 
-#include <vgc/ui/label.h>
-#include <vgc/ui/numberedit.h>
 #include <vgc/ui/strings.h>
 
 namespace vgc::ui {
