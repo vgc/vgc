@@ -381,6 +381,10 @@ public:
         addTo(i, widget_, property, count);
     }
 
+    /// Adds the margin of another stylable object to the preferred size.
+    ///
+    void addMargin(const style::StylableObject* obj);
+
     /// Adds the padding and border of the widget to the preferred size.
     ///
     void addPaddingAndBorder();

@@ -98,6 +98,13 @@ PreferredSizeCalculator::PreferredSizeCalculator(const Widget* widget)
     , hint_(isHinted(widget)) {
 }
 
+void PreferredSizeCalculator::addMargin(const style::StylableObject* obj) {
+    addWidth(obj, style::strings::margin_left);
+    addWidth(obj, style::strings::margin_right);
+    addHeight(obj, style::strings::margin_top);
+    addHeight(obj, style::strings::margin_bottom);
+}
+
 void PreferredSizeCalculator::addPaddingAndBorder() {
     addWidth(style::strings::padding_left);
     addWidth(style::strings::padding_right);
