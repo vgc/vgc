@@ -23,6 +23,7 @@
 #include <vgc/core/stringid.h>
 #include <vgc/geometry/curve.h>
 #include <vgc/graphics/strings.h>
+#include <vgc/ui/boolsettingedit.h>
 #include <vgc/ui/column.h>
 #include <vgc/ui/cursor.h>
 #include <vgc/ui/logcategories.h>
@@ -39,7 +40,13 @@ namespace options {
 
 NumberSetting* penWidth() {
     static NumberSettingPtr setting = createDecimalNumberSetting(
-        settings::session(), "tools.sketck.penWidth", "Pen Width", 5, 0, 1000);
+        settings::session(), "tools.sketch.penWidth", "Pen Width", 5, 0, 1000);
+    return setting.get();
+}
+
+BoolSetting* snapping() {
+    static BoolSettingPtr setting = BoolSetting::create(
+        settings::session(), "tools.sketch.snapping", "Snapping", true);
     return setting.get();
 }
 
@@ -92,9 +99,18 @@ void SketchTool::setPenWidth(double width) {
     options::penWidth()->setValue(width);
 }
 
+bool SketchTool::isSnappingEnabled() const {
+    return options::snapping()->value();
+}
+
+void SketchTool::setSnappingEnabled(bool enabled) {
+    options::snapping()->setValue(enabled);
+}
+
 ui::WidgetPtr SketchTool::createOptionsWidget() const {
     ui::WidgetPtr res = ui::Column::create();
     res->createChild<ui::NumberSettingEdit>(options::penWidth());
+    res->createChild<ui::BoolSettingEdit>(options::snapping());
     return res;
 }
 
@@ -439,7 +455,7 @@ void SketchTool::startCurve_(const geometry::Vec2d& p, double width) {
     workspace::Element* snapVertex = nullptr;
     hasStartSnap_ = false;
     startSnapPosition_ = p;
-    if (isSnappingEnabled_) {
+    if (isSnappingEnabled()) {
         snapVertex = computeSnapVertex_(p, nullptr);
         if (snapVertex) {
             hasStartSnap_ = true;
@@ -567,7 +583,7 @@ void SketchTool::finishCurve_() {
     }
 
     // Compute end vertex snapping
-    if (isSnappingEnabled_ && smoothedInputPoints_.length() > 1) {
+    if (isSnappingEnabled() && smoothedInputPoints_.length() > 1) {
 
         // Compute start vertex to snap to
         geometry::Vec2d lastInputPoint = lastInputPoints_[0];
