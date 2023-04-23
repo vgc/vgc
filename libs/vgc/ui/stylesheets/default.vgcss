@@ -210,6 +210,34 @@
     padding-right: 20dp;
 }
 
+.Toggle {
+    horizontal-stretch: 0;
+    vertical-stretch: 0;
+}
+
+.Toggle > .back {
+    background-color: rgb(255, 0, 0);
+    preferred-width: 26dp;
+    preferred-height: 15dp;
+    border-top-left-radius: 7.5dp;
+    border-top-right-radius: 7.5dp;
+    border-bottom-right-radius: 7.5dp;
+    border-bottom-left-radius: 7.5dp;
+
+}
+
+.Toggle > .front {
+    background-color: rgb(0, 0, 0);
+    preferred-width: 11dp;
+    preferred-height: 11dp;
+    border-top-left-radius: 5.5dp;
+    border-top-right-radius: 5.5dp;
+    border-bottom-right-radius: 5.5dp;
+    border-bottom-left-radius: 5.5dp;
+    margin-left: 2dp;
+    margin-right: 2dp;
+}
+
 /* ----------------------------------------------------------------------------
  *                                 COLORS
 */
@@ -306,6 +334,36 @@
 .MenuButton.disabled > .Shortcut {
     text-color: rgb(105, 105, 105);
 }
+
+.Toggle > .front {
+    background-color: rgb(241, 241, 241);
+}
+
+.Toggle.off > .back {
+    background-color: rgb(90, 94, 98);
+    text-color: rgb(245, 245, 245);
+}
+
+.Toggle.off.hovered > .back {
+    background-color: rgb(110, 114, 118);
+}
+
+.Toggle.off.pressed > .back {
+    background-color: rgb(120, 124, 128);
+}
+
+.Toggle.on > .back {
+    background-color: rgb(11, 82, 172);
+}
+
+.Toggle.on.hovered  > .back {
+    background-color: rgb(31, 102, 192);
+}
+
+.Toggle.on.pressed  > .back {
+    background-color: rgb(41, 112, 202);
+}
+
 
 /* ----------------------------------------------------------------------------
  *                                 TOOLS PANEL

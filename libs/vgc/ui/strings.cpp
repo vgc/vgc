@@ -21,6 +21,7 @@ namespace vgc::ui::strings {
 // Widgets
 // -------
 
+const core::StringId BoolSettingEdit("BoolSettingEdit");
 const core::StringId Button("Button");
 const core::StringId Canvas("Canvas");
 const core::StringId ColorListView("ColorListView");
@@ -45,6 +46,7 @@ const core::StringId Plot2d("Plot2d");
 const core::StringId SettingEdit("SettingEdit");
 const core::StringId TabBar("TabBar");
 const core::StringId TabBody("TabBody");
+const core::StringId Toggle("Toggle");
 const core::StringId Widget("Widget");
 
 // Properties
@@ -104,6 +106,9 @@ const core::StringId pressed("pressed");
 const core::StringId active("active");
 const core::StringId enabled("enabled");
 const core::StringId disabled("disabled");
+
+const core::StringId on("on");
+const core::StringId off("off");
 
 // Dialog
 const core::StringId body("body");

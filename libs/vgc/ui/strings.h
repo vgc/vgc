@@ -22,6 +22,7 @@
 
 namespace vgc::ui::strings {
 
+VGC_UI_API extern const core::StringId BoolSettingEdit;
 VGC_UI_API extern const core::StringId Button;
 VGC_UI_API extern const core::StringId Canvas;
 VGC_UI_API extern const core::StringId ColorListView;
@@ -46,6 +47,7 @@ VGC_UI_API extern const core::StringId Plot2d;
 VGC_UI_API extern const core::StringId SettingEdit;
 VGC_UI_API extern const core::StringId TabBar;
 VGC_UI_API extern const core::StringId TabBody;
+VGC_UI_API extern const core::StringId Toggle;
 VGC_UI_API extern const core::StringId Widget;
 
 VGC_UI_API extern const core::StringId min_width;
@@ -96,6 +98,9 @@ VGC_UI_API extern const core::StringId pressed;
 VGC_UI_API extern const core::StringId active;
 VGC_UI_API extern const core::StringId enabled;
 VGC_UI_API extern const core::StringId disabled;
+
+VGC_UI_API extern const core::StringId on;
+VGC_UI_API extern const core::StringId off;
 
 VGC_UI_API extern const core::StringId body;
 VGC_UI_API extern const core::StringId buttons;
