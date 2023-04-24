@@ -583,6 +583,19 @@ void SketchTool::continueCurve_(const geometry::Vec2d& p, double width) {
         points_ = smoothedInputPoints_;
     }
 
+    // we discard second and before last points since they are
+    // less smoothed than the others.
+    core::DoubleArray widths = widths_;
+    if (points_.length() > 2) {
+        points_.removeAt(1);
+        widths.removeAt(1);
+    }
+    if (points_.length() > 2) {
+        Int i = points_.length() - 2;
+        points_.removeAt(i);
+        widths.removeAt(i);
+    }
+
     // Update DOM and workspace
     namespace ds = dom::strings;
     endVertex_->setAttribute(ds::position, points_.last());
