@@ -946,7 +946,7 @@ void VacKeyEdge::onPaintDraw(
     data.hasPendingColorChange_ = false;
 
     if (flags.has(PaintOption::Selected)) {
-        engine->setProgram(graphics::BuiltinProgram::SreenSpaceDisplacement);
+        engine->setProgram(graphics::BuiltinProgram::ScreenSpaceDisplacement);
         engine->draw(graphics.selectionGeometry());
     }
     else if (!flags.has(PaintOption::Outline)) {
@@ -956,17 +956,17 @@ void VacKeyEdge::onPaintDraw(
     }
 
     if (isPaintingOffsetLine0) {
-        engine->setProgram(graphics::BuiltinProgram::SreenSpaceDisplacement);
+        engine->setProgram(graphics::BuiltinProgram::ScreenSpaceDisplacement);
         engine->draw(graphics.offsetLineGeometry(0));
     }
 
     if (isPaintingOffsetLine1) {
-        engine->setProgram(graphics::BuiltinProgram::SreenSpaceDisplacement);
+        engine->setProgram(graphics::BuiltinProgram::ScreenSpaceDisplacement);
         engine->draw(graphics.offsetLineGeometry(1));
     }
 
     if (flags.has(PaintOption::Outline)) {
-        engine->setProgram(graphics::BuiltinProgram::SreenSpaceDisplacement);
+        engine->setProgram(graphics::BuiltinProgram::ScreenSpaceDisplacement);
         engine->draw(graphics.centerlineGeometry());
         engine->drawInstanced(controlPointsGeometry_);
     }

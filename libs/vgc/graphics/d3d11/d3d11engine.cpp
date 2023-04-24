@@ -968,7 +968,7 @@ void D3d11Engine::createBuiltinShaders_() {
     }
 
     D3d11ProgramPtr sreenSpaceDisplacementProgram(
-        new D3d11Program(resourceRegistry_, BuiltinProgram::SreenSpaceDisplacement));
+        new D3d11Program(resourceRegistry_, BuiltinProgram::ScreenSpaceDisplacement));
     sreenSpaceDisplacementProgram_ = sreenSpaceDisplacementProgram;
 
     // Create the sreen-space displacement shader (vertex)

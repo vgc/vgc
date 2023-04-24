@@ -1000,7 +1000,7 @@ ProgramPtr Engine::builtinProgram(BuiltinProgram builtinProgram) {
         return simpleTexturedProgram_;
     case BuiltinProgram::SimpleTexturedDebug:
         return simpleTexturedDebugProgram_;
-    case BuiltinProgram::SreenSpaceDisplacement:
+    case BuiltinProgram::ScreenSpaceDisplacement:
         return sreenSpaceDisplacementProgram_;
     default:
         break;
