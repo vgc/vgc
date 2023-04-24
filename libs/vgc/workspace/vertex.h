@@ -17,6 +17,8 @@
 #ifndef VGC_WORKSPACE_VERTEX_H
 #define VGC_WORKSPACE_VERTEX_H
 
+#include <optional>
+
 #include <vgc/core/arithmetic.h>
 #include <vgc/core/array.h>
 #include <vgc/core/span.h>
@@ -33,6 +35,16 @@ class VacInbetweenVertex;
 class VacEdgeCell;
 class VacEdgeCellFrameData;
 class VacVertexCellFrameData;
+
+namespace detail {
+
+VGC_WORKSPACE_API
+bool isMultiJoinEnabled();
+
+VGC_WORKSPACE_API
+void setMultiJoinEnabled(bool enabled);
+
+} // namespace detail
 
 // references an incident halfedge in a join
 class VGC_WORKSPACE_API VacJoinHalfedge {
@@ -73,6 +85,34 @@ private:
 namespace detail {
 
 class VacJoinFrameData;
+
+struct BoxModelBorder {
+    geometry::Vec2d origin; // halfedge side point at join
+    geometry::Vec2d dir;
+
+    std::optional<geometry::Vec2d>
+    computeIntersectionParametersWith(const BoxModelBorder& other) const {
+
+        const geometry::Vec2d d1 = dir;
+        const geometry::Vec2d d2 = other.dir;
+
+        // Solve 2x2 system using Cramer's rule.
+        double delta = d1.det(d2);
+        if (std::abs(delta) > core::epsilon) {
+            geometry::Vec2d p1p2 = other.origin - origin;
+            double inv_delta = 1 / delta;
+            double t1 = p1p2.det(d2) * inv_delta;
+            double t2 = p1p2.det(d1) * inv_delta;
+            return geometry::Vec2d(t1, t2);
+        }
+
+        return std::nullopt;
+    }
+
+    geometry::Vec2d pointAt(double t) const {
+        return origin + t * dir;
+    }
+};
 
 // outgoing halfedge
 class VGC_WORKSPACE_API VacJoinHalfedgeFrameData {
@@ -142,7 +182,7 @@ private:
         double joinHalfwidth = 0;
         bool isCutFillet = false;
         double extLength = 0;
-        //Ray borderRay = {};
+        BoxModelBorder border = {};
 
         void clear() {
             filletLength = 0;
