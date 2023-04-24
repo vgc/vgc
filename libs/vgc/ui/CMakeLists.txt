@@ -46,6 +46,7 @@ vgc_add_library(ui
         numbersetting.h
         numbersettingedit.h
         overlayarea.h
+        paintbuckettool.h
         panel.h
         panelarea.h
         plot2d.h
@@ -103,6 +104,7 @@ vgc_add_library(ui
         numbersetting.cpp
         numbersettingedit.cpp
         overlayarea.cpp
+        paintbuckettool.cpp
         panel.cpp
         panelarea.cpp
         plot2d.cpp
