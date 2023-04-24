@@ -16,6 +16,8 @@ vgc_add_library(ui
         actiongroup.h
         api.h
         application.h
+        boolsetting.h
+        boolsettingedit.h
         button.h
         canvas.h
         canvastool.h
@@ -60,6 +62,7 @@ vgc_add_library(ui
         strings.h
         tabbar.h
         tabbody.h
+        toggle.h
         widget.h
         window.h
 
@@ -71,6 +74,8 @@ vgc_add_library(ui
         action.cpp
         actiongroup.cpp
         application.cpp
+        boolsetting.cpp
+        boolsettingedit.cpp
         button.cpp
         canvas.cpp
         canvastool.cpp
@@ -114,6 +119,7 @@ vgc_add_library(ui
         strings.cpp
         tabbar.cpp
         tabbody.cpp
+        toggle.cpp
         widget.cpp
         window.cpp
 
