@@ -447,6 +447,9 @@ void SketchTool::updateSmoothedData_() {
 
 void SketchTool::startCurve_(const geometry::Vec2d& p, double width) {
 
+    // Clear the points now. We don't to it on finishCurve_() for debug
+    // visualization purposes.
+    //
     inputPoints_.clear();
     inputWidths_.clear();
 
