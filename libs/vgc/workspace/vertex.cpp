@@ -956,7 +956,7 @@ void VacKeyVertex::computeJoin_() {
 
     data.isJoinComputed_ = true;
     data.isComputing_ = false;
-} // namespace vgc::workspace
+}
 
 void VacKeyVertex::dirtyPosition_() {
     if (frameData_.isPositionComputed_) {
