@@ -34,8 +34,7 @@ BoolSettingPtr BoolSetting::create(
     std::string_view label,
     bool defaultValue) {
 
-    return BoolSettingPtr(
-        new BoolSetting(settings, key, label, defaultValue));
+    return BoolSettingPtr(new BoolSetting(settings, key, label, defaultValue));
 }
 
 bool BoolSetting::value() const {
