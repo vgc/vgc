@@ -515,6 +515,8 @@ void Workspace::onVacNodeCreated_(vacomplex::Node* node, NodeSpan /*opSourceNode
         dom::Element::create(domParent, element->domTagName().value());
     const core::Id id = domElement->internalId();
 
+    // TODO: move element to respect ordering under parent
+
     const auto& p = elements_.emplace(id, std::move(u));
     if (!p.second) {
         // TODO: throw ?
