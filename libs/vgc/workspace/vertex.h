@@ -90,6 +90,13 @@ struct BoxModelBorder {
     geometry::Vec2d origin; // halfedge side point at join
     geometry::Vec2d dir;
 
+    BoxModelBorder() = default;
+
+    BoxModelBorder(const geometry::Vec2d& origin, const geometry::Vec2d& dir)
+        : origin(origin)
+        , dir(dir) {
+    }
+
     std::optional<geometry::Vec2d>
     computeIntersectionParametersWith(const BoxModelBorder& other) const {
 

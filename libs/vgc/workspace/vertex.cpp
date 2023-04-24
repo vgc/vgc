@@ -408,21 +408,21 @@ void VacKeyVertex::computeJoin_() {
 
                     ps0.centerPoint = joinSample.position();
                     ps1.centerPoint = ps0.centerPoint;
-                    ps0.centerSU = geometry::Vec2f{s, u};
+                    ps0.centerSU = geometry::Vec2f(s, u);
                     ps1.centerSU = ps0.centerSU;
 
                     ps0.sidePoint = midPoint + h0 * normal;
                     ps1.sidePoint = midPoint - h1 * normal;
-                    ps0.sideSTUV = geometry::Vec4f{
+                    ps0.sideSTUV = geometry::Vec4f(
                         s,
                         static_cast<float>((ps0.sidePoint - ps0.centerPoint).length()),
                         u,
-                        1.f};
-                    ps1.sideSTUV = geometry::Vec4f{
+                        1.f);
+                    ps1.sideSTUV = geometry::Vec4f(
                         s,
                         static_cast<float>((ps1.sidePoint - ps1.centerPoint).length()),
                         u,
-                        1.f};
+                        1.f);
                 }
             }
             else {
@@ -440,15 +440,15 @@ void VacKeyVertex::computeJoin_() {
 
                     ps0.centerPoint = midPoint;
                     ps1.centerPoint = ps0.centerPoint;
-                    ps0.centerSU = geometry::Vec2f{s, u};
+                    ps0.centerSU = geometry::Vec2f(s, u);
                     ps1.centerSU = ps0.centerSU;
 
                     ps0.sidePoint = midPoint + h0 * normal;
                     ps1.sidePoint = midPoint - h1 * normal;
-                    ps0.sideSTUV = geometry::Vec4f{
-                        s, static_cast<float>(h0), u, static_cast<float>(y)};
-                    ps1.sideSTUV = geometry::Vec4f{
-                        s, static_cast<float>(h1), u, static_cast<float>(y)};
+                    ps0.sideSTUV = geometry::Vec4f(
+                        s, static_cast<float>(h0), u, static_cast<float>(y));
+                    ps1.sideSTUV = geometry::Vec4f(
+                        s, static_cast<float>(h1), u, static_cast<float>(y));
                 }
             }
         }
@@ -633,18 +633,18 @@ void VacKeyVertex::computeJoin_() {
             auto& sidePatchDataA0 = halfedgeDataA->sidePatchData_[0];
             auto& sidePatchDataB1 = halfedgeDataB->sidePatchData_[1];
 
-            detail::BoxModelBorder borderA = {
+            detail::BoxModelBorder borderA(
                 vertexPosition
                     + halfedgeDataA->outgoingTangent_.orthogonalized()
                           * halfedgeDataA->halfwidths_[0],
-                halfedgeDataA->outgoingTangent_};
+                halfedgeDataA->outgoingTangent_);
             sidePatchDataA0.border = borderA;
 
-            detail::BoxModelBorder borderB = {
+            detail::BoxModelBorder borderB(
                 vertexPosition
                     - halfedgeDataB->outgoingTangent_.orthogonalized()
                           * halfedgeDataB->halfwidths_[1],
-                halfedgeDataB->outgoingTangent_};
+                halfedgeDataB->outgoingTangent_);
             sidePatchDataB1.border = borderB;
 
             sidePatchDataA0.clear();
@@ -674,8 +674,8 @@ void VacKeyVertex::computeJoin_() {
                 else {
                     if (halfedgeDataA->halfwidths_[0] > halfedgeDataB->halfwidths_[1]) {
                         geometry::Vec2d farCorner = borderA.origin;
-                        detail::BoxModelBorder splitBorder{
-                            vertexPosition, (farCorner - vertexPosition).normalized()};
+                        detail::BoxModelBorder splitBorder(
+                            vertexPosition, (farCorner - vertexPosition).normalized());
                         geometry::Vec2d split =
                             splitBorder.computeIntersectionParametersWith(borderB)
                                 .value_or(geometry::Vec2d());
@@ -700,8 +700,8 @@ void VacKeyVertex::computeJoin_() {
                     }
                     else {
                         geometry::Vec2d farCorner = borderB.origin;
-                        detail::BoxModelBorder splitRay{
-                            vertexPosition, (farCorner - vertexPosition).normalized()};
+                        detail::BoxModelBorder splitRay(
+                            vertexPosition, (farCorner - vertexPosition).normalized());
                         geometry::Vec2d split =
                             splitRay.computeIntersectionParametersWith(borderA).value_or(
                                 geometry::Vec2d());
@@ -739,8 +739,8 @@ void VacKeyVertex::computeJoin_() {
                 halfedgeData.sidePatchData_[0].filletLength,
                 halfedgeData.sidePatchData_[1].filletLength);
 
-            detail::BoxModelBorder centerRay = {
-                vertexPosition, halfedgeData.outgoingTangent_};
+            detail::BoxModelBorder centerRay(
+                vertexPosition, halfedgeData.outgoingTangent_);
             geometry::Vec2d centerRayNormal =
                 halfedgeData.outgoingTangent_.orthogonalized();
 
