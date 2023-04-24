@@ -448,6 +448,7 @@ void SketchTool::updateSmoothedData_() {
 void SketchTool::startCurve_(const geometry::Vec2d& p, double width) {
 
     inputPoints_.clear();
+    inputWidths_.clear();
 
     // Fast return if missing required context
     workspace::Workspace* workspace = this->workspace();
