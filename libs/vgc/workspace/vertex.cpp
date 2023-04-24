@@ -244,6 +244,8 @@ void VacKeyVertex::computePosition_() {
     data.isComputing_ = false;
 }
 
+namespace {
+
 template<bool fromEnd>
 Int findJoinPatchLimit(
     VacEdgeCellFrameData* edgeData,
@@ -287,6 +289,8 @@ Int findJoinPatchLimit(
         return findJoinPatchLimit<false>(edgeData, halfwidthArcRatio, side);
     }
 }
+
+} // namespace
 
 void VacKeyVertex::computeJoin_() {
     VacVertexCellFrameData& data = frameData_;
