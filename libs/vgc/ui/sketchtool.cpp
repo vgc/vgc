@@ -396,13 +396,13 @@ void SketchTool::updateSmoothedData_() {
 
     // Add the latest raw input points to smoothed data.
     //
-    if (lastInputPoints_.length() > 0) {
-        smoothedInputPoints_.append(lastInputPoints_.first());
+    if (inputPoints_.length() > 0) {
+        smoothedInputPoints_.append(inputPoints_.last());
     }
     else {
         return;
     }
-    Int numInputPoints = lastInputPoints_.length();
+    Int numInputPoints = inputPoints_.length();
     Int numSmoothedPoints = smoothedInputPoints_.length();
     VGC_ASSERT(numSmoothedPoints > 0);
     VGC_ASSERT(numSmoothedPoints >= numInputPoints);
@@ -411,19 +411,19 @@ void SketchTool::updateSmoothedData_() {
     //
     Int lastUnchangedIndex = 0;
     if (numInputPoints >= 3) {
-        smoothedInputPoints_.getUnchecked(numSmoothedPoints - 2) = //
-            (1 / 4.0) * lastInputPoints_.getUnchecked(0) +         //
-            (2 / 4.0) * lastInputPoints_.getUnchecked(1) +         //
-            (1 / 4.0) * lastInputPoints_.getUnchecked(2);
+        smoothedInputPoints_.getUnchecked(numSmoothedPoints - 2) =      //
+            (1 / 4.0) * inputPoints_.getUnchecked(numInputPoints - 1) + //
+            (2 / 4.0) * inputPoints_.getUnchecked(numInputPoints - 2) + //
+            (1 / 4.0) * inputPoints_.getUnchecked(numInputPoints - 3);
         lastUnchangedIndex = numSmoothedPoints - 3;
     }
     if (numInputPoints >= 5) {
-        smoothedInputPoints_.getUnchecked(numSmoothedPoints - 3) = //
-            (1 / 16.0) * lastInputPoints_.getUnchecked(0) +        //
-            (4 / 16.0) * lastInputPoints_.getUnchecked(1) +        //
-            (6 / 16.0) * lastInputPoints_.getUnchecked(2) +        //
-            (4 / 16.0) * lastInputPoints_.getUnchecked(3) +        //
-            (1 / 16.0) * lastInputPoints_.getUnchecked(4);
+        smoothedInputPoints_.getUnchecked(numSmoothedPoints - 3) =       //
+            (1 / 16.0) * inputPoints_.getUnchecked(numInputPoints - 1) + //
+            (4 / 16.0) * inputPoints_.getUnchecked(numInputPoints - 2) + //
+            (6 / 16.0) * inputPoints_.getUnchecked(numInputPoints - 3) + //
+            (4 / 16.0) * inputPoints_.getUnchecked(numInputPoints - 4) + //
+            (1 / 16.0) * inputPoints_.getUnchecked(numInputPoints - 5);
         lastUnchangedIndex = numSmoothedPoints - 4;
     }
     VGC_ASSERT(lastUnchangedIndex >= 0);
@@ -446,6 +446,8 @@ void SketchTool::updateSmoothedData_() {
 }
 
 void SketchTool::startCurve_(const geometry::Vec2d& p, double width) {
+
+    inputPoints_.clear();
 
     // Fast return if missing required context
     workspace::Workspace* workspace = this->workspace();
@@ -544,18 +546,16 @@ void SketchTool::continueCurve_(const geometry::Vec2d& p, double width) {
     }
 
     // Skip duplicate points
-    if (!lastInputPoints_.isEmpty()) {
-        if (lastInputPoints_.last() == p) {
+    if (!inputPoints_.isEmpty()) {
+        if (inputPoints_.last() == p) {
+            // TODO: update last point width if width increases
             return;
         }
     }
 
     // Append raw new data
-    widths_.append(width);
-    lastInputPoints_.prepend(p);
-    if (lastInputPoints_.length() > 5) {
-        lastInputPoints_.removeLast();
-    }
+    inputPoints_.append(p);
+    inputWidths_.append(width);
 
     // Update smoothed data from raw data
     updateSmoothedData_();
@@ -578,9 +578,12 @@ void SketchTool::continueCurve_(const geometry::Vec2d& p, double width) {
                 points_[i] = sp; // maybe optimize in the future
             }
         }
+
+        widths_ = inputWidths_;
     }
     else {
         points_ = smoothedInputPoints_;
+        widths_ = inputWidths_;
     }
 
     // Update DOM and workspace
@@ -612,7 +615,7 @@ void SketchTool::finishCurve_() {
     if (isSnappingEnabled() && smoothedInputPoints_.length() > 1) {
 
         // Compute start vertex to snap to
-        geometry::Vec2d lastInputPoint = lastInputPoints_[0];
+        geometry::Vec2d lastInputPoint = inputPoints_.last();
         workspace::Element* snapVertex = computeSnapVertex_(lastInputPoint, endVertex_);
 
         // If found, do the snapping
@@ -659,11 +662,14 @@ bool SketchTool::resetData_() {
         isSketching_ = false;
         endVertex_ = nullptr;
         edge_ = nullptr;
-        points_.clear();
-        widths_.clear();
-        lastInputPoints_.clear();
+        // inputs are kept until next curve starts
+        // for debugging purposes.
+        //inputPoints_.clear();
+        //inputWidths_.clear();
         smoothedInputPoints_.clear();
         smoothedInputArclengths_.clear();
+        points_.clear();
+        widths_.clear();
         return true;
     }
     return false;

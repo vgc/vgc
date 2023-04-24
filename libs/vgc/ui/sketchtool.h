@@ -115,11 +115,10 @@ protected:
     // Raw input.
     //
     // Notes:
-    // - input points are stored in reverse order, and only the last 5 are kept
     // - for now, we do not smooth widths
     //
-    geometry::Vec2dArray lastInputPoints_;
-    core::DoubleArray widths_;
+    geometry::Vec2dArray inputPoints_;
+    core::DoubleArray inputWidths_;
 
     // Smoothing. Invariant: both arrays have the same length.
     geometry::Vec2dArray smoothedInputPoints_;
@@ -136,6 +135,7 @@ protected:
 
     // Final points
     geometry::Vec2dArray points_;
+    core::DoubleArray widths_;
 
     // Draw additional points at the stroke tip, based on global cursor
     // position, to reduce perceived input lag.
