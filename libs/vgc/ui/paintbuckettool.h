@@ -56,11 +56,10 @@ protected:
     void onPaintDestroy(graphics::Engine* engine) override;
 
 private:
-    // Stroke style
-    core::Color penColor_ = core::Color(0, 0, 0, 1);
-
-    // Flags
-    bool reload_ = true;
+    core::Array<topology::KeyCycle> paintCandidateCycles_;
+    core::FloatArray paintCandidatePendingTriangles_;
+    graphics::GeometryViewPtr paintCandidateFillGeometry_;
+    bool hasPaintCandidate_ = false;
 
     /*
     // temporary method
@@ -68,18 +67,6 @@ private:
     // temporary method
     void clearPaintCandidate_();
 */
-
-    /*
-    // Temporary: paint bucket tests
-    graphics::GeometryViewPtr paintCandidateFillGeometry_;
-    core::FloatArray paintCandidatePendingTriangles_;
-    core::Array<topology::KeyCycle> paintCandidateCycles_;
-    bool hasPaintCandidate_ = false;
-    bool isBucketPainting_ = false;
-    core::Color paintColor_ = {};
-
-    void doBucketPaintTest_(const geometry::Vec2d& mousePos);
-    */
 };
 
 } // namespace vgc::ui

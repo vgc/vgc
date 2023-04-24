@@ -33,15 +33,35 @@ ui::WidgetPtr PaintBucketTool::createOptionsWidget() const {
     return res;
 }
 
-bool PaintBucketTool::onMouseMove(MouseEvent* /*event*/) {
-    // TODO
-    /*
-    else if (isBucketPainting_) {
-        doBucketPaintTest_(mousePos);
+bool PaintBucketTool::onMouseMove(MouseEvent* event) {
+
+    ui::Canvas* canvas = this->canvas();
+    if (!canvas) {
+        return false;
+    }
+
+    // Convert from view to world coords.
+    // TODO: Have a helper function in Canvas for this.
+    geometry::Vec2f mousePosf = event->position();
+    geometry::Vec2d mousePos = geometry::Vec2d(mousePosf.x(), mousePosf.y());
+    geometry::Vec2d viewCoords = mousePos;
+    geometry::Vec2d worldCoords =
+        canvas->camera().viewMatrix().inverted().transformPointAffine(viewCoords);
+
+    // Compute key face candidate
+    paintCandidateCycles_ = topology::detail::computeKeyFaceCandidateAt(
+        worldCoords, workspace()->vac()->rootGroup(), paintCandidatePendingTriangles_);
+    bool hadPaintCandidate = hasPaintCandidate_;
+    hasPaintCandidate_ = !paintCandidateCycles_.isEmpty();
+
+    if (hasPaintCandidate_ || hadPaintCandidate) {
+        // TODO: use something like "paintCandidateCyclesChanged" instead of the test above.
+        requestRepaint();
         return true;
     }
-    */
-    return false;
+    else {
+        return false;
+    }
 }
 
 bool PaintBucketTool::onMousePress(MouseEvent* /*event*/) {
@@ -92,18 +112,19 @@ bool PaintBucketTool::onMouseRelease(MouseEvent* /*event*/) {
 }
 
 void PaintBucketTool::onPaintCreate(graphics::Engine* engine) {
+    using Layout = graphics::BuiltinGeometryLayout;
     SuperClass::onPaintCreate(engine);
-
-    /*
-    paintCandidateFillGeometry_ =
-        engine->createDynamicTriangleListView(BuiltinGeometryLayout::XY_iRGBA);
-    */
+    paintCandidateFillGeometry_ = engine->createDynamicTriangleListView(Layout::XY_iRGBA);
 }
 
 void PaintBucketTool::onPaintDraw(graphics::Engine* engine, PaintOptions options) {
     SuperClass::onPaintDraw(engine, options);
 
-    /*
+    ui::Canvas* canvas = this->canvas();
+    if (!canvas) {
+        return;
+    }
+
     if (hasPaintCandidate_ && paintCandidateFillGeometry_) {
         if (!paintCandidatePendingTriangles_.isEmpty()) {
             engine->updateBufferData(
@@ -113,18 +134,21 @@ void PaintBucketTool::onPaintDraw(graphics::Engine* engine, PaintOptions options
                 paintCandidateFillGeometry_->vertexBuffer(1), //
                 core::Array<float>({1, 0, 0, 1}));
         }
-        engine->setProgram(graphics::BuiltinProgram::SimplePreview);
+
+        // TODO: setting up the view matrix should be done by Canvas.
+        engine->pushProgram(graphics::BuiltinProgram::SimplePreview);
+        geometry::Mat4f vm = engine->viewMatrix();
+        geometry::Mat4f cameraViewf(canvas->camera().viewMatrix());
+        engine->pushViewMatrix(vm * cameraViewf);
         engine->draw(paintCandidateFillGeometry_);
+        engine->popViewMatrix();
+        engine->popProgram();
     }
-*/
 }
 
 void PaintBucketTool::onPaintDestroy(graphics::Engine* engine) {
     SuperClass::onPaintDestroy(engine);
-
-    /*
     paintCandidateFillGeometry_.reset();
-    */
 }
 
 /*
@@ -165,21 +189,6 @@ void Canvas::onColorChanged_(const core::Color& color) {
 /*
 void Canvas::onDocumentChanged_(const dom::Diff& diff) {
     clearPaintCandidate_();
-}
-*/
-
-/*
-void Canvas::doBucketPaintTest_(const geometry::Vec2d& mousePos) {
-    clearSelection_();
-    geometry::Vec2d worldCoords =
-        camera_.viewMatrix().inverted().transformPointAffine(mousePos);
-    paintCandidateCycles_ = topology::detail::computeKeyFaceCandidateAt(
-        worldCoords, workspace()->vac()->rootGroup(), paintCandidatePendingTriangles_);
-    bool hadPaintCandidate = hasPaintCandidate_;
-    hasPaintCandidate_ = !paintCandidateCycles_.isEmpty();
-    if (hasPaintCandidate_ || hadPaintCandidate) {
-        requestRepaint();
-    }
 }
 */
 
