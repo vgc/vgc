@@ -291,14 +291,6 @@ void VacKeyEdge::onPaintDraw(
         graphics.setJoinGeometry(engine->createDynamicTriangleStripView(
             BuiltinGeometryLayout::XYUV_iRGBA, IndexFormat::UInt32));
 
-        GeometryViewCreateInfo createInfo = {};
-        createInfo.setBuiltinGeometryLayout(BuiltinGeometryLayout::XYUV_iRGBA);
-        createInfo.setPrimitiveType(PrimitiveType::TriangleStrip);
-        createInfo.setVertexBuffer(0, graphics.strokeGeometry()->vertexBuffer(0));
-        BufferPtr selectionInstanceBuffer = engine->createVertexBuffer(Int(4) * 4);
-        createInfo.setVertexBuffer(1, selectionInstanceBuffer);
-        graphics.setSelectionGeometry(engine->createGeometryView(createInfo));
-
         geometry::Vec2fArray strokeVertices;
         core::Array<UInt32> strokeIndices;
         geometry::Vec2fArray joinVertices;
