@@ -532,7 +532,7 @@ void VacKeyVertex::computeJoin_() {
                 }
             }
             else {
-                std::array<bool, 2> sideDone = {};
+                //std::array<bool, 2> sideDone = {};
                 auto it = preJoinSamples.rbegin();
                 Int i = 0;
                 auto previousIt = it;
