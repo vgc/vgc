@@ -17,7 +17,6 @@
 #ifndef VGC_UI_NUMBERSETTINGEDIT_H
 #define VGC_UI_NUMBERSETTINGEDIT_H
 
-#include <vgc/ui/label.h>
 #include <vgc/ui/numberedit.h>
 #include <vgc/ui/numbersetting.h>
 #include <vgc/ui/settingedit.h>
@@ -55,7 +54,6 @@ public:
 
 private:
     NumberSettingPtr numberSetting_;
-    LabelPtr label_;
     NumberEditPtr numberEdit_;
 
     void onNumberEditValueChanged_(double value);

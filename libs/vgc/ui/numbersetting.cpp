@@ -16,8 +16,6 @@
 
 #include <vgc/ui/numbersetting.h>
 
-#include <vgc/ui/settings.h>
-
 namespace vgc::ui {
 
 NumberSetting::NumberSetting(
@@ -88,18 +86,18 @@ double NumberSetting::value() const {
 void NumberSetting::setValue(double newValue) {
 
     // Set new value
-    double value_ = value();
-    if (value_ == newValue) {
+    double oldValue = value();
+    if (oldValue == newValue) {
         return;
     }
     newValue = clampedAndRoundedValue_(newValue);
-    if (value_ == newValue) {
+    if (oldValue == newValue) {
         return;
     }
     settings()->setDoubleValue(key(), newValue);
 
     // Emit signal
-    valueChanged().emit(value_);
+    valueChanged().emit(newValue);
 }
 
 void NumberSetting::setMinimum(double min) {
