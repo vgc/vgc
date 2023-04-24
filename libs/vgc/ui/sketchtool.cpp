@@ -23,6 +23,7 @@
 #include <vgc/core/stringid.h>
 #include <vgc/geometry/curve.h>
 #include <vgc/graphics/strings.h>
+#include <vgc/ui/boolsettingedit.h>
 #include <vgc/ui/column.h>
 #include <vgc/ui/cursor.h>
 #include <vgc/ui/logcategories.h>
@@ -39,7 +40,25 @@ namespace options {
 
 NumberSetting* penWidth() {
     static NumberSettingPtr setting = createDecimalNumberSetting(
-        settings::session(), "tools.sketck.penWidth", "Pen Width", 5, 0, 1000);
+        settings::session(), "tools.sketch.penWidth", "Pen Width", 5, 0, 1000);
+    return setting.get();
+}
+
+BoolSetting* snapping() {
+    static BoolSettingPtr setting = BoolSetting::create(
+        settings::session(), "tools.sketch.snapping", "Snapping", true);
+    return setting.get();
+}
+
+NumberSetting* snapDistance() {
+    static NumberSettingPtr setting = createDecimalNumberSetting(
+        settings::session(), "tools.sketch.snapDistance", "Snap Distance", 10, 0, 1000);
+    return setting.get();
+}
+
+NumberSetting* snapFalloff() {
+    static NumberSettingPtr setting = createDecimalNumberSetting(
+        settings::session(), "tools.sketch.snapFalloff", "Snap Falloff", 100, 0, 1000);
     return setting.get();
 }
 
@@ -63,15 +82,15 @@ geometry::Vec2d getSnapPosition(workspace::Element* snapVertex) {
 }
 
 // Note: for now, the deformation is linear, which introduce a non-smooth
-// point at s = snapDeformationLength.
+// point at s = snapFalloff.
 //
-geometry::Vec2d snapDeformation(
+geometry::Vec2d applySnapFalloff(
     const geometry::Vec2d& position,
     const geometry::Vec2d& delta,
     double s,
-    double snapDeformationLength) {
+    double snapFalloff) {
 
-    return position + delta * (1 - (s / snapDeformationLength));
+    return position + delta * (1 - (s / snapFalloff));
 }
 
 } // namespace
@@ -92,9 +111,20 @@ void SketchTool::setPenWidth(double width) {
     options::penWidth()->setValue(width);
 }
 
+bool SketchTool::isSnappingEnabled() const {
+    return options::snapping()->value();
+}
+
+void SketchTool::setSnappingEnabled(bool enabled) {
+    options::snapping()->setValue(enabled);
+}
+
 ui::WidgetPtr SketchTool::createOptionsWidget() const {
     ui::WidgetPtr res = ui::Column::create();
     res->createChild<ui::NumberSettingEdit>(options::penWidth());
+    res->createChild<ui::BoolSettingEdit>(options::snapping());
+    res->createChild<ui::NumberSettingEdit>(options::snapDistance());
+    res->createChild<ui::NumberSettingEdit>(options::snapFalloff());
     return res;
 }
 
@@ -273,11 +303,11 @@ void SketchTool::onPaintDraw(graphics::Engine* engine, PaintOptions options) {
             if (!smoothedInputPoints_.isEmpty()) {
                 double s = smoothedInputArclengths_.last()
                            + (pos2d - smoothedInputPoints_.last()).length();
-                double snapDeformationLength_ = snapDeformationLength();
+                double snapFalloff_ = snapFalloff();
                 geometry::Vec2d delta = startSnapPosition_ - smoothedInputPoints_[0];
-                if (s < snapDeformationLength_) {
+                if (s < snapFalloff_) {
                     minimalLatencySnappedCursor_ =
-                        snapDeformation(pos2d, delta, s, snapDeformationLength_);
+                        applySnapFalloff(pos2d, delta, s, snapFalloff_);
                 }
             }
         }
@@ -303,17 +333,29 @@ void SketchTool::onPaintDraw(graphics::Engine* engine, PaintOptions options) {
                     minimalLatencySnappedCursor_ - edgeLastSample.position();
                 double width = edgeLastSample.halfwidth(0) + edgeLastSample.halfwidth(1);
 
+                // We only draw the curve tip if it is long enough w.r.t. the
+                // stroke width, otherwise it looks really bad when drawing
+                // thick strokes (lots of flickering between [-90°, 90°] angles
+                // due to mouse inputs being integer pixels)
+                //
+                // TODO: improve visualization of the tip. It might make more
+                // sense to only draw curve outlines as thin overlay lines,
+                // since we draw tip as an overlay anyway, that is, not at the
+                // same depth as the actual curve, and without any effects
+                // (blur, layer opacity, etc.), so the tip as currently drawn
+                // may look very different from the actual curve anyway.
+                //
                 if (tipDir.length() > width) {
 
                     geometry::Vec2d tipNormal = tipDir.orthogonalized().normalized();
 
-                    double radiusRatio = 0.5;
+                    double widthRatio = 0.5;
                     geometry::Vec2d tipPoint0 =
                         minimalLatencySnappedCursor_
-                        - tipNormal * radiusRatio * edgeLastSample.halfwidth(1);
+                        - tipNormal * widthRatio * edgeLastSample.halfwidth(1);
                     geometry::Vec2d tipPoint1 =
                         minimalLatencySnappedCursor_
-                        + tipNormal * radiusRatio * edgeLastSample.halfwidth(0);
+                        + tipNormal * widthRatio * edgeLastSample.halfwidth(0);
 
                     strokeVertices.emplaceLast(
                         geometry::Vec2f(edgeLastSample.leftPoint()));
@@ -439,7 +481,7 @@ void SketchTool::startCurve_(const geometry::Vec2d& p, double width) {
     workspace::Element* snapVertex = nullptr;
     hasStartSnap_ = false;
     startSnapPosition_ = p;
-    if (isSnappingEnabled_) {
+    if (isSnappingEnabled()) {
         snapVertex = computeSnapVertex_(p, nullptr);
         if (snapVertex) {
             hasStartSnap_ = true;
@@ -522,15 +564,15 @@ void SketchTool::continueCurve_(const geometry::Vec2d& p, double width) {
     if (hasStartSnap_) {
 
         Int numPoints = smoothedInputPoints_.length();
-        double snapDeformationLength_ = snapDeformationLength();
+        double snapFalloff_ = snapFalloff();
         geometry::Vec2d delta = startSnapPosition_ - smoothedInputPoints_[0];
 
         points_.resizeNoInit(numPoints);
         for (Int i = 0; i < numPoints; ++i) {
             geometry::Vec2d sp = smoothedInputPoints_[i];
             double s = smoothedInputArclengths_[i];
-            if (s < snapDeformationLength_) {
-                points_[i] = snapDeformation(sp, delta, s, snapDeformationLength_);
+            if (s < snapFalloff_) {
+                points_[i] = applySnapFalloff(sp, delta, s, snapFalloff_);
             }
             else {
                 points_[i] = sp; // maybe optimize in the future
@@ -567,7 +609,7 @@ void SketchTool::finishCurve_() {
     }
 
     // Compute end vertex snapping
-    if (isSnappingEnabled_ && smoothedInputPoints_.length() > 1) {
+    if (isSnappingEnabled() && smoothedInputPoints_.length() > 1) {
 
         // Compute start vertex to snap to
         geometry::Vec2d lastInputPoint = lastInputPoints_[0];
@@ -578,7 +620,7 @@ void SketchTool::finishCurve_() {
 
             // Cap snap deformation length to ensure start point isn't modified
             double maxS = smoothedInputArclengths_.last();
-            double snapDeformationLength_ = (std::min)(snapDeformationLength(), maxS);
+            double snapFalloff_ = (std::min)(snapFalloff(), maxS);
 
             // Deform end of stroke to match snap position
             double s = 0;
@@ -587,9 +629,8 @@ void SketchTool::finishCurve_() {
             points_.last() = snapPosition;
             for (Int i = smoothedInputPoints_.length() - 2; i >= 0; --i) {
                 s = maxS - smoothedInputArclengths_[i];
-                if (s < snapDeformationLength_) {
-                    points_[i] =
-                        snapDeformation(points_[i], delta, s, snapDeformationLength_);
+                if (s < snapFalloff_) {
+                    points_[i] = applySnapFalloff(points_[i], delta, s, snapFalloff_);
                 }
                 else {
                     break;
@@ -628,15 +669,15 @@ bool SketchTool::resetData_() {
     return false;
 }
 
-double SketchTool::snapDeformationLength() const {
+double SketchTool::snapFalloff() const {
 
-    using namespace style::literals;
-    constexpr style::Length snapDeformationLength_ = 100.0_dp;
+    float snapFalloffFloat = static_cast<float>(options::snapFalloff()->value());
+    style::Length snapFalloffLength(snapFalloffFloat, style::LengthUnit::Dp);
 
     ui::Canvas* canvas = this->canvas();
     double zoom = canvas ? canvas->camera().zoom() : 1.0;
 
-    return snapDeformationLength_.toPx(styleMetrics()) / zoom;
+    return snapFalloffLength.toPx(styleMetrics()) / zoom;
 }
 
 // Note: in the future we may want to have the snapping candidates implemented
@@ -646,24 +687,24 @@ workspace::Element* SketchTool::computeSnapVertex_(
     const geometry::Vec2d& position,
     dom::Element* excludedElement_) {
 
-    using namespace style::literals;
-    constexpr style::Length snapRadius_ = 14.0_dp;
-
     workspace::Workspace* workspace = this->workspace();
     if (!workspace) {
         return nullptr;
     }
 
+    float snapDistanceFloat = static_cast<float>(options::snapDistance()->value());
+    style::Length snapDistanceLength(snapDistanceFloat, style::LengthUnit::Dp);
+
     ui::Canvas* canvas = this->canvas();
     double zoom = canvas ? canvas->camera().zoom() : 1.0;
-    double snapRadius = snapRadius_.toPx(styleMetrics()) / zoom;
+    double snapDistance = snapDistanceLength.toPx(styleMetrics()) / zoom;
     double minDist = core::DoubleInfinity;
 
     workspace::Element* res = nullptr;
 
     workspace->visitDepthFirst(
         [](workspace::Element*, Int) { return true; },
-        [&, snapRadius, position](workspace::Element* e, Int /*depth*/) {
+        [&, snapDistance, position](workspace::Element* e, Int /*depth*/) {
             if (!e || !e->domElement() || e->domElement() == excludedElement_) {
                 //    ^^^^^^^^^^^^^^^^
                 //    For now, we forbid snapping to vertices with no corresponding
@@ -678,7 +719,8 @@ workspace::Element* SketchTool::computeSnapVertex_(
                 return;
             }
             double dist = 0;
-            if (e->isSelectableAt(position, false, snapRadius, &dist) && dist < minDist) {
+            if (e->isSelectableAt(position, false, snapDistance, &dist)
+                && dist < minDist) {
                 minDist = dist;
                 res = e;
             }

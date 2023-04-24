@@ -54,10 +54,6 @@ protected:
         setWindowIconFromResource("apps/illustration/icons/512.png");
         createTestActionsAndMenus_();
         createTestWidgets_();
-        auto sketchTool = dynamic_cast<ui::SketchTool*>(currentTool());
-        if (sketchTool) {
-            sketchTool->setSnappingEnabled(true);
-        }
     }
 
 private:

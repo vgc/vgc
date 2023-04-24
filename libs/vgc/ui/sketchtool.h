@@ -25,7 +25,6 @@
 #include <vgc/ui/api.h>
 #include <vgc/ui/canvastool.h>
 #include <vgc/ui/cursor.h>
-#include <vgc/ui/numbersetting.h>
 #include <vgc/workspace/workspace.h>
 
 namespace vgc::ui {
@@ -73,16 +72,12 @@ public:
     /// Returns whether sketched strokes are automatically snapped to end
     /// points of existing strokes.
     ///
-    bool isSnappingEnabled() const {
-        return isSnappingEnabled_;
-    }
+    bool isSnappingEnabled() const;
 
     /// Sets whether sketched strokes are automatically snapped
     /// to end points of existing strokes.
     ///
-    void setSnappingEnabled(bool enabled) {
-        isSnappingEnabled_ = enabled;
-    }
+    void setSnappingEnabled(bool enabled);
 
 protected:
     // Reimplementation of CanvasTool virtual methods
@@ -132,8 +127,11 @@ protected:
     void updateSmoothedData_();
 
     // Snapping
-    bool isSnappingEnabled_ = false; // may change between startCurve() and finishCurve()
-    bool hasStartSnap_ = false;      // computed once in startCurve()
+    //
+    // Note: keep in mind that isSnappingEnabled() may change between
+    // startCurve() and finishCurve().
+    //
+    bool hasStartSnap_ = false;
     geometry::Vec2d startSnapPosition_;
 
     // Final points
@@ -159,7 +157,7 @@ protected:
     bool resetData_();
 
     // The length of curve that snapping is allowed to deform
-    double snapDeformationLength() const;
+    double snapFalloff() const;
 
     workspace::Element*
     computeSnapVertex_(const geometry::Vec2d& position, dom::Element* excludedElement_);
