@@ -910,7 +910,7 @@ void QglEngine::createBuiltinShaders_() {
     simpleTexturedDebugProgram_ = simpleTexturedDebugProgram;
 
     QglProgramPtr sreenSpaceDisplacementProgram(
-        new QglProgram(resourceRegistry_, BuiltinProgram::SreenSpaceDisplacement));
+        new QglProgram(resourceRegistry_, BuiltinProgram::ScreenSpaceDisplacement));
     sreenSpaceDisplacementProgram_ = sreenSpaceDisplacementProgram;
 }
 
