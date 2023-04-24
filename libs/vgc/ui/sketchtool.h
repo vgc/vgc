@@ -157,7 +157,7 @@ protected:
     bool resetData_();
 
     // The length of curve that snapping is allowed to deform
-    double snapDeformationLength() const;
+    double snapFalloff() const;
 
     workspace::Element*
     computeSnapVertex_(const geometry::Vec2d& position, dom::Element* excludedElement_);

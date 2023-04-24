@@ -388,16 +388,17 @@
 
 .tool-options {
     vertical-stretch: 0;
-    min-height: 80dp;
+    min-height: 140dp;
 }
 
 .tool-options .Panel > .Flex {
-    vertical-stretch: 1;
+    vertical-stretch: 0;
     main-alignment: start;
     main-spacing: packed;
 }
 
 .tool-options .Panel .SettingEdit {
+    vertical-shrink: 0;
     vertical-stretch: 0;
     main-alignment: start;
     main-spacing: packed;
