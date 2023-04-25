@@ -26,6 +26,7 @@
 #include <vgc/ui/overlayarea.h>
 #include <vgc/ui/plot2d.h>
 #include <vgc/ui/row.h>
+#include <vgc/workspace/vertex.h>
 
 namespace app = vgc::app;
 namespace core = vgc::core;
@@ -309,6 +310,7 @@ private:
 };
 
 int main(int argc, char* argv[]) {
+    vgc::workspace::detail::setMultiJoinEnabled(true);
     auto application = UiTestApplication::create(argc, argv);
     return application->exec();
 }
