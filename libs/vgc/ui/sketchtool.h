@@ -151,6 +151,8 @@ protected:
     geometry::Vec2f lastImmediateCursorPos_ = {};
     geometry::Vec2d minimalLatencySnappedCursor_ = {};
 
+    graphics::GeometryViewPtr mouseInputGeometry_;
+
     void startCurve_(const geometry::Vec2d& p, double width);
     void continueCurve_(const geometry::Vec2d& p, double width);
     void finishCurve_();

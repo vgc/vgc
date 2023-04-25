@@ -266,16 +266,14 @@ void SketchTool::onPaintCreate(graphics::Engine* engine) {
     using namespace graphics;
     minimalLatencyStrokeGeometry_ =
         engine->createDynamicTriangleStripView(BuiltinGeometryLayout::XY_iRGBA);
+    mouseInputGeometry_ =
+        engine->createDynamicTriangleStripView(BuiltinGeometryLayout::XYDxDy_iXYRotWRGBA);
     reload_ = true;
 }
 
 void SketchTool::onPaintDraw(graphics::Engine* engine, PaintOptions options) {
 
     SuperClass::onPaintDraw(engine, options);
-
-    if (!isSketching_) {
-        return;
-    }
 
     using namespace graphics;
     namespace gs = graphics::strings;
@@ -290,7 +288,7 @@ void SketchTool::onPaintDraw(graphics::Engine* engine, PaintOptions options) {
     //
     Window* w = window();
     bool cursorMoved = false;
-    if (w) {
+    if (isSketching_ && w) {
         geometry::Vec2f pos(w->mapFromGlobal(globalCursorPosition()));
         geometry::Vec2d posd(root()->mapTo(this, pos));
         pos = geometry::Vec2f(
@@ -313,7 +311,7 @@ void SketchTool::onPaintDraw(graphics::Engine* engine, PaintOptions options) {
         }
     }
 
-    if (cursorMoved || minimalLatencyStrokeReload_) {
+    if (isSketching_ && (cursorMoved || minimalLatencyStrokeReload_)) {
 
         core::Color color = penColor_;
         geometry::Vec2fArray strokeVertices;
@@ -378,13 +376,44 @@ void SketchTool::onPaintDraw(graphics::Engine* engine, PaintOptions options) {
         minimalLatencyStrokeReload_ = false;
     }
 
-    engine->pushProgram(graphics::BuiltinProgram::Simple);
+    if (true) { // todo only update on new points
+
+        core::Array<geometry::Vec4f> pointVertices;
+        Int n = 32;
+        pointVertices.reserve(n * 2 + 1);
+        for (Int i = 0; i < n; ++i) {
+            double a = core::pi * 2.0 * i / 32.f;
+            pointVertices.emplaceLast(0, 0, 0, 0);
+            pointVertices.emplaceLast(0, 0, std::cos(a), std::sin(a));
+        }
+        pointVertices.emplaceLast(0, 0, 1, 0);
+
+        core::FloatArray pointInstData;
+        const Int numPoints = inputPoints_.length();
+        for (Int i = 0; i < numPoints; ++i) {
+            geometry::Vec2f p = geometry::Vec2f(inputPoints_[i]);
+            pointInstData.extend({p.x(), p.y(), 0.f, 4.f, 0.f, 1.f, 0.f, 1.f});
+        }
+
+        engine->updateBufferData(
+            mouseInputGeometry_->vertexBuffer(0), std::move(pointVertices));
+        engine->updateBufferData(
+            mouseInputGeometry_->vertexBuffer(1), std::move(pointInstData));
+    }
+
     geometry::Mat4f vm = engine->viewMatrix();
     geometry::Mat4f cameraViewf(canvas->camera().viewMatrix());
     engine->pushViewMatrix(vm * cameraViewf);
-    engine->draw(minimalLatencyStrokeGeometry_);
+
+    if (isSketching_) {
+        engine->setProgram(graphics::BuiltinProgram::Simple);
+        engine->draw(minimalLatencyStrokeGeometry_);
+    }
+
+    engine->setProgram(graphics::BuiltinProgram::ScreenSpaceDisplacement);
+    engine->drawInstanced(mouseInputGeometry_);
+
     engine->popViewMatrix();
-    engine->popProgram();
 }
 
 void SketchTool::onPaintDestroy(graphics::Engine* engine) {
