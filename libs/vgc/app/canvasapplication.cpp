@@ -23,6 +23,7 @@
 #include <vgc/app/logcategories.h>
 #include <vgc/core/datetime.h>
 #include <vgc/dom/strings.h>
+#include <vgc/ui/paintbuckettool.h>
 #include <vgc/ui/qtutil.h>
 #include <vgc/ui/selecttool.h>
 #include <vgc/ui/shortcut.h>
@@ -620,8 +621,10 @@ void CanvasApplication::createTools_(ui::Widget* parent) {
     ui::Column* tools = parent->createChild<ui::Column>();
     ui::SelectToolPtr selectTool = ui::SelectTool::create();
     ui::SketchToolPtr sketchTool = ui::SketchTool::create();
+    ui::PaintBucketToolPtr paintBucketTool = ui::PaintBucketTool::create();
     registerTool_(tools, "Select Tool", selectTool);
     registerTool_(tools, "Sketch Tool", sketchTool);
+    registerTool_(tools, "Paint Bucket Tool", paintBucketTool);
 
     // Keep pointer to sketch tool for handling color changes,
     // and set it as default tool.
@@ -732,30 +735,6 @@ void CanvasApplication::onActionDebugWidgetSizing_() {
         widget = widget->hoverChainChild();
     }
     VGC_DEBUG(LogVgcApp, out);
-}
-
-void CanvasApplication::createColorPalette_(ui::Widget* parent) {
-    palette_ = parent->createChild<ui::ColorPalette>();
-}
-
-void CanvasApplication::onColorChanged_() {
-    if (canvas_ && palette_) {
-        core::Color color = palette_->selectedColor();
-        tool_->setPenColor(color);
-        canvas_->onColorChanged_(color);
-    }
-}
-
-void CanvasApplication::createCanvas_(
-    ui::Widget* parent,
-    workspace::Workspace* workspace) {
-
-    canvas_ = parent->createChild<ui::Canvas>(workspace);
-    tool_ = canvas_->createChild<ui::SketchTool>();
-    onColorChanged_();
-    if (palette_) {
-        palette_->colorSelected().connect(onColorChangedSlot_());
-    }
 }
 
 } // namespace vgc::app

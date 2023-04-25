@@ -307,7 +307,6 @@ void samplePointsOnCycleUniformly(
 
 namespace detail {
 
-// todo: return the face mesh too
 core::Array<KeyCycle> computeKeyFaceCandidateAt(
     geometry::Vec2d position,
     vacomplex::Group* group,
