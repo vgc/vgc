@@ -112,18 +112,50 @@ protected:
     dom::Element* endVertex_ = nullptr;
     dom::Element* edge_ = nullptr;
 
-    // Raw input.
+    // Raw input in widget space (pixels).
+    //
+    // Invariant: both arrays have the same length.
     //
     // Notes:
-    // - for now, we do not smooth widths
+    // - for now, we do not smooth widths.
+    // - we assume the view matrix does not change during the operation.
     //
-    geometry::Vec2dArray inputPoints_;
+    geometry::Vec2fArray inputPoints_;
     core::DoubleArray inputWidths_;
+    core::Array<Int64> inputPointsTimestamps_;
+    geometry::Mat4d canvasToWorkspaceMatrix_;
+    bool isInputQuantized_ = false;
 
-    // Smoothing. Invariant: both arrays have the same length.
-    geometry::Vec2dArray smoothedInputPoints_;
-    core::DoubleArray smoothedInputArclengths_;
+    // Dequantization.
+    //
+    // Invariant: both arrays have the same length.
+    //
+    geometry::Vec2fArray unquantizedPoints_;
+    core::DoubleArray unquantizedWidths_;
+    void updateUnquantizedData_();
+
+    // Transformation.
+    //
+    // Invariant: both arrays have the same length.
+    //
+    geometry::Vec2dArray transformedPoints_;
+    core::DoubleArray transformedWidths_;
+    void updateTransformedData_();
+
+    // Smoothing.
+    //
+    // Invariant: both arrays have the same length.
+    //
+    geometry::Vec2dArray smoothedPoints_;
+    core::DoubleArray smoothedWidths_;
     void updateSmoothedData_();
+
+    // Final points.
+    //
+    // Invariant: both arrays have the same length.
+    //
+    geometry::Vec2dArray points_;
+    core::DoubleArray widths_;
 
     // Snapping
     //
@@ -132,10 +164,6 @@ protected:
     //
     bool hasStartSnap_ = false;
     geometry::Vec2d startSnapPosition_;
-
-    // Final points
-    geometry::Vec2dArray points_;
-    core::DoubleArray widths_;
 
     // Draw additional points at the stroke tip, based on global cursor
     // position, to reduce perceived input lag.
@@ -153,9 +181,10 @@ protected:
 
     graphics::GeometryViewPtr mouseInputGeometry_;
 
-    void startCurve_(const geometry::Vec2d& p, double width);
-    void continueCurve_(const geometry::Vec2d& p, double width);
-    void finishCurve_();
+    // Assumes canvas() is non-null.
+    void startCurve_(MouseEvent* event);
+    void continueCurve_(MouseEvent* event);
+    void finishCurve_(MouseEvent* event);
     bool resetData_();
 
     // The length of curve that snapping is allowed to deform
