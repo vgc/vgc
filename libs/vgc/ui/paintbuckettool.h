@@ -56,23 +56,17 @@ protected:
     void onPaintDestroy(graphics::Engine* engine) override;
 
 private:
-    // Face candidate
-    core::Array<topology::KeyCycle> paintCandidateCycles_;
-    bool hasPaintCandidate_() const {
-        return !paintCandidateCycles_.isEmpty();
+    // Face candidate.
+    core::Array<vacomplex::KeyCycle> faceCandidateCycles_;
+    bool hasFaceCandidate_() const {
+        return !faceCandidateCycles_.isEmpty();
     }
-    void clearPaintCandidate_();
+    void clearFaceCandidate_();
     void updateFaceCandidate_(const geometry::Vec2d& worldPosition);
 
     // Graphics Data
-    core::FloatArray paintCandidatePendingTriangles_;
-    graphics::GeometryViewPtr paintCandidateFillGeometry_;
-
-    /*
-    // temporary method
-    void onColorChanged_(const core::Color& color);
-    // temporary method
-*/
+    core::FloatArray faceCandidatePendingTriangles_;
+    graphics::GeometryViewPtr faceCandidateFillGeometry_;
 };
 
 } // namespace vgc::ui

@@ -37,7 +37,7 @@ bool PaintBucketTool::onMouseMove(MouseEvent* event) {
 
     ui::Canvas* canvas = this->canvas();
     if (!canvas) {
-        clearPaintCandidate_();
+        clearFaceCandidate_();
         return false;
     }
 
@@ -52,19 +52,19 @@ bool PaintBucketTool::onMouseMove(MouseEvent* event) {
 
     // Compute the key face candidate for the current mouse position.
     //
-    bool hadPaintCandidate = hasPaintCandidate_();
+    bool hadFaceCandidate = hasFaceCandidate_();
     updateFaceCandidate_(worldCoords);
-    bool hasPaintCandidate = hasPaintCandidate_();
+    bool hasFaceCandidate = hasFaceCandidate_();
 
-    // Determine whether the paint candidate changed. For now, we just assume
+    // Determine whether the face candidate changed. For now, we just assume
     // it always changes, unless there was no candidate before and there is
     // still no candidate now.
     //
-    bool paintCandidateChanged = hasPaintCandidate || hadPaintCandidate;
+    bool faceCandidateChanged = hasFaceCandidate || hadFaceCandidate;
 
-    // Request a repaint if the candidate changed.
+    // Request a repaint if the face candidate changed.
     //
-    if (paintCandidateChanged) {
+    if (faceCandidateChanged) {
         requestRepaint();
         return true;
     }
@@ -73,44 +73,61 @@ bool PaintBucketTool::onMouseMove(MouseEvent* event) {
     }
 }
 
-bool PaintBucketTool::onMousePress(MouseEvent* /*event*/) {
-    // TODO
+bool PaintBucketTool::onMousePress(MouseEvent* event) {
 
-    /*
-    if (isBucketPainting_ && event->button() == MouseButton::Left
-        && !paintCandidateCycles_.isEmpty()) {
+    if (event->button() == MouseButton::Left && hasFaceCandidate_()) {
 
-        core::History* history = workspace()->history();
-        static core::StringId Paint_Face("Paint Face");
-        core::UndoGroup* ug = nullptr;
+        // Get workspace and history
+        workspace::Workspace* workspace_ = workspace();
+        if (!workspace_) {
+            VGC_WARNING(
+                LogVgcToolsPaintBucket, "Workspace not found: cannot create face.");
+            return false;
+        }
+        core::History* history = workspace_->history();
+
+        // Open undo group if history is enabled
+        static core::StringId operationName("Create Face with Paint Bucket");
+        core::UndoGroup* undoGroup = nullptr;
         if (history) {
-            ug = history->createUndoGroup(Paint_Face);
+            undoGroup = history->createUndoGroup(operationName);
         }
 
-        vacomplex::Group* group =
-            paintCandidateCycles_[0].halfedges().first().edge()->parentGroup();
+        // Find the parent group under which to create the new face.
+        // Note: we know that paintCandidateCycles_ is non-empty.
+        //
+        const vacomplex::KeyCycle& anyCycle = faceCandidateCycles_[0];
+        if (!anyCycle.isValid()) {
+            // This shouldn't happen since computeKeyFaceCandidateAt() is not
+            // supposed to return invalid cycles, but we double-check anyway.
+            VGC_WARNING(LogVgcToolsPaintBucket, "Invalid cycle: cannot create face.");
+            clearFaceCandidate_();
+            return false;
+        }
+        vacomplex::Cell* anyCell = anyCycle.steinerVertex();
+        if (!anyCell) {
+            VGC_ASSERT(!anyCycle.halfedges().isEmpty());
+            anyCell = anyCycle.halfedges()[0].edge();
+        }
+        VGC_ASSERT(anyCell);
+        vacomplex::Group* parentGroup = anyCell->parentGroup();
+
+        // Create the face
         vacomplex::KeyFace* kf = topology::ops::createKeyFace(
-            paintCandidateCycles_, group, group->firstChild());
+            faceCandidateCycles_, parentGroup, parentGroup->firstChild());
         workspace::VacElement* element = workspace()->findVacElement(kf);
-        element->domElement()->setAttribute(dom::strings::color, paintColor_);
+        core::Color faceColor(1, 0, 0); // TODO: use current tool color
+        element->domElement()->setAttribute(dom::strings::color, faceColor);
 
-        workspace()->sync();
-        if (ug) {
-            ug->close();
+        // Close the undo group. This requires syncing the DOM from the VAC.
+        workspace_->sync();
+        if (undoGroup) {
+            undoGroup->close();
         }
 
-        clearPaintCandidate_();
-        event->stopPropagation();
-    }
-*/
-
-    /*
-    else if (event->button() == MouseButton::Right) {
-        isBucketPainting_ = true;
-        doBucketPaintTest_(mousePos);
+        clearFaceCandidate_();
         return true;
     }
-*/
 
     return false;
 }
@@ -123,7 +140,7 @@ bool PaintBucketTool::onMouseRelease(MouseEvent* /*event*/) {
 void PaintBucketTool::onPaintCreate(graphics::Engine* engine) {
     using Layout = graphics::BuiltinGeometryLayout;
     SuperClass::onPaintCreate(engine);
-    paintCandidateFillGeometry_ = engine->createDynamicTriangleListView(Layout::XY_iRGBA);
+    faceCandidateFillGeometry_ = engine->createDynamicTriangleListView(Layout::XY_iRGBA);
 }
 
 void PaintBucketTool::onPaintDraw(graphics::Engine* engine, PaintOptions options) {
@@ -134,14 +151,21 @@ void PaintBucketTool::onPaintDraw(graphics::Engine* engine, PaintOptions options
         return;
     }
 
-    if (hasPaintCandidate_() && paintCandidateFillGeometry_) {
-        if (!paintCandidatePendingTriangles_.isEmpty()) {
+    // TODO: use current tool color?
+    core::Color facePreviewColor(1, 0, 0);
+
+    if (hasFaceCandidate_() && faceCandidateFillGeometry_) {
+        if (!faceCandidatePendingTriangles_.isEmpty()) {
             engine->updateBufferData(
-                paintCandidateFillGeometry_->vertexBuffer(0), //
-                paintCandidatePendingTriangles_);
+                faceCandidateFillGeometry_->vertexBuffer(0), //
+                faceCandidatePendingTriangles_);
             engine->updateBufferData(
-                paintCandidateFillGeometry_->vertexBuffer(1), //
-                core::Array<float>({1, 0, 0, 1}));
+                faceCandidateFillGeometry_->vertexBuffer(1), //
+                core::Array<float>(
+                    {facePreviewColor.r(),
+                     facePreviewColor.g(),
+                     facePreviewColor.b(),
+                     1}));
         }
 
         // TODO: setting up the view matrix should be done by Canvas.
@@ -149,7 +173,7 @@ void PaintBucketTool::onPaintDraw(graphics::Engine* engine, PaintOptions options
         geometry::Mat4f vm = engine->viewMatrix();
         geometry::Mat4f cameraViewf(canvas->camera().viewMatrix());
         engine->pushViewMatrix(vm * cameraViewf);
-        engine->draw(paintCandidateFillGeometry_);
+        engine->draw(faceCandidateFillGeometry_);
         engine->popViewMatrix();
         engine->popProgram();
     }
@@ -157,24 +181,25 @@ void PaintBucketTool::onPaintDraw(graphics::Engine* engine, PaintOptions options
 
 void PaintBucketTool::onPaintDestroy(graphics::Engine* engine) {
     SuperClass::onPaintDestroy(engine);
-    paintCandidateFillGeometry_.reset();
+    faceCandidateFillGeometry_.reset();
 }
 
-void PaintBucketTool::clearPaintCandidate_() {
-    if (!paintCandidateCycles_.isEmpty()) {
-        paintCandidatePendingTriangles_.clear();
-        paintCandidateCycles_.clear();
+void PaintBucketTool::clearFaceCandidate_() {
+    if (!faceCandidateCycles_.isEmpty()) {
+        faceCandidatePendingTriangles_.clear();
+        faceCandidateCycles_.clear();
         requestRepaint();
     }
 }
 
 void PaintBucketTool::updateFaceCandidate_(const geometry::Vec2d& worldPosition) {
-    paintCandidateCycles_ = topology::detail::computeKeyFaceCandidateAt(
-        worldPosition, workspace()->vac()->rootGroup(), paintCandidatePendingTriangles_);
+    faceCandidateCycles_ = topology::detail::computeKeyFaceCandidateAt(
+        worldPosition, workspace()->vac()->rootGroup(), faceCandidatePendingTriangles_);
 }
+
 /*
 // temporary method to test color change of element
-void Canvas::onColorChanged_(const core::Color& color) {
+void PaintBucketTool::onColorChanged_(const core::Color& color) {
     //paintColor_ = color;
     workspace::Element* element = selectedElement_();
     core::History* history = workspace()->history();
@@ -197,7 +222,7 @@ void Canvas::onColorChanged_(const core::Color& color) {
 */
 
 /*
-void Canvas::onDocumentChanged_(const dom::Diff& diff) {
+void PaintBucketTool::onDocumentChanged_(const dom::Diff& diff) {
     clearPaintCandidate_();
 }
 */
