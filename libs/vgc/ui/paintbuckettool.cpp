@@ -16,7 +16,11 @@
 
 #include <vgc/ui/paintbuckettool.h>
 
+#include <vgc/core/history.h>
+#include <vgc/dom/strings.h>
+#include <vgc/topology/operations.h>
 #include <vgc/ui/column.h>
+#include <vgc/workspace/element.h>
 
 namespace vgc::ui {
 

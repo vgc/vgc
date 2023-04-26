@@ -17,16 +17,20 @@
 #ifndef VGC_UI_PAINTBUCKETTOOL_H
 #define VGC_UI_PAINTBUCKETTOOL_H
 
+#include <vgc/core/array.h>
+#include <vgc/core/color.h>
+#include <vgc/geometry/vec2d.h>
+#include <vgc/graphics/geometryview.h>
+#include <vgc/topology/keycycle.h>
 #include <vgc/ui/api.h>
 #include <vgc/ui/canvastool.h>
-#include <vgc/ui/cursor.h>
 
 namespace vgc::ui {
 
 VGC_DECLARE_OBJECT(PaintBucketTool);
 
-/// \class vgc::ui::SketchTool
-/// \brief A CanvasTool that implements sketching strokes.
+/// \class vgc::ui::PaintBucketTool
+/// \brief Implementation of the "paint bucket" tool, creating faces on click.
 ///
 class VGC_UI_API PaintBucketTool : public CanvasTool {
 private:
