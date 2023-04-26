@@ -81,6 +81,10 @@ Canvas::Canvas(workspace::Workspace* workspace)
 
 void Canvas::setWorkspace(workspace::Workspace* workspace) {
 
+    if (workspace_ == workspace) {
+        return;
+    }
+
     if (workspace_) {
         workspace_->disconnect(this);
         // XXX to remove
@@ -96,6 +100,7 @@ void Canvas::setWorkspace(workspace::Workspace* workspace) {
     }
 
     requestRepaint();
+    workspaceReplaced().emit();
 }
 
 void Canvas::startLoggingUnder(core::PerformanceLog* parent) {

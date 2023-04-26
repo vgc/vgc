@@ -219,7 +219,7 @@ void PaintBucketTool::onPaintDestroy(graphics::Engine* engine) {
 }
 
 void PaintBucketTool::clearFaceCandidate_() {
-    if (!faceCandidateCycles_.isEmpty()) {
+    if (hasFaceCandidate_()) {
         faceCandidateTriangles_.clear();
         faceCandidateCycles_.clear();
         requestRepaint();
@@ -227,8 +227,21 @@ void PaintBucketTool::clearFaceCandidate_() {
 }
 
 void PaintBucketTool::updateFaceCandidate_(const geometry::Vec2d& worldPosition) {
+
+    // Fast return if no workspace
+    workspace::Workspace* workspace = this->workspace();
+    if (!workspace) {
+        clearFaceCandidate_();
+        return;
+    }
+
+    // Compute face candidate at given world position
     faceCandidateCycles_ = topology::detail::computeKeyFaceCandidateAt(
-        worldPosition, workspace()->vac()->rootGroup(), faceCandidateTriangles_);
+        worldPosition, workspace->vac()->rootGroup(), faceCandidateTriangles_);
+
+    // Clear face candidate if document or workspace changes
+    workspace->document()->changed().connect(clearFaceCandidateSlot_());
+    canvas()->workspaceReplaced().connect(clearFaceCandidateSlot_());
 }
 
 /*
@@ -252,12 +265,6 @@ void PaintBucketTool::onColorChanged_(const core::Color& color) {
         }
         workspace()->sync();
     }
-}
-*/
-
-/*
-void PaintBucketTool::onDocumentChanged_(const dom::Diff& diff) {
-    clearPaintCandidate_();
 }
 */
 

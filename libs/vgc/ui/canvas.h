@@ -88,6 +88,18 @@ public:
     ///
     void setWorkspace(workspace::Workspace* workspace);
 
+    /// This signal is emitted whenever this `Canvas` changes which
+    /// `workspace()` it is observing. In other words, this is emitted when
+    /// `setWorkspace()` is called with a different workspace.
+    ///
+    /// The new `workspace()` may be null, which means that the canvas doesn't
+    /// observe anymore a workspace.
+    ///
+    /// Note that this signal is different from `workspace()->changed()`, which
+    /// is emitted when the inner content of the `workspace()` changes.
+    ///
+    VGC_SIGNAL(workspaceReplaced)
+
     /// Creates and manages new performance logs as children of the given \p
     /// parent.
     ///
@@ -98,6 +110,8 @@ public:
     ///
     void stopLoggingUnder(core::PerformanceLog* parent);
 
+    /// Returns the current requested tesselation mode.
+    ///
     geometry::CurveSamplingQuality requestedTesselationMode() const {
         return requestedTesselationMode_;
     }
@@ -107,8 +121,6 @@ public:
     const geometry::Camera2d& camera() const {
         return camera_;
     }
-
-    VGC_SIGNAL(changed);
 
     //----------------------- Manage selection --------------------------------
     //

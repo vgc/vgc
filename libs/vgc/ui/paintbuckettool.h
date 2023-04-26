@@ -69,13 +69,14 @@ private:
     // Tool color
     core::Color color_;
 
-    // Face candidate.
+    // Face candidate
     core::Array<vacomplex::KeyCycle> faceCandidateCycles_;
     bool hasFaceCandidate_() const {
         return !faceCandidateCycles_.isEmpty();
     }
     void clearFaceCandidate_();
     void updateFaceCandidate_(const geometry::Vec2d& worldPosition);
+    VGC_SLOT(clearFaceCandidateSlot_, clearFaceCandidate_)
 
     // Graphics Data
     bool isFaceCandidateGraphicsDirty_ = true;
