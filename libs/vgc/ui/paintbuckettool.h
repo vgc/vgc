@@ -43,6 +43,16 @@ public:
     ///
     static PaintBucketToolPtr create();
 
+    /// Returns the color of the tool.
+    ///
+    core::Color color() const {
+        return color_;
+    }
+
+    /// Sets the color of the tool.
+    ///
+    void setColor(const core::Color& color);
+
 protected:
     // Reimplementation of CanvasTool virtual methods
     ui::WidgetPtr createOptionsWidget() const override;
@@ -56,6 +66,9 @@ protected:
     void onPaintDestroy(graphics::Engine* engine) override;
 
 private:
+    // Tool color
+    core::Color color_;
+
     // Face candidate.
     core::Array<vacomplex::KeyCycle> faceCandidateCycles_;
     bool hasFaceCandidate_() const {
@@ -65,7 +78,8 @@ private:
     void updateFaceCandidate_(const geometry::Vec2d& worldPosition);
 
     // Graphics Data
-    core::FloatArray faceCandidatePendingTriangles_;
+    bool isFaceCandidateGraphicsDirty_ = true;
+    core::FloatArray faceCandidateTriangles_;
     graphics::GeometryViewPtr faceCandidateFillGeometry_;
 };
 

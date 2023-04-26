@@ -28,6 +28,14 @@ PaintBucketToolPtr PaintBucketTool::create() {
     return PaintBucketToolPtr(new PaintBucketTool());
 }
 
+void PaintBucketTool::setColor(const core::Color& color) {
+    color_ = color;
+    if (hasFaceCandidate_()) {
+        isFaceCandidateGraphicsDirty_ = true;
+        requestRepaint();
+    }
+}
+
 ui::WidgetPtr PaintBucketTool::createOptionsWidget() const {
     ui::WidgetPtr res = ui::Column::create();
     return res;
@@ -65,8 +73,20 @@ bool PaintBucketTool::onMouseMove(MouseEvent* event) {
     // Request a repaint if the face candidate changed.
     //
     if (faceCandidateChanged) {
+        isFaceCandidateGraphicsDirty_ = true;
         requestRepaint();
-        return true;
+
+        // We return false, so that the event can still be propagated to the
+        // parent (Canvas), so that users can still pan/zoom/rotate the view
+        // even if there is a preview face.
+        //
+        // In theory, it might make more sense to return true since the mouse
+        // move "did something meaningful", but this would require Canvas to
+        // support more properly NOT pass the mouse move to the tool if it is
+        // already in the middle of an action, via hover-lock or explicitly
+        // unsetting the hover-chain child in preMouseMove().
+        //
+        return false;
     }
     else {
         return false;
@@ -75,7 +95,10 @@ bool PaintBucketTool::onMouseMove(MouseEvent* event) {
 
 bool PaintBucketTool::onMousePress(MouseEvent* event) {
 
-    if (event->button() == MouseButton::Left && hasFaceCandidate_()) {
+    ModifierKeys keys = event->modifierKeys();
+    MouseButton button = event->button();
+
+    if (keys == ModifierKey::None && button == MouseButton::Left && hasFaceCandidate_()) {
 
         // Get workspace and history
         workspace::Workspace* workspace_ = workspace();
@@ -112,15 +135,31 @@ bool PaintBucketTool::onMousePress(MouseEvent* event) {
         VGC_ASSERT(anyCell);
         vacomplex::Group* parentGroup = anyCell->parentGroup();
 
-        // Create the face
-        vacomplex::KeyFace* kf = topology::ops::createKeyFace(
+        // Create the face. For now, we place it as first child of the group.
+        // In the future, we may want to place at the highest index which is
+        // still below all the cells in the face's boundary.
+        vacomplex::KeyFace* face = topology::ops::createKeyFace(
             faceCandidateCycles_, parentGroup, parentGroup->firstChild());
-        workspace::VacElement* element = workspace()->findVacElement(kf);
-        core::Color faceColor(1, 0, 0); // TODO: use current tool color
-        element->domElement()->setAttribute(dom::strings::color, faceColor);
+        workspace::VacElement* workspaceFace = workspace_->findVacElement(face);
+        dom::Element* domFace = workspaceFace ? workspaceFace->domElement() : nullptr;
+        if (domFace) {
+            domFace->setAttribute(dom::strings::color, color());
 
-        // Close the undo group. This requires syncing the DOM from the VAC.
-        workspace_->sync();
+            // Move the DOM element as first child of parent group. This is
+            // normally not needed: it is a workaround for the fact that
+            // currently, the update from VAC to DOM does not properly create
+            // the elements in the correct order.
+            //
+            workspace::VacElement* workspaceGroup =
+                workspace_->findVacElement(parentGroup);
+            dom::Element* domGroup =
+                workspaceGroup ? workspaceGroup->domElement() : nullptr;
+            if (domGroup) {
+                domGroup->insertChild(domGroup->firstChild(), domFace);
+            }
+        }
+
+        // Close the undo group
         if (undoGroup) {
             undoGroup->close();
         }
@@ -151,21 +190,16 @@ void PaintBucketTool::onPaintDraw(graphics::Engine* engine, PaintOptions options
         return;
     }
 
-    // TODO: use current tool color?
-    core::Color facePreviewColor(1, 0, 0);
-
     if (hasFaceCandidate_() && faceCandidateFillGeometry_) {
-        if (!faceCandidatePendingTriangles_.isEmpty()) {
+        core::Color c = color();
+        if (isFaceCandidateGraphicsDirty_) {
             engine->updateBufferData(
                 faceCandidateFillGeometry_->vertexBuffer(0), //
-                faceCandidatePendingTriangles_);
+                faceCandidateTriangles_);
             engine->updateBufferData(
                 faceCandidateFillGeometry_->vertexBuffer(1), //
-                core::Array<float>(
-                    {facePreviewColor.r(),
-                     facePreviewColor.g(),
-                     facePreviewColor.b(),
-                     1}));
+                core::Array<float>({c.r(), c.g(), c.b(), 1}));
+            isFaceCandidateGraphicsDirty_ = false;
         }
 
         // TODO: setting up the view matrix should be done by Canvas.
@@ -186,7 +220,7 @@ void PaintBucketTool::onPaintDestroy(graphics::Engine* engine) {
 
 void PaintBucketTool::clearFaceCandidate_() {
     if (!faceCandidateCycles_.isEmpty()) {
-        faceCandidatePendingTriangles_.clear();
+        faceCandidateTriangles_.clear();
         faceCandidateCycles_.clear();
         requestRepaint();
     }
@@ -194,7 +228,7 @@ void PaintBucketTool::clearFaceCandidate_() {
 
 void PaintBucketTool::updateFaceCandidate_(const geometry::Vec2d& worldPosition) {
     faceCandidateCycles_ = topology::detail::computeKeyFaceCandidateAt(
-        worldPosition, workspace()->vac()->rootGroup(), faceCandidatePendingTriangles_);
+        worldPosition, workspace()->vac()->rootGroup(), faceCandidateTriangles_);
 }
 
 /*
