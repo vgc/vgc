@@ -31,6 +31,14 @@ namespace vgc::topology {
 namespace detail {
 
 VGC_TOPOLOGY_API
+core::Array<KeyCycle> computeKeyFaceCandidateAt(
+    geometry::Vec2d position,
+    VacGroup* group,
+    core::FloatArray& trianglesBuffer,
+    geometry::WindingRule windingRule = geometry::WindingRule::Odd,
+    core::AnimTime t = {});
+
+VGC_TOPOLOGY_API
 bool computeKeyFaceFillTriangles(
     const core::Array<KeyCycle>& cycles,
     core::FloatArray& trianglesBuffer,

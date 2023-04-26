@@ -23,6 +23,7 @@
 #include <vgc/app/logcategories.h>
 #include <vgc/core/datetime.h>
 #include <vgc/dom/strings.h>
+#include <vgc/ui/paintbuckettool.h>
 #include <vgc/ui/qtutil.h>
 #include <vgc/ui/selecttool.h>
 #include <vgc/ui/shortcut.h>
@@ -620,12 +621,15 @@ void CanvasApplication::createTools_(ui::Widget* parent) {
     ui::Column* tools = parent->createChild<ui::Column>();
     ui::SelectToolPtr selectTool = ui::SelectTool::create();
     ui::SketchToolPtr sketchTool = ui::SketchTool::create();
+    ui::PaintBucketToolPtr paintBucketTool = ui::PaintBucketTool::create();
     registerTool_(tools, "Select Tool", selectTool);
     registerTool_(tools, "Sketch Tool", sketchTool);
+    registerTool_(tools, "Paint Bucket Tool", paintBucketTool);
 
     // Keep pointer to sketch tool for handling color changes,
     // and set it as default tool.
     sketchTool_ = sketchTool.get();
+    paintBucketTool_ = paintBucketTool.get();
     setCurrentTool_(sketchTool_);
 }
 
@@ -687,8 +691,15 @@ void CanvasApplication::createColorPalette_(ui::Widget* parent) {
 }
 
 void CanvasApplication::onColorChanged_() {
-    if (canvas_ && palette_ && sketchTool_) {
-        sketchTool_->setPenColor(palette_->selectedColor());
+    // TODO: system for all tools to share a global "current tool color".
+    if (palette_) {
+        core::Color color = palette_->selectedColor();
+        if (sketchTool_) {
+            sketchTool_->setPenColor(color);
+        }
+        if (paintBucketTool_) {
+            paintBucketTool_->setColor(color);
+        }
     }
 }
 

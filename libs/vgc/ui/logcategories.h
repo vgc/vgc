@@ -26,6 +26,7 @@ VGC_DECLARE_LOG_CATEGORY(VGC_UI_API, LogVgcUi, Debug)
 
 // TODO: move to another module (e.g., app or tools)
 VGC_DECLARE_LOG_CATEGORY(VGC_UI_API, LogVgcToolsSketch, Debug)
+VGC_DECLARE_LOG_CATEGORY(VGC_UI_API, LogVgcToolsPaintBucket, Debug)
 
 } // namespace vgc::ui
 

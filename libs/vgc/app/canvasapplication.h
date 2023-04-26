@@ -28,6 +28,7 @@
 #include <vgc/ui/colorpalette.h>
 #include <vgc/ui/column.h>
 #include <vgc/ui/menu.h>
+#include <vgc/ui/paintbuckettool.h>
 #include <vgc/ui/panel.h>
 #include <vgc/ui/panelarea.h>
 #include <vgc/ui/sketchtool.h>
@@ -195,6 +196,7 @@ private:
     std::map<ui::CanvasTool*, ui::Action*> toolMapInv_;
     ui::CanvasTool* currentTool_ = nullptr;
     ui::SketchTool* sketchTool_ = nullptr;
+    ui::PaintBucketTool* paintBucketTool_ = nullptr;
     ui::Panel* toolOptionsPanel_ = nullptr;
 
     void createTools_(ui::Widget* parent);
