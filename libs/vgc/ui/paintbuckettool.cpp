@@ -37,25 +37,34 @@ bool PaintBucketTool::onMouseMove(MouseEvent* event) {
 
     ui::Canvas* canvas = this->canvas();
     if (!canvas) {
+        clearPaintCandidate_();
         return false;
     }
 
-    // Convert from view to world coords.
+    // Convert mouse position from view to world coords.
     // TODO: Have a helper function in Canvas for this.
+    //
     geometry::Vec2f mousePosf = event->position();
     geometry::Vec2d mousePos = geometry::Vec2d(mousePosf.x(), mousePosf.y());
     geometry::Vec2d viewCoords = mousePos;
     geometry::Vec2d worldCoords =
         canvas->camera().viewMatrix().inverted().transformPointAffine(viewCoords);
 
-    // Compute key face candidate
-    paintCandidateCycles_ = topology::detail::computeKeyFaceCandidateAt(
-        worldCoords, workspace()->vac()->rootGroup(), paintCandidatePendingTriangles_);
-    bool hadPaintCandidate = hasPaintCandidate_;
-    hasPaintCandidate_ = !paintCandidateCycles_.isEmpty();
+    // Compute the key face candidate for the current mouse position.
+    //
+    bool hadPaintCandidate = hasPaintCandidate_();
+    updateFaceCandidate_(worldCoords);
+    bool hasPaintCandidate = hasPaintCandidate_();
 
-    if (hasPaintCandidate_ || hadPaintCandidate) {
-        // TODO: use something like "paintCandidateCyclesChanged" instead of the test above.
+    // Determine whether the paint candidate changed. For now, we just assume
+    // it always changes, unless there was no candidate before and there is
+    // still no candidate now.
+    //
+    bool paintCandidateChanged = hasPaintCandidate || hadPaintCandidate;
+
+    // Request a repaint if the candidate changed.
+    //
+    if (paintCandidateChanged) {
         requestRepaint();
         return true;
     }
@@ -125,7 +134,7 @@ void PaintBucketTool::onPaintDraw(graphics::Engine* engine, PaintOptions options
         return;
     }
 
-    if (hasPaintCandidate_ && paintCandidateFillGeometry_) {
+    if (hasPaintCandidate_() && paintCandidateFillGeometry_) {
         if (!paintCandidatePendingTriangles_.isEmpty()) {
             engine->updateBufferData(
                 paintCandidateFillGeometry_->vertexBuffer(0), //
@@ -151,17 +160,18 @@ void PaintBucketTool::onPaintDestroy(graphics::Engine* engine) {
     paintCandidateFillGeometry_.reset();
 }
 
-/*
-void Canvas::clearPaintCandidate_() {
+void PaintBucketTool::clearPaintCandidate_() {
     if (!paintCandidateCycles_.isEmpty()) {
         paintCandidatePendingTriangles_.clear();
-        hasPaintCandidate_ = false;
         paintCandidateCycles_.clear();
         requestRepaint();
     }
 }
-*/
 
+void PaintBucketTool::updateFaceCandidate_(const geometry::Vec2d& worldPosition) {
+    paintCandidateCycles_ = topology::detail::computeKeyFaceCandidateAt(
+        worldPosition, workspace()->vac()->rootGroup(), paintCandidatePendingTriangles_);
+}
 /*
 // temporary method to test color change of element
 void Canvas::onColorChanged_(const core::Color& color) {

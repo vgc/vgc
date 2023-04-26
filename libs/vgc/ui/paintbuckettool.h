@@ -56,16 +56,22 @@ protected:
     void onPaintDestroy(graphics::Engine* engine) override;
 
 private:
+    // Face candidate
     core::Array<topology::KeyCycle> paintCandidateCycles_;
+    bool hasPaintCandidate_() const {
+        return !paintCandidateCycles_.isEmpty();
+    }
+    void clearPaintCandidate_();
+    void updateFaceCandidate_(const geometry::Vec2d& worldPosition);
+
+    // Graphics Data
     core::FloatArray paintCandidatePendingTriangles_;
     graphics::GeometryViewPtr paintCandidateFillGeometry_;
-    bool hasPaintCandidate_ = false;
 
     /*
     // temporary method
     void onColorChanged_(const core::Color& color);
     // temporary method
-    void clearPaintCandidate_();
 */
 };
 
