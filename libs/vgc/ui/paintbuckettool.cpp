@@ -45,12 +45,20 @@ ui::WidgetPtr PaintBucketTool::createOptionsWidget() const {
     return res;
 }
 
-bool PaintBucketTool::onMouseMove(MouseEvent* event) {
+// XXX We should instead use a new virtual function in Widget, e.g.:
+// onMouseHovered(MouseEvent* event)
+//
+// The idea is that things related to hovering, and pre-computing of what
+// should happen on future click is done in onMouseHovered. Then,
+// onMousePress() would use this information, and onMouseMove() should be
+// reserved for click-move-release sequences, not hovering computation.
+//
+bool PaintBucketTool::updateHoverChainChild(MouseEvent* event) {
 
     ui::Canvas* canvas = this->canvas();
     if (!canvas) {
         clearFaceCandidate_();
-        return false;
+        return false; // or true?
     }
 
     // Convert mouse position from view to world coords.
@@ -79,22 +87,15 @@ bool PaintBucketTool::onMouseMove(MouseEvent* event) {
     if (faceCandidateChanged) {
         isFaceCandidateGraphicsDirty_ = true;
         requestRepaint();
-
-        // We return false, so that the event can still be propagated to the
-        // parent (Canvas), so that users can still pan/zoom/rotate the view
-        // even if there is a preview face.
-        //
-        // In theory, it might make more sense to return true since the mouse
-        // move "did something meaningful", but this would require Canvas to
-        // support more properly NOT pass the mouse move to the tool if it is
-        // already in the middle of an action, via hover-lock or explicitly
-        // unsetting the hover-chain child in preMouseMove().
-        //
-        return false;
+        return true;
     }
     else {
-        return false;
+        return false; // or true?
     }
+}
+
+bool PaintBucketTool::onMouseMove(MouseEvent*) {
+    return false;
 }
 
 bool PaintBucketTool::onMousePress(MouseEvent* event) {
@@ -178,6 +179,15 @@ bool PaintBucketTool::onMousePress(MouseEvent* event) {
 bool PaintBucketTool::onMouseRelease(MouseEvent* /*event*/) {
     // TODO
     return false;
+}
+
+bool PaintBucketTool::onMouseEnter() {
+    return true;
+}
+
+bool PaintBucketTool::onMouseLeave() {
+    clearFaceCandidate_();
+    return true;
 }
 
 void PaintBucketTool::onPaintCreate(graphics::Engine* engine) {
