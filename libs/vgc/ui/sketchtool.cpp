@@ -416,7 +416,8 @@ Int reconstructInputStep(
     geometry::Vec2fArray& points,
     core::IntArray& indices,
     Int intervalStart,
-    float thresholdCoefficient) {
+    float thresholdCoefficient,
+    float tolerance = 1e-10f) {
 
     // This is a variant of Douglas-Peucker designed to dequantize mouse
     // inputs from integer to float coordinates.
@@ -453,7 +454,7 @@ Int reconstructInputStep(
         float pixelHalfwidthOnOrthogonalOfAB = static_cast<float>(
             std::cos(core::pi / 4 - abAngleWithClosestAxis) * (sqrtOf2 / 2));
         float threshold = thresholdCoefficient * pixelHalfwidthOnOrthogonalOfAB;
-        threshold += core::epsilon;
+        threshold += tolerance;
 
         float maxDist = 0;
         Int farthestPointSide = 0;
@@ -488,8 +489,8 @@ Int reconstructInputStep(
 
             // TODO: delta could be scaled based on some data
             //       to prevent shrinkage ?
-            float delta = pixelHalfwidthOnOrthogonalOfAB * 0.75;
-            points[farthestPointIndex] -= (n * delta);
+            //float delta = pixelHalfwidthOnOrthogonalOfAB * 0.75;
+            //points[farthestPointIndex] -= (n * delta);
         }
         else {
             ++i;
@@ -515,12 +516,15 @@ void SketchTool::updateUnquantizedData_(bool isFinalPass) {
     // TODO: process duplicate points
 
     core::IntArray indices({0, dequantizerBuffer_.length() - 1});
-    reconstructInputStep(dequantizerBuffer_, indices, 0, 2.f);
+    reconstructInputStep(dequantizerBuffer_, indices, 0, 2.f, 1.0f);
 
     if (indices.length() > 2) {
-        for (Int i0 = 0; i0 <= indices.length() - 2;) {
-            i0 = reconstructInputStep(dequantizerBuffer_, indices, i0, 1.f);
+        if (indices.length() > 3) {
+            VGC_DEBUG_TMP("new points: {}", indices.length() - 2);
         }
+        //for (Int i0 = 0; i0 <= indices.length() - 2;) {
+        //    i0 = reconstructInputStep(dequantizerBuffer_, indices, i0, 2.f);
+        //}
         unquantizedPoints_.removeLast(2);
         unquantizedWidths_.removeLast(2);
         for (Int index : indices) {
@@ -531,6 +535,12 @@ void SketchTool::updateUnquantizedData_(bool isFinalPass) {
         Int stableIndex = indices.getWrapped(-2);
         dequantizerBuffer_.removeFirst(stableIndex);
         dequantizerBufferStartIndex += stableIndex;
+    }
+    else {
+        unquantizedPoints_.removeLast(1);
+        unquantizedWidths_.removeLast(1);
+        unquantizedPoints_.append(dequantizerBuffer_.last());
+        unquantizedWidths_.append(inputWidths_.last());
     }
 
     // TODO: remap points to keep widths data ?
