@@ -168,12 +168,8 @@ protected:
     void onPaintDraw(graphics::Engine* engine, PaintOptions options) override;
     void onPaintDestroy(graphics::Engine* engine) override;
     void updateChildrenGeometry() override;
-    //
 
-    VGC_SLOT(onWorkspaceChanged, onWorkspaceChanged_)
-    VGC_SLOT(onDocumentChanged, onDocumentChanged_)
-
-protected:
+private:
     // Flags
     bool reload_ = true;
 
@@ -185,6 +181,9 @@ protected:
 
     void onWorkspaceChanged_();
     void onDocumentChanged_(const dom::Diff& diff);
+
+    VGC_SLOT(onWorkspaceChanged, onWorkspaceChanged_)
+    VGC_SLOT(onDocumentChanged, onDocumentChanged_)
 
     // Moving camera
     bool isPanning_ = false;
