@@ -45,11 +45,13 @@ ui::WidgetPtr PaintBucketTool::createOptionsWidget() const {
     return res;
 }
 
-// XXX We should instead use a new virtual function in Widget, e.g.: onMouseHovered(MouseEvent* event)
+// XXX We should instead use a new virtual function in Widget, e.g.:
+// onMouseHovered(MouseEvent* event)
 //
-// The idea is that things related to hovering, and pre-computing of what should happen
-// on future click is done in onMouseHovered. Then, onMouseClick uses this information,
-// and onMouseMove is reserved for click-move-release sequences.
+// The idea is that things related to hovering, and pre-computing of what
+// should happen on future click is done in onMouseHovered. Then,
+// onMousePress() would use this information, and onMouseMove() should be
+// reserved for click-move-release sequences, not hovering computation.
 //
 bool PaintBucketTool::updateHoverChainChild(MouseEvent* event) {
 
