@@ -178,8 +178,8 @@ bool SketchTool::onMousePress(MouseEvent* event) {
 bool SketchTool::onMouseRelease(MouseEvent* event) {
 
     if (event->button() == MouseButton::Left) {
-        //VGC_DEBUG_TMP_EXPR(mouseInputPoints_);
-        //VGC_DEBUG_TMP_EXPR(mouseInputPointsTimestamps_);
+        VGC_DEBUG_TMP_EXPR(inputPoints_);
+        VGC_DEBUG_TMP_EXPR(inputPointsTimestamps_);
         finishCurve_(event);
         if (resetData_()) {
             return true;
@@ -368,21 +368,20 @@ void SketchTool::onPaintDraw(graphics::Engine* engine, PaintOptions options) {
 
     if (true) { // todo only update on new points
 
-        core::Array<geometry::Vec4f> pointVertices;
-        Int n = 32;
-        pointVertices.reserve(n * 2 + 1);
-        for (Int i = 0; i < n; ++i) {
-            double a = core::pi * 2.0 * i / 32.f;
-            pointVertices.emplaceLast(0, 0, 0, 0);
-            pointVertices.emplaceLast(0, 0, std::cos(a), std::sin(a));
-        }
-        pointVertices.emplaceLast(0, 0, 1, 0);
+        float hp = static_cast<float>(
+            (canvasToWorkspaceMatrix_.transformPointAffine(geometry::Vec2d(0, 0.5))
+             - canvasToWorkspaceMatrix_.transformPointAffine(geometry::Vec2d(0, 0)))
+                .length());
+        core::FloatArray pointVertices(
+            {-hp, -hp, 0, 0, hp, -hp, 0, 0, -hp, hp, 0, 0, hp, hp, 0, 0});
 
         core::FloatArray pointInstData;
         const Int numPoints = inputPoints_.length();
         for (Int i = 0; i < numPoints; ++i) {
-            geometry::Vec2f p = geometry::Vec2f(inputPoints_[i]);
-            pointInstData.extend({p.x(), p.y(), 0.f, 4.f, 0.f, 1.f, 0.f, 1.f});
+            geometry::Vec2d pd = geometry::Vec2d(inputPoints_[i]);
+            geometry::Vec2f p =
+                geometry::Vec2f(canvasToWorkspaceMatrix_.transformPointAffine(pd));
+            pointInstData.extend({p.x(), p.y(), 0.f, 4.f, 0.f, 1.f, 0.f, 0.5f});
         }
 
         engine->updateBufferData(
@@ -400,11 +399,10 @@ void SketchTool::onPaintDraw(graphics::Engine* engine, PaintOptions options) {
         engine->draw(minimalLatencyStrokeGeometry_);
     }
 
-    engine->popViewMatrix();
+    engine->setProgram(graphics::BuiltinProgram::ScreenSpaceDisplacement);
+    engine->drawInstanced(mouseInputGeometry_);
 
-    // the input points geometry is in widget space
-    //engine->setProgram(graphics::BuiltinProgram::ScreenSpaceDisplacement);
-    //engine->drawInstanced(mouseInputGeometry_);
+    engine->popViewMatrix();
 }
 
 void SketchTool::onPaintDestroy(graphics::Engine* engine) {
@@ -412,20 +410,133 @@ void SketchTool::onPaintDestroy(graphics::Engine* engine) {
     minimalLatencyStrokeGeometry_.reset();
 }
 
-void SketchTool::updateUnquantizedData_() {
-    unquantizedPoints_ = inputPoints_;
-    unquantizedWidths_ = inputWidths_;
+namespace {
 
-    // Skip duplicate points
-    //if (!inputPoints_.isEmpty()) {
-    //    if (inputPoints_.last() == p) {
-    //        // TODO: update last point width if width increases
-    //        return;
-    //    }
-    //}
+Int reconstructInputStep(
+    geometry::Vec2fArray& points,
+    core::IntArray& indices,
+    Int intervalStart,
+    float thresholdCoefficient) {
+
+    // This is a variant of Douglas-Peucker designed to dequantize mouse
+    // inputs from integer to float coordinates.
+    //
+    // To this end, the distance test checks if the current segment passes
+    // through all pixel squares of the points in the interval.
+    // This threshold is scaled with the given `thresholdCoefficient`.
+    // If the current segment does not pass the test, then the farthest
+    // point is picked and shifted toward the segment by half the length of
+    // the projection of a pixel square onto the segment's normal axis.
+
+    Int i = intervalStart;
+    Int endIndex = indices[i + 1];
+    while (indices[i] != endIndex) {
+        Int i0 = indices.getUnchecked(i);
+        Int i1 = indices.getUnchecked(i + 1);
+
+        geometry::Vec2f a = points.getUnchecked(i0);
+        geometry::Vec2f b = points.getUnchecked(i1);
+        geometry::Vec2f ab = b - a;
+        float abLen = ab.length();
+
+        if (abLen < core::epsilon) {
+            ++i;
+            continue;
+        }
+
+        double abMaxNormalizedAbsoluteCoord =
+            (std::max)(std::abs(ab.x()), std::abs(ab.y())) / abLen;
+        double abAngleWithClosestAxis = std::acos(abMaxNormalizedAbsoluteCoord);
+
+        constexpr double sqrtOf2 = 1.4142135623730950488017;
+
+        float pixelHalfwidthOnOrthogonalOfAB = static_cast<float>(
+            std::cos(core::pi / 4 - abAngleWithClosestAxis) * (sqrtOf2 / 2));
+        float threshold = thresholdCoefficient * pixelHalfwidthOnOrthogonalOfAB;
+        threshold += core::epsilon;
+
+        float maxDist = 0;
+        Int farthestPointSide = 0;
+        Int farthestPointIndex = -1;
+        for (Int j = i0 + 1; j < i1; ++j) {
+            geometry::Vec2f p = points[j];
+            geometry::Vec2f ap = p - a;
+            float dist = ab.det(ap) / abLen;
+            // ┌─── x
+            // │    ↑ side 1
+            // │ A ───→ B
+            // y    ↓ side 0
+            Int side = 0;
+            if (dist < 0) {
+                dist = -dist;
+                side = 1;
+            }
+            if (dist > maxDist) {
+                maxDist = dist;
+                farthestPointSide = side;
+                farthestPointIndex = j;
+            }
+        }
+
+        if (maxDist > threshold) {
+            indices.insert(i + 1, farthestPointIndex);
+
+            geometry::Vec2f n = ab.orthogonalized() / abLen;
+            if (farthestPointSide != 0) {
+                n = -n;
+            }
+
+            // TODO: delta could be scaled based on some data
+            //       to prevent shrinkage ?
+            float delta = pixelHalfwidthOnOrthogonalOfAB * 0.75;
+            points[farthestPointIndex] -= (n * delta);
+        }
+        else {
+            ++i;
+        }
+    }
+    return i;
 }
 
-void SketchTool::updateTransformedData_() {
+} // namespace
+
+void SketchTool::updateUnquantizedData_(bool isFinalPass) {
+    // the algorithm works only for more than 2 input points
+    if (!isInputQuantized_ || inputPoints_.length() <= 2) {
+        unquantizedPoints_ = inputPoints_;
+        unquantizedWidths_ = inputWidths_;
+        return;
+    }
+
+    Int numAlreadyBuffered = dequantizerBufferStartIndex + dequantizerBuffer_.length();
+    dequantizerBuffer_.extend(
+        inputPoints_.begin() + numAlreadyBuffered, inputPoints_.end());
+
+    // TODO: process duplicate points
+
+    core::IntArray indices({0, dequantizerBuffer_.length() - 1});
+    reconstructInputStep(dequantizerBuffer_, indices, 0, 2.f);
+
+    if (indices.length() > 2) {
+        for (Int i0 = 0; i0 <= indices.length() - 2;) {
+            i0 = reconstructInputStep(dequantizerBuffer_, indices, i0, 1.f);
+        }
+        unquantizedPoints_.removeLast(2);
+        unquantizedWidths_.removeLast(2);
+        for (Int index : indices) {
+            unquantizedPoints_.append(dequantizerBuffer_[index]);
+            unquantizedWidths_.append(inputWidths_[dequantizerBufferStartIndex + index]);
+        }
+        // The N - 1 first indices are stable
+        Int stableIndex = indices.getWrapped(-2);
+        dequantizerBuffer_.removeFirst(stableIndex);
+        dequantizerBufferStartIndex += stableIndex;
+    }
+
+    // TODO: remap points to keep widths data ?
+}
+
+void SketchTool::updateTransformedData_(bool /*isFinalPass*/) {
     Int n = unquantizedPoints_.length();
     transformedPoints_.resize(n);
     for (Int i = 0; i < n; ++i) {
@@ -435,35 +546,46 @@ void SketchTool::updateTransformedData_() {
     transformedWidths_ = unquantizedWidths_;
 }
 
-void SketchTool::updateSmoothedData_() {
+void SketchTool::updateSmoothedData_(bool /*isFinalPass*/) {
 
     smoothedPoints_ = transformedPoints_;
     smoothedWidths_ = transformedWidths_;
 
     Int numPoints = smoothedPoints_.length();
 
-    if (numPoints >= 3) {
+    Int smoothingLevel = 0;
+    if (smoothingLevel > 0 && numPoints >= 3) {
         // Apply gaussian smoothing.
 
         const geometry::Vec2dArray& inPoints = transformedPoints_;
 
-        smoothedPoints_.getUnchecked(1) =          //
-            (1 / 4.0) * inPoints.getUnchecked(0) + //
-            (2 / 4.0) * inPoints.getUnchecked(1) + //
-            (1 / 4.0) * inPoints.getUnchecked(2);
+        if (smoothingLevel == 1) {
+            for (Int i = 1; i < numPoints - 1; ++i) {
+                smoothedPoints_.getUnchecked(i) =              //
+                    (1 / 4.0) * inPoints.getUnchecked(i - 1) + //
+                    (2 / 4.0) * inPoints.getUnchecked(i + 0) + //
+                    (1 / 4.0) * inPoints.getUnchecked(i + 1);
+            }
+        }
+        else if (smoothingLevel == 2) {
+            smoothedPoints_.getUnchecked(1) =          //
+                (1 / 4.0) * inPoints.getUnchecked(0) + //
+                (2 / 4.0) * inPoints.getUnchecked(1) + //
+                (1 / 4.0) * inPoints.getUnchecked(2);
 
-        smoothedPoints_.getUnchecked(numPoints - 2) =          //
-            (1 / 4.0) * inPoints.getUnchecked(numPoints - 1) + //
-            (2 / 4.0) * inPoints.getUnchecked(numPoints - 2) + //
-            (1 / 4.0) * inPoints.getUnchecked(numPoints - 3);
+            smoothedPoints_.getUnchecked(numPoints - 2) =          //
+                (1 / 4.0) * inPoints.getUnchecked(numPoints - 1) + //
+                (2 / 4.0) * inPoints.getUnchecked(numPoints - 2) + //
+                (1 / 4.0) * inPoints.getUnchecked(numPoints - 3);
 
-        for (Int i = 2; i < numPoints - 2; ++i) {
-            smoothedPoints_.getUnchecked(i) =               //
-                (1 / 16.0) * inPoints.getUnchecked(i - 2) + //
-                (4 / 16.0) * inPoints.getUnchecked(i - 1) + //
-                (6 / 16.0) * inPoints.getUnchecked(i + 0) + //
-                (4 / 16.0) * inPoints.getUnchecked(i + 1) + //
-                (1 / 16.0) * inPoints.getUnchecked(i + 2);
+            for (Int i = 2; i < numPoints - 2; ++i) {
+                smoothedPoints_.getUnchecked(i) =               //
+                    (1 / 16.0) * inPoints.getUnchecked(i - 2) + //
+                    (4 / 16.0) * inPoints.getUnchecked(i - 1) + //
+                    (6 / 16.0) * inPoints.getUnchecked(i + 0) + //
+                    (4 / 16.0) * inPoints.getUnchecked(i + 1) + //
+                    (1 / 16.0) * inPoints.getUnchecked(i + 2);
+            }
         }
     }
 
@@ -590,9 +712,9 @@ void SketchTool::continueCurve_(MouseEvent* event) {
     inputWidths_.append(pressurePenWidth(event));
     inputPointsTimestamps_.append(event->timestamp());
 
-    updateUnquantizedData_();
-    updateTransformedData_();
-    updateSmoothedData_();
+    updateUnquantizedData_(false);
+    updateTransformedData_(false);
+    updateSmoothedData_(false);
 
     // Handle snapping
     if (hasStartSnap_) {
@@ -640,6 +762,10 @@ void SketchTool::finishCurve_(MouseEvent* /*event*/) {
     if (!workspace || !workspace->document() || !edge_ || !endVertex_) {
         return;
     }
+
+    updateUnquantizedData_(true);
+    updateTransformedData_(true);
+    updateSmoothedData_(true);
 
     // Set curve to final requested tesselation mode
     workspace::Element* edgeElement = workspace->find(edge_);
@@ -716,6 +842,8 @@ bool SketchTool::resetData_() {
         //inputPoints_.clear();
         //inputWidths_.clear();
         //inputPointsTimestamps_.clear();
+        dequantizerBuffer_.clear();
+        dequantizerBufferStartIndex = 0;
         unquantizedPoints_.clear();
         unquantizedWidths_.clear();
         transformedPoints_.clear();

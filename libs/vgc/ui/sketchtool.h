@@ -130,9 +130,11 @@ protected:
     //
     // Invariant: both arrays have the same length.
     //
+    geometry::Vec2fArray dequantizerBuffer_;
+    Int dequantizerBufferStartIndex = 0;
     geometry::Vec2fArray unquantizedPoints_;
     core::DoubleArray unquantizedWidths_;
-    void updateUnquantizedData_();
+    void updateUnquantizedData_(bool isFinalPass);
 
     // Transformation.
     //
@@ -140,7 +142,7 @@ protected:
     //
     geometry::Vec2dArray transformedPoints_;
     core::DoubleArray transformedWidths_;
-    void updateTransformedData_();
+    void updateTransformedData_(bool isFinalPass);
 
     // Smoothing.
     //
@@ -148,7 +150,7 @@ protected:
     //
     geometry::Vec2dArray smoothedPoints_;
     core::DoubleArray smoothedWidths_;
-    void updateSmoothedData_();
+    void updateSmoothedData_(bool isFinalPass);
 
     // Final points.
     //
