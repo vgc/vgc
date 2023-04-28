@@ -21,7 +21,7 @@
 #include <vgc/core/array.h>
 #include <vgc/dom/element.h>
 #include <vgc/graphics/engine.h>
-#include <vgc/topology/vac.h>
+#include <vgc/vacomplex/complex.h>
 #include <vgc/workspace/api.h>
 #include <vgc/workspace/element.h>
 

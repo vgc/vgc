@@ -171,12 +171,12 @@ ElementStatus VacKeyVertex::updateFromDom_(Workspace* /*workspace*/) {
             onUpdateError_();
             return ElementStatus::ErrorInParent;
         }
-        kv = topology::ops::createKeyVertex(position, parentNode->toGroupUnchecked());
+        kv = vacomplex::ops::createKeyVertex(position, parentNode->toGroupUnchecked());
         setVacNode(kv);
         // position should already be dirty
     }
     else if (kv->position() != position) {
-        topology::ops::setKeyVertexPosition(kv, position);
+        vacomplex::ops::setKeyVertexPosition(kv, position);
         dirtyPosition_();
     }
 

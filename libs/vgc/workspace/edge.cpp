@@ -1033,7 +1033,7 @@ ElementStatus VacKeyEdge::updateFromDom_(Workspace* workspace) {
         isClosed = false;
     }
 
-    // update vac to get vertex nodes
+    // update VAC to get vertex nodes
     std::array<vacomplex::KeyVertex*, 2> kvs = {};
     for (Int i = 0; i < 2; ++i) {
         VacKeyVertex* kvElement = newVertices[i];
@@ -1084,13 +1084,13 @@ ElementStatus VacKeyEdge::updateFromDom_(Workspace* workspace) {
         }
     }
 
-    // create/rebuild/update vac node
+    // create/rebuild/update VAC node
     if (!ke) {
         if (isClosed) {
-            ke = topology::ops::createKeyClosedEdge(points, widths, parentGroup);
+            ke = vacomplex::ops::createKeyClosedEdge(points, widths, parentGroup);
         }
         else {
-            ke = topology::ops::createKeyOpenEdge(
+            ke = vacomplex::ops::createKeyOpenEdge(
                 kvs[0], kvs[1], points, widths, parentGroup);
         }
         if (!ke) {
@@ -1100,8 +1100,8 @@ ElementStatus VacKeyEdge::updateFromDom_(Workspace* workspace) {
         setVacNode(ke);
     }
     else if (hasInputGeometryChanged) {
-        topology::ops::setKeyEdgeCurvePoints(ke, points);
-        topology::ops::setKeyEdgeCurveWidths(ke, widths);
+        vacomplex::ops::setKeyEdgeCurvePoints(ke, points);
+        vacomplex::ops::setKeyEdgeCurveWidths(ke, widths);
     }
 
     // dirty cached data
@@ -1232,7 +1232,7 @@ bool VacKeyEdge::computePreJoinGeometry_() {
     }
 
     geometry::CurveSamplingParameters samplingParams(edgeTesselationMode_);
-    topology::ops::setKeyEdgeSamplingParameters(ke, samplingParams);
+    vacomplex::ops::setKeyEdgeSamplingParameters(ke, samplingParams);
 
     for (const geometry::Vec2d& p : ke->points()) {
         controlPoints_.emplaceLast(geometry::Vec2f(p));

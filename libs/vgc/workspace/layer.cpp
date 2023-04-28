@@ -39,8 +39,9 @@ ElementStatus Layer::updateFromDom_(Workspace* /*workspace*/) {
     //dom::Element* const domElement = this->domElement();
 
     vacomplex::Node* node = vacNode();
-    vacomplex::Group* g = node ? node->toCellUnchecked()->toGroupUnchecked() : nullptr;
-    if (!g) {
+    vacomplex::Group* group =
+        node ? node->toCellUnchecked()->toGroupUnchecked() : nullptr;
+    if (!group) {
         VacElement* parentElement = parentVacElement();
         if (!parentElement) {
             return ElementStatus::ErrorInParent;
@@ -49,8 +50,8 @@ ElementStatus Layer::updateFromDom_(Workspace* /*workspace*/) {
         if (!parentNode) {
             return ElementStatus::ErrorInParent;
         }
-        g = topology::ops::createVacGroup(parentNode->toGroupUnchecked());
-        setVacNode(g);
+        group = vacomplex::ops::createGroup(parentNode->toGroupUnchecked());
+        setVacNode(group);
     }
 
     // todo: set attributes

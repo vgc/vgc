@@ -2,7 +2,7 @@ vgc_add_library(workspace
     VGC_DEPENDENCIES
         dom
         graphics
-        topology
+        vacomplex
 
     CPP_HEADER_FILES
         api.h

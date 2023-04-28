@@ -26,8 +26,8 @@
 #include <vgc/geometry/rect2d.h>
 #include <vgc/geometry/vec2d.h>
 #include <vgc/graphics/engine.h>
-#include <vgc/topology/operations.h>
-#include <vgc/topology/vac.h>
+#include <vgc/vacomplex/complex.h>
+#include <vgc/vacomplex/operations.h>
 #include <vgc/workspace/api.h>
 #include <vgc/workspace/logcategories.h>
 
@@ -35,8 +35,8 @@ namespace vgc::workspace {
 
 //
 // transforms will only be available on groups, composites, text, but not cells to keep
-// vac computations reasonably fast.
-// A vac needs all of the transforms from its root.
+// VAC computations reasonably fast.
+// A VAC needs all of the transforms from its root.
 //
 // We want our workspace to provide a way to visit the scene for rendering.
 // This brings a few questions:
@@ -117,12 +117,12 @@ constexpr bool operator!(const ElementStatus& status) noexcept {
 class Workspace;
 class VacElement;
 
-class VGC_WORKSPACE_API Element : public topology::detail::TreeNodeBase<Element> {
+class VGC_WORKSPACE_API Element : public vacomplex::detail::TreeNodeBase<Element> {
 private:
     friend Workspace;
     friend VacElement;
 
-    using Base = topology::detail::TreeNodeBase<Element>;
+    using Base = vacomplex::detail::TreeNodeBase<Element>;
 
 protected:
     Element(Workspace* workspace)
@@ -346,7 +346,7 @@ public:
     }
 
 public:
-    // the returned pointer can be dangling if the workspace is not synced with its vac
+    // the returned pointer can be dangling if the workspace is not synced with its VAC
     vacomplex::Node* vacNode() const {
         return vacNode_;
     }
@@ -360,7 +360,7 @@ protected:
     void setVacNode(vacomplex::Node* vacNode);
 
 private:
-    // this pointer is not safe to use when tree is not synced with vac
+    // this pointer is not safe to use when tree is not synced with VAC
     vacomplex::Node* vacNode_ = nullptr;
 
     virtual void updateFromVac_(vacomplex::NodeDiffFlags diffs) = 0;

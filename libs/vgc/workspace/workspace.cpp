@@ -21,8 +21,8 @@
 
 #include <vgc/core/boolguard.h>
 #include <vgc/dom/strings.h>
-#include <vgc/topology/operations.h>
-#include <vgc/topology/vac.h>
+#include <vgc/vacomplex/complex.h>
+#include <vgc/vacomplex/operations.h>
 #include <vgc/workspace/edge.h>
 #include <vgc/workspace/face.h>
 #include <vgc/workspace/layer.h>
@@ -51,7 +51,7 @@ namespace {
 // Assumes (parent == it->parent()).
 template<
     typename Node,
-    typename TreeLinksGetter = topology::detail::TreeLinksGetter<Node>>
+    typename TreeLinksGetter = vacomplex::detail::TreeLinksGetter<Node>>
 void iterDfsPreOrderSkipChildren(Node*& it, Int& depth, core::TypeIdentity<Node>* root) {
     Node* next = nullptr;
     // breadth next
@@ -78,7 +78,7 @@ void iterDfsPreOrderSkipChildren(Node*& it, Int& depth, core::TypeIdentity<Node>
 // Assumes (parent == it->parent()).
 template<
     typename Node,
-    typename TreeLinksGetter = topology::detail::TreeLinksGetter<Node>>
+    typename TreeLinksGetter = vacomplex::detail::TreeLinksGetter<Node>>
 void iterDfsPreOrder(Node*& it, Int& depth, core::TypeIdentity<Node>* root) {
     Node* next = nullptr;
     // depth first
@@ -94,7 +94,7 @@ void iterDfsPreOrder(Node*& it, Int& depth, core::TypeIdentity<Node>* root) {
 
 template<
     typename Node,
-    typename TreeLinksGetter = topology::detail::TreeLinksGetter<Node>>
+    typename TreeLinksGetter = vacomplex::detail::TreeLinksGetter<Node>>
 void iterDfsPreOrder(
     Node*& it,
     Int& depth,
@@ -111,7 +111,7 @@ void iterDfsPreOrder(
 
 template<
     typename Node,
-    typename TreeLinksGetter = topology::detail::TreeLinksGetter<Node>>
+    typename TreeLinksGetter = vacomplex::detail::TreeLinksGetter<Node>>
 void visitDfsPreOrder(Node* root, std::function<void(core::TypeIdentity<Node>*, Int)> f) {
     Node* e = root;
     Int depth = 0;
@@ -123,7 +123,7 @@ void visitDfsPreOrder(Node* root, std::function<void(core::TypeIdentity<Node>*, 
 
 template<
     typename Node,
-    typename TreeLinksGetter = topology::detail::TreeLinksGetter<Node>>
+    typename TreeLinksGetter = vacomplex::detail::TreeLinksGetter<Node>>
 void visitDfs(
     Node* root,
     const std::function<bool(core::TypeIdentity<Node>*, Int)>& preOrderFn,
@@ -190,7 +190,7 @@ void Workspace::onDestroyed() {
         Element* e = p.second.get();
         VacElement* ve = e->toVacElement();
         if (ve) {
-            // the whole vac is cleared afterwards
+            // the whole VAC is cleared afterwards
             ve->vacNode_ = nullptr;
         }
         while (!e->dependents_.isEmpty()) {
@@ -429,7 +429,7 @@ void Workspace::preUpdateDomFromVac_() {
 }
 
 void Workspace::postUpdateDomFromVac_() {
-    // TODO: delay for batch vac-to-dom updates
+    // TODO: delay for batch VAC-to-DOM updates
     document_->emitPendingDiff();
 }
 
@@ -441,7 +441,7 @@ void Workspace::rebuildDomFromWorkspaceTree_() {
 void Workspace::onVacNodeAboutToBeRemoved_(vacomplex::Node* node) {
     // Note: Should we bypass the following logic if deletion comes from workspace ?
     //       Currently it is done by erasing the workspace element from elements_
-    //       before doing the vac element removal so that this whole callback is not called.
+    //       before doing the VAC element removal so that this whole callback is not called.
     VacElement* vacElement = findVacElement(node);
     if (vacElement && vacElement->vacNode_) {
         vacElement->vacNode_ = nullptr;
@@ -539,7 +539,7 @@ void Workspace::onVacNodeMoved_(vacomplex::Node* /*node*/) {
     }
 
     throw core::LogicError(
-        "Moving Vac Nodes is not supported yet. It requires updating paths.");
+        "Moving VAC Nodes is not supported yet. It requires updating paths.");
 
     /*
     VacElement* vacElement = findVacElement(node->id());
@@ -718,7 +718,7 @@ void Workspace::rebuildWorkspaceTreeFromDom_() {
     // reset tree
     clearElements_();
 
-    // reset vac
+    // reset VAC
     {
         core::BoolGuard bgVac(isUpdatingVacFromDom_);
         vac_->clear();
@@ -787,7 +787,7 @@ void Workspace::updateVacChildrenOrder_() {
                 while (childVacElement) {
                     if (childVacElement->vacNode()) {
                         vacomplex::Group* group = static_cast<vacomplex::Group*>(node);
-                        topology::ops::moveToGroup(
+                        vacomplex::ops::moveToGroup(
                             childVacElement->vacNode(), group, group->firstChild());
                         break;
                     }
@@ -796,11 +796,11 @@ void Workspace::updateVacChildrenOrder_() {
             }
 
             if (element->parent()) {
-                // synchronize as previous sibling of next sibling vac node
+                // synchronize as previous sibling of next sibling VAC node
                 VacElement* nextSiblingVacElement = element->nextSiblingVacElement();
                 while (nextSiblingVacElement) {
                     if (nextSiblingVacElement->vacNode()) {
-                        topology::ops::moveToGroup(
+                        vacomplex::ops::moveToGroup(
                             node, node->parentGroup(), nextSiblingVacElement->vacNode());
                         break;
                     }
@@ -808,7 +808,7 @@ void Workspace::updateVacChildrenOrder_() {
                         nextSiblingVacElement->nextSiblingVacElement();
                 }
                 if (!nextSiblingVacElement) {
-                    topology::ops::moveToGroup(node, node->parentGroup(), nullptr);
+                    vacomplex::ops::moveToGroup(node, node->parentGroup(), nullptr);
                 }
             }
         }
@@ -862,7 +862,7 @@ void Workspace::updateVacFromDom_(const dom::Diff& diff) {
     core::BoolGuard bgVac(isUpdatingVacFromDom_);
 
     // impl goal: we want to keep as much cached data as possible.
-    //            we want the vac to be valid -> using only its operators
+    //            we want the VAC to be valid -> using only its operators
     //            limits bugs to their implementation.
 
     bool hasModifiedPaths =
@@ -872,7 +872,7 @@ void Workspace::updateVacFromDom_(const dom::Diff& diff) {
     std::set<Element*> parentsToOrderSync;
 
     // First, we remove what has to be removed.
-    // Note that this can recursively remove dependent vac nodes (star).
+    // Note that this can recursively remove dependent VAC nodes (star).
     //
     for (dom::Node* node : diff.removedNodes()) {
         dom::Element* domElement = dom::Element::cast(node);
