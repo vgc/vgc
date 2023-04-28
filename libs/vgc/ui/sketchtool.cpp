@@ -413,6 +413,40 @@ void SketchTool::onPaintDestroy(graphics::Engine* engine) {
 
 namespace {
 
+// This is a variant of Douglas-Peucker designed to dequantize mouse inputs
+// from integer to float coordinates.
+//
+// To this end, the distance test checks if the current line segment AB passes
+// through all pixel squares of the samples in the interval. We call
+// `threshold` the minimal distance between AB and the pixel center such that
+// AB does not passes through the pixel square.
+//
+//     ---------------
+//    |               |
+//    |     pixel     |             threshold = distance(pixelCenter, A'B'),
+//    |     center    |         B'  where A'B' is a line parallel to AB and
+//    |       x       |       '     touching the pixel square.
+//    |               |     '
+//    |               |   '
+//    |               | '
+//     ---------------'
+//                  '
+//                ' A'
+//
+// This threshold only depends on the angle AB. If AB is perfectly horizontal
+// or vertical, the threshold is equal to 0.5. If AB is at 45°, the threshold
+// is equal to sqrt(2)/2 (the half-diagonal).
+//
+// We then scale this threshold is scaled with the given `thresholdCoefficient`
+// and add the given `tolerance`.
+//
+// If the current segment does not pass the test, then the farthest samples is
+// selected for the next iteration.
+//
+// In some variants of this algorithm, we may also slighly move the position of
+// selected samples towards the segment AB (e.g., by 0.75 * threshold), which
+// seems to empirically give nicer results in some circumstances.
+//
 Int reconstructInputStep(
     geometry::Vec2fArray& points,
     core::IntArray& indices,
@@ -420,47 +454,38 @@ Int reconstructInputStep(
     float thresholdCoefficient,
     float tolerance = 1e-10f) {
 
-    // This is a variant of Douglas-Peucker designed to dequantize mouse
-    // inputs from integer to float coordinates.
-    //
-    // To this end, the distance test checks if the current segment passes
-    // through all pixel squares of the points in the interval.
-    // This threshold is scaled with the given `thresholdCoefficient`.
-    // If the current segment does not pass the test, then the farthest
-    // point is picked and shifted toward the segment by half the length of
-    // the projection of a pixel square onto the segment's normal axis.
-
     Int i = intervalStart;
     Int endIndex = indices[i + 1];
     while (indices[i] != endIndex) {
-        Int i0 = indices[i];
-        Int i1 = indices[i + 1];
 
-        geometry::Vec2f a = points[i0];
-        geometry::Vec2f b = points[i1];
+        // Get line AB. Fast discard if AB too small.
+        Int iA = indices[i];
+        Int iB = indices[i + 1];
+        geometry::Vec2f a = points[iA];
+        geometry::Vec2f b = points[iB];
         geometry::Vec2f ab = b - a;
         float abLen = ab.length();
-
         if (abLen < core::epsilon) {
             ++i;
             continue;
         }
 
+        // Compute `threshold`
+        constexpr double sqrtOf2 = 1.4142135623730950488017;
         double abMaxNormalizedAbsoluteCoord =
             (std::max)(std::abs(ab.x()), std::abs(ab.y())) / abLen;
         double abAngleWithClosestAxis = std::acos(abMaxNormalizedAbsoluteCoord);
-
-        constexpr double sqrtOf2 = 1.4142135623730950488017;
-
-        float pixelHalfwidthOnOrthogonalOfAB = static_cast<float>(
+        float threshold = static_cast<float>(
             std::cos(core::pi / 4 - abAngleWithClosestAxis) * (sqrtOf2 / 2));
-        float threshold = thresholdCoefficient * pixelHalfwidthOnOrthogonalOfAB;
-        threshold += tolerance;
 
+        // Apply threshold coefficient and additive tolerance
+        float adjustedThreshold = thresholdCoefficient * threshold + tolerance;
+
+        // Compute which sample between A and B is furthest from the line AB
         float maxDist = 0;
         Int farthestPointSide = 0;
         Int farthestPointIndex = -1;
-        for (Int j = i0 + 1; j < i1; ++j) {
+        for (Int j = iA + 1; j < iB; ++j) {
             geometry::Vec2f p = points[j];
             geometry::Vec2f ap = p - a;
             float dist = ab.det(ap) / abLen;
@@ -480,18 +505,24 @@ Int reconstructInputStep(
             }
         }
 
-        if (maxDist > threshold) {
+        // If the furthest point is too far from AB, then recurse.
+        // Otherwise, stop the recusion and move one to the next segment.
+        if (maxDist > adjustedThreshold) {
+
+            // Add sample to the list of selected samples
             indices.insert(i + 1, farthestPointIndex);
 
-            geometry::Vec2f n = ab.orthogonalized() / abLen;
-            if (farthestPointSide != 0) {
-                n = -n;
+            // Move the position of the selected sample slightly towards AB
+            constexpr bool isMoveEnabled = false;
+            if (isMoveEnabled) {
+                geometry::Vec2f n = ab.orthogonalized() / abLen;
+                if (farthestPointSide != 0) {
+                    n = -n;
+                }
+                // TODO: scale delta based on some data to prevent shrinkage?
+                float delta = 0.75 * threshold;
+                points[farthestPointIndex] -= delta * n;
             }
-
-            // TODO: delta could be scaled based on some data
-            //       to prevent shrinkage ?
-            //float delta = pixelHalfwidthOnOrthogonalOfAB * 0.75;
-            //points[farthestPointIndex] -= (n * delta);
         }
         else {
             ++i;
