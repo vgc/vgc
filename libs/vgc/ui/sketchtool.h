@@ -112,18 +112,75 @@ protected:
     dom::Element* endVertex_ = nullptr;
     dom::Element* edge_ = nullptr;
 
-    // Raw input.
+    // Raw input in widget space (pixels).
+    //
+    // Invariant: both arrays have the same length.
     //
     // Notes:
-    // - for now, we do not smooth widths
+    // - for now, we do not smooth widths.
+    // - we assume the view matrix does not change during the operation.
     //
-    geometry::Vec2dArray inputPoints_;
+    geometry::Vec2fArray inputPoints_;
     core::DoubleArray inputWidths_;
+    core::Array<Int64> inputPointsTimestamps_;
+    geometry::Mat4d canvasToWorkspaceMatrix_;
+    bool isInputQuantized_ = false;
 
-    // Smoothing. Invariant: both arrays have the same length.
-    geometry::Vec2dArray smoothedInputPoints_;
-    core::DoubleArray smoothedInputArclengths_;
-    void updateSmoothedData_();
+    // Dequantization.
+    //
+    // This step removes the "staircase effect" that happens when input points
+    // come from a source only providing integer coordinates (e.g. a mouse).
+    //
+    // The general idea is to discard and/or slighly adjust the position of the
+    // samples to reconstruct what the mouse positions actually were if there
+    // had been no rounding to integer (= "quantization") in the first place.
+    //
+    // This step is fundamently different from smoothing, because the staircase
+    // patterns caused by quantization are not equivalent to random noise:
+    // during quantization, the perturbations applied to consecutive samples
+    // are correlated, while with random noise they are not.
+    //
+    // Therefore, while in smoothing we generally want to mimize some
+    // least-square distance to samples, in dequantization we want instead to
+    // minimize some other objective (e.g., curve length, curvature, or change
+    // of curvature) subject to the non-linear constraint "pass through each
+    // input pixel". As long as the dequantized curve passes through the input
+    // pixel, we do not want to value more "being closer to the center of the
+    // pixel".
+    //
+    // Invariant: both arrays have the same length.
+    //
+    geometry::Vec2fArray dequantizerBuffer_;
+    Int dequantizerBufferStartIndex = 0;
+    geometry::Vec2fArray unquantizedPoints_;
+    core::DoubleArray unquantizedWidths_;
+    void updateUnquantizedData_(bool isFinalPass);
+
+    // Transformation.
+    //
+    // This step applies the transformation from canvas coordinates to
+    // workspace/group coordinates.
+    //
+    // Invariant: both arrays have the same length.
+    //
+    geometry::Vec2dArray transformedPoints_;
+    core::DoubleArray transformedWidths_;
+    void updateTransformedData_(bool isFinalPass);
+
+    // Smoothing.
+    //
+    // Invariant: both arrays have the same length.
+    //
+    geometry::Vec2dArray smoothedPoints_;
+    core::DoubleArray smoothedWidths_;
+    void updateSmoothedData_(bool isFinalPass);
+
+    // Final points.
+    //
+    // Invariant: both arrays have the same length.
+    //
+    geometry::Vec2dArray points_;
+    core::DoubleArray widths_;
 
     // Snapping
     //
@@ -132,10 +189,6 @@ protected:
     //
     bool hasStartSnap_ = false;
     geometry::Vec2d startSnapPosition_;
-
-    // Final points
-    geometry::Vec2dArray points_;
-    core::DoubleArray widths_;
 
     // Draw additional points at the stroke tip, based on global cursor
     // position, to reduce perceived input lag.
@@ -151,9 +204,12 @@ protected:
     geometry::Vec2f lastImmediateCursorPos_ = {};
     geometry::Vec2d minimalLatencySnappedCursor_ = {};
 
-    void startCurve_(const geometry::Vec2d& p, double width);
-    void continueCurve_(const geometry::Vec2d& p, double width);
-    void finishCurve_();
+    graphics::GeometryViewPtr mouseInputGeometry_;
+
+    // Assumes canvas() is non-null.
+    void startCurve_(MouseEvent* event);
+    void continueCurve_(MouseEvent* event);
+    void finishCurve_(MouseEvent* event);
     bool resetData_();
 
     // The length of curve that snapping is allowed to deform

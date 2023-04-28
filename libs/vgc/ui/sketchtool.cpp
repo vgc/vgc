@@ -152,21 +152,7 @@ bool SketchTool::onMouseMove(MouseEvent* event) {
         return false;
     }
 
-    // Note: event.button() is always NoButton for move events. This is why
-    // we use the variable isPanning_ and isSketching_ to remember the current
-    // mouse action. In the future, we'll abstract this mechanism in a separate
-    // class.
-
-    geometry::Vec2f mousePosf = event->position();
-    geometry::Vec2d mousePos = geometry::Vec2d(mousePosf.x(), mousePosf.y());
-
-    // XXX This is very inefficient (shouldn't use generic 4x4 matrix inversion,
-    // and should be cached), but let's keep it like this for now for testing.
-    geometry::Vec2d viewCoords = mousePos;
-    geometry::Vec2d worldCoords =
-        canvas->camera().viewMatrix().inverted().transformPointAffine(viewCoords);
-    double width = pressurePenWidth(event);
-    continueCurve_(worldCoords, width);
+    continueCurve_(event);
     minimalLatencyStrokeReload_ = true;
     return true;
 }
@@ -185,20 +171,14 @@ bool SketchTool::onMousePress(MouseEvent* event) {
 
     isSketching_ = true;
 
-    geometry::Vec2f mousePosf = event->position();
-    geometry::Vec2d mousePos = geometry::Vec2d(mousePosf.x(), mousePosf.y());
-
-    geometry::Vec2d viewCoords = mousePos;
-    geometry::Vec2d worldCoords =
-        canvas->camera().viewMatrix().inverted().transformPointAffine(viewCoords);
-    startCurve_(worldCoords, pressurePenWidth(event));
+    startCurve_(event);
     return true;
 }
 
 bool SketchTool::onMouseRelease(MouseEvent* event) {
 
     if (event->button() == MouseButton::Left) {
-        finishCurve_();
+        finishCurve_(event);
         if (resetData_()) {
             return true;
         }
@@ -266,16 +246,14 @@ void SketchTool::onPaintCreate(graphics::Engine* engine) {
     using namespace graphics;
     minimalLatencyStrokeGeometry_ =
         engine->createDynamicTriangleStripView(BuiltinGeometryLayout::XY_iRGBA);
+    mouseInputGeometry_ =
+        engine->createDynamicTriangleStripView(BuiltinGeometryLayout::XYDxDy_iXYRotWRGBA);
     reload_ = true;
 }
 
 void SketchTool::onPaintDraw(graphics::Engine* engine, PaintOptions options) {
 
     SuperClass::onPaintDraw(engine, options);
-
-    if (!isSketching_) {
-        return;
-    }
 
     using namespace graphics;
     namespace gs = graphics::strings;
@@ -290,7 +268,7 @@ void SketchTool::onPaintDraw(graphics::Engine* engine, PaintOptions options) {
     //
     Window* w = window();
     bool cursorMoved = false;
-    if (w) {
+    if (isSketching_ && w) {
         geometry::Vec2f pos(w->mapFromGlobal(globalCursorPosition()));
         geometry::Vec2d posd(root()->mapTo(this, pos));
         pos = geometry::Vec2f(
@@ -300,11 +278,19 @@ void SketchTool::onPaintDraw(graphics::Engine* engine, PaintOptions options) {
             cursorMoved = true;
             geometry::Vec2d pos2d(pos);
             minimalLatencySnappedCursor_ = pos2d;
-            if (!smoothedInputPoints_.isEmpty()) {
-                double s = smoothedInputArclengths_.last()
-                           + (pos2d - smoothedInputPoints_.last()).length();
+            if (!smoothedPoints_.isEmpty()) {
+
+                double s = 0;
+                geometry::Vec2d previousSp = smoothedPoints_.first();
+                for (Int i = 0; i < smoothedPoints_.length(); ++i) {
+                    geometry::Vec2d sp = smoothedPoints_[i];
+                    s += (sp - previousSp).length();
+                    previousSp = sp;
+                }
+                s += (pos2d - smoothedPoints_.last()).length();
+
                 double snapFalloff_ = snapFalloff();
-                geometry::Vec2d delta = startSnapPosition_ - smoothedInputPoints_[0];
+                geometry::Vec2d delta = startSnapPosition_ - smoothedPoints_[0];
                 if (s < snapFalloff_) {
                     minimalLatencySnappedCursor_ =
                         applySnapFalloff(pos2d, delta, s, snapFalloff_);
@@ -313,7 +299,7 @@ void SketchTool::onPaintDraw(graphics::Engine* engine, PaintOptions options) {
         }
     }
 
-    if (cursorMoved || minimalLatencyStrokeReload_) {
+    if (isSketching_ && (cursorMoved || minimalLatencyStrokeReload_)) {
 
         core::Color color = penColor_;
         geometry::Vec2fArray strokeVertices;
@@ -378,13 +364,46 @@ void SketchTool::onPaintDraw(graphics::Engine* engine, PaintOptions options) {
         minimalLatencyStrokeReload_ = false;
     }
 
-    engine->pushProgram(graphics::BuiltinProgram::Simple);
+    const bool showInputPixels = false;
+
+    if (showInputPixels) { // TODO: only update on new points
+        float hp = static_cast<float>(
+            (canvasToWorkspaceMatrix_.transformPointAffine(geometry::Vec2d(0, 0.5))
+             - canvasToWorkspaceMatrix_.transformPointAffine(geometry::Vec2d(0, 0)))
+                .length());
+        core::FloatArray pointVertices(
+            {-hp, -hp, 0, 0, hp, -hp, 0, 0, -hp, hp, 0, 0, hp, hp, 0, 0});
+
+        core::FloatArray pointInstData;
+        const Int numPoints = inputPoints_.length();
+        for (Int i = 0; i < numPoints; ++i) {
+            geometry::Vec2d pd = geometry::Vec2d(inputPoints_[i]);
+            geometry::Vec2f p =
+                geometry::Vec2f(canvasToWorkspaceMatrix_.transformPointAffine(pd));
+            pointInstData.extend({p.x(), p.y(), 0.f, 4.f, 0.f, 1.f, 0.f, 0.5f});
+        }
+
+        engine->updateBufferData(
+            mouseInputGeometry_->vertexBuffer(0), std::move(pointVertices));
+        engine->updateBufferData(
+            mouseInputGeometry_->vertexBuffer(1), std::move(pointInstData));
+    }
+
     geometry::Mat4f vm = engine->viewMatrix();
     geometry::Mat4f cameraViewf(canvas->camera().viewMatrix());
     engine->pushViewMatrix(vm * cameraViewf);
-    engine->draw(minimalLatencyStrokeGeometry_);
+
+    if (isSketching_) {
+        engine->setProgram(graphics::BuiltinProgram::Simple);
+        engine->draw(minimalLatencyStrokeGeometry_);
+    }
+
+    if (showInputPixels) {
+        engine->setProgram(graphics::BuiltinProgram::ScreenSpaceDisplacement);
+        engine->drawInstanced(mouseInputGeometry_);
+    }
+
     engine->popViewMatrix();
-    engine->popProgram();
 }
 
 void SketchTool::onPaintDestroy(graphics::Engine* engine) {
@@ -392,66 +411,235 @@ void SketchTool::onPaintDestroy(graphics::Engine* engine) {
     minimalLatencyStrokeGeometry_.reset();
 }
 
-void SketchTool::updateSmoothedData_() {
+namespace {
 
-    // Add the latest raw input points to smoothed data.
-    //
-    if (inputPoints_.length() > 0) {
-        smoothedInputPoints_.append(inputPoints_.last());
-    }
-    else {
-        return;
-    }
-    Int numInputPoints = inputPoints_.length();
-    Int numSmoothedPoints = smoothedInputPoints_.length();
-    VGC_ASSERT(numSmoothedPoints > 0);
-    VGC_ASSERT(numSmoothedPoints >= numInputPoints);
+// This is a variant of Douglas-Peucker designed to dequantize mouse inputs
+// from integer to float coordinates.
+//
+// To this end, the distance test checks if the current line segment AB passes
+// through all pixel squares of the samples in the interval. We call
+// `threshold` the minimal distance between AB and the pixel center such that
+// AB does not passes through the pixel square.
+//
+//     ---------------
+//    |               |
+//    |     pixel     |             threshold = distance(pixelCenter, A'B'),
+//    |     center    |         B'  where A'B' is a line parallel to AB and
+//    |       x       |       '     touching the pixel square.
+//    |               |     '
+//    |               |   '
+//    |               | '
+//     ---------------'
+//                  '
+//                ' A'
+//
+// This threshold only depends on the angle AB. If AB is perfectly horizontal
+// or vertical, the threshold is equal to 0.5. If AB is at 45°, the threshold
+// is equal to sqrt(2)/2 (the half-diagonal).
+//
+// We then scale this threshold is scaled with the given `thresholdCoefficient`
+// and add the given `tolerance`.
+//
+// If the current segment does not pass the test, then the farthest samples is
+// selected for the next iteration.
+//
+// In some variants of this algorithm, we may also slighly move the position of
+// selected samples towards the segment AB (e.g., by 0.75 * threshold), which
+// seems to empirically give nicer results in some circumstances.
+//
+Int reconstructInputStep(
+    geometry::Vec2fArray& points,
+    core::IntArray& indices,
+    Int intervalStart,
+    float thresholdCoefficient,
+    float tolerance = 1e-10f) {
 
-    // Apply gaussian smoothing. We only need to update at most 2 points.
-    //
-    Int lastUnchangedIndex = 0;
-    if (numInputPoints >= 3) {
-        smoothedInputPoints_.getUnchecked(numSmoothedPoints - 2) =      //
-            (1 / 4.0) * inputPoints_.getUnchecked(numInputPoints - 1) + //
-            (2 / 4.0) * inputPoints_.getUnchecked(numInputPoints - 2) + //
-            (1 / 4.0) * inputPoints_.getUnchecked(numInputPoints - 3);
-        lastUnchangedIndex = numSmoothedPoints - 3;
-    }
-    if (numInputPoints >= 5) {
-        smoothedInputPoints_.getUnchecked(numSmoothedPoints - 3) =       //
-            (1 / 16.0) * inputPoints_.getUnchecked(numInputPoints - 1) + //
-            (4 / 16.0) * inputPoints_.getUnchecked(numInputPoints - 2) + //
-            (6 / 16.0) * inputPoints_.getUnchecked(numInputPoints - 3) + //
-            (4 / 16.0) * inputPoints_.getUnchecked(numInputPoints - 4) + //
-            (1 / 16.0) * inputPoints_.getUnchecked(numInputPoints - 5);
-        lastUnchangedIndex = numSmoothedPoints - 4;
-    }
-    VGC_ASSERT(lastUnchangedIndex >= 0);
+    Int i = intervalStart;
+    Int endIndex = indices[i + 1];
+    while (indices[i] != endIndex) {
 
-    // Update arclengths.
-    //
-    smoothedInputArclengths_.resizeNoInit(numSmoothedPoints);
-    if (numSmoothedPoints == 1) {
-        smoothedInputArclengths_[0] = 0;
-    }
-    else {
-        double s = smoothedInputArclengths_[lastUnchangedIndex];
-        geometry::Vec2d p = smoothedInputPoints_[lastUnchangedIndex];
-        for (Int i = lastUnchangedIndex + 1; i < numSmoothedPoints; ++i) {
-            geometry::Vec2d q = smoothedInputPoints_[i];
-            s += (q - p).length();
-            smoothedInputArclengths_[i] = s;
+        // Get line AB. Fast discard if AB too small.
+        Int iA = indices[i];
+        Int iB = indices[i + 1];
+        geometry::Vec2f a = points[iA];
+        geometry::Vec2f b = points[iB];
+        geometry::Vec2f ab = b - a;
+        float abLen = ab.length();
+        if (abLen < core::epsilon) {
+            ++i;
+            continue;
+        }
+
+        // Compute `threshold`
+        constexpr double sqrtOf2 = 1.4142135623730950488017;
+        double abMaxNormalizedAbsoluteCoord =
+            (std::max)(std::abs(ab.x()), std::abs(ab.y())) / abLen;
+        double abAngleWithClosestAxis = std::acos(abMaxNormalizedAbsoluteCoord);
+        float threshold = static_cast<float>(
+            std::cos(core::pi / 4 - abAngleWithClosestAxis) * (sqrtOf2 / 2));
+
+        // Apply threshold coefficient and additive tolerance
+        float adjustedThreshold = thresholdCoefficient * threshold + tolerance;
+
+        // Compute which sample between A and B is furthest from the line AB
+        float maxDist = 0;
+        Int farthestPointSide = 0;
+        Int farthestPointIndex = -1;
+        for (Int j = iA + 1; j < iB; ++j) {
+            geometry::Vec2f p = points[j];
+            geometry::Vec2f ap = p - a;
+            float dist = ab.det(ap) / abLen;
+            // ┌─── x
+            // │    ↑ side 1
+            // │ A ───→ B
+            // y    ↓ side 0
+            Int side = 0;
+            if (dist < 0) {
+                dist = -dist;
+                side = 1;
+            }
+            if (dist > maxDist) {
+                maxDist = dist;
+                farthestPointSide = side;
+                farthestPointIndex = j;
+            }
+        }
+
+        // If the furthest point is too far from AB, then recurse.
+        // Otherwise, stop the recursion and move one to the next segment.
+        if (maxDist > adjustedThreshold) {
+
+            // Add sample to the list of selected samples
+            indices.insert(i + 1, farthestPointIndex);
+
+            // Move the position of the selected sample slightly towards AB
+            constexpr bool isMoveEnabled = false;
+            if (isMoveEnabled) {
+                geometry::Vec2f n = ab.orthogonalized() / abLen;
+                if (farthestPointSide != 0) {
+                    n = -n;
+                }
+                // TODO: scale delta based on some data to prevent shrinkage?
+                float delta = 0.75f * threshold;
+                points[farthestPointIndex] -= delta * n;
+            }
+        }
+        else {
+            ++i;
         }
     }
+    return i;
 }
 
-void SketchTool::startCurve_(const geometry::Vec2d& p, double width) {
+} // namespace
 
-    // Clear the points now. We don't to it on finishCurve_() for debug
-    // visualization purposes.
+void SketchTool::updateUnquantizedData_(bool /*isFinalPass*/) {
+    // the algorithm works only for more than 2 input points
+    if (!isInputQuantized_ || inputPoints_.length() <= 2) {
+        unquantizedPoints_ = inputPoints_;
+        unquantizedWidths_ = inputWidths_;
+        return;
+    }
+
+    Int numAlreadyBuffered = dequantizerBufferStartIndex + dequantizerBuffer_.length();
+    dequantizerBuffer_.extend(
+        inputPoints_.begin() + numAlreadyBuffered, inputPoints_.end());
+
+    // TODO: process duplicate points
+
+    core::IntArray indices({0, dequantizerBuffer_.length() - 1});
+    reconstructInputStep(dequantizerBuffer_, indices, 0, 2.f, 0.f);
+
+    if (indices.length() > 2) {
+        for (Int i0 = 0; i0 <= indices.length() - 2;) {
+            i0 = reconstructInputStep(dequantizerBuffer_, indices, i0, 1.f, 0.5f);
+        }
+        unquantizedPoints_.removeLast(2);
+        unquantizedWidths_.removeLast(2);
+        for (Int index : indices) {
+            unquantizedPoints_.append(dequantizerBuffer_[index]);
+            unquantizedWidths_.append(inputWidths_[dequantizerBufferStartIndex + index]);
+        }
+        // The N - 1 first indices are stable
+        Int stableIndex = indices.getWrapped(-2);
+        dequantizerBuffer_.removeFirst(stableIndex);
+        dequantizerBufferStartIndex += stableIndex;
+    }
+    else {
+        unquantizedPoints_.removeLast(1);
+        unquantizedWidths_.removeLast(1);
+        unquantizedPoints_.append(dequantizerBuffer_.last());
+        unquantizedWidths_.append(inputWidths_.last());
+    }
+
+    // TODO: remap points to keep widths data ?
+}
+
+void SketchTool::updateTransformedData_(bool /*isFinalPass*/) {
+    Int n = unquantizedPoints_.length();
+    transformedPoints_.resize(n);
+    for (Int i = 0; i < n; ++i) {
+        geometry::Vec2d pointd(unquantizedPoints_[i]);
+        transformedPoints_[i] = canvasToWorkspaceMatrix_.transformPointAffine(pointd);
+    }
+    transformedWidths_ = unquantizedWidths_;
+}
+
+void SketchTool::updateSmoothedData_(bool /*isFinalPass*/) {
+
+    smoothedPoints_ = transformedPoints_;
+    smoothedWidths_ = transformedWidths_;
+
+    Int numPoints = smoothedPoints_.length();
+
+    Int smoothingLevel = 0;
+    if (smoothingLevel > 0 && numPoints >= 3) {
+        // Apply gaussian smoothing.
+
+        const geometry::Vec2dArray& inPoints = transformedPoints_;
+
+        if (smoothingLevel == 1) {
+            for (Int i = 1; i < numPoints - 1; ++i) {
+                smoothedPoints_.getUnchecked(i) =              //
+                    (1 / 4.0) * inPoints.getUnchecked(i - 1) + //
+                    (2 / 4.0) * inPoints.getUnchecked(i + 0) + //
+                    (1 / 4.0) * inPoints.getUnchecked(i + 1);
+            }
+        }
+        else if (smoothingLevel == 2) {
+            smoothedPoints_.getUnchecked(1) =          //
+                (1 / 4.0) * inPoints.getUnchecked(0) + //
+                (2 / 4.0) * inPoints.getUnchecked(1) + //
+                (1 / 4.0) * inPoints.getUnchecked(2);
+
+            smoothedPoints_.getUnchecked(numPoints - 2) =          //
+                (1 / 4.0) * inPoints.getUnchecked(numPoints - 1) + //
+                (2 / 4.0) * inPoints.getUnchecked(numPoints - 2) + //
+                (1 / 4.0) * inPoints.getUnchecked(numPoints - 3);
+
+            for (Int i = 2; i < numPoints - 2; ++i) {
+                smoothedPoints_.getUnchecked(i) =               //
+                    (1 / 16.0) * inPoints.getUnchecked(i - 2) + //
+                    (4 / 16.0) * inPoints.getUnchecked(i - 1) + //
+                    (6 / 16.0) * inPoints.getUnchecked(i + 0) + //
+                    (4 / 16.0) * inPoints.getUnchecked(i + 1) + //
+                    (1 / 16.0) * inPoints.getUnchecked(i + 2);
+            }
+        }
+    }
+
+    // TODO: could remove second and before last sample here
+    //       since they are less smooth than the others.
+}
+
+void SketchTool::startCurve_(MouseEvent* event) {
+
+    // Clear the points now. We don't to it on finishCurve_() for
+    // debugging purposes.
     //
     inputPoints_.clear();
     inputWidths_.clear();
+    inputPointsTimestamps_.clear();
 
     // Fast return if missing required context
     workspace::Workspace* workspace = this->workspace();
@@ -483,12 +671,19 @@ void SketchTool::startCurve_(const geometry::Vec2d& p, double width) {
             });
     }
 
+    geometry::Vec2f eventPos2f = event->position();
+    geometry::Vec2d eventPos2d = geometry::Vec2d(eventPos2f.x(), eventPos2f.y());
+
+    // Save inverse view matrix
+    canvasToWorkspaceMatrix_ = canvas()->camera().viewMatrix().inverted();
+    isInputQuantized_ = !event->isTablet();
+
     // Compute start vertex to snap to
     workspace::Element* snapVertex = nullptr;
     hasStartSnap_ = false;
-    startSnapPosition_ = p;
+    startSnapPosition_ = canvasToWorkspaceMatrix_.transformPointAffine(eventPos2d);
     if (isSnappingEnabled()) {
-        snapVertex = computeSnapVertex_(p, nullptr);
+        snapVertex = computeSnapVertex_(startSnapPosition_, nullptr);
         if (snapVertex) {
             hasStartSnap_ = true;
             startSnapPosition_ = getSnapPosition(snapVertex);
@@ -527,7 +722,7 @@ void SketchTool::startCurve_(const geometry::Vec2d& p, double width) {
     edge_->setAttribute(ds::endvertex, endVertex_->getPathFromId());
 
     // Append start point to geometry
-    continueCurve_(p, width);
+    continueCurve_(event);
 
     // Set curve to fast tesselation to minimize lag. We do this after
     // continueCurve_() to rely on workspace->sync() called there.
@@ -541,7 +736,7 @@ void SketchTool::startCurve_(const geometry::Vec2d& p, double width) {
     minimalLatencyStrokeReload_ = true;
 }
 
-void SketchTool::continueCurve_(const geometry::Vec2d& p, double width) {
+void SketchTool::continueCurve_(MouseEvent* event) {
 
     // Fast return if missing required context
     workspace::Workspace* workspace = this->workspace();
@@ -549,45 +744,44 @@ void SketchTool::continueCurve_(const geometry::Vec2d& p, double width) {
         return;
     }
 
-    // Skip duplicate points
-    if (!inputPoints_.isEmpty()) {
-        if (inputPoints_.last() == p) {
-            // TODO: update last point width if width increases
-            return;
-        }
-    }
+    geometry::Vec2f eventPos2f = event->position();
 
-    // Append raw new data
-    inputPoints_.append(p);
-    inputWidths_.append(width);
+    // Append the input point
+    inputPoints_.append(eventPos2f);
+    inputWidths_.append(pressurePenWidth(event));
+    inputPointsTimestamps_.append(event->timestamp());
 
-    // Update smoothed data from raw data
-    updateSmoothedData_();
+    updateUnquantizedData_(false);
+    updateTransformedData_(false);
+    updateSmoothedData_(false);
 
     // Handle snapping
     if (hasStartSnap_) {
 
-        Int numPoints = smoothedInputPoints_.length();
+        Int numPoints = smoothedPoints_.length();
         double snapFalloff_ = snapFalloff();
-        geometry::Vec2d delta = startSnapPosition_ - smoothedInputPoints_[0];
+        geometry::Vec2d delta = startSnapPosition_ - smoothedPoints_[0];
 
+        double s = 0;
         points_.resizeNoInit(numPoints);
+        geometry::Vec2d previousSp = smoothedPoints_.first();
         for (Int i = 0; i < numPoints; ++i) {
-            geometry::Vec2d sp = smoothedInputPoints_[i];
-            double s = smoothedInputArclengths_[i];
+            geometry::Vec2d sp = smoothedPoints_[i];
+            s += (sp - previousSp).length();
             if (s < snapFalloff_) {
                 points_[i] = applySnapFalloff(sp, delta, s, snapFalloff_);
             }
             else {
                 points_[i] = sp; // maybe optimize in the future
             }
+            previousSp = sp;
         }
 
-        widths_ = inputWidths_;
+        widths_ = smoothedWidths_;
     }
     else {
-        points_ = smoothedInputPoints_;
-        widths_ = inputWidths_;
+        points_ = smoothedPoints_;
+        widths_ = smoothedWidths_;
     }
 
     // Update DOM and workspace
@@ -598,7 +792,7 @@ void SketchTool::continueCurve_(const geometry::Vec2d& p, double width) {
     workspace->sync();
 }
 
-void SketchTool::finishCurve_() {
+void SketchTool::finishCurve_(MouseEvent* /*event*/) {
 
     namespace ds = dom::strings;
 
@@ -608,6 +802,10 @@ void SketchTool::finishCurve_() {
         return;
     }
 
+    updateUnquantizedData_(true);
+    updateTransformedData_(true);
+    updateSmoothedData_(true);
+
     // Set curve to final requested tesselation mode
     workspace::Element* edgeElement = workspace->find(edge_);
     auto edgeCell = dynamic_cast<workspace::VacKeyEdge*>(edgeElement);
@@ -616,26 +814,38 @@ void SketchTool::finishCurve_() {
     }
 
     // Compute end vertex snapping
-    if (isSnappingEnabled() && smoothedInputPoints_.length() > 1) {
+    if (isSnappingEnabled() && smoothedPoints_.length() > 1) {
 
         // Compute start vertex to snap to
-        geometry::Vec2d lastInputPoint = inputPoints_.last();
-        workspace::Element* snapVertex = computeSnapVertex_(lastInputPoint, endVertex_);
+        geometry::Vec2d endPoint = canvasToWorkspaceMatrix_.transformPointAffine(
+            geometry::Vec2d(inputPoints_.last()));
+        workspace::Element* snapVertex = computeSnapVertex_(endPoint, endVertex_);
 
         // If found, do the snapping
         if (snapVertex) {
 
+            Int numPoints = smoothedPoints_.length();
+            core::DoubleArray arclengthsFromLast(numPoints, core::noInit);
+            arclengthsFromLast.last() = 0;
+            geometry::Vec2d previousSp = smoothedPoints_.last();
+            double s = 0;
+            for (Int i = numPoints - 2; i >= 0; --i) {
+                geometry::Vec2d sp = smoothedPoints_[i];
+                s += (sp - previousSp).length();
+                arclengthsFromLast[i] = s;
+                previousSp = sp;
+            }
+
             // Cap snap deformation length to ensure start point isn't modified
-            double maxS = smoothedInputArclengths_.last();
+            double maxS = arclengthsFromLast.first();
             double snapFalloff_ = (std::min)(snapFalloff(), maxS);
 
             // Deform end of stroke to match snap position
-            double s = 0;
             geometry::Vec2d snapPosition = getSnapPosition(snapVertex);
-            geometry::Vec2d delta = snapPosition - lastInputPoint;
+            geometry::Vec2d delta = snapPosition - endPoint;
             points_.last() = snapPosition;
-            for (Int i = smoothedInputPoints_.length() - 2; i >= 0; --i) {
-                s = maxS - smoothedInputArclengths_[i];
+            for (Int i = smoothedPoints_.length() - 2; i >= 0; --i) {
+                s = arclengthsFromLast[i];
                 if (s < snapFalloff_) {
                     points_[i] = applySnapFalloff(points_[i], delta, s, snapFalloff_);
                 }
@@ -670,8 +880,15 @@ bool SketchTool::resetData_() {
         // for debugging purposes.
         //inputPoints_.clear();
         //inputWidths_.clear();
-        smoothedInputPoints_.clear();
-        smoothedInputArclengths_.clear();
+        //inputPointsTimestamps_.clear();
+        dequantizerBuffer_.clear();
+        dequantizerBufferStartIndex = 0;
+        unquantizedPoints_.clear();
+        unquantizedWidths_.clear();
+        transformedPoints_.clear();
+        transformedWidths_.clear();
+        smoothedPoints_.clear();
+        smoothedWidths_.clear();
         points_.clear();
         widths_.clear();
         return true;
