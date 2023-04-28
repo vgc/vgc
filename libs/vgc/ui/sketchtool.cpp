@@ -506,7 +506,7 @@ Int reconstructInputStep(
         }
 
         // If the furthest point is too far from AB, then recurse.
-        // Otherwise, stop the recusion and move one to the next segment.
+        // Otherwise, stop the recursion and move one to the next segment.
         if (maxDist > adjustedThreshold) {
 
             // Add sample to the list of selected samples
