@@ -520,9 +520,6 @@ void SketchTool::updateUnquantizedData_(bool /*isFinalPass*/) {
     reconstructInputStep(dequantizerBuffer_, indices, 0, 2.f, 0.f);
 
     if (indices.length() > 2) {
-        if (indices.length() > 3) {
-            VGC_DEBUG_TMP("new points: {}", indices.length() - 2);
-        }
         for (Int i0 = 0; i0 <= indices.length() - 2;) {
             i0 = reconstructInputStep(dequantizerBuffer_, indices, i0, 1.f, 0.5f);
         }
