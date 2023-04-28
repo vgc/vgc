@@ -407,28 +407,20 @@ bool Canvas::onMousePress(MouseEvent* event) {
         return true;
     }
 
-    geometry::Vec2f mousePosf = event->position();
-    geometry::Vec2d mousePos = geometry::Vec2d(mousePosf.x(), mousePosf.y());
-    if (event->modifierKeys() == ModifierKey::Alt
-        && event->button() == MouseButton::Left) {
+    ModifierKeys keys = event->modifierKeys();
+    MouseButton button = event->button();
+    if (keys == ModifierKey::Alt && button == MouseButton::Left) {
         isRotating_ = true;
-        mousePosAtPress_ = mousePos;
-        cameraAtPress_ = camera_;
-        return true;
     }
-    else if (
-        event->modifierKeys() == ModifierKey::Alt
-        && event->button() == MouseButton::Middle) {
+    else if (keys == ModifierKey::Alt && button == MouseButton::Middle) {
         isPanning_ = true;
-        mousePosAtPress_ = mousePos;
-        cameraAtPress_ = camera_;
-        return true;
     }
-    else if (
-        event->modifierKeys() == ModifierKey::Alt
-        && event->button() == MouseButton::Right) {
+    else if (keys == ModifierKey::Alt && button == MouseButton::Right) {
         isZooming_ = true;
-        mousePosAtPress_ = mousePos;
+    }
+
+    if (isPanning_ || isRotating_ || isZooming_) {
+        mousePosAtPress_ = geometry::Vec2d(event->position());
         cameraAtPress_ = camera_;
         return true;
     }
