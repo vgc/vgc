@@ -21,9 +21,9 @@
 #include <vgc/core/color.h>
 #include <vgc/geometry/vec2d.h>
 #include <vgc/graphics/geometryview.h>
-#include <vgc/topology/keycycle.h>
 #include <vgc/ui/api.h>
 #include <vgc/ui/canvastool.h>
+#include <vgc/vacomplex/keycycle.h>
 
 namespace vgc::ui {
 

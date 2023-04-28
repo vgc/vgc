@@ -27,7 +27,7 @@
 #include <vgc/core/span.h>
 #include <vgc/dom/document.h>
 #include <vgc/graphics/engine.h>
-#include <vgc/topology/vac.h>
+#include <vgc/vacomplex/complex.h>
 #include <vgc/workspace/api.h>
 #include <vgc/workspace/element.h>
 

@@ -143,7 +143,7 @@ void VacElement::removeVacNode() {
         // and schedule this element for update.
         vacomplex::Node* tmp = vacNode_;
         vacNode_ = nullptr;
-        topology::ops::removeNode(tmp, false);
+        vacomplex::ops::removeNode(tmp, false);
         const_cast<Workspace*>(workspace())->elementByVacInternalId_.erase(tmp->id());
     }
 }

@@ -427,9 +427,9 @@ ElementStatus VacKeyFace::updateFromDom_(Workspace* workspace) {
         kf = nullptr;
     }
 
-    // create/rebuild/update vac node
+    // create/rebuild/update VAC node
     if (!kf) {
-        kf = topology::ops::createKeyFace(cycles, parentGroup);
+        kf = vacomplex::ops::createKeyFace(cycles, parentGroup);
         if (!kf) {
             onUpdateError_();
             return ElementStatus::InvalidAttribute;
@@ -551,7 +551,7 @@ bool VacKeyFace::computeFillMesh_() {
     }
     VGC_ASSERT(!data.isComputing_);
 
-    using namespace topology;
+    using namespace vacomplex;
     using geometry::Vec2d;
     using geometry::Vec2f;
 
@@ -563,7 +563,7 @@ bool VacKeyFace::computeFillMesh_() {
     data.isComputing_ = true;
     data.bbox_ = geometry::Rect2d::empty;
 
-    topology::detail::computeKeyFaceFillTriangles(
+    vacomplex::detail::computeKeyFaceFillTriangles(
         kf->cycles(), data.triangulation_, geometry::WindingRule::Odd);
 
     if (data.triangulation_.reservedLength() > data.triangulation_.length() * 3) {

@@ -18,8 +18,8 @@
 
 #include <vgc/core/history.h>
 #include <vgc/dom/strings.h>
-#include <vgc/topology/operations.h>
 #include <vgc/ui/column.h>
+#include <vgc/vacomplex/operations.h>
 #include <vgc/workspace/element.h>
 
 namespace vgc::ui {
@@ -143,7 +143,7 @@ bool PaintBucketTool::onMousePress(MouseEvent* event) {
         // Create the face. For now, we place it as first child of the group.
         // In the future, we may want to place at the highest index which is
         // still below all the cells in the face's boundary.
-        vacomplex::KeyFace* face = topology::ops::createKeyFace(
+        vacomplex::KeyFace* face = vacomplex::ops::createKeyFace(
             faceCandidateCycles_, parentGroup, parentGroup->firstChild());
         workspace::VacElement* workspaceFace = workspace_->findVacElement(face);
         dom::Element* domFace = workspaceFace ? workspaceFace->domElement() : nullptr;
@@ -250,7 +250,7 @@ void PaintBucketTool::updateFaceCandidate_(const geometry::Vec2d& worldPosition)
     }
 
     // Compute face candidate at given world position
-    faceCandidateCycles_ = topology::detail::computeKeyFaceCandidateAt(
+    faceCandidateCycles_ = vacomplex::detail::computeKeyFaceCandidateAt(
         worldPosition, workspace->vac()->rootGroup(), faceCandidateTriangles_);
 
     // Clear face candidate if document or workspace changes
