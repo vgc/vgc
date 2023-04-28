@@ -513,14 +513,14 @@ Int reconstructInputStep(
             indices.insert(i + 1, farthestPointIndex);
 
             // Move the position of the selected sample slightly towards AB
-            constexpr bool isMoveEnabled = false;
+            constexpr bool isMoveEnabled = true;
             if (isMoveEnabled) {
                 geometry::Vec2f n = ab.orthogonalized() / abLen;
                 if (farthestPointSide != 0) {
                     n = -n;
                 }
                 // TODO: scale delta based on some data to prevent shrinkage?
-                float delta = 0.75f * threshold;
+                float delta = 0.8f * threshold;
                 points[farthestPointIndex] -= delta * n;
             }
         }
