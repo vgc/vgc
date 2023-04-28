@@ -16,9 +16,8 @@
 
 #include <vgc/workspace/face.h>
 
-#include <tesselator.h> // libtess2
-
 #include <vgc/core/span.h>
+#include <vgc/workspace/colors.h>
 #include <vgc/workspace/edge.h>
 #include <vgc/workspace/workspace.h>
 
@@ -233,9 +232,17 @@ void VacKeyFace::onPaintDraw(
     data.hasPendingColorChange_ = false;
 
     if (flags.has(PaintOption::Selected)) {
-        // TODO: use special shader for selected faces
-        engine->setProgram(graphics::BuiltinProgram::Simple);
+        const core::Color& c = colors::selection;
+        core::FloatArray bufferData = {c.r(), c.g(), c.b(), c.a()};
+        const BufferPtr& buffer = graphics.fillGeometry()->vertexBuffer(1);
+        engine->updateBufferData(buffer, std::move(bufferData));
+        engine->setProgram(graphics::BuiltinProgram::SimplePreview);
         engine->draw(graphics.fillGeometry());
+        data.hasPendingColorChange_ = true;
+        // For now we share the same GeometryView for PaintOption::Selected and
+        // PaintOption::None, so we set hasPendingColorChange_ to true so that
+        // in the next onPaintDraw(PaintOption::None), we go again in the code
+        // path updating the face color.
     }
     else if (!flags.has(PaintOption::Outline)) {
         engine->setProgram(graphics::BuiltinProgram::Simple);

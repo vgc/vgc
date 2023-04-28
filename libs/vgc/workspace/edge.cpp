@@ -14,10 +14,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <vgc/core/span.h>
 #include <vgc/workspace/edge.h>
-#include <vgc/workspace/vertex.h>
 
+#include <vgc/core/span.h>
+#include <vgc/workspace/colors.h>
+#include <vgc/workspace/vertex.h>
 #include <vgc/workspace/workspace.h>
 
 namespace vgc::workspace {
@@ -882,17 +883,11 @@ void VacKeyEdge::onPaintDraw(
     }
     if (graphics.selectionGeometry()
         && (data.hasPendingColorChange_ || hasNewCenterlineGraphics)) {
-        engine->updateBufferData(
-            graphics.selectionGeometry()->vertexBuffer(1), //
-            core::Array<float>(
-                {0.f,
-                 0.f,
-                 1.f,
-                 2.f,
-                 0.0f, //std::round(1.0f - color.r()),
-                 0.7f, //std::round(1.0f - color.g()),
-                 1.0f, //std::round(1.0f - color.b()),
-                 1.f}));
+
+        const core::Color& c = colors::selection;
+        core::FloatArray bufferData = {0.f, 0.f, 1.f, 2.f, c.r(), c.g(), c.b(), c.a()};
+        const BufferPtr& buffer = graphics.selectionGeometry()->vertexBuffer(1);
+        engine->updateBufferData(buffer, std::move(bufferData));
     }
 
     constexpr PaintOptions pointsOptions = {PaintOption::Outline};
