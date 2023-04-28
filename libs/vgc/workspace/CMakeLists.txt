@@ -6,6 +6,7 @@ vgc_add_library(workspace
 
     CPP_HEADER_FILES
         api.h
+        colors.h
         edge.h
         element.h
         face.h
