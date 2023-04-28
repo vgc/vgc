@@ -433,11 +433,11 @@ Int reconstructInputStep(
     Int i = intervalStart;
     Int endIndex = indices[i + 1];
     while (indices[i] != endIndex) {
-        Int i0 = indices.getUnchecked(i);
-        Int i1 = indices.getUnchecked(i + 1);
+        Int i0 = indices[i];
+        Int i1 = indices[i + 1];
 
-        geometry::Vec2f a = points.getUnchecked(i0);
-        geometry::Vec2f b = points.getUnchecked(i1);
+        geometry::Vec2f a = points[i0];
+        geometry::Vec2f b = points[i1];
         geometry::Vec2f ab = b - a;
         float abLen = ab.length();
 
