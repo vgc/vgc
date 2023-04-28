@@ -178,8 +178,6 @@ bool SketchTool::onMousePress(MouseEvent* event) {
 bool SketchTool::onMouseRelease(MouseEvent* event) {
 
     if (event->button() == MouseButton::Left) {
-        VGC_DEBUG_TMP_EXPR(inputPoints_);
-        VGC_DEBUG_TMP_EXPR(inputPointsTimestamps_);
         finishCurve_(event);
         if (resetData_()) {
             return true;
@@ -366,8 +364,9 @@ void SketchTool::onPaintDraw(graphics::Engine* engine, PaintOptions options) {
         minimalLatencyStrokeReload_ = false;
     }
 
-    if (true) { // todo only update on new points
+    const bool showInputPixels = false;
 
+    if (showInputPixels) { // TODO: only update on new points
         float hp = static_cast<float>(
             (canvasToWorkspaceMatrix_.transformPointAffine(geometry::Vec2d(0, 0.5))
              - canvasToWorkspaceMatrix_.transformPointAffine(geometry::Vec2d(0, 0)))
@@ -399,8 +398,10 @@ void SketchTool::onPaintDraw(graphics::Engine* engine, PaintOptions options) {
         engine->draw(minimalLatencyStrokeGeometry_);
     }
 
-    engine->setProgram(graphics::BuiltinProgram::ScreenSpaceDisplacement);
-    engine->drawInstanced(mouseInputGeometry_);
+    if (showInputPixels) {
+        engine->setProgram(graphics::BuiltinProgram::ScreenSpaceDisplacement);
+        engine->drawInstanced(mouseInputGeometry_);
+    }
 
     engine->popViewMatrix();
 }
@@ -516,15 +517,15 @@ void SketchTool::updateUnquantizedData_(bool isFinalPass) {
     // TODO: process duplicate points
 
     core::IntArray indices({0, dequantizerBuffer_.length() - 1});
-    reconstructInputStep(dequantizerBuffer_, indices, 0, 2.f, 1.0f);
+    reconstructInputStep(dequantizerBuffer_, indices, 0, 2.f, 0.f);
 
     if (indices.length() > 2) {
         if (indices.length() > 3) {
             VGC_DEBUG_TMP("new points: {}", indices.length() - 2);
         }
-        //for (Int i0 = 0; i0 <= indices.length() - 2;) {
-        //    i0 = reconstructInputStep(dequantizerBuffer_, indices, i0, 2.f);
-        //}
+        for (Int i0 = 0; i0 <= indices.length() - 2;) {
+            i0 = reconstructInputStep(dequantizerBuffer_, indices, i0, 1.f, 0.5f);
+        }
         unquantizedPoints_.removeLast(2);
         unquantizedWidths_.removeLast(2);
         for (Int index : indices) {
