@@ -520,7 +520,7 @@ Int reconstructInputStep(
                     n = -n;
                 }
                 // TODO: scale delta based on some data to prevent shrinkage?
-                float delta = 0.75 * threshold;
+                float delta = 0.75f * threshold;
                 points[farthestPointIndex] -= delta * n;
             }
         }
