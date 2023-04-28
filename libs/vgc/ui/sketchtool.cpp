@@ -502,7 +502,7 @@ Int reconstructInputStep(
 
 } // namespace
 
-void SketchTool::updateUnquantizedData_(bool isFinalPass) {
+void SketchTool::updateUnquantizedData_(bool /*isFinalPass*/) {
     // the algorithm works only for more than 2 input points
     if (!isInputQuantized_ || inputPoints_.length() <= 2) {
         unquantizedPoints_ = inputPoints_;

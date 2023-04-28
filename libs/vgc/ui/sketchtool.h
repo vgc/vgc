@@ -128,6 +128,26 @@ protected:
 
     // Dequantization.
     //
+    // This step removes the "staircase effect" that happens when input points
+    // come from a source only providing integer coordinates (e.g. a mouse).
+    //
+    // The general idea is to discard and/or slighly adjust the position of the
+    // samples to reconstruct what the mouse positions actually were if there
+    // had been no rounding to integer (= "quantization") in the first place.
+    //
+    // This step is fundamently different from smoothing, because the staircase
+    // patterns caused by quantization are not equivalent to random noise:
+    // during quantization, the perturbations applied to consecutive samples
+    // are correlated, while with random noise they are not.
+    //
+    // Therefore, while in smoothing we generally want to mimize some
+    // least-square distance to samples, in dequantization we want instead to
+    // minimize some other objective (e.g., curve length, curvature, or change
+    // of curvature) subject to the non-linear constraint "pass through each
+    // input pixel". As long as the dequantized curve passes through the input
+    // pixel, we do not want to value more "being closer to the center of the
+    // pixel".
+    //
     // Invariant: both arrays have the same length.
     //
     geometry::Vec2fArray dequantizerBuffer_;
@@ -137,6 +157,9 @@ protected:
     void updateUnquantizedData_(bool isFinalPass);
 
     // Transformation.
+    //
+    // This step applies the transformation from canvas coordinates to
+    // workspace/group coordinates.
     //
     // Invariant: both arrays have the same length.
     //
