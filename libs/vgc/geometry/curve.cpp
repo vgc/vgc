@@ -161,33 +161,33 @@ CurveSamplingParameters::CurveSamplingParameters(CurveSamplingQuality quality)
     switch (quality) {
     case CurveSamplingQuality::Disabled:
         maxAngle_ = 100;
-        minIntraSegmentSamples_ = 1;
-        maxIntraSegmentSamples_ = 1;
+        minIntraSegmentSamples_ = 0;
+        maxIntraSegmentSamples_ = 0;
         break;
     case CurveSamplingQuality::UniformLow:
         maxAngle_ = 100;
-        minIntraSegmentSamples_ = 4;
-        maxIntraSegmentSamples_ = 4;
+        minIntraSegmentSamples_ = 3;
+        maxIntraSegmentSamples_ = 3;
         break;
     case CurveSamplingQuality::AdaptiveLow:
         maxAngle_ = 0.05;
-        minIntraSegmentSamples_ = 1;
-        maxIntraSegmentSamples_ = 8;
+        minIntraSegmentSamples_ = 0;
+        maxIntraSegmentSamples_ = 7;
         break;
     case CurveSamplingQuality::UniformHigh:
         maxAngle_ = 100;
-        minIntraSegmentSamples_ = 16;
-        maxIntraSegmentSamples_ = 16;
+        minIntraSegmentSamples_ = 15;
+        maxIntraSegmentSamples_ = 15;
         break;
     case CurveSamplingQuality::AdaptiveHigh:
         maxAngle_ = 0.025;
-        minIntraSegmentSamples_ = 1;
-        maxIntraSegmentSamples_ = 32;
+        minIntraSegmentSamples_ = 0;
+        maxIntraSegmentSamples_ = 31;
         break;
     case CurveSamplingQuality::UniformVeryHigh:
         maxAngle_ = 100;
-        minIntraSegmentSamples_ = 64;
-        maxIntraSegmentSamples_ = 64;
+        minIntraSegmentSamples_ = 63;
+        maxIntraSegmentSamples_ = 63;
         break;
     }
 }
