@@ -349,8 +349,10 @@ void Operations::addToBoundary_(Cell* boundedCell, Cell* boundingCell) {
     else if (!boundedCell->boundary_.contains(boundingCell)) {
         boundedCell->boundary_.append(boundingCell);
         boundingCell->star_.append(boundedCell);
-        complex()->diff_.onNodeDiff(boundedCell, NodeDiffFlag::BoundaryChanged);
-        complex()->diff_.onNodeDiff(boundingCell, NodeDiffFlag::StarChanged);
+        if (complex()->isDiffEnabled_) {
+            complex()->diff_.onNodeDiff(boundedCell, NodeDiffFlag::BoundaryChanged);
+            complex()->diff_.onNodeDiff(boundingCell, NodeDiffFlag::StarChanged);
+        }
     }
 }
 
