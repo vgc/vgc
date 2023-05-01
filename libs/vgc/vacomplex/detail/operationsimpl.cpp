@@ -176,7 +176,7 @@ KeyFace* Operations::createKeyFace(
     for (const KeyCycle& cycle : kf->cycles_) {
         KeyVertex* kv = cycle.steinerVertex_;
         if (kv) {
-            if (!boundary.find(kv)) {
+            if (!boundary.contains(kv)) {
                 kv->star_.emplaceLast(kf);
                 // diff star
                 if (complex->isDiffEnabled_) {
@@ -187,7 +187,7 @@ KeyFace* Operations::createKeyFace(
         }
         for (const KeyHalfedge& halfedge : cycle.halfedges_) {
             KeyEdge* ke = halfedge.edge();
-            if (!boundary.find(ke)) {
+            if (!boundary.contains(ke)) {
                 ke->star_.emplaceLast(kf);
                 // diff star
                 if (complex->isDiffEnabled_) {
