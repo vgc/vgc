@@ -105,9 +105,9 @@ KeyEdge* Operations::createKeyOpenEdge(
     ke->widths_ = widths.getShared();
     ke->boundary_.assign({startVertex, endVertex});
     // add edge to new vertices star
-    startVertex->star_.emplaceLast(ke);
+    startVertex->star_.append(ke);
     if (endVertex != startVertex) {
-        endVertex->star_.emplaceLast(ke);
+        endVertex->star_.append(ke);
     }
 
     // diff
@@ -177,23 +177,23 @@ KeyFace* Operations::createKeyFace(
         KeyVertex* kv = cycle.steinerVertex_;
         if (kv) {
             if (!boundary.contains(kv)) {
-                kv->star_.emplaceLast(kf);
+                kv->star_.append(kf);
                 // diff star
                 if (complex->isDiffEnabled_) {
                     complex->diff_.onNodeDiff(kv, NodeDiffFlag::StarChanged);
                 }
-                boundary.emplaceLast(kv);
+                boundary.append(kv);
             }
         }
         for (const KeyHalfedge& halfedge : cycle.halfedges_) {
             KeyEdge* ke = halfedge.edge();
             if (!boundary.contains(ke)) {
-                ke->star_.emplaceLast(kf);
+                ke->star_.append(kf);
                 // diff star
                 if (complex->isDiffEnabled_) {
                     complex->diff_.onNodeDiff(ke, NodeDiffFlag::StarChanged);
                 }
-                boundary.emplaceLast(ke);
+                boundary.append(ke);
             }
         }
     }
