@@ -196,9 +196,6 @@ private:
 
     // Helper methods
     // TODO: move to Operations
-    void incrementVersion() {
-        ++version_;
-    }
     bool insertNode(std::unique_ptr<Node>&& node);
 };
 
