@@ -23,9 +23,13 @@ namespace vgc::vacomplex::detail {
 Operations::Operations(Complex* complex)
     : complex_(complex) {
 
+    // Ensure complex is non-null
     if (!complex) {
         throw LogicError("Cannot instantiate a VAC `Operations` with a null complex.");
     }
+
+    // Increment version
+    complex->version_ += 1;
 }
 
 Group* Operations::createRootGroup() {
@@ -35,7 +39,6 @@ Group* Operations::createRootGroup() {
     complex()->insertNode(std::unique_ptr<Group>(group));
 
     // diff
-    complex()->incrementVersion();
     if (complex()->isDiffEnabled_) {
         complex()->diff_.onNodeDiff(group, NodeDiffFlag::Created);
     }
@@ -52,7 +55,6 @@ Group* Operations::createGroup(Group* parentGroup, Node* nextSibling) {
     parentGroup->insertChildUnchecked(nextSibling, group);
 
     // diff
-    complex()->incrementVersion();
     if (complex()->isDiffEnabled_) {
         complex()->diff_.onNodeDiff(group, NodeDiffFlag::Created);
         complex()->diff_.onNodeDiff(parentGroup, NodeDiffFlag::ChildrenChanged);
@@ -77,7 +79,6 @@ KeyVertex* Operations::createKeyVertex(
     parentGroup->insertChildUnchecked(nextSibling, kv);
 
     // diff
-    complex()->incrementVersion();
     if (complex()->isDiffEnabled_) {
         complex()->diff_.onNodeDiff(kv, NodeDiffFlag::Created);
         complex()->diff_.onNodeDiff(parentGroup, NodeDiffFlag::ChildrenChanged);
@@ -116,7 +117,6 @@ KeyEdge* Operations::createKeyOpenEdge(
     }
 
     // diff
-    complex()->incrementVersion();
     if (complex()->isDiffEnabled_) {
         complex()->diff_.onNodeDiff(ke, NodeDiffFlag::Created);
         complex()->diff_.onNodeDiff(parentGroup, NodeDiffFlag::ChildrenChanged);
@@ -148,7 +148,6 @@ KeyEdge* Operations::createKeyClosedEdge(
     // ...
 
     // diff
-    complex()->incrementVersion();
     if (complex()->isDiffEnabled_) {
         complex()->diff_.onNodeDiff(ke, NodeDiffFlag::Created);
         complex()->diff_.onNodeDiff(parentGroup, NodeDiffFlag::ChildrenChanged);
@@ -203,7 +202,6 @@ KeyFace* Operations::createKeyFace(
     kf->boundary_.assign(std::move(boundary));
 
     // diff
-    complex()->incrementVersion();
     if (complex()->isDiffEnabled_) {
         complex()->diff_.onNodeDiff(kf, NodeDiffFlag::Created);
         complex()->diff_.onNodeDiff(parentGroup, NodeDiffFlag::ChildrenChanged);
@@ -347,7 +345,6 @@ void Operations::moveToGroup(Node* node, Group* parentGroup, Node* nextSibling) 
     }
 
     // diff
-    complex()->incrementVersion();
     if (complex()->isDiffEnabled_) {
         if (oldParent != parentGroup) {
             complex()->diff_.onNodeDiff(node, NodeDiffFlag::Reparented);
@@ -365,8 +362,6 @@ void Operations::setKeyVertexPosition(KeyVertex* kv, const geometry::Vec2d& pos)
     }
 
     kv->position_ = pos;
-    // inc version
-    kv->complex()->incrementVersion();
 
     dirtyGeometry_(kv); // it also emits the geometry change event
 }
@@ -383,8 +378,6 @@ void Operations::setKeyEdgeCurvePoints(
 
     ke->points_ = std::move(sPoints);
     ++ke->dataVersion_;
-    // inc version
-    ke->complex()->incrementVersion();
 
     ke->dirtyInputSampling_();
     dirtyGeometry_(ke); // it also emits the geometry change event
@@ -402,8 +395,6 @@ void Operations::setKeyEdgeCurveWidths(
 
     ke->widths_ = std::move(sWidths);
     ++ke->dataVersion_;
-    // inc version
-    ke->complex()->incrementVersion();
 
     ke->dirtyInputSampling_();
     dirtyGeometry_(ke); // it also emits the geometry change event
@@ -420,8 +411,6 @@ void Operations::setKeyEdgeSamplingParameters(
 
     ke->samplingParameters_ = parameters;
     ++ke->dataVersion_;
-    // inc version
-    ke->complex()->incrementVersion();
 
     ke->dirtyInputSampling_();
     dirtyGeometry_(ke); // it also emits the geometry change event
