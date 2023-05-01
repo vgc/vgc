@@ -111,11 +111,4 @@ bool Complex::containsNode(core::Id id) const {
 //    return false;
 //}
 
-bool Complex::insertNode(std::unique_ptr<Node>&& node) {
-    if (!nodes_.try_emplace(node->id(), std::move(node)).second) {
-        throw LogicError("Id collision error.");
-    }
-    return true;
-}
-
 } // namespace vgc::vacomplex

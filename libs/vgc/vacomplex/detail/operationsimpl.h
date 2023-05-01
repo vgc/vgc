@@ -110,7 +110,25 @@ public:
 private:
     Complex* complex_;
 
-    // Helper methods
+    // Creates a new node and inserts it to the complex.
+    //
+    // Note: we cannot use make_unique due to the non-public constructor,
+    // which is why we have to use `new` here.
+    //
+    template<class T, typename... Args>
+    T* createNode_(Args&&... args) {
+        T* node = new T(args...);
+        std::unique_ptr<T> nodePtr(node);
+        Complex::NodePtrMap& nodes = complex()->nodes_;
+        core::Id id = node->id();
+        bool emplaced = nodes.try_emplace(id, std::move(nodePtr)).second;
+        if (!emplaced) {
+            throw LogicError("Id collision error.");
+        }
+        return node;
+    }
+
+    // Other helper methods
     void collectDependentNodes_(Node* node, std::unordered_set<Node*>& dependentNodes);
     void dirtyGeometry_(Cell* cell);
 };
