@@ -834,14 +834,6 @@ protected:
 private:
     core::Array<Cell*> star_;
     core::Array<Cell*> boundary_;
-
-    bool insertStar_(Cell* cell) {
-        if (!star_.contains(cell)) {
-            star_.append(cell);
-            return true;
-        }
-        return false;
-    }
 };
 
 inline Complex* Node::complex() const {
