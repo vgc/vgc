@@ -33,30 +33,14 @@ Operations::Operations(Complex* complex)
 }
 
 Group* Operations::createRootGroup() {
-
     Group* group = createNode_<Group>(complex());
-
-    // diff
-    if (complex()->isDiffEnabled_) {
-        complex()->diff_.onNodeDiff(group, NodeDiffFlag::Created);
-    }
     complex()->nodeCreated().emit(group, {});
-
     return group;
 }
 
 Group* Operations::createGroup(Group* parentGroup, Node* nextSibling) {
-
-    Group* group = createNode_<Group>(complex());
-    parentGroup->insertChildUnchecked(nextSibling, group);
-
-    // diff
-    if (complex()->isDiffEnabled_) {
-        complex()->diff_.onNodeDiff(group, NodeDiffFlag::Created);
-        complex()->diff_.onNodeDiff(parentGroup, NodeDiffFlag::ChildrenChanged);
-    }
+    Group* group = createNodeAt_<Group>(parentGroup, nextSibling, complex());
     complex()->nodeCreated().emit(group, {});
-
     return group;
 }
 
@@ -67,17 +51,9 @@ KeyVertex* Operations::createKeyVertex(
     core::Span<Node*> operationSourceNodes,
     core::AnimTime t) {
 
-    KeyVertex* kv = createNode_<KeyVertex>(t);
+    KeyVertex* kv = createNodeAt_<KeyVertex>(parentGroup, nextSibling, t);
     kv->position_ = position;
-    parentGroup->insertChildUnchecked(nextSibling, kv);
-
-    // diff
-    if (complex()->isDiffEnabled_) {
-        complex()->diff_.onNodeDiff(kv, NodeDiffFlag::Created);
-        complex()->diff_.onNodeDiff(parentGroup, NodeDiffFlag::ChildrenChanged);
-    }
     complex()->nodeCreated().emit(kv, operationSourceNodes);
-
     return kv;
 }
 
@@ -91,30 +67,26 @@ KeyEdge* Operations::createKeyOpenEdge(
     core::Span<Node*> operationSourceNodes,
     core::AnimTime t) {
 
-    KeyEdge* ke = createNode_<KeyEdge>(t);
-    parentGroup->insertChildUnchecked(nextSibling, ke);
+    KeyEdge* ke = createNodeAt_<KeyEdge>(parentGroup, nextSibling, t);
 
-    // init cell
-    ke->startVertex_ = startVertex;
-    ke->endVertex_ = endVertex;
+    // Geometric attributes
     ke->points_ = points.getShared();
     ke->widths_ = widths.getShared();
+
+    // Boundary / star
+    ke->startVertex_ = startVertex;
+    ke->endVertex_ = endVertex;
     ke->boundary_.assign({startVertex, endVertex});
-    // add edge to new vertices star
     startVertex->star_.append(ke);
     if (endVertex != startVertex) {
         endVertex->star_.append(ke);
     }
-
-    // diff
     if (complex()->isDiffEnabled_) {
-        complex()->diff_.onNodeDiff(ke, NodeDiffFlag::Created);
-        complex()->diff_.onNodeDiff(parentGroup, NodeDiffFlag::ChildrenChanged);
         complex()->diff_.onNodeDiff(startVertex, NodeDiffFlag::StarChanged);
         complex()->diff_.onNodeDiff(endVertex, NodeDiffFlag::StarChanged);
     }
-    complex()->nodeCreated().emit(ke, operationSourceNodes);
 
+    complex()->nodeCreated().emit(ke, operationSourceNodes);
     return ke;
 }
 
@@ -126,22 +98,10 @@ KeyEdge* Operations::createKeyClosedEdge(
     core::Span<Node*> operationSourceNodes,
     core::AnimTime t) {
 
-    KeyEdge* ke = createNode_<KeyEdge>(t);
-    parentGroup->insertChildUnchecked(nextSibling, ke);
-
+    KeyEdge* ke = createNodeAt_<KeyEdge>(parentGroup, nextSibling, t);
     ke->points_ = points.getShared();
     ke->widths_ = widths.getShared();
-
-    // init cell
-    // ...
-
-    // diff
-    if (complex()->isDiffEnabled_) {
-        complex()->diff_.onNodeDiff(ke, NodeDiffFlag::Created);
-        complex()->diff_.onNodeDiff(parentGroup, NodeDiffFlag::ChildrenChanged);
-    }
     complex()->nodeCreated().emit(ke, operationSourceNodes);
-
     return ke;
 }
 
@@ -154,10 +114,9 @@ KeyFace* Operations::createKeyFace(
     core::Span<Node*> operationSourceNodes,
     core::AnimTime t) {
 
-    KeyFace* kf = createNode_<KeyFace>(t);
-    parentGroup->insertChildUnchecked(nextSibling, kf);
+    KeyFace* kf = createNodeAt_<KeyFace>(parentGroup, nextSibling, t);
 
-    // init cell
+    // Boundary / star
     kf->cycles_ = std::move(cycles);
     core::Array<Cell*> boundary = {};
     for (const KeyCycle& cycle : kf->cycles_) {
@@ -186,13 +145,7 @@ KeyFace* Operations::createKeyFace(
     }
     kf->boundary_.assign(std::move(boundary));
 
-    // diff
-    if (complex()->isDiffEnabled_) {
-        complex()->diff_.onNodeDiff(kf, NodeDiffFlag::Created);
-        complex()->diff_.onNodeDiff(parentGroup, NodeDiffFlag::ChildrenChanged);
-    }
     complex()->nodeCreated().emit(kf, operationSourceNodes);
-
     return kf;
 }
 

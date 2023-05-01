@@ -20,7 +20,6 @@
 #include <vgc/core/id.h>
 #include <vgc/vacomplex/api.h>
 #include <vgc/vacomplex/complex.h>
-#include <vgc/vacomplex/detail/operationsimpl.h>
 #include <vgc/vacomplex/exceptions.h>
 
 namespace vgc::vacomplex::ops {
