@@ -46,6 +46,8 @@ ComplexPtr Complex::create() {
     return ComplexPtr(new Complex());
 }
 
+// TODO: Move to Operations
+//
 void Complex::clear() {
 
     isBeingCleared_ = true;
@@ -75,8 +77,9 @@ Group* Complex::resetRoot() {
     if (isBeingCleared_) {
         return nullptr;
     }
-    clear();
-    root_ = detail::Operations::createRootGroup(this);
+    clear(); // should be an operation
+    detail::Operations ops(this);
+    root_ = ops.createRootGroup();
     return root_;
 }
 

@@ -130,8 +130,6 @@ class VGC_VACOMPLEX_API Complex : public core::Object {
 private:
     VGC_OBJECT(Complex, core::Object)
 
-    friend detail::Operations;
-
 protected:
     Complex() {
         resetRoot();
@@ -177,22 +175,31 @@ public:
 
     //VGC_SIGNAL(changed, (const ComplexDiff&, diff))
 
-protected:
+private:
+    friend detail::Operations;
+    using NodePtrMap = std::unordered_map<core::Id, std::unique_ptr<Node>>;
+
+    // Container storing and owning all the nodes in the Complex.
+    NodePtrMap nodes_;
+
+    // Non-owning pointer to the root Group.
+    // Note that the root Group is also in nodes_.
+    Group* root_;
+
+    // Version control
+    Int64 version_ = 0;
+    ComplexDiff diff_ = {};
+    bool isDiffEnabled_ = false;
+
+    // Guard against recursion when calling clear() / resetRoot()
+    bool isBeingCleared_ = false;
+
+    // Helper methods
+    // TODO: move to Operations
     void incrementVersion() {
         ++version_;
     }
-
     bool insertNode(std::unique_ptr<Node>&& node);
-
-private:
-    using NodePtrMap = std::unordered_map<core::Id, std::unique_ptr<Node>>;
-    Int64 version_ = 0;
-    NodePtrMap nodes_;
-    // TODO: maybe store the root in the map.
-    Group* root_;
-    ComplexDiff diff_ = {};
-    bool isDiffEnabled_ = false;
-    bool isBeingCleared_ = false;
 };
 
 } // namespace vgc::vacomplex

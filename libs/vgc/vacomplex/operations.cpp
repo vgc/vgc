@@ -35,8 +35,8 @@ Group* createGroup(Group* parentGroup, Node* nextSibling) {
         throw LogicError("createGroup: parentGroup is nullptr.");
     }
     checkIsChildOrNull(nextSibling, parentGroup);
-
-    return detail::Operations::createGroup(parentGroup, nextSibling);
+    detail::Operations ops(parentGroup->complex());
+    return ops.createGroup(parentGroup, nextSibling);
 }
 
 KeyVertex* createKeyVertex(
@@ -49,8 +49,8 @@ KeyVertex* createKeyVertex(
         throw LogicError("createKeyVertex: parentGroup is nullptr.");
     }
     checkIsChildOrNull(nextSibling, parentGroup);
-
-    return detail::Operations::createKeyVertex(position, parentGroup, nextSibling, {}, t);
+    detail::Operations ops(parentGroup->complex());
+    return ops.createKeyVertex(position, parentGroup, nextSibling, {}, t);
 }
 
 KeyEdge* createKeyClosedEdge(
@@ -64,9 +64,8 @@ KeyEdge* createKeyClosedEdge(
         throw LogicError("createKeyClosedEdge: parentGroup is nullptr.");
     }
     checkIsChildOrNull(nextSibling, parentGroup);
-
-    return detail::Operations::createKeyClosedEdge(
-        points, widths, parentGroup, nextSibling, {}, t);
+    detail::Operations ops(parentGroup->complex());
+    return ops.createKeyClosedEdge(points, widths, parentGroup, nextSibling, {}, t);
 }
 
 KeyEdge* createKeyOpenEdge(
@@ -110,8 +109,10 @@ KeyEdge* createKeyOpenEdge(
             "createKeyOpenEdge: given `endVertex` is not at the given time `t`.");
     }
 
-    return detail::Operations::createKeyOpenEdge(
-        startVertex, endVertex, points, widths, parentGroup, nextSibling, {}, t);
+    detail::Operations ops(complex);
+    core::Span<Node*> sourceNodes;
+    return ops.createKeyOpenEdge(
+        startVertex, endVertex, points, widths, parentGroup, nextSibling, sourceNodes, t);
 }
 
 KeyFace* createKeyFace(
@@ -127,43 +128,35 @@ KeyFace* createKeyFace(
 
     for (const KeyCycle& cycle : cycles) {
         if (!cycle.isValid()) {
-            throw LogicError(
-                "createKeyFace: at least one of the input cycles is not valid.");
+            throw LogicError("createKeyFace: invalid input cycle.");
         }
     }
 
-    return detail::Operations::createKeyFace(
-        std::move(cycles), parentGroup, nextSibling, {}, t);
+    detail::Operations ops(parentGroup->complex());
+    core::Span<Node*> sourceNodes;
+    return ops.createKeyFace(std::move(cycles), parentGroup, nextSibling, sourceNodes, t);
 }
 
 KeyFace*
 createKeyFace(KeyCycle cycle, Group* parentGroup, Node* nextSibling, core::AnimTime t) {
-
-    if (!parentGroup) {
-        throw LogicError("createKeyFace: parentGroup is nullptr.");
-    }
-    checkIsChildOrNull(nextSibling, parentGroup);
-
-    if (!cycle.isValid()) {
-        throw LogicError("createKeyFace: the input cycle is not valid.");
-    }
-
-    return detail::Operations::createKeyFace(
-        core::Array<KeyCycle>(1, std::move(cycle)), parentGroup, nextSibling, {}, t);
+    core::Array<KeyCycle> cycles(1, std::move(cycle));
+    return createKeyFace(std::move(cycles), parentGroup, nextSibling, t);
 }
 
 void removeNode(Node* node, bool removeFreeVertices) {
     if (!node) {
         throw LogicError("removeNode: node is nullptr.");
     }
-    detail::Operations::removeNode(node, removeFreeVertices);
+    detail::Operations ops(node->complex());
+    ops.removeNode(node, removeFreeVertices);
 }
 
 void removeNodeSmart(Node* node, bool removeFreeVertices) {
     if (!node) {
         throw LogicError("removeNodeSmart: node is nullptr.");
     }
-    detail::Operations::removeNodeSmart(node, removeFreeVertices);
+    detail::Operations ops(node->complex());
+    ops.removeNodeSmart(node, removeFreeVertices);
 }
 
 void moveToGroup(Node* node, Group* parentGroup, Node* nextSibling) {
@@ -174,29 +167,32 @@ void moveToGroup(Node* node, Group* parentGroup, Node* nextSibling) {
         throw LogicError("moveToGroup: parentGroup is nullptr.");
     }
     checkIsChildOrNull(nextSibling, parentGroup);
-
-    return detail::Operations::moveToGroup(node, parentGroup, nextSibling);
+    detail::Operations ops(node->complex());
+    ops.moveToGroup(node, parentGroup, nextSibling);
 }
 
 void setKeyVertexPosition(KeyVertex* vertex, const geometry::Vec2d& pos) {
     if (!vertex) {
         throw LogicError("setKeyVertexPosition: vertex is nullptr.");
     }
-    return detail::Operations::setKeyVertexPosition(vertex, pos);
+    detail::Operations ops(vertex->complex());
+    return ops.setKeyVertexPosition(vertex, pos);
 }
 
 void setKeyEdgeCurvePoints(KeyEdge* edge, const geometry::SharedConstVec2dArray& points) {
     if (!edge) {
         throw LogicError("setKeyEdgeCurvePoints: edge is nullptr.");
     }
-    return detail::Operations::setKeyEdgeCurvePoints(edge, points);
+    detail::Operations ops(edge->complex());
+    return ops.setKeyEdgeCurvePoints(edge, points);
 }
 
 void setKeyEdgeCurveWidths(KeyEdge* edge, const core::SharedConstDoubleArray& widths) {
     if (!edge) {
         throw LogicError("setKeyEdgeCurveWidths: edge is nullptr.");
     }
-    return detail::Operations::setKeyEdgeCurveWidths(edge, widths);
+    detail::Operations ops(edge->complex());
+    return ops.setKeyEdgeCurveWidths(edge, widths);
 }
 
 VGC_VACOMPLEX_API
@@ -207,7 +203,8 @@ void setKeyEdgeSamplingParameters(
     if (!edge) {
         throw LogicError("setKeyEdgeSamplingParameters: edge is nullptr.");
     }
-    return detail::Operations::setKeyEdgeSamplingParameters(edge, parameters);
+    detail::Operations ops(edge->complex());
+    return ops.setKeyEdgeSamplingParameters(edge, parameters);
 }
 
 } // namespace vgc::vacomplex::ops
