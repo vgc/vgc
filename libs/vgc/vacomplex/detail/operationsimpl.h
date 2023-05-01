@@ -125,6 +125,21 @@ private:
         if (!emplaced) {
             throw LogicError("Id collision error.");
         }
+        if (complex()->isDiffEnabled_) {
+            complex()->diff_.onNodeDiff(node, NodeDiffFlag::Created);
+        }
+        return node;
+    }
+
+    // Creates a new node at the given location.
+    //
+    template<class T, typename... Args>
+    T* createNodeAt_(Group* parentGroup, Node* nextSibling, Args&&... args) {
+        T* node = createNode_<T>(std::forward<Args>(args)...);
+        parentGroup->insertChildUnchecked(nextSibling, node);
+        if (complex()->isDiffEnabled_) {
+            complex()->diff_.onNodeDiff(parentGroup, NodeDiffFlag::ChildrenChanged);
+        }
         return node;
     }
 
