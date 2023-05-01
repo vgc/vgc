@@ -28,24 +28,40 @@ class VGC_VACOMPLEX_API Operations {
     //using GroupChildrenConstIterator = decltype(Group::children_)::const_iterator;
 
 public:
-    static Group* createRootGroup(Complex* complex);
+    // Creates an instance of `Operations` for operating on the given `complex`.
+    //
+    // Throws a `LogicError` if `complex` is nullptr.
+    //
+    Operations(Complex* complex);
 
-    /// Assumes `nextSibling` is either `nullptr` or a child of `parentGroup`.
-    static Group* createGroup(Group* parentGroup, Node* nextSibling = nullptr);
+    // Returns the `Complex` that this `Operations` operates on.
+    //
+    // This function never returns nullptr.
+    //
+    Complex* complex() const {
+        return complex_;
+    }
 
-    /// Assumes `nextSibling` is either `nullptr` or a child of `parentGroup`.
-    static KeyVertex* createKeyVertex(
+    Group* createRootGroup();
+
+    // Assumes `nextSibling` is either `nullptr` or a child of `parentGroup`.
+    //
+    Group* createGroup(Group* parentGroup, Node* nextSibling = nullptr);
+
+    // Assumes `nextSibling` is either `nullptr` or a child of `parentGroup`.
+    //
+    KeyVertex* createKeyVertex(
         const geometry::Vec2d& position,
         Group* parentGroup,
         Node* nextSibling = nullptr,
         core::Span<Node*> operationSourceNodes = {},
         core::AnimTime t = {});
 
-    /// Assumes `nextSibling` is either `nullptr` or a child of `parentGroup`.
-    /// Assumes `startVertex` is from the same `Complex` as `parentGroup`.
-    /// Assumes `endVertex` is from the same `Complex` as `parentGroup`.
-    ///
-    static KeyEdge* createKeyOpenEdge(
+    // Assumes `nextSibling` is either `nullptr` or a child of `parentGroup`.
+    // Assumes `startVertex` is from the same `Complex` as `parentGroup`.
+    // Assumes `endVertex` is from the same `Complex` as `parentGroup`.
+    //
+    KeyEdge* createKeyOpenEdge(
         KeyVertex* startVertex,
         KeyVertex* endVertex,
         const geometry::SharedConstVec2dArray& points,
@@ -55,8 +71,9 @@ public:
         core::Span<Node*> operationSourceNodes = {},
         core::AnimTime t = {});
 
-    /// Assumes `nextSibling` is either `nullptr` or a child of `parentGroup`.
-    static KeyEdge* createKeyClosedEdge(
+    // Assumes `nextSibling` is either `nullptr` or a child of `parentGroup`.
+    //
+    KeyEdge* createKeyClosedEdge(
         const geometry::SharedConstVec2dArray& points,
         const core::SharedConstDoubleArray& widths,
         Group* parentGroup,
@@ -64,37 +81,38 @@ public:
         core::Span<Node*> operationSourceNodes = {},
         core::AnimTime t = {});
 
-    /// Assumes `cycles` are valid.
-    /// Assumes `nextSibling` is either `nullptr` or a child of `parentGroup`.
-    ///
-    static KeyFace* createKeyFace(
+    // Assumes `cycles` are valid.
+    // Assumes `nextSibling` is either `nullptr` or a child of `parentGroup`.
+    //
+    KeyFace* createKeyFace(
         core::Array<KeyCycle> cycles,
         Group* parentGroup,
         Node* nextSibling = nullptr,
         core::Span<Node*> operationSourceNodes = {},
         core::AnimTime t = {});
 
-    static void removeNode(Node* node, bool removeFreeVertices);
-    static void removeNodeSmart(Node* node, bool removeFreeVertices);
+    void removeNode(Node* node, bool removeFreeVertices);
+    void removeNodeSmart(Node* node, bool removeFreeVertices);
 
-    static void moveToGroup(Node* node, Group* parentGroup, Node* nextSibling = nullptr);
+    void moveToGroup(Node* node, Group* parentGroup, Node* nextSibling = nullptr);
 
-    static void setKeyVertexPosition(KeyVertex* kv, const geometry::Vec2d& pos);
+    void setKeyVertexPosition(KeyVertex* kv, const geometry::Vec2d& pos);
 
-    static void
+    void
     setKeyEdgeCurvePoints(KeyEdge* ke, const geometry::SharedConstVec2dArray& points);
-    static void
-    setKeyEdgeCurveWidths(KeyEdge* ke, const core::SharedConstDoubleArray& widths);
 
-    static void setKeyEdgeSamplingParameters(
+    void setKeyEdgeCurveWidths(KeyEdge* ke, const core::SharedConstDoubleArray& widths);
+
+    void setKeyEdgeSamplingParameters(
         KeyEdge* ke,
         const geometry::CurveSamplingParameters& parameters);
 
 private:
-    static void
-    collectDependentNodes_(Node* node, std::unordered_set<Node*>& dependentNodes);
+    Complex* complex_;
 
-    static void dirtyGeometry_(Cell* cell);
+    // Helper methods
+    void collectDependentNodes_(Node* node, std::unordered_set<Node*>& dependentNodes);
+    void dirtyGeometry_(Cell* cell);
 };
 
 } // namespace vgc::vacomplex::detail

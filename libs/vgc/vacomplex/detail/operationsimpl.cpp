@@ -20,18 +20,26 @@
 
 namespace vgc::vacomplex::detail {
 
-Group* Operations::createRootGroup(Complex* complex) {
+Operations::Operations(Complex* complex)
+    : complex_(complex) {
+
+    if (!complex) {
+        throw LogicError("Cannot instantiate a VAC `Operations` with a null complex.");
+    }
+}
+
+Group* Operations::createRootGroup() {
     const core::Id id = core::genId();
 
-    Group* group = new Group(complex, id);
-    complex->insertNode(std::unique_ptr<Group>(group));
+    Group* group = new Group(complex(), id);
+    complex()->insertNode(std::unique_ptr<Group>(group));
 
     // diff
-    complex->incrementVersion();
-    if (complex->isDiffEnabled_) {
-        complex->diff_.onNodeDiff(group, NodeDiffFlag::Created);
+    complex()->incrementVersion();
+    if (complex()->isDiffEnabled_) {
+        complex()->diff_.onNodeDiff(group, NodeDiffFlag::Created);
     }
-    complex->nodeCreated().emit(group, {});
+    complex()->nodeCreated().emit(group, {});
 
     return group;
 }
@@ -39,18 +47,17 @@ Group* Operations::createRootGroup(Complex* complex) {
 Group* Operations::createGroup(Group* parentGroup, Node* nextSibling) {
     const core::Id id = core::genId();
 
-    Complex* complex = parentGroup->complex();
-    Group* group = new Group(complex, id);
-    complex->insertNode(std::unique_ptr<Group>(group));
+    Group* group = new Group(complex(), id);
+    complex()->insertNode(std::unique_ptr<Group>(group));
     parentGroup->insertChildUnchecked(nextSibling, group);
 
     // diff
-    complex->incrementVersion();
-    if (complex->isDiffEnabled_) {
-        complex->diff_.onNodeDiff(group, NodeDiffFlag::Created);
-        complex->diff_.onNodeDiff(parentGroup, NodeDiffFlag::ChildrenChanged);
+    complex()->incrementVersion();
+    if (complex()->isDiffEnabled_) {
+        complex()->diff_.onNodeDiff(group, NodeDiffFlag::Created);
+        complex()->diff_.onNodeDiff(parentGroup, NodeDiffFlag::ChildrenChanged);
     }
-    complex->nodeCreated().emit(group, {});
+    complex()->nodeCreated().emit(group, {});
 
     return group;
 }
@@ -64,19 +71,18 @@ KeyVertex* Operations::createKeyVertex(
 
     const core::Id id = core::genId();
 
-    Complex* complex = parentGroup->complex();
     KeyVertex* kv = new KeyVertex(id, t);
     kv->position_ = position;
-    complex->insertNode(std::unique_ptr<KeyVertex>(kv));
+    complex()->insertNode(std::unique_ptr<KeyVertex>(kv));
     parentGroup->insertChildUnchecked(nextSibling, kv);
 
     // diff
-    complex->incrementVersion();
-    if (complex->isDiffEnabled_) {
-        complex->diff_.onNodeDiff(kv, NodeDiffFlag::Created);
-        complex->diff_.onNodeDiff(parentGroup, NodeDiffFlag::ChildrenChanged);
+    complex()->incrementVersion();
+    if (complex()->isDiffEnabled_) {
+        complex()->diff_.onNodeDiff(kv, NodeDiffFlag::Created);
+        complex()->diff_.onNodeDiff(parentGroup, NodeDiffFlag::ChildrenChanged);
     }
-    complex->nodeCreated().emit(kv, operationSourceNodes);
+    complex()->nodeCreated().emit(kv, operationSourceNodes);
 
     return kv;
 }
@@ -93,9 +99,8 @@ KeyEdge* Operations::createKeyOpenEdge(
 
     const core::Id id = core::genId();
 
-    Complex* complex = parentGroup->complex();
     KeyEdge* ke = new KeyEdge(id, t);
-    complex->insertNode(std::unique_ptr<KeyEdge>(ke));
+    complex()->insertNode(std::unique_ptr<KeyEdge>(ke));
     parentGroup->insertChildUnchecked(nextSibling, ke);
 
     // init cell
@@ -111,14 +116,14 @@ KeyEdge* Operations::createKeyOpenEdge(
     }
 
     // diff
-    complex->incrementVersion();
-    if (complex->isDiffEnabled_) {
-        complex->diff_.onNodeDiff(ke, NodeDiffFlag::Created);
-        complex->diff_.onNodeDiff(parentGroup, NodeDiffFlag::ChildrenChanged);
-        complex->diff_.onNodeDiff(startVertex, NodeDiffFlag::StarChanged);
-        complex->diff_.onNodeDiff(endVertex, NodeDiffFlag::StarChanged);
+    complex()->incrementVersion();
+    if (complex()->isDiffEnabled_) {
+        complex()->diff_.onNodeDiff(ke, NodeDiffFlag::Created);
+        complex()->diff_.onNodeDiff(parentGroup, NodeDiffFlag::ChildrenChanged);
+        complex()->diff_.onNodeDiff(startVertex, NodeDiffFlag::StarChanged);
+        complex()->diff_.onNodeDiff(endVertex, NodeDiffFlag::StarChanged);
     }
-    complex->nodeCreated().emit(ke, operationSourceNodes);
+    complex()->nodeCreated().emit(ke, operationSourceNodes);
 
     return ke;
 }
@@ -133,23 +138,22 @@ KeyEdge* Operations::createKeyClosedEdge(
 
     const core::Id id = core::genId();
 
-    Complex* complex = parentGroup->complex();
     KeyEdge* ke = new KeyEdge(id, t);
     ke->points_ = points.getShared();
     ke->widths_ = widths.getShared();
-    complex->insertNode(std::unique_ptr<KeyEdge>(ke));
+    complex()->insertNode(std::unique_ptr<KeyEdge>(ke));
     parentGroup->insertChildUnchecked(nextSibling, ke);
 
     // init cell
     // ...
 
     // diff
-    complex->incrementVersion();
-    if (complex->isDiffEnabled_) {
-        complex->diff_.onNodeDiff(ke, NodeDiffFlag::Created);
-        complex->diff_.onNodeDiff(parentGroup, NodeDiffFlag::ChildrenChanged);
+    complex()->incrementVersion();
+    if (complex()->isDiffEnabled_) {
+        complex()->diff_.onNodeDiff(ke, NodeDiffFlag::Created);
+        complex()->diff_.onNodeDiff(parentGroup, NodeDiffFlag::ChildrenChanged);
     }
-    complex->nodeCreated().emit(ke, operationSourceNodes);
+    complex()->nodeCreated().emit(ke, operationSourceNodes);
 
     return ke;
 }
@@ -165,9 +169,8 @@ KeyFace* Operations::createKeyFace(
 
     const core::Id id = core::genId();
 
-    Complex* complex = parentGroup->complex();
     KeyFace* kf = new KeyFace(id, t);
-    complex->insertNode(std::unique_ptr<KeyFace>(kf));
+    complex()->insertNode(std::unique_ptr<KeyFace>(kf));
     parentGroup->insertChildUnchecked(nextSibling, kf);
 
     // init cell
@@ -179,8 +182,8 @@ KeyFace* Operations::createKeyFace(
             if (!boundary.contains(kv)) {
                 kv->star_.append(kf);
                 // diff star
-                if (complex->isDiffEnabled_) {
-                    complex->diff_.onNodeDiff(kv, NodeDiffFlag::StarChanged);
+                if (complex()->isDiffEnabled_) {
+                    complex()->diff_.onNodeDiff(kv, NodeDiffFlag::StarChanged);
                 }
                 boundary.append(kv);
             }
@@ -190,8 +193,8 @@ KeyFace* Operations::createKeyFace(
             if (!boundary.contains(ke)) {
                 ke->star_.append(kf);
                 // diff star
-                if (complex->isDiffEnabled_) {
-                    complex->diff_.onNodeDiff(ke, NodeDiffFlag::StarChanged);
+                if (complex()->isDiffEnabled_) {
+                    complex()->diff_.onNodeDiff(ke, NodeDiffFlag::StarChanged);
                 }
                 boundary.append(ke);
             }
@@ -200,22 +203,21 @@ KeyFace* Operations::createKeyFace(
     kf->boundary_.assign(std::move(boundary));
 
     // diff
-    complex->incrementVersion();
-    if (complex->isDiffEnabled_) {
-        complex->diff_.onNodeDiff(kf, NodeDiffFlag::Created);
-        complex->diff_.onNodeDiff(parentGroup, NodeDiffFlag::ChildrenChanged);
+    complex()->incrementVersion();
+    if (complex()->isDiffEnabled_) {
+        complex()->diff_.onNodeDiff(kf, NodeDiffFlag::Created);
+        complex()->diff_.onNodeDiff(parentGroup, NodeDiffFlag::ChildrenChanged);
     }
-    complex->nodeCreated().emit(kf, operationSourceNodes);
+    complex()->nodeCreated().emit(kf, operationSourceNodes);
 
     return kf;
 }
 
 void Operations::removeNode(Node* node, bool removeFreeVertices) {
 
-    Complex* complex = node->complex();
-    ComplexDiff& diff = complex->diff_;
-    const bool diffEnabled = complex->isDiffEnabled_;
-    const bool isRoot = (complex->rootGroup() == node);
+    ComplexDiff& diff = complex()->diff_;
+    const bool diffEnabled = complex()->isDiffEnabled_;
+    const bool isRoot = (complex()->rootGroup() == node);
 
     std::unordered_set<Node*> toRemoveNodes;
 
@@ -315,8 +317,8 @@ void Operations::removeNode(Node* node, bool removeFreeVertices) {
         }
         toRemoveNode->unlink();
         // Note: must not cause recursion.
-        complex->nodeAboutToBeRemoved().emit(toRemoveNode);
-        complex->nodes_.erase(toRemoveNode->id());
+        complex()->nodeAboutToBeRemoved().emit(toRemoveNode);
+        complex()->nodes_.erase(toRemoveNode->id());
     }
 
     if (isRoot) {
@@ -338,7 +340,6 @@ void Operations::removeNodeSmart(Node* /*node*/, bool /*removeFreeVertices*/) {
 
 void Operations::moveToGroup(Node* node, Group* parentGroup, Node* nextSibling) {
 
-    Complex* complex = parentGroup->complex();
     Group* oldParent = node->parentGroup();
     bool inserted = parentGroup->insertChildUnchecked(nextSibling, node);
     if (!inserted) {
@@ -346,12 +347,12 @@ void Operations::moveToGroup(Node* node, Group* parentGroup, Node* nextSibling) 
     }
 
     // diff
-    complex->incrementVersion();
-    if (complex->isDiffEnabled_) {
+    complex()->incrementVersion();
+    if (complex()->isDiffEnabled_) {
         if (oldParent != parentGroup) {
-            complex->diff_.onNodeDiff(node, NodeDiffFlag::Reparented);
+            complex()->diff_.onNodeDiff(node, NodeDiffFlag::Reparented);
         }
-        complex->diff_.onNodeDiff(parentGroup, NodeDiffFlag::ChildrenChanged);
+        complex()->diff_.onNodeDiff(parentGroup, NodeDiffFlag::ChildrenChanged);
     }
 }
 
@@ -467,12 +468,11 @@ void Operations::dirtyGeometry_(Cell* cell) {
         }
     }
 
-    Complex* complex = cell->complex();
     for (Cell* dirtyCell : dirtyList) {
-        if (complex->isDiffEnabled_) {
-            complex->diff_.onNodeDiff(dirtyCell, NodeDiffFlag::GeometryChanged);
+        if (complex()->isDiffEnabled_) {
+            complex()->diff_.onNodeDiff(dirtyCell, NodeDiffFlag::GeometryChanged);
         }
-        complex->nodeModified().emit(dirtyCell, NodeDiffFlag::GeometryChanged);
+        complex()->nodeModified().emit(dirtyCell, NodeDiffFlag::GeometryChanged);
     }
 }
 
