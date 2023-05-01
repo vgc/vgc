@@ -52,7 +52,13 @@ KeyVertex* Operations::createKeyVertex(
     core::AnimTime t) {
 
     KeyVertex* kv = createNodeAt_<KeyVertex>(parentGroup, nextSibling, t);
+
+    // Topological attributes
+    // -> None
+
+    // Geometric attributes
     kv->position_ = position;
+
     complex()->nodeCreated().emit(kv, operationSourceNodes);
     return kv;
 }
@@ -69,22 +75,15 @@ KeyEdge* Operations::createKeyOpenEdge(
 
     KeyEdge* ke = createNodeAt_<KeyEdge>(parentGroup, nextSibling, t);
 
+    // Topological attributes
+    ke->startVertex_ = startVertex;
+    ke->endVertex_ = endVertex;
+    addToBoundary_(ke, startVertex);
+    addToBoundary_(ke, endVertex);
+
     // Geometric attributes
     ke->points_ = points.getShared();
     ke->widths_ = widths.getShared();
-
-    // Boundary / star
-    ke->startVertex_ = startVertex;
-    ke->endVertex_ = endVertex;
-    ke->boundary_.assign({startVertex, endVertex});
-    startVertex->star_.append(ke);
-    if (endVertex != startVertex) {
-        endVertex->star_.append(ke);
-    }
-    if (complex()->isDiffEnabled_) {
-        complex()->diff_.onNodeDiff(startVertex, NodeDiffFlag::StarChanged);
-        complex()->diff_.onNodeDiff(endVertex, NodeDiffFlag::StarChanged);
-    }
 
     complex()->nodeCreated().emit(ke, operationSourceNodes);
     return ke;
@@ -99,8 +98,14 @@ KeyEdge* Operations::createKeyClosedEdge(
     core::AnimTime t) {
 
     KeyEdge* ke = createNodeAt_<KeyEdge>(parentGroup, nextSibling, t);
+
+    // Topological attributes
+    // -> None
+
+    // Geometric attributes
     ke->points_ = points.getShared();
     ke->widths_ = widths.getShared();
+
     complex()->nodeCreated().emit(ke, operationSourceNodes);
     return ke;
 }
@@ -116,34 +121,14 @@ KeyFace* Operations::createKeyFace(
 
     KeyFace* kf = createNodeAt_<KeyFace>(parentGroup, nextSibling, t);
 
-    // Boundary / star
+    // Topological attributes
     kf->cycles_ = std::move(cycles);
-    core::Array<Cell*> boundary = {};
-    for (const KeyCycle& cycle : kf->cycles_) {
-        KeyVertex* kv = cycle.steinerVertex_;
-        if (kv) {
-            if (!boundary.contains(kv)) {
-                kv->star_.append(kf);
-                // diff star
-                if (complex()->isDiffEnabled_) {
-                    complex()->diff_.onNodeDiff(kv, NodeDiffFlag::StarChanged);
-                }
-                boundary.append(kv);
-            }
-        }
-        for (const KeyHalfedge& halfedge : cycle.halfedges_) {
-            KeyEdge* ke = halfedge.edge();
-            if (!boundary.contains(ke)) {
-                ke->star_.append(kf);
-                // diff star
-                if (complex()->isDiffEnabled_) {
-                    complex()->diff_.onNodeDiff(ke, NodeDiffFlag::StarChanged);
-                }
-                boundary.append(ke);
-            }
-        }
+    for (const KeyCycle& cycle : kf->cycles()) {
+        addToBoundary_(kf, cycle);
     }
-    kf->boundary_.assign(std::move(boundary));
+
+    // Geometric attributes
+    // -> None
 
     complex()->nodeCreated().emit(kf, operationSourceNodes);
     return kf;
@@ -352,6 +337,41 @@ void Operations::setKeyEdgeSamplingParameters(
 
     ke->dirtyInputSampling_();
     dirtyGeometry_(ke); // it also emits the geometry change event
+}
+
+void Operations::addToBoundary_(Cell* boundedCell, Cell* boundingCell) {
+    if (!boundingCell) {
+        throw core::LogicError("Cannot add null cell to boundary.");
+    }
+    else if (!boundedCell) {
+        throw core::LogicError("Cannot modify the boundary of a null cell.");
+    }
+    else if (!boundedCell->boundary_.contains(boundingCell)) {
+        boundedCell->boundary_.append(boundingCell);
+        boundingCell->star_.append(boundedCell);
+        if (complex()->isDiffEnabled_) {
+            complex()->diff_.onNodeDiff(boundedCell, NodeDiffFlag::BoundaryChanged);
+            complex()->diff_.onNodeDiff(boundingCell, NodeDiffFlag::StarChanged);
+        }
+    }
+}
+
+void Operations::addToBoundary_(Cell* face, const KeyCycle& cycle) {
+    if (cycle.steinerVertex()) {
+        // Steiner cycle
+        addToBoundary_(face, cycle.steinerVertex());
+    }
+    else if (cycle.halfedges().first().isClosed()) {
+        // Simple cycle
+        addToBoundary_(face, cycle.halfedges().first().edge());
+    }
+    else {
+        // Non-simple cycle
+        for (const KeyHalfedge& halfedge : cycle.halfedges()) {
+            addToBoundary_(face, halfedge.edge());
+            addToBoundary_(face, halfedge.endVertex());
+        }
+    }
 }
 
 void Operations::collectDependentNodes_(

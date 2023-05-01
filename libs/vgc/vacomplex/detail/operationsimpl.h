@@ -143,6 +143,19 @@ private:
         return node;
     }
 
+    // Adds the `boundingCell` to the boundary of the `boundedCell`.
+    //
+    // This updates both boundingCell->star_ and boundedCell->boundary_ and
+    // sets the appropriate NodeDiff flags.
+    //
+    // Throw a LogicError if either `boundingCell` or `boundedCell` is null.
+    //
+    void addToBoundary_(Cell* boundedCell, Cell* boundingCell);
+
+    // Adds all the cells in the given `cycle` to the boundary of the `face`.
+    //
+    void addToBoundary_(Cell* face, const KeyCycle& cycle);
+
     // Other helper methods
     void collectDependentNodes_(Node* node, std::unordered_set<Node*>& dependentNodes);
     void dirtyGeometry_(Cell* cell);
