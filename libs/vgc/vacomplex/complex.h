@@ -193,10 +193,6 @@ private:
 
     // Guard against recursion when calling clear() / resetRoot()
     bool isBeingCleared_ = false;
-
-    // Helper methods
-    // TODO: move to Operations
-    bool insertNode(std::unique_ptr<Node>&& node);
 };
 
 } // namespace vgc::vacomplex

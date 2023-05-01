@@ -35,8 +35,7 @@ Operations::Operations(Complex* complex)
 Group* Operations::createRootGroup() {
     const core::Id id = core::genId();
 
-    Group* group = new Group(complex(), id);
-    complex()->insertNode(std::unique_ptr<Group>(group));
+    Group* group = createNode_<Group>(complex(), id);
 
     // diff
     if (complex()->isDiffEnabled_) {
@@ -50,8 +49,7 @@ Group* Operations::createRootGroup() {
 Group* Operations::createGroup(Group* parentGroup, Node* nextSibling) {
     const core::Id id = core::genId();
 
-    Group* group = new Group(complex(), id);
-    complex()->insertNode(std::unique_ptr<Group>(group));
+    Group* group = createNode_<Group>(complex(), id);
     parentGroup->insertChildUnchecked(nextSibling, group);
 
     // diff
@@ -73,9 +71,8 @@ KeyVertex* Operations::createKeyVertex(
 
     const core::Id id = core::genId();
 
-    KeyVertex* kv = new KeyVertex(id, t);
+    KeyVertex* kv = createNode_<KeyVertex>(id, t);
     kv->position_ = position;
-    complex()->insertNode(std::unique_ptr<KeyVertex>(kv));
     parentGroup->insertChildUnchecked(nextSibling, kv);
 
     // diff
@@ -100,8 +97,7 @@ KeyEdge* Operations::createKeyOpenEdge(
 
     const core::Id id = core::genId();
 
-    KeyEdge* ke = new KeyEdge(id, t);
-    complex()->insertNode(std::unique_ptr<KeyEdge>(ke));
+    KeyEdge* ke = createNode_<KeyEdge>(id, t);
     parentGroup->insertChildUnchecked(nextSibling, ke);
 
     // init cell
@@ -138,11 +134,11 @@ KeyEdge* Operations::createKeyClosedEdge(
 
     const core::Id id = core::genId();
 
-    KeyEdge* ke = new KeyEdge(id, t);
+    KeyEdge* ke = createNode_<KeyEdge>(id, t);
+    parentGroup->insertChildUnchecked(nextSibling, ke);
+
     ke->points_ = points.getShared();
     ke->widths_ = widths.getShared();
-    complex()->insertNode(std::unique_ptr<KeyEdge>(ke));
-    parentGroup->insertChildUnchecked(nextSibling, ke);
 
     // init cell
     // ...
@@ -168,8 +164,7 @@ KeyFace* Operations::createKeyFace(
 
     const core::Id id = core::genId();
 
-    KeyFace* kf = new KeyFace(id, t);
-    complex()->insertNode(std::unique_ptr<KeyFace>(kf));
+    KeyFace* kf = createNode_<KeyFace>(id, t);
     parentGroup->insertChildUnchecked(nextSibling, kf);
 
     // init cell
