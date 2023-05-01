@@ -33,9 +33,8 @@ Operations::Operations(Complex* complex)
 }
 
 Group* Operations::createRootGroup() {
-    const core::Id id = core::genId();
 
-    Group* group = createNode_<Group>(complex(), id);
+    Group* group = createNode_<Group>(complex());
 
     // diff
     if (complex()->isDiffEnabled_) {
@@ -47,9 +46,8 @@ Group* Operations::createRootGroup() {
 }
 
 Group* Operations::createGroup(Group* parentGroup, Node* nextSibling) {
-    const core::Id id = core::genId();
 
-    Group* group = createNode_<Group>(complex(), id);
+    Group* group = createNode_<Group>(complex());
     parentGroup->insertChildUnchecked(nextSibling, group);
 
     // diff
@@ -69,9 +67,7 @@ KeyVertex* Operations::createKeyVertex(
     core::Span<Node*> operationSourceNodes,
     core::AnimTime t) {
 
-    const core::Id id = core::genId();
-
-    KeyVertex* kv = createNode_<KeyVertex>(id, t);
+    KeyVertex* kv = createNode_<KeyVertex>(t);
     kv->position_ = position;
     parentGroup->insertChildUnchecked(nextSibling, kv);
 
@@ -95,9 +91,7 @@ KeyEdge* Operations::createKeyOpenEdge(
     core::Span<Node*> operationSourceNodes,
     core::AnimTime t) {
 
-    const core::Id id = core::genId();
-
-    KeyEdge* ke = createNode_<KeyEdge>(id, t);
+    KeyEdge* ke = createNode_<KeyEdge>(t);
     parentGroup->insertChildUnchecked(nextSibling, ke);
 
     // init cell
@@ -132,9 +126,7 @@ KeyEdge* Operations::createKeyClosedEdge(
     core::Span<Node*> operationSourceNodes,
     core::AnimTime t) {
 
-    const core::Id id = core::genId();
-
-    KeyEdge* ke = createNode_<KeyEdge>(id, t);
+    KeyEdge* ke = createNode_<KeyEdge>(t);
     parentGroup->insertChildUnchecked(nextSibling, ke);
 
     ke->points_ = points.getShared();
@@ -162,9 +154,7 @@ KeyFace* Operations::createKeyFace(
     core::Span<Node*> operationSourceNodes,
     core::AnimTime t) {
 
-    const core::Id id = core::genId();
-
-    KeyFace* kf = createNode_<KeyFace>(id, t);
+    KeyFace* kf = createNode_<KeyFace>(t);
     parentGroup->insertChildUnchecked(nextSibling, kf);
 
     // init cell

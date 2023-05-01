@@ -475,14 +475,8 @@ public:
     ~Group() override = default;
 
 protected:
-    explicit Group(Complex* complex, core::Id id) noexcept
+    explicit Group(core::Id id, Complex* complex) noexcept
         : Node(id)
-        , complex_(complex) {
-    }
-
-    // Root Node constructor.
-    explicit Group(Complex* complex) noexcept
-        : Node(0)
         , complex_(complex) {
     }
 
