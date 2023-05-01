@@ -117,10 +117,10 @@ private:
     //
     template<class T, typename... Args>
     T* createNode_(Args&&... args) {
-        T* node = new T(args...);
+        core::Id id = core::genId();
+        T* node = new T(id, std::forward<Args>(args)...);
         std::unique_ptr<T> nodePtr(node);
         Complex::NodePtrMap& nodes = complex()->nodes_;
-        core::Id id = node->id();
         bool emplaced = nodes.try_emplace(id, std::move(nodePtr)).second;
         if (!emplaced) {
             throw LogicError("Id collision error.");
