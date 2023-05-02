@@ -103,7 +103,7 @@ bool SelectTool::onMouseRelease(MouseEvent* event) {
                                 candidates.end());
                         }
                         else {
-                            lastDeselectedId = -1;
+                            lastSelectedId = -1;
                             keys.unset(ModifierKey::Alt);
                         }
                     }
@@ -112,7 +112,7 @@ bool SelectTool::onMouseRelease(MouseEvent* event) {
                         core::Id id = c.id();
                         if (!newSelection.contains(id)) {
                             // Deselect last selected if not being reselected
-                            if (keys.has(ModifierKey::Alt) && lastDeselectedId != -1
+                            if (keys.has(ModifierKey::Alt) && lastSelectedId != -1
                                 && id != lastSelectedId) {
                                 //
                                 newSelection.removeOne(lastSelectedId);
