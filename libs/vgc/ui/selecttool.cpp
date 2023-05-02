@@ -126,7 +126,7 @@ bool SelectTool::onMouseRelease(MouseEvent* event) {
                     }
                 }
             }
-            else if (keys == ModifierKey::Ctrl) {
+            else if (keys.has(ModifierKey::Ctrl)) {
                 // remove from multi-selection
 
                 lastSelectedId = -1;
