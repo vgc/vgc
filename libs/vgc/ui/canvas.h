@@ -155,7 +155,9 @@ public:
     /// Computes candidate elements for selection at `position`.
     ///
     /// Returns a list of pairs (element id, distance from position) with
-    /// one pair for each candidate and sorted from closest to farthest.
+    /// one pair for each candidate. This list sorted from closest to
+    /// farthest from `position` and from foreground to background for
+    /// candidates at equal distances from `position`.
     ///
     core::Array<std::pair<core::Id, double>>
     computeSelectionCandidates(const geometry::Vec2f& position) const;
