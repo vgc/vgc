@@ -92,9 +92,7 @@ bool SelectTool::onMouseRelease(MouseEvent* event) {
                     // Otherwise find the first unselected item in the candidates list.
                     //
                     // First, rotate candidates so that last selected becomes first if present.
-                    bool isAlternativeMode =
-                        keys.has(ModifierKey::Alt) && lastSelectedId != -1;
-                    if (isAlternativeMode) {
+                    if (keys.has(ModifierKey::Alt) && lastSelectedId != -1) {
                         Int i = candidates.index([&](const SelectionCandidate& c) {
                             return c.id() == lastSelectedId;
                         });
@@ -104,13 +102,19 @@ bool SelectTool::onMouseRelease(MouseEvent* event) {
                                 candidates.begin() + i,
                                 candidates.end());
                         }
+                        else {
+                            lastDeselectedId = -1;
+                            keys.unset(ModifierKey::Alt);
+                        }
                     }
                     // Then search first unselected candidate in candidates.
                     for (const SelectionCandidate& c : candidates) {
                         core::Id id = c.id();
                         if (!newSelection.contains(id)) {
                             // Deselect last selected if not being reselected
-                            if (isAlternativeMode && id != lastSelectedId) {
+                            if (keys.has(ModifierKey::Alt) && lastDeselectedId != -1
+                                && id != lastSelectedId) {
+                                //
                                 newSelection.removeOne(lastSelectedId);
                             }
                             // select new item
@@ -141,9 +145,7 @@ bool SelectTool::onMouseRelease(MouseEvent* event) {
                     // Otherwise find the first selected item in the candidates list.
                     //
                     // First, rotate candidates so that last deselected becomes first if present.
-                    bool isAlternativeMode =
-                        keys.has(ModifierKey::Alt) && lastDeselectedId != -1;
-                    if (isAlternativeMode) {
+                    if (keys.has(ModifierKey::Alt) && lastDeselectedId != -1) {
                         Int i = candidates.index([&](const SelectionCandidate& c) {
                             return c.id() == lastDeselectedId;
                         });
@@ -153,13 +155,19 @@ bool SelectTool::onMouseRelease(MouseEvent* event) {
                                 candidates.begin() + i,
                                 candidates.end());
                         }
+                        else {
+                            lastDeselectedId = -1;
+                            keys.unset(ModifierKey::Alt);
+                        }
                     }
                     // Then search first selected candidate in candidates.
                     for (const SelectionCandidate& c : candidates) {
                         core::Id id = c.id();
                         if (newSelection.contains(id)) {
                             // Select last deselected if not being deselected
-                            if (isAlternativeMode && id != lastDeselectedId) {
+                            if (keys.has(ModifierKey::Alt) && lastDeselectedId != -1
+                                && id != lastDeselectedId) {
+                                //
                                 if (!newSelection.contains(lastDeselectedId)) {
                                     newSelection.append(lastDeselectedId);
                                 }
