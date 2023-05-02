@@ -84,9 +84,69 @@ bool VacEdgeCellFrameData::isSelectableAt(
     geometry::Rect2d inflatedBbox = bbox_;
     inflatedBbox.setPMin(inflatedBbox.pMin() - Vec2d(tol, tol));
     inflatedBbox.setPMax(inflatedBbox.pMax() + Vec2d(tol, tol));
+    inflatedBbox.uniteWith(strokeBbox_);
     if (!inflatedBbox.contains(position)) {
         return false;
     }
+
+    if (!outlineOnly) {
+        bool isContained = false;
+        // strip iteration
+        const geometry::Vec2dArray& strokeVertices = this->stroke_.xyVertices();
+        const core::IntArray& strokeIndices = this->stroke_.indices();
+        Int j = 0;
+        Vec2d v0, v1;
+        for (Int i : strokeIndices) {
+            if (i == StuvMesh2d::primitiveRestartIndex) {
+                j = 0;
+            }
+            else if (j == 0) {
+                j = 1;
+                v0 = strokeVertices[i];
+            }
+            else if (j == 1) {
+                j = 2;
+                v1 = strokeVertices[i];
+            }
+            else if (j == 2) {
+                j = 3;
+                Vec2d v2 = strokeVertices[i];
+                bool b0 = (v1 - v0).det(position - v0) > 0;
+                bool b1 = (v2 - v1).det(position - v1) > 0;
+                if (b0 == b1) {
+                    bool b2 = (v0 - v2).det(position - v2) > 0;
+                    if (b2 == b0) {
+                        isContained = true;
+                        break;
+                    }
+                }
+                v0 = v1;
+                v1 = v2;
+            }
+            else if (j == 3) {
+                j = 2;
+                Vec2d v2 = strokeVertices[i];
+                bool b0 = (v0 - v1).det(position - v1) > 0;
+                bool b1 = (v2 - v0).det(position - v0) > 0;
+                if (b0 == b1) {
+                    bool b2 = (v1 - v2).det(position - v2) > 0;
+                    if (b2 == b0) {
+                        isContained = true;
+                        break;
+                    }
+                }
+                v0 = v1;
+                v1 = v2;
+            }
+        }
+        if (isContained) {
+            if (outDistance) {
+                *outDistance = 0;
+            }
+            return true;
+        }
+    }
+
     // use "binary search"-style tree/array of bboxes?
 
     if (!sampling_ || sampling_->samples().isEmpty()) {
@@ -120,38 +180,6 @@ bool VacEdgeCellFrameData::isSelectableAt(
                 const double ty = p0p.det(segdir);
                 // does p project in slice?
                 shortestDistance = (std::min)(shortestDistance, std::abs(ty));
-            }
-        }
-
-        if (!outlineOnly) {
-            // does p belongs to quad ?
-            // only works for convex or hourglass quads atm
-            const Vec2d r0 = it0->sidePoint(0);
-            const Vec2d r0p = position - r0;
-            if (it0->normal().det(r0p) <= 0) {
-                const Vec2d l1 = it1->sidePoint(1);
-                const Vec2d l1p = position - l1;
-                if (it1->normal().det(l1p) >= 0) {
-                    const Vec2d r1r0 = (r0 - it1->sidePoint(0));
-                    const Vec2d l0l1 = (l1 - it0->sidePoint(1));
-                    const bool a = r1r0.det(r0p) >= 0;
-                    const bool b = l0l1.det(l1p) >= 0;
-                    // approximate detection of hourglass case
-                    // (false-positives but no false-negatives)
-                    //if (r1r0.dot(l0l1) > 0) {
-                    //    // naive test for "p in quad?" in the hourglass case
-                    //    if (a || b) {
-                    //        return true;
-                    //    }
-                    //}
-                    //else
-                    if (a && b) {
-                        if (outDistance) {
-                            *outDistance = 0;
-                        }
-                        return true;
-                    }
-                }
             }
         }
     }
