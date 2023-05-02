@@ -152,6 +152,16 @@ public:
     ///
     void selectAlternativeAtPosition(const geometry::Vec2f& position);
 
+    /// Computes candidate elements for selection at `position`.
+    ///
+    /// Returns a list of pairs (element id, distance from position) with
+    /// one pair for each candidate. This list sorted from closest to
+    /// farthest from `position` and from foreground to background for
+    /// candidates at equal distances from `position`.
+    ///
+    core::Array<std::pair<core::Id, double>>
+    computeSelectionCandidates(const geometry::Vec2f& position) const;
+
 protected:
     // Reimplementation of Widget virtual methods
     bool onKeyPress(KeyEvent* event) override;
@@ -194,8 +204,6 @@ private:
 
     // Selection
     core::Id selectedElementId_ = -1;
-    core::Array<std::pair<core::Id, double>>
-    computeSelectionCandidates_(const geometry::Vec2f& position) const;
     workspace::Element* selectedElement_() const;
 
     // Graphics resources
