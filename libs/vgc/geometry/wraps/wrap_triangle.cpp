@@ -111,6 +111,8 @@ void wrap_triangle(py::module& m, const std::string& name) {
         .def(py::self == py::self)
         .def(py::self != py::self)
 
+        .def("contains", &This::contains)
+
         .def("__repr__", [](const This& t) { return vgc::core::toString(t); });
 }
 
