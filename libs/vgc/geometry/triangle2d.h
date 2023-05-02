@@ -236,7 +236,6 @@ public:
     /// Returns whether `point` is inside this triangle (borders included).
     ///
     bool contains(const Vec2d& point) {
-        Vec2d v2 = strokeVertices[i];
         double det1 = (data_[1] - data_[0]).det(point - data_[0]);
         double det2 = (data_[2] - data_[1]).det(point - data_[1]);
         if (det1 >= 0 && det2 >= 0) {
