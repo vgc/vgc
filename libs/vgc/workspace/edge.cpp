@@ -17,6 +17,7 @@
 #include <vgc/workspace/edge.h>
 
 #include <vgc/core/span.h>
+#include <vgc/geometry/triangle2d.h>
 #include <vgc/workspace/colors.h>
 #include <vgc/workspace/vertex.h>
 #include <vgc/workspace/workspace.h>
@@ -95,48 +96,27 @@ bool VacEdgeCellFrameData::isSelectableAt(
         const geometry::Vec2dArray& strokeVertices = this->stroke_.xyVertices();
         const core::IntArray& strokeIndices = this->stroke_.indices();
         Int j = 0;
-        Vec2d v0, v1;
+        bool isTriangleDefined = false;
+        geometry::Triangle2d triangle;
         for (Int i : strokeIndices) {
             if (i == StuvMesh2d::primitiveRestartIndex) {
+                // new strip
+                isTriangleDefined = false;
                 j = 0;
             }
-            else if (j == 0) {
-                j = 1;
-                v0 = strokeVertices[i];
-            }
-            else if (j == 1) {
-                j = 2;
-                v1 = strokeVertices[i];
-            }
-            else if (j == 2) {
-                j = 3;
-                Vec2d v2 = strokeVertices[i];
-                bool b0 = (v1 - v0).det(position - v0) > 0;
-                bool b1 = (v2 - v1).det(position - v1) > 0;
-                if (b0 == b1) {
-                    bool b2 = (v0 - v2).det(position - v2) > 0;
-                    if (b2 == b0) {
-                        isContained = true;
-                        break;
-                    }
+            else {
+                triangle[j] = strokeVertices[i];
+                j += 1;
+
+                if (j == 3) {
+                    isTriangleDefined = true;
+                    j = 0;
                 }
-                v0 = v1;
-                v1 = v2;
-            }
-            else if (j == 3) {
-                j = 2;
-                Vec2d v2 = strokeVertices[i];
-                bool b0 = (v0 - v1).det(position - v1) > 0;
-                bool b1 = (v2 - v0).det(position - v0) > 0;
-                if (b0 == b1) {
-                    bool b2 = (v1 - v2).det(position - v2) > 0;
-                    if (b2 == b0) {
-                        isContained = true;
-                        break;
-                    }
+
+                if (isTriangleDefined && triangle.contains(position)) {
+                    isContained = true;
+                    break;
                 }
-                v0 = v1;
-                v1 = v2;
             }
         }
         if (isContained) {
