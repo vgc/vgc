@@ -215,59 +215,10 @@ void Canvas::clearSelection() {
     selectedElementIds_.clear();
 }
 
-void Canvas::selectAtPosition(const geometry::Vec2f& position) {
-    core::Array<std::pair<core::Id, double>> candidates =
-        computeSelectionCandidates(position);
-    if (candidates.isEmpty()) {
-        clearSelection();
-    }
-    else {
-        selectedElementIds_.assign(1, candidates.first().first);
-    }
-}
-
-// Note: we recompute the selection candidates at each click. We could
-// optimize performance by keeping the candidates in cache for a given position, but:
-// - Alternate selection is a rare operation compared to normal selection.
-// - It isn't super important to make alternate selection faster than normal selection.
-// - The mouse position may move slighlty anyway.
-// - We would have to be careful to invalidate the cache when the workspace changes, etc.
-//
-// Therefore, it is not worth the added complexity and bug-proneness to keep the
-// candidates in cache.
-//
-void Canvas::selectAlternativeAtPosition(const geometry::Vec2f& position) {
-    core::Array<std::pair<core::Id, double>> candidates =
-        computeSelectionCandidates(position);
-    if (candidates.isEmpty()) {
-        clearSelection();
-    }
-    else {
-        // If there is a currently one selected element, and if it is in the
-        // candidates, then we select the next candidate in order. Otherwise,
-        // we select the first candidate.
-        //
-        bool found = false;
-        if (selectedElementIds_.length() == 1) {
-            for (Int i = 0; i < candidates.length(); ++i) {
-                if (candidates[i].first == selectedElementIds_[0]) {
-                    Int j = (i + 1) % candidates.length();
-                    selectedElementIds_[0] = candidates[j].first;
-                    found = true;
-                    break;
-                }
-            }
-        }
-        if (!found) {
-            selectedElementIds_.assign(1, candidates.first().first);
-        }
-    }
-}
-
-core::Array<std::pair<core::Id, double>>
+core::Array<SelectionCandidate>
 Canvas::computeSelectionCandidates(const geometry::Vec2f& position) const {
 
-    core::Array<std::pair<core::Id, double>> res;
+    core::Array<SelectionCandidate> result;
 
     geometry::Vec2d viewCoords(position);
     geometry::Vec2d worldCoords =
@@ -286,23 +237,26 @@ Canvas::computeSelectionCandidates(const geometry::Vec2f& position) const {
                 }
                 double dist = 0;
                 if (e->isSelectableAt(worldCoords, false, tol, &dist)) {
-                    res.emplaceLast(e->id(), dist);
+                    result.emplaceLast(e->id(), dist);
                 }
             });
 
         // order from front to back
-        std::reverse(res.begin(), res.end());
+        std::reverse(result.begin(), result.end());
 
         // sort by selection distance, stable to keep Z order priority
-        std::stable_sort(res.begin(), res.end(), [](const auto& a, const auto& b) {
-            return a.second < b.second;
-        });
+        std::stable_sort(
+            result.begin(),
+            result.end(),
+            [](const SelectionCandidate& a, const SelectionCandidate& b) {
+                return a.distance() < b.distance();
+            });
     }
 
-    return res;
+    return result;
 }
 
-void Canvas::setSelection(core::Array<core::Id> elementIds) {
+void Canvas::setSelection(const core::Array<core::Id>& elementIds) {
     selectedElementIds_.clear();
     for (core::Id id : elementIds) {
         if (!selectedElementIds_.contains(id)) {
