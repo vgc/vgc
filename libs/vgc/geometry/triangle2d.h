@@ -235,20 +235,13 @@ public:
 
     /// Returns whether `point` is inside this triangle (borders included).
     ///
-    bool contains(const Vec2d& point) {
+    bool contains(const Vec2d& point) const {
         double det1 = (data_[1] - data_[0]).det(point - data_[0]);
         double det2 = (data_[2] - data_[1]).det(point - data_[1]);
-        if (det1 >= 0 && det2 >= 0) {
-            double det3 = (data_[0] - data_[2]).det(point - data_[2]);
-            return (det3 >= 0);
-        }
-        else if (det1 <= 0 && det2 <= 0) {
-            double det3 = (data_[0] - data_[2]).det(point - data_[2]);
-            return (det3 <= 0);
-        }
-        else {
-            return false;
-        }
+        double det3 = (data_[0] - data_[2]).det(point - data_[2]);
+        bool hasPos = (det1 > 0) || (det2 > 0) || (det3 > 0);
+        bool hasNeg = (det1 < 0) || (det2 < 0) || (det3 < 0);
+        return !(hasPos && hasNeg);
     }
 
 private:
