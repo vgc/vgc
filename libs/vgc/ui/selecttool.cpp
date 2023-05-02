@@ -115,6 +115,7 @@ bool SelectTool::onMouseRelease(MouseEvent* event) {
                             newSelection.append(id);
                             updateSelection = true;
                             lastSelectedId = id;
+                            break;
                         }
                     }
                 }
@@ -163,6 +164,7 @@ bool SelectTool::onMouseRelease(MouseEvent* event) {
                             newSelection.append(id);
                             updateSelection = true;
                             lastSelectedId = id;
+                            break;
                         }
                     }
                 }
