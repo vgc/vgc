@@ -217,7 +217,6 @@ bool SelectTool::onMouseRelease(MouseEvent* event) {
 
             if (updateSelection) {
                 canvas->setSelection(newSelection);
-                requestRepaint();
             }
             return true;
         }

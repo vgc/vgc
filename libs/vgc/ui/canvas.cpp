@@ -263,6 +263,7 @@ void Canvas::setSelection(const core::Array<core::Id>& elementIds) {
             selectedElementIds_.append(id);
         }
     }
+    requestRepaint();
 }
 
 core::Array<core::Id> Canvas::selection() const {
