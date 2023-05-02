@@ -209,10 +209,8 @@ bool SelectTool::onMouseRelease(MouseEvent* event) {
                 lastDeselectedId = -1;
                 lastSelectedId = -1;
 
-                if (!newSelection.isEmpty()) {
-                    newSelection.clear();
-                    updateSelection = true;
-                }
+                newSelection.clear();
+                updateSelection = true;
             }
 
             if (updateSelection) {
