@@ -212,7 +212,7 @@ void deleteElement(workspace::Element* element, workspace::Workspace* workspace)
 } // namespace
 
 void Canvas::clearSelection() {
-    selectedElementId_ = -1;
+    selectedElementIds_.clear();
 }
 
 void Canvas::selectAtPosition(const geometry::Vec2f& position) {
@@ -222,7 +222,7 @@ void Canvas::selectAtPosition(const geometry::Vec2f& position) {
         clearSelection();
     }
     else {
-        selectedElementId_ = candidates.first().first;
+        selectedElementIds_.assign(1, candidates.first().first);
     }
 }
 
@@ -243,23 +243,23 @@ void Canvas::selectAlternativeAtPosition(const geometry::Vec2f& position) {
         clearSelection();
     }
     else {
-        // If there is a currently selected element, and if it is in the
+        // If there is a currently one selected element, and if it is in the
         // candidates, then we select the next candidate in order. Otherwise,
         // we select the first candidate.
         //
         bool found = false;
-        if (selectedElementId_ != -1) {
+        if (selectedElementIds_.length() == 1) {
             for (Int i = 0; i < candidates.length(); ++i) {
-                if (candidates[i].first == selectedElementId_) {
+                if (candidates[i].first == selectedElementIds_[0]) {
                     Int j = (i + 1) % candidates.length();
-                    selectedElementId_ = candidates[j].first;
+                    selectedElementIds_[0] = candidates[j].first;
                     found = true;
                     break;
                 }
             }
         }
         if (!found) {
-            selectedElementId_ = candidates.first().first;
+            selectedElementIds_.assign(1, candidates.first().first);
         }
     }
 }
@@ -300,6 +300,19 @@ Canvas::computeSelectionCandidates(const geometry::Vec2f& position) const {
     }
 
     return res;
+}
+
+void Canvas::setSelection(core::Array<core::Id> elementIds) {
+    selectedElementIds_.clear();
+    for (core::Id id : elementIds) {
+        if (!selectedElementIds_.contains(id)) {
+            selectedElementIds_.append(id);
+        }
+    }
+}
+
+core::Array<core::Id> Canvas::selection() const {
+    return selectedElementIds_;
 }
 
 bool Canvas::onKeyPress(KeyEvent* event) {
@@ -345,7 +358,9 @@ bool Canvas::onKeyPress(KeyEvent* event) {
         break;
     case Key::Backspace:
     case Key::Delete:
-        deleteElement(selectedElement_(), workspace());
+        for (workspace::Element* selectedElement : selectedElements_()) {
+            deleteElement(selectedElement, workspace());
+        }
         break;
     default:
         return false;
@@ -601,8 +616,7 @@ void Canvas::onPaintDraw(graphics::Engine* engine, PaintOptions options) {
         reTesselate = false;
     }
 
-    workspace::Element* selectedElement = selectedElement_();
-    if (selectedElement) {
+    for (workspace::Element* selectedElement : selectedElements_()) {
         selectedElement->paint(engine, {}, workspace::PaintOption::Selected);
     }
 
@@ -628,13 +642,17 @@ void Canvas::updateChildrenGeometry() {
     }
 }
 
-workspace::Element* Canvas::selectedElement_() const {
-    if (workspace() && selectedElementId_ >= 0) {
-        return workspace()->find(selectedElementId_);
+core::Array<workspace::Element*> Canvas::selectedElements_() const {
+    core::Array<workspace::Element*> result;
+    if (workspace()) {
+        for (core::Id id : selectedElementIds_) {
+            workspace::Element* element = workspace()->find(id);
+            if (element && !result.contains(element)) {
+                result.append(element);
+            }
+        }
     }
-    else {
-        return nullptr;
-    }
+    return result;
 }
 
 } // namespace vgc::ui

@@ -162,6 +162,14 @@ public:
     core::Array<std::pair<core::Id, double>>
     computeSelectionCandidates(const geometry::Vec2f& position) const;
 
+    /// Sets the current selected elements.
+    ///
+    void setSelection(core::Array<core::Id> elementIds);
+
+    /// Returns the list of current selected elements.
+    ///
+    core::Array<core::Id> selection() const;
+
 protected:
     // Reimplementation of Widget virtual methods
     bool onKeyPress(KeyEvent* event) override;
@@ -203,8 +211,8 @@ private:
     geometry::Camera2d cameraAtPress_;
 
     // Selection
-    core::Id selectedElementId_ = -1;
-    workspace::Element* selectedElement_() const;
+    core::Array<core::Id> selectedElementIds_;
+    core::Array<workspace::Element*> selectedElements_() const;
 
     // Graphics resources
     // VgcGraph

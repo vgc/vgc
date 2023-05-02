@@ -41,6 +41,27 @@ bool SelectTool::onMousePress(MouseEvent* event) {
         if (event->modifierKeys() == ModifierKey::Alt) {
             canvas->selectAlternativeAtPosition(event->position());
         }
+        else if (event->modifierKeys() == ModifierKey::Shift) {
+            core::Array<std::pair<core::Id, double>> candidates =
+                canvas->computeSelectionCandidates(event->position());
+            core::Array<core::Id> selection = canvas->selection();
+            // selection has priority in this mode.
+            bool hasSelectedAnElement = false;
+            for (const auto& pair : candidates) {
+                if (!selection.contains(pair.first)) {
+                    selection.append(pair.first);
+                    canvas->setSelection(selection);
+                    hasSelectedAnElement = true;
+                    break;
+                }
+            }
+            // if no element has been selected then we deselect
+            // the first candidate.
+            if (!hasSelectedAnElement && !candidates.isEmpty()) {
+                selection.removeOne(candidates.first().first);
+                canvas->setSelection(selection);
+            }
+        }
         else {
             canvas->selectAtPosition(event->position());
         }
