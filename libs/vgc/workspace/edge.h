@@ -27,7 +27,7 @@
 #include <vgc/geometry/curve.h>
 #include <vgc/geometry/vec2d.h>
 #include <vgc/geometry/vec2f.h>
-#include <vgc/geometry/vec4d.h>
+#include <vgc/geometry/vec3f.h>
 #include <vgc/geometry/vec4f.h>
 #include <vgc/graphics/engine.h>
 #include <vgc/graphics/geometryview.h>
@@ -49,7 +49,10 @@ namespace vgc::workspace {
 // Component (drawn and selectable..)
 
 class VGC_WORKSPACE_API StuvMesh2d {
+    // TODO: triangle iterator
 public:
+    static constexpr Int primitiveRestartIndex = -1;
+
     StuvMesh2d() noexcept = default;
 
     void reset(bool isStrip) {
@@ -70,7 +73,7 @@ public:
     }
 
     /// Returns the stuv component of vertices.
-    const geometry::Vec4dArray& stuvVertices() const {
+    const geometry::Vec4fArray& stuvVertices() const {
         return stuvVertices_;
     }
 
@@ -99,11 +102,15 @@ public:
         return xyVertices_.length();
     }
 
-    Int appendVertex(const geometry::Vec2d& position, const geometry::Vec4d& stuv) {
+    Int appendVertex(const geometry::Vec2d& position, const geometry::Vec4f& stuv) {
         Int idx = xyVertices_.length();
         xyVertices_.emplaceLast(position);
         stuvVertices_.emplaceLast(stuv);
         return idx;
+    }
+
+    Int numIndices() const {
+        return indices_.length();
     }
 
     void appendIndex(Int i) {
@@ -135,13 +142,13 @@ public:
     }
 
     void appendPrimitiveRestartIndex() {
-        indices_.append(-1);
+        indices_.append(primitiveRestartIndex);
         hasPrimRestart_ = true;
     }
 
 private:
     geometry::Vec2dArray xyVertices_;
-    geometry::Vec4dArray stuvVertices_;
+    geometry::Vec4fArray stuvVertices_;
     core::IntArray indices_;
     bool isStrip_ = false;
     bool hasPrimRestart_ = false;
@@ -155,7 +162,7 @@ public:
         mesh_.reset(false);
     }
 
-    Int appendVertex(const geometry::Vec2d& position, const geometry::Vec4d& stuv) {
+    Int appendVertex(const geometry::Vec2d& position, const geometry::Vec4f& stuv) {
         return mesh_.appendVertex(position, stuv);
     }
 
@@ -274,12 +281,14 @@ private:
 namespace detail {
 
 struct EdgeJoinPatchSample {
-    geometry::Vec2d centerPoint;
     geometry::Vec2d sidePoint;
-    geometry::Vec4f sideSTUV;
-    geometry::Vec2f centerSU;
+    geometry::Vec3f sideSTV;
     Int centerPointSampleIndex = -1;
+    geometry::Vec2d centerPoint;
+    geometry::Vec3f centerSTV;
 };
+
+constexpr size_t aaaa = sizeof(EdgeJoinPatchSample);
 
 struct EdgeJoinPatchMergeLocation {
     Int halfedgeNextSampleIndex = 0;
@@ -288,7 +297,13 @@ struct EdgeJoinPatchMergeLocation {
 };
 
 struct EdgeJoinPatch {
+    // Constraints:
+    // - the samples at join origin must have a `s` of 0 for both sides.
+    // - the samples at merge location must have the same `s`.
+    // - the samples must be ordered from extension to merge location.
     std::array<core::Array<EdgeJoinPatchSample>, 2> sideSamples;
+    float extensionS = 0.f;
+    float overrideS = 0.f;
     EdgeJoinPatchMergeLocation mergeLocation = {};
     bool isCap = false;
 
@@ -297,6 +312,8 @@ struct EdgeJoinPatch {
         sideSamples[1].clear();
         mergeLocation = {};
         isCap = false;
+        extensionS = 0.f;
+        overrideS = 0.f;
     }
 };
 
@@ -366,6 +383,7 @@ public:
 private:
     core::AnimTime time_;
     geometry::Rect2d bbox_ = {};
+    geometry::Rect2d strokeBbox_ = {};
 
     // stage PreJoinGeometry
     std::shared_ptr<const vacomplex::EdgeSampling> sampling_;
