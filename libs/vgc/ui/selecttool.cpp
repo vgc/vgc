@@ -133,19 +133,19 @@ bool SelectTool::onMouseRelease(MouseEvent* event) {
                 }
                 else {
                     newSelection = canvas->selection();
-                    // If alternative mode is on and the last selected item is in the candidates:
-                    //      Find the first unselected item starting from the last selected item
+                    // If alternative mode is on and the last deselected item is in the candidates:
+                    //      Find the first selected item starting from the last deselected item
                     //      in the candidates list after having rotated it in such a way that the
-                    //      last selected item is the first candidate. If such item exists and is
-                    //      not the last selected item then deselect the last selected item.
-                    // Otherwise find the first unselected item in the candidates list.
+                    //      last deselected item is the first candidate. If such item exists and is
+                    //      not the last deselected item then select the last deselected item.
+                    // Otherwise find the first selected item in the candidates list.
                     //
-                    // First, rotate candidates so that last selected becomes first if present.
+                    // First, rotate candidates so that last deselected becomes first if present.
                     bool isAlternativeMode =
-                        keys.has(ModifierKey::Alt) && lastSelectedId != -1;
+                        keys.has(ModifierKey::Alt) && lastDeselectedId != -1;
                     if (isAlternativeMode) {
                         Int i = candidates.index([&](const SelectionCandidate& c) {
-                            return c.id() == lastSelectedId;
+                            return c.id() == lastDeselectedId;
                         });
                         if (i >= 0) {
                             std::rotate(
@@ -154,18 +154,20 @@ bool SelectTool::onMouseRelease(MouseEvent* event) {
                                 candidates.end());
                         }
                     }
-                    // Then search first unselected candidate in candidates.
+                    // Then search first selected candidate in candidates.
                     for (const SelectionCandidate& c : candidates) {
                         core::Id id = c.id();
-                        if (!newSelection.contains(id)) {
-                            // Deselect last selected if not being reselected
-                            if (isAlternativeMode && id != lastSelectedId) {
-                                newSelection.removeOne(lastSelectedId);
+                        if (newSelection.contains(id)) {
+                            // Select last deselected if not being deselected
+                            if (isAlternativeMode && id != lastDeselectedId) {
+                                if (!newSelection.contains(lastDeselectedId)) {
+                                    newSelection.append(lastDeselectedId);
+                                }
                             }
-                            // select new item
-                            newSelection.append(id);
+                            // deselect new item
+                            newSelection.removeOne(id);
                             updateSelection = true;
-                            lastSelectedId = id;
+                            lastDeselectedId = id;
                             break;
                         }
                     }
