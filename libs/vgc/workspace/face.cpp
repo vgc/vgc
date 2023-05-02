@@ -113,7 +113,7 @@ bool VacFaceCellFrameData::isSelectableAt(
 
     bool isContained = false;
 
-    geometry::Vec2f positionF(position);
+    Vec2f positionF(position);
     geometry::Triangle2f triangle;
     for (Int i = 0; i < triangulation_.length() - 5; i += 6) {
         triangle.setA(triangulation_[i + 0], triangulation_[i + 1]);
