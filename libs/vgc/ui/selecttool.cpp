@@ -40,6 +40,142 @@ bool SelectTool::onMousePress(MouseEvent* /*event*/) {
     return false;
 }
 
+namespace {
+
+core::Id
+indexInCandidates(const core::Array<SelectionCandidate>& candidates, core::Id itemId) {
+    return candidates.index(                       //
+        [&](const SelectionCandidate& candidate) { //
+            return candidate.id() == itemId;
+        });
+}
+
+// If the given item is a candidate, then returns the item and rotates the
+// candidates such that the item becomes last.
+//
+// Otherwise, return -1.
+//
+core::Id rotateCandidates(core::Array<SelectionCandidate>& candidates, core::Id item) {
+    Int i = indexInCandidates(candidates, item);
+    if (i >= 0) {
+        std::rotate(candidates.begin(), candidates.begin() + i, candidates.end());
+        return item;
+    }
+    else {
+        return -1;
+    }
+}
+
+// Returns the item added to the selection, if any. Otherwise returns -1.
+//
+core::Id addToSelection(
+    core::Array<core::Id>& selection,
+    core::Array<SelectionCandidate>& candidates,
+    bool isAlternativeMode,
+    core::Id lastSelectedId) {
+
+    // If no candidates, then we preserve the current selection.
+    //
+    if (candidates.isEmpty()) {
+        return -1;
+    }
+
+    // If Alt is pressed and the last selected item is a candidate, then we
+    // want to deselect it and select the next unselected candidate instead.
+    //
+    // We implement this behavior by rotating the candidates such that the last
+    // selected item becomes the last candidate, and we remember whether we
+    // should deselect it (unless later re-selected).
+    //
+    core::Id itemToDeselect = -1;
+    if (isAlternativeMode && lastSelectedId != -1) {
+        itemToDeselect = rotateCandidates(candidates, lastSelectedId);
+    }
+
+    // Select the first unselected candidate.
+    //
+    for (const SelectionCandidate& c : candidates) {
+        core::Id id = c.id();
+        if (!selection.contains(id)) {
+            if (itemToDeselect != -1 && itemToDeselect != id) {
+                selection.removeOne(itemToDeselect);
+            }
+            selection.append(id);
+            return id;
+        }
+    }
+    return -1;
+}
+
+// Returns the item removed from the selection, if any. Otherwise returns -1.
+//
+core::Id removeFromSelection(
+    core::Array<core::Id>& selection,
+    core::Array<SelectionCandidate>& candidates,
+    bool isAlternativeMode,
+    core::Id lastDeselectedId) {
+
+    // If no candidates, then we preserve the current selection.
+    //
+    if (candidates.isEmpty()) {
+        return -1;
+    }
+
+    // If Alt is pressed and the last deselected item is a candidate, then we
+    // want to reselect it and deselect the next selected candidate instead.
+    //
+    // We implement this behavior by rotating the candidates such that the last
+    // deselected item becomes the last candidate, and we remember whether we
+    // should reselect it (unless later re-deselected).
+    //
+    core::Id itemToReselect = -1;
+    if (isAlternativeMode && lastDeselectedId != -1) {
+        itemToReselect = rotateCandidates(candidates, lastDeselectedId);
+    }
+
+    // Deselect the first selected candidate.
+    //
+    for (const SelectionCandidate& c : candidates) {
+        core::Id id = c.id();
+        if (selection.contains(id)) {
+            if (itemToReselect != -1 && itemToReselect != id) {
+                selection.append(itemToReselect);
+            }
+            selection.removeOne(id);
+            return id;
+        }
+    }
+    return -1;
+}
+
+// Returns the item to select, if any. Otherwise returns -1.
+//
+core::Id selectSingleItem(
+    const core::Array<SelectionCandidate>& candidates,
+    bool isAlternativeMode,
+    core::Id lastSelectedId) {
+
+    // If no candidates, then we clear selection.
+    //
+    if (candidates.isEmpty()) {
+        return -1;
+    }
+
+    // Return the first candidate, unless in alternative mode when we return
+    // the candidate after the last selected item.
+    //
+    Int j = 0;
+    if (isAlternativeMode && lastSelectedId != -1) {
+        Int i = indexInCandidates(candidates, lastSelectedId);
+        if (i != -1) {
+            j = (i + 1) % candidates.length();
+        }
+    }
+    return candidates[j].id();
+}
+
+} // namespace
+
 bool SelectTool::onMouseRelease(MouseEvent* event) {
 
     ui::Canvas* canvas = this->canvas();
@@ -56,179 +192,71 @@ bool SelectTool::onMouseRelease(MouseEvent* event) {
             // todo
         }
         else {
+            // Fast return if there is an unsupported modifier key
             ModifierKeys unsupportedKeys =
                 (ModifierKey::Ctrl | ModifierKey::Alt | ModifierKey::Shift).toggleAll();
             if (keys.hasAny(unsupportedKeys)) {
-                // unsupported modifier key
                 return false;
             }
 
-            bool updateSelection = false;
-            core::Array<core::Id> newSelection;
+            // Get current selection and selection candidates
+            core::Array<core::Id> selection = canvas->selection();
             core::Array<SelectionCandidate> candidates =
                 canvas->computeSelectionCandidates(event->position());
 
+            // Compute new selection
+            bool isAlternativeMode = keys.has(ModifierKey::Alt);
+            bool selectionChanged = false;
             if (keys.hasAll(ModifierKey::Shift | ModifierKey::Ctrl)) {
-                // toggle, todo
-                lastSelectedId = -1;
-                lastDeselectedId = -1;
+                // TODO: Toggle selection.
             }
             else if (keys.has(ModifierKey::Shift)) {
-                // add to multi-selection
-
-                lastDeselectedId = -1;
-
-                if (candidates.isEmpty()) {
-                    // do not change the current selection
-                    lastSelectedId = -1;
-                }
-                else {
-                    newSelection = canvas->selection();
-                    // If alternative mode is on and the last selected item is in the candidates:
-                    //      Find the first unselected item starting from the last selected item
-                    //      in the candidates list after having rotated it in such a way that the
-                    //      last selected item is the first candidate. If such item exists and is
-                    //      not the last selected item then deselect the last selected item.
-                    // Otherwise find the first unselected item in the candidates list.
-                    //
-                    // First, rotate candidates so that last selected becomes first if present.
-                    if (keys.has(ModifierKey::Alt) && lastSelectedId != -1) {
-                        Int i = candidates.index([&](const SelectionCandidate& c) {
-                            return c.id() == lastSelectedId;
-                        });
-                        if (i >= 0) {
-                            std::rotate(
-                                candidates.begin(),
-                                candidates.begin() + i,
-                                candidates.end());
-                        }
-                        else {
-                            lastSelectedId = -1;
-                            keys.unset(ModifierKey::Alt);
-                        }
-                    }
-                    // Then search first unselected candidate in candidates.
-                    for (const SelectionCandidate& c : candidates) {
-                        core::Id id = c.id();
-                        if (!newSelection.contains(id)) {
-                            // Deselect last selected if not being reselected
-                            if (keys.has(ModifierKey::Alt) && lastSelectedId != -1
-                                && id != lastSelectedId) {
-                                //
-                                newSelection.removeOne(lastSelectedId);
-                            }
-                            // select new item
-                            newSelection.append(id);
-                            updateSelection = true;
-                            lastSelectedId = id;
-                            break;
-                        }
-                    }
+                core::Id selectedId = addToSelection(
+                    selection, candidates, isAlternativeMode, lastSelectedId);
+                if (selectedId != -1) {
+                    selectionChanged = true;
+                    lastSelectedId = selectedId;
+                    lastDeselectedId = -1;
                 }
             }
             else if (keys.has(ModifierKey::Ctrl)) {
-                // remove from multi-selection
+                core::Id deselectedId = removeFromSelection(
+                    selection, candidates, isAlternativeMode, lastDeselectedId);
+                if (deselectedId != -1) {
+                    selectionChanged = true;
+                    lastSelectedId = -1;
+                    lastDeselectedId = deselectedId;
+                }
+            }
+            else {
+                core::Id selectedId =
+                    selectSingleItem(candidates, isAlternativeMode, lastSelectedId);
 
-                lastSelectedId = -1;
-
-                if (candidates.isEmpty()) {
-                    // do not change the current selection
+                if (selectedId != -1) {
+                    if (selection.length() != 1 || selection.first() != selectedId) {
+                        selection.assign(1, selectedId);
+                        selectionChanged = true;
+                    }
+                    lastSelectedId = selectedId;
                     lastDeselectedId = -1;
                 }
                 else {
-                    newSelection = canvas->selection();
-                    // If alternative mode is on and the last deselected item is in the candidates:
-                    //      Find the first selected item starting from the last deselected item
-                    //      in the candidates list after having rotated it in such a way that the
-                    //      last deselected item is the first candidate. If such item exists and is
-                    //      not the last deselected item then select the last deselected item.
-                    // Otherwise find the first selected item in the candidates list.
-                    //
-                    // First, rotate candidates so that last deselected becomes first if present.
-                    if (keys.has(ModifierKey::Alt) && lastDeselectedId != -1) {
-                        Int i = candidates.index([&](const SelectionCandidate& c) {
-                            return c.id() == lastDeselectedId;
-                        });
-                        if (i >= 0) {
-                            std::rotate(
-                                candidates.begin(),
-                                candidates.begin() + i,
-                                candidates.end());
-                        }
-                        else {
-                            lastDeselectedId = -1;
-                            keys.unset(ModifierKey::Alt);
-                        }
+                    if (!selection.isEmpty()) {
+                        selection.clear();
+                        selectionChanged = true;
                     }
-                    // Then search first selected candidate in candidates.
-                    for (const SelectionCandidate& c : candidates) {
-                        core::Id id = c.id();
-                        if (newSelection.contains(id)) {
-                            // Select last deselected if not being deselected
-                            if (keys.has(ModifierKey::Alt) && lastDeselectedId != -1
-                                && id != lastDeselectedId) {
-                                //
-                                if (!newSelection.contains(lastDeselectedId)) {
-                                    newSelection.append(lastDeselectedId);
-                                }
-                            }
-                            // deselect new item
-                            newSelection.removeOne(id);
-                            updateSelection = true;
-                            lastDeselectedId = id;
-                            break;
-                        }
-                    }
+                    lastSelectedId = -1;
+                    lastDeselectedId = -1;
                 }
             }
-            else if (keys == ModifierKey::Alt) {
-                // single selection with alternative
 
-                lastDeselectedId = -1;
-
-                if (!candidates.isEmpty()) {
-                    // find first candidate after last selected item in candidates
-                    // wrapped if last item is in the candidates, otherwise use
-                    // first candidate entry in candidates.
-                    Int j = 0;
-                    if (lastSelectedId != -1) {
-                        Int i = candidates.index([&](const SelectionCandidate& c) {
-                            return c.id() == lastSelectedId;
-                        });
-                        j = (i + 1) % candidates.length();
-                    }
-                    core::Id id = candidates[j].id();
-                    if (id != lastSelectedId || !newSelection.contains(id)) {
-                        newSelection.append(id);
-                        updateSelection = true;
-                        lastSelectedId = id;
-                    }
-                }
-            }
-            else if (!candidates.isEmpty()) {
-                // single selection
-
-                lastDeselectedId = -1;
-
-                core::Id id = candidates.first().id();
-                newSelection.append(id);
-                updateSelection = true;
-                lastSelectedId = id;
+            if (selectionChanged) {
+                canvas->setSelection(selection);
+                return true;
             }
             else {
-                // single selection of nothing (deselect all)
-
-                lastDeselectedId = -1;
-                lastSelectedId = -1;
-
-                newSelection.clear();
-                updateSelection = true;
+                return false;
             }
-
-            if (updateSelection) {
-                canvas->setSelection(newSelection);
-            }
-            return true;
         }
     }
 

@@ -433,7 +433,6 @@ bool Canvas::onMousePress(MouseEvent* event) {
         return true;
     }
 
-    clearSelection();
     return false;
 }
 
