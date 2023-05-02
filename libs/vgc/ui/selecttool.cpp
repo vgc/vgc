@@ -29,7 +29,8 @@ SelectToolPtr SelectTool::create() {
 bool SelectTool::onMouseMove(MouseEvent* /*event*/) {
     if (pressedButtons() == MouseButton::Left) {
         if (!isDrag) {
-            isDrag = true;
+            // todo: activate after a few pixels
+            //isDrag = true;
         }
     }
     return false;
