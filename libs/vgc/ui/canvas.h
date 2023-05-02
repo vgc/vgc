@@ -152,6 +152,9 @@ public:
     ///
     void selectAlternativeAtPosition(const geometry::Vec2f& position);
 
+    core::Array<std::pair<core::Id, double>>
+    computeSelectionCandidates(const geometry::Vec2f& position) const;
+
 protected:
     // Reimplementation of Widget virtual methods
     bool onKeyPress(KeyEvent* event) override;
@@ -194,8 +197,6 @@ private:
 
     // Selection
     core::Id selectedElementId_ = -1;
-    core::Array<std::pair<core::Id, double>>
-    computeSelectionCandidates_(const geometry::Vec2f& position) const;
     workspace::Element* selectedElement_() const;
 
     // Graphics resources

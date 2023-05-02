@@ -217,7 +217,7 @@ void Canvas::clearSelection() {
 
 void Canvas::selectAtPosition(const geometry::Vec2f& position) {
     core::Array<std::pair<core::Id, double>> candidates =
-        computeSelectionCandidates_(position);
+        computeSelectionCandidates(position);
     if (candidates.isEmpty()) {
         clearSelection();
     }
@@ -238,7 +238,7 @@ void Canvas::selectAtPosition(const geometry::Vec2f& position) {
 //
 void Canvas::selectAlternativeAtPosition(const geometry::Vec2f& position) {
     core::Array<std::pair<core::Id, double>> candidates =
-        computeSelectionCandidates_(position);
+        computeSelectionCandidates(position);
     if (candidates.isEmpty()) {
         clearSelection();
     }
@@ -262,6 +262,44 @@ void Canvas::selectAlternativeAtPosition(const geometry::Vec2f& position) {
             selectedElementId_ = candidates.first().first;
         }
     }
+}
+
+core::Array<std::pair<core::Id, double>>
+Canvas::computeSelectionCandidates(const geometry::Vec2f& position) const {
+
+    core::Array<std::pair<core::Id, double>> res;
+
+    geometry::Vec2d viewCoords(position);
+    geometry::Vec2d worldCoords =
+        camera_.viewMatrix().inverted().transformPointAffine(viewCoords);
+
+    using namespace style::literals;
+    style::Length dpTol = 7.0_dp;
+    double tol = dpTol.toPx(styleMetrics()) / camera_.zoom();
+
+    if (workspace_) {
+        workspace_->visitDepthFirst(
+            [](workspace::Element*, Int) { return true; },
+            [&, tol, worldCoords](workspace::Element* e, Int /*depth*/) {
+                if (!e) {
+                    return;
+                }
+                double dist = 0;
+                if (e->isSelectableAt(worldCoords, false, tol, &dist)) {
+                    res.emplaceLast(e->id(), dist);
+                }
+            });
+
+        // order from front to back
+        std::reverse(res.begin(), res.end());
+
+        // sort by selection distance, stable to keep Z order priority
+        std::stable_sort(res.begin(), res.end(), [](const auto& a, const auto& b) {
+            return a.second < b.second;
+        });
+    }
+
+    return res;
 }
 
 bool Canvas::onKeyPress(KeyEvent* event) {
@@ -588,44 +626,6 @@ void Canvas::updateChildrenGeometry() {
     for (auto c : children()) {
         c->updateGeometry(rect());
     }
-}
-
-core::Array<std::pair<core::Id, double>>
-Canvas::computeSelectionCandidates_(const geometry::Vec2f& position) const {
-
-    core::Array<std::pair<core::Id, double>> res;
-
-    geometry::Vec2d viewCoords(position);
-    geometry::Vec2d worldCoords =
-        camera_.viewMatrix().inverted().transformPointAffine(viewCoords);
-
-    using namespace style::literals;
-    style::Length dpTol = 7.0_dp;
-    double tol = dpTol.toPx(styleMetrics()) / camera_.zoom();
-
-    if (workspace_) {
-        workspace_->visitDepthFirst(
-            [](workspace::Element*, Int) { return true; },
-            [&, tol, worldCoords](workspace::Element* e, Int /*depth*/) {
-                if (!e) {
-                    return;
-                }
-                double dist = 0;
-                if (e->isSelectableAt(worldCoords, false, tol, &dist)) {
-                    res.emplaceLast(e->id(), dist);
-                }
-            });
-
-        // order from front to back
-        std::reverse(res.begin(), res.end());
-
-        // sort by selection distance, stable to keep Z order priority
-        std::stable_sort(res.begin(), res.end(), [](const auto& a, const auto& b) {
-            return a.second < b.second;
-        });
-    }
-
-    return res;
 }
 
 workspace::Element* Canvas::selectedElement_() const {
