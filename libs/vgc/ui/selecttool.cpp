@@ -56,8 +56,9 @@ bool SelectTool::onMouseRelease(MouseEvent* event) {
             // todo
         }
         else {
-            if (!keys.mask(ModifierKey::Ctrl | ModifierKey::Alt | ModifierKey::Shift)
-                     .isEmpty()) {
+            ModifierKeys unsupportedKeys =
+                (ModifierKey::Ctrl | ModifierKey::Alt | ModifierKey::Shift).toggleAll();
+            if (keys.hasAny(unsupportedKeys)) {
                 // unsupported modifier key
                 return false;
             }
