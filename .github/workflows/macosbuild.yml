@@ -80,7 +80,7 @@ jobs:
         architecture: 'x64'
 
     - name: Install Qt
-      uses: jurplel/install-qt-action@v2
+      uses: jurplel/install-qt-action@v3
       with:
         version: ${{env.QT_VERSION}}
         setup-python: false
