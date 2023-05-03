@@ -249,8 +249,13 @@ void Workspace::sync() {
 }
 
 void Workspace::rebuildFromDom() {
+    if (!document_) {
+        return;
+    }
     rebuildWorkspaceTreeFromDom_();
     rebuildVacFromWorkspaceTree_();
+    lastSyncedDomVersionId_ = document_->versionId();
+    changed().emit();
 }
 
 bool Workspace::updateElementFromDom(Element* element) {
@@ -314,34 +319,59 @@ Workspace::elementCreators_() {
 }
 
 void Workspace::removeElement_(Element* element) {
-    removeElement_(element->id());
+    VGC_ASSERT(element);
+    bool removed = removeElement_(element->id());
+    VGC_ASSERT(removed);
 }
 
-void Workspace::removeElement_(core::Id id) {
+bool Workspace::removeElement_(core::Id id) {
+
+    // Find the element with the given ID. Fast return if not found.
+    //
     auto it = elements_.find(id);
-    if (it != elements_.end()) {
-        Element* element = it->second.get();
-        if (vgcElement_ == element) {
-            vgcElement_ = nullptr;
-        }
-        if (element->hasError()) {
-            elementsWithError_.removeOne(element);
-        }
-        if (element->hasPendingUpdate()) {
-            elementsToUpdateFromDom_.removeOne(element);
-        }
-        // Note:  don't simply erase it since elements' destructor can indirectly use
-        // elements_ via callbacks (e.g. onVacNodeAboutToBeRemoved_).
-        std::unique_ptr<Element> uptr = std::move(it->second);
-        elements_.erase(it);
-        while (!element->dependents_.isEmpty()) {
-            Element* dependent = element->dependents_.pop();
-            dependent->dependencies_.removeOne(element);
-            dependent->onDependencyRemoved_(element);
-            element->onDependentElementRemoved_(dependent);
-        }
-        uptr.reset();
+    if (it == elements_.end()) {
+        return false;
     }
+    Element* element = it->second.get();
+
+    // Update parent-child relationship between elements.
+    //
+    element->unlink();
+    if (vgcElement_ == element) {
+        vgcElement_ = nullptr;
+    }
+
+    // Remove from error list and pending update lists.
+    //
+    if (element->hasError()) {
+        elementsWithError_.removeOne(element);
+    }
+    if (element->hasPendingUpdate()) {
+        elementsToUpdateFromDom_.removeOne(element);
+    }
+
+    // Remove from the elements_ map.
+    //
+    // Note: we temporarily keep a unique_ptr before calling erase() since the
+    // element's destructor can indirectly use elements_ via callbacks (e.g.
+    // onVacNodeAboutToBeRemoved_).
+    //
+    std::unique_ptr<Element> uptr = std::move(it->second);
+    elements_.erase(it);
+
+    // Update dependencies and execute callbacks.
+    //
+    while (!element->dependents_.isEmpty()) {
+        Element* dependent = element->dependents_.pop();
+        dependent->dependencies_.removeOne(element);
+        dependent->onDependencyRemoved_(element);
+        element->onDependentElementRemoved_(dependent);
+    }
+
+    // Finally destruct the element.
+    //
+    uptr.reset();
+    return true;
 }
 
 void Workspace::clearElements_() {
@@ -417,6 +447,10 @@ void Workspace::debugPrintWorkspaceTree_() {
 }
 
 void Workspace::preUpdateDomFromVac_() {
+
+    // Check whether the Workspace is properly synchronized with the DOM before
+    // we attempt to update the DOM from the VAC.
+    //
     if (document_->hasPendingDiff()) {
         VGC_ERROR(
             LogVgcWorkspace,
@@ -426,11 +460,27 @@ void Workspace::preUpdateDomFromVac_() {
         flushDomDiff_();
         // TODO: rebuild from DOM instead of ignoring the pending diffs?
     }
+
+    // Note: There is no need to do something like `isUpdatingDomFromVac =
+    // true` here, because no signal is emitted from the DOM between
+    // preUpdateDomFromVac_() and postUpdateDomFromVac_. Indeed, we only
+    // call document->emitPendingDiff() in postUpdateDomFromVac_(), not
+    // before.
 }
 
 void Workspace::postUpdateDomFromVac_() {
-    // TODO: delay for batch VAC-to-DOM updates
-    document_->emitPendingDiff();
+
+    // Now that we're done updating the DOM from the VAC, we emit the pending
+    // DOM diff but ignore them. Indeed, the Workspace is the author of the
+    // pending diff so there is no need to process them.
+    //
+    flushDomDiff_();
+
+    // Inform the world that the Workspace content has changed.
+    //
+    changed().emit();
+
+    // TODO: delay for batch VAC-to-DOM updates?
 }
 
 void Workspace::rebuildDomFromWorkspaceTree_() {
@@ -439,14 +489,80 @@ void Workspace::rebuildDomFromWorkspaceTree_() {
 }
 
 void Workspace::onVacNodeAboutToBeRemoved_(vacomplex::Node* node) {
-    // Note: Should we bypass the following logic if deletion comes from workspace ?
-    //       Currently it is done by erasing the workspace element from elements_
-    //       before doing the VAC element removal so that this whole callback is not called.
+
+    // XXX What if node is the root node?
+    //
+    // Currently, in the Workspace(document) constructor, we first create a
+    // vacomplex::Complex (which creates a root node), then call
+    // rebuildFromDom(), which first clears the Complex (destructing the root
+    // node), then creates the nodes including the root node. Therefore, this
+    // function is called in the Workspace(document) constructor, which is
+    // probably not ideal.
+
+    // Get Workspace element corresponding to the destroyed VAC node. Nothing
+    // to do if there is no such element.
+    //
     VacElement* vacElement = findVacElement(node);
-    if (vacElement && vacElement->vacNode_) {
-        vacElement->vacNode_ = nullptr;
-        setPendingUpdateFromDom_(vacElement);
-        // TODO: only clear graphics and append to corrupt list (elementsWithError_)
+    if (!vacElement) {
+        return;
+    }
+
+    if (isUpdatingVacFromDom_) {
+
+        // A VAC node has been destroyed as a side-effect of updating the VAC
+        // from the DOM. This can mean that some Workspace elements should now
+        // be mark as corrupted.
+        //
+        // Example scenario:
+        //
+        // 1. User deletes a <vertex> element in the DOM Editor, despite
+        //    an existing <edge> element using it as end vertex.
+        //
+        // 2. This modifies the dom::Document, calls doc->emitPendingDiff(),
+        //    which in turn calls Workspace::onDocumentDiff().
+        //
+        // 3. The Workspace retrieves the corresponding vertexElement Workspace element
+        //    and vertexNode VAC Node.
+        //
+        // 4. The Workspace destroys and unregisters the vertexElement.
+        //
+        // 5. The Workspace calls ops::hardDelete(vertexNode)
+        //
+        // 6. The VAC emits:
+        //    - onVacNodeAboutToBeRemoved(vertexNode)  -> destroyed explicitly:     OK
+        //    - onVacNodeAboutToBeRemoved(edgeNode)    -> destroyed as side-effect: now corrupted
+        //
+        if (vacElement->vacNode_) {
+
+            // If we find the element despite being updating VAC from DOM,
+            // this means the element is now corrupted, so mark it as such.
+            //
+            vacElement->vacNode_ = nullptr;
+            setPendingUpdateFromDom_(vacElement);
+
+            // TODO: only clear graphics and actually append to corrupt list
+        }
+    }
+    else {
+
+        preUpdateDomFromVac_();
+        if (vacElement) {
+
+            // Delete the corresponding DOM element if any.
+            //
+            dom::Element* domElement = vacElement->domElement();
+            if (domElement) {
+                domElement->remove();
+            }
+
+            // Delete the Workspace element. We need to set its vacNode_ to
+            // nullptr before removal since the destructor of the VacElement
+            // will hardDelete() its vacNode_ if any.
+            //
+            vacElement->vacNode_ = nullptr;
+            removeElement_(vacElement);
+        }
+        postUpdateDomFromVac_();
     }
 }
 
@@ -711,9 +827,8 @@ dom::Element* rebuildTreeFromDomIter(Element* it, Element*& parent) {
 
 void Workspace::rebuildWorkspaceTreeFromDom_() {
 
-    if (!document_) {
-        return;
-    }
+    VGC_ASSERT(document_);
+    VGC_ASSERT(vac_);
 
     // reset tree
     clearElements_();
@@ -733,8 +848,9 @@ void Workspace::rebuildWorkspaceTreeFromDom_() {
     }
 
     Element* vgcElement = createAppendElementFromDom_(domVgcElement, nullptr);
-    VGC_ASSERT(vgcElement->isVacElement());
-    vgcElement_ = static_cast<VacElement*>(vgcElement);
+    VGC_ASSERT(vgcElement);
+    vgcElement_ = vgcElement->toVacElement();
+    VGC_ASSERT(vgcElement_);
 
     Element* p = nullptr;
     Element* e = vgcElement_;
@@ -748,9 +864,9 @@ void Workspace::rebuildWorkspaceTreeFromDom_() {
 }
 
 void Workspace::rebuildVacFromWorkspaceTree_() {
-    if (!document_ || !vgcElement_) {
-        return;
-    }
+
+    VGC_ASSERT(vgcElement_);
+    VGC_ASSERT(vac_);
 
     core::BoolGuard bgVac(isUpdatingVacFromDom_);
 
@@ -768,9 +884,6 @@ void Workspace::rebuildVacFromWorkspaceTree_() {
     }
 
     updateVacChildrenOrder_();
-
-    lastSyncedDomVersionId_ = document_->versionId();
-    changed().emit();
 }
 
 void Workspace::updateVacChildrenOrder_() {
@@ -856,9 +969,9 @@ void Workspace::updateVacChildrenOrder_() {
 //}
 
 void Workspace::updateVacFromDom_(const dom::Diff& diff) {
-    if (!document_) {
-        return;
-    }
+
+    VGC_ASSERT(document_);
+
     core::BoolGuard bgVac(isUpdatingVacFromDom_);
 
     // impl goal: we want to keep as much cached data as possible.
@@ -872,7 +985,11 @@ void Workspace::updateVacFromDom_(const dom::Diff& diff) {
     std::set<Element*> parentsToOrderSync;
 
     // First, we remove what has to be removed.
-    // Note that this can recursively remove dependent VAC nodes (star).
+    //
+    // Note that if `element` is a VacElement, then:
+    // - removeElement_(element) calls vacomplex::ops::hardDelete(node),
+    // - which may destroy other VAC nodes,
+    // - which will invoke onVacNodeAboutToBeRemoved(otherNode).
     //
     for (dom::Node* node : diff.removedNodes()) {
         dom::Element* domElement = dom::Element::cast(node);
@@ -887,7 +1004,6 @@ void Workspace::updateVacFromDom_(const dom::Diff& diff) {
             for (Element* child : *element) {
                 parent->appendChild(child);
             }
-            element->unlink();
             removeElement_(element);
         }
     }
