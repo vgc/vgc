@@ -21,6 +21,7 @@
 #include <QPainter>
 
 #include <vgc/core/array.h>
+#include <vgc/core/history.h>
 #include <vgc/core/paths.h>
 #include <vgc/core/stopwatch.h>
 #include <vgc/core/stringid.h>
@@ -183,14 +184,6 @@ void deleteElement(workspace::Element* element, workspace::Workspace* workspace)
         elementsToDelete.prepend(element->domElement());
     }
 
-    // Open history group
-    static core::StringId Delete_Element("Delete Element");
-    core::UndoGroup* undoGroup = nullptr;
-    core::History* history = workspace->history();
-    if (history) {
-        undoGroup = history->createUndoGroup(Delete_Element);
-    }
-
     // Actually delete the elements via DOM modifications.
     //
     // Note that due to signals, one removal may trigger other removals,
@@ -201,9 +194,38 @@ void deleteElement(workspace::Element* element, workspace::Workspace* workspace)
             e->remove();
         }
     }
+}
 
-    // Sync workspace and close operation.
-    workspace->sync();
+void deleteElements(
+    const core::Array<core::Id>& elementIds,
+    workspace::Workspace* workspace) {
+
+    if (elementIds.isEmpty()) {
+        return;
+    }
+
+    // Open history group
+    static core::StringId Delete_Element("Delete Element");
+    core::UndoGroup* undoGroup = nullptr;
+    core::History* history = workspace->history();
+    if (history) {
+        undoGroup = history->createUndoGroup(Delete_Element);
+    }
+
+    // Iterate over all elements to delete.
+    //
+    // For now, deletion is done via the DOM, so we need to sync() before
+    // finding the next selected ID to check whether it still exists.
+    //
+    for (core::Id id : elementIds) {
+        workspace::Element* element = workspace->find(id);
+        if (element) {
+            deleteElement(element, workspace);
+            workspace->sync();
+        }
+    }
+
+    // Close operation
     if (undoGroup) {
         undoGroup->close();
     }
@@ -211,63 +233,28 @@ void deleteElement(workspace::Element* element, workspace::Workspace* workspace)
 
 } // namespace
 
+core::Array<core::Id> Canvas::selection() const {
+    return selectedElementIds_;
+}
+
+void Canvas::setSelection(const core::Array<core::Id>& elementIds) {
+    selectedElementIds_.clear();
+    for (core::Id id : elementIds) {
+        if (!selectedElementIds_.contains(id)) {
+            selectedElementIds_.append(id);
+        }
+    }
+    requestRepaint();
+}
+
 void Canvas::clearSelection() {
-    selectedElementId_ = -1;
+    setSelection({});
 }
 
-void Canvas::selectAtPosition(const geometry::Vec2f& position) {
-    core::Array<std::pair<core::Id, double>> candidates =
-        computeSelectionCandidates(position);
-    if (candidates.isEmpty()) {
-        clearSelection();
-    }
-    else {
-        selectedElementId_ = candidates.first().first;
-    }
-}
-
-// Note: we recompute the selection candidates at each click. We could
-// optimize performance by keeping the candidates in cache for a given position, but:
-// - Alternate selection is a rare operation compared to normal selection.
-// - It isn't super important to make alternate selection faster than normal selection.
-// - The mouse position may move slighlty anyway.
-// - We would have to be careful to invalidate the cache when the workspace changes, etc.
-//
-// Therefore, it is not worth the added complexity and bug-proneness to keep the
-// candidates in cache.
-//
-void Canvas::selectAlternativeAtPosition(const geometry::Vec2f& position) {
-    core::Array<std::pair<core::Id, double>> candidates =
-        computeSelectionCandidates(position);
-    if (candidates.isEmpty()) {
-        clearSelection();
-    }
-    else {
-        // If there is a currently selected element, and if it is in the
-        // candidates, then we select the next candidate in order. Otherwise,
-        // we select the first candidate.
-        //
-        bool found = false;
-        if (selectedElementId_ != -1) {
-            for (Int i = 0; i < candidates.length(); ++i) {
-                if (candidates[i].first == selectedElementId_) {
-                    Int j = (i + 1) % candidates.length();
-                    selectedElementId_ = candidates[j].first;
-                    found = true;
-                    break;
-                }
-            }
-        }
-        if (!found) {
-            selectedElementId_ = candidates.first().first;
-        }
-    }
-}
-
-core::Array<std::pair<core::Id, double>>
+core::Array<SelectionCandidate>
 Canvas::computeSelectionCandidates(const geometry::Vec2f& position) const {
 
-    core::Array<std::pair<core::Id, double>> res;
+    core::Array<SelectionCandidate> result;
 
     geometry::Vec2d viewCoords(position);
     geometry::Vec2d worldCoords =
@@ -286,20 +273,23 @@ Canvas::computeSelectionCandidates(const geometry::Vec2f& position) const {
                 }
                 double dist = 0;
                 if (e->isSelectableAt(worldCoords, false, tol, &dist)) {
-                    res.emplaceLast(e->id(), dist);
+                    result.emplaceLast(e->id(), dist);
                 }
             });
 
         // order from front to back
-        std::reverse(res.begin(), res.end());
+        std::reverse(result.begin(), result.end());
 
         // sort by selection distance, stable to keep Z order priority
-        std::stable_sort(res.begin(), res.end(), [](const auto& a, const auto& b) {
-            return a.second < b.second;
-        });
+        std::stable_sort(
+            result.begin(),
+            result.end(),
+            [](const SelectionCandidate& a, const SelectionCandidate& b) {
+                return a.distance() < b.distance();
+            });
     }
 
-    return res;
+    return result;
 }
 
 bool Canvas::onKeyPress(KeyEvent* event) {
@@ -345,7 +335,8 @@ bool Canvas::onKeyPress(KeyEvent* event) {
         break;
     case Key::Backspace:
     case Key::Delete:
-        deleteElement(selectedElement_(), workspace());
+        deleteElements(selectedElementIds_, workspace());
+        clearSelection();
         break;
     default:
         return false;
@@ -463,7 +454,6 @@ bool Canvas::onMousePress(MouseEvent* event) {
         return true;
     }
 
-    clearSelection();
     return false;
 }
 
@@ -601,8 +591,7 @@ void Canvas::onPaintDraw(graphics::Engine* engine, PaintOptions options) {
         reTesselate = false;
     }
 
-    workspace::Element* selectedElement = selectedElement_();
-    if (selectedElement) {
+    for (workspace::Element* selectedElement : selectedElements_()) {
         selectedElement->paint(engine, {}, workspace::PaintOption::Selected);
     }
 
@@ -628,13 +617,17 @@ void Canvas::updateChildrenGeometry() {
     }
 }
 
-workspace::Element* Canvas::selectedElement_() const {
-    if (workspace() && selectedElementId_ >= 0) {
-        return workspace()->find(selectedElementId_);
+core::Array<workspace::Element*> Canvas::selectedElements_() const {
+    core::Array<workspace::Element*> result;
+    if (workspace()) {
+        for (core::Id id : selectedElementIds_) {
+            workspace::Element* element = workspace()->find(id);
+            if (element && !result.contains(element)) {
+                result.append(element);
+            }
+        }
     }
-    else {
-        return nullptr;
-    }
+    return result;
 }
 
 } // namespace vgc::ui

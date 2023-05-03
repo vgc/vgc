@@ -60,6 +60,29 @@ private:
     core::Array<SelectionList> lists_;
 };
 
+/// \class vgc::ui::SelectionCandidate
+/// \brief A workspace item candidate for selection.
+///
+class VGC_UI_API SelectionCandidate {
+public:
+    SelectionCandidate(core::Id id, double distance)
+        : id_(id)
+        , distance_(distance) {
+    }
+
+    core::Id id() const {
+        return id_;
+    }
+
+    double distance() const {
+        return distance_;
+    }
+
+private:
+    core::Id id_;
+    double distance_;
+};
+
 /// \class vgc::ui::Canvas
 /// \brief A document canvas widget.
 ///
@@ -130,27 +153,17 @@ public:
     // in case of split view, etc.
     //
 
-    /// Deselects all selected elements and make the list of selection
-    /// candidates empty.
+    /// Returns the list of current selected elements.
+    ///
+    core::Array<core::Id> selection() const;
+
+    /// Sets the current selected elements.
+    ///
+    void setSelection(const core::Array<core::Id>& elementIds);
+
+    /// Deselects all selected elements.
     ///
     void clearSelection();
-
-    /// Selects the element at the given `position` in canvas coordinates.
-    ///
-    // TODO: Split API in separate methods for more flexibility and let
-    //       the tool control what to do depending on whether Shift/Alt/etc.
-    //       is pressed:
-    //       - ElementId getElementAtPosition(position)
-    //       - addToSelection(elementId)
-    //       - setSelection(Array<ElementId>)
-    //       - ...
-    //
-    void selectAtPosition(const geometry::Vec2f& position);
-
-    /// Selects an alternative element at the given `position` in canvas
-    /// coordinates.
-    ///
-    void selectAlternativeAtPosition(const geometry::Vec2f& position);
 
     /// Computes candidate elements for selection at `position`.
     ///
@@ -159,7 +172,7 @@ public:
     /// farthest from `position` and from foreground to background for
     /// candidates at equal distances from `position`.
     ///
-    core::Array<std::pair<core::Id, double>>
+    core::Array<SelectionCandidate>
     computeSelectionCandidates(const geometry::Vec2f& position) const;
 
 protected:
@@ -203,8 +216,8 @@ private:
     geometry::Camera2d cameraAtPress_;
 
     // Selection
-    core::Id selectedElementId_ = -1;
-    workspace::Element* selectedElement_() const;
+    core::Array<core::Id> selectedElementIds_;
+    core::Array<workspace::Element*> selectedElements_() const;
 
     // Graphics resources
     // VgcGraph

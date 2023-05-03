@@ -17,6 +17,7 @@
 #ifndef VGC_UI_SELECTTOOL_H
 #define VGC_UI_SELECTTOOL_H
 
+#include <vgc/core/id.h>
 #include <vgc/ui/api.h>
 #include <vgc/ui/canvastool.h>
 
@@ -47,6 +48,19 @@ protected:
     bool onMouseMove(MouseEvent* event) override;
     bool onMousePress(MouseEvent* event) override;
     bool onMouseRelease(MouseEvent* event) override;
+
+private:
+    enum class SelectionMode {
+        Single,
+        Add,
+        Remove,
+        Toggle
+    };
+    SelectionMode selectionMode_;
+    bool isSelecting_ = false;
+    bool isAlternativeMode_ = false;
+    core::Id lastSelectedId_ = -1;
+    core::Id lastDeselectedId_ = -1;
 };
 
 } // namespace vgc::ui
