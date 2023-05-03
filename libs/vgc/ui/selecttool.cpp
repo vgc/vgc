@@ -27,17 +27,50 @@ SelectToolPtr SelectTool::create() {
 }
 
 bool SelectTool::onMouseMove(MouseEvent* /*event*/) {
-    if (pressedButtons() == MouseButton::Left) {
-        if (!isDrag) {
-            // todo: activate after a few pixels
-            //isDrag = true;
-        }
-    }
-    return false;
+    return isSelecting_;
+
+    // TODO: if isMaybeSelecting_ or isMaybeDragging_,
+    //       activate dragging after a few pixel
 }
 
-bool SelectTool::onMousePress(MouseEvent* /*event*/) {
-    return false;
+bool SelectTool::onMousePress(MouseEvent* event) {
+
+    if (isSelecting_) {
+        return true;
+    }
+
+    MouseButton button = event->button();
+    ModifierKeys keys = event->modifierKeys();
+    if (button == MouseButton::Left) {
+        ModifierKeys unsupportedKeys =
+            (ModifierKey::Ctrl | ModifierKey::Alt | ModifierKey::Shift).toggleAll();
+        if (keys.hasAny(unsupportedKeys)) {
+            isSelecting_ = false;
+        }
+        else {
+            isSelecting_ = true;
+            isAlternativeMode_ = keys.has(ModifierKey::Alt);
+            if (keys.hasAll(ModifierKey::Shift | ModifierKey::Ctrl)) {
+                selectionMode_ = SelectionMode::Toggle;
+            }
+            else if (keys.has(ModifierKey::Shift)) {
+                selectionMode_ = SelectionMode::Add;
+            }
+            else if (keys.has(ModifierKey::Ctrl)) {
+                selectionMode_ = SelectionMode::Remove;
+            }
+            else {
+                selectionMode_ = SelectionMode::Single;
+            }
+        }
+    }
+    else {
+        isSelecting_ = false;
+    }
+
+    return isSelecting_;
+
+    // TODO: isMaybeSelecting_, isMaybeDragging_
 }
 
 namespace {
@@ -178,89 +211,88 @@ core::Id selectSingleItem(
 
 bool SelectTool::onMouseRelease(MouseEvent* event) {
 
-    ui::Canvas* canvas = this->canvas();
-    if (!canvas) {
+    if (!isSelecting_) {
         return false;
     }
 
-    MouseButton button = event->button();
-    ModifierKeys keys = event->modifierKeys();
-
-    if (button == MouseButton::Left) {
-        if (isDrag) {
-            isDrag = false;
-            // todo
-        }
-        else {
-            // Fast return if there is an unsupported modifier key
-            ModifierKeys unsupportedKeys =
-                (ModifierKey::Ctrl | ModifierKey::Alt | ModifierKey::Shift).toggleAll();
-            if (keys.hasAny(unsupportedKeys)) {
-                return false;
-            }
-
-            // Get current selection and selection candidates
-            core::Array<core::Id> selection = canvas->selection();
-            core::Array<SelectionCandidate> candidates =
-                canvas->computeSelectionCandidates(event->position());
-
-            // Compute new selection
-            bool isAlternativeMode = keys.has(ModifierKey::Alt);
-            bool selectionChanged = false;
-            if (keys.hasAll(ModifierKey::Shift | ModifierKey::Ctrl)) {
-                // TODO: Toggle selection.
-            }
-            else if (keys.has(ModifierKey::Shift)) {
-                core::Id selectedId = addToSelection(
-                    selection, candidates, isAlternativeMode, lastSelectedId);
-                if (selectedId != -1) {
-                    selectionChanged = true;
-                    lastSelectedId = selectedId;
-                    lastDeselectedId = -1;
-                }
-            }
-            else if (keys.has(ModifierKey::Ctrl)) {
-                core::Id deselectedId = removeFromSelection(
-                    selection, candidates, isAlternativeMode, lastDeselectedId);
-                if (deselectedId != -1) {
-                    selectionChanged = true;
-                    lastSelectedId = -1;
-                    lastDeselectedId = deselectedId;
-                }
-            }
-            else {
-                core::Id selectedId =
-                    selectSingleItem(candidates, isAlternativeMode, lastSelectedId);
-
-                if (selectedId != -1) {
-                    if (selection.length() != 1 || selection.first() != selectedId) {
-                        selection.assign(1, selectedId);
-                        selectionChanged = true;
-                    }
-                    lastSelectedId = selectedId;
-                    lastDeselectedId = -1;
-                }
-                else {
-                    if (!selection.isEmpty()) {
-                        selection.clear();
-                        selectionChanged = true;
-                    }
-                    lastSelectedId = -1;
-                    lastDeselectedId = -1;
-                }
-            }
-
-            if (selectionChanged) {
-                canvas->setSelection(selection);
-                return true;
-            }
-            else {
-                return false;
-            }
-        }
+    if (event->button() != MouseButton::Left) {
+        // Prevent parent widget from doing an action with a different
+        // mouse button if we are in the middle of our own action.
+        return true;
     }
 
-    return false;
+    ui::Canvas* canvas = this->canvas();
+    if (!canvas) {
+        bool wasSelecting = isSelecting_;
+        isSelecting_ = false;
+        return wasSelecting;
+        // Until a better mechanism is implemented, we should return the same
+        // value in onMousePress / onMouseRelease (at least for the same mouse
+        // button) otherwise this confuses the parent widgets (receiving the
+        // press but not the release, or vice-versa).
+    }
+
+    // Get current selection and selection candidates
+    core::Array<core::Id> selection = canvas->selection();
+    core::Array<SelectionCandidate> candidates =
+        canvas->computeSelectionCandidates(event->position());
+
+    // Compute new selection
+    bool selectionChanged = false;
+    switch (selectionMode_) {
+    case SelectionMode::Toggle:
+        // TODO: Toggle selection.
+        break;
+
+    case SelectionMode::Add: {
+        core::Id selectedId =
+            addToSelection(selection, candidates, isAlternativeMode_, lastSelectedId_);
+        if (selectedId != -1) {
+            selectionChanged = true;
+            lastSelectedId_ = selectedId;
+            lastDeselectedId_ = -1;
+        }
+        break;
+    }
+    case SelectionMode::Remove: {
+        core::Id deselectedId = removeFromSelection(
+            selection, candidates, isAlternativeMode_, lastDeselectedId_);
+        if (deselectedId != -1) {
+            selectionChanged = true;
+            lastSelectedId_ = -1;
+            lastDeselectedId_ = deselectedId;
+        }
+        break;
+    }
+
+    case SelectionMode::Single: {
+        core::Id selectedId =
+            selectSingleItem(candidates, isAlternativeMode_, lastSelectedId_);
+        if (selectedId != -1) {
+            if (selection.length() != 1 || selection.first() != selectedId) {
+                selection.assign(1, selectedId);
+                selectionChanged = true;
+            }
+            lastSelectedId_ = selectedId;
+            lastDeselectedId_ = -1;
+        }
+        else {
+            if (!selection.isEmpty()) {
+                selection.clear();
+                selectionChanged = true;
+            }
+            lastSelectedId_ = -1;
+            lastDeselectedId_ = -1;
+        }
+        break;
+    }
+    }
+
+    if (selectionChanged) {
+        canvas->setSelection(selection);
+    }
+    isSelecting_ = false;
+    return true;
 }
 
 } // namespace vgc::ui

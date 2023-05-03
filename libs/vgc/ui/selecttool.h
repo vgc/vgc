@@ -50,9 +50,17 @@ protected:
     bool onMouseRelease(MouseEvent* event) override;
 
 private:
-    core::Id lastSelectedId = -1;
-    core::Id lastDeselectedId = -1;
-    bool isDrag = false;
+    enum class SelectionMode {
+        Single,
+        Add,
+        Remove,
+        Toggle
+    };
+    SelectionMode selectionMode_;
+    bool isSelecting_ = false;
+    bool isAlternativeMode_ = false;
+    core::Id lastSelectedId_ = -1;
+    core::Id lastDeselectedId_ = -1;
 };
 
 } // namespace vgc::ui
