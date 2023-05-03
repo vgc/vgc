@@ -305,7 +305,7 @@ private:
     void clearPendingUpdateFromDom_(Element* element);
 
     void removeElement_(Element* element);
-    void removeElement_(core::Id id);
+    bool removeElement_(core::Id id); // returns if removal occured
     void clearElements_();
 
     void
@@ -321,8 +321,6 @@ private:
 
     // Note: update from the VAC to the DOM are direct: they happen after
     // each atomic operations.
-
-    bool isUpdatingDomFromVac_ = false;
 
     // Signal-slot connections
 
