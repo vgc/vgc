@@ -153,8 +153,15 @@ public:
     // in case of split view, etc.
     //
 
-    /// Deselects all selected elements and make the list of selection
-    /// candidates empty.
+    /// Returns the list of current selected elements.
+    ///
+    core::Array<core::Id> selection() const;
+
+    /// Sets the current selected elements.
+    ///
+    void setSelection(const core::Array<core::Id>& elementIds);
+
+    /// Deselects all selected elements.
     ///
     void clearSelection();
 
@@ -167,14 +174,6 @@ public:
     ///
     core::Array<SelectionCandidate>
     computeSelectionCandidates(const geometry::Vec2f& position) const;
-
-    /// Sets the current selected elements.
-    ///
-    void setSelection(const core::Array<core::Id>& elementIds);
-
-    /// Returns the list of current selected elements.
-    ///
-    core::Array<core::Id> selection() const;
 
 protected:
     // Reimplementation of Widget virtual methods

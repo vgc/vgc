@@ -21,6 +21,7 @@
 #include <QPainter>
 
 #include <vgc/core/array.h>
+#include <vgc/core/history.h>
 #include <vgc/core/paths.h>
 #include <vgc/core/stopwatch.h>
 #include <vgc/core/stringid.h>
@@ -183,14 +184,6 @@ void deleteElement(workspace::Element* element, workspace::Workspace* workspace)
         elementsToDelete.prepend(element->domElement());
     }
 
-    // Open history group
-    static core::StringId Delete_Element("Delete Element");
-    core::UndoGroup* undoGroup = nullptr;
-    core::History* history = workspace->history();
-    if (history) {
-        undoGroup = history->createUndoGroup(Delete_Element);
-    }
-
     // Actually delete the elements via DOM modifications.
     //
     // Note that due to signals, one removal may trigger other removals,
@@ -201,9 +194,38 @@ void deleteElement(workspace::Element* element, workspace::Workspace* workspace)
             e->remove();
         }
     }
+}
 
-    // Sync workspace and close operation.
-    workspace->sync();
+void deleteElements(
+    const core::Array<core::Id>& elementIds,
+    workspace::Workspace* workspace) {
+
+    if (elementIds.isEmpty()) {
+        return;
+    }
+
+    // Open history group
+    static core::StringId Delete_Element("Delete Element");
+    core::UndoGroup* undoGroup = nullptr;
+    core::History* history = workspace->history();
+    if (history) {
+        undoGroup = history->createUndoGroup(Delete_Element);
+    }
+
+    // Iterate over all elements to delete.
+    //
+    // For now, deletion is done via the DOM, so we need to sync() before
+    // finding the next selected ID to check whether it still exists.
+    //
+    for (core::Id id : elementIds) {
+        workspace::Element* element = workspace->find(id);
+        if (element) {
+            deleteElement(element, workspace);
+            workspace->sync();
+        }
+    }
+
+    // Close operation
     if (undoGroup) {
         undoGroup->close();
     }
@@ -211,8 +233,22 @@ void deleteElement(workspace::Element* element, workspace::Workspace* workspace)
 
 } // namespace
 
-void Canvas::clearSelection() {
+core::Array<core::Id> Canvas::selection() const {
+    return selectedElementIds_;
+}
+
+void Canvas::setSelection(const core::Array<core::Id>& elementIds) {
     selectedElementIds_.clear();
+    for (core::Id id : elementIds) {
+        if (!selectedElementIds_.contains(id)) {
+            selectedElementIds_.append(id);
+        }
+    }
+    requestRepaint();
+}
+
+void Canvas::clearSelection() {
+    setSelection({});
 }
 
 core::Array<SelectionCandidate>
@@ -254,20 +290,6 @@ Canvas::computeSelectionCandidates(const geometry::Vec2f& position) const {
     }
 
     return result;
-}
-
-void Canvas::setSelection(const core::Array<core::Id>& elementIds) {
-    selectedElementIds_.clear();
-    for (core::Id id : elementIds) {
-        if (!selectedElementIds_.contains(id)) {
-            selectedElementIds_.append(id);
-        }
-    }
-    requestRepaint();
-}
-
-core::Array<core::Id> Canvas::selection() const {
-    return selectedElementIds_;
 }
 
 bool Canvas::onKeyPress(KeyEvent* event) {
@@ -313,9 +335,8 @@ bool Canvas::onKeyPress(KeyEvent* event) {
         break;
     case Key::Backspace:
     case Key::Delete:
-        for (workspace::Element* selectedElement : selectedElements_()) {
-            deleteElement(selectedElement, workspace());
-        }
+        deleteElements(selectedElementIds_, workspace());
+        clearSelection();
         break;
     default:
         return false;
