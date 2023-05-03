@@ -138,12 +138,13 @@ VacElement::~VacElement() {
 
 void VacElement::removeVacNode() {
     if (vacNode_) {
-        // We set vacNode_ to null before calling removeNode because
+        // We set vacNode_ to null before calling hardDelete because
         // the workspace would otherwise consider it as an external event
         // and schedule this element for update.
         vacomplex::Node* tmp = vacNode_;
         vacNode_ = nullptr;
-        vacomplex::ops::removeNode(tmp, false);
+        bool deleteIsolatedVertices = false;
+        vacomplex::ops::hardDelete(tmp, deleteIsolatedVertices);
         const_cast<Workspace*>(workspace())->elementByVacInternalId_.erase(tmp->id());
     }
 }

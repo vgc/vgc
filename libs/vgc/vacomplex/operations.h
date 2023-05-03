@@ -87,11 +87,12 @@ KeyFace* createKeyFace(
     Node* nextSibling = nullptr,
     core::AnimTime t = {});
 
+// Post-condition: node is deleted, except if node is the root.
 VGC_VACOMPLEX_API
-void removeNode(Node* node, bool removeFreeVertices);
+void hardDelete(Node* node, bool deleteIsolatedVertices);
 
 VGC_VACOMPLEX_API
-void removeNodeSmart(Node* node, bool removeFreeVertices);
+void softDelete(Node* node, bool deleteIsolatedVertices);
 
 /// Throws `NotAChildError` if `nextSibling` is not a child of `parentGroup` or `nullptr`.
 // XXX should check if node belongs to same VAC.

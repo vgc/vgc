@@ -134,30 +134,37 @@ KeyFace* Operations::createKeyFace(
     return kf;
 }
 
-void Operations::removeNode(Node* node, bool removeFreeVertices) {
+void Operations::hardDelete(Node* node, bool deleteIsolatedVertices) {
 
     ComplexDiff& diff = complex()->diff_;
     const bool diffEnabled = complex()->isDiffEnabled_;
+
+    std::unordered_set<Node*> nodesToDestroy;
+
+    // When hard-deleting the root, we delete all nodes below the root, but
+    // preserve the root itself since we have the invariant that there is
+    // always a root.
+    //
     const bool isRoot = (complex()->rootGroup() == node);
-
-    std::unordered_set<Node*> toRemoveNodes;
-
-    // only remove `node` if it is not the root node
     if (!isRoot) {
-        toRemoveNodes.insert(node);
+        nodesToDestroy.insert(node);
     }
 
-    // collect all dependent nodes
-    collectDependentNodes_(node, toRemoveNodes);
+    // Recursively collect all dependent nodes:
+    // - children of groups
+    // - star cells of cells
+    //
+    collectDependentNodes_(node, nodesToDestroy);
 
-    std::unordered_set<Node*> freeKeyVertices;
-    std::unordered_set<Node*> freeInbetweenVertices;
-
-    // flag removal
-    for (Node* toRemoveNode : toRemoveNodes) {
-        toRemoveNode->isBeingDestroyed_ = true;
+    // Flag all cells that are about to be deleted.
+    //
+    for (Node* nodeToDestroy : nodesToDestroy) {
+        nodeToDestroy->isBeingDestroyed_ = true;
     }
 
+    // Helper function that tests if the star of a cell will become empty after
+    // deleting all cells flagged for deletion.
+    //
     auto hasEmptyStar = [](Cell* cell) {
         bool isStarEmpty = true;
         for (Cell* starCell : cell->star()) {
@@ -169,29 +176,43 @@ void Operations::removeNode(Node* node, bool removeFreeVertices) {
         return isStarEmpty;
     };
 
-    for (Node* toRemoveNode : toRemoveNodes) {
-        if (toRemoveNode->isCell()) {
-            Cell* cell = toRemoveNode->toCellUnchecked();
+    // Update star of cells in the boundary of deleted cells.
+    //
+    // For example, if we delete an edge, we should remove the edge
+    // for the star of its end vertices.
+    //
+    // In this step, we also detect vertices which are about to become
+    // isolated, and delete these if deleteIsolatedVertices is true. Note that
+    // there is no need to collectDependentNodes_(isolatedVertex), since being
+    // isolated means having an empty star, which means that the vertex has no
+    // dependent nodes.
+    //
+    // Note: we store the isolated vertices as set<Node*> instead of set<Cell*>
+    // so that we can later merge with nodesToDelete.
+    //
+    std::unordered_set<Node*> isolatedKeyVertices;
+    std::unordered_set<Node*> isolatedInbetweenVertices;
+    for (Node* nodeToDestroy : nodesToDestroy) {
+        if (nodeToDestroy->isCell()) {
+            Cell* cell = nodeToDestroy->toCellUnchecked();
             for (Cell* boundaryCell : cell->boundary()) {
-                // skip if cell is flag'd for removal
                 if (boundaryCell->isBeingDestroyed_) {
                     continue;
                 }
-                if (removeFreeVertices
+                if (deleteIsolatedVertices
                     && boundaryCell->spatialType() == CellSpatialType::Vertex
                     && hasEmptyStar(boundaryCell)) {
 
                     switch (boundaryCell->cellType()) {
                     case CellType::KeyVertex:
-                        freeKeyVertices.insert(boundaryCell);
+                        isolatedKeyVertices.insert(boundaryCell);
                         break;
                     case CellType::InbetweenVertex:
-                        freeInbetweenVertices.insert(boundaryCell);
+                        isolatedInbetweenVertices.insert(boundaryCell);
                         break;
                     default:
                         break;
                     }
-
                     boundaryCell->isBeingDestroyed_ = true;
                 }
                 if (!boundaryCell->isBeingDestroyed_) {
@@ -204,42 +225,57 @@ void Operations::removeNode(Node* node, bool removeFreeVertices) {
         }
     }
 
-    if (removeFreeVertices) {
-        // it requires a second pass since inbetween vertices are in star of key vertices
-        for (Node* vn : freeInbetweenVertices) {
-            Cell* cell = vn->toCellUnchecked();
-            for (Cell* boundaryCell : cell->boundary()) {
-                if (boundaryCell->isBeingDestroyed_) {
+    // Deleting isolated inbetween vertices might indirectly cause key vertices
+    // to become isolated, so we detect these in a second pass.
+    //
+    //       ke1
+    // kv1 -------- kv2          Scenario: user hard deletes ie1
+    //  |            |
+    //  |iv1         | iv2        -> This directly makes iv1, iv2, and iv3 isolated
+    //  |            |               (but does not directly make kv5 isolated, since
+    //  |    ie1     kv5              the star of kv5 still contained iv2 and iv3)
+    //  |            |
+    //  |            | iv3
+    //  |            |
+    // kv3 ------- kv4
+    //       ke2
+    //
+    if (deleteIsolatedVertices) {
+        for (Node* inbetweenVertexNode : isolatedInbetweenVertices) {
+            Cell* inbetweenVertex = inbetweenVertexNode->toCellUnchecked();
+            for (Cell* keyVertex : inbetweenVertex->boundary()) {
+                if (keyVertex->isBeingDestroyed_) {
                     continue;
                 }
-                if (hasEmptyStar(boundaryCell)) {
-                    freeKeyVertices.insert(boundaryCell->toKeyVertexUnchecked());
-                    boundaryCell->isBeingDestroyed_ = true;
+                if (hasEmptyStar(keyVertex)) {
+                    isolatedKeyVertices.insert(keyVertex);
+                    keyVertex->isBeingDestroyed_ = true;
                 }
                 else {
-                    boundaryCell->star_.removeOne(cell);
+                    keyVertex->star_.removeOne(inbetweenVertex);
                     if (diffEnabled) {
-                        diff.onNodeDiff(boundaryCell, NodeDiffFlag::StarChanged);
+                        diff.onNodeDiff(keyVertex, NodeDiffFlag::StarChanged);
                     }
                 }
             }
         }
-        toRemoveNodes.merge(freeKeyVertices);
-        toRemoveNodes.merge(freeInbetweenVertices);
+        nodesToDestroy.merge(isolatedKeyVertices);
+        nodesToDestroy.merge(isolatedInbetweenVertices);
     }
 
-    for (Node* toRemoveNode : toRemoveNodes) {
+    // Actually delete the nodes
+    for (Node* nodeToDestroy : nodesToDestroy) {
         if (diffEnabled) {
-            Group* parentGroup = toRemoveNode->parentGroup();
+            Group* parentGroup = nodeToDestroy->parentGroup();
             if (parentGroup) {
                 diff.onNodeDiff(parentGroup, NodeDiffFlag::ChildrenChanged);
             }
-            diff.onNodeRemoved(toRemoveNode);
+            diff.onNodeRemoved(nodeToDestroy);
         }
-        toRemoveNode->unlink();
+        nodeToDestroy->unlink();
         // Note: must not cause recursion.
-        complex()->nodeAboutToBeRemoved().emit(toRemoveNode);
-        complex()->nodes_.erase(toRemoveNode->id());
+        complex()->nodeAboutToBeRemoved().emit(nodeToDestroy);
+        complex()->nodes_.erase(nodeToDestroy->id());
     }
 
     if (isRoot) {
@@ -254,9 +290,9 @@ void Operations::removeNode(Node* node, bool removeFreeVertices) {
     }
 }
 
-void Operations::removeNodeSmart(Node* /*node*/, bool /*removeFreeVertices*/) {
-    // todo later
-    throw core::RuntimeError("not implemented");
+void Operations::softDelete(Node* /*node*/, bool /*deleteIsolatedVertices*/) {
+    // TODO
+    throw core::LogicError("Soft Delete topological operator is not implemented yet.");
 }
 
 void Operations::moveToGroup(Node* node, Group* parentGroup, Node* nextSibling) {
@@ -379,18 +415,20 @@ void Operations::collectDependentNodes_(
     std::unordered_set<Node*>& dependentNodes) {
 
     if (node->isGroup()) {
-        Group* g = node->toGroupUnchecked();
-        for (Node* n : *g) {
-            if (dependentNodes.insert(n).second) {
-                collectDependentNodes_(n, dependentNodes);
+        // Delete all children of the group
+        Group* group = node->toGroupUnchecked();
+        for (Node* child : *group) {
+            if (dependentNodes.insert(child).second) {
+                collectDependentNodes_(child, dependentNodes);
             }
         }
     }
     else {
-        Cell* c = node->toCellUnchecked();
-        for (Node* n : c->star()) {
-            if (dependentNodes.insert(n).second) {
-                collectDependentNodes_(n, dependentNodes);
+        // Delete all cells in the star of the cell
+        Cell* cell = node->toCellUnchecked();
+        for (Node* starNode : cell->star()) {
+            if (dependentNodes.insert(starNode).second) {
+                collectDependentNodes_(starNode, dependentNodes);
             }
         }
     }

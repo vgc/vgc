@@ -143,20 +143,20 @@ createKeyFace(KeyCycle cycle, Group* parentGroup, Node* nextSibling, core::AnimT
     return createKeyFace(std::move(cycles), parentGroup, nextSibling, t);
 }
 
-void removeNode(Node* node, bool removeFreeVertices) {
+void hardDelete(Node* node, bool deleteIsolatedVertices) {
     if (!node) {
-        throw LogicError("removeNode: node is nullptr.");
+        throw LogicError("hardDelete: node is nullptr.");
     }
     detail::Operations ops(node->complex());
-    ops.removeNode(node, removeFreeVertices);
+    ops.hardDelete(node, deleteIsolatedVertices);
 }
 
-void removeNodeSmart(Node* node, bool removeFreeVertices) {
+void softDelete(Node* node, bool deleteIsolatedVertices) {
     if (!node) {
-        throw LogicError("removeNodeSmart: node is nullptr.");
+        throw LogicError("softDelete: node is nullptr.");
     }
     detail::Operations ops(node->complex());
-    ops.removeNodeSmart(node, removeFreeVertices);
+    ops.softDelete(node, deleteIsolatedVertices);
 }
 
 void moveToGroup(Node* node, Group* parentGroup, Node* nextSibling) {
