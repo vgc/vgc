@@ -240,10 +240,10 @@ bool SelectTool::onMouseRelease(MouseEvent* event) {
     // Compute new selection
     bool selectionChanged = false;
     switch (selectionMode_) {
-    case SelectionMode::Toggle:
+    case SelectionMode::Toggle: {
         // TODO: Toggle selection.
         break;
-
+    }
     case SelectionMode::Add: {
         core::Id selectedId =
             addToSelection(selection, candidates, isAlternativeMode_, lastSelectedId_);
@@ -264,7 +264,6 @@ bool SelectTool::onMouseRelease(MouseEvent* event) {
         }
         break;
     }
-
     case SelectionMode::Single: {
         core::Id selectedId =
             selectSingleItem(candidates, isAlternativeMode_, lastSelectedId_);
