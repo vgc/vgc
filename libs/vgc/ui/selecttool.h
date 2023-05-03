@@ -17,7 +17,9 @@
 #ifndef VGC_UI_SELECTTOOL_H
 #define VGC_UI_SELECTTOOL_H
 
+#include <vgc/core/array.h>
 #include <vgc/core/id.h>
+#include <vgc/geometry/vec2f.h>
 #include <vgc/ui/api.h>
 #include <vgc/ui/canvastool.h>
 
@@ -56,11 +58,27 @@ private:
         Remove,
         Toggle
     };
-    SelectionMode selectionMode_;
-    bool isSelecting_ = false;
+    enum class DragAction {
+        Select,
+        TranslateSelection,
+        TranslateCandidate,
+    };
+
+    core::Array<SelectionCandidate> candidates_;
+    core::Array<core::Id> selectionAtPress_;
+    geometry::Vec2f cursorPositionAtPress_;
+    geometry::Vec2f cursorPositionAtDragStart_;
+    geometry::Vec2f cursorPositionAtLastTranslate_;
+    Int timeAtPress_ = 0;
+    bool isInAction_ = false;
+    bool isDragging_ = false;
+    DragAction dragAction_ = {};
+    SelectionMode selectionMode_ = {};
     bool isAlternativeMode_ = false;
     core::Id lastSelectedId_ = -1;
     core::Id lastDeselectedId_ = -1;
+
+    void resetActionState_();
 };
 
 } // namespace vgc::ui

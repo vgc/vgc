@@ -26,51 +26,184 @@ SelectToolPtr SelectTool::create() {
     return SelectToolPtr(new SelectTool());
 }
 
-bool SelectTool::onMouseMove(MouseEvent* /*event*/) {
-    return isSelecting_;
+namespace {
 
-    // TODO: if isMaybeSelecting_ or isMaybeDragging_,
-    //       activate dragging after a few pixel
+// Assumes `workspace` is not null.
+void translateElements(
+    workspace::Workspace* workspace,
+    const core::Array<core::Id>& elementIds,
+    const geometry::Vec2d& delta) {
+
+    if (elementIds.isEmpty()) {
+        return;
+    }
+
+    // Open history group
+    static core::StringId Translate_Elements("Translate Elements");
+    core::UndoGroup* undoGroup = nullptr;
+    core::History* history = workspace->history();
+    if (history) {
+        undoGroup = history->createUndoGroup(Translate_Elements);
+    }
+
+    // TODO: specific transformations for edges and vertices
+
+    // Iterate over all elements to translate.
+    //
+    for (core::Id id : elementIds) {
+        workspace::Element* element = workspace->find(id);
+        if (element) {
+            element->setPosition(element->position() + delta);
+        }
+    }
+    workspace->sync();
+
+    // Close operation
+    if (undoGroup) {
+        bool tryAmend =
+            undoGroup->parent() && undoGroup->parent()->name() == Translate_Elements;
+        undoGroup->close(tryAmend);
+    }
+}
+
+} // namespace
+
+bool SelectTool::onMouseMove(MouseEvent* event) {
+
+    if (!isInAction_) {
+        return false;
+    }
+
+    if (!isDragging_) {
+        // Initiate drag if conditions are met.
+        //
+        // Current event implementation uses Qt's timestamps, and according to the
+        // documentation, these should "normally be in milliseconds".
+        Int deltaTime = core::int_cast<Int>(event->timestamp()) - timeAtPress_;
+        float deltaPos = (event->position() - cursorPositionAtPress_).length();
+        // Consider the action is a drag if we moved 5 pixels or the button
+        // has been pressed for more than 1 second.
+        if (deltaPos >= 5.f || deltaTime > 1000) {
+            cursorPositionAtDragStart_ = cursorPositionAtPress_; // event->position();
+            cursorPositionAtLastTranslate_ = cursorPositionAtDragStart_;
+            isDragging_ = true;
+        }
+    }
+
+    ui::Canvas* canvas = this->canvas();
+    if (!canvas) {
+        return isInAction_; // always true
+    }
+
+    workspace::Workspace* workspace = canvas->workspace();
+
+    if (isDragging_) {
+        geometry::Mat4d inverseViewMatrix = canvas->camera().viewMatrix().inverted();
+        geometry::Vec2f cursorPosition = event->position();
+
+        geometry::Vec2d cursorPositionInWorkspace =
+            inverseViewMatrix.transformPointAffine(geometry::Vec2d(cursorPosition));
+        geometry::Vec2d cursorPositionInWorkspaceAtLastTranslate =
+            inverseViewMatrix.transformPointAffine(
+                geometry::Vec2d(cursorPositionAtLastTranslate_));
+
+        geometry::Vec2d deltaInWorkspace =
+            cursorPositionInWorkspace - cursorPositionInWorkspaceAtLastTranslate;
+
+        VGC_DEBUG_TMP("delta: {}", deltaInWorkspace);
+
+        switch (dragAction_) {
+        case DragAction::Select: {
+            // todo
+            break;
+        }
+        case DragAction::TranslateCandidate: {
+            if (workspace) {
+                core::Array<core::Id> elementIds;
+                elementIds.append(candidates_.first().id());
+                translateElements(workspace, elementIds, deltaInWorkspace);
+                cursorPositionAtLastTranslate_ = cursorPosition;
+            }
+            break;
+        }
+        case DragAction::TranslateSelection: {
+            if (workspace) {
+                translateElements(workspace, selectionAtPress_, deltaInWorkspace);
+                cursorPositionAtLastTranslate_ = cursorPosition;
+            }
+            break;
+        }
+        }
+    }
+
+    return true;
 }
 
 bool SelectTool::onMousePress(MouseEvent* event) {
 
-    if (isSelecting_) {
+    if (isInAction_) {
         return true;
     }
 
     MouseButton button = event->button();
+    if (button != MouseButton::Left) {
+        return isInAction_; // always false
+    }
+
+    ui::Canvas* canvas = this->canvas();
+    if (!canvas) {
+        return isInAction_; // always false
+    }
+
     ModifierKeys keys = event->modifierKeys();
-    if (button == MouseButton::Left) {
-        ModifierKeys unsupportedKeys =
-            (ModifierKey::Ctrl | ModifierKey::Alt | ModifierKey::Shift).toggleAll();
-        if (keys.hasAny(unsupportedKeys)) {
-            isSelecting_ = false;
+
+    ModifierKeys unsupportedKeys =
+        (ModifierKey::Ctrl | ModifierKey::Alt | ModifierKey::Shift).toggleAll();
+    if (canvas && !keys.hasAny(unsupportedKeys)) {
+        // We prepare for a simple click selection action
+        isInAction_ = true;
+        candidates_ = canvas->computeSelectionCandidates(event->position());
+        selectionAtPress_ = canvas->selection();
+        cursorPositionAtPress_ = event->position();
+        timeAtPress_ = core::int_cast<Int>(event->timestamp());
+
+        if (keys.hasAll(ModifierKey::Shift | ModifierKey::Ctrl)) {
+            selectionMode_ = SelectionMode::Toggle;
+        }
+        else if (keys.has(ModifierKey::Shift)) {
+            selectionMode_ = SelectionMode::Add;
+        }
+        else if (keys.has(ModifierKey::Ctrl)) {
+            selectionMode_ = SelectionMode::Remove;
         }
         else {
-            isSelecting_ = true;
-            isAlternativeMode_ = keys.has(ModifierKey::Alt);
-            if (keys.hasAll(ModifierKey::Shift | ModifierKey::Ctrl)) {
-                selectionMode_ = SelectionMode::Toggle;
-            }
-            else if (keys.has(ModifierKey::Shift)) {
-                selectionMode_ = SelectionMode::Add;
-            }
-            else if (keys.has(ModifierKey::Ctrl)) {
-                selectionMode_ = SelectionMode::Remove;
-            }
-            else {
-                selectionMode_ = SelectionMode::Single;
+            selectionMode_ = SelectionMode::Single;
+        }
+        isAlternativeMode_ = keys.has(ModifierKey::Alt);
+
+        if (candidates_.isEmpty()) {
+            dragAction_ = DragAction::Select;
+        }
+        else if (selectionMode_ == SelectionMode::Single && !isAlternativeMode_) {
+            // When no modifier keys are used:
+            // If some candidates are already selected then the drag action is
+            // to translate the current selection.
+            // Otherwise we'll translate the candidate that would be selected
+            // if no drag occurs.
+            dragAction_ = DragAction::TranslateCandidate;
+            for (const SelectionCandidate& candidate : candidates_) {
+                if (selectionAtPress_.contains(candidate.id())) {
+                    dragAction_ = DragAction::TranslateSelection;
+                    break;
+                }
             }
         }
-    }
-    else {
-        isSelecting_ = false;
+        else {
+            dragAction_ = DragAction::Select;
+        }
     }
 
-    return isSelecting_;
-
-    // TODO: isMaybeSelecting_, isMaybeDragging_
+    return isInAction_;
 }
 
 namespace {
@@ -211,7 +344,7 @@ core::Id selectSingleItem(
 
 bool SelectTool::onMouseRelease(MouseEvent* event) {
 
-    if (!isSelecting_) {
+    if (!isInAction_) {
         return false;
     }
 
@@ -223,22 +356,26 @@ bool SelectTool::onMouseRelease(MouseEvent* event) {
 
     ui::Canvas* canvas = this->canvas();
     if (!canvas) {
-        bool wasSelecting = isSelecting_;
-        isSelecting_ = false;
-        return wasSelecting;
+        bool wasInAction = isInAction_;
+        resetActionState_();
+        return wasInAction;
         // Until a better mechanism is implemented, we should return the same
         // value in onMousePress / onMouseRelease (at least for the same mouse
         // button) otherwise this confuses the parent widgets (receiving the
         // press but not the release, or vice-versa).
+        // Here we stop the action early so our parent may receive releases for
+        // buttons it didn't receive any press event for.
     }
 
-    // Get current selection and selection candidates
-    core::Array<core::Id> selection = canvas->selection();
-    core::Array<SelectionCandidate> candidates =
-        canvas->computeSelectionCandidates(event->position());
+    // If we were dragging we can stop the action and return.
+    if (isDragging_) {
+        resetActionState_();
+        return true;
+    }
 
-    // Compute new selection
+    // Otherwise, we compute the new selection.
     bool selectionChanged = false;
+    core::Array<core::Id> selection = selectionAtPress_;
     switch (selectionMode_) {
     case SelectionMode::Toggle: {
         // TODO: Toggle selection.
@@ -246,7 +383,7 @@ bool SelectTool::onMouseRelease(MouseEvent* event) {
     }
     case SelectionMode::Add: {
         core::Id selectedId =
-            addToSelection(selection, candidates, isAlternativeMode_, lastSelectedId_);
+            addToSelection(selection, candidates_, isAlternativeMode_, lastSelectedId_);
         if (selectedId != -1) {
             selectionChanged = true;
             lastSelectedId_ = selectedId;
@@ -256,7 +393,7 @@ bool SelectTool::onMouseRelease(MouseEvent* event) {
     }
     case SelectionMode::Remove: {
         core::Id deselectedId = removeFromSelection(
-            selection, candidates, isAlternativeMode_, lastDeselectedId_);
+            selection, candidates_, isAlternativeMode_, lastDeselectedId_);
         if (deselectedId != -1) {
             selectionChanged = true;
             lastSelectedId_ = -1;
@@ -266,7 +403,7 @@ bool SelectTool::onMouseRelease(MouseEvent* event) {
     }
     case SelectionMode::Single: {
         core::Id selectedId =
-            selectSingleItem(candidates, isAlternativeMode_, lastSelectedId_);
+            selectSingleItem(candidates_, isAlternativeMode_, lastSelectedId_);
         if (selectedId != -1) {
             if (selection.length() != 1 || selection.first() != selectedId) {
                 selection.assign(1, selectedId);
@@ -290,8 +427,16 @@ bool SelectTool::onMouseRelease(MouseEvent* event) {
     if (selectionChanged) {
         canvas->setSelection(selection);
     }
-    isSelecting_ = false;
+
+    resetActionState_();
     return true;
+}
+
+void SelectTool::resetActionState_() {
+    candidates_.clear();
+    selectionAtPress_.clear();
+    isInAction_ = false;
+    isDragging_ = false;
 }
 
 } // namespace vgc::ui

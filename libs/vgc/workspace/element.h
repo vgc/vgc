@@ -249,6 +249,11 @@ public:
 
     virtual geometry::Rect2d boundingBox(core::AnimTime t = {}) const;
 
+    virtual geometry::Vec2d position(core::AnimTime t = {}) const;
+
+    virtual void
+    setPosition(const geometry::Vec2d& position, core::AnimTime t = {}) const;
+
     /// Returns whether the element is selectable, that is:
     /// - `pos` is inside the element graphics geometry, or
     /// - `pos` is at a distance less than `tol` from the element outline.

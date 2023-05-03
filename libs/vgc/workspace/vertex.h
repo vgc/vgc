@@ -326,6 +326,11 @@ public:
 
     geometry::Rect2d boundingBox(core::AnimTime t) const override;
 
+    geometry::Vec2d position(core::AnimTime t = {}) const override;
+
+    void
+    setPosition(const geometry::Vec2d& position, core::AnimTime t = {}) const override;
+
     bool isSelectableAt(
         const geometry::Vec2d& pos,
         bool outlineOnly,
