@@ -72,6 +72,7 @@ private:
     Int timeAtPress_ = 0;
     bool isInAction_ = false;
     bool isDragging_ = false;
+    bool canAmendUndoGroup_ = false;
     DragAction dragAction_ = {};
     SelectionMode selectionMode_ = {};
     bool isAlternativeMode_ = false;

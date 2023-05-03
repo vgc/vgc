@@ -32,7 +32,8 @@ namespace {
 void translateElements(
     workspace::Workspace* workspace,
     const core::Array<core::Id>& elementIds,
-    const geometry::Vec2d& delta) {
+    const geometry::Vec2d& delta,
+    bool tryAmend) {
 
     if (elementIds.isEmpty()) {
         return;
@@ -47,6 +48,8 @@ void translateElements(
     }
 
     // TODO: specific transformations for edges and vertices
+    // move this function as a method of the tool to recompute translation
+    // from "before drag" data.
 
     // Iterate over all elements to translate.
     //
@@ -60,9 +63,9 @@ void translateElements(
 
     // Close operation
     if (undoGroup) {
-        bool tryAmend =
-            undoGroup->parent() && undoGroup->parent()->name() == Translate_Elements;
-        undoGroup->close(tryAmend);
+        bool amend = tryAmend && undoGroup->parent()
+                     && undoGroup->parent()->name() == Translate_Elements;
+        undoGroup->close(amend);
     }
 }
 
@@ -110,8 +113,6 @@ bool SelectTool::onMouseMove(MouseEvent* event) {
         geometry::Vec2d deltaInWorkspace =
             cursorPositionInWorkspace - cursorPositionInWorkspaceAtLastTranslate;
 
-        VGC_DEBUG_TMP("delta: {}", deltaInWorkspace);
-
         switch (dragAction_) {
         case DragAction::Select: {
             // todo
@@ -121,15 +122,19 @@ bool SelectTool::onMouseMove(MouseEvent* event) {
             if (workspace) {
                 core::Array<core::Id> elementIds;
                 elementIds.append(candidates_.first().id());
-                translateElements(workspace, elementIds, deltaInWorkspace);
+                translateElements(
+                    workspace, elementIds, deltaInWorkspace, canAmendUndoGroup_);
                 cursorPositionAtLastTranslate_ = cursorPosition;
+                canAmendUndoGroup_ = true;
             }
             break;
         }
         case DragAction::TranslateSelection: {
             if (workspace) {
-                translateElements(workspace, selectionAtPress_, deltaInWorkspace);
+                translateElements(
+                    workspace, selectionAtPress_, deltaInWorkspace, canAmendUndoGroup_);
                 cursorPositionAtLastTranslate_ = cursorPosition;
+                canAmendUndoGroup_ = true;
             }
             break;
         }
@@ -437,6 +442,7 @@ void SelectTool::resetActionState_() {
     selectionAtPress_.clear();
     isInAction_ = false;
     isDragging_ = false;
+    canAmendUndoGroup_ = false;
 }
 
 } // namespace vgc::ui
