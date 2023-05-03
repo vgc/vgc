@@ -91,8 +91,8 @@ public:
         core::Span<Node*> operationSourceNodes = {},
         core::AnimTime t = {});
 
-    void removeNode(Node* node, bool removeFreeVertices);
-    void removeNodeSmart(Node* node, bool removeFreeVertices);
+    void hardDelete(Node* node, bool deleteIsolatedVertices);
+    void softDelete(Node* node, bool deleteIsolatedVertices);
 
     void moveToGroup(Node* node, Group* parentGroup, Node* nextSibling = nullptr);
 
