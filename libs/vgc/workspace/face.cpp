@@ -17,6 +17,7 @@
 #include <vgc/workspace/face.h>
 
 #include <vgc/core/span.h>
+#include <vgc/geometry/triangle2f.h>
 #include <vgc/workspace/colors.h>
 #include <vgc/workspace/edge.h>
 #include <vgc/workspace/workspace.h>
@@ -110,24 +111,17 @@ bool VacFaceCellFrameData::isSelectableAt(
         return false;
     }
 
-    geometry::Vec2f positionF(position);
-
     bool isContained = false;
-    if (inflatedBbox.contains(position)) {
-        for (Int i = 0; i < triangulation_.length() - 5; i += 6) {
-            Vec2f v0(triangulation_[i + 0], triangulation_[i + 1]);
-            Vec2f v1(triangulation_[i + 2], triangulation_[i + 3]);
-            Vec2f v2(triangulation_[i + 4], triangulation_[i + 5]);
-            bool b0 = (v1 - v0).det(positionF - v0) > 0;
-            bool b1 = (v2 - v1).det(positionF - v1) > 0;
-            if (b0 != b1) {
-                continue;
-            }
-            bool b2 = (v0 - v2).det(positionF - v2) > 0;
-            if (b2 == b0) {
-                isContained = true;
-                break;
-            }
+
+    Vec2f positionF(position);
+    geometry::Triangle2f triangle;
+    for (Int i = 0; i < triangulation_.length() - 5; i += 6) {
+        triangle.setA(triangulation_[i + 0], triangulation_[i + 1]);
+        triangle.setB(triangulation_[i + 2], triangulation_[i + 3]);
+        triangle.setC(triangulation_[i + 4], triangulation_[i + 5]);
+        if (triangle.contains(positionF)) {
+            isContained = true;
+            break;
         }
     }
 
