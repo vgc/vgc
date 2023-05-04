@@ -34,6 +34,7 @@ const EdgeSampling& KeyEdge::sampling() const {
     if (inputSamples_.isEmpty()) {
         inputSamples_ = computeInputSamples_(samplingParameters_);
     }
+    hasGeometryBeenQueriedSinceLastDirtyEvent_ = true;
 
     // TODO: transform and snap
 
