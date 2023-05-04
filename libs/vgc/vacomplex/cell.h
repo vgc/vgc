@@ -829,7 +829,13 @@ public:
     VGC_VACOMPLEX_DEFINE_CELL_CAST_METHOD(InbetweenFace)
 
 protected:
-    mutable bool isGeometryDirty_ = false;
+    // This flag is used to not signal NodeDiffFlag::GeometryChanged
+    // multiple times if no dependent nodes nor the user has queried
+    // the new geometry. It should be set to true (either directly
+    // or indirectly) in all geometry getters.
+    mutable bool hasGeometryBeenQueriedSinceLastDirtyEvent_ = false;
+
+    virtual void onBoundaryGeometryChanged_();
 
 private:
     core::Array<Cell*> star_;

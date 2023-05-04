@@ -435,21 +435,22 @@ void Operations::collectDependentNodes_(
 }
 
 void Operations::dirtyGeometry_(Cell* cell) {
-    if (cell->isGeometryDirty_) {
+    if (!cell->hasGeometryBeenQueriedSinceLastDirtyEvent_) {
         return;
     }
 
     core::Array<Cell*> dirtyList;
 
     dirtyList.append(cell);
-    cell->isGeometryDirty_ = true;
+    cell->hasGeometryBeenQueriedSinceLastDirtyEvent_ = false;
 
     for (Cell* starCell : cell->star_) {
-        if (!starCell->isGeometryDirty_) {
+        if (starCell->hasGeometryBeenQueriedSinceLastDirtyEvent_) {
             // There is no need to call dirtyGeometry_ for starCell
             // since starCell.star() is a subset of cell.star().
             dirtyList.append(starCell);
-            starCell->isGeometryDirty_ = true;
+            starCell->hasGeometryBeenQueriedSinceLastDirtyEvent_ = false;
+            starCell->onBoundaryGeometryChanged_();
         }
     }
 

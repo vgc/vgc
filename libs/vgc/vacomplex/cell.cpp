@@ -52,6 +52,9 @@ Complex* Cell::complex() const {
     return p ? p->complex() : nullptr;
 }
 
+void Cell::onBoundaryGeometryChanged_() {
+}
+
 Transform Group::computeInverseTransformTo(Group* ancestor) const {
     Transform t = inverseTransform_;
     Group* g = parentGroup();

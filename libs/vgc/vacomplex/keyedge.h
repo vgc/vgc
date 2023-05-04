@@ -112,11 +112,13 @@ public:
 
     // XXX temporary, we should use geometry_.
     const geometry::Vec2dArray& points() const {
+        hasGeometryBeenQueriedSinceLastDirtyEvent_ = true;
         return points_ ? *points_ : fallbackPoints_;
     }
 
     // XXX temporary, we should use geometry_.
     const core::DoubleArray& widths() const {
+        hasGeometryBeenQueriedSinceLastDirtyEvent_ = true;
         return widths_ ? *widths_ : fallbackWidths_;
     }
 
@@ -170,6 +172,8 @@ private:
     mutable geometry::Rect2d snappedSamplingBbox_ = {};
 
     void dirtyInputSampling_();
+
+    void onBoundaryGeometryChanged_() override;
 
     geometry::CurveSampleArray
     computeInputSamples_(const geometry::CurveSamplingParameters& parameters) const;
