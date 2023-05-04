@@ -588,7 +588,6 @@ void SelectTool::updateDragMovedElements_(
             }
         }
     }
-    workspace->sync();
 
     // Close operation
     if (undoGroup) {
