@@ -687,12 +687,12 @@ void VacKeyEdge::updateFromVac_(vacomplex::NodeDiffFlags /*diffs*/) {
 
     const auto& points = domElement->getAttribute(ds::positions).getVec2dArray();
     if (ke->points() != points) {
-        domElement->setAttribute(ds::positions, points);
+        domElement->setAttribute(ds::positions, ke->points());
     }
 
     const auto& widths = domElement->getAttribute(ds::widths).getDoubleArray();
     if (ke->widths() != widths) {
-        domElement->setAttribute(ds::widths, widths);
+        domElement->setAttribute(ds::widths, ke->widths());
     }
 
     const Workspace* w = workspace();
