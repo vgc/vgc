@@ -194,15 +194,23 @@ indexInCandidates(const core::Array<SelectionCandidate>& candidates, core::Id it
         });
 }
 
+core::Array<SelectionCandidate>::iterator
+findInCandidates(core::Array<SelectionCandidate>& candidates, core::Id itemId) {
+    return candidates.find(                        //
+        [&](const SelectionCandidate& candidate) { //
+            return candidate.id() == itemId;
+        });
+}
+
 // If the given item is a candidate, then returns the item and rotates the
 // candidates such that the item becomes last.
 //
 // Otherwise, return -1.
 //
 core::Id rotateCandidates(core::Array<SelectionCandidate>& candidates, core::Id item) {
-    Int i = indexInCandidates(candidates, item);
-    if (i >= 0) {
-        std::rotate(candidates.begin(), candidates.begin() + i, candidates.end());
+    auto it = findInCandidates(candidates, item);
+    if (it != candidates.end()) {
+        std::rotate(candidates.begin(), ++it, candidates.end());
         return item;
     }
     else {
@@ -227,9 +235,10 @@ core::Id addToSelection(
     // If Alt is pressed and the last selected item is a candidate, then we
     // want to deselect it and select the next unselected candidate instead.
     //
-    // We implement this behavior by rotating the candidates such that the last
-    // selected item becomes the last candidate, and we remember whether we
-    // should deselect it (unless later re-selected).
+    // We implement this behavior by:
+    // 1. Checking if the last selected item is indeed a candidate (else do nothing).
+    // 2. Rotating the candidates to place the last selected item at the end.
+    // 3. Remembering to delesect it if we find a candidate to select.
     //
     core::Id itemToDeselect = -1;
     if (isAlternativeMode && lastSelectedId != -1) {
@@ -241,7 +250,7 @@ core::Id addToSelection(
     for (const SelectionCandidate& c : candidates) {
         core::Id id = c.id();
         if (!selection.contains(id)) {
-            if (itemToDeselect != -1 && itemToDeselect != id) {
+            if (itemToDeselect != -1) {
                 selection.removeOne(itemToDeselect);
             }
             selection.append(id);
@@ -268,9 +277,10 @@ core::Id removeFromSelection(
     // If Alt is pressed and the last deselected item is a candidate, then we
     // want to reselect it and deselect the next selected candidate instead.
     //
-    // We implement this behavior by rotating the candidates such that the last
-    // deselected item becomes the last candidate, and we remember whether we
-    // should reselect it (unless later re-deselected).
+    // We implement this behavior by:
+    // 1. Checking if the last deselected item is indeed a candidate (else do nothing).
+    // 2. Rotating the candidates to place the last deselected item at the end.
+    // 3. Remembering to relesect it if we find a candidate to deselect.
     //
     core::Id itemToReselect = -1;
     if (isAlternativeMode && lastDeselectedId != -1) {
@@ -282,7 +292,7 @@ core::Id removeFromSelection(
     for (const SelectionCandidate& c : candidates) {
         core::Id id = c.id();
         if (selection.contains(id)) {
-            if (itemToReselect != -1 && itemToReselect != id) {
+            if (itemToReselect != -1 && !selection.contains(itemToReselect)) {
                 selection.append(itemToReselect);
             }
             selection.removeOne(id);
