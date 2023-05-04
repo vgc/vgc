@@ -25,7 +25,7 @@ std::shared_ptr<const EdgeSampling> KeyEdge::samplingShared() const {
 
 const EdgeSampling& KeyEdge::sampling() const {
 
-    if (!isGeometryDirty_ && snappedSampling_) {
+    if (snappedSampling_) {
         return *snappedSampling_;
     }
 
@@ -34,6 +34,7 @@ const EdgeSampling& KeyEdge::sampling() const {
     if (inputSamples_.isEmpty()) {
         inputSamples_ = computeInputSamples_(samplingParameters_);
     }
+    hasGeometryBeenQueriedSinceLastDirtyEvent_ = true;
 
     // TODO: transform and snap
 
@@ -55,7 +56,6 @@ const EdgeSampling& KeyEdge::sampling() const {
     }
 
     snappedSampling_ = std::make_shared<EdgeSampling>(std::move(snappedSamples));
-    isGeometryDirty_ = false;
 
     return *snappedSampling_;
 }
@@ -110,6 +110,10 @@ void KeyEdge::dirtyInputSampling_() {
     inputSamples_.clear();
 }
 
+void KeyEdge::onBoundaryGeometryChanged_() {
+    snappedSampling_.reset();
+}
+
 geometry::CurveSampleArray
 KeyEdge::computeInputSamples_(const geometry::CurveSamplingParameters& parameters) const {
 
@@ -135,6 +139,7 @@ KeyEdge::computeInputSamples_(const geometry::CurveSamplingParameters& parameter
             lastPoint = point;
         }
     }
+    hasGeometryBeenQueriedSinceLastDirtyEvent_ = true;
     return sampling;
 }
 

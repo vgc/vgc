@@ -39,10 +39,12 @@ public:
     VGC_VACOMPLEX_DEFINE_SPATIOTEMPORAL_CELL_CAST_METHODS(Key, Vertex)
 
     constexpr geometry::Vec2d position() const {
+        hasGeometryBeenQueriedSinceLastDirtyEvent_ = true;
         return position_;
     }
 
     geometry::Vec2d position(core::AnimTime /*t*/) const override {
+        hasGeometryBeenQueriedSinceLastDirtyEvent_ = true;
         return position_;
     }
 
