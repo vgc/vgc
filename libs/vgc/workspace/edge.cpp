@@ -386,23 +386,62 @@ void VacKeyEdge::onPaintDraw(
         geometry::Vec4fArray lineVertices;
         geometry::Vec4fArray offsetLine0Vertices;
         geometry::Vec4fArray offsetLine1Vertices;
-        for (const geometry::CurveSample& s : data.preJoinSamples()) {
-            geometry::Vec2f p = geometry::Vec2f(s.position());
-            geometry::Vec2f n = geometry::Vec2f(s.normal());
-            // clang-format off
-            lineVertices.emplaceLast(p.x(), p.y(), -n.x(), -n.y());
-            lineVertices.emplaceLast(p.x(), p.y(),  n.x(),  n.y());
-            if (isPaintingOffsetLine0) {
-                geometry::Vec2f p0 = geometry::Vec2f(s.sidePoint(0));
-                offsetLine0Vertices.emplaceLast(p0.x(), p0.y(), -n.x(), -n.y());
-                offsetLine0Vertices.emplaceLast(p0.x(), p0.y(),  n.x(),  n.y());
+
+        constexpr Int nCap = 2;
+        const geometry::CurveSampleArray& preJoinSamples = data.preJoinSamples();
+        if (!preJoinSamples.isEmpty()) {
+            {
+                // start cap
+                geometry::Vec2f p = geometry::Vec2f(preJoinSamples.first().position());
+                geometry::Vec2f n = geometry::Vec2f(preJoinSamples.first().normal());
+                geometry::Vec2f d = n.orthogonalized();
+                float aDelta = static_cast<float>(core::pi) / (nCap * 2.f + 1.f);
+                for (Int i = 0; i < nCap; ++i) {
+                    float a = aDelta * (nCap - i);
+                    float x = std::sin(a);
+                    float y = std::cos(a);
+                    geometry::Vec2f dx = x * d;
+                    geometry::Vec2f sp1 = dx - n * y;
+                    geometry::Vec2f sp2 = dx + n * y;
+                    lineVertices.emplaceLast(p.x(), p.y(), sp1.x(), sp1.y());
+                    lineVertices.emplaceLast(p.x(), p.y(), sp2.x(), sp2.y());
+                }
             }
-            if (isPaintingOffsetLine1) {
-                geometry::Vec2f p1 = geometry::Vec2f(s.sidePoint(1));
-                offsetLine1Vertices.emplaceLast(p1.x(), p1.y(), -n.x(), -n.y());
-                offsetLine1Vertices.emplaceLast(p1.x(), p1.y(),  n.x(),  n.y());
+            for (const geometry::CurveSample& s : preJoinSamples) {
+                geometry::Vec2f p = geometry::Vec2f(s.position());
+                geometry::Vec2f n = geometry::Vec2f(s.normal());
+                // clang-format off
+                lineVertices.emplaceLast(p.x(), p.y(), -n.x(), -n.y());
+                lineVertices.emplaceLast(p.x(), p.y(),  n.x(),  n.y());
+                if (isPaintingOffsetLine0) {
+                    geometry::Vec2f p0 = geometry::Vec2f(s.sidePoint(0));
+                    offsetLine0Vertices.emplaceLast(p0.x(), p0.y(), -n.x(), -n.y());
+                    offsetLine0Vertices.emplaceLast(p0.x(), p0.y(),  n.x(),  n.y());
+                }
+                if (isPaintingOffsetLine1) {
+                    geometry::Vec2f p1 = geometry::Vec2f(s.sidePoint(1));
+                    offsetLine1Vertices.emplaceLast(p1.x(), p1.y(), -n.x(), -n.y());
+                    offsetLine1Vertices.emplaceLast(p1.x(), p1.y(),  n.x(),  n.y());
+                }
+                // clang-format on
             }
-            // clang-format on
+            {
+                // end cap
+                geometry::Vec2f p = geometry::Vec2f(preJoinSamples.last().position());
+                geometry::Vec2f n = geometry::Vec2f(preJoinSamples.last().normal());
+                geometry::Vec2f d = -n.orthogonalized();
+                float aDelta = static_cast<float>(core::pi) / (nCap * 2.f + 1.f);
+                for (Int i = 0; i < nCap; ++i) {
+                    float a = aDelta * (i + 1);
+                    float x = std::sin(a);
+                    float y = std::cos(a);
+                    geometry::Vec2f dx = x * d;
+                    geometry::Vec2f sp1 = dx - n * y;
+                    geometry::Vec2f sp2 = dx + n * y;
+                    lineVertices.emplaceLast(p.x(), p.y(), sp1.x(), sp1.y());
+                    lineVertices.emplaceLast(p.x(), p.y(), sp2.x(), sp2.y());
+                }
+            }
         }
 
         engine->updateBufferData(
