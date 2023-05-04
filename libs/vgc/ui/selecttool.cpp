@@ -194,8 +194,8 @@ indexInCandidates(const core::Array<SelectionCandidate>& candidates, core::Id it
         });
 }
 
-core::Array<SelectionCandidate>::const_iterator
-findInCandidates(const core::Array<SelectionCandidate>& candidates, core::Id itemId) {
+core::Array<SelectionCandidate>::iterator
+findInCandidates(core::Array<SelectionCandidate>& candidates, core::Id itemId) {
     return candidates.find(                        //
         [&](const SelectionCandidate& candidate) { //
             return candidate.id() == itemId;
@@ -210,7 +210,7 @@ findInCandidates(const core::Array<SelectionCandidate>& candidates, core::Id ite
 core::Id rotateCandidates(core::Array<SelectionCandidate>& candidates, core::Id item) {
     auto it = findInCandidates(candidates, item);
     if (it != candidates.end()) {
-        std::rotate(candidates.cbegin(), ++it, candidates.cend());
+        std::rotate(candidates.begin(), ++it, candidates.end());
         return item;
     }
     else {
@@ -238,7 +238,7 @@ core::Id addToSelection(
     // We implement this behavior by:
     // 1. Checking if the last selected item is indeed a candidate (else do nothing).
     // 2. Rotating the candidates to place the last selected item at the end.
-    // 3. Remembering to delesect it we if we find a candidate to select.
+    // 3. Remembering to delesect it if we find a candidate to select.
     //
     core::Id itemToDeselect = -1;
     if (isAlternativeMode && lastSelectedId != -1) {
