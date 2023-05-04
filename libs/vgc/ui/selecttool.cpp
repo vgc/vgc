@@ -540,18 +540,16 @@ void SelectTool::updateDragMovedElements_(
                     // Vertices are already translated here.
                     geometry::Vec2d a = ke->startVertex()->position();
                     geometry::Vec2d b = ke->endVertex()->position();
-                    if (newPoints.length() < 3) {
+                    if (newPoints.length() == 1) {
                         // We would have to deal with "widths" if we want
                         // to change the number of points.
-                        if (newPoints.length() > 0) {
-                            if (newPoints.length() == 1) {
-                                newPoints[0] = (a + b) * 0.5;
-                            }
-                            else {
-                                newPoints[0] = a;
-                                newPoints[1] = b;
-                            }
-                        }
+                        newPoints[0] = (a + b) * 0.5;
+                    }
+                    else if (newPoints.length() == 2) {
+                        // We would have to deal with "widths" if we want
+                        // to change the number of points.
+                        newPoints[0] = a;
+                        newPoints[1] = b;
                     }
                     else {
                         geometry::Vec2d d1 = a - newPoints.first();
@@ -564,13 +562,20 @@ void SelectTool::updateDragMovedElements_(
                             totalS += (p - lastP).length();
                             lastP = p;
                         }
-                        double currentS = 0;
-                        lastP = newPoints.first();
-                        for (geometry::Vec2d& p : newPoints) {
-                            currentS += (p - lastP).length();
-                            lastP = p;
-                            double t = currentS / totalS;
-                            p += (d1 + t * (d2 - d1));
+                        if (totalS > 0) {
+                            double currentS = 0;
+                            lastP = newPoints.first();
+                            for (geometry::Vec2d& p : newPoints) {
+                                currentS += (p - lastP).length();
+                                lastP = p;
+                                double t = currentS / totalS;
+                                p += (d1 + t * (d2 - d1));
+                            }
+                        }
+                        else {
+                            for (geometry::Vec2d& p : newPoints) {
+                                p += d1;
+                            }
                         }
                     }
                 }
