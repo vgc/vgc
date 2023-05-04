@@ -77,7 +77,7 @@ private:
     core::Id lastSelectedId_ = -1;
     core::Id lastDeselectedId_ = -1;
 
-    // translation data
+    // drag-move data
     struct KeyVertexDragData {
         core::Id elementId;
         geometry::Vec2d position;
@@ -90,6 +90,16 @@ private:
 
     core::Array<KeyVertexDragData> draggedVertices_;
     core::Array<KeyEdgeDragData> draggedEdges_;
+
+    // assumes workspace is not null
+    void initializeDragMoveData_(
+        workspace::Workspace* workspace,
+        const core::Array<core::Id>& elementsIds);
+
+    // assumes workspace is not null
+    void updateDragMovedElements_(
+        workspace::Workspace* workspace,
+        const geometry::Vec2d& translationInWorkspace);
 
     void resetActionState_();
 };
