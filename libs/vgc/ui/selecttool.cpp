@@ -16,6 +16,8 @@
 
 #include <vgc/ui/selecttool.h>
 
+#include <set>
+
 namespace vgc::ui {
 
 SelectTool::SelectTool()
@@ -26,51 +28,160 @@ SelectToolPtr SelectTool::create() {
     return SelectToolPtr(new SelectTool());
 }
 
-bool SelectTool::onMouseMove(MouseEvent* /*event*/) {
-    return isSelecting_;
+namespace {
 
-    // TODO: if isMaybeSelecting_ or isMaybeDragging_,
-    //       activate dragging after a few pixel
+// Time elapsed from press after which the action becomes a drag.
+inline constexpr Int dragTimeThresholdInMilliseconds = 1000;
+inline constexpr float dragDeltaThresholdInPixels = 5.f;
+
+} // namespace
+
+bool SelectTool::onMouseMove(MouseEvent* event) {
+
+    if (!isInAction_) {
+        return false;
+    }
+
+    ui::Canvas* canvas = this->canvas();
+    if (!canvas) {
+        return isInAction_; // always true
+    }
+
+    workspace::Workspace* workspace = canvas->workspace();
+    if (!workspace) {
+        return isInAction_; // always true
+    }
+
+    if (!isDragging_) {
+        // Initiate drag if conditions are met.
+        //
+        // Current event implementation uses Qt's timestamps, and according to the
+        // documentation, these should "normally be in milliseconds".
+        Int deltaTime = core::int_cast<Int>(event->timestamp()) - timeAtPress_;
+        float deltaPos = (event->position() - cursorPositionAtPress_).length();
+        // Consider the action is a drag if we moved 5 pixels or the button
+        // has been pressed for more than 1 second.
+        if (deltaPos >= dragDeltaThresholdInPixels
+            || deltaTime > dragTimeThresholdInMilliseconds) {
+
+            isDragging_ = true;
+            // Initialize drag data
+            switch (dragAction_) {
+            case DragAction::Select: {
+                break;
+            }
+            case DragAction::TranslateCandidate: {
+                // Note: candidates_ is guaranteed to be not empty for this action.
+                core::Array<core::Id> elementsIds;
+                elementsIds.append(candidates_.first().id());
+                initializeDragMoveData_(workspace, elementsIds);
+                break;
+            }
+            case DragAction::TranslateSelection: {
+                initializeDragMoveData_(workspace, selectionAtPress_);
+                break;
+            }
+            }
+        }
+    }
+
+    if (isDragging_) {
+        geometry::Mat4d inverseViewMatrix = canvas->camera().viewMatrix().inverted();
+        geometry::Vec2f cursorPosition = event->position();
+
+        geometry::Vec2d cursorPositionInWorkspace =
+            inverseViewMatrix.transformPointAffine(geometry::Vec2d(cursorPosition));
+        geometry::Vec2d cursorPositionInWorkspaceAtPress =
+            inverseViewMatrix.transformPointAffine(
+                geometry::Vec2d(cursorPositionAtPress_));
+
+        switch (dragAction_) {
+        case DragAction::Select: {
+            // todo
+            break;
+        }
+        case DragAction::TranslateCandidate:
+        case DragAction::TranslateSelection: {
+            geometry::Vec2d deltaInWorkspace =
+                cursorPositionInWorkspace - cursorPositionInWorkspaceAtPress;
+            updateDragMovedElements_(workspace, deltaInWorkspace);
+            break;
+        }
+        }
+    }
+
+    return true;
 }
 
 bool SelectTool::onMousePress(MouseEvent* event) {
 
-    if (isSelecting_) {
+    if (isInAction_) {
+        // Prevent parent widget from doing an action
+        // if we are in the middle of our own action.
         return true;
     }
 
     MouseButton button = event->button();
+    if (button != MouseButton::Left) {
+        return false;
+    }
+
+    ui::Canvas* canvas = this->canvas();
+    if (!canvas) {
+        return false;
+    }
+
     ModifierKeys keys = event->modifierKeys();
-    if (button == MouseButton::Left) {
-        ModifierKeys unsupportedKeys =
-            (ModifierKey::Ctrl | ModifierKey::Alt | ModifierKey::Shift).toggleAll();
-        if (keys.hasAny(unsupportedKeys)) {
-            isSelecting_ = false;
+    ModifierKeys supportedKeys =
+        (ModifierKey::Ctrl | ModifierKey::Alt | ModifierKey::Shift);
+    ModifierKeys unsupportedKeys = ~supportedKeys;
+
+    if (!keys.hasAny(unsupportedKeys)) {
+        isInAction_ = true;
+        candidates_ = canvas->computeSelectionCandidates(event->position());
+        selectionAtPress_ = canvas->selection();
+        cursorPositionAtPress_ = event->position();
+        timeAtPress_ = core::int_cast<Int>(event->timestamp());
+
+        // Prepare for a potential simple click selection action.
+        if (keys.hasAll(ModifierKey::Shift | ModifierKey::Ctrl)) {
+            selectionMode_ = SelectionMode::Toggle;
+        }
+        else if (keys.has(ModifierKey::Shift)) {
+            selectionMode_ = SelectionMode::Add;
+        }
+        else if (keys.has(ModifierKey::Ctrl)) {
+            selectionMode_ = SelectionMode::Remove;
         }
         else {
-            isSelecting_ = true;
-            isAlternativeMode_ = keys.has(ModifierKey::Alt);
-            if (keys.hasAll(ModifierKey::Shift | ModifierKey::Ctrl)) {
-                selectionMode_ = SelectionMode::Toggle;
-            }
-            else if (keys.has(ModifierKey::Shift)) {
-                selectionMode_ = SelectionMode::Add;
-            }
-            else if (keys.has(ModifierKey::Ctrl)) {
-                selectionMode_ = SelectionMode::Remove;
-            }
-            else {
-                selectionMode_ = SelectionMode::Single;
+            selectionMode_ = SelectionMode::Single;
+        }
+        isAlternativeMode_ = keys.has(ModifierKey::Alt);
+
+        // Prepare for a potential click-and-drag action.
+        if (candidates_.isEmpty()) {
+            dragAction_ = DragAction::Select;
+        }
+        else if (selectionMode_ == SelectionMode::Single && !isAlternativeMode_) {
+            // When no modifier keys are used:
+            // If some candidates are already selected then the drag action is
+            // to translate the current selection.
+            // Otherwise we'll translate the candidate that would be selected
+            // if no drag occurs.
+            dragAction_ = DragAction::TranslateCandidate;
+            for (const SelectionCandidate& candidate : candidates_) {
+                if (selectionAtPress_.contains(candidate.id())) {
+                    dragAction_ = DragAction::TranslateSelection;
+                    break;
+                }
             }
         }
-    }
-    else {
-        isSelecting_ = false;
+        else {
+            dragAction_ = DragAction::Select;
+        }
     }
 
-    return isSelecting_;
-
-    // TODO: isMaybeSelecting_, isMaybeDragging_
+    return isInAction_;
 }
 
 namespace {
@@ -211,7 +322,7 @@ core::Id selectSingleItem(
 
 bool SelectTool::onMouseRelease(MouseEvent* event) {
 
-    if (!isSelecting_) {
+    if (!isInAction_) {
         return false;
     }
 
@@ -223,22 +334,27 @@ bool SelectTool::onMouseRelease(MouseEvent* event) {
 
     ui::Canvas* canvas = this->canvas();
     if (!canvas) {
-        bool wasSelecting = isSelecting_;
-        isSelecting_ = false;
-        return wasSelecting;
+        bool wasInAction = isInAction_;
+        resetActionState_();
+        return wasInAction;
         // Until a better mechanism is implemented, we should return the same
         // value in onMousePress / onMouseRelease (at least for the same mouse
         // button) otherwise this confuses the parent widgets (receiving the
         // press but not the release, or vice-versa).
+        // Here we stop the action early so our parent may receive releases for
+        // buttons it didn't receive any press event for.
     }
 
-    // Get current selection and selection candidates
-    core::Array<core::Id> selection = canvas->selection();
-    core::Array<SelectionCandidate> candidates =
-        canvas->computeSelectionCandidates(event->position());
+    // If we were dragging we can stop the action and return.
+    Int deltaTime = core::int_cast<Int>(event->timestamp()) - timeAtPress_;
+    if (isDragging_ || deltaTime > dragTimeThresholdInMilliseconds) {
+        resetActionState_();
+        return true;
+    }
 
-    // Compute new selection
+    // Otherwise, we compute the new selection.
     bool selectionChanged = false;
+    core::Array<core::Id> selection = selectionAtPress_;
     switch (selectionMode_) {
     case SelectionMode::Toggle: {
         // TODO: Toggle selection.
@@ -246,7 +362,7 @@ bool SelectTool::onMouseRelease(MouseEvent* event) {
     }
     case SelectionMode::Add: {
         core::Id selectedId =
-            addToSelection(selection, candidates, isAlternativeMode_, lastSelectedId_);
+            addToSelection(selection, candidates_, isAlternativeMode_, lastSelectedId_);
         if (selectedId != -1) {
             selectionChanged = true;
             lastSelectedId_ = selectedId;
@@ -256,7 +372,7 @@ bool SelectTool::onMouseRelease(MouseEvent* event) {
     }
     case SelectionMode::Remove: {
         core::Id deselectedId = removeFromSelection(
-            selection, candidates, isAlternativeMode_, lastDeselectedId_);
+            selection, candidates_, isAlternativeMode_, lastDeselectedId_);
         if (deselectedId != -1) {
             selectionChanged = true;
             lastSelectedId_ = -1;
@@ -266,7 +382,7 @@ bool SelectTool::onMouseRelease(MouseEvent* event) {
     }
     case SelectionMode::Single: {
         core::Id selectedId =
-            selectSingleItem(candidates, isAlternativeMode_, lastSelectedId_);
+            selectSingleItem(candidates_, isAlternativeMode_, lastSelectedId_);
         if (selectedId != -1) {
             if (selection.length() != 1 || selection.first() != selectedId) {
                 selection.assign(1, selectedId);
@@ -290,8 +406,206 @@ bool SelectTool::onMouseRelease(MouseEvent* event) {
     if (selectionChanged) {
         canvas->setSelection(selection);
     }
-    isSelecting_ = false;
+
+    resetActionState_();
     return true;
+}
+
+void SelectTool::initializeDragMoveData_(
+    workspace::Workspace* workspace,
+    const core::Array<core::Id>& elementsIds) {
+
+    // Only key vertices and edges have intrinsic spatial data amongst
+    // vac cells, so we identify those first.
+    //
+    std::set<vacomplex::KeyVertex*> verticesToTranslate;
+    std::set<vacomplex::KeyEdge*> edgesToTranslate;
+    auto insertCellToTranslate = [&](vacomplex::Cell* cell) {
+        switch (cell->cellType()) {
+        case vacomplex::CellType::KeyVertex: {
+            verticesToTranslate.insert(cell->toKeyVertexUnchecked());
+            break;
+        }
+        case vacomplex::CellType::KeyEdge: {
+            edgesToTranslate.insert(cell->toKeyEdgeUnchecked());
+            break;
+        }
+        default:
+            break;
+        }
+    };
+
+    for (const core::Id& id : elementsIds) {
+        workspace::Element* element = workspace->find(id);
+        if (!element) {
+            continue;
+        }
+        vacomplex::Node* node = element->vacNode();
+        if (!node || !node->isCell()) {
+            continue;
+        }
+        vacomplex::Cell* cell = node->toCellUnchecked();
+        insertCellToTranslate(cell);
+        for (vacomplex::Cell* boundaryCell : cell->boundary()) {
+            insertCellToTranslate(boundaryCell);
+        }
+    }
+
+    // Every edge connected to translated vertices has to be either
+    // partially modified (snapped) or translated (both vertices are
+    // translated).
+    std::set<vacomplex::KeyEdge*> affectedEdges;
+    for (vacomplex::KeyVertex* kv : verticesToTranslate) {
+        for (vacomplex::Cell* cell : kv->star()) {
+            if (cell->cellType() == vacomplex::CellType::KeyEdge) {
+                vacomplex::KeyEdge* ke = cell->toKeyEdgeUnchecked();
+                if (edgesToTranslate.count(ke) == 0) {
+                    affectedEdges.insert(ke);
+                }
+            }
+        }
+    }
+    // Now transfer edges of affectedEdges that have both end vertices
+    // in verticesToTranslate to edgesToTranslate.
+    for (auto it = affectedEdges.begin(); it != affectedEdges.end();) {
+        vacomplex::KeyEdge* ke = *it;
+        // It is guaranteed that these edges have start and end vertices,
+        // otherwise they would not be in any vertex star.
+        if (verticesToTranslate.count(ke->startVertex()) > 0
+            && verticesToTranslate.count(ke->endVertex()) > 0) {
+
+            edgesToTranslate.insert(ke);
+            it = affectedEdges.erase(it);
+        }
+        else {
+            ++it;
+        }
+    }
+
+    // Save original intrinsic geometry data for translation
+    for (vacomplex::KeyVertex* kv : verticesToTranslate) {
+        workspace::Element* element = workspace->findVacElement(kv->id());
+        if (element) {
+            draggedVertices_.append({element->id(), kv->position()});
+        }
+    }
+    for (vacomplex::KeyEdge* ke : edgesToTranslate) {
+        workspace::Element* element = workspace->findVacElement(ke->id());
+        if (element) {
+            draggedEdges_.append({element->id(), ke->points(), false});
+        }
+    }
+    for (vacomplex::KeyEdge* ke : affectedEdges) {
+        workspace::Element* element = workspace->findVacElement(ke->id());
+        if (element) {
+            draggedEdges_.append({element->id(), ke->points(), true});
+        }
+    }
+}
+
+void SelectTool::updateDragMovedElements_(
+    workspace::Workspace* workspace,
+    const geometry::Vec2d& translationInWorkspace) {
+
+    // Open history group
+    static core::StringId Translate_Elements("Translate Elements");
+    core::UndoGroup* undoGroup = nullptr;
+    core::History* history = workspace->history();
+    if (history) {
+        undoGroup = history->createUndoGroup(Translate_Elements);
+    }
+
+    // Translate cells
+    for (const KeyVertexDragData& kvd : draggedVertices_) {
+        workspace::Element* element = workspace->find(kvd.elementId);
+        if (element && element->vacNode() && element->vacNode()->isCell()) {
+            vacomplex::KeyVertex* kv =
+                element->vacNode()->toCellUnchecked()->toKeyVertex();
+            if (kv) {
+                vacomplex::ops::setKeyVertexPosition(
+                    kv, kvd.position + translationInWorkspace);
+            }
+        }
+    }
+    for (const KeyEdgeDragData& ked : draggedEdges_) {
+        workspace::Element* element = workspace->find(ked.elementId);
+        if (element && element->vacNode() && element->vacNode()->isCell()) {
+            vacomplex::KeyEdge* ke = element->vacNode()->toCellUnchecked()->toKeyEdge();
+            if (ke) {
+                geometry::Vec2dArray newPoints = ked.points;
+                if (newPoints.isEmpty()) {
+                    // do nothing
+                }
+                else if (ked.isPartialTranslation) {
+                    // Vertices are already translated here.
+                    geometry::Vec2d a = ke->startVertex()->position();
+                    geometry::Vec2d b = ke->endVertex()->position();
+                    if (newPoints.length() == 1) {
+                        // We would have to deal with "widths" if we want
+                        // to change the number of points.
+                        newPoints[0] = (a + b) * 0.5;
+                    }
+                    else if (newPoints.length() == 2) {
+                        // We would have to deal with "widths" if we want
+                        // to change the number of points.
+                        newPoints[0] = a;
+                        newPoints[1] = b;
+                    }
+                    else {
+                        geometry::Vec2d d1 = a - newPoints.first();
+                        geometry::Vec2d d2 = b - newPoints.last();
+
+                        // linear deformation in rough "s"
+                        double totalS = 0;
+                        geometry::Vec2d lastP = newPoints.first();
+                        for (const geometry::Vec2d& p : newPoints) {
+                            totalS += (p - lastP).length();
+                            lastP = p;
+                        }
+                        if (totalS > 0) {
+                            double currentS = 0;
+                            lastP = newPoints.first();
+                            for (geometry::Vec2d& p : newPoints) {
+                                currentS += (p - lastP).length();
+                                lastP = p;
+                                double t = currentS / totalS;
+                                p += (d1 + t * (d2 - d1));
+                            }
+                        }
+                        else {
+                            for (geometry::Vec2d& p : newPoints) {
+                                p += d1;
+                            }
+                        }
+                    }
+                }
+                else {
+                    for (geometry::Vec2d& p : newPoints) {
+                        p += translationInWorkspace;
+                    }
+                }
+                vacomplex::ops::setKeyEdgeCurvePoints(ke, std::move(newPoints));
+            }
+        }
+    }
+
+    // Close operation
+    if (undoGroup) {
+        bool amend = canAmendUndoGroup_ && undoGroup->parent()
+                     && undoGroup->parent()->name() == Translate_Elements;
+        undoGroup->close(amend);
+        canAmendUndoGroup_ = true;
+    }
+}
+
+void SelectTool::resetActionState_() {
+    candidates_.clear();
+    selectionAtPress_.clear();
+    isInAction_ = false;
+    isDragging_ = false;
+    canAmendUndoGroup_ = false;
+    draggedVertices_.clear();
+    draggedEdges_.clear();
 }
 
 } // namespace vgc::ui

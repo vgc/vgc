@@ -17,7 +17,9 @@
 #ifndef VGC_UI_SELECTTOOL_H
 #define VGC_UI_SELECTTOOL_H
 
+#include <vgc/core/array.h>
 #include <vgc/core/id.h>
+#include <vgc/geometry/vec2f.h>
 #include <vgc/ui/api.h>
 #include <vgc/ui/canvastool.h>
 
@@ -56,11 +58,50 @@ private:
         Remove,
         Toggle
     };
-    SelectionMode selectionMode_;
-    bool isSelecting_ = false;
+    enum class DragAction {
+        Select,
+        TranslateSelection,
+        TranslateCandidate,
+    };
+
+    core::Array<SelectionCandidate> candidates_;
+    core::Array<core::Id> selectionAtPress_;
+    geometry::Vec2f cursorPositionAtPress_;
+    Int timeAtPress_ = 0;
+    bool isInAction_ = false;
+    bool isDragging_ = false;
+    bool canAmendUndoGroup_ = false;
+    DragAction dragAction_ = {};
+    SelectionMode selectionMode_ = {};
     bool isAlternativeMode_ = false;
     core::Id lastSelectedId_ = -1;
     core::Id lastDeselectedId_ = -1;
+
+    // drag-move data
+    struct KeyVertexDragData {
+        core::Id elementId;
+        geometry::Vec2d position;
+    };
+    struct KeyEdgeDragData {
+        core::Id elementId;
+        geometry::Vec2dArray points;
+        bool isPartialTranslation;
+    };
+
+    core::Array<KeyVertexDragData> draggedVertices_;
+    core::Array<KeyEdgeDragData> draggedEdges_;
+
+    // assumes workspace is not null
+    void initializeDragMoveData_(
+        workspace::Workspace* workspace,
+        const core::Array<core::Id>& elementsIds);
+
+    // assumes workspace is not null
+    void updateDragMovedElements_(
+        workspace::Workspace* workspace,
+        const geometry::Vec2d& translationInWorkspace);
+
+    void resetActionState_();
 };
 
 } // namespace vgc::ui
