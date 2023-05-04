@@ -34,14 +34,6 @@ geometry::Rect2d Element::boundingBox(core::AnimTime /*t*/) const {
     return geometry::Rect2d::empty;
 }
 
-geometry::Vec2d Element::position(core::AnimTime /*t*/) const {
-    return {};
-}
-
-void Element::setPosition(const geometry::Vec2d& /*position*/, core::AnimTime /*t*/)
-    const {
-}
-
 bool Element::isSelectableAt(
     const geometry::Vec2d& /*pos*/,
     bool /*outlineOnly*/,

@@ -16,7 +16,6 @@
 
 #include <vgc/workspace/vertex.h>
 
-#include <vgc/vacomplex/operations.h>
 #include <vgc/workspace/edge.h>
 #include <vgc/workspace/workspace.h>
 
@@ -103,27 +102,10 @@ geometry::Rect2d VacKeyVertex::boundingBox(core::AnimTime /*t*/) const {
     // TODO: use cached position in frame data
     vacomplex::KeyVertex* kv = vacKeyVertexNode();
     if (kv) {
-        geometry::Vec2d pos = kv->position();
+        geometry::Vec2d pos = vacKeyVertexNode()->position();
         return geometry::Rect2d(pos, pos);
     }
     return geometry::Rect2d::empty;
-}
-
-geometry::Vec2d VacKeyVertex::position(core::AnimTime t) const {
-    vacomplex::KeyVertex* kv = vacKeyVertexNode();
-    if (kv && t == kv->time()) {
-        return kv->position();
-    }
-    return {};
-}
-
-void VacKeyVertex::setPosition(const geometry::Vec2d& position, core::AnimTime t) const {
-
-    vacomplex::KeyVertex* kv = vacKeyVertexNode();
-    if (kv && t == kv->time()) {
-        // todo: this will have to be position in vac space instead of workspace space.
-        vacomplex::ops::setKeyVertexPosition(kv, position);
-    }
 }
 
 bool VacKeyVertex::isSelectableAt(

@@ -213,55 +213,6 @@ geometry::Rect2d VacKeyEdge::boundingBox(core::AnimTime t) const {
     return geometry::Rect2d::empty;
 }
 
-geometry::Vec2d VacKeyEdge::position(core::AnimTime t) const {
-    vacomplex::KeyEdge* ke = vacKeyEdgeNode();
-    if (ke && t == ke->time()) {
-        const geometry::Vec2dArray& points = ke->points();
-        if (!points.isEmpty()) {
-            return points[0];
-        }
-    }
-    return {};
-}
-
-void VacKeyEdge::setPosition(const geometry::Vec2d& position, core::AnimTime t) const {
-    vacomplex::KeyEdge* ke = vacKeyEdgeNode();
-    if (ke && t == ke->time()) {
-        // todo: this will have to be positions in vac space instead of workspace space.
-        // todo: later we may only have to move vertices, snapping should do the rest.
-        const geometry::Vec2dArray& oldPoints = ke->points();
-        geometry::Vec2d delta = {};
-        bool isDeltaComputed = false;
-        if (!oldPoints.isEmpty()) {
-            geometry::Vec2dArray newPoints = oldPoints;
-            delta = position - oldPoints[0];
-            isDeltaComputed = true;
-            for (geometry::Vec2d& point : newPoints) {
-                point += delta;
-            }
-            vacomplex::ops::setKeyEdgeCurvePoints(ke, std::move(newPoints));
-        }
-        vacomplex::KeyVertex* kv1 = ke->startVertex();
-        if (kv1) {
-            geometry::Vec2d kv1Pos = kv1->position();
-            if (!isDeltaComputed) {
-                delta = position - kv1Pos;
-                isDeltaComputed = true;
-            }
-            vacomplex::ops::setKeyVertexPosition(kv1, kv1Pos + delta);
-        }
-        vacomplex::KeyVertex* kv2 = ke->endVertex();
-        if (kv2) {
-            geometry::Vec2d kv2Pos = kv2->position();
-            if (!isDeltaComputed) {
-                delta = position - kv2Pos;
-                isDeltaComputed = true;
-            }
-            vacomplex::ops::setKeyVertexPosition(kv2, kv2Pos + delta);
-        }
-    }
-}
-
 bool VacKeyEdge::isSelectableAt(
     const geometry::Vec2d& position,
     bool outlineOnly,
@@ -727,9 +678,6 @@ void VacKeyEdge::updateFromVac_(vacomplex::NodeDiffFlags /*diffs*/) {
         // TODO: error or throw ?
         return;
     }
-
-    // Force geometry update, otherwise we won't be informed if it changes again.
-    ke->sampling();
 
     dom::Element* const domElement = this->domElement();
     if (!domElement) {
