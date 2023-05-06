@@ -236,12 +236,55 @@ public:
     /// Returns whether `point` is inside this triangle (borders included).
     ///
     bool contains(const Vec2x& point) const {
-        float det1 = (data_[1] - data_[0]).det(point - data_[0]);
-        float det2 = (data_[2] - data_[1]).det(point - data_[1]);
-        float det3 = (data_[0] - data_[2]).det(point - data_[2]);
-        bool hasPos = (det1 > 0) || (det2 > 0) || (det3 > 0);
-        bool hasNeg = (det1 < 0) || (det2 < 0) || (det3 < 0);
-        return !(hasPos && hasNeg);
+
+        // The three sides of the triangle
+        Vec2x v0 = data_[1] - data_[0];
+        Vec2x v1 = data_[2] - data_[1];
+        Vec2x v2 = data_[0] - data_[2];
+
+        float det_ = v0.det(v1);
+        if (det_ == 0) {
+            // Degenerate cases:
+            // - All points are equals
+            // - Two of the points are equals
+            // - The three points are different but aligned
+
+            // Find longest triangle side, store result in (p2, v2, l2)
+            float l0 = v0.squaredLength();
+            float l1 = v1.squaredLength();
+            float l2 = v2.squaredLength();
+            Vec2x p2 = data_[2];
+            if (l0 > l2) {
+                p2 = data_[0];
+                v2 = v0;
+                l2 = l0;
+            }
+            if (l1 > l2) {
+                p2 = data_[1];
+                v2 = v1;
+                l2 = l1;
+            }
+
+            if (l2 == 0) {
+                // Case where the triangle is a point.
+                return point == p2;
+            }
+            else {
+                // Case where the triangle is a line segment.
+                float det2 = v2.det(point - p2);
+                float dot2 = v2.dot(point - p2);
+                return (det2 == 0 && 0 <= dot2 && dot2 <= l2);
+            }
+        }
+        else {
+            // Normal case: the triangle has non-zero area
+            float det0 = v0.det(point - data_[0]);
+            float det1 = v1.det(point - data_[1]);
+            float det2 = v2.det(point - data_[2]);
+            bool hasPos = (det0 > 0) || (det1 > 0) || (det2 > 0);
+            bool hasNeg = (det0 < 0) || (det1 < 0) || (det2 < 0);
+            return !(hasPos && hasNeg);
+        }
     }
 
 private:
