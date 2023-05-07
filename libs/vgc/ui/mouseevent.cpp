@@ -22,7 +22,7 @@ MouseEvent::MouseEvent(
     MouseButton button,
     const geometry::Vec2f& position,
     ModifierKeys modifierKeys,
-    uint64_t timestamp,
+    double timestamp,
     double pressure,
     bool isTablet)
 
@@ -41,7 +41,7 @@ MouseEventPtr MouseEvent::create(
     MouseButton button,
     const geometry::Vec2f& position,
     ModifierKeys modifierKeys,
-    uint64_t timestamp,
+    double timestamp,
     double pressure,
     bool isTablet) {
 
