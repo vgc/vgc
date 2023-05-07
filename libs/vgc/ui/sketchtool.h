@@ -114,7 +114,7 @@ protected:
 
     // Raw input in widget space (pixels).
     //
-    // Invariant: both arrays have the same length.
+    // Invariant: all arrays have the same length.
     //
     // Notes:
     // - for now, we do not smooth widths.
@@ -122,9 +122,11 @@ protected:
     //
     geometry::Vec2fArray inputPoints_;
     core::DoubleArray inputWidths_;
-    core::DoubleArray inputTimestamps;
+    core::DoubleArray inputTimestamps_;
     geometry::Mat4d canvasToWorkspaceMatrix_;
-    bool isInputQuantized_ = false;
+    bool isInputPointsQuantized_ = false;
+    bool isInputWidthsQuantized_ = false;
+    bool isInputTimestampsQuantized_ = false;
 
     // Dequantization.
     //
@@ -148,12 +150,13 @@ protected:
     // pixel, we do not want to value more "being closer to the center of the
     // pixel".
     //
-    // Invariant: both arrays have the same length.
+    // Invariant: all arrays have the same length.
     //
     geometry::Vec2fArray dequantizerBuffer_;
     Int dequantizerBufferStartIndex = 0;
     geometry::Vec2fArray unquantizedPoints_;
     core::DoubleArray unquantizedWidths_;
+    core::DoubleArray unquantizedTimestamps_;
     void updateUnquantizedData_(bool isFinalPass);
 
     // Transformation.
@@ -161,34 +164,37 @@ protected:
     // This step applies the transformation from canvas coordinates to
     // workspace/group coordinates.
     //
-    // Invariant: both arrays have the same length.
+    // It also translate the timestamps such that the timestamp of the
+    // first sample is 0.
+    //
+    // Invariant: all arrays have the same length.
     //
     geometry::Vec2dArray transformedPoints_;
     core::DoubleArray transformedWidths_;
+    core::DoubleArray transformedTimestamps_;
     void updateTransformedData_(bool isFinalPass);
 
     // Smoothing.
     //
-    // Invariant: both arrays have the same length.
+    // Invariant: all arrays have the same length.
     //
     geometry::Vec2dArray smoothedPoints_;
     core::DoubleArray smoothedWidths_;
     void updateSmoothedData_(bool isFinalPass);
 
-    // Final points.
-    //
-    // Invariant: both arrays have the same length.
-    //
-    geometry::Vec2dArray points_;
-    core::DoubleArray widths_;
-
     // Snapping
+    //
+    // Invariant: all arrays have the same length.
     //
     // Note: keep in mind that isSnappingEnabled() may change between
     // startCurve() and finishCurve().
     //
     bool hasStartSnap_ = false;
     geometry::Vec2d startSnapPosition_;
+    geometry::Vec2dArray snappedPoints_;
+    core::DoubleArray snappedWidths_;
+    void updateSnappedData_(bool isFinalPass);
+    void updateEndSnappedData_(const geometry::Vec2d& endSnapPosition);
 
     // Draw additional points at the stroke tip, based on global cursor
     // position, to reduce perceived input lag.

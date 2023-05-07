@@ -533,44 +533,131 @@ Int reconstructInputStep(
 
 } // namespace
 
+// XXX shouldn't we do the fine pass if isFinalPass = true?
+//
 void SketchTool::updateUnquantizedData_(bool /*isFinalPass*/) {
 
-    // the algorithm works only for more than 2 input points
-    if (!isInputQuantized_ || inputPoints_.length() <= 2) {
+    // Dequantize timestamps.
+    //
+    // We store the result as a local array instead of storing it to
+    // unquantizedTimestamps_, since the latter will only include a subset of
+    // the former.
+    //
+    // On our limited tests with tablet inputs, we observed that we were
+    // getting delta timestamps that looked like [8ms, 12ms, 8ms, 12ms, ...],
+    // while upon looking at the data, they truly were all 10ms (that is, the
+    // positions were uniformly spaced when drawing at uniform speed, but the
+    // timestamps were not).
+    //
+    // Therefore, a simple solution for now is to simply distribute the average
+    // delta time across all samples.
+    //
+    Int numInputPoints = inputPoints_.length();
+    core::DoubleArray timestamps = inputTimestamps_;
+    if (isInputTimestampsQuantized_ && numInputPoints > 2) {
+        double startTime = inputTimestamps_.first();
+        double endTime = inputTimestamps_.last();
+        double dt = (endTime - startTime) / (numInputPoints - 1);
+        timestamps.reserve(numInputPoints);
+        for (Int i = 0; i < numInputPoints; ++i) {
+            double i_ = i;
+            timestamps.append(startTime + i_ * dt);
+        }
+    }
+    else {
+        timestamps = inputTimestamps_;
+    }
+
+    // We can only dequantize if there are at least three input samples.
+    //
+    if (!isInputPointsQuantized_ || inputPoints_.length() <= 2) {
         unquantizedPoints_ = inputPoints_;
         unquantizedWidths_ = inputWidths_;
+        unquantizedTimestamps_ = timestamps;
         return;
     }
 
+    // In its most simple definition, the dequantization algorithm we use is
+    // global: it iteratively selects which input samples we want to keep,
+    // starting from only the first and last samples, then selecting additional
+    // samples until the unquantized curve is close enough to all input
+    // samples.
+    //
+    // So whenever a mouse move happens, we would have to start the algorithm
+    // from scratch.
+    //
+    // In order to make the result more local and less computationnaly
+    // expensive (we don't an input sample to affect far away samples), we
+    // tweaked the algorithm so that we don't touch the beginning of the curve
+    // (the "stable" zone), and only recompute things for the last few samples
+    // (the "buffer" zone).
+    //
     Int numAlreadyBuffered = dequantizerBufferStartIndex + dequantizerBuffer_.length();
     dequantizerBuffer_.extend(
         inputPoints_.begin() + numAlreadyBuffered, inputPoints_.end());
 
     // TODO: process duplicate points
 
+    // The `indices` array stores, at any point in time, which samples have
+    // been selected so far.
+    //
     core::IntArray indices({0, dequantizerBuffer_.length() - 1});
-    reconstructInputStep(dequantizerBuffer_, indices, 0, 2.f, 0.f);
 
+    // First, we apply the algorithm on the whole buffer with a larger
+    // threshold. This gives us a coarse approximation which we use to decide
+    // which part of the current buffer should stay in the buffer (the last
+    // segment of the coarse approximation), and which part should be
+    // considered stable and removed from the buffer (all segments of the
+    // coarse approximation except the last).
+    //
+    const float coarseThreshold = 2.0f;
+    const float coarseTolerance = 0.0f;
+    reconstructInputStep(
+        dequantizerBuffer_, indices, 0, coarseThreshold, coarseTolerance);
+
+    // If there are three or more indices, this means that the coarse
+    // approximation has two or more segments. We only keep the last segment in
+    // the buffer, and now consider all other segments to be stable.
+    //
     if (indices.length() > 2) {
+
+        // We first refine the stable part of the curve with a smaller threshold.
+        //
+        const float finehreshold = 1.0f;
+        const float fineTolerance = 0.5f;
         for (Int i0 = 0; i0 <= indices.length() - 2;) {
-            i0 = reconstructInputStep(dequantizerBuffer_, indices, i0, 1.f, 0.5f);
+            i0 = reconstructInputStep(
+                dequantizerBuffer_, indices, i0, finehreshold, fineTolerance);
         }
+
+        // We then replace the last two unquantized samples (corresponding to
+        // the previous buffer zone), with all the new stable samples, as well
+        // as the new buffer zone.
+        //
         unquantizedPoints_.removeLast(2);
         unquantizedWidths_.removeLast(2);
+        unquantizedTimestamps_.removeLast(2);
         for (Int index : indices) {
+            Int originalIndex = dequantizerBufferStartIndex + index;
             unquantizedPoints_.append(dequantizerBuffer_[index]);
-            unquantizedWidths_.append(inputWidths_[dequantizerBufferStartIndex + index]);
+            unquantizedWidths_.append(inputWidths_[originalIndex]);
+            unquantizedTimestamps_.append(timestamps[originalIndex]);
         }
-        // The N - 1 first indices are stable
         Int stableIndex = indices.getWrapped(-2);
         dequantizerBuffer_.removeFirst(stableIndex);
         dequantizerBufferStartIndex += stableIndex;
     }
     else {
+        // If there are only two points in the coarse approximation, we
+        // preserve the current stable zone and simply extend the buffer zone
+        // by the new input sample.
+        //
         unquantizedPoints_.removeLast(1);
         unquantizedWidths_.removeLast(1);
+        unquantizedTimestamps_.removeLast(1);
         unquantizedPoints_.append(dequantizerBuffer_.last());
         unquantizedWidths_.append(inputWidths_.last());
+        unquantizedTimestamps_.append(timestamps.last());
     }
 
     // TODO: remap points to keep widths data ?
@@ -579,9 +666,12 @@ void SketchTool::updateUnquantizedData_(bool /*isFinalPass*/) {
 void SketchTool::updateTransformedData_(bool /*isFinalPass*/) {
     Int n = unquantizedPoints_.length();
     transformedPoints_.resize(n);
+    transformedTimestamps_.resize(n);
+    double startTime = (n > 0) ? unquantizedTimestamps_.first() : 0;
     for (Int i = 0; i < n; ++i) {
         geometry::Vec2d pointd(unquantizedPoints_[i]);
         transformedPoints_[i] = canvasToWorkspaceMatrix_.transformPointAffine(pointd);
+        transformedTimestamps_[i] = unquantizedTimestamps_[i] - startTime;
     }
     transformedWidths_ = unquantizedWidths_;
 }
@@ -633,6 +723,78 @@ void SketchTool::updateSmoothedData_(bool /*isFinalPass*/) {
     //       since they are less smooth than the others.
 }
 
+void SketchTool::updateSnappedData_(bool /*isFinalPass*/) {
+
+    // Nothing to do with the widths
+    snappedWidths_ = smoothedWidths_;
+
+    // Fast return if no snapping or not enough points
+    Int numPoints = smoothedPoints_.length();
+    if (!hasStartSnap_ || numPoints < 1) {
+        snappedPoints_ = smoothedPoints_;
+        return;
+    }
+
+    // Compute snapping
+    geometry::Vec2d startPoint = smoothedPoints_.first();
+    geometry::Vec2d delta = startSnapPosition_ - startPoint;
+    double snapFalloff_ = snapFalloff();
+    double s = 0;
+    snappedPoints_.resizeNoInit(numPoints);
+    geometry::Vec2d previousPoint = smoothedPoints_.first();
+    for (Int i = 0; i < numPoints; ++i) {
+        geometry::Vec2d point = smoothedPoints_[i];
+        s += (point - previousPoint).length();
+        if (s < snapFalloff_) {
+            snappedPoints_[i] = applySnapFalloff(point, delta, s, snapFalloff_);
+        }
+        else {
+            snappedPoints_[i] = point;
+        }
+        previousPoint = point;
+    }
+}
+
+void SketchTool::updateEndSnappedData_(const geometry::Vec2d& endSnapPosition) {
+
+    // Fast return if not enough points
+    Int numPoints = smoothedPoints_.length();
+    if (numPoints < 1) {
+        return;
+    }
+
+    // Compute reversed arclengths (length from end of curve to current point)
+    geometry::Vec2d endPoint = smoothedPoints_.last();
+    core::DoubleArray reversedArclengths(numPoints, core::noInit);
+    reversedArclengths.last() = 0;
+    geometry::Vec2d previousPoint = endPoint;
+    double s = 0;
+    for (Int i = numPoints - 2; i >= 0; --i) {
+        geometry::Vec2d point = smoothedPoints_[i];
+        s += (point - previousPoint).length();
+        reversedArclengths[i] = s;
+        previousPoint = point;
+    }
+
+    // Cap snap deformation length to ensure start point isn't modified
+    double maxS = reversedArclengths.first();
+    double snapFalloff_ = (std::min)(snapFalloff(), maxS);
+
+    // Deform end of stroke to match end snap position
+    geometry::Vec2d delta = endSnapPosition - endPoint;
+    snappedPoints_.last() = endSnapPosition;
+    for (Int i = smoothedPoints_.length() - 2; i >= 0; --i) {
+        s = reversedArclengths[i];
+        if (s < snapFalloff_) {
+            snappedPoints_[i] =
+                applySnapFalloff(snappedPoints_[i], delta, s, snapFalloff_);
+        }
+        else {
+            break;
+        }
+    }
+}
+
 void SketchTool::startCurve_(MouseEvent* event) {
 
     // Clear the points now. We don't to it on finishCurve_() for
@@ -640,7 +802,7 @@ void SketchTool::startCurve_(MouseEvent* event) {
     //
     inputPoints_.clear();
     inputWidths_.clear();
-    inputTimestamps.clear();
+    inputTimestamps_.clear();
 
     // Fast return if missing required context
     workspace::Workspace* workspace = this->workspace();
@@ -677,7 +839,11 @@ void SketchTool::startCurve_(MouseEvent* event) {
 
     // Save inverse view matrix
     canvasToWorkspaceMatrix_ = canvas()->camera().viewMatrix().inverted();
-    isInputQuantized_ = !event->isTablet();
+
+    // Whether to apply points/width/timestamp dequantization
+    isInputPointsQuantized_ = !event->isTablet();
+    isInputWidthsQuantized_ = event->isTablet();
+    isInputTimestampsQuantized_ = event->isTablet();
 
     // Compute start vertex to snap to
     workspace::Element* snapVertex = nullptr;
@@ -750,46 +916,19 @@ void SketchTool::continueCurve_(MouseEvent* event) {
     // Append the input point
     inputPoints_.append(eventPos2f);
     inputWidths_.append(pressurePenWidth(event));
-    inputTimestamps.append(event->timestamp());
+    inputTimestamps_.append(event->timestamp());
 
+    // Apply all processing steps
     updateUnquantizedData_(false);
     updateTransformedData_(false);
     updateSmoothedData_(false);
-
-    // Handle snapping
-    if (hasStartSnap_) {
-
-        Int numPoints = smoothedPoints_.length();
-        double snapFalloff_ = snapFalloff();
-        geometry::Vec2d delta = startSnapPosition_ - smoothedPoints_[0];
-
-        double s = 0;
-        points_.resizeNoInit(numPoints);
-        geometry::Vec2d previousSp = smoothedPoints_.first();
-        for (Int i = 0; i < numPoints; ++i) {
-            geometry::Vec2d sp = smoothedPoints_[i];
-            s += (sp - previousSp).length();
-            if (s < snapFalloff_) {
-                points_[i] = applySnapFalloff(sp, delta, s, snapFalloff_);
-            }
-            else {
-                points_[i] = sp; // maybe optimize in the future
-            }
-            previousSp = sp;
-        }
-
-        widths_ = smoothedWidths_;
-    }
-    else {
-        points_ = smoothedPoints_;
-        widths_ = smoothedWidths_;
-    }
+    updateSnappedData_(false);
 
     // Update DOM and workspace
     namespace ds = dom::strings;
-    endVertex_->setAttribute(ds::position, points_.last());
-    edge_->setAttribute(ds::positions, points_);
-    edge_->setAttribute(ds::widths, widths_);
+    endVertex_->setAttribute(ds::position, snappedPoints_.last());
+    edge_->setAttribute(ds::positions, snappedPoints_);
+    edge_->setAttribute(ds::widths, snappedWidths_);
     workspace->sync();
 }
 
@@ -803,9 +942,11 @@ void SketchTool::finishCurve_(MouseEvent* /*event*/) {
         return;
     }
 
+    // Apply all processing steps
     updateUnquantizedData_(true);
     updateTransformedData_(true);
     updateSmoothedData_(true);
+    updateSnappedData_(true);
 
     // Set curve to final requested tesselation mode
     workspace::Element* edgeElement = workspace->find(edge_);
@@ -818,47 +959,19 @@ void SketchTool::finishCurve_(MouseEvent* /*event*/) {
     if (isSnappingEnabled() && smoothedPoints_.length() > 1) {
 
         // Compute start vertex to snap to
-        geometry::Vec2d endPoint = canvasToWorkspaceMatrix_.transformPointAffine(
-            geometry::Vec2d(inputPoints_.last()));
+        geometry::Vec2d endPoint = smoothedPoints_.last();
         workspace::Element* snapVertex = computeSnapVertex_(endPoint, endVertex_);
 
         // If found, do the snapping
         if (snapVertex) {
 
-            Int numPoints = smoothedPoints_.length();
-            core::DoubleArray arclengthsFromLast(numPoints, core::noInit);
-            arclengthsFromLast.last() = 0;
-            geometry::Vec2d previousSp = smoothedPoints_.last();
-            double s = 0;
-            for (Int i = numPoints - 2; i >= 0; --i) {
-                geometry::Vec2d sp = smoothedPoints_[i];
-                s += (sp - previousSp).length();
-                arclengthsFromLast[i] = s;
-                previousSp = sp;
-            }
-
-            // Cap snap deformation length to ensure start point isn't modified
-            double maxS = arclengthsFromLast.first();
-            double snapFalloff_ = (std::min)(snapFalloff(), maxS);
-
-            // Deform end of stroke to match snap position
-            geometry::Vec2d snapPosition = getSnapPosition(snapVertex);
-            geometry::Vec2d delta = snapPosition - endPoint;
-            points_.last() = snapPosition;
-            for (Int i = smoothedPoints_.length() - 2; i >= 0; --i) {
-                s = arclengthsFromLast[i];
-                if (s < snapFalloff_) {
-                    points_[i] = applySnapFalloff(points_[i], delta, s, snapFalloff_);
-                }
-                else {
-                    break;
-                }
-            }
+            // Compute snapped geometry
+            updateEndSnappedData_(getSnapPosition(snapVertex));
 
             // Update DOM and workspace
             endVertex_->remove();
             endVertex_ = snapVertex->domElement();
-            edge_->setAttribute(ds::positions, points_);
+            edge_->setAttribute(ds::positions, snappedPoints_);
             edge_->setAttribute(ds::endvertex, endVertex_->getPathFromId());
             workspace->sync();
         }
@@ -881,7 +994,7 @@ bool SketchTool::resetData_() {
         // for debugging purposes.
         //inputPoints_.clear();
         //inputWidths_.clear();
-        //inputPointsTimestamps_.clear();
+        //inputTimestamps_.clear();
         dequantizerBuffer_.clear();
         dequantizerBufferStartIndex = 0;
         unquantizedPoints_.clear();
@@ -890,8 +1003,8 @@ bool SketchTool::resetData_() {
         transformedWidths_.clear();
         smoothedPoints_.clear();
         smoothedWidths_.clear();
-        points_.clear();
-        widths_.clear();
+        snappedPoints_.clear();
+        snappedWidths_.clear();
         return true;
     }
     return false;
