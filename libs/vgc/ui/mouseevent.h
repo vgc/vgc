@@ -97,7 +97,7 @@ protected:
         MouseButton button,
         const geometry::Vec2f& position,
         ModifierKeys modifierKeys,
-        uint64_t timestamp,
+        double timestamp,
         double pressure,
         bool isTablet);
 
@@ -108,7 +108,7 @@ public:
         MouseButton button,
         const geometry::Vec2f& position,
         ModifierKeys modifierKeys,
-        uint64_t timestamp = 0,
+        double timestamp = 0,
         double pressure = -1.0,
         bool isTablet = false);
 
@@ -183,13 +183,18 @@ public:
         modifierKeys_ = modifierKeys;
     }
 
-    /// Returns the window system's timestamp at which this event is processed.
-    /// It will normally be in milliseconds since some arbitrary point in time,
-    /// such as the time when the system was started.
+    /// Returns the time at which this event occured, in seconds, since some
+    /// arbitrary point in time (for example, the application startup time, or
+    /// the system startup time).
     ///
-    // XXX Make this a true timestamp (poll time) when possible.
+    /// Note that due to platform limitations, this timestamp is not always
+    /// accurate. As a general rule of thumbs, it tends to be more accurate
+    /// with pen tablet inputs than with mouse input.
+    ///
+    // XXX Make this a true timestamp (poll time) when possible, rather than
+    // the time when Qt added the event to the event queue.
     //
-    uint64_t timestamp() const {
+    double timestamp() const {
         return timestamp_;
     }
 
@@ -235,7 +240,7 @@ private:
     geometry::Vec2f position_ = {};
     ModifierKeys modifierKeys_;
     HoverLockPolicy hoverLockPolicy_ = {};
-    uint64_t timestamp_ = 0;
+    double timestamp_ = 0;
     double pressure_ = 0.f;
     bool hasPressure_ = false;
     bool isTablet_ = false;

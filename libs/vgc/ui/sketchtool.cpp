@@ -534,6 +534,7 @@ Int reconstructInputStep(
 } // namespace
 
 void SketchTool::updateUnquantizedData_(bool /*isFinalPass*/) {
+
     // the algorithm works only for more than 2 input points
     if (!isInputQuantized_ || inputPoints_.length() <= 2) {
         unquantizedPoints_ = inputPoints_;
@@ -639,7 +640,7 @@ void SketchTool::startCurve_(MouseEvent* event) {
     //
     inputPoints_.clear();
     inputWidths_.clear();
-    inputPointsTimestamps_.clear();
+    inputTimestamps.clear();
 
     // Fast return if missing required context
     workspace::Workspace* workspace = this->workspace();
@@ -749,7 +750,7 @@ void SketchTool::continueCurve_(MouseEvent* event) {
     // Append the input point
     inputPoints_.append(eventPos2f);
     inputWidths_.append(pressurePenWidth(event));
-    inputPointsTimestamps_.append(event->timestamp());
+    inputTimestamps.append(event->timestamp());
 
     updateUnquantizedData_(false);
     updateTransformedData_(false);

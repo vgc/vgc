@@ -31,8 +31,8 @@ SelectToolPtr SelectTool::create() {
 namespace {
 
 // Time elapsed from press after which the action becomes a drag.
-inline constexpr Int dragTimeThresholdInMilliseconds = 1000;
-inline constexpr float dragDeltaThresholdInPixels = 5.f;
+inline constexpr double dragTimeThreshold = 0.5;
+inline constexpr float dragDeltaThreshold = 5;
 
 } // namespace
 
@@ -53,18 +53,17 @@ bool SelectTool::onMouseMove(MouseEvent* event) {
     }
 
     if (!isDragging_) {
-        // Initiate drag if conditions are met.
+
+        // Initiate drag if:
+        // - mouse position moved more than a few pixels, or
+        // - mouse pressed for longer than a few 1/10s of seconds
         //
-        // Current event implementation uses Qt's timestamps, and according to the
-        // documentation, these should "normally be in milliseconds".
-        Int deltaTime = core::int_cast<Int>(event->timestamp()) - timeAtPress_;
+        double deltaTime = event->timestamp() - timeAtPress_;
         float deltaPos = (event->position() - cursorPositionAtPress_).length();
-        // Consider the action is a drag if we moved 5 pixels or the button
-        // has been pressed for more than 1 second.
-        if (deltaPos >= dragDeltaThresholdInPixels
-            || deltaTime > dragTimeThresholdInMilliseconds) {
+        if (deltaPos >= dragDeltaThreshold || deltaTime > dragTimeThreshold) {
 
             isDragging_ = true;
+
             // Initialize drag data
             switch (dragAction_) {
             case DragAction::Select: {
@@ -141,7 +140,7 @@ bool SelectTool::onMousePress(MouseEvent* event) {
         candidates_ = canvas->computeSelectionCandidates(event->position());
         selectionAtPress_ = canvas->selection();
         cursorPositionAtPress_ = event->position();
-        timeAtPress_ = core::int_cast<Int>(event->timestamp());
+        timeAtPress_ = event->timestamp();
 
         // Prepare for a potential simple click selection action.
         if (keys.hasAll(ModifierKey::Shift | ModifierKey::Ctrl)) {
@@ -356,8 +355,8 @@ bool SelectTool::onMouseRelease(MouseEvent* event) {
     }
 
     // If we were dragging we can stop the action and return.
-    Int deltaTime = core::int_cast<Int>(event->timestamp()) - timeAtPress_;
-    if (isDragging_ || deltaTime > dragTimeThresholdInMilliseconds) {
+    double deltaTime = event->timestamp() - timeAtPress_;
+    if (isDragging_ || deltaTime > dragTimeThreshold) {
         resetActionState_();
         return true;
     }

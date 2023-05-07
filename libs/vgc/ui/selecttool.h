@@ -67,7 +67,7 @@ private:
     core::Array<SelectionCandidate> candidates_;
     core::Array<core::Id> selectionAtPress_;
     geometry::Vec2f cursorPositionAtPress_;
-    Int timeAtPress_ = 0;
+    double timeAtPress_ = 0;
     bool isInAction_ = false;
     bool isDragging_ = false;
     bool canAmendUndoGroup_ = false;

@@ -129,7 +129,11 @@ MouseEventPtr fromQt(QMouseEvent* event) {
     // Modidier keys
     ModifierKeys modifierKeys = fromQt(event->modifiers());
 
-    return MouseEvent::create(button, fromQtf(p), modifierKeys, event->timestamp());
+    return MouseEvent::create(
+        button,
+        fromQtf(p),
+        modifierKeys,
+        static_cast<double>(event->timestamp()) * 0.001);
 }
 
 MouseEventPtr fromQt(QTabletEvent* event) {
@@ -155,7 +159,12 @@ MouseEventPtr fromQt(QTabletEvent* event) {
     double pressure = event->pressure();
 
     return MouseEvent::create(
-        button, fromQtf(p), modifierKeys, event->timestamp(), pressure, true);
+        button,
+        fromQtf(p),
+        modifierKeys,
+        static_cast<double>(event->timestamp()) * 0.001,
+        pressure,
+        true);
 }
 
 KeyEventPtr fromQt(QKeyEvent* event) {

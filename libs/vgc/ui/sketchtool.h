@@ -122,7 +122,7 @@ protected:
     //
     geometry::Vec2fArray inputPoints_;
     core::DoubleArray inputWidths_;
-    core::Array<Int64> inputPointsTimestamps_;
+    core::DoubleArray inputTimestamps;
     geometry::Mat4d canvasToWorkspaceMatrix_;
     bool isInputQuantized_ = false;
 
