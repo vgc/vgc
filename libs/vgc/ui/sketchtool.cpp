@@ -746,7 +746,7 @@ std::array<Int, n + 1> binomialCoefficients() {
 template<size_t level, typename T>
 void indexBasedGaussianSmoothing(const core::Array<T>& in, core::Array<T>& out) {
 
-    if (level == 0) {
+    if constexpr (level == 0) {
         out = in;
         return;
     }
