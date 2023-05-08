@@ -152,7 +152,30 @@ bool SketchTool::onMouseMove(MouseEvent* event) {
         return false;
     }
 
-    continueCurve_(event);
+    bool isPressureZero = event->hasPressure() && !(event->pressure() > 0);
+    if (isCurveStarted_) {
+
+        // Ends the curve if the pressure becomes zero. If we receive a
+        // non-zero pressure later, this has the intended effect of splitting
+        // the curve into several curves.
+        //
+        if (isPressureZero) {
+            finishCurve_(event);
+            isCurveStarted_ = false;
+        }
+        else {
+            continueCurve_(event);
+        }
+    }
+    else {
+        // Starts the curve as soon as the pressure is non-zero.
+        //
+        if (!isPressureZero) {
+            isCurveStarted_ = true;
+            startCurve_(event);
+        }
+    }
+
     minimalLatencyStrokeReload_ = true;
     return true;
 }
@@ -171,15 +194,28 @@ bool SketchTool::onMousePress(MouseEvent* event) {
 
     isSketching_ = true;
 
-    startCurve_(event);
+    // If the device is pressure-enabled, we wait for the pressure to actually
+    // be positive before starting the curve. This fixes issues on some devices
+    // where the first/last samples have a null pressure.
+    //
+    bool isPressureZero = event->hasPressure() && !(event->pressure() > 0);
+    if (!isPressureZero) {
+        isCurveStarted_ = true;
+        startCurve_(event);
+    }
+
     return true;
 }
 
 bool SketchTool::onMouseRelease(MouseEvent* event) {
 
     if (event->button() == MouseButton::Left) {
-        finishCurve_(event);
-        if (resetData_()) {
+        if (isSketching_) {
+            if (isCurveStarted_) {
+                finishCurve_(event);
+                isCurveStarted_ = false;
+            }
+            isSketching_ = false;
             return true;
         }
     }
@@ -819,18 +855,23 @@ void SketchTool::startCurve_(MouseEvent* event) {
     static core::StringId Draw_Curve("Draw Curve");
     core::History* history = workspace->history();
     if (history) {
+        SketchToolPtr self(this);
         drawCurveUndoGroup_ = history->createUndoGroup(Draw_Curve);
         drawCurveUndoGroupConnectionHandle_ = drawCurveUndoGroup_->undone().connect(
-            [this]([[maybe_unused]] core::UndoGroup* undoGroup, bool /*isAbort*/) {
-                // isAbort should be true since we have no sub-group
-                if (drawCurveUndoGroup_) {
-                    VGC_ASSERT(undoGroup == drawCurveUndoGroup_);
-                    drawCurveUndoGroup_->undone().disconnect(
-                        drawCurveUndoGroupConnectionHandle_);
-                    drawCurveUndoGroup_ = nullptr;
+            [self]([[maybe_unused]] core::UndoGroup* undoGroup, bool /*isAbort*/) {
+                if (!self.isAlive()) {
+                    return;
                 }
-                resetData_();
-                requestRepaint();
+                // isAbort should be true since we have no sub-group
+                if (self->drawCurveUndoGroup_) {
+                    VGC_ASSERT(undoGroup == self->drawCurveUndoGroup_);
+                    self->drawCurveUndoGroup_->undone().disconnect(
+                        self->drawCurveUndoGroupConnectionHandle_);
+                    self->drawCurveUndoGroup_ = nullptr;
+                }
+                self->isSketching_ = false;
+                self->resetData_();
+                self->requestRepaint();
             });
     }
 
@@ -977,37 +1018,33 @@ void SketchTool::finishCurve_(MouseEvent* /*event*/) {
         }
     }
 
+    resetData_();
     requestRepaint();
 }
 
-bool SketchTool::resetData_() {
+void SketchTool::resetData_() {
     if (drawCurveUndoGroup_) {
         drawCurveUndoGroup_->close();
         drawCurveUndoGroup_->undone().disconnect(drawCurveUndoGroupConnectionHandle_);
         drawCurveUndoGroup_ = nullptr;
     }
-    if (isSketching_) {
-        isSketching_ = false;
-        endVertex_ = nullptr;
-        edge_ = nullptr;
-        // inputs are kept until next curve starts
-        // for debugging purposes.
-        //inputPoints_.clear();
-        //inputWidths_.clear();
-        //inputTimestamps_.clear();
-        dequantizerBuffer_.clear();
-        dequantizerBufferStartIndex = 0;
-        unquantizedPoints_.clear();
-        unquantizedWidths_.clear();
-        transformedPoints_.clear();
-        transformedWidths_.clear();
-        smoothedPoints_.clear();
-        smoothedWidths_.clear();
-        snappedPoints_.clear();
-        snappedWidths_.clear();
-        return true;
-    }
-    return false;
+    endVertex_ = nullptr;
+    edge_ = nullptr;
+    // inputs are kept until next curve starts
+    // for debugging purposes.
+    //inputPoints_.clear();
+    //inputWidths_.clear();
+    //inputTimestamps_.clear();
+    dequantizerBuffer_.clear();
+    dequantizerBufferStartIndex = 0;
+    unquantizedPoints_.clear();
+    unquantizedWidths_.clear();
+    transformedPoints_.clear();
+    transformedWidths_.clear();
+    smoothedPoints_.clear();
+    smoothedWidths_.clear();
+    snappedPoints_.clear();
+    snappedWidths_.clear();
 }
 
 double SketchTool::snapFalloff() const {

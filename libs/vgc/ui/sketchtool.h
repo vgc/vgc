@@ -107,6 +107,7 @@ protected:
 
     // Curve draw
     bool isSketching_ = false;
+    bool isCurveStarted_ = false;
     core::UndoGroup* drawCurveUndoGroup_ = nullptr;
     core::ConnectionHandle drawCurveUndoGroupConnectionHandle_ = {};
     dom::Element* endVertex_ = nullptr;
@@ -216,7 +217,7 @@ protected:
     void startCurve_(MouseEvent* event);
     void continueCurve_(MouseEvent* event);
     void finishCurve_(MouseEvent* event);
-    bool resetData_();
+    void resetData_();
 
     // The length of curve that snapping is allowed to deform
     double snapFalloff() const;
