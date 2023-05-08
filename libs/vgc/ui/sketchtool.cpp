@@ -16,6 +16,8 @@
 
 #include <vgc/ui/sketchtool.h>
 
+#include <array>
+
 #include <QBitmap>
 #include <QCursor>
 #include <QPainter>
@@ -152,7 +154,7 @@ bool SketchTool::onMouseMove(MouseEvent* event) {
         return false;
     }
 
-    bool isPressureZero = event->hasPressure() && !(event->pressure() > 0);
+    bool isPressureZero = hasPressure_ && !(event->pressure() > 0);
     if (isCurveStarted_) {
 
         // Ends the curve if the pressure becomes zero. If we receive a
@@ -193,12 +195,13 @@ bool SketchTool::onMousePress(MouseEvent* event) {
     canvas->clearSelection();
 
     isSketching_ = true;
+    hasPressure_ = event->hasPressure();
 
     // If the device is pressure-enabled, we wait for the pressure to actually
     // be positive before starting the curve. This fixes issues on some devices
     // where the first/last samples have a null pressure.
     //
-    bool isPressureZero = event->hasPressure() && !(event->pressure() > 0);
+    bool isPressureZero = hasPressure_ && !(event->pressure() > 0);
     if (!isPressureZero) {
         isCurveStarted_ = true;
         startCurve_(event);
@@ -712,20 +715,80 @@ void SketchTool::updateTransformedData_(bool /*isFinalPass*/) {
     transformedWidths_ = unquantizedWidths_;
 }
 
-void SketchTool::updateSmoothedData_(bool /*isFinalPass*/) {
+namespace {
 
-    smoothedPoints_ = transformedPoints_;
-    smoothedWidths_ = transformedWidths_;
+// Returns the binomial coefficient C(n, k) for 0 <= k <= n.
+//
+// The returned array is of size n + 1.
+//
+// These are computed using the Pascal's triangle:
+//
+//  C(0, k) =       1
+//  C(1, k) =      1 1
+//  C(2, k) =     1 2 1
+//  C(3, k) =    1 3 3 1
+//  C(4, k) =   1 4 6 4 1
+//
+template<size_t n>
+std::array<Int, n + 1> binomialCoefficients() {
+    std::array<Int, n + 1> res;
+    res[0] = 1;
+    for (size_t m = 1; m <= n; ++m) {
+        // Compute C(m, k) coefficients from C(m-1, k) coefficients
+        res[m] = 1;
+        for (size_t k = m - 1; k >= 1; --k) {
+            res[k] = res[k] + res[k - 1];
+        }
+    }
+    return res;
+}
+
+template<size_t level, typename T>
+void indexBasedGaussianSmoothing(const core::Array<T>& in, core::Array<T>& out) {
+
+    if (level == 0) {
+        out = in;
+        return;
+    }
+
+    // Get binomial coefficients
+    constexpr Int l = level;
+    constexpr Int m = 2 * level + 1;
+    std::array<Int, m> coeffs = binomialCoefficients<2 * level>();
+
+    // Apply convolution with coefficients
+    Int n = in.length();
+    out.resizeNoInit(n);
+    for (Int i = 0; i < n; ++i) {
+        double value = 0;
+        double sumCoeffs = 0;
+        Int j = i - l;
+        for (Int k = 0; k < m; ++k, ++j) {
+            if (0 <= j && j < n) {
+                sumCoeffs += coeffs[k];
+                value += coeffs[k] * in.getUnchecked(j);
+            }
+        }
+        out.getUnchecked(i) = value / sumCoeffs;
+    }
+}
+
+} // namespace
+
+void SketchTool::updateSmoothedData_(bool /*isFinalPass*/) {
 
     Int numPoints = smoothedPoints_.length();
 
-    Int smoothingLevel = 0;
-    if (smoothingLevel > 0 && numPoints >= 3) {
+    // Smooth points.
+    //
+    smoothedPoints_ = transformedPoints_;
+    Int pointsSmoothingLevel = 0;
+    if (pointsSmoothingLevel > 0 && numPoints >= 3) {
         // Apply gaussian smoothing.
 
         const geometry::Vec2dArray& inPoints = transformedPoints_;
 
-        if (smoothingLevel == 1) {
+        if (pointsSmoothingLevel == 1) {
             for (Int i = 1; i < numPoints - 1; ++i) {
                 smoothedPoints_.getUnchecked(i) =              //
                     (1 / 4.0) * inPoints.getUnchecked(i - 1) + //
@@ -733,7 +796,7 @@ void SketchTool::updateSmoothedData_(bool /*isFinalPass*/) {
                     (1 / 4.0) * inPoints.getUnchecked(i + 1);
             }
         }
-        else if (smoothingLevel == 2) {
+        else if (pointsSmoothingLevel == 2) {
             smoothedPoints_.getUnchecked(1) =          //
                 (1 / 4.0) * inPoints.getUnchecked(0) + //
                 (2 / 4.0) * inPoints.getUnchecked(1) + //
@@ -755,8 +818,19 @@ void SketchTool::updateSmoothedData_(bool /*isFinalPass*/) {
         }
     }
 
-    // TODO: could remove second and before last sample here
-    //       since they are less smooth than the others.
+    // Smooth width.
+    //
+    // This is different as smoothing points since we don't need to keep
+    // the first/last width unchanged.
+    //
+    if (hasPressure_) {
+        constexpr size_t widthSmoothingLevel = 4;
+        indexBasedGaussianSmoothing<widthSmoothingLevel>(
+            transformedWidths_, smoothedWidths_);
+    }
+    else {
+        smoothedWidths_ = transformedWidths_;
+    }
 }
 
 void SketchTool::updateSnappedData_(bool /*isFinalPass*/) {

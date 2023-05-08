@@ -108,6 +108,7 @@ protected:
     // Curve draw
     bool isSketching_ = false;
     bool isCurveStarted_ = false;
+    bool hasPressure_ = false;
     core::UndoGroup* drawCurveUndoGroup_ = nullptr;
     core::ConnectionHandle drawCurveUndoGroupConnectionHandle_ = {};
     dom::Element* endVertex_ = nullptr;
