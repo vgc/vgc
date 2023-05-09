@@ -392,13 +392,6 @@ void Window::wheelEvent(QWheelEvent* event) {
             }
             float integralPart = 0;
             accumulatedScrollDelta_[i] = std::modf(acc, &integralPart);
-            //VGC_DEBUG_TMP(
-            //    "[{}] d:{}, acc:{}, newAcc:{}, integralPart:{}",
-            //    i,
-            //    d,
-            //    acc,
-            //    accumulatedScrollDelta_[i],
-            //    integralPart);
             scrollSteps[i] = static_cast<Int>(integralPart);
         }
     }
