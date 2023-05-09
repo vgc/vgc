@@ -399,7 +399,7 @@ void Window::wheelEvent(QWheelEvent* event) {
             //    acc,
             //    accumulatedScrollDelta_[i],
             //    integralPart);
-            scrollSteps[i] = integralPart;
+            scrollSteps[i] = static_cast<Int>(integralPart);
         }
     }
     vgcEvent->setHorizontalSteps(scrollSteps[0]);
