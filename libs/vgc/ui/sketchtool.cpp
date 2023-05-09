@@ -785,7 +785,7 @@ struct IndexWidth {
         , width(width) {
     }
 
-    bool operator<(const IndexWidth& other) {
+    bool operator<(const IndexWidth& other) const {
         return width < other.width;
     }
 };
