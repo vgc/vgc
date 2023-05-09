@@ -212,8 +212,10 @@ private:
     bool isPanning_ = false;
     bool isRotating_ = false;
     bool isZooming_ = false;
-    geometry::Vec2d mousePosAtPress_ = {};
+    geometry::Vec2f mousePosAtPress_ = {};
     geometry::Camera2d cameraAtPress_;
+    double timeAtPress_ = 0;
+    bool isDragging_ = false;
 
     // Selection
     core::Array<core::Id> selectedElementIds_;
