@@ -316,7 +316,7 @@ bool Canvas::onMouseMove(MouseEvent* event) {
         // - mouse pressed for longer than a few 1/10s of seconds
         //
         double deltaTime = event->timestamp() - timeAtPress_;
-        float deltaPos = (event->position() - cursorPositionAtPress_).length();
+        float deltaPos = (event->position() - mousePosAtPress_).length();
         if (deltaPos >= dragDeltaThreshold || deltaTime > dragTimeThreshold) {
 
             isDragging_ = true;
@@ -328,10 +328,11 @@ bool Canvas::onMouseMove(MouseEvent* event) {
     // mouse action. In the future, we'll abstract this mechanism in a separate
     // class.
 
-    geometry::Vec2f mousePosf = event->position();
-    geometry::Vec2d mousePos = geometry::Vec2d(mousePosf.x(), mousePosf.y());
+    geometry::Vec2d mousePosAtPress(mousePosAtPress_);
+    geometry::Vec2d mousePos(event->position());
+
     if (isPanning_) {
-        geometry::Vec2d delta = mousePosAtPress_ - mousePos;
+        geometry::Vec2d delta = mousePosAtPress - mousePos;
         camera_.setCenter(cameraAtPress_.center() + delta);
         requestRepaint();
         return true;
@@ -341,12 +342,12 @@ bool Canvas::onMouseMove(MouseEvent* event) {
         // XXX rotateViewSensitivity should be a user preference
         //     (the signs in front of dx and dy too)
         const double rotateViewSensitivity = 0.01;
-        geometry::Vec2d deltaPos = mousePosAtPress_ - mousePos;
+        geometry::Vec2d deltaPos = mousePosAtPress - mousePos;
         double deltaRotation = rotateViewSensitivity * (deltaPos.x() - deltaPos.y());
         camera_.setRotation(cameraAtPress_.rotation() + deltaRotation);
 
         // Set new camera center so that rotation center = mouse pos at press
-        geometry::Vec2d pivotViewCoords = mousePosAtPress_;
+        geometry::Vec2d pivotViewCoords = mousePosAtPress;
         geometry::Vec2d pivotWorldCoords =
             cameraAtPress_.viewMatrix().inverted().transformPointAffine(pivotViewCoords);
         geometry::Vec2d pivotViewCoordsNow =
@@ -361,12 +362,12 @@ bool Canvas::onMouseMove(MouseEvent* event) {
         // XXX zoomViewSensitivity should be a user preference
         //     (the signs in front of dx and dy too)
         const double zoomViewSensitivity = 0.005;
-        geometry::Vec2d deltaPos = mousePosAtPress_ - mousePos;
+        geometry::Vec2d deltaPos = mousePosAtPress - mousePos;
         const double s = std::exp(zoomViewSensitivity * (deltaPos.y() - deltaPos.x()));
         camera_.setZoom(cameraAtPress_.zoom() * s);
 
         // Set new camera center so that zoom center = mouse pos at press
-        geometry::Vec2d pivotViewCoords = mousePosAtPress_;
+        geometry::Vec2d pivotViewCoords = mousePosAtPress;
         geometry::Vec2d pivotWorldCoords =
             cameraAtPress_.viewMatrix().inverted().transformPointAffine(pivotViewCoords);
         geometry::Vec2d pivotViewCoordsNow =
@@ -405,9 +406,8 @@ bool Canvas::onMousePress(MouseEvent* event) {
     }
 
     if (isPanning_ || isRotating_ || isZooming_) {
-        mousePosAtPress_ = geometry::Vec2d(event->position());
+        mousePosAtPress_ = event->position();
         cameraAtPress_ = camera_;
-        cursorPositionAtPress_ = event->position();
         timeAtPress_ = event->timestamp();
         return true;
     }
@@ -428,7 +428,7 @@ bool Canvas::onMouseRelease(MouseEvent* event) {
 
     if (isRotating_ && !isDragging_) {
         // Save mouse pos in world coords before modifying camera
-        geometry::Vec2d mousePos = geometry::Vec2d(cursorPositionAtPress_);
+        geometry::Vec2d mousePos(mousePosAtPress_);
         geometry::Vec2d p1 =
             camera_.viewMatrix().inverted().transformPointAffine(mousePos);
 
