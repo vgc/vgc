@@ -261,6 +261,9 @@ void Window::mouseMoveEvent(QMouseEvent* event) {
 }
 
 void Window::mousePressEvent(QMouseEvent* event) {
+    // Reset scroll accumulator
+    accumulatedScrollDelta_ = {};
+    // Process event
     MouseEventPtr vgcEvent = fromQt(event);
     MouseButton button = vgcEvent->button();
     if (pressedMouseButtons_.has(button)) {
@@ -279,6 +282,9 @@ void Window::mousePressEvent(QMouseEvent* event) {
 }
 
 void Window::mouseReleaseEvent(QMouseEvent* event) {
+    // Reset scroll accumulator
+    accumulatedScrollDelta_ = {};
+    // Process event
     MouseEventPtr vgcEvent = fromQt(event);
     MouseButton button = vgcEvent->button();
     if (!pressedMouseButtons_.has(button)) {
@@ -298,6 +304,9 @@ void Window::mouseReleaseEvent(QMouseEvent* event) {
 }
 
 void Window::tabletEvent(QTabletEvent* event) {
+    // Reset scroll accumulator
+    accumulatedScrollDelta_ = {};
+    // Process event
     switch (event->type()) {
     case QEvent::TabletMove: {
         MouseEventPtr vgcEvent = fromQt(event);
@@ -363,6 +372,42 @@ void Window::tabletEvent(QTabletEvent* event) {
     }
 }
 
+void Window::wheelEvent(QWheelEvent* event) {
+    ScrollEventPtr vgcEvent = fromQt(event);
+    geometry::Vec2f delta = vgcEvent->scrollDelta();
+    std::array<Int, 2> scrollSteps = {};
+    for (Int i = 0; i < 2; ++i) {
+        float acc = accumulatedScrollDelta_[i];
+        float d = delta[i];
+        if (d != 0) {
+            if (acc == 0) {
+                acc = d;
+            }
+            else if (std::signbit(acc) != std::signbit(d)) {
+                // If the scroll direction change we restart the accumulation from zero
+                acc = d;
+            }
+            else {
+                acc += d;
+            }
+            float integralPart = 0;
+            accumulatedScrollDelta_[i] = std::modf(acc, &integralPart);
+            //VGC_DEBUG_TMP(
+            //    "[{}] d:{}, acc:{}, newAcc:{}, integralPart:{}",
+            //    i,
+            //    d,
+            //    acc,
+            //    accumulatedScrollDelta_[i],
+            //    integralPart);
+            scrollSteps[i] = integralPart;
+        }
+    }
+    vgcEvent->setHorizontalSteps(scrollSteps[0]);
+    vgcEvent->setVerticalSteps(scrollSteps[1]);
+    prepareMouseEvent(widget_.get(), vgcEvent.get(), this);
+    event->setAccepted(mouseScrollEvent_(vgcEvent.get()));
+}
+
 // Qt tablet event handling is buggy.
 // Tablet proximity events may not happen in some cases according to some Qt user reports.
 // Also, the documentation says accepting a tablet event prevents it from being resent
@@ -425,6 +470,18 @@ bool Window::mouseReleaseEvent_(MouseEvent* event) {
     }
     else {
         isHandled = widget_->mouseRelease(event);
+    }
+    return isHandled;
+}
+
+bool Window::mouseScrollEvent_(ScrollEvent* event) {
+    bool isHandled = false;
+    Widget* mouseCaptor = widget_->mouseCaptor();
+    if (mouseCaptor) {
+        isHandled = mouseCaptor->onMouseScroll(event);
+    }
+    else {
+        isHandled = widget_->mouseScroll(event);
     }
     return isHandled;
 }

@@ -21,10 +21,12 @@
 #include <QGuiApplication>
 #include <QMouseEvent>
 #include <QTabletEvent>
+#include <QWheelEvent>
 
 #include <vgc/core/algorithm.h>
 #include <vgc/ui/keyevent.h>
 #include <vgc/ui/mouseevent.h>
+#include <vgc/ui/scrollevent.h>
 
 namespace vgc::ui {
 
@@ -165,6 +167,33 @@ MouseEventPtr fromQt(QTabletEvent* event) {
         static_cast<double>(event->timestamp()) * 0.001,
         pressure,
         true);
+}
+
+ScrollEventPtr fromQt(QWheelEvent* event) {
+
+    // Position
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
+    const QPointF& p = event->posF();
+#else
+    const QPointF& p = event->position();
+#endif
+
+    // Modidier keys
+    // Note: we don't use event->modifiers() or QGuiApplication::keyboardModifiers()
+    // because they're broken for tablet events; at least in Qt 5.6 and Linux/X11,
+    // they always returns NoModifier.
+    ModifierKeys modifierKeys = fromQt(QGuiApplication::queryKeyboardModifiers());
+
+    geometry::Vec2f delta = fromQtf(event->angleDelta()) / 120.f;
+
+    return ScrollEvent::create(
+        fromQtf(p),
+        delta,
+        // same as std::trunc to int
+        static_cast<Int>(delta.x()),
+        static_cast<Int>(delta.y()),
+        modifierKeys,
+        static_cast<double>(event->timestamp()) * 0.001);
 }
 
 KeyEventPtr fromQt(QKeyEvent* event) {
