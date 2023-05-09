@@ -214,6 +214,9 @@ private:
     bool isZooming_ = false;
     geometry::Vec2d mousePosAtPress_ = {};
     geometry::Camera2d cameraAtPress_;
+    geometry::Vec2f cursorPositionAtPress_;
+    double timeAtPress_ = 0;
+    bool isDragging_ = false;
 
     // Selection
     core::Array<core::Id> selectedElementIds_;

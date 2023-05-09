@@ -294,12 +294,33 @@ void Canvas::onWorkspaceChanged_() {
 void Canvas::onDocumentChanged_(const dom::Diff& /*diff*/) {
 }
 
+namespace {
+
+// Time elapsed from press after which the action becomes a drag.
+inline constexpr double dragTimeThreshold = 0.5;
+inline constexpr float dragDeltaThreshold = 5;
+
+} // namespace
+
 // Reimplementation of Widget virtual methods
 
 bool Canvas::onMouseMove(MouseEvent* event) {
 
     if (!mousePressed_) {
         return false;
+    }
+
+    if (!isDragging_) {
+        // Initiate drag if:
+        // - mouse position moved more than a few pixels, or
+        // - mouse pressed for longer than a few 1/10s of seconds
+        //
+        double deltaTime = event->timestamp() - timeAtPress_;
+        float deltaPos = (event->position() - cursorPositionAtPress_).length();
+        if (deltaPos >= dragDeltaThreshold || deltaTime > dragTimeThreshold) {
+
+            isDragging_ = true;
+        }
     }
 
     // Note: event.button() is always NoButton for move events. This is why
@@ -386,6 +407,8 @@ bool Canvas::onMousePress(MouseEvent* event) {
     if (isPanning_ || isRotating_ || isZooming_) {
         mousePosAtPress_ = geometry::Vec2d(event->position());
         cameraAtPress_ = camera_;
+        cursorPositionAtPress_ = event->position();
+        timeAtPress_ = event->timestamp();
         return true;
     }
 
@@ -398,10 +421,32 @@ bool Canvas::onMouseRelease(MouseEvent* event) {
         return false;
     }
 
+    if (!isDragging_) {
+        double deltaTime = event->timestamp() - timeAtPress_;
+        isDragging_ = deltaTime > dragTimeThreshold;
+    }
+
+    if (isRotating_ && !isDragging_) {
+        // Save mouse pos in world coords before modifying camera
+        geometry::Vec2d mousePos = geometry::Vec2d(cursorPositionAtPress_);
+        geometry::Vec2d p1 =
+            camera_.viewMatrix().inverted().transformPointAffine(mousePos);
+
+        // Reset camera rotation
+        camera_.setRotation(0);
+
+        // Set new camera center so that zoom center = mouse pos at scroll
+        geometry::Vec2d p2 = camera_.viewMatrix().transformPointAffine(p1);
+        camera_.setCenter(camera_.center() - mousePos + p2);
+
+        requestRepaint();
+    }
+
     isRotating_ = false;
     isPanning_ = false;
     isZooming_ = false;
     mousePressed_ = false;
+    isDragging_ = false;
 
     return true;
 }
