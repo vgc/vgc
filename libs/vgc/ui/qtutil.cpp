@@ -172,7 +172,11 @@ MouseEventPtr fromQt(QTabletEvent* event) {
 ScrollEventPtr fromQt(QWheelEvent* event) {
 
     // Position
+#if QT_VERSION < QT_VERSION_CHECK(5, 14, 0)
+    QPointF p = event->posF();
+#else
     QPointF p = event->position();
+#endif
 
     // Modidier keys
     // Note: we don't use event->modifiers() or QGuiApplication::keyboardModifiers()
