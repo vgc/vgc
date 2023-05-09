@@ -373,13 +373,13 @@ bool Canvas::onMousePress(MouseEvent* event) {
 
     ModifierKeys keys = event->modifierKeys();
     MouseButton button = event->button();
-    if (keys == ModifierKey::Alt && button == MouseButton::Middle) {
-        isRotating_ = true;
-    }
-    else if (keys == ModifierKey::None && button == MouseButton::Middle) {
+    if (keys == ModifierKey::None && button == MouseButton::Middle) {
         isPanning_ = true;
     }
     else if (keys == ModifierKey::Alt && button == MouseButton::Right) {
+        isRotating_ = true;
+    }
+    else if (keys == ModifierKey::Alt && button == MouseButton::Middle) {
         isZooming_ = true;
     }
 
