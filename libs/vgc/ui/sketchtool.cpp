@@ -22,6 +22,7 @@
 #include <QCursor>
 #include <QPainter>
 
+#include <vgc/core/profile.h>
 #include <vgc/core/stringid.h>
 #include <vgc/geometry/curve.h>
 #include <vgc/graphics/strings.h>
@@ -773,6 +774,204 @@ void indexBasedGaussianSmoothing(const core::Array<T>& in, core::Array<T>& out) 
     }
 }
 
+// Helper struct for applyWidthRoughnessLimitor
+//
+struct IndexWidth {
+    Int index;
+    double width;
+
+    IndexWidth(Int index, double width)
+        : index(index)
+        , width(width) {
+    }
+
+    bool operator<(const IndexWidth& other) const {
+        return width < other.width;
+    }
+};
+
+} // namespace
+
+} // namespace vgc::ui
+
+template<>
+struct fmt::formatter<vgc::ui::IndexWidth> : fmt::formatter<vgc::geometry::Vec2d> {
+    template<typename FormatContext>
+    auto format(const vgc::ui::IndexWidth& iw, FormatContext& ctx) {
+        return fmt::formatter<vgc::geometry::Vec2d>::format(
+            vgc::geometry::Vec2d(iw.index, iw.width), ctx);
+    }
+};
+
+namespace vgc::ui {
+
+namespace {
+
+// Ensures that |dw/ds| <= k (e.g., k = 0.5).
+//
+// Importantly, we should have at least |dw/ds| <= 1, otherwise in the current
+// tesselation model with round caps, it causes the following ugly artifact:
+//
+// Mouse move #123:   (pos = (100, 0), width = 3)
+//
+// -------_
+//         =
+//      +   |
+//         =
+// -------'
+//
+// Mouse move #124:   (pos = (101, 0), width = 1)
+//
+// -------   <- Ugly temporal disontinuity (previously existing geometry disappears)
+//        .  <- Ugly geometric discontinuity (prone to cusps, etc.)
+//       + |
+//        '
+// -------
+//
+// The idea is that what users see should be as close as possible as the
+// "integral of disks" interpretation of a brush stroke. With a physical round
+// paint brush, if you push the brush more then it creates a bigger disk. If
+// you then pull a little without moving lateraly, then it doesn't remove what
+// was previously already painted.
+//
+// Algorithm pseudo-code:
+//
+// 1. Sort samples by width in a list
+// 2. While the list isn't empty:
+//    a. Pop sample with largest width
+//    b. Modify the width of its two siblings to enforce |dw/ds| <= k
+//    c. Update the location of the two siblings in the sorted list to keep it sorted
+//
+// In theory, using a priority queue might be the best data structure for this.
+// In practice, we use a dynamic array for data locality, and taking advantage
+// of the fact that siblings of the samples with largest width have also
+// probably a large width.
+//
+void applyWidthRoughnessLimitor(
+    double k,
+    const geometry::Vec2dArray& points,
+    core::DoubleArray& widths) {
+
+    // Compute maximum delta width between two adjacent samples, based on the
+    // distance between the two samples.
+    //
+    Int n = points.length();
+    VGC_ASSERT(n == widths.length());
+    core::DoubleArray dwMaximums;
+    dwMaximums.reserve(n - 1);
+    for (Int i = 0; i < n - 1; ++i) {
+        double ds = (points[i + 1] - points[i]).length();
+        dwMaximums.append(k * ds);
+    }
+
+    // Sort samples by width.
+    //
+    // Note: during the algorithm, we use index = -1 as a special value to mean
+    // "virtually removed from the list". This is a performance optimization to
+    // avoid shifting the whole array when removing an element.
+    //
+    core::Array<IndexWidth> sortedWidths;
+    sortedWidths.reserve(n);
+    for (Int i = 0; i < n; ++i) {
+        sortedWidths.append({i, widths[i]});
+    }
+    std::sort(sortedWidths.begin(), sortedWidths.end());
+
+    // Construct map from original index to index in the sorted array.
+    //
+    core::Array<Int> indexMap;
+    indexMap.resizeNoInit(n);
+    for (Int i = 0; i < n; ++i) {
+        indexMap[sortedWidths[i].index] = i;
+    }
+
+    // Helper lambda that sets a new width to the sample at index i/j. Updates
+    // accordingly its position in the sorted array as well as all modified
+    // indices in indexMap.
+    //
+    // Terminolgy:
+    //   i: index in widths
+    //   j: index in sortedWidths
+    //
+    auto updateWidth = [&](Int i, Int j, double newWidth) {
+        // Remove from list
+        sortedWidths[j].index = -1;
+
+        // Find where to insert it. We also remember the index of the
+        // next "-1" empty spot in the array.
+        //
+        Int n = sortedWidths.length();
+        Int jInsert = 0;
+        Int jEmpty = n;
+        for (Int k = n - 1; k >= 0; --k) {
+            const IndexWidth& other = sortedWidths[k];
+            if (other.index == -1) {
+                jEmpty = k;
+            }
+            else if (other.width < newWidth) {
+                jInsert = k + 1;
+                break;
+            }
+        }
+
+        // Shift all elements one position to the right (from jInsert to
+        // jEmpty) to make room for the element to insert. Update
+        // indexMap accordingly.
+        //
+        if (jEmpty == n) {
+            sortedWidths.append(IndexWidth(-1, -1));
+        }
+        for (Int k = jEmpty; k > jInsert; --k) {
+            IndexWidth other = sortedWidths[k - 1];
+            sortedWidths[k] = other;
+            indexMap[other.index] = k;
+        }
+
+        // Insert element in the sorted array with its new width
+        sortedWidths[jInsert] = IndexWidth(i, newWidth);
+        indexMap[i] = jInsert;
+    };
+
+    // Helper lambda that updates the width of the sample at index i such that
+    // it doesn't have a width smaller than `w - dwMax`. Updates accordingly
+    // its position in the sorted array as well as all modified indices in
+    // indexMap.
+    //
+    auto updateSibling = [&](Int i, double dwMax, double w) {
+        Int j = indexMap[i];
+        if (j != -1) { // else: already processed
+            double wSibling = sortedWidths[j].width;
+            if (w - wSibling > dwMax) {
+                updateWidth(i, j, w - dwMax);
+            }
+        }
+    };
+
+    // Main algorithm loop:
+    // a. pop sample with largest width
+    // b. update the width of its two siblings to enforce |dw/ds| <= k
+    // c. repeat
+    //
+    while (!sortedWidths.isEmpty()) {
+        IndexWidth d = sortedWidths.pop();
+        Int i = d.index;
+        if (i == -1) { // element already virtually removed from the array
+            continue;
+        }
+        double w = d.width;
+        widths[i] = w;    // write final width
+        indexMap[i] = -1; // mark as processed
+        if (i > 0) {
+            // Update previous sibling
+            updateSibling(i - 1, dwMaximums[i - 1], w);
+        }
+        if (i < n - 1) {
+            // Update next sibling
+            updateSibling(i + 1, dwMaximums[i], w);
+        }
+    }
+}
+
 } // namespace
 
 void SketchTool::updateSmoothedData_(bool /*isFinalPass*/) {
@@ -825,8 +1024,10 @@ void SketchTool::updateSmoothedData_(bool /*isFinalPass*/) {
     //
     if (hasPressure_) {
         constexpr size_t widthSmoothingLevel = 4;
+        constexpr double widthRoughness = 0.8;
         indexBasedGaussianSmoothing<widthSmoothingLevel>(
             transformedWidths_, smoothedWidths_);
+        applyWidthRoughnessLimitor(widthRoughness, smoothedPoints_, smoothedWidths_);
     }
     else {
         smoothedWidths_ = transformedWidths_;
