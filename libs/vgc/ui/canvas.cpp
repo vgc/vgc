@@ -406,6 +406,88 @@ bool Canvas::onMouseRelease(MouseEvent* event) {
     return true;
 }
 
+bool Canvas::onMouseScroll(ScrollEvent* event) {
+    if (mousePressed_) {
+        return true;
+    }
+
+    double oldZoom = camera_.zoom();
+    double newZoom = 0;
+
+    // Cubic Root of 2 (we want to double zoom every 3 steps)
+    constexpr double fallbackZoomFactor = 1.25992104989487;
+
+    if (event->modifierKeys().isEmpty()) {
+        Int steps = event->verticalSteps();
+        constexpr double q23 = 2.0 / 3;
+        constexpr double levels[] = {
+            q23 / 32,   0.8 / 32,  1.0 / 32,  q23 / 16,   0.8 / 16,  1.0 / 16,
+            q23 / 8,    0.8 / 8,   1.0 / 8,   q23 / 4,    0.8 / 4,   1.0 / 4,
+            q23 / 2,    0.8 / 2,   1.0 / 2,   q23,        0.8,       1.0,
+            1.25,       1.5,       1.0 * 2,   1.25 * 2,   1.5 * 2,   1.0 * 4,
+            1.25 * 4,   1.5 * 4,   1.0 * 8,   1.25 * 8,   1.5 * 8,   1.0 * 16,
+            1.25 * 16,  1.5 * 16,  1.0 * 32,  1.25 * 32,  1.5 * 32,  1.0 * 64,
+            1.25 * 64,  1.5 * 64,  1.0 * 128, 1.25 * 128, 1.5 * 128, 1.0 * 256,
+            1.25 * 256, 1.5 * 256, 1.0 * 512, 1.25 * 512, 1.5 * 512,
+        };
+        Int n = static_cast<Int>(std::size(levels));
+
+        if (steps == 0) {
+            // no change
+        }
+        else if (steps > 0) {
+            newZoom = levels[0];
+            Int i = 0;
+            for (; i < n; ++i) {
+                newZoom = levels[i];
+                if (levels[i] > oldZoom) {
+                    break;
+                }
+            }
+            if (i == n) {
+                newZoom = oldZoom * fallbackZoomFactor;
+            }
+        }
+        else { // steps < 0
+            Int i = 0;
+            for (; i < n; ++i) {
+                if (oldZoom <= levels[i]) {
+                    break;
+                }
+                newZoom = levels[i];
+            }
+            if (i == 0) {
+                newZoom = oldZoom / fallbackZoomFactor;
+            }
+        }
+    }
+    else if (event->modifierKeys() == ModifierKey::Alt) {
+        // At least on Linux KDE, scrolling on a touchpad with Alt pressed
+        // switches from vertical to horizontal scrolling.
+        // So we use horizontal if vertical delta is zero.
+        geometry::Vec2f deltas = event->scrollDelta();
+        float d = deltas.y() != 0 ? deltas.y() : deltas.x();
+        newZoom = oldZoom * std::pow(fallbackZoomFactor, d);
+    }
+
+    if (newZoom != 0) {
+        // Save mouse pos in world coords before applying zoom
+        geometry::Vec2d mousePos = geometry::Vec2d(event->position());
+        geometry::Vec2d p1 =
+            camera_.viewMatrix().inverted().transformPointAffine(mousePos);
+
+        camera_.setZoom(newZoom);
+
+        // Set new camera center so that zoom center = mouse pos at scroll
+        geometry::Vec2d p2 = camera_.viewMatrix().transformPointAffine(p1);
+        camera_.setCenter(camera_.center() - mousePos + p2);
+
+        requestRepaint();
+    }
+
+    return true;
+}
+
 bool Canvas::onMouseEnter() {
     return false;
 }
