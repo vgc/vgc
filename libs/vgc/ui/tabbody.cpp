@@ -35,8 +35,8 @@ void TabBody::updateChildrenGeometry() {
     }
 }
 
-void TabBody::onWidgetAdded(Widget* /*child*/, bool){
+void TabBody::onWidgetAdded(Widget* /*child*/, bool) {
     // TODO: auto-hide if not active
-};
+}
 
 } // namespace vgc::ui

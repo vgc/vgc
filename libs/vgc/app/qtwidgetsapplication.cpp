@@ -232,7 +232,7 @@ bool QApplicationImpl::notify(QObject* receiver, QEvent* event) {
         std::terminate();
     }
 #endif
-};
+}
 
 void QApplicationImpl::onSystemSignalReceived(std::string_view errorMessage, int sig) {
     app_->onSystemSignalReceived(errorMessage, sig);
@@ -255,7 +255,7 @@ void systemSignalHandler(int sig) {
     }
 }
 
-}; // namespace detail
+} // namespace detail
 
 QtWidgetsApplication::QtWidgetsApplication(int argc, char* argv[])
     : ui::Application(argc, argv)

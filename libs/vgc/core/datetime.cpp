@@ -20,6 +20,6 @@ namespace vgc::core {
 
 DateTime DateTime::now() {
     return DateTime(std::chrono::system_clock::now(), TimeMode::Utc);
-};
+}
 
 } // namespace vgc::core
