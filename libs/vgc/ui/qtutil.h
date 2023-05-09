@@ -41,6 +41,7 @@
 class QKeyEvent;
 class QMouseEvent;
 class QTabletEvent;
+class QWheelEvent;
 
 class QCoreApplication;
 class QGuiApplication;
@@ -49,6 +50,7 @@ namespace vgc::ui {
 
 VGC_DECLARE_OBJECT(KeyEvent);
 VGC_DECLARE_OBJECT(MouseEvent);
+VGC_DECLARE_OBJECT(ScrollEvent);
 
 /// Converts the given UTF-8 encoded std::string_view `s` into a QString.
 ///
@@ -119,6 +121,11 @@ MouseEventPtr fromQt(QMouseEvent* event);
 ///
 VGC_UI_API
 MouseEventPtr fromQt(QTabletEvent* event);
+
+/// Converts the given QWheelEvent into a vgc::ui::ScrollEvent.
+///
+VGC_UI_API
+ScrollEventPtr fromQt(QWheelEvent* event);
 
 /// Converts the given QKeyEvent into a vgc::ui::KeyEvent.
 ///

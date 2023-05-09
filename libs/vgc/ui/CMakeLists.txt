@@ -54,6 +54,7 @@ vgc_add_library(ui
         preferredsizecalculator.h
         qtutil.h
         row.h
+        scrollevent.h
         selecttool.h
         settingedit.h
         setting.h
@@ -112,6 +113,7 @@ vgc_add_library(ui
         preferredsizecalculator.cpp
         qtutil.cpp
         row.cpp
+        scrollevent.cpp
         selecttool.cpp
         settingedit.cpp
         setting.cpp

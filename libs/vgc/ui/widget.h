@@ -39,6 +39,7 @@
 #include <vgc/ui/logcategories.h>
 #include <vgc/ui/margins.h>
 #include <vgc/ui/mouseevent.h>
+#include <vgc/ui/scrollevent.h>
 #include <vgc/ui/shortcut.h>
 
 namespace vgc::ui {
@@ -857,6 +858,12 @@ public:
     ///
     bool mouseRelease(MouseEvent* event);
 
+    /// Propagates a mouse scroll event through the widget hierarchy.
+    ///
+    /// It can only be called on the root widget.
+    ///
+    bool mouseScroll(ScrollEvent* event);
+
     /// Override this function if you wish to handle MouseMove events during the
     /// capture phase (from root to leaf).
     ///
@@ -891,6 +898,11 @@ public:
     /// must return true if the event was handled, false otherwise.
     ///
     virtual bool onMouseRelease(MouseEvent* event);
+
+    /// Override this function if you wish to handle MouseScroll events. You
+    /// must return true if the event was handled, false otherwise.
+    ///
+    virtual bool onMouseScroll(ScrollEvent* event);
 
     /// Returns whether this widget children are allowed to be hovered or not.
     ///
@@ -1512,6 +1524,7 @@ private:
     void mouseMove_(MouseEvent* event);
     void mousePress_(MouseEvent* event);
     void mouseRelease_(MouseEvent* event);
+    void mouseScroll_(ScrollEvent* event);
 
     bool mouseEnter_();
     bool mouseLeave_();

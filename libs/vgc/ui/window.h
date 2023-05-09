@@ -22,6 +22,7 @@
 #include <vgc/core/array.h>
 #include <vgc/core/os.h>
 #include <vgc/core/stopwatch.h>
+#include <vgc/geometry/vec2f.h>
 #include <vgc/graphics/engine.h>
 #include <vgc/ui/widget.h>
 
@@ -168,12 +169,14 @@ protected:
     void mousePressEvent(QMouseEvent* event) override;
     void mouseReleaseEvent(QMouseEvent* event) override;
     void tabletEvent(QTabletEvent* event) override;
+    void wheelEvent(QWheelEvent* event) override;
 
 private:
     bool isTabletInUse_() const;
     bool mouseMoveEvent_(MouseEvent* event);
     bool mousePressEvent_(MouseEvent* event);
     bool mouseReleaseEvent_(MouseEvent* event);
+    bool mouseScrollEvent_(ScrollEvent* event);
 
     // ==================== Handle keyboard input =============================
 
@@ -290,6 +293,7 @@ private:
 
     MouseButtons pressedMouseButtons_;
     MouseButtons pressedTabletButtons_;
+    geometry::Vec2f accumulatedScrollDelta_ = {};
 
     // The tablet is considered "in use" if a tablet button is pressed, or the
     // pen tablet is in proximity of the tablet, or the time since the last

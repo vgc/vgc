@@ -649,6 +649,22 @@ bool Widget::mouseRelease(MouseEvent* event) {
     return handled;
 }
 
+bool Widget::mouseScroll(ScrollEvent* event) {
+    if (!isRoot()) {
+        VGC_WARNING(LogVgcUi, "mouseScroll() can only be called on a root widget.");
+        return false;
+    }
+    lastMousePosition_ = event->position();
+    lastModifierKeys_ = event->modifierKeys();
+    WidgetPtr thisPtr = this;
+    mouseScroll_(event);
+    bool handled = event->isHandled();
+    if (isAlive()) {
+        handled |= updateHoverChain();
+    }
+    return handled;
+}
+
 void Widget::preMouseMove(MouseEvent* /*event*/) {
     // no-op
 }
@@ -670,6 +686,10 @@ bool Widget::onMousePress(MouseEvent* /*event*/) {
 }
 
 bool Widget::onMouseRelease(MouseEvent* /*event*/) {
+    return false;
+}
+
+bool Widget::onMouseScroll(ScrollEvent* /*event*/) {
     return false;
 }
 
@@ -978,6 +998,57 @@ void Widget::mouseRelease_(MouseEvent* event) {
     }
     else {
         unlockHover_(); // It also releases pressed buttons.
+    }
+}
+
+void Widget::mouseScroll_(ScrollEvent* event) {
+
+    geometry::Vec2f eventPos = event->position();
+
+    if (!checkAlreadyHovered_()) {
+        return;
+    }
+
+    // User-defined capture phase handler is not implemented yet.
+
+    // Keep weak pointer to `this`.
+    WidgetPtr thisPtr = this;
+
+    // Get hover-chain child without update.
+    Widget* hcChild = hoverChainChild();
+
+    // Call hover-chain child's handler.
+    if (hcChild) {
+        // Prepare against widget killers.
+        WidgetPtr hcChildPtr = hcChild;
+        // Call handler.
+        event->setPosition(mapTo(hcChild, eventPos));
+        hcChild->mouseScroll_(event);
+        // Check for deaths.
+        if (!isAlive() || !hcChild->isAlive()) {
+            // Widget got killed. Event can be considered handled.
+            event->handled_ = true;
+            return;
+        }
+        // Handle stop propagation.
+        if (event->isStopPropagationRequested()) {
+            return;
+        }
+        // Restore event position.
+        event->setPosition(eventPos);
+    }
+
+    // Scroll events cannot be used as action start nor end, thus we
+    // do not change the current hover-lock state.
+
+    if (!event->handled_ || handledEventPolicy_ == HandledEventPolicy::Receive) {
+        // User-defined bubble phase handler.
+        event->handled_ |= onMouseScroll(event);
+        if (!isAlive()) {
+            // Widget got killed. Event can be considered handled.
+            event->handled_ = true;
+            return;
+        }
     }
 }
 
