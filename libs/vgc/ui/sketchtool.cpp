@@ -84,8 +84,7 @@ geometry::Vec2d getSnapPosition(workspace::Element* snapVertex) {
     return geometry::Vec2d();
 }
 
-// Note: for now, the deformation is linear, which introduce a non-smooth
-// point at s = snapFalloff.
+// Assumes 0 <= s <= snapFalloff
 //
 geometry::Vec2d applySnapFalloff(
     const geometry::Vec2d& position,
@@ -93,7 +92,10 @@ geometry::Vec2d applySnapFalloff(
     double s,
     double snapFalloff) {
 
-    return position + delta * (1 - (s / snapFalloff));
+    // Cubic Ease-Out
+    double t = s / snapFalloff;
+    double x = 1 - t;
+    return position + delta * x * x * x;
 }
 
 } // namespace
