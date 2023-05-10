@@ -275,7 +275,7 @@ Int findJoinPatchLimit(
             }
         }
     }
-    return std::min(index, samples.length() / 3);
+    return (std::min)(index, samples.length() / 3);
 }
 
 Int findJoinPatchLimit(
@@ -486,7 +486,7 @@ void VacKeyVertex::computeJoin_() {
             // we'll interpolate the center-line too and it is common to both sides
             const double patchLengthLimit =
                 interpolationLimitCoefficient
-                * std::max(heData.patchCutLimits_[0], heData.patchCutLimits_[1]);
+                * (std::max)(heData.patchCutLimits_[0], heData.patchCutLimits_[1]);
             const double sqPatchLengthLimit = patchLengthLimit * patchLengthLimit;
             double patchLength = patchLengthLimit;
             //
