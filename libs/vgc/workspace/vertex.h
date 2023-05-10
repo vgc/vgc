@@ -23,6 +23,7 @@
 #include <vgc/core/array.h>
 #include <vgc/core/span.h>
 #include <vgc/dom/element.h>
+#include <vgc/graphics/geometryview.h>
 #include <vgc/vacomplex/complex.h>
 #include <vgc/workspace/api.h>
 #include <vgc/workspace/element.h>
@@ -249,6 +250,11 @@ private:
     bool isPositionComputed_ = false;
     bool isJoinComputed_ = false;
     bool isComputing_ = false;
+
+    graphics::BufferPtr diskMeshVertexBuffer_;
+    graphics::BufferPtr diskMeshInstanceBuffer_;
+    graphics::GeometryViewPtr selectionGeometry_;
+    bool isSelectionGeometryDirty_ = true;
 
     bool hasJoinData_() const {
         return isJoinComputed_;

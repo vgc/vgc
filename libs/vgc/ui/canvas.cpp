@@ -206,9 +206,25 @@ Canvas::computeSelectionCandidates(const geometry::Vec2f& position) const {
                 if (!e) {
                     return;
                 }
+                double tolerance = tol;
                 double dist = 0;
-                if (e->isSelectableAt(worldCoords, false, tol, &dist)) {
-                    result.emplaceLast(e->id(), dist);
+                Int priority = 1;
+                if (e->isVacElement()) {
+                    vacomplex::Node* node = e->toVacElement()->vacNode();
+                    if (node->isCell()) {
+                        vacomplex::Cell* cell = node->toCellUnchecked();
+                        switch (cell->cellType()) {
+                        case vacomplex::CellType::KeyVertex:
+                            tolerance *= 2;
+                            priority = 2;
+                            break;
+                        default:
+                            break;
+                        }
+                    }
+                }
+                if (e->isSelectableAt(worldCoords, false, tolerance, &dist)) {
+                    result.emplaceLast(e->id(), dist, priority);
                 }
             });
 
@@ -220,7 +236,12 @@ Canvas::computeSelectionCandidates(const geometry::Vec2f& position) const {
             result.begin(),
             result.end(),
             [](const SelectionCandidate& a, const SelectionCandidate& b) {
-                return a.distance() < b.distance();
+                if (a.priority() != b.priority()) {
+                    return a.priority() > b.priority();
+                }
+                else {
+                    return a.distance() < b.distance();
+                }
             });
     }
 
