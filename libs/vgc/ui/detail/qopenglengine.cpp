@@ -1230,7 +1230,7 @@ void QglEngine::initFramebuffer_(Framebuffer* aFramebuffer) {
     api_->glBindFramebuffer(GL_DRAW_FRAMEBUFFER, boundFramebuffer_);
 }
 
-void QglEngine::initBuffer_(Buffer* aBuffer, const char* data, Int lengthInBytes) {
+void QglEngine::initBuffer_(Buffer* aBuffer, const void* data, Int lengthInBytes) {
     QglBuffer* buffer = static_cast<QglBuffer*>(aBuffer);
     GLuint object = 0;
     api_->glGenBuffers(1, &object);

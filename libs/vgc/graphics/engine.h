@@ -472,7 +472,7 @@ protected:
     virtual void initBuiltinResources_() = 0;
 
     virtual void initFramebuffer_(Framebuffer* framebuffer) = 0;
-    virtual void initBuffer_(Buffer* buffer, const char* data, Int lengthInBytes) = 0;
+    virtual void initBuffer_(Buffer* buffer, const void* data, Int lengthInBytes) = 0;
     virtual void initImage_(
         Image* image,
         const core::Span<const char>* mipLevelDataSpans,
