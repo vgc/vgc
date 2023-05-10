@@ -687,10 +687,10 @@ void VacKeyVertex::computeJoin_() {
                                 .value_or(Vec2d());
 
                         sidePatchDataA0.joinHalfwidth = split[0];
-                        sidePatchDataA0.filletLength = halfedgeDataA->patchLength_;
-                        if (ts[0] > 0) {
-                            sidePatchDataA0.filletLength =
-                                (std::min)(ts[0], halfedgeDataA->patchLength_);
+                        sidePatchDataA0.filletLength =
+                            halfedgeDataA->patchLength_ / interpolationLimitCoefficient;
+                        if (ts[0] > 0 && ts[0] < sidePatchDataA0.filletLength) {
+                            sidePatchDataA0.filletLength = ts[0];
                         }
 
                         double tB = split[1];
@@ -713,10 +713,10 @@ void VacKeyVertex::computeJoin_() {
                                 Vec2d());
 
                         sidePatchDataB1.joinHalfwidth = split[0];
-                        sidePatchDataB1.filletLength = halfedgeDataB->patchLength_;
-                        if (ts[1] > 0) {
-                            sidePatchDataB1.filletLength =
-                                (std::min)(ts[1], halfedgeDataB->patchLength_);
+                        sidePatchDataB1.filletLength =
+                            halfedgeDataB->patchLength_ / interpolationLimitCoefficient;
+                        if (ts[1] > 0 && ts[1] < sidePatchDataB1.filletLength) {
+                            sidePatchDataB1.filletLength = ts[1];
                         }
 
                         const double tA = split[1];
