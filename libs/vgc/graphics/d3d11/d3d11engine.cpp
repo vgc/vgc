@@ -1299,7 +1299,7 @@ void D3d11Engine::initFramebuffer_(Framebuffer* /*framebuffer*/) {
     // no-op
 }
 
-void D3d11Engine::initBuffer_(Buffer* buffer, const char* data, Int lengthInBytes) {
+void D3d11Engine::initBuffer_(Buffer* buffer, const void* data, Int lengthInBytes) {
     D3d11Buffer* d3dBuffer = static_cast<D3d11Buffer*>(buffer);
     if (lengthInBytes) {
         loadBuffer_(d3dBuffer, data, lengthInBytes);

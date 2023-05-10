@@ -143,7 +143,7 @@ protected:
     void initBuiltinResources_() override;
 
     void initFramebuffer_(Framebuffer* framebuffer) override;
-    void initBuffer_(Buffer* buffer, const char* data, Int lengthInBytes) override;
+    void initBuffer_(Buffer* buffer, const void* data, Int lengthInBytes) override;
     void initImage_(
         Image* image,
         const core::Span<const char>* mipLevelDataSpans,
