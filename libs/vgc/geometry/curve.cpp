@@ -452,6 +452,58 @@ Vec2dArray Curve::triangulate(double maxAngle, Int minQuads, Int maxQuads) const
     return res;
 }
 
+namespace {
+
+struct CubicBezierData {
+    std::array<Vec2d, 4> positions;
+    std::array<double, 4> halfwidths;
+    bool isWidthUniform = false;
+
+    // Uninitialized
+    //
+    CubicBezierData() {
+    }
+
+    // Returns the CubicBezierData corresponding to the segment at index [i,
+    // i+1] in the given Curve.
+    //
+    CubicBezierData(const Curve* curve, Int i) {
+
+        // Ensure we have a valid segment between two control points
+        const Int numPts = curve->numPoints();
+        VGC_ASSERT(i >= 0);
+        VGC_ASSERT(i <= numPts - 2);
+
+        // Get indices of points used by the Catmull-Rom interpolation
+        Int i0 = (std::max)(i - 1, Int(0));
+        Int i1 = i;
+        Int i2 = i + 1;
+        Int i3 = (std::min)(i + 2, numPts - 1);
+
+        // Get positions
+        const Vec2d* p = curve->positions().data();
+        positions = {p[i0], p[i1], p[i2], p[i3]};
+
+        // Get widths
+        isWidthUniform =
+            (curve->widthVariability() == Curve::AttributeVariability::Constant);
+        if (isWidthUniform) {
+            double hw = curve->width() * 0.5;
+            halfwidths = {hw, hw, hw, hw};
+        }
+        else {
+            const double* w = curve->widths().data();
+            halfwidths = {w[i0] * 0.5, w[i1] * 0.5, w[i2] * 0.5, w[i3] * 0.5};
+        }
+
+        // Convert from Catmull-Rom to Bézier.
+        uniformCatmullRomToBezierCappedInPlace(positions.data());
+        if (!isWidthUniform) {
+            uniformCatmullRomToBezierInPlace(halfwidths.data());
+        }
+    }
+};
+
 // ---------------------------------------------------------------------------------------
 // Simple adaptive sampling in model space. Adapts to the curve widths in the same pass.
 // To be deprecated in favor of the multi-view sampling further below.
@@ -482,19 +534,14 @@ struct IterativeSamplingSample {
     double u;
     Int subdivLevel = 0;
 
-    void computeFrom(
-        const std::array<Vec2d, 4>& controlPoints,
-        const std::array<double, 4>& radii,
-        double u_,
-        bool isWidthUniform) {
-
+    void computeFrom(const CubicBezierData& data, double u_) {
         u = u_;
-        cubicBezierPosAndDerCasteljau<Vec2d>(controlPoints, u_, pos, tangent);
-        if (!isWidthUniform) {
-            cubicBezierPosAndDerCasteljau<double>(radii, u, radius, radiusDer);
+        cubicBezierPosAndDerCasteljau<Vec2d>(data.positions, u, pos, tangent);
+        if (!data.isWidthUniform) {
+            cubicBezierPosAndDerCasteljau<double>(data.halfwidths, u, radius, radiusDer);
         }
         else {
-            radius = radii[0];
+            radius = data.halfwidths[0];
             radiusDer = 0;
         }
         normal = tangent.normalized().orthogonalized();
@@ -546,6 +593,7 @@ bool testLine_(
     const IterativeSamplingSample& s1,
     double cosMaxAngle,
     bool isWidthUniform) {
+
     // Test angle between curve normals and center segment normal.
     geometry::Vec2d l = s1.pos - s0.pos;
     geometry::Vec2d n = l.normalized().orthogonalized();
@@ -558,6 +606,7 @@ bool testLine_(
     if (isWidthUniform) {
         return true;
     }
+
     // Test angle between curve normals and outline segments normal.
     geometry::Vec2d ll = s1.leftPoint - s0.leftPoint;
     geometry::Vec2d lln = -ll.normalized().orthogonalized();
@@ -578,51 +627,22 @@ bool testLine_(
     return true;
 }
 
+// Samples the semi-open range [data.segmentIndex, data.segmentIndex + 1)
+//
 bool sampleIter_(
     const Curve* curve,
     const CurveSamplingParameters& params,
     IterativeSamplingCache& data,
     core::Array<CurveSample>& outAppend) {
 
-    const Int idx = data.segmentIndex;
-
-    // Get indices of interpolated points for current segment.
-    const Int numPts = curve->numPoints();
-    Int i0 = (std::max)(idx - 1, Int(0));
-    Int i1 = idx;
-    Int i2 = idx + 1;
-    Int i3 = (std::min)(idx + 2, numPts - 1);
-
-    // Return now if idx is not a valid segment index.
-    if (i1 < 0 || i2 >= numPts) {
-        return false;
-    }
-
-    // Get positions of interpolated points.
-    const Vec2d* positions = curve->positions().data();
-    std::array<Vec2d, 4> cps = {
-        positions[i0], positions[i1], positions[i2], positions[i3]};
-
-    // Convert points to Bézier.
-    uniformCatmullRomToBezierCappedInPlace(cps.data());
-
-    // Convert widths from Catmull-Rom to Bézier if not uniform.
-    std::array<double, 4> radii = {};
-    const bool isWidthUniform =
-        (curve->widthVariability() == Curve::AttributeVariability::Constant);
-    if (!isWidthUniform) {
-        const double* widths = curve->widths().data();
-        radii = {widths[i0] * 0.5, widths[i1] * 0.5, widths[i2] * 0.5, widths[i3] * 0.5};
-        // XXX use something that does not overshoot
-        uniformCatmullRomToBezierInPlace(radii.data());
-    }
+    CubicBezierData bezierData(curve, data.segmentIndex);
 
     IterativeSamplingSample s0 = {};
     IterativeSamplingSample sN = {};
 
     // Compute first sample of segment.
     if (!data.previousSampleN.has_value()) {
-        s0.computeFrom(cps, radii, 0, isWidthUniform);
+        s0.computeFrom(bezierData, 0);
         outAppend.emplaceLast(s0.pos, s0.normal, s0.radius);
     }
     else {
@@ -632,7 +652,7 @@ bool sampleIter_(
     }
 
     // Compute last sample of segment.
-    { sN.computeFrom(cps, radii, 1, isWidthUniform); }
+    { sN.computeFrom(bezierData, 1); }
 
     const double cosMaxAngle = data.cosMaxAngle;
     const Int minISS = params.minIntraSegmentSamples();
@@ -660,17 +680,17 @@ bool sampleIter_(
         }
         else {
             double u = i * duLevel0;
-            s->computeFrom(cps, radii, u, isWidthUniform);
+            s->computeFrom(bezierData, u);
         }
         while (s != nullptr) {
             // Adaptive sampling
             Int subdivLevel = (std::max)(s0.subdivLevel, s->subdivLevel);
             if (subdivLevel < maxSubdivLevels
-                && !testLine_(s0, *s, cosMaxAngle, isWidthUniform)) {
+                && !testLine_(s0, *s, cosMaxAngle, bezierData.isWidthUniform)) {
 
                 double u = (s0.u + s->u) * 0.5;
                 s = &sampleStack.emplaceLast();
-                s->computeFrom(cps, radii, u, isWidthUniform);
+                s->computeFrom(bezierData, u);
                 s->subdivLevel = subdivLevel + 1;
             }
             else {
@@ -687,32 +707,118 @@ bool sampleIter_(
     return true;
 }
 
+// Python-like index wrapping
+Int wrapSampleIndex(Int i, Int n) {
+    if (n == 0) {
+        throw vgc::core::IndexError("cannot sample a curve with no points.");
+    }
+    else if (i < -n || i > n - 1) {
+        throw vgc::core::IndexError(vgc::core::format(
+            "index {} out of range [{}, {}] (num points is {})", i, -n, n - 1, n));
+    }
+    else {
+        if (i < 0) {
+            i += n;
+        }
+        return i;
+    }
+}
+
+} // namespace
+
 void Curve::sampleRange(
-    const CurveSamplingParameters& parameters,
     core::Array<CurveSample>& outAppend,
+    const CurveSamplingParameters& parameters,
     Int start,
-    Int end) const {
+    Int end,
+    bool computeArclength) const {
 
-    Int numSegs = (std::max)(Int(0), numPoints() - 1);
-    if (start < 0) {
-        start = (std::max)(Int(0), numSegs - start);
-    }
-    else if (start > numSegs - 1) {
-        return;
-    }
-    if (end < 0 || end > numSegs) {
-        end = numSegs;
+    // Cleanup start and end indices
+    Int n = numPoints();
+    start = wrapSampleIndex(start, n);
+    end = wrapSampleIndex(end, n);
+    if (start > end) {
+        throw vgc::core::IndexError(
+            vgc::core::format("start index ({}) > end index ({})", start, end));
     }
 
-    const Int minSegmentSamples =
-        (std::max)(Int(0), parameters.minIntraSegmentSamples()) + 1;
-    outAppend.reserve(outAppend.length() + 1 + (end - start) * minSegmentSamples);
+    // Remember old length of outAppend
+    const Int oldLength = outAppend.length();
 
-    IterativeSamplingCache data = {};
-    data.cosMaxAngle = std::cos(parameters.maxAngle());
-    data.segmentIndex = start;
-    for (Int i = start; i < end; ++i) {
-        sampleIter_(this, parameters, data, outAppend);
+    if (n == 1) {
+        // Handle case where there are no segments at all the curve.
+        //
+        // Note that this is different from `start == end` with `n > 1`, in
+        // which case we need to actually evaluate a Bezier curve to get the
+        // normal.
+        //
+        const bool isWidthUniform =
+            (widthVariability() == Curve::AttributeVariability::Constant);
+        Vec2d position = positions()[0];
+        Vec2d normal(0, 0);
+        double halfwidth = 0.5 * (isWidthUniform ? width() : widths_[0]);
+        outAppend.emplaceLast(position, normal, halfwidth);
+    }
+    else {
+        // Reserve memory space
+        const Int minSegmentSamples =
+            (std::max)(Int(0), parameters.minIntraSegmentSamples()) + 1;
+        outAppend.reserve(outAppend.length() + 1 + (end - start) * minSegmentSamples);
+
+        // Iterate over all segments
+        IterativeSamplingCache data = {};
+        data.cosMaxAngle = std::cos(parameters.maxAngle());
+        data.segmentIndex = start;
+        for (Int i = start; i < end; ++i) {
+            sampleIter_(this, parameters, data, outAppend);
+        }
+
+        // Add the last point
+        IterativeSamplingSample lastSample;
+        if (data.previousSampleN.has_value()) {
+            // Get last sample from the last call of sampleIter_
+            lastSample = *data.previousSampleN;
+        }
+        else {
+            // case start == end (sampleIter_ was never called)
+            CubicBezierData bezierData;
+            double u;
+            if (start < n - 1) {
+                bezierData = CubicBezierData(this, start);
+                u = 0;
+            }
+            else { // start == n - 1
+                bezierData = CubicBezierData(this, n - 2);
+                u = 1;
+            }
+            lastSample.computeFrom(bezierData, u);
+        }
+        outAppend.emplaceLast(lastSample.pos, lastSample.normal, lastSample.radius);
+    }
+
+    // Compute arclength.
+    //
+    if (computeArclength) {
+
+        // Compute arclength of first new sample
+        double s = 0;
+        auto it = outAppend.begin() + oldLength;
+        if (oldLength > 0) {
+            CurveSample& firstNewSample = *it;
+            CurveSample& lastOldSample = *(it - 1);
+            s = lastOldSample.s()
+                + (firstNewSample.position() - lastOldSample.position()).length();
+        }
+        it->setS(s);
+        geometry::Vec2d lastPoint = it->position();
+
+        // Compute arclength of all subsequent samples
+        for (++it; it != outAppend.end(); ++it) {
+            geometry::Vec2d point = it->position();
+            s += (point - lastPoint).length();
+            it->setS(s);
+            lastPoint = point;
+        }
     }
 }
 
