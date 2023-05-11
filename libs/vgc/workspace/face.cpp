@@ -162,6 +162,31 @@ bool VacKeyFace::isSelectableAt(
     return false;
 }
 
+bool VacKeyFace::isSelectableInRect(const geometry::Rect2d& rect, core::AnimTime t)
+    const {
+
+    vacomplex::KeyFace* kf = vacKeyFaceNode();
+    if (kf && frameData_.time() == t) {
+        if (frameData_.bbox_.isEmpty() || !frameData_.bbox_.intersects(rect)) {
+            return false;
+        }
+        for (const vacomplex::KeyCycle& cycle : kf->cycles()) {
+            if (cycle.steinerVertex()) {
+                if (rect.contains(cycle.steinerVertex()->position())) {
+                    return true;
+                }
+            }
+            for (const vacomplex::KeyHalfedge& khe : cycle.halfedges()) {
+                VacElement* edgeElement = workspace()->findVacElement(khe.edge());
+                if (edgeElement->isSelectableInRect(rect, t)) {
+                    return true;
+                }
+            }
+        }
+    }
+    return false;
+}
+
 const VacFaceCellFrameData* VacKeyFace::computeFrameData() {
     bool success = computeFillMesh_();
     return success ? &frameData_ : nullptr;

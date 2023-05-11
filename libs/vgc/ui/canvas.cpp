@@ -248,6 +248,38 @@ Canvas::computeSelectionCandidates(const geometry::Vec2f& position) const {
     return result;
 }
 
+core::Array<core::Id> Canvas::computeRectangleSelectionCandidates(
+    const geometry::Vec2f& a,
+    const geometry::Vec2f& b) const {
+
+    using geometry::Vec2d;
+
+    core::Array<core::Id> result;
+
+    if (workspace_) {
+        geometry::Mat4d invView = camera().viewMatrix().inverted();
+        geometry::Rect2d rect = geometry::Rect2d::empty;
+        rect.uniteWith(invView.transformPointAffine(Vec2d(a)));
+        rect.uniteWith(invView.transformPointAffine(Vec2d(b)));
+
+        workspace_->visitDepthFirst(
+            [](workspace::Element*, Int) { return true; },
+            [&, rect](workspace::Element* e, Int /*depth*/) {
+                if (!e) {
+                    return;
+                }
+                if (e->isSelectableInRect(rect)) {
+                    result.emplaceLast(e->id());
+                }
+            });
+
+        // order from front to back
+        std::reverse(result.begin(), result.end());
+    }
+
+    return result;
+}
+
 bool Canvas::onKeyPress(KeyEvent* event) {
 
     using geometry::CurveSamplingQuality;

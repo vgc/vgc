@@ -265,6 +265,9 @@ public:
         double* outDistance = nullptr,
         core::AnimTime t = {}) const;
 
+    virtual bool
+    isSelectableInRect(const geometry::Rect2d& rect, core::AnimTime t = {}) const;
+
 protected:
     void addDependency(Element* dependency);
     /// Both `oldDependency` and `newDependency` can be null. Returns true if `oldDependency != newDependency`, false otherwise.

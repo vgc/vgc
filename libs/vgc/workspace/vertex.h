@@ -339,6 +339,9 @@ public:
         double* outDistance = nullptr,
         core::AnimTime t = {}) const override;
 
+    bool isSelectableInRect(const geometry::Rect2d& rect, core::AnimTime t = {})
+        const override;
+
     const VacVertexCellFrameData* computeFrameDataAt(core::AnimTime t) override;
 
 protected:

@@ -25,6 +25,7 @@
 #include <vgc/core/color.h>
 #include <vgc/dom/element.h>
 #include <vgc/geometry/curve.h>
+#include <vgc/geometry/rect2d.h>
 #include <vgc/geometry/vec2d.h>
 #include <vgc/geometry/vec2f.h>
 #include <vgc/geometry/vec3f.h>
@@ -380,10 +381,17 @@ public:
         double tol,
         double* outDistance) const;
 
+    bool isSelectableInRect(const geometry::Rect2d& rect) const;
+
 private:
     core::AnimTime time_;
     geometry::Rect2d bbox_ = {};
     geometry::Rect2d strokeBbox_ = {};
+
+    // KeyFace::isSelectableInRect() calls its cycle edges' isSelectableInRect()
+    // thus it becomes useful to cache the result when testing a set of cells.
+    mutable geometry::Rect2d selectionTestCacheLastRect_ = geometry::Rect2d::empty;
+    mutable bool selectionTestCacheResult_ = false;
 
     // stage PreJoinGeometry
     std::shared_ptr<const vacomplex::EdgeSampling> sampling_;
@@ -469,6 +477,9 @@ public:
         double tol,
         double* outDistance = nullptr,
         core::AnimTime t = {}) const override;
+
+    bool isSelectableInRect(const geometry::Rect2d& rect, core::AnimTime t = {})
+        const override;
 
     const VacKeyEdgeFrameData* computeFrameData(VacEdgeComputationStage stage);
 

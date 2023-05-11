@@ -181,6 +181,16 @@ public:
     core::Array<SelectionCandidate>
     computeSelectionCandidates(const geometry::Vec2f& position) const;
 
+    /// Computes candidate elements for selection in the axis-aligned
+    /// rectangle with opposite corners `a` and `b`.
+    ///
+    /// Returns a list of element ids. This list sorted from foreground
+    /// to background.
+    ///
+    core::Array<core::Id> computeRectangleSelectionCandidates(
+        const geometry::Vec2f& a,
+        const geometry::Vec2f& b) const;
+
 protected:
     // Reimplementation of Widget virtual methods
     bool onKeyPress(KeyEvent* event) override;

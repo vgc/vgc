@@ -100,10 +100,10 @@ std::optional<core::StringId> VacKeyVertex::domTagName() const {
     return dom::strings::vertex;
 }
 
-geometry::Rect2d VacKeyVertex::boundingBox(core::AnimTime /*t*/) const {
+geometry::Rect2d VacKeyVertex::boundingBox(core::AnimTime t) const {
     // TODO: use cached position in frame data
     vacomplex::KeyVertex* kv = vacKeyVertexNode();
-    if (kv) {
+    if (kv && frameData_.time() == t) {
         geometry::Vec2d pos = vacKeyVertexNode()->position();
         return geometry::Rect2d(pos, pos);
     }
@@ -115,10 +115,10 @@ bool VacKeyVertex::isSelectableAt(
     bool /*outlineOnly*/,
     double tol,
     double* outDistance,
-    core::AnimTime /*t*/) const {
+    core::AnimTime t) const {
 
     vacomplex::KeyVertex* kv = vacKeyVertexNode();
-    if (kv) {
+    if (kv && frameData_.time() == t) {
         geometry::Vec2d pos = vacKeyVertexNode()->position();
         double d = (p - pos).length();
         if (d < tol) {
@@ -127,6 +127,17 @@ bool VacKeyVertex::isSelectableAt(
             }
             return true;
         }
+    }
+    return false;
+}
+
+bool VacKeyVertex::isSelectableInRect(const geometry::Rect2d& rect, core::AnimTime t)
+    const {
+
+    vacomplex::KeyVertex* kv = vacKeyVertexNode();
+    if (kv && frameData_.time() == t) {
+        geometry::Vec2d pos = vacKeyVertexNode()->position();
+        return rect.contains(pos);
     }
     return false;
 }

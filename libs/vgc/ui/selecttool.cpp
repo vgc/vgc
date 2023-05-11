@@ -14,7 +14,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#include <vgc/graphics/strings.h>
 #include <vgc/ui/selecttool.h>
+#include <vgc/workspace/colors.h>
 
 #include <set>
 
@@ -52,6 +54,8 @@ bool SelectTool::onMouseMove(MouseEvent* event) {
         return isInAction_; // always true
     }
 
+    cursorPosition_ = event->position();
+
     if (!isDragging_) {
 
         // Initiate drag if:
@@ -59,7 +63,7 @@ bool SelectTool::onMouseMove(MouseEvent* event) {
         // - mouse pressed for longer than a few 1/10s of seconds
         //
         double deltaTime = event->timestamp() - timeAtPress_;
-        float deltaPos = (event->position() - cursorPositionAtPress_).length();
+        float deltaPos = (cursorPosition_ - cursorPositionAtPress_).length();
         if (deltaPos >= dragDeltaThreshold || deltaTime > dragTimeThreshold) {
 
             isDragging_ = true;
@@ -86,17 +90,19 @@ bool SelectTool::onMouseMove(MouseEvent* event) {
 
     if (isDragging_) {
         geometry::Mat4d inverseViewMatrix = canvas->camera().viewMatrix().inverted();
-        geometry::Vec2f cursorPosition = event->position();
 
         geometry::Vec2d cursorPositionInWorkspace =
-            inverseViewMatrix.transformPointAffine(geometry::Vec2d(cursorPosition));
+            inverseViewMatrix.transformPointAffine(geometry::Vec2d(cursorPosition_));
         geometry::Vec2d cursorPositionInWorkspaceAtPress =
             inverseViewMatrix.transformPointAffine(
                 geometry::Vec2d(cursorPositionAtPress_));
 
         switch (dragAction_) {
         case DragAction::Select: {
-            // todo
+            rectCandidates_ = canvas->computeRectangleSelectionCandidates(
+                cursorPositionAtPress_, cursorPosition_);
+            selectionRectangleGeometry_.reset();
+            requestRepaint();
             break;
         }
         case DragAction::TranslateCandidate:
@@ -153,7 +159,7 @@ bool SelectTool::onMousePress(MouseEvent* event) {
             selectionMode_ = SelectionMode::Remove;
         }
         else {
-            selectionMode_ = SelectionMode::Single;
+            selectionMode_ = SelectionMode::New;
         }
         isAlternativeMode_ = keys.has(ModifierKey::Alt);
 
@@ -161,7 +167,7 @@ bool SelectTool::onMousePress(MouseEvent* event) {
         if (candidates_.isEmpty()) {
             dragAction_ = DragAction::Select;
         }
-        else if (selectionMode_ == SelectionMode::Single && !isAlternativeMode_) {
+        else if (selectionMode_ == SelectionMode::New && !isAlternativeMode_) {
             // When no modifier keys are used:
             // If some candidates are already selected then the drag action is
             // to translate the current selection.
@@ -303,7 +309,7 @@ core::Id removeFromSelection(
 
 // Returns the item to select, if any. Otherwise returns -1.
 //
-core::Id selectSingleItem(
+core::Id selectNewItem(
     const core::Array<SelectionCandidate>& candidates,
     bool isAlternativeMode,
     core::Id lastSelectedId) {
@@ -354,62 +360,98 @@ bool SelectTool::onMouseRelease(MouseEvent* event) {
         // buttons it didn't receive any press event for.
     }
 
+    core::Array<core::Id> selection = selectionAtPress_;
+    bool selectionChanged = false;
+
     // If we were dragging we can stop the action and return.
     double deltaTime = event->timestamp() - timeAtPress_;
     if (isDragging_ || deltaTime > dragTimeThreshold) {
-        resetActionState_();
-        return true;
-    }
-
-    // Otherwise, we compute the new selection.
-    bool selectionChanged = false;
-    core::Array<core::Id> selection = selectionAtPress_;
-    switch (selectionMode_) {
-    case SelectionMode::Toggle: {
-        // TODO: Toggle selection.
-        break;
-    }
-    case SelectionMode::Add: {
-        core::Id selectedId =
-            addToSelection(selection, candidates_, isAlternativeMode_, lastSelectedId_);
-        if (selectedId != -1) {
-            selectionChanged = true;
-            lastSelectedId_ = selectedId;
-            lastDeselectedId_ = -1;
-        }
-        break;
-    }
-    case SelectionMode::Remove: {
-        core::Id deselectedId = removeFromSelection(
-            selection, candidates_, isAlternativeMode_, lastDeselectedId_);
-        if (deselectedId != -1) {
-            selectionChanged = true;
-            lastSelectedId_ = -1;
-            lastDeselectedId_ = deselectedId;
-        }
-        break;
-    }
-    case SelectionMode::Single: {
-        core::Id selectedId =
-            selectSingleItem(candidates_, isAlternativeMode_, lastSelectedId_);
-        if (selectedId != -1) {
-            if (selection.length() != 1 || selection.first() != selectedId) {
-                selection.assign(1, selectedId);
-                selectionChanged = true;
+        if (dragAction_ == DragAction::Select) {
+            // Rectangle selection.
+            switch (selectionMode_) {
+            case SelectionMode::Toggle: {
+                // TODO: Toggle selection.
+                break;
             }
-            lastSelectedId_ = selectedId;
-            lastDeselectedId_ = -1;
-        }
-        else {
-            if (!selection.isEmpty()) {
-                selection.clear();
-                selectionChanged = true;
+            case SelectionMode::Add: {
+                for (core::Id id : rectCandidates_) {
+                    if (!selection.contains(id)) {
+                        selection.append(id);
+                        selectionChanged = true;
+                    }
+                }
+                break;
+            }
+            case SelectionMode::Remove: {
+                for (core::Id id : rectCandidates_) {
+                    if (selection.removeOne(id)) {
+                        selection.append(id);
+                        selectionChanged = true;
+                    }
+                }
+                break;
+            }
+            case SelectionMode::New: {
+                if (!selection.isEmpty() || !rectCandidates_.isEmpty()) {
+                    selection = rectCandidates_;
+                    selectionChanged = true;
+                }
+                break;
+            }
             }
             lastSelectedId_ = -1;
             lastDeselectedId_ = -1;
         }
-        break;
     }
+    else {
+        // Point selection.
+        switch (selectionMode_) {
+        case SelectionMode::Toggle: {
+            // TODO: Toggle selection.
+            break;
+        }
+        case SelectionMode::Add: {
+            core::Id selectedId = addToSelection(
+                selection, candidates_, isAlternativeMode_, lastSelectedId_);
+            if (selectedId != -1) {
+                selectionChanged = true;
+                lastSelectedId_ = selectedId;
+                lastDeselectedId_ = -1;
+            }
+            break;
+        }
+        case SelectionMode::Remove: {
+            core::Id deselectedId = removeFromSelection(
+                selection, candidates_, isAlternativeMode_, lastDeselectedId_);
+            if (deselectedId != -1) {
+                selectionChanged = true;
+                lastSelectedId_ = -1;
+                lastDeselectedId_ = deselectedId;
+            }
+            break;
+        }
+        case SelectionMode::New: {
+            core::Id selectedId =
+                selectNewItem(candidates_, isAlternativeMode_, lastSelectedId_);
+            if (selectedId != -1) {
+                if (selection.length() != 1 || selection.first() != selectedId) {
+                    selection.assign(1, selectedId);
+                    selectionChanged = true;
+                }
+                lastSelectedId_ = selectedId;
+                lastDeselectedId_ = -1;
+            }
+            else {
+                if (!selection.isEmpty()) {
+                    selection.clear();
+                    selectionChanged = true;
+                }
+                lastSelectedId_ = -1;
+                lastDeselectedId_ = -1;
+            }
+            break;
+        }
+        }
     }
 
     if (selectionChanged) {
@@ -418,6 +460,90 @@ bool SelectTool::onMouseRelease(MouseEvent* event) {
 
     resetActionState_();
     return true;
+}
+
+void SelectTool::onResize() {
+    SuperClass::onResize();
+    selectionRectangleGeometry_.reset();
+}
+
+void SelectTool::onPaintCreate(graphics::Engine* engine) {
+    SuperClass::onPaintCreate(engine);
+}
+
+void SelectTool::onPaintDraw(graphics::Engine* engine, PaintOptions options) {
+
+    SuperClass::onPaintDraw(engine, options);
+
+    using namespace graphics;
+    namespace gs = graphics::strings;
+
+    ui::Canvas* canvas = this->canvas();
+    if (!canvas) {
+        return;
+    }
+
+    using geometry::Vec2d;
+    using geometry::Vec2f;
+
+    if (isDragging_ && dragAction_ == DragAction::Select) {
+        if (!selectionRectangleGeometry_) {
+            selectionRectangleGeometry_ = engine->createDynamicTriangleStripView(
+                BuiltinGeometryLayout::XYDxDy_iXYRotWRGBA);
+
+            geometry::Mat4d invView = canvas->camera().viewMatrix().inverted();
+            Vec2f a(invView.transformPointAffine(Vec2d(cursorPositionAtPress_)));
+            Vec2f b(invView.transformPointAffine(Vec2d(cursorPosition_)));
+            geometry::Rect2f rect = geometry::Rect2f::empty;
+            rect.uniteWith(a);
+            rect.uniteWith(b);
+
+            geometry::Vec4fArray vertices;
+            // XYDxDy
+            //
+            //    0┄┄┄┄┄┄2
+            //    ┆\    /┆
+            //    ┆ 1┄┄3 ┆
+            //    ┆ ┆  ┆ ┆
+            //    ┆ 7┄┄5 ┆
+            //    ┆/    \┆
+            //    6┄┄┄┄┄┄4
+            //
+            vertices.emplaceLast(rect.pMin().x(), rect.pMin().y(), 0.f, 0.f);
+            vertices.emplaceLast(rect.pMin().x(), rect.pMin().y(), 1.f, 1.f);
+            vertices.emplaceLast(rect.pMax().x(), rect.pMin().y(), 0.f, 0.f);
+            vertices.emplaceLast(rect.pMax().x(), rect.pMin().y(), -1.f, 1.f);
+            vertices.emplaceLast(rect.pMax().x(), rect.pMax().y(), 0.f, 0.f);
+            vertices.emplaceLast(rect.pMax().x(), rect.pMax().y(), -1.f, -1.f);
+            vertices.emplaceLast(rect.pMin().x(), rect.pMax().y(), 0.f, 0.f);
+            vertices.emplaceLast(rect.pMin().x(), rect.pMax().y(), 1.f, -1.f);
+            vertices.emplaceLast(vertices[0]);
+            vertices.emplaceLast(vertices[1]);
+            engine->updateBufferData(
+                selectionRectangleGeometry_->vertexBuffer(0), std::move(vertices));
+
+            // XYRotWRGBA
+            const core::Color& c = workspace::colors::selection;
+            core::FloatArray instanceData({0, 0, 1.f, 2.f, c.r(), c.g(), c.b(), c.a()});
+
+            engine->updateBufferData(
+                selectionRectangleGeometry_->vertexBuffer(1), std::move(instanceData));
+        }
+
+        geometry::Mat4f currentView(engine->viewMatrix());
+        geometry::Mat4f canvasView(canvas->camera().viewMatrix());
+        engine->pushViewMatrix(currentView * canvasView);
+
+        engine->setProgram(graphics::BuiltinProgram::ScreenSpaceDisplacement);
+        engine->draw(selectionRectangleGeometry_);
+
+        engine->popViewMatrix();
+    }
+}
+
+void SelectTool::onPaintDestroy(graphics::Engine* engine) {
+    SuperClass::onPaintDestroy(engine);
+    selectionRectangleGeometry_.reset();
 }
 
 void SelectTool::initializeDragMoveData_(
@@ -615,6 +741,10 @@ void SelectTool::resetActionState_() {
     canAmendUndoGroup_ = false;
     draggedVertices_.clear();
     draggedEdges_.clear();
+    if (selectionRectangleGeometry_) {
+        selectionRectangleGeometry_.reset();
+        requestRepaint();
+    }
 }
 
 } // namespace vgc::ui
