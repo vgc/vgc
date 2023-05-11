@@ -65,9 +65,10 @@ private:
 ///
 class VGC_UI_API SelectionCandidate {
 public:
-    SelectionCandidate(core::Id id, double distance)
+    SelectionCandidate(core::Id id, double distance, Int priority = 1)
         : id_(id)
-        , distance_(distance) {
+        , distance_(distance)
+        , priority_(priority) {
     }
 
     core::Id id() const {
@@ -78,9 +79,14 @@ public:
         return distance_;
     }
 
+    Int priority() const {
+        return priority_;
+    }
+
 private:
     core::Id id_;
     double distance_;
+    Int priority_;
 };
 
 /// \class vgc::ui::Canvas
