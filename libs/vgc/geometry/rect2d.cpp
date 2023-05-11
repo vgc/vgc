@@ -109,12 +109,12 @@ bool Rect2d::intersectsSegmentWithExternalEndpoints_(
     int o4 = computeAngleOrientation(p0p1, corner(3) - p0);
 
     int ox = o1 | o2 | o3 | o4;
-    if (ox & 1) {
-        // a corner is on p0p1.
+    if (ox == 6) {
+        // some corners are on different sides of p0p1.
         return true;
     }
-    else if (ox == 6) {
-        // some corners are on different sides of p0p1.
+    else if (ox & 1) {
+        // a corner is on p0p1.
         return true;
     }
 
