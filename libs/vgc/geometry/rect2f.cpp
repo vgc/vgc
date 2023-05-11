@@ -23,4 +23,102 @@
 
 namespace vgc::geometry {
 
+bool Rect2f::intersectsSegmentWithExternalEndpoints_(
+    const Vec2f& p0,
+    const Vec2f& p1,
+    int p0c,
+    int p0r,
+    int p1c,
+    int p1r) const {
+
+    if (p0c == p1c) {
+        if (p0c != 0) {
+            // p0 and p1 are both on the same side of rect in x.
+            //
+            //        ┆     ┆
+            //   p0  q1────q2     p0
+            //    │   │     │     /
+            //   p1  q4────q3    /
+            //        ┆     ┆  p1
+            //
+            return false;
+        }
+        else if (p0r + p1r == 3) {
+            // p0 and p1 are on both sides of the rect in y and
+            // inside the rect bounds in x.
+            //
+            //       ┆  p0   ┆
+            //      q1───┼──q2
+            //       │   │   │
+            //      q4───┼──q3
+            //       ┆  p1   ┆
+            //
+            return true;
+        }
+    }
+    if (p0r == p1r) {
+        if (p0r != 0) {
+            // p0 and p1 are both on the same side of rect in y.
+            //
+            //     p0──────p1
+            //  ┄┄┄┄┄┄┄q1────q2┄┄┄┄┄┄┄
+            //          │     │
+            //  ┄┄┄┄┄┄┄q4────q3┄┄┄┄┄┄┄
+            //            p0──────p1
+            //
+            return false;
+        }
+        else if (p0c + p1c == 3) {
+            // p0 and p1 are on both sides of the rect in x and
+            // inside the rect bounds in y.
+            //
+            //  ┄┄┄┄┄┄┄q1────q2┄┄┄┄┄┄┄
+            //     p0───┼─────┼───p1
+            //          │     │
+            //  ┄┄┄┄┄┄┄q4────q3┄┄┄┄┄┄┄
+            //
+            return true;
+        }
+    }
+    if (p0 == p1) {
+        // p0 and p1 are equal and outside of the rect
+        return false;
+    }
+    // Here, the remaining cases are limited to (symmetries excluded):
+    //
+    //  p0 ┆    ┆       p0 ┆    ┆          ┆ p0 ┆
+    //  ┄┄┄a────c┄┄┄    ┄┄┄a────c┄┄┄    ┄┄┄a────c┄┄┄
+    //     │    │ p1       │    │          │    │ p1
+    //  ┄┄┄b────d┄┄┄    ┄┄┄b────d┄┄┄    ┄┄┄b────d┄┄┄
+    //     ┆    ┆          ┆    ┆ p1       ┆    ┆
+    //
+    // We can see that in every case, p0p1 intersects the rect if and only if
+    // any corner is on p0p1 or corners are not all on the same side of p0p1.
+    //
+    Vec2f p0p1 = p1 - p0;
+    auto computeAngleOrientation = [](const Vec2f& ab, const Vec2f& ac) {
+        double det = ab.det(ac);
+        if (det == 0) {
+            return 1;
+        }
+        return (det > 0) ? 4 : 2;
+    };
+    int o1 = computeAngleOrientation(p0p1, corner(0) - p0);
+    int o2 = computeAngleOrientation(p0p1, corner(1) - p0);
+    int o3 = computeAngleOrientation(p0p1, corner(2) - p0);
+    int o4 = computeAngleOrientation(p0p1, corner(3) - p0);
+
+    int ox = o1 & o2 & o3 & o4;
+    if (ox & 1) {
+        // a corner is on p0p1.
+        return true;
+    }
+    else if (ox == 6) {
+        // some corners are on different sides of p0p1.
+        return true;
+    }
+
+    return false;
+}
+
 } // namespace vgc::geometry
