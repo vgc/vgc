@@ -747,9 +747,84 @@ public:
         return contains(Vec2x(x, y));
     }
 
+    /// Returns whether this rectangle has a non-empty intersection with the
+    /// polyline defined by the sequence of points from `first` to `last`.
+    ///
+    template<typename PointIt, typename PointPositionGetter = core::Identity>
+    bool intersectsPolyline(
+        PointIt first,
+        PointIt last,
+        PointPositionGetter positionGetter = {}) const {
+
+        auto it0 = first;
+        Vec2x p0 = positionGetter(*it0);
+        int p0c = p0.x() > xMax() ? 2 : (p0.x() < xMin() ? 1 : 0);
+        int p0r = p0.y() > yMax() ? 2 : (p0.y() < yMin() ? 1 : 0);
+        if (!p0c && !p0r) {
+            // p0 is inside the rect.
+            return true;
+        }
+
+        for (auto it1 = it0 + 1; it1 != last; it0 = it1++) {
+            // in segment outline-mode-selection box?
+            Vec2x p1 = positionGetter(*it1);
+            int p1c = p1.x() > xMax() ? 2 : (p1.x() < xMin() ? 1 : 0);
+            int p1r = p1.y() > yMax() ? 2 : (p1.y() < yMin() ? 1 : 0);
+            if (!p1c && !p1r) {
+                // p1 is inside the rect.
+                return true;
+            }
+
+            if (intersectsSegmentWithExternalEndpoints_(p0, p1, p0c, p0r, p1c, p1r)) {
+                return true;
+            }
+
+            p0 = p1;
+            p0c = p1c;
+            p0r = p1r;
+        }
+
+        return false;
+    }
+
+    /// Returns whether this rectangle has a non-empty intersection with the
+    /// segment defined by the given endpoints `p0` and `p1`.
+    ///
+    bool intersectsSegment(
+        const Vec2x& p0, const Vec2x& p1) const {
+
+        int p0c = p0.x() > xMax() ? 2 : (p0.x() < xMin() ? 1 : 0);
+        int p0r = p0.y() > yMax() ? 2 : (p0.y() < yMin() ? 1 : 0);
+        if (!p0c && !p0r) {
+            // p0 is inside the rect.
+            return true;
+        }
+        int p1c = p1.x() > xMax() ? 2 : (p1.x() < xMin() ? 1 : 0);
+        int p1r = p1.y() > yMax() ? 2 : (p1.y() < yMin() ? 1 : 0);
+        if (!p1c && !p1r) {
+            // p1 is inside the rect.
+            return true;
+        }
+
+        if (intersectsSegmentWithExternalEndpoints_(p0, p1, p0c, p0r, p1c, p1r)) {
+            return true;
+        }
+
+        return false;
+    }
+
 private:
     Vec2x pMin_;
     Vec2x pMax_;
+
+    VGC_GEOMETRY_API
+    bool intersectsSegmentWithExternalEndpoints_(
+        const Vec2x& p0,
+        const Vec2x& p1,
+        int p0c,
+        int p0r,
+        int p1c,
+        int p1r) const;
 };
 
 inline constexpr Rect2x Rect2x::empty = Rect2x(
