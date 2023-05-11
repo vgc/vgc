@@ -99,16 +99,16 @@ bool Rect2d::intersectsSegmentWithExternalEndpoints_(
     auto computeAngleOrientation = [](const Vec2d& ab, const Vec2d& ac) {
         double det = ab.det(ac);
         if (det == 0) {
-            return 1;
+            return 0x1;
         }
-        return (det > 0) ? 4 : 2;
+        return (det > 0) ? 0x4 : 0x2;
     };
     int o1 = computeAngleOrientation(p0p1, corner(0) - p0);
     int o2 = computeAngleOrientation(p0p1, corner(1) - p0);
     int o3 = computeAngleOrientation(p0p1, corner(2) - p0);
     int o4 = computeAngleOrientation(p0p1, corner(3) - p0);
 
-    int ox = o1 & o2 & o3 & o4;
+    int ox = o1 | o2 | o3 | o4;
     if (ox & 1) {
         // a corner is on p0p1.
         return true;
