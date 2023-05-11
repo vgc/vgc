@@ -138,6 +138,15 @@ struct TypeIdentity_ {
 template<typename U>
 using TypeIdentity = typename detail::TypeIdentity_<U>::type;
 
+/// Function object type whose operator() returns its argument unchanged.
+///
+struct Identity {
+    template<typename U>
+    constexpr U&& operator()(U&& x) const noexcept {
+        std::forward<U>(x);
+    }
+};
+
 /// Casts a class enum value to its underlying type.
 /// Equivalent to `return static_cast<std::underlying_type_t<Enum>>(e);`.
 ///
