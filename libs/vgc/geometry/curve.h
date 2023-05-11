@@ -282,12 +282,12 @@ using SharedConstCurveSampleArray = core::SharedConstArray<CurveSample>;
 /// offset curves is less than `maxAngle`.
 ///
 /// When the curve is a straight line between two control points, no intra
-/// segment samples are needed. However, you can use use
-/// `minIntraSegmentSamples` if you wish to have at least a certain number of
-/// samples uniformly generated between any two control points. Also, you can
-/// use `maxIntraSegmentSamples` to limit how many samples are generated
-/// between any two control points. This is necessary to break infinite loops
-/// in case the curve contains a cusp between two control points.
+/// segment samples are needed. However, you can use `minIntraSegmentSamples`
+/// if you wish to have at least a certain number of samples uniformly
+/// generated between any two control points. Also, you can use
+/// `maxIntraSegmentSamples` to limit how many samples are generated between
+/// any two control points. This is necessary to break infinite loops in case
+/// the curve contains a cusp between two control points.
 ///
 /// If you wish to uniformly generate a fixed number of samples between control
 /// points, simply set `maxAngle` to any value, and set
