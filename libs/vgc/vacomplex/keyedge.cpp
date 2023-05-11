@@ -116,29 +116,12 @@ void KeyEdge::onBoundaryGeometryChanged_() {
 
 geometry::CurveSampleArray
 KeyEdge::computeInputSamples_(const geometry::CurveSamplingParameters& parameters) const {
-
-    //VGC_DEBUG_TMP(
-    //    "[{}]::computeInputSampling_({{{}, {}, {}}})",
-    //    (void*)this,
-    //    parameters.maxAngle(),
-    //    parameters.minIntraSegmentSamples(),
-    //    parameters.maxIntraSegmentSamples());
     geometry::Curve curve;
     geometry::CurveSampleArray sampling;
     curve.setPositions(points());
     curve.setWidths(widths());
-    curve.sampleRange(parameters, sampling);
-    if (sampling.length()) {
-        auto it = sampling.begin();
-        geometry::Vec2d lastPoint = it->position();
-        double s = 0;
-        for (++it; it != sampling.end(); ++it) {
-            geometry::Vec2d point = it->position();
-            s += (point - lastPoint).length();
-            it->setS(s);
-            lastPoint = point;
-        }
-    }
+    curve.sampleRange(sampling, parameters);
+    VGC_ASSERT(sampling.length() > 0);
     hasGeometryBeenQueriedSinceLastDirtyEvent_ = true;
     return sampling;
 }

@@ -261,6 +261,38 @@ using SharedConstCurveSampleArray = core::SharedConstArray<CurveSample>;
 /// \class vgc::geometry::CurveSamplingParameters
 /// \brief Parameters for the sampling.
 ///
+/// Using the default parameters, the sampling is "adaptive". This means that
+/// the number of samples generated between two control points depends on the
+/// curvature of the curve: the higher the curvature, the more samples are
+/// generated. This ensures that consecutive segments never have an angle more
+/// than `maxAngle` (expressed in radian), which ensures that the curve looks
+/// "smooth" at any zoom level.
+///
+/// \verbatim
+///                    _o p3
+///                 _-`
+///              _-` } maxAngle
+/// o----------o`- - - - - - - - -
+/// p1         p2
+/// \endverbatim
+///
+/// Note that some algorithms may only take into account the angle between
+/// consecutive segments of the centerline, while other may be width-aware,
+/// that is, also ensure that the angle between consecutive segments of the
+/// offset curves is less than `maxAngle`.
+///
+/// When the curve is a straight line between two control points, no intra
+/// segment samples are needed. However, you can use use
+/// `minIntraSegmentSamples` if you wish to have at least a certain number of
+/// samples uniformly generated between any two control points. Also, you can
+/// use `maxIntraSegmentSamples` to limit how many samples are generated
+/// between any two control points. This is necessary to break infinite loops
+/// in case the curve contains a cusp between two control points.
+///
+/// If you wish to uniformly generate a fixed number of samples between control
+/// points, simply set `maxAngle` to any value, and set
+/// `minIntraSegmentSamples` and `maxIntraSegmentSamples` to the same value.
+///
 class VGC_GEOMETRY_API CurveSamplingParameters {
 public:
     CurveSamplingParameters() = default;
@@ -315,8 +347,8 @@ public:
 
 private:
     double maxAngle_ = 0.05; // 2PI / 0.05 ~= 125.66
-    Int minIntraSegmentSamples_ = 1;
-    Int maxIntraSegmentSamples_ = 64;
+    Int minIntraSegmentSamples_ = 0;
+    Int maxIntraSegmentSamples_ = 63;
 };
 
 /// \class vgc::geometry::WidthProfile
@@ -511,41 +543,66 @@ public:
     Vec2dArray
     triangulate(double maxAngle = 0.05, Int minQuads = 1, Int maxQuads = 64) const;
 
-    /// Computes and returns a sampling of this curve as a sequence of samples
-    /// with position and normal.
-    ///
-    /// Using the default parameters, the sampling is "adaptive". This means
-    /// that the number of samples generated between two control points depends
-    /// on the curvature of the curve and curve outline. The higher the curvature,
-    /// the more samples are generated to ensure that consecutive segments never
-    /// have an angle more than \p maxAngle (expressed in radian).
-    /// This is what makes sure that the curve looks "smooth" at any zoom level.
+    /// Computes a sampling of the subset of this curve between `startIndex`
+    /// and `endIndex`.
     ///
     /// \verbatim
-    ///                    _o p3
-    ///                 _-`
-    ///              _-` } maxAngle
-    /// o----------o`- - - - - - - - -
-    /// p1         p2
+    ///                    startIndex             endIndex
+    ///              0         1           2         3         4        5
+    /// input      = x---------x-----------x---------x---------x--------x
+    ///                        |                     |
+    ///                        |                     |
+    ///                        |                     |
+    ///                        v                     v
+    /// output     =           x-x-x-x-x-x-x-x-x-x-x-x
+    ///
     /// \endverbatim
     ///
-    /// In the case where the curve is a straight line between two control points,
-    /// no samples are needed. However, you can use use \p minIntraSegmentSamples_
-    /// if you wish to have at least a certain number of quads uniformly generated
-    /// between any two control points. Also, you can use \p maxIntraSegmentSamples_
-    /// to limit how many samples are generated between any two control points.
-    /// This is necessary to break infinite loops in case the curve contains a
-    /// cusp between two control points.
+    /// The result is appended to the output parameter `outAppend`.
     ///
-    /// If you wish to uniformly generate a fixed number of samples between
-    /// control points, simply set maxAngle to any value, and set minQuads =
-    /// maxQuads = number of desired samples in the parameters.
+    /// The values of `startIndex` and `endIndex` must be in the range [-n,
+    /// n-1] with `n = numPoints()`. Negative values can be used for indexing
+    /// from the end: `-1` represents the last point, and `-n` represents the
+    /// first point.
+    ///
+    /// This function throws `IndexError` if:
+    /// - the curve is empty (`numPoints() == 0`), or
+    /// - `startIndex` is not in the range [-n, n-1], or
+    /// - `endIndex` is not in the range [-n, n-1], or
+    /// - the start index is greater than the end index (after wrapping
+    ///   negative input indices to their corresponding positive index).
+    ///
+    /// The start and end points of the range are both included. This means
+    /// that if this function does not throw, it is guaranteed to return a
+    /// non-empty sampling (i.e., with at least one sample).
+    ///
+    /// This also means that calling `sampleRange(out, params, 0, 1)` followed
+    /// by `sampleRange(out, params, 1, 2)` would result in having two times
+    /// the sample corresponding to index `1`. If you wish to do such chaining
+    /// meaningfully, you have to manually discard the last point:
+    ///
+    /// ```cpp
+    /// sampleRange(out, params, 0, 1);
+    /// out.removeLast();
+    /// sampleRange(out, params, 1, 2);
+    /// ```
+    ///
+    /// If `withArclengths = true` (the default), then arclengths are computed
+    /// starting from `s = 0` (if `outAppend` is initially empty) or `s =
+    /// outAppend.last().s()` (if `outAppend` is not initially empty).
+    ///
+    /// If `withArclengths = false` (the default), then all arclengths of the
+    /// computed samples are left uninitialized.
+    ///
+    /// If `numPoints() == 1`, this function returns a unique sample with a
+    /// normal set to zero.
     ///
     void sampleRange(
-        const CurveSamplingParameters& parameters,
         core::Array<CurveSample>& outAppend,
+        const CurveSamplingParameters& parameters,
         Int start = 0,
-        Int end = -1) const;
+        Int end = -1,
+        bool withArclengths = true) const;
 
     /// Sets the color of the curve.
     ///
