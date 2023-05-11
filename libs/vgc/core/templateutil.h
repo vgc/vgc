@@ -146,6 +146,9 @@ struct Identity {
         std::forward<U>(x);
     }
 };
+/// Function object whose operator() returns its argument unchanged.
+///
+inline constexpr Identity identity = {};
 
 /// Casts a class enum value to its underlying type.
 /// Equivalent to `return static_cast<std::underlying_type_t<Enum>>(e);`.
