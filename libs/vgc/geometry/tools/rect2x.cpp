@@ -108,7 +108,7 @@ bool Rect2x::intersectsSegmentWithExternalEndpoints_(
     int o3 = computeAngleOrientation(p0p1, corner(2) - p0);
     int o4 = computeAngleOrientation(p0p1, corner(3) - p0);
 
-    int ox = o1 & o2 & o3 & o4;
+    int ox = o1 | o2 | o3 | o4;
     if (ox & 1) {
         // a corner is on p0p1.
         return true;
