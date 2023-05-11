@@ -43,7 +43,7 @@ bool Rect2d::intersectsSegmentWithExternalEndpoints_(
             //
             return false;
         }
-        else if (p0r + p1r == 3) {
+        else if (p0r != p1r) {
             // p0 and p1 are on both sides of the rect in y and
             // inside the rect bounds in x.
             //
@@ -68,7 +68,7 @@ bool Rect2d::intersectsSegmentWithExternalEndpoints_(
             //
             return false;
         }
-        else if (p0c + p1c == 3) {
+        else if (p0c != p1c) {
             // p0 and p1 are on both sides of the rect in x and
             // inside the rect bounds in y.
             //
