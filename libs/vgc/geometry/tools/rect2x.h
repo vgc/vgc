@@ -23,7 +23,6 @@
 #define VGC_GEOMETRY_RECT2X_H
 
 #include <algorithm> // minmax
-#include <functional> // functional
 
 #include <vgc/core/array.h>
 #include <vgc/geometry/api.h>
