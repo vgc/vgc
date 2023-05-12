@@ -14,25 +14,26 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <vgc/ui/paintbuckettool.h>
+#include <vgc/tools/paintbucket.h>
 
 #include <vgc/core/history.h>
 #include <vgc/dom/strings.h>
+#include <vgc/tools/logcategories.h>
 #include <vgc/ui/column.h>
 #include <vgc/vacomplex/operations.h>
 #include <vgc/workspace/element.h>
 
-namespace vgc::ui {
+namespace vgc::tools {
 
-PaintBucketTool::PaintBucketTool()
+PaintBucket::PaintBucket()
     : CanvasTool() {
 }
 
-PaintBucketToolPtr PaintBucketTool::create() {
-    return PaintBucketToolPtr(new PaintBucketTool());
+PaintBucketPtr PaintBucket::create() {
+    return PaintBucketPtr(new PaintBucket());
 }
 
-void PaintBucketTool::setColor(const core::Color& color) {
+void PaintBucket::setColor(const core::Color& color) {
     color_ = color;
     if (hasFaceCandidate_()) {
         isFaceCandidateGraphicsDirty_ = true;
@@ -40,7 +41,7 @@ void PaintBucketTool::setColor(const core::Color& color) {
     }
 }
 
-ui::WidgetPtr PaintBucketTool::createOptionsWidget() const {
+ui::WidgetPtr PaintBucket::createOptionsWidget() const {
     ui::WidgetPtr res = ui::Column::create();
     return res;
 }
@@ -53,9 +54,9 @@ ui::WidgetPtr PaintBucketTool::createOptionsWidget() const {
 // onMousePress() would use this information, and onMouseMove() should be
 // reserved for click-move-release sequences, not hovering computation.
 //
-bool PaintBucketTool::updateHoverChainChild(MouseEvent* event) {
+bool PaintBucket::updateHoverChainChild(ui::MouseEvent* event) {
 
-    ui::Canvas* canvas = this->canvas();
+    canvas::Canvas* canvas = this->canvas();
     if (!canvas) {
         clearFaceCandidate_();
         return false; // or true?
@@ -94,16 +95,17 @@ bool PaintBucketTool::updateHoverChainChild(MouseEvent* event) {
     }
 }
 
-bool PaintBucketTool::onMouseMove(MouseEvent*) {
+bool PaintBucket::onMouseMove(ui::MouseEvent*) {
     return false;
 }
 
-bool PaintBucketTool::onMousePress(MouseEvent* event) {
+bool PaintBucket::onMousePress(ui::MouseEvent* event) {
 
-    ModifierKeys keys = event->modifierKeys();
-    MouseButton button = event->button();
+    ui::ModifierKeys keys = event->modifierKeys();
+    ui::MouseButton button = event->button();
 
-    if (keys == ModifierKey::None && button == MouseButton::Left && hasFaceCandidate_()) {
+    if (keys == ui::ModifierKey::None && button == ui::MouseButton::Left
+        && hasFaceCandidate_()) {
 
         // Get workspace and history
         workspace::Workspace* workspace_ = workspace();
@@ -176,30 +178,30 @@ bool PaintBucketTool::onMousePress(MouseEvent* event) {
     return false;
 }
 
-bool PaintBucketTool::onMouseRelease(MouseEvent* /*event*/) {
+bool PaintBucket::onMouseRelease(ui::MouseEvent* /*event*/) {
     // TODO
     return false;
 }
 
-bool PaintBucketTool::onMouseEnter() {
+bool PaintBucket::onMouseEnter() {
     return true;
 }
 
-bool PaintBucketTool::onMouseLeave() {
+bool PaintBucket::onMouseLeave() {
     clearFaceCandidate_();
     return true;
 }
 
-void PaintBucketTool::onPaintCreate(graphics::Engine* engine) {
+void PaintBucket::onPaintCreate(graphics::Engine* engine) {
     using Layout = graphics::BuiltinGeometryLayout;
     SuperClass::onPaintCreate(engine);
     faceCandidateFillGeometry_ = engine->createDynamicTriangleListView(Layout::XY_iRGBA);
 }
 
-void PaintBucketTool::onPaintDraw(graphics::Engine* engine, PaintOptions options) {
+void PaintBucket::onPaintDraw(graphics::Engine* engine, ui::PaintOptions options) {
     SuperClass::onPaintDraw(engine, options);
 
-    ui::Canvas* canvas = this->canvas();
+    canvas::Canvas* canvas = this->canvas();
     if (!canvas) {
         return;
     }
@@ -227,12 +229,12 @@ void PaintBucketTool::onPaintDraw(graphics::Engine* engine, PaintOptions options
     }
 }
 
-void PaintBucketTool::onPaintDestroy(graphics::Engine* engine) {
+void PaintBucket::onPaintDestroy(graphics::Engine* engine) {
     SuperClass::onPaintDestroy(engine);
     faceCandidateFillGeometry_.reset();
 }
 
-void PaintBucketTool::clearFaceCandidate_() {
+void PaintBucket::clearFaceCandidate_() {
     if (hasFaceCandidate_()) {
         faceCandidateTriangles_.clear();
         faceCandidateCycles_.clear();
@@ -240,7 +242,7 @@ void PaintBucketTool::clearFaceCandidate_() {
     }
 }
 
-void PaintBucketTool::updateFaceCandidate_(const geometry::Vec2d& worldPosition) {
+void PaintBucket::updateFaceCandidate_(const geometry::Vec2d& worldPosition) {
 
     // Fast return if no workspace
     workspace::Workspace* workspace = this->workspace();
@@ -282,4 +284,4 @@ void PaintBucketTool::onColorChanged_(const core::Color& color) {
 }
 */
 
-} // namespace vgc::ui
+} // namespace vgc::tools

@@ -14,26 +14,26 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef VGC_UI_CANVASTOOL_H
-#define VGC_UI_CANVASTOOL_H
+#ifndef VGC_CANVAS_CANVASTOOL_H
+#define VGC_CANVAS_CANVASTOOL_H
 
 #include <variant>
 
+#include <vgc/canvas/api.h>
+#include <vgc/canvas/canvas.h>
 #include <vgc/core/object.h>
-#include <vgc/ui/api.h>
-#include <vgc/ui/canvas.h>
 #include <vgc/workspace/workspace.h>
 
-namespace vgc::ui {
+namespace vgc::canvas {
 
 VGC_DECLARE_OBJECT(CanvasTool);
 
-/// \class vgc::ui::CanvasTool
+/// \class vgc::canvas::CanvasTool
 /// \brief An abstract canvas tool widget.
 ///
-class VGC_UI_API CanvasTool : public Widget {
+class VGC_CANVAS_API CanvasTool : public ui::Widget {
 private:
-    VGC_OBJECT(CanvasTool, Widget)
+    VGC_OBJECT(CanvasTool, ui::Widget)
 
 protected:
     /// This is an implementation details. Please use
@@ -52,7 +52,7 @@ public:
         return canvas_ ? canvas_->workspace() : nullptr;
     }
 
-    ui::Canvas* canvas() const {
+    Canvas* canvas() const {
         return canvas_;
     }
 
@@ -72,14 +72,14 @@ protected:
     virtual ui::WidgetPtr createOptionsWidget() const;
 
     // Reimplementation of Widget virtual methods
-    void onParentWidgetChanged(Widget* newParent) override;
-    void preMouseMove(MouseEvent* event) override;
-    void preMousePress(MouseEvent* event) override;
-    void preMouseRelease(MouseEvent* event) override;
+    void onParentWidgetChanged(ui::Widget* newParent) override;
+    void preMouseMove(ui::MouseEvent* event) override;
+    void preMousePress(ui::MouseEvent* event) override;
+    void preMouseRelease(ui::MouseEvent* event) override;
     geometry::Vec2f computePreferredSize() const override;
 
 private:
-    ui::Canvas* canvas_ = nullptr;
+    Canvas* canvas_ = nullptr;
 
     mutable ui::WidgetPtr optionsWidget_;
 
@@ -98,12 +98,14 @@ private:
     // 2. We ignore mouseReleaseEvent() if the value of event->button() is
     //    different from its value in mousePressEvent().
     //
-    MouseButtons pressedMouseButtons_ = {};  // whether there's been a mouse press event
-                                             // with no matching mouse release event.
-    MouseButtons pressedTabletButtons_ = {}; // whether there's been a tablet press event
-                                             // with no matching tablet release event.
+    ui::MouseButtons pressedMouseButtons_ =
+        {}; // whether there's been a mouse press event
+            // with no matching mouse release event.
+    ui::MouseButtons pressedTabletButtons_ =
+        {}; // whether there's been a tablet press event
+            // with no matching tablet release event.
 };
 
-} // namespace vgc::ui
+} // namespace vgc::canvas
 
-#endif // VGC_UI_CANVAS_H
+#endif // VGC_CANVAS_CANVASTOOL_H

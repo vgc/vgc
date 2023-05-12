@@ -27,12 +27,14 @@
 #include <vgc/geometry/vec2f.h>
 #include <vgc/graphics/text.h>
 #include <vgc/style/types.h>
+#include <vgc/ui/api.h>
 #include <vgc/ui/widget.h>
 
 namespace vgc::ui::detail {
 
 // clang-format off
 
+VGC_UI_API
 void insertTriangle(
     core::FloatArray& a,
     float r, float g, float b,
@@ -40,6 +42,7 @@ void insertTriangle(
 
 // replaces values from a[i] to a[i + 14] with the given triangle
 //
+VGC_UI_API
 void writeTriangleAt(
     core::FloatArray& a, Int i,
     float r, float g, float b,
@@ -47,11 +50,13 @@ void writeTriangleAt(
 
 // replaces values from a[i] to a[i + 14] with the given triangle
 //
+VGC_UI_API
 void writeTriangleAt(
     core::FloatArray& a, Int i,
     float r, float g, float b,
     const geometry::Triangle2f& t);
 
+VGC_UI_API
 void insertTriangle(
     core::FloatArray& a,
     const core::Color& color,
@@ -59,16 +64,19 @@ void insertTriangle(
     const geometry::Vec2f& v2,
     const geometry::Vec2f& v3);
 
+VGC_UI_API
 void insertRect(
     core::FloatArray& a,
     float r, float g, float b,
     float x1, float y1, float x2, float y2);
 
+VGC_UI_API
 void insertRect(
     core::FloatArray& a,
     const core::Color& color,
     const geometry::Rect2f& rect);
 
+VGC_UI_API
 void insertRect(
     core::FloatArray& a,
     const core::Color& color,
@@ -76,6 +84,7 @@ void insertRect(
 
 // clang-format on
 
+VGC_UI_API
 void insertRect(
     core::FloatArray& a,
     const style::Metrics& styleMetrics,
@@ -84,6 +93,7 @@ void insertRect(
     const style::BorderRadii& borderRadii,
     float pixelSize = 1.0f);
 
+VGC_UI_API
 void insertRect(
     core::FloatArray& a,
     const style::Metrics& styleMetrics,
@@ -98,6 +108,7 @@ void insertRect(
 // this is useful if you want to add a border to an existing
 // rounded rectangle: you want to use the same number of samples
 // so that the quad strips match perfectly.
+VGC_UI_API
 void insertRect(
     core::FloatArray& a,
     const core::Color& fillColor,
@@ -108,18 +119,23 @@ void insertRect(
     float borderWidth,
     float pixelSize = 1.0f);
 
+VGC_UI_API
 core::Color getColor(const style::StylableObject* obj, core::StringId property);
 
+VGC_UI_API
 style::Length getLength(const style::StylableObject* obj, core::StringId property);
 
+VGC_UI_API
 style::LengthOrPercentage
 getLengthOrPercentage(const style::StylableObject* obj, core::StringId property);
 
+VGC_UI_API
 float getLengthInPx(
     const style::StylableObject* obj,
     core::StringId property,
     bool hinted = false);
 
+VGC_UI_API
 float getLengthOrPercentageInPx(
     const style::StylableObject* obj,
     core::StringId property,

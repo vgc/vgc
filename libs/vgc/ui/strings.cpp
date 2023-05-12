@@ -23,12 +23,6 @@ namespace vgc::ui::strings {
 
 const core::StringId BoolSettingEdit("BoolSettingEdit");
 const core::StringId Button("Button");
-const core::StringId Canvas("Canvas");
-const core::StringId ColorListView("ColorListView");
-const core::StringId ColorListViewItem("ColorListViewItem");
-const core::StringId ColorPalette("ColorPalette");
-const core::StringId ColorPaletteSelector("ColorPaletteSelector");
-const core::StringId ColorPreview("ColorPreview");
 const core::StringId Dialog("Dialog");
 const core::StringId Flex("Flex");
 const core::StringId Grid("Grid");

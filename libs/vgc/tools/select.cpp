@@ -14,20 +14,21 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#include <vgc/tools/select.h>
+
 #include <vgc/graphics/strings.h>
-#include <vgc/ui/selecttool.h>
 #include <vgc/workspace/colors.h>
 
 #include <set>
 
-namespace vgc::ui {
+namespace vgc::tools {
 
-SelectTool::SelectTool()
+Select::Select()
     : CanvasTool() {
 }
 
-SelectToolPtr SelectTool::create() {
-    return SelectToolPtr(new SelectTool());
+SelectPtr Select::create() {
+    return SelectPtr(new Select());
 }
 
 namespace {
@@ -38,13 +39,13 @@ inline constexpr float dragDeltaThreshold = 5;
 
 } // namespace
 
-bool SelectTool::onMouseMove(MouseEvent* event) {
+bool Select::onMouseMove(ui::MouseEvent* event) {
 
     if (!isInAction_) {
         return false;
     }
 
-    ui::Canvas* canvas = this->canvas();
+    canvas::Canvas* canvas = this->canvas();
     if (!canvas) {
         return isInAction_; // always true
     }
@@ -118,7 +119,7 @@ bool SelectTool::onMouseMove(MouseEvent* event) {
     return true;
 }
 
-bool SelectTool::onMousePress(MouseEvent* event) {
+bool Select::onMousePress(ui::MouseEvent* event) {
 
     if (isInAction_) {
         // Prevent parent widget from doing an action
@@ -126,20 +127,20 @@ bool SelectTool::onMousePress(MouseEvent* event) {
         return true;
     }
 
-    MouseButton button = event->button();
-    if (button != MouseButton::Left) {
+    ui::MouseButton button = event->button();
+    if (button != ui::MouseButton::Left) {
         return false;
     }
 
-    ui::Canvas* canvas = this->canvas();
+    canvas::Canvas* canvas = this->canvas();
     if (!canvas) {
         return false;
     }
 
-    ModifierKeys keys = event->modifierKeys();
-    ModifierKeys supportedKeys =
-        (ModifierKey::Ctrl | ModifierKey::Alt | ModifierKey::Shift);
-    ModifierKeys unsupportedKeys = ~supportedKeys;
+    ui::ModifierKeys keys = event->modifierKeys();
+    ui::ModifierKeys supportedKeys =
+        (ui::ModifierKey::Ctrl | ui::ModifierKey::Alt | ui::ModifierKey::Shift);
+    ui::ModifierKeys unsupportedKeys = ~supportedKeys;
 
     if (!keys.hasAny(unsupportedKeys)) {
         isInAction_ = true;
@@ -149,19 +150,19 @@ bool SelectTool::onMousePress(MouseEvent* event) {
         timeAtPress_ = event->timestamp();
 
         // Prepare for a potential simple click selection action.
-        if (keys.hasAll(ModifierKey::Shift | ModifierKey::Ctrl)) {
+        if (keys.hasAll(ui::ModifierKey::Shift | ui::ModifierKey::Ctrl)) {
             selectionMode_ = SelectionMode::Toggle;
         }
-        else if (keys.has(ModifierKey::Shift)) {
+        else if (keys.has(ui::ModifierKey::Shift)) {
             selectionMode_ = SelectionMode::Add;
         }
-        else if (keys.has(ModifierKey::Ctrl)) {
+        else if (keys.has(ui::ModifierKey::Ctrl)) {
             selectionMode_ = SelectionMode::Remove;
         }
         else {
             selectionMode_ = SelectionMode::New;
         }
-        isAlternativeMode_ = keys.has(ModifierKey::Alt);
+        isAlternativeMode_ = keys.has(ui::ModifierKey::Alt);
 
         // Prepare for a potential click-and-drag action.
         if (candidates_.isEmpty()) {
@@ -174,7 +175,7 @@ bool SelectTool::onMousePress(MouseEvent* event) {
             // Otherwise we'll translate the candidate that would be selected
             // if no drag occurs.
             dragAction_ = DragAction::TranslateCandidate;
-            for (const SelectionCandidate& candidate : candidates_) {
+            for (const canvas::SelectionCandidate& candidate : candidates_) {
                 if (selectionAtPress_.contains(candidate.id())) {
                     dragAction_ = DragAction::TranslateSelection;
                     break;
@@ -191,18 +192,19 @@ bool SelectTool::onMousePress(MouseEvent* event) {
 
 namespace {
 
-core::Id
-indexInCandidates(const core::Array<SelectionCandidate>& candidates, core::Id itemId) {
-    return candidates.index(                       //
-        [&](const SelectionCandidate& candidate) { //
+core::Id indexInCandidates(
+    const core::Array<canvas::SelectionCandidate>& candidates,
+    core::Id itemId) {
+    return candidates.index(                               //
+        [&](const canvas::SelectionCandidate& candidate) { //
             return candidate.id() == itemId;
         });
 }
 
-core::Array<SelectionCandidate>::iterator
-findInCandidates(core::Array<SelectionCandidate>& candidates, core::Id itemId) {
-    return candidates.find(                        //
-        [&](const SelectionCandidate& candidate) { //
+core::Array<canvas::SelectionCandidate>::iterator
+findInCandidates(core::Array<canvas::SelectionCandidate>& candidates, core::Id itemId) {
+    return candidates.find(                                //
+        [&](const canvas::SelectionCandidate& candidate) { //
             return candidate.id() == itemId;
         });
 }
@@ -212,7 +214,8 @@ findInCandidates(core::Array<SelectionCandidate>& candidates, core::Id itemId) {
 //
 // Otherwise, return -1.
 //
-core::Id rotateCandidates(core::Array<SelectionCandidate>& candidates, core::Id item) {
+core::Id
+rotateCandidates(core::Array<canvas::SelectionCandidate>& candidates, core::Id item) {
     auto it = findInCandidates(candidates, item);
     if (it != candidates.end()) {
         std::rotate(candidates.begin(), ++it, candidates.end());
@@ -227,7 +230,7 @@ core::Id rotateCandidates(core::Array<SelectionCandidate>& candidates, core::Id 
 //
 core::Id addToSelection(
     core::Array<core::Id>& selection,
-    core::Array<SelectionCandidate>& candidates,
+    core::Array<canvas::SelectionCandidate>& candidates,
     bool isAlternativeMode,
     core::Id lastSelectedId) {
 
@@ -252,7 +255,7 @@ core::Id addToSelection(
 
     // Select the first unselected candidate.
     //
-    for (const SelectionCandidate& c : candidates) {
+    for (const canvas::SelectionCandidate& c : candidates) {
         core::Id id = c.id();
         if (!selection.contains(id)) {
             if (itemToDeselect != -1) {
@@ -269,7 +272,7 @@ core::Id addToSelection(
 //
 core::Id removeFromSelection(
     core::Array<core::Id>& selection,
-    core::Array<SelectionCandidate>& candidates,
+    core::Array<canvas::SelectionCandidate>& candidates,
     bool isAlternativeMode,
     core::Id lastDeselectedId) {
 
@@ -294,7 +297,7 @@ core::Id removeFromSelection(
 
     // Deselect the first selected candidate.
     //
-    for (const SelectionCandidate& c : candidates) {
+    for (const canvas::SelectionCandidate& c : candidates) {
         core::Id id = c.id();
         if (selection.contains(id)) {
             if (itemToReselect != -1 && !selection.contains(itemToReselect)) {
@@ -310,7 +313,7 @@ core::Id removeFromSelection(
 // Returns the item to select, if any. Otherwise returns -1.
 //
 core::Id selectNewItem(
-    const core::Array<SelectionCandidate>& candidates,
+    const core::Array<canvas::SelectionCandidate>& candidates,
     bool isAlternativeMode,
     core::Id lastSelectedId) {
 
@@ -335,19 +338,19 @@ core::Id selectNewItem(
 
 } // namespace
 
-bool SelectTool::onMouseRelease(MouseEvent* event) {
+bool Select::onMouseRelease(ui::MouseEvent* event) {
 
     if (!isInAction_) {
         return false;
     }
 
-    if (event->button() != MouseButton::Left) {
+    if (event->button() != ui::MouseButton::Left) {
         // Prevent parent widget from doing an action with a different
         // mouse button if we are in the middle of our own action.
         return true;
     }
 
-    ui::Canvas* canvas = this->canvas();
+    canvas::Canvas* canvas = this->canvas();
     if (!canvas) {
         bool wasInAction = isInAction_;
         resetActionState_();
@@ -465,23 +468,23 @@ bool SelectTool::onMouseRelease(MouseEvent* event) {
     return true;
 }
 
-void SelectTool::onResize() {
+void Select::onResize() {
     SuperClass::onResize();
     selectionRectangleGeometry_.reset();
 }
 
-void SelectTool::onPaintCreate(graphics::Engine* engine) {
+void Select::onPaintCreate(graphics::Engine* engine) {
     SuperClass::onPaintCreate(engine);
 }
 
-void SelectTool::onPaintDraw(graphics::Engine* engine, PaintOptions options) {
+void Select::onPaintDraw(graphics::Engine* engine, ui::PaintOptions options) {
 
     SuperClass::onPaintDraw(engine, options);
 
     using namespace graphics;
     namespace gs = graphics::strings;
 
-    ui::Canvas* canvas = this->canvas();
+    canvas::Canvas* canvas = this->canvas();
     if (!canvas) {
         return;
     }
@@ -544,12 +547,12 @@ void SelectTool::onPaintDraw(graphics::Engine* engine, PaintOptions options) {
     }
 }
 
-void SelectTool::onPaintDestroy(graphics::Engine* engine) {
+void Select::onPaintDestroy(graphics::Engine* engine) {
     SuperClass::onPaintDestroy(engine);
     selectionRectangleGeometry_.reset();
 }
 
-void SelectTool::initializeDragMoveData_(
+void Select::initializeDragMoveData_(
     workspace::Workspace* workspace,
     const core::Array<core::Id>& elementsIds) {
 
@@ -641,7 +644,7 @@ void SelectTool::initializeDragMoveData_(
     }
 }
 
-void SelectTool::updateDragMovedElements_(
+void Select::updateDragMovedElements_(
     workspace::Workspace* workspace,
     const geometry::Vec2d& translationInWorkspace) {
 
@@ -736,7 +739,7 @@ void SelectTool::updateDragMovedElements_(
     }
 }
 
-void SelectTool::resetActionState_() {
+void Select::resetActionState_() {
     candidates_.clear();
     selectionAtPress_.clear();
     isInAction_ = false;
@@ -750,4 +753,4 @@ void SelectTool::resetActionState_() {
     }
 }
 
-} // namespace vgc::ui
+} // namespace vgc::tools

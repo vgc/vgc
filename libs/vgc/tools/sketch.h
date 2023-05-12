@@ -14,40 +14,40 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef VGC_UI_SKETCHTOOL_H
-#define VGC_UI_SKETCHTOOL_H
+#ifndef VGC_TOOLS_SKETCH_H
+#define VGC_TOOLS_SKETCH_H
 
+#include <vgc/canvas/canvastool.h>
 #include <vgc/core/array.h>
 #include <vgc/core/color.h>
 #include <vgc/core/history.h>
 #include <vgc/dom/element.h>
 #include <vgc/geometry/vec2d.h>
-#include <vgc/ui/api.h>
-#include <vgc/ui/canvastool.h>
+#include <vgc/tools/api.h>
 #include <vgc/ui/cursor.h>
 #include <vgc/workspace/workspace.h>
 
-namespace vgc::ui {
+namespace vgc::tools {
 
-VGC_DECLARE_OBJECT(SketchTool);
+VGC_DECLARE_OBJECT(Sketch);
 
-/// \class vgc::ui::SketchTool
+/// \class vgc::tools::SketchTool
 /// \brief A CanvasTool that implements sketching strokes.
 ///
-class VGC_UI_API SketchTool : public CanvasTool {
+class VGC_TOOLS_API Sketch : public canvas::CanvasTool {
 private:
-    VGC_OBJECT(SketchTool, CanvasTool)
+    VGC_OBJECT(Sketch, canvas::CanvasTool)
 
 protected:
     /// This is an implementation details.
     /// Please use `SketchTool::create()` instead.
     ///
-    SketchTool();
+    Sketch();
 
 public:
     /// Creates a `SketchTool`.
     ///
-    static SketchToolPtr create();
+    static SketchPtr create();
 
     /// Returns the pen color of the tool.
     ///
@@ -84,15 +84,15 @@ protected:
     ui::WidgetPtr createOptionsWidget() const override;
 
     // Reimplementation of Widget virtual methods
-    bool onKeyPress(KeyEvent* event) override;
-    bool onMouseMove(MouseEvent* event) override;
-    bool onMousePress(MouseEvent* event) override;
-    bool onMouseRelease(MouseEvent* event) override;
+    bool onKeyPress(ui::KeyEvent* event) override;
+    bool onMouseMove(ui::MouseEvent* event) override;
+    bool onMousePress(ui::MouseEvent* event) override;
+    bool onMouseRelease(ui::MouseEvent* event) override;
     bool onMouseEnter() override;
     bool onMouseLeave() override;
     void onResize() override;
     void onPaintCreate(graphics::Engine* engine) override;
-    void onPaintDraw(graphics::Engine* engine, PaintOptions options) override;
+    void onPaintDraw(graphics::Engine* engine, ui::PaintOptions options) override;
     void onPaintDestroy(graphics::Engine* engine) override;
 
 protected:
@@ -103,7 +103,7 @@ protected:
     bool reload_ = true;
 
     // Cursor
-    CursorChanger cursorChanger_;
+    ui::CursorChanger cursorChanger_;
 
     // Curve draw
     bool isSketching_ = false;
@@ -228,9 +228,9 @@ protected:
     graphics::GeometryViewPtr mouseInputGeometry_;
 
     // Assumes canvas() is non-null.
-    void startCurve_(MouseEvent* event);
-    void continueCurve_(MouseEvent* event);
-    void finishCurve_(MouseEvent* event);
+    void startCurve_(ui::MouseEvent* event);
+    void continueCurve_(ui::MouseEvent* event);
+    void finishCurve_(ui::MouseEvent* event);
     void resetData_();
 
     // The length of curve that snapping is allowed to deform
@@ -240,6 +240,6 @@ protected:
     computeSnapVertex_(const geometry::Vec2d& position, dom::Element* excludedElement_);
 };
 
-} // namespace vgc::ui
+} // namespace vgc::tools
 
-#endif // VGC_UI_SKETCHTOOL_H
+#endif // VGC_TOOLS_SKETCH_H

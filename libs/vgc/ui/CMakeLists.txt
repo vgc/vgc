@@ -19,9 +19,6 @@ vgc_add_library(ui
         boolsetting.h
         boolsettingedit.h
         button.h
-        canvas.h
-        canvastool.h
-        colorpalette.h
         column.h
         cursor.h
         dialog.h
@@ -46,7 +43,6 @@ vgc_add_library(ui
         numbersetting.h
         numbersettingedit.h
         overlayarea.h
-        paintbuckettool.h
         panel.h
         panelarea.h
         plot2d.h
@@ -55,12 +51,10 @@ vgc_add_library(ui
         qtutil.h
         row.h
         scrollevent.h
-        selecttool.h
         settingedit.h
         setting.h
         settings.h
         shortcut.h
-        sketchtool.h
         strings.h
         tabbar.h
         tabbody.h
@@ -79,9 +73,6 @@ vgc_add_library(ui
         boolsetting.cpp
         boolsettingedit.cpp
         button.cpp
-        canvas.cpp
-        canvastool.cpp
-        colorpalette.cpp
         column.cpp
         cursor.cpp
         dialog.cpp
@@ -105,7 +96,6 @@ vgc_add_library(ui
         numbersetting.cpp
         numbersettingedit.cpp
         overlayarea.cpp
-        paintbuckettool.cpp
         panel.cpp
         panelarea.cpp
         plot2d.cpp
@@ -114,12 +104,10 @@ vgc_add_library(ui
         qtutil.cpp
         row.cpp
         scrollevent.cpp
-        selecttool.cpp
         settingedit.cpp
         setting.cpp
         settings.cpp
         shortcut.cpp
-        sketchtool.cpp
         strings.cpp
         tabbar.cpp
         tabbody.cpp

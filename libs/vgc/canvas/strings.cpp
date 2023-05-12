@@ -1,4 +1,4 @@
-// Copyright 2022 The VGC Developers
+// Copyright 2023 The VGC Developers
 // See the COPYRIGHT file at the top-level directory of this distribution
 // and at https://github.com/vgc/vgc/blob/master/COPYRIGHT
 //
@@ -14,10 +14,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <vgc/ui/logcategories.h>
+#include <vgc/canvas/strings.h>
 
-namespace vgc::ui {
+namespace vgc::canvas::strings {
 
-VGC_DEFINE_LOG_CATEGORY(LogVgcUi, "vgc.ui")
+const core::StringId Canvas("Canvas");
 
-} // namespace vgc::ui
+} // namespace vgc::canvas::strings

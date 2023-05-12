@@ -22,16 +22,16 @@
 #include <vgc/app/api.h>
 #include <vgc/app/mainwindow.h>
 #include <vgc/app/qtwidgetsapplication.h>
+#include <vgc/canvas/canvas.h>
 #include <vgc/dom/document.h>
+#include <vgc/tools/colorpalette.h>
+#include <vgc/tools/paintbucket.h>
+#include <vgc/tools/sketch.h>
 #include <vgc/ui/action.h>
-#include <vgc/ui/canvas.h>
-#include <vgc/ui/colorpalette.h>
 #include <vgc/ui/column.h>
 #include <vgc/ui/menu.h>
-#include <vgc/ui/paintbuckettool.h>
 #include <vgc/ui/panel.h>
 #include <vgc/ui/panelarea.h>
-#include <vgc/ui/sketchtool.h>
 #include <vgc/workspace/workspace.h>
 
 namespace vgc::app {
@@ -106,7 +106,7 @@ public:
 
     /// Returns the current `CanvasTool`.
     ///
-    ui::CanvasTool* currentTool() const {
+    canvas::CanvasTool* currentTool() const {
         return currentTool_;
     }
 
@@ -186,32 +186,32 @@ private:
     void createWidgets_();
 
     // Canvas
-    ui::Canvas* canvas_ = nullptr;
+    canvas::Canvas* canvas_ = nullptr;
 
     void createCanvas_(ui::Widget* parent, workspace::Workspace* workspace);
 
     // Canvas Tools
     ui::ActionGroupPtr toolsActionGroup_;
-    std::map<ui::Action*, ui::CanvasToolPtr> toolMap_;
-    std::map<ui::CanvasTool*, ui::Action*> toolMapInv_;
-    ui::CanvasTool* currentTool_ = nullptr;
-    ui::SketchTool* sketchTool_ = nullptr;
-    ui::PaintBucketTool* paintBucketTool_ = nullptr;
+    std::map<ui::Action*, canvas::CanvasToolPtr> toolMap_;
+    std::map<canvas::CanvasTool*, ui::Action*> toolMapInv_;
+    canvas::CanvasTool* currentTool_ = nullptr;
+    tools::Sketch* sketchTool_ = nullptr;
+    tools::PaintBucket* paintBucketTool_ = nullptr;
     ui::Panel* toolOptionsPanel_ = nullptr;
 
     void createTools_(ui::Widget* parent);
     void registerTool_( //
         ui::Widget* parent,
         std::string_view toolName,
-        ui::CanvasToolPtr tool);
+        canvas::CanvasToolPtr tool);
 
-    void setCurrentTool_(ui::CanvasTool* canvasTool);
+    void setCurrentTool_(canvas::CanvasTool* canvasTool);
 
     void onToolCheckStateChanged_(ui::Action* toolAction, ui::CheckState checkState);
     VGC_SLOT(onToolCheckStateChangedSlot_, onToolCheckStateChanged_);
 
     // Palette
-    ui::ColorPalette* palette_ = nullptr;
+    tools::ColorPalette* palette_ = nullptr;
 
     void createColorPalette_(ui::Widget* parent);
     void onColorChanged_();

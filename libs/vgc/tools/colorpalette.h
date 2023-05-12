@@ -14,10 +14,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef VGC_UI_COLORPALETTE_H
-#define VGC_UI_COLORPALETTE_H
+#ifndef VGC_TOOLS_COLORPALETTE_H
+#define VGC_TOOLS_COLORPALETTE_H
 
 #include <vgc/geometry/rect2f.h>
+#include <vgc/tools/api.h>
 #include <vgc/ui/button.h>
 #include <vgc/ui/column.h>
 #include <vgc/ui/cursor.h>
@@ -25,24 +26,29 @@
 
 namespace vgc::ui {
 
+VGC_DECLARE_OBJECT(LineEdit);
+VGC_DECLARE_OBJECT(NumberEdit);
+
+} // namespace vgc::ui
+
+namespace vgc::tools {
+
 VGC_DECLARE_OBJECT(ColorListView);
 VGC_DECLARE_OBJECT(ColorListViewItem);
 VGC_DECLARE_OBJECT(ColorPalette);
 VGC_DECLARE_OBJECT(ColorPaletteSelector);
 VGC_DECLARE_OBJECT(ColorPreview);
-VGC_DECLARE_OBJECT(LineEdit);
-VGC_DECLARE_OBJECT(NumberEdit);
 VGC_DECLARE_OBJECT(ScreenColorPickerButton);
 
-/// \class vgc::ui::ScreenColorPickerButton
+/// \class vgc::tools::ScreenColorPickerButton
 /// \brief Allow users to pick a screen color.
 ///
-class VGC_UI_API ScreenColorPickerButton : public Button {
+class VGC_TOOLS_API ScreenColorPickerButton : public ui::Button {
 private:
-    VGC_OBJECT(ScreenColorPickerButton, Button)
+    VGC_OBJECT(ScreenColorPickerButton, ui::Button)
 
 protected:
-    ScreenColorPickerButton(Action* action);
+    ScreenColorPickerButton(ui::Action* action);
 
 public:
     /// Creates a `ScreenColorPickerButton`.
@@ -50,11 +56,11 @@ public:
     static ScreenColorPickerButtonPtr create(std::string_view name);
 
     // Reimplementation of `Widget` virtual methods
-    bool onMouseMove(MouseEvent* event) override;
-    bool onMousePress(MouseEvent* event) override;
-    bool onMouseRelease(MouseEvent* event) override;
-    bool onKeyPress(KeyEvent* event) override;
-    bool onKeyRelease(KeyEvent* event) override;
+    bool onMouseMove(ui::MouseEvent* event) override;
+    bool onMousePress(ui::MouseEvent* event) override;
+    bool onMouseRelease(ui::MouseEvent* event) override;
+    bool onKeyPress(ui::KeyEvent* event) override;
+    bool onKeyRelease(ui::KeyEvent* event) override;
 
     VGC_SIGNAL(pickingStarted)
     VGC_SIGNAL(pickingStopped)
@@ -73,12 +79,12 @@ private:
     VGC_SLOT(startPickingSlot_, startPicking_)
 };
 
-/// \class vgc::ui::ColorPalette
+/// \class vgc::tools::ColorPalette
 /// \brief Allow users to select a color.
 ///
-class VGC_UI_API ColorPalette : public Column {
+class VGC_TOOLS_API ColorPalette : public ui::Column {
 private:
-    VGC_OBJECT(ColorPalette, Column)
+    VGC_OBJECT(ColorPalette, ui::Column)
 
 protected:
     /// This is an implementation details. Please use
@@ -117,20 +123,20 @@ private:
     core::Color selectedColor_;
     core::Color selectedColorOnPickScreenStarted_;
     ColorPreviewPtr colorPreview_;
-    ActionGroupPtr stepsActionGroup_;
-    Button* stepsButton_;
-    Button* continuousButton_;
+    ui::ActionGroupPtr stepsActionGroup_;
+    ui::Button* stepsButton_;
+    ui::Button* continuousButton_;
     ColorPaletteSelector* selector_;
-    NumberEdit* hStepsEdit_;
-    NumberEdit* sStepsEdit_;
-    NumberEdit* lStepsEdit_;
-    NumberEdit* rEdit_;
-    NumberEdit* gEdit_;
-    NumberEdit* bEdit_;
-    NumberEdit* hEdit_;
-    NumberEdit* sEdit_;
-    NumberEdit* lEdit_;
-    LineEdit* hexEdit_;
+    ui::NumberEdit* hStepsEdit_;
+    ui::NumberEdit* sStepsEdit_;
+    ui::NumberEdit* lStepsEdit_;
+    ui::NumberEdit* rEdit_;
+    ui::NumberEdit* gEdit_;
+    ui::NumberEdit* bEdit_;
+    ui::NumberEdit* hEdit_;
+    ui::NumberEdit* sEdit_;
+    ui::NumberEdit* lEdit_;
+    ui::LineEdit* hexEdit_;
     ColorListView* colorListView_;
 
     // Prevent infinite loops: RGB changed -> color changed -> HSL changed -> ...
@@ -191,12 +197,12 @@ private:
     void setSelectedColorNoCheckNoEmit_(const core::Color& color);
 };
 
-/// \class vgc::ui::ColorPaletteSelector
+/// \class vgc::tools::ColorPaletteSelector
 /// \brief Allow users to select a color.
 ///
-class VGC_UI_API ColorPaletteSelector : public Widget {
+class VGC_TOOLS_API ColorPaletteSelector : public ui::Widget {
 private:
-    VGC_OBJECT(ColorPaletteSelector, Widget)
+    VGC_OBJECT(ColorPaletteSelector, ui::Widget)
 
 protected:
     /// This is an implementation details. Please use
@@ -265,11 +271,11 @@ public:
 
     // reimpl
     void onPaintCreate(graphics::Engine* engine) override;
-    void onPaintDraw(graphics::Engine* engine, PaintOptions options) override;
+    void onPaintDraw(graphics::Engine* engine, ui::PaintOptions options) override;
     void onPaintDestroy(graphics::Engine* engine) override;
-    bool onMouseMove(MouseEvent* event) override;
-    bool onMousePress(MouseEvent* event) override;
-    bool onMouseRelease(MouseEvent* event) override;
+    bool onMouseMove(ui::MouseEvent* event) override;
+    bool onMousePress(ui::MouseEvent* event) override;
+    bool onMouseRelease(ui::MouseEvent* event) override;
     bool onMouseEnter() override;
     bool onMouseLeave() override;
 
@@ -359,12 +365,12 @@ private:
     bool selectContinuousColor_(const geometry::Vec2f& position);
 };
 
-/// \class vgc::ui::ColorPreview
+/// \class vgc::tools::ColorPreview
 /// \brief Display a color.
 ///
-class VGC_UI_API ColorPreview : public Widget {
+class VGC_TOOLS_API ColorPreview : public ui::Widget {
 private:
-    VGC_OBJECT(ColorPreview, Widget)
+    VGC_OBJECT(ColorPreview, ui::Widget)
 
 protected:
     ColorPreview();
@@ -391,7 +397,7 @@ public:
     // Implement Widget interface
     void onResize() override;
     void onPaintCreate(graphics::Engine* engine) override;
-    void onPaintDraw(graphics::Engine* engine, PaintOptions options) override;
+    void onPaintDraw(graphics::Engine* engine, ui::PaintOptions options) override;
     void onPaintDestroy(graphics::Engine* engine) override;
 
 private:
@@ -400,12 +406,12 @@ private:
     bool reload_ = true;
 };
 
-/// \class vgc::ui::ColorListView
+/// \class vgc::tools::ColorListView
 /// \brief Shows a list of colors.
 ///
-class VGC_UI_API ColorListView : public Widget {
+class VGC_TOOLS_API ColorListView : public ui::Widget {
 private:
-    VGC_OBJECT(ColorListView, Widget)
+    VGC_OBJECT(ColorListView, ui::Widget)
 
 protected:
     ColorListView();
@@ -503,11 +509,11 @@ public:
     // Implement Widget interface
     void onResize() override;
     void onPaintCreate(graphics::Engine* engine) override;
-    void onPaintDraw(graphics::Engine* engine, PaintOptions options) override;
+    void onPaintDraw(graphics::Engine* engine, ui::PaintOptions options) override;
     void onPaintDestroy(graphics::Engine* engine) override;
-    bool onMouseMove(MouseEvent* event) override;
-    bool onMousePress(MouseEvent* event) override;
-    bool onMouseRelease(MouseEvent* event) override;
+    bool onMouseMove(ui::MouseEvent* event) override;
+    bool onMousePress(ui::MouseEvent* event) override;
+    bool onMouseRelease(ui::MouseEvent* event) override;
     bool onMouseEnter() override;
     bool onMouseLeave() override;
 
@@ -545,6 +551,6 @@ private:
     bool selectColorFromHovered_();
 };
 
-} // namespace vgc::ui
+} // namespace vgc::tools
 
-#endif // VGC_UI_COLORPALETTE_H
+#endif // VGC_TOOLS_COLORPALETTE_H

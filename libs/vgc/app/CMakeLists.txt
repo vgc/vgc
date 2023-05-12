@@ -3,9 +3,10 @@ vgc_add_library(app
         ${VGC_QT_WIDGETS}
 
     VGC_DEPENDENCIES
-        ui
+        tools
 
     CPP_HEADER_FILES
+        api.h
         canvasapplication.h
         logcategories.h
         mainwindow.h

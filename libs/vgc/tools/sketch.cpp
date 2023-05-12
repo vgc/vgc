@@ -14,7 +14,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <vgc/ui/sketchtool.h>
+#include <vgc/tools/sketch.h>
 
 #include <array>
 
@@ -26,42 +26,52 @@
 #include <vgc/core/stringid.h>
 #include <vgc/geometry/curve.h>
 #include <vgc/graphics/strings.h>
+#include <vgc/tools/logcategories.h>
 #include <vgc/ui/boolsettingedit.h>
 #include <vgc/ui/column.h>
 #include <vgc/ui/cursor.h>
-#include <vgc/ui/logcategories.h>
 #include <vgc/ui/numbersettingedit.h>
 #include <vgc/ui/settings.h>
 #include <vgc/ui/window.h>
 #include <vgc/workspace/edge.h>
 
-namespace vgc::ui {
+namespace vgc::tools {
 
 namespace {
 
 namespace options {
 
-NumberSetting* penWidth() {
-    static NumberSettingPtr setting = createDecimalNumberSetting(
-        settings::session(), "tools.sketch.penWidth", "Pen Width", 5, 0, 1000);
+ui::NumberSetting* penWidth() {
+    static ui::NumberSettingPtr setting = createDecimalNumberSetting(
+        ui::settings::session(), "tools.sketch.penWidth", "Pen Width", 5, 0, 1000);
     return setting.get();
 }
 
-BoolSetting* snapping() {
-    static BoolSettingPtr setting = BoolSetting::create(
-        settings::session(), "tools.sketch.snapping", "Snapping", true);
+ui::BoolSetting* snapping() {
+    static ui::BoolSettingPtr setting = ui::BoolSetting::create(
+        ui::settings::session(), "tools.sketch.snapping", "Snapping", true);
     return setting.get();
 }
 
-NumberSetting* snapDistance() {
-    static NumberSettingPtr setting = createDecimalNumberSetting(
-        settings::session(), "tools.sketch.snapDistance", "Snap Distance", 10, 0, 1000);
+ui::NumberSetting* snapDistance() {
+    static ui::NumberSettingPtr setting = createDecimalNumberSetting(
+        ui::settings::session(),
+        "tools.sketch.snapDistance",
+        "Snap Distance",
+        10,
+        0,
+        1000);
     return setting.get();
 }
 
-NumberSetting* snapFalloff() {
-    static NumberSettingPtr setting = createDecimalNumberSetting(
-        settings::session(), "tools.sketch.snapFalloff", "Snap Falloff", 100, 0, 1000);
+ui::NumberSetting* snapFalloff() {
+    static ui::NumberSettingPtr setting = createDecimalNumberSetting(
+        ui::settings::session(),
+        "tools.sketch.snapFalloff",
+        "Snap Falloff",
+        100,
+        0,
+        1000);
     return setting.get();
 }
 
@@ -100,31 +110,31 @@ geometry::Vec2d applySnapFalloff(
 
 } // namespace
 
-SketchTool::SketchTool()
+Sketch::Sketch()
     : CanvasTool() {
 }
 
-SketchToolPtr SketchTool::create() {
-    return SketchToolPtr(new SketchTool());
+SketchPtr Sketch::create() {
+    return SketchPtr(new Sketch());
 }
 
-double SketchTool::penWidth() const {
+double Sketch::penWidth() const {
     return options::penWidth()->value();
 }
 
-void SketchTool::setPenWidth(double width) {
+void Sketch::setPenWidth(double width) {
     options::penWidth()->setValue(width);
 }
 
-bool SketchTool::isSnappingEnabled() const {
+bool Sketch::isSnappingEnabled() const {
     return options::snapping()->value();
 }
 
-void SketchTool::setSnappingEnabled(bool enabled) {
+void Sketch::setSnappingEnabled(bool enabled) {
     options::snapping()->setValue(enabled);
 }
 
-ui::WidgetPtr SketchTool::createOptionsWidget() const {
+ui::WidgetPtr Sketch::createOptionsWidget() const {
     ui::WidgetPtr res = ui::Column::create();
     res->createChild<ui::NumberSettingEdit>(options::penWidth());
     res->createChild<ui::BoolSettingEdit>(options::snapping());
@@ -133,26 +143,26 @@ ui::WidgetPtr SketchTool::createOptionsWidget() const {
     return res;
 }
 
-bool SketchTool::onKeyPress(KeyEvent* /*event*/) {
+bool Sketch::onKeyPress(ui::KeyEvent* /*event*/) {
     return false;
 }
 
 namespace {
 
-double pressurePenWidth(const MouseEvent* event) {
+double pressurePenWidth(const ui::MouseEvent* event) {
     double baseWidth = options::penWidth()->value();
     return event->hasPressure() ? 2 * event->pressure() * baseWidth : baseWidth;
 }
 
 } // namespace
 
-bool SketchTool::onMouseMove(MouseEvent* event) {
+bool Sketch::onMouseMove(ui::MouseEvent* event) {
 
     if (!isSketching_) {
         return false;
     }
 
-    ui::Canvas* canvas = this->canvas();
+    canvas::Canvas* canvas = this->canvas();
     if (!canvas) {
         return false;
     }
@@ -185,13 +195,14 @@ bool SketchTool::onMouseMove(MouseEvent* event) {
     return true;
 }
 
-bool SketchTool::onMousePress(MouseEvent* event) {
+bool Sketch::onMousePress(ui::MouseEvent* event) {
 
-    if (isSketching_ || event->button() != MouseButton::Left || event->modifierKeys()) {
+    if (isSketching_ || event->button() != ui::MouseButton::Left
+        || event->modifierKeys()) {
         return false;
     }
 
-    ui::Canvas* canvas = this->canvas();
+    canvas::Canvas* canvas = this->canvas();
     if (!canvas) {
         return false;
     }
@@ -213,9 +224,9 @@ bool SketchTool::onMousePress(MouseEvent* event) {
     return true;
 }
 
-bool SketchTool::onMouseRelease(MouseEvent* event) {
+bool Sketch::onMouseRelease(ui::MouseEvent* event) {
 
-    if (event->button() == MouseButton::Left) {
+    if (event->button() == ui::MouseButton::Left) {
         if (isSketching_) {
             if (isCurveStarted_) {
                 finishCurve_(event);
@@ -269,21 +280,21 @@ QCursor crossCursor() {
 
 } // namespace
 
-bool SketchTool::onMouseEnter() {
+bool Sketch::onMouseEnter() {
     cursorChanger_.set(crossCursor());
     return false;
 }
 
-bool SketchTool::onMouseLeave() {
+bool Sketch::onMouseLeave() {
     cursorChanger_.clear();
     return false;
 }
 
-void SketchTool::onResize() {
+void Sketch::onResize() {
     reload_ = true;
 }
 
-void SketchTool::onPaintCreate(graphics::Engine* engine) {
+void Sketch::onPaintCreate(graphics::Engine* engine) {
     SuperClass::onPaintCreate(engine);
     using namespace graphics;
     minimalLatencyStrokeGeometry_ =
@@ -293,14 +304,14 @@ void SketchTool::onPaintCreate(graphics::Engine* engine) {
     reload_ = true;
 }
 
-void SketchTool::onPaintDraw(graphics::Engine* engine, PaintOptions options) {
+void Sketch::onPaintDraw(graphics::Engine* engine, ui::PaintOptions options) {
 
     SuperClass::onPaintDraw(engine, options);
 
     using namespace graphics;
     namespace gs = graphics::strings;
 
-    ui::Canvas* canvas = this->canvas();
+    canvas::Canvas* canvas = this->canvas();
     if (!canvas) {
         return;
     }
@@ -308,10 +319,10 @@ void SketchTool::onPaintDraw(graphics::Engine* engine, PaintOptions options) {
     // Draw temporary tip of curve between mouse event position and actual current cursor
     // position to reduce visual lag.
     //
-    Window* w = window();
+    ui::Window* w = window();
     bool cursorMoved = false;
     if (isSketching_ && w) {
-        geometry::Vec2f pos(w->mapFromGlobal(globalCursorPosition()));
+        geometry::Vec2f pos(w->mapFromGlobal(ui::globalCursorPosition()));
         geometry::Vec2d posd(root()->mapTo(this, pos));
         pos = geometry::Vec2f(
             canvas->camera().viewMatrix().inverted().transformPointAffine(posd));
@@ -448,7 +459,7 @@ void SketchTool::onPaintDraw(graphics::Engine* engine, PaintOptions options) {
     engine->popViewMatrix();
 }
 
-void SketchTool::onPaintDestroy(graphics::Engine* engine) {
+void Sketch::onPaintDestroy(graphics::Engine* engine) {
     SuperClass::onPaintDestroy(engine);
     minimalLatencyStrokeGeometry_.reset();
 }
@@ -577,7 +588,7 @@ Int reconstructInputStep(
 
 // XXX shouldn't we do the fine pass if isFinalPass = true?
 //
-void SketchTool::updateUnquantizedData_(bool /*isFinalPass*/) {
+void Sketch::updateUnquantizedData_(bool /*isFinalPass*/) {
 
     // Dequantize timestamps.
     //
@@ -718,7 +729,7 @@ void SketchTool::updateUnquantizedData_(bool /*isFinalPass*/) {
 // depends on distance in pixels rather than the width, since for
 // extremities, the width is not a reliable or meaningful metric to use.
 //
-void SketchTool::updatePreTransformedData_(bool /*isFinalPass*/) {
+void Sketch::updatePreTransformedData_(bool /*isFinalPass*/) {
 
     constexpr float minDistanceToSecondSample = 5; // in pixels
 
@@ -834,7 +845,7 @@ void SketchTool::updatePreTransformedData_(bool /*isFinalPass*/) {
     }
 }
 
-void SketchTool::updateTransformedData_(bool /*isFinalPass*/) {
+void Sketch::updateTransformedData_(bool /*isFinalPass*/) {
     Int n = preTransformedPoints_.length();
     transformedPoints_.resize(n);
     transformedTimestamps_.resize(n);
@@ -923,18 +934,18 @@ struct IndexWidth {
 
 } // namespace
 
-} // namespace vgc::ui
+} // namespace vgc::tools
 
 template<>
-struct fmt::formatter<vgc::ui::IndexWidth> : fmt::formatter<vgc::geometry::Vec2d> {
+struct fmt::formatter<vgc::tools::IndexWidth> : fmt::formatter<vgc::geometry::Vec2d> {
     template<typename FormatContext>
-    auto format(const vgc::ui::IndexWidth& iw, FormatContext& ctx) {
+    auto format(const vgc::tools::IndexWidth& iw, FormatContext& ctx) {
         return fmt::formatter<vgc::geometry::Vec2d>::format(
             vgc::geometry::Vec2d(iw.index, iw.width), ctx);
     }
 };
 
-namespace vgc::ui {
+namespace vgc::tools {
 
 namespace {
 
@@ -1105,7 +1116,7 @@ void applyWidthRoughnessLimitor(
 
 } // namespace
 
-void SketchTool::updateSmoothedData_(bool /*isFinalPass*/) {
+void Sketch::updateSmoothedData_(bool /*isFinalPass*/) {
 
     Int numPoints = smoothedPoints_.length();
 
@@ -1165,7 +1176,7 @@ void SketchTool::updateSmoothedData_(bool /*isFinalPass*/) {
     }
 }
 
-void SketchTool::updateSnappedData_(bool /*isFinalPass*/) {
+void Sketch::updateSnappedData_(bool /*isFinalPass*/) {
 
     // Nothing to do with the widths
     snappedWidths_ = smoothedWidths_;
@@ -1197,7 +1208,7 @@ void SketchTool::updateSnappedData_(bool /*isFinalPass*/) {
     }
 }
 
-void SketchTool::updateEndSnappedData_(const geometry::Vec2d& endSnapPosition) {
+void Sketch::updateEndSnappedData_(const geometry::Vec2d& endSnapPosition) {
 
     // Fast return if not enough points
     Int numPoints = smoothedPoints_.length();
@@ -1237,7 +1248,7 @@ void SketchTool::updateEndSnappedData_(const geometry::Vec2d& endSnapPosition) {
     }
 }
 
-void SketchTool::startCurve_(MouseEvent* event) {
+void Sketch::startCurve_(ui::MouseEvent* event) {
 
     // Clear the points now. We don't to it on finishCurve_() for
     // debugging purposes.
@@ -1261,7 +1272,7 @@ void SketchTool::startCurve_(MouseEvent* event) {
     static core::StringId Draw_Curve("Draw Curve");
     core::History* history = workspace->history();
     if (history) {
-        SketchToolPtr self(this);
+        SketchPtr self(this);
         drawCurveUndoGroup_ = history->createUndoGroup(Draw_Curve);
         drawCurveUndoGroupConnectionHandle_ = drawCurveUndoGroup_->undone().connect(
             [self]([[maybe_unused]] core::UndoGroup* undoGroup, bool /*isAbort*/) {
@@ -1350,7 +1361,7 @@ void SketchTool::startCurve_(MouseEvent* event) {
     minimalLatencyStrokeReload_ = true;
 }
 
-void SketchTool::continueCurve_(MouseEvent* event) {
+void Sketch::continueCurve_(ui::MouseEvent* event) {
 
     // Fast return if missing required context
     workspace::Workspace* workspace = this->workspace();
@@ -1380,7 +1391,7 @@ void SketchTool::continueCurve_(MouseEvent* event) {
     workspace->sync();
 }
 
-void SketchTool::finishCurve_(MouseEvent* /*event*/) {
+void Sketch::finishCurve_(ui::MouseEvent* /*event*/) {
 
     namespace ds = dom::strings;
 
@@ -1430,7 +1441,7 @@ void SketchTool::finishCurve_(MouseEvent* /*event*/) {
     requestRepaint();
 }
 
-void SketchTool::resetData_() {
+void Sketch::resetData_() {
     if (drawCurveUndoGroup_) {
         drawCurveUndoGroup_->close();
         drawCurveUndoGroup_->undone().disconnect(drawCurveUndoGroupConnectionHandle_);
@@ -1460,12 +1471,12 @@ void SketchTool::resetData_() {
     snappedWidths_.clear();
 }
 
-double SketchTool::snapFalloff() const {
+double Sketch::snapFalloff() const {
 
     float snapFalloffFloat = static_cast<float>(options::snapFalloff()->value());
     style::Length snapFalloffLength(snapFalloffFloat, style::LengthUnit::Dp);
 
-    ui::Canvas* canvas = this->canvas();
+    canvas::Canvas* canvas = this->canvas();
     double zoom = canvas ? canvas->camera().zoom() : 1.0;
 
     return snapFalloffLength.toPx(styleMetrics()) / zoom;
@@ -1474,7 +1485,7 @@ double SketchTool::snapFalloff() const {
 // Note: in the future we may want to have the snapping candidates implemented
 // in canvas to be shared by all tools.
 
-workspace::Element* SketchTool::computeSnapVertex_(
+workspace::Element* Sketch::computeSnapVertex_(
     const geometry::Vec2d& position,
     dom::Element* excludedElement_) {
 
@@ -1486,7 +1497,7 @@ workspace::Element* SketchTool::computeSnapVertex_(
     float snapDistanceFloat = static_cast<float>(options::snapDistance()->value());
     style::Length snapDistanceLength(snapDistanceFloat, style::LengthUnit::Dp);
 
-    ui::Canvas* canvas = this->canvas();
+    canvas::Canvas* canvas = this->canvas();
     double zoom = canvas ? canvas->camera().zoom() : 1.0;
     double snapDistance = snapDistanceLength.toPx(styleMetrics()) / zoom;
     double minDist = core::DoubleInfinity;
@@ -1520,4 +1531,4 @@ workspace::Element* SketchTool::computeSnapVertex_(
     return res;
 }
 
-} // namespace vgc::ui
+} // namespace vgc::tools
