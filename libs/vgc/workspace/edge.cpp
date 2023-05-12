@@ -61,7 +61,7 @@ bool VacEdgeCellFrameData::resetToStage(VacEdgeComputationStage stage) {
             sampling_.reset();
             graphics_.clearCenterlineGeometry();
             graphics_.clearSelectionGeometry();
-            selectionTestCacheLastRect_ = geometry::Rect2d::empty;
+            selectionTestCacheRect_ = geometry::Rect2d::empty;
             selectionTestCacheResult_ = false;
             [[fallthrough]];
         }
@@ -183,7 +183,7 @@ bool VacEdgeCellFrameData::isSelectableInRect(const geometry::Rect2d& rect) cons
         return false;
     }
 
-    if (selectionTestCacheLastRect_ == rect) {
+    if (selectionTestCacheRect_ == rect) {
         return selectionTestCacheResult_;
     }
 
@@ -208,7 +208,9 @@ bool VacEdgeCellFrameData::isSelectableInRect(const geometry::Rect2d& rect) cons
     bool result =
         rect.intersectsPolyline(samples.begin(), samples.end(), SamplePositionGetter());
 
-    selectionTestCacheLastRect_ = rect;
+    // We only cache the result if it reaches the intersectsPolyline() test because
+    // it seems better to only cache "costly" result.
+    selectionTestCacheRect_ = rect;
     selectionTestCacheResult_ = result;
 
     return result;

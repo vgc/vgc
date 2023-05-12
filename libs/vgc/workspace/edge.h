@@ -390,7 +390,7 @@ private:
 
     // KeyFace::isSelectableInRect() calls its cycle edges' isSelectableInRect()
     // thus it becomes useful to cache the result when testing a set of cells.
-    mutable geometry::Rect2d selectionTestCacheLastRect_ = geometry::Rect2d::empty;
+    mutable geometry::Rect2d selectionTestCacheRect_ = geometry::Rect2d::empty;
     mutable bool selectionTestCacheResult_ = false;
 
     // stage PreJoinGeometry
