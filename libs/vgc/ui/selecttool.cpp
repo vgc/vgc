@@ -364,8 +364,7 @@ bool SelectTool::onMouseRelease(MouseEvent* event) {
     bool selectionChanged = false;
 
     // If we were dragging we can stop the action and return.
-    double deltaTime = event->timestamp() - timeAtPress_;
-    if (isDragging_ || deltaTime > dragTimeThreshold) {
+    if (isDragging_) {
         if (dragAction_ == DragAction::Select) {
             // Rectangle selection.
             switch (selectionMode_) {
