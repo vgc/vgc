@@ -14,31 +14,31 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef VGC_UI_CANVAS_H
-#define VGC_UI_CANVAS_H
+#ifndef VGC_CANVAS_CANVAS_H
+#define VGC_CANVAS_CANVAS_H
 
 #include <variant>
 
+#include <vgc/canvas/api.h>
 #include <vgc/core/array.h>
 #include <vgc/core/color.h>
 #include <vgc/core/object.h>
 #include <vgc/core/performancelog.h>
 #include <vgc/geometry/camera2d.h>
 #include <vgc/geometry/vec2d.h>
-#include <vgc/ui/api.h>
 #include <vgc/ui/cursor.h>
 #include <vgc/ui/widget.h>
 #include <vgc/workspace/edge.h>
 #include <vgc/workspace/workspace.h>
 
-namespace vgc::ui {
+namespace vgc::canvas {
 
 VGC_DECLARE_OBJECT(SelectionListHistory);
 VGC_DECLARE_OBJECT(Canvas);
 
 using SelectionList = core::Array<core::Id>;
 
-class VGC_UI_API SelectionListHistory : public core::Object {
+class VGC_CANVAS_API SelectionListHistory : public core::Object {
 private:
     VGC_OBJECT(SelectionListHistory, core::Object)
 
@@ -60,10 +60,10 @@ private:
     core::Array<SelectionList> lists_;
 };
 
-/// \class vgc::ui::SelectionCandidate
+/// \class vgc::canvas::SelectionCandidate
 /// \brief A workspace item candidate for selection.
 ///
-class VGC_UI_API SelectionCandidate {
+class VGC_CANVAS_API SelectionCandidate {
 public:
     SelectionCandidate(core::Id id, double distance, Int priority = 1)
         : id_(id)
@@ -92,9 +92,9 @@ private:
 /// \class vgc::ui::Canvas
 /// \brief A document canvas widget.
 ///
-class VGC_UI_API Canvas : public Widget {
+class VGC_CANVAS_API Canvas : public ui::Widget {
 private:
-    VGC_OBJECT(Canvas, Widget)
+    VGC_OBJECT(Canvas, ui::Widget)
 
 protected:
     /// This is an implementation details. Please use
@@ -193,11 +193,11 @@ public:
 
 protected:
     // Reimplementation of Widget virtual methods
-    bool onKeyPress(KeyEvent* event) override;
-    bool onMouseMove(MouseEvent* event) override;
-    bool onMousePress(MouseEvent* event) override;
-    bool onMouseRelease(MouseEvent* event) override;
-    bool onMouseScroll(ScrollEvent* event) override;
+    bool onKeyPress(ui::KeyEvent* event) override;
+    bool onMouseMove(ui::MouseEvent* event) override;
+    bool onMousePress(ui::MouseEvent* event) override;
+    bool onMouseRelease(ui::MouseEvent* event) override;
+    bool onMouseScroll(ui::ScrollEvent* event) override;
     bool onMouseEnter() override;
     bool onMouseLeave() override;
     void onVisible() override;
@@ -205,7 +205,7 @@ protected:
     void onResize() override;
     geometry::Vec2f computePreferredSize() const override;
     void onPaintCreate(graphics::Engine* engine) override;
-    void onPaintDraw(graphics::Engine* engine, PaintOptions options) override;
+    void onPaintDraw(graphics::Engine* engine, ui::PaintOptions options) override;
     void onPaintDestroy(graphics::Engine* engine) override;
     void updateChildrenGeometry() override;
 
@@ -270,7 +270,7 @@ private:
     // with no matching mouse release event.
     bool tabletPressed_ = false; // whether there's been a tablet press event
     // with no matching tablet release event.
-    MouseButton mouseButtonAtPress_ =
+    ui::MouseButton mouseButtonAtPress_ =
         ui::MouseButton::None; // value of event->button at press
 
     // Polygon mode. This is selected with the n/t/f keys.
@@ -298,6 +298,6 @@ private:
     core::PerformanceLogTask drawTask_;
 };
 
-} // namespace vgc::ui
+} // namespace vgc::canvas
 
-#endif // VGC_UI_CANVAS_H
+#endif // VGC_CANVAS_CANVAS_H

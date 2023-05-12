@@ -14,38 +14,38 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef VGC_UI_PAINTBUCKETTOOL_H
-#define VGC_UI_PAINTBUCKETTOOL_H
+#ifndef VGC_TOOLS_PAINTBUCKET_H
+#define VGC_TOOLS_PAINTBUCKET_H
 
+#include <vgc/canvas/canvastool.h>
 #include <vgc/core/array.h>
 #include <vgc/core/color.h>
 #include <vgc/geometry/vec2d.h>
 #include <vgc/graphics/geometryview.h>
-#include <vgc/ui/api.h>
-#include <vgc/ui/canvastool.h>
+#include <vgc/tools/api.h>
 #include <vgc/vacomplex/keycycle.h>
 
-namespace vgc::ui {
+namespace vgc::tools {
 
-VGC_DECLARE_OBJECT(PaintBucketTool);
+VGC_DECLARE_OBJECT(PaintBucket);
 
-/// \class vgc::ui::PaintBucketTool
+/// \class vgc::tools::PaintBucketTool
 /// \brief Implementation of the "paint bucket" tool, creating faces on click.
 ///
-class VGC_UI_API PaintBucketTool : public CanvasTool {
+class VGC_TOOLS_API PaintBucket : public canvas::CanvasTool {
 private:
-    VGC_OBJECT(PaintBucketTool, CanvasTool)
+    VGC_OBJECT(PaintBucket, canvas::CanvasTool)
 
 protected:
     /// This is an implementation details.
     /// Please use `PaintBucketTool::create()` instead.
     ///
-    PaintBucketTool();
+    PaintBucket();
 
 public:
     /// Creates a `SketchTool`.
     ///
-    static PaintBucketToolPtr create();
+    static PaintBucketPtr create();
 
     /// Returns the color of the tool.
     ///
@@ -62,14 +62,14 @@ protected:
     ui::WidgetPtr createOptionsWidget() const override;
 
     // Reimplementation of Widget virtual methods
-    bool updateHoverChainChild(MouseEvent* event) override;
-    bool onMouseMove(MouseEvent* event) override;
-    bool onMousePress(MouseEvent* event) override;
-    bool onMouseRelease(MouseEvent* event) override;
+    bool updateHoverChainChild(ui::MouseEvent* event) override;
+    bool onMouseMove(ui::MouseEvent* event) override;
+    bool onMousePress(ui::MouseEvent* event) override;
+    bool onMouseRelease(ui::MouseEvent* event) override;
     bool onMouseEnter() override;
     bool onMouseLeave() override;
     void onPaintCreate(graphics::Engine* engine) override;
-    void onPaintDraw(graphics::Engine* engine, PaintOptions options) override;
+    void onPaintDraw(graphics::Engine* engine, ui::PaintOptions options) override;
     void onPaintDestroy(graphics::Engine* engine) override;
 
 private:
@@ -91,6 +91,6 @@ private:
     graphics::GeometryViewPtr faceCandidateFillGeometry_;
 };
 
-} // namespace vgc::ui
+} // namespace vgc::tools
 
-#endif // VGC_UI_PAINTBUCKETTOOL_H
+#endif // VGC_TOOLS_PAINTBUCKET_H

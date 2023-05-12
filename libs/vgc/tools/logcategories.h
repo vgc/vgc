@@ -1,4 +1,4 @@
-// Copyright 2022 The VGC Developers
+// Copyright 2023 The VGC Developers
 // See the COPYRIGHT file at the top-level directory of this distribution
 // and at https://github.com/vgc/vgc/blob/master/COPYRIGHT
 //
@@ -14,10 +14,21 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <vgc/ui/logcategories.h>
+#ifndef VGC_TOOLS_LOGCATEGORIES_H
+#define VGC_TOOLS_LOGCATEGORIES_H
 
-namespace vgc::ui {
+#include <vgc/core/logging.h>
+#include <vgc/tools/api.h>
 
-VGC_DEFINE_LOG_CATEGORY(LogVgcUi, "vgc.ui")
+namespace vgc::tools {
 
-} // namespace vgc::ui
+VGC_DECLARE_LOG_CATEGORY(VGC_TOOLS_API, LogVgcTools, Debug)
+
+VGC_DECLARE_LOG_CATEGORY(VGC_TOOLS_API, LogVgcToolsColorPalette, Debug)
+VGC_DECLARE_LOG_CATEGORY(VGC_TOOLS_API, LogVgcToolsPaintBucket, Debug)
+VGC_DECLARE_LOG_CATEGORY(VGC_TOOLS_API, LogVgcToolsSelect, Debug)
+VGC_DECLARE_LOG_CATEGORY(VGC_TOOLS_API, LogVgcToolsSketch, Debug)
+
+} // namespace vgc::tools
+
+#endif // VGC_TOOLS_LOGCATEGORIES_H

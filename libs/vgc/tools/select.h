@@ -14,46 +14,46 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef VGC_UI_SELECTTOOL_H
-#define VGC_UI_SELECTTOOL_H
+#ifndef VGC_TOOLS_SELECT_H
+#define VGC_TOOLS_SELECT_H
 
+#include <vgc/canvas/canvastool.h>
 #include <vgc/core/array.h>
 #include <vgc/core/id.h>
 #include <vgc/geometry/vec2f.h>
-#include <vgc/ui/api.h>
-#include <vgc/ui/canvastool.h>
+#include <vgc/tools/api.h>
 
-namespace vgc::ui {
+namespace vgc::tools {
 
-VGC_DECLARE_OBJECT(SelectTool);
+VGC_DECLARE_OBJECT(Select);
 
-/// \class vgc::ui::SelectTool
+/// \class vgc::tools::SelectTool
 /// \brief A CanvasTool that implements selecting strokes.
 ///
-class VGC_UI_API SelectTool : public CanvasTool {
+class VGC_TOOLS_API Select : public canvas::CanvasTool {
 private:
-    VGC_OBJECT(SelectTool, CanvasTool)
+    VGC_OBJECT(Select, canvas::CanvasTool)
 
 protected:
     /// This is an implementation details.
     /// Please use `SketchTool::create()` instead.
     ///
-    SelectTool();
+    Select();
 
 public:
     /// Creates a `SelectTool`.
     ///
-    static SelectToolPtr create();
+    static SelectPtr create();
 
 protected:
     // Reimplementation of Widget virtual methods
-    bool onMouseMove(MouseEvent* event) override;
-    bool onMousePress(MouseEvent* event) override;
-    bool onMouseRelease(MouseEvent* event) override;
+    bool onMouseMove(ui::MouseEvent* event) override;
+    bool onMousePress(ui::MouseEvent* event) override;
+    bool onMouseRelease(ui::MouseEvent* event) override;
 
     void onResize() override;
     void onPaintCreate(graphics::Engine* engine) override;
-    void onPaintDraw(graphics::Engine* engine, PaintOptions options) override;
+    void onPaintDraw(graphics::Engine* engine, ui::PaintOptions options) override;
     void onPaintDestroy(graphics::Engine* engine) override;
 
 private:
@@ -69,7 +69,7 @@ private:
         TranslateCandidate,
     };
 
-    core::Array<SelectionCandidate> candidates_;
+    core::Array<canvas::SelectionCandidate> candidates_;
     core::Array<core::Id> rectCandidates_;
     core::Array<core::Id> selectionAtPress_;
     geometry::Vec2f cursorPositionAtPress_;
@@ -112,6 +112,6 @@ private:
     void resetActionState_();
 };
 
-} // namespace vgc::ui
+} // namespace vgc::tools
 
-#endif // VGC_UI_SELECTTOOL_H
+#endif // VGC_TOOLS_SELECT_H

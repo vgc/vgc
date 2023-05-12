@@ -23,9 +23,8 @@
 #include <vgc/app/logcategories.h>
 #include <vgc/core/datetime.h>
 #include <vgc/dom/strings.h>
-#include <vgc/ui/paintbuckettool.h>
+#include <vgc/tools/select.h>
 #include <vgc/ui/qtutil.h>
-#include <vgc/ui/selecttool.h>
 #include <vgc/ui/shortcut.h>
 #include <vgc/ui/tabbar.h>
 
@@ -43,13 +42,13 @@ core::StringId s_tools("tools");
 core::StringId s_tool_options("tool-options");
 
 void loadColorPalette_(
-    ui::ColorPalette* palette,
+    tools::ColorPalette* palette,
     const core::Array<core::Color>& colors) {
 
     if (!palette) {
         return;
     }
-    ui::ColorListView* listView = palette->colorListView();
+    tools::ColorListView* listView = palette->colorListView();
     if (!listView) {
         return;
     }
@@ -86,7 +85,7 @@ public:
     ColorPaletteSaver(const ColorPaletteSaver&) = delete;
     ColorPaletteSaver& operator=(const ColorPaletteSaver&) = delete;
 
-    ColorPaletteSaver(ui::ColorPalette* palette, dom::Document* doc)
+    ColorPaletteSaver(tools::ColorPalette* palette, dom::Document* doc)
         : isUndoOpened_(false)
         , doc_(doc) {
 
@@ -94,7 +93,7 @@ public:
             return;
         }
 
-        ui::ColorListView* listView = palette->colorListView();
+        tools::ColorListView* listView = palette->colorListView();
         if (!listView) {
             return;
         }
@@ -609,7 +608,7 @@ void CanvasApplication::createCanvas_(
     ui::Widget* parent,
     workspace::Workspace* workspace) {
 
-    canvas_ = parent->createChild<ui::Canvas>(workspace);
+    canvas_ = parent->createChild<canvas::Canvas>(workspace);
 }
 
 void CanvasApplication::createTools_(ui::Widget* parent) {
@@ -619,24 +618,25 @@ void CanvasApplication::createTools_(ui::Widget* parent) {
 
     // Create and register all tools
     ui::Column* tools = parent->createChild<ui::Column>();
-    ui::SelectToolPtr selectTool = ui::SelectTool::create();
-    ui::SketchToolPtr sketchTool = ui::SketchTool::create();
-    ui::PaintBucketToolPtr paintBucketTool = ui::PaintBucketTool::create();
+    tools::SelectPtr selectTool = tools::Select::create();
+    tools::SketchPtr sketchTool = tools::Sketch::create();
+    tools::PaintBucketPtr paintBucketTool = tools::PaintBucket::create();
     registerTool_(tools, "Select Tool", selectTool);
     registerTool_(tools, "Sketch Tool", sketchTool);
     registerTool_(tools, "Paint Bucket Tool", paintBucketTool);
 
-    // Keep pointer to sketch tool for handling color changes,
-    // and set it as default tool.
+    // Keep pointer to some tools for handling color changes
     sketchTool_ = sketchTool.get();
     paintBucketTool_ = paintBucketTool.get();
+
+    // Set the sketch tool as default tool
     setCurrentTool_(sketchTool_);
 }
 
 void CanvasApplication::registerTool_(
     ui::Widget* parent,
     std::string_view toolName,
-    ui::CanvasToolPtr tool) {
+    canvas::CanvasToolPtr tool) {
 
     // Create tool action and add it to the action group
     ui::Action* action = parent->createAction(toolName);
@@ -653,7 +653,7 @@ void CanvasApplication::registerTool_(
     parent->createChild<ui::Button>(action);
 }
 
-void CanvasApplication::setCurrentTool_(ui::CanvasTool* canvasTool) {
+void CanvasApplication::setCurrentTool_(canvas::CanvasTool* canvasTool) {
     if (canvasTool != currentTool_) {
         bool wasFocusedWidget = false;
         if (currentTool_) {
@@ -679,13 +679,13 @@ void CanvasApplication::onToolCheckStateChanged_(
     ui::CheckState checkState) {
 
     if (checkState == ui::CheckState::Checked) {
-        ui::CanvasTool* canvasTool = toolMap_[toolAction].get();
+        canvas::CanvasTool* canvasTool = toolMap_[toolAction].get();
         setCurrentTool_(canvasTool);
     }
 }
 
 void CanvasApplication::createColorPalette_(ui::Widget* parent) {
-    palette_ = parent->createChild<ui::ColorPalette>();
+    palette_ = parent->createChild<tools::ColorPalette>();
     palette_->colorSelected().connect(onColorChangedSlot_());
     onColorChanged_();
 }

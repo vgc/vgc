@@ -14,7 +14,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <vgc/ui/colorpalette.h>
+#include <vgc/tools/colorpalette.h>
 
 #include <cstdlib> // abs
 
@@ -25,6 +25,8 @@
 #include <vgc/geometry/mat3f.h>
 #include <vgc/graphics/strings.h>
 #include <vgc/style/strings.h>
+#include <vgc/tools/logcategories.h>
+#include <vgc/tools/strings.h>
 #include <vgc/ui/button.h>
 #include <vgc/ui/cursor.h>
 #include <vgc/ui/label.h>
@@ -32,11 +34,10 @@
 #include <vgc/ui/margins.h>
 #include <vgc/ui/numberedit.h>
 #include <vgc/ui/row.h>
-#include <vgc/ui/strings.h>
 
 #include <vgc/ui/detail/paintutil.h>
 
-namespace vgc::ui {
+namespace vgc::tools {
 
 namespace {
 
@@ -265,7 +266,7 @@ computeHighlightColor(const core::Color& c, HighlightStyle style = HighlightStyl
 void ScreenColorPickerButton::startPicking_() {
     setHovered(false);
     isPicking_ = true;
-    hoveredColor_ = colorUnderCursor();
+    hoveredColor_ = ui::colorUnderCursor();
     cursorChanger_.set(Qt::CrossCursor); // TODO: custom picker-shaped cursor
     startMouseCapture();
     startKeyboardCapture();
@@ -281,7 +282,7 @@ void ScreenColorPickerButton::stopPicking_() {
 }
 
 ScreenColorPickerButtonPtr ScreenColorPickerButton::create(std::string_view name) {
-    Action* action = nullptr;
+    ui::Action* action = nullptr;
     ScreenColorPickerButtonPtr button = new ScreenColorPickerButton(action);
     action = button->createAction(name);
     button->setAction(action);
@@ -289,11 +290,11 @@ ScreenColorPickerButtonPtr ScreenColorPickerButton::create(std::string_view name
     return button;
 }
 
-ScreenColorPickerButton::ScreenColorPickerButton(Action* action)
-    : Button(action, FlexDirection::Row) {
+ScreenColorPickerButton::ScreenColorPickerButton(ui::Action* action)
+    : Button(action, ui::FlexDirection::Row) {
 }
 
-bool ScreenColorPickerButton::onMousePress(MouseEvent* event) {
+bool ScreenColorPickerButton::onMousePress(ui::MouseEvent* event) {
     if (isPicking_) {
         return true;
     }
@@ -302,9 +303,9 @@ bool ScreenColorPickerButton::onMousePress(MouseEvent* event) {
     }
 }
 
-bool ScreenColorPickerButton::onMouseMove(MouseEvent* event) {
+bool ScreenColorPickerButton::onMouseMove(ui::MouseEvent* event) {
     if (isPicking_) {
-        hoveredColor_ = colorUnderCursor();
+        hoveredColor_ = ui::colorUnderCursor();
         colorHovered().emit(hoveredColor_);
         return true;
     }
@@ -313,7 +314,7 @@ bool ScreenColorPickerButton::onMouseMove(MouseEvent* event) {
     }
 }
 
-bool ScreenColorPickerButton::onMouseRelease(MouseEvent* event) {
+bool ScreenColorPickerButton::onMouseRelease(ui::MouseEvent* event) {
     if (isPicking_) {
         colorClicked().emit(hoveredColor_);
         stopPicking_();
@@ -324,9 +325,9 @@ bool ScreenColorPickerButton::onMouseRelease(MouseEvent* event) {
     }
 }
 
-bool ScreenColorPickerButton::onKeyPress(KeyEvent* event) {
+bool ScreenColorPickerButton::onKeyPress(ui::KeyEvent* event) {
     if (isPicking_) {
-        if (event->key() == Key::Escape) {
+        if (event->key() == ui::Key::Escape) {
             pickingCancelled().emit();
             stopPicking_();
             return true;
@@ -340,7 +341,7 @@ bool ScreenColorPickerButton::onKeyPress(KeyEvent* event) {
     }
 }
 
-bool ScreenColorPickerButton::onKeyRelease(KeyEvent* event) {
+bool ScreenColorPickerButton::onKeyRelease(ui::KeyEvent* event) {
     if (isPicking_) {
         return false;
     }
@@ -351,40 +352,40 @@ bool ScreenColorPickerButton::onKeyRelease(KeyEvent* event) {
 
 namespace {
 
-Widget* createFieldRow(Widget* parent, core::StringId styleClass) {
-    Row* row = parent->createChild<Row>();
+ui::Widget* createFieldRow(ui::Widget* parent, core::StringId styleClass) {
+    ui::Row* row = parent->createChild<ui::Row>();
     row->addStyleClass(strings_::field_row);
     row->addStyleClass(styleClass);
     return row;
 }
 
-Widget* createFieldRowAndLabel(
-    Widget* parent,
+ui::Widget* createFieldRowAndLabel(
+    ui::Widget* parent,
     core::StringId styleClass,
     std::string_view labelText) {
 
-    Widget* row = createFieldRow(parent, styleClass);
-    Label* label = row->createChild<Label>(labelText);
+    ui::Widget* row = createFieldRow(parent, styleClass);
+    ui::Label* label = row->createChild<ui::Label>(labelText);
     label->addStyleClass(strings_::field_label);
     return row;
 }
 
-Widget* createFieldRowLabelAndGroup(
-    Widget* parent,
+ui::Widget* createFieldRowLabelAndGroup(
+    ui::Widget* parent,
     core::StringId styleClass,
     std::string_view labelText) {
 
-    Widget* row = createFieldRowAndLabel(parent, styleClass, labelText);
-    Row* group = row->createChild<Row>();
+    ui::Widget* row = createFieldRowAndLabel(parent, styleClass, labelText);
+    ui::Row* group = row->createChild<ui::Row>();
     group->addStyleClass(strings_::field_group);
     group->addStyleClass(strings_::horizontal);
     return group;
 }
 
-void addFirstLastStyleClasses_(std::initializer_list<Widget*> widgets) {
+void addFirstLastStyleClasses_(std::initializer_list<ui::Widget*> widgets) {
     const size_t n = widgets.size();
     size_t i = 0;
-    for (Widget* widget : widgets) {
+    for (ui::Widget* widget : widgets) {
         bool isFirst = (i == 0);
         bool isLast = (i == n - 1);
         if (isFirst) {
@@ -404,35 +405,35 @@ void addFirstLastStyleClasses_(std::initializer_list<Widget*> widgets) {
 }
 
 void createThreeNumberEdits_(
-    Widget* parent,
+    ui::Widget* parent,
     core::StringId styleClass,
     std::string_view labelText,
-    NumberEdit*& a,
-    NumberEdit*& b,
-    NumberEdit*& c) {
+    ui::NumberEdit*& a,
+    ui::NumberEdit*& b,
+    ui::NumberEdit*& c) {
 
-    Widget* group = createFieldRowLabelAndGroup(parent, styleClass, labelText);
-    a = group->createChild<NumberEdit>();
-    b = group->createChild<NumberEdit>();
-    c = group->createChild<NumberEdit>();
+    ui::Widget* group = createFieldRowLabelAndGroup(parent, styleClass, labelText);
+    a = group->createChild<ui::NumberEdit>();
+    b = group->createChild<ui::NumberEdit>();
+    c = group->createChild<ui::NumberEdit>();
     addFirstLastStyleClasses_({a, b, c});
 }
 
 void createOneLineEdit_(
-    Widget* parent,
+    ui::Widget* parent,
     core::StringId styleClass,
     std::string_view labelText,
-    LineEdit*& a) {
+    ui::LineEdit*& a) {
 
-    Widget* group = createFieldRowLabelAndGroup(parent, styleClass, labelText);
-    a = group->createChild<LineEdit>();
+    ui::Widget* group = createFieldRowLabelAndGroup(parent, styleClass, labelText);
+    a = group->createChild<ui::LineEdit>();
     addFirstLastStyleClasses_({a});
 }
 
-Button* createCheckableButton_(Widget* parent, std::string_view text) {
-    Action* action = parent->createAction(text);
+ui::Button* createCheckableButton_(ui::Widget* parent, std::string_view text) {
+    ui::Action* action = parent->createAction(text);
     action->setCheckable(true);
-    Button* res = parent->createChild<Button>(action);
+    ui::Button* res = parent->createChild<ui::Button>(action);
     return res;
 }
 
@@ -445,12 +446,12 @@ ColorPalette::ColorPalette()
     colorPreview_ = createChild<ColorPreview>();
 
     // Continuous vs. Steps
-    Row* stepsModeRow = createChild<Row>();
+    ui::Row* stepsModeRow = createChild<ui::Row>();
     stepsModeRow->addStyleClass(strings_::field_group);
     stepsButton_ = createCheckableButton_(stepsModeRow, "Steps");
     continuousButton_ = createCheckableButton_(stepsModeRow, "Continuous");
     addFirstLastStyleClasses_({stepsButton_, continuousButton_});
-    stepsActionGroup_ = ActionGroup::create(CheckPolicy::ExactlyOne);
+    stepsActionGroup_ = ui::ActionGroup::create(ui::CheckPolicy::ExactlyOne);
     stepsActionGroup_->addAction(stepsButton_->action());
     stepsActionGroup_->addAction(continuousButton_->action());
     createThreeNumberEdits_(
@@ -478,12 +479,12 @@ ColorPalette::ColorPalette()
         createChild<ScreenColorPickerButton>("Pick Screen Color");
 
     // Palette
-    Row* paletteButtons = createChild<Row>();
+    ui::Row* paletteButtons = createChild<ui::Row>();
     paletteButtons->addStyleClass(strings_::field_row);
-    Action* addToPaletteAction = createAction("Add to Palette");
-    paletteButtons->createChild<Button>(addToPaletteAction);
-    Action* removeFromPaletteAction = createAction("-");
-    paletteButtons->createChild<Button>(removeFromPaletteAction);
+    ui::Action* addToPaletteAction = createAction("Add to Palette");
+    paletteButtons->createChild<ui::Button>(addToPaletteAction);
+    ui::Action* removeFromPaletteAction = createAction("-");
+    paletteButtons->createChild<ui::Button>(removeFromPaletteAction);
     colorListView_ = createChild<ColorListView>();
 
     // Init
@@ -544,7 +545,7 @@ namespace {
 //
 // Otherwise this function sets `isValid` to false and returns `Color()`.
 //
-core::Color parseHex_(LineEdit* lineEdit, bool& isValid) {
+core::Color parseHex_(ui::LineEdit* lineEdit, bool& isValid) {
     try {
         const std::string& text = lineEdit->text();
         return core::Color::fromHex(text);
@@ -968,8 +969,8 @@ void insertSLCursorQuad_(
     core::Color color(cellColor);
 
     geometry::Rect2f rect1(x1, y1, x2, y2);
-    geometry::Rect2f rect2 = rect1 + Margins(1);
-    geometry::Rect2f rect3 = rect2 + Margins(1);
+    geometry::Rect2f rect2 = rect1 + ui::Margins(1);
+    geometry::Rect2f rect3 = rect2 + ui::Margins(1);
 
     // outer quad
     geometry::Vec2f p1 = rect3.corner(0);
@@ -1016,7 +1017,7 @@ void insertCircle_(
     geometry::Vec2f p1 = center + radius * unitCircle[1];
     for (Int i = 2; i < numCircleSamples - 2; ++i) {
         geometry::Vec2f p2 = center + radius * unitCircle[i];
-        detail::insertTriangle(a, color, p0, p1, p2);
+        ui::detail::insertTriangle(a, color, p0, p1, p2);
         p1 = p2;
     }
 }
@@ -1066,7 +1067,9 @@ float hint(float value, bool hinting) {
 
 } // namespace
 
-void ColorPaletteSelector::onPaintDraw(graphics::Engine* engine, PaintOptions options) {
+void ColorPaletteSelector::onPaintDraw(
+    graphics::Engine* engine,
+    ui::PaintOptions options) {
 
     SuperClass::onPaintDraw(engine, options);
 
@@ -1080,7 +1083,8 @@ void ColorPaletteSelector::onPaintDraw(graphics::Engine* engine, PaintOptions op
         oldHeight_ = height();
         core::FloatArray a = {};
 
-        core::Color borderColor = detail::getColor(this, style::strings::border_color);
+        core::Color borderColor =
+            ui::detail::getColor(this, style::strings::border_color);
         updateMetrics_(); // TODO: only update if we know that they have changed
         const Metrics& m = metrics_;
 
@@ -1128,7 +1132,7 @@ void ColorPaletteSelector::onPaintDraw(graphics::Engine* engine, PaintOptions op
 
         // draw saturation/lightness selector
         if (m.borderWidth > 0) {
-            detail::insertRect(a, borderColor, m.saturationLightnessRect);
+            ui::detail::insertRect(a, borderColor, m.saturationLightnessRect);
         }
         float x0 = m.saturationLightnessRect.xMin();
         float y0 = m.saturationLightnessRect.yMin();
@@ -1163,7 +1167,7 @@ void ColorPaletteSelector::onPaintDraw(graphics::Engine* engine, PaintOptions op
                 else {
                     y2 -= m.borderWidth;
                     auto c = core::Color::hsl(hue, s, l).round8b();
-                    detail::insertRect(a, c, x1, y1, x2, y2);
+                    ui::detail::insertRect(a, c, x1, y1, x2, y2);
                 }
             }
         }
@@ -1173,7 +1177,7 @@ void ColorPaletteSelector::onPaintDraw(graphics::Engine* engine, PaintOptions op
                 float hmargins = m.borderWidth;
                 float vmargins = m.borderWidth;
                 geometry::Rect2f rect =
-                    m.saturationLightnessRect - Margins(vmargins, hmargins);
+                    m.saturationLightnessRect - ui::Margins(vmargins, hmargins);
 
                 geometry::Vec2f center(
                     rect.xMin() + hoveredLightness_ * rect.width(),
@@ -1205,7 +1209,7 @@ void ColorPaletteSelector::onPaintDraw(graphics::Engine* engine, PaintOptions op
                 style::BorderRadii radius(style::BorderRadius(0));
                 float borderWidth = 1;
 
-                detail::insertRect(
+                ui::detail::insertRect(
                     a,
                     styleMetrics(),
                     hoveredColor,
@@ -1228,7 +1232,7 @@ void ColorPaletteSelector::onPaintDraw(graphics::Engine* engine, PaintOptions op
                 vmargins += 0.5f * slDy;
             }
             geometry::Rect2f rect =
-                m.saturationLightnessRect - Margins(vmargins, hmargins);
+                m.saturationLightnessRect - ui::Margins(vmargins, hmargins);
 
             geometry::Vec2f center(
                 rect.xMin() + selectedLightness_ * rect.width(),
@@ -2026,8 +2030,8 @@ ColorPaletteSelector::Metrics
 ColorPaletteSelector::computeMetricsFromWidth_(float width) const {
     namespace gs = graphics::strings;
     namespace ss = style::strings;
-    using detail::getLengthInPx;
-    using detail::getLengthOrPercentageInPx;
+    using ui::detail::getLengthInPx;
+    using ui::detail::getLengthOrPercentageInPx;
 
     // TODO: handle case where padding/gap is a percentage. It's unlikely
     // (doesn't make much sense), but ideally we should support it. For
@@ -2058,7 +2062,7 @@ void ColorPaletteSelector::onPaintDestroy(graphics::Engine* engine) {
     triangles_.reset();
 }
 
-bool ColorPaletteSelector::onMouseMove(MouseEvent* event) {
+bool ColorPaletteSelector::onMouseMove(ui::MouseEvent* event) {
 
     const geometry::Vec2f& position = event->position();
 
@@ -2120,7 +2124,7 @@ bool ColorPaletteSelector::onMouseMove(MouseEvent* event) {
     return true;
 }
 
-bool ColorPaletteSelector::onMousePress(MouseEvent* event) {
+bool ColorPaletteSelector::onMousePress(ui::MouseEvent* event) {
     if (isContinuous_) {
         geometry::Vec2f position = event->position();
         if (metrics_.saturationLightnessRect.contains(position)) {
@@ -2142,7 +2146,7 @@ bool ColorPaletteSelector::onMousePress(MouseEvent* event) {
     }
 }
 
-bool ColorPaletteSelector::onMouseRelease(MouseEvent* /*event*/) {
+bool ColorPaletteSelector::onMouseRelease(ui::MouseEvent* /*event*/) {
     scrubbedSelector_ = SelectorType::None;
     return true;
 }
@@ -2172,7 +2176,7 @@ float ColorPaletteSelector::preferredHeightForWidth(float width) const {
     Metrics m = computeMetricsFromWidth_(width);
     if (m.height < 0) {
         VGC_WARNING(
-            LogVgcUi,
+            LogVgcToolsColorPalette,
             "Computed preferredHeightForWidth ({}) of ColorPaletteSelector is negative.",
             m.height);
     }
@@ -2410,17 +2414,17 @@ void ColorPreview::onPaintCreate(graphics::Engine* engine) {
         engine->createDynamicTriangleListView(graphics::BuiltinGeometryLayout::XYRGB);
 }
 
-void ColorPreview::onPaintDraw(graphics::Engine* engine, PaintOptions options) {
+void ColorPreview::onPaintDraw(graphics::Engine* engine, ui::PaintOptions options) {
     SuperClass::onPaintDraw(engine, options);
     namespace ss = style::strings;
     if (reload_) {
         reload_ = false;
         core::FloatArray a = {};
-        float borderWidth = detail::getLengthInPx(this, ss::border_width);
+        float borderWidth = ui::detail::getLengthInPx(this, ss::border_width);
         core::Color borderColor =
             computeHighlightColor(color_, HighlightStyle::DarkenOnly);
         style::BorderRadii radii = style::BorderRadii(this);
-        detail::insertRect(
+        ui::detail::insertRect(
             a, styleMetrics(), color_, borderColor, rect(), radii, borderWidth);
         engine->updateVertexBufferData(triangles_, std::move(a));
     }
@@ -2585,7 +2589,7 @@ float getItemLengthInPx(style::StylableObject* item, core::StringId property) {
 
 } // namespace
 
-void ColorListView::onPaintDraw(graphics::Engine* engine, PaintOptions options) {
+void ColorListView::onPaintDraw(graphics::Engine* engine, ui::PaintOptions options) {
 
     SuperClass::onPaintDraw(engine, options);
 
@@ -2598,8 +2602,8 @@ void ColorListView::onPaintDraw(graphics::Engine* engine, PaintOptions options) 
             updateMetrics_();
             const Metrics& m = metrics_;
 
-            float borderWidth = detail::getLengthInPx(item_.get(), ss::border_width);
-            //core::Color borderColor = detail::getColor(item_.get(), gs::border_color);
+            float borderWidth = ui::detail::getLengthInPx(item_.get(), ss::border_width);
+            //core::Color borderColor = ui::detail::getColor(item_.get(), gs::border_color);
             style::BorderRadii radii = style::BorderRadii(item_.get());
 
             geometry::Vec2f itemSize(m.itemWidth, m.itemHeight);
@@ -2628,10 +2632,10 @@ void ColorListView::onPaintDraw(graphics::Engine* engine, PaintOptions options) 
                     geometry::Rect2f itemRect2 = itemRect + ui::Margins(2);
                     style::BorderRadiiInPx radii2 = refRadii.offsetted(2, 2, 2, 2);
 
-                    detail::insertRect(
+                    ui::detail::insertRect(
                         a, color, cursorInnerColor, itemRect1, radii1, refRadii, 1);
 
-                    detail::insertRect(
+                    ui::detail::insertRect(
                         a,
                         core::colors::transparent,
                         cursorOuterColor,
@@ -2645,7 +2649,7 @@ void ColorListView::onPaintDraw(graphics::Engine* engine, PaintOptions options) 
                                                ? HighlightStyle::LightenOnly
                                                : HighlightStyle::DarkenOnly;
                     core::Color highlightColor = computeHighlightColor(color, style);
-                    detail::insertRect(
+                    ui::detail::insertRect(
                         a,
                         styleMetrics(),
                         color,
@@ -2687,7 +2691,7 @@ Int computeTrackIndex(float position, float itemSize, float gap, float numTracks
 
 } // namespace
 
-bool ColorListView::onMouseMove(MouseEvent* event) {
+bool ColorListView::onMouseMove(ui::MouseEvent* event) {
 
     const Metrics& m = metrics_;
 
@@ -2715,8 +2719,8 @@ bool ColorListView::onMouseMove(MouseEvent* event) {
     return true;
 }
 
-bool ColorListView::onMousePress(MouseEvent* event) {
-    if (event->button() == MouseButton::Left) {
+bool ColorListView::onMousePress(ui::MouseEvent* event) {
+    if (event->button() == ui::MouseButton::Left) {
         isScrubbing_ = true;
         selectColorFromHovered_();
         return true;
@@ -2726,8 +2730,8 @@ bool ColorListView::onMousePress(MouseEvent* event) {
     }
 }
 
-bool ColorListView::onMouseRelease(MouseEvent* event) {
-    if (event->button() == MouseButton::Left) {
+bool ColorListView::onMouseRelease(ui::MouseEvent* event) {
+    if (event->button() == ui::MouseButton::Left) {
         isScrubbing_ = false;
         selectColorFromHovered_();
         return true;
@@ -2759,7 +2763,7 @@ float ColorListView::preferredHeightForWidth(float width) const {
     Metrics m = computeMetricsFromWidth_(width);
     if (m.height < 0) {
         VGC_WARNING(
-            LogVgcUi,
+            LogVgcToolsColorPalette,
             "Computed preferredHeightForWidth ({}) of ColorListView is negative.",
             m.height);
         m.height = 0;
@@ -2806,8 +2810,8 @@ ColorListView::Metrics ColorListView::computeMetricsFromWidth_(float width) cons
     m.hinting = (style(gs::pixel_hinting) == gs::normal);
 
     // Item preferred size
-    m.itemPreferredWidth = getItemLengthInPx(item_.get(), strings::preferred_width);
-    m.itemPreferredHeight = getItemLengthInPx(item_.get(), strings::preferred_height);
+    m.itemPreferredWidth = getItemLengthInPx(item_.get(), ui::strings::preferred_width);
+    m.itemPreferredHeight = getItemLengthInPx(item_.get(), ui::strings::preferred_height);
 
     // Hinted final size
     //
@@ -2847,10 +2851,10 @@ ColorListView::Metrics ColorListView::computeMetricsFromWidth_(float width) cons
     // gap-percentage-relative-to: main-axis | cross-axis | respective-axes
     //
     float refLength = width;
-    m.rowGap =
-        detail::getLengthOrPercentageInPx(this, strings::row_gap, refLength, m.hinting);
-    m.columnGap = detail::getLengthOrPercentageInPx(
-        this, strings::column_gap, refLength, m.hinting);
+    m.rowGap = ui::detail::getLengthOrPercentageInPx(
+        this, ui::strings::row_gap, refLength, m.hinting);
+    m.columnGap = ui::detail::getLengthOrPercentageInPx(
+        this, ui::strings::column_gap, refLength, m.hinting);
 
     // Compute number of rows/columns, and update the column-gap accordingly,
     // as if styled with `.Flex { main-alignment: space-between; }`, but only
@@ -2901,4 +2905,4 @@ bool ColorListView::selectColorFromHovered_() {
     }
 }
 
-} // namespace vgc::ui
+} // namespace vgc::tools

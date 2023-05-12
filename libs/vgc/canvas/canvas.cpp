@@ -14,12 +14,14 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <vgc/ui/canvas.h>
+#include <vgc/canvas/canvas.h>
 
 #include <QBitmap>
 #include <QCursor>
 #include <QPainter>
 
+#include <vgc/canvas/logcategories.h>
+#include <vgc/canvas/strings.h>
 #include <vgc/core/array.h>
 #include <vgc/core/history.h>
 #include <vgc/core/paths.h>
@@ -29,15 +31,13 @@
 #include <vgc/geometry/curve.h>
 #include <vgc/graphics/strings.h>
 #include <vgc/ui/cursor.h>
-#include <vgc/ui/logcategories.h>
 #include <vgc/ui/qtutil.h>
-#include <vgc/ui/strings.h>
 #include <vgc/ui/window.h>
 #include <vgc/workspace/edge.h>
 
 #include <vgc/ui/detail/paintutil.h>
 
-namespace vgc::ui {
+namespace vgc::canvas {
 
 SelectionListHistoryPtr SelectionListHistory::create() {
     return SelectionListHistoryPtr(new SelectionListHistory());
@@ -66,7 +66,7 @@ Canvas::Canvas(workspace::Workspace* workspace)
 
     // Set ClickFocus policy to be able to accept keyboard events (default
     // policy is NoFocus).
-    setFocusPolicy(FocusPolicy::Click);
+    setFocusPolicy(ui::FocusPolicy::Click);
 
     setClippingEnabled(true);
 
@@ -77,7 +77,7 @@ Canvas::Canvas(workspace::Workspace* workspace)
         workspace_->document()->changed().connect(onDocumentChanged());
     }
 
-    addStyleClass(strings::Canvas);
+    addStyleClass(canvas::strings::Canvas);
 }
 
 void Canvas::setWorkspace(workspace::Workspace* workspace) {
@@ -280,16 +280,16 @@ core::Array<core::Id> Canvas::computeRectangleSelectionCandidates(
     return result;
 }
 
-bool Canvas::onKeyPress(KeyEvent* event) {
+bool Canvas::onKeyPress(ui::KeyEvent* event) {
 
     using geometry::CurveSamplingQuality;
 
     switch (event->key()) {
-    case Key::T:
+    case ui::Key::T:
         polygonMode_ = polygonMode_ ? 0 : 1;
         requestRepaint();
         break;
-    case Key::I:
+    case ui::Key::I:
         switch (requestedTesselationMode_) {
         case CurveSamplingQuality::Disabled:
             requestedTesselationMode_ = CurveSamplingQuality::UniformLow;
@@ -311,18 +311,18 @@ bool Canvas::onKeyPress(KeyEvent* event) {
             break;
         }
         VGC_INFO(
-            LogVgcToolsSketch,
+            LogVgcCanvas,
             "Switched edge subdivision quality to: {}",
             core::Enum::prettyName(requestedTesselationMode_));
         reTesselate = true;
         requestRepaint();
         break;
-    case Key::P:
+    case ui::Key::P:
         showControlPoints_ = !showControlPoints_;
         requestRepaint();
         break;
-    case Key::Backspace:
-    case Key::Delete:
+    case ui::Key::Backspace:
+    case ui::Key::Delete:
         deleteElements(selectedElementIds_, workspace());
         clearSelection();
         break;
@@ -357,7 +357,7 @@ inline constexpr float dragDeltaThreshold = 5;
 
 // Reimplementation of Widget virtual methods
 
-bool Canvas::onMouseMove(MouseEvent* event) {
+bool Canvas::onMouseMove(ui::MouseEvent* event) {
 
     if (!mousePressed_) {
         return false;
@@ -434,7 +434,7 @@ bool Canvas::onMouseMove(MouseEvent* event) {
     return false;
 }
 
-bool Canvas::onMousePress(MouseEvent* event) {
+bool Canvas::onMousePress(ui::MouseEvent* event) {
 
     if (mousePressed_ || tabletPressed_) {
         return true;
@@ -446,15 +446,17 @@ bool Canvas::onMousePress(MouseEvent* event) {
         return true;
     }
 
-    ModifierKeys keys = event->modifierKeys();
-    MouseButton button = event->button();
-    if (keys == ModifierKey::None && button == MouseButton::Middle) {
+    using K = ui::ModifierKey;
+    using B = ui::MouseButton;
+    ui::ModifierKeys keys = event->modifierKeys();
+    ui::MouseButton button = event->button();
+    if (keys == K::None && button == B::Middle) {
         isPanning_ = true;
     }
-    else if (keys == ModifierKey::Alt && button == MouseButton::Right) {
+    else if (keys == K::Alt && button == B::Right) {
         isRotating_ = true;
     }
-    else if (keys == ModifierKey::Alt && button == MouseButton::Middle) {
+    else if (keys == K::Alt && button == B::Middle) {
         isZooming_ = true;
     }
 
@@ -468,7 +470,7 @@ bool Canvas::onMousePress(MouseEvent* event) {
     return false;
 }
 
-bool Canvas::onMouseRelease(MouseEvent* event) {
+bool Canvas::onMouseRelease(ui::MouseEvent* event) {
 
     if (!mousePressed_ || mouseButtonAtPress_ != event->button()) {
         return false;
@@ -504,7 +506,7 @@ bool Canvas::onMouseRelease(MouseEvent* event) {
     return true;
 }
 
-bool Canvas::onMouseScroll(ScrollEvent* event) {
+bool Canvas::onMouseScroll(ui::ScrollEvent* event) {
     if (mousePressed_) {
         return true;
     }
@@ -559,7 +561,7 @@ bool Canvas::onMouseScroll(ScrollEvent* event) {
             }
         }
     }
-    else if (event->modifierKeys() == ModifierKey::Alt) {
+    else if (event->modifierKeys() == ui::ModifierKey::Alt) {
         // At least on Linux KDE, scrolling on a touchpad with Alt pressed
         // switches from vertical to horizontal scrolling.
         // So we use horizontal if vertical delta is zero.
@@ -629,7 +631,7 @@ void Canvas::onPaintCreate(graphics::Engine* engine) {
 // end to call the `onPaintDraw()` method of the CanvasTool children of the
 // Canvas.
 //
-void Canvas::onPaintDraw(graphics::Engine* engine, PaintOptions options) {
+void Canvas::onPaintDraw(graphics::Engine* engine, ui::PaintOptions options) {
 
     using namespace graphics;
     namespace gs = graphics::strings;
@@ -745,4 +747,4 @@ core::Array<workspace::Element*> Canvas::selectedElements_() const {
     return result;
 }
 
-} // namespace vgc::ui
+} // namespace vgc::canvas

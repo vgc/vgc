@@ -14,7 +14,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <vgc/ui/canvastool.h>
+#include <vgc/canvas/canvastool.h>
 
 #include <QBitmap>
 #include <QCursor>
@@ -25,7 +25,7 @@
 #include <vgc/ui/qtutil.h>
 #include <vgc/ui/strings.h>
 
-namespace vgc::ui {
+namespace vgc::canvas {
 
 CanvasToolPtr CanvasTool::create() {
     CanvasToolPtr res = new CanvasTool();
@@ -56,7 +56,7 @@ CanvasTool::CanvasTool()
     // so that they can be trigerred with their shortcut even if the canvas
     // doesn't have the focus.
     //
-    setFocusPolicy(FocusPolicy::Click | FocusPolicy::Sticky);
+    setFocusPolicy(ui::FocusPolicy::Click | ui::FocusPolicy::Sticky);
 
     // Enable clipping, so that tools don't draw outside the canvas.
     //
@@ -81,10 +81,10 @@ ui::WidgetPtr CanvasTool::createOptionsWidget() const {
 // Reimplementation of Widget virtual methods
 
 void CanvasTool::onParentWidgetChanged(Widget* newParent) {
-    canvas_ = dynamic_cast<ui::Canvas*>(newParent);
+    canvas_ = dynamic_cast<canvas::Canvas*>(newParent);
 }
 
-void CanvasTool::preMouseMove(MouseEvent* event) {
+void CanvasTool::preMouseMove(ui::MouseEvent* event) {
     if (event->isTablet()) {
         if (pressedMouseButtons_) {
             event->stopPropagation();
@@ -97,7 +97,7 @@ void CanvasTool::preMouseMove(MouseEvent* event) {
     }
 }
 
-void CanvasTool::preMousePress(MouseEvent* event) {
+void CanvasTool::preMousePress(ui::MouseEvent* event) {
     if (event->isTablet()) {
         if (pressedMouseButtons_) {
             event->stopPropagation();
@@ -116,7 +116,7 @@ void CanvasTool::preMousePress(MouseEvent* event) {
     }
 }
 
-void CanvasTool::preMouseRelease(MouseEvent* event) {
+void CanvasTool::preMouseRelease(ui::MouseEvent* event) {
     if (event->isTablet()) {
         if (!pressedTabletButtons_.has(event->button())) {
             event->stopPropagation();
@@ -139,4 +139,4 @@ geometry::Vec2f CanvasTool::computePreferredSize() const {
     return geometry::Vec2f(0, 0);
 }
 
-} // namespace vgc::ui
+} // namespace vgc::canvas
