@@ -89,7 +89,7 @@ private:
     Int priority_;
 };
 
-/// \class vgc::ui::Canvas
+/// \class vgc::canvas::Canvas
 /// \brief A document canvas widget.
 ///
 class VGC_CANVAS_API Canvas : public ui::Widget {
