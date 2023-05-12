@@ -595,7 +595,7 @@ void SketchTool::updateUnquantizedData_(bool /*isFinalPass*/) {
     // delta time across all samples.
     //
     Int numInputPoints = inputPoints_.length();
-    core::DoubleArray timestamps = inputTimestamps_;
+    core::DoubleArray timestamps;
     if (isInputTimestampsQuantized_ && numInputPoints > 2) {
         double startTime = inputTimestamps_.first();
         double endTime = inputTimestamps_.last();
@@ -705,17 +705,138 @@ void SketchTool::updateUnquantizedData_(bool /*isFinalPass*/) {
     // TODO: remap points to keep widths data ?
 }
 
+// At stroke extremities, we discard points which are too close to the end
+// point, more aggressively than in the middle of the curve, because:
+//
+// 1. The extremities of strokes tend to need more cleanup than the middle
+//    of strokes (human physiology: more noise when initiating the motion).
+//
+// 2. It's more important for joins to have smooth and well defined
+//    tangents at stroke extremities than in the middle of strokes.
+//
+// Unlike other discarding performed in the smoothing step, this discarding
+// depends on distance in pixels rather than the width, since for
+// extremities, the width is not a reliable or meaningful metric to use.
+//
+void SketchTool::updatePreTransformedData_(bool /*isFinalPass*/) {
+
+    constexpr float minDistanceToSecondSample = 5; // in pixels
+
+    // Convenient aliases for in/out arrays
+    const geometry::Vec2fArray& inPoints = unquantizedPoints_;
+    const core::DoubleArray& inWidths = unquantizedWidths_;
+    const core::DoubleArray& inTimestamps = unquantizedTimestamps_;
+    geometry::Vec2fArray& outPoints = preTransformedPoints_;
+    core::DoubleArray& outWidths = preTransformedWidths_;
+    core::DoubleArray& outTimestamps = preTransformedTimestamps_;
+
+    // Fast path if there are two samples or less
+    Int n = inPoints.length();
+    VGC_ASSERT(inWidths.length() == n);
+    VGC_ASSERT(inTimestamps.length() == n);
+    if (n <= 2) {
+        outPoints = inPoints;
+        outWidths = inWidths;
+        outTimestamps = inTimestamps;
+        return;
+    }
+
+    // Clear computations from previous mouse move
+    outPoints.clear();
+    outWidths.clear();
+    outTimestamps.clear();
+
+    // Find new second samplesand second-to-last sample, if any.
+    //
+    // Legend:
+    //
+    // <-d->  minDistanceToSecondSample
+    // x      input samples
+    // s      selected new second sample
+    // l      selected new second-to-last sample
+    // b      both selected new second sample and second-to-last sample are the same
+    //
+    //      Input                Output            iSecond  iSecondLast
+    //
+    // <-d->
+    // x-x---s-x--S----x-x   x-----x-x--x------x     2       4
+    //
+    // S-x--s                x----x                  2       0
+    //
+    // x-x---b----x          x-----x----x            2       2
+    //
+    // x-S--s--x             x-------x               2       1
+    //
+    Int iSecond = n;
+    geometry::Vec2f startPoint = inPoints[0];
+    for (Int i = 1; i < n - 1; ++i) {
+        if ((inPoints[i] - startPoint).length() > minDistanceToSecondSample) {
+            iSecond = i;
+            break;
+        }
+    }
+    Int iSecondLast = 0;
+    geometry::Vec2f endPoint = inPoints[n - 1];
+    for (Int i = n - 2; i >= 1; --i) {
+        if ((inPoints[i] - endPoint).length() > minDistanceToSecondSample) {
+            iSecondLast = i;
+            break;
+        }
+    }
+    VGC_ASSERT(1 <= iSecond && iSecond <= n);
+    VGC_ASSERT(0 <= iSecondLast && iSecondLast <= n - 2);
+
+    // Fill out arrays without discarded points
+    outPoints.append(inPoints[0]);
+    outWidths.append(inWidths[0]);
+    outTimestamps.append(inTimestamps[0]);
+    for (Int i = iSecond; i <= iSecondLast; ++i) {
+        outPoints.append(inPoints[i]);
+        outWidths.append(inWidths[i]);
+        outTimestamps.append(inTimestamps[i]);
+    }
+    outPoints.append(inPoints[n - 1]);
+    outWidths.append(inWidths[n - 1]);
+    outTimestamps.append(inTimestamps[n - 1]);
+
+    // Apply minimal smoothing to the kept second and second-to-last sample,
+    // since discarding points introduced discontinuity.
+    //
+    // We don't do if if input points are quantized, because the smoothing we
+    // use assumes that we have uniformly distributed points, and our current
+    // dequantization does not output unifomly distributed points.
+    //
+    if (!isInputPointsQuantized_) {
+        n = outPoints.length();
+        if (n > 3) {
+            geometry::Vec2f pSecond =
+                0.25f * outPoints[0] + 0.5f * outPoints[1] + 0.25f * outPoints[2];
+            double wSecond =
+                0.25f * outWidths[0] + 0.5f * outWidths[1] + 0.25f * outWidths[2];
+            geometry::Vec2f pSecondLast = 0.25f * outPoints[n - 3]
+                                          + 0.5f * outPoints[n - 2]
+                                          + 0.25f * outPoints[n - 1];
+            double wSecondLast = 0.25f * outWidths[n - 3] + 0.5f * outWidths[n - 2]
+                                 + 0.25f * outWidths[n - 1];
+            outPoints[1] = pSecond;
+            outWidths[1] = wSecond;
+            outPoints[n - 2] = pSecondLast;
+            outWidths[n - 2] = wSecondLast;
+        }
+    }
+}
+
 void SketchTool::updateTransformedData_(bool /*isFinalPass*/) {
-    Int n = unquantizedPoints_.length();
+    Int n = preTransformedPoints_.length();
     transformedPoints_.resize(n);
     transformedTimestamps_.resize(n);
-    double startTime = (n > 0) ? unquantizedTimestamps_.first() : 0;
+    double startTime = (n > 0) ? preTransformedTimestamps_.first() : 0;
     for (Int i = 0; i < n; ++i) {
-        geometry::Vec2d pointd(unquantizedPoints_[i]);
+        geometry::Vec2d pointd(preTransformedPoints_[i]);
         transformedPoints_[i] = canvasToWorkspaceMatrix_.transformPointAffine(pointd);
-        transformedTimestamps_[i] = unquantizedTimestamps_[i] - startTime;
+        transformedTimestamps_[i] = preTransformedTimestamps_[i] - startTime;
     }
-    transformedWidths_ = unquantizedWidths_;
+    transformedWidths_ = preTransformedWidths_;
 }
 
 namespace {
@@ -763,7 +884,7 @@ void indexBasedGaussianSmoothing(const core::Array<T>& in, core::Array<T>& out) 
     Int n = in.length();
     out.resizeNoInit(n);
     for (Int i = 0; i < n; ++i) {
-        double value = 0;
+        T value = {};
         double sumCoeffs = 0;
         Int j = i - l;
         for (Int k = 0; k < m; ++k, ++j) {
@@ -983,7 +1104,7 @@ void SketchTool::updateSmoothedData_(bool /*isFinalPass*/) {
     // Smooth points.
     //
     smoothedPoints_ = transformedPoints_;
-    Int pointsSmoothingLevel = 0;
+    Int pointsSmoothingLevel = hasPressure_ ? 0 : 0;
     if (pointsSmoothingLevel > 0 && numPoints >= 3) {
         // Apply gaussian smoothing.
 
@@ -1025,7 +1146,7 @@ void SketchTool::updateSmoothedData_(bool /*isFinalPass*/) {
     // the first/last width unchanged.
     //
     if (hasPressure_) {
-        constexpr size_t widthSmoothingLevel = 4;
+        constexpr size_t widthSmoothingLevel = 2;
         constexpr double widthRoughness = 0.8;
         indexBasedGaussianSmoothing<widthSmoothingLevel>(
             transformedWidths_, smoothedWidths_);
@@ -1238,6 +1359,7 @@ void SketchTool::continueCurve_(MouseEvent* event) {
 
     // Apply all processing steps
     updateUnquantizedData_(false);
+    updatePreTransformedData_(false);
     updateTransformedData_(false);
     updateSmoothedData_(false);
     updateSnappedData_(false);
@@ -1262,6 +1384,7 @@ void SketchTool::finishCurve_(MouseEvent* /*event*/) {
 
     // Apply all processing steps
     updateUnquantizedData_(true);
+    updatePreTransformedData_(true);
     updateTransformedData_(true);
     updateSmoothedData_(true);
     updateSnappedData_(true);
@@ -1316,8 +1439,13 @@ void SketchTool::resetData_() {
     dequantizerBufferStartIndex = 0;
     unquantizedPoints_.clear();
     unquantizedWidths_.clear();
+    unquantizedTimestamps_.clear();
+    preTransformedPoints_.clear();
+    preTransformedWidths_.clear();
+    preTransformedTimestamps_.clear();
     transformedPoints_.clear();
     transformedWidths_.clear();
+    transformedTimestamps_.clear();
     smoothedPoints_.clear();
     smoothedWidths_.clear();
     snappedPoints_.clear();
