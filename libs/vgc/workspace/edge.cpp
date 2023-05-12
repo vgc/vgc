@@ -61,6 +61,8 @@ bool VacEdgeCellFrameData::resetToStage(VacEdgeComputationStage stage) {
             sampling_.reset();
             graphics_.clearCenterlineGeometry();
             graphics_.clearSelectionGeometry();
+            selectionTestCacheRect_ = geometry::Rect2d::empty;
+            selectionTestCacheResult_ = false;
             [[fallthrough]];
         }
     case VacEdgeComputationStage::Clear:
@@ -174,6 +176,46 @@ bool VacEdgeCellFrameData::isSelectableAt(
     return false;
 }
 
+bool VacEdgeCellFrameData::isSelectableInRect(const geometry::Rect2d& rect) const {
+    using Vec2d = geometry::Vec2d;
+
+    if (rect.isEmpty()) {
+        return false;
+    }
+
+    if (selectionTestCacheRect_ == rect) {
+        return selectionTestCacheResult_;
+    }
+
+    if (bbox_.isEmpty() || !bbox_.intersects(rect)) {
+        return false;
+    }
+
+    // use "binary search"-style tree/array of bboxes?
+
+    if (!sampling_ || sampling_->samples().isEmpty()) {
+        return false;
+    }
+
+    const geometry::CurveSampleArray& samples = sampling_->samples();
+
+    struct SamplePositionGetter {
+        Vec2d operator()(const geometry::CurveSample& s) {
+            return s.position();
+        }
+    };
+
+    bool result =
+        rect.intersectsPolyline(samples.begin(), samples.end(), SamplePositionGetter());
+
+    // We only cache the result if it reaches the intersectsPolyline() test because
+    // it seems better to only cache "costly" result.
+    selectionTestCacheRect_ = rect;
+    selectionTestCacheResult_ = result;
+
+    return result;
+}
+
 namespace detail {
 
 graphics::GeometryViewPtr
@@ -222,6 +264,15 @@ bool VacKeyEdge::isSelectableAt(
 
     if (frameData_.time() == t) {
         return frameData_.isSelectableAt(position, outlineOnly, tol, outDistance);
+    }
+    return false;
+}
+
+bool VacKeyEdge::isSelectableInRect(const geometry::Rect2d& rect, core::AnimTime t)
+    const {
+
+    if (frameData_.time() == t) {
+        return frameData_.isSelectableInRect(rect);
     }
     return false;
 }

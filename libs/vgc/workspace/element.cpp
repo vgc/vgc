@@ -44,6 +44,12 @@ bool Element::isSelectableAt(
     return false;
 }
 
+bool Element::isSelectableInRect(const geometry::Rect2d& /*rect*/, core::AnimTime /*t*/)
+    const {
+
+    return false;
+}
+
 void Element::addDependency(Element* element) {
     if (element && !dependencies_.contains(element)) {
         dependencies_.emplaceLast(element);

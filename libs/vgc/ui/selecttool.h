@@ -51,9 +51,14 @@ protected:
     bool onMousePress(MouseEvent* event) override;
     bool onMouseRelease(MouseEvent* event) override;
 
+    void onResize() override;
+    void onPaintCreate(graphics::Engine* engine) override;
+    void onPaintDraw(graphics::Engine* engine, PaintOptions options) override;
+    void onPaintDestroy(graphics::Engine* engine) override;
+
 private:
     enum class SelectionMode {
-        Single,
+        New,
         Add,
         Remove,
         Toggle
@@ -65,8 +70,10 @@ private:
     };
 
     core::Array<SelectionCandidate> candidates_;
+    core::Array<core::Id> rectCandidates_;
     core::Array<core::Id> selectionAtPress_;
     geometry::Vec2f cursorPositionAtPress_;
+    geometry::Vec2f cursorPosition_;
     double timeAtPress_ = 0;
     bool isInAction_ = false;
     bool isDragging_ = false;
@@ -76,6 +83,7 @@ private:
     bool isAlternativeMode_ = false;
     core::Id lastSelectedId_ = -1;
     core::Id lastDeselectedId_ = -1;
+    graphics::GeometryViewPtr selectionRectangleGeometry_;
 
     // drag-move data
     struct KeyVertexDragData {
