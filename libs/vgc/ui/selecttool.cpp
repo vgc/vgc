@@ -370,7 +370,12 @@ bool SelectTool::onMouseRelease(MouseEvent* event) {
             // Rectangle selection.
             switch (selectionMode_) {
             case SelectionMode::Toggle: {
-                // TODO: Toggle selection.
+                for (core::Id id : rectCandidates_) {
+                    if (!selection.removeOne(id)) {
+                        selection.append(id);
+                    }
+                }
+                selectionChanged = !rectCandidates_.isEmpty();
                 break;
             }
             case SelectionMode::Add: {
@@ -385,7 +390,6 @@ bool SelectTool::onMouseRelease(MouseEvent* event) {
             case SelectionMode::Remove: {
                 for (core::Id id : rectCandidates_) {
                     if (selection.removeOne(id)) {
-                        selection.append(id);
                         selectionChanged = true;
                     }
                 }
