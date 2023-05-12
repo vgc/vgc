@@ -17,8 +17,8 @@
 #ifndef VGC_TOOLS_STRINGS_H
 #define VGC_TOOLS_STRINGS_H
 
-#include <vgc/tools/api.h>
 #include <vgc/core/stringid.h>
+#include <vgc/tools/api.h>
 
 namespace vgc::tools::strings {
 

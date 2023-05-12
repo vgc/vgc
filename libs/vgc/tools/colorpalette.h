@@ -18,6 +18,7 @@
 #define VGC_TOOLS_COLORPALETTE_H
 
 #include <vgc/geometry/rect2f.h>
+#include <vgc/tools/api.h>
 #include <vgc/ui/button.h>
 #include <vgc/ui/column.h>
 #include <vgc/ui/cursor.h>
@@ -42,7 +43,7 @@ VGC_DECLARE_OBJECT(ScreenColorPickerButton);
 /// \class vgc::tools::ScreenColorPickerButton
 /// \brief Allow users to pick a screen color.
 ///
-class VGC_UI_API ScreenColorPickerButton : public ui::Button {
+class VGC_TOOLS_API ScreenColorPickerButton : public ui::Button {
 private:
     VGC_OBJECT(ScreenColorPickerButton, ui::Button)
 
@@ -81,7 +82,7 @@ private:
 /// \class vgc::tools::ColorPalette
 /// \brief Allow users to select a color.
 ///
-class VGC_UI_API ColorPalette : public ui::Column {
+class VGC_TOOLS_API ColorPalette : public ui::Column {
 private:
     VGC_OBJECT(ColorPalette, ui::Column)
 
@@ -199,7 +200,7 @@ private:
 /// \class vgc::tools::ColorPaletteSelector
 /// \brief Allow users to select a color.
 ///
-class VGC_UI_API ColorPaletteSelector : public ui::Widget {
+class VGC_TOOLS_API ColorPaletteSelector : public ui::Widget {
 private:
     VGC_OBJECT(ColorPaletteSelector, ui::Widget)
 
@@ -367,7 +368,7 @@ private:
 /// \class vgc::tools::ColorPreview
 /// \brief Display a color.
 ///
-class VGC_UI_API ColorPreview : public ui::Widget {
+class VGC_TOOLS_API ColorPreview : public ui::Widget {
 private:
     VGC_OBJECT(ColorPreview, ui::Widget)
 
@@ -408,7 +409,7 @@ private:
 /// \class vgc::tools::ColorListView
 /// \brief Shows a list of colors.
 ///
-class VGC_UI_API ColorListView : public ui::Widget {
+class VGC_TOOLS_API ColorListView : public ui::Widget {
 private:
     VGC_OBJECT(ColorListView, ui::Widget)
 
