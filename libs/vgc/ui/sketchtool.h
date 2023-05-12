@@ -161,6 +161,19 @@ protected:
     core::DoubleArray unquantizedTimestamps_;
     void updateUnquantizedData_(bool isFinalPass);
 
+    // Pre-transform processing.
+    //
+    // In this step, we apply any processing that we'd like to do before the
+    // transform step, that is, all processing that relies on positions in
+    // canvas coordinates space rather than positions in workspace coordinates.
+    //
+    // Invariant: all arrays have the same length.
+    //
+    geometry::Vec2fArray preTransformedPoints_;
+    core::DoubleArray preTransformedWidths_;
+    core::DoubleArray preTransformedTimestamps_;
+    void updatePreTransformedData_(bool isFinalPass);
+
     // Transformation.
     //
     // This step applies the transformation from canvas coordinates to
