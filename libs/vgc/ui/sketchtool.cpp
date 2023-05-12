@@ -767,18 +767,21 @@ void SketchTool::updatePreTransformedData_(bool /*isFinalPass*/) {
     //
     // x-S--s--x             x-------x               2       1
     //
+    VGC_ASSERT(n > 2);
     Int iSecond = n;
-    geometry::Vec2f startPoint = inPoints[0];
+    geometry::Vec2f startPoint = inPoints.getUnchecked(0);
     for (Int i = 1; i < n - 1; ++i) {
-        if ((inPoints[i] - startPoint).length() > minDistanceToSecondSample) {
+        geometry::Vec2f point = inPoints.getUnchecked(i);
+        if ((point - startPoint).length() > minDistanceToSecondSample) {
             iSecond = i;
             break;
         }
     }
     Int iSecondLast = 0;
-    geometry::Vec2f endPoint = inPoints[n - 1];
+    geometry::Vec2f endPoint = inPoints.getUnchecked(n - 1);
     for (Int i = n - 2; i >= 1; --i) {
-        if ((inPoints[i] - endPoint).length() > minDistanceToSecondSample) {
+        geometry::Vec2f point = inPoints.getUnchecked(i);
+        if ((point - endPoint).length() > minDistanceToSecondSample) {
             iSecondLast = i;
             break;
         }
@@ -787,17 +790,17 @@ void SketchTool::updatePreTransformedData_(bool /*isFinalPass*/) {
     VGC_ASSERT(0 <= iSecondLast && iSecondLast <= n - 2);
 
     // Fill out arrays without discarded points
-    outPoints.append(inPoints[0]);
-    outWidths.append(inWidths[0]);
-    outTimestamps.append(inTimestamps[0]);
+    outPoints.append(inPoints.getUnchecked(0));
+    outWidths.append(inWidths.getUnchecked(0));
+    outTimestamps.append(inTimestamps.getUnchecked(0));
     for (Int i = iSecond; i <= iSecondLast; ++i) {
         outPoints.append(inPoints[i]);
         outWidths.append(inWidths[i]);
         outTimestamps.append(inTimestamps[i]);
     }
-    outPoints.append(inPoints[n - 1]);
-    outWidths.append(inWidths[n - 1]);
-    outTimestamps.append(inTimestamps[n - 1]);
+    outPoints.append(inPoints.getUnchecked(n - 1));
+    outWidths.append(inWidths.getUnchecked(n - 1));
+    outTimestamps.append(inTimestamps.getUnchecked(n - 1));
 
     // Apply minimal smoothing to the kept second and second-to-last sample,
     // since discarding points introduced discontinuity.
@@ -809,19 +812,24 @@ void SketchTool::updatePreTransformedData_(bool /*isFinalPass*/) {
     if (!isInputPointsQuantized_) {
         n = outPoints.length();
         if (n > 3) {
-            geometry::Vec2f pSecond =
-                0.25f * outPoints[0] + 0.5f * outPoints[1] + 0.25f * outPoints[2];
-            double wSecond =
-                0.25f * outWidths[0] + 0.5f * outWidths[1] + 0.25f * outWidths[2];
-            geometry::Vec2f pSecondLast = 0.25f * outPoints[n - 3]
-                                          + 0.5f * outPoints[n - 2]
-                                          + 0.25f * outPoints[n - 1];
-            double wSecondLast = 0.25f * outWidths[n - 3] + 0.5f * outWidths[n - 2]
-                                 + 0.25f * outWidths[n - 1];
-            outPoints[1] = pSecond;
-            outWidths[1] = wSecond;
-            outPoints[n - 2] = pSecondLast;
-            outWidths[n - 2] = wSecondLast;
+            geometry::Vec2f p1 = outPoints.getUnchecked(0);
+            geometry::Vec2f p2 = outPoints.getUnchecked(1);
+            geometry::Vec2f p3 = outPoints.getUnchecked(2);
+            geometry::Vec2f p4 = outPoints.getUnchecked(n - 3);
+            geometry::Vec2f p5 = outPoints.getUnchecked(n - 2);
+            geometry::Vec2f p6 = outPoints.getUnchecked(n - 1);
+
+            double w1 = outWidths.getUnchecked(0);
+            double w2 = outWidths.getUnchecked(1);
+            double w3 = outWidths.getUnchecked(2);
+            double w4 = outWidths.getUnchecked(n - 3);
+            double w5 = outWidths.getUnchecked(n - 2);
+            double w6 = outWidths.getUnchecked(n - 1);
+
+            outPoints.getUnchecked(1) = 0.25f * p1 + 0.5f * p2 + 0.25f * p3;
+            outWidths.getUnchecked(1) = 0.25f * w1 + 0.5f * w2 + 0.25f * w3;
+            outPoints.getUnchecked(n - 2) = 0.25f * p4 + 0.5f * p5 + 0.25f * p6;
+            outWidths.getUnchecked(n - 2) = 0.25f * w4 + 0.5f * w5 + 0.25f * w6;
         }
     }
 }
