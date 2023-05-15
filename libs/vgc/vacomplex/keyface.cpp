@@ -257,6 +257,11 @@ void samplePointsOnCycleUniformly(
     for (const KeyHalfedge& khe : cycle) {
         const geometry::CurveSampleArray& samples = khe.edge()->sampling().samples();
         double heS = samples.last().s();
+        if (heS == 0) {
+            // XXX TODO: handle cases where heS == 0 more appropriately.
+            // For example, ensure that this function still returns at least one sample.
+            continue;
+        }
         if (khe.direction()) {
             auto it = samples.begin();
             geometry::Vec2d previousP = it->position();
@@ -299,8 +304,6 @@ void samplePointsOnCycleUniformly(
         }
         nextStepS -= heS;
     }
-
-    //VGC_DEBUG_TMP("outPoints.length(): {}", outPoints.length());
 }
 
 } // namespace
@@ -650,9 +653,12 @@ bool computeKeyFaceFillTriangles(
             for (const KeyHalfedge& khe : cycle.halfedges()) {
                 const KeyEdge* ke = khe.edge();
                 if (ke) {
-                    const geometry::CurveSampleArray& samples =
-                        quality ? ke->computeSampling(*quality).samples()
-                                : ke->sampling().samples();
+                    // Note: ke->computeSampling(*quality) returns an
+                    // EdgeSampling by value. The const ref extend its
+                    // lifetime.
+                    const EdgeSampling& sampling =
+                        quality ? ke->computeSampling(*quality) : ke->sampling();
+                    const geometry::CurveSampleArray& samples = sampling.samples();
                     if (khe.direction()) {
                         for (const geometry::CurveSample& s : samples) {
                             geometry::Vec2d p = s.position();
