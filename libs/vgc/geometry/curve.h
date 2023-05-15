@@ -37,7 +37,8 @@ enum class CurveSamplingQuality {
     AdaptiveLow,
     UniformHigh,
     AdaptiveHigh,
-    UniformVeryHigh
+    UniformVeryHigh,
+    Max_ = UniformVeryHigh
 };
 
 VGC_GEOMETRY_API

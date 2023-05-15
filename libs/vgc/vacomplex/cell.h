@@ -60,7 +60,7 @@ class InbetweenVertex;
 class InbetweenEdge;
 class InbetweenFace;
 
-class EdgeGeometry;
+class KeyEdgeGeometry;
 class FaceGeometry;
 
 /// \enum vgc::graph::CellSpatialType

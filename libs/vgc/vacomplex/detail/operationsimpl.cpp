@@ -63,11 +63,12 @@ KeyVertex* Operations::createKeyVertex(
     return kv;
 }
 
+// TODO: replace points & widths with `std::unique_ptr<EdgeGeometry>&& geometry`.
+
 KeyEdge* Operations::createKeyOpenEdge(
     KeyVertex* startVertex,
     KeyVertex* endVertex,
-    const geometry::SharedConstVec2dArray& points,
-    const core::SharedConstDoubleArray& widths,
+    std::unique_ptr<KeyEdgeGeometry>&& geometry,
     Group* parentGroup,
     Node* nextSibling,
     core::Span<Node*> operationSourceNodes,
@@ -82,16 +83,14 @@ KeyEdge* Operations::createKeyOpenEdge(
     addToBoundary_(ke, endVertex);
 
     // Geometric attributes
-    ke->points_ = points.getShared();
-    ke->widths_ = widths.getShared();
+    ke->geometry_ = std::move(geometry);
 
     complex()->nodeCreated().emit(ke, operationSourceNodes);
     return ke;
 }
 
 KeyEdge* Operations::createKeyClosedEdge(
-    const geometry::SharedConstVec2dArray& points,
-    const core::SharedConstDoubleArray& widths,
+    std::unique_ptr<KeyEdgeGeometry>&& geometry,
     Group* parentGroup,
     Node* nextSibling,
     core::Span<Node*> operationSourceNodes,
@@ -103,8 +102,7 @@ KeyEdge* Operations::createKeyClosedEdge(
     // -> None
 
     // Geometric attributes
-    ke->points_ = points.getShared();
-    ke->widths_ = widths.getShared();
+    ke->geometry_ = std::move(geometry);
 
     complex()->nodeCreated().emit(ke, operationSourceNodes);
     return ke;
@@ -322,57 +320,63 @@ void Operations::setKeyVertexPosition(KeyVertex* kv, const geometry::Vec2d& pos)
 
     kv->position_ = pos;
 
-    dirtyGeometry_(kv); // it also emits the geometry change event
+    dirtyGeometry(kv); // it also emits the geometry change event
 }
 
-void Operations::setKeyEdgeCurvePoints(
+void Operations::setKeyEdgeGeometry(
     KeyEdge* ke,
-    const geometry::SharedConstVec2dArray& points) {
+    std::unique_ptr<KeyEdgeGeometry>&& geometry) {
 
-    KeyEdge::SharedConstPoints sPoints = points.getShared();
-    if (sPoints == ke->points_) {
+    VGC_ASSERT(!geometry->edge_);
+
+    ke->geometry_ = std::move(geometry);
+    geometry->edge_ = ke;
+
+    ke->dirtyInputSampling_();
+    dirtyGeometry(ke); // it also emits the geometry change event
+}
+
+void Operations::setKeyEdgeSamplingQuality(
+    KeyEdge* ke,
+    geometry::CurveSamplingQuality quality) {
+
+    if (quality == ke->samplingQuality_) {
         // same data
         return;
     }
 
-    ke->points_ = std::move(sPoints);
-    ++ke->dataVersion_;
+    ke->samplingQuality_ = quality;
 
     ke->dirtyInputSampling_();
-    dirtyGeometry_(ke); // it also emits the geometry change event
+    dirtyGeometry(ke); // it also emits the geometry change event
 }
 
-void Operations::setKeyEdgeCurveWidths(
-    KeyEdge* ke,
-    const core::SharedConstDoubleArray& widths) {
-
-    KeyEdge::SharedConstWidths sWidths = widths.getShared();
-    if (sWidths == ke->widths_) {
-        // same data
+void Operations::dirtyGeometry(Cell* cell) {
+    if (!cell->hasGeometryBeenQueriedSinceLastDirtyEvent_) {
         return;
     }
 
-    ke->widths_ = std::move(sWidths);
-    ++ke->dataVersion_;
+    core::Array<Cell*> dirtyList;
 
-    ke->dirtyInputSampling_();
-    dirtyGeometry_(ke); // it also emits the geometry change event
-}
+    dirtyList.append(cell);
+    cell->hasGeometryBeenQueriedSinceLastDirtyEvent_ = false;
 
-void Operations::setKeyEdgeSamplingParameters(
-    KeyEdge* ke,
-    const geometry::CurveSamplingParameters& parameters) {
-
-    if (parameters == ke->samplingParameters_) {
-        // same data
-        return;
+    for (Cell* starCell : cell->star_) {
+        if (starCell->hasGeometryBeenQueriedSinceLastDirtyEvent_) {
+            // There is no need to call dirtyGeometry_ for starCell
+            // since starCell.star() is a subset of cell.star().
+            dirtyList.append(starCell);
+            starCell->hasGeometryBeenQueriedSinceLastDirtyEvent_ = false;
+            starCell->onBoundaryGeometryChanged_();
+        }
     }
 
-    ke->samplingParameters_ = parameters;
-    ++ke->dataVersion_;
-
-    ke->dirtyInputSampling_();
-    dirtyGeometry_(ke); // it also emits the geometry change event
+    for (Cell* dirtyCell : dirtyList) {
+        if (complex()->isDiffEnabled_) {
+            complex()->diff_.onNodeDiff(dirtyCell, NodeDiffFlag::GeometryChanged);
+        }
+        complex()->nodeModified().emit(dirtyCell, NodeDiffFlag::GeometryChanged);
+    }
 }
 
 void Operations::addToBoundary_(Cell* boundedCell, Cell* boundingCell) {
@@ -431,34 +435,6 @@ void Operations::collectDependentNodes_(
                 collectDependentNodes_(starNode, dependentNodes);
             }
         }
-    }
-}
-
-void Operations::dirtyGeometry_(Cell* cell) {
-    if (!cell->hasGeometryBeenQueriedSinceLastDirtyEvent_) {
-        return;
-    }
-
-    core::Array<Cell*> dirtyList;
-
-    dirtyList.append(cell);
-    cell->hasGeometryBeenQueriedSinceLastDirtyEvent_ = false;
-
-    for (Cell* starCell : cell->star_) {
-        if (starCell->hasGeometryBeenQueriedSinceLastDirtyEvent_) {
-            // There is no need to call dirtyGeometry_ for starCell
-            // since starCell.star() is a subset of cell.star().
-            dirtyList.append(starCell);
-            starCell->hasGeometryBeenQueriedSinceLastDirtyEvent_ = false;
-            starCell->onBoundaryGeometryChanged_();
-        }
-    }
-
-    for (Cell* dirtyCell : dirtyList) {
-        if (complex()->isDiffEnabled_) {
-            complex()->diff_.onNodeDiff(dirtyCell, NodeDiffFlag::GeometryChanged);
-        }
-        complex()->nodeModified().emit(dirtyCell, NodeDiffFlag::GeometryChanged);
     }
 }
 

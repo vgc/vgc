@@ -22,6 +22,7 @@
 #include <vgc/core/id.h>
 #include <vgc/geometry/vec2f.h>
 #include <vgc/tools/api.h>
+#include <vgc/vacomplex/edgegeometry.h>
 
 namespace vgc::tools {
 
@@ -92,7 +93,6 @@ private:
     };
     struct KeyEdgeDragData {
         core::Id elementId;
-        geometry::Vec2dArray points;
         bool isPartialTranslation;
     };
 
@@ -108,6 +108,9 @@ private:
     void updateDragMovedElements_(
         workspace::Workspace* workspace,
         const geometry::Vec2d& translationInWorkspace);
+
+    // assumes workspace is not null
+    void finalizeDragMovedElements_(workspace::Workspace* workspace);
 
     void resetActionState_();
 };

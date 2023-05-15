@@ -363,12 +363,20 @@ bool Select::onMouseRelease(ui::MouseEvent* event) {
         // buttons it didn't receive any press event for.
     }
 
+    workspace::Workspace* workspace = canvas->workspace();
+    if (!workspace) {
+        bool wasInAction = isInAction_;
+        resetActionState_();
+        return wasInAction;
+    }
+
     core::Array<core::Id> selection = selectionAtPress_;
     bool selectionChanged = false;
 
     // If we were dragging we can stop the action and return.
     if (isDragging_) {
-        if (dragAction_ == DragAction::Select) {
+        switch (dragAction_) {
+        case DragAction::Select: {
             // Rectangle selection.
             switch (selectionMode_) {
             case SelectionMode::Toggle: {
@@ -407,6 +415,13 @@ bool Select::onMouseRelease(ui::MouseEvent* event) {
             }
             lastSelectedId_ = -1;
             lastDeselectedId_ = -1;
+            break;
+        }
+        case DragAction::TranslateCandidate:
+        case DragAction::TranslateSelection: {
+            finalizeDragMovedElements_(workspace);
+            break;
+        }
         }
     }
     else {
@@ -633,13 +648,13 @@ void Select::initializeDragMoveData_(
     for (vacomplex::KeyEdge* ke : edgesToTranslate) {
         workspace::Element* element = workspace->findVacElement(ke->id());
         if (element) {
-            draggedEdges_.append({element->id(), ke->points(), false});
+            draggedEdges_.append({element->id(), false});
         }
     }
     for (vacomplex::KeyEdge* ke : affectedEdges) {
         workspace::Element* element = workspace->findVacElement(ke->id());
         if (element) {
-            draggedEdges_.append({element->id(), ke->points(), true});
+            draggedEdges_.append({element->id(), true});
         }
     }
 }
@@ -656,7 +671,7 @@ void Select::updateDragMovedElements_(
         undoGroup = history->createUndoGroup(Translate_Elements);
     }
 
-    // Translate cells
+    // Translate Vertices
     for (const KeyVertexDragData& kvd : draggedVertices_) {
         workspace::Element* element = workspace->find(kvd.elementId);
         if (element && element->vacNode() && element->vacNode()->isCell()) {
@@ -668,64 +683,33 @@ void Select::updateDragMovedElements_(
             }
         }
     }
+
+    // Close operation
+    if (undoGroup) {
+        bool amend = canAmendUndoGroup_ && undoGroup->parent()
+                     && undoGroup->parent()->name() == Translate_Elements;
+        undoGroup->close(amend);
+        canAmendUndoGroup_ = true;
+    }
+}
+
+void Select::finalizeDragMovedElements_(workspace::Workspace* workspace) {
+    // Open history group
+    static core::StringId Translate_Elements("Translate Elements");
+    core::UndoGroup* undoGroup = nullptr;
+    core::History* history = workspace->history();
+    if (history) {
+        undoGroup = history->createUndoGroup(Translate_Elements);
+    }
+
+    // Snap edges' geometry
     for (const KeyEdgeDragData& ked : draggedEdges_) {
         workspace::Element* element = workspace->find(ked.elementId);
         if (element && element->vacNode() && element->vacNode()->isCell()) {
             vacomplex::KeyEdge* ke = element->vacNode()->toCellUnchecked()->toKeyEdge();
             if (ke) {
-                geometry::Vec2dArray newPoints = ked.points;
-                if (newPoints.isEmpty()) {
-                    // do nothing
-                }
-                else if (ked.isPartialTranslation) {
-                    // Vertices are already translated here.
-                    geometry::Vec2d a = ke->startVertex()->position();
-                    geometry::Vec2d b = ke->endVertex()->position();
-                    if (newPoints.length() == 1) {
-                        // We would have to deal with "widths" if we want
-                        // to change the number of points.
-                        newPoints[0] = (a + b) * 0.5;
-                    }
-                    else if (newPoints.length() == 2) {
-                        // We would have to deal with "widths" if we want
-                        // to change the number of points.
-                        newPoints[0] = a;
-                        newPoints[1] = b;
-                    }
-                    else {
-                        geometry::Vec2d d1 = a - newPoints.first();
-                        geometry::Vec2d d2 = b - newPoints.last();
-
-                        // linear deformation in rough "s"
-                        double totalS = 0;
-                        geometry::Vec2d lastP = newPoints.first();
-                        for (const geometry::Vec2d& p : newPoints) {
-                            totalS += (p - lastP).length();
-                            lastP = p;
-                        }
-                        if (totalS > 0) {
-                            double currentS = 0;
-                            lastP = newPoints.first();
-                            for (geometry::Vec2d& p : newPoints) {
-                                currentS += (p - lastP).length();
-                                lastP = p;
-                                double t = currentS / totalS;
-                                p += (d1 + t * (d2 - d1));
-                            }
-                        }
-                        else {
-                            for (geometry::Vec2d& p : newPoints) {
-                                p += d1;
-                            }
-                        }
-                    }
-                }
-                else {
-                    for (geometry::Vec2d& p : newPoints) {
-                        p += translationInWorkspace;
-                    }
-                }
-                vacomplex::ops::setKeyEdgeCurvePoints(ke, std::move(newPoints));
+                // Vertices are already translated here.
+                ke->snapGeometry();
             }
         }
     }

@@ -1,4 +1,4 @@
-// Copyright 2022 The VGC Developers
+// Copyright 2023 The VGC Developers
 // See the COPYRIGHT file at the top-level directory of this distribution
 // and at https://github.com/vgc/vgc/blob/master/COPYRIGHT
 //
@@ -14,18 +14,27 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <vgc/vacomplex/detail/operationsimpl.h>
+#ifndef VGC_WORKSPACE_EDGEGEOMETRY_H
+#define VGC_WORKSPACE_EDGEGEOMETRY_H
+
+#include <vgc/dom/element.h>
 #include <vgc/vacomplex/edgegeometry.h>
-#include <vgc/vacomplex/keyedge.h>
+#include <vgc/workspace/api.h>
 
-namespace vgc::vacomplex {
+namespace vgc::workspace {
 
-void KeyEdgeGeometry::dirtyEdgeSampling() const {
-    if (edge_) {
-        edge_->dirtyInputSampling_();
-        detail::Operations ops(edge_->complex());
-        ops.dirtyGeometry(edge_); // it also emits the geometry change event
+class VGC_WORKSPACE_API EdgeGeometry : public vacomplex::KeyEdgeGeometry {
+public:
+    std::unique_ptr<EdgeGeometry> cloneWorkspaceEdgeGeometry() {
+        return std::unique_ptr<EdgeGeometry>(
+            static_cast<EdgeGeometry*>(clone().release()));
     }
-}
 
-} // namespace vgc::vacomplex
+    virtual bool updateFromDomEdge_(dom::Element* element) = 0;
+    virtual void writeToDomEdge_(dom::Element* element) const = 0;
+    virtual void removeFromDomEdge_(dom::Element* element) const = 0;
+};
+
+} // namespace vgc::workspace
+
+#endif // VGC_WORKSPACE_EDGEGEOMETRY_H

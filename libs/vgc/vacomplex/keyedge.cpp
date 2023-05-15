@@ -18,112 +18,120 @@
 
 namespace vgc::vacomplex {
 
+KeyEdge::~KeyEdge() {
+    if (geometry_) {
+        geometry_->edge_ = nullptr;
+    }
+}
+
+void KeyEdge::snapGeometry() {
+    geometry::Vec2d snapStartPosition = {};
+    geometry::Vec2d snapEndPosition = {};
+
+    if (!isClosed()) {
+        snapStartPosition = startVertex_->position();
+        snapEndPosition = endVertex_->position();
+    }
+    else {
+        // todo: set snapStartPosition
+        snapEndPosition = snapStartPosition;
+    }
+    geometry_->snap(snapStartPosition, snapEndPosition);
+}
+
 std::shared_ptr<const EdgeSampling> KeyEdge::samplingShared() const {
-    sampling();
-    return snappedSampling_;
+    updateSampling_();
+    return sampling_;
 }
 
 const EdgeSampling& KeyEdge::sampling() const {
-
-    if (snappedSampling_) {
-        return *snappedSampling_;
-    }
-
-    geometry::CurveSampleArray snappedSamples;
-
-    if (inputSamples_.isEmpty()) {
-        inputSamples_ = computeInputSamples_(samplingParameters_);
-    }
-    hasGeometryBeenQueriedSinceLastDirtyEvent_ = true;
-
-    // TODO: transform and snap
-
-    snappedSamples = inputSamples_;
-
-    // TODO: define guarantees.
-    // - what about a closed edge without points data ?
-    // - what about an open edge without points data and same end points ?
-    // - what about an open edge without points data but different end points ?
-    if (!isClosed() && !snappedSamples.isEmpty()) {
-        snappedSamples.first().setPosition(startVertex_->position());
-        snappedSamples.last().setPosition(endVertex_->position());
-    }
-
-    snappedSamplingBbox_ = geometry::Rect2d::empty;
-    for (const auto& sample : snappedSamples) {
-        snappedSamplingBbox_.uniteWith(sample.sidePoint(0));
-        snappedSamplingBbox_.uniteWith(sample.sidePoint(1));
-    }
-
-    snappedSampling_ = std::make_shared<EdgeSampling>(std::move(snappedSamples));
-
-    return *snappedSampling_;
+    updateSampling_();
+    return *sampling_;
 }
 
-const geometry::Rect2d& KeyEdge::samplingBoundingBox() const {
-    // update sampling
-    sampling();
-    return snappedSamplingBbox_;
+const geometry::Rect2d& KeyEdge::centerlineBoundingBox() const {
+    updateSampling_();
+    return sampling_ ? sampling_->centerlineBoundingBox() : geometry::Rect2d::empty;
 }
 
 /// Computes and returns a new array of samples for this edge according to the
 /// given `parameters`.
 ///
-/// Unlike `sampling()`, this function does not cache the result.
+/// Unlike `sampling()`, this function does not cache the result unless
+/// `quality == edge->samplingQuality()`.
 ///
-geometry::CurveSampleArray
-KeyEdge::computeSampling(const geometry::CurveSamplingParameters& parameters) const {
+EdgeSampling KeyEdge::computeSampling(geometry::CurveSamplingQuality quality) const {
 
-    if (samplingParameters_ == parameters) {
+    if (samplingQuality_ == quality && sampling_) {
         // return copy of cached sampling
-        return sampling().samples();
+        return *sampling_;
     }
 
-    geometry::CurveSampleArray sampling = computeInputSamples_(parameters);
+    EdgeSampling sampling = computeSampling_(samplingQuality_);
 
-    // TODO: transform and snap
+    if (samplingQuality_ == quality) {
+        sampling_ = std::make_shared<const EdgeSampling>(sampling);
+        hasGeometryBeenQueriedSinceLastDirtyEvent_ = true;
+    }
 
     return sampling;
 }
 
 double KeyEdge::startAngle() const {
-    sampling();
+    updateSampling_();
     // TODO: guarantee at least one sample
-    if (!snappedSampling_->samples().isEmpty()) {
-        return snappedSampling_->samples().first().tangent().angle();
+    if (!sampling_->samples().isEmpty()) {
+        return sampling_->samples().first().tangent().angle();
     }
     return 0;
 }
 
 double KeyEdge::endAngle() const {
-    sampling();
+    updateSampling_();
     // TODO: guarantee at least one sample
-    if (!snappedSampling_->samples().isEmpty()) {
-        geometry::Vec2d endTangent = snappedSampling_->samples().last().tangent();
+    if (!sampling_->samples().isEmpty()) {
+        geometry::Vec2d endTangent = sampling_->samples().last().tangent();
         return (-endTangent).angle();
     }
     return 0;
 }
 
+EdgeSampling KeyEdge::computeSampling_(geometry::CurveSamplingQuality quality) const {
+    // TODO: define guarantees.
+    // - what about a closed edge without points data ?
+    // - what about an open edge without points data and same end points ?
+    // - what about an open edge without points data but different end points ?
+
+    geometry::Vec2d snapStartPosition = {};
+    geometry::Vec2d snapEndPosition = {};
+
+    if (!isClosed()) {
+        snapStartPosition = startVertex_->position();
+        snapEndPosition = endVertex_->position();
+    }
+    else {
+        // todo: set snapStartPosition
+        snapEndPosition = snapStartPosition;
+    }
+
+    return geometry_->computeSampling(quality, snapStartPosition, snapEndPosition);
+}
+
+void KeyEdge::updateSampling_() const {
+    if (!sampling_) {
+        EdgeSampling sampling = computeSampling_(samplingQuality_);
+        sampling_ = std::make_shared<const EdgeSampling>(std::move(sampling));
+        hasGeometryBeenQueriedSinceLastDirtyEvent_ = true;
+    }
+}
+
 void KeyEdge::dirtyInputSampling_() {
-    snappedSampling_.reset();
-    inputSamples_.clear();
+    sampling_.reset();
 }
 
 void KeyEdge::onBoundaryGeometryChanged_() {
-    snappedSampling_.reset();
-}
-
-geometry::CurveSampleArray
-KeyEdge::computeInputSamples_(const geometry::CurveSamplingParameters& parameters) const {
-    geometry::Curve curve;
-    geometry::CurveSampleArray sampling;
-    curve.setPositions(points());
-    curve.setWidths(widths());
-    curve.sampleRange(sampling, parameters);
-    VGC_ASSERT(sampling.length() > 0);
-    hasGeometryBeenQueriedSinceLastDirtyEvent_ = true;
-    return sampling;
+    // possible optimization: check if positions really changed.
+    dirtyInputSampling_();
 }
 
 } // namespace vgc::vacomplex
