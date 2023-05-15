@@ -1,4 +1,4 @@
-// Copyright 2022 The VGC Developers
+// Copyright 2023 The VGC Developers
 // See the COPYRIGHT file at the top-level directory of this distribution
 // and at https://github.com/vgc/vgc/blob/master/COPYRIGHT
 //
@@ -14,18 +14,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <vgc/vacomplex/detail/operationsimpl.h>
-#include <vgc/vacomplex/edgegeometry.h>
-#include <vgc/vacomplex/keyedge.h>
+#include <vgc/workspace/edgegeometry.h>
 
-namespace vgc::vacomplex {
-
-void KeyEdgeGeometry::dirtyEdgeSampling() const {
-    if (edge_) {
-        edge_->dirtyInputSampling_();
-        detail::Operations ops(edge_->complex());
-        ops.dirtyGeometry(edge_); // it also emits the geometry change event
-    }
-}
-
-} // namespace vgc::vacomplex
+namespace vgc::workspace {} // namespace vgc::workspace

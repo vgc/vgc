@@ -17,43 +17,33 @@
 #ifndef VGC_VACOMPLEX_EDGEGEOMETRY_H
 #define VGC_VACOMPLEX_EDGEGEOMETRY_H
 
+#include <array>
+#include <memory>
+
 #include <vgc/core/arithmetic.h>
 #include <vgc/core/array.h>
+#include <vgc/core/enum.h>
 #include <vgc/core/flags.h>
 #include <vgc/geometry/curve.h>
 #include <vgc/geometry/mat3d.h>
 #include <vgc/geometry/range1d.h>
+#include <vgc/geometry/rect2d.h>
 #include <vgc/geometry/vec2d.h>
 #include <vgc/vacomplex/api.h>
 #include <vgc/vacomplex/dataobject.h>
 
+// how to share edge shape correctly ?
+// an inbetween edge that doesn't change should have the same shape for all times
+// we also need edge shape source/def, which can be different curve types
+// -> EdgeParameters ?
+
 namespace vgc::vacomplex {
+
+class KeyEdge;
 
 namespace detail {
 
 class Operations;
-
-} // namespace detail
-
-// how to share edge shape correctly ?
-// an inbetween edge that doesn't change should have the same shape for all times
-// we also need edge shape source/def, which can be different curve types
-// -> EdgeParameters
-
-class VGC_VACOMPLEX_API EdgeBezierQuadSampling : DataObject {
-public:
-    EdgeBezierQuadSampling(core::Id id) noexcept
-        : DataObject(id) {
-    }
-
-public:
-private:
-    // to be moved to curve.h.
-    // array of Vec2d, points at odd indices are the middle control points.
-    // maybe better in curve.h
-    //core::Array<geometry::Vec2d> points_;
-    //core::Array<double> widths_;
-};
 
 // generic parameters for all models
 class VGC_VACOMPLEX_API SamplingParameters {
@@ -75,11 +65,54 @@ private:
     // mode, uniform s, uniform u -> overload
 };
 
+} // namespace detail
+
+enum class EdgeSnapTransformationMode {
+    LinearInArclength,
+};
+
+class VGC_VACOMPLEX_API EdgeSampling {
+public:
+    EdgeSampling() noexcept = default;
+
+    explicit EdgeSampling(const geometry::CurveSampleArray& samples)
+        : samples_(samples) {
+
+        computeCenterlineBoundingBox();
+    }
+
+    explicit EdgeSampling(geometry::CurveSampleArray&& samples)
+        : samples_(std::move(samples)) {
+
+        computeCenterlineBoundingBox();
+    }
+
+    const geometry::CurveSampleArray& samples() const {
+        return samples_;
+    }
+
+    const geometry::Rect2d& centerlineBoundingBox() const {
+        return centerlineBoundingBox_;
+    }
+
+private:
+    geometry::CurveSampleArray samples_ = {};
+    geometry::Rect2d centerlineBoundingBox_ = geometry::Rect2d::empty;
+
+    void computeCenterlineBoundingBox() {
+        centerlineBoundingBox_ = geometry::Rect2d::empty;
+        for (const geometry::CurveSample& cs : samples_) {
+            centerlineBoundingBox_.uniteWith(cs.position());
+        }
+    }
+};
+
 /// \class vgc::vacomplex::KeyEdgeGeometry
 /// \brief Authored model of the edge geometry.
 ///
 /// It can be translated from dom or set manually.
 ///
+// Dev Notes:
 // Edge geometry is relative to end vertices position.
 // We want to snap the source geometry in its own space when:
 //    - releasing a dragged end vertex
@@ -91,97 +124,59 @@ private:
 // In which space do we sample ?
 // inbetweening -> common ancestor for best identification of interest points
 //
-
 class VGC_VACOMPLEX_API KeyEdgeGeometry {
 private:
     friend detail::Operations;
+    friend KeyEdge;
 
 public:
     KeyEdgeGeometry() noexcept = default;
 
     virtual ~KeyEdgeGeometry() = default;
 
-public:
-    // public api
+    KeyEdgeGeometry(const KeyEdgeGeometry&) = delete;
+    KeyEdgeGeometry& operator=(const KeyEdgeGeometry&) = delete;
 
-    // vertices in object space
-    virtual void
-    snapToVertices(const geometry::Vec2d& start, const geometry::Vec2d& end) = 0;
+    virtual std::unique_ptr<KeyEdgeGeometry> clone() const = 0;
 
-    // ideally, for inbetweening we would like a sampling that is good in 2 spaces:
-    // - the common ancestor group space for best morphing
-    // - the canvas space for best rendering
+    /// Expects positions in object space.
+    ///
+    virtual void snap(
+        const geometry::Vec2d& snapStartPosition,
+        const geometry::Vec2d& snapEndPosition,
+        EdgeSnapTransformationMode mode =
+            EdgeSnapTransformationMode::LinearInArclength) = 0;
 
-    virtual EdgeBezierQuadSampling
-    computeSampling(const SamplingParameters& parameters) = 0;
+    // variant `std::unique_ptr<KeyEdgeGeometry> snapped()` ?
+
+    /// Expects positions in object space.
+    ///
+    virtual EdgeSampling computeSampling(
+        geometry::CurveSamplingQuality quality,
+        const geometry::Vec2d& snapStartPosition,
+        const geometry::Vec2d& snapEndPosition,
+        EdgeSnapTransformationMode mode =
+            EdgeSnapTransformationMode::LinearInArclength) const = 0;
+
+    // We will later need a variant of computeSampling() that accepts a target
+    // view matrix.
+    // Ideally, for inbetweening we would like a sampling that is good in 2 spaces:
+    // - the common ancestor group space for best morphing.
+    // - the canvas space for best rendering.
 
 protected:
-    //virtual EdgeSampling computeSampling() = 0;
+    void dirtyEdgeSampling() const;
+
+private:
+    KeyEdge* edge_ = nullptr;
 };
+
+//std::shared_ptr<const EdgeSampling> snappedSampling_;
+//virtual EdgeSampling computeSampling() = 0;
 
 // key edge
 //   geometry as pointer or type, but if it's a type it could be integrated to key edge...
 //   if pointer then poly or inner pointer again ? poly is more efficient..
-
-enum class KeyEdgeInterpolatedPointsGeometryFlag : UInt16 {
-    None = 0x00,
-    ReadOnly = 0x01,
-};
-VGC_DEFINE_FLAGS(
-    KeyEdgeInterpolatedPointsGeometryFlags,
-    KeyEdgeInterpolatedPointsGeometryFlag)
-
-class VGC_VACOMPLEX_API KeyEdgeInterpolatedPointsGeometry : public KeyEdgeGeometry {
-private:
-    friend detail::Operations;
-
-public:
-    KeyEdgeInterpolatedPointsGeometry() noexcept = default;
-
-    virtual ~KeyEdgeInterpolatedPointsGeometry() = default;
-
-public:
-    const geometry::SharedConstVec2dArray& points() const {
-        return points_;
-    }
-
-    const core::SharedConstDoubleArray& widths() const {
-        return widths_;
-    }
-
-    void setPoints(const geometry::SharedConstVec2dArray& points) {
-        points_ = points;
-    }
-
-    void setPoints(geometry::Vec2dArray points) {
-        points_ = geometry::SharedConstVec2dArray(std::move(points));
-    }
-
-    void setWidths(const core::SharedConstDoubleArray& widths) {
-        widths_ = widths;
-    }
-
-    // public api impl
-
-    // vertices in object space
-    void
-    snapToVertices(const geometry::Vec2d& start, const geometry::Vec2d& end) override;
-
-    // ideally, for inbetweening we would like a sampling that is good in 2 spaces:
-    // - the common ancestor group space for best morphing
-    // - the canvas space for best rendering
-
-    EdgeBezierQuadSampling computeSampling(const SamplingParameters& parameters) override;
-
-protected:
-    //virtual EdgeSampling computeSampling() = 0;
-
-private:
-    geometry::SharedConstVec2dArray points_;
-    core::SharedConstDoubleArray widths_;
-    KeyEdgeInterpolatedPointsGeometryFlags flags_ =
-        KeyEdgeInterpolatedPointsGeometryFlag::None;
-};
 
 } // namespace vgc::vacomplex
 

@@ -19,6 +19,8 @@
 #include <vgc/core/span.h>
 #include <vgc/geometry/triangle2d.h>
 #include <vgc/workspace/colors.h>
+#include <vgc/workspace/edgegeometry.h>
+#include <vgc/workspace/freehandedgegeometry.h>
 #include <vgc/workspace/vertex.h>
 #include <vgc/workspace/workspace.h>
 
@@ -702,15 +704,12 @@ ElementStatus VacKeyEdge::updateFromDom_(Workspace* workspace) {
 
     vacomplex::KeyEdge* ke = vacKeyEdgeNode();
 
-    const auto& points = domElement->getAttribute(ds::positions).getVec2dArray();
-    const auto& widths = domElement->getAttribute(ds::widths).getDoubleArray();
+    //const auto& points = domElement->getAttribute(ds::positions).getVec2dArray();
+    //const auto& widths = domElement->getAttribute(ds::widths).getDoubleArray();
 
     bool hasInputGeometryChanged = true;
     bool hasBoundaryChanged = true;
     if (ke) {
-        if (&ke->points() == &points.get() && &ke->widths() == &widths.get()) {
-            hasInputGeometryChanged = false;
-        }
         if (kvs[0] == ke->startVertex() && kvs[1] == ke->endVertex()) {
             hasBoundaryChanged = false;
         }
@@ -723,12 +722,14 @@ ElementStatus VacKeyEdge::updateFromDom_(Workspace* workspace) {
 
     // create/rebuild/update VAC node
     if (!ke) {
+        auto geometry = std::make_unique<workspace::FreehandEdgeGeometry>();
+        geometry->updateFromDomEdge_(domElement);
         if (isClosed) {
-            ke = vacomplex::ops::createKeyClosedEdge(points, widths, parentGroup);
+            ke = vacomplex::ops::createKeyClosedEdge(std::move(geometry), parentGroup);
         }
         else {
             ke = vacomplex::ops::createKeyOpenEdge(
-                kvs[0], kvs[1], points, widths, parentGroup);
+                kvs[0], kvs[1], std::move(geometry), parentGroup);
         }
         if (!ke) {
             onUpdateError_();
@@ -736,9 +737,11 @@ ElementStatus VacKeyEdge::updateFromDom_(Workspace* workspace) {
         }
         setVacNode(ke);
     }
-    else if (hasInputGeometryChanged) {
-        vacomplex::ops::setKeyEdgeCurvePoints(ke, points);
-        vacomplex::ops::setKeyEdgeCurveWidths(ke, widths);
+    else {
+        auto geometry = dynamic_cast<workspace::EdgeGeometry*>(ke->geometry());
+        if (geometry && geometry->updateFromDomEdge_(domElement)) {
+            hasInputGeometryChanged = false;
+        }
     }
 
     // dirty cached data
@@ -775,14 +778,10 @@ void VacKeyEdge::updateFromVac_(vacomplex::NodeDiffFlags /*diffs*/) {
         return;
     }
 
-    const auto& points = domElement->getAttribute(ds::positions).getVec2dArray();
-    if (ke->points() != points) {
-        domElement->setAttribute(ds::positions, ke->points());
-    }
-
-    const auto& widths = domElement->getAttribute(ds::widths).getDoubleArray();
-    if (ke->widths() != widths) {
-        domElement->setAttribute(ds::widths, ke->widths());
+    auto geometry = dynamic_cast<const workspace::EdgeGeometry*>(ke->geometry());
+    if (geometry) {
+        // todo: if geometry type changed, remove previous geometry's attributes.
+        geometry->writeToDomEdge_(domElement);
     }
 
     const Workspace* w = workspace();
@@ -868,17 +867,20 @@ bool VacKeyEdge::computePreJoinGeometry_() {
         return false;
     }
 
-    geometry::CurveSamplingParameters samplingParams(edgeTesselationMode_);
-    vacomplex::ops::setKeyEdgeSamplingParameters(ke, samplingParams);
+    vacomplex::ops::setKeyEdgeSamplingQuality(ke, edgeTesselationMode_);
 
-    for (const geometry::Vec2d& p : ke->points()) {
-        controlPoints_.emplaceLast(geometry::Vec2f(p));
+    auto fhGeometry =
+        dynamic_cast<const workspace::FreehandEdgeGeometry*>(ke->geometry());
+    if (fhGeometry) {
+        for (const geometry::Vec2d& p : fhGeometry->points().get()) {
+            controlPoints_.emplaceLast(geometry::Vec2f(p));
+        }
     }
 
     data.isComputing_ = true;
 
     data.sampling_ = ke->samplingShared();
-    data.bbox_ = ke->samplingBoundingBox();
+    data.bbox_ = ke->centerlineBoundingBox();
 
     alreadyNotifiedChanges_.unset(ChangeFlag::EdgePreJoinGeometry);
     data.stage_ = VacEdgeComputationStage::PreJoinGeometry;

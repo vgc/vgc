@@ -92,7 +92,7 @@ Int32 computeWindingContribution(
 
     const KeyEdge* ke = keyHalfedge.edge();
     const geometry::CurveSampleArray& samples = ke->sampling().samples();
-    const geometry::Rect2d& bbox = ke->samplingBoundingBox();
+    const geometry::Rect2d& bbox = ke->centerlineBoundingBox();
 
     // The winding number of a closed curve C (cycle) at point P = (Px, Py)
     // is the total number of times C travels positively around P.
@@ -551,7 +551,7 @@ core::Array<KeyCycle> computeKeyFaceCandidateAt(
             // compute max distance from position to external boundary to limit search
             maxKeyHalfedgeCandidateDistance = 0;
             for (const KeyHalfedge& khe : externalBoundaryCycle.cycle) {
-                const geometry::Rect2d& bbox = khe.edge()->samplingBoundingBox();
+                const geometry::Rect2d& bbox = khe.edge()->centerlineBoundingBox();
                 for (Int i = 0; i < 4; ++i) {
                     double d = (bbox.corner(i) - position).length();
                     if (d > maxKeyHalfedgeCandidateDistance) {
@@ -612,8 +612,7 @@ core::Array<KeyCycle> computeKeyFaceCandidateAt(
             computeKeyFaceFillTriangles(
                 result,
                 trianglesBuffer,
-                geometry::CurveSamplingParameters(
-                    geometry::CurveSamplingQuality::Disabled),
+                geometry::CurveSamplingQuality::Disabled,
                 windingRule);
             return result;
         }
@@ -634,7 +633,7 @@ namespace {
 bool computeKeyFaceFillTriangles(
     const core::Array<KeyCycle>& cycles,
     core::FloatArray& trianglesBuffer,
-    const geometry::CurveSamplingParameters* parameters,
+    const geometry::CurveSamplingQuality* quality,
     geometry::WindingRule windingRule) {
 
     trianglesBuffer.clear();
@@ -652,8 +651,8 @@ bool computeKeyFaceFillTriangles(
                 const KeyEdge* ke = khe.edge();
                 if (ke) {
                     const geometry::CurveSampleArray& samples =
-                        parameters ? ke->computeSampling(*parameters)
-                                   : ke->sampling().samples();
+                        quality ? ke->computeSampling(*quality).samples()
+                                : ke->sampling().samples();
                     if (khe.direction()) {
                         for (const geometry::CurveSample& s : samples) {
                             geometry::Vec2d p = s.position();
@@ -708,10 +707,10 @@ bool computeKeyFaceFillTriangles(
 bool computeKeyFaceFillTriangles(
     const core::Array<KeyCycle>& cycles,
     core::FloatArray& trianglesBuffer,
-    const geometry::CurveSamplingParameters& parameters,
+    geometry::CurveSamplingQuality quality,
     geometry::WindingRule windingRule) {
 
-    return computeKeyFaceFillTriangles(cycles, trianglesBuffer, &parameters, windingRule);
+    return computeKeyFaceFillTriangles(cycles, trianglesBuffer, &quality, windingRule);
 }
 
 } // namespace detail

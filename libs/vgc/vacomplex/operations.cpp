@@ -54,8 +54,7 @@ KeyVertex* createKeyVertex(
 }
 
 KeyEdge* createKeyClosedEdge(
-    const geometry::SharedConstVec2dArray& points,
-    const core::SharedConstDoubleArray& widths,
+    std::unique_ptr<KeyEdgeGeometry>&& geometry,
     Group* parentGroup,
     Node* nextSibling,
     core::AnimTime t) {
@@ -65,14 +64,13 @@ KeyEdge* createKeyClosedEdge(
     }
     checkIsChildOrNull(nextSibling, parentGroup);
     detail::Operations ops(parentGroup->complex());
-    return ops.createKeyClosedEdge(points, widths, parentGroup, nextSibling, {}, t);
+    return ops.createKeyClosedEdge(std::move(geometry), parentGroup, nextSibling, {}, t);
 }
 
 KeyEdge* createKeyOpenEdge(
     KeyVertex* startVertex,
     KeyVertex* endVertex,
-    const geometry::SharedConstVec2dArray& points,
-    const core::SharedConstDoubleArray& widths,
+    std::unique_ptr<KeyEdgeGeometry>&& geometry,
     Group* parentGroup,
     Node* nextSibling,
     core::AnimTime t) {
@@ -112,7 +110,13 @@ KeyEdge* createKeyOpenEdge(
     detail::Operations ops(complex);
     core::Span<Node*> sourceNodes;
     return ops.createKeyOpenEdge(
-        startVertex, endVertex, points, widths, parentGroup, nextSibling, sourceNodes, t);
+        startVertex,
+        endVertex,
+        std::move(geometry),
+        parentGroup,
+        nextSibling,
+        sourceNodes,
+        t);
 }
 
 KeyFace* createKeyFace(
@@ -179,32 +183,20 @@ void setKeyVertexPosition(KeyVertex* vertex, const geometry::Vec2d& pos) {
     return ops.setKeyVertexPosition(vertex, pos);
 }
 
-void setKeyEdgeCurvePoints(KeyEdge* edge, const geometry::SharedConstVec2dArray& points) {
+void setKeyEdgeGeometry(KeyEdge* edge, std::unique_ptr<KeyEdgeGeometry>&& geometry) {
     if (!edge) {
         throw LogicError("setKeyEdgeCurvePoints: edge is nullptr.");
     }
     detail::Operations ops(edge->complex());
-    return ops.setKeyEdgeCurvePoints(edge, points);
+    return ops.setKeyEdgeGeometry(edge, std::move(geometry));
 }
 
-void setKeyEdgeCurveWidths(KeyEdge* edge, const core::SharedConstDoubleArray& widths) {
-    if (!edge) {
-        throw LogicError("setKeyEdgeCurveWidths: edge is nullptr.");
-    }
-    detail::Operations ops(edge->complex());
-    return ops.setKeyEdgeCurveWidths(edge, widths);
-}
-
-VGC_VACOMPLEX_API
-void setKeyEdgeSamplingParameters(
-    KeyEdge* edge,
-    const geometry::CurveSamplingParameters& parameters) {
-
+void setKeyEdgeSamplingQuality(KeyEdge* edge, geometry::CurveSamplingQuality quality) {
     if (!edge) {
         throw LogicError("setKeyEdgeSamplingParameters: edge is nullptr.");
     }
     detail::Operations ops(edge->complex());
-    return ops.setKeyEdgeSamplingParameters(edge, parameters);
+    return ops.setKeyEdgeSamplingQuality(edge, quality);
 }
 
 } // namespace vgc::vacomplex::ops

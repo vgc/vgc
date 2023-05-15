@@ -48,7 +48,7 @@ VGC_VACOMPLEX_API
 bool computeKeyFaceFillTriangles(
     const core::Array<KeyCycle>& cycles,
     core::FloatArray& trianglesBuffer,
-    const geometry::CurveSamplingParameters& parameters,
+    geometry::CurveSamplingQuality quality,
     geometry::WindingRule windingRule = geometry::WindingRule::Odd);
 
 } // namespace detail

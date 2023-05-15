@@ -30,43 +30,20 @@
 
 namespace vgc::vacomplex {
 
-class VGC_VACOMPLEX_API EdgeSampling {
-public:
-    EdgeSampling() noexcept = default;
-
-    explicit EdgeSampling(const geometry::CurveSampleArray& samples)
-        : samples_(samples) {
-    }
-
-    explicit EdgeSampling(geometry::CurveSampleArray&& samples)
-        : samples_(std::move(samples)) {
-    }
-
-    EdgeSampling(const EdgeSampling&) = delete;
-    EdgeSampling& operator=(const EdgeSampling&) = delete;
-
-    const geometry::CurveSampleArray& samples() const {
-        return samples_;
-    }
-
-private:
-    geometry::CurveSampleArray samples_ = {};
-};
-
 class VGC_VACOMPLEX_API KeyEdge final : public SpatioTemporalCell<EdgeCell, KeyCell> {
 private:
     friend detail::Operations;
+    friend KeyEdgeGeometry;
 
     explicit KeyEdge(core::Id id, core::AnimTime t) noexcept
         : SpatioTemporalCell(id, t)
-        , samplingParameters_(geometry::CurveSamplingQuality::AdaptiveLow) {
+        , samplingQuality_(geometry::CurveSamplingQuality::AdaptiveLow) {
     }
 
 public:
     VGC_VACOMPLEX_DEFINE_SPATIOTEMPORAL_CELL_CAST_METHODS(Key, Edge)
 
-    using SharedConstPoints = std::shared_ptr<const geometry::Vec2dArray>;
-    using SharedConstWidths = std::shared_ptr<const core::DoubleArray>;
+    virtual ~KeyEdge();
 
     KeyVertex* startVertex() const {
         return startVertex_;
@@ -76,56 +53,27 @@ public:
         return endVertex_;
     }
 
-    const KeyEdgeGeometry* geometry() const {
+    KeyEdgeGeometry* geometry() const {
+        hasGeometryBeenQueriedSinceLastDirtyEvent_ = true;
         return geometry_.get();
     }
 
-    //void setGeometryParameters(const KeyEdgeGeometryParameters& parameters);
-
-    //
-
-    //EdgeSampling computeSamplingAt(core::AnimTime /*t*/) {
-    //    // XXX todo
-    //    return EdgeSampling(-1);
-    //}
-
-    //void
-    //setCachedSamplingParameters(const geometry::CurveSamplingParameters& parameters) {
-    //    cachedSamplingParameters_ = parameters;
-    //}
-
-    const geometry::CurveSamplingParameters& samplingParameters() const {
-        return samplingParameters_;
+    geometry::CurveSamplingQuality samplingQuality() const {
+        return samplingQuality_;
     }
+
+    void snapGeometry();
 
     std::shared_ptr<const EdgeSampling> samplingShared() const;
     const EdgeSampling& sampling() const;
-    const geometry::Rect2d& samplingBoundingBox() const;
+    const geometry::Rect2d& centerlineBoundingBox() const;
 
     /// Computes and returns a new array of samples for this edge according to the
     /// given `parameters`.
     ///
     /// Unlike `sampling()`, this function does not cache the result.
     ///
-    geometry::CurveSampleArray
-    computeSampling(const geometry::CurveSamplingParameters& parameters) const;
-
-    // XXX temporary, we should use geometry_.
-    const geometry::Vec2dArray& points() const {
-        hasGeometryBeenQueriedSinceLastDirtyEvent_ = true;
-        return points_ ? *points_ : fallbackPoints_;
-    }
-
-    // XXX temporary, we should use geometry_.
-    const core::DoubleArray& widths() const {
-        hasGeometryBeenQueriedSinceLastDirtyEvent_ = true;
-        return widths_ ? *widths_ : fallbackWidths_;
-    }
-
-    // XXX temporary, we should use geometry_.
-    Int64 dataVersion() const {
-        return dataVersion_;
-    }
+    EdgeSampling computeSampling(geometry::CurveSamplingQuality quality) const;
 
     bool isStartVertex(VertexCell* v) const override {
         return v == startVertex_;
@@ -156,21 +104,14 @@ private:
     // position and orientation when not bound to vertices ?
     //detail::Transform2d transform_;
 
-    // XXX temporary, we should use "KeyEdgeGeometry geometry_".
-    SharedConstPoints points_;
-    SharedConstWidths widths_;
-    geometry::Vec2dArray fallbackPoints_;
-    core::DoubleArray fallbackWidths_;
-    Int64 dataVersion_ = 0;
-
     std::unique_ptr<KeyEdgeGeometry> geometry_ = {};
     //bool isClosed_ = false;
 
-    geometry::CurveSamplingParameters samplingParameters_ = {};
-    mutable geometry::CurveSampleArray inputSamples_ = {};
-    mutable std::shared_ptr<const EdgeSampling> snappedSampling_ = {};
-    mutable geometry::Rect2d snappedSamplingBbox_ = {};
+    geometry::CurveSamplingQuality samplingQuality_ = {};
+    mutable std::shared_ptr<const EdgeSampling> sampling_ = {};
 
+    EdgeSampling computeSampling_(geometry::CurveSamplingQuality quality) const;
+    void updateSampling_() const;
     void dirtyInputSampling_();
 
     void onBoundaryGeometryChanged_() override;

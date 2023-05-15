@@ -64,8 +64,7 @@ public:
     KeyEdge* createKeyOpenEdge(
         KeyVertex* startVertex,
         KeyVertex* endVertex,
-        const geometry::SharedConstVec2dArray& points,
-        const core::SharedConstDoubleArray& widths,
+        std::unique_ptr<KeyEdgeGeometry>&& geometry,
         Group* parentGroup,
         Node* nextSibling = nullptr,
         core::Span<Node*> operationSourceNodes = {},
@@ -74,8 +73,7 @@ public:
     // Assumes `nextSibling` is either `nullptr` or a child of `parentGroup`.
     //
     KeyEdge* createKeyClosedEdge(
-        const geometry::SharedConstVec2dArray& points,
-        const core::SharedConstDoubleArray& widths,
+        std::unique_ptr<KeyEdgeGeometry>&& geometry,
         Group* parentGroup,
         Node* nextSibling = nullptr,
         core::Span<Node*> operationSourceNodes = {},
@@ -98,14 +96,11 @@ public:
 
     void setKeyVertexPosition(KeyVertex* kv, const geometry::Vec2d& pos);
 
-    void
-    setKeyEdgeCurvePoints(KeyEdge* ke, const geometry::SharedConstVec2dArray& points);
+    void setKeyEdgeGeometry(KeyEdge* ke, std::unique_ptr<KeyEdgeGeometry>&& geometry);
 
-    void setKeyEdgeCurveWidths(KeyEdge* ke, const core::SharedConstDoubleArray& widths);
+    void setKeyEdgeSamplingQuality(KeyEdge* ke, geometry::CurveSamplingQuality quality);
 
-    void setKeyEdgeSamplingParameters(
-        KeyEdge* ke,
-        const geometry::CurveSamplingParameters& parameters);
+    void dirtyGeometry(Cell* cell);
 
 private:
     Complex* complex_;
@@ -158,7 +153,6 @@ private:
 
     // Other helper methods
     void collectDependentNodes_(Node* node, std::unordered_set<Node*>& dependentNodes);
-    void dirtyGeometry_(Cell* cell);
 };
 
 } // namespace vgc::vacomplex::detail
