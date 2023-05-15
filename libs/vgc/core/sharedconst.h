@@ -64,10 +64,6 @@ public:
         : value_(std::make_shared<const T>(std::forward<Args>(args)...)) {
     }
 
-    bool hasValue() const noexcept {
-        return value_ != nullptr;
-    }
-
     operator const T&() const noexcept {
         return *value_;
     }

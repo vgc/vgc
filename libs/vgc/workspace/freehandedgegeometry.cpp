@@ -61,7 +61,7 @@ void FreehandEdgeGeometry::snap(
         dirtyArclengths_();
         dirtyEdgeSampling();
     }
-    else if (points_.hasValue()) {
+    else {
         geometry::Vec2dArray newPoints = points_.get();
         computeSnappedLinearS_(
             newPoints, newPoints, arclengths_, snapStartPosition, snapEndPosition);
@@ -84,7 +84,7 @@ vacomplex::EdgeSampling FreehandEdgeGeometry::computeSampling(
     geometry::Vec2dArray tmpPoints;
     core::DoubleArray tmpWidths;
 
-    std::shared_ptr<const geometry::Vec2dArray> pointsShared = points_.getShared();
+    const geometry::Vec2dArray& points = points_.get();
 
     if (!snappedPoints_.isEmpty() && snappedPoints_.first() == snapStartPosition
         && snappedPoints_.last() == snapEndPosition) {
@@ -92,27 +92,21 @@ vacomplex::EdgeSampling FreehandEdgeGeometry::computeSampling(
         curve.setPositions(snappedPoints_);
         curve.setWidths(widths_.get());
     }
-    else if (!pointsShared || pointsShared->isEmpty()) {
+    else if (points.isEmpty()) {
         // fallback to segment
         tmpPoints = {snapStartPosition, snapEndPosition};
         tmpWidths = {1.0, 1.0};
         curve.setPositions(tmpPoints);
         curve.setWidths(tmpWidths);
     }
-    else if (
-        pointsShared->first() == snapStartPosition
-        && pointsShared->last() == snapEndPosition) {
+    else if (points.first() == snapStartPosition && points.last() == snapEndPosition) {
         // no snapping necessary
-        curve.setPositions(points_.get());
+        curve.setPositions(points);
         curve.setWidths(widths_.get());
     }
     else {
         computeSnappedLinearS_(
-            snappedPoints_,
-            *pointsShared,
-            arclengths_,
-            snapStartPosition,
-            snapEndPosition);
+            snappedPoints_, points, arclengths_, snapStartPosition, snapEndPosition);
         curve.setPositions(snappedPoints_);
         curve.setWidths(widths_.get());
     }
@@ -165,7 +159,7 @@ void FreehandEdgeGeometry::removeFromDomEdge_(dom::Element* element) const {
 }
 
 void FreehandEdgeGeometry::updateArclengths_() const {
-    if (points_.hasValue() && arclengths_.isEmpty()) {
+    if (arclengths_.isEmpty()) {
         computeArclengths_(arclengths_, points_.get());
     }
 }
