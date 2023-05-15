@@ -165,6 +165,7 @@ public:
     // - the canvas space for best rendering.
 
 protected:
+    // todo: argument to tell when it is only an affine transformation ?
     void dirtyEdgeSampling() const;
 
 private:

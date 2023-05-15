@@ -28,7 +28,7 @@ public:
     using SharedConstPoints = geometry::SharedConstVec2dArray;
     using SharedConstWidths = core::SharedConstDoubleArray;
 
-    FreehandEdgeGeometry() noexcept = default;
+    FreehandEdgeGeometry() noexcept {};
 
     FreehandEdgeGeometry(const SharedConstPoints& points, const SharedConstWidths& widths)
         : points_(points)
