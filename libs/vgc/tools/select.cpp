@@ -375,7 +375,8 @@ bool Select::onMouseRelease(ui::MouseEvent* event) {
 
     // If we were dragging we can stop the action and return.
     if (isDragging_) {
-        if (dragAction_ == DragAction::Select) {
+        switch (dragAction_) {
+        case DragAction::Select: {
             // Rectangle selection.
             switch (selectionMode_) {
             case SelectionMode::Toggle: {
@@ -414,9 +415,13 @@ bool Select::onMouseRelease(ui::MouseEvent* event) {
             }
             lastSelectedId_ = -1;
             lastDeselectedId_ = -1;
+            break;
         }
-        else if (dragAction_ == DragAction::TranslateSelection) {
+        case DragAction::TranslateCandidate:
+        case DragAction::TranslateSelection: {
             finalizeDragMovedElements_(workspace);
+            break;
+        }
         }
     }
     else {
