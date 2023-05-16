@@ -91,7 +91,7 @@ private:
 
 class VGC_VACOMPLEX_API ModifiedNodeInfo {
 public:
-    ModifiedNodeInfo(Node* node)
+    explicit ModifiedNodeInfo(Node* node)
         : nodeId_(node->id())
         , node_(node) {
     }
@@ -118,16 +118,33 @@ private:
     ModifiedNodeFlags flags_ = {};
 };
 
+class VGC_VACOMPLEX_API RemovedNodeInfo {
+public:
+    explicit RemovedNodeInfo(core::Id id)
+        : nodeId_(id) {
+    }
+
+    core::Id nodeId() const {
+        return nodeId_;
+    }
+
+private:
+    core::Id nodeId_;
+};
+
 class VGC_VACOMPLEX_API ComplexDiff {
 public:
     ComplexDiff() = default;
 
     void clear() {
+        createdNodes_.clear();
         modifiedNodes_.clear();
+        removedNodes_.clear();
     }
 
     bool isEmpty() const {
-        return modifiedNodes_.empty();
+        return createdNodes_.isEmpty() && modifiedNodes_.isEmpty()
+               && removedNodes_.isEmpty();
     }
 
     const core::Array<CreatedNodeInfo>& createdNodes() const {
@@ -138,7 +155,7 @@ public:
         return modifiedNodes_;
     }
 
-    const core::Array<core::Id>& removedNodes() const {
+    const core::Array<RemovedNodeInfo>& removedNodes() const {
         return removedNodes_;
     }
 
@@ -150,7 +167,7 @@ private:
 
     core::Array<CreatedNodeInfo> createdNodes_;
     core::Array<ModifiedNodeInfo> modifiedNodes_;
-    core::Array<core::Id> removedNodes_;
+    core::Array<RemovedNodeInfo> removedNodes_;
 
     // ops helpers
 
@@ -158,7 +175,7 @@ private:
         createdNodes_.emplaceLast(node, std::move(sourceOperation));
     }
 
-    void onModifiedNode(Node* node, ModifiedNodeFlags diffFlags) {
+    void onNodeModified(Node* node, ModifiedNodeFlags diffFlags) {
         for (Int i = 0; i < createdNodes_.length(); ++i) {
             if (createdNodes_[i].node() == node) {
                 // swallow node diffs when node is new
@@ -188,7 +205,7 @@ private:
                 break;
             }
         }
-        removedNodes_.append(id);
+        removedNodes_.emplaceLast(id);
     }
 };
 

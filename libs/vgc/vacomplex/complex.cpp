@@ -28,10 +28,10 @@ void ComplexDiff::merge(const ComplexDiff& other) {
         onNodeCreated(info.node(), info.sourceOperation());
     }
     for (const ModifiedNodeInfo& info : other.modifiedNodes_) {
-        onModifiedNode(info.node(), info.flags());
+        onNodeModified(info.node(), info.flags());
     }
-    for (core::Id id : other.removedNodes_) {
-        onNodeRemoved(id);
+    for (const RemovedNodeInfo& info : other.removedNodes_) {
+        onNodeRemoved(info.nodeId());
     }
 }
 

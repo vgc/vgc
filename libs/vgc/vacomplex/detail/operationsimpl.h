@@ -109,7 +109,7 @@ private:
     ComplexDiff diff_ = {};
     std::unordered_set<Node*> nodesToDestroy_ = {};
 
-    void onModifiedNode_(Node* node, ModifiedNodeFlags diffFlags);
+    void onNodeModified_(Node* node, ModifiedNodeFlags diffFlags);
     void onNodeCreated_(Node* node, NodeSourceOperation sourceOperation);
 
     // Creates a new node and inserts it to the complex.
@@ -143,7 +143,7 @@ private:
         T* node = createNode_<T>(std::move(sourceOperation), std::forward<Args>(args)...);
         parentGroup->insertChildUnchecked(nextSibling, node);
         onNodeCreated_(node, std::move(sourceOperation));
-        onModifiedNode_(parentGroup, ModifiedNodeFlag::ChildrenChanged);
+        onNodeModified_(parentGroup, ModifiedNodeFlag::ChildrenChanged);
         return node;
     }
 

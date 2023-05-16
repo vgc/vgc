@@ -50,7 +50,7 @@ Operations::~Operations() {
     for (Node* nodeToDestroy : nodesToDestroy_) {
         Group* parentGroup = nodeToDestroy->parentGroup();
         if (parentGroup) {
-            diff_.onModifiedNode(parentGroup, ModifiedNodeFlag::ChildrenChanged);
+            diff_.onNodeModified(parentGroup, ModifiedNodeFlag::ChildrenChanged);
         }
         nodeToDestroy->unlink();
         diff_.onNodeRemoved(nodeToDestroy->id());
@@ -252,7 +252,7 @@ void Operations::hardDelete(Node* node, bool deleteIsolatedVertices) {
                 }
                 if (!boundaryCell->isBeingDestroyed_) {
                     boundaryCell->star_.removeOne(cell);
-                    onModifiedNode_(boundaryCell, ModifiedNodeFlag::StarChanged);
+                    onNodeModified_(boundaryCell, ModifiedNodeFlag::StarChanged);
                 }
             }
         }
@@ -286,7 +286,7 @@ void Operations::hardDelete(Node* node, bool deleteIsolatedVertices) {
                 }
                 else {
                     keyVertex->star_.removeOne(inbetweenVertex);
-                    onModifiedNode_(keyVertex, ModifiedNodeFlag::StarChanged);
+                    onNodeModified_(keyVertex, ModifiedNodeFlag::StarChanged);
                 }
             }
         }
@@ -299,7 +299,7 @@ void Operations::hardDelete(Node* node, bool deleteIsolatedVertices) {
         Group* group = node->toGroupUnchecked();
         if (group->numChildren()) {
             group->resetChildrenNoUnlink();
-            onModifiedNode_(node, ModifiedNodeFlag::ChildrenChanged);
+            onNodeModified_(node, ModifiedNodeFlag::ChildrenChanged);
         }
     }
 }
@@ -319,9 +319,9 @@ void Operations::moveToGroup(Node* node, Group* parentGroup, Node* nextSibling) 
 
     // diff
     if (oldParent != parentGroup) {
-        onModifiedNode_(node, ModifiedNodeFlag::Reparented);
+        onNodeModified_(node, ModifiedNodeFlag::Reparented);
     }
-    onModifiedNode_(parentGroup, ModifiedNodeFlag::ChildrenChanged);
+    onNodeModified_(parentGroup, ModifiedNodeFlag::ChildrenChanged);
 }
 
 // dev note: update boundary before star
@@ -367,8 +367,8 @@ void Operations::setKeyEdgeSamplingQuality(
     dirtyMesh_(ke);
 }
 
-void Operations::onModifiedNode_(Node* node, ModifiedNodeFlags diffFlags) {
-    diff_.onModifiedNode(node, diffFlags);
+void Operations::onNodeModified_(Node* node, ModifiedNodeFlags diffFlags) {
+    diff_.onNodeModified(node, diffFlags);
 }
 
 void Operations::onNodeCreated_(Node* node, NodeSourceOperation sourceOperation) {
@@ -401,13 +401,13 @@ void Operations::dirtyMesh_(Cell* cell) {
 
     for (Cell* dirtyCell : dirtyList) {
         dirtyCell->dirtyMesh_();
-        onModifiedNode_(dirtyCell, ModifiedNodeFlag::MeshChanged);
+        onNodeModified_(dirtyCell, ModifiedNodeFlag::MeshChanged);
     }
 }
 
 void Operations::onGeometryChanged_(Cell* cell) {
     dirtyMesh_(cell);
-    onModifiedNode_(cell, ModifiedNodeFlag::GeometryChanged);
+    onNodeModified_(cell, ModifiedNodeFlag::GeometryChanged);
 }
 
 void Operations::addToBoundary_(Cell* boundedCell, Cell* boundingCell) {
@@ -420,8 +420,8 @@ void Operations::addToBoundary_(Cell* boundedCell, Cell* boundingCell) {
     else if (!boundedCell->boundary_.contains(boundingCell)) {
         boundedCell->boundary_.append(boundingCell);
         boundingCell->star_.append(boundedCell);
-        onModifiedNode_(boundedCell, ModifiedNodeFlag::BoundaryChanged);
-        onModifiedNode_(boundingCell, ModifiedNodeFlag::StarChanged);
+        onNodeModified_(boundedCell, ModifiedNodeFlag::BoundaryChanged);
+        onNodeModified_(boundingCell, ModifiedNodeFlag::StarChanged);
     }
 }
 
