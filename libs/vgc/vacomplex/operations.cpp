@@ -136,7 +136,6 @@ KeyFace* createKeyFace(
     }
 
     detail::Operations ops(parentGroup->complex());
-    core::Span<Node*> sourceNodes;
     return ops.createKeyFace(
         std::move(cycles), parentGroup, nextSibling, NodeSourceOperation(), t);
 }

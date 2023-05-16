@@ -25,7 +25,7 @@
 namespace vgc::vacomplex::detail {
 
 class VGC_VACOMPLEX_API Operations {
-    friend KeyEdgeGeometry;
+    friend class vacomplex::KeyEdgeGeometry;
     using GroupChildrenIterator = Group;
     //using GroupChildrenConstIterator = decltype(Group::children_)::const_iterator;
 
