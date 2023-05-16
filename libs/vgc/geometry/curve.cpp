@@ -628,6 +628,8 @@ bool testLine_(
 }
 
 // Samples the semi-open range [data.segmentIndex, data.segmentIndex + 1)
+// First point of first segment is appended only if the cache `data` is new.
+// Last point of last segment is included.
 //
 bool sampleIter_(
     const Curve* curve,
@@ -765,22 +767,9 @@ void Curve::sampleRange(
             (std::max)(Int(0), parameters.minIntraSegmentSamples()) + 1;
         outAppend.reserve(outAppend.length() + 1 + (end - start) * minSegmentSamples);
 
-        // Iterate over all segments
-        IterativeSamplingCache data = {};
-        data.cosMaxAngle = std::cos(parameters.maxAngle());
-        data.segmentIndex = start;
-        for (Int i = start; i < end; ++i) {
-            sampleIter_(this, parameters, data, outAppend);
-        }
-
-        // Add the last point
-        IterativeSamplingSample lastSample;
-        if (data.previousSampleN.has_value()) {
-            // Get last sample from the last call of sampleIter_
-            lastSample = *data.previousSampleN;
-        }
-        else {
-            // case start == end (sampleIter_ was never called)
+        if (start == end) {
+            // Add a point manually if it is a single point segment.
+            IterativeSamplingSample lastSample;
             CubicBezierData bezierData;
             double u;
             if (start < n - 1) {
@@ -792,8 +781,17 @@ void Curve::sampleRange(
                 u = 1;
             }
             lastSample.computeFrom(bezierData, u);
+            outAppend.emplaceLast(lastSample.pos, lastSample.normal, lastSample.radius);
         }
-        outAppend.emplaceLast(lastSample.pos, lastSample.normal, lastSample.radius);
+        else {
+            // Iterate over all segments
+            IterativeSamplingCache data = {};
+            data.cosMaxAngle = std::cos(parameters.maxAngle());
+            data.segmentIndex = start;
+            for (Int i = start; i < end; ++i) {
+                sampleIter_(this, parameters, data, outAppend);
+            }
+        }
     }
 
     // Compute arclength.
