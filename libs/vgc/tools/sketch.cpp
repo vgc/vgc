@@ -466,6 +466,14 @@ void Sketch::onPaintDestroy(graphics::Engine* engine) {
 
 namespace {
 
+bool isInteger(float x) {
+    return std::round(x) == x;
+}
+
+bool isInteger(const geometry::Vec2f v) {
+    return isInteger(v[0]) && isInteger(v[1]);
+}
+
 // This is a variant of Douglas-Peucker designed to dequantize mouse inputs
 // from integer to float coordinates.
 //
@@ -590,6 +598,20 @@ Int reconstructInputStep(
 //
 void Sketch::updateUnquantizedData_(bool /*isFinalPass*/) {
 
+    Int numInputPoints = inputPoints_.length();
+
+    // Identify whether the input points are quantized.
+    //
+    if (!isQuantizationStatusIdentified_) {
+        if (numInputPoints > 2) {
+            isInputPointsQuantized_ =         //
+                isInteger(inputPoints_[0])    //
+                && isInteger(inputPoints_[1]) //
+                && isInteger(inputPoints_[2]);
+            isQuantizationStatusIdentified_ = true;
+        }
+    }
+
     // Dequantize timestamps.
     //
     // We store the result as a local array instead of storing it to
@@ -605,7 +627,6 @@ void Sketch::updateUnquantizedData_(bool /*isFinalPass*/) {
     // Therefore, a simple solution for now is to simply distribute the average
     // delta time across all samples.
     //
-    Int numInputPoints = inputPoints_.length();
     core::DoubleArray timestamps;
     if (isInputTimestampsQuantized_ && numInputPoints > 2) {
         double startTime = inputTimestamps_.first();
@@ -1299,7 +1320,8 @@ void Sketch::startCurve_(ui::MouseEvent* event) {
     canvasToWorkspaceMatrix_ = canvas()->camera().viewMatrix().inverted();
 
     // Whether to apply points/width/timestamp dequantization
-    isInputPointsQuantized_ = !event->isTablet();
+    isQuantizationStatusIdentified_ = false;
+    isInputPointsQuantized_ = false;
     isInputWidthsQuantized_ = event->isTablet();
     isInputTimestampsQuantized_ = event->isTablet();
 
