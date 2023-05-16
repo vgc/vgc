@@ -646,7 +646,7 @@ void Workspace::onVacNodeCreated_(
     element->id_ = id;
     element->setVacNode(node);
 
-    element->updateFromVac_(vacomplex::NodeDiffFlag::Created);
+    element->updateFromVac_(vacomplex::ModifiedNodeFlag::Created);
 
     postUpdateDomFromVac_();
 }
@@ -707,7 +707,7 @@ void Workspace::onVacNodeMoved_(vacomplex::Node* /*node*/) {
 
 void Workspace::onVacNodeModified_(
     vacomplex::Node* node,
-    vacomplex::NodeDiffFlags diffs) {
+    vacomplex::ModifiedNodeFlags flags) {
 
     if (isUpdatingVacFromDom_) {
         return;
@@ -723,7 +723,7 @@ void Workspace::onVacNodeModified_(
     // dom update
 
     preUpdateDomFromVac_();
-    vacElement->updateFromVac_(diffs);
+    vacElement->updateFromVac_(flags);
     postUpdateDomFromVac_();
 }
 

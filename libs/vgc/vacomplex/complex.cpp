@@ -20,21 +20,19 @@
 
 namespace vgc::vacomplex {
 
-void ComplexDiff::merge(const ComplexDiff& /*other*/) {
-    //for (auto& p : other.nodeDiffs_) {
-    //    const NodeDiff& nextDiff = p.second;
-    //    NodeDiff& nodeDiff = nodeDiffs_[p.first];
-    //    nodeDiff.setNode(nextDiff.node());
-    //    if (nextDiff.flags().has(NodeDiffFlag::Removed)) {
-    //        nodeDiff.setFlags(NodeDiffFlag::Removed);
-    //    }
-    //    else if (nextDiff.flags().has(NodeDiffFlag::Removed)) {
-    //        nodeDiff.setFlags(nextDiff.flags());
-    //    }
-    //    else {
-    //        nodeDiff.setFlags(nodeDiff.flags() | nextDiff.flags());
-    //    }
-    //}
+void ComplexDiff::merge(const ComplexDiff& other) {
+
+    // todo: optimize, keep sorted ?
+
+    for (const CreatedNodeInfo& info : other.createdNodes_) {
+        onNodeCreated(info.node(), info.sourceOperation());
+    }
+    for (const ModifiedNodeInfo& info : other.modifiedNodes_) {
+        onModifiedNode(info.node(), info.flags());
+    }
+    for (core::Id id : other.removedNodes_) {
+        onNodeRemoved(id);
+    }
 }
 
 void Complex::onDestroyed() {

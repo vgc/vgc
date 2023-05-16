@@ -354,7 +354,7 @@ private:
     mutable VacVertexCellFrameData frameData_;
 
     ElementStatus updateFromDom_(Workspace* workspace) override;
-    void updateFromVac_(vacomplex::NodeDiffFlags diffs) override;
+    void updateFromVac_(vacomplex::ModifiedNodeFlags flags) override;
 
     void onAddJoinHalfedge_(const VacJoinHalfedge& joinHalfedge) override;
     void onRemoveJoinHalfedge_(const VacJoinHalfedge& joinHalfedge) override;

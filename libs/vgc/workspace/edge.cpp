@@ -760,7 +760,7 @@ ElementStatus VacKeyEdge::updateFromDom_(Workspace* workspace) {
     return ElementStatus::Ok;
 }
 
-void VacKeyEdge::updateFromVac_(vacomplex::NodeDiffFlags diffs) {
+void VacKeyEdge::updateFromVac_(vacomplex::ModifiedNodeFlags flags) {
     namespace ds = dom::strings;
     vacomplex::KeyEdge* ke = vacKeyEdgeNode();
     if (!ke) {
@@ -778,9 +778,9 @@ void VacKeyEdge::updateFromVac_(vacomplex::NodeDiffFlags diffs) {
         return;
     }
 
-    bool created = diffs.has(vacomplex::NodeDiffFlag::Created);
+    bool created = flags.has(vacomplex::ModifiedNodeFlag::Created);
 
-    if (created || diffs.has(vacomplex::NodeDiffFlag::GeometryChanged)) {
+    if (created || flags.has(vacomplex::ModifiedNodeFlag::GeometryChanged)) {
         auto geometry = dynamic_cast<const workspace::EdgeGeometry*>(ke->geometry());
         if (geometry) {
             // todo: if geometry type changed, remove previous geometry's attributes.
@@ -789,13 +789,13 @@ void VacKeyEdge::updateFromVac_(vacomplex::NodeDiffFlags diffs) {
             dirtyPreJoinGeometry_();
         }
     }
-    else if (diffs.has(vacomplex::NodeDiffFlag::MeshChanged)) {
+    else if (flags.has(vacomplex::ModifiedNodeFlag::MeshChanged)) {
         dirtyPreJoinGeometry_();
     }
 
     const Workspace* w = workspace();
 
-    if (created || diffs.has(vacomplex::NodeDiffFlag::BoundaryChanged)) {
+    if (created || flags.has(vacomplex::ModifiedNodeFlag::BoundaryChanged)) {
         std::array<VacKeyVertex*, 2> oldVertices = {
             verticesInfo_[0].element, verticesInfo_[1].element};
         // TODO: check bool(ke->startVertex()) == bool(newVertices[0])

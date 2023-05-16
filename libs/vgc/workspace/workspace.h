@@ -335,7 +335,7 @@ private:
     void onVacNodeMoved_(vacomplex::Node* node);
     VGC_SLOT(onVacNodeMoved, onVacNodeMoved_);
 
-    void onVacNodeModified_(vacomplex::Node* node, vacomplex::NodeDiffFlags diffs);
+    void onVacNodeModified_(vacomplex::Node* node, vacomplex::ModifiedNodeFlags flags);
     VGC_SLOT(onVacNodeModified, onVacNodeModified_);
 
     // Helper methods

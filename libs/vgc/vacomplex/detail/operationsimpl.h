@@ -109,7 +109,7 @@ private:
     ComplexDiff diff_ = {};
     std::unordered_set<Node*> nodesToDestroy_ = {};
 
-    void onNodeDiff_(Node* node, NodeDiffFlags diffFlags);
+    void onModifiedNode_(Node* node, ModifiedNodeFlags diffFlags);
     void onNodeCreated_(Node* node, NodeSourceOperation sourceOperation);
 
     // Creates a new node and inserts it to the complex.
@@ -143,7 +143,7 @@ private:
         T* node = createNode_<T>(std::move(sourceOperation), std::forward<Args>(args)...);
         parentGroup->insertChildUnchecked(nextSibling, node);
         onNodeCreated_(node, std::move(sourceOperation));
-        onNodeDiff_(parentGroup, NodeDiffFlag::ChildrenChanged);
+        onModifiedNode_(parentGroup, ModifiedNodeFlag::ChildrenChanged);
         return node;
     }
 
@@ -155,7 +155,7 @@ private:
     // Adds the `boundingCell` to the boundary of the `boundedCell`.
     //
     // This updates both boundingCell->star_ and boundedCell->boundary_ and
-    // sets the appropriate NodeDiff flags.
+    // sets the appropriate ModifiedNode flags.
     //
     // Throw a LogicError if either `boundingCell` or `boundedCell` is null.
     //

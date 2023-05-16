@@ -28,37 +28,46 @@ Operations::Operations(Complex* complex)
         throw LogicError("Cannot instantiate a VAC `Operations` with a null complex.");
     }
 
+    if (complex->isOperationInProgress_) {
+        throw LogicError("Cannot instantiate a VAC `Operations` when another is still "
+                         "alive for the same complex.");
+    }
+    complex->isOperationInProgress_ = true;
+
     // Increment version
     complex->version_ += 1;
 }
 
 Operations::~Operations() {
+    Complex* complex = this->complex();
 
     // Notify of created nodes (removed nodes are still alive).
     for (const CreatedNodeInfo& info : diff_.createdNodes()) {
-        complex()->nodeCreated().emit(info.node(), info.sourceOperation());
+        complex->nodeCreated().emit(info.node(), info.sourceOperation());
     }
 
     // Delete nodes removed during the operation.
     for (Node* nodeToDestroy : nodesToDestroy_) {
         Group* parentGroup = nodeToDestroy->parentGroup();
         if (parentGroup) {
-            diff_.onNodeDiff(parentGroup, NodeDiffFlag::ChildrenChanged);
+            diff_.onModifiedNode(parentGroup, ModifiedNodeFlag::ChildrenChanged);
         }
         nodeToDestroy->unlink();
         diff_.onNodeRemoved(nodeToDestroy->id());
         // Note: must not cause recursion.
-        complex()->nodeAboutToBeRemoved().emit(nodeToDestroy);
-        complex()->nodes_.erase(nodeToDestroy->id());
+        complex->nodeAboutToBeRemoved().emit(nodeToDestroy);
+        complex->nodes_.erase(nodeToDestroy->id());
     }
 
-    for (const NodeDiff& diff : diff_.nodeDiffs()) {
-        complex()->nodeModified().emit(diff.node(), diff.flags());
+    for (const ModifiedNodeInfo& info : diff_.modifiedNodes()) {
+        complex->nodeModified().emit(info.node(), info.flags());
     }
 
-    if (complex()->isDiffEnabled_) {
-        complex()->diff_.merge(diff_);
+    if (complex->isDiffEnabled_) {
+        complex->diff_.merge(diff_);
     }
+
+    complex->isOperationInProgress_ = false;
 }
 
 Group* Operations::createRootGroup() {
@@ -243,7 +252,7 @@ void Operations::hardDelete(Node* node, bool deleteIsolatedVertices) {
                 }
                 if (!boundaryCell->isBeingDestroyed_) {
                     boundaryCell->star_.removeOne(cell);
-                    onNodeDiff_(boundaryCell, NodeDiffFlag::StarChanged);
+                    onModifiedNode_(boundaryCell, ModifiedNodeFlag::StarChanged);
                 }
             }
         }
@@ -277,7 +286,7 @@ void Operations::hardDelete(Node* node, bool deleteIsolatedVertices) {
                 }
                 else {
                     keyVertex->star_.removeOne(inbetweenVertex);
-                    onNodeDiff_(keyVertex, NodeDiffFlag::StarChanged);
+                    onModifiedNode_(keyVertex, ModifiedNodeFlag::StarChanged);
                 }
             }
         }
@@ -290,7 +299,7 @@ void Operations::hardDelete(Node* node, bool deleteIsolatedVertices) {
         Group* group = node->toGroupUnchecked();
         if (group->numChildren()) {
             group->resetChildrenNoUnlink();
-            onNodeDiff_(node, NodeDiffFlag::ChildrenChanged);
+            onModifiedNode_(node, ModifiedNodeFlag::ChildrenChanged);
         }
     }
 }
@@ -310,9 +319,9 @@ void Operations::moveToGroup(Node* node, Group* parentGroup, Node* nextSibling) 
 
     // diff
     if (oldParent != parentGroup) {
-        onNodeDiff_(node, NodeDiffFlag::Reparented);
+        onModifiedNode_(node, ModifiedNodeFlag::Reparented);
     }
-    onNodeDiff_(parentGroup, NodeDiffFlag::ChildrenChanged);
+    onModifiedNode_(parentGroup, ModifiedNodeFlag::ChildrenChanged);
 }
 
 // dev note: update boundary before star
@@ -358,8 +367,8 @@ void Operations::setKeyEdgeSamplingQuality(
     dirtyMesh_(ke);
 }
 
-void Operations::onNodeDiff_(Node* node, NodeDiffFlags diffFlags) {
-    diff_.onNodeDiff(node, diffFlags);
+void Operations::onModifiedNode_(Node* node, ModifiedNodeFlags diffFlags) {
+    diff_.onModifiedNode(node, diffFlags);
 }
 
 void Operations::onNodeCreated_(Node* node, NodeSourceOperation sourceOperation) {
@@ -392,13 +401,13 @@ void Operations::dirtyMesh_(Cell* cell) {
 
     for (Cell* dirtyCell : dirtyList) {
         dirtyCell->dirtyMesh_();
-        onNodeDiff_(dirtyCell, NodeDiffFlag::MeshChanged);
+        onModifiedNode_(dirtyCell, ModifiedNodeFlag::MeshChanged);
     }
 }
 
 void Operations::onGeometryChanged_(Cell* cell) {
     dirtyMesh_(cell);
-    onNodeDiff_(cell, NodeDiffFlag::GeometryChanged);
+    onModifiedNode_(cell, ModifiedNodeFlag::GeometryChanged);
 }
 
 void Operations::addToBoundary_(Cell* boundedCell, Cell* boundingCell) {
@@ -411,8 +420,8 @@ void Operations::addToBoundary_(Cell* boundedCell, Cell* boundingCell) {
     else if (!boundedCell->boundary_.contains(boundingCell)) {
         boundedCell->boundary_.append(boundingCell);
         boundingCell->star_.append(boundedCell);
-        onNodeDiff_(boundedCell, NodeDiffFlag::BoundaryChanged);
-        onNodeDiff_(boundingCell, NodeDiffFlag::StarChanged);
+        onModifiedNode_(boundedCell, ModifiedNodeFlag::BoundaryChanged);
+        onModifiedNode_(boundingCell, ModifiedNodeFlag::StarChanged);
     }
 }
 

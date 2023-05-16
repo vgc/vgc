@@ -366,7 +366,7 @@ private:
     // this pointer is not safe to use when tree is not synced with VAC
     vacomplex::Node* vacNode_ = nullptr;
 
-    virtual void updateFromVac_(vacomplex::NodeDiffFlags diffs) = 0;
+    virtual void updateFromVac_(vacomplex::ModifiedNodeFlags flags) = 0;
 };
 
 vacomplex::Node* Element::vacNode() const {
