@@ -20,11 +20,12 @@
 #include <unordered_set>
 
 #include <vgc/vacomplex/complex.h>
+#include <vgc/vacomplex/edgegeometry.h>
 
 namespace vgc::vacomplex::detail {
 
 class VGC_VACOMPLEX_API Operations {
-    friend class KeyEdgeGeometry;
+    friend KeyEdgeGeometry;
     using GroupChildrenIterator = Group;
     //using GroupChildrenConstIterator = decltype(Group::children_)::const_iterator;
 
