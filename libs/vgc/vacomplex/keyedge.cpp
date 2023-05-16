@@ -46,6 +46,7 @@ std::shared_ptr<const EdgeSampling> KeyEdge::samplingShared() const {
 
 const EdgeSampling& KeyEdge::sampling() const {
     updateSampling_();
+    VGC_ASSERT(sampling_ != nullptr);
     return *sampling_;
 }
 

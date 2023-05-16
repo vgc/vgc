@@ -294,14 +294,7 @@ void Operations::hardDelete(Node* node, bool deleteIsolatedVertices) {
         nodesToDestroy.merge(isolatedInbetweenVertices);
     }
 
-    if (isRoot) {
-        // we did not remove root group but cleared its children
-        Group* group = node->toGroupUnchecked();
-        if (group->numChildren()) {
-            group->resetChildrenNoUnlink();
-            onNodeModified_(node, ModifiedNodeFlag::ChildrenChanged);
-        }
-    }
+    nodesToDestroy_.insert(nodesToDestroy.begin(), nodesToDestroy.end());
 }
 
 void Operations::softDelete(Node* /*node*/, bool /*deleteIsolatedVertices*/) {
