@@ -126,6 +126,7 @@ protected:
     core::DoubleArray inputWidths_;
     core::DoubleArray inputTimestamps_;
     geometry::Mat4d canvasToWorkspaceMatrix_;
+    bool isQuantizationStatusIdentified_ = false;
     bool isInputPointsQuantized_ = false;
     bool isInputWidthsQuantized_ = false;
     bool isInputTimestampsQuantized_ = false;
