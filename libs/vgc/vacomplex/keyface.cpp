@@ -338,7 +338,6 @@ core::Array<KeyCycle> computeKeyFaceCandidateAt(
         }
         KeyEdge* ke = cell->toKeyEdge();
         if (ke && ke->existsAt(t)) {
-            const geometry::CurveSampleArray& sampling = ke->sampling().samples();
             const geometry::CurveSampleArray& samples = ke->sampling().samples();
             geometry::DistanceToCurve d = geometry::distanceToCurve(samples, position);
 
