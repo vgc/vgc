@@ -51,7 +51,7 @@ public:
 
     void setWidths(core::DoubleArray widths);
 
-    std::unique_ptr<KeyEdgeGeometry> clone() const override;
+    std::shared_ptr<KeyEdgeGeometry> clone() const override;
 
     /// Expects positions in object space.
     ///

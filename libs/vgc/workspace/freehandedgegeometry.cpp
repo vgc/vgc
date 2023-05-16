@@ -41,8 +41,8 @@ void FreehandEdgeGeometry::setWidths(core::DoubleArray widths) {
     dirtyEdgeSampling();
 }
 
-std::unique_ptr<vacomplex::KeyEdgeGeometry> FreehandEdgeGeometry::clone() const {
-    auto ret = std::make_unique<FreehandEdgeGeometry>();
+std::shared_ptr<vacomplex::KeyEdgeGeometry> FreehandEdgeGeometry::clone() const {
+    auto ret = std::make_shared<FreehandEdgeGeometry>();
     ret->points_ = points_;
     ret->widths_ = widths_;
     ret->arclengths_ = arclengths_;

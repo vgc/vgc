@@ -327,8 +327,9 @@ private:
     void onVacNodeAboutToBeRemoved_(vacomplex::Node* node);
     VGC_SLOT(onVacNodeAboutToBeRemoved, onVacNodeAboutToBeRemoved_);
 
-    using NodeSpan = core::Span<vacomplex::Node*>;
-    void onVacNodeCreated_(vacomplex::Node* node, NodeSpan operationSourceNodes);
+    void onVacNodeCreated_(
+        vacomplex::Node* node,
+        const vacomplex::NodeSourceOperation& nodeSourceOperation);
     VGC_SLOT(onVacNodeCreated, onVacNodeCreated_);
 
     void onVacNodeMoved_(vacomplex::Node* node);

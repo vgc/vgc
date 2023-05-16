@@ -137,7 +137,7 @@ public:
     KeyEdgeGeometry(const KeyEdgeGeometry&) = delete;
     KeyEdgeGeometry& operator=(const KeyEdgeGeometry&) = delete;
 
-    virtual std::unique_ptr<KeyEdgeGeometry> clone() const = 0;
+    virtual std::shared_ptr<KeyEdgeGeometry> clone() const = 0;
 
     /// Expects positions in object space.
     ///
@@ -146,8 +146,6 @@ public:
         const geometry::Vec2d& snapEndPosition,
         EdgeSnapTransformationMode mode =
             EdgeSnapTransformationMode::LinearInArclength) = 0;
-
-    // variant `std::unique_ptr<KeyEdgeGeometry> snapped()` ?
 
     /// Expects positions in object space.
     ///

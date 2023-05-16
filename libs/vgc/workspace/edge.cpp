@@ -707,7 +707,7 @@ ElementStatus VacKeyEdge::updateFromDom_(Workspace* workspace) {
     //const auto& points = domElement->getAttribute(ds::positions).getVec2dArray();
     //const auto& widths = domElement->getAttribute(ds::widths).getDoubleArray();
 
-    bool hasInputGeometryChanged = true;
+    bool hasGeometryChanged = true;
     bool hasBoundaryChanged = true;
     if (ke) {
         if (kvs[0] == ke->startVertex() && kvs[1] == ke->endVertex()) {
@@ -722,7 +722,7 @@ ElementStatus VacKeyEdge::updateFromDom_(Workspace* workspace) {
 
     // create/rebuild/update VAC node
     if (!ke) {
-        auto geometry = std::make_unique<workspace::FreehandEdgeGeometry>();
+        auto geometry = std::make_shared<workspace::FreehandEdgeGeometry>();
         geometry->updateFromDomEdge_(domElement);
         if (isClosed) {
             ke = vacomplex::ops::createKeyClosedEdge(std::move(geometry), parentGroup);
@@ -740,12 +740,12 @@ ElementStatus VacKeyEdge::updateFromDom_(Workspace* workspace) {
     else {
         auto geometry = dynamic_cast<workspace::EdgeGeometry*>(ke->geometry());
         if (geometry && geometry->updateFromDomEdge_(domElement)) {
-            hasInputGeometryChanged = false;
+            hasGeometryChanged = false;
         }
     }
 
     // dirty cached data
-    if (hasInputGeometryChanged || hasBoundaryChanged) {
+    if (hasGeometryChanged || hasBoundaryChanged) {
         dirtyPreJoinGeometry_(false);
     }
 
@@ -760,7 +760,7 @@ ElementStatus VacKeyEdge::updateFromDom_(Workspace* workspace) {
     return ElementStatus::Ok;
 }
 
-void VacKeyEdge::updateFromVac_(vacomplex::NodeDiffFlags /*diffs*/) {
+void VacKeyEdge::updateFromVac_(vacomplex::NodeDiffFlags diffs) {
     namespace ds = dom::strings;
     vacomplex::KeyEdge* ke = vacKeyEdgeNode();
     if (!ke) {
@@ -778,31 +778,43 @@ void VacKeyEdge::updateFromVac_(vacomplex::NodeDiffFlags /*diffs*/) {
         return;
     }
 
-    auto geometry = dynamic_cast<const workspace::EdgeGeometry*>(ke->geometry());
-    if (geometry) {
-        // todo: if geometry type changed, remove previous geometry's attributes.
-        geometry->writeToDomEdge_(domElement);
+    bool created = diffs.has(vacomplex::NodeDiffFlag::Created);
+
+    if (created || diffs.has(vacomplex::NodeDiffFlag::GeometryChanged)) {
+        auto geometry = dynamic_cast<const workspace::EdgeGeometry*>(ke->geometry());
+        if (geometry) {
+            // todo: if geometry type changed, remove previous geometry's attributes.
+            geometry->writeToDomEdge_(domElement);
+            // todo: dirty only if really changed ?
+            dirtyPreJoinGeometry_();
+        }
+    }
+    else if (diffs.has(vacomplex::NodeDiffFlag::MeshChanged)) {
+        dirtyPreJoinGeometry_();
     }
 
     const Workspace* w = workspace();
-    std::array<VacKeyVertex*, 2> oldVertices = {
-        verticesInfo_[0].element, verticesInfo_[1].element};
-    // TODO: check bool(ke->startVertex()) == bool(newVertices[0])
-    //             bool(ke->endVertex()) == bool(newVertices[1])
-    std::array<VacKeyVertex*, 2> newVertices = {
-        static_cast<VacKeyVertex*>(w->findVacElement(ke->startVertex())),
-        static_cast<VacKeyVertex*>(w->findVacElement(ke->endVertex())),
-    };
-    updateVertices_(newVertices);
 
-    // TODO: check domElement() != nullptr
-    if (oldVertices[0] != newVertices[0]) {
-        domElement->setAttribute(
-            ds::startvertex, newVertices[0]->domElement()->getPathFromId());
-    }
-    if (oldVertices[1] != newVertices[1]) {
-        domElement->setAttribute(
-            ds::startvertex, newVertices[1]->domElement()->getPathFromId());
+    if (created || diffs.has(vacomplex::NodeDiffFlag::BoundaryChanged)) {
+        std::array<VacKeyVertex*, 2> oldVertices = {
+            verticesInfo_[0].element, verticesInfo_[1].element};
+        // TODO: check bool(ke->startVertex()) == bool(newVertices[0])
+        //             bool(ke->endVertex()) == bool(newVertices[1])
+        std::array<VacKeyVertex*, 2> newVertices = {
+            static_cast<VacKeyVertex*>(w->findVacElement(ke->startVertex())),
+            static_cast<VacKeyVertex*>(w->findVacElement(ke->endVertex())),
+        };
+        updateVertices_(newVertices);
+
+        // TODO: check domElement() != nullptr
+        if (oldVertices[0] != newVertices[0]) {
+            domElement->setAttribute(
+                ds::startvertex, newVertices[0]->domElement()->getPathFromId());
+        }
+        if (oldVertices[1] != newVertices[1]) {
+            domElement->setAttribute(
+                ds::startvertex, newVertices[1]->domElement()->getPathFromId());
+        }
     }
 }
 

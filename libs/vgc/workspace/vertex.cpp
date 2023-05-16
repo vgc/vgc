@@ -271,13 +271,18 @@ void VacKeyVertex::updateFromVac_(vacomplex::NodeDiffFlags diffs) {
         return;
     }
 
+    bool created = diffs.has(vacomplex::NodeDiffFlag::Created);
+
     using vacomplex::NodeDiffFlag;
-    if (diffs.hasAny({NodeDiffFlag::GeometryChanged, NodeDiffFlag::Created})) {
+    if (created || diffs.has(NodeDiffFlag::GeometryChanged)) {
         const auto& position = domElement->getAttribute(ds::position).getVec2d();
         if (kv->position() != position) {
             domElement->setAttribute(ds::position, kv->position());
             dirtyPosition_();
         }
+    }
+    else if (diffs.has(NodeDiffFlag::MeshChanged)) {
+        frameData_.isSelectionGeometryDirty_ = true;
     }
 }
 

@@ -20,21 +20,21 @@
 
 namespace vgc::vacomplex {
 
-void ComplexDiff::merge(const ComplexDiff& other) {
-    for (auto& p : other.nodeDiffs_) {
-        const NodeDiff& nextDiff = p.second;
-        NodeDiff& nodeDiff = nodeDiffs_[p.first];
-        nodeDiff.setNode(nextDiff.node());
-        if (nextDiff.flags().has(NodeDiffFlag::Removed)) {
-            nodeDiff.setFlags(NodeDiffFlag::Removed);
-        }
-        else if (nextDiff.flags().has(NodeDiffFlag::Removed)) {
-            nodeDiff.setFlags(nextDiff.flags());
-        }
-        else {
-            nodeDiff.setFlags(nodeDiff.flags() | nextDiff.flags());
-        }
-    }
+void ComplexDiff::merge(const ComplexDiff& /*other*/) {
+    //for (auto& p : other.nodeDiffs_) {
+    //    const NodeDiff& nextDiff = p.second;
+    //    NodeDiff& nodeDiff = nodeDiffs_[p.first];
+    //    nodeDiff.setNode(nextDiff.node());
+    //    if (nextDiff.flags().has(NodeDiffFlag::Removed)) {
+    //        nodeDiff.setFlags(NodeDiffFlag::Removed);
+    //    }
+    //    else if (nextDiff.flags().has(NodeDiffFlag::Removed)) {
+    //        nodeDiff.setFlags(nextDiff.flags());
+    //    }
+    //    else {
+    //        nodeDiff.setFlags(nodeDiff.flags() | nextDiff.flags());
+    //    }
+    //}
 }
 
 void Complex::onDestroyed() {
@@ -58,13 +58,13 @@ void Complex::clear() {
     }
 
     // Remove all the nodes
-    auto nodesCopy = std::move(nodes_);
+    NodePtrMap nodesCopy = std::move(nodes_);
     nodes_ = NodePtrMap();
 
     // Add the removal of all the nodes to the diff
     if (isDiffEnabled_) {
         for (const auto& node : nodesCopy) {
-            diff_.onNodeRemoved(node.second.get());
+            diff_.onNodeRemoved(node.first);
         }
     }
 

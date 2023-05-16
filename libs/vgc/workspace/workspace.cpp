@@ -566,7 +566,9 @@ void Workspace::onVacNodeAboutToBeRemoved_(vacomplex::Node* node) {
     }
 }
 
-void Workspace::onVacNodeCreated_(vacomplex::Node* node, NodeSpan /*opSourceNodes*/) {
+void Workspace::onVacNodeCreated_(
+    vacomplex::Node* node,
+    const vacomplex::NodeSourceOperation& /*nodeSourceOperation*/) {
 
     if (isUpdatingVacFromDom_) {
         return;

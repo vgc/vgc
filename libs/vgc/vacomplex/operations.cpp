@@ -54,7 +54,7 @@ KeyVertex* createKeyVertex(
 }
 
 KeyEdge* createKeyClosedEdge(
-    std::unique_ptr<KeyEdgeGeometry>&& geometry,
+    const std::shared_ptr<KeyEdgeGeometry>& geometry,
     Group* parentGroup,
     Node* nextSibling,
     core::AnimTime t) {
@@ -64,13 +64,13 @@ KeyEdge* createKeyClosedEdge(
     }
     checkIsChildOrNull(nextSibling, parentGroup);
     detail::Operations ops(parentGroup->complex());
-    return ops.createKeyClosedEdge(std::move(geometry), parentGroup, nextSibling, {}, t);
+    return ops.createKeyClosedEdge(geometry, parentGroup, nextSibling, {}, t);
 }
 
 KeyEdge* createKeyOpenEdge(
     KeyVertex* startVertex,
     KeyVertex* endVertex,
-    std::unique_ptr<KeyEdgeGeometry>&& geometry,
+    const std::shared_ptr<KeyEdgeGeometry>& geometry,
     Group* parentGroup,
     Node* nextSibling,
     core::AnimTime t) {
@@ -108,14 +108,13 @@ KeyEdge* createKeyOpenEdge(
     }
 
     detail::Operations ops(complex);
-    core::Span<Node*> sourceNodes;
     return ops.createKeyOpenEdge(
         startVertex,
         endVertex,
-        std::move(geometry),
+        geometry,
         parentGroup,
         nextSibling,
-        sourceNodes,
+        NodeSourceOperation(),
         t);
 }
 
@@ -138,7 +137,8 @@ KeyFace* createKeyFace(
 
     detail::Operations ops(parentGroup->complex());
     core::Span<Node*> sourceNodes;
-    return ops.createKeyFace(std::move(cycles), parentGroup, nextSibling, sourceNodes, t);
+    return ops.createKeyFace(
+        std::move(cycles), parentGroup, nextSibling, NodeSourceOperation(), t);
 }
 
 KeyFace*
@@ -183,12 +183,12 @@ void setKeyVertexPosition(KeyVertex* vertex, const geometry::Vec2d& pos) {
     return ops.setKeyVertexPosition(vertex, pos);
 }
 
-void setKeyEdgeGeometry(KeyEdge* edge, std::unique_ptr<KeyEdgeGeometry>&& geometry) {
+void setKeyEdgeGeometry(KeyEdge* edge, const std::shared_ptr<KeyEdgeGeometry>& geometry) {
     if (!edge) {
         throw LogicError("setKeyEdgeCurvePoints: edge is nullptr.");
     }
     detail::Operations ops(edge->complex());
-    return ops.setKeyEdgeGeometry(edge, std::move(geometry));
+    return ops.setKeyEdgeGeometry(edge, geometry);
 }
 
 void setKeyEdgeSamplingQuality(KeyEdge* edge, geometry::CurveSamplingQuality quality) {

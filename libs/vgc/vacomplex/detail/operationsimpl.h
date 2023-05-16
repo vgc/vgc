@@ -24,6 +24,7 @@
 namespace vgc::vacomplex::detail {
 
 class VGC_VACOMPLEX_API Operations {
+    friend class KeyEdgeGeometry;
     using GroupChildrenIterator = Group;
     //using GroupChildrenConstIterator = decltype(Group::children_)::const_iterator;
 
@@ -33,6 +34,8 @@ public:
     // Throws a `LogicError` if `complex` is nullptr.
     //
     Operations(Complex* complex);
+
+    ~Operations();
 
     // Returns the `Complex` that this `Operations` operates on.
     //
@@ -54,7 +57,7 @@ public:
         const geometry::Vec2d& position,
         Group* parentGroup,
         Node* nextSibling = nullptr,
-        core::Span<Node*> operationSourceNodes = {},
+        NodeSourceOperation sourceOperation = {},
         core::AnimTime t = {});
 
     // Assumes `nextSibling` is either `nullptr` or a child of `parentGroup`.
@@ -64,19 +67,19 @@ public:
     KeyEdge* createKeyOpenEdge(
         KeyVertex* startVertex,
         KeyVertex* endVertex,
-        std::unique_ptr<KeyEdgeGeometry>&& geometry,
+        const std::shared_ptr<KeyEdgeGeometry>& geometry,
         Group* parentGroup,
         Node* nextSibling = nullptr,
-        core::Span<Node*> operationSourceNodes = {},
+        NodeSourceOperation sourceOperation = {},
         core::AnimTime t = {});
 
     // Assumes `nextSibling` is either `nullptr` or a child of `parentGroup`.
     //
     KeyEdge* createKeyClosedEdge(
-        std::unique_ptr<KeyEdgeGeometry>&& geometry,
+        const std::shared_ptr<KeyEdgeGeometry>& geometry,
         Group* parentGroup,
         Node* nextSibling = nullptr,
-        core::Span<Node*> operationSourceNodes = {},
+        NodeSourceOperation sourceOperation = {},
         core::AnimTime t = {});
 
     // Assumes `cycles` are valid.
@@ -86,7 +89,7 @@ public:
         core::Array<KeyCycle> cycles,
         Group* parentGroup,
         Node* nextSibling = nullptr,
-        core::Span<Node*> operationSourceNodes = {},
+        NodeSourceOperation sourceOperation = {},
         core::AnimTime t = {});
 
     void hardDelete(Node* node, bool deleteIsolatedVertices);
@@ -96,14 +99,18 @@ public:
 
     void setKeyVertexPosition(KeyVertex* kv, const geometry::Vec2d& pos);
 
-    void setKeyEdgeGeometry(KeyEdge* ke, std::unique_ptr<KeyEdgeGeometry>&& geometry);
+    void
+    setKeyEdgeGeometry(KeyEdge* ke, const std::shared_ptr<KeyEdgeGeometry>& geometry);
 
     void setKeyEdgeSamplingQuality(KeyEdge* ke, geometry::CurveSamplingQuality quality);
 
-    void dirtyGeometry(Cell* cell);
-
 private:
-    Complex* complex_;
+    Complex* complex_ = nullptr;
+    ComplexDiff diff_ = {};
+    std::unordered_set<Node*> nodesToDestroy_ = {};
+
+    void onNodeDiff_(Node* node, NodeDiffFlags diffFlags);
+    void onNodeCreated_(Node* node, NodeSourceOperation sourceOperation);
 
     // Creates a new node and inserts it to the complex.
     //
@@ -111,7 +118,7 @@ private:
     // which is why we have to use `new` here.
     //
     template<class T, typename... Args>
-    T* createNode_(Args&&... args) {
+    T* createNode_(NodeSourceOperation sourceOperation = {}, Args&&... args) {
         core::Id id = core::genId();
         T* node = new T(id, std::forward<Args>(args)...);
         std::unique_ptr<T> nodePtr(node);
@@ -120,23 +127,30 @@ private:
         if (!emplaced) {
             throw LogicError("Id collision error.");
         }
-        if (complex()->isDiffEnabled_) {
-            complex()->diff_.onNodeDiff(node, NodeDiffFlag::Created);
-        }
+        onNodeCreated_(node, std::move(sourceOperation));
         return node;
     }
 
     // Creates a new node at the given location.
     //
     template<class T, typename... Args>
-    T* createNodeAt_(Group* parentGroup, Node* nextSibling, Args&&... args) {
-        T* node = createNode_<T>(std::forward<Args>(args)...);
+    T* createNodeAt_(
+        Group* parentGroup,
+        Node* nextSibling,
+        NodeSourceOperation sourceOperation = {},
+        Args&&... args) {
+
+        T* node = createNode_<T>(std::move(sourceOperation), std::forward<Args>(args)...);
         parentGroup->insertChildUnchecked(nextSibling, node);
-        if (complex()->isDiffEnabled_) {
-            complex()->diff_.onNodeDiff(parentGroup, NodeDiffFlag::ChildrenChanged);
-        }
+        onNodeCreated_(node, std::move(sourceOperation));
+        onNodeDiff_(parentGroup, NodeDiffFlag::ChildrenChanged);
         return node;
     }
+
+    void removeNode_(Node* node);
+
+    void dirtyMesh_(Cell* cell);
+    void onGeometryChanged_(Cell* cell);
 
     // Adds the `boundingCell` to the boundary of the `boundedCell`.
     //

@@ -54,7 +54,6 @@ public:
     }
 
     KeyEdgeGeometry* geometry() const {
-        hasGeometryBeenQueriedSinceLastDirtyEvent_ = true;
         return geometry_.get();
     }
 
@@ -104,7 +103,7 @@ private:
     // position and orientation when not bound to vertices ?
     //detail::Transform2d transform_;
 
-    std::unique_ptr<KeyEdgeGeometry> geometry_ = {};
+    std::shared_ptr<KeyEdgeGeometry> geometry_ = {};
     //bool isClosed_ = false;
 
     geometry::CurveSamplingQuality samplingQuality_ = {};
@@ -112,9 +111,9 @@ private:
 
     EdgeSampling computeSampling_(geometry::CurveSamplingQuality quality) const;
     void updateSampling_() const;
-    void dirtyInputSampling_();
 
-    void onBoundaryGeometryChanged_() override;
+    void dirtyMesh_() override;
+    void onBoundaryMeshChanged_() override;
 
     geometry::CurveSampleArray
     computeInputSamples_(const geometry::CurveSamplingParameters& parameters) const;
