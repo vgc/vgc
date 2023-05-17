@@ -22,9 +22,8 @@ namespace vgc::vacomplex {
 
 void KeyEdgeGeometry::dirtyEdgeSampling() const {
     if (edge_) {
-        edge_->dirtyInputSampling_();
         detail::Operations ops(edge_->complex());
-        ops.dirtyGeometry(edge_); // it also emits the geometry change event
+        ops.onGeometryChanged_(edge_);
     }
 }
 

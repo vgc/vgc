@@ -46,6 +46,7 @@ std::shared_ptr<const EdgeSampling> KeyEdge::samplingShared() const {
 
 const EdgeSampling& KeyEdge::sampling() const {
     updateSampling_();
+    VGC_ASSERT(sampling_ != nullptr);
     return *sampling_;
 }
 
@@ -71,7 +72,7 @@ EdgeSampling KeyEdge::computeSampling(geometry::CurveSamplingQuality quality) co
 
     if (samplingQuality_ == quality) {
         sampling_ = std::make_shared<const EdgeSampling>(sampling);
-        hasGeometryBeenQueriedSinceLastDirtyEvent_ = true;
+        hasMeshBeenQueriedSinceLastDirtyEvent_ = true;
     }
 
     return sampling;
@@ -121,17 +122,17 @@ void KeyEdge::updateSampling_() const {
     if (!sampling_) {
         EdgeSampling sampling = computeSampling_(samplingQuality_);
         sampling_ = std::make_shared<const EdgeSampling>(std::move(sampling));
-        hasGeometryBeenQueriedSinceLastDirtyEvent_ = true;
     }
+    hasMeshBeenQueriedSinceLastDirtyEvent_ = true;
 }
 
-void KeyEdge::dirtyInputSampling_() {
+void KeyEdge::dirtyMesh_() {
     sampling_.reset();
 }
 
-void KeyEdge::onBoundaryGeometryChanged_() {
+void KeyEdge::onBoundaryMeshChanged_() {
     // possible optimization: check if positions really changed.
-    dirtyInputSampling_();
+    dirtyMesh_();
 }
 
 } // namespace vgc::vacomplex

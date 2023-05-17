@@ -52,7 +52,10 @@ Complex* Cell::complex() const {
     return p ? p->complex() : nullptr;
 }
 
-void Cell::onBoundaryGeometryChanged_() {
+void Cell::dirtyMesh_() {
+}
+
+void Cell::onBoundaryMeshChanged_() {
 }
 
 Transform Group::computeInverseTransformTo(Group* ancestor) const {

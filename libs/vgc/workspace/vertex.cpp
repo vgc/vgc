@@ -253,7 +253,7 @@ ElementStatus VacKeyVertex::updateFromDom_(Workspace* /*workspace*/) {
     return ElementStatus::Ok;
 }
 
-void VacKeyVertex::updateFromVac_(vacomplex::NodeDiffFlags diffs) {
+void VacKeyVertex::updateFromVac_(vacomplex::ModifiedNodeFlags flags) {
     namespace ds = dom::strings;
     vacomplex::KeyVertex* kv = vacKeyVertexNode();
     if (!kv) {
@@ -271,13 +271,16 @@ void VacKeyVertex::updateFromVac_(vacomplex::NodeDiffFlags diffs) {
         return;
     }
 
-    using vacomplex::NodeDiffFlag;
-    if (diffs.hasAny({NodeDiffFlag::GeometryChanged, NodeDiffFlag::Created})) {
+    using vacomplex::ModifiedNodeFlag;
+    if (flags.has(ModifiedNodeFlag::GeometryChanged)) {
         const auto& position = domElement->getAttribute(ds::position).getVec2d();
         if (kv->position() != position) {
             domElement->setAttribute(ds::position, kv->position());
             dirtyPosition_();
         }
+    }
+    else if (flags.has(ModifiedNodeFlag::MeshChanged)) {
+        frameData_.isSelectionGeometryDirty_ = true;
     }
 }
 

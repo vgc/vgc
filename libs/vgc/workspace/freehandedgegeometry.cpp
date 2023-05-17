@@ -41,8 +41,8 @@ void FreehandEdgeGeometry::setWidths(core::DoubleArray widths) {
     dirtyEdgeSampling();
 }
 
-std::unique_ptr<vacomplex::KeyEdgeGeometry> FreehandEdgeGeometry::clone() const {
-    auto ret = std::make_unique<FreehandEdgeGeometry>();
+std::shared_ptr<vacomplex::KeyEdgeGeometry> FreehandEdgeGeometry::clone() const {
+    auto ret = std::make_shared<FreehandEdgeGeometry>();
     ret->points_ = points_;
     ret->widths_ = widths_;
     ret->arclengths_ = arclengths_;
@@ -80,7 +80,7 @@ vacomplex::EdgeSampling FreehandEdgeGeometry::computeSampling(
     vacomplex::EdgeSnapTransformationMode /*mode*/) const {
 
     geometry::Curve curve;
-    geometry::CurveSampleArray sampling;
+    geometry::CurveSampleArray samples;
     geometry::Vec2dArray tmpPoints;
     core::DoubleArray tmpWidths;
 
@@ -111,9 +111,10 @@ vacomplex::EdgeSampling FreehandEdgeGeometry::computeSampling(
         curve.setWidths(widths_.get());
     }
 
-    curve.sampleRange(sampling, geometry::CurveSamplingParameters(quality));
-    VGC_ASSERT(sampling.length() > 0);
-    return vacomplex::EdgeSampling(std::move(sampling));
+    curve.sampleRange(samples, geometry::CurveSamplingParameters(quality));
+    VGC_ASSERT(samples.length() > 0);
+
+    return vacomplex::EdgeSampling(std::move(samples));
 }
 
 bool FreehandEdgeGeometry::updateFromDomEdge_(dom::Element* element) {

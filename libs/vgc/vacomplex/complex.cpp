@@ -21,19 +21,17 @@
 namespace vgc::vacomplex {
 
 void ComplexDiff::merge(const ComplexDiff& other) {
-    for (auto& p : other.nodeDiffs_) {
-        const NodeDiff& nextDiff = p.second;
-        NodeDiff& nodeDiff = nodeDiffs_[p.first];
-        nodeDiff.setNode(nextDiff.node());
-        if (nextDiff.flags().has(NodeDiffFlag::Removed)) {
-            nodeDiff.setFlags(NodeDiffFlag::Removed);
-        }
-        else if (nextDiff.flags().has(NodeDiffFlag::Removed)) {
-            nodeDiff.setFlags(nextDiff.flags());
-        }
-        else {
-            nodeDiff.setFlags(nodeDiff.flags() | nextDiff.flags());
-        }
+
+    // todo: optimize, keep sorted ?
+
+    for (const CreatedNodeInfo& info : other.createdNodes_) {
+        onNodeCreated(info.node(), info.sourceOperation());
+    }
+    for (const ModifiedNodeInfo& info : other.modifiedNodes_) {
+        onNodeModified(info.node(), info.flags());
+    }
+    for (const DestroyedNodeInfo& info : other.destroyedNodes_) {
+        onNodeDestroyed(info.nodeId());
     }
 }
 
@@ -54,17 +52,17 @@ void Complex::clear() {
 
     // Emit about to be removed for all the nodes
     for (const auto& node : nodes_) {
-        nodeAboutToBeRemoved().emit(node.second.get());
+        nodeDestroyed().emit(node.first);
     }
 
     // Remove all the nodes
-    auto nodesCopy = std::move(nodes_);
+    NodePtrMap nodesCopy = std::move(nodes_);
     nodes_ = NodePtrMap();
 
     // Add the removal of all the nodes to the diff
     if (isDiffEnabled_) {
         for (const auto& node : nodesCopy) {
-            diff_.onNodeRemoved(node.second.get());
+            diff_.onNodeDestroyed(node.first);
         }
     }
 

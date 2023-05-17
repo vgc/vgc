@@ -184,7 +184,7 @@ protected:
         return parent_;
     }
 
-    void unlink();
+    void unparent();
 
 private:
     Child* previousSibling_ = nullptr;
@@ -306,7 +306,7 @@ private:
 };
 
 template<typename Derived, typename Parent>
-void TreeChildBase<Derived, Parent>::unlink() {
+void TreeChildBase<Derived, Parent>::unparent() {
 
     Parent* const oldParent = parent_;
     Derived* const oldPreviousSibling = previousSibling_;
@@ -459,8 +459,8 @@ private:
 
     core::Id id_ = -1;
     const UInt8 cellType_;
-    // used during removal operations
-    bool isBeingDestroyed_ = false;
+    // used during hard/soft delete operations
+    bool isBeingDeleted_ = false;
 };
 
 class VGC_VACOMPLEX_API Group : public Node, public detail::TreeParentBase<Group, Node> {
@@ -829,13 +829,14 @@ public:
     VGC_VACOMPLEX_DEFINE_CELL_CAST_METHOD(InbetweenFace)
 
 protected:
-    // This flag is used to not signal NodeDiffFlag::GeometryChanged
+    // This flag is used to not signal ModifiedNodeFlag::MeshChanged
     // multiple times if no dependent nodes nor the user has queried
-    // the new geometry. It should be set to true (either directly
-    // or indirectly) in all geometry getters.
-    mutable bool hasGeometryBeenQueriedSinceLastDirtyEvent_ = false;
+    // the new mesh. It should be set to true (either directly
+    // or indirectly) in all mesh getters.
+    mutable bool hasMeshBeenQueriedSinceLastDirtyEvent_ = false;
 
-    virtual void onBoundaryGeometryChanged_();
+    virtual void dirtyMesh_();
+    virtual void onBoundaryMeshChanged_();
 
 private:
     core::Array<Cell*> star_;

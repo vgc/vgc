@@ -60,7 +60,7 @@ ElementStatus Layer::updateFromDom_(Workspace* /*workspace*/) {
     return ElementStatus::Ok;
 }
 
-void Layer::updateFromVac_(vacomplex::NodeDiffFlags /*diffs*/) {
+void Layer::updateFromVac_(vacomplex::ModifiedNodeFlags /*flags*/) {
     // TODO
 }
 

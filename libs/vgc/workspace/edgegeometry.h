@@ -25,9 +25,8 @@ namespace vgc::workspace {
 
 class VGC_WORKSPACE_API EdgeGeometry : public vacomplex::KeyEdgeGeometry {
 public:
-    std::unique_ptr<EdgeGeometry> cloneWorkspaceEdgeGeometry() {
-        return std::unique_ptr<EdgeGeometry>(
-            static_cast<EdgeGeometry*>(clone().release()));
+    std::shared_ptr<EdgeGeometry> cloneWorkspaceEdgeGeometry() {
+        return std::static_pointer_cast<EdgeGeometry>(clone());
     }
 
     virtual bool updateFromDomEdge_(dom::Element* element) = 0;

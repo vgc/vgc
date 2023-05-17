@@ -91,8 +91,10 @@ Int32 computeWindingContribution(
     const geometry::Vec2d& point) {
 
     const KeyEdge* ke = keyHalfedge.edge();
-    const geometry::CurveSampleArray& samples = ke->sampling().samples();
-    const geometry::Rect2d& bbox = ke->centerlineBoundingBox();
+
+    const EdgeSampling& sampling = ke->sampling();
+    const geometry::CurveSampleArray& samples = sampling.samples();
+    const geometry::Rect2d& bbox = sampling.centerlineBoundingBox();
 
     // The winding number of a closed curve C (cycle) at point P = (Px, Py)
     // is the total number of times C travels positively around P.
@@ -336,8 +338,8 @@ core::Array<KeyCycle> computeKeyFaceCandidateAt(
         }
         KeyEdge* ke = cell->toKeyEdge();
         if (ke && ke->existsAt(t)) {
-            const geometry::CurveSampleArray& sampling = ke->sampling().samples();
-            geometry::DistanceToCurve d = geometry::distanceToCurve(sampling, position);
+            const geometry::CurveSampleArray& samples = ke->sampling().samples();
+            geometry::DistanceToCurve d = geometry::distanceToCurve(samples, position);
 
             constexpr double hpi = core::pi / 2;
             double a = d.angleFromTangent();

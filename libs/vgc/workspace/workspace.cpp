@@ -175,7 +175,7 @@ Workspace::Workspace(dom::DocumentPtr document)
     document->changed().connect(onDocumentDiff());
 
     vac_ = vacomplex::Complex::create();
-    vac_->nodeAboutToBeRemoved().connect(onVacNodeAboutToBeRemoved());
+    vac_->nodeDestroyed().connect(onVacNodeDestroyed());
     vac_->nodeCreated().connect(onVacNodeCreated());
     vac_->nodeMoved().connect(onVacNodeMoved());
     vac_->nodeModified().connect(onVacNodeModified());
@@ -336,7 +336,7 @@ bool Workspace::removeElement_(core::Id id) {
 
     // Update parent-child relationship between elements.
     //
-    element->unlink();
+    element->unparent();
     if (vgcElement_ == element) {
         vgcElement_ = nullptr;
     }
@@ -354,7 +354,7 @@ bool Workspace::removeElement_(core::Id id) {
     //
     // Note: we temporarily keep a unique_ptr before calling erase() since the
     // element's destructor can indirectly use elements_ via callbacks (e.g.
-    // onVacNodeAboutToBeRemoved_).
+    // onVacNodeDestroyed_).
     //
     std::unique_ptr<Element> uptr = std::move(it->second);
     elements_.erase(it);
@@ -375,7 +375,7 @@ bool Workspace::removeElement_(core::Id id) {
 }
 
 void Workspace::clearElements_() {
-    // Note: elements_.clear() indirectly calls onVacNodeAboutToBeRemoved_() and thus fills
+    // Note: elements_.clear() indirectly calls onVacNodeDestroyed_() and thus fills
     // elementsToUpdateFromDom_. So it is important to clear the latter after the former.
     for (const auto& p : elements_) {
         Element* e = p.second.get();
@@ -488,7 +488,7 @@ void Workspace::rebuildDomFromWorkspaceTree_() {
     throw core::RuntimeError("not implemented");
 }
 
-void Workspace::onVacNodeAboutToBeRemoved_(vacomplex::Node* node) {
+void Workspace::onVacNodeDestroyed_(core::Id nodeId) {
 
     // XXX What if node is the root node?
     //
@@ -502,7 +502,7 @@ void Workspace::onVacNodeAboutToBeRemoved_(vacomplex::Node* node) {
     // Get Workspace element corresponding to the destroyed VAC node. Nothing
     // to do if there is no such element.
     //
-    VacElement* vacElement = findVacElement(node);
+    VacElement* vacElement = findVacElement(nodeId);
     if (!vacElement) {
         return;
     }
@@ -529,8 +529,8 @@ void Workspace::onVacNodeAboutToBeRemoved_(vacomplex::Node* node) {
         // 5. The Workspace calls ops::hardDelete(vertexNode)
         //
         // 6. The VAC emits:
-        //    - onVacNodeAboutToBeRemoved(vertexNode)  -> destroyed explicitly:     OK
-        //    - onVacNodeAboutToBeRemoved(edgeNode)    -> destroyed as side-effect: now corrupted
+        //    - onVacNodeDestroyed(vertexNodeId)  -> destroyed explicitly:     OK
+        //    - onVacNodeDestroyed(edgeNodeId)    -> destroyed as side-effect: now corrupted
         //
         if (vacElement->vacNode_) {
 
@@ -566,7 +566,9 @@ void Workspace::onVacNodeAboutToBeRemoved_(vacomplex::Node* node) {
     }
 }
 
-void Workspace::onVacNodeCreated_(vacomplex::Node* node, NodeSpan /*opSourceNodes*/) {
+void Workspace::onVacNodeCreated_(
+    vacomplex::Node* node,
+    const vacomplex::NodeSourceOperation& /*nodeSourceOperation*/) {
 
     if (isUpdatingVacFromDom_) {
         return;
@@ -644,7 +646,7 @@ void Workspace::onVacNodeCreated_(vacomplex::Node* node, NodeSpan /*opSourceNode
     element->id_ = id;
     element->setVacNode(node);
 
-    element->updateFromVac_(vacomplex::NodeDiffFlag::Created);
+    element->updateFromVac_(vacomplex::ModifiedNodeFlag::All);
 
     postUpdateDomFromVac_();
 }
@@ -705,7 +707,7 @@ void Workspace::onVacNodeMoved_(vacomplex::Node* /*node*/) {
 
 void Workspace::onVacNodeModified_(
     vacomplex::Node* node,
-    vacomplex::NodeDiffFlags diffs) {
+    vacomplex::ModifiedNodeFlags flags) {
 
     if (isUpdatingVacFromDom_) {
         return;
@@ -721,7 +723,7 @@ void Workspace::onVacNodeModified_(
     // dom update
 
     preUpdateDomFromVac_();
-    vacElement->updateFromVac_(diffs);
+    vacElement->updateFromVac_(flags);
     postUpdateDomFromVac_();
 }
 
@@ -989,7 +991,7 @@ void Workspace::updateVacFromDom_(const dom::Diff& diff) {
     // Note that if `element` is a VacElement, then:
     // - removeElement_(element) calls vacomplex::ops::hardDelete(node),
     // - which may destroy other VAC nodes,
-    // - which will invoke onVacNodeAboutToBeRemoved(otherNode).
+    // - which will invoke onVacNodeDestroyed(otherNodeId).
     //
     for (dom::Node* node : diff.removedNodes()) {
         dom::Element* domElement = dom::Element::cast(node);

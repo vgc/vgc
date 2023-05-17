@@ -324,17 +324,18 @@ private:
 
     // Signal-slot connections
 
-    void onVacNodeAboutToBeRemoved_(vacomplex::Node* node);
-    VGC_SLOT(onVacNodeAboutToBeRemoved, onVacNodeAboutToBeRemoved_);
+    void onVacNodeDestroyed_(core::Id nodeId);
+    VGC_SLOT(onVacNodeDestroyed, onVacNodeDestroyed_);
 
-    using NodeSpan = core::Span<vacomplex::Node*>;
-    void onVacNodeCreated_(vacomplex::Node* node, NodeSpan operationSourceNodes);
+    void onVacNodeCreated_(
+        vacomplex::Node* node,
+        const vacomplex::NodeSourceOperation& nodeSourceOperation);
     VGC_SLOT(onVacNodeCreated, onVacNodeCreated_);
 
     void onVacNodeMoved_(vacomplex::Node* node);
     VGC_SLOT(onVacNodeMoved, onVacNodeMoved_);
 
-    void onVacNodeModified_(vacomplex::Node* node, vacomplex::NodeDiffFlags diffs);
+    void onVacNodeModified_(vacomplex::Node* node, vacomplex::ModifiedNodeFlags flags);
     VGC_SLOT(onVacNodeModified, onVacNodeModified_);
 
     // Helper methods

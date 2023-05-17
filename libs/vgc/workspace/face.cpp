@@ -488,7 +488,7 @@ ElementStatus VacKeyFace::updateFromDom_(Workspace* workspace) {
     return ElementStatus::Ok;
 }
 
-void VacKeyFace::updateFromVac_(vacomplex::NodeDiffFlags diffs) {
+void VacKeyFace::updateFromVac_(vacomplex::ModifiedNodeFlags flags) {
     namespace ds = dom::strings;
     vacomplex::KeyFace* kf = vacKeyFaceNode();
     if (!kf) {
@@ -506,8 +506,10 @@ void VacKeyFace::updateFromVac_(vacomplex::NodeDiffFlags diffs) {
         return;
     }
 
-    using vacomplex::NodeDiffFlag;
-    if (diffs.hasAny({NodeDiffFlag::BoundaryChanged, NodeDiffFlag::Created})) {
+    using vacomplex::ModifiedNodeFlag;
+    if (flags.hasAny(
+            {ModifiedNodeFlag::BoundaryChanged, ModifiedNodeFlag::MeshChanged})) {
+
         dirtyFillMesh_();
         // rebuild cycles attribute
         core::Array<DomCycle> domCycles;

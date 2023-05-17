@@ -28,19 +28,46 @@ Operations::Operations(Complex* complex)
         throw LogicError("Cannot instantiate a VAC `Operations` with a null complex.");
     }
 
+    if (complex->isOperationInProgress_) {
+        throw LogicError("Cannot instantiate a VAC `Operations` when another is still "
+                         "alive for the same complex.");
+    }
+    complex->isOperationInProgress_ = true;
+
     // Increment version
     complex->version_ += 1;
 }
 
+Operations::~Operations() {
+    Complex* complex = this->complex();
+
+    for (const DestroyedNodeInfo& info : diff_.destroyedNodes()) {
+        complex->nodeDestroyed().emit(info.nodeId());
+    }
+
+    for (const CreatedNodeInfo& info : diff_.createdNodes()) {
+        complex->nodeCreated().emit(info.node(), info.sourceOperation());
+    }
+
+    for (const ModifiedNodeInfo& info : diff_.modifiedNodes()) {
+        complex->nodeModified().emit(info.node(), info.flags());
+    }
+
+    if (complex->isDiffEnabled_) {
+        complex->diff_.merge(diff_);
+    }
+
+    complex->isOperationInProgress_ = false;
+}
+
 Group* Operations::createRootGroup() {
-    Group* group = createNode_<Group>(complex());
-    complex()->nodeCreated().emit(group, {});
+    Group* group = createNode_<Group>(NodeSourceOperation(), complex());
     return group;
 }
 
 Group* Operations::createGroup(Group* parentGroup, Node* nextSibling) {
-    Group* group = createNodeAt_<Group>(parentGroup, nextSibling, complex());
-    complex()->nodeCreated().emit(group, {});
+    Group* group =
+        createNodeAt_<Group>(parentGroup, nextSibling, NodeSourceOperation(), complex());
     return group;
 }
 
@@ -48,10 +75,11 @@ KeyVertex* Operations::createKeyVertex(
     const geometry::Vec2d& position,
     Group* parentGroup,
     Node* nextSibling,
-    core::Span<Node*> operationSourceNodes,
+    NodeSourceOperation sourceOperation,
     core::AnimTime t) {
 
-    KeyVertex* kv = createNodeAt_<KeyVertex>(parentGroup, nextSibling, t);
+    KeyVertex* kv =
+        createNodeAt_<KeyVertex>(parentGroup, nextSibling, std::move(sourceOperation), t);
 
     // Topological attributes
     // -> None
@@ -59,7 +87,6 @@ KeyVertex* Operations::createKeyVertex(
     // Geometric attributes
     kv->position_ = position;
 
-    complex()->nodeCreated().emit(kv, operationSourceNodes);
     return kv;
 }
 
@@ -68,13 +95,14 @@ KeyVertex* Operations::createKeyVertex(
 KeyEdge* Operations::createKeyOpenEdge(
     KeyVertex* startVertex,
     KeyVertex* endVertex,
-    std::unique_ptr<KeyEdgeGeometry>&& geometry,
+    const std::shared_ptr<KeyEdgeGeometry>& geometry,
     Group* parentGroup,
     Node* nextSibling,
-    core::Span<Node*> operationSourceNodes,
+    NodeSourceOperation sourceOperation,
     core::AnimTime t) {
 
-    KeyEdge* ke = createNodeAt_<KeyEdge>(parentGroup, nextSibling, t);
+    KeyEdge* ke =
+        createNodeAt_<KeyEdge>(parentGroup, nextSibling, std::move(sourceOperation), t);
 
     // Topological attributes
     ke->startVertex_ = startVertex;
@@ -83,28 +111,29 @@ KeyEdge* Operations::createKeyOpenEdge(
     addToBoundary_(ke, endVertex);
 
     // Geometric attributes
-    ke->geometry_ = std::move(geometry);
+    ke->geometry_ = geometry;
+    geometry->edge_ = ke;
 
-    complex()->nodeCreated().emit(ke, operationSourceNodes);
     return ke;
 }
 
 KeyEdge* Operations::createKeyClosedEdge(
-    std::unique_ptr<KeyEdgeGeometry>&& geometry,
+    const std::shared_ptr<KeyEdgeGeometry>& geometry,
     Group* parentGroup,
     Node* nextSibling,
-    core::Span<Node*> operationSourceNodes,
+    NodeSourceOperation sourceOperation,
     core::AnimTime t) {
 
-    KeyEdge* ke = createNodeAt_<KeyEdge>(parentGroup, nextSibling, t);
+    KeyEdge* ke =
+        createNodeAt_<KeyEdge>(parentGroup, nextSibling, std::move(sourceOperation), t);
 
     // Topological attributes
     // -> None
 
     // Geometric attributes
-    ke->geometry_ = std::move(geometry);
+    ke->geometry_ = geometry;
+    geometry->edge_ = ke;
 
-    complex()->nodeCreated().emit(ke, operationSourceNodes);
     return ke;
 }
 
@@ -114,10 +143,11 @@ KeyFace* Operations::createKeyFace(
     core::Array<KeyCycle> cycles,
     Group* parentGroup,
     Node* nextSibling,
-    core::Span<Node*> operationSourceNodes,
+    NodeSourceOperation sourceOperation,
     core::AnimTime t) {
 
-    KeyFace* kf = createNodeAt_<KeyFace>(parentGroup, nextSibling, t);
+    KeyFace* kf =
+        createNodeAt_<KeyFace>(parentGroup, nextSibling, std::move(sourceOperation), t);
 
     // Topological attributes
     kf->cycles_ = std::move(cycles);
@@ -128,14 +158,10 @@ KeyFace* Operations::createKeyFace(
     // Geometric attributes
     // -> None
 
-    complex()->nodeCreated().emit(kf, operationSourceNodes);
     return kf;
 }
 
 void Operations::hardDelete(Node* node, bool deleteIsolatedVertices) {
-
-    ComplexDiff& diff = complex()->diff_;
-    const bool diffEnabled = complex()->isDiffEnabled_;
 
     std::unordered_set<Node*> nodesToDestroy;
 
@@ -157,7 +183,7 @@ void Operations::hardDelete(Node* node, bool deleteIsolatedVertices) {
     // Flag all cells that are about to be deleted.
     //
     for (Node* nodeToDestroy : nodesToDestroy) {
-        nodeToDestroy->isBeingDestroyed_ = true;
+        nodeToDestroy->isBeingDeleted_ = true;
     }
 
     // Helper function that tests if the star of a cell will become empty after
@@ -166,7 +192,7 @@ void Operations::hardDelete(Node* node, bool deleteIsolatedVertices) {
     auto hasEmptyStar = [](Cell* cell) {
         bool isStarEmpty = true;
         for (Cell* starCell : cell->star()) {
-            if (!starCell->isBeingDestroyed_) {
+            if (!starCell->isBeingDeleted_) {
                 isStarEmpty = false;
                 break;
             }
@@ -194,7 +220,7 @@ void Operations::hardDelete(Node* node, bool deleteIsolatedVertices) {
         if (nodeToDestroy->isCell()) {
             Cell* cell = nodeToDestroy->toCellUnchecked();
             for (Cell* boundaryCell : cell->boundary()) {
-                if (boundaryCell->isBeingDestroyed_) {
+                if (boundaryCell->isBeingDeleted_) {
                     continue;
                 }
                 if (deleteIsolatedVertices
@@ -211,13 +237,11 @@ void Operations::hardDelete(Node* node, bool deleteIsolatedVertices) {
                     default:
                         break;
                     }
-                    boundaryCell->isBeingDestroyed_ = true;
+                    boundaryCell->isBeingDeleted_ = true;
                 }
-                if (!boundaryCell->isBeingDestroyed_) {
+                if (!boundaryCell->isBeingDeleted_) {
                     boundaryCell->star_.removeOne(cell);
-                    if (diffEnabled) {
-                        diff.onNodeDiff(boundaryCell, NodeDiffFlag::StarChanged);
-                    }
+                    onNodeModified_(boundaryCell, ModifiedNodeFlag::StarChanged);
                 }
             }
         }
@@ -242,18 +266,16 @@ void Operations::hardDelete(Node* node, bool deleteIsolatedVertices) {
         for (Node* inbetweenVertexNode : isolatedInbetweenVertices) {
             Cell* inbetweenVertex = inbetweenVertexNode->toCellUnchecked();
             for (Cell* keyVertex : inbetweenVertex->boundary()) {
-                if (keyVertex->isBeingDestroyed_) {
+                if (keyVertex->isBeingDeleted_) {
                     continue;
                 }
                 if (hasEmptyStar(keyVertex)) {
                     isolatedKeyVertices.insert(keyVertex);
-                    keyVertex->isBeingDestroyed_ = true;
+                    keyVertex->isBeingDeleted_ = true;
                 }
                 else {
                     keyVertex->star_.removeOne(inbetweenVertex);
-                    if (diffEnabled) {
-                        diff.onNodeDiff(keyVertex, NodeDiffFlag::StarChanged);
-                    }
+                    onNodeModified_(keyVertex, ModifiedNodeFlag::StarChanged);
                 }
             }
         }
@@ -261,31 +283,7 @@ void Operations::hardDelete(Node* node, bool deleteIsolatedVertices) {
         nodesToDestroy.merge(isolatedInbetweenVertices);
     }
 
-    // Actually delete the nodes
-    for (Node* nodeToDestroy : nodesToDestroy) {
-        if (diffEnabled) {
-            Group* parentGroup = nodeToDestroy->parentGroup();
-            if (parentGroup) {
-                diff.onNodeDiff(parentGroup, NodeDiffFlag::ChildrenChanged);
-            }
-            diff.onNodeRemoved(nodeToDestroy);
-        }
-        nodeToDestroy->unlink();
-        // Note: must not cause recursion.
-        complex()->nodeAboutToBeRemoved().emit(nodeToDestroy);
-        complex()->nodes_.erase(nodeToDestroy->id());
-    }
-
-    if (isRoot) {
-        // we did not remove root group but cleared its children
-        Group* group = node->toGroupUnchecked();
-        if (group->numChildren()) {
-            group->resetChildrenNoUnlink();
-            if (diffEnabled) {
-                diff.onNodeDiff(node, NodeDiffFlag::ChildrenChanged);
-            }
-        }
-    }
+    destroyNodes_(nodesToDestroy);
 }
 
 void Operations::softDelete(Node* /*node*/, bool /*deleteIsolatedVertices*/) {
@@ -302,12 +300,10 @@ void Operations::moveToGroup(Node* node, Group* parentGroup, Node* nextSibling) 
     }
 
     // diff
-    if (complex()->isDiffEnabled_) {
-        if (oldParent != parentGroup) {
-            complex()->diff_.onNodeDiff(node, NodeDiffFlag::Reparented);
-        }
-        complex()->diff_.onNodeDiff(parentGroup, NodeDiffFlag::ChildrenChanged);
+    if (oldParent != parentGroup) {
+        onNodeModified_(node, ModifiedNodeFlag::Reparented);
     }
+    onNodeModified_(parentGroup, ModifiedNodeFlag::ChildrenChanged);
 }
 
 // dev note: update boundary before star
@@ -320,20 +316,23 @@ void Operations::setKeyVertexPosition(KeyVertex* kv, const geometry::Vec2d& pos)
 
     kv->position_ = pos;
 
-    dirtyGeometry(kv); // it also emits the geometry change event
+    onGeometryChanged_(kv);
 }
 
 void Operations::setKeyEdgeGeometry(
     KeyEdge* ke,
-    std::unique_ptr<KeyEdgeGeometry>&& geometry) {
+    const std::shared_ptr<KeyEdgeGeometry>& geometry) {
 
-    VGC_ASSERT(!geometry->edge_);
-
-    ke->geometry_ = std::move(geometry);
+    KeyEdge* previousKe = geometry->edge_;
+    ke->geometry_ = geometry;
     geometry->edge_ = ke;
 
-    ke->dirtyInputSampling_();
-    dirtyGeometry(ke); // it also emits the geometry change event
+    if (previousKe) {
+        previousKe->geometry_ = nullptr;
+        onGeometryChanged_(previousKe);
+    }
+
+    onGeometryChanged_(ke);
 }
 
 void Operations::setKeyEdgeSamplingQuality(
@@ -347,36 +346,85 @@ void Operations::setKeyEdgeSamplingQuality(
 
     ke->samplingQuality_ = quality;
 
-    ke->dirtyInputSampling_();
-    dirtyGeometry(ke); // it also emits the geometry change event
+    dirtyMesh_(ke);
 }
 
-void Operations::dirtyGeometry(Cell* cell) {
-    if (!cell->hasGeometryBeenQueriedSinceLastDirtyEvent_) {
+void Operations::onNodeModified_(Node* node, ModifiedNodeFlags diffFlags) {
+    diff_.onNodeModified(node, diffFlags);
+}
+
+void Operations::onNodeCreated_(Node* node, NodeSourceOperation sourceOperation) {
+    diff_.onNodeCreated(node, std::move(sourceOperation));
+}
+
+// Assumes node has no children.
+// maybe we should also handle star/boundary changes here
+void Operations::destroyNode_(Node* node) {
+    [[maybe_unused]] Group* group = node->toGroup();
+    VGC_ASSERT(!group || group->numChildren() == 0);
+    Group* parentGroup = node->parentGroup();
+    core::Id nodeId = node->id();
+    node->unparent();
+    complex()->nodes_.erase(nodeId);
+    diff_.onNodeDestroyed(nodeId);
+    if (parentGroup) {
+        diff_.onNodeModified(parentGroup, ModifiedNodeFlag::ChildrenChanged);
+    }
+}
+
+// Assumes that all descendants of all `nodes` are also in `nodes`.
+void Operations::destroyNodes_(const std::unordered_set<Node*>& nodes) {
+    // debug check
+    for (Node* node : nodes) {
+        Group* group = node->toGroup();
+        if (group) {
+            for (Node* child : *group) {
+                VGC_ASSERT(nodes.count(child)); // == contains
+            }
+        }
+    }
+    for (Node* node : nodes) {
+        Group* parentGroup = node->parentGroup();
+        node->unparent();
+        diff_.onNodeDestroyed(node->id());
+        if (parentGroup) {
+            diff_.onNodeModified(parentGroup, ModifiedNodeFlag::ChildrenChanged);
+        }
+    }
+    for (Node* node : nodes) {
+        complex()->nodes_.erase(node->id());
+    }
+}
+
+void Operations::dirtyMesh_(Cell* cell) {
+    if (!cell->hasMeshBeenQueriedSinceLastDirtyEvent_) {
         return;
     }
 
     core::Array<Cell*> dirtyList;
 
     dirtyList.append(cell);
-    cell->hasGeometryBeenQueriedSinceLastDirtyEvent_ = false;
+    cell->hasMeshBeenQueriedSinceLastDirtyEvent_ = false;
 
     for (Cell* starCell : cell->star_) {
-        if (starCell->hasGeometryBeenQueriedSinceLastDirtyEvent_) {
-            // There is no need to call dirtyGeometry_ for starCell
-            // since starCell.star() is a subset of cell.star().
+        if (starCell->hasMeshBeenQueriedSinceLastDirtyEvent_) {
+            // There is no need to call onBoundaryMeshChanged_ for
+            // starCell since starCell.star() is a subset of cell.star().
             dirtyList.append(starCell);
-            starCell->hasGeometryBeenQueriedSinceLastDirtyEvent_ = false;
-            starCell->onBoundaryGeometryChanged_();
+            starCell->hasMeshBeenQueriedSinceLastDirtyEvent_ = false;
+            starCell->onBoundaryMeshChanged_();
         }
     }
 
     for (Cell* dirtyCell : dirtyList) {
-        if (complex()->isDiffEnabled_) {
-            complex()->diff_.onNodeDiff(dirtyCell, NodeDiffFlag::GeometryChanged);
-        }
-        complex()->nodeModified().emit(dirtyCell, NodeDiffFlag::GeometryChanged);
+        dirtyCell->dirtyMesh_();
+        onNodeModified_(dirtyCell, ModifiedNodeFlag::MeshChanged);
     }
+}
+
+void Operations::onGeometryChanged_(Cell* cell) {
+    dirtyMesh_(cell);
+    onNodeModified_(cell, ModifiedNodeFlag::GeometryChanged);
 }
 
 void Operations::addToBoundary_(Cell* boundedCell, Cell* boundingCell) {
@@ -389,10 +437,8 @@ void Operations::addToBoundary_(Cell* boundedCell, Cell* boundingCell) {
     else if (!boundedCell->boundary_.contains(boundingCell)) {
         boundedCell->boundary_.append(boundingCell);
         boundingCell->star_.append(boundedCell);
-        if (complex()->isDiffEnabled_) {
-            complex()->diff_.onNodeDiff(boundedCell, NodeDiffFlag::BoundaryChanged);
-            complex()->diff_.onNodeDiff(boundingCell, NodeDiffFlag::StarChanged);
-        }
+        onNodeModified_(boundedCell, ModifiedNodeFlag::BoundaryChanged);
+        onNodeModified_(boundingCell, ModifiedNodeFlag::StarChanged);
     }
 }
 
