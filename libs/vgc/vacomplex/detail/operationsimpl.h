@@ -108,7 +108,6 @@ public:
 private:
     Complex* complex_ = nullptr;
     ComplexDiff diff_ = {};
-    std::unordered_set<Node*> nodesToDestroy_ = {};
 
     void onNodeModified_(Node* node, ModifiedNodeFlags diffFlags);
     void onNodeCreated_(Node* node, NodeSourceOperation sourceOperation);
@@ -143,12 +142,15 @@ private:
 
         T* node = createNode_<T>(std::move(sourceOperation), std::forward<Args>(args)...);
         parentGroup->insertChildUnchecked(nextSibling, node);
-        onNodeCreated_(node, std::move(sourceOperation));
         onNodeModified_(parentGroup, ModifiedNodeFlag::ChildrenChanged);
         return node;
     }
 
-    void removeNode_(Node* node);
+    // Assumes node has no children.
+    void destroyNode_(Node* node);
+
+    // Assumes that all descendants of all `nodes` are also in `nodes`.
+    void destroyNodes_(const std::unordered_set<Node*>& nodes);
 
     void dirtyMesh_(Cell* cell);
     void onGeometryChanged_(Cell* cell);

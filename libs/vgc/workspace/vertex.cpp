@@ -271,10 +271,8 @@ void VacKeyVertex::updateFromVac_(vacomplex::ModifiedNodeFlags flags) {
         return;
     }
 
-    bool created = flags.has(vacomplex::ModifiedNodeFlag::Created);
-
     using vacomplex::ModifiedNodeFlag;
-    if (created || flags.has(ModifiedNodeFlag::GeometryChanged)) {
+    if (flags.has(ModifiedNodeFlag::GeometryChanged)) {
         const auto& position = domElement->getAttribute(ds::position).getVec2d();
         if (kv->position() != position) {
             domElement->setAttribute(ds::position, kv->position());

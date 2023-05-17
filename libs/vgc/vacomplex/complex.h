@@ -41,16 +41,15 @@ VGC_DECLARE_OBJECT(Complex);
 
 // clang-format off
 enum class ModifiedNodeFlag {
-    Created                  = 0x01,
-    Removed                  = 0x02,
-    Reparented               = 0x04,
-    ChildrenChanged          = 0x08,
-    TransformChanged         = 0x10,
-    GeometryChanged          = 0x20,
-    MeshChanged              = 0x40,
+    Reparented               = 0x01,
+    ChildrenChanged          = 0x02,
+    TransformChanged         = 0x04,
+    GeometryChanged          = 0x08,
+    MeshChanged              = 0x10,
     // do we need BoundaryMeshChanged ?
-    BoundaryChanged          = 0x80,
-    StarChanged              = 0x100,
+    BoundaryChanged          = 0x20,
+    StarChanged              = 0x40,
+    All                      = 0x7F,
 };
 VGC_DEFINE_FLAGS(ModifiedNodeFlags, ModifiedNodeFlag)
 // clang-format on
@@ -118,9 +117,9 @@ private:
     ModifiedNodeFlags flags_ = {};
 };
 
-class VGC_VACOMPLEX_API RemovedNodeInfo {
+class VGC_VACOMPLEX_API DestroyedNodeInfo {
 public:
-    explicit RemovedNodeInfo(core::Id id)
+    explicit DestroyedNodeInfo(core::Id id)
         : nodeId_(id) {
     }
 
@@ -139,12 +138,12 @@ public:
     void clear() {
         createdNodes_.clear();
         modifiedNodes_.clear();
-        removedNodes_.clear();
+        destroyedNodes_.clear();
     }
 
     bool isEmpty() const {
         return createdNodes_.isEmpty() && modifiedNodes_.isEmpty()
-               && removedNodes_.isEmpty();
+               && destroyedNodes_.isEmpty();
     }
 
     const core::Array<CreatedNodeInfo>& createdNodes() const {
@@ -155,8 +154,8 @@ public:
         return modifiedNodes_;
     }
 
-    const core::Array<RemovedNodeInfo>& removedNodes() const {
-        return removedNodes_;
+    const core::Array<DestroyedNodeInfo>& destroyedNodes() const {
+        return destroyedNodes_;
     }
 
     void merge(const ComplexDiff& other);
@@ -167,7 +166,7 @@ private:
 
     core::Array<CreatedNodeInfo> createdNodes_;
     core::Array<ModifiedNodeInfo> modifiedNodes_;
-    core::Array<RemovedNodeInfo> removedNodes_;
+    core::Array<DestroyedNodeInfo> destroyedNodes_;
 
     // ops helpers
 
@@ -192,7 +191,7 @@ private:
         modifiedNodeInfo.setFlags(modifiedNodeInfo.flags() | diffFlags);
     }
 
-    void onNodeRemoved(core::Id id) {
+    void onNodeDestroyed(core::Id id) {
         for (Int i = 0; i < createdNodes_.length(); ++i) {
             if (createdNodes_[i].nodeId() == id) {
                 createdNodes_.removeAt(i);
@@ -205,7 +204,7 @@ private:
                 break;
             }
         }
-        removedNodes_.emplaceLast(id);
+        destroyedNodes_.emplaceLast(id);
     }
 };
 
@@ -255,9 +254,9 @@ public:
     //bool emitPendingDiff();
 
     VGC_SIGNAL(nodeCreated, (Node*, node), (const NodeSourceOperation&, sourceOperation))
-    VGC_SIGNAL(nodeAboutToBeRemoved, (Node*, node))
     VGC_SIGNAL(nodeMoved, (Node*, node))
     VGC_SIGNAL(nodeModified, (Node*, node), (ModifiedNodeFlags, flags))
+    VGC_SIGNAL(nodeDestroyed, (core::Id, nodeId))
 
     //VGC_SIGNAL(changed, (const ComplexDiff&, diff))
 

@@ -41,22 +41,12 @@ Operations::Operations(Complex* complex)
 Operations::~Operations() {
     Complex* complex = this->complex();
 
-    // Notify of created nodes (removed nodes are still alive).
-    for (const CreatedNodeInfo& info : diff_.createdNodes()) {
-        complex->nodeCreated().emit(info.node(), info.sourceOperation());
+    for (const DestroyedNodeInfo& info : diff_.destroyedNodes()) {
+        complex->nodeDestroyed().emit(info.nodeId());
     }
 
-    // Delete nodes removed during the operation.
-    for (Node* nodeToDestroy : nodesToDestroy_) {
-        Group* parentGroup = nodeToDestroy->parentGroup();
-        if (parentGroup) {
-            diff_.onNodeModified(parentGroup, ModifiedNodeFlag::ChildrenChanged);
-        }
-        nodeToDestroy->unlink();
-        diff_.onNodeRemoved(nodeToDestroy->id());
-        // Note: must not cause recursion.
-        complex->nodeAboutToBeRemoved().emit(nodeToDestroy);
-        complex->nodes_.erase(nodeToDestroy->id());
+    for (const CreatedNodeInfo& info : diff_.createdNodes()) {
+        complex->nodeCreated().emit(info.node(), info.sourceOperation());
     }
 
     for (const ModifiedNodeInfo& info : diff_.modifiedNodes()) {
@@ -89,7 +79,7 @@ KeyVertex* Operations::createKeyVertex(
     core::AnimTime t) {
 
     KeyVertex* kv =
-        createNodeAt_<KeyVertex>(parentGroup, nextSibling, NodeSourceOperation(), t);
+        createNodeAt_<KeyVertex>(parentGroup, nextSibling, std::move(sourceOperation), t);
 
     // Topological attributes
     // -> None
@@ -97,7 +87,6 @@ KeyVertex* Operations::createKeyVertex(
     // Geometric attributes
     kv->position_ = position;
 
-    onNodeCreated_(kv, std::move(sourceOperation));
     return kv;
 }
 
@@ -112,7 +101,8 @@ KeyEdge* Operations::createKeyOpenEdge(
     NodeSourceOperation sourceOperation,
     core::AnimTime t) {
 
-    KeyEdge* ke = createNodeAt_<KeyEdge>(parentGroup, nextSibling, {}, t);
+    KeyEdge* ke =
+        createNodeAt_<KeyEdge>(parentGroup, nextSibling, std::move(sourceOperation), t);
 
     // Topological attributes
     ke->startVertex_ = startVertex;
@@ -124,7 +114,6 @@ KeyEdge* Operations::createKeyOpenEdge(
     ke->geometry_ = geometry;
     geometry->edge_ = ke;
 
-    onNodeCreated_(ke, std::move(sourceOperation));
     return ke;
 }
 
@@ -135,7 +124,8 @@ KeyEdge* Operations::createKeyClosedEdge(
     NodeSourceOperation sourceOperation,
     core::AnimTime t) {
 
-    KeyEdge* ke = createNodeAt_<KeyEdge>(parentGroup, nextSibling, {}, t);
+    KeyEdge* ke =
+        createNodeAt_<KeyEdge>(parentGroup, nextSibling, std::move(sourceOperation), t);
 
     // Topological attributes
     // -> None
@@ -144,7 +134,6 @@ KeyEdge* Operations::createKeyClosedEdge(
     ke->geometry_ = geometry;
     geometry->edge_ = ke;
 
-    onNodeCreated_(ke, std::move(sourceOperation));
     return ke;
 }
 
@@ -157,7 +146,8 @@ KeyFace* Operations::createKeyFace(
     NodeSourceOperation sourceOperation,
     core::AnimTime t) {
 
-    KeyFace* kf = createNodeAt_<KeyFace>(parentGroup, nextSibling, {}, t);
+    KeyFace* kf =
+        createNodeAt_<KeyFace>(parentGroup, nextSibling, std::move(sourceOperation), t);
 
     // Topological attributes
     kf->cycles_ = std::move(cycles);
@@ -168,7 +158,6 @@ KeyFace* Operations::createKeyFace(
     // Geometric attributes
     // -> None
 
-    onNodeCreated_(kf, std::move(sourceOperation));
     return kf;
 }
 
@@ -194,7 +183,7 @@ void Operations::hardDelete(Node* node, bool deleteIsolatedVertices) {
     // Flag all cells that are about to be deleted.
     //
     for (Node* nodeToDestroy : nodesToDestroy) {
-        nodeToDestroy->isBeingDestroyed_ = true;
+        nodeToDestroy->isBeingDeleted_ = true;
     }
 
     // Helper function that tests if the star of a cell will become empty after
@@ -203,7 +192,7 @@ void Operations::hardDelete(Node* node, bool deleteIsolatedVertices) {
     auto hasEmptyStar = [](Cell* cell) {
         bool isStarEmpty = true;
         for (Cell* starCell : cell->star()) {
-            if (!starCell->isBeingDestroyed_) {
+            if (!starCell->isBeingDeleted_) {
                 isStarEmpty = false;
                 break;
             }
@@ -231,7 +220,7 @@ void Operations::hardDelete(Node* node, bool deleteIsolatedVertices) {
         if (nodeToDestroy->isCell()) {
             Cell* cell = nodeToDestroy->toCellUnchecked();
             for (Cell* boundaryCell : cell->boundary()) {
-                if (boundaryCell->isBeingDestroyed_) {
+                if (boundaryCell->isBeingDeleted_) {
                     continue;
                 }
                 if (deleteIsolatedVertices
@@ -248,9 +237,9 @@ void Operations::hardDelete(Node* node, bool deleteIsolatedVertices) {
                     default:
                         break;
                     }
-                    boundaryCell->isBeingDestroyed_ = true;
+                    boundaryCell->isBeingDeleted_ = true;
                 }
-                if (!boundaryCell->isBeingDestroyed_) {
+                if (!boundaryCell->isBeingDeleted_) {
                     boundaryCell->star_.removeOne(cell);
                     onNodeModified_(boundaryCell, ModifiedNodeFlag::StarChanged);
                 }
@@ -277,12 +266,12 @@ void Operations::hardDelete(Node* node, bool deleteIsolatedVertices) {
         for (Node* inbetweenVertexNode : isolatedInbetweenVertices) {
             Cell* inbetweenVertex = inbetweenVertexNode->toCellUnchecked();
             for (Cell* keyVertex : inbetweenVertex->boundary()) {
-                if (keyVertex->isBeingDestroyed_) {
+                if (keyVertex->isBeingDeleted_) {
                     continue;
                 }
                 if (hasEmptyStar(keyVertex)) {
                     isolatedKeyVertices.insert(keyVertex);
-                    keyVertex->isBeingDestroyed_ = true;
+                    keyVertex->isBeingDeleted_ = true;
                 }
                 else {
                     keyVertex->star_.removeOne(inbetweenVertex);
@@ -294,7 +283,7 @@ void Operations::hardDelete(Node* node, bool deleteIsolatedVertices) {
         nodesToDestroy.merge(isolatedInbetweenVertices);
     }
 
-    nodesToDestroy_.insert(nodesToDestroy.begin(), nodesToDestroy.end());
+    destroyNodes_(nodesToDestroy);
 }
 
 void Operations::softDelete(Node* /*node*/, bool /*deleteIsolatedVertices*/) {
@@ -368,8 +357,43 @@ void Operations::onNodeCreated_(Node* node, NodeSourceOperation sourceOperation)
     diff_.onNodeCreated(node, std::move(sourceOperation));
 }
 
-void Operations::removeNode_(Node* node) {
-    nodesToDestroy_.insert(node);
+// Assumes node has no children.
+// maybe we should also handle star/boundary changes here
+void Operations::destroyNode_(Node* node) {
+    [[maybe_unused]] Group* group = node->toGroup();
+    VGC_ASSERT(!group || group->numChildren() == 0);
+    Group* parentGroup = node->parentGroup();
+    core::Id nodeId = node->id();
+    node->unparent();
+    complex()->nodes_.erase(nodeId);
+    diff_.onNodeDestroyed(nodeId);
+    if (parentGroup) {
+        diff_.onNodeModified(parentGroup, ModifiedNodeFlag::ChildrenChanged);
+    }
+}
+
+// Assumes that all descendants of all `nodes` are also in `nodes`.
+void Operations::destroyNodes_(const std::unordered_set<Node*>& nodes) {
+    // debug check
+    for (Node* node : nodes) {
+        Group* group = node->toGroup();
+        if (group) {
+            for (Node* child : *group) {
+                VGC_ASSERT(nodes.count(child)); // == contains
+            }
+        }
+    }
+    for (Node* node : nodes) {
+        Group* parentGroup = node->parentGroup();
+        node->unparent();
+        diff_.onNodeDestroyed(node->id());
+        if (parentGroup) {
+            diff_.onNodeModified(parentGroup, ModifiedNodeFlag::ChildrenChanged);
+        }
+    }
+    for (Node* node : nodes) {
+        complex()->nodes_.erase(node->id());
+    }
 }
 
 void Operations::dirtyMesh_(Cell* cell) {

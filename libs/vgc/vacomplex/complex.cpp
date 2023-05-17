@@ -30,8 +30,8 @@ void ComplexDiff::merge(const ComplexDiff& other) {
     for (const ModifiedNodeInfo& info : other.modifiedNodes_) {
         onNodeModified(info.node(), info.flags());
     }
-    for (const RemovedNodeInfo& info : other.removedNodes_) {
-        onNodeRemoved(info.nodeId());
+    for (const DestroyedNodeInfo& info : other.destroyedNodes_) {
+        onNodeDestroyed(info.nodeId());
     }
 }
 
@@ -52,7 +52,7 @@ void Complex::clear() {
 
     // Emit about to be removed for all the nodes
     for (const auto& node : nodes_) {
-        nodeAboutToBeRemoved().emit(node.second.get());
+        nodeDestroyed().emit(node.first);
     }
 
     // Remove all the nodes
@@ -62,7 +62,7 @@ void Complex::clear() {
     // Add the removal of all the nodes to the diff
     if (isDiffEnabled_) {
         for (const auto& node : nodesCopy) {
-            diff_.onNodeRemoved(node.first);
+            diff_.onNodeDestroyed(node.first);
         }
     }
 

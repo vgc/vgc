@@ -508,9 +508,7 @@ void VacKeyFace::updateFromVac_(vacomplex::ModifiedNodeFlags flags) {
 
     using vacomplex::ModifiedNodeFlag;
     if (flags.hasAny(
-            {ModifiedNodeFlag::BoundaryChanged,
-             ModifiedNodeFlag::MeshChanged,
-             ModifiedNodeFlag::Created})) {
+            {ModifiedNodeFlag::BoundaryChanged, ModifiedNodeFlag::MeshChanged})) {
 
         dirtyFillMesh_();
         // rebuild cycles attribute

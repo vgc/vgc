@@ -324,8 +324,8 @@ private:
 
     // Signal-slot connections
 
-    void onVacNodeAboutToBeRemoved_(vacomplex::Node* node);
-    VGC_SLOT(onVacNodeAboutToBeRemoved, onVacNodeAboutToBeRemoved_);
+    void onVacNodeDestroyed_(core::Id nodeId);
+    VGC_SLOT(onVacNodeDestroyed, onVacNodeDestroyed_);
 
     void onVacNodeCreated_(
         vacomplex::Node* node,

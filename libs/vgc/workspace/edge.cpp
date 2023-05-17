@@ -778,9 +778,7 @@ void VacKeyEdge::updateFromVac_(vacomplex::ModifiedNodeFlags flags) {
         return;
     }
 
-    bool created = flags.has(vacomplex::ModifiedNodeFlag::Created);
-
-    if (created || flags.has(vacomplex::ModifiedNodeFlag::GeometryChanged)) {
+    if (flags.has(vacomplex::ModifiedNodeFlag::GeometryChanged)) {
         auto geometry = dynamic_cast<const workspace::EdgeGeometry*>(ke->geometry());
         if (geometry) {
             // todo: if geometry type changed, remove previous geometry's attributes.
@@ -795,7 +793,7 @@ void VacKeyEdge::updateFromVac_(vacomplex::ModifiedNodeFlags flags) {
 
     const Workspace* w = workspace();
 
-    if (created || flags.has(vacomplex::ModifiedNodeFlag::BoundaryChanged)) {
+    if (flags.has(vacomplex::ModifiedNodeFlag::BoundaryChanged)) {
         std::array<VacKeyVertex*, 2> oldVertices = {
             verticesInfo_[0].element, verticesInfo_[1].element};
         // TODO: check bool(ke->startVertex()) == bool(newVertices[0])
