@@ -627,9 +627,11 @@ bool testLine_(
     return true;
 }
 
-// Samples the semi-open range [data.segmentIndex, data.segmentIndex + 1)
-// First point of first segment is appended only if the cache `data` is new.
-// Last point of last segment is included.
+// Samples the segment [data.segmentIndex, data.segmentIndex + 1], and append the 
+// result to outAppend.
+//
+// The first sample of the segment is appended only if the cache `data` is new.
+// The last sample is always appended.
 //
 bool sampleIter_(
     const Curve* curve,
