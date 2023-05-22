@@ -740,6 +740,7 @@ void Widget::mouseMove_(MouseEvent* event) {
         WidgetPtr hcChildPtr = hcChild;
         // Call handler.
         event->setPosition(mapTo(hcChild, eventPos));
+        hcChild->onMouseHover(event);
         hcChild->mouseMove_(event);
         // Check for deaths.
         if (!isAlive() || !hcChild->isAlive()) {
@@ -1134,7 +1135,7 @@ bool Widget::setHovered(bool hovered) {
             p->mouseEnter_();
         }
 
-        // From here, let's be carefull about dangling pointers.
+        // From here, let's be careful about dangling pointers.
         bool aborted = false;
         for (; it != path.rend(); ++it) {
             c = it->getIfAlive();
@@ -1307,22 +1308,33 @@ void Widget::onWidgetRemoved(Widget*) {
     // no-op
 }
 
-bool Widget::mouseEnter_() {
+void Widget::mouseHover_() {
+    Widget* root_ = root();
+    MouseButton button = MouseButton::None;
+    geometry::Vec2f position = root_->mapTo(this, root_->lastMousePosition_);
+    ModifierKeys modifierKeys = root_->lastModifierKeys_;
+    MouseEventPtr hoverEvent = MouseEvent::create(button, position, modifierKeys);
+    onMouseHover(hoverEvent.get());
+}
+
+void Widget::mouseEnter_() {
     isHovered_ = true;
-    return onMouseEnter();
+    onMouseEnter();
+    mouseHover_();
 }
 
-bool Widget::mouseLeave_() {
+void Widget::mouseLeave_() {
     // isHovered_ is set to false in setHovered()
-    return onMouseLeave();
+    onMouseLeave();
 }
 
-bool Widget::onMouseEnter() {
-    return false;
+void Widget::onMouseHover(MouseEvent*) {
 }
 
-bool Widget::onMouseLeave() {
-    return false;
+void Widget::onMouseEnter() {
+}
+
+void Widget::onMouseLeave() {
 }
 
 bool Widget::updateHoverChainChild(MouseEvent* event) {

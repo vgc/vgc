@@ -46,20 +46,12 @@ ui::WidgetPtr PaintBucket::createOptionsWidget() const {
     return res;
 }
 
-// XXX We should instead use a new virtual function in Widget, e.g.:
-// onMouseHovered(MouseEvent* event)
-//
-// The idea is that things related to hovering, and pre-computing of what
-// should happen on future click is done in onMouseHovered. Then,
-// onMousePress() would use this information, and onMouseMove() should be
-// reserved for click-move-release sequences, not hovering computation.
-//
-bool PaintBucket::updateHoverChainChild(ui::MouseEvent* event) {
+void PaintBucket::onMouseHover(ui::MouseEvent* event) {
 
     canvas::Canvas* canvas = this->canvas();
     if (!canvas) {
         clearFaceCandidate_();
-        return false; // or true?
+        return;
     }
 
     // Convert mouse position from view to world coords.
@@ -88,10 +80,6 @@ bool PaintBucket::updateHoverChainChild(ui::MouseEvent* event) {
     if (faceCandidateChanged) {
         isFaceCandidateGraphicsDirty_ = true;
         requestRepaint();
-        return true;
-    }
-    else {
-        return false; // or true?
     }
 }
 
@@ -183,13 +171,11 @@ bool PaintBucket::onMouseRelease(ui::MouseEvent* /*event*/) {
     return false;
 }
 
-bool PaintBucket::onMouseEnter() {
-    return true;
+void PaintBucket::onMouseEnter() {
 }
 
-bool PaintBucket::onMouseLeave() {
+void PaintBucket::onMouseLeave() {
     clearFaceCandidate_();
-    return true;
 }
 
 void PaintBucket::onPaintCreate(graphics::Engine* engine) {

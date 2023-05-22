@@ -475,13 +475,11 @@ void PanelArea::onWidgetRemoved(Widget*) {
     onChildrenChanged_();
 }
 
-bool PanelArea::onMouseEnter() {
-    return true;
+void PanelArea::onMouseEnter() {
 }
 
-bool PanelArea::onMouseLeave() {
+void PanelArea::onMouseLeave() {
     setHoveredSplitHandle_(-1);
-    return true;
 }
 
 Widget* PanelArea::computeHoverChainChild(MouseEvent* event) const {

@@ -252,8 +252,8 @@ protected:
     void onWidgetRemoved(Widget* widget) override;
     void preMouseMove(MouseEvent* event) override;
     void preMousePress(MouseEvent* event) override;
-    bool onMouseEnter() override;
-    bool onMouseLeave() override;
+    void onMouseEnter() override;
+    void onMouseLeave() override;
     void onVisible() override;
     void onHidden() override;
     geometry::Vec2f computePreferredSize() const override;

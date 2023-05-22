@@ -160,14 +160,12 @@ bool Button::onMouseRelease(MouseEvent* event) {
     }
 }
 
-bool Button::onMouseEnter() {
+void Button::onMouseEnter() {
     addStyleClass(strings::hovered);
-    return false;
 }
 
-bool Button::onMouseLeave() {
+void Button::onMouseLeave() {
     removeStyleClass(strings::hovered);
-    return false;
 }
 
 void Button::connectNewAction_() {

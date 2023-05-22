@@ -588,12 +588,10 @@ bool Canvas::onMouseScroll(ui::ScrollEvent* event) {
     return true;
 }
 
-bool Canvas::onMouseEnter() {
-    return false;
+void Canvas::onMouseEnter() {
 }
 
-bool Canvas::onMouseLeave() {
-    return false;
+void Canvas::onMouseLeave() {
 }
 
 void Canvas::onVisible() {

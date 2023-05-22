@@ -2151,11 +2151,10 @@ bool ColorPaletteSelector::onMouseRelease(ui::MouseEvent* /*event*/) {
     return true;
 }
 
-bool ColorPaletteSelector::onMouseEnter() {
-    return true;
+void ColorPaletteSelector::onMouseEnter() {
 }
 
-bool ColorPaletteSelector::onMouseLeave() {
+void ColorPaletteSelector::onMouseLeave() {
     hoveredLightnessIndex_ = -1;
     hoveredSaturationIndex_ = -1;
     hoveredHueIndex_ = -1;
@@ -2164,7 +2163,6 @@ bool ColorPaletteSelector::onMouseLeave() {
     hoveredHue_ = -1;
     reload_ = true;
     requestRepaint();
-    return true;
 }
 
 float ColorPaletteSelector::preferredWidthForHeight(float) const {
@@ -2741,17 +2739,15 @@ bool ColorListView::onMouseRelease(ui::MouseEvent* event) {
     }
 }
 
-bool ColorListView::onMouseEnter() {
-    return true;
+void ColorListView::onMouseEnter() {
 }
 
-bool ColorListView::onMouseLeave() {
+void ColorListView::onMouseLeave() {
     if (hoveredColorIndex_ != -1) {
         hoveredColorIndex_ = -1;
         reload_ = true;
         requestRepaint();
     }
-    return true;
 }
 
 float ColorListView::preferredWidthForHeight(float /* height */) const {

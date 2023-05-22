@@ -88,8 +88,8 @@ protected:
     bool onMouseMove(ui::MouseEvent* event) override;
     bool onMousePress(ui::MouseEvent* event) override;
     bool onMouseRelease(ui::MouseEvent* event) override;
-    bool onMouseEnter() override;
-    bool onMouseLeave() override;
+    void onMouseEnter() override;
+    void onMouseLeave() override;
     void onResize() override;
     void onPaintCreate(graphics::Engine* engine) override;
     void onPaintDraw(graphics::Engine* engine, ui::PaintOptions options) override;

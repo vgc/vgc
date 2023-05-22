@@ -86,16 +86,14 @@ void Label::onPaintDestroy(graphics::Engine* engine) {
     triangles_.reset();
 }
 
-bool Label::onMouseEnter() {
+void Label::onMouseEnter() {
     reload_ = true;
     requestRepaint();
-    return true;
 }
 
-bool Label::onMouseLeave() {
+void Label::onMouseLeave() {
     reload_ = true;
     requestRepaint();
-    return true;
 }
 
 void Label::onStyleChanged() {

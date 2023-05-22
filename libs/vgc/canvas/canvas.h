@@ -198,8 +198,8 @@ protected:
     bool onMousePress(ui::MouseEvent* event) override;
     bool onMouseRelease(ui::MouseEvent* event) override;
     bool onMouseScroll(ui::ScrollEvent* event) override;
-    bool onMouseEnter() override;
-    bool onMouseLeave() override;
+    void onMouseEnter() override;
+    void onMouseLeave() override;
     void onVisible() override;
     void onHidden() override;
     void onResize() override;
