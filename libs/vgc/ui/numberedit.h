@@ -191,8 +191,8 @@ public:
 
 protected:
     // Reimplementation of Widget virtual methods
-    bool onMouseEnter() override;
-    bool onMouseLeave() override;
+    void onMouseEnter() override;
+    void onMouseLeave() override;
     bool onMouseMove(MouseEvent* event) override;
     bool onMousePress(MouseEvent* event) override;
     bool onMouseRelease(MouseEvent* event) override;

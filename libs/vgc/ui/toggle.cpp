@@ -127,14 +127,12 @@ bool Toggle::onMouseRelease(MouseEvent* event) {
     }
 }
 
-bool Toggle::onMouseEnter() {
+void Toggle::onMouseEnter() {
     addStyleClass(strings::hovered);
-    return false;
 }
 
-bool Toggle::onMouseLeave() {
+void Toggle::onMouseLeave() {
     removeStyleClass(strings::hovered);
-    return false;
 }
 
 geometry::Vec2f Toggle::computePreferredSize() const {

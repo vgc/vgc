@@ -402,21 +402,19 @@ bool Plot2d::onMouseRelease(MouseEvent* /*event*/) {
     return true;
 }
 
-bool Plot2d::onMouseEnter() {
+void Plot2d::onMouseEnter() {
     isHovered_ = true;
     dirtyPlot_ = true;
     dirtyHint_ = true;
     requestRepaint();
-    return true;
 }
 
-bool Plot2d::onMouseLeave() {
+void Plot2d::onMouseLeave() {
     isHovered_ = false;
     mpos_ = {0, 0};
     dirtyPlot_ = true;
     dirtyHint_ = true;
     requestRepaint();
-    return true;
 }
 
 geometry::Vec2f Plot2d::computePreferredSize() const {

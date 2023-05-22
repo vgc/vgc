@@ -280,14 +280,12 @@ QCursor crossCursor() {
 
 } // namespace
 
-bool Sketch::onMouseEnter() {
+void Sketch::onMouseEnter() {
     cursorChanger_.set(crossCursor());
-    return false;
 }
 
-bool Sketch::onMouseLeave() {
+void Sketch::onMouseLeave() {
     cursorChanger_.clear();
-    return false;
 }
 
 void Sketch::onResize() {

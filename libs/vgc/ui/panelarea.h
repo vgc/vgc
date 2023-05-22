@@ -211,8 +211,8 @@ protected:
     //     probably make them protected for consistency
     void onWidgetAdded(Widget* child, bool wasOnlyReordered) override;
     void onWidgetRemoved(Widget* child) override;
-    bool onMouseEnter() override;
-    bool onMouseLeave() override;
+    void onMouseEnter() override;
+    void onMouseLeave() override;
     Widget* computeHoverChainChild(MouseEvent* event) const override;
     void preMouseMove(MouseEvent* event) override;
     bool onMouseMove(MouseEvent* event) override;

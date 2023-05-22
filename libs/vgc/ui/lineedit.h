@@ -76,8 +76,8 @@ public:
     bool onMouseMove(MouseEvent* event) override;
     bool onMousePress(MouseEvent* event) override;
     bool onMouseRelease(MouseEvent* event) override;
-    bool onMouseEnter() override;
-    bool onMouseLeave() override;
+    void onMouseEnter() override;
+    void onMouseLeave() override;
     bool onFocusIn(FocusReason reason) override;
     bool onFocusOut(FocusReason reason) override;
     bool onKeyPress(KeyEvent* event) override;

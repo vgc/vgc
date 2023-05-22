@@ -643,13 +643,11 @@ void Menu::preMousePress(MouseEvent* event) {
     lastHoverPos_ = event->position();
 }
 
-bool Menu::onMouseEnter() {
+void Menu::onMouseEnter() {
     isFirstMoveSinceEnter_ = true;
-    return false;
 }
 
-bool Menu::onMouseLeave() {
-    return false;
+void Menu::onMouseLeave() {
 }
 
 void Menu::onVisible() {

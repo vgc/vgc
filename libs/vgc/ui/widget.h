@@ -1293,15 +1293,26 @@ protected:
     ///
     virtual void onWidgetRemoved(Widget*);
 
+    /// This event handler is called whenever the widget is hovered by the
+    /// mouse at the position given by `event->position()`. This can happen in
+    /// the following situations:
+    ///
+    /// - The mouse moved.
+    /// - A mouse button was released, completing a mouse drag action,
+    ///   therefore updating which widget is now hovered.
+    /// - The window gained focus, for example after Alt-Tab.
+    ///
+    virtual void onMouseHover(MouseEvent* event);
+
     /// Override this function if you wish to handle MouseEnter events. You
     /// must return true if the event was handled, false otherwise.
     ///
-    virtual bool onMouseEnter();
+    virtual void onMouseEnter();
 
     /// Override this function if you wish to handle MouseLeave events. You
     /// must return true if the event was handled, false otherwise.
     ///
-    virtual bool onMouseLeave();
+    virtual void onMouseLeave();
 
     /// Override this function if you wish to handle the update of your
     /// hover-chain child yourself.
@@ -1526,8 +1537,9 @@ private:
     void mouseRelease_(MouseEvent* event);
     void mouseScroll_(ScrollEvent* event);
 
-    bool mouseEnter_();
-    bool mouseLeave_();
+    void mouseHover_();
+    void mouseEnter_();
+    void mouseLeave_();
 
     void onUnhover_();
 

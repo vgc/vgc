@@ -111,7 +111,7 @@ void NumberEdit::setPrecision(core::Precision precision) {
     setValue(clampedAndRoundedValue_(value_));
 }
 
-bool NumberEdit::onMouseEnter() {
+void NumberEdit::onMouseEnter() {
 
     // Call the base method first, to ensure that the IBeam cursor is on the
     // cursor stack, so that we can transition from drag mode to text mode by
@@ -119,13 +119,11 @@ bool NumberEdit::onMouseEnter() {
     //
     LineEdit::onMouseEnter();
     updateCursor_();
-    return true;
 }
 
-bool NumberEdit::onMouseLeave() {
+void NumberEdit::onMouseLeave() {
     cursorChangerOnMouseHover_.clear();
     LineEdit::onMouseLeave();
-    return true;
 }
 
 bool NumberEdit::onMouseMove(MouseEvent* event) {
