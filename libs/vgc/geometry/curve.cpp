@@ -627,7 +627,7 @@ bool testLine_(
     return true;
 }
 
-// Samples the segment [data.segmentIndex, data.segmentIndex + 1], and append the 
+// Samples the segment [data.segmentIndex, data.segmentIndex + 1], and append the
 // result to outAppend.
 //
 // The first sample of the segment is appended only if the cache `data` is new.
