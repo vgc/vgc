@@ -31,6 +31,7 @@ namespace vgc::ui {
 VGC_DECLARE_OBJECT(Action);
 VGC_DECLARE_OBJECT(Widget);
 VGC_DECLARE_OBJECT(Menu);
+VGC_DECLARE_OBJECT(MouseEvent);
 
 /// \enum vgc::ui::ActionType
 /// \brief Whether an action is a one-shot trigger or a mouse click/drag.
@@ -55,6 +56,8 @@ enum class ActionType {
     ///
     MouseDrag
 };
+
+VGC_UI_API
 VGC_DECLARE_ENUM(ActionType);
 
 ///
@@ -342,18 +345,72 @@ public:
     ///
     /// This will cause the triggered signal to be emitted.
     ///
-    /// \sa triggered
+    /// \sa `triggered()`.
     ///
     bool trigger(Widget* from = nullptr);
     VGC_SLOT(trigger)
 
     /// This signal is emitted whenever the action is activated by the user
     /// (for example, clicking on a button associated with this action), or
-    /// when the trigger() method is called.
+    /// when the `trigger()` method is called.
     ///
-    /// \sa trigger()
+    /// \sa `trigger()`.
     ///
     VGC_SIGNAL(triggered, (Widget*, from))
+
+    // ------------------------- Event Handling ---------------------------------
+
+    // XXX Use subclasses (e.g. MouseDragAction) and define handlers there?
+
+    /// This event handler is called whenever the action is of type `MouseDrag`
+    /// and the action is initiated, either via mouse press of key press.
+    ///
+    /// The default implementation does nothing.
+    ///
+    /// \sa `onMouseDragMove()`, `onMouseDragConfirm()`, `onMouseDragCancel()`.
+    ///
+    virtual void onMouseDragStart(MouseEvent* event);
+
+    /// This event handler is called whenever the action is of type `MouseDrag`
+    /// and the mouse is moved after the action being initiated. The method
+    /// `onMouseDragStart()` is guaranteed to have been called before this
+    /// method is called.
+    ///
+    /// The default implementation does nothing.
+    ///
+    /// \sa `onMouseDragStart()`, `onMouseDragConfirm()`, `onMouseDragCancel()`.
+    ///
+    virtual void onMouseDragMove(MouseEvent* event);
+
+    /// This event handler is called whenever the action is of type `MouseDrag`
+    /// and the user indicates that he wants to finish the action by confirming it.
+    ///
+    /// This confirmation typically happened via mouse press, key press, mouse
+    /// release, or key release.
+    ///
+    /// The method `onMouseDragStart()` is guaranteed to have been called
+    /// before this method is called.
+    ///
+    /// The default implementation does nothing.
+    ///
+    /// \sa `onMouseDragStart()`, `onMouseDragMove()`, `onMouseDragCancel()`.
+    ///
+    virtual void onMouseDragConfirm(MouseEvent* event);
+
+    /// This event handler is called whenever the action is of type `MouseDrag`
+    /// and the user indicates that he wants to finish the action by cancelling
+    /// it.
+    ///
+    /// This cancellation typically happened via the `Esc` key press.
+    ///
+    /// The method `onMouseDragStart()` is guaranteed to have been called
+    /// before this method is called.
+    ///
+    /// The default implementation does nothing.
+    ///
+    /// \sa `onMouseDragStart()`, `onMouseDragMove()`, `onMouseDragConfirm()`.
+    ///
+    virtual void onMouseDragCancel(MouseEvent* event);
 
 private:
     friend Menu;
