@@ -21,6 +21,7 @@
 #include <vgc/ui/api.h>
 #include <vgc/ui/key.h>
 #include <vgc/ui/modifierkey.h>
+#include <vgc/ui/mousebutton.h>
 
 namespace vgc::ui {
 
@@ -54,12 +55,10 @@ VGC_DECLARE_ENUM(ShortcutContext)
 ///
 class VGC_UI_API Shortcut {
 public:
-    /// Creates an empty shortcut, that is, a shortcut whose key is set
-    /// as Key::None.
+    /// Creates an empty shortcut, that is, a shortcut with both `key()` and
+    /// `mouseButton()` set to `None`.
     ///
-    Shortcut()
-        : modifiers_()
-        , key_(Key::None) {
+    Shortcut() {
     }
 
     /// Creates a Shortcut with the given modifier keys and key.
@@ -67,6 +66,13 @@ public:
     Shortcut(ModifierKeys modifiers, Key key)
         : modifiers_(modifiers)
         , key_(key) {
+    }
+
+    /// Creates a Shortcut with the given modifier keys and mouse button.
+    ///
+    Shortcut(ModifierKeys modifiers, MouseButton mouseButton)
+        : modifiers_(modifiers)
+        , mouseButton_(mouseButton) {
     }
 
     /// Returns the modifier keys of this shortcut.
@@ -93,11 +99,23 @@ public:
         key_ = key;
     }
 
-    /// Returns whether the shortcut is empty, that is, whether key() is
-    /// Key::None.
+    /// Returns the mouse button of this shortcut.
+    ///
+    MouseButton mouseButton() const {
+        return mouseButton_;
+    }
+
+    /// Sets the mouse button of this shortcut.
+    ///
+    void setMouseButton(MouseButton mouseButton) {
+        mouseButton_ = mouseButton;
+    }
+
+    /// Returns whether the shortcut is empty, that is, whether both `key()`
+    /// and `mouseButton()` are `None`.
     ///
     bool isEmpty() const {
-        return key() == Key::None;
+        return key() == Key::None && mouseButton() == MouseButton::None;
     }
 
     /// Returns whether the two shortcuts `s1` and `s2` are equal.
@@ -114,8 +132,9 @@ public:
     }
 
 private:
-    ModifierKeys modifiers_;
-    Key key_;
+    ModifierKeys modifiers_ = ModifierKey::None;
+    Key key_ = Key::None;
+    MouseButton mouseButton_ = MouseButton::None;
 };
 
 namespace detail {
