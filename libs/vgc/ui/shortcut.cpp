@@ -26,6 +26,34 @@ VGC_DEFINE_ENUM(
     (Window, "Window"),
     (Widget, "Widget"))
 
+VGC_DEFINE_ENUM( //
+    ShortcutType,
+    (None, "None"),
+    (Keyboard, "Keyboard"),
+    (Mouse, "Mouse"))
+
+void Shortcut::setKey(Key key) {
+    key_ = key;
+    mouseButton_ = MouseButton::None;
+    if (key_ == Key::None) {
+        type_ = ShortcutType::None;
+    }
+    else {
+        type_ = ShortcutType::Keyboard;
+    }
+}
+
+void Shortcut::setMouseButton(MouseButton button) {
+    mouseButton_ = button;
+    key_ = Key::None;
+    if (mouseButton_ == MouseButton::None) {
+        type_ = ShortcutType::None;
+    }
+    else {
+        type_ = ShortcutType::Mouse;
+    }
+}
+
 namespace {
 
 void appendString(std::string& res, std::string& separator, std::string_view str) {
@@ -43,8 +71,7 @@ void appendString(std::string& res, std::string& separator, std::string_view str
 namespace detail {
 
 std::string toString(const Shortcut& shortcut) {
-    Key key = shortcut.key();
-    if (key == Key::None) {
+    if (shortcut.type() == ShortcutType::None) {
         return "";
     }
     ModifierKeys modifiers = shortcut.modifiers();
@@ -80,7 +107,13 @@ std::string toString(const Shortcut& shortcut) {
         appendString(res, separator, "⌘"); // U+2318 Command / Cmd
     }
 #endif
-    appendString(res, separator, core::Enum::prettyName(key));
+    if (shortcut.type() == ShortcutType::Keyboard) {
+        appendString(res, separator, core::Enum::prettyName(shortcut.key()));
+    }
+    else if (shortcut.type() == ShortcutType::Mouse) {
+        appendString(res, separator, "Mouse ");
+        res += core::Enum::prettyName(shortcut.mouseButton());
+    }
     return res;
 }
 
