@@ -511,6 +511,7 @@ void Select::onPaintDraw(graphics::Engine* engine, ui::PaintOptions options) {
         if (!selectionRectangleGeometry_) {
             selectionRectangleGeometry_ = engine->createDynamicTriangleStripView(
                 BuiltinGeometryLayout::XYDxDy_iXYRotWRGBA);
+            const BufferPtr& vertexBuffer = selectionRectangleGeometry_->vertexBuffer(0);
 
             geometry::Mat4d invView = canvas->camera().viewMatrix().inverted();
             Vec2f a(invView.transformPointAffine(Vec2d(cursorPositionAtPress_)));
@@ -519,29 +520,32 @@ void Select::onPaintDraw(graphics::Engine* engine, ui::PaintOptions options) {
             rect.uniteWith(a);
             rect.uniteWith(b);
 
-            geometry::Vec4fArray vertices;
             // XYDxDy
             //
-            //    0┄┄┄┄┄┄2
-            //    ┆\    /┆
-            //    ┆ 1┄┄3 ┆
-            //    ┆ ┆  ┆ ┆
-            //    ┆ 7┄┄5 ┆
-            //    ┆/    \┆
-            //    6┄┄┄┄┄┄4
+            //   8/0┄┄┄┄┄┄2
+            //    ┆\     /┆
+            //    ┆9/1┄┄3 ┆
+            //    ┆ ┆   ┆ ┆
+            //    ┆ 7┄┄┄5 ┆
+            //    ┆/     \┆
+            //    6┄┄┄┄┄┄┄4
             //
-            vertices.emplaceLast(rect.pMin().x(), rect.pMin().y(), 0.f, 0.f);
-            vertices.emplaceLast(rect.pMin().x(), rect.pMin().y(), 1.f, 1.f);
-            vertices.emplaceLast(rect.pMax().x(), rect.pMin().y(), 0.f, 0.f);
-            vertices.emplaceLast(rect.pMax().x(), rect.pMin().y(), -1.f, 1.f);
-            vertices.emplaceLast(rect.pMax().x(), rect.pMax().y(), 0.f, 0.f);
-            vertices.emplaceLast(rect.pMax().x(), rect.pMax().y(), -1.f, -1.f);
-            vertices.emplaceLast(rect.pMin().x(), rect.pMax().y(), 0.f, 0.f);
-            vertices.emplaceLast(rect.pMin().x(), rect.pMax().y(), 1.f, -1.f);
-            vertices.emplaceLast(vertices[0]);
-            vertices.emplaceLast(vertices[1]);
-            engine->updateBufferData(
-                selectionRectangleGeometry_->vertexBuffer(0), std::move(vertices));
+            float rxMin = rect.xMin();
+            float ryMin = rect.yMin();
+            float rxMax = rect.xMax();
+            float ryMax = rect.yMax();
+            geometry::Vec4fArray vertices = {
+                {rxMin, ryMin, 0, 0},
+                {rxMin, ryMin, 1, 1},
+                {rxMax, ryMin, 0, 0},
+                {rxMax, ryMin, -1, 1},
+                {rxMax, ryMax, 0, 0},
+                {rxMax, ryMax, -1, -1},
+                {rxMin, ryMax, 0, 0},
+                {rxMin, ryMax, 1, -1},
+                {rxMin, ryMin, 0, 0},
+                {rxMin, ryMin, 1, 1}};
+            engine->updateBufferData(vertexBuffer, std::move(vertices));
 
             // XYRotWRGBA
             const core::Color& c = workspace::colors::selection;
