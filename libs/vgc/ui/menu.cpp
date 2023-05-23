@@ -61,7 +61,7 @@ Menu::Menu(std::string_view title)
     : Flex(FlexDirection::Column, FlexWrap::NoWrap) {
 
     addStyleClass(strings::Menu);
-    action_ = createAction(title);
+    action_ = createTriggerAction(title);
     action_->isMenu_ = true;
     action_->triggered().connect(onSelfActionTriggeredSlot_());
 }

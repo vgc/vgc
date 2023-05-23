@@ -71,18 +71,18 @@ private:
 
         testMenu_ = menuBar()->createSubMenu("Test");
 
-        Action* actionCreateAction = parent->createAction(
+        Action* actionCreateAction = parent->createTriggerAction(
             "Create action in Test menu", Shortcut(ModifierKey::Ctrl, Key::A));
         actionCreateAction->triggered().connect([this]() {
-            Action* action = this->testMenu_->createAction("Hello");
+            Action* action = this->testMenu_->createTriggerAction("Hello");
             this->testMenu_->addItem(action);
         });
 
-        Action* actionCreateMenu = parent->createAction(
+        Action* actionCreateMenu = parent->createTriggerAction(
             "Create menu in menubar", Shortcut(ModifierKey::Ctrl, Key::M));
         actionCreateMenu->triggered().connect([this]() {
             Menu* menu = this->menuBar()->createSubMenu("Test 2");
-            Action* action = menu->createAction("Hello");
+            Action* action = menu->createTriggerAction("Hello");
             menu->addItem(action);
         });
 
@@ -92,29 +92,29 @@ private:
         Menu* menu2 = testMenu_->createSubMenu("Menu 2");
         Menu* menu3 = testMenu_->createSubMenu("Menu 3");
 
-        menu1->addItem(parent->createAction("Action #1.1", Shortcut({}, Key::G)));
-        menu1->addItem(
-            parent->createAction("Action #1.2", Shortcut(ModifierKey::Ctrl, Key::L)));
-        menu1->addItem(parent->createAction("Action #1.3"));
-        menu1->addItem(parent->createAction("Action #1.4"));
-        menu1->addItem(parent->createAction("Action #1.5"));
-        menu1->addItem(parent->createAction("Action #1.6"));
-        menu1->addItem(parent->createAction("Action #1.7"));
+        menu1->addItem(parent->createTriggerAction("Action #1.1", Shortcut({}, Key::G)));
+        menu1->addItem(parent->createTriggerAction(
+            "Action #1.2", Shortcut(ModifierKey::Ctrl, Key::L)));
+        menu1->addItem(parent->createTriggerAction("Action #1.3"));
+        menu1->addItem(parent->createTriggerAction("Action #1.4"));
+        menu1->addItem(parent->createTriggerAction("Action #1.5"));
+        menu1->addItem(parent->createTriggerAction("Action #1.6"));
+        menu1->addItem(parent->createTriggerAction("Action #1.7"));
         Menu* menu1b = menu1->createSubMenu("Menu 1.8");
 
-        menu1b->addItem(parent->createAction("Action #1.8.1"));
-        menu1b->addItem(parent->createAction("Action #1.8.2"));
-        menu1b->addItem(parent->createAction("Action #1.8.3"));
-        menu1b->addItem(parent->createAction("Action #1.8.4"));
-        menu1b->addItem(parent->createAction("Action #1.8.5"));
-        menu1b->addItem(parent->createAction("Action #1.8.6"));
-        menu1b->addItem(parent->createAction("Action #1.8.7"));
+        menu1b->addItem(parent->createTriggerAction("Action #1.8.1"));
+        menu1b->addItem(parent->createTriggerAction("Action #1.8.2"));
+        menu1b->addItem(parent->createTriggerAction("Action #1.8.3"));
+        menu1b->addItem(parent->createTriggerAction("Action #1.8.4"));
+        menu1b->addItem(parent->createTriggerAction("Action #1.8.5"));
+        menu1b->addItem(parent->createTriggerAction("Action #1.8.6"));
+        menu1b->addItem(parent->createTriggerAction("Action #1.8.7"));
 
-        menu2->addItem(parent->createAction("Action #2.1", Shortcut({}, Key::F)));
-        menu2->addItem(
-            parent->createAction("Action #2.2", Shortcut(ModifierKey::Ctrl, Key::K)));
+        menu2->addItem(parent->createTriggerAction("Action #2.1", Shortcut({}, Key::F)));
+        menu2->addItem(parent->createTriggerAction(
+            "Action #2.2", Shortcut(ModifierKey::Ctrl, Key::K)));
 
-        menu3->addItem(parent->createAction("Action #3.1"));
+        menu3->addItem(parent->createTriggerAction("Action #3.1"));
     }
 
     void createTestWidgets_() {
@@ -274,7 +274,7 @@ private:
         grid->setStyleSheet(".Grid { column-gap: 10dp; row-gap: 10dp; }");
         for (int i = 0; i < 2; ++i) {
             for (int j = 0; j < 4; ++j) {
-                ui::Action* action = parent->createAction("click me");
+                ui::Action* action = parent->createTriggerAction("click me");
                 ui::ButtonPtr button = ui::Button::create(action);
                 grid->setWidgetAt(button.get(), i, j);
                 action->triggered().connect([=](ui::Widget* from) {
@@ -291,7 +291,7 @@ private:
 
         ui::Flex* row = parent->createChild<ui::Flex>(ui::FlexDirection::Row);
 
-        ui::Action* action = parent->createAction("Quit?");
+        ui::Action* action = parent->createTriggerAction("Quit?");
         ui::Button* button = row->createChild<ui::Button>(action);
         action->triggered().connect([=]() {
             auto dialog = ui::MessageDialog::create();

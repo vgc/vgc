@@ -528,7 +528,7 @@ void CanvasApplication::createActions_(ui::Widget* parent) {
     ui::ShortcutContext context = ui::ShortcutContext::Window;
 
     auto createAction = [=](std::string_view text, const Shortcut& shortcut) {
-        return parent->createAction(text, shortcut, context);
+        return parent->createTriggerAction(text, shortcut, context);
     };
 
     actionNew_ = createAction("New", Shortcut(ctrl, Key::N));
@@ -639,7 +639,7 @@ void CanvasApplication::registerTool_(
     canvas::CanvasToolPtr tool) {
 
     // Create tool action and add it to the action group
-    ui::Action* action = parent->createAction(toolName);
+    ui::Action* action = parent->createTriggerAction(toolName);
     action->setCheckable(true);
     action->checkStateChanged().connect(onToolCheckStateChangedSlot_());
     toolsActionGroup_->addAction(action);

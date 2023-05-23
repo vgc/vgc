@@ -284,7 +284,7 @@ void ScreenColorPickerButton::stopPicking_() {
 ScreenColorPickerButtonPtr ScreenColorPickerButton::create(std::string_view name) {
     ui::Action* action = nullptr;
     ScreenColorPickerButtonPtr button = new ScreenColorPickerButton(action);
-    action = button->createAction(name);
+    action = button->createTriggerAction(name);
     button->setAction(action);
     action->triggered().connect(button->startPickingSlot_());
     return button;
@@ -431,7 +431,7 @@ void createOneLineEdit_(
 }
 
 ui::Button* createCheckableButton_(ui::Widget* parent, std::string_view text) {
-    ui::Action* action = parent->createAction(text);
+    ui::Action* action = parent->createTriggerAction(text);
     action->setCheckable(true);
     ui::Button* res = parent->createChild<ui::Button>(action);
     return res;
@@ -481,9 +481,9 @@ ColorPalette::ColorPalette()
     // Palette
     ui::Row* paletteButtons = createChild<ui::Row>();
     paletteButtons->addStyleClass(strings_::field_row);
-    ui::Action* addToPaletteAction = createAction("Add to Palette");
+    ui::Action* addToPaletteAction = createTriggerAction("Add to Palette");
     paletteButtons->createChild<ui::Button>(addToPaletteAction);
-    ui::Action* removeFromPaletteAction = createAction("-");
+    ui::Action* removeFromPaletteAction = createTriggerAction("-");
     paletteButtons->createChild<ui::Button>(removeFromPaletteAction);
     colorListView_ = createChild<ColorListView>();
 

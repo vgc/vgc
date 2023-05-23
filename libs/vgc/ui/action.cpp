@@ -169,6 +169,18 @@ bool Action::trigger(Widget* from) {
     return true;
 }
 
+void Action::onMouseDragStart(MouseEvent*) {
+}
+
+void Action::onMouseDragMove(MouseEvent*) {
+}
+
+void Action::onMouseDragConfirm(MouseEvent*) {
+}
+
+void Action::onMouseDragCancel(MouseEvent*) {
+}
+
 void Action::setCheckStateNoEmit_(CheckState newState) {
     checkState_ = newState;
 }

@@ -1249,13 +1249,22 @@ public:
         return ActionListView(actions_);
     }
 
-    /// Creates an Action, adds it to this widget, and returns the action.
+    /// Creates an action of type `TAction`, adds it to this widget, and
+    /// returns the action.
     ///
-    template<typename... Args>
+    template<typename TAction, typename... Args>
     Action* createAction(Args&&... args) {
-        ActionPtr action = Action::create(std::forward<Args>(args)...);
+        ActionPtr action = TAction::create(std::forward<Args>(args)...);
         actions_->append(action.get());
         return action.get();
+    }
+
+    /// Creates an action of type `ActionType::Trigger`, adds it to this
+    /// widget, and returns the action.
+    ///
+    template<typename... Args>
+    Action* createTriggerAction(Args&&... args) {
+        return createAction<Action>(std::forward<Args>(args)...);
     }
 
     // Implementation of StylableObject interface
