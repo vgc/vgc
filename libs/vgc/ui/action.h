@@ -20,6 +20,7 @@
 #include <string>
 #include <string_view>
 
+#include <vgc/core/enum.h>
 #include <vgc/core/object.h>
 #include <vgc/ui/actiongroup.h>
 #include <vgc/ui/api.h>
@@ -31,6 +32,34 @@ VGC_DECLARE_OBJECT(Action);
 VGC_DECLARE_OBJECT(Widget);
 VGC_DECLARE_OBJECT(Menu);
 
+/// \enum vgc::ui::ActionType
+/// \brief Whether an action is a one-shot trigger or a mouse click/drag.
+///
+enum class ActionType {
+
+    /// Represents a single-step action that can be typically be triggered from
+    /// anywhere and does not requires knowledge of the mouse cursor.
+    ///
+    Trigger,
+
+    /// Represents a single-step action that requires the mouse cursor, and is
+    /// typically performed either on mouse press or mouse release. However, it
+    /// can also be initiated via a keyboard shortcut if preferred.
+    ///
+    MouseClick,
+
+    /// Represents a multiple-steps action that requires the mouse cursor and
+    /// typically performs something on mouse press, mouse move, and mouse
+    /// release. However, it can also be initiated/completed via keyboard
+    /// shortcuts if preferred.
+    ///
+    MouseDrag
+};
+VGC_DECLARE_ENUM(ActionType);
+
+///
+/// , drag action keyboard action, noThe type of a given action an action that can be triggered via menu items, shorctuts, etc.
+///
 /// \class vgc::ui::Action
 /// \brief Represents an action that can be triggered via menu items, shorctuts, etc.
 ///
@@ -41,33 +70,48 @@ private:
 
 protected:
     explicit Action(
+        ActionType type = ActionType::Trigger,
         std::string_view text = "",
         const Shortcut& shortcut = Shortcut(),
         ShortcutContext shortcutContext = ShortcutContext::Widget);
 
 public:
-    /// Creates an action.
+    /// Creates an action of type `ActionType::Trigger`.
     ///
     static ActionPtr create();
 
-    /// Creates an action with the given shortcut.
+    /// Creates an action of type `ActionType::Trigger` with the given shortcut.
     ///
     static ActionPtr create(
         const Shortcut& shortcut,
         ShortcutContext shortcutContext = ShortcutContext::Widget);
 
-    /// Creates an action with the given text.
+    /// Creates an action of type `ActionType::Trigger` with the given text.
     ///
     static ActionPtr create(std::string_view text);
 
-    /// Creates an action with the given text and shortcut.
+    /// Creates an action of type `ActionType::Trigger` with the given text and shortcut.
     ///
     static ActionPtr create(
         std::string_view text,
         const Shortcut& shortcut,
         ShortcutContext shortcutContext = ShortcutContext::Widget);
 
+    /// Creates an action with the given action type, text and shortcut.
+    ///
+    static ActionPtr create(
+        ActionType type,
+        std::string_view text,
+        const Shortcut& shortcut,
+        ShortcutContext shortcutContext = ShortcutContext::Widget);
+
     // ----------------------- Action Properties -------------------------------
+
+    /// Returns the type of this action.
+    ///
+    ActionType type() const {
+        return type_;
+    }
 
     /// Returns the descriptive text for this action.
     ///
@@ -315,6 +359,7 @@ private:
     friend Menu;
     friend ActionGroup;
 
+    ActionType type_ = ActionType::Trigger;
     std::string text_;
     Shortcut shortcut_;
     ui::ActionGroup* group_ = nullptr;

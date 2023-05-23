@@ -21,12 +21,20 @@
 
 namespace vgc::ui {
 
+VGC_DEFINE_ENUM(
+    ActionType,
+    (Trigger, "Trigger"),
+    (MouseClick, "Mouse Click"),
+    (MouseDrag, "Mouse Drag"))
+
 Action::Action(
+    ActionType type,
     std::string_view text,
     const Shortcut& shortcut,
     ShortcutContext shortcutContext)
 
-    : text_(text)
+    : type_(type)
+    , text_(text)
     , shortcut_(shortcut)
     , shortcutContext_(shortcutContext) {
 }
@@ -36,11 +44,11 @@ ActionPtr Action::create() {
 }
 
 ActionPtr Action::create(const Shortcut& shortcut, ShortcutContext shortcutContext) {
-    return ActionPtr(new Action("", shortcut, shortcutContext));
+    return ActionPtr(new Action(ActionType::Trigger, "", shortcut, shortcutContext));
 }
 
 ActionPtr Action::create(std::string_view text) {
-    return ActionPtr(new Action(text));
+    return ActionPtr(new Action(ActionType::Trigger, text));
 }
 
 ActionPtr Action::create(
@@ -48,7 +56,16 @@ ActionPtr Action::create(
     const Shortcut& shortcut,
     ShortcutContext shortcutContext) {
 
-    return ActionPtr(new Action(text, shortcut, shortcutContext));
+    return ActionPtr(new Action(ActionType::Trigger, text, shortcut, shortcutContext));
+}
+
+ActionPtr Action::create(
+    ActionType type,
+    std::string_view text,
+    const Shortcut& shortcut,
+    ShortcutContext shortcutContext) {
+
+    return ActionPtr(new Action(type, text, shortcut, shortcutContext));
 }
 
 void Action::setText(std::string_view text) {
