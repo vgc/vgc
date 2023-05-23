@@ -93,8 +93,8 @@ private:
         Menu* menu3 = testMenu_->createSubMenu("Menu 3");
 
         menu1->addItem(parent->createTriggerAction("Action #1.1", Shortcut({}, Key::G)));
-        menu1->addItem(
-            parent->createTriggerAction("Action #1.2", Shortcut(ModifierKey::Ctrl, Key::L)));
+        menu1->addItem(parent->createTriggerAction(
+            "Action #1.2", Shortcut(ModifierKey::Ctrl, Key::L)));
         menu1->addItem(parent->createTriggerAction("Action #1.3"));
         menu1->addItem(parent->createTriggerAction("Action #1.4"));
         menu1->addItem(parent->createTriggerAction("Action #1.5"));
@@ -111,8 +111,8 @@ private:
         menu1b->addItem(parent->createTriggerAction("Action #1.8.7"));
 
         menu2->addItem(parent->createTriggerAction("Action #2.1", Shortcut({}, Key::F)));
-        menu2->addItem(
-            parent->createTriggerAction("Action #2.2", Shortcut(ModifierKey::Ctrl, Key::K)));
+        menu2->addItem(parent->createTriggerAction(
+            "Action #2.2", Shortcut(ModifierKey::Ctrl, Key::K)));
 
         menu3->addItem(parent->createTriggerAction("Action #3.1"));
     }
