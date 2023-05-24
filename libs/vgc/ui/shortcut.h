@@ -21,6 +21,7 @@
 #include <vgc/ui/api.h>
 #include <vgc/ui/key.h>
 #include <vgc/ui/modifierkey.h>
+#include <vgc/ui/mousebutton.h>
 
 namespace vgc::ui {
 
@@ -47,26 +48,63 @@ enum class ShortcutContext : UInt8 {
 VGC_UI_API
 VGC_DECLARE_ENUM(ShortcutContext)
 
+/// \enum vgc::ui::ShortcutType
+/// \brief Describes whether a shortcut is a mouse button press, a keyboard key press, etc.
+///
+// TODO:
+// - DoubleClick?
+// - Activate on Press vs Release?
+// - Should the key/button be kept pressed during a drag action?
+//
+enum class ShortcutType : UInt8 {
+
+    /// There is no shortcut.
+    ///
+    None,
+
+    /// The shortcut is activated by pressing a keyboard key.
+    ///
+    Keyboard,
+
+    /// The shortcut is activated by pressing a mouse button.
+    ///
+    Mouse
+};
+
+VGC_UI_API
+VGC_DECLARE_ENUM(ShortcutType)
+
 /// \class vgc::ui::Shortcut
 /// \brief Represents a combination of keys that can trigger an action.
 ///
-/// A Shortcut is a combination of ModifiersKeys together with a Key.
+/// A `Shortcut` is a combination of ModifiersKeys together with a `Key` or
+/// `MouseButton`.
 ///
 class VGC_UI_API Shortcut {
 public:
-    /// Creates an empty shortcut, that is, a shortcut whose key is set
-    /// as Key::None.
+    /// Creates a shortcut of type `ShortcutType::None`.
     ///
-    Shortcut()
-        : modifiers_()
-        , key_(Key::None) {
+    Shortcut() {
     }
 
     /// Creates a Shortcut with the given modifier keys and key.
     ///
-    Shortcut(ModifierKeys modifiers, Key key)
-        : modifiers_(modifiers)
-        , key_(key) {
+    Shortcut(ModifierKeys modifiers, Key key) {
+        setModifiers(modifiers);
+        setKey(key);
+    }
+
+    /// Creates a Shortcut with the given modifier keys and mouse button.
+    ///
+    Shortcut(ModifierKeys modifiers, MouseButton button) {
+        setModifiers(modifiers);
+        setMouseButton(button);
+    }
+
+    /// Returns the type of this shortcut.
+    ///
+    ShortcutType type() const {
+        return type_;
     }
 
     /// Returns the modifier keys of this shortcut.
@@ -89,15 +127,33 @@ public:
 
     /// Sets the key of this shortcut.
     ///
-    void setKey(Key key) {
-        key_ = key;
+    /// This changes the `type()` of this shortcut to `Keyboard` (unless the
+    /// given `key` is `None`, in which case the `type()` becomes `None`).
+    ///
+    /// This also changes the `mouseButton()` to `None`.
+    ///
+    void setKey(Key key);
+
+    /// Returns the mouse button of this shortcut.
+    ///
+    MouseButton mouseButton() const {
+        return mouseButton_;
     }
 
-    /// Returns whether the shortcut is empty, that is, whether key() is
-    /// Key::None.
+    /// Sets the mouse button of this shortcut.
+    ///
+    /// This changes the `type()` of this shortcut to `Mouse` (unless the
+    /// given `button` is `None`, in which case the `type()` becomes `None`).
+    ///
+    /// This also changes the `key()` to `None`.
+    ///
+    void setMouseButton(MouseButton button);
+
+    /// Returns whether the shortcut is empty, that is, whether both `key()`
+    /// and `mouseButton()` are `None`.
     ///
     bool isEmpty() const {
-        return key() == Key::None;
+        return key() == Key::None && mouseButton() == MouseButton::None;
     }
 
     /// Returns whether the two shortcuts `s1` and `s2` are equal.
@@ -114,8 +170,10 @@ public:
     }
 
 private:
-    ModifierKeys modifiers_;
-    Key key_;
+    ShortcutType type_ = ShortcutType::None;
+    ModifierKeys modifiers_ = ModifierKey::None;
+    Key key_ = Key::None;
+    MouseButton mouseButton_ = MouseButton::None;
 };
 
 namespace detail {
