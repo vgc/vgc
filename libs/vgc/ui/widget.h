@@ -1528,6 +1528,8 @@ private:
 
     // Events
     HandledEventPolicy handledEventPolicy_ = HandledEventPolicy::Skip;
+    WidgetPtr currentMouseDragWidget_;         // Stored at the root
+    Action* currentMouseDragAction_ = nullptr; // Stored at the root
 
     // Mouse
     Widget* mouseCaptor_ = nullptr; // TODO: move to future class WidgetTree
