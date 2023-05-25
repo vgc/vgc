@@ -744,7 +744,7 @@ ElementStatus VacKeyEdge::updateFromDom_(Workspace* workspace) {
     }
     else {
         auto geometry = dynamic_cast<workspace::EdgeGeometry*>(ke->geometry());
-        if (geometry && geometry->updateFromDomEdge_(domElement)) {
+        if (!geometry || !geometry->updateFromDomEdge_(domElement)) {
             hasGeometryChanged = false;
         }
     }
