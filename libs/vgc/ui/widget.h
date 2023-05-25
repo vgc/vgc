@@ -1273,7 +1273,7 @@ public:
         populateStyleSpecTable(table);
     }
 
-    /// Return the current mouse drag action, if any.
+    /// Returns the current mouse drag action, if any.
     ///
     ui::Action* currentMouseDragAction() const {
         return currentMouseDragAction_;
