@@ -36,11 +36,11 @@ public:
     }
 
     const geometry::Vec2dArray& points() const {
-        return isBeingEdited_ ? points_ : domPoints_;
+        return isBeingEdited_ ? points_ : sharedConstPoints_;
     }
 
     const core::DoubleArray& widths() const {
-        return isBeingEdited_ ? widths_ : domWidths_;
+        return isBeingEdited_ ? widths_ : sharedConstWidths_;
     }
 
     void setPoints(const SharedConstPoints& points);
@@ -78,8 +78,8 @@ public:
     void removeFromDomEdge_(dom::Element* element) const override;
 
 private:
-    SharedConstPoints domPoints_;
-    SharedConstWidths domWidths_;
+    SharedConstPoints sharedConstPoints_;
+    SharedConstWidths sharedConstWidths_;
     core::DoubleArray originalArclengths_;
     geometry::Vec2dArray points_;
     core::DoubleArray widths_;
