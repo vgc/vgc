@@ -1253,8 +1253,8 @@ public:
     /// returns the action.
     ///
     template<typename TAction, typename... Args>
-    Action* createAction(Args&&... args) {
-        ActionPtr action = TAction::create(std::forward<Args>(args)...);
+    TAction* createAction(Args&&... args) {
+        core::ObjPtr<TAction> action = TAction::create(std::forward<Args>(args)...);
         actions_->append(action.get());
         return action.get();
     }
@@ -1271,6 +1271,12 @@ public:
     static void populateStyleSpecTable(style::SpecTable* table);
     void populateStyleSpecTableVirtual(style::SpecTable* table) override {
         populateStyleSpecTable(table);
+    }
+
+    /// Return the current mouse drag action, if any.
+    ///
+    ui::Action* currentMouseDragAction() const {
+        return currentMouseDragAction_;
     }
 
 protected:
