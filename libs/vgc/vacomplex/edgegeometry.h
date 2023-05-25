@@ -141,20 +141,25 @@ public:
 
     /// Expects positions in object space.
     ///
-    virtual void snap(
-        const geometry::Vec2d& snapStartPosition,
-        const geometry::Vec2d& snapEndPosition,
-        EdgeSnapTransformationMode mode =
-            EdgeSnapTransformationMode::LinearInArclength) = 0;
-
-    /// Expects positions in object space.
-    ///
     virtual EdgeSampling computeSampling(
         geometry::CurveSamplingQuality quality,
         const geometry::Vec2d& snapStartPosition,
         const geometry::Vec2d& snapEndPosition,
         EdgeSnapTransformationMode mode =
             EdgeSnapTransformationMode::LinearInArclength) const = 0;
+
+    virtual void startEdit() = 0;
+    virtual void resetEdit() = 0;
+    virtual void finishEdit() = 0;
+    virtual void abortEdit() = 0;
+
+    /// Expects positions in object space.
+    ///
+    virtual void snap(
+        const geometry::Vec2d& snapStartPosition,
+        const geometry::Vec2d& snapEndPosition,
+        EdgeSnapTransformationMode mode =
+            EdgeSnapTransformationMode::LinearInArclength) = 0;
 
     // We will later need a variant of computeSampling() that accepts a target
     // view matrix.

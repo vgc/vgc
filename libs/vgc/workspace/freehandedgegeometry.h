@@ -35,12 +35,12 @@ public:
         , widths_(widths) {
     }
 
-    const SharedConstPoints& points() const {
-        return points_;
+    const geometry::Vec2dArray& points() const {
+        return isBeingEdited_ ? points_ : sharedConstPoints_;
     }
 
-    const SharedConstWidths& widths() const {
-        return widths_;
+    const core::DoubleArray& widths() const {
+        return isBeingEdited_ ? widths_ : sharedConstWidths_;
     }
 
     void setPoints(const SharedConstPoints& points);
@@ -55,34 +55,36 @@ public:
 
     /// Expects positions in object space.
     ///
-    void snap(
-        const geometry::Vec2d& snapStartPosition,
-        const geometry::Vec2d& snapEndPosition,
-        vacomplex::EdgeSnapTransformationMode mode) override;
-
-    /// Expects positions in object space.
-    ///
     vacomplex::EdgeSampling computeSampling(
         geometry::CurveSamplingQuality quality,
         const geometry::Vec2d& snapStartPosition,
         const geometry::Vec2d& snapEndPosition,
         vacomplex::EdgeSnapTransformationMode mode) const override;
 
+    void startEdit() override;
+    void resetEdit() override;
+    void finishEdit() override;
+    void abortEdit() override;
+
+    /// Expects positions in object space.
+    ///
+    void snap(
+        const geometry::Vec2d& snapStartPosition,
+        const geometry::Vec2d& snapEndPosition,
+        vacomplex::EdgeSnapTransformationMode mode) override;
+
     bool updateFromDomEdge_(dom::Element* element) override;
     void writeToDomEdge_(dom::Element* element) const override;
     void removeFromDomEdge_(dom::Element* element) const override;
 
 private:
-    SharedConstPoints points_;
-    SharedConstWidths widths_;
-    mutable core::DoubleArray arclengths_;
-    // snapping cache because:
-    // - we don't want to modify the file unless the curve is edited.
-    // - we prefer not to allocate a new array for each incremental edit.
-    mutable geometry::Vec2dArray snappedPoints_;
-
-    void updateArclengths_() const;
-    void dirtyArclengths_();
+    SharedConstPoints sharedConstPoints_;
+    SharedConstWidths sharedConstWidths_;
+    core::DoubleArray originalArclengths_;
+    geometry::Vec2dArray points_;
+    core::DoubleArray widths_;
+    geometry::Vec2d editStartPosition_ = {};
+    bool isBeingEdited_ = false;
 
     static void computeSnappedLinearS_(
         geometry::Vec2dArray& outPoints,
