@@ -1541,6 +1541,9 @@ private:
     Widget* mouseCaptor_ = nullptr; // TODO: move to future class WidgetTree
     Widget* hoverChainParent_ = nullptr;
     Widget* hoverChainChild_ = nullptr;
+    geometry::Vec2f lastMouseHoverPosition_;
+    ModifierKeys lastMouseHoverModifierKeys_;
+    bool forceNextMouseHover_ = true;
     bool isHovered_ = false;
     bool isInHoveredRow_ = false;
     bool isInHoveredColumn_ = false;

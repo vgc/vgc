@@ -798,7 +798,6 @@ void Widget::mouseMove_(MouseEvent* event) {
         WidgetPtr hcChildPtr = hcChild;
         // Call handler.
         event->setPosition(mapTo(hcChild, eventPos));
-        hcChild->onMouseHover(event);
         hcChild->mouseMove_(event);
         // Check for deaths.
         if (!isAlive() || !hcChild->isAlive()) {
@@ -1407,18 +1406,43 @@ void Widget::onWidgetRemoved(Widget*) {
 }
 
 void Widget::mouseHover_() {
+
+    // New hover data
     Widget* root_ = root();
     MouseButton button = MouseButton::None;
     geometry::Vec2f position = root_->mapTo(this, root_->lastMousePosition_);
     ModifierKeys modifierKeys = root_->lastModifierKeys_;
-    MouseEventPtr hoverEvent = MouseEvent::create(button, position, modifierKeys);
-    onMouseHover(hoverEvent.get());
+
+    // Determine if we should send the mouse hover
+    bool doMouseHover = false;
+    if (forceNextMouseHover_) {
+        doMouseHover = true;
+    }
+    else if (
+        lastMouseHoverPosition_ != position
+        || lastMouseHoverModifierKeys_ != modifierKeys) {
+
+        doMouseHover = true;
+    }
+
+    // So the mouse hover if necessary
+    if (doMouseHover) {
+        lastMouseHoverPosition_ = position;
+        lastMouseHoverModifierKeys_ = modifierKeys;
+        MouseEventPtr hoverEvent = MouseEvent::create(button, position, modifierKeys);
+        onMouseHover(hoverEvent.get());
+        forceNextMouseHover_ = false;
+    }
 }
 
 void Widget::mouseEnter_() {
+    WidgetPtr thisPtr = this;
     isHovered_ = true;
     onMouseEnter();
-    mouseHover_();
+    if (thisPtr.isAlive()) {
+        forceNextMouseHover_ = true;
+        mouseHover_();
+    }
 }
 
 void Widget::mouseLeave_() {
@@ -1443,40 +1467,67 @@ bool Widget::updateHoverChainChild(MouseEvent* event) {
 // TODO: fix recursion discovered with the "opened menu + window resize" crash.
 // updateGeometry->updateHoverChain->mapTo->position->updateRootGeometry_->updateGeometry->updateHoverChain
 bool Widget::updateHoverChain() {
-    if (!isHovered()) {
+
+    // We do not want to update the hover-chain if this widget isn't hovered,
+    // or if a MouseDrag action is in progress.
+    //
+    if (!isHovered() || currentMouseDragAction()) {
         return false;
     }
-    // Prepare for death.
 
-    Widget* root_ = root();
-    Widget* hcParent = this;
-    Widget* hcChild = hoverChainChild();
-    // Find end of hover-locked part.
-    while (hcChild && hcChild->isHoverLocked()) {
-        hcParent = hcChild;
-        hcChild = hcParent->hoverChainChild();
+    // Useful variables.
+    //
+    WidgetPtr root = this->root();
+    MouseButton button = MouseButton::None;
+    geometry::Vec2f position = root->lastMousePosition_;
+    ModifierKeys modifiers = root->lastModifierKeys_;
+
+    // Start by traversing the locked part of the hover-chain.
+    //
+    // We keep this part of the chain unchanged, that is, we do no call
+    // updateHoverChainChild() for these widgets.
+    //
+    WidgetPtr widget = this;
+    WidgetPtr child = hoverChainChild();
+    while (child && child->isHoverLocked()) {
+        widget = child;
+        child = widget->hoverChainChild();
     }
-    // Compute mouse position relative to hcParent.
-    geometry::Vec2f relPos = root_->mapTo(hcParent, root_->lastMousePosition_);
 
+    // Update the remaining (non-locked) part of the hover-chain.
+    //
+    WidgetPtr leaf = widget;
     bool changed = false;
-    while (hcParent && hcParent->isChildHoverEnabled_) {
-        WidgetPtr hcParentPtr = hcParent;
-        Widget* oldChild = hcChild;
-        MouseEventPtr updateEvent =
-            MouseEvent::create(MouseButton::None, relPos, root_->lastModifierKeys_);
-        bool updated = hcParent->updateHoverChainChild(updateEvent.get());
-        if (!updated || !hcParent->isAlive()) {
-            return true;
+    while (widget && widget->isChildHoverEnabled_) {
+        WidgetPtr oldChild = child;
+        geometry::Vec2f relPos = root->mapTo(widget.get(), position);
+        MouseEventPtr event = MouseEvent::create(button, relPos, modifiers);
+        bool success = widget->updateHoverChainChild(event.get());
+        if (!success || !widget->isAlive()) {
+            changed = true;
+            break;
         }
-        hcChild = hcParent->hoverChainChild();
-        if (hcChild != oldChild) {
+        leaf = widget;
+        child = widget->hoverChainChild();
+        if (child != oldChild) {
             changed = true;
         }
-        if (hcChild) {
-            relPos = hcParent->mapTo(hcChild, relPos);
+        widget = child;
+    }
+
+    // Call onMouseHover from leaf to root.
+    //
+    if (leaf.isAlive()) {
+        widget = leaf;
+        while (widget) {
+            widget->mouseHover_();
+            if (widget.get() == this) {
+                widget = nullptr;
+            }
+            else {
+                widget = widget->hoverChainParent_;
+            }
         }
-        hcParent = hcChild;
     }
 
     return changed;
