@@ -535,16 +535,16 @@ void Select::onPaintDraw(graphics::Engine* engine, ui::PaintOptions options) {
             float rxMax = rect.xMax();
             float ryMax = rect.yMax();
             geometry::Vec4fArray vertices = {
-                {rxMin, ryMin, 0, 0},
                 {rxMin, ryMin, 1, 1},
-                {rxMax, ryMin, 0, 0},
-                {rxMax, ryMin, -1, 1},
-                {rxMax, ryMax, 0, 0},
-                {rxMax, ryMax, -1, -1},
-                {rxMin, ryMax, 0, 0},
-                {rxMin, ryMax, 1, -1},
                 {rxMin, ryMin, 0, 0},
-                {rxMin, ryMin, 1, 1}};
+                {rxMax, ryMin, -1, 1},
+                {rxMax, ryMin, 0, 0},
+                {rxMax, ryMax, -1, -1},
+                {rxMax, ryMax, 0, 0},
+                {rxMin, ryMax, 1, -1},
+                {rxMin, ryMax, 0, 0},
+                {rxMin, ryMin, 1, 1},
+                {rxMin, ryMin, 0, 0}};
             engine->updateBufferData(vertexBuffer, std::move(vertices));
 
             // XYRotWRGBA
