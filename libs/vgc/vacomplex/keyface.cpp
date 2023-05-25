@@ -14,12 +14,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <vgc/vacomplex/complex.h>
 #include <vgc/vacomplex/keyface.h>
 
 #include <unordered_set>
 
 #include <vgc/geometry/curves2d.h>
+#include <vgc/vacomplex/complex.h>
 
 namespace vgc::vacomplex {
 
@@ -199,35 +199,38 @@ Int32 computeWindingContribution(
         // Note: We assume first and last sample positions to exactly match the
         // positions of start and end vertices.
         auto it = samples.begin();
-        geometry::Vec2d pi = it->position();
-        geometry::Vec2d pj = {};
-        bool xiSide = (pi.x() <= px);
-        bool xjSide = {};
+        geometry::Vec2d p1 = it->position();
+        geometry::Vec2d p2 = {};
+        bool x1Side = (p1.x() <= px);
+        bool x2Side = {};
+        Int i = 0;
         for (++it; it != samples.end(); ++it) {
-            pj = it->position();
-            xjSide = (pj.x() <= px);
-            if (xiSide != xjSide) {
-                bool yiSide = pi.y() < py;
-                bool yjSide = pj.y() < py;
-                if (yiSide == yjSide) {
-                    if (!yiSide) {
-                        contribution += (1 - 2 * xiSide);
+            p2 = it->position();
+            x2Side = (p2.x() <= px);
+            if (x1Side != x2Side) {
+                bool y1Side = p1.y() < py;
+                bool y2Side = p2.y() < py;
+                if (y1Side == y2Side) {
+                    if (!y1Side) {
+                        contribution += (1 - 2 * x1Side);
                     }
                 }
                 else {
-                    const geometry::Vec2d segment = pj - pi;
-                    double delta = -segment.x();
-                    geometry::Vec2d ppi = pi - point;
-                    double inv_delta = 1 / delta;
-                    double yIntersect = ppi.det(segment) * inv_delta;
-                    if (yIntersect > py) {
-                        contribution += (1 - 2 * xiSide);
+                    geometry::Vec2d p1p2 = p2 - p1;
+                    geometry::Vec2d pp1 = p1 - point;
+                    double t = pp1.det(p1p2);
+                    bool xDir = std::signbit(p1p2.x());
+                    bool tSign = std::signbit(t);
+                    // If p lies exactly on p1p2, the result does not matter,
+                    // thus we do not test for (t == 0).
+                    if (tSign != xDir) {
+                        contribution += (1 - 2 * x1Side);
                     }
                 }
             }
-
-            pi = pj;
-            xiSide = xjSide;
+            p1 = p2;
+            x1Side = x2Side;
+            ++i;
         }
     }
 
@@ -240,7 +243,8 @@ Int32 computeWindingNumber(
 
     Int32 result = 0;
     for (const KeyHalfedge& keyHalfedge : cycle) {
-        result += computeWindingContribution(keyHalfedge, point);
+        Int32 contribution = computeWindingContribution(keyHalfedge, point);
+        result += contribution;
     }
     return result;
 }
@@ -344,11 +348,12 @@ core::Array<KeyCycle> computeKeyFaceCandidateAt(
             constexpr double hpi = core::pi / 2;
             double a = d.angleFromTangent();
             float angleScore = static_cast<float>(hpi - std::abs(hpi - std::abs(a)));
+            bool isEdgeBackFacing = false;
             if (a < 0) {
                 angleScore = -angleScore;
+                isEdgeBackFacing = true;
             }
 
-            bool isEdgeBackFacing = a < 0;
             cycleHalfedgeCandidates.emplace(
                 ke, true, d.distance(), angleScore, isEdgeBackFacing);
             cycleHalfedgeCandidates.emplace(
