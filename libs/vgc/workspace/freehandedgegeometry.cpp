@@ -133,7 +133,8 @@ void FreehandEdgeGeometry::finishEdit() {
         sharedConstWidths_ = SharedConstWidths(std::move(widths_));
         points_ = geometry::Vec2dArray();
         widths_ = core::DoubleArray();
-        originalArclengths_ = core::DoubleArray();
+        originalArclengths_.clear();
+        originalArclengths_.shrinkToFit();
         dirtyEdgeSampling();
         isBeingEdited_ = false;
     }
@@ -143,7 +144,8 @@ void FreehandEdgeGeometry::abortEdit() {
     if (isBeingEdited_) {
         points_ = geometry::Vec2dArray();
         widths_ = core::DoubleArray();
-        originalArclengths_ = core::DoubleArray();
+        originalArclengths_.clear();
+        originalArclengths_.shrinkToFit();
         dirtyEdgeSampling();
         isBeingEdited_ = false;
     }
