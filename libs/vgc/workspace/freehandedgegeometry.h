@@ -35,12 +35,12 @@ public:
         , widths_(widths) {
     }
 
-    const SharedConstPoints& domPoints() const {
-        return domPoints_;
+    const geometry::Vec2dArray& points() const {
+        return isBeingEdited_ ? points_ : domPoints_;
     }
 
-    const SharedConstWidths& domWidths() const {
-        return domWidths_;
+    const core::DoubleArray& widths() const {
+        return isBeingEdited_ ? widths_ : domWidths_;
     }
 
     void setPoints(const SharedConstPoints& points);

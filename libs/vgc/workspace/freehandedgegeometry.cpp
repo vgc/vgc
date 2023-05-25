@@ -20,37 +20,45 @@
 namespace vgc::workspace {
 
 void FreehandEdgeGeometry::setPoints(const SharedConstPoints& points) {
-    bool isBeingEdited = isBeingEdited_;
-    if (isBeingEdited) {
-        abortEdit();
+    if (isBeingEdited_) {
+        points_ = points;
     }
-    domPoints_ = points;
-    originalArclengths_.clear();
+    else {
+        domPoints_ = points;
+        originalArclengths_.clear();
+    }
     dirtyEdgeSampling();
-    if (isBeingEdited) {
-        startEdit();
-    }
 }
 
 void FreehandEdgeGeometry::setPoints(geometry::Vec2dArray points) {
-    setPoints(SharedConstPoints(std::move(points)));
+    if (isBeingEdited_) {
+        points_ = std::move(points);
+    }
+    else {
+        domPoints_ = SharedConstPoints(std::move(points));
+        originalArclengths_.clear();
+    }
+    dirtyEdgeSampling();
 }
 
 void FreehandEdgeGeometry::setWidths(const SharedConstWidths& widths) {
-    bool isBeingEdited = isBeingEdited_;
-    if (isBeingEdited) {
-        abortEdit();
+    if (isBeingEdited_) {
+        widths_ = widths;
     }
-    widths_ = widths;
-    originalArclengths_.clear();
+    else {
+        domWidths_ = widths;
+    }
     dirtyEdgeSampling();
-    if (isBeingEdited) {
-        startEdit();
-    }
 }
 
 void FreehandEdgeGeometry::setWidths(core::DoubleArray widths) {
-    setWidths(SharedConstWidths(std::move(widths)));
+    if (isBeingEdited_) {
+        widths_ = std::move(widths);
+        dirtyEdgeSampling();
+    }
+    else {
+        domWidths_ = SharedConstWidths(std::move(widths));
+    }
 }
 
 std::shared_ptr<vacomplex::KeyEdgeGeometry> FreehandEdgeGeometry::clone() const {
@@ -104,10 +112,11 @@ vacomplex::EdgeSampling FreehandEdgeGeometry::computeSampling(
 }
 
 void FreehandEdgeGeometry::startEdit() {
-    VGC_ASSERT(!isBeingEdited_);
-    points_ = domPoints_.get();
-    widths_ = domWidths_.get();
-    isBeingEdited_ = true;
+    if (!isBeingEdited_) {
+        points_ = domPoints_.get();
+        widths_ = domWidths_.get();
+        isBeingEdited_ = true;
+    }
 }
 
 void FreehandEdgeGeometry::resetEdit() {
@@ -145,18 +154,23 @@ void FreehandEdgeGeometry::snap(
     const geometry::Vec2d& snapEndPosition,
     vacomplex::EdgeSnapTransformationMode /*mode*/) {
 
-    const geometry::Vec2dArray& points = domPoints_;
+    const geometry::Vec2dArray& points = this->points();
     if (!points.isEmpty() && points.first() == snapStartPosition
         && points.last() == snapEndPosition) {
         // already snapped
         return;
     }
 
-    geometry::Vec2dArray snappedPoints;
-    computeSnappedLinearS_(
-        snappedPoints, points, originalArclengths_, snapStartPosition, snapEndPosition);
-
-    domPoints_ = SharedConstPoints(snappedPoints);
+    if (isBeingEdited_) {
+        computeSnappedLinearS_(
+            points_, points, originalArclengths_, snapStartPosition, snapEndPosition);
+    }
+    else {
+        computeSnappedLinearS_(
+            points_, points, originalArclengths_, snapStartPosition, snapEndPosition);
+        domPoints_ = SharedConstPoints(std::move(points_));
+        points_ = geometry::Vec2dArray();
+    }
 
     originalArclengths_.clear();
     dirtyEdgeSampling();

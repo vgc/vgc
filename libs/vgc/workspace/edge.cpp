@@ -885,7 +885,7 @@ bool VacKeyEdge::computePreJoinGeometry_() {
     auto fhGeometry =
         dynamic_cast<const workspace::FreehandEdgeGeometry*>(ke->geometry());
     if (fhGeometry) {
-        for (const geometry::Vec2d& p : fhGeometry->points().get()) {
+        for (const geometry::Vec2d& p : fhGeometry->points()) {
             controlPoints_.emplaceLast(geometry::Vec2f(p));
         }
     }
