@@ -35,11 +35,11 @@ public:
         , widths_(widths) {
     }
 
-    const SharedConstPoints& points() const {
+    const SharedConstPoints& domPoints() const {
         return domPoints_;
     }
 
-    const SharedConstWidths& widths() const {
+    const SharedConstWidths& domWidths() const {
         return domWidths_;
     }
 

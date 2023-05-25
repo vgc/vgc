@@ -20,9 +20,16 @@
 namespace vgc::workspace {
 
 void FreehandEdgeGeometry::setPoints(const SharedConstPoints& points) {
+    bool isBeingEdited = isBeingEdited_;
+    if (isBeingEdited) {
+        abortEdit();
+    }
     domPoints_ = points;
     originalArclengths_.clear();
     dirtyEdgeSampling();
+    if (isBeingEdited) {
+        startEdit();
+    }
 }
 
 void FreehandEdgeGeometry::setPoints(geometry::Vec2dArray points) {
@@ -30,9 +37,16 @@ void FreehandEdgeGeometry::setPoints(geometry::Vec2dArray points) {
 }
 
 void FreehandEdgeGeometry::setWidths(const SharedConstWidths& widths) {
+    bool isBeingEdited = isBeingEdited_;
+    if (isBeingEdited) {
+        abortEdit();
+    }
     widths_ = widths;
     originalArclengths_.clear();
     dirtyEdgeSampling();
+    if (isBeingEdited) {
+        startEdit();
+    }
 }
 
 void FreehandEdgeGeometry::setWidths(core::DoubleArray widths) {
