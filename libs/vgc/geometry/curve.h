@@ -234,22 +234,45 @@ using CurveSampleArray = core::Array<CurveSample>;
 
 class VGC_GEOMETRY_API DistanceToCurve {
 public:
-    DistanceToCurve(double distance, double angleFromTangent) noexcept
+    DistanceToCurve() noexcept = default;
+
+    DistanceToCurve(
+        double distance,
+        double angleFromTangent,
+        Int segmentIndex,
+        double segmentT) noexcept
+
         : distance_(distance)
-        , angleFromTangent_(angleFromTangent) {
+        , angleFromTangent_(angleFromTangent)
+        , segmentT_(segmentT)
+        , segmentIndex_(segmentIndex) {
     }
 
     double distance() const {
         return distance_;
     }
 
+    void setDistance(double distance) {
+        distance_ = distance;
+    }
+
     double angleFromTangent() const {
         return angleFromTangent_;
     }
 
+    Int segmentIndex() const {
+        return segmentIndex_;
+    }
+
+    double segmentT() const {
+        return segmentT_;
+    }
+
 private:
-    double distance_ = 0.0;
-    double angleFromTangent_ = 0.0;
+    double distance_ = 0;
+    double angleFromTangent_ = 0;
+    double segmentT_ = 0;
+    Int segmentIndex_ = 0;
 };
 
 VGC_GEOMETRY_API
