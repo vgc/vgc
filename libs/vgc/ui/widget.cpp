@@ -619,7 +619,8 @@ bool Widget::mouseMove(MouseEvent* event) {
     // If there is a current mouse drag action, redirect the mouse move to this action.
     //
     if (currentMouseDragAction_) {
-        geometry::Vec2f position = mapTo(this, lastMousePosition_);
+        geometry::Vec2f position =
+            mapTo(currentMouseDragWidget_.get(), lastMousePosition_);
         event->setPosition(position);
         currentMouseDragAction_->onMouseDragMove(event);
         return true;
@@ -685,7 +686,8 @@ bool Widget::mouseRelease(MouseEvent* event) {
     // If there is a current mouse drag action, redirect the mouse release to this action.
     //
     if (currentMouseDragAction_) {
-        geometry::Vec2f position = mapTo(this, lastMousePosition_);
+        geometry::Vec2f position =
+            mapTo(currentMouseDragWidget_.get(), lastMousePosition_);
         event->setPosition(position);
         currentMouseDragAction_->onMouseDragConfirm(event);
         currentMouseDragWidget_ = nullptr;

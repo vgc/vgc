@@ -1276,7 +1276,7 @@ public:
     /// Returns the current mouse drag action, if any.
     ///
     ui::Action* currentMouseDragAction() const {
-        return currentMouseDragAction_;
+        return root()->currentMouseDragAction_;
     }
 
 protected:
