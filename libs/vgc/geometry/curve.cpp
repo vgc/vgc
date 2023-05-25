@@ -82,7 +82,7 @@ void computeSample(
 
 DistanceToCurve distanceToCurve(const CurveSampleArray& samples, const Vec2d& position) {
 
-    DistanceToCurve result(core::DoubleInfinity, 0);
+    DistanceToCurve result(core::DoubleInfinity, 0, 0, 0);
     constexpr double hpi = core::pi / 2;
 
     if (samples.isEmpty()) {
@@ -90,11 +90,11 @@ DistanceToCurve distanceToCurve(const CurveSampleArray& samples, const Vec2d& po
     }
 
     auto it2 = samples.begin();
-    for (auto it1 = it2++; it2 != samples.end(); it1 = it2++) {
+    Int i = 0;
+    for (auto it1 = it2++; it2 != samples.end(); it1 = it2++, ++i) {
         const Vec2d p1 = it1->position();
         const Vec2d p2 = it2->position();
-
-        Vec2d p1p = position - p1;
+        const Vec2d p1p = position - p1;
         double d = p1p.length();
         if (d > 0) {
             Vec2d p1p2 = p2 - p1;
@@ -108,47 +108,50 @@ DistanceToCurve distanceToCurve(const CurveSampleArray& samples, const Vec2d& po
                     if (d < result.distance()) {
                         if (d > 0) {
                             double angleFromTangent = (ty < 0) ? -hpi : hpi;
-                            result = DistanceToCurve(d, angleFromTangent);
+                            result = DistanceToCurve(d, angleFromTangent, i, tx / l);
                         }
                         else {
                             // (p on segment) => no better result can be found.
                             // The angle is ambiguous, we arbitrarily set to hpi.
-                            return DistanceToCurve(d, hpi);
+                            return DistanceToCurve(0, hpi, i, tx / l);
                         }
                     }
                 }
-                else if (d < result.distance()) {
-                    double angleFromTangent = (it1->normal().dot(p1p) < 0) ? -hpi : hpi;
-                    result = DistanceToCurve(d, angleFromTangent);
+                else if (d < result.distance() && tx < 0) {
+                    double angleFromTangent = 0;
+                    if (i != 0) {
+                        angleFromTangent = (it1->normal().dot(p1p) < 0) ? -hpi : hpi;
+                    }
+                    else {
+                        angleFromTangent = it1->tangent().angle(p1p);
+                    }
+                    result = DistanceToCurve(d, angleFromTangent, i, 0);
                 }
             }
         }
         else {
             // (p == sample) => no better result can be found.
             // The angle is ambiguous, we arbitrarily set to hpi.
-            return DistanceToCurve(d, hpi);
+            return DistanceToCurve(0, hpi, i, 0);
         }
     }
 
-    auto testSample = [&](const CurveSample& sample) {
-        Vec2d ps = samples.first().position();
-        Vec2d psp = position - ps;
-        double d = psp.length();
-        if (d < result.distance()) {
-            if (d > 0) {
-                Vec2d tangent = -(sample.normal().orthogonalized());
-                result = DistanceToCurve(d, tangent.angle(psp));
-            }
-            else {
-                // (p == sample) => no better result can be found.
-                // The angle is ambiguous, we arbitrarily set to hpi.
-                result = DistanceToCurve(d, hpi);
-            }
+    // test last sample as point
+    const CurveSample& sample = samples.last();
+    Vec2d q = sample.position();
+    Vec2d qp = position - q;
+    double d = qp.length();
+    if (d < result.distance()) {
+        if (d > 0) {
+            double angleFromTangent = sample.tangent().angle(qp);
+            result = DistanceToCurve(d, angleFromTangent, i, 0);
         }
-    };
-
-    testSample(samples.first());
-    testSample(samples.last());
+        else {
+            // (p == sample) => no better result can be found.
+            // The angle is ambiguous, we arbitrarily set to hpi.
+            return DistanceToCurve(0, hpi, i, 0);
+        }
+    }
 
     return result;
 }

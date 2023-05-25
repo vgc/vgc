@@ -234,22 +234,53 @@ using CurveSampleArray = core::Array<CurveSample>;
 
 class VGC_GEOMETRY_API DistanceToCurve {
 public:
-    DistanceToCurve(double distance, double angleFromTangent) noexcept
+    DistanceToCurve() noexcept = default;
+
+    DistanceToCurve(
+        double distance,
+        double angleFromTangent,
+        Int segmentIndex,
+        double segmentParameter) noexcept
+
         : distance_(distance)
-        , angleFromTangent_(angleFromTangent) {
+        , angleFromTangent_(angleFromTangent)
+        , segmentParameter_(segmentParameter)
+        , segmentIndex_(segmentIndex) {
     }
 
     double distance() const {
         return distance_;
     }
 
+    void setDistance(double distance) {
+        distance_ = distance;
+    }
+
     double angleFromTangent() const {
         return angleFromTangent_;
     }
 
+    /// Returns the index of:
+    /// - a segment containing a closest point, or
+    /// - the index of the last sample.
+    ///
+    Int segmentIndex() const {
+        return segmentIndex_;
+    }
+
+    /// Returns the parameter t between 0 and 1 such that
+    /// `lerp(samples[segmentIndex], samples[segmentIndex + 1], t)`
+    /// is a closest point.
+    ///
+    double segmentParameter() const {
+        return segmentParameter_;
+    }
+
 private:
-    double distance_ = 0.0;
-    double angleFromTangent_ = 0.0;
+    double distance_ = 0;
+    double angleFromTangent_ = 0;
+    double segmentParameter_ = 0;
+    Int segmentIndex_ = 0;
 };
 
 VGC_GEOMETRY_API
