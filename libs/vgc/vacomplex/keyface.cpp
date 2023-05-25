@@ -86,7 +86,7 @@ struct KeyHalfedgeCandidateCompare {
 /// The sum of the results of this function for all halfedges of a cycle is
 /// the winding number.
 ///
-Int32 computeWindingContribution(
+Int computeWindingContribution(
     const KeyHalfedge& keyHalfedge,
     const geometry::Vec2d& point) {
 
@@ -155,7 +155,7 @@ Int32 computeWindingContribution(
 
     // from here, bbox overlaps the half-line
 
-    Int32 contribution = 0;
+    Int contribution = 0;
 
     if (bbox.yMin() > py) {
         // bbox overlaps the half-line but does not contain P.
@@ -203,7 +203,6 @@ Int32 computeWindingContribution(
         geometry::Vec2d p2 = {};
         bool x1Side = (p1.x() <= px);
         bool x2Side = {};
-        Int i = 0;
         for (++it; it != samples.end(); ++it) {
             p2 = it->position();
             x2Side = (p2.x() <= px);
@@ -230,20 +229,19 @@ Int32 computeWindingContribution(
             }
             p1 = p2;
             x1Side = x2Side;
-            ++i;
         }
     }
 
     return keyHalfedge.direction() ? contribution : -contribution;
 }
 
-Int32 computeWindingNumber(
+Int computeWindingNumber(
     const core::Array<KeyHalfedge>& cycle,
     const geometry::Vec2d& point) {
 
-    Int32 result = 0;
+    Int result = 0;
     for (const KeyHalfedge& keyHalfedge : cycle) {
-        Int32 contribution = computeWindingContribution(keyHalfedge, point);
+        Int contribution = computeWindingContribution(keyHalfedge, point);
         result += contribution;
     }
     return result;
@@ -449,7 +447,7 @@ core::Array<KeyCycle> computeKeyFaceCandidateAt(
 
         struct CycleWithWindingNumber {
             core::Array<KeyHalfedge> cycle;
-            Int32 windingNumber;
+            Int windingNumber;
         };
 
         core::Array<CycleWithWindingNumber> discardedCycles;
@@ -460,7 +458,7 @@ core::Array<KeyCycle> computeKeyFaceCandidateAt(
             // Compute winding number to see if cursor is inside the cycle candidate.
             // Build the cycle in the same loop.
 
-            Int32 windingNumber = computeWindingNumber(planarCycleCandidate, position);
+            Int windingNumber = computeWindingNumber(planarCycleCandidate, position);
 
             if (geometry::isWindingNumberSatisfyingRule(windingNumber, windingRule)) {
                 externalBoundaryCycle.cycle.swap(planarCycleCandidate);
@@ -479,13 +477,13 @@ core::Array<KeyCycle> computeKeyFaceCandidateAt(
             // Each new hole must lie ~50% inside the external boundary as well
             // as the face triangulation with current holes.
 
-            Int32 totalWindingNumber = externalBoundaryCycle.windingNumber;
+            Int totalWindingNumber = externalBoundaryCycle.windingNumber;
             core::Array<CycleWithWindingNumber> holeCycles; // accepted holes
 
             core::Array<geometry::Vec2d> holeCycleCandidatePoints;
             auto isValidHoleCycle =
                 [&](const CycleWithWindingNumber& holeCycleCandidate) {
-                    Int32 newWindingNumber =
+                    Int newWindingNumber =
                         totalWindingNumber + holeCycleCandidate.windingNumber;
                     if (!geometry::isWindingNumberSatisfyingRule(
                             newWindingNumber, windingRule)) {
@@ -501,7 +499,7 @@ core::Array<KeyCycle> computeKeyFaceCandidateAt(
                     Int fails = 0;
                     for (const geometry::Vec2d& point : holeCycleCandidatePoints) {
                         bool success = false;
-                        Int32 windingNumber =
+                        Int windingNumber =
                             computeWindingNumber(externalBoundaryCycle.cycle, point);
                         if (geometry::isWindingNumberSatisfyingRule(
                                 windingNumber, windingRule)) {
@@ -572,8 +570,7 @@ core::Array<KeyCycle> computeKeyFaceCandidateAt(
 
             // find holes in new cycles
             while (findNextPlanarCycleCandidate()) {
-                Int32 windingNumber =
-                    computeWindingNumber(planarCycleCandidate, position);
+                Int windingNumber = computeWindingNumber(planarCycleCandidate, position);
                 CycleWithWindingNumber cycle = {};
                 cycle.cycle.swap(planarCycleCandidate);
                 cycle.windingNumber = windingNumber;
