@@ -79,8 +79,8 @@ vacomplex::EdgeSampling FreehandEdgeGeometry::computeSampling(
     geometry::Vec2dArray tmpPoints;
     core::DoubleArray tmpWidths;
 
-    const geometry::Vec2dArray& points = isBeingEdited_ ? points_ : sharedConstPoints_;
-    const core::DoubleArray& widths = isBeingEdited_ ? widths_ : sharedConstWidths_;
+    const geometry::Vec2dArray& points = this->points();
+    const core::DoubleArray& widths = this->widths();
 
     if (points.isEmpty()) {
         // fallback to segment
