@@ -671,7 +671,8 @@ bool sampleIter_(
 
     const Int extraSamplesPerLevel0Line =
         static_cast<Int>(std::floor(static_cast<float>(extraSamples) / level0Lines));
-    const Int maxSubdivLevels = static_cast<Int>(std::floor(std::log2(extraSamplesPerLevel0Line + 1)));
+    const Int maxSubdivLevels =
+        static_cast<Int>(std::floor(std::log2(extraSamplesPerLevel0Line + 1)));
 
     core::Array<IterativeSamplingSample>& sampleStack = data.sampleStack;
     sampleStack.resize(0);
