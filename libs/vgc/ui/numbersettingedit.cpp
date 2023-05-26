@@ -35,7 +35,7 @@ NumberSettingEdit::NumberSettingEdit(NumberSettingPtr setting)
     numberEdit_->setValue(setting->value());
     numberEdit_->valueChanged().connect(onNumberEditValueChangedSlot_());
 
-    // TODO: sync from settings() to NumberEdit when settings change externally.
+    numberSetting_->valueChanged().connect(onNumberSettingValueChangedSlot_());
 }
 
 NumberSettingEditPtr NumberSettingEdit::create(NumberSettingPtr setting) {
@@ -45,6 +45,10 @@ NumberSettingEditPtr NumberSettingEdit::create(NumberSettingPtr setting) {
 
 void NumberSettingEdit::onNumberEditValueChanged_(double value) {
     numberSetting_->setValue(value);
+}
+
+void NumberSettingEdit::onNumberSettingValueChanged_(double value) {
+    numberEdit_->setValue(value);
 }
 
 } // namespace vgc::ui

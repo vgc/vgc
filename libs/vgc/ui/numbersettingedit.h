@@ -58,6 +58,9 @@ private:
 
     void onNumberEditValueChanged_(double value);
     VGC_SLOT(onNumberEditValueChangedSlot_, onNumberEditValueChanged_);
+
+    void onNumberSettingValueChanged_(double value);
+    VGC_SLOT(onNumberSettingValueChangedSlot_, onNumberSettingValueChanged_);
 };
 
 } // namespace vgc::ui

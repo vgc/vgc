@@ -31,7 +31,7 @@ BoolSettingEdit::BoolSettingEdit(BoolSettingPtr setting)
     toggle_->setState(setting->value());
     toggle_->toggled().connect(onToggleToggledSlot_());
 
-    // TODO: sync from settings() to BoolEdit when settings change externally.
+    boolSetting_->valueChanged().connect(onBoolSettingValueChangedSlot_());
 }
 
 BoolSettingEditPtr BoolSettingEdit::create(BoolSettingPtr setting) {
@@ -41,6 +41,10 @@ BoolSettingEditPtr BoolSettingEdit::create(BoolSettingPtr setting) {
 
 void BoolSettingEdit::onToggleToggled_(bool state) {
     boolSetting_->setValue(state);
+}
+
+void BoolSettingEdit::onBoolSettingValueChanged_(bool value) {
+    toggle_->setState(value);
 }
 
 } // namespace vgc::ui
