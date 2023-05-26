@@ -431,8 +431,6 @@ void Sculpt::onPaintDraw(graphics::Engine* engine, ui::PaintOptions options) {
 
     geometry::Mat4d ivm = canvas->camera().viewMatrix().inverted();
 
-    geometry::Vec2d center = {};
-
     geometry::Mat4f translation = geometry::Mat4f::identity;
     if (isActionCircleEnabled_) {
         geometry::Vec2f pos(actionCircleCenter_);
@@ -448,7 +446,7 @@ void Sculpt::onPaintDraw(graphics::Engine* engine, ui::PaintOptions options) {
     }
 
     geometry::Mat4f scaling = geometry::Mat4f::identity;
-    scaling.scale(options::sculptRadius()->value());
+    scaling.scale(static_cast<float>(options::sculptRadius()->value()));
 
     geometry::Mat4f currentView(engine->viewMatrix());
     geometry::Mat4f canvasView(canvas->camera().viewMatrix());
