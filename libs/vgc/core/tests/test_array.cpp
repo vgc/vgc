@@ -1289,6 +1289,11 @@ TEST(TestArray, ShrinkToFit) {
         a.shrinkToFit();
         EXPECT_EQ(a.reservedLength(), 3);
         EXPECT_EQ(a[2], 42);
+        a.clear();
+        a.shrinkToFit();
+        EXPECT_EQ(a.data(), nullptr);
+        EXPECT_EQ(a.length(), 0);
+        EXPECT_EQ(a.reservedLength(), 0);
     }
     EXPECT_NO_THROW(TestObj::doPostTestChecks());
 }
