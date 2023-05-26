@@ -2031,12 +2031,6 @@ private:
         }
     }
 
-    // Resets the container to its default constructed state (empty, no storage).
-    //
-    void reset_() noexcept {
-        destroyStorage_();
-    }
-
     // Leaves length_ unchanged!
     // Expects: (data_ == nullptr) and (n <= maxLength()).
     //
@@ -2071,7 +2065,9 @@ private:
         const Int len = length_;
         if (len != reservedLength_) {
             if (len == 0) {
-                reset_();
+                destroyStorage_();
+                data_ = nullptr;
+                reservedLength_ = 0;
             }
             else {
                 reallocateExactly_(len);
