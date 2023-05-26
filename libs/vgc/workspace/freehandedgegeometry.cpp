@@ -266,7 +266,26 @@ Int filterSculptPointsStep(
             indices.insert(i + 1, maxDistPointIndex);
         }
         else {
-            //i = filterSculptPointsWidthStep(points, indices, i, tolerance);
+            //
+            // Note: The width filtering step is disabled for now since it introduces
+            // unwanted noisy widening of the curve.
+            // This is probably caused by our use of Catmull-Rom to interpolate
+            // widths: they can overshoot, then get sampled as sculpt points and
+            // kept as new control points that overshoot further on the next grab.
+            //
+            /*
+            Int i0 = indices[i];
+            Int i1 = indices[i + 1];
+            geometry::Vec2d previousPos = points[i0].pos;
+            double s = points[i0].cumulativeS;
+            for (Int j = i0 + 1; j < i1; ++j) {
+                SculptPoint& sp = points[j];
+                s += (sp.pos - previousPos).length();
+                sp.cumulativeS = s;
+                previousPos = sp.pos;
+            }
+            i = filterSculptPointsWidthStep(points, indices, i, tolerance);
+            */
             ++i;
         }
     }
