@@ -51,8 +51,11 @@ private:
     BoolSettingPtr boolSetting_;
     TogglePtr toggle_;
 
-    void onToggleToggled_(bool isToggled);
+    void onToggleToggled_(bool state);
     VGC_SLOT(onToggleToggledSlot_, onToggleToggled_)
+
+    void onBoolSettingValueChanged_(bool value);
+    VGC_SLOT(onBoolSettingValueChangedSlot_, onBoolSettingValueChanged_);
 };
 
 } // namespace vgc::ui
