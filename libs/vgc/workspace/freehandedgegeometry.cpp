@@ -227,7 +227,7 @@ Int filterSculptPointsStep(
     core::Array<SculptPoint>& points,
     core::IntArray& indices,
     Int intervalStart,
-    float tolerance) {
+    double tolerance) {
 
     Int i = intervalStart;
     Int endIndex = indices[i + 1];

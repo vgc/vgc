@@ -118,7 +118,7 @@ GeometryViewPtr createCircleWithScreenSpaceThickness(
     geometry::Vec4fArray vertices;
     vertices.resizeNoInit(2 * n);
     for (Int i = 0; i < n; ++i) {
-        float a = (static_cast<float>(i) / (n - 1)) * 2 * core::pi;
+        float a = (static_cast<float>(i) / (n - 1)) * 2 * static_cast<float>(core::pi);
         float x = std::cos(a);
         float y = std::sin(a);
         //

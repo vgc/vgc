@@ -360,7 +360,7 @@ void Sculpt::onMouseHover(ui::MouseEvent* event) {
                             minDistance = dtc.distance();
                             closestPoint = samples[dtc.segmentIndex()].position();
                             Int numSegments = samples.length() - 1;
-                            if (dtc.segmentParameter()
+                            if (dtc.segmentParameter() > 0
                                 && dtc.segmentIndex() < numSegments) {
 
                                 closestPoint =
