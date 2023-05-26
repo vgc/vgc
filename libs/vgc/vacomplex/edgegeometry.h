@@ -167,6 +167,18 @@ public:
     // - the common ancestor group space for best morphing.
     // - the canvas space for best rendering.
 
+    /// Returns the new position of the grabbed point (center of deformation falloff).
+    ///
+    // Note: choose properly between tolerance/samplingDelta/quality.
+    // Todo: later add falloff kind, arclength/spatial, keep vertices.
+    //
+    virtual geometry::Vec2d sculptGrab(
+        const geometry::Vec2d& startPosition,
+        const geometry::Vec2d& endPosition,
+        double radius,
+        double strength,
+        double tolerance) = 0;
+
 protected:
     // todo: argument to tell when it is only an affine transformation ?
     void dirtyEdgeSampling() const;

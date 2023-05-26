@@ -23,6 +23,8 @@
 #include <vgc/app/logcategories.h>
 #include <vgc/core/datetime.h>
 #include <vgc/dom/strings.h>
+#include <vgc/tools/paintbucket.h>
+#include <vgc/tools/sculpt.h>
 #include <vgc/tools/select.h>
 #include <vgc/ui/qtutil.h>
 #include <vgc/ui/shortcut.h>
@@ -621,9 +623,11 @@ void CanvasApplication::createTools_(ui::Widget* parent) {
     tools::SelectPtr selectTool = tools::Select::create();
     tools::SketchPtr sketchTool = tools::Sketch::create();
     tools::PaintBucketPtr paintBucketTool = tools::PaintBucket::create();
+    tools::SculptPtr sculptTool = tools::Sculpt::create();
     registerTool_(tools, "Select Tool", selectTool);
     registerTool_(tools, "Sketch Tool", sketchTool);
     registerTool_(tools, "Paint Bucket Tool", paintBucketTool);
+    registerTool_(tools, "Sculpt Tool", sculptTool);
 
     // Keep pointer to some tools for handling color changes
     sketchTool_ = sketchTool.get();

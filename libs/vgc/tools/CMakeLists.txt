@@ -7,6 +7,7 @@ vgc_add_library(tools
         colorpalette.h
         logcategories.h
         paintbucket.h
+        sculpt.h
         select.h
         sketch.h
         strings.h
@@ -15,6 +16,7 @@ vgc_add_library(tools
         colorpalette.cpp
         logcategories.cpp
         paintbucket.cpp
+        sculpt.cpp
         select.cpp
         sketch.cpp
         strings.cpp

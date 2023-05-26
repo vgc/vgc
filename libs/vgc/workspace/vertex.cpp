@@ -17,6 +17,7 @@
 #include <vgc/workspace/vertex.h>
 
 #include <vgc/geometry/vec4f.h>
+#include <vgc/graphics/detail/shapeutil.h>
 #include <vgc/workspace/colors.h>
 #include <vgc/workspace/edge.h>
 #include <vgc/workspace/workspace.h>
@@ -166,51 +167,25 @@ void VacKeyVertex::onPaintDraw(
     geometry::Vec2f posF(kv->position());
 
     if (flags.hasAny(PaintOption::Outline | PaintOption::Selected)) {
-        if (!data.diskMeshVertexBuffer_) {
-            // XYDxDy
-            geometry::Vec4fArray vertices;
-            Int nSteps = 16;
-            vertices.emplaceLast(0.f, 0.f, -1.f, 0.f);
-            for (Int i = 1; i < nSteps; ++i) {
-                float a = static_cast<float>(core::pi) * (static_cast<float>(i) / nSteps);
-                float dx = -std::cos(a);
-                float dy = std::sin(a);
-                vertices.emplaceLast(0.f, 0.f, dx, dy);
-                vertices.emplaceLast(0.f, 0.f, dx, -dy);
-            }
-            vertices.emplaceLast(0.f, 0.f, 1.f, 0.f);
 
-            data.diskMeshVertexBuffer_ =
-                engine->createVertexBuffer(std::move(vertices), false);
-
-            data.selectionGeometry_.reset();
-        }
-
-        if (data.isSelectionGeometryDirty_) {
-            // XYRotWRGBA
-            const core::Color& c = colors::selection;
-            core::FloatArray instanceData(
-                {posF.x(), posF.y(), 1.f, 6.f, c.r(), c.g(), c.b(), c.a()});
-
-            if (!data.diskMeshInstanceBuffer_) {
-                data.diskMeshInstanceBuffer_ =
-                    engine->createVertexBuffer(std::move(instanceData), true);
-            }
-            else {
-                engine->updateBufferData(
-                    data.diskMeshInstanceBuffer_, std::move(instanceData));
-            }
-            data.isSelectionGeometryDirty_ = false;
-        }
+        constexpr float selectionDiskRadius = 6.f;
+        constexpr Int selectionDiskNumSides = 16;
 
         if (!data.selectionGeometry_) {
-            graphics::GeometryViewCreateInfo createInfo = {};
-            createInfo.setBuiltinGeometryLayout(
-                graphics::BuiltinGeometryLayout::XYDxDy_iXYRotWRGBA);
-            createInfo.setPrimitiveType(graphics::PrimitiveType::TriangleStrip);
-            createInfo.setVertexBuffer(0, data.diskMeshVertexBuffer_);
-            createInfo.setVertexBuffer(1, data.diskMeshInstanceBuffer_);
-            data.selectionGeometry_ = engine->createGeometryView(createInfo);
+            data.selectionGeometry_ = graphics::detail::createScreenSpaceDisk(
+                engine,
+                posF,
+                selectionDiskRadius,
+                colors::selection,
+                selectionDiskNumSides);
+        }
+        else if (data.isSelectionGeometryDirty_) {
+            graphics::detail::updateScreenSpaceDisk(
+                engine,
+                data.selectionGeometry_,
+                posF,
+                selectionDiskRadius,
+                colors::selection);
         }
 
         engine->setProgram(graphics::BuiltinProgram::ScreenSpaceDisplacement);

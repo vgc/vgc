@@ -383,7 +383,7 @@
  */
 .tools {
     vertical-stretch: 0;
-    min-height: 120dp;
+    min-height: 140dp;
 }
 
 .tool-options {

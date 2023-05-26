@@ -40,6 +40,7 @@ vgc_add_library(graphics
         detail/comptr.h
         detail/pipelinestate.h
         detail/pixelformats.h
+        detail/shapeutil.h
 
     CPP_SOURCE_FILES
         engine.cpp
