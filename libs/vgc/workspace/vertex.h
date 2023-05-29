@@ -251,8 +251,6 @@ private:
     bool isJoinComputed_ = false;
     bool isComputing_ = false;
 
-    graphics::BufferPtr diskMeshVertexBuffer_;
-    graphics::BufferPtr diskMeshInstanceBuffer_;
     graphics::GeometryViewPtr selectionGeometry_;
     bool isSelectionGeometryDirty_ = true;
 

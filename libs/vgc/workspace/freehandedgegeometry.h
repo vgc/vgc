@@ -73,6 +73,13 @@ public:
         const geometry::Vec2d& snapEndPosition,
         vacomplex::EdgeSnapTransformationMode mode) override;
 
+    geometry::Vec2d sculptGrab(
+        const geometry::Vec2d& startPosition,
+        const geometry::Vec2d& endPosition,
+        double radius,
+        double strength,
+        double tolerance) override;
+
     bool updateFromDomEdge_(dom::Element* element) override;
     void writeToDomEdge_(dom::Element* element) const override;
     void removeFromDomEdge_(dom::Element* element) const override;
