@@ -369,12 +369,8 @@ geometry::Vec2d FreehandEdgeGeometry::sculptGrab(
     double uMin = 0;
     geometry::CurveSample s1 = middleSample;
 
-    VGC_DEBUG_TMP_EXPR(middleSample.position());
-
     auto sampleUniformStep = [&](Int i) -> bool {
         geometry::CurveSample s2 = samples[i];
-        //VGC_DEBUG_TMP(
-        //    "sampleUniformStep({}): s1={} s2={}", i, s1.position(), s2.position());
         geometry::Vec2d p1p2 = s2.position() - s1.position();
         double d = p1p2.length();
         if (d <= core::epsilon) {
@@ -459,15 +455,6 @@ geometry::Vec2d FreehandEdgeGeometry::sculptGrab(
             break;
         }
     }
-
-    //VGC_DEBUG_TMP_EXPR(pointSampleIndices);
-    //VGC_DEBUG_TMP_EXPR(sculptPoints.length());
-    //VGC_DEBUG_TMP_EXPR(numSamples);
-    //VGC_DEBUG_TMP_EXPR(startSampleIndex);
-    //VGC_DEBUG_TMP_EXPR(endSampleIndex);
-    //VGC_DEBUG_TMP_EXPR(numPoints);
-    //VGC_DEBUG_TMP_EXPR(startPointIndex);
-    //VGC_DEBUG_TMP_EXPR(endPointIndex);
 
     for (Int i = 0; i < sculptPoints.length(); ++i) {
         SculptPoint& sp = sculptPoints[i];
