@@ -954,7 +954,7 @@ public:
     ///
     /// The returned widget is not always a child widget of this widget.
     ///
-    Widget* hoverChainChild() {
+    Widget* hoverChainChild() const {
         return hoverChainChild_;
     }
 
@@ -963,7 +963,7 @@ public:
     ///
     /// The returned widget is not always the parent widget of this widget.
     ///
-    Widget* hoverChainParent() {
+    Widget* hoverChainParent() const {
         return hoverChainParent_;
     }
 
@@ -1276,7 +1276,7 @@ public:
     /// Returns the current mouse drag action, if any.
     ///
     ui::Action* currentMouseDragAction() const {
-        return root()->currentMouseDragAction_;
+        return root()->currentMouseDragAction_.getIfAlive();
     }
 
 protected:
@@ -1534,8 +1534,18 @@ private:
 
     // Events
     HandledEventPolicy handledEventPolicy_ = HandledEventPolicy::Skip;
-    WidgetPtr currentMouseDragWidget_;         // Stored at the root
-    Action* currentMouseDragAction_ = nullptr; // Stored at the root
+
+    // Handling of actions.
+    // All of those are stored at the root.
+    //
+    MouseButton mouseActionButton_ = MouseButton::None;
+    core::Array<MouseEventPtr> pendingMouseActionEvents_;
+    WidgetPtr pendingMouseClickWidget_;
+    WidgetPtr pendingMouseDragWidget_;
+    WidgetPtr currentMouseDragWidget_;
+    ActionPtr pendingMouseClickAction_;
+    ActionPtr pendingMouseDragAction_;
+    ActionPtr currentMouseDragAction_;
 
     // Mouse
     Widget* mouseCaptor_ = nullptr; // TODO: move to future class WidgetTree
@@ -1550,6 +1560,14 @@ private:
     bool isHoverLocked_ = false;
     bool isChildHoverEnabled_ = true;
     MouseButtons pressedButtons_ = {};
+
+    void appendToPendingMouseActionEvents_(MouseEvent* event);
+    void mapMouseActionPosition_(MouseEvent* event, Widget* widget);
+    void maybeStartPendingMouseAction_();
+    void cancelActionsFromDeadWidgets_();
+    bool handleMousePressActions_(MouseEvent* event);
+    bool handleMouseMoveActions_(MouseEvent* event);
+    bool handleMouseReleaseActions_(MouseEvent* event);
 
     bool checkAlreadyHovered_();
     void mouseMove_(MouseEvent* event);

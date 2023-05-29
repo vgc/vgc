@@ -169,6 +169,9 @@ bool Action::trigger(Widget* from) {
     return true;
 }
 
+void Action::onMouseClick(MouseEvent*) {
+}
+
 void Action::onMouseDragStart(MouseEvent*) {
 }
 
