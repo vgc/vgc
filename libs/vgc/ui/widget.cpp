@@ -609,32 +609,20 @@ bool Widget::mouseMove(MouseEvent* event) {
     lastModifierKeys_ = event->modifierKeys();
     WidgetPtr thisPtr = this;
 
-    // Cancel current mouse drag action if its owning widget died.
+    // We first check whether this MouseMove can be handled by a registered action.
     //
-    if (currentMouseDragAction_ && !currentMouseDragWidget_.isAlive()) {
-        currentMouseDragWidget_ = nullptr;
-        currentMouseDragAction_ = nullptr;
-    }
-
-    // If there is a current mouse drag action, redirect the mouse move to this action.
-    //
-    if (currentMouseDragAction_) {
-        geometry::Vec2f position =
-            mapTo(currentMouseDragWidget_.get(), lastMousePosition_);
-        event->setPosition(position);
-        currentMouseDragAction_->onMouseDragMove(event);
-        return true;
-    }
+    bool handled = handleMouseMoveActions_(event);
 
     // Otherwise, propagate the mouse move through the hover chain.
     //
-    bool chainChanged = updateHoverChain();
-    if (isAlive()) {
-        // XXX should we set event as handled if chainChanged is true ?
-        mouseMove_(event);
-        return event->isHandled();
+    if (!handled) {
+        handled |= updateHoverChain();
+        if (isAlive()) {
+            mouseMove_(event);
+            handled |= event->isHandled();
+        }
     }
-    return chainChanged;
+    return handled;
 }
 
 bool Widget::mousePress(MouseEvent* event) {
@@ -646,23 +634,18 @@ bool Widget::mousePress(MouseEvent* event) {
     lastModifierKeys_ = event->modifierKeys();
     WidgetPtr thisPtr = this;
 
-    // If there is already a mouse drag action in progress, we ignore the mouse
-    // press but condider it handled (absorbed by the action).
+    // We first check whether this MousePress can be handled by a registered action.
     //
-    // TODO: support sub-actions, for example, right-clicking in the middle of
-    // a left-drag to do something special. We could implement this by calling
-    // an onMousePress() handler on the action itself.
-    //
-    if (currentMouseDragAction_) {
-        return true;
-    }
+    bool handled = handleMousePressActions_(event);
 
     // Otherwise, propagate the mouse press through the hover chain.
     //
-    mousePress_(event);
-    bool handled = event->isHandled();
-    if (isAlive()) {
-        handled |= updateHoverChain();
+    if (!handled) {
+        mousePress_(event);
+        handled |= event->isHandled();
+        if (isAlive()) {
+            handled |= updateHoverChain();
+        }
     }
     return handled;
 }
@@ -676,33 +659,18 @@ bool Widget::mouseRelease(MouseEvent* event) {
     lastModifierKeys_ = event->modifierKeys();
     WidgetPtr thisPtr = this;
 
-    // Cancel current mouse drag action if its owning widget died.
+    // We first check whether this MouseRelease can be handled by a registered action.
     //
-    if (currentMouseDragAction_ && !currentMouseDragWidget_.isAlive()) {
-        currentMouseDragWidget_ = nullptr;
-        currentMouseDragAction_ = nullptr;
-    }
-
-    // If there is a current mouse drag action, redirect the mouse release to this action.
-    //
-    if (currentMouseDragAction_) {
-        geometry::Vec2f position =
-            mapTo(currentMouseDragWidget_.get(), lastMousePosition_);
-        event->setPosition(position);
-        currentMouseDragAction_->onMouseDragConfirm(event);
-        currentMouseDragWidget_ = nullptr;
-        currentMouseDragAction_ = nullptr;
-        unlockHover_();
-        updateHoverChain();
-        return true;
-    }
+    bool handled = handleMouseReleaseActions_(event);
 
     // Otherwise, propagate the mouse release through the hover chain.
     //
-    mouseRelease_(event);
-    bool handled = event->isHandled();
-    if (isAlive()) {
-        handled |= updateHoverChain();
+    if (!handled) {
+        mouseRelease_(event);
+        handled |= event->isHandled();
+        if (isAlive()) {
+            handled |= updateHoverChain();
+        }
     }
     return handled;
 }
@@ -749,6 +717,281 @@ bool Widget::onMouseRelease(MouseEvent* /*event*/) {
 
 bool Widget::onMouseScroll(ScrollEvent* /*event*/) {
     return false;
+}
+
+void Widget::appendToPendingMouseActionEvents_(MouseEvent* event) {
+    if (pendingMouseClickAction_ || pendingMouseDragAction_) {
+        pendingMouseActionEvents_.append(MouseEvent::create(
+            event->button(),
+            event->position(),
+            event->modifierKeys(),
+            event->timestamp(),
+            event->pressure(),
+            event->isTablet()));
+    }
+}
+
+void Widget::mapMouseActionPosition_(MouseEvent* event, Widget* widget) {
+    geometry::Vec2f position = mapTo(widget, event->position());
+    event->setPosition(position);
+}
+
+namespace {
+
+// Time elapsed from press after which the action becomes a drag.
+// TODO: make it a user preference. Allow setting it in px?
+inline constexpr double dragTimeThreshold = 0.5; // in seconds
+inline constexpr style::Length dragDeltaThreshold(5, style::LengthUnit::Dp);
+
+} // namespace
+
+// TODO: Allow starting actions on mouse release (even when there is no
+// conflict), based on user preference (could be a property of Shortcut).
+//
+// Indeed, in some cases, it may be preferrable to always triggers a MouseClick
+// on mouse release, even if there is no MouseDrag with the same shortcut.
+//
+// Also, in some cases, it may be preferrable to start a MouseDrag on
+// button/key release, so that the drag action can be performed without having
+// to hold the button/key. We would then wait a second button/key release to
+// end the action. The shortcut to end the action could be different than the
+// one used to start the action.
+//
+void Widget::maybeStartPendingMouseAction_() {
+
+    // We cannot start an action if there is no event to handle.
+    //
+    if (pendingMouseActionEvents_.isEmpty()) {
+        return;
+    }
+
+    // If both a ClickAction and DragAction are available for the same
+    // shortcut, it's a conflict. We resolve the conflict by waiting until the
+    // mouse moved enough, or enough time passed, or the mouse button was
+    // released.
+    //
+    if (pendingMouseClickAction_ && pendingMouseDragAction_) {
+        if (pendingMouseActionEvents_.length() >= 2) {
+            MouseEvent* pressEvent = pendingMouseActionEvents_.first().get();
+            MouseEvent* moveEvent = pendingMouseActionEvents_.last().get();
+            double deltaTime = moveEvent->timestamp() - pressEvent->timestamp();
+            float deltaInPx = (moveEvent->position() - pressEvent->position()).length();
+            float deltaThresholdInPx = dragDeltaThreshold.toPx(styleMetrics());
+            if (deltaInPx > deltaThresholdInPx || deltaTime > dragTimeThreshold) {
+
+                // => Conflict resolved: it's a drag action.
+                pendingMouseClickWidget_ = nullptr;
+                pendingMouseClickAction_ = nullptr;
+            }
+        }
+    }
+
+    // Trigger or Start the action if there is no conflict.
+    //
+    if (pendingMouseClickAction_ && !pendingMouseDragAction_) {
+
+        // Trigger the MouseClick.
+        //
+        MouseEventPtr event = pendingMouseActionEvents_.first();
+        mapMouseActionPosition_(event.get(), pendingMouseClickWidget_.get());
+        pendingMouseClickAction_->onMouseClick(event.get());
+        pendingMouseActionEvents_.clear();
+        pendingMouseClickWidget_ = nullptr;
+        pendingMouseClickAction_ = nullptr;
+    }
+    else if (pendingMouseDragAction_ && !pendingMouseClickAction_) {
+
+        // Start the MouseDrag.
+        //
+        currentMouseDragWidget_ = pendingMouseDragWidget_;
+        currentMouseDragAction_ = pendingMouseDragAction_;
+        pendingMouseDragWidget_ = nullptr;
+        pendingMouseDragAction_ = nullptr;
+        bool isStart = true;
+        for (const MouseEventPtr& event : pendingMouseActionEvents_) {
+            mapMouseActionPosition_(event.get(), currentMouseDragWidget_.get());
+            if (isStart) {
+                currentMouseDragAction_->onMouseDragStart(event.get());
+                isStart = false;
+            }
+            else {
+                // TODO: only give the last mouse move if
+                // action->isMouseMoveCompressionEnabled() is true
+                currentMouseDragAction_->onMouseDragMove(event.get());
+            }
+        }
+        pendingMouseActionEvents_.clear();
+    }
+}
+
+// XXX Should we call onMouseDragCancel(), or is it too risky?
+//
+void Widget::cancelActionsFromDeadWidgets_() {
+    if (currentMouseDragAction_ && !currentMouseDragWidget_.isAlive()) {
+        currentMouseDragWidget_ = nullptr;
+        currentMouseDragAction_ = nullptr;
+    }
+    if (pendingMouseDragAction_ && !pendingMouseDragWidget_.isAlive()) {
+        pendingMouseDragWidget_ = nullptr;
+        pendingMouseDragAction_ = nullptr;
+    }
+    if (pendingMouseClickAction_ && !pendingMouseClickWidget_.isAlive()) {
+        pendingMouseClickWidget_ = nullptr;
+        pendingMouseClickAction_ = nullptr;
+    }
+}
+
+// Check for registered actions whose shortcut match the pressed mouse button
+// and modifiers. Returns true if an action has been handled this way, which
+// means that the mouse press shouldn't be propagated through the widget
+// hierarchy via onMousePress().
+//
+bool Widget::handleMousePressActions_(MouseEvent* event) {
+
+    cancelActionsFromDeadWidgets_();
+
+    // Ignore mouse press if there is a pending or current mouse action.
+    //
+    // TODO: support sub-actions, for example, right-clicking in the middle of
+    // a left-drag to do something special. We could implement this by calling
+    // an onMousePress() handler on the action itself.
+    //
+    if (pendingMouseClickAction_ || pendingMouseDragAction_ || currentMouseDragAction_) {
+        return true;
+    }
+
+    // Collect possible mouse actions corresponding to this mouse press.
+    //
+    // If there are two conflicting MouseClick actions (or two conflicting
+    // MouseDrag actions), then we prioritize the inner-most in widget depth,
+    // then the first in action list order.
+    //
+    MouseButton button = event->button();
+    ModifierKeys modifiers = event->modifierKeys();
+    for (Widget* widget = this; widget; widget = widget->hoverChainChild()) {
+
+        // Collect MouseClick actions
+        for (Action* action : widget->actions()) {
+            if (action->type() == ActionType::MouseClick
+                && action->shortcut().type() == ShortcutType::Mouse
+                && action->shortcut().mouseButton() == button
+                && action->shortcut().modifiers() == modifiers) {
+
+                pendingMouseClickWidget_ = widget;
+                pendingMouseClickAction_ = action;
+                break;
+            }
+        }
+
+        // Collect MouseDrag actions
+        for (Action* action : widget->actions()) {
+            if (action->type() == ActionType::MouseDrag
+                && action->shortcut().type() == ShortcutType::Mouse
+                && action->shortcut().mouseButton() == button
+                && action->shortcut().modifiers() == modifiers) {
+
+                pendingMouseDragWidget_ = widget;
+                pendingMouseDragAction_ = action;
+                break;
+            }
+        }
+    }
+
+    if (pendingMouseClickAction_ || pendingMouseDragAction_) {
+
+        // If there is a pending action, start it now or defer start in case of
+        // conflicts. We return true anyway so that the rest of the application
+        // behaves as if the action was already in progress.
+        //
+        mouseActionButton_ = button;
+        pendingMouseActionEvents_.clear();
+        appendToPendingMouseActionEvents_(event);
+        maybeStartPendingMouseAction_();
+        return true;
+    }
+    else {
+        // If there is no pending action, this means that the event is not
+        // handled via regirstered actions, so we need to propagate the
+        // MousePress through the widget hierarchy for raw handling without
+        // actions.
+        //
+        return false;
+    }
+}
+
+bool Widget::handleMouseMoveActions_(MouseEvent* event) {
+
+    cancelActionsFromDeadWidgets_();
+
+    if (currentMouseDragAction_) {
+
+        // If there is a current mouse drag action, redirect the mouse move to this action.
+        //
+        mapMouseActionPosition_(event, currentMouseDragWidget_.get());
+        currentMouseDragAction_->onMouseDragMove(event);
+        return true;
+    }
+    else if (pendingMouseClickAction_ || pendingMouseDragAction_) {
+
+        // Resolve conflicts.
+        //
+        appendToPendingMouseActionEvents_(event);
+        maybeStartPendingMouseAction_();
+        return true;
+    }
+    else {
+        return false;
+    }
+}
+
+bool Widget::handleMouseReleaseActions_(MouseEvent* event) {
+
+    // Note: if there is a current or pending action, then we return true even
+    // if the released button is not the same as the action's button, to
+    // prevent any further processing while an action is current or pending.
+
+    cancelActionsFromDeadWidgets_();
+
+    bool handled = false;
+    bool actionEnded = false;
+
+    if (currentMouseDragAction_) {
+
+        // Confirm the action if the button matches.
+        //
+        if (mouseActionButton_ == event->button()) {
+            mapMouseActionPosition_(event, currentMouseDragWidget_.get());
+            currentMouseDragAction_->onMouseDragConfirm(event);
+            currentMouseDragWidget_ = nullptr;
+            currentMouseDragAction_ = nullptr;
+            actionEnded = true;
+        }
+        handled = true;
+    }
+    else if (pendingMouseClickAction_ || pendingMouseDragAction_) {
+
+        // If there is both a pending click and a pending drag, then this resolves
+        // the conflict: it's a click, not a drag.
+        //
+        // If there is no pending click action, this means that there was a potential
+        // MouseDrag that could have happened, but it's too late now: we don't
+        // want to initiate a MouseDrag on MouseRelease, so we just discard it.
+        //
+        if (mouseActionButton_ == event->button()) {
+            pendingMouseDragWidget_ = nullptr;
+            pendingMouseDragAction_ = nullptr;
+            maybeStartPendingMouseAction_(); // trigger pending click if any
+            actionEnded = true;
+        }
+        handled = true;
+    }
+
+    if (actionEnded) {
+        mouseActionButton_ = MouseButton::None;
+        unlockHover_();
+        updateHoverChain();
+    }
+    return handled;
 }
 
 bool Widget::checkAlreadyHovered_() {
@@ -953,41 +1196,7 @@ void Widget::mousePress_(MouseEvent* event) {
 
     if (!event->handled_ || handledEventPolicy_ == HandledEventPolicy::Receive) {
         event->setHoverLockPolicy(HoverLockPolicy::Default);
-
-        // Handle mouse actions whose shortcut match the current mouse button /
-        // modifiers.
-        //
-        // TODO: also support MouseClick type, and resolve potential conflicts
-        // between MouseDrag and MouseClick with the same shortcut (wait for a
-        // few px or second to determine if it's a click or drag).
-        //
-        // TODO: also support initiating MouseDrag action via keyboard shortcuts.
-        //
-        Action* potentialMouseDragAction = nullptr;
-        for (Action* action : actions()) {
-            if (action->type() == ActionType::MouseDrag
-                && action->shortcut().type() == ShortcutType::Mouse
-                && action->shortcut().mouseButton() == event->button()) {
-
-                potentialMouseDragAction = action;
-                break;
-            }
-        }
-
-        // If we found a matching action, then we call the action mouse
-        // handler, otherwise, we call the widget handler.
-        //
-        if (potentialMouseDragAction) {
-            Widget* root_ = this->root();
-            root_->currentMouseDragWidget_ = this;
-            root_->currentMouseDragAction_ = potentialMouseDragAction;
-            potentialMouseDragAction->onMouseDragStart(event);
-            event->handled_ = true;
-        }
-        else {
-            event->handled_ |= onMousePress(event);
-        }
-
+        event->handled_ |= onMousePress(event);
         if (!isAlive()) {
             // Widget got killed. Event can be considered handled.
             event->handled_ = true;

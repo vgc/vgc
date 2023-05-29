@@ -362,6 +362,14 @@ public:
 
     // XXX Use subclasses (e.g. MouseDragAction) and define handlers there?
 
+    /// This event handler is called whenever the action is of type `MouseClick`
+    /// and the action is triggered, either via mouse press, key press, mouse release,
+    /// or key release.
+    ///
+    /// The default implementation does nothing.
+    ///
+    virtual void onMouseClick(MouseEvent* event);
+
     /// This event handler is called whenever the action is of type `MouseDrag`
     /// and the action is initiated, either via mouse press of key press.
     ///
