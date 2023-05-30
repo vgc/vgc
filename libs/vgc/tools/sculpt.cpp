@@ -243,7 +243,7 @@ protected:
         : ui::Action(
             ui::ActionType::MouseDrag,
             "Edit Sculpt Radius",
-            ui::Shortcut(ui::ModifierKey::None, ui::MouseButton::Right),
+            ui::Shortcut(ui::ModifierKey::Ctrl, ui::MouseButton::Left),
             ui::ShortcutContext::Widget) {
     }
 
