@@ -62,10 +62,10 @@ protected:
     ui::WidgetPtr createOptionsWidget() const override;
 
     // Reimplementation of Widget virtual methods
-    void onMouseHover(ui::MouseEvent* event) override;
-    bool onMouseMove(ui::MouseEvent* event) override;
-    bool onMousePress(ui::MouseEvent* event) override;
-    bool onMouseRelease(ui::MouseEvent* event) override;
+    void onMouseHover(ui::MouseHoverEvent* event) override;
+    bool onMouseMove(ui::MouseMoveEvent* event) override;
+    bool onMousePress(ui::MousePressEvent* event) override;
+    bool onMouseRelease(ui::MouseReleaseEvent* event) override;
     void onMouseEnter() override;
     void onMouseLeave() override;
     void onPaintCreate(graphics::Engine* engine) override;

@@ -84,7 +84,7 @@ void CanvasTool::onParentWidgetChanged(Widget* newParent) {
     canvas_ = dynamic_cast<canvas::Canvas*>(newParent);
 }
 
-void CanvasTool::preMouseMove(ui::MouseEvent* event) {
+void CanvasTool::preMouseMove(ui::MouseMoveEvent* event) {
     if (event->isTablet()) {
         if (pressedMouseButtons_) {
             event->stopPropagation();
@@ -97,7 +97,7 @@ void CanvasTool::preMouseMove(ui::MouseEvent* event) {
     }
 }
 
-void CanvasTool::preMousePress(ui::MouseEvent* event) {
+void CanvasTool::preMousePress(ui::MousePressEvent* event) {
     if (event->isTablet()) {
         if (pressedMouseButtons_) {
             event->stopPropagation();
@@ -116,7 +116,7 @@ void CanvasTool::preMousePress(ui::MouseEvent* event) {
     }
 }
 
-void CanvasTool::preMouseRelease(ui::MouseEvent* event) {
+void CanvasTool::preMouseRelease(ui::MouseReleaseEvent* event) {
     if (event->isTablet()) {
         if (!pressedTabletButtons_.has(event->button())) {
             event->stopPropagation();

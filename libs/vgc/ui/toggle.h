@@ -110,9 +110,9 @@ public:
     VGC_SIGNAL(released, (Toggle*, toggle), (const geometry::Vec2f&, pos));
 
 protected:
-    bool onMouseMove(MouseEvent* event) override;
-    bool onMousePress(MouseEvent* event) override;
-    bool onMouseRelease(MouseEvent* event) override;
+    bool onMouseMove(MouseMoveEvent* event) override;
+    bool onMousePress(MousePressEvent* event) override;
+    bool onMouseRelease(MouseReleaseEvent* event) override;
     void onMouseEnter() override;
     void onMouseLeave() override;
     geometry::Vec2f computePreferredSize() const override;

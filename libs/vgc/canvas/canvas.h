@@ -193,10 +193,10 @@ public:
 
 protected:
     // Reimplementation of Widget virtual methods
-    bool onKeyPress(ui::KeyEvent* event) override;
-    bool onMouseMove(ui::MouseEvent* event) override;
-    bool onMousePress(ui::MouseEvent* event) override;
-    bool onMouseRelease(ui::MouseEvent* event) override;
+    bool onKeyPress(ui::KeyPressEvent* event) override;
+    bool onMouseMove(ui::MouseMoveEvent* event) override;
+    bool onMousePress(ui::MousePressEvent* event) override;
+    bool onMouseRelease(ui::MouseReleaseEvent* event) override;
     bool onMouseScroll(ui::ScrollEvent* event) override;
     void onMouseEnter() override;
     void onMouseLeave() override;

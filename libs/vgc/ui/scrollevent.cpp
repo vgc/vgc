@@ -19,15 +19,29 @@
 
 namespace vgc::ui {
 
+namespace {
+
+// XXX Does this make sense? Or should Scroll event not inherit from MouseEvent?
+//
+MouseEventData makeMouseEventData(const geometry::Vec2f& position) {
+    MouseEventData data;
+    data.setPosition(position);
+    data.setButton(MouseButton::Middle);
+    data.setHasPressure(false);
+    return data;
+}
+
+} // namespace
+
 ScrollEvent::ScrollEvent(
+    double timestamp,
+    ModifierKeys modifiers,
     const geometry::Vec2f& position,
     const geometry::Vec2f& scrollDelta,
     Int horizontalSteps,
-    Int verticalSteps,
-    ModifierKeys modifierKeys,
-    double timestamp)
+    Int verticalSteps)
 
-    : MouseEvent(MouseButton::Middle, position, modifierKeys, timestamp, -1.0, false)
+    : PropagatedMouseEvent(timestamp, modifiers, makeMouseEventData(position))
     , scrollDelta_(scrollDelta)
     , horizontalSteps_(horizontalSteps)
     , verticalSteps_(verticalSteps) {
@@ -35,15 +49,15 @@ ScrollEvent::ScrollEvent(
 
 /* static */
 ScrollEventPtr ScrollEvent::create(
+    double timestamp,
+    ModifierKeys modifiers,
     const geometry::Vec2f& position,
     const geometry::Vec2f& scrollDelta,
     Int horizontalSteps,
-    Int verticalSteps,
-    ModifierKeys modifierKeys,
-    double timestamp) {
+    Int verticalSteps) {
 
     return ScrollEventPtr(new ScrollEvent(
-        position, scrollDelta, horizontalSteps, verticalSteps, modifierKeys, timestamp));
+        timestamp, modifiers, position, scrollDelta, horizontalSteps, verticalSteps));
 }
 
 } // namespace vgc::ui

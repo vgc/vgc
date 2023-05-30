@@ -18,15 +18,62 @@
 
 namespace vgc::ui {
 
-KeyEvent::KeyEvent(Key key, std::string text, ModifierKeys modifierKeys)
-    : Event()
-    , key_(key)
-    , text_(std::move(text))
-    , modifierKeys_(modifierKeys) {
+KeyEvent::KeyEvent(double timestamp, ModifierKeys modifiers, const KeyEventData& data)
+    : Event(timestamp, modifiers)
+    , data_(data) {
 }
 
-KeyEventPtr KeyEvent::create(Key key, std::string text, ModifierKeys modifierKeys) {
-    return KeyEventPtr(new KeyEvent(key, std::move(text), modifierKeys));
+KeyEventPtr
+KeyEvent::create(double timestamp, ModifierKeys modifiers, const KeyEventData& data) {
+    return KeyEventPtr(new KeyEvent(timestamp, modifiers, data));
+}
+
+PropagatedKeyEvent::PropagatedKeyEvent(
+    double timestamp,
+    ModifierKeys modifiers,
+    const KeyEventData& data)
+
+    : KeyEvent(timestamp, modifiers, data) {
+}
+
+PropagatedKeyEventPtr PropagatedKeyEvent::create(
+    double timestamp,
+    ModifierKeys modifiers,
+    const KeyEventData& data) {
+
+    return PropagatedKeyEventPtr(new PropagatedKeyEvent(timestamp, modifiers, data));
+}
+
+KeyPressEvent::KeyPressEvent(
+    double timestamp,
+    ModifierKeys modifiers,
+    const KeyEventData& data)
+
+    : PropagatedKeyEvent(timestamp, modifiers, data) {
+}
+
+KeyPressEventPtr KeyPressEvent::create(
+    double timestamp,
+    ModifierKeys modifiers,
+    const KeyEventData& data) {
+
+    return KeyPressEventPtr(new KeyPressEvent(timestamp, modifiers, data));
+}
+
+KeyReleaseEvent::KeyReleaseEvent(
+    double timestamp,
+    ModifierKeys modifiers,
+    const KeyEventData& data)
+
+    : PropagatedKeyEvent(timestamp, modifiers, data) {
+}
+
+KeyReleaseEventPtr KeyReleaseEvent::create(
+    double timestamp,
+    ModifierKeys modifiers,
+    const KeyEventData& data) {
+
+    return KeyReleaseEventPtr(new KeyReleaseEvent(timestamp, modifiers, data));
 }
 
 } // namespace vgc::ui

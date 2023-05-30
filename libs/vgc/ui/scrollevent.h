@@ -27,7 +27,7 @@ VGC_DECLARE_OBJECT(ScrollEvent);
 /// \class vgc::ui::ScrollEvent
 /// \brief Class to handle mouse wheel and trackpad scroll gestures.
 ///
-class VGC_UI_API ScrollEvent : public MouseEvent {
+class VGC_UI_API ScrollEvent : public PropagatedMouseEvent {
 private:
     VGC_OBJECT(ScrollEvent, MouseEvent)
 
@@ -36,23 +36,23 @@ protected:
     /// ScrollEvent::create() instead.
     ///
     ScrollEvent(
+        double timestamp,
+        ModifierKeys modifiers,
         const geometry::Vec2f& position,
         const geometry::Vec2f& scrollDelta,
         Int horizontalSteps,
-        Int verticalSteps,
-        ModifierKeys modifierKeys,
-        double timestamp);
+        Int verticalSteps);
 
 public:
     /// Creates a ScrollEvent.
     ///
     static ScrollEventPtr create(
-        const geometry::Vec2f& position,
-        const geometry::Vec2f& scrollDelta,
-        Int horizontalSteps,
-        Int verticalSteps,
-        ModifierKeys modifierKeys,
-        double timestamp = 0);
+        double timestamp = 0,
+        ModifierKeys modifiers = {},
+        const geometry::Vec2f& position = {},
+        const geometry::Vec2f& scrollDelta = {},
+        Int horizontalSteps = 0,
+        Int verticalSteps = 0);
 
     /// Returns the scrolling input delta that caused a scroll event,
     /// in fraction of steps in both axes.
@@ -64,6 +64,8 @@ public:
     }
 
     /// Sets the scrolling input delta of this `ScrollEvent` in fraction of steps.
+    ///
+    /// Event handlers should typically not change this.
     ///
     void setScrollDelta(const geometry::Vec2f& scrollDelta) {
         scrollDelta_ = scrollDelta;
@@ -84,6 +86,8 @@ public:
     }
 
     /// Sets the discrete horizontal scrolling steps.
+    ///
+    /// Event handlers should typically not change this.
     ///
     /// \sa `horizontalSteps()`
     ///
@@ -106,6 +110,8 @@ public:
     }
 
     /// Sets the discrete vertical scrolling steps.
+    ///
+    /// Event handlers should typically not change this.
     ///
     /// \sa `verticalSteps()`
     ///

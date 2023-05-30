@@ -126,7 +126,7 @@ void NumberEdit::onMouseLeave() {
     LineEdit::onMouseLeave();
 }
 
-bool NumberEdit::onMouseMove(MouseEvent* event) {
+bool NumberEdit::onMouseMove(MouseMoveEvent* event) {
 
     // Delegate to LineEdit in case of text mode
     if (isTextMode_) {
@@ -199,7 +199,7 @@ bool NumberEdit::onMouseMove(MouseEvent* event) {
     return true;
 }
 
-bool NumberEdit::onMousePress(MouseEvent* event) {
+bool NumberEdit::onMousePress(MousePressEvent* event) {
 
     // Delegate to LineEdit in case of text mode
     if (isTextMode_) {
@@ -260,7 +260,7 @@ bool NumberEdit::onMousePress(MouseEvent* event) {
     return true;
 }
 
-bool NumberEdit::onMouseRelease(MouseEvent* event) {
+bool NumberEdit::onMouseRelease(MouseReleaseEvent* event) {
 
     // Delegate to LineEdit in case of text mode
     if (isTextMode_) {
@@ -305,7 +305,7 @@ bool NumberEdit::onFocusOut(FocusReason reason) {
     return LineEdit::onFocusOut(reason);
 }
 
-bool NumberEdit::onKeyPress(KeyEvent* event) {
+bool NumberEdit::onKeyPress(KeyPressEvent* event) {
     if (!isTextMode_) {
         return false;
     }

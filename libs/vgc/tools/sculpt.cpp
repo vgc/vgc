@@ -316,7 +316,7 @@ ui::WidgetPtr Sculpt::createOptionsWidget() const {
     return res;
 }
 
-void Sculpt::onMouseHover(ui::MouseEvent* event) {
+void Sculpt::onMouseHover(ui::MouseHoverEvent* event) {
 
     cursorPosition_ = event->position();
 

@@ -19,6 +19,7 @@
 
 #include <vgc/core/innercore.h>
 #include <vgc/ui/api.h>
+#include <vgc/ui/modifierkey.h>
 
 namespace vgc::ui {
 
@@ -26,7 +27,7 @@ VGC_DECLARE_OBJECT(Event);
 VGC_DECLARE_OBJECT(Widget);
 
 /// \class vgc::ui::Event
-/// \brief Base class of all events handled in the user interface.
+/// \brief Base class of all events in the user interface.
 ///
 class VGC_UI_API Event : public core::Object {
 private:
@@ -36,23 +37,97 @@ private:
 protected:
     /// This is an implementation detail. please use Event::create() instead.
     ///
-    Event();
+    Event(double timestamp, ModifierKeys modifiers);
 
 public:
     /// Creates an Event.
     ///
     static EventPtr create();
 
+    /// Creates an Event.
+    ///
+    static EventPtr create(double timestamp = 0, ModifierKeys modifiers = {});
+
+    /// Returns the time at which this event occured, in seconds, since some
+    /// arbitrary point in time (for example, the application startup time, or
+    /// the system startup time).
+    ///
+    /// Note that due to platform limitations, this timestamp is not always
+    /// accurate. As a general rule of thumbs, it tends to be more accurate
+    /// with pen tablet inputs than with mouse input.
+    ///
+    /// \sa `setTimestamp()`.
+    ///
+    // XXX Make this a true timestamp (poll time) when possible, rather than
+    // the time when Qt added the event to the event queue.
+    //
+    double timestamp() const {
+        return timestamp_;
+    }
+
+    /// Sets the time at which this event occured.
+    ///
+    /// \sa `timestamp()`.
+    ///
+    void setTimestamp(double t) {
+        timestamp_ = t;
+    }
+
+    /// Returns the modifier keys (Ctrl, Shift, etc.) that were pressed
+    /// when this event was generated.
+    ///
+    /// \sa `setModifierKeys()`.
+    ///
+    ModifierKeys modifierKeys() const {
+        return modifierKeys_;
+    }
+
+    /// Sets the modifier keys of this event.
+    ///
+    /// \sa `modifierKeys()`.
+    ///
+    void setModifierKeys(ModifierKeys modifierKeys) {
+        modifierKeys_ = modifierKeys;
+    }
+
+private:
+    friend Widget;
+
+    double timestamp_ = 0;
+    ModifierKeys modifierKeys_ = {};
+};
+
+/// \class vgc::ui::PropagatedEvent
+/// \brief Base class of all events propagated through the widget hierarchy.
+///
+/// Some events are propagated through the widget hierachy (for example,
+/// `Widget::onMouseMove()`), while some events are directly handled without
+/// propagation (for example, actions triggered via a shortcut).
+///
+/// This class is used as base class for all events that do require propagation
+/// through the widget hierarchy.
+///
+/// Note that this class is designed to be used with multiple inheritance in
+/// mind, and therefore does not inherit from `Event` itself, in order to avoid
+/// the diamond problem.
+///
+class VGC_UI_API PropagatedEvent {
+public:
+    /// Creates a `PropagatedEvent`.
+    ///
+    PropagatedEvent() {
+    }
+
     /// Returns whether a handler requested to stop propagating this event.
     ///
     bool isStopPropagationRequested() const {
-        return stopPropagation_;
+        return isStopPropagationRequested_;
     }
 
     /// Tells the mouse event system to stop propagating this event.
     ///
     void stopPropagation() {
-        stopPropagation_ = true;
+        isStopPropagationRequested_ = true;
     }
 
     /// Returns whether a handler already handled this event.
@@ -64,7 +139,7 @@ public:
 private:
     friend Widget;
 
-    bool stopPropagation_ = false;
+    bool isStopPropagationRequested_ = false;
     bool handled_ = false;
 };
 

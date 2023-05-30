@@ -143,7 +143,7 @@ ui::WidgetPtr Sketch::createOptionsWidget() const {
     return res;
 }
 
-bool Sketch::onKeyPress(ui::KeyEvent* /*event*/) {
+bool Sketch::onKeyPress(ui::KeyPressEvent* /*event*/) {
     return false;
 }
 
@@ -156,7 +156,7 @@ double pressurePenWidth(const ui::MouseEvent* event) {
 
 } // namespace
 
-bool Sketch::onMouseMove(ui::MouseEvent* event) {
+bool Sketch::onMouseMove(ui::MouseMoveEvent* event) {
 
     if (!isSketching_) {
         return false;
@@ -195,7 +195,7 @@ bool Sketch::onMouseMove(ui::MouseEvent* event) {
     return true;
 }
 
-bool Sketch::onMousePress(ui::MouseEvent* event) {
+bool Sketch::onMousePress(ui::MousePressEvent* event) {
 
     if (isSketching_ || event->button() != ui::MouseButton::Left
         || event->modifierKeys()) {
@@ -224,7 +224,7 @@ bool Sketch::onMousePress(ui::MouseEvent* event) {
     return true;
 }
 
-bool Sketch::onMouseRelease(ui::MouseEvent* event) {
+bool Sketch::onMouseRelease(ui::MouseReleaseEvent* event) {
 
     if (event->button() == ui::MouseButton::Left) {
         if (isSketching_) {

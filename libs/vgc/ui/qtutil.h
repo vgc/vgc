@@ -112,25 +112,29 @@ Qt::KeyboardModifiers toQt(const ui::ModifierKeys& modifiers);
 VGC_UI_API
 ui::ModifierKeys fromQt(const Qt::KeyboardModifiers& modifiers);
 
-/// Converts the given QMouseEvent into a vgc::ui::MouseEvent.
+/// Transfers the data from the given `QMouseEvent` into the given
+/// `vgc::ui::MouseEvent`.
 ///
 VGC_UI_API
-MouseEventPtr fromQt(QMouseEvent* event);
+void fromQt(QMouseEvent* event, MouseEvent* vgcEvent);
 
-/// Converts the given QMouseEvent into a vgc::ui::MouseEvent.
+/// Transfers the data from the given `QTabletEvent` into the given
+/// `vgc::ui::MouseEvent`.
 ///
 VGC_UI_API
-MouseEventPtr fromQt(QTabletEvent* event);
+void fromQt(QTabletEvent* event, MouseEvent* vgcEvent);
 
-/// Converts the given QWheelEvent into a vgc::ui::ScrollEvent.
+/// Transfers the data from the given `QWheelEvent` into the given
+/// `vgc::ui::MouseEvent`.
 ///
 VGC_UI_API
-ScrollEventPtr fromQt(QWheelEvent* event);
+void fromQt(QWheelEvent* event, ScrollEvent* vgcEvent);
 
-/// Converts the given QKeyEvent into a vgc::ui::KeyEvent.
+/// Transfers the data from the given `QKeyEvent` into the given
+/// `vgc::ui::KeyEvent`.
 ///
 VGC_UI_API
-KeyEventPtr fromQt(QKeyEvent* event);
+void fromQt(QKeyEvent* event, KeyEvent* vgcEvent);
 
 /// Converts the given geometry::Mat4f into a QMatrix4x4.
 ///

@@ -85,7 +85,7 @@ bool Toggle::click(const geometry::Vec2f& pos) {
     }
 }
 
-bool Toggle::onMouseMove(MouseEvent* event) {
+bool Toggle::onMouseMove(MouseMoveEvent* event) {
     if (isPressed_) {
         if (rect().contains(event->position())) {
             addStyleClass(strings::pressed);
@@ -100,7 +100,7 @@ bool Toggle::onMouseMove(MouseEvent* event) {
     }
 }
 
-bool Toggle::onMousePress(MouseEvent* event) {
+bool Toggle::onMousePress(MousePressEvent* event) {
     if (event->button() == MouseButton::Left) {
         pressed().emit(this, event->position());
         addStyleClass(strings::pressed);
@@ -112,7 +112,7 @@ bool Toggle::onMousePress(MouseEvent* event) {
     }
 }
 
-bool Toggle::onMouseRelease(MouseEvent* event) {
+bool Toggle::onMouseRelease(MouseReleaseEvent* event) {
     if (isPressed_ && event->button() == MouseButton::Left) {
         released().emit(this, event->position());
         if (rect().contains(event->position())) {

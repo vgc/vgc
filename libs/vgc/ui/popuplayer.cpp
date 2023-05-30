@@ -57,7 +57,7 @@ Widget* PopupLayer::computeHoverChainChild(MouseEvent* event) const {
     return nullptr;
 }
 
-bool PopupLayer::onMousePress(MouseEvent* event) {
+bool PopupLayer::onMousePress(MousePressEvent* event) {
     bool handled = Widget::onMousePress(event);
     if (!handled && !hoverChainChild()) {
         backgroundPressed().emit();

@@ -386,7 +386,7 @@ void Plot2d::onPaintDestroy(graphics::Engine* engine) {
     hintTextGeom_.reset();
 }
 
-bool Plot2d::onMouseMove(MouseEvent* event) {
+bool Plot2d::onMouseMove(MouseMoveEvent* event) {
     mpos_ = event->position();
     dirtyPlot_ = true;
     dirtyHint_ = true;
@@ -394,11 +394,11 @@ bool Plot2d::onMouseMove(MouseEvent* event) {
     return true;
 }
 
-bool Plot2d::onMousePress(MouseEvent* /*event*/) {
+bool Plot2d::onMousePress(MousePressEvent* /*event*/) {
     return true;
 }
 
-bool Plot2d::onMouseRelease(MouseEvent* /*event*/) {
+bool Plot2d::onMouseRelease(MouseReleaseEvent* /*event*/) {
     return true;
 }
 
