@@ -19,12 +19,268 @@
 
 #include <vgc/geometry/vec2f.h>
 #include <vgc/ui/event.h>
-#include <vgc/ui/modifierkey.h>
 #include <vgc/ui/mousebutton.h>
 
 namespace vgc::ui {
 
 VGC_DECLARE_OBJECT(MouseEvent);
+
+/// \class vgc::ui::MouseEventData
+/// \brief A convenient class to store mouse-related event data.
+///
+class VGC_UI_API MouseEventData {
+public:
+    /// Creates a `MouseEventData` with default values.
+    ///
+    MouseEventData() {
+    }
+
+    /// Returns the mouse button of the event.
+    ///
+    MouseButton button() const {
+        return button_;
+    }
+
+    /// Sets the mouse button of the event.
+    ///
+    void setButton(MouseButton button) {
+        button_ = button;
+    }
+
+    /// Returns the position of the mouse cursor, in local coordinates, when
+    /// the event occured.
+    ///
+    const geometry::Vec2f& position() const {
+        return position_;
+    }
+
+    /// Returns the position of the mouse cursor, in local coordinates, when
+    /// the event occured.
+    ///
+    geometry::Vec2f& position() {
+        return position_;
+    }
+
+    /// Sets the position of the mouse cursor, in local coordinates, when the
+    /// event occured.
+    ///
+    void setPosition(const geometry::Vec2f& position) {
+        position_ = position;
+    }
+
+    /// Returns whether the event comes from a tablet.
+    ///
+    bool isTablet() const {
+        return isTablet_;
+    }
+
+    /// Sets whether the event comes from a tablet.
+    ///
+    void setTablet(bool isTablet) {
+        isTablet_ = isTablet;
+    }
+
+    /// Returns whether there is pressure data associated with the event.
+    ///
+    bool hasPressure() const {
+        return hasPressure_;
+    }
+
+    /// Sets whether there is pressure data associated with the event.
+    ///
+    /// If `hasPressure` is false, this also sets the `pressure()` to `0`.
+    ///
+    void setHasPressure(bool hasPressure) {
+        hasPressure_ = hasPressure;
+        if (!hasPressure) {
+            pressure_ = 0;
+        }
+    }
+
+    /// Returns the pressure of the event. Returns 0 whenever `hasPressure()`
+    /// is false.
+    ///
+    double pressure() const {
+        return pressure_;
+    }
+
+    /// Sets the pressure of the event. If `hasPressure()` is false, then this
+    /// function does nothing, that is, `pressure()` stays equal to 0.
+    ///
+    void setPressure(double pressure) {
+        if (hasPressure()) {
+            pressure_ = pressure;
+        }
+    }
+
+private:
+    MouseButton button_ = {};
+    geometry::Vec2f position_ = {};
+    double pressure_ = 0;
+    bool hasPressure_ = false;
+    bool isTablet_ = false;
+};
+
+/// \class vgc::ui::MouseEvent
+/// \brief Base class to handle all mouse-related events (move, clicks, etc.)
+///
+class VGC_UI_API MouseEvent : public Event {
+private:
+    VGC_OBJECT(MouseEvent, Event)
+
+protected:
+    /// This is an implementation details. Please use
+    /// MouseEvent::create() instead.
+    ///
+    MouseEvent(double timestamp, ModifierKeys modifiers, const MouseEventData& data);
+
+public:
+    /// Creates a MouseEvent.
+    ///
+    static MouseEventPtr create(
+        double timestamp = 0,
+        ModifierKeys modifiers = {},
+        const MouseEventData& data = {});
+
+    /// Returns the data associated with the MouseEvent as one convenient
+    /// aggregate object.
+    ///
+    const MouseEventData& data() const {
+        return data_;
+    }
+
+    /// Sets the data associated with the MouseEvent.
+    ///
+    /// Event handlers should typically not change this.
+    ///
+    void setData(const MouseEventData& data) {
+        data_ = data;
+    }
+
+    /// Returns the mouse button that caused a mouse press or mouse release event.
+    ///
+    /// Returns `MouseButton::None` for mouse move events.
+    ///
+    MouseButton button() const {
+        return data_.button();
+    }
+
+    /// Sets the mouse button of this event.
+    ///
+    /// Event handlers should typically not change this.
+    ///
+    void setButton(MouseButton button) {
+        data_.setButton(button);
+    }
+
+    /// Returns the position of the mouse cursor, in local coordinates, when
+    /// the event occured.
+    ///
+    const geometry::Vec2f& position() const {
+        return data_.position();
+    }
+
+    /// Sets the position of the mouse cursor, in local coordinates, when the
+    /// event occured.
+    ///
+    /// Event handlers should typically not change this, unless implementing
+    /// some custom mouse event propagation algorithm that require mapping
+    /// coordinates from one space to another.
+    ///
+    void setPosition(const geometry::Vec2f& position) {
+        data_.setPosition(position);
+    }
+
+    /// Returns the X-coordinate of the position of the mouse cursor, in local
+    /// coordinates, when the event occured. This is equivalent to `pos()[0]`.
+    ///
+    float x() const {
+        return data_.position()[0];
+    }
+
+    /// Sets the X-coordinate of the position of the mouse cursor, in local
+    /// coordinates. This method should typically only be used when
+    /// implementing mouse event propagation.
+    ///
+    /// Event handlers should typically not change this, unless implementing
+    /// some custom mouse event propagation algorithm that require mapping
+    /// coordinates from one space to another.
+    ///
+    void setX(float x) {
+        data_.position()[0] = x;
+    }
+
+    /// Returns the Y-coordinate of the position of the mouse cursor, in local
+    /// coordinates, when the event occurs. This is equivalent to `pos()[1]`.
+    ///
+    float y() const {
+        return position()[1];
+    }
+
+    /// Sets the Y-coordinate of the position of the mouse cursor, in local
+    /// coordinates.
+    ///
+    /// Event handlers should typically not change this, unless implementing
+    /// some custom mouse event propagation algorithm that require mapping
+    /// coordinates from one space to another.
+    ///
+    void setY(float y) {
+        data_.position()[1] = y;
+    }
+
+    /// Returns whether this event comes from a tablet.
+    ///
+    bool isTablet() const {
+        return data_.isTablet();
+    }
+
+    /// Sets whether the event comes from a tablet.
+    ///
+    /// Event handlers should typically not change this.
+    ///
+    void setTablet(bool isTablet) {
+        data_.setTablet(isTablet);
+    }
+
+    /// Returns whether there is pressure data associated with this event.
+    ///
+    bool hasPressure() const {
+        return data_.hasPressure();
+    }
+
+    /// Sets whether there is pressure data associated with the event.
+    ///
+    /// If `hasPressure` is false, this also sets the `pressure()` to `0`.
+    ///
+    /// Event handlers should typically not change this.
+    ///
+    void setHasPressure(bool hasPressure) {
+        data_.setHasPressure(hasPressure);
+    }
+
+    /// Returns the pressure of this tablet event. Returns 0 whenever
+    /// hasPressure() is false.
+    ///
+    double pressure() const {
+        return data_.pressure();
+    }
+
+    /// Sets the pressure of the event.
+    ///
+    /// If `hasPressure()` is false, then this function does nothing, that is,
+    /// `pressure()` stays equal to 0.
+    ///
+    /// Event handlers should typically not change this.
+    ///
+    void setPressure(double pressure) {
+        data_.setPressure(pressure);
+    }
+
+private:
+    friend Widget;
+
+    MouseEventData data_ = {};
+};
 
 /// \class vgc::ui::HoverLockPolicy
 /// \brief Specifies hover-locking behavior.
@@ -41,140 +297,31 @@ enum class HoverLockPolicy {
     ForceUnlock
 };
 
-/// \class vgc::ui::MouseEvent
-/// \brief Class to handle mouse move, clicks, etc.
+VGC_DECLARE_OBJECT(PropagatedMouseEvent);
+
+/// \class vgc::ui::PropagatedMouseEvent
+/// \brief Base class for MousePress, MouseMove, and MouseRelease events.
 ///
-class VGC_UI_API MouseEvent : public Event {
+class VGC_UI_API PropagatedMouseEvent : public MouseEvent, public PropagatedEvent {
 private:
-    VGC_OBJECT(MouseEvent, Event)
+    VGC_OBJECT(PropagatedMouseEvent, MouseEvent)
 
 protected:
-    /// This is an implementation details. Please use
-    /// MouseEvent::create() instead.
+    /// Protected constructor for `PropagatedMouseEvent`. You typically want
+    /// to use the public method `PropagatedMouseEvent::create()` instead.
     ///
-    MouseEvent(
-        MouseButton button,
-        const geometry::Vec2f& position,
-        ModifierKeys modifierKeys,
+    PropagatedMouseEvent(
         double timestamp,
-        double pressure,
-        bool isTablet);
+        ModifierKeys modifiers,
+        const MouseEventData& data);
 
 public:
-    /// Creates a MouseEvent.
+    /// Creates a PropagatedMouseEvent.
     ///
-    static MouseEventPtr create(
-        MouseButton button,
-        const geometry::Vec2f& position,
-        ModifierKeys modifierKeys,
+    static PropagatedMouseEventPtr create(
         double timestamp = 0,
-        double pressure = -1.0,
-        bool isTablet = false);
-
-    /// Returns the mouse button that caused a mouse press or mouse release event.
-    /// Returns `MouseButton::None` for mouse move events.
-    ///
-    MouseButton button() const {
-        return button_;
-    }
-
-    /// Sets the mouse button of this `MouseEvent`.
-    ///
-    void setButton(MouseButton button) {
-        button_ = button;
-    }
-
-    /// Returns the position of the mouse cursor, in local coordinates, when
-    /// the event occurs.
-    ///
-    const geometry::Vec2f& position() const {
-        return position_;
-    }
-
-    /// Sets the position of the mouse cursor, in local coordinates. This
-    /// method should typically only be used when implementing mouse event
-    /// propagation.
-    ///
-    void setPosition(const geometry::Vec2f& position) {
-        position_ = position;
-    }
-
-    /// Returns the X-coordinate of the position of the mouse cursor, in local
-    /// coordinates, when the event occurs. This is equivalent to `pos()[0]`.
-    ///
-    float x() const {
-        return position_[0];
-    }
-
-    /// Sets the X-coordinate of the position of the mouse cursor, in local
-    /// coordinates. This method should typically only be used when
-    /// implementing mouse event propagation.
-    ///
-    void setX(float x) {
-        position_[0] = x;
-    }
-
-    /// Returns the Y-coordinate of the position of the mouse cursor, in local
-    /// coordinates, when the event occurs. This is equivalent to `pos()[1]`.
-    ///
-    float y() const {
-        return position_[1];
-    }
-
-    /// Sets the Y-coordinate of the position of the mouse cursor, in local
-    /// coordinates. This method should typically only be used when
-    /// implementing mouse event propagation.
-    ///
-    void setY(float y) {
-        position_[1] = y;
-    }
-
-    /// Returns the modifier keys (Ctrl, Shift, etc.) that were pressed
-    /// when this even was generated.
-    ///
-    ModifierKeys modifierKeys() const {
-        return modifierKeys_;
-    }
-
-    /// Sets the modifier keys of this event.
-    ///
-    void setModifierKeys(ModifierKeys modifierKeys) {
-        modifierKeys_ = modifierKeys;
-    }
-
-    /// Returns the time at which this event occured, in seconds, since some
-    /// arbitrary point in time (for example, the application startup time, or
-    /// the system startup time).
-    ///
-    /// Note that due to platform limitations, this timestamp is not always
-    /// accurate. As a general rule of thumbs, it tends to be more accurate
-    /// with pen tablet inputs than with mouse input.
-    ///
-    // XXX Make this a true timestamp (poll time) when possible, rather than
-    // the time when Qt added the event to the event queue.
-    //
-    double timestamp() const {
-        return timestamp_;
-    }
-
-    /// Returns whether this event comes from a tablet.
-    ///
-    bool isTablet() const {
-        return isTablet_;
-    }
-
-    /// Returns whether there is pressure data associated with this event.
-    ///
-    bool hasPressure() const {
-        return hasPressure_;
-    }
-
-    /// Returns the pressure of this tablet event. Returns 0 whenever
-    /// hasPressure() is false.
-    ///
-    double pressure() const {
-        return pressure_;
-    }
+        ModifierKeys modifiers = {},
+        const MouseEventData& data = {});
 
     /// Returns the hover-lock policy that should be used when this event
     /// is returned from a handler in the bubbling phase.
@@ -195,14 +342,154 @@ public:
     }
 
 private:
-    MouseButton button_ = {};
-    geometry::Vec2f position_ = {};
-    ModifierKeys modifierKeys_;
     HoverLockPolicy hoverLockPolicy_ = {};
-    double timestamp_ = 0;
-    double pressure_ = 0.f;
-    bool hasPressure_ = false;
-    bool isTablet_ = false;
+};
+
+VGC_DECLARE_OBJECT(MousePressEvent);
+
+/// \class vgc::ui::MousePressEvent
+/// \brief A MousePress event propagated through the widget hierarchy.
+///
+class VGC_UI_API MousePressEvent : public PropagatedMouseEvent {
+private:
+    VGC_OBJECT(MousePressEvent, PropagatedMouseEvent)
+
+protected:
+    /// Protected constructor for `MousePressEvent`. You typically want
+    /// to use the public method `MousePressEvent::create()` instead.
+    ///
+    MousePressEvent(double timestamp, ModifierKeys modifiers, const MouseEventData& data);
+
+public:
+    /// Creates a `MousePressEvent`.
+    ///
+    static MousePressEventPtr create(
+        double timestamp = 0,
+        ModifierKeys modifiers = {},
+        const MouseEventData& data = {});
+};
+
+VGC_DECLARE_OBJECT(MouseMoveEvent);
+
+/// \class vgc::ui::MouseMoveEvent
+/// \brief A MouseMove event propagated through the widget hierarchy.
+///
+class VGC_UI_API MouseMoveEvent : public PropagatedMouseEvent {
+private:
+    VGC_OBJECT(MouseMoveEvent, PropagatedMouseEvent)
+
+protected:
+    /// Protected constructor for `MouseMoveEvent`. You typically want
+    /// to use the public method `MouseMoveEvent::create()` instead.
+    ///
+    MouseMoveEvent(double timestamp, ModifierKeys modifiers, const MouseEventData& data);
+
+public:
+    /// Creates a `MouseMoveEvent`.
+    ///
+    static MouseMoveEventPtr create(
+        double timestamp = 0,
+        ModifierKeys modifiers = {},
+        const MouseEventData& data = {});
+};
+
+VGC_DECLARE_OBJECT(MouseReleaseEvent);
+
+/// \class vgc::ui::MouseReleaseEvent
+/// \brief A MouseRelease event propagated through the widget hierarchy.
+///
+class VGC_UI_API MouseReleaseEvent : public PropagatedMouseEvent {
+private:
+    VGC_OBJECT(MouseReleaseEvent, PropagatedMouseEvent)
+
+protected:
+    /// Protected constructor for `MouseReleaseEvent`. You typically want
+    /// to use the public method `MouseReleaseEvent::create()` instead.
+    ///
+    MouseReleaseEvent(
+        double timestamp,
+        ModifierKeys modifiers,
+        const MouseEventData& data);
+
+public:
+    /// Creates a `MouseReleaseEvent`.
+    ///
+    static MouseReleaseEventPtr create(
+        double timestamp = 0,
+        ModifierKeys modifiers = {},
+        const MouseEventData& data = {});
+};
+
+VGC_DECLARE_OBJECT(MouseHoverEvent);
+
+/// \class vgc::ui::MouseHoverEvent
+/// \brief An event delivered when a widget is hovered by the mouse.
+///
+class VGC_UI_API MouseHoverEvent : public MouseEvent {
+private:
+    VGC_OBJECT(MouseHoverEvent, MouseEvent)
+
+protected:
+    /// Protected constructor for `MouseHoverEvent`. You typically want
+    /// to use the public method `MouseHoverEvent::create()` instead.
+    ///
+    MouseHoverEvent(double timestamp, ModifierKeys modifiers, const MouseEventData& data);
+
+public:
+    /// Creates a `MouseReleaseEvent`.
+    ///
+    static MouseHoverEventPtr create(
+        double timestamp = 0,
+        ModifierKeys modifiers = {},
+        const MouseEventData& data = {});
+};
+
+VGC_DECLARE_OBJECT(Widget);
+VGC_DECLARE_OBJECT(MouseActionEvent);
+
+/// \class vgc::ui::MouseActionEvent
+/// \brief A mouse event delivered to an action, typically initiated via a shortcut.
+///
+class VGC_UI_API MouseActionEvent : public MouseEvent {
+private:
+    VGC_OBJECT(MouseActionEvent, MouseEvent)
+
+protected:
+    /// Protected constructor for `MouseActionEvent`. You typically want
+    /// to use the public method `MouseActionEvent::create()` instead.
+    ///
+    MouseActionEvent(
+        double timestamp,
+        ModifierKeys modifiers,
+        const MouseEventData& data,
+        Widget* widget);
+
+public:
+    /// Creates a `MouseActionEvent`.
+    ///
+    static MouseActionEventPtr create(
+        double timestamp = 0,
+        ModifierKeys modifiers = {},
+        const MouseEventData& data = {},
+        Widget* widget = nullptr);
+
+    /// Creates a `MouseActionEvent` whose data are initialized based on the
+    /// given mouse event.
+    ///
+    static MouseActionEventPtr create(const MouseEvent* other, Widget* widget = nullptr);
+
+    /// Returns the widget from which the action was triggered.
+    ///
+    Widget* widget() const;
+
+    /// Sets the widget from which the action was triggered.
+    ///
+    /// Event handlers should typically not change this.
+    ///
+    void setWidget(Widget* widget);
+
+private:
+    WidgetPtr widget_;
 };
 
 } // namespace vgc::ui

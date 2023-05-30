@@ -600,13 +600,14 @@ void Widget::stopKeyboardCapture() {
     }
 }
 
-bool Widget::mouseMove(MouseEvent* event) {
+bool Widget::mouseMove(MouseMoveEvent* event) {
     if (!isRoot()) {
         VGC_WARNING(LogVgcUi, "mouseMove() can only be called on a root widget.");
         return false;
     }
     lastMousePosition_ = event->position();
     lastModifierKeys_ = event->modifierKeys();
+    lastTimestamp_ = event->timestamp();
     WidgetPtr thisPtr = this;
 
     // We first check whether this MouseMove can be handled by a registered action.
@@ -625,13 +626,14 @@ bool Widget::mouseMove(MouseEvent* event) {
     return handled;
 }
 
-bool Widget::mousePress(MouseEvent* event) {
+bool Widget::mousePress(MousePressEvent* event) {
     if (!isRoot()) {
         VGC_WARNING(LogVgcUi, "mousePress() can only be called on a root widget.");
         return false;
     }
     lastMousePosition_ = event->position();
     lastModifierKeys_ = event->modifierKeys();
+    lastTimestamp_ = event->timestamp();
     WidgetPtr thisPtr = this;
 
     // We first check whether this MousePress can be handled by a registered action.
@@ -650,13 +652,14 @@ bool Widget::mousePress(MouseEvent* event) {
     return handled;
 }
 
-bool Widget::mouseRelease(MouseEvent* event) {
+bool Widget::mouseRelease(MouseReleaseEvent* event) {
     if (!isRoot()) {
         VGC_WARNING(LogVgcUi, "mouseRelease() can only be called on a root widget.");
         return false;
     }
     lastMousePosition_ = event->position();
     lastModifierKeys_ = event->modifierKeys();
+    lastTimestamp_ = event->timestamp();
     WidgetPtr thisPtr = this;
 
     // We first check whether this MouseRelease can be handled by a registered action.
@@ -682,8 +685,11 @@ bool Widget::mouseScroll(ScrollEvent* event) {
     }
     lastMousePosition_ = event->position();
     lastModifierKeys_ = event->modifierKeys();
+    lastTimestamp_ = event->timestamp();
+
     WidgetPtr thisPtr = this;
     mouseScroll_(event);
+
     bool handled = event->isHandled();
     if (isAlive()) {
         handled |= updateHoverChain();
@@ -691,27 +697,27 @@ bool Widget::mouseScroll(ScrollEvent* event) {
     return handled;
 }
 
-void Widget::preMouseMove(MouseEvent* /*event*/) {
+void Widget::preMouseMove(MouseMoveEvent* /*event*/) {
     // no-op
 }
 
-void Widget::preMousePress(MouseEvent* /*event*/) {
+void Widget::preMousePress(MousePressEvent* /*event*/) {
     // no-op
 }
 
-void Widget::preMouseRelease(MouseEvent* /*event*/) {
+void Widget::preMouseRelease(MouseReleaseEvent* /*event*/) {
     // no-op
 }
 
-bool Widget::onMouseMove(MouseEvent* /*event*/) {
+bool Widget::onMouseMove(MouseMoveEvent* /*event*/) {
     return false;
 }
 
-bool Widget::onMousePress(MouseEvent* /*event*/) {
+bool Widget::onMousePress(MousePressEvent* /*event*/) {
     return false;
 }
 
-bool Widget::onMouseRelease(MouseEvent* /*event*/) {
+bool Widget::onMouseRelease(MouseReleaseEvent* /*event*/) {
     return false;
 }
 
@@ -721,13 +727,10 @@ bool Widget::onMouseScroll(ScrollEvent* /*event*/) {
 
 void Widget::appendToPendingMouseActionEvents_(MouseEvent* event) {
     if (pendingMouseClickAction_ || pendingMouseDragAction_) {
-        pendingMouseActionEvents_.append(MouseEvent::create(
-            event->button(),
-            event->position(),
-            event->modifierKeys(),
-            event->timestamp(),
-            event->pressure(),
-            event->isTablet()));
+        // Note: the widget is set to a non-null value when delivering the
+        // event, see maybeStartPendingMouseAction_().
+        Widget* widget = nullptr;
+        pendingMouseActionEvents_.append(MouseActionEvent::create(event, widget));
     }
 }
 
@@ -792,7 +795,8 @@ void Widget::maybeStartPendingMouseAction_() {
 
         // Trigger the MouseClick.
         //
-        MouseEventPtr event = pendingMouseActionEvents_.first();
+        MouseActionEventPtr event = pendingMouseActionEvents_.first();
+        event->setWidget(pendingMouseClickWidget_.get());
         mapMouseActionPosition_(event.get(), pendingMouseClickWidget_.get());
         pendingMouseClickAction_->onMouseClick(event.get());
         pendingMouseActionEvents_.clear();
@@ -808,7 +812,8 @@ void Widget::maybeStartPendingMouseAction_() {
         pendingMouseDragWidget_ = nullptr;
         pendingMouseDragAction_ = nullptr;
         bool isStart = true;
-        for (const MouseEventPtr& event : pendingMouseActionEvents_) {
+        for (const MouseActionEventPtr& event : pendingMouseActionEvents_) {
+            event->setWidget(currentMouseDragWidget_.get());
             mapMouseActionPosition_(event.get(), currentMouseDragWidget_.get());
             if (isStart) {
                 currentMouseDragAction_->onMouseDragStart(event.get());
@@ -1008,7 +1013,7 @@ bool Widget::checkAlreadyHovered_() {
     return true;
 }
 
-void Widget::mouseMove_(MouseEvent* event) {
+void Widget::mouseMove_(MouseMoveEvent* event) {
 
     geometry::Vec2f eventPos = event->position();
 
@@ -1109,7 +1114,7 @@ void clearNonStickyNonChildFocus_(Widget* parent, Widget* child) {
 
 } // namespace
 
-void Widget::mousePress_(MouseEvent* event) {
+void Widget::mousePress_(MousePressEvent* event) {
     const geometry::Vec2f eventPos = event->position();
     const bool otherWasPressed = !pressedButtons_.isEmpty();
 
@@ -1220,7 +1225,7 @@ void Widget::mousePress_(MouseEvent* event) {
     }
 }
 
-void Widget::mouseRelease_(MouseEvent* event) {
+void Widget::mouseRelease_(MouseReleaseEvent* event) {
 
     geometry::Vec2f eventPos = event->position();
 
@@ -1617,10 +1622,11 @@ void Widget::onWidgetRemoved(Widget*) {
 void Widget::mouseHover_() {
 
     // New hover data
-    Widget* root_ = root();
+    Widget* root = this->root();
     MouseButton button = MouseButton::None;
-    geometry::Vec2f position = root_->mapTo(this, root_->lastMousePosition_);
-    ModifierKeys modifierKeys = root_->lastModifierKeys_;
+    geometry::Vec2f position = root->mapTo(this, root->lastMousePosition_);
+    ModifierKeys modifierKeys = root->lastModifierKeys_;
+    double timestamp = root->lastTimestamp_;
 
     // Determine if we should send the mouse hover
     bool doMouseHover = false;
@@ -1634,11 +1640,15 @@ void Widget::mouseHover_() {
         doMouseHover = true;
     }
 
-    // So the mouse hover if necessary
+    // Do the mouse hover if necessary
     if (doMouseHover) {
         lastMouseHoverPosition_ = position;
         lastMouseHoverModifierKeys_ = modifierKeys;
-        MouseEventPtr hoverEvent = MouseEvent::create(button, position, modifierKeys);
+        MouseHoverEventPtr hoverEvent = MouseHoverEvent::create();
+        hoverEvent->setTimestamp(timestamp);
+        hoverEvent->setModifierKeys(modifierKeys);
+        hoverEvent->setPosition(position); // XXX: what about isTablet?
+        hoverEvent->setButton(button);
         onMouseHover(hoverEvent.get());
         forceNextMouseHover_ = false;
     }
@@ -1659,7 +1669,7 @@ void Widget::mouseLeave_() {
     onMouseLeave();
 }
 
-void Widget::onMouseHover(MouseEvent*) {
+void Widget::onMouseHover(MouseHoverEvent*) {
 }
 
 void Widget::onMouseEnter() {
@@ -1668,7 +1678,7 @@ void Widget::onMouseEnter() {
 void Widget::onMouseLeave() {
 }
 
-bool Widget::updateHoverChainChild(MouseEvent* event) {
+bool Widget::updateHoverChainChild(MouseHoverEvent* event) {
     Widget* hcChild = computeHoverChainChild(event);
     return setHoverChainChild(hcChild);
 }
@@ -1690,6 +1700,7 @@ bool Widget::updateHoverChain() {
     MouseButton button = MouseButton::None;
     geometry::Vec2f position = root->lastMousePosition_;
     ModifierKeys modifiers = root->lastModifierKeys_;
+    double timestamp = root->lastTimestamp_;
 
     // Start by traversing the locked part of the hover-chain.
     //
@@ -1710,8 +1721,12 @@ bool Widget::updateHoverChain() {
     while (widget && widget->isChildHoverEnabled_) {
         WidgetPtr oldChild = child;
         geometry::Vec2f relPos = root->mapTo(widget.get(), position);
-        MouseEventPtr event = MouseEvent::create(button, relPos, modifiers);
-        bool success = widget->updateHoverChainChild(event.get());
+        MouseHoverEventPtr hoverEvent = MouseHoverEvent::create();
+        hoverEvent->setTimestamp(timestamp);
+        hoverEvent->setModifierKeys(modifiers);
+        hoverEvent->setPosition(relPos); // XXX: what about isTablet?
+        hoverEvent->setButton(button);
+        bool success = widget->updateHoverChainChild(hoverEvent.get());
         if (!success || !widget->isAlive()) {
             changed = true;
             break;
@@ -1829,7 +1844,7 @@ bool Widget::onFocusOut(FocusReason) {
     return false;
 }
 
-bool Widget::keyPress(KeyEvent* event) {
+bool Widget::keyPress(KeyPressEvent* event) {
     if (!isRoot()) {
         VGC_WARNING(LogVgcUi, "keyPress() can only be called on a root widget.");
         return false;
@@ -1840,7 +1855,7 @@ bool Widget::keyPress(KeyEvent* event) {
     return event->isHandled();
 }
 
-bool Widget::keyRelease(KeyEvent* event) {
+bool Widget::keyRelease(KeyReleaseEvent* event) {
     if (!isRoot()) {
         VGC_WARNING(LogVgcUi, "keyRelease() can only be called on a root widget.");
         return false;
@@ -1851,31 +1866,31 @@ bool Widget::keyRelease(KeyEvent* event) {
     return event->isHandled();
 }
 
-void Widget::preKeyPress(KeyEvent*) {
+void Widget::preKeyPress(KeyPressEvent*) {
     // no-op
 }
 
-void Widget::preKeyRelease(KeyEvent*) {
+void Widget::preKeyRelease(KeyReleaseEvent*) {
     // no-op
 }
 
-bool Widget::onKeyPress(KeyEvent*) {
+bool Widget::onKeyPress(KeyPressEvent*) {
     return false;
 }
 
-bool Widget::onKeyRelease(KeyEvent*) {
+bool Widget::onKeyRelease(KeyReleaseEvent*) {
     return false;
 }
 
-void Widget::keyEvent_(KeyEvent* event, bool isKeyPress) {
+void Widget::keyEvent_(PropagatedKeyEvent* event, bool isKeyPress) {
 
     // User-defined capture phase handler.
     WidgetPtr thisPtr = this;
     if (isKeyPress) {
-        preKeyPress(event);
+        preKeyPress(static_cast<KeyPressEvent*>(event));
     }
     else {
-        preKeyRelease(event);
+        preKeyRelease(static_cast<KeyReleaseEvent*>(event));
     }
     if (!isAlive()) {
         // Widget got killed. Event can be considered handled.
@@ -1929,7 +1944,9 @@ void Widget::keyEvent_(KeyEvent* event, bool isKeyPress) {
 
     // User-defined bubble phase handler
     if (!event->handled_ || handledEventPolicy_ == HandledEventPolicy::Receive) {
-        event->handled_ |= isKeyPress ? onKeyPress(event) : onKeyRelease(event);
+        event->handled_ |= isKeyPress
+                               ? onKeyPress(static_cast<KeyPressEvent*>(event))
+                               : onKeyRelease(static_cast<KeyReleaseEvent*>(event));
         if (!isAlive()) {
             // Widget got killed. Event can be considered handled.
             event->handled_ = true;

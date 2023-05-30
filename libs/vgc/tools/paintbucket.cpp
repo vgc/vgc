@@ -46,7 +46,7 @@ ui::WidgetPtr PaintBucket::createOptionsWidget() const {
     return res;
 }
 
-void PaintBucket::onMouseHover(ui::MouseEvent* event) {
+void PaintBucket::onMouseHover(ui::MouseHoverEvent* event) {
 
     canvas::Canvas* canvas = this->canvas();
     if (!canvas) {
@@ -83,11 +83,11 @@ void PaintBucket::onMouseHover(ui::MouseEvent* event) {
     }
 }
 
-bool PaintBucket::onMouseMove(ui::MouseEvent*) {
+bool PaintBucket::onMouseMove(ui::MouseMoveEvent*) {
     return false;
 }
 
-bool PaintBucket::onMousePress(ui::MouseEvent* event) {
+bool PaintBucket::onMousePress(ui::MousePressEvent* event) {
 
     ui::ModifierKeys keys = event->modifierKeys();
     ui::MouseButton button = event->button();
@@ -166,7 +166,7 @@ bool PaintBucket::onMousePress(ui::MouseEvent* event) {
     return false;
 }
 
-bool PaintBucket::onMouseRelease(ui::MouseEvent* /*event*/) {
+bool PaintBucket::onMouseRelease(ui::MouseReleaseEvent* /*event*/) {
     // TODO
     return false;
 }

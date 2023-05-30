@@ -844,19 +844,19 @@ public:
     ///
     /// It can only be called on the root widget.
     ///
-    bool mouseMove(MouseEvent* event);
+    bool mouseMove(MouseMoveEvent* event);
 
     /// Propagates a mouse press event through the widget hierarchy.
     ///
     /// It can only be called on the root widget.
     ///
-    bool mousePress(MouseEvent* event);
+    bool mousePress(MousePressEvent* event);
 
     /// Propagates a mouse release event through the widget hierarchy.
     ///
     /// It can only be called on the root widget.
     ///
-    bool mouseRelease(MouseEvent* event);
+    bool mouseRelease(MouseReleaseEvent* event);
 
     /// Propagates a mouse scroll event through the widget hierarchy.
     ///
@@ -872,32 +872,32 @@ public:
     /// However you can change it again in this function using `setHoverChainChild()`.
     /// This let's you override a hover-locked hover-chain child.
     ///
-    virtual void preMouseMove(MouseEvent* event);
+    virtual void preMouseMove(MouseMoveEvent* event);
 
     /// Override this function if you wish to handle MousePress events during the
     /// capture phase (from root to leaf).
     ///
-    virtual void preMousePress(MouseEvent* event);
+    virtual void preMousePress(MousePressEvent* event);
 
     /// Override this function if you wish to handle MouseRelease events during the
     /// capture phase (from root to leaf).
     ///
-    virtual void preMouseRelease(MouseEvent* event);
+    virtual void preMouseRelease(MouseReleaseEvent* event);
 
     /// Override this function if you wish to handle MouseMove events. You must
     /// return true if the event was handled, false otherwise.
     ///
-    virtual bool onMouseMove(MouseEvent* event);
+    virtual bool onMouseMove(MouseMoveEvent* event);
 
     /// Override this function if you wish to handle MousePress events. You
     /// must return true if the event was handled, false otherwise.
     ///
-    virtual bool onMousePress(MouseEvent* event);
+    virtual bool onMousePress(MousePressEvent* event);
 
     /// Override this function if you wish to handle MouseRelease events. You
     /// must return true if the event was handled, false otherwise.
     ///
-    virtual bool onMouseRelease(MouseEvent* event);
+    virtual bool onMouseRelease(MouseReleaseEvent* event);
 
     /// Override this function if you wish to handle MouseScroll events. You
     /// must return true if the event was handled, false otherwise.
@@ -1215,33 +1215,33 @@ public:
     ///
     /// It can only be called on the root widget.
     ///
-    bool keyPress(KeyEvent* event);
+    bool keyPress(KeyPressEvent* event);
 
     /// Propagates a key release event through the widget hierarchy.
     ///
     /// It can only be called on the root widget.
     ///
-    bool keyRelease(KeyEvent* event);
+    bool keyRelease(KeyReleaseEvent* event);
 
     /// Override this function if you wish to handle KeyPress events during the
     /// capture phase (from root to leaf).
     ///
-    virtual void preKeyPress(KeyEvent* event);
+    virtual void preKeyPress(KeyPressEvent* event);
 
     /// Override this function if you wish to handle KeyRelease events during the
     /// capture phase (from root to leaf).
     ///
-    virtual void preKeyRelease(KeyEvent* event);
+    virtual void preKeyRelease(KeyReleaseEvent* event);
 
     /// Override this function if you wish to handle key press events. You must
     /// return true if the event was handled, false otherwise.
     ///
-    virtual bool onKeyPress(KeyEvent* event);
+    virtual bool onKeyPress(KeyPressEvent* event);
 
     /// Override this function if you wish to handle key release events. You must
     /// return true if the event was handled, false otherwise.
     ///
-    virtual bool onKeyRelease(KeyEvent* event);
+    virtual bool onKeyRelease(KeyReleaseEvent* event);
 
     /// Returns the list of actions of this widget.
     ///
@@ -1317,7 +1317,7 @@ protected:
     ///   therefore updating which widget is now hovered.
     /// - The window gained focus, for example after Alt-Tab.
     ///
-    virtual void onMouseHover(MouseEvent* event);
+    virtual void onMouseHover(MouseHoverEvent* event);
 
     /// Override this function if you wish to handle MouseEnter events. You
     /// must return true if the event was handled, false otherwise.
@@ -1338,7 +1338,7 @@ protected:
     /// the hover chain child (on all mouse events if there is no
     /// hover-locked hover-chain child).
     ///
-    virtual bool updateHoverChainChild(MouseEvent* event);
+    virtual bool updateHoverChainChild(MouseHoverEvent* event);
 
     /// Update the hover-chain starting from this widget.
     /// Returns whether the hover-chain changed or not.
@@ -1495,6 +1495,7 @@ private:
     // XXX only valid for root. to be moved to WidgetTree data.
     geometry::Vec2f lastMousePosition_ = {};
     ModifierKeys lastModifierKeys_ = {};
+    double lastTimestamp_ = 0;
 
     void resendPendingRequests_();
 
@@ -1539,7 +1540,7 @@ private:
     // All of those are stored at the root.
     //
     MouseButton mouseActionButton_ = MouseButton::None;
-    core::Array<MouseEventPtr> pendingMouseActionEvents_;
+    core::Array<MouseActionEventPtr> pendingMouseActionEvents_;
     WidgetPtr pendingMouseClickWidget_;
     WidgetPtr pendingMouseDragWidget_;
     WidgetPtr currentMouseDragWidget_;
@@ -1570,9 +1571,9 @@ private:
     bool handleMouseReleaseActions_(MouseEvent* event);
 
     bool checkAlreadyHovered_();
-    void mouseMove_(MouseEvent* event);
-    void mousePress_(MouseEvent* event);
-    void mouseRelease_(MouseEvent* event);
+    void mouseMove_(MouseMoveEvent* event);
+    void mousePress_(MousePressEvent* event);
+    void mouseRelease_(MouseReleaseEvent* event);
     void mouseScroll_(ScrollEvent* event);
 
     void mouseHover_();
@@ -1604,7 +1605,7 @@ private:
     Widget* focus_ = nullptr;
     Widget* keyboardCaptor_ = nullptr; // TODO: move to future class WidgetTree
 
-    void keyEvent_(KeyEvent* event, bool isPress);
+    void keyEvent_(PropagatedKeyEvent* event, bool isPress);
 
     // Engine
     graphics::Engine* lastPaintEngine_ = nullptr;

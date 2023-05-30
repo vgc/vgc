@@ -151,7 +151,7 @@ void LineEdit::resetSelectionInitialPair_() {
     mouseSelectionInitialPair_ = std::make_pair(position, position);
 }
 
-bool LineEdit::onMouseMove(MouseEvent* event) {
+bool LineEdit::onMouseMove(MouseMoveEvent* event) {
     if (mouseButton_ == MouseButton::Left) {
         geometry::Vec2f mousePosition = event->position();
         geometry::Vec2f mouseOffset = richText_->rect().pMin();
@@ -163,7 +163,7 @@ bool LineEdit::onMouseMove(MouseEvent* event) {
     return true;
 }
 
-bool LineEdit::onMousePress(MouseEvent* event) {
+bool LineEdit::onMousePress(MousePressEvent* event) {
     // Only support one mouse button at a time
     if (mouseButton_ != MouseButton::None) {
         return false;
@@ -237,7 +237,7 @@ bool LineEdit::onMousePress(MouseEvent* event) {
     return true;
 }
 
-bool LineEdit::onMouseRelease(MouseEvent* event) {
+bool LineEdit::onMouseRelease(MouseReleaseEvent* event) {
     // Only support one mouse button at a time
     if (mouseButton_ != event->button()) {
         return false;
@@ -282,7 +282,7 @@ bool LineEdit::onFocusOut(FocusReason reason) {
     return true;
 }
 
-bool LineEdit::onKeyPress(KeyEvent* event) {
+bool LineEdit::onKeyPress(KeyPressEvent* event) {
 
     using Op = graphics::RichTextMoveOperation;
 

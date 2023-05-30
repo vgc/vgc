@@ -255,7 +255,8 @@ void Window::mouseMoveEvent(QMouseEvent* event) {
     if (pressedTabletButtons_) {
         return;
     }
-    MouseEventPtr vgcEvent = fromQt(event);
+    MouseMoveEventPtr vgcEvent = MouseMoveEvent::create();
+    fromQt(event, vgcEvent.get());
     prepareMouseEvent(widget_.get(), vgcEvent.get(), this);
     event->setAccepted(mouseMoveEvent_(vgcEvent.get()));
 }
@@ -264,7 +265,8 @@ void Window::mousePressEvent(QMouseEvent* event) {
     // Reset scroll accumulator
     accumulatedScrollDelta_ = {};
     // Process event
-    MouseEventPtr vgcEvent = fromQt(event);
+    MousePressEventPtr vgcEvent = MousePressEvent::create();
+    fromQt(event, vgcEvent.get());
     MouseButton button = vgcEvent->button();
     if (pressedMouseButtons_.has(button)) {
         // Already pressed on mouse: ignore event.
@@ -285,7 +287,8 @@ void Window::mouseReleaseEvent(QMouseEvent* event) {
     // Reset scroll accumulator
     accumulatedScrollDelta_ = {};
     // Process event
-    MouseEventPtr vgcEvent = fromQt(event);
+    MouseReleaseEventPtr vgcEvent = MouseReleaseEvent::create();
+    fromQt(event, vgcEvent.get());
     MouseButton button = vgcEvent->button();
     if (!pressedMouseButtons_.has(button)) {
         // Not pressed on mouse: ignore event.
@@ -309,7 +312,8 @@ void Window::tabletEvent(QTabletEvent* event) {
     // Process event
     switch (event->type()) {
     case QEvent::TabletMove: {
-        MouseEventPtr vgcEvent = fromQt(event);
+        MouseMoveEventPtr vgcEvent = MouseMoveEvent::create();
+        fromQt(event, vgcEvent.get());
         prepareMouseEvent(widget_.get(), vgcEvent.get(), this);
         mouseMoveEvent_(vgcEvent.get());
         // Always accept to prevent Qt from retrying as a mouse event.
@@ -318,7 +322,8 @@ void Window::tabletEvent(QTabletEvent* event) {
         break;
     }
     case QEvent::TabletPress: {
-        MouseEventPtr vgcEvent = fromQt(event);
+        MousePressEventPtr vgcEvent = MousePressEvent::create();
+        fromQt(event, vgcEvent.get());
         MouseButton button = vgcEvent->button();
         if (pressedTabletButtons_.has(button)) {
             // Already pressed on tablet: ignore event.
@@ -339,7 +344,8 @@ void Window::tabletEvent(QTabletEvent* event) {
         break;
     }
     case QEvent::TabletRelease: {
-        MouseEventPtr vgcEvent = fromQt(event);
+        MouseReleaseEventPtr vgcEvent = MouseReleaseEvent::create();
+        fromQt(event, vgcEvent.get());
         MouseButton button = vgcEvent->button();
         if (!pressedTabletButtons_.has(button)) {
             // Not pressed on tablet: ignore event.
@@ -373,7 +379,8 @@ void Window::tabletEvent(QTabletEvent* event) {
 }
 
 void Window::wheelEvent(QWheelEvent* event) {
-    ScrollEventPtr vgcEvent = fromQt(event);
+    ScrollEventPtr vgcEvent = ScrollEvent::create();
+    fromQt(event, vgcEvent.get());
     geometry::Vec2f delta = vgcEvent->scrollDelta();
     std::array<Int, 2> scrollSteps = {};
     for (Int i = 0; i < 2; ++i) {
@@ -422,7 +429,7 @@ bool Window::isTabletInUse_() const {
            || timeSinceLastTableEvent_.elapsed() < tabletIdleDuration_;
 }
 
-bool Window::mouseMoveEvent_(MouseEvent* event) {
+bool Window::mouseMoveEvent_(MouseMoveEvent* event) {
     bool isHandled = false;
     Widget* mouseCaptor = widget_->mouseCaptor();
     if (!mouseCaptor && !widget_->isHovered()) {
@@ -443,7 +450,7 @@ bool Window::mouseMoveEvent_(MouseEvent* event) {
     return isHandled;
 }
 
-bool Window::mousePressEvent_(MouseEvent* event) {
+bool Window::mousePressEvent_(MousePressEvent* event) {
     bool isHandled = false;
     Widget* mouseCaptor = widget_->mouseCaptor();
     if (mouseCaptor) {
@@ -455,7 +462,7 @@ bool Window::mousePressEvent_(MouseEvent* event) {
     return isHandled;
 }
 
-bool Window::mouseReleaseEvent_(MouseEvent* event) {
+bool Window::mouseReleaseEvent_(MouseReleaseEvent* event) {
     bool isHandled = false;
     Widget* mouseCaptor = widget_->mouseCaptor();
     if (mouseCaptor) {
@@ -491,7 +498,8 @@ void Window::focusOutEvent(QFocusEvent* event) {
 
 void Window::keyPressEvent(QKeyEvent* event) {
 
-    KeyEventPtr vgcEvent = fromQt(event);
+    KeyPressEventPtr vgcEvent = KeyPressEvent::create();
+    fromQt(event, vgcEvent.get());
     Widget* keyboardCaptor = widget_->keyboardCaptor();
     bool isHandled = false;
     if (keyboardCaptor) {
@@ -521,7 +529,8 @@ void Window::keyPressEvent(QKeyEvent* event) {
 }
 
 void Window::keyReleaseEvent(QKeyEvent* event) {
-    KeyEventPtr vgcEvent = fromQt(event);
+    KeyReleaseEventPtr vgcEvent = KeyReleaseEvent::create();
+    fromQt(event, vgcEvent.get());
     Widget* keyboardCaptor = widget_->keyboardCaptor();
     bool isHandled = false;
     if (keyboardCaptor) {

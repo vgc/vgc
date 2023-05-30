@@ -48,9 +48,9 @@ public:
 
 protected:
     // Reimplementation of Widget virtual methods
-    bool onMouseMove(ui::MouseEvent* event) override;
-    bool onMousePress(ui::MouseEvent* event) override;
-    bool onMouseRelease(ui::MouseEvent* event) override;
+    bool onMouseMove(ui::MouseMoveEvent* event) override;
+    bool onMousePress(ui::MousePressEvent* event) override;
+    bool onMouseRelease(ui::MouseReleaseEvent* event) override;
 
     void onResize() override;
     void onPaintCreate(graphics::Engine* engine) override;

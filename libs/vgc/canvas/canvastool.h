@@ -73,9 +73,9 @@ protected:
 
     // Reimplementation of Widget virtual methods
     void onParentWidgetChanged(ui::Widget* newParent) override;
-    void preMouseMove(ui::MouseEvent* event) override;
-    void preMousePress(ui::MouseEvent* event) override;
-    void preMouseRelease(ui::MouseEvent* event) override;
+    void preMouseMove(ui::MouseMoveEvent* event) override;
+    void preMousePress(ui::MousePressEvent* event) override;
+    void preMouseRelease(ui::MouseReleaseEvent* event) override;
     geometry::Vec2f computePreferredSize() const override;
 
 private:

@@ -490,7 +490,7 @@ Widget* PanelArea::computeHoverChainChild(MouseEvent* event) const {
     return Widget::computeHoverChainChild(event);
 }
 
-void PanelArea::preMouseMove(MouseEvent* event) {
+void PanelArea::preMouseMove(MouseMoveEvent* event) {
     if (!isHoverLocked() && draggedSplitHandle_ == -1) {
         updateHoveredSplitHandle_(event->position());
     }
@@ -499,7 +499,7 @@ void PanelArea::preMouseMove(MouseEvent* event) {
     }
 }
 
-bool PanelArea::onMouseMove(MouseEvent* event) {
+bool PanelArea::onMouseMove(MouseMoveEvent* event) {
     if (draggedSplitHandle_ != -1) {
         continueDragging_(event->position());
         return true;
@@ -507,7 +507,7 @@ bool PanelArea::onMouseMove(MouseEvent* event) {
     return false;
 }
 
-bool PanelArea::onMousePress(MouseEvent* event) {
+bool PanelArea::onMousePress(MousePressEvent* event) {
     if (event->button() == ui::MouseButton::Left) {
         draggedSplitHandle_ = hoveredSplitHandle_;
         if (draggedSplitHandle_ != -1) {
@@ -518,7 +518,7 @@ bool PanelArea::onMousePress(MouseEvent* event) {
     return false;
 }
 
-bool PanelArea::onMouseRelease(MouseEvent* event) {
+bool PanelArea::onMouseRelease(MouseReleaseEvent* event) {
     if (event->button() == ui::MouseButton::Left) {
         if (draggedSplitHandle_ != -1) {
             draggedSplitHandle_ = -1;

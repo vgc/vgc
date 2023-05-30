@@ -114,7 +114,7 @@ bool Button::click(const geometry::Vec2f& pos) {
     }
 }
 
-bool Button::onMouseMove(MouseEvent* event) {
+bool Button::onMouseMove(MouseMoveEvent* event) {
     if (isPressed_) {
         if (rect().contains(event->position())) {
             if (!hasStyleClass(strings::pressed)) {
@@ -133,7 +133,7 @@ bool Button::onMouseMove(MouseEvent* event) {
     }
 }
 
-bool Button::onMousePress(MouseEvent* event) {
+bool Button::onMousePress(MousePressEvent* event) {
     if (event->button() == MouseButton::Left) {
         pressed().emit(this, event->position());
         addStyleClass(strings::pressed);
@@ -145,7 +145,7 @@ bool Button::onMousePress(MouseEvent* event) {
     }
 }
 
-bool Button::onMouseRelease(MouseEvent* event) {
+bool Button::onMouseRelease(MouseReleaseEvent* event) {
     if (isPressed_ && event->button() == MouseButton::Left) {
         released().emit(this, event->position());
         if (rect().contains(event->position())) {

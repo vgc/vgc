@@ -250,8 +250,8 @@ protected:
     // Reimplementation of Widget virtual methods
     void onParentWidgetChanged(Widget* newParent) override;
     void onWidgetRemoved(Widget* widget) override;
-    void preMouseMove(MouseEvent* event) override;
-    void preMousePress(MouseEvent* event) override;
+    void preMouseMove(MouseMoveEvent* event) override;
+    void preMousePress(MousePressEvent* event) override;
     void onMouseEnter() override;
     void onMouseLeave() override;
     void onVisible() override;

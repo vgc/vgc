@@ -134,9 +134,9 @@ public:
     void onPaintCreate(graphics::Engine* engine) override;
     void onPaintDraw(graphics::Engine* engine, PaintOptions options) override;
     void onPaintDestroy(graphics::Engine* engine) override;
-    bool onMouseMove(MouseEvent* event) override;
-    bool onMousePress(MouseEvent* event) override;
-    bool onMouseRelease(MouseEvent* event) override;
+    bool onMouseMove(MouseMoveEvent* event) override;
+    bool onMousePress(MousePressEvent* event) override;
+    bool onMouseRelease(MouseReleaseEvent* event) override;
     void onMouseEnter() override;
     void onMouseLeave() override;
 

@@ -173,9 +173,9 @@ protected:
 
 private:
     bool isTabletInUse_() const;
-    bool mouseMoveEvent_(MouseEvent* event);
-    bool mousePressEvent_(MouseEvent* event);
-    bool mouseReleaseEvent_(MouseEvent* event);
+    bool mouseMoveEvent_(MouseMoveEvent* event);
+    bool mousePressEvent_(MousePressEvent* event);
+    bool mouseReleaseEvent_(MouseReleaseEvent* event);
     bool mouseScrollEvent_(ScrollEvent* event);
 
     // ==================== Handle keyboard input =============================

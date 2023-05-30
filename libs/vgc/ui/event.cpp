@@ -18,13 +18,15 @@
 
 namespace vgc::ui {
 
-Event::Event()
-    : Object() {
+Event::Event(double timestamp, ModifierKeys modifiers)
+    : Object()
+    , timestamp_(timestamp)
+    , modifierKeys_(modifiers) {
 }
 
 /* static */
-EventPtr Event::create() {
-    return EventPtr(new Event());
+EventPtr Event::create(double timestamp, ModifierKeys modifiers) {
+    return EventPtr(new Event(timestamp, modifiers));
 }
 
 } // namespace vgc::ui

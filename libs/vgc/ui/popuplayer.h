@@ -67,7 +67,7 @@ protected:
     void onWidgetAdded(Widget* child, bool wasOnlyReordered) override;
     void onResize() override;
     Widget* computeHoverChainChild(MouseEvent* event) const override;
-    bool onMousePress(MouseEvent* event) override;
+    bool onMousePress(MousePressEvent* event) override;
 
 private:
     Widget* underlyingWidget_ = nullptr;

@@ -294,7 +294,7 @@ ScreenColorPickerButton::ScreenColorPickerButton(ui::Action* action)
     : Button(action, ui::FlexDirection::Row) {
 }
 
-bool ScreenColorPickerButton::onMousePress(ui::MouseEvent* event) {
+bool ScreenColorPickerButton::onMousePress(ui::MousePressEvent* event) {
     if (isPicking_) {
         return true;
     }
@@ -303,7 +303,7 @@ bool ScreenColorPickerButton::onMousePress(ui::MouseEvent* event) {
     }
 }
 
-bool ScreenColorPickerButton::onMouseMove(ui::MouseEvent* event) {
+bool ScreenColorPickerButton::onMouseMove(ui::MouseMoveEvent* event) {
     if (isPicking_) {
         hoveredColor_ = ui::colorUnderCursor();
         colorHovered().emit(hoveredColor_);
@@ -314,7 +314,7 @@ bool ScreenColorPickerButton::onMouseMove(ui::MouseEvent* event) {
     }
 }
 
-bool ScreenColorPickerButton::onMouseRelease(ui::MouseEvent* event) {
+bool ScreenColorPickerButton::onMouseRelease(ui::MouseReleaseEvent* event) {
     if (isPicking_) {
         colorClicked().emit(hoveredColor_);
         stopPicking_();
@@ -325,7 +325,7 @@ bool ScreenColorPickerButton::onMouseRelease(ui::MouseEvent* event) {
     }
 }
 
-bool ScreenColorPickerButton::onKeyPress(ui::KeyEvent* event) {
+bool ScreenColorPickerButton::onKeyPress(ui::KeyPressEvent* event) {
     if (isPicking_) {
         if (event->key() == ui::Key::Escape) {
             pickingCancelled().emit();
@@ -341,7 +341,7 @@ bool ScreenColorPickerButton::onKeyPress(ui::KeyEvent* event) {
     }
 }
 
-bool ScreenColorPickerButton::onKeyRelease(ui::KeyEvent* event) {
+bool ScreenColorPickerButton::onKeyRelease(ui::KeyReleaseEvent* event) {
     if (isPicking_) {
         return false;
     }
@@ -2062,7 +2062,7 @@ void ColorPaletteSelector::onPaintDestroy(graphics::Engine* engine) {
     triangles_.reset();
 }
 
-bool ColorPaletteSelector::onMouseMove(ui::MouseEvent* event) {
+bool ColorPaletteSelector::onMouseMove(ui::MouseMoveEvent* event) {
 
     const geometry::Vec2f& position = event->position();
 
@@ -2124,7 +2124,7 @@ bool ColorPaletteSelector::onMouseMove(ui::MouseEvent* event) {
     return true;
 }
 
-bool ColorPaletteSelector::onMousePress(ui::MouseEvent* event) {
+bool ColorPaletteSelector::onMousePress(ui::MousePressEvent* event) {
     if (isContinuous_) {
         geometry::Vec2f position = event->position();
         if (metrics_.saturationLightnessRect.contains(position)) {
@@ -2146,7 +2146,7 @@ bool ColorPaletteSelector::onMousePress(ui::MouseEvent* event) {
     }
 }
 
-bool ColorPaletteSelector::onMouseRelease(ui::MouseEvent* /*event*/) {
+bool ColorPaletteSelector::onMouseRelease(ui::MouseReleaseEvent* /*event*/) {
     scrubbedSelector_ = SelectorType::None;
     return true;
 }
@@ -2689,7 +2689,7 @@ Int computeTrackIndex(float position, float itemSize, float gap, float numTracks
 
 } // namespace
 
-bool ColorListView::onMouseMove(ui::MouseEvent* event) {
+bool ColorListView::onMouseMove(ui::MouseMoveEvent* event) {
 
     const Metrics& m = metrics_;
 
@@ -2717,7 +2717,7 @@ bool ColorListView::onMouseMove(ui::MouseEvent* event) {
     return true;
 }
 
-bool ColorListView::onMousePress(ui::MouseEvent* event) {
+bool ColorListView::onMousePress(ui::MousePressEvent* event) {
     if (event->button() == ui::MouseButton::Left) {
         isScrubbing_ = true;
         selectColorFromHovered_();
@@ -2728,7 +2728,7 @@ bool ColorListView::onMousePress(ui::MouseEvent* event) {
     }
 }
 
-bool ColorListView::onMouseRelease(ui::MouseEvent* event) {
+bool ColorListView::onMouseRelease(ui::MouseReleaseEvent* event) {
     if (event->button() == ui::MouseButton::Left) {
         isScrubbing_ = false;
         selectColorFromHovered_();

@@ -115,11 +115,31 @@ ModifierKeys fromQt(const Qt::KeyboardModifiers& modifiers) {
     return modifierKeys;
 }
 
-MouseEventPtr fromQt(QMouseEvent* event) {
+namespace {
+
+void transferEventData(QInputEvent* event, Event* vgcEvent) {
+    vgcEvent->setTimestamp(static_cast<double>(event->timestamp()) * 0.001);
+    vgcEvent->setModifierKeys(fromQt(event->modifiers()));
+}
+
+// In some cases, we do not want to use event->modifiers() or
+// QGuiApplication::keyboardModifiers() because they're sometimes incorrect,
+// this is for example the case for QTabletEvent (at least in Qt 5.6 and
+// Linux/X11), where they always return NoModifier.
+//
+void fixModifiers(Event* vgcEvent) {
+    vgcEvent->setModifierKeys(fromQt(QGuiApplication::queryKeyboardModifiers()));
+}
+
+} // namespace
+
+void fromQt(QMouseEvent* event, MouseEvent* vgcEvent) {
+
+    // Timestamp + Modifiers
+    transferEventData(event, vgcEvent);
 
     // Button
-    Qt::MouseButton qbutton = event->button();
-    MouseButton button = static_cast<MouseButton>(qbutton);
+    vgcEvent->setButton(static_cast<MouseButton>(event->button()));
 
     // Position
 #if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
@@ -127,22 +147,17 @@ MouseEventPtr fromQt(QMouseEvent* event) {
 #else
     QPointF p = event->position();
 #endif
-
-    // Modidier keys
-    ModifierKeys modifierKeys = fromQt(event->modifiers());
-
-    return MouseEvent::create(
-        button,
-        fromQtf(p),
-        modifierKeys,
-        static_cast<double>(event->timestamp()) * 0.001);
+    vgcEvent->setPosition(fromQtf(p));
 }
 
-MouseEventPtr fromQt(QTabletEvent* event) {
+void fromQt(QTabletEvent* event, MouseEvent* vgcEvent) {
+
+    // Timestamp + Modifiers
+    transferEventData(event, vgcEvent);
+    fixModifiers(vgcEvent);
 
     // Button
-    Qt::MouseButton qbutton = event->button();
-    MouseButton button = static_cast<MouseButton>(qbutton);
+    vgcEvent->setButton(static_cast<MouseButton>(event->button()));
 
     // Position
 #if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
@@ -150,26 +165,18 @@ MouseEventPtr fromQt(QTabletEvent* event) {
 #else
     QPointF p = event->position();
 #endif
+    vgcEvent->setPosition(fromQtf(p));
 
-    // Modidier keys
-    // Note: we don't use event->modifiers() or QGuiApplication::keyboardModifiers()
-    // because they're broken for tablet events; at least in Qt 5.6 and Linux/X11,
-    // they always returns NoModifier.
-    ModifierKeys modifierKeys = fromQt(QGuiApplication::queryKeyboardModifiers());
-
-    // Pressure
-    double pressure = event->pressure();
-
-    return MouseEvent::create(
-        button,
-        fromQtf(p),
-        modifierKeys,
-        static_cast<double>(event->timestamp()) * 0.001,
-        pressure,
-        true);
+    // Tablet + Pressure
+    vgcEvent->setTablet(true);
+    vgcEvent->setHasPressure(true);
+    vgcEvent->setPressure(event->pressure());
 }
 
-ScrollEventPtr fromQt(QWheelEvent* event) {
+void fromQt(QWheelEvent* event, ScrollEvent* vgcEvent) {
+
+    // Timestamp + Modifiers
+    transferEventData(event, vgcEvent);
 
     // Position
 #if QT_VERSION < QT_VERSION_CHECK(5, 14, 0)
@@ -177,38 +184,24 @@ ScrollEventPtr fromQt(QWheelEvent* event) {
 #else
     QPointF p = event->position();
 #endif
+    vgcEvent->setPosition(fromQtf(p));
 
-    // Modidier keys
-    // Note: we don't use event->modifiers() or QGuiApplication::keyboardModifiers()
-    // because they're broken for tablet events; at least in Qt 5.6 and Linux/X11,
-    // they always returns NoModifier.
-    ModifierKeys modifierKeys = fromQt(QGuiApplication::queryKeyboardModifiers());
-
+    // Delta
+    // Note: static_cast<Int> is equivalent to std::trunc then cast to Int.
     geometry::Vec2f delta = fromQtf(event->angleDelta()) / 120.f;
-
-    return ScrollEvent::create(
-        fromQtf(p),
-        delta,
-        // same as std::trunc to int
-        static_cast<Int>(delta.x()),
-        static_cast<Int>(delta.y()),
-        modifierKeys,
-        static_cast<double>(event->timestamp()) * 0.001);
+    vgcEvent->setScrollDelta(delta);
+    vgcEvent->setHorizontalSteps(static_cast<Int>(delta.x()));
+    vgcEvent->setVerticalSteps(static_cast<Int>(delta.y()));
 }
 
-KeyEventPtr fromQt(QKeyEvent* event) {
+void fromQt(QKeyEvent* event, KeyEvent* vgcEvent) {
 
-    // Key
-    int qkey = event->key();
-    Key key = static_cast<Key>(qkey);
+    // Timestamp + Modifiers
+    transferEventData(event, vgcEvent);
 
-    // Text
-    std::string text = event->text().toStdString();
-
-    // Modidier keys
-    ModifierKeys modifierKeys = fromQt(event->modifiers());
-
-    return KeyEvent::create(key, std::move(text), modifierKeys);
+    // Key + Text
+    vgcEvent->setKey(static_cast<Key>(event->key()));
+    vgcEvent->setText(event->text().toStdString());
 }
 
 // clang-format off

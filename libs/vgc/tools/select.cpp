@@ -39,7 +39,7 @@ inline constexpr float dragDeltaThreshold = 5;
 
 } // namespace
 
-bool Select::onMouseMove(ui::MouseEvent* event) {
+bool Select::onMouseMove(ui::MouseMoveEvent* event) {
 
     if (!isInAction_) {
         return false;
@@ -119,7 +119,7 @@ bool Select::onMouseMove(ui::MouseEvent* event) {
     return true;
 }
 
-bool Select::onMousePress(ui::MouseEvent* event) {
+bool Select::onMousePress(ui::MousePressEvent* event) {
 
     if (isInAction_) {
         // Prevent parent widget from doing an action
@@ -338,7 +338,7 @@ core::Id selectNewItem(
 
 } // namespace
 
-bool Select::onMouseRelease(ui::MouseEvent* event) {
+bool Select::onMouseRelease(ui::MouseReleaseEvent* event) {
 
     if (!isInAction_) {
         return false;

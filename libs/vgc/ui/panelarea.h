@@ -214,10 +214,10 @@ protected:
     void onMouseEnter() override;
     void onMouseLeave() override;
     Widget* computeHoverChainChild(MouseEvent* event) const override;
-    void preMouseMove(MouseEvent* event) override;
-    bool onMouseMove(MouseEvent* event) override;
-    bool onMousePress(MouseEvent* event) override;
-    bool onMouseRelease(MouseEvent* event) override;
+    void preMouseMove(MouseMoveEvent* event) override;
+    bool onMouseMove(MouseMoveEvent* event) override;
+    bool onMousePress(MousePressEvent* event) override;
+    bool onMouseRelease(MouseReleaseEvent* event) override;
     void onResize() override;
     void updateChildrenGeometry() override;
     void onPaintCreate(graphics::Engine* engine) override;

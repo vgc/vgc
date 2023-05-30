@@ -280,7 +280,7 @@ core::Array<core::Id> Canvas::computeRectangleSelectionCandidates(
     return result;
 }
 
-bool Canvas::onKeyPress(ui::KeyEvent* event) {
+bool Canvas::onKeyPress(ui::KeyPressEvent* event) {
 
     using geometry::CurveSamplingQuality;
 
@@ -357,7 +357,7 @@ inline constexpr float dragDeltaThreshold = 5;
 
 // Reimplementation of Widget virtual methods
 
-bool Canvas::onMouseMove(ui::MouseEvent* event) {
+bool Canvas::onMouseMove(ui::MouseMoveEvent* event) {
 
     if (!mousePressed_) {
         return false;
@@ -434,7 +434,7 @@ bool Canvas::onMouseMove(ui::MouseEvent* event) {
     return false;
 }
 
-bool Canvas::onMousePress(ui::MouseEvent* event) {
+bool Canvas::onMousePress(ui::MousePressEvent* event) {
 
     if (mousePressed_ || tabletPressed_) {
         return true;
@@ -470,7 +470,7 @@ bool Canvas::onMousePress(ui::MouseEvent* event) {
     return false;
 }
 
-bool Canvas::onMouseRelease(ui::MouseEvent* event) {
+bool Canvas::onMouseRelease(ui::MouseReleaseEvent* event) {
 
     if (!mousePressed_ || mouseButtonAtPress_ != event->button()) {
         return false;

@@ -529,7 +529,7 @@ void Menu::onWidgetRemoved(Widget* widget) {
     removeItem(widget);
 }
 
-void Menu::preMouseMove(MouseEvent* event) {
+void Menu::preMouseMove(MouseMoveEvent* event) {
     Widget* hcc = hoverChainChild();
     if (hcc && hcc->parent() != this) {
         return;
@@ -629,7 +629,7 @@ void Menu::preMouseMove(MouseEvent* event) {
     isFirstMoveSinceEnter_ = false;
 }
 
-void Menu::preMousePress(MouseEvent* event) {
+void Menu::preMousePress(MousePressEvent* event) {
     // Close everything if we click on an openable menu in a docked menu that
     // is already active.
     if (!isOpenAsPopup_ && subMenuPopup_) {

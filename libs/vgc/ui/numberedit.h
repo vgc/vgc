@@ -193,12 +193,12 @@ protected:
     // Reimplementation of Widget virtual methods
     void onMouseEnter() override;
     void onMouseLeave() override;
-    bool onMouseMove(MouseEvent* event) override;
-    bool onMousePress(MouseEvent* event) override;
-    bool onMouseRelease(MouseEvent* event) override;
+    bool onMouseMove(MouseMoveEvent* event) override;
+    bool onMousePress(MousePressEvent* event) override;
+    bool onMouseRelease(MouseReleaseEvent* event) override;
     bool onFocusIn(FocusReason reason) override;
     bool onFocusOut(FocusReason reason) override;
-    bool onKeyPress(KeyEvent* event) override;
+    bool onKeyPress(KeyPressEvent* event) override;
 
 private:
     // Current value
