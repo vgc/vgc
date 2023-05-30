@@ -50,7 +50,16 @@ public:
     // Destroys the root of the given obj if its refcount reaches zero. Does
     // nothing if obj == nullptr.
     //
-    static void decref(const Object* obj, Int64 k = 1);
+    // Using `void*` instead of `const Object*` makes it possible to call the
+    // destructor of an ObjPtr with just a forward declaration. This is useful
+    // for classes holding an ObjPtr<T> as data member with just a forward
+    // declaration of T: they would otherwise have to define a destructor in
+    // the .cpp file, after including the full definition of T. This design is
+    // still relatively safe since we do have a `const Object* obj` signature
+    // for incref(), which verifies that T derives from Object whenever we
+    // construct an ObjPtr<T>.
+    //
+    static void decref(void* obj, Int64 k = 1);
 };
 
 } // namespace detail
@@ -94,6 +103,9 @@ public:
     ///
     ObjPtr() noexcept
         : obj_(nullptr) {
+
+        // No-op, but verifies at compile time that T derives from Object.
+        detail::ObjPtrAccess::incref(obj_);
     }
 
     /// Creates an `ObjPtr<T>` managing the given object.
@@ -1354,7 +1366,8 @@ inline void ObjPtrAccess::incref(const Object* obj, Int64 k) {
     }
 }
 
-inline void ObjPtrAccess::decref(const Object* obj, Int64 k) {
+inline void ObjPtrAccess::decref(void* obj_, Int64 k) {
+    const Object* obj = static_cast<const Object*>(obj_);
     if (obj) {
         obj->refCount_ -= k;
         bool isRoot = (obj->parentObject_ == nullptr);
