@@ -544,14 +544,22 @@ void VacKeyVertex::computeJoin_() {
                 if (!isT0Normalizable) {
                     t0 = capDir;
                 }
-                else if (t0.dot(capDir) < 0) {
-                    t0 = -t0;
+                else {
+                    double proj = t0.dot(capDir);
+                    if (proj < 0) {
+                        // reflected opposite
+                        t0 = t0 - 2 * proj * capDir;
+                    }
                 }
                 if (!isT1Normalizable) {
                     t1 = capDir;
                 }
-                else if (t1.dot(capDir) < 0) {
-                    t1 = -t1;
+                else {
+                    double proj = t1.dot(capDir);
+                    if (proj < 0) {
+                        // reflected opposite
+                        t1 = t1 - 2 * proj * capDir;
+                    }
                 }
 
                 Int numPoints = 63;
