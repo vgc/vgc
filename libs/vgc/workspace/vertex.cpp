@@ -631,9 +631,7 @@ void VacKeyVertex::computeJoin_() {
                     }
                 }
                 else {
-                    // We want a strip in the direction of capDir.
-                    // It is not trivial since we have to use a
-                    // sweep-line like algorithm.
+                    // We want strips in the direction of capDir.
 
                     struct CrossSection {
                         Vec2d pos0;
