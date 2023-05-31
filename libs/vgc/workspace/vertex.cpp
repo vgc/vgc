@@ -529,7 +529,6 @@ void VacKeyVertex::computeJoin_() {
                 constexpr double oneThird = 1.0 / 3.0;
 
                 geometry::CurveSample joinSamplePrev = halfedgeData.joinPreviousSample_;
-                Vec2d cp = joinSample.position();
                 Vec2d sp0 = joinSample.sidePoint(0);
                 Vec2d sp1 = joinSample.sidePoint(1);
 
