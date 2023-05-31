@@ -504,6 +504,23 @@ struct CubicBezierData {
         if (!isWidthUniform) {
             uniformCatmullRomToBezierInPlace(halfwidths.data());
         }
+
+        // Set mirror tangents at endpoints.
+        bool isEndSegment = (i + 1) == (numPts - 1);
+        if (i == 0) {
+            if (!isEndSegment) {
+                Vec2d n = (positions[3] - positions[0]).orthogonalized().normalized();
+                Vec2d d = positions[2] - positions[3];
+                d = (2.0 * (n.dot(d)) * n) - d;
+                positions[1] = positions[0] + d;
+            }
+        }
+        else if (isEndSegment) {
+            Vec2d n = (positions[3] - positions[0]).orthogonalized().normalized();
+            Vec2d d = positions[1] - positions[0];
+            d = 2 * (n.dot(d)) * n - d;
+            positions[2] = positions[3] + d;
+        }
     }
 };
 
