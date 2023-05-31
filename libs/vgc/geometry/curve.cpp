@@ -510,6 +510,7 @@ struct CubicBezierData {
         bool isEndSegment = ((i + 1) == (numPts - 1));
         if (isStartSegment) {
             if (isEndSegment) {
+                // Special case if only one segment: linear parametrization
                 double u = 1.0 / 3;
                 double v = (1 - u);
                 positions[1] = v * positions[0] + u * positions[3];
