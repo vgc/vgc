@@ -601,10 +601,6 @@ void VacKeyVertex::computeJoin_() {
 
                 if (isStyleRadial) {
                     // constant S; radial gradient T, V
-                    Vec2d base = capDir * maxHalfwidth;
-                    bool previousIsSide0 = true;
-
-                    Int indexOfSep = 0;
 
                     for (Int i = splitIndex; i >= 0; --i) {
                         detail::EdgeJoinPatchSample& ps =
