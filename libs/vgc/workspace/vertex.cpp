@@ -16,7 +16,9 @@
 
 #include <vgc/workspace/vertex.h>
 
-#include <vgc/geometry/vec4f.h>
+#include <vgc/geometry/bezier.h>
+#include <vgc/geometry/vec2d.h>
+#include <vgc/geometry/vec3d.h>
 #include <vgc/graphics/detail/shapeutil.h>
 #include <vgc/workspace/colors.h>
 #include <vgc/workspace/edge.h>
@@ -370,7 +372,9 @@ void VacKeyVertex::computeJoin_() {
         }
 
         const geometry::CurveSampleArray& samples = edgeData->preJoinSamples();
-        if (samples.length() < 2) {
+        Int numSamples = samples.length();
+
+        if (numSamples < 2) {
             continue;
         }
 
@@ -380,15 +384,24 @@ void VacKeyVertex::computeJoin_() {
 
         const bool isReverse = he.isReverse();
         if (!isReverse) {
-            geometry::CurveSample sample = samples.first();
+            geometry::CurveSample sample = samples.getUnchecked(0);
             heData.halfwidths_ = sample.halfwidths();
             heData.joinSample_ = sample;
+            heData.joinPreviousSample_ = samples.getUnchecked(1);
         }
         else {
-            geometry::CurveSample sample = samples.last();
+            geometry::CurveSample sample = samples.getUnchecked(numSamples - 1);
             heData.halfwidths_[0] = sample.halfwidth(1);
             heData.halfwidths_[1] = sample.halfwidth(0);
-            heData.joinSample_ = sample;
+            heData.joinSample_ = geometry::CurveSample(
+                sample.position(), -sample.normal(), heData.halfwidths_, 0);
+            geometry::CurveSample previousSample = samples.getUnchecked(numSamples - 2);
+            geometry::Vec2d previousHw = previousSample.halfwidths();
+            heData.joinPreviousSample_ = geometry::CurveSample(
+                previousSample.position(),
+                -previousSample.normal(),
+                geometry::Vec2d(previousHw[1], previousHw[0]),
+                sample.s() - previousSample.s());
         }
     }
 
@@ -405,7 +418,10 @@ void VacKeyVertex::computeJoin_() {
         heData.patchCutLimits_ = cutLimitCoefficient * heData.halfwidths_;
     }
 
+    using geometry::CurveSample;
     using geometry::Vec2d;
+    using geometry::Vec3d;
+    using geometry::Vec3f;
 
     const Int numHalfedges = joinData.halfedgesFrameData_.length();
     if (numHalfedges == 0) {
@@ -422,83 +438,351 @@ void VacKeyVertex::computeJoin_() {
             double maxHalfwidth =
                 (std::max)(halfedgeData.halfwidths_[0], halfedgeData.halfwidths_[1]);
 
-            geometry::CurveSample joinSample = halfedgeData.joinSample_;
+            CurveSample joinSample = halfedgeData.joinSample_;
             Vec2d normal = halfedgeData.joinSample_.normal();
-            Vec2d dir = -halfedgeData.joinSample_.tangent();
-            if (halfedgeData.isReverse()) {
-                normal = -normal;
-                dir = -dir;
-            }
+            Vec2d capDir = -halfedgeData.joinSample_.tangent();
 
             detail::EdgeJoinPatch& patch =
                 halfedgeData.edgeData_->patches_[halfedgeData.isReverse() ? 1 : 0];
             patch.isCap = true;
 
+            patch.sideSamples[0].clear();
             patch.sideSamples[1].clear();
 
             Vec2d capOrigin = joinSample.position();
 
+            // hard-coded configuration (atm)
             bool isStyleRadial = true;
-            if (isStyleRadial) {
-                // constant S; radial gradient T, V
-                Vec2d base = dir * maxHalfwidth;
-                for (Int i = 0; i <= 32; ++i) {
-                    detail::EdgeJoinPatchSample& ps0 = patch.sideSamples[0].emplaceLast();
-                    detail::EdgeJoinPatchSample& ps1 = patch.sideSamples[1].emplaceLast();
+            bool isCircular = false;
 
-                    double a = core::pi * 0.5 * i / 32.f;
-                    double x = std::cos(a);
-                    double y = std::sin(a);
-                    double h0 = joinSample.halfwidth(0) * y;
-                    double h1 = joinSample.halfwidth(1) * y;
+            if (isCircular) {
+                if (isStyleRadial) {
+                    // constant S; radial gradient T, V
+                    Vec2d base = capDir * maxHalfwidth;
+                    for (Int i = 0; i <= 32; ++i) {
+                        detail::EdgeJoinPatchSample& ps0 =
+                            patch.sideSamples[0].emplaceLast();
+                        detail::EdgeJoinPatchSample& ps1 =
+                            patch.sideSamples[1].emplaceLast();
 
-                    Vec2d midPoint = capOrigin + x * base;
+                        double a = core::pi * 0.5 * i / 32.f;
+                        double x = std::cos(a);
+                        double y = std::sin(a);
+                        double h0 = joinSample.halfwidth(0) * y;
+                        double h1 = joinSample.halfwidth(1) * y;
 
-                    ps0.centerPoint = capOrigin;
-                    ps1.centerPoint = ps0.centerPoint;
-                    ps0.centerSTV = geometry::Vec3f(0, 0, 0);
-                    ps1.centerSTV = ps0.centerSTV;
+                        Vec2d midPoint = capOrigin + x * base;
 
-                    ps0.sidePoint = midPoint + h0 * normal;
-                    ps1.sidePoint = midPoint - h1 * normal;
-                    ps0.sideSTV = geometry::Vec3f(
-                        0,
-                        static_cast<float>((ps0.sidePoint - ps0.centerPoint).length()),
-                        1.f);
-                    ps1.sideSTV = geometry::Vec3f(
-                        0,
-                        static_cast<float>((ps1.sidePoint - ps1.centerPoint).length()),
-                        1.f);
+                        ps0.centerPoint = capOrigin;
+                        ps1.centerPoint = ps0.centerPoint;
+                        ps0.centerSTV = geometry::Vec3f(0, 0, 0);
+                        ps1.centerSTV = ps0.centerSTV;
+
+                        ps0.sidePoint = midPoint + h0 * normal;
+                        ps1.sidePoint = midPoint - h1 * normal;
+                        ps0.sideSTV = geometry::Vec3f(
+                            0,
+                            static_cast<float>(
+                                (ps0.sidePoint - ps0.centerPoint).length()),
+                            1.f);
+                        ps1.sideSTV = geometry::Vec3f(
+                            0,
+                            static_cast<float>(
+                                (ps1.sidePoint - ps1.centerPoint).length()),
+                            1.f);
+                    }
+                }
+                else {
+                    // constant S; directional gradient T, V
+                    patch.extensionS = static_cast<float>(maxHalfwidth);
+                    for (Int i = 0; i <= 32; ++i) {
+                        detail::EdgeJoinPatchSample& ps0 =
+                            patch.sideSamples[0].emplaceLast();
+                        detail::EdgeJoinPatchSample& ps1 =
+                            patch.sideSamples[1].emplaceLast();
+
+                        double a = core::pi * 0.5 * i / 32.f;
+                        double x = std::sin(a);
+                        double y = std::cos(a);
+                        double h0 = joinSample.halfwidth(0) * y;
+                        double h1 = joinSample.halfwidth(1) * y;
+                        double s = x * maxHalfwidth;
+                        float sf = static_cast<float>(s);
+
+                        Vec2d midPoint = capOrigin + capDir * s;
+
+                        ps0.centerPoint = midPoint;
+                        ps1.centerPoint = ps0.centerPoint;
+                        ps0.centerSTV = geometry::Vec3f(sf, 0, 0);
+                        ps1.centerSTV = ps0.centerSTV;
+
+                        ps0.sidePoint = midPoint + h0 * normal;
+                        ps1.sidePoint = midPoint - h1 * normal;
+                        ps0.sideSTV = geometry::Vec3f(
+                            sf, static_cast<float>(h0), static_cast<float>(y));
+                        ps1.sideSTV = geometry::Vec3f(
+                            sf, static_cast<float>(h1), static_cast<float>(y));
+                    }
                 }
             }
-            else {
-                // constant S; directional gradient T, V
-                patch.extensionS = static_cast<float>(maxHalfwidth);
-                for (Int i = 0; i <= 32; ++i) {
-                    detail::EdgeJoinPatchSample& ps0 = patch.sideSamples[0].emplaceLast();
-                    detail::EdgeJoinPatchSample& ps1 = patch.sideSamples[1].emplaceLast();
+            else { // !isCircular
+                constexpr double oneThird = 1.0 / 3.0;
 
-                    double a = core::pi * 0.5 * i / 32.f;
-                    double x = std::sin(a);
-                    double y = std::cos(a);
-                    double h0 = joinSample.halfwidth(0) * y;
-                    double h1 = joinSample.halfwidth(1) * y;
-                    double s = x * maxHalfwidth;
-                    float sf = static_cast<float>(s);
+                geometry::CurveSample joinSamplePrev = halfedgeData.joinPreviousSample_;
+                Vec2d cp = joinSample.position();
+                Vec2d sp0 = joinSample.sidePoint(0);
+                Vec2d sp1 = joinSample.sidePoint(1);
 
-                    Vec2d midPoint = capOrigin + dir * s;
+                bool isT0Normalizable = false;
+                bool isT1Normalizable = false;
+                Vec2d t0 = (sp0 - joinSamplePrev.sidePoint(0))
+                               .normalized(&isT0Normalizable, core::epsilon);
+                Vec2d t1 = (sp1 - joinSamplePrev.sidePoint(1))
+                               .normalized(&isT1Normalizable, core::epsilon);
+                Vec2d halfwidths = joinSample.halfwidths();
 
-                    ps0.centerPoint = midPoint;
-                    ps1.centerPoint = ps0.centerPoint;
-                    ps0.centerSTV = geometry::Vec3f(sf, 0, 0);
-                    ps1.centerSTV = ps0.centerSTV;
+                // fix-up tangents if there is a cusp
+                if (!isT0Normalizable) {
+                    t0 = capDir;
+                }
+                else if (t0.dot(capDir) < 0) {
+                    t0 = -t0;
+                }
+                if (!isT1Normalizable) {
+                    t1 = capDir;
+                }
+                else if (t1.dot(capDir) < 0) {
+                    t1 = -t1;
+                }
 
-                    ps0.sidePoint = midPoint + h0 * normal;
-                    ps1.sidePoint = midPoint - h1 * normal;
-                    ps0.sideSTV = geometry::Vec3f(
-                        sf, static_cast<float>(h0), static_cast<float>(y));
-                    ps1.sideSTV = geometry::Vec3f(
-                        sf, static_cast<float>(h1), static_cast<float>(y));
+                Int numPoints = 63;
+                std::array<const Vec2d, 4> controlPoints = {
+                    sp0,
+                    sp0 + t0 * (oneThird * (1 + capDir.dot(t0))) * 2.0 * halfwidths[0],
+                    sp1 + t1 * (oneThird * (1 + capDir.dot(t1))) * 2.0 * halfwidths[1],
+                    sp1};
+
+                geometry::Vec2dArray points;
+                points.reserve(numPoints + 1); // +1 for patch split sample
+
+                Int splitIndex = 0;
+                {
+                    Int i = 0;
+                    for (; i < numPoints; ++i) {
+                        double u = static_cast<double>(i + 1) / (numPoints + 1);
+                        Vec2d p =
+                            geometry::cubicBezierPosCasteljau<Vec2d>(controlPoints, u);
+                        Vec2d op = p - capOrigin;
+                        double side = op.dot(normal);
+                        if (side < 0) {
+                            splitIndex = i;
+                            const Vec2d d1 = capDir;
+                            const Vec2d d2 = (points.last() - p).normalized();
+                            double delta = d1.det(d2);
+                            if (std::abs(delta) > core::epsilon) {
+                                double inv_delta = 1 / delta;
+                                Vec2d pSplit = p + d2 * op.det(d1) * inv_delta;
+                                points.append(pSplit);
+                            }
+                            points.append(p);
+                            ++i;
+                            break;
+                        }
+                        points.append(p);
+                    }
+                    for (; i < numPoints; ++i) {
+                        double u = static_cast<double>(i + 1) / (numPoints + 1);
+                        Vec2d p =
+                            geometry::cubicBezierPosCasteljau<Vec2d>(controlPoints, u);
+                        points.append(p);
+                    }
+                }
+                numPoints = points.length();
+
+                if (isStyleRadial) {
+                    // constant S; radial gradient T, V
+                    Vec2d base = capDir * maxHalfwidth;
+                    bool previousIsSide0 = true;
+
+                    Int indexOfSep = 0;
+
+                    for (Int i = splitIndex; i >= 0; --i) {
+                        detail::EdgeJoinPatchSample& ps =
+                            patch.sideSamples[0].emplaceLast();
+                        ps.centerPoint = capOrigin;
+                        ps.centerSTV = geometry::Vec3f(0, 0, 0);
+                        ps.sidePoint = points[i];
+                        ps.sideSTV = geometry::Vec3f(
+                            0,
+                            static_cast<float>((ps.sidePoint - capOrigin).length()),
+                            1.f);
+                    }
+
+                    for (Int i = splitIndex; i < numPoints; ++i) {
+                        detail::EdgeJoinPatchSample& ps =
+                            patch.sideSamples[1].emplaceLast();
+                        ps.centerPoint = capOrigin;
+                        ps.centerSTV = geometry::Vec3f(0, 0, 0);
+                        ps.sidePoint = points[i];
+                        ps.sideSTV = geometry::Vec3f(
+                            0,
+                            static_cast<float>((ps.sidePoint - capOrigin).length()),
+                            1.f);
+                    }
+                }
+                else {
+                    // We want a strip in the direction of capDir.
+                    // It is not trivial since we have to use a
+                    // sweep-line like algorithm.
+
+                    struct CrossSection {
+                        Vec2d pos0;
+                        Vec2d pos1;
+                        double s;
+                        double t0;
+                        double t1;
+                    };
+
+                    double minS = 0;
+                    Int minSIndex = 0;
+                    core::Array<CrossSection> crossSections(numPoints, core::noInit);
+                    for (Int i = 0; i < numPoints; ++i) {
+                        Vec2d p = points[i];
+                        Vec2d d = p - capOrigin;
+                        double s = -d.dot(capDir);
+                        crossSections[i].pos0 = p;
+                        crossSections[i].s = s;
+                        crossSections[i].t0 = d.dot(normal);
+                        if (s < minS) {
+                            minSIndex = i;
+                            minS = s;
+                        }
+                    }
+                    crossSections[splitIndex].t0 = 0;
+
+                    // complete the cross sections by computing the point on the other side
+                    {
+                        CrossSection cs1 = {sp1, {}, 0, halfwidths[1], 0};
+                        Int i2 = numPoints - 1;
+                        for (Int i = 0; i < minSIndex; ++i) {
+                            while (crossSections[i2].s > crossSections[i].s) {
+                                cs1 = crossSections[i2--];
+                            }
+                            const CrossSection& cs2 = crossSections[i2];
+                            double t = (crossSections[i].s - cs1.s) / (cs2.s - cs1.s);
+                            double ot = 1 - t;
+                            crossSections[i].pos1 = ot * cs1.pos0 + t * cs2.pos0;
+                            crossSections[i].t1 = ot * cs1.t0 + t * cs2.t0;
+                        }
+                        crossSections[minSIndex].pos1 = crossSections[minSIndex].pos0;
+                        crossSections[minSIndex].t1 = crossSections[minSIndex].t0;
+                        cs1 = {sp0, {}, 0, halfwidths[0], 0};
+                        i2 = 0;
+                        for (Int i = numPoints - 1; i > minSIndex; --i) {
+                            while (crossSections[i2].s > crossSections[i].s) {
+                                cs1 = crossSections[i2++];
+                            }
+                            crossSections[i].pos1 = crossSections[i].pos0;
+                            crossSections[i].t1 = crossSections[i].t0;
+                            const CrossSection& cs2 = crossSections[i2];
+                            double t = (crossSections[i].s - cs1.s) / (cs2.s - cs1.s);
+                            double ot = 1 - t;
+                            crossSections[i].pos0 = ot * cs1.pos0 + t * cs2.pos0;
+                            crossSections[i].t0 = ot * cs1.t0 + t * cs2.t0;
+                        }
+                    }
+
+                    // remove half the cross sections on the "small" side
+                    double joinWidth = halfwidths[0] + halfwidths[1];
+                    bool isSortedInReverseOrder = false;
+                    if (halfwidths[1] + crossSections[minSIndex].t0 > joinWidth * 0.5) {
+                        crossSections.removeFirst(minSIndex);
+                    }
+                    else {
+                        crossSections.removeRange(minSIndex + 1, crossSections.length());
+                        isSortedInReverseOrder = true;
+                    }
+
+                    // create patches
+
+                    auto appendPatchSamplesFromCrossSection =
+                        [&](const CrossSection& cs) {
+                            //
+                            double t0 = std::abs(cs.t0);
+                            double t1 = std::abs(cs.t1);
+                            float s = static_cast<float>(cs.s);
+                            Vec3f stv0(
+                                s,
+                                static_cast<float>(t0),
+                                static_cast<float>(t0 / halfwidths[0]));
+                            Vec3f stv1(
+                                s,
+                                static_cast<float>(t1),
+                                static_cast<float>(t1 / halfwidths[1]));
+                            Vec2d splitPoint = {};
+                            if (cs.t0 >= 0) {
+                                detail::EdgeJoinPatchSample& ps =
+                                    patch.sideSamples[0].emplaceLast();
+                                ps.sidePoint = cs.pos0;
+                                ps.sideSTV = stv0;
+                                if (cs.t1 < 0) {
+                                    splitPoint = capOrigin - cs.s * capDir;
+                                    ps.centerPoint = splitPoint;
+                                    ps.centerSTV = Vec3f(s, 0.f, 0.f);
+                                }
+                                else {
+                                    if (cs.t1 == 0) {
+                                        splitPoint = cs.pos1;
+                                    }
+                                    ps.centerPoint = cs.pos1;
+                                    ps.centerSTV = stv1;
+                                }
+                            }
+                            if (cs.t1 <= 0) {
+                                detail::EdgeJoinPatchSample& ps =
+                                    patch.sideSamples[1].emplaceLast();
+                                ps.sidePoint = cs.pos1;
+                                ps.sideSTV = stv1;
+                                if (cs.t0 > 0) {
+                                    // splitPoint is already computed.
+                                    ps.centerPoint = splitPoint;
+                                    ps.centerSTV = Vec3f(s, 0.f, 0.f);
+                                }
+                                else {
+                                    ps.centerPoint = cs.pos0;
+                                    ps.centerSTV = stv0;
+                                }
+                            }
+                        };
+
+                    if (isSortedInReverseOrder) {
+                        auto it = crossSections.rbegin();
+                        for (; it != crossSections.rend(); ++it) {
+                            const CrossSection& cs = *it;
+                            appendPatchSamplesFromCrossSection(cs);
+                        }
+                    }
+                    else {
+                        for (const CrossSection& cs : crossSections) {
+                            appendPatchSamplesFromCrossSection(cs);
+                        }
+                    }
+                }
+
+                // add patch-samples at join
+                {
+                    detail::EdgeJoinPatchSample& ps = patch.sideSamples[0].emplaceLast();
+                    ps.centerPoint = capOrigin;
+                    ps.sidePoint = sp0;
+                    ps.sideSTV[1] = static_cast<float>(halfwidths[0]);
+                    ps.sideSTV[2] = 1.f;
+                }
+                {
+                    detail::EdgeJoinPatchSample& ps = patch.sideSamples[1].emplaceLast();
+                    ps.centerPoint = capOrigin;
+                    ps.sidePoint = sp1;
+                    ps.sideSTV[1] = static_cast<float>(halfwidths[1]);
+                    ps.sideSTV[2] = 1.f;
                 }
             }
         }
