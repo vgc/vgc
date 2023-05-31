@@ -534,10 +534,10 @@ void VacKeyVertex::computeJoin_() {
 
                 bool isT0Normalizable = false;
                 bool isT1Normalizable = false;
-                Vec2d t0 = (sp0 - joinSamplePrev.sidePoint(0))
-                               .normalized(&isT0Normalizable, core::epsilon);
-                Vec2d t1 = (sp1 - joinSamplePrev.sidePoint(1))
-                               .normalized(&isT1Normalizable, core::epsilon);
+                Vec2d t0 =
+                    (sp0 - joinSamplePrev.sidePoint(0)).normalized(&isT0Normalizable);
+                Vec2d t1 =
+                    (sp1 - joinSamplePrev.sidePoint(1)).normalized(&isT1Normalizable);
                 Vec2d halfwidths = joinSample.halfwidths();
 
                 // fix-up tangents if there is a cusp
