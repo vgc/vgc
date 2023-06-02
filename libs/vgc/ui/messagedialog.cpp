@@ -156,6 +156,24 @@ void MessageDialog::createButtonsIfNotCreated_() {
     }
 }
 
+namespace {
+
+namespace commands {
+
+// XXX This could be done directly by button
+//
+VGC_UI_DEFINE_COMMAND(
+    clickButton,
+    "ui.messageDialog.clickButton",
+    CommandType::Trigger,
+    "Click Button",
+    ShortcutContext::Widget,
+    Shortcut())
+
+} // namespace commands
+
+} // namespace
+
 Action* MessageDialog::addButton_(std::string_view text) {
     if (content_) {
 
@@ -166,7 +184,7 @@ Action* MessageDialog::addButton_(std::string_view text) {
         // How to assign shortcuts? (e.g., Enter key for OK, etc.).
         //
         createButtonsIfNotCreated_();
-        ActionPtr action = Action::create(text);
+        ActionPtr action = Action::create(commands::clickButton, text);
         actions_.append(action);
         buttons_->createChild<Button>(action.get());
         updateSize_();

@@ -44,6 +44,18 @@ FlexDirection orthoDir(FlexDirection dir) {
 }
 */
 
+namespace commands {
+
+VGC_UI_DEFINE_COMMAND(
+    openMenu,
+    "ui.menu.open",
+    CommandType::Trigger,
+    "Open Menu",
+    ShortcutContext::Widget,
+    Shortcut())
+
+}
+
 } // namespace
 
 MenuItem::MenuItem(Action* action, MenuButton* button) noexcept
@@ -61,7 +73,7 @@ Menu::Menu(std::string_view title)
     : Flex(FlexDirection::Column, FlexWrap::NoWrap) {
 
     addStyleClass(strings::Menu);
-    action_ = createTriggerAction(title);
+    action_ = createTriggerAction(commands::openMenu, title);
     action_->isMenu_ = true;
     action_->triggered().connect(onSelfActionTriggeredSlot_());
 }

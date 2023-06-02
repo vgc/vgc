@@ -28,9 +28,13 @@ namespace vgc::ui {
 /// \enum vgc::ui::ShortcutContext
 /// \brief Describes in what context a shortcut is active.
 ///
+/// This describes whether a shortcut is active application-wide, or only when
+/// the action is in the active window, or only when the action is owned by a
+/// widget that has the keyboard focus.
+///
 enum class ShortcutContext : UInt8 {
 
-    /// The shortuct is active application-wide.
+    /// The shortcut is active application-wide.
     ///
     Application,
 

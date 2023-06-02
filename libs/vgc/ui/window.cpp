@@ -1144,7 +1144,7 @@ void Window::initEngine_() {
 
 namespace {
 
-bool isWindowShorctut_(Action* action) {
+bool isWindowShortcut_(Action* action) {
 
     // For now, we store both application-wide and window-wide shortcuts in the
     // Window's shortcut map. Later, we may want to store application-wide
@@ -1158,7 +1158,7 @@ bool isWindowShorctut_(Action* action) {
 
 void Window::addShortcuts_(Widget* widget) {
     for (Action* action : widget->actions()) {
-        addShorctut_(action);
+        addShortcut_(action);
     }
     for (Widget* child : widget->children()) {
         addShortcuts_(child);
@@ -1174,8 +1174,8 @@ void Window::removeShortcuts_(Widget* widget) {
     }
 }
 
-void Window::addShorctut_(Action* action) {
-    if (!isWindowShorctut_(action)) {
+void Window::addShortcut_(Action* action) {
+    if (!isWindowShortcut_(action)) {
         return;
     }
     Shortcut shortcut = action->shortcut();
@@ -1199,7 +1199,7 @@ void Window::addShorctut_(Action* action) {
 }
 
 void Window::removeShortcut_(Action* action) {
-    if (!isWindowShorctut_(action)) {
+    if (!isWindowShortcut_(action)) {
         return;
     }
     Shortcut shortcut = action->shortcut();

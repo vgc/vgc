@@ -877,7 +877,7 @@ bool Widget::handleMousePressActions_(MouseEvent* event) {
 
         // Collect MouseClick actions
         for (Action* action : widget->actions()) {
-            if (action->type() == ActionType::MouseClick
+            if (action->type() == CommandType::MouseClick
                 && action->shortcut().type() == ShortcutType::Mouse
                 && action->shortcut().mouseButton() == button
                 && action->shortcut().modifiers() == modifiers) {
@@ -890,7 +890,7 @@ bool Widget::handleMousePressActions_(MouseEvent* event) {
 
         // Collect MouseDrag actions
         for (Action* action : widget->actions()) {
-            if (action->type() == ActionType::MouseDrag
+            if (action->type() == CommandType::MouseDrag
                 && action->shortcut().type() == ShortcutType::Mouse
                 && action->shortcut().mouseButton() == button
                 && action->shortcut().modifiers() == modifiers) {

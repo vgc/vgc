@@ -33,16 +33,31 @@ namespace options {
 
 ui::NumberSetting* sculptRadius() {
     static ui::NumberSettingPtr setting = createDecimalNumberSetting(
-        ui::settings::session(),
-        "tools.sculpt.sculptRadius",
-        "Sculpt Radius",
-        20,
-        0,
-        1000);
+        ui::settings::session(), "tools.sculpt.radius", "Sculpt Radius", 20, 0, 1000);
     return setting.get();
 }
 
 } // namespace options
+
+namespace commands {
+
+VGC_UI_DEFINE_COMMAND(
+    grab,
+    "tools.sculpt.grab",
+    ui::CommandType::MouseDrag,
+    "Sculpt Grab",
+    ui::ShortcutContext::Widget,
+    ui::Shortcut(ui::ModifierKey::None, ui::MouseButton::Left))
+
+VGC_UI_DEFINE_COMMAND(
+    editRadius,
+    "tools.sculpt.editRadius",
+    ui::CommandType::MouseDrag,
+    "Edit Sculpt Radius",
+    ui::ShortcutContext::Widget,
+    ui::Shortcut(ui::ModifierKey::Ctrl, ui::MouseButton::Left))
+
+} // namespace commands
 
 VGC_DECLARE_OBJECT(SculptGrabAction);
 
@@ -55,11 +70,7 @@ protected:
     /// Please use `SculptGrabAction::create()` instead.
     ///
     SculptGrabAction()
-        : ui::Action(
-            ui::ActionType::MouseDrag,
-            "Sculpt Grab",
-            ui::Shortcut(ui::ModifierKey::None, ui::MouseButton::Left),
-            ui::ShortcutContext::Widget) {
+        : ui::Action(commands::grab) {
     }
 
 public:
@@ -240,11 +251,7 @@ protected:
     /// Please use `EditSculptRadiusAction::create()` instead.
     ///
     EditSculptRadiusAction()
-        : ui::Action(
-            ui::ActionType::MouseDrag,
-            "Edit Sculpt Radius",
-            ui::Shortcut(ui::ModifierKey::Ctrl, ui::MouseButton::Left),
-            ui::ShortcutContext::Widget) {
+        : ui::Action(commands::editRadius) {
     }
 
 public:
