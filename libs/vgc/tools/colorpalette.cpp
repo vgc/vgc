@@ -41,25 +41,69 @@ namespace vgc::tools {
 
 namespace {
 
-core::Color initialColor(0.416f, 0.416f, 0.918f);
-core::Color cursorOuterColor(0.15f, 0.2f, 0.3f);
-core::Color cursorInnerColor(1.0f, 1.0f, 1.0f);
+const core::Color initialColor(0.416f, 0.416f, 0.918f);
+const core::Color cursorOuterColor(0.15f, 0.2f, 0.3f);
+const core::Color cursorInnerColor(1.0f, 1.0f, 1.0f);
+
+namespace commands {
+
+VGC_UI_DEFINE_COMMAND(
+    pickScreenColor,
+    "colors.pickScreenColor",
+    ui::CommandType::Trigger,
+    "Pick Screen Color",
+    ui::ShortcutContext::Window,
+    ui::Shortcut(ui::ModifierKey::None, ui::Key::P))
+
+VGC_UI_DEFINE_COMMAND(
+    addToPalette,
+    "colors.addToPalette",
+    ui::CommandType::Trigger,
+    "Add to Palette",
+    ui::ShortcutContext::Window,
+    ui::Shortcut())
+
+VGC_UI_DEFINE_COMMAND(
+    removeFromPalette,
+    "colors.removeFromPalette",
+    ui::CommandType::Trigger,
+    "Remove from Palette",
+    ui::ShortcutContext::Window,
+    ui::Shortcut())
+
+VGC_UI_DEFINE_COMMAND(
+    stepsMode,
+    "colors.stepsMode",
+    ui::CommandType::Trigger,
+    "Steps Mode",
+    ui::ShortcutContext::Window,
+    ui::Shortcut())
+
+VGC_UI_DEFINE_COMMAND(
+    continuousMode,
+    "colors.continuousMode",
+    ui::CommandType::Trigger,
+    "Continuous Mode",
+    ui::ShortcutContext::Window,
+    ui::Shortcut())
+
+} // namespace commands
 
 namespace strings_ {
 
-core::StringId horizontal("horizontal");
-core::StringId first("first");
-core::StringId last("last");
-core::StringId not_first("not-first");
-core::StringId not_last("not-last");
-core::StringId steps("steps");
-core::StringId rgb("rgb");
-core::StringId hsl("hsl");
-core::StringId hex("hex");
-core::StringId button_group("button-group");
-core::StringId field_group("field-group");
-core::StringId field_label("field-label");
-core::StringId field_row("field-row");
+const core::StringId horizontal("horizontal");
+const core::StringId first("first");
+const core::StringId last("last");
+const core::StringId not_first("not-first");
+const core::StringId not_last("not-last");
+const core::StringId steps("steps");
+const core::StringId rgb("rgb");
+const core::StringId hsl("hsl");
+const core::StringId hex("hex");
+const core::StringId button_group("button-group");
+const core::StringId field_group("field-group");
+const core::StringId field_label("field-label");
+const core::StringId field_row("field-row");
 
 } // namespace strings_
 
@@ -281,17 +325,19 @@ void ScreenColorPickerButton::stopPicking_() {
     pickingStopped().emit();
 }
 
-ScreenColorPickerButtonPtr ScreenColorPickerButton::create(std::string_view name) {
+// TODO: This should be action implemented as an action
+//
+ScreenColorPickerButton::ScreenColorPickerButton()
+    : Button(nullptr, ui::FlexDirection::Row) {
+}
+
+ScreenColorPickerButtonPtr ScreenColorPickerButton::create() {
     ui::Action* action = nullptr;
-    ScreenColorPickerButtonPtr button = new ScreenColorPickerButton(action);
-    action = button->createTriggerAction(name);
+    ScreenColorPickerButtonPtr button = new ScreenColorPickerButton();
+    action = button->createTriggerAction(commands::pickScreenColor);
     button->setAction(action);
     action->triggered().connect(button->startPickingSlot_());
     return button;
-}
-
-ScreenColorPickerButton::ScreenColorPickerButton(ui::Action* action)
-    : Button(action, ui::FlexDirection::Row) {
 }
 
 bool ScreenColorPickerButton::onMousePress(ui::MousePressEvent* event) {
@@ -430,8 +476,13 @@ void createOneLineEdit_(
     addFirstLastStyleClasses_({a});
 }
 
-ui::Button* createCheckableButton_(ui::Widget* parent, std::string_view text) {
-    ui::Action* action = parent->createTriggerAction(text);
+ui::Button* createCheckableButton_(
+    ui::Widget* parent,
+    core::StringId commandId,
+    std::string_view text) {
+
+    ui::Action* action = parent->createTriggerAction(commandId);
+    action->setText(text);
     action->setCheckable(true);
     ui::Button* res = parent->createChild<ui::Button>(action);
     return res;
@@ -448,8 +499,9 @@ ColorPalette::ColorPalette()
     // Continuous vs. Steps
     ui::Row* stepsModeRow = createChild<ui::Row>();
     stepsModeRow->addStyleClass(strings_::field_group);
-    stepsButton_ = createCheckableButton_(stepsModeRow, "Steps");
-    continuousButton_ = createCheckableButton_(stepsModeRow, "Continuous");
+    stepsButton_ = createCheckableButton_(stepsModeRow, commands::stepsMode, "Steps");
+    continuousButton_ =
+        createCheckableButton_(stepsModeRow, commands::continuousMode, "Continuous");
     addFirstLastStyleClasses_({stepsButton_, continuousButton_});
     stepsActionGroup_ = ui::ActionGroup::create(ui::CheckPolicy::ExactlyOne);
     stepsActionGroup_->addAction(stepsButton_->action());
@@ -475,15 +527,16 @@ ColorPalette::ColorPalette()
     createOneLineEdit_(this, strings_::hex, "Hex:", hexEdit_);
 
     // Pick screen
-    ScreenColorPickerButton* pickScreenButton =
-        createChild<ScreenColorPickerButton>("Pick Screen Color");
+    ScreenColorPickerButton* pickScreenButton = createChild<ScreenColorPickerButton>();
 
     // Palette
     ui::Row* paletteButtons = createChild<ui::Row>();
     paletteButtons->addStyleClass(strings_::field_row);
-    ui::Action* addToPaletteAction = createTriggerAction("Add to Palette");
+    ui::Action* addToPaletteAction = createTriggerAction(commands::addToPalette);
     paletteButtons->createChild<ui::Button>(addToPaletteAction);
-    ui::Action* removeFromPaletteAction = createTriggerAction("-");
+    ui::Action* removeFromPaletteAction =
+        createTriggerAction(commands::removeFromPalette);
+    removeFromPaletteAction->setText("-");
     paletteButtons->createChild<ui::Button>(removeFromPaletteAction);
     colorListView_ = createChild<ColorListView>();
 

@@ -38,6 +38,60 @@ using vgc::UInt32;
 
 VGC_DECLARE_OBJECT(UiTestApplication);
 
+namespace {
+
+namespace commands {
+
+using Shortcut = ui::Shortcut;
+using Key = ui::Key;
+
+constexpr ui::ModifierKey ctrl = ui::ModifierKey::Ctrl;
+
+#define DEFINE_MENU_COMMAND(var, id, name, shortcut)                                     \
+    VGC_UI_DEFINE_COMMAND(                                                               \
+        var, id, ui::CommandType::Trigger, name, ui::ShortcutContext::Window, shortcut)
+
+DEFINE_MENU_COMMAND(
+    createAction,
+    "uitest.createActionInTestMenu",
+    "Create action in Test menu",
+    Shortcut(ctrl, Key::A))
+
+DEFINE_MENU_COMMAND(
+    createMenu,
+    "uitest.createMenuInMenuBar",
+    "Create menu in menubar",
+    Shortcut(ctrl, Key::M))
+
+DEFINE_MENU_COMMAND(hello, "uitest.hello", "Hello", Shortcut())
+
+DEFINE_MENU_COMMAND(_1_1, "uitest.1.1", "Action #1.1", Shortcut(ctrl, Key::G))
+DEFINE_MENU_COMMAND(_1_2, "uitest.1.2", "Action #1.2", Shortcut(ctrl, Key::L))
+DEFINE_MENU_COMMAND(_1_3, "uitest.1.3", "Action #1.3", Shortcut())
+DEFINE_MENU_COMMAND(_1_4, "uitest.1.4", "Action #1.4", Shortcut())
+DEFINE_MENU_COMMAND(_1_5, "uitest.1.5", "Action #1.5", Shortcut())
+DEFINE_MENU_COMMAND(_1_6, "uitest.1.6", "Action #1.6", Shortcut())
+DEFINE_MENU_COMMAND(_1_7, "uitest.1.7", "Action #1.7", Shortcut())
+
+DEFINE_MENU_COMMAND(_1_8_1, "uitest.1.8.1", "Action #1.8.1", Shortcut())
+DEFINE_MENU_COMMAND(_1_8_2, "uitest.1.8.2", "Action #1.8.2", Shortcut())
+DEFINE_MENU_COMMAND(_1_8_3, "uitest.1.8.3", "Action #1.8.3", Shortcut())
+DEFINE_MENU_COMMAND(_1_8_4, "uitest.1.8.4", "Action #1.8.4", Shortcut())
+DEFINE_MENU_COMMAND(_1_8_5, "uitest.1.8.5", "Action #1.8.5", Shortcut())
+DEFINE_MENU_COMMAND(_1_8_6, "uitest.1.8.6", "Action #1.8.6", Shortcut())
+DEFINE_MENU_COMMAND(_1_8_7, "uitest.1.8.7", "Action #1.8.7", Shortcut())
+
+DEFINE_MENU_COMMAND(_2_1, "uitest.2.1", "Action #2.1", Shortcut(ctrl, Key::F))
+DEFINE_MENU_COMMAND(_2_2, "uitest.2.2", "Action #2.2", Shortcut(ctrl, Key::K))
+
+DEFINE_MENU_COMMAND(_3_1, "uitest.action.3.1", "Action #3.1", Shortcut())
+
+DEFINE_MENU_COMMAND(openPopup, "uitest.openPopup", "Open Popup", Shortcut())
+DEFINE_MENU_COMMAND(maybeQuit, "uitest.maybeQuit", "Maybe Quit", Shortcut())
+
+} // namespace commands
+} // namespace
+
 class UiTestApplication : public app::CanvasApplication {
     VGC_OBJECT(UiTestApplication, app::CanvasApplication)
 
@@ -71,18 +125,16 @@ private:
 
         testMenu_ = menuBar()->createSubMenu("Test");
 
-        Action* actionCreateAction = parent->createTriggerAction(
-            "Create action in Test menu", Shortcut(ModifierKey::Ctrl, Key::A));
+        Action* actionCreateAction = parent->createTriggerAction(commands::createAction);
         actionCreateAction->triggered().connect([this]() {
-            Action* action = this->testMenu_->createTriggerAction("Hello");
+            Action* action = this->testMenu_->createTriggerAction(commands::hello);
             this->testMenu_->addItem(action);
         });
 
-        Action* actionCreateMenu = parent->createTriggerAction(
-            "Create menu in menubar", Shortcut(ModifierKey::Ctrl, Key::M));
+        Action* actionCreateMenu = parent->createTriggerAction(commands::createMenu);
         actionCreateMenu->triggered().connect([this]() {
             Menu* menu = this->menuBar()->createSubMenu("Test 2");
-            Action* action = menu->createTriggerAction("Hello");
+            Action* action = menu->createTriggerAction(commands::hello);
             menu->addItem(action);
         });
 
@@ -92,29 +144,27 @@ private:
         Menu* menu2 = testMenu_->createSubMenu("Menu 2");
         Menu* menu3 = testMenu_->createSubMenu("Menu 3");
 
-        menu1->addItem(parent->createTriggerAction("Action #1.1", Shortcut({}, Key::G)));
-        menu1->addItem(parent->createTriggerAction(
-            "Action #1.2", Shortcut(ModifierKey::Ctrl, Key::L)));
-        menu1->addItem(parent->createTriggerAction("Action #1.3"));
-        menu1->addItem(parent->createTriggerAction("Action #1.4"));
-        menu1->addItem(parent->createTriggerAction("Action #1.5"));
-        menu1->addItem(parent->createTriggerAction("Action #1.6"));
-        menu1->addItem(parent->createTriggerAction("Action #1.7"));
+        menu1->addItem(parent->createTriggerAction(commands::_1_1));
+        menu1->addItem(parent->createTriggerAction(commands::_1_2));
+        menu1->addItem(parent->createTriggerAction(commands::_1_3));
+        menu1->addItem(parent->createTriggerAction(commands::_1_4));
+        menu1->addItem(parent->createTriggerAction(commands::_1_5));
+        menu1->addItem(parent->createTriggerAction(commands::_1_6));
+        menu1->addItem(parent->createTriggerAction(commands::_1_7));
         Menu* menu1b = menu1->createSubMenu("Menu 1.8");
 
-        menu1b->addItem(parent->createTriggerAction("Action #1.8.1"));
-        menu1b->addItem(parent->createTriggerAction("Action #1.8.2"));
-        menu1b->addItem(parent->createTriggerAction("Action #1.8.3"));
-        menu1b->addItem(parent->createTriggerAction("Action #1.8.4"));
-        menu1b->addItem(parent->createTriggerAction("Action #1.8.5"));
-        menu1b->addItem(parent->createTriggerAction("Action #1.8.6"));
-        menu1b->addItem(parent->createTriggerAction("Action #1.8.7"));
+        menu1b->addItem(parent->createTriggerAction(commands::_1_8_1));
+        menu1b->addItem(parent->createTriggerAction(commands::_1_8_2));
+        menu1b->addItem(parent->createTriggerAction(commands::_1_8_3));
+        menu1b->addItem(parent->createTriggerAction(commands::_1_8_4));
+        menu1b->addItem(parent->createTriggerAction(commands::_1_8_5));
+        menu1b->addItem(parent->createTriggerAction(commands::_1_8_6));
+        menu1b->addItem(parent->createTriggerAction(commands::_1_8_7));
 
-        menu2->addItem(parent->createTriggerAction("Action #2.1", Shortcut({}, Key::F)));
-        menu2->addItem(parent->createTriggerAction(
-            "Action #2.2", Shortcut(ModifierKey::Ctrl, Key::K)));
+        menu2->addItem(parent->createTriggerAction(commands::_2_1));
+        menu2->addItem(parent->createTriggerAction(commands::_2_2));
 
-        menu3->addItem(parent->createTriggerAction("Action #3.1"));
+        menu3->addItem(parent->createTriggerAction(commands::_3_1));
     }
 
     void createTestWidgets_() {
@@ -274,7 +324,8 @@ private:
         grid->setStyleSheet(".Grid { column-gap: 10dp; row-gap: 10dp; }");
         for (int i = 0; i < 2; ++i) {
             for (int j = 0; j < 4; ++j) {
-                ui::Action* action = parent->createTriggerAction("click me");
+                ui::Action* action =
+                    parent->createTriggerAction(commands::openPopup, "click me");
                 ui::ButtonPtr button = ui::Button::create(action);
                 grid->setWidgetAt(button.get(), i, j);
                 action->triggered().connect([=](ui::Widget* from) {
@@ -291,7 +342,7 @@ private:
 
         ui::Flex* row = parent->createChild<ui::Flex>(ui::FlexDirection::Row);
 
-        ui::Action* action = parent->createTriggerAction("Quit?");
+        ui::Action* action = parent->createTriggerAction(commands::maybeQuit, "Quit?");
         ui::Button* button = row->createChild<ui::Button>(action);
         action->triggered().connect([=]() {
             auto dialog = ui::MessageDialog::create();

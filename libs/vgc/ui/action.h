@@ -24,6 +24,7 @@
 #include <vgc/core/object.h>
 #include <vgc/ui/actiongroup.h>
 #include <vgc/ui/api.h>
+#include <vgc/ui/command.h>
 #include <vgc/ui/shortcut.h>
 
 namespace vgc::ui {
@@ -33,38 +34,8 @@ VGC_DECLARE_OBJECT(Widget);
 VGC_DECLARE_OBJECT(Menu);
 VGC_DECLARE_OBJECT(MouseEvent);
 
-/// \enum vgc::ui::ActionType
-/// \brief Whether an action is a one-shot trigger or a mouse click/drag.
-///
-enum class ActionType {
-
-    /// Represents a single-step action that can be typically be triggered from
-    /// anywhere and does not requires knowledge of the mouse cursor.
-    ///
-    Trigger,
-
-    /// Represents a single-step action that requires the mouse cursor, and is
-    /// typically performed either on mouse press or mouse release. However, it
-    /// can also be initiated via a keyboard shortcut if preferred.
-    ///
-    MouseClick,
-
-    /// Represents a multiple-steps action that requires the mouse cursor and
-    /// typically performs something on mouse press, mouse move, and mouse
-    /// release. However, it can also be initiated/completed via keyboard
-    /// shortcuts if preferred.
-    ///
-    MouseDrag
-};
-
-VGC_UI_API
-VGC_DECLARE_ENUM(ActionType);
-
-///
-/// , drag action keyboard action, noThe type of a given action an action that can be triggered via menu items, shorctuts, etc.
-///
 /// \class vgc::ui::Action
-/// \brief Represents an action that can be triggered via menu items, shorctuts, etc.
+/// \brief Represents an action that can be triggered via menu items, shortcuts, etc.
 ///
 class VGC_UI_API Action : public core::Object {
 private:
@@ -72,51 +43,45 @@ private:
     VGC_PRIVATIZE_OBJECT_TREE_MUTATORS
 
 protected:
-    explicit Action(
-        ActionType type = ActionType::Trigger,
-        std::string_view text = "",
-        const Shortcut& shortcut = Shortcut(),
-        ShortcutContext shortcutContext = ShortcutContext::Widget);
+    explicit Action(core::StringId commandId);
+    Action(core::StringId commandId, std::string_view text);
 
 public:
-    /// Creates an action of type `ActionType::Trigger`.
+    /// Creates an action.
     ///
-    static ActionPtr create();
+    static ActionPtr create(core::StringId commandId);
 
-    /// Creates an action of type `ActionType::Trigger` with the given shortcut.
+    /// Creates an action with the given text.
     ///
-    static ActionPtr create(
-        const Shortcut& shortcut,
-        ShortcutContext shortcutContext = ShortcutContext::Widget);
-
-    /// Creates an action of type `ActionType::Trigger` with the given text.
-    ///
-    static ActionPtr create(std::string_view text);
-
-    /// Creates an action of type `ActionType::Trigger` with the given text and shortcut.
-    ///
-    static ActionPtr create(
-        std::string_view text,
-        const Shortcut& shortcut,
-        ShortcutContext shortcutContext = ShortcutContext::Widget);
-
-    /// Creates an action with the given action type, text and shortcut.
-    ///
-    static ActionPtr create(
-        ActionType type,
-        std::string_view text,
-        const Shortcut& shortcut,
-        ShortcutContext shortcutContext = ShortcutContext::Widget);
+    static ActionPtr create(core::StringId commandId, std::string_view text);
 
     // ----------------------- Action Properties -------------------------------
 
-    /// Returns the type of this action.
+    /// Returns the command associated with this action.
     ///
-    ActionType type() const {
-        return type_;
+    const Command* command() const {
+        return command_;
     }
 
-    /// Returns the descriptive text for this action.
+    /// Returns the type of the command associated with this action.
+    ///
+    CommandType type() const {
+        return command_->type();
+    }
+
+    /// Returns the name of the command associated with this action.
+    ///
+    /// \sa `text()`, `setText()`.
+    ///
+    std::string_view name() const {
+        return command_->name();
+    }
+
+    /// Returns the displayed text for this action.
+    ///
+    /// By default, this is the same as the `name()` of the action, but it can
+    /// be changed dynamically to something more specific depending on the
+    /// context.
     ///
     /// \sa `setText()`
     ///
@@ -124,46 +89,24 @@ public:
         return text_;
     }
 
-    /// Sets the descriptive text for this action.
+    /// Sets the displayed text for this action.
     ///
     /// \sa `text()`
     ///
     void setText(std::string_view text);
 
-    /// Returns the shortcut associated with this action. This can be an empty
-    /// shortcut if this action has no associated shortcut.
-    ///
-    /// \sa `setShortcut()`
+    /// Returns the shortcut of the command associated with this action. This
+    /// can be an empty shortcut if the command has no shortcut.
     ///
     const Shortcut& shortcut() const {
-        return shortcut_;
+        return command_->shortcut();
     }
 
-    /// Sets the shortcut associated with this action.
-    ///
-    /// \sa `shortcut()`
-    ///
-    void setShortcut(const Shortcut& shortcut);
-
-    /// Returns the shortcut context of this action.
-    ///
-    /// This describes whether the `shortuct()` is active application-wide, or
-    /// only when the action is in the active window, or only when the action
-    /// is owned by a widget that has the keyboard focus.
-    ///
-    /// By default, the shortcut context is `ShortcutContext::Widget`.
-    ///
-    /// \sa `setShortcutContext()`
+    /// Returns the shortcut context of the command associated with this action.
     ///
     ShortcutContext shortcutContext() const {
-        return shortcutContext_;
+        return command_->shortcutContext();
     }
-
-    /// Sets the shortcut context associated with this action.
-    ///
-    /// \sa `shortcutContext()`
-    ///
-    void setShortcutContext(ShortcutContext shortcutContext);
 
     /// Returns the `CheckMode` of the action.
     ///
@@ -424,11 +367,9 @@ private:
     friend Menu;
     friend ActionGroup;
 
-    ActionType type_ = ActionType::Trigger;
+    const Command* command_;
     std::string text_;
-    Shortcut shortcut_;
     ui::ActionGroup* group_ = nullptr;
-    ShortcutContext shortcutContext_ = ShortcutContext::Widget;
     bool isEnabled_ = true;
     bool isMenu_ = false;
     CheckMode checkMode_ = CheckMode::Uncheckable;

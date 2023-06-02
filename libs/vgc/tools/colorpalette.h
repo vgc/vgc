@@ -43,17 +43,27 @@ VGC_DECLARE_OBJECT(ScreenColorPickerButton);
 /// \class vgc::tools::ScreenColorPickerButton
 /// \brief Allow users to pick a screen color.
 ///
+// TODO: This should be implemented as a subclass of Action, not a
+// subclass of Button.
+//
+// In order to do this, we need to allow MouseDrag actions to be started with a
+// press-then-release, then ended with a press-then-release. For now, it is
+// implemented as a subclass of Widget to take advantage of the mouse capture /
+// keyboard capture mechanism, but this ought to be achievable purely in terms
+// of actions too, since actions may want to capture mouse / keyboard input and
+// handle them as sub-actions.
+//
 class VGC_TOOLS_API ScreenColorPickerButton : public ui::Button {
 private:
     VGC_OBJECT(ScreenColorPickerButton, ui::Button)
 
 protected:
-    ScreenColorPickerButton(ui::Action* action);
+    ScreenColorPickerButton();
 
 public:
     /// Creates a `ScreenColorPickerButton`.
     ///
-    static ScreenColorPickerButtonPtr create(std::string_view name);
+    static ScreenColorPickerButtonPtr create();
 
     // Reimplementation of `Widget` virtual methods
     bool onMouseMove(ui::MouseMoveEvent* event) override;

@@ -202,7 +202,7 @@ private:
     void createTools_(ui::Widget* parent);
     void registerTool_( //
         ui::Widget* parent,
-        std::string_view toolName,
+        core::StringId commandId,
         canvas::CanvasToolPtr tool);
 
     void setCurrentTool_(canvas::CanvasTool* canvasTool);

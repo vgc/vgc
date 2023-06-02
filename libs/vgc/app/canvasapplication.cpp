@@ -520,43 +520,59 @@ void CanvasApplication::updateUndoRedoActionState_() {
     }
 }
 
+namespace {
+
+namespace commands {
+
+using Shortcut = ui::Shortcut;
+using Key = ui::Key;
+
+constexpr ui::ModifierKey ctrl = ui::ModifierKey::Ctrl;
+constexpr ui::ModifierKey shift = ui::ModifierKey::Shift;
+
+#define DEFINE_MENU_COMMAND(var, id, name, shortcut)                                     \
+    VGC_UI_DEFINE_COMMAND(                                                               \
+        var, id, ui::CommandType::Trigger, name, ui::ShortcutContext::Window, shortcut)
+
+DEFINE_MENU_COMMAND(_new, "file.new", "New", Shortcut(ctrl, Key::N))
+DEFINE_MENU_COMMAND(open, "file.open", "Open", Shortcut(ctrl, Key::O))
+DEFINE_MENU_COMMAND(save, "file.save", "Save", Shortcut(ctrl, Key::S))
+DEFINE_MENU_COMMAND(saveAs, "file.saveAs", "Save As...", Shortcut(ctrl | shift, Key::S))
+DEFINE_MENU_COMMAND(quit, "file.quit", "Quit", Shortcut(ctrl, Key::Q))
+
+DEFINE_MENU_COMMAND(undo, "edit.undo", "Undo", Shortcut(ctrl, Key::Z))
+DEFINE_MENU_COMMAND(redo, "edit.redo", "Redo", Shortcut(ctrl | shift, Key::Z))
+
+DEFINE_MENU_COMMAND(
+    debugWidgetSizing,
+    "debug.widgetSizing",
+    "Debug Widget Sizing",
+    Shortcut(ctrl | shift, Key::W))
+
+} // namespace commands
+
+template<typename TSlot>
+ui::Action* createAction(ui::Widget* parent, core::StringId commandId, TSlot slot) {
+    ui::Action* action = parent->createTriggerAction(commandId);
+    action->triggered().connect(slot);
+    return action;
+}
+
+} // namespace
+
 void CanvasApplication::createActions_(ui::Widget* parent) {
 
-    using ui::Key;
-    using ui::Shortcut;
+    actionNew_ = createAction(parent, commands::_new, onActionNewSlot_());
+    actionOpen_ = createAction(parent, commands::open, onActionOpenSlot_());
+    actionSave_ = createAction(parent, commands::save, onActionSaveSlot_());
+    actionSaveAs_ = createAction(parent, commands::saveAs, onActionSaveAsSlot_());
+    actionQuit_ = createAction(parent, commands::quit, onActionQuitSlot_());
 
-    ui::ModifierKey ctrl = ui::ModifierKey::Ctrl;
-    ui::ModifierKey shift = ui::ModifierKey::Shift;
-    ui::ShortcutContext context = ui::ShortcutContext::Window;
+    actionUndo_ = createAction(parent, commands::undo, onActionUndoSlot_());
+    actionRedo_ = createAction(parent, commands::redo, onActionRedoSlot_());
 
-    auto createAction = [=](std::string_view text, const Shortcut& shortcut) {
-        return parent->createTriggerAction(text, shortcut, context);
-    };
-
-    actionNew_ = createAction("New", Shortcut(ctrl, Key::N));
-    actionNew_->triggered().connect(onActionNewSlot_());
-
-    actionOpen_ = createAction("Open", Shortcut(ctrl, Key::O));
-    actionOpen_->triggered().connect(onActionOpenSlot_());
-
-    actionSave_ = createAction("Save", Shortcut(ctrl, Key::S));
-    actionSave_->triggered().connect(onActionSaveSlot_());
-
-    actionSaveAs_ = createAction("Save As...", Shortcut(ctrl | shift, Key::S));
-    actionSaveAs_->triggered().connect(onActionSaveAsSlot_());
-
-    actionQuit_ = createAction("Quit", Shortcut(ctrl, Key::Q));
-    actionQuit_->triggered().connect(onActionQuitSlot_());
-
-    actionUndo_ = createAction("Undo", Shortcut(ctrl, Key::Z));
-    actionUndo_->triggered().connect(onActionUndoSlot_());
-
-    actionRedo_ = createAction("Redo", Shortcut(ctrl | shift, Key::Z));
-    actionRedo_->triggered().connect(onActionRedoSlot_());
-
-    actionDebugWidgetSizing_ =
-        createAction("Debug Widget Sizing", Shortcut(ctrl | shift, Key::W));
-    actionDebugWidgetSizing_->triggered().connect(onActionDebugWidgetSizingSlot_());
+    actionDebugWidgetSizing_ = createAction(
+        parent, commands::debugWidgetSizing, onActionDebugWidgetSizingSlot_());
 
     updateUndoRedoActionState_();
 }
@@ -613,6 +629,27 @@ void CanvasApplication::createCanvas_(
     canvas_ = parent->createChild<canvas::Canvas>(workspace);
 }
 
+namespace {
+
+namespace commands {
+
+#define DEFINE_TOOL_COMMAND(var, id, name, shortcut)                                     \
+    VGC_UI_DEFINE_COMMAND(                                                               \
+        var, id, ui::CommandType::Trigger, name, ui::ShortcutContext::Window, shortcut)
+
+// clang-format off
+
+DEFINE_TOOL_COMMAND(selectTool, "tools.select", "Select Tool", Shortcut({}, Key::S))
+DEFINE_TOOL_COMMAND(sketchTool, "tools.sketch", "Sketch Tool", Shortcut(ctrl, Key::Digit2))
+DEFINE_TOOL_COMMAND(paintBucketTool,"tools.paintBucket","Paint Bucket Tool", Shortcut(ctrl, Key::Digit3))
+DEFINE_TOOL_COMMAND(sculptTool, "tools.sculpt", "Sculpt Tool", Shortcut(ctrl, Key::Digit4))
+
+// clang-format on
+
+} // namespace commands
+
+} // namespace
+
 void CanvasApplication::createTools_(ui::Widget* parent) {
 
     // Create action group ensuring only one tool is active at a time
@@ -624,10 +661,10 @@ void CanvasApplication::createTools_(ui::Widget* parent) {
     tools::SketchPtr sketchTool = tools::Sketch::create();
     tools::PaintBucketPtr paintBucketTool = tools::PaintBucket::create();
     tools::SculptPtr sculptTool = tools::Sculpt::create();
-    registerTool_(tools, "Select Tool", selectTool);
-    registerTool_(tools, "Sketch Tool", sketchTool);
-    registerTool_(tools, "Paint Bucket Tool", paintBucketTool);
-    registerTool_(tools, "Sculpt Tool", sculptTool);
+    registerTool_(tools, commands::selectTool, selectTool);
+    registerTool_(tools, commands::sketchTool, sketchTool);
+    registerTool_(tools, commands::paintBucketTool, paintBucketTool);
+    registerTool_(tools, commands::sculptTool, sculptTool);
 
     // Keep pointer to some tools for handling color changes
     sketchTool_ = sketchTool.get();
@@ -639,11 +676,11 @@ void CanvasApplication::createTools_(ui::Widget* parent) {
 
 void CanvasApplication::registerTool_(
     ui::Widget* parent,
-    std::string_view toolName,
+    core::StringId commandId,
     canvas::CanvasToolPtr tool) {
 
     // Create tool action and add it to the action group
-    ui::Action* action = parent->createTriggerAction(toolName);
+    ui::Action* action = parent->createTriggerAction(commandId);
     action->setCheckable(true);
     action->checkStateChanged().connect(onToolCheckStateChangedSlot_());
     toolsActionGroup_->addAction(action);

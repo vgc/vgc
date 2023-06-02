@@ -21,51 +21,22 @@
 
 namespace vgc::ui {
 
-VGC_DEFINE_ENUM(
-    ActionType,
-    (Trigger, "Trigger"),
-    (MouseClick, "Mouse Click"),
-    (MouseDrag, "Mouse Drag"))
-
-Action::Action(
-    ActionType type,
-    std::string_view text,
-    const Shortcut& shortcut,
-    ShortcutContext shortcutContext)
-
-    : type_(type)
-    , text_(text)
-    , shortcut_(shortcut)
-    , shortcutContext_(shortcutContext) {
+Action::Action(core::StringId id)
+    : command_(&CommandRegistry::find(id))
+    , text_(command_->name()) {
 }
 
-ActionPtr Action::create() {
-    return ActionPtr(new Action());
+Action::Action(core::StringId id, std::string_view text)
+    : command_(&CommandRegistry::find(id))
+    , text_(text) {
 }
 
-ActionPtr Action::create(const Shortcut& shortcut, ShortcutContext shortcutContext) {
-    return ActionPtr(new Action(ActionType::Trigger, "", shortcut, shortcutContext));
+ActionPtr Action::create(core::StringId id) {
+    return ActionPtr(new Action(id));
 }
 
-ActionPtr Action::create(std::string_view text) {
-    return ActionPtr(new Action(ActionType::Trigger, text));
-}
-
-ActionPtr Action::create(
-    std::string_view text,
-    const Shortcut& shortcut,
-    ShortcutContext shortcutContext) {
-
-    return ActionPtr(new Action(ActionType::Trigger, text, shortcut, shortcutContext));
-}
-
-ActionPtr Action::create(
-    ActionType type,
-    std::string_view text,
-    const Shortcut& shortcut,
-    ShortcutContext shortcutContext) {
-
-    return ActionPtr(new Action(type, text, shortcut, shortcutContext));
+ActionPtr Action::create(core::StringId id, std::string_view text) {
+    return ActionPtr(new Action(id, text));
 }
 
 void Action::setText(std::string_view text) {
@@ -73,14 +44,6 @@ void Action::setText(std::string_view text) {
         return;
     }
     text_ = text;
-    propertiesChanged().emit();
-}
-
-void Action::setShortcut(const Shortcut& shortcut) {
-    if (shortcut_ == shortcut) {
-        return;
-    }
-    shortcut_ = shortcut;
     propertiesChanged().emit();
 }
 

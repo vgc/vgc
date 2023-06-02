@@ -20,6 +20,7 @@ vgc_add_library(ui
         boolsettingedit.h
         button.h
         column.h
+        command.h
         cursor.h
         dialog.h
         event.h
@@ -75,6 +76,7 @@ vgc_add_library(ui
         boolsettingedit.cpp
         button.cpp
         column.cpp
+        command.cpp
         cursor.cpp
         dialog.cpp
         event.cpp

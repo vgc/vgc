@@ -316,7 +316,7 @@ private:
 
     void addShortcuts_(Widget* widget);
     void removeShortcuts_(Widget* widget);
-    void addShorctut_(Action* action);
+    void addShortcut_(Action* action);
     void removeShortcut_(Action* action);
 
     void onActiveChanged_();
