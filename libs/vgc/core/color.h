@@ -160,7 +160,7 @@ public:
     /// Returns a color rounded to the nearest RGB value representable as an
     /// 8-bit value in the range 0-255.
     ///
-    Color rounded8b() {
+    Color rounded8b() const {
         return Color(*this).round8b();
     }
 
