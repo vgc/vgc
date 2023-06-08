@@ -273,17 +273,9 @@ public:
         if (!canvas || !workspace) {
             return;
         }
-
-        geometry::Mat4d inverseViewMatrix = canvas->camera().viewMatrix().inverted();
-
-        geometry::Vec2d cursorPositionInWorkspace =
-            inverseViewMatrix.transformPointAffine(geometry::Vec2d(event->position()));
-        geometry::Vec2d cursorPositionInWorkspaceAtPress =
-            inverseViewMatrix.transformPointAffine(
-                geometry::Vec2d(cursorPositionAtPress_));
-
-        double dx = cursorPositionInWorkspace.x() - cursorPositionInWorkspaceAtPress.x();
-        double newRadius = (std::max)(0.0, oldRadius_ + dx);
+        double zoom = canvas->camera().zoom();
+        double dx = event->position().x() - cursorPositionAtPress_.x();
+        double newRadius = (std::max)(0.0, oldRadius_ + dx / zoom);
         options::sculptRadius()->setValue(newRadius);
         tool_->dirtyActionCircle();
     }
