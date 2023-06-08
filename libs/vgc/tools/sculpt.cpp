@@ -113,11 +113,10 @@ public:
                 geometry::Vec2d(cursorPositionAtPress_));
 
         // Open history group
-        static core::StringId Translate_Elements("Sculpt Grab Edge");
         core::UndoGroup* undoGroup = nullptr;
         core::History* history = workspace->history();
         if (history) {
-            undoGroup = history->createUndoGroup(Translate_Elements);
+            undoGroup = history->createUndoGroup(actionName());
         }
 
         // Translate Vertices
@@ -139,7 +138,8 @@ public:
                         cursorPositionInWorkspace,
                         options::sculptRadius()->value(),
                         1,
-                        pixelSize);
+                        pixelSize,
+                        ke->isClosed());
                     tool_->setActionCircleCenter(grabbedPoint);
                     tool_->setActionCircleEnabled(true);
                 }
@@ -149,7 +149,7 @@ public:
         // Close operation
         if (undoGroup) {
             bool amend = canAmendUndoGroup_ && undoGroup->parent()
-                         && undoGroup->parent()->name() == Translate_Elements;
+                         && undoGroup->parent()->name() == actionName();
             undoGroup->close(amend);
             canAmendUndoGroup_ = true;
         }
@@ -167,11 +167,10 @@ public:
         }
 
         // Open history group
-        static core::StringId Translate_Elements("Sculpt Grab Edge");
         core::UndoGroup* undoGroup = nullptr;
         core::History* history = workspace->history();
         if (history) {
-            undoGroup = history->createUndoGroup(Translate_Elements);
+            undoGroup = history->createUndoGroup(actionName());
         }
 
         workspace::Element* element = workspace->find(edgeId_);
@@ -188,7 +187,7 @@ public:
         // Close operation
         if (undoGroup) {
             bool amend = canAmendUndoGroup_ && undoGroup->parent()
-                         && undoGroup->parent()->name() == Translate_Elements;
+                         && undoGroup->parent()->name() == actionName();
             undoGroup->close(amend);
             canAmendUndoGroup_ = true;
         }
@@ -238,6 +237,11 @@ public:
     geometry::Vec2f cursorPositionAtPress_;
     geometry::Vec2f cursorPosition_;
     geometry::Vec2d grabbedPoint_;
+
+    core::StringId actionName() const {
+        static core::StringId actionName_("Sculpt Grab");
+        return actionName_;
+    }
 };
 
 VGC_DECLARE_OBJECT(EditSculptRadiusAction);

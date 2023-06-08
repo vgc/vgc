@@ -18,6 +18,7 @@
 #include <vgc/geometry/bezier.h>
 #include <vgc/geometry/vec4d.h>
 #include <vgc/workspace/freehandedgegeometry.h>
+#include <vgc/workspace/logcategories.h>
 
 namespace vgc::workspace {
 
@@ -119,7 +120,46 @@ vacomplex::EdgeSampling FreehandEdgeGeometry::computeSampling(
     curve.sampleRange(samples, geometry::CurveSamplingParameters(quality));
     VGC_ASSERT(samples.length() > 0);
 
-    return vacomplex::EdgeSampling(std::move(samples));
+    vacomplex::EdgeSampling res(std::move(samples));
+    return res;
+}
+
+vacomplex::EdgeSampling FreehandEdgeGeometry::computeSampling(
+    geometry::CurveSamplingQuality quality,
+    bool isClosed,
+    vacomplex::EdgeSnapTransformationMode /*mode*/) const {
+
+    geometry::Curve curve(
+        isClosed ? geometry::Curve::Type::ClosedUniformCatmullRom
+                 : geometry::Curve::Type::OpenUniformCatmullRom);
+    geometry::CurveSampleArray samples;
+    geometry::Vec2dArray tmpPoints;
+    core::DoubleArray tmpWidths;
+
+    const geometry::Vec2dArray& points = this->points();
+    const core::DoubleArray& widths = this->widths();
+
+    if (points.isEmpty()) {
+        // fallback to segment
+        tmpPoints = {geometry::Vec2d(), geometry::Vec2d()};
+        tmpWidths = {1.0, 1.0};
+        curve.setPositions(tmpPoints);
+        curve.setWidths(tmpWidths);
+    }
+    else {
+        curve.setPositions(points);
+        curve.setWidths(widths);
+    }
+
+    if (isBeingEdited_) {
+        quality = geometry::CurveSamplingQuality::AdaptiveLow;
+    }
+
+    curve.sampleRange(samples, geometry::CurveSamplingParameters(quality));
+    VGC_ASSERT(samples.length() > 0);
+
+    vacomplex::EdgeSampling res(std::move(samples));
+    return res;
 }
 
 void FreehandEdgeGeometry::startEdit() {
@@ -160,6 +200,47 @@ void FreehandEdgeGeometry::abortEdit() {
         dirtyEdgeSampling();
         isBeingEdited_ = false;
     }
+}
+
+void FreehandEdgeGeometry::translate(const geometry::Vec2d& delta) {
+    const geometry::Vec2dArray& points = this->points();
+    points_ = points;
+    for (geometry::Vec2d& p : points_) {
+        p += delta;
+    }
+    if (!isBeingEdited_) {
+        sharedConstPoints_ = SharedConstPoints(std::move(points_));
+        points_ = geometry::Vec2dArray();
+    }
+    originalArclengths_.clear();
+    dirtyEdgeSampling();
+}
+
+void FreehandEdgeGeometry::snap(
+    const geometry::Vec2d& snapStartPosition,
+    const geometry::Vec2d& snapEndPosition,
+    vacomplex::EdgeSnapTransformationMode /*mode*/) {
+
+    const geometry::Vec2dArray& points = this->points();
+    if (!points.isEmpty() && points.first() == snapStartPosition
+        && points.last() == snapEndPosition) {
+        // already snapped
+        return;
+    }
+
+    if (isBeingEdited_) {
+        computeSnappedLinearS_(
+            points_, points, originalArclengths_, snapStartPosition, snapEndPosition);
+    }
+    else {
+        computeSnappedLinearS_(
+            points_, points, originalArclengths_, snapStartPosition, snapEndPosition);
+        sharedConstPoints_ = SharedConstPoints(std::move(points_));
+        points_ = geometry::Vec2dArray();
+    }
+
+    originalArclengths_.clear();
+    dirtyEdgeSampling();
 }
 
 namespace {
@@ -299,7 +380,8 @@ geometry::Vec2d FreehandEdgeGeometry::sculptGrab(
     const geometry::Vec2d& endPosition,
     double radius,
     double /*strength*/,
-    double tolerance) {
+    double tolerance,
+    bool /*isClosed*/) {
 
     // Let's consider tolerance will be ~= pixelSize for now.
     //
@@ -509,33 +591,6 @@ geometry::Vec2d FreehandEdgeGeometry::sculptGrab(
     // In spatial mode, step is supported and we may have to do this at every step.
 }
 
-void FreehandEdgeGeometry::snap(
-    const geometry::Vec2d& snapStartPosition,
-    const geometry::Vec2d& snapEndPosition,
-    vacomplex::EdgeSnapTransformationMode /*mode*/) {
-
-    const geometry::Vec2dArray& points = this->points();
-    if (!points.isEmpty() && points.first() == snapStartPosition
-        && points.last() == snapEndPosition) {
-        // already snapped
-        return;
-    }
-
-    if (isBeingEdited_) {
-        computeSnappedLinearS_(
-            points_, points, originalArclengths_, snapStartPosition, snapEndPosition);
-    }
-    else {
-        computeSnappedLinearS_(
-            points_, points, originalArclengths_, snapStartPosition, snapEndPosition);
-        sharedConstPoints_ = SharedConstPoints(std::move(points_));
-        points_ = geometry::Vec2dArray();
-    }
-
-    originalArclengths_.clear();
-    dirtyEdgeSampling();
-}
-
 bool FreehandEdgeGeometry::updateFromDomEdge_(dom::Element* element) {
     namespace ds = dom::strings;
 
@@ -616,11 +671,11 @@ void FreehandEdgeGeometry::computeSnappedLinearS_(
             if (srcArclengths.isEmpty()) {
                 computeArclengths_(srcArclengths, srcPoints);
             }
-            double totalS = srcArclengths.last();
-            if (totalS > 0) {
+            double curveLength = srcArclengths.last();
+            if (curveLength > 0) {
                 // linear deformation in rough "s"
                 for (Int i = 0; i < numPoints; ++i) {
-                    double t = srcArclengths[i] / totalS;
+                    double t = srcArclengths[i] / curveLength;
                     outPoints[i] = srcPoints[i] + (d1 + t * (d2 - d1));
                 }
             }

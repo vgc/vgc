@@ -1430,9 +1430,9 @@ void Sketch::finishCurve_(ui::MouseEvent* /*event*/) {
 
     // Set curve to final requested tesselation mode
     workspace::Element* edgeElement = workspace->find(edge_);
-    auto edgeCell = dynamic_cast<workspace::VacKeyEdge*>(edgeElement);
-    if (edgeCell && canvas()) {
-        edgeCell->setTesselationMode(canvas()->requestedTesselationMode());
+    auto keyEdgeElement = dynamic_cast<workspace::VacKeyEdge*>(edgeElement);
+    if (keyEdgeElement && canvas()) {
+        keyEdgeElement->setTesselationMode(canvas()->requestedTesselationMode());
     }
 
     // Compute end vertex snapping
@@ -1452,7 +1452,31 @@ void Sketch::finishCurve_(ui::MouseEvent* /*event*/) {
             endVertex_->remove();
             endVertex_ = snapVertex->domElement();
             edge_->setAttribute(ds::positions, snappedPoints_);
-            edge_->setAttribute(ds::endvertex, endVertex_->getPathFromId());
+
+            bool canClose = false;
+            auto snapKeyVertexElement =
+                dynamic_cast<workspace::VacKeyVertex*>(snapVertex);
+            if (snapKeyVertexElement && keyEdgeElement) {
+                vacomplex::KeyVertex* kv = snapKeyVertexElement->vacKeyVertexNode();
+                vacomplex::KeyEdge* ke = keyEdgeElement->vacKeyEdgeNode();
+                canClose = true;
+                for (vacomplex::Cell* cell : kv->star()) {
+                    if (cell != ke) {
+                        canClose = false;
+                        break;
+                    }
+                }
+            }
+            if (canClose) {
+                endVertex_->remove();
+                endVertex_ = nullptr;
+                edge_->clearAttribute(ds::startvertex);
+                edge_->clearAttribute(ds::endvertex);
+            }
+            else {
+                edge_->setAttribute(ds::endvertex, endVertex_->getPathFromId());
+            }
+
             workspace->sync();
         }
     }

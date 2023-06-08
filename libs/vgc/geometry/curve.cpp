@@ -478,10 +478,28 @@ struct CubicBezierData {
         VGC_ASSERT(i <= numPts - 2);
 
         // Get indices of points used by the Catmull-Rom interpolation
-        Int i0 = (std::max)(i - 1, Int(0));
+        Int i0 = i - 1;
         Int i1 = i;
         Int i2 = i + 1;
-        Int i3 = (std::min)(i + 2, numPts - 1);
+        Int i3 = i + 2;
+
+        bool isClosed = curve->type() == Curve::Type::ClosedUniformCatmullRom;
+        if (isClosed) {
+            if (i0 < 0) {
+                i0 = numPts - 2;
+            }
+            if (i3 > numPts - 1) {
+                i3 = 1;
+            }
+        }
+        else {
+            if (i0 < 0) {
+                i0 = 0;
+            }
+            if (i3 > numPts - 1) {
+                i3 = numPts - 1;
+            }
+        }
 
         // Get positions
         const Vec2d* p = curve->positions().data();
@@ -518,7 +536,7 @@ struct CubicBezierData {
                 halfwidths[1] = v * halfwidths[0] + u * halfwidths[3];
                 halfwidths[2] = u * halfwidths[0] + v * halfwidths[3];
             }
-            else {
+            else if (!isClosed) {
                 Vec2d n = (positions[3] - positions[0]).orthogonalized().normalized();
                 Vec2d d = positions[2] - positions[3];
                 d = (2.0 * (n.dot(d)) * n) - d;
@@ -526,7 +544,7 @@ struct CubicBezierData {
                 // TODO: something similar for halfwidths
             }
         }
-        else if (isEndSegment) {
+        else if (isEndSegment && !isClosed) {
             Vec2d n = (positions[3] - positions[0]).orthogonalized().normalized();
             Vec2d d = positions[1] - positions[0];
             d = 2 * (n.dot(d)) * n - d;

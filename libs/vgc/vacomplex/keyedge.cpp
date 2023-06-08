@@ -103,19 +103,14 @@ EdgeSampling KeyEdge::computeSampling_(geometry::CurveSamplingQuality quality) c
     // - what about an open edge without points data and same end points ?
     // - what about an open edge without points data but different end points ?
 
-    geometry::Vec2d snapStartPosition = {};
-    geometry::Vec2d snapEndPosition = {};
-
     if (!isClosed()) {
-        snapStartPosition = startVertex_->position();
-        snapEndPosition = endVertex_->position();
+        geometry::Vec2d snapStartPosition = startVertex_->position();
+        geometry::Vec2d snapEndPosition = endVertex_->position();
+        return geometry_->computeSampling(quality, snapStartPosition, snapEndPosition);
     }
     else {
-        // todo: set snapStartPosition
-        snapEndPosition = snapStartPosition;
+        return geometry_->computeSampling(quality, true);
     }
-
-    return geometry_->computeSampling(quality, snapStartPosition, snapEndPosition);
 }
 
 void KeyEdge::updateSampling_() const {

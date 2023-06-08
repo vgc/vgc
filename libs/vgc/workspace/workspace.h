@@ -237,18 +237,19 @@ public:
     /// Throws an exception if the attribute does not exist, or exist but is
     /// not of type `dom::ValueType::Path` or `dom::ValueType::NoneOrPath`.
     ///
-    /// The behavior is undefined if `domElement`
+    /// The behavior is undefined if `domElement` is null.
+    ///
     /// Example:
     ///
     /// ```cpp
-    /// Element* startVertexWorkspaceElement = workspace->getElementFromPathAttribute(
+    /// std::optional<Element*> startVertexWorkspaceElement = workspace->getElementFromPathAttribute(
     ///     edgeDomElement,
     ///     dom::strings::startvertex,
     ///     dom::strings::vertex);
     /// ```
     ///
-    Element* getElementFromPathAttribute(
-        dom::Element* domElement,
+    std::optional<Element*> getElementFromPathAttribute(
+        const dom::Element* domElement,
         core::StringId attrName,
         core::StringId tagNameFilter = {}) const;
 

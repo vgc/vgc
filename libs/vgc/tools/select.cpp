@@ -108,9 +108,9 @@ bool Select::onMouseMove(ui::MouseMoveEvent* event) {
         }
         case DragAction::TranslateCandidate:
         case DragAction::TranslateSelection: {
-            geometry::Vec2d deltaInWorkspace =
+            deltaInWorkspace_ =
                 cursorPositionInWorkspace - cursorPositionInWorkspaceAtPress;
-            updateDragMovedElements_(workspace, deltaInWorkspace);
+            updateDragMovedElements_(workspace, deltaInWorkspace_);
             break;
         }
         }
@@ -631,9 +631,9 @@ void Select::initializeDragMoveData_(
         vacomplex::KeyEdge* ke = *it;
         // It is guaranteed that these edges have start and end vertices,
         // otherwise they would not be in any vertex star.
-        if (verticesToTranslate.count(ke->startVertex()) > 0
-            && verticesToTranslate.count(ke->endVertex()) > 0) {
-
+        Int n = verticesToTranslate.count(ke->startVertex())
+                + verticesToTranslate.count(ke->endVertex());
+        if (n != 1) {
             edgesToTranslate.insert(ke);
             it = affectedEdges.erase(it);
         }
@@ -652,13 +652,13 @@ void Select::initializeDragMoveData_(
     for (vacomplex::KeyEdge* ke : edgesToTranslate) {
         workspace::Element* element = workspace->findVacElement(ke->id());
         if (element) {
-            draggedEdges_.append({element->id(), false});
+            draggedEdges_.append({element->id(), true});
         }
     }
     for (vacomplex::KeyEdge* ke : affectedEdges) {
         workspace::Element* element = workspace->findVacElement(ke->id());
         if (element) {
-            draggedEdges_.append({element->id(), true});
+            draggedEdges_.append({element->id(), false});
         }
     }
 }
@@ -688,6 +688,27 @@ void Select::updateDragMovedElements_(
         }
     }
 
+    // Translate closed edges' geometry
+    for (const KeyEdgeDragData& ked : draggedEdges_) {
+        workspace::Element* element = workspace->find(ked.elementId);
+        if (element && element->vacNode() && element->vacNode()->isCell()) {
+            vacomplex::KeyEdge* ke = element->vacNode()->toCellUnchecked()->toKeyEdge();
+            if (ke && ked.isUniformTranslation) {
+                vacomplex::KeyEdgeGeometry* geometry = ke->geometry();
+                if (geometry) {
+                    if (!ked.isEditStarted) {
+                        geometry->startEdit();
+                        ked.isEditStarted = true;
+                    }
+                    else {
+                        geometry->resetEdit();
+                    }
+                    geometry->translate(translationInWorkspace);
+                }
+            }
+        }
+    }
+
     // Close operation
     if (undoGroup) {
         bool amend = canAmendUndoGroup_ && undoGroup->parent()
@@ -713,7 +734,15 @@ void Select::finalizeDragMovedElements_(workspace::Workspace* workspace) {
             vacomplex::KeyEdge* ke = element->vacNode()->toCellUnchecked()->toKeyEdge();
             if (ke) {
                 // Vertices are already translated here.
-                ke->snapGeometry();
+                if (!ked.isUniformTranslation) {
+                    ke->snapGeometry();
+                }
+                else if (ked.isEditStarted) {
+                    vacomplex::KeyEdgeGeometry* geometry = ke->geometry();
+                    if (geometry) {
+                        geometry->finishEdit();
+                    }
+                }
             }
         }
     }

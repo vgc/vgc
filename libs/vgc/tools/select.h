@@ -85,6 +85,7 @@ private:
     core::Id lastSelectedId_ = -1;
     core::Id lastDeselectedId_ = -1;
     graphics::GeometryViewPtr selectionRectangleGeometry_;
+    geometry::Vec2d deltaInWorkspace_ = {};
 
     // drag-move data
     struct KeyVertexDragData {
@@ -93,7 +94,8 @@ private:
     };
     struct KeyEdgeDragData {
         core::Id elementId;
-        bool isPartialTranslation;
+        bool isUniformTranslation;
+        mutable bool isEditStarted = false;
     };
 
     core::Array<KeyVertexDragData> draggedVertices_;

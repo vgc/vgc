@@ -61,10 +61,19 @@ public:
         const geometry::Vec2d& snapEndPosition,
         vacomplex::EdgeSnapTransformationMode mode) const override;
 
+    vacomplex::EdgeSampling computeSampling(
+        geometry::CurveSamplingQuality quality,
+        bool isClosed,
+        vacomplex::EdgeSnapTransformationMode mode) const override;
+
     void startEdit() override;
     void resetEdit() override;
     void finishEdit() override;
     void abortEdit() override;
+
+    /// Expects delta in object space.
+    ///
+    void translate(const geometry::Vec2d& delta) override;
 
     /// Expects positions in object space.
     ///
@@ -78,7 +87,8 @@ public:
         const geometry::Vec2d& endPosition,
         double radius,
         double strength,
-        double tolerance) override;
+        double tolerance,
+        bool isClosed) override;
 
     bool updateFromDomEdge_(dom::Element* element) override;
     void writeToDomEdge_(dom::Element* element) const override;

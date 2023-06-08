@@ -436,7 +436,8 @@ public:
         /// Other types of Catmull-Rom splines exist but are not currently
         /// supported.
         ///
-        OpenUniformCatmullRom
+        OpenUniformCatmullRom,
+        ClosedUniformCatmullRom
     };
 
     /// Specifies the type of a variable attribute along the curve, that is,
