@@ -205,23 +205,24 @@ constexpr bool isClosedType(Curve::Type type) {
     case T::ClosedUniformCatmullRom:
         return true;
     }
+    return false;
 }
 
 } // namespace
 
 Curve::Curve(Type type)
     : type_(type)
+    , isClosed_(isClosedType(type))
     , widthVariability_(AttributeVariability::PerControlPoint)
-    , color_(core::colors::black)
-    , isClosed_(isClosedType(type)) {
+    , color_(core::colors::black) {
 }
 
 Curve::Curve(double constantWidth, Type type)
     : type_(type)
+    , isClosed_(isClosedType(type))
     , widthVariability_(AttributeVariability::Constant)
     , widthConstant_(constantWidth)
-    , color_(core::colors::black)
-    , isClosed_(isClosedType(type)) {
+    , color_(core::colors::black) {
 }
 
 double Curve::width() const {
@@ -262,8 +263,8 @@ Vec2dArray Curve::triangulate(double maxAngle, Int minQuads, Int maxQuads) const
     double cosMaxAngle = std::cos(maxAngle);
 
     // Early return if not enough segments
-    Int numCPs = numPoints();
-    Int numSegments = numCPs - 1;
+    Int numCPs = this->numControlPoints();
+    Int numSegments = this->numSegments();
     if (numSegments < 1) {
         return res;
     }
@@ -552,7 +553,7 @@ struct CubicBezierData {
 
         // Set mirror tangents at endpoints.
         bool isStartSegment = (i == 0);
-        bool isEndSegment = ((i + 1) == (numPts - 1));
+        bool isEndSegment = ((i + 1) == numSegments);
         if (isStartSegment) {
             if (isEndSegment) {
                 // Special case if only one segment: linear parametrization
@@ -814,8 +815,12 @@ void Curve::sampleRange(
     Int end,
     bool computeArclength) const {
 
+    if (positions_.length() == 0) {
+        throw vgc::core::IndexError("cannot sample a curve with no control points.");
+    }
+
     // Cleanup start and end indices
-    Int n = numPoints();
+    Int n = numSegments();
     start = wrapSampleIndex(start, n);
     end = wrapSampleIndex(end, n);
     if (start > end) {
@@ -826,7 +831,7 @@ void Curve::sampleRange(
     // Remember old length of outAppend
     const Int oldLength = outAppend.length();
 
-    if (n == 1) {
+    if (positions_.length() == 1) {
         // Handle case where there are no segments at all the curve.
         //
         // Note that this is different from `start == end` with `n > 1`, in
@@ -838,12 +843,14 @@ void Curve::sampleRange(
         Vec2d position = positions()[0];
         Vec2d normal(0, 0);
         double halfwidth = 0.5 * (isWidthUniform ? width() : widths_[0]);
-        outAppend.emplaceLast(position, normal, halfwidth);
+        for (Int i = 0; i < n; ++i) {
+            outAppend.emplaceLast(position, normal, halfwidth);
+        }
     }
     else {
         // Reserve memory space
         const Int minSegmentSamples =
-            (std::max)(Int(0), parameters.minIntraSegmentSamples()) + 1;
+            std::max<Int>(0, parameters.minIntraSegmentSamples()) + 1;
         outAppend.reserve(outAppend.length() + 1 + (end - start) * minSegmentSamples);
 
         if (start == end) {

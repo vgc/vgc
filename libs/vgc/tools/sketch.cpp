@@ -1451,7 +1451,6 @@ void Sketch::finishCurve_(ui::MouseEvent* /*event*/) {
             // Update DOM and workspace
             endVertex_->remove();
             endVertex_ = snapVertex->domElement();
-            edge_->setAttribute(ds::positions, snappedPoints_);
 
             bool canClose = false;
             auto snapKeyVertexElement =
@@ -1472,10 +1471,14 @@ void Sketch::finishCurve_(ui::MouseEvent* /*event*/) {
                 endVertex_ = nullptr;
                 edge_->clearAttribute(ds::startvertex);
                 edge_->clearAttribute(ds::endvertex);
+                if (snappedPoints_.length() > 1) {
+                    snappedPoints_.removeLast();
+                }
             }
             else {
                 edge_->setAttribute(ds::endvertex, endVertex_->getPathFromId());
             }
+            edge_->setAttribute(ds::positions, snappedPoints_);
 
             workspace->sync();
         }

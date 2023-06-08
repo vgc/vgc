@@ -503,18 +503,18 @@ public:
     /// Returns the number of control points of the curve.
     ///
     Int numControlPoints() const {
-        Int numPositions = positions_.length();
-        return isClosed_ ? numPositions + 1 : numPositions;
+        return positions_.length();
     }
 
     /// Returns the number of segments of the curve.
     ///
     Int numSegments() const {
+        Int numPositions = positions_.length();
         switch (type_) {
         case Type::OpenUniformCatmullRom:
-            return numPoints() - 1;
+            return std::max<Int>(0, numPositions - 1);
         case Type::ClosedUniformCatmullRom:
-            return numPoints() - 1;
+            return numPositions;
         }
         return 0;
     }
