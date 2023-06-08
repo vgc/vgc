@@ -418,9 +418,12 @@ public:
 
         /// Represents an open uniform Catmull-Rom spline.
         ///
-        /// Each position p in `positions()` represent a control points of the
-        /// spline. The curve starts at the first control point, ends at the
-        /// last control point, and go through all control points.
+        /// With this curve type, we have `numSegment() == numKnots() - 1`.
+        ///
+        /// Each position p in `positions()` represent a control points (= knot
+        /// in this case) of the spline. The curve starts at the first control
+        /// point, ends at the last control point, and go through all control
+        /// points.
         ///
         /// Each curve segment between two control points p[i] and p[i+1] is a
         /// cubic curve P_i(u) parameterized by u in [0, 1]. The derivative
@@ -448,15 +451,19 @@ public:
 
         /// Represents a closed uniform Catmull-Rom spline.
         ///
-        /// This is similar to `OpenUniformCatmullRom` except that it forms a loop: the
-        /// tangent at the first/last control point is determined by:
+        /// This is similar to `OpenUniformCatmullRom` except that it forms a loop.
         ///
-        /// P' = (p[1] - p[n-2]) / 2
+        /// With this curve type, we have `numSegment() == numKnots()`: the last segment
+        /// goes from the knot at index `numKnots() - 1` (the last knot) back to the knot
+        /// at index `0` (the first knot).
         ///
-        /// The value of `positions()[0]` is assumed to be equal to
-        /// `positions()[n-1]` (that is, the first/last control point is
-        /// duplicated), which simplifies many algorithms when processing the
-        /// curve.
+        /// Unlike `OpenUniformCatmullRom`, there is no special handling of tangents
+        /// for the first/last segment, since all knots have adjacent knots. In particular,
+        /// the tangent at the first/last control point is determined by:
+        ///
+        /// P' = (p[1] - p[n-1]) / 2
+        ///
+        /// where n = numKnots().
         ///
         ClosedUniformCatmullRom
     };
