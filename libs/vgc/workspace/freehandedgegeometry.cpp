@@ -412,7 +412,7 @@ geometry::Vec2d FreehandEdgeGeometry::sculptGrab(
         samples.pop();
         pointSampleIndices[i] = samples.length();
         curve.sampleRange(
-            samples, geometry::CurveSamplingQuality::AdaptiveLow, i, i + 1, false);
+            samples, geometry::CurveSamplingQuality::AdaptiveLow, i, 1, false);
     }
     pointSampleIndices.last() = samples.length() - 1;
     Int numSamples = samples.length();
@@ -706,7 +706,7 @@ void FreehandEdgeGeometry::computeArclengths_(
     curve.setPositions(srcPoints);
     double s = 0;
     for (Int i = 1; i < numPoints; ++i) {
-        curve.sampleRange(sampling, sParams, i - 1, i, true);
+        curve.sampleRange(sampling, sParams, i - 1, 1, true);
         s += sampling.last().s();
         outArclengths[i] = s;
         sampling.clear();
