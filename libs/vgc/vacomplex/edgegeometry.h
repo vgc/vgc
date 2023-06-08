@@ -95,9 +95,33 @@ public:
         return centerlineBoundingBox_;
     }
 
+    const std::array<geometry::Vec2d, 2>&
+    offsetLineTangentsAtEndpoint(Int endpoint) const {
+        return offsetLineTangents_[endpoint];
+    }
+
+    void setOffsetLineTangentsAtEndpoint(
+        Int endpoint,
+        const std::array<geometry::Vec2d, 2>& tangents) {
+        //
+        offsetLineTangents_[endpoint] = tangents;
+        hasOffsetLineTangents_[endpoint] = true;
+    }
+
+    void clearOffsetLineTangentsAtEndpoint(Int endpoint) {
+        hasOffsetLineTangents_[endpoint] = false;
+    }
+
+    bool hasDefinedOffsetLineTangentsAtEndpoint(Int endpoint) const {
+        return hasOffsetLineTangents_[endpoint];
+    }
+
 private:
     geometry::CurveSampleArray samples_ = {};
     geometry::Rect2d centerlineBoundingBox_ = geometry::Rect2d::empty;
+    // offsetLineTangents_[i][j] is tangent at endpoint i and side j.
+    std::array<std::array<geometry::Vec2d, 2>, 2> offsetLineTangents_ = {};
+    std::array<bool, 2> hasOffsetLineTangents_ = {};
 
     void computeCenterlineBoundingBox() {
         centerlineBoundingBox_ = geometry::Rect2d::empty;

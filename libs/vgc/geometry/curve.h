@@ -695,6 +695,17 @@ public:
         Int numSegments = -1,
         bool withArclengths = true) const;
 
+    /// Returns the normalized tangents of the two offset lines at the given
+    /// segment endpoint. An endpoint can be part of two consecutive segments
+    /// and thus can have two different pairs of tangents.
+    ///
+    /// Throws `IndexError` if (`numPoints() < 2`).
+    /// 
+    void getOffsetLineTangentsAtSegmentEndpoint(
+        std::array<geometry::Vec2d, 2>& outTangents,
+        Int segmentIndex,
+        Int endpointIndex) const;
+
     /// Sets the color of the curve.
     ///
     // XXX Think aboutvariability for colors too. Does it make sense

@@ -121,6 +121,13 @@ vacomplex::EdgeSampling FreehandEdgeGeometry::computeSampling(
     VGC_ASSERT(samples.length() > 0);
 
     vacomplex::EdgeSampling res(std::move(samples));
+    if (curve.numPoints() >= 2) {
+        std::array<geometry::Vec2d, 2> tangents;
+        curve.getOffsetLineTangentsAtSegmentEndpoint(tangents, 0, 0);
+        res.setOffsetLineTangentsAtEndpoint(0, tangents);
+        curve.getOffsetLineTangentsAtSegmentEndpoint(tangents, curve.numPoints() - 2, 1);
+        res.setOffsetLineTangentsAtEndpoint(1, tangents);
+    }
     return res;
 }
 
