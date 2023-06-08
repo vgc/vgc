@@ -494,10 +494,29 @@ public:
         return type_;
     }
 
+    /// Returns whether the curve is closed.
+    ///
+    bool isClosed() const {
+        return isClosed_;
+    }
+
     /// Returns the number of control points of the curve.
     ///
-    Int numPoints() const {
-        return positions_.length();
+    Int numControlPoints() const {
+        Int numPositions = positions_.length();
+        return isClosed_ ? numPositions + 1 : numPositions;
+    }
+
+    /// Returns the number of segments of the curve.
+    ///
+    Int numSegments() const {
+        switch (type_) {
+        case Type::OpenUniformCatmullRom:
+            return numPoints() - 1;
+        case Type::ClosedUniformCatmullRom:
+            return numPoints() - 1;
+        }
+        return 0;
     }
 
     /// Returns the position data of the curve.
@@ -682,6 +701,7 @@ private:
     // Representation of the centerline of the curve
     Type type_;
     core::Span<const Vec2d> positions_ = {};
+    bool isClosed_ = false;
 
     // Representation of the width of the curve
     AttributeVariability widthVariability_;

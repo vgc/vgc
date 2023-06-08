@@ -195,17 +195,33 @@ CurveSamplingParameters::CurveSamplingParameters(CurveSamplingQuality quality)
     }
 }
 
+namespace {
+
+constexpr bool isClosedType(Curve::Type type) {
+    using T = Curve::Type;
+    switch (type) {
+    case T::OpenUniformCatmullRom:
+        return false;
+    case T::ClosedUniformCatmullRom:
+        return true;
+    }
+}
+
+} // namespace
+
 Curve::Curve(Type type)
     : type_(type)
     , widthVariability_(AttributeVariability::PerControlPoint)
-    , color_(core::colors::black) {
+    , color_(core::colors::black)
+    , isClosed_(isClosedType(type)) {
 }
 
 Curve::Curve(double constantWidth, Type type)
     : type_(type)
     , widthVariability_(AttributeVariability::Constant)
     , widthConstant_(constantWidth)
-    , color_(core::colors::black) {
+    , color_(core::colors::black)
+    , isClosed_(isClosedType(type)) {
 }
 
 double Curve::width() const {

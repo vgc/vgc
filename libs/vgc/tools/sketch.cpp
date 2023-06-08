@@ -1436,7 +1436,7 @@ void Sketch::finishCurve_(ui::MouseEvent* /*event*/) {
     }
 
     // Compute end vertex snapping
-    if (isSnappingEnabled() && smoothedPoints_.length() > 1) {
+    if (isSnappingEnabled() && smoothedPoints_.length() > 0) {
 
         // Compute start vertex to snap to
         geometry::Vec2d endPoint = smoothedPoints_.last();
