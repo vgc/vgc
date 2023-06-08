@@ -486,12 +486,15 @@ struct CubicBezierData {
     // Returns the CubicBezierData corresponding to the segment at index [i,
     // i+1] in the given Curve.
     //
+    //
     CubicBezierData(const Curve* curve, Int i) {
 
         // Ensure we have a valid segment between two control points
-        const Int numPts = curve->numPoints();
+        const Int numSegments = curve->numSegments();
         VGC_ASSERT(i >= 0);
-        VGC_ASSERT(i <= numPts - 2);
+        VGC_ASSERT(i < numSegments);
+
+        const Int numControlPoints = curve->numControlPoints();
 
         // Get indices of points used by the Catmull-Rom interpolation
         Int i0 = i - 1;
@@ -499,21 +502,29 @@ struct CubicBezierData {
         Int i2 = i + 1;
         Int i3 = i + 2;
 
-        bool isClosed = curve->type() == Curve::Type::ClosedUniformCatmullRom;
+        bool isClosed = curve->isClosed();
         if (isClosed) {
             if (i0 < 0) {
-                i0 = numPts - 2;
+                i0 = numControlPoints - 1;
             }
-            if (i3 > numPts - 1) {
+            if (i2 > numControlPoints - 1) {
+                i2 = 0;
                 i3 = 1;
+            }
+            if (i3 > numControlPoints - 1) {
+                i3 = 0;
             }
         }
         else {
             if (i0 < 0) {
                 i0 = 0;
             }
-            if (i3 > numPts - 1) {
-                i3 = numPts - 1;
+            if (i2 > numControlPoints - 1) {
+                i2 = numControlPoints - 1;
+                i3 = numControlPoints - 1;
+            }
+            else if (i3 > numControlPoints - 1) {
+                i3 = numControlPoints - 1;
             }
         }
 
