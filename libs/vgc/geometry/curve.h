@@ -416,27 +416,48 @@ public:
     ///
     enum class Type {
 
-        /// Represents an open uniform Catmull-Rom spline, formatted as [ x0,
-        /// y0, x1, y1, ..., xn, yn ]. The curve starts at (x0, y0), ends at
-        /// (xn, yn), and go through all control points p[i] = (xi, yi).
+        /// Represents an open uniform Catmull-Rom spline.
         ///
-        /// In general, a Catmull-Rom spline is a cubic Hermite spline where the
-        /// derivative m[i] at each control point p[i] is not user-specified,
-        /// but is instead automatically computed based on the position of its
-        /// two adjacent control points.
+        /// Each position p in `positions()` represent a control points of the
+        /// spline. The curve starts at the first control point, ends at the
+        /// last control point, and go through all control points.
         ///
-        /// In the specific case of a *uniform* Catmull-Rom spline, we have:
+        /// Each curve segment between two control points p[i] and p[i+1] is a
+        /// cubic curve P_i(u) parameterized by u in [0, 1]. The derivative
+        /// P_i'(u) at each control point (except end points) is automatically
+        /// determined from its two adjacent control points:
         ///
-        /// m[i] = (p[i+1] - p[i-1]) / 2
+        /// P_{i-1}'(1) = P_i'(0) = (p[i+1] - p[i-1]) / 2
         ///
-        /// In the specific case of an *open* uniform Catmull-Rom spline, we
-        /// also assume by convention that p[-1] = p[0] and p[n+1] = p[n], that
-        /// is, we duplicate the end control points.
+        /// At end control points, we use a tangent mirrored from the adjacent control
+        /// point, see: https://github.com/vgc/vgc/pull/1341.
         ///
-        /// Other types of Catmull-Rom splines exist but are not currently
-        /// supported.
+        /// In addition, tangents are capped based on the distance between control points
+        /// to avoid loops.
+        ///
+        /// Note: "uniform" refers here to the fact that this corresponds to a
+        /// Catmull-Rom spline with knot values uniformly spaced, that is: [0,
+        /// 1, 2, ..., n-1]. There exist other types of Catmull-Rom splines
+        /// using different knot values, such as the Cardinal or Chordal
+        /// Catmull-Rom, that uses the distance between control points to
+        /// determine more suitable knot values to avoid loops, see:
+        ///
+        /// https://en.wikipedia.org/wiki/Centripetal_Catmull%E2%80%93Rom_spline
         ///
         OpenUniformCatmullRom,
+
+        /// Represents a closed uniform Catmull-Rom spline.
+        ///
+        /// This is similar to `OpenUniformCatmullRom` except that it forms a loop: the
+        /// tangent at the first/last control point is determined by:
+        ///
+        /// P' = (p[1] - p[n-2]) / 2
+        ///
+        /// The value of `positions()[0]` is assumed to be equal to
+        /// `positions()[n-1]` (that is, the first/last control point is
+        /// duplicated), which simplifies many algorithms when processing the
+        /// curve.
+        ///
         ClosedUniformCatmullRom
     };
 
