@@ -811,32 +811,57 @@ Int wrapSampleIndex(Int i, Int excludedMax) {
 void Curve::sampleRange(
     core::Array<CurveSample>& outAppend,
     const CurveSamplingParameters& parameters,
-    Int startKnotIndex,
+    Int startKnot,
     Int numSegments,
     bool computeArclength) const {
 
-    if (numKnots() == 0) {
-        throw vgc::core::IndexError("cannot sample a curve with no knots.");
+    Int numKnots = this->numKnots();
+    Int n = this->numSegments();
+
+    // Verify we have at least one knot, since a post-condition of this
+    // function is to return at least one sample.
+    if (numKnots == 0) {
+        throw vgc::core::IndexError("Cannot sample a curve with no knots.");
     }
 
-    // Cleanup start and end indices
-    Int n = this->numSegments();
-    Int start = wrapSampleIndex(startKnotIndex, numKnots());
+    // Verify and wrap startKnot
+    if (startKnot < -numKnots || startKnot > numKnots - 1) {
+        throw vgc::core::IndexError(vgc::core::format(
+            "Parameter startKnot ({}) out of valid knot index range [{}, {}].",
+            startKnot,
+            -numKnots,
+            numKnots - 1));
+    }
+    if (startKnot < 0) {
+        startKnot += numKnots; // -1 becomes numKnots - 1 (=> last knot)
+    }
 
-    Int maxSegments = n;
-    Int wrappedNumSegments = wrapSampleIndex(numSegments, maxSegments + 1);
-    if (!isClosed() && wrappedNumSegments > n - start) {
+    // Verify and wrap numSegments
+    if (numSegments < -n - 1 || numSegments > n) {
+        throw vgc::core::IndexError(vgc::core::format(
+            "Parameter numSegments ({}) out of valid number of segments range [{}, {}].",
+            numSegments,
+            -n - 1,
+            n));
+    }
+    if (numSegments < 0) {
+        numSegments += n + 1; // -1 becomes n (=> all segments)
+    }
+    if (!isClosed() && numSegments > n - startKnot) {
         throw vgc::core::IndexError(core::format(
-            "cannot sample {} segments from knot {}, max is {}.",
-            wrappedNumSegments,
-            start,
-            n - start));
+            "Parameter numSegments ({} after negative-wrap) exceeds remaining number of "
+            "segments when starting at the given startKnot ({} after negative-wrap): "
+            "valid range is [0, {}] since the curve is open and has {} knots.",
+            numSegments,
+            startKnot,
+            n - startKnot,
+            numKnots));
     }
 
     // Remember old length of outAppend
     const Int oldLength = outAppend.length();
 
-    if (numKnots() == 1) {
+    if (numKnots == 1) {
         // Handle case where there are no segments at all the curve.
         //
         // Note that this is different from `start == end` with `n > 1`, in
@@ -851,13 +876,13 @@ void Curve::sampleRange(
         outAppend.emplaceLast(position, normal, halfwidth);
     }
     else {
-        if (wrappedNumSegments == 0) {
+        if (numSegments == 0) {
             // Add a point manually if it is a single point segment.
             IterativeSamplingSample lastSample;
             CubicBezierData bezierData;
             double u;
-            if (start < n) {
-                bezierData = CubicBezierData(this, start);
+            if (startKnot < n) {
+                bezierData = CubicBezierData(this, startKnot);
                 u = 0;
             }
             else { // start == n
@@ -871,14 +896,13 @@ void Curve::sampleRange(
             // Reserve memory space
             const Int minSegmentSamples =
                 std::max<Int>(0, parameters.minIntraSegmentSamples()) + 1;
-            outAppend.reserve(
-                outAppend.length() + 1 + wrappedNumSegments * minSegmentSamples);
+            outAppend.reserve(outAppend.length() + 1 + numSegments * minSegmentSamples);
 
             // Iterate over all segments
             IterativeSamplingCache data = {};
             data.cosMaxAngle = std::cos(parameters.maxAngle());
-            data.segmentIndex = start;
-            for (Int i = 0; i < wrappedNumSegments; ++i) {
+            data.segmentIndex = startKnot;
+            for (Int i = 0; i < numSegments; ++i) {
                 sampleIter_(this, parameters, data, outAppend);
                 data.segmentIndex = data.segmentIndex % n;
             }

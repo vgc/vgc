@@ -616,48 +616,59 @@ public:
     Vec2dArray
     triangulate(double maxAngle = 0.05, Int minQuads = 1, Int maxQuads = 64) const;
 
-    /// Computes a sampling of the subset of this curve between `startIndex`
-    /// and `endIndex`.
+    /// Computes a sampling of the subset of this curve consisting of
+    /// `numSegments` segments starting at the knot at index `startKnot`.
     ///
     /// \verbatim
-    ///                    startIndex             endIndex
-    ///              0         1           2         3         4        5
-    /// input      = x---------x-----------x---------x---------x--------x
-    ///                        |                     |
-    ///                        |                     |
-    ///                        |                     |
-    ///                        v                     v
-    /// output     =           x-x-x-x-x-x-x-x-x-x-x-x
-    ///
+    /// INPUT
+    /// -----
+    /// startKnot   = 1
+    /// numSegments = 2
+    /// knots       = 0------1-----------2---------3---------4--------5
+    ///                      |                     |
+    ///                      |                     |
+    ///                      |                     |
+    ///                      |                     |
+    /// OUTPUT               |                     |
+    /// ------               v                     v
+    /// samples     =        x-x-x-x-x-x-x-x-x-x-x-x
     /// \endverbatim
     ///
     /// The result is appended to the output parameter `outAppend`.
     ///
-    /// The values of `startIndex` and `endIndex` must be in the range [-n,
-    /// n-1] with `n = numPoints()`. Negative values can be used for indexing
-    /// from the end: `-1` represents the last point, and `-n` represents the
-    /// first point.
+    /// The value of `startKnot` must be in the range [-m, m-1] with `m =
+    /// numKnots()`. Negative values can be used for indexing from the end:
+    /// `-1` represents the last knot, and `-m` represents the first knot.
+    ///
+    /// The value of `numSegments` must be in the range [-n-1, n] with `n =
+    /// numSegments()`. Negative values can be used for specifying "all except
+    /// k segments": `-1` represents all segments, and `-n-1` represents zero
+    /// segments.
     ///
     /// This function throws `IndexError` if:
-    /// - the curve is empty (`numPoints() == 0`), or
-    /// - `startIndex` is not in the range [-n, n-1], or
-    /// - `endIndex` is not in the range [-n, n-1], or
-    /// - the start index is greater than the end index (after wrapping
-    ///   negative input indices to their corresponding positive index).
+    /// - the curve is empty (`numKnots() == 0`), or
+    /// - `startKnot` is not in the range [-m, m-1], or
+    /// - `numSegments` is not in the range [-n-1, n], or
+    /// - the curve is open and the requested number of segments (after wrapping
+    /// negative values) is larger than the remaining number of segments when
+    /// starting at `startKnot`. For example, if the curve has 4 knots and
+    /// `startKnot == 1`, then the maximum value for `numSegments` is 2
+    /// (segments from knot index 1 to knot index 3 which is the last knot).
     ///
-    /// The start and end points of the range are both included. This means
+    /// The start and end samples of the range are both included. This means
     /// that if this function does not throw, it is guaranteed to return a
-    /// non-empty sampling (i.e., with at least one sample).
+    /// non-empty sampling (i.e., with at least one sample), even when
+    /// the given `numSegments` is equal to zero.
     ///
     /// This also means that calling `sampleRange(out, params, 0, 1)` followed
-    /// by `sampleRange(out, params, 1, 2)` would result in having two times
-    /// the sample corresponding to index `1`. If you wish to do such chaining
+    /// by `sampleRange(out, params, 1, 1)` would result in having two times
+    /// the sample corresponding to knot index `1`. If you wish to do such chaining
     /// meaningfully, you have to manually discard the last point:
     ///
     /// ```cpp
     /// sampleRange(out, params, 0, 1);
     /// out.removeLast();
-    /// sampleRange(out, params, 1, 2);
+    /// sampleRange(out, params, 1, 1);
     /// ```
     ///
     /// If `withArclengths = true` (the default), then arclengths are computed
@@ -667,13 +678,13 @@ public:
     /// If `withArclengths = false` (the default), then all arclengths of the
     /// computed samples are left uninitialized.
     ///
-    /// If `numPoints() == 1`, this function returns a unique sample with a
-    /// normal set to zero.
+    /// If the curve is open and `numKnot() == 1`, this function returns a
+    /// unique sample with a normal set to zero.
     ///
     void sampleRange(
         core::Array<CurveSample>& outAppend,
         const CurveSamplingParameters& parameters,
-        Int startKnotIndex = 0,
+        Int startKnot = 0,
         Int numSegments = -1,
         bool withArclengths = true) const;
 
