@@ -552,32 +552,35 @@ struct CubicBezierData {
         }
 
         // Set mirror tangents at endpoints.
-        bool isStartSegment = (i == 0);
-        bool isEndSegment = ((i + 1) == numSegments);
-        if (isStartSegment) {
-            if (isEndSegment) {
-                // Special case if only one segment: linear parametrization
-                double u = 1.0 / 3;
-                double v = (1 - u);
-                positions[1] = v * positions[0] + u * positions[3];
-                positions[2] = u * positions[0] + v * positions[3];
-                halfwidths[1] = v * halfwidths[0] + u * halfwidths[3];
-                halfwidths[2] = u * halfwidths[0] + v * halfwidths[3];
+        // See https://github.com/vgc/vgc/pull/1341 for image explanation.
+        if (!isClosed) {
+            bool isStartSegment = (i == 0);
+            bool isEndSegment = ((i + 1) == numSegments);
+            if (isStartSegment) {
+                if (isEndSegment) {
+                    // Special case if only one segment: linear parametrization
+                    double u = 1.0 / 3;
+                    double v = (1 - u);
+                    positions[1] = v * positions[0] + u * positions[3];
+                    positions[2] = u * positions[0] + v * positions[3];
+                    halfwidths[1] = v * halfwidths[0] + u * halfwidths[3];
+                    halfwidths[2] = u * halfwidths[0] + v * halfwidths[3];
+                }
+                else {
+                    Vec2d n = (positions[3] - positions[0]).orthogonalized().normalized();
+                    Vec2d d = positions[2] - positions[3];
+                    d = (2.0 * (n.dot(d)) * n) - d;
+                    positions[1] = positions[0] + d;
+                    // TODO: something similar for halfwidths
+                }
             }
-            else if (!isClosed) {
+            else if (isEndSegment) {
                 Vec2d n = (positions[3] - positions[0]).orthogonalized().normalized();
-                Vec2d d = positions[2] - positions[3];
-                d = (2.0 * (n.dot(d)) * n) - d;
-                positions[1] = positions[0] + d;
+                Vec2d d = positions[1] - positions[0];
+                d = 2 * (n.dot(d)) * n - d;
+                positions[2] = positions[3] + d;
                 // TODO: something similar for halfwidths
             }
-        }
-        else if (isEndSegment && !isClosed) {
-            Vec2d n = (positions[3] - positions[0]).orthogonalized().normalized();
-            Vec2d d = positions[1] - positions[0];
-            d = 2 * (n.dot(d)) * n - d;
-            positions[2] = positions[3] + d;
-            // TODO: something similar for halfwidths
         }
     }
 };
