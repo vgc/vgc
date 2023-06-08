@@ -792,20 +792,6 @@ bool sampleIter_(
     return true;
 }
 
-// Python-like index wrapping
-Int wrapSampleIndex(Int i, Int excludedMax) {
-    if (i < -excludedMax || i >= excludedMax) {
-        throw vgc::core::IndexError(vgc::core::format(
-            "index {} out of range [{}, {}]", i, -excludedMax, excludedMax - 1));
-    }
-    else {
-        if (i < 0) {
-            i += excludedMax;
-        }
-        return i;
-    }
-}
-
 } // namespace
 
 void Curve::sampleRange(
