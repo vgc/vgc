@@ -520,7 +520,7 @@ bool Canvas::onMouseScroll(ui::ScrollEvent* event) {
     if (event->modifierKeys().isEmpty()) {
         Int steps = event->verticalSteps();
         constexpr double q23 = 2.0 / 3;
-        constexpr double levels[] = {
+        constexpr auto levels = std::array{
             q23 / 32,   0.8 / 32,  1.0 / 32,  q23 / 16,   0.8 / 16,  1.0 / 16,
             q23 / 8,    0.8 / 8,   1.0 / 8,   q23 / 4,    0.8 / 4,   1.0 / 4,
             q23 / 2,    0.8 / 2,   1.0 / 2,   q23,        0.8,       1.0,
@@ -530,34 +530,41 @@ bool Canvas::onMouseScroll(ui::ScrollEvent* event) {
             1.25 * 64,  1.5 * 64,  1.0 * 128, 1.25 * 128, 1.5 * 128, 1.0 * 256,
             1.25 * 256, 1.5 * 256, 1.0 * 512, 1.25 * 512, 1.5 * 512,
         };
-        Int n = static_cast<Int>(std::size(levels));
+        Int n = core::int_cast<Int>(std::size(levels));
+
+        // Use case: user is at level 0, zooms out N times and zooms in N times.
+        // Due to floating point inaccuracy, zoom may not be back to level 0 value.
+        // Applying this factor snaps zoom to level 0.
+        // Similar reasoning for last level and inverse zoom operations.
+        constexpr double snapZoomFactor = 1.001;
 
         if (steps == 0) {
             // no change
         }
         else if (steps > 0) {
-            newZoom = levels[0];
-            Int i = 0;
-            for (; i < n; ++i) {
-                newZoom = levels[i];
-                if (levels[i] > oldZoom) {
-                    break;
+            // zoom in
+            newZoom = oldZoom * fallbackZoomFactor;
+            if (n > 0 && newZoom * snapZoomFactor > levels.at(0)
+                && oldZoom < levels.at(n - 1)) {
+                for (Int i = 0; i < n; ++i) {
+                    newZoom = levels.at(i);
+                    if (newZoom > oldZoom) {
+                        break;
+                    }
                 }
-            }
-            if (i == n) {
-                newZoom = oldZoom * fallbackZoomFactor;
             }
         }
         else { // steps < 0
-            Int i = 0;
-            for (; i < n; ++i) {
-                if (oldZoom <= levels[i]) {
-                    break;
+            // zoom out
+            newZoom = oldZoom / fallbackZoomFactor;
+            if (n > 0 && newZoom / snapZoomFactor < levels.at(n - 1)
+                && oldZoom > levels.at(0)) {
+                for (Int i = n - 1; i >= 0; --i) {
+                    newZoom = levels.at(i);
+                    if (newZoom < oldZoom) {
+                        break;
+                    }
                 }
-                newZoom = levels[i];
-            }
-            if (i == 0) {
-                newZoom = oldZoom / fallbackZoomFactor;
             }
         }
     }
