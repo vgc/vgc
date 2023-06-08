@@ -823,7 +823,11 @@ void Curve::sampleRange(
     Int maxSegments = n;
     Int wrappedNumSegments = wrapSampleIndex(numSegments, maxSegments + 1);
     if (!isClosed() && wrappedNumSegments > n - start) {
-        wrappedNumSegments = n - start;
+        throw vgc::core::IndexError(core::format(
+            "cannot sample {} segments from knot {}, max is {}.",
+            wrappedNumSegments,
+            start,
+            n - start));
     }
 
     // Remember old length of outAppend
