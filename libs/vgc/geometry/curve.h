@@ -500,9 +500,9 @@ public:
         return isClosed_;
     }
 
-    /// Returns the number of control points of the curve.
+    /// Returns the number of knots of the curve.
     ///
-    Int numControlPoints() const {
+    Int numKnots() const {
         return positions_.length();
     }
 
@@ -673,8 +673,8 @@ public:
     void sampleRange(
         core::Array<CurveSample>& outAppend,
         const CurveSamplingParameters& parameters,
-        Int start = 0,
-        Int end = -1,
+        Int startKnotIndex = 0,
+        Int numSegments = -1,
         bool withArclengths = true) const;
 
     /// Sets the color of the curve.

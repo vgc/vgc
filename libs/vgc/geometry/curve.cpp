@@ -263,7 +263,7 @@ Vec2dArray Curve::triangulate(double maxAngle, Int minQuads, Int maxQuads) const
     double cosMaxAngle = std::cos(maxAngle);
 
     // Early return if not enough segments
-    Int numCPs = this->numControlPoints();
+    Int numKnots = this->numKnots();
     Int numSegments = this->numSegments();
     if (numSegments < 1) {
         return res;
@@ -272,7 +272,7 @@ Vec2dArray Curve::triangulate(double maxAngle, Int minQuads, Int maxQuads) const
     const Vec2d* positions = positions_.data();
 
     bool varyingWidth = widthVariability() == AttributeVariability::PerControlPoint;
-    if (varyingWidth && widths_.length() < numCPs) {
+    if (varyingWidth && widths_.length() < numKnots) {
         return {};
     }
 
@@ -495,7 +495,7 @@ struct CubicBezierData {
         VGC_ASSERT(i >= 0);
         VGC_ASSERT(i < numSegments);
 
-        const Int numControlPoints = curve->numControlPoints();
+        const Int numKnots = curve->numKnots();
 
         // Get indices of points used by the Catmull-Rom interpolation
         Int i0 = i - 1;
@@ -506,13 +506,13 @@ struct CubicBezierData {
         bool isClosed = curve->isClosed();
         if (isClosed) {
             if (i0 < 0) {
-                i0 = numControlPoints - 1;
+                i0 = numKnots - 1;
             }
-            if (i2 > numControlPoints - 1) {
+            if (i2 > numKnots - 1) {
                 i2 = 0;
                 i3 = 1;
             }
-            if (i3 > numControlPoints - 1) {
+            if (i3 > numKnots - 1) {
                 i3 = 0;
             }
         }
@@ -520,12 +520,12 @@ struct CubicBezierData {
             if (i0 < 0) {
                 i0 = 0;
             }
-            if (i2 > numControlPoints - 1) {
-                i2 = numControlPoints - 1;
-                i3 = numControlPoints - 1;
+            if (i2 > numKnots - 1) {
+                i2 = numKnots - 1;
+                i3 = numKnots - 1;
             }
-            else if (i3 > numControlPoints - 1) {
-                i3 = numControlPoints - 1;
+            else if (i3 > numKnots - 1) {
+                i3 = numKnots - 1;
             }
         }
 
@@ -790,17 +790,14 @@ bool sampleIter_(
 }
 
 // Python-like index wrapping
-Int wrapSampleIndex(Int i, Int n) {
-    if (n == 0) {
-        throw vgc::core::IndexError("cannot sample a curve with no points.");
-    }
-    else if (i < -n || i > n - 1) {
+Int wrapSampleIndex(Int i, Int excludedMax) {
+    if (i < -excludedMax || i >= excludedMax) {
         throw vgc::core::IndexError(vgc::core::format(
-            "index {} out of range [{}, {}] (num points is {})", i, -n, n - 1, n));
+            "index {} out of range [{}, {}]", i, -excludedMax, excludedMax - 1));
     }
     else {
         if (i < 0) {
-            i += n;
+            i += excludedMax;
         }
         return i;
     }
@@ -811,27 +808,28 @@ Int wrapSampleIndex(Int i, Int n) {
 void Curve::sampleRange(
     core::Array<CurveSample>& outAppend,
     const CurveSamplingParameters& parameters,
-    Int start,
-    Int end,
+    Int startKnotIndex,
+    Int numSegments,
     bool computeArclength) const {
 
-    if (positions_.length() == 0) {
-        throw vgc::core::IndexError("cannot sample a curve with no control points.");
+    if (numKnots() == 0) {
+        throw vgc::core::IndexError("cannot sample a curve with no knots.");
     }
 
     // Cleanup start and end indices
-    Int n = numSegments();
-    start = wrapSampleIndex(start, n);
-    end = wrapSampleIndex(end, n);
-    if (start > end) {
-        throw vgc::core::IndexError(
-            vgc::core::format("start index ({}) > end index ({})", start, end));
+    Int n = this->numSegments();
+    Int start = wrapSampleIndex(startKnotIndex, numKnots());
+
+    Int maxSegments = n;
+    Int wrappedNumSegments = wrapSampleIndex(numSegments, maxSegments + 1);
+    if (!isClosed() && wrappedNumSegments > n - start) {
+        wrappedNumSegments = n - start;
     }
 
     // Remember old length of outAppend
     const Int oldLength = outAppend.length();
 
-    if (positions_.length() == 1) {
+    if (numKnots() == 1) {
         // Handle case where there are no segments at all the curve.
         //
         // Note that this is different from `start == end` with `n > 1`, in
@@ -843,39 +841,39 @@ void Curve::sampleRange(
         Vec2d position = positions()[0];
         Vec2d normal(0, 0);
         double halfwidth = 0.5 * (isWidthUniform ? width() : widths_[0]);
-        for (Int i = 0; i < n; ++i) {
-            outAppend.emplaceLast(position, normal, halfwidth);
-        }
+        outAppend.emplaceLast(position, normal, halfwidth);
     }
     else {
-        // Reserve memory space
-        const Int minSegmentSamples =
-            std::max<Int>(0, parameters.minIntraSegmentSamples()) + 1;
-        outAppend.reserve(outAppend.length() + 1 + (end - start) * minSegmentSamples);
-
-        if (start == end) {
+        if (wrappedNumSegments == 0) {
             // Add a point manually if it is a single point segment.
             IterativeSamplingSample lastSample;
             CubicBezierData bezierData;
             double u;
-            if (start < n - 1) {
+            if (start < n) {
                 bezierData = CubicBezierData(this, start);
                 u = 0;
             }
-            else { // start == n - 1
-                bezierData = CubicBezierData(this, n - 2);
+            else { // start == n
+                bezierData = CubicBezierData(this, n - 1);
                 u = 1;
             }
             lastSample.computeFrom(bezierData, u);
             outAppend.emplaceLast(lastSample.pos, lastSample.normal, lastSample.radius);
         }
         else {
+            // Reserve memory space
+            const Int minSegmentSamples =
+                std::max<Int>(0, parameters.minIntraSegmentSamples()) + 1;
+            outAppend.reserve(
+                outAppend.length() + 1 + wrappedNumSegments * minSegmentSamples);
+
             // Iterate over all segments
             IterativeSamplingCache data = {};
             data.cosMaxAngle = std::cos(parameters.maxAngle());
             data.segmentIndex = start;
-            for (Int i = start; i < end; ++i) {
+            for (Int i = 0; i < wrappedNumSegments; ++i) {
                 sampleIter_(this, parameters, data, outAppend);
+                data.segmentIndex = data.segmentIndex % n;
             }
         }
     }
