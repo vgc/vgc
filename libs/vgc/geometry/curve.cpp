@@ -195,14 +195,31 @@ CurveSamplingParameters::CurveSamplingParameters(CurveSamplingQuality quality)
     }
 }
 
+namespace {
+
+constexpr bool isClosedType(Curve::Type type) {
+    using T = Curve::Type;
+    switch (type) {
+    case T::OpenUniformCatmullRom:
+        return false;
+    case T::ClosedUniformCatmullRom:
+        return true;
+    }
+    return false;
+}
+
+} // namespace
+
 Curve::Curve(Type type)
     : type_(type)
+    , isClosed_(isClosedType(type))
     , widthVariability_(AttributeVariability::PerControlPoint)
     , color_(core::colors::black) {
 }
 
 Curve::Curve(double constantWidth, Type type)
     : type_(type)
+    , isClosed_(isClosedType(type))
     , widthVariability_(AttributeVariability::Constant)
     , widthConstant_(constantWidth)
     , color_(core::colors::black) {
@@ -246,8 +263,8 @@ Vec2dArray Curve::triangulate(double maxAngle, Int minQuads, Int maxQuads) const
     double cosMaxAngle = std::cos(maxAngle);
 
     // Early return if not enough segments
-    Int numCPs = numPoints();
-    Int numSegments = numCPs - 1;
+    Int numKnots = this->numKnots();
+    Int numSegments = this->numSegments();
     if (numSegments < 1) {
         return res;
     }
@@ -255,7 +272,7 @@ Vec2dArray Curve::triangulate(double maxAngle, Int minQuads, Int maxQuads) const
     const Vec2d* positions = positions_.data();
 
     bool varyingWidth = widthVariability() == AttributeVariability::PerControlPoint;
-    if (varyingWidth && widths_.length() < numCPs) {
+    if (varyingWidth && widths_.length() < numKnots) {
         return {};
     }
 
@@ -470,18 +487,47 @@ struct CubicBezierData {
     // Returns the CubicBezierData corresponding to the segment at index [i,
     // i+1] in the given Curve.
     //
+    //
     CubicBezierData(const Curve* curve, Int i) {
 
         // Ensure we have a valid segment between two control points
-        const Int numPts = curve->numPoints();
+        const Int numSegments = curve->numSegments();
         VGC_ASSERT(i >= 0);
-        VGC_ASSERT(i <= numPts - 2);
+        VGC_ASSERT(i < numSegments);
+
+        const Int numKnots = curve->numKnots();
 
         // Get indices of points used by the Catmull-Rom interpolation
-        Int i0 = (std::max)(i - 1, Int(0));
+        Int i0 = i - 1;
         Int i1 = i;
         Int i2 = i + 1;
-        Int i3 = (std::min)(i + 2, numPts - 1);
+        Int i3 = i + 2;
+
+        bool isClosed = curve->isClosed();
+        if (isClosed) {
+            if (i0 < 0) {
+                i0 = numKnots - 1;
+            }
+            if (i2 > numKnots - 1) {
+                i2 = 0;
+                i3 = 1;
+            }
+            if (i3 > numKnots - 1) {
+                i3 = 0;
+            }
+        }
+        else {
+            if (i0 < 0) {
+                i0 = 0;
+            }
+            if (i2 > numKnots - 1) {
+                i2 = numKnots - 1;
+                i3 = numKnots - 1;
+            }
+            else if (i3 > numKnots - 1) {
+                i3 = numKnots - 1;
+            }
+        }
 
         // Get positions
         const Vec2d* p = curve->positions().data();
@@ -506,32 +552,35 @@ struct CubicBezierData {
         }
 
         // Set mirror tangents at endpoints.
-        bool isStartSegment = (i == 0);
-        bool isEndSegment = ((i + 1) == (numPts - 1));
-        if (isStartSegment) {
-            if (isEndSegment) {
-                // Special case if only one segment: linear parametrization
-                double u = 1.0 / 3;
-                double v = (1 - u);
-                positions[1] = v * positions[0] + u * positions[3];
-                positions[2] = u * positions[0] + v * positions[3];
-                halfwidths[1] = v * halfwidths[0] + u * halfwidths[3];
-                halfwidths[2] = u * halfwidths[0] + v * halfwidths[3];
+        // See https://github.com/vgc/vgc/pull/1341 for image explanation.
+        if (!isClosed) {
+            bool isStartSegment = (i == 0);
+            bool isEndSegment = ((i + 1) == numSegments);
+            if (isStartSegment) {
+                if (isEndSegment) {
+                    // Special case if only one segment: linear parametrization
+                    double u = 1.0 / 3;
+                    double v = (1 - u);
+                    positions[1] = v * positions[0] + u * positions[3];
+                    positions[2] = u * positions[0] + v * positions[3];
+                    halfwidths[1] = v * halfwidths[0] + u * halfwidths[3];
+                    halfwidths[2] = u * halfwidths[0] + v * halfwidths[3];
+                }
+                else {
+                    Vec2d n = (positions[3] - positions[0]).orthogonalized().normalized();
+                    Vec2d d = positions[2] - positions[3];
+                    d = (2.0 * (n.dot(d)) * n) - d;
+                    positions[1] = positions[0] + d;
+                    // TODO: something similar for halfwidths
+                }
             }
-            else {
+            else if (isEndSegment) {
                 Vec2d n = (positions[3] - positions[0]).orthogonalized().normalized();
-                Vec2d d = positions[2] - positions[3];
-                d = (2.0 * (n.dot(d)) * n) - d;
-                positions[1] = positions[0] + d;
+                Vec2d d = positions[1] - positions[0];
+                d = 2 * (n.dot(d)) * n - d;
+                positions[2] = positions[3] + d;
                 // TODO: something similar for halfwidths
             }
-        }
-        else if (isEndSegment) {
-            Vec2d n = (positions[3] - positions[0]).orthogonalized().normalized();
-            Vec2d d = positions[1] - positions[0];
-            d = 2 * (n.dot(d)) * n - d;
-            positions[2] = positions[3] + d;
-            // TODO: something similar for halfwidths
         }
     }
 };
@@ -743,45 +792,62 @@ bool sampleIter_(
     return true;
 }
 
-// Python-like index wrapping
-Int wrapSampleIndex(Int i, Int n) {
-    if (n == 0) {
-        throw vgc::core::IndexError("cannot sample a curve with no points.");
-    }
-    else if (i < -n || i > n - 1) {
-        throw vgc::core::IndexError(vgc::core::format(
-            "index {} out of range [{}, {}] (num points is {})", i, -n, n - 1, n));
-    }
-    else {
-        if (i < 0) {
-            i += n;
-        }
-        return i;
-    }
-}
-
 } // namespace
 
 void Curve::sampleRange(
     core::Array<CurveSample>& outAppend,
     const CurveSamplingParameters& parameters,
-    Int start,
-    Int end,
+    Int startKnot,
+    Int numSegments,
     bool computeArclength) const {
 
-    // Cleanup start and end indices
-    Int n = numPoints();
-    start = wrapSampleIndex(start, n);
-    end = wrapSampleIndex(end, n);
-    if (start > end) {
-        throw vgc::core::IndexError(
-            vgc::core::format("start index ({}) > end index ({})", start, end));
+    Int numKnots = this->numKnots();
+    Int n = this->numSegments();
+
+    // Verify we have at least one knot, since a post-condition of this
+    // function is to return at least one sample.
+    if (numKnots == 0) {
+        throw vgc::core::IndexError("Cannot sample a curve with no knots.");
+    }
+
+    // Verify and wrap startKnot
+    if (startKnot < -numKnots || startKnot > numKnots - 1) {
+        throw vgc::core::IndexError(vgc::core::format(
+            "Parameter startKnot ({}) out of valid knot index range [{}, {}].",
+            startKnot,
+            -numKnots,
+            numKnots - 1));
+    }
+    if (startKnot < 0) {
+        startKnot += numKnots; // -1 becomes numKnots - 1 (=> last knot)
+    }
+
+    // Verify and wrap numSegments
+    if (numSegments < -n - 1 || numSegments > n) {
+        throw vgc::core::IndexError(vgc::core::format(
+            "Parameter numSegments ({}) out of valid number of segments range [{}, {}].",
+            numSegments,
+            -n - 1,
+            n));
+    }
+    if (numSegments < 0) {
+        numSegments += n + 1; // -1 becomes n (=> all segments)
+    }
+    if (!isClosed() && numSegments > n - startKnot) {
+        throw vgc::core::IndexError(core::format(
+            "Parameter numSegments ({} after negative-wrap) exceeds remaining number of "
+            "segments when starting at the given startKnot ({} after negative-wrap): "
+            "valid range is [0, {}] since the curve is open and has {} knots.",
+            numSegments,
+            startKnot,
+            n - startKnot,
+            numKnots));
     }
 
     // Remember old length of outAppend
     const Int oldLength = outAppend.length();
 
-    if (n == 1) {
+    if (numKnots == 1) {
         // Handle case where there are no segments at all the curve.
         //
         // Note that this is different from `start == end` with `n > 1`, in
@@ -796,34 +862,35 @@ void Curve::sampleRange(
         outAppend.emplaceLast(position, normal, halfwidth);
     }
     else {
-        // Reserve memory space
-        const Int minSegmentSamples =
-            (std::max)(Int(0), parameters.minIntraSegmentSamples()) + 1;
-        outAppend.reserve(outAppend.length() + 1 + (end - start) * minSegmentSamples);
-
-        if (start == end) {
+        if (numSegments == 0) {
             // Add a point manually if it is a single point segment.
             IterativeSamplingSample lastSample;
             CubicBezierData bezierData;
             double u;
-            if (start < n - 1) {
-                bezierData = CubicBezierData(this, start);
+            if (startKnot < n) {
+                bezierData = CubicBezierData(this, startKnot);
                 u = 0;
             }
-            else { // start == n - 1
-                bezierData = CubicBezierData(this, n - 2);
+            else { // start == n
+                bezierData = CubicBezierData(this, n - 1);
                 u = 1;
             }
             lastSample.computeFrom(bezierData, u);
             outAppend.emplaceLast(lastSample.pos, lastSample.normal, lastSample.radius);
         }
         else {
+            // Reserve memory space
+            const Int minSegmentSamples =
+                std::max<Int>(0, parameters.minIntraSegmentSamples()) + 1;
+            outAppend.reserve(outAppend.length() + 1 + numSegments * minSegmentSamples);
+
             // Iterate over all segments
             IterativeSamplingCache data = {};
             data.cosMaxAngle = std::cos(parameters.maxAngle());
-            data.segmentIndex = start;
-            for (Int i = start; i < end; ++i) {
+            data.segmentIndex = startKnot;
+            for (Int i = 0; i < numSegments; ++i) {
                 sampleIter_(this, parameters, data, outAppend);
+                data.segmentIndex = data.segmentIndex % n;
             }
         }
     }

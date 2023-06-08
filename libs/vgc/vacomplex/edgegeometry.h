@@ -148,10 +148,20 @@ public:
         EdgeSnapTransformationMode mode =
             EdgeSnapTransformationMode::LinearInArclength) const = 0;
 
+    virtual EdgeSampling computeSampling(
+        geometry::CurveSamplingQuality quality,
+        bool isClosed = false,
+        EdgeSnapTransformationMode mode =
+            EdgeSnapTransformationMode::LinearInArclength) const = 0;
+
     virtual void startEdit() = 0;
     virtual void resetEdit() = 0;
     virtual void finishEdit() = 0;
     virtual void abortEdit() = 0;
+
+    /// Expects delta in object space.
+    ///
+    virtual void translate(const geometry::Vec2d& delta) = 0;
 
     /// Expects positions in object space.
     ///
@@ -177,7 +187,8 @@ public:
         const geometry::Vec2d& endPosition,
         double radius,
         double strength,
-        double tolerance) = 0;
+        double tolerance,
+        bool isClosed = false) = 0;
 
 protected:
     // todo: argument to tell when it is only an affine transformation ?

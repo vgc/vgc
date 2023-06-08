@@ -416,27 +416,56 @@ public:
     ///
     enum class Type {
 
-        /// Represents an open uniform Catmull-Rom spline, formatted as [ x0,
-        /// y0, x1, y1, ..., xn, yn ]. The curve starts at (x0, y0), ends at
-        /// (xn, yn), and go through all control points p[i] = (xi, yi).
+        /// Represents an open uniform Catmull-Rom spline.
         ///
-        /// In general, a Catmull-Rom spline is a cubic Hermite spline where the
-        /// derivative m[i] at each control point p[i] is not user-specified,
-        /// but is instead automatically computed based on the position of its
-        /// two adjacent control points.
+        /// With this curve type, we have `numSegment() == numKnots() - 1`.
         ///
-        /// In the specific case of a *uniform* Catmull-Rom spline, we have:
+        /// Each position p in `positions()` represent a control points (= knot
+        /// in this case) of the spline. The curve starts at the first control
+        /// point, ends at the last control point, and go through all control
+        /// points.
         ///
-        /// m[i] = (p[i+1] - p[i-1]) / 2
+        /// Each curve segment between two control points p[i] and p[i+1] is a
+        /// cubic curve P_i(u) parameterized by u in [0, 1]. The derivative
+        /// P_i'(u) at each control point (except end points) is automatically
+        /// determined from its two adjacent control points:
         ///
-        /// In the specific case of an *open* uniform Catmull-Rom spline, we
-        /// also assume by convention that p[-1] = p[0] and p[n+1] = p[n], that
-        /// is, we duplicate the end control points.
+        /// P_{i-1}'(1) = P_i'(0) = (p[i+1] - p[i-1]) / 2
         ///
-        /// Other types of Catmull-Rom splines exist but are not currently
-        /// supported.
+        /// At end control points, we use a tangent mirrored from the adjacent control
+        /// point, see: https://github.com/vgc/vgc/pull/1341.
         ///
-        OpenUniformCatmullRom
+        /// In addition, tangents are capped based on the distance between control points
+        /// to avoid loops.
+        ///
+        /// Note: "uniform" refers here to the fact that this corresponds to a
+        /// Catmull-Rom spline with knot values uniformly spaced, that is: [0,
+        /// 1, 2, ..., n-1]. There exist other types of Catmull-Rom splines
+        /// using different knot values, such as the Cardinal or Chordal
+        /// Catmull-Rom, that uses the distance between control points to
+        /// determine more suitable knot values to avoid loops, see:
+        ///
+        /// https://en.wikipedia.org/wiki/Centripetal_Catmull%E2%80%93Rom_spline
+        ///
+        OpenUniformCatmullRom,
+
+        /// Represents a closed uniform Catmull-Rom spline.
+        ///
+        /// This is similar to `OpenUniformCatmullRom` except that it forms a loop.
+        ///
+        /// With this curve type, we have `numSegment() == numKnots()`: the last segment
+        /// goes from the knot at index `numKnots() - 1` (the last knot) back to the knot
+        /// at index `0` (the first knot).
+        ///
+        /// Unlike `OpenUniformCatmullRom`, there is no special handling of tangents
+        /// for the first/last segment, since all knots have adjacent knots. In particular,
+        /// the tangent at the first/last control point is determined by:
+        ///
+        /// P' = (p[1] - p[n-1]) / 2
+        ///
+        /// where n = numKnots().
+        ///
+        ClosedUniformCatmullRom
     };
 
     /// Specifies the type of a variable attribute along the curve, that is,
@@ -472,10 +501,29 @@ public:
         return type_;
     }
 
-    /// Returns the number of control points of the curve.
+    /// Returns whether the curve is closed.
     ///
-    Int numPoints() const {
+    bool isClosed() const {
+        return isClosed_;
+    }
+
+    /// Returns the number of knots of the curve.
+    ///
+    Int numKnots() const {
         return positions_.length();
+    }
+
+    /// Returns the number of segments of the curve.
+    ///
+    Int numSegments() const {
+        Int numPositions = positions_.length();
+        switch (type_) {
+        case Type::OpenUniformCatmullRom:
+            return std::max<Int>(0, numPositions - 1);
+        case Type::ClosedUniformCatmullRom:
+            return numPositions;
+        }
+        return 0;
     }
 
     /// Returns the position data of the curve.
@@ -575,48 +623,59 @@ public:
     Vec2dArray
     triangulate(double maxAngle = 0.05, Int minQuads = 1, Int maxQuads = 64) const;
 
-    /// Computes a sampling of the subset of this curve between `startIndex`
-    /// and `endIndex`.
+    /// Computes a sampling of the subset of this curve consisting of
+    /// `numSegments` segments starting at the knot at index `startKnot`.
     ///
     /// \verbatim
-    ///                    startIndex             endIndex
-    ///              0         1           2         3         4        5
-    /// input      = x---------x-----------x---------x---------x--------x
-    ///                        |                     |
-    ///                        |                     |
-    ///                        |                     |
-    ///                        v                     v
-    /// output     =           x-x-x-x-x-x-x-x-x-x-x-x
-    ///
+    /// INPUT
+    /// -----
+    /// startKnot   = 1
+    /// numSegments = 2
+    /// knots       = 0------1-----------2---------3---------4--------5
+    ///                      |                     |
+    ///                      |                     |
+    ///                      |                     |
+    ///                      |                     |
+    /// OUTPUT               |                     |
+    /// ------               v                     v
+    /// samples     =        x-x-x-x-x-x-x-x-x-x-x-x
     /// \endverbatim
     ///
     /// The result is appended to the output parameter `outAppend`.
     ///
-    /// The values of `startIndex` and `endIndex` must be in the range [-n,
-    /// n-1] with `n = numPoints()`. Negative values can be used for indexing
-    /// from the end: `-1` represents the last point, and `-n` represents the
-    /// first point.
+    /// The value of `startKnot` must be in the range [-m, m-1] with `m =
+    /// numKnots()`. Negative values can be used for indexing from the end:
+    /// `-1` represents the last knot, and `-m` represents the first knot.
+    ///
+    /// The value of `numSegments` must be in the range [-n-1, n] with `n =
+    /// numSegments()`. Negative values can be used for specifying "all except
+    /// k segments": `-1` represents all segments, and `-n-1` represents zero
+    /// segments.
     ///
     /// This function throws `IndexError` if:
-    /// - the curve is empty (`numPoints() == 0`), or
-    /// - `startIndex` is not in the range [-n, n-1], or
-    /// - `endIndex` is not in the range [-n, n-1], or
-    /// - the start index is greater than the end index (after wrapping
-    ///   negative input indices to their corresponding positive index).
+    /// - the curve is empty (`numKnots() == 0`), or
+    /// - `startKnot` is not in the range [-m, m-1], or
+    /// - `numSegments` is not in the range [-n-1, n], or
+    /// - the curve is open and the requested number of segments (after wrapping
+    /// negative values) is larger than the remaining number of segments when
+    /// starting at `startKnot`. For example, if the curve has 4 knots and
+    /// `startKnot == 1`, then the maximum value for `numSegments` is 2
+    /// (segments from knot index 1 to knot index 3 which is the last knot).
     ///
-    /// The start and end points of the range are both included. This means
+    /// The start and end samples of the range are both included. This means
     /// that if this function does not throw, it is guaranteed to return a
-    /// non-empty sampling (i.e., with at least one sample).
+    /// non-empty sampling (i.e., with at least one sample), even when
+    /// the given `numSegments` is equal to zero.
     ///
     /// This also means that calling `sampleRange(out, params, 0, 1)` followed
-    /// by `sampleRange(out, params, 1, 2)` would result in having two times
-    /// the sample corresponding to index `1`. If you wish to do such chaining
+    /// by `sampleRange(out, params, 1, 1)` would result in having two times
+    /// the sample corresponding to knot index `1`. If you wish to do such chaining
     /// meaningfully, you have to manually discard the last point:
     ///
     /// ```cpp
     /// sampleRange(out, params, 0, 1);
     /// out.removeLast();
-    /// sampleRange(out, params, 1, 2);
+    /// sampleRange(out, params, 1, 1);
     /// ```
     ///
     /// If `withArclengths = true` (the default), then arclengths are computed
@@ -626,14 +685,14 @@ public:
     /// If `withArclengths = false` (the default), then all arclengths of the
     /// computed samples are left uninitialized.
     ///
-    /// If `numPoints() == 1`, this function returns a unique sample with a
-    /// normal set to zero.
+    /// If the curve is open and `numKnot() == 1`, this function returns a
+    /// unique sample with a normal set to zero.
     ///
     void sampleRange(
         core::Array<CurveSample>& outAppend,
         const CurveSamplingParameters& parameters,
-        Int start = 0,
-        Int end = -1,
+        Int startKnot = 0,
+        Int numSegments = -1,
         bool withArclengths = true) const;
 
     /// Sets the color of the curve.
@@ -660,6 +719,7 @@ private:
     // Representation of the centerline of the curve
     Type type_;
     core::Span<const Vec2d> positions_ = {};
+    bool isClosed_ = false;
 
     // Representation of the width of the curve
     AttributeVariability widthVariability_;

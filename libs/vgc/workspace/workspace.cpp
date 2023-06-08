@@ -284,20 +284,21 @@ bool Workspace::updateElementFromDom(Element* element) {
     return true;
 }
 
-Element* Workspace::getElementFromPathAttribute(
-    dom::Element* domElement,
+std::optional<Element*> Workspace::getElementFromPathAttribute(
+    const dom::Element* domElement,
     core::StringId attrName,
     core::StringId tagNameFilter) const {
 
-    dom::Element* domTargetElement =
-        domElement->getElementFromPathAttribute(attrName, tagNameFilter)
-            .value_or(nullptr);
-    if (!domTargetElement) {
-        return nullptr;
-    }
+    std::optional<dom::Element*> domTargetElement =
+        domElement->getElementFromPathAttribute(attrName, tagNameFilter);
 
-    auto it = elements_.find(domTargetElement->internalId());
-    return it->second.get();
+    if (domTargetElement.has_value()) {
+        auto it = elements_.find(domTargetElement.value()->internalId());
+        return {it->second.get()};
+    }
+    else {
+        return std::nullopt;
+    }
 }
 
 void Workspace::visitDepthFirstPreOrder(
