@@ -688,7 +688,7 @@ geometry::Vec2d FreehandEdgeGeometry::sculptGrab(
                     pointsS.first());
             }
             if (sculptSampling.cappedRadii[1] < radius) {
-                double width = hasWidths ? widths_.first() : samples[0].halfwidth(0) * 2;
+                double width = hasWidths ? widths_.last() : samples[0].halfwidth(0) * 2;
                 sculptPoints.emplaceLast(
                     points_.last(), width, sculptSampling.cappedRadii[1], pointsS.last());
             }
