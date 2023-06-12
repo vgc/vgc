@@ -964,9 +964,9 @@ void Curve::getOffsetLineTangentsAtSegmentEndpoint(
     Int segmentIndex,
     Int endpointIndex) const {
 
-    if (numPoints() < 2) {
+    if (numKnots() < 2) {
         throw vgc::core::IndexError(
-            "cannot compute tangents of a curve with less than 2 points.");
+            "cannot compute tangents of a curve with less than 2 knots.");
     }
 
     CubicBezierData bezierData = CubicBezierData(this, segmentIndex);
