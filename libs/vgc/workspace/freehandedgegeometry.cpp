@@ -409,7 +409,10 @@ void computeSculptSampling(
     if (!isDone) {
         VGC_WARNING(
             LogVgcWorkspace,
-            "computeSculptSampling generated less sculpt points than predicted.");
+            "computeSculptSampling generated less sculpt points ({}) than predicted "
+            "({}).",
+            sculptPoints.length(),
+            numSculptSamplesBeforeMsp + numSculptSamplesAfterMsp + 1);
     }
 
     if (sculptPoints.isEmpty()) {
