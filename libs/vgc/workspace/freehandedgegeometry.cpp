@@ -473,7 +473,7 @@ Int filterPointsStep(
     Int intervalStart,
     double tolerance,
     PositionGetter positionGetter,
-    WidthGetter widthGetter) {
+    WidthGetter /*widthGetter*/) {
 
     Int i = intervalStart;
     Int endIndex = indices[i + 1];
