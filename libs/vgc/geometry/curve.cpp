@@ -588,10 +588,8 @@ struct CubicBezierData {
 // Currently assumes first derivative at endpoint is non null.
 // TODO: Support null derivatives (using limit analysis).
 // TODO: Support different halfwidth on both sides.
-void computeOffsetLineTangentsAtEndPoint(
-    std::array<geometry::Vec2d, 2>& outTangents,
-    const CubicBezierData& data,
-    Int endpoint) {
+std::array<geometry::Vec2d, 2>
+computeOffsetLineTangentsAtEndPoint(const CubicBezierData& data, Int endpoint) {
 
     Vec2d p = {};
     Vec2d dp = {};
@@ -619,8 +617,7 @@ void computeOffsetLineTangentsAtEndPoint(
     Vec2d dn = dp * (ddp.det(dp)) / (dpl * dpl * dpl);
 
     Vec2d a = dn * w + n * dw;
-    outTangents[0] = (dp + a).normalized();
-    outTangents[1] = (dp - a).normalized();
+    return {(dp + a).normalized(), (dp - a).normalized()};
 }
 
 // ---------------------------------------------------------------------------------------
@@ -959,18 +956,24 @@ void Curve::sampleRange(
     }
 }
 
-void Curve::getOffsetLineTangentsAtSegmentEndpoint(
-    std::array<geometry::Vec2d, 2>& outTangents,
-    Int segmentIndex,
-    Int endpointIndex) const {
+std::array<geometry::Vec2d, 2>
+Curve::getOffsetLineTangentsAtSegmentEndpoint(Int segmentIndex, Int endpointIndex) const {
 
-    if (numKnots() < 2) {
-        throw vgc::core::IndexError(
-            "cannot compute tangents of a curve with less than 2 knots.");
+    if (segmentIndex < 0 || segmentIndex >= numSegments()) {
+        throw vgc::core::IndexError(core::format(
+            "The given `segmentIndex` ({}) is out of range "
+            " `[0, numSegments() - 1]` ([0, {}])",
+            segmentIndex,
+            numSegments() - 1));
+    }
+
+    if (endpointIndex < 0 || endpointIndex > 1) {
+        throw vgc::core::IndexError(core::format(
+            "The given `endpointIndex` ({}) must be `0` or `1`", endpointIndex));
     }
 
     CubicBezierData bezierData = CubicBezierData(this, segmentIndex);
-    computeOffsetLineTangentsAtEndPoint(outTangents, bezierData, endpointIndex);
+    return computeOffsetLineTangentsAtEndPoint(bezierData, endpointIndex);
 }
 
 void Curve::onWidthsChanged_() {
