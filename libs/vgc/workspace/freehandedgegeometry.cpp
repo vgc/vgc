@@ -736,7 +736,7 @@ geometry::Vec2d FreehandEdgeGeometry::sculptGrab(
         //  keepCount:                     1            (count until next >= sn)
         //
         Int keepIndex = 0;
-        for (Int keepIndex = 0; keepIndex < numPoints; ++keepIndex) {
+        for (; keepIndex < numPoints; ++keepIndex) {
             if (pointsS[keepIndex] > sn) {
                 break;
             }
