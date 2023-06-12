@@ -528,37 +528,72 @@ void VacKeyVertex::computeJoin_() {
             else { // !isCircular
                 constexpr double oneThird = 1.0 / 3.0;
 
-                geometry::CurveSample joinSamplePrev = halfedgeData.joinPreviousSample_;
                 Vec2d sp0 = joinSample.sidePoint(0);
                 Vec2d sp1 = joinSample.sidePoint(1);
-
-                bool isT0Normalizable = false;
-                bool isT1Normalizable = false;
-                Vec2d t0 =
-                    (sp0 - joinSamplePrev.sidePoint(0)).normalized(&isT0Normalizable);
-                Vec2d t1 =
-                    (sp1 - joinSamplePrev.sidePoint(1)).normalized(&isT1Normalizable);
                 Vec2d halfwidths = joinSample.halfwidths();
 
-                // fix-up tangents if there is a cusp
-                if (!isT0Normalizable) {
-                    t0 = capDir;
-                }
-                else {
-                    double proj = t0.dot(capDir);
-                    if (proj < 0) {
-                        // reflected opposite
-                        t0 = t0 - 2 * proj * capDir;
+                const vacomplex::EdgeSampling* sampling =
+                    halfedgeData.edgeData_->sampling_.get();
+
+                Vec2d t0 = {};
+                Vec2d t1 = {};
+
+                if (sampling
+                    && sampling->hasDefinedOffsetLineTangentsAtEndpoint(
+                        halfedgeData.isReverse() ? 1 : 0)) {
+
+                    if (halfedgeData.isReverse()) {
+                        std::array<geometry::Vec2d, 2> tangents =
+                            sampling->offsetLineTangentsAtEndpoint(1);
+                        t0 = tangents[1];
+                        t1 = tangents[0];
+                    }
+                    else {
+                        std::array<geometry::Vec2d, 2> tangents =
+                            sampling->offsetLineTangentsAtEndpoint(0);
+                        t0 = -tangents[0];
+                        t1 = -tangents[1];
+                    }
+
+                    // fix tangent orientation in case of cusps
+                    double proj0 = t0.dot(capDir);
+                    if (proj0 < 0) {
+                        t0 = -t0;
+                    }
+                    double proj1 = t1.dot(capDir);
+                    if (proj1 < 0) {
+                        t1 = -t1;
                     }
                 }
-                if (!isT1Normalizable) {
-                    t1 = capDir;
-                }
                 else {
-                    double proj = t1.dot(capDir);
-                    if (proj < 0) {
-                        // reflected opposite
-                        t1 = t1 - 2 * proj * capDir;
+                    geometry::CurveSample joinSamplePrev =
+                        halfedgeData.joinPreviousSample_;
+
+                    bool isT0Valid = false;
+                    bool isT1Valid = false;
+                    t0 = (sp0 - joinSamplePrev.sidePoint(0)).normalized(&isT0Valid);
+                    t1 = (sp1 - joinSamplePrev.sidePoint(1)).normalized(&isT1Valid);
+
+                    // fix-up tangents if there is a cusp
+                    if (!isT0Valid) {
+                        t0 = capDir;
+                    }
+                    else {
+                        double proj = t0.dot(capDir);
+                        if (proj < 0) {
+                            // reflected opposite
+                            t0 = t0 - 2 * proj * capDir;
+                        }
+                    }
+                    if (!isT1Valid) {
+                        t1 = capDir;
+                    }
+                    else {
+                        double proj = t1.dot(capDir);
+                        if (proj < 0) {
+                            // reflected opposite
+                            t1 = t1 - 2 * proj * capDir;
+                        }
                     }
                 }
 

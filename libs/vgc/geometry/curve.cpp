@@ -585,6 +585,41 @@ struct CubicBezierData {
     }
 };
 
+// Currently assumes first derivative at endpoint is non null.
+// TODO: Support null derivatives (using limit analysis).
+// TODO: Support different halfwidth on both sides.
+std::array<geometry::Vec2d, 2>
+computeOffsetLineTangentsAtEndPoint(const CubicBezierData& data, Int endpoint) {
+
+    Vec2d p = {};
+    Vec2d dp = {};
+    Vec2d ddp = {};
+    double w = {};
+    double dw = {};
+
+    if (endpoint) {
+        p = data.positions[3];
+        dp = 3 * (data.positions[3] - data.positions[2]);
+        ddp = 6 * (data.positions[3] - 2 * data.positions[2] + data.positions[1]);
+        w = data.halfwidths[3];
+        dw = 3 * (data.halfwidths[3] - data.halfwidths[2]);
+    }
+    else {
+        p = data.positions[0];
+        dp = 3 * (data.positions[1] - data.positions[0]);
+        ddp = 6 * (data.positions[2] - 2 * data.positions[1] + data.positions[0]);
+        w = data.halfwidths[0];
+        dw = 3 * (data.halfwidths[1] - data.halfwidths[0]);
+    }
+
+    double dpl = dp.length();
+    Vec2d n = dp.orthogonalized() / dpl;
+    Vec2d dn = dp * (ddp.det(dp)) / (dpl * dpl * dpl);
+
+    Vec2d a = dn * w + n * dw;
+    return {(dp + a).normalized(), (dp - a).normalized()};
+}
+
 // ---------------------------------------------------------------------------------------
 // Simple adaptive sampling in model space. Adapts to the curve widths in the same pass.
 // To be deprecated in favor of the multi-view sampling further below.
@@ -919,6 +954,26 @@ void Curve::sampleRange(
             lastPoint = point;
         }
     }
+}
+
+std::array<geometry::Vec2d, 2>
+Curve::getOffsetLineTangentsAtSegmentEndpoint(Int segmentIndex, Int endpointIndex) const {
+
+    if (segmentIndex < 0 || segmentIndex >= numSegments()) {
+        throw vgc::core::IndexError(core::format(
+            "The given `segmentIndex` ({}) is out of range "
+            " `[0, numSegments() - 1]` ([0, {}])",
+            segmentIndex,
+            numSegments() - 1));
+    }
+
+    if (endpointIndex < 0 || endpointIndex > 1) {
+        throw vgc::core::IndexError(core::format(
+            "The given `endpointIndex` ({}) must be `0` or `1`", endpointIndex));
+    }
+
+    CubicBezierData bezierData = CubicBezierData(this, segmentIndex);
+    return computeOffsetLineTangentsAtEndPoint(bezierData, endpointIndex);
 }
 
 void Curve::onWidthsChanged_() {

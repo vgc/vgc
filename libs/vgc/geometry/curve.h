@@ -695,6 +695,23 @@ public:
         Int numSegments = -1,
         bool withArclengths = true) const;
 
+    /// Returns the normalized tangents of the two offset lines at the given
+    /// segment endpoint, given by its segment index and endpoint index (0 for
+    /// the start of the segment, and 1 for the end of the segment).
+    ///
+    /// Note that the tangents just before and just after a knot are not
+    /// necessarily equal in case of "corner" knots. Therefore,
+    /// `getOffsetLineTangentsAtSegmentEndpoint(i - 1, 1)` and
+    /// `getOffsetLineTangentsAtSegmentEndpoint(i, 0)` may not be equal.
+    ///
+    /// Throws `IndexError` if the given `segmentIndex` is not in the range
+    /// `[0, numSegments() - 1]`.
+    ///
+    /// Throws `IndexError` if the given `endpointIndex` is neither `0` or `1`.
+    ///
+    std::array<geometry::Vec2d, 2>
+    getOffsetLineTangentsAtSegmentEndpoint(Int segmentIndex, Int endpointIndex) const;
+
     /// Sets the color of the curve.
     ///
     // XXX Think aboutvariability for colors too. Does it make sense
