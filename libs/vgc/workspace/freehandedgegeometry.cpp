@@ -573,18 +573,22 @@ geometry::Vec2d FreehandEdgeGeometry::sculptGrab(
     // We could benefit from a two step sampling (sample centerline points, then sample
     // cross sections on an sub-interval).
     geometry::CurveSampleArray samples;
-    geometry::Curve curve;
+    geometry::Curve curve(
+        isClosed ? geometry::Curve::Type::ClosedUniformCatmullRom
+                 : geometry::Curve::Type::OpenUniformCatmullRom);
     curve.setPositions(points_);
     curve.setWidths(widths_);
     core::Array<double> pointsS(numPoints, core::noInit);
-    pointsS[0] = 0;
-    for (Int i = 1; i < numPoints; ++i) {
-        if (i > 1) {
-            samples.pop();
-        }
-        curve.sampleRange(
-            samples, geometry::CurveSamplingQuality::AdaptiveLow, i, 1, true);
+    samples.emplaceLast();
+    for (Int i = 0; i < numPoints; ++i) {
         pointsS[i] = samples.last().s();
+        samples.pop();
+        curve.sampleRange(
+            samples,
+            geometry::CurveSamplingQuality::AdaptiveLow,
+            i,
+            Int{(!isClosed && i == numPoints - 1) ? 0 : 1},
+            true);
     }
 
     // Note: we could have a distanceToCurve specialized for our geometry.
@@ -711,19 +715,17 @@ geometry::Vec2d FreehandEdgeGeometry::sculptGrab(
 
     // Insert sculpt points in input points
     if (sculptSampling.isClosed) {
-        points_.resize(numPatchPoints + 1);
+        points_.resize(numPatchPoints);
         for (Int i = 0; i < numPatchPoints; ++i) {
             const SculptPoint& sp = sculptPoints[indices[i]];
             points_[i] = sp.pos;
         }
-        points_.last() = points_.first();
         if (hasWidths) {
-            widths_.resize(numPatchPoints + 1);
+            widths_.resize(numPatchPoints);
             for (Int i = 0; i < numPatchPoints; ++i) {
                 const SculptPoint& sp = sculptPoints[indices[i]];
                 widths_[i] = sp.width;
             }
-            widths_.last() = widths_.first();
         }
     }
     else if (sculptSampling.isOverlappingStart) {
@@ -750,20 +752,18 @@ geometry::Vec2d FreehandEdgeGeometry::sculptGrab(
         Int keepCount = keepEndIndex - keepIndex;
 
         points_.erase(points_.begin(), points_.begin() + keepIndex);
-        points_.resize(keepCount + numPatchPoints + 1);
+        points_.resize(keepCount + numPatchPoints);
         for (Int i = 0; i < numPatchPoints; ++i) {
             const SculptPoint& sp = sculptPoints[indices[i]];
             points_[keepCount + i] = sp.pos;
         }
-        points_.last() = points_.first();
         if (hasWidths) {
             widths_.erase(widths_.begin(), widths_.begin() + keepIndex);
-            widths_.resize(keepCount + numPatchPoints + 1);
+            widths_.resize(keepCount + numPatchPoints);
             for (Int i = 0; i < numPatchPoints; ++i) {
                 const SculptPoint& sp = sculptPoints[indices[i]];
                 widths_[keepCount + i] = sp.width;
             }
-            widths_.last() = widths_.first();
         }
     }
     else {
