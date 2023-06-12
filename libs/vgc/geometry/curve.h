@@ -700,7 +700,7 @@ public:
     /// and thus can have two different pairs of tangents.
     ///
     /// Throws `IndexError` if (`numPoints() < 2`).
-    /// 
+    ///
     void getOffsetLineTangentsAtSegmentEndpoint(
         std::array<geometry::Vec2d, 2>& outTangents,
         Int segmentIndex,
