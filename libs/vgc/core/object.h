@@ -59,7 +59,7 @@ public:
     // for incref(), which verifies that T derives from Object whenever we
     // construct an ObjPtr<T>.
     //
-    static void decref(void* obj, Int64 k = 1);
+    static void decref(const void* obj, Int64 k = 1);
 };
 
 } // namespace detail
@@ -139,6 +139,17 @@ public:
         : obj_(other.obj_) {
 
         detail::ObjPtrAccess::incref(obj_);
+    }
+
+    /// Assigns the given `T*` to this `ObjPtr<T>`.
+    ///
+    ObjPtr& operator=(T* obj) noexcept {
+        if (obj_ != obj) {
+            detail::ObjPtrAccess::decref(obj_);
+            obj_ = obj;
+            detail::ObjPtrAccess::incref(obj_);
+        }
+        return *this;
     }
 
     /// Assigns the given `ObjPtr<T>` to this `ObjPtr<T>`.
@@ -1366,7 +1377,7 @@ inline void ObjPtrAccess::incref(const Object* obj, Int64 k) {
     }
 }
 
-inline void ObjPtrAccess::decref(void* obj_, Int64 k) {
+inline void ObjPtrAccess::decref(const void* obj_, Int64 k) {
     const Object* obj = static_cast<const Object*>(obj_);
     if (obj) {
         obj->refCount_ -= k;
