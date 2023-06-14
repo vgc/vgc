@@ -162,12 +162,10 @@ namespace commands {
 
 // XXX This could be done directly by button
 //
-VGC_UI_DEFINE_COMMAND(
+VGC_UI_DEFINE_TRIGGER_COMMAND(
     clickButton,
     "ui.messageDialog.clickButton",
-    CommandType::Trigger,
     "Click Button",
-    ShortcutContext::Widget,
     Shortcut())
 
 } // namespace commands

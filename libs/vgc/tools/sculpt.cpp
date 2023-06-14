@@ -41,21 +41,21 @@ ui::NumberSetting* sculptRadius() {
 
 namespace commands {
 
-VGC_UI_DEFINE_COMMAND(
+using ui::ModifierKey;
+using ui::MouseButton;
+using ui::Shortcut;
+
+VGC_UI_DEFINE_MOUSE_DRAG_COMMAND( //
     grab,
     "tools.sculpt.grab",
-    ui::CommandType::MouseDrag,
     "Sculpt Grab",
-    ui::ShortcutContext::Widget,
-    ui::Shortcut(ui::ModifierKey::None, ui::MouseButton::Left))
+    MouseButton::Left)
 
-VGC_UI_DEFINE_COMMAND(
+VGC_UI_DEFINE_MOUSE_DRAG_COMMAND( //
     editRadius,
     "tools.sculpt.editRadius",
-    ui::CommandType::MouseDrag,
     "Edit Sculpt Radius",
-    ui::ShortcutContext::Widget,
-    ui::Shortcut(ui::ModifierKey::Ctrl, ui::MouseButton::Left))
+    Shortcut(ModifierKey::Ctrl, MouseButton::Left))
 
 } // namespace commands
 

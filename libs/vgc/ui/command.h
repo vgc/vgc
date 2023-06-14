@@ -24,23 +24,6 @@
 #include <vgc/ui/api.h>
 #include <vgc/ui/shortcut.h>
 
-/// Defines a command and adds it to the `CommandRegistry`.
-///
-/// ```cpp
-/// VGC_UI_DEFINE_COMMAND(
-///     save,
-///     "file.save"
-///     vgc::ui::CommandType::Trigger,
-///     "Save",
-///     vgc::ui::ShortcutContext::Window,
-///     vgc::ui::Shortcut(vgc::ui::ModifierKey::Ctrl, vgc::ui::Key::S))
-/// ```
-///
-#define VGC_UI_DEFINE_COMMAND(variableName, id, type, name, shortcutContext, shortcut)   \
-    static const ::vgc::core::StringId variableName(id);                                 \
-    static const ::vgc::ui::detail::CommandRegistrer variableName##_detail(              \
-        ::vgc::ui::Command(id, type, name, shortcutContext, shortcut));
-
 namespace vgc::ui {
 
 /// \enum vgc::ui::CommandType
@@ -126,15 +109,13 @@ public:
     Command(
         std::string_view id,
         ui::CommandType type,
-        std::string_view name,
         ShortcutContext shortcutContext,
-        Shortcut shortcut)
+        std::string_view name)
 
         : id_(id)
         , type_(type)
-        , name_(name)
         , shortcutContext_(shortcutContext)
-        , shortcut_(shortcut) {
+        , name_(name) {
     }
 
     /// Returns the ID of the command, which is a string that uniquely identifies a
@@ -155,6 +136,20 @@ public:
         return type_;
     }
 
+    /// Returns the shortcut context of the command.
+    ///
+    /// This describes whether the `shortcut()` is active application-wide, or
+    /// only when the action is in the active window, or only when the action
+    /// is owned by a widget that has the keyboard focus.
+    ///
+    // XXX Should shortcut context be allowed to be defined per-shortcut,
+    // instead of per-command? Example: "R" as WidgetContext, "Ctrl+Shift+R" as
+    // WindowContext?
+    //
+    ShortcutContext shortcutContext() const {
+        return shortcutContext_;
+    }
+
     /// Returns the name of the command.
     ///
     /// This is a short user-facing string that appears for example in menus,
@@ -166,37 +161,11 @@ public:
         return name_;
     }
 
-    /// Returns the shortcut context of the command.
-    ///
-    /// This describes whether the `shortcut()` is active application-wide, or
-    /// only when the action is in the active window, or only when the action
-    /// is owned by a widget that has the keyboard focus.
-    ///
-    ShortcutContext shortcutContext() const {
-        return shortcutContext_;
-    }
-
-    /// Returns the shortcut associated with the command. This can be an empty
-    /// shortcut if this command has no associated shortcut.
-    ///
-    // TODO => the shortcut should be stored in a separate ShortcutMap, mapping
-    // Commands with shortcuts, since this is not a static properties of actions
-    // but a dynamic one (they can be changed at runtime).
-    //
-    // XXX Should shortcut context also be dynamic, and possibly each shortcut
-    // have its own shortcut context (e.g.: "R" as WidgetContext, "Ctrl+Shift+R"
-    // as WindowContext?)
-    //
-    const Shortcut& shortcut() const {
-        return shortcut_;
-    }
-
 private:
     core::StringId id_;
     ui::CommandType type_;
-    core::StringId name_;
     ShortcutContext shortcutContext_;
-    Shortcut shortcut_;
+    core::StringId name_;
 };
 
 } // namespace vgc::ui
@@ -230,7 +199,7 @@ public:
     /// the same ID in the registry, then the given command replaces the
     /// pre-existing command.
     ///
-    static void add(Command command);
+    static void add(const Command& command);
 
 private:
     std::unordered_map<core::StringId, Command> commands_;
@@ -241,13 +210,121 @@ private:
 namespace detail {
 
 struct CommandRegistrer {
-    CommandRegistrer(Command actionProperties) {
-        CommandRegistry::add(actionProperties);
+    CommandRegistrer(const Command& command) {
+        CommandRegistry::add(command);
     }
 };
 
 } // namespace detail
 
 } // namespace vgc::ui
+
+#define VGC_UI_DEFINE_COMMAND_5(variableName, id, type, shortcutContext, name)           \
+    static const ::vgc::core::StringId variableName(id);                                 \
+    static const ::vgc::ui::detail::CommandRegistrer variableName##_detail(              \
+        ::vgc::ui::Command(id, type, shortcutContext, name));
+
+#define VGC_UI_DEFINE_COMMAND_6(variableName, id, type, shortcutContext, name, shortcut) \
+    VGC_UI_DEFINE_COMMAND_5(variableName, id, type, shortcutContext, name)               \
+    VGC_UI_ADD_DEFAULT_SHORTCUT(variableName, shortcut)
+
+/// Defines a command and adds it to the `CommandRegistry`.
+///
+/// ```cpp
+/// VGC_UI_DEFINE_COMMAND(
+///     save,
+///     "file.save"
+///     CommandType::Trigger,
+///     ShortcutContext::Window,
+///     "Save",
+///     )
+/// ```
+///
+/// Optionally, it is also possible to add a default shortcut associated with the command:
+///
+/// ```cpp
+/// VGC_UI_DEFINE_COMMAND(
+///     save,
+///     "file.save"
+///     CommandType::Trigger,
+///     ShortcutContext::Window,
+///     "Save",
+///     Shortcut(ModifierKey::Ctrl, Key::S)
+/// )
+/// ```
+///
+#define VGC_UI_DEFINE_COMMAND(...)                                                       \
+    VGC_PP_EXPAND(VGC_PP_OVERLOAD(VGC_UI_DEFINE_COMMAND_, __VA_ARGS__)(__VA_ARGS__))
+
+/// An overload of `VGC_UI_DEFINE_COMMAND()` that creates a command of type
+/// `Trigger` and shortcut context `Widget`.
+///
+/// ```cpp
+/// VGC_UI_DEFINE_TRIGGER_COMMAND(
+///     openSubMenu,
+///     "ui.menu.openVerticalSubMenu",
+///     "Open Vertical Sub Menu"
+///     Key::Right)
+/// ```
+///
+#define VGC_UI_DEFINE_TRIGGER_COMMAND(var, id, ...)                                      \
+    VGC_UI_DEFINE_COMMAND(                                                               \
+        var, id, ui::CommandType::Trigger, ui::ShortcutContext::Widget, __VA_ARGS__)
+
+/// An overload of `VGC_UI_DEFINE_COMMAND()` that creates a command of type
+/// `MouseDrag` and shortcut context `Widget`.
+///
+/// ```cpp
+/// VGC_UI_DEFINE_MOUSE_DRAG_COMMAND(
+///     grab,
+///     "tools.sculpt.grab",
+///     "Sculpt Grab",
+///     MouseButton::Left)
+/// ```
+///
+#define VGC_UI_DEFINE_MOUSE_DRAG_COMMAND(var, id, ...)                                   \
+    VGC_UI_DEFINE_COMMAND(                                                               \
+        var, id, ui::CommandType::MouseDrag, ui::ShortcutContext::Widget, __VA_ARGS__)
+
+/// An overload of `VGC_UI_DEFINE_COMMAND()` that creates a command of type
+/// `MouseClick` and shortcut context `Widget`.
+///
+/// ```cpp
+/// VGC_UI_DEFINE_MOUSE_CLICK_COMMAND(
+///     cutEdge,
+///     "tools.topology.cutEdgeAtNewVertex",
+///     "Cut Edge at New Vertex",
+///     MouseButton::Left)
+/// ```
+///
+#define VGC_UI_DEFINE_MOUSE_CLICK_COMMAND(var, id, ...)                                  \
+    VGC_UI_DEFINE_COMMAND(                                                               \
+        var, id, ui::CommandType::MouseClick, ui::ShortcutContext::Widget, __VA_ARGS__)
+
+/// An overload of `VGC_UI_DEFINE_COMMAND()` that creates a command of type
+/// `Trigger` and shortcut context `Window`.
+///
+/// ```cpp
+/// VGC_UI_DEFINE_WINDOW_COMMAND(
+///     undo,
+///     "edit.undo",
+///     "Undo",
+///     Shortcut(ModifierKey::Ctrl, Key::Z))
+/// ```
+///
+#define VGC_UI_DEFINE_WINDOW_COMMAND(var, id, ...)                                       \
+    VGC_UI_DEFINE_COMMAND(                                                               \
+        var, id, ui::CommandType::Trigger, ui::ShortcutContext::Window, __VA_ARGS__)
+
+/// An overload of `VGC_UI_DEFINE_COMMAND()` that creates a command of type
+/// `Trigger` and shortcut context `Application`.
+///
+#define VGC_UI_DEFINE_APPLICATION_COMMAND(var, id, ...)                                  \
+    VGC_UI_DEFINE_COMMAND(                                                               \
+        var,                                                                             \
+        id,                                                                              \
+        ui::CommandType::Trigger,                                                        \
+        ui::ShortcutContext::Application,                                                \
+        __VA_ARGS__)
 
 #endif // VGC_UI_COMMAND_H

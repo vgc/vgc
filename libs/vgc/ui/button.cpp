@@ -174,6 +174,7 @@ void Button::connectNewAction_() {
         action_->propertiesChanged().connect(onActionPropertiesChangedSlot_());
         action_->checkStateChanged().connect(onActionCheckStateChangedSlot_());
         action_->enabledChanged().connect(onActionEnabledChangedSlot_());
+        ui::userShortcuts()->changed().connect(onUserShortcutsChangedSlot_());
     }
 }
 
@@ -182,14 +183,27 @@ void Button::disconnectOldAction_() {
         action_->aboutToBeDestroyed().disconnect(onActionAboutToBeDestroyedSlot_());
         action_->propertiesChanged().disconnect(onActionPropertiesChangedSlot_());
         action_->checkStateChanged().disconnect(onActionCheckStateChangedSlot_());
-        action_->enabledChanged().connect(onActionEnabledChangedSlot_());
+        action_->enabledChanged().disconnect(onActionEnabledChangedSlot_());
+        ui::userShortcuts()->changed().disconnect(onUserShortcutsChangedSlot_());
     }
 }
 
 void Button::updateWidgetsBasedOnAction_() {
+
+    // Update text
     std::string_view text_ = text();
-    std::string shortcutText = core::format("{}", shortcut());
     textLabel_->setText(text_);
+
+    // Update shortcut text
+    std::string shortcutText;
+    if (action_) {
+        const ShortcutArray& shortcuts = action_->userShortcuts();
+        if (!shortcuts.isEmpty()) {
+            // We display the first shortcut, which is considered to be the
+            // "primary" shortcut.
+            shortcutText = core::format("{}", shortcuts.first());
+        }
+    }
     shortcutLabel_->setText(shortcutText);
 
     // Update `unchecked`, `checked`, `indeterminate` style class
@@ -241,6 +255,10 @@ void Button::onActionCheckStateChanged_() {
 void Button::onActionEnabledChanged_() {
     updateWidgetsBasedOnAction_();
     actionChanged().emit(action_);
+}
+
+void Button::onUserShortcutsChanged_() {
+    updateWidgetsBasedOnAction_();
 }
 
 } // namespace vgc::ui
