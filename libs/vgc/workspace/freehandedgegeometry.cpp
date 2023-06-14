@@ -284,6 +284,60 @@ struct SculptPoint {
     double s = 0;
 };
 
+} // namespace
+
+} // namespace vgc::workspace
+
+template<>
+struct fmt::formatter<vgc::workspace::SculptPoint> : fmt::formatter<double> {
+    template<typename FormatContext>
+    auto format(const vgc::workspace::SculptPoint& point, FormatContext& context) {
+        auto&& out = context.out();
+        format_to(out, "{{pos=(");
+        fmt::formatter<double>::format(point.pos[0], context);
+        format_to(out, ", ");
+        fmt::formatter<double>::format(point.pos[1], context);
+        format_to(out, "), width=");
+        fmt::formatter<double>::format(point.width, context);
+        format_to(out, ", d=");
+        fmt::formatter<double>::format(point.d, context);
+        format_to(out, ", s=");
+        fmt::formatter<double>::format(point.s, context);
+        return format_to(out, "}}");
+    }
+};
+
+// Same as default Array formatter but with newlines between elements,
+// and allowing same format parameters as double
+template<>
+struct fmt::formatter<vgc::core::Array<vgc::workspace::SculptPoint>>
+    : fmt::formatter<vgc::workspace::SculptPoint> {
+
+    template<typename FormatContext>
+    auto format( //
+        const vgc::core::Array<vgc::workspace::SculptPoint>& array,
+        FormatContext& context) {
+
+        auto&& out = context.out();
+        format_to(out, "[\n    ");
+        bool first = true;
+        for (const auto& point : array) {
+            if (first) {
+                first = false;
+            }
+            else {
+                format_to(out, ",\n    ");
+            }
+            fmt::formatter<vgc::workspace::SculptPoint>::format(point, context);
+        }
+        return format_to(out, "]");
+    }
+};
+
+namespace vgc::workspace {
+
+namespace {
+
 struct SculptSampling {
     core::Array<SculptPoint> sculptPoints;
     // sampling boundaries in arclength from central sculpt point.
@@ -317,6 +371,16 @@ T narrow_cast(U x) {
 template<typename T, typename U>
 T floor_narrow_cast(U x) {
     return static_cast<T>(std::floor(x));
+}
+
+/// Rounds the given floating point `x` towards the closest integer and narrow_cast it to
+/// an integer.
+///
+// XXX Add tests, SFINAE checks, and move to core/arithmetic.h
+//
+template<typename T, typename U>
+T round_narrow_cast(U x) {
+    return static_cast<T>(std::round(x));
 }
 
 /*
@@ -943,12 +1007,30 @@ public:
         double maxDs,
         double simplifyTolerance) {
 
+        VGC_DEBUG_TMP_EXPR(position);
+        VGC_DEBUG_TMP_EXPR(strength);
+        VGC_DEBUG_TMP_EXPR(radius);
+        VGC_DEBUG_TMP_EXPR(points);
+        VGC_DEBUG_TMP_EXPR(widths);
+        VGC_DEBUG_TMP_EXPR(isClosed);
+        VGC_DEBUG_TMP_EXPR(samplingQuality);
+        VGC_DEBUG_TMP_EXPR(maxDs);
+        VGC_DEBUG_TMP_EXPR(simplifyTolerance);
+
+        VGC_DEBUG_TMP_EXPR(points);
+
         points_ = &points;
         widths_ = &widths;
         isClosed_ = isClosed;
         hasWidths_ = widths_->length() == points_->length();
 
         outSculptCursorPosition = position;
+
+        // Step 1:
+        //
+        // Compute sculpt points, which are a uniform sampling of the curve
+        // around the sculpt center. Using a uniform sampling is important in
+        // order to be able to compute meaningful weighted averages.
 
         if (!initCurveSampling_(samplingQuality)) {
             return false;
@@ -964,6 +1046,12 @@ public:
             return false;
         }
 
+        // Step 2:
+        //
+        // Determine which original knots of the curve are within the range of
+        // sculpt points, that is, affected by sculpt operation. These are called
+        // the "sculpted knots".
+
         sculptedKnotsInterval_ = computeSculptedKnotsInterval_();
         if (sculptedKnotsInterval_.count == 0) {
             outSculptCursorPosition =
@@ -971,17 +1059,56 @@ public:
             return false;
         }
 
-        newStartPointIndex_ = 0;
-        appendUnmodifiedPoints1_();
-        Int simplifyFirstIndex = std::max<Int>(0, newPoints_.length() - 1);
-        appendTransformedPoints_(strength);
-        Int simplifyLastIndex = newPoints_.length();
-        appendUnmodifiedPoints2_();
-        simplifyLastIndex = std::min<Int>(simplifyLastIndex, newPoints_.length() - 1);
+        // Step 3:
+        //
+        // Compute new positions of original knots:
+        // (a) First append unmodified knots before the sculpted knots
+        // (b) Then append the sculpted knots with their new position
+        //     computed thanks to the uniform sampling (sculpt points)
+        // (c) Then append unmodified knots after the sculpted knots
+        //
 
-        if (newStartPointIndex_ == newPoints_.length()) {
+        newStartPointIndex_ = 0;                          // See step 5
+        appendUnmodifiedKnotsBefore_();                   // (a)
+        appendModifiedKnots_(strength);                   // (b)
+        appendUnmodifiedKnotsAfter_();                    // (c)
+        if (newStartPointIndex_ == newPoints_.length()) { // See step 5
             newStartPointIndex_ = 0;
         }
+
+        VGC_DEBUG_TMP_EXPR(newPoints_);
+
+        // XXX TODO: Fix first point is duplicated when using an open curve
+        // and the middle sculpt point is exactly at s = 0. Perhaps caused
+        // by adding it both in appendUnmodifiedKnotsBefore_ and appendModifiedKnots_
+        // see comment in appendUnmodifiedKnotsBefore_.
+        //
+        // Same issue at the end.
+
+        // Step 4:
+        //
+        // Apply simplification (Douglas-Peuckert based) to the sculpted knots,
+        // in order to remove knots that are not needed anymore due to the curve being smoother.
+        //
+        // The knot interval that we want to smooth is basically the same as sculptedKnotsInterval_
+        // but extended by one more knot:
+        //
+        //
+        // Original knots:             x------x-----xx----x-----x-------x
+        // Sculpt points:                       o--o--o--o--o--o--o
+        // Sculpted knots:                          xx    x     x
+        // Transformed knots:                        x    x     x
+        // Simplified interval:               x------x----x-----x-------x
+        //                                 simplify                  simplify
+        //                                first index               last index
+        //
+        // Knots surviving simplification:    x-----------x-----x-------x    (= `indices`)
+        //
+
+        Int simplifyFirstIndex = numUnmodifiedKnotsBefore_ - 1;
+        Int simplifyLastIndex = newPoints_.length() - numUnmodifiedKnotsAfter_;
+        simplifyFirstIndex = core::clamp(simplifyFirstIndex, 0, newPoints_.length() - 1);
+        simplifyLastIndex = core::clamp(simplifyLastIndex, 0, newPoints_.length() - 1);
 
         core::IntArray indices;
         indices.extend({simplifyFirstIndex, simplifyLastIndex});
@@ -992,8 +1119,22 @@ public:
             simplifyTolerance,
             [](const geometry::Vec2d& p) { return p; },
             [](const geometry::Vec2d&) { return 1.0; });
+
         // TODO: add index in filterPointsStep functor parameters to be
         //       able to use newPoints_[index] in the width getter.
+
+        // Step 5:
+        //
+        // Copy the results post-simplification to the final output points/widths
+        // arrays.
+        //
+        // In the case of a closed curve, the original first knot may not have
+        // survived simplification, and therefore we need to find a new
+        // suitable first knot and rotate the other knots accordingly.
+        //
+        // The new first knot (given by `newStartPointIndex_`) is chosen as
+        // close as possible to the original first knot.
+        //
 
         outPoints.clear();
         outWidths.clear();
@@ -1004,7 +1145,35 @@ public:
             outWidths.reserve(n);
         }
 
-        if (newStartPointIndex_ > 0) {
+        if (newStartPointIndex_ == 0) { // Simple case: no knot rotation needed
+
+            // Copy the unmodified knots before
+            outPoints.extend(newPoints_.begin(), newPoints_.begin() + simplifyFirstIndex);
+            if (hasWidths_) {
+                outWidths.extend(
+                    newWidths_.begin(), newWidths_.begin() + simplifyFirstIndex);
+            }
+
+            // Copy the modified knots that survived simplification
+            for (Int i : indices) {
+                outPoints.append(newPoints_[i]);
+                if (hasWidths_) {
+                    outWidths.append(newWidths_[i]);
+                }
+            }
+
+            // Copy the unmodified knots after
+            outPoints.extend(
+                newPoints_.begin() + simplifyLastIndex + 1, newPoints_.end());
+            if (hasWidths_) {
+                outWidths.extend(
+                    newWidths_.begin() + simplifyLastIndex + 1, newWidths_.end());
+            }
+        }
+        else { // newStartPointIndex_ > 0: rotation needed
+
+            // Copy the modified knots that survived simplification and
+            // are equal or after the new first knot.
             for (Int i : indices) {
                 if (i >= newStartPointIndex_) {
                     outPoints.append(newPoints_[i]);
@@ -1013,17 +1182,24 @@ public:
                     }
                 }
             }
+
+            // Copy the unmodified knots before
             outPoints.extend(
                 newPoints_.begin() + simplifyLastIndex + 1, newPoints_.end());
             if (hasWidths_) {
                 outWidths.extend(
                     newWidths_.begin() + simplifyLastIndex + 1, newWidths_.end());
             }
+
+            // Copy the unmodified knots after
             outPoints.extend(newPoints_.begin(), newPoints_.begin() + simplifyFirstIndex);
             if (hasWidths_) {
                 outWidths.extend(
                     newWidths_.begin(), newWidths_.begin() + simplifyFirstIndex);
             }
+
+            // Copy the modified knots that survived simplification and
+            // are before the new first knot.
             for (Int i : indices) {
                 if (i < newStartPointIndex_) {
                     outPoints.append(newPoints_[i]);
@@ -1033,27 +1209,10 @@ public:
                 }
             }
         }
-        else {
-            outPoints.extend(newPoints_.begin(), newPoints_.begin() + simplifyFirstIndex);
-            if (hasWidths_) {
-                outWidths.extend(
-                    newWidths_.begin(), newWidths_.begin() + simplifyFirstIndex);
-            }
-            for (Int i : indices) {
-                outPoints.append(newPoints_[i]);
-                if (hasWidths_) {
-                    outWidths.append(newWidths_[i]);
-                }
-            }
-            outPoints.extend(
-                newPoints_.begin() + simplifyLastIndex + 1, newPoints_.end());
-            if (hasWidths_) {
-                outWidths.extend(
-                    newWidths_.begin() + simplifyLastIndex + 1, newWidths_.end());
-            }
-        }
 
         outSculptCursorPosition = outSculptCursorPosition_;
+
+        VGC_DEBUG_TMP_EXPR(outPoints);
 
         return true;
     }
@@ -1073,12 +1232,16 @@ private:
         pointsS_[0] = 0;
         samples_.clear();
         samples_.reserve(numPoints);
+        bool computeArclength = true;
         for (Int i = 0; i < numPoints - 1; ++i) {
-            curve.sampleRange(samples_, quality, i, 1, true);
+            Int numSegments = 1;
+            curve.sampleRange(samples_, quality, i, numSegments, computeArclength);
             pointsS_[i + 1] = samples_.last().s();
             samples_.pop();
         }
-        curve.sampleRange(samples_, quality, numPoints - 1, Int{isClosed_ ? 1 : 0}, true);
+        Int numSegments = isClosed_ ? 1 : 0;
+        curve.sampleRange(
+            samples_, quality, numPoints - 1, numSegments, computeArclength);
         totalS_ = samples_.last().s();
         return true;
     }
@@ -1110,8 +1273,10 @@ private:
         sN_ = sculptPoints.last().s;
 
         if (sculptSampling_.isClosed) {
+            // XXX Update s/d?
             sculptPoints.emplaceLast(sculptPoints.first());
         }
+        VGC_DEBUG_TMP("sculptPoints = {:> 8.2f}", sculptPoints);
 
         return true;
     }
@@ -1122,8 +1287,6 @@ private:
     };
 
     KnotsInterval computeSculptedKnotsInterval_() {
-
-        // THIS FUNCTION IS BUGGY ATM
 
         KnotsInterval res = {};
         const Int numPoints = pointsS_.length();
@@ -1143,7 +1306,6 @@ private:
         // Count knots in interval
         if (sculptSampling_.isClosed) {
             res.count = numPoints;
-            VGC_DEBUG_TMP("start:{} count:{} (isClosed)", res.start, res.count);
         }
         else {
             // Search index of first point just after sN.
@@ -1154,7 +1316,17 @@ private:
                 }
             }
             if (iN == numPoints) {
-                iN = (isClosed_ && sN_ >= totalS_) ? 1 : 0;
+                if (isClosed_) {
+                    if (sN_ >= totalS_) {
+                        iN = 1;
+                    }
+                    else {
+                        iN = 0;
+                    }
+                }
+                else {
+                    iN = numPoints;
+                }
             }
             // Build interval.
             if (sculptSampling_.isRadiusOverlappingStart && iN <= i0) {
@@ -1167,22 +1339,24 @@ private:
                 }
             }
             else {
-                if (isClosed_ && iN == 0 && i0 > 0) {
-                    res.count = numPoints - i0;
+                if (isClosed_) {
+                    if (iN == 0 && i0 > 0) {
+                        res.count = numPoints - i0;
+                    }
+                    else {
+                        res.count = iN - i0;
+                    }
                 }
                 else {
-                    // always `i0 <= iN` ?
                     res.count = iN - i0;
                 }
             }
-            VGC_DEBUG_TMP(
-                "start:{} count:{}/{} iN:{}", res.start, res.count, numPoints, iN);
         }
 
         return res;
     }
 
-    void appendUnmodifiedPoints1_() {
+    void appendUnmodifiedKnotsBefore_() {
         const Int numPoints = pointsS_.length();
         const bool isOverlappingStart =
             sculptedKnotsInterval_.start + sculptedKnotsInterval_.count > numPoints;
@@ -1191,6 +1365,9 @@ private:
             Int n = sculptedKnotsInterval_.start;
             if (!isClosed_ && n == 0) {
                 n = 1;
+                // XXX:Boris why? Why not handling it normally as modified knot?
+                // Is it to avoid to merge it with other knot (average s) in the
+                // first sculpt point segment?
             }
             newPoints_.extend(points_->begin(), points_->begin() + n);
             if (hasWidths_) {
@@ -1210,9 +1387,11 @@ private:
                 }
             }
         }
+        numUnmodifiedKnotsBefore_ = newPoints_.length();
     }
 
-    void appendUnmodifiedPoints2_() {
+    void appendUnmodifiedKnotsAfter_() {
+        const Int oldNewPointsLength = newPoints_.length();
         const Int numPoints = points_->length();
         const bool isOverlappingStart =
             sculptedKnotsInterval_.start + sculptedKnotsInterval_.count > numPoints;
@@ -1221,23 +1400,22 @@ private:
             Int n = sculptedKnotsInterval_.start + sculptedKnotsInterval_.count;
             if (!isClosed_ && n == numPoints) {
                 n = numPoints - 1;
+                // XXX:Boris Same comment, see appendUnmodifiedKnotsBefore_
             }
             newPoints_.extend(points_->begin() + n, points_->end());
             if (hasWidths_) {
                 newWidths_.extend(widths_->begin() + n, widths_->end());
             }
         }
+        numUnmodifiedKnotsAfter_ = newPoints_.length() - oldNewPointsLength;
     }
 
-    void appendTransformedPoints_(double strength) {
+    void appendModifiedKnots_(double strength) {
         if (sculptedKnotsInterval_.count == 0) {
             return;
         }
 
         core::Array<SculptPoint>& sculptPoints = sculptSampling_.sculptPoints;
-
-        // For each pair of consecutive sculpt points, average the original points in between
-        // and move the result based on the sculpt point transformation.
 
         initWeightedAveragingData_();
         auto computeWeightedAverageSculptPointFn =
@@ -1248,10 +1426,17 @@ private:
         SculptPoint wasp1 = {};
         Int iWasp1 = -1;
         Int pointIndex = sculptedKnotsInterval_.start;
-        if (pointIndex == 0) {
+        if (isClosed_ && pointIndex == 0) { // XXX missing "isClosed &&"?
             newStartPointIndex_ = newPoints_.length();
         }
 
+        // For each pair of consecutive sculpt points:
+        // 1. Find all original knots in between (if any)
+        // 2. Average their arclength s
+        // 3. Replace all these knots by a single knot, whose position/width
+        //    is a linear interpolation between the two transformed consecutive
+        //    sculpt points.
+        //
         for (Int i = 1; i < sculptPoints.length(); ++i) {
             const SculptPoint& sp1 = sculptPoints[i - 1];
             const SculptPoint& sp2 = sculptPoints[i];
@@ -1338,12 +1523,76 @@ private:
         }
     }
 
+    // In order to handle boundary conditions for compute the weighted average,
+    // we compute th weighted average as if we repeatedly applied a central symmetry
+    // to all the sculpt points:
+    //
+    // Original curve:
+    //                                                            curve
+    //                                                             end
+    //                      curve   MSP    ,------------------------|
+    //                      start  ,-x----'
+    //                        |---'
+    //                  <------------|------------>
+    //                      radius       radius
+    //
+    // Sculpt points:
+    //
+    //                              MSP    ,------|
+    //                             ,-x----'
+    //                        |---'
+    //                        <------|------------>
+    //                        capped     capped
+    //                        radii[0]   radii[1]
+    //
+    // 2D central symmetry of sculpt points at both sides:
+    // (repeated infinitely many times... or at least until length > 2 * radius):
+    //
+    //                                                            ,---|···
+    //                                                    ,------'
+    //                              MSP    ,------|------'
+    //                             ,-x----'
+    //                    ,---|---'
+    //            ,------'
+    // ···|------'
+    //
+    //    |-------------------------------------->|-------------------------------------->
+    //             repeating pattern
+    //
+    //
+    // Compute weighted average for any sculpt point p:
+    //                                                            ,---|···
+    //                                       p2           ,------'
+    //                                     ,-x----|------'
+    //                          p  ,------'
+    //             p1     ,---|-x-'
+    //            ,x-----'
+    // ···|------'
+    //             <------------|------------>
+    //                 radius       radius
+    //              \_______________________/
+    //              p' = weigthed average of all
+    //                   points between p1 and p2
+    //
+    // Note how this method ensures that by design, the weighted average p' at
+    // the boundary of the sculpt points is exactly equal to p itself. More
+    // generally, the closer we get to the boundary, the less modified the
+    // points are.
+    //
+    // For the width, we do not perform a "central symmetry", but rather
+    // just a regular 1D symmetry, so that at the boundary, the
+
     void initWeightedAveragingData_() {
         const core::Array<SculptPoint>& sculptPoints = sculptSampling_.sculptPoints;
         const Int numSculptPoints = sculptPoints.length();
         numInfluencingPointsPerSide_ =
-            static_cast<Int>(std::floor(sculptSampling_.radius / sculptSampling_.ds));
+            round_narrow_cast<Int>(sculptSampling_.radius / sculptSampling_.ds);
+        // Number of points (= "period") of the repeating pattern
         repeatN_ = (numSculptPoints - 1) * 2;
+        // Offset between one repeating pattern to the next
+        // Note: we don't want to use a similar delta for width, as
+        // we XXX Same thing for width?
+        //     Or not?
         repeatDelta_ = (sculptPoints.last().pos - sculptPoints.first().pos) * 2;
     }
 
@@ -1374,8 +1623,9 @@ private:
     SculptPoint getInfluencePoint_(Int i) {
         core::Array<SculptPoint>& sculptPoints = sculptSampling_.sculptPoints;
         const Int n = sculptPoints.length();
-        // Note: last sculpt point == first sculpt point
         if constexpr (!isSculptSamplingClosed) {
+            // Property of the repeating pattern:
+            // getInfluencePoint_(i + repeatN_) = getInfluencePoint_(i) + repeatDelta_
             SculptPoint res = {};
             auto d = std::div(i, repeatN_);
             if (d.rem < 0) {
@@ -1403,6 +1653,7 @@ private:
             return res;
         }
         else {
+            // Note: last sculpt point == first sculpt point
             const Int m = n - 1;
             Int k = (m + (i % m)) % m;
             return sculptPoints[k];
@@ -1421,6 +1672,8 @@ private:
     double s0_ = 0;
     double sN_ = 0;
     KnotsInterval sculptedKnotsInterval_ = {};
+    Int numUnmodifiedKnotsBefore_ = 0;
+    Int numUnmodifiedKnotsAfter_ = 0;
     geometry::Vec2dArray newPoints_;
     core::DoubleArray newWidths_;
     geometry::Vec2d outSculptCursorPosition_;
