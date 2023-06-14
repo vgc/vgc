@@ -991,7 +991,9 @@ public:
             0,
             simplifyTolerance,
             [](const geometry::Vec2d& p) { return p; },
-            [](const geometry::Vec2d& p) { return 1.0; });
+            [](const geometry::Vec2d&) { return 1.0; });
+        // TODO: add index in filterPointsStep functor parameters to be
+        //       able to use newPoints_[index] in the width getter.
 
         outPoints.clear();
         outWidths.clear();
@@ -1250,7 +1252,6 @@ private:
             newStartPointIndex_ = newPoints_.length();
         }
 
-        double lastPointS = pointsS_.last();
         for (Int i = 1; i < sculptPoints.length(); ++i) {
             const SculptPoint& sp1 = sculptPoints[i - 1];
             const SculptPoint& sp2 = sculptPoints[i];
