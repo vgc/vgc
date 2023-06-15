@@ -199,6 +199,10 @@ void FreehandEdgeGeometry::resetEdit() {
 }
 
 void FreehandEdgeGeometry::finishEdit() {
+
+    // TODO: we may want to check for NaN here, and do abort instead if NaN found, e.g.:
+    // VGC_WARNING("NaN point detected after editing edge geometry: edit aborted.");
+
     if (isBeingEdited_) {
         sharedConstPoints_ = SharedConstPoints(std::move(points_));
         sharedConstWidths_ = SharedConstWidths(std::move(widths_));
@@ -991,6 +995,187 @@ geometry::Vec2d FreehandEdgeGeometry::sculptGrab(
 
 namespace {
 
+// In order to handle boundary conditions when computing a weighted average, we
+// compute the weighted average as if we repeatedly applied a central symmetry
+// to all the sculpt points:
+//
+// Original curve:
+//                                                            curve
+//                                                             end
+//                      curve   MSP    ,------------------------|
+//                      start  ,-x----'
+//                        |---'
+//                  <------------|------------>
+//                      radius       radius
+//
+// Sculpt points:
+//
+//                              MSP    ,------|
+//                             ,-x----'
+//                        |---'
+//                        <------|------------>
+//                        capped     capped
+//                        radii[0]   radii[1]
+//
+// 2D central symmetry of sculpt points at both sides (similar for width):
+// (repeated infinitely many times... or at least until length > 2 * radius):
+//
+//                                                            ,---|···
+//                                                    ,------'
+//                              MSP    ,------|------'
+//                             ,-x----'
+//                    ,---|---'
+//            ,------'
+// ···|------'
+//
+//    |-------------------------------------->|-------------------------------------->
+//             repeating pattern
+//
+//
+// Compute weighted average for any sculpt point p:
+//                                                            ,---|···
+//                                       p2           ,------'
+//                                     ,-x----|------'
+//                          p  ,------'
+//             p1     ,---|-x-'
+//            ,x-----'
+// ···|------'
+//             <------------|------------>
+//                 radius       radius
+//              \_______________________/
+//              p' = weigthed average of all
+//                   points between p1 and p2
+//
+// Note how this method ensures that by design, the weighted average p' at
+// the boundary of the sculpt points is exactly equal to p itself. More
+// generally, the closer we get to the boundary, the less modified the
+// points are.
+
+class WeightedAverageAlgorithm {
+public:
+    WeightedAverageAlgorithm(const SculptSampling& sculptSampling)
+        : sculptSampling_(sculptSampling)
+        , sculptPoints_(sculptSampling.sculptPoints) {
+
+        // Compute how many theoretical sculpt points influence each sculpt
+        // point (per side). When radius == cappedRadii, this is supposed to be
+        // equal to (sculptPoints_.length() - 1) / 2.
+        //
+        // Note about the division by ds: can it generate a huge
+        // numInfluencingPoints? In theory no, because ds is supposed to be a
+        // reasonable fraction of radius (e.g., 1%). However, there is the
+        // potential case of sculpting a very small edge with a very large
+        // radius: this may force ds to be smaller than we want it to be. TODO:
+        // Do we want to handle this case by capping sculptSampling_.radius to
+        // no more than, say, 10x the edge length?
+        //
+        numInfluencingPointsPerSide_ =
+            round_narrow_cast<Int>(sculptSampling_.radius / sculptSampling_.ds);
+
+        if (!sculptSampling_.isClosed) {
+
+            // Number of points (= "period") of the repeating pattern
+            repeatN_ = (sculptPoints_.length() - 1) * 2;
+
+            // Offset between one repeating pattern to the nextrepeatDelta_
+            const SculptPoint& pFirst = sculptPoints_.first();
+            const SculptPoint& pLast = sculptPoints_.last();
+            repeatDelta_.pos = (pLast.pos - pFirst.pos) * 2;
+            repeatDelta_.width = (pLast.width - pFirst.width) * 2;
+        }
+    }
+
+    SculptPoint computeAveraged(Int i) {
+        if (sculptSampling_.isClosed) {
+            return computeAveraged_<true>(i);
+        }
+        else {
+            return computeAveraged_<false>(i);
+        }
+    }
+
+private:
+    const SculptSampling& sculptSampling_;
+    const core::Array<SculptPoint>& sculptPoints_;
+    Int numInfluencingPointsPerSide_ = 0;
+    Int repeatN_ = 0;
+    SculptPoint repeatDelta_;
+
+    // Note: We use a templated implementation to avoid making a dynamic
+    // "if(closed)" in the middle of the hot path, called O(n²) times.
+
+    template<bool isSculptSamplingClosed>
+    SculptPoint computeAveraged_(Int i) {
+        SculptPoint res = sculptPoints_[i];
+        double wSum = cubicEaseInOut(1.0);
+        res.pos *= wSum;
+        res.width *= wSum;
+        for (Int j = 1; j < numInfluencingPointsPerSide_; ++j) {
+            double u = 1.0 - narrow_cast<double>(j) / numInfluencingPointsPerSide_;
+            double w = cubicEaseInOut(u);
+            SculptPoint sp1 = getInfluencePoint_<isSculptSamplingClosed>(i - j);
+            SculptPoint sp2 = getInfluencePoint_<isSculptSamplingClosed>(i + j);
+            res.pos += w * sp1.pos;
+            res.pos += w * sp2.pos;
+            res.width += w * sp1.width;
+            res.width += w * sp2.width;
+            wSum += 2 * w;
+        }
+        res.pos /= wSum;
+        res.width /= wSum;
+        return res;
+    }
+
+    template<bool isSculptSamplingClosed>
+    SculptPoint getInfluencePoint_(Int i) {
+        if constexpr (isSculptSamplingClosed) {
+            return getInfluencePointClosed_(i);
+        }
+        else {
+            return getInfluencePointOpen_(i);
+        }
+    }
+
+    SculptPoint getInfluencePointClosed_(Int i) {
+        // Note: in the closed case, we have sculptPoints.first() == sculptPoints.last()
+        const Int n = sculptPoints_.length() - 1;
+        Int j = (n + (i % n)) % n;
+        return sculptPoints_.getUnchecked(j);
+    }
+
+    // Note: we have getInfluencePointOpen_(i + repeatN) = getInfluencePointOpen_(i) + repeatDelta
+    // Note 2: We may want to cache some of the computation here if too slow.
+    //
+    SculptPoint getInfluencePointOpen_(Int i) {
+
+        const Int n = sculptPoints_.length();
+        SculptPoint res = {};
+        auto [q, r] = std::div(i, repeatN_); // i = q * repeatN + r
+        if (r < 0) {
+            q -= 1;
+            r += repeatN_;
+        }
+        geometry::Vec2d p = {};
+        double w = 0;
+        if (r >= n) {
+            Int mirroredR = repeatN_ - r;
+            const SculptPoint& sp = sculptPoints_[mirroredR];
+            p = repeatDelta_.pos - sp.pos + 2 * sculptPoints_[0].pos;
+            w = repeatDelta_.width - sp.width + 2 * sculptPoints_[0].width;
+        }
+        else {
+            const SculptPoint& sp = sculptPoints_[r];
+            p = sp.pos;
+            w = sp.width;
+        }
+        p += repeatDelta_.pos * narrow_cast<double>(q);
+        w += repeatDelta_.width * narrow_cast<double>(q);
+        res.pos = p;
+        res.width = w;
+        return res;
+    }
+};
+
 class SculptSmoothAlgorithm {
 public:
     bool execute(
@@ -1007,6 +1192,7 @@ public:
         double maxDs,
         double simplifyTolerance) {
 
+        /*
         VGC_DEBUG_TMP_EXPR(position);
         VGC_DEBUG_TMP_EXPR(strength);
         VGC_DEBUG_TMP_EXPR(radius);
@@ -1016,8 +1202,7 @@ public:
         VGC_DEBUG_TMP_EXPR(samplingQuality);
         VGC_DEBUG_TMP_EXPR(maxDs);
         VGC_DEBUG_TMP_EXPR(simplifyTolerance);
-
-        VGC_DEBUG_TMP_EXPR(points);
+        */
 
         points_ = &points;
         widths_ = &widths;
@@ -1076,7 +1261,7 @@ public:
             newStartPointIndex_ = 0;
         }
 
-        VGC_DEBUG_TMP_EXPR(newPoints_);
+        //VGC_DEBUG_TMP_EXPR(newPoints_);
 
         // XXX TODO: Fix first point is duplicated when using an open curve
         // and the middle sculpt point is exactly at s = 0. Perhaps caused
@@ -1212,7 +1397,7 @@ public:
 
         outSculptCursorPosition = outSculptCursorPosition_;
 
-        VGC_DEBUG_TMP_EXPR(outPoints);
+        //VGC_DEBUG_TMP_EXPR(outPoints);
 
         return true;
     }
@@ -1273,10 +1458,11 @@ private:
         sN_ = sculptPoints.last().s;
 
         if (sculptSampling_.isClosed) {
-            // XXX Update s/d?
+            // Duplicate first point as last point.
+            // We intentionally keep the original s and d for the duplicated point.
             sculptPoints.emplaceLast(sculptPoints.first());
         }
-        VGC_DEBUG_TMP("sculptPoints = {:> 8.2f}", sculptPoints);
+        //VGC_DEBUG_TMP("sculptPoints = {:> 8.2f}", sculptPoints);
 
         return true;
     }
@@ -1415,18 +1601,29 @@ private:
             return;
         }
 
+        // Prevent widths from exploding (due to the Catmull-Rom interpolation
+        // of knots outputing sculpt points with widths bigger than the knots)
+        // by capping the widths based on the input widths.
+        //
+        // This method is not perfect but better than nothing. Ideally, we need
+        // to use something better than Uniform Catmull-Rom (e.g., Centripetal
+        // Catmull-Rom, Kappa curves, or Yuksel curves).
+        //
+        double minModifiedKnotWidth = core::DoubleInfinity;
+        double maxModifiedKnotWidth = 0;
+        for (Int i = 0; i < sculptedKnotsInterval_.count; ++i) {
+            double knotWidth = widths_->getWrapped(sculptedKnotsInterval_.start + i);
+            minModifiedKnotWidth = (std::min)(knotWidth, minModifiedKnotWidth);
+            maxModifiedKnotWidth = (std::max)(knotWidth, maxModifiedKnotWidth);
+        }
+
         core::Array<SculptPoint>& sculptPoints = sculptSampling_.sculptPoints;
+        WeightedAverageAlgorithm weightedAverage(sculptSampling_);
 
-        initWeightedAveragingData_();
-        auto computeWeightedAverageSculptPointFn =
-            sculptSampling_.isClosed
-                ? &SculptSmoothAlgorithm::computeWeightedAverageSculptPoint_<true>
-                : &SculptSmoothAlgorithm::computeWeightedAverageSculptPoint_<false>;
-
-        SculptPoint wasp1 = {};
-        Int iWasp1 = -1;
+        SculptPoint wasp1 = {}; // weighted-averaged sculpt point
+        Int iWasp1 = -1;        // remember which index was last computed to reuse it
         Int pointIndex = sculptedKnotsInterval_.start;
-        if (isClosed_ && pointIndex == 0) { // XXX missing "isClosed &&"?
+        if (isClosed_ && pointIndex == 0) {
             newStartPointIndex_ = newPoints_.length();
         }
 
@@ -1473,16 +1670,14 @@ private:
                 continue;
             }
 
-            VGC_DEBUG_TMP("s1:{} s2:{}", s1, s2);
-
             // finalize mean
             meanS /= static_cast<double>(n);
 
             // transform
             if (iWasp1 != i - 1) {
-                wasp1 = (this->*computeWeightedAverageSculptPointFn)(i - 1);
+                wasp1 = weightedAverage.computeAveraged(i - 1);
             }
-            SculptPoint wasp2 = (this->*computeWeightedAverageSculptPointFn)(i);
+            SculptPoint wasp2 = weightedAverage.computeAveraged(i);
 
             double t = (meanS - s1) / (s2 - s1);
             double u = 1.0 - t;
@@ -1491,28 +1686,25 @@ private:
             geometry::Vec2d p = u * sp1.pos + t * sp2.pos;
             geometry::Vec2d np = p + strength * dp;
             newPoints_.append(np);
-            if (std::isnan(np[0]) || std::isnan(np[1])) {
-                VGC_WARNING(LogVgcWorkspace, "generated nan point");
-            }
+
             if (hasWidths_) {
                 double dw = u * (wasp1.width - sp1.width) + t * (wasp2.width - sp2.width);
                 double w = u * sp1.width + t * sp2.width;
-                newWidths_.append(w + strength * dw);
+                double nw = w + strength * dw;
+                newWidths_.append(
+                    core::clamp(nw, minModifiedKnotWidth, maxModifiedKnotWidth));
             }
         }
 
-        geometry::Vec2d scp =
-            sculptSampling_.sculptPoints[sculptSampling_.middleSculptPointIndex].pos;
-        geometry::Vec2d wascp = (this->*computeWeightedAverageSculptPointFn)(
-                                    sculptSampling_.middleSculptPointIndex)
-                                    .pos;
+        Int iMsp = sculptSampling_.middleSculptPointIndex;
+        geometry::Vec2d scp = sculptPoints[iMsp].pos;
+        geometry::Vec2d wascp = weightedAverage.computeAveraged(iMsp).pos;
         outSculptCursorPosition_ = scp + (wascp - scp) * strength;
     }
 
     void accumulatePointsS_(Int& i, double s1, double s2, double& meanS, Int& n) {
         if (i < points_->length() && pointsS_[i] >= s1) {
             while (pointsS_[i] <= s2) {
-                VGC_DEBUG_TMP("acc point {}", i);
                 meanS += pointsS_[i];
                 ++n;
                 ++i;
@@ -1522,143 +1714,6 @@ private:
             }
         }
     }
-
-    // In order to handle boundary conditions for compute the weighted average,
-    // we compute th weighted average as if we repeatedly applied a central symmetry
-    // to all the sculpt points:
-    //
-    // Original curve:
-    //                                                            curve
-    //                                                             end
-    //                      curve   MSP    ,------------------------|
-    //                      start  ,-x----'
-    //                        |---'
-    //                  <------------|------------>
-    //                      radius       radius
-    //
-    // Sculpt points:
-    //
-    //                              MSP    ,------|
-    //                             ,-x----'
-    //                        |---'
-    //                        <------|------------>
-    //                        capped     capped
-    //                        radii[0]   radii[1]
-    //
-    // 2D central symmetry of sculpt points at both sides:
-    // (repeated infinitely many times... or at least until length > 2 * radius):
-    //
-    //                                                            ,---|···
-    //                                                    ,------'
-    //                              MSP    ,------|------'
-    //                             ,-x----'
-    //                    ,---|---'
-    //            ,------'
-    // ···|------'
-    //
-    //    |-------------------------------------->|-------------------------------------->
-    //             repeating pattern
-    //
-    //
-    // Compute weighted average for any sculpt point p:
-    //                                                            ,---|···
-    //                                       p2           ,------'
-    //                                     ,-x----|------'
-    //                          p  ,------'
-    //             p1     ,---|-x-'
-    //            ,x-----'
-    // ···|------'
-    //             <------------|------------>
-    //                 radius       radius
-    //              \_______________________/
-    //              p' = weigthed average of all
-    //                   points between p1 and p2
-    //
-    // Note how this method ensures that by design, the weighted average p' at
-    // the boundary of the sculpt points is exactly equal to p itself. More
-    // generally, the closer we get to the boundary, the less modified the
-    // points are.
-    //
-    // For the width, we do not perform a "central symmetry", but rather
-    // just a regular 1D symmetry, so that at the boundary, the
-
-    void initWeightedAveragingData_() {
-        const core::Array<SculptPoint>& sculptPoints = sculptSampling_.sculptPoints;
-        const Int numSculptPoints = sculptPoints.length();
-        numInfluencingPointsPerSide_ =
-            round_narrow_cast<Int>(sculptSampling_.radius / sculptSampling_.ds);
-        // Number of points (= "period") of the repeating pattern
-        repeatN_ = (numSculptPoints - 1) * 2;
-        // Offset between one repeating pattern to the next
-        // Note: we don't want to use a similar delta for width, as
-        // we XXX Same thing for width?
-        //     Or not?
-        repeatDelta_ = (sculptPoints.last().pos - sculptPoints.first().pos) * 2;
-    }
-
-    template<bool isSculptSamplingClosed>
-    SculptPoint computeWeightedAverageSculptPoint_(Int i) {
-        const core::Array<SculptPoint>& sculptPoints = sculptSampling_.sculptPoints;
-        SculptPoint res = sculptPoints[i];
-        double wSum = cubicEaseInOut(1.0);
-        res.pos *= wSum;
-        res.width *= wSum;
-        for (Int j = 1; j < numInfluencingPointsPerSide_; ++j) {
-            double u = 1.0 - static_cast<double>(j) / numInfluencingPointsPerSide_;
-            double w = cubicEaseInOut(u);
-            SculptPoint sp1 = getInfluencePoint_<isSculptSamplingClosed>(i - j);
-            SculptPoint sp2 = getInfluencePoint_<isSculptSamplingClosed>(i + j);
-            res.pos += w * sp1.pos;
-            res.pos += w * sp2.pos;
-            res.width += w * sp1.width;
-            res.width += w * sp2.width;
-            wSum += 2 * w;
-        }
-        res.pos /= wSum;
-        res.width /= wSum;
-        return res;
-    };
-
-    template<bool isSculptSamplingClosed>
-    SculptPoint getInfluencePoint_(Int i) {
-        core::Array<SculptPoint>& sculptPoints = sculptSampling_.sculptPoints;
-        const Int n = sculptPoints.length();
-        if constexpr (!isSculptSamplingClosed) {
-            // Property of the repeating pattern:
-            // getInfluencePoint_(i + repeatN_) = getInfluencePoint_(i) + repeatDelta_
-            SculptPoint res = {};
-            auto d = std::div(i, repeatN_);
-            if (d.rem < 0) {
-                d.rem += repeatN_;
-                d.quot -= 1;
-            }
-            geometry::Vec2d p = {};
-            double w = 0;
-            Int k = d.rem;
-            if (d.rem >= n) {
-                k = repeatN_ - k;
-                const SculptPoint& sp = sculptPoints[k];
-                p = repeatDelta_ - sp.pos + 2 * sculptPoints[0].pos;
-                w = sp.width;
-            }
-            else {
-                const SculptPoint& sp = sculptPoints[k];
-                p = sp.pos;
-                w = sp.width;
-            }
-            p += repeatDelta_ * static_cast<double>(d.quot);
-            res.pos = p;
-            res.width = w;
-            //VGC_DEBUG_TMP("i:{}->k:{} /{}", i, k, n);
-            return res;
-        }
-        else {
-            // Note: last sculpt point == first sculpt point
-            const Int m = n - 1;
-            Int k = (m + (i % m)) % m;
-            return sculptPoints[k];
-        }
-    };
 
     const geometry::Vec2dArray* points_ = nullptr;
     const core::DoubleArray* widths_ = nullptr;
@@ -1678,10 +1733,6 @@ private:
     core::DoubleArray newWidths_;
     geometry::Vec2d outSculptCursorPosition_;
     Int newStartPointIndex_ = 0;
-    // weighted averaging
-    Int numInfluencingPointsPerSide_ = 0;
-    Int repeatN_ = 0;
-    geometry::Vec2d repeatDelta_;
 };
 
 } // namespace
