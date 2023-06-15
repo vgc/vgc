@@ -1611,13 +1611,21 @@ private:
         //
         double minModifiedKnotWidth = core::DoubleInfinity;
         double maxModifiedKnotWidth = 0;
-        for (Int i = 0; i < sculptedKnotsInterval_.count; ++i) {
-            double knotWidth = widths_->getWrapped(sculptedKnotsInterval_.start + i);
-            minModifiedKnotWidth = (std::min)(knotWidth, minModifiedKnotWidth);
-            maxModifiedKnotWidth = (std::max)(knotWidth, maxModifiedKnotWidth);
+        Int extendedStartIndex = sculptedKnotsInterval_.start - 1;
+        Int extendedEndIndex =
+            sculptedKnotsInterval_.start + sculptedKnotsInterval_.count;
+        if (!isClosed_) {
+            extendedStartIndex = std::max<Int>(extendedStartIndex, 0);
+            extendedEndIndex = (std::min)(extendedEndIndex, widths_->length() - 1);
+        }
+        for (Int i = extendedStartIndex; i <= extendedEndIndex; ++i) {
+            double w = isClosed_ ? widths_->getWrapped(i) : widths_->getUnchecked(i);
+            minModifiedKnotWidth = (std::min)(w, minModifiedKnotWidth);
+            maxModifiedKnotWidth = (std::max)(w, maxModifiedKnotWidth);
         }
 
-        core::Array<SculptPoint>& sculptPoints = sculptSampling_.sculptPoints;
+        // Initialize weighted average algorithm
+        //
         WeightedAverageAlgorithm weightedAverage(sculptSampling_);
 
         SculptPoint wasp1 = {}; // weighted-averaged sculpt point
@@ -1634,6 +1642,7 @@ private:
         //    is a linear interpolation between the two transformed consecutive
         //    sculpt points.
         //
+        core::Array<SculptPoint>& sculptPoints = sculptSampling_.sculptPoints;
         for (Int i = 1; i < sculptPoints.length(); ++i) {
             const SculptPoint& sp1 = sculptPoints[i - 1];
             const SculptPoint& sp2 = sculptPoints[i];
