@@ -164,19 +164,19 @@ public:
     /// A `SecondRootElementError` exception is raised if the given `parent`
     /// `Document` already has a root element.
     ///
-    static Element* create(Document* parent, core::StringId tagName);
+    static Element* create(Document* parent, core::StringId tagName, Element* nextSibling = nullptr);
     /// \overload
-    static Element* create(Document* parent, std::string_view tagName) {
-        return create(parent, core::StringId(tagName));
+    static Element* create(Document* parent, std::string_view tagName, Element* nextSibling = nullptr) {
+        return create(parent, core::StringId(tagName), nextSibling);
     }
 
     /// Creates an `Element` with the given `tagName` as the last child of the
     /// given `parent` `Element`. Always returns a valid non-null `Element`.
     ///
-    static Element* create(Element* parent, core::StringId tagName);
+    static Element* create(Element* parent, core::StringId tagName, Element* nextSibling = nullptr);
     /// \overload
-    static Element* create(Element* parent, std::string_view tagName) {
-        return create(parent, core::StringId(tagName));
+    static Element* create(Element* parent, std::string_view tagName, Element* nextSibling = nullptr) {
+        return create(parent, core::StringId(tagName), nextSibling);
     }
 
     /// Casts the given `node` to an `Element`. Returns `nullptr` if `node` is
@@ -409,7 +409,7 @@ private:
     // Helper method for create(). Assumes that a new Element can indeed be
     // appended to parent.
     //
-    static Element* create_(Node* parent, core::StringId tagName);
+    static Element* create_(Node* parent, core::StringId tagName, Element* nextSibling = nullptr);
 
     // Authored attributes of this element. Note: copying AuthoredAttribute
     // instances is expensive, but fortunately there shouldn't be any copy with

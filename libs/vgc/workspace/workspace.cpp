@@ -175,10 +175,7 @@ Workspace::Workspace(dom::DocumentPtr document)
     document->changed().connect(onDocumentDiff());
 
     vac_ = vacomplex::Complex::create();
-    vac_->nodeDestroyed().connect(onVacNodeDestroyed());
-    vac_->nodeCreated().connect(onVacNodeCreated());
-    vac_->nodeMoved().connect(onVacNodeMoved());
-    vac_->nodeModified().connect(onVacNodeModified());
+    vac_->nodesChanged().connect(onVacNodesChanged());
 
     rebuildFromDom();
 }
@@ -201,7 +198,7 @@ void Workspace::onDestroyed() {
         }
     }
     elements_.clear();
-    vgcElement_ = nullptr;
+    rootVacElement_ = nullptr;
     elementsWithError_.clear();
     elementsToUpdateFromDom_.clear();
     vac_ = nullptr;
@@ -338,8 +335,8 @@ bool Workspace::removeElement_(core::Id id) {
     // Update parent-child relationship between elements.
     //
     element->unparent();
-    if (vgcElement_ == element) {
-        vgcElement_ = nullptr;
+    if (rootVacElement_ == element) {
+        rootVacElement_ = nullptr;
     }
 
     // Remove from error list and pending update lists.
@@ -388,7 +385,7 @@ void Workspace::clearElements_() {
         }
     }
     elements_.clear();
-    vgcElement_ = nullptr;
+    rootVacElement_ = nullptr;
     elementsWithError_.clear();
     elementsToUpdateFromDom_.clear();
 }
@@ -489,29 +486,11 @@ void Workspace::rebuildDomFromWorkspaceTree_() {
     throw core::RuntimeError("not implemented");
 }
 
-void Workspace::onVacNodeDestroyed_(core::Id nodeId) {
-
-    // XXX What if node is the root node?
-    //
-    // Currently, in the Workspace(document) constructor, we first create a
-    // vacomplex::Complex (which creates a root node), then call
-    // rebuildFromDom(), which first clears the Complex (destructing the root
-    // node), then creates the nodes including the root node. Therefore, this
-    // function is called in the Workspace(document) constructor, which is
-    // probably not ideal.
-
-    // Get Workspace element corresponding to the destroyed VAC node. Nothing
-    // to do if there is no such element.
-    //
-    VacElement* vacElement = findVacElement(nodeId);
-    if (!vacElement) {
-        return;
-    }
+void Workspace::onVacNodesChanged_(const vacomplex::ComplexDiff& diff) {
 
     if (isUpdatingVacFromDom_) {
-
-        // A VAC node has been destroyed as a side-effect of updating the VAC
-        // from the DOM. This can mean that some Workspace elements should now
+        // If a VAC node has been destroyed as a side-effect of updating the VAC
+        // from the DOM, it can mean that some Workspace elements should now
         // be mark as corrupted.
         //
         // Example scenario:
@@ -529,26 +508,229 @@ void Workspace::onVacNodeDestroyed_(core::Id nodeId) {
         //
         // 5. The Workspace calls ops::hardDelete(vertexNode)
         //
-        // 6. The VAC emits:
-        //    - onVacNodeDestroyed(vertexNodeId)  -> destroyed explicitly:     OK
-        //    - onVacNodeDestroyed(edgeNodeId)    -> destroyed as side-effect: now corrupted
+        // 6. The VAC diff contains destroyed node ids:
+        //    - vertexNodeId  -> destroyed explicitly:     OK
+        //    - edgeNodeId    -> destroyed as side-effect: now corrupted
         //
-        if (vacElement->vacNode_) {
+        for (const auto& info : diff.destroyedNodes()) {
+            VacElement* vacElement = findVacElement(info.nodeId());
+            if (vacElement && vacElement->vacNode_) {
+                // If we find the element despite being updating VAC from DOM,
+                // this means the element is now corrupted, so mark it as such.
+                //
+                vacElement->vacNode_ = nullptr;
+                setPendingUpdateFromDom_(vacElement);
 
-            // If we find the element despite being updating VAC from DOM,
-            // this means the element is now corrupted, so mark it as such.
-            //
-            vacElement->vacNode_ = nullptr;
-            setPendingUpdateFromDom_(vacElement);
+                // TODO: only clear graphics and actually append to corrupt list
+            }
+        }
+        return;
+    }
 
-            // TODO: only clear graphics and actually append to corrupt list
+    preUpdateDomFromVac_();
+
+    // Process created vac nodes
+    //
+    for (const auto& info : diff.createdNodes()) {
+        vacomplex::Node* node = info.node();
+
+        // TODO: check id conflict
+
+        // TODO: add constructors expecting operationSourceNodes
+
+        // Create the workspace element
+        std::unique_ptr<Element> u = {};
+        if (node->isGroup()) {
+            //vacomplex::Group* group = node->toGroup();
+            u = makeUniqueElement<Layer>(this);
+        }
+        else {
+            vacomplex::Cell* cell = node->toCell();
+            switch (cell->cellType()) {
+            case vacomplex::CellType::KeyVertex:
+                u = makeUniqueElement<VacKeyVertex>(this);
+                break;
+            case vacomplex::CellType::KeyEdge:
+                u = makeUniqueElement<VacKeyEdge>(this);
+                break;
+            case vacomplex::CellType::KeyFace:
+                u = makeUniqueElement<VacKeyFace>(this);
+                break;
+            case vacomplex::CellType::InbetweenVertex:
+            case vacomplex::CellType::InbetweenEdge:
+            case vacomplex::CellType::InbetweenFace:
+                break;
+            }
+        }
+        if (!u) {
+            // TODO: error ?
+            continue;
+        }
+
+        VacElement* element = u->toVacElement();
+        if (!element) {
+            // TODO: error ?
+            continue;
+        }
+
+        // By default insert is as last child of root.
+        // There should be a NodeInsertionInfo in the diff that will
+        // let us move it to its final destination later in this function.
+        rootVacElement_->appendChild(element);
+
+        // Create the DOM element (as last child of root too)
+
+        dom::ElementPtr domElement = dom::Element::create(
+            document_->rootElement(), element->domTagName().value(), nullptr);
+        const core::Id id = domElement->internalId();
+
+        const auto& p = elements_.emplace(id, std::move(u));
+        if (!p.second) {
+            // TODO: throw ?
+            continue;
+        }
+
+        element->domElement_ = domElement.get();
+        element->id_ = id;
+        element->setVacNode(node);
+
+        element->updateFromVac_(vacomplex::NodeModificationFlag::All);
+    }
+
+    // Process transient vac nodes
+    //
+    for (const auto& info : diff.transientNodes()) {
+        core::Id nodeId = info.nodeId();
+
+        // TODO: check id conflict
+
+        // TODO: add constructors expecting operationSourceNodes
+
+        // Create the workspace element
+        std::unique_ptr<Element> u = makeUniqueElement<TransientVacElement>(this);
+
+        VacElement* element = u->toVacElement();
+        if (!element) {
+            // TODO: error ?
+            continue;
+        }
+
+        // By default insert is as last child of root.
+        // There should be a NodeInsertionInfo in the diff that will
+        // let us move it to its final destination later in this function.
+        rootVacElement_->appendChild(element);
+
+        core::Id id = core::genId();
+
+        const auto& p = elements_.emplace(id, std::move(u));
+        if (!p.second) {
+            // TODO: throw ?
+            continue;
+        }
+
+        element->domElement_ = nullptr;
+        element->id_ = id;
+
+        // Note: One must not forget to remove it manually when destroying
+        //       the transient element before leaving this function.
+        elementByVacInternalId_.emplace(nodeId, element);
+    }
+
+    // Process insertions
+    for (const auto& info : diff.insertions()) {
+        VacElement* vacElement = findVacElement(info.nodeId());
+        if (!vacElement) {
+            VGC_ERROR(
+                LogVgcWorkspace,
+                "No matching workspace::VacElement found for "
+                "nodeInsertionInfo->nodeId().");
+            continue;
+        }
+        dom::Element* domElement = vacElement->domElement();
+
+        VacElement* vacParentElement = findVacElement(info.newParentId());
+        if (!vacParentElement) {
+            VGC_ERROR(
+                LogVgcWorkspace,
+                "No matching workspace::VacElement found for "
+                "nodeInsertionInfo->newParentId().");
+            continue;
+        }
+        dom::Element* domParentElement = vacParentElement->domElement();
+
+        switch (info.type()) {
+        case vacomplex::NodeInsertionType::BeforeSibling: {
+            VacElement* vacSiblingElement = findVacElement(info.newSiblingId());
+            if (!vacSiblingElement) {
+                VGC_ERROR(
+                    LogVgcWorkspace,
+                    "No matching workspace::VacElement found for "
+                    "nodeInsertionInfo->newSiblingId().");
+                continue;
+            }
+            dom::Element* domSiblingElement = vacSiblingElement->domElement();
+            vacParentElement->insertChildUnchecked(vacSiblingElement, vacElement);
+            domParentElement->insertChild(domSiblingElement, domElement);
+            break;
+        }
+        case vacomplex::NodeInsertionType::AfterSibling: {
+            VacElement* vacSiblingElement = findVacElement(info.newSiblingId());
+            if (!vacSiblingElement) {
+                VGC_ERROR(
+                    LogVgcWorkspace,
+                    "No matching workspace::VacElement found for "
+                    "nodeInsertionInfo->newSiblingId().");
+                continue;
+            }
+            dom::Element* domSiblingElement = vacSiblingElement->domElement();
+            vacParentElement->insertChildUnchecked(
+                vacSiblingElement->nextSibling(), vacElement);
+            domParentElement->insertChild(domSiblingElement->nextSibling(), domElement);
+            break;
+        }
+        case vacomplex::NodeInsertionType::FirstChild: {
+            vacParentElement->insertChildUnchecked(
+                vacParentElement->firstChild(), vacElement);
+            domParentElement->insertChild(domParentElement->firstChild(), domElement);
+            break;
+        }
+        case vacomplex::NodeInsertionType::LastChild: {
+            vacParentElement->insertChildUnchecked(nullptr, vacElement);
+            domParentElement->insertChild(nullptr, domElement);
+            break;
+        }
         }
     }
-    else {
 
-        preUpdateDomFromVac_();
+    // Process modified vac nodes
+    //
+    for (const auto& info : diff.modifiedNodes()) {
+        VacElement* vacElement = findVacElement(info.nodeId());
+        if (!vacElement) {
+            VGC_ERROR(LogVgcWorkspace, "Unexpected vacomplex::Node");
+            // TODO: recover from error by creating the Cell in workspace and DOM ?
+            continue;
+        }
+        vacElement->updateFromVac_(info.flags());
+    }
+
+    // Process destroyed vac nodes
+    //
+    // XXX What if node is the root node?
+    //
+    // Currently, in the Workspace(document) constructor, we first create a
+    // vacomplex::Complex (which creates a root node), then call
+    // rebuildFromDom(), which first clears the Complex (destructing the root
+    // node), then creates the nodes including the root node. Therefore, this
+    // function is called in the Workspace(document) constructor, which is
+    // probably not ideal.
+    //
+    // Get Workspace element corresponding to the destroyed VAC node. Nothing
+    // to do if there is no such element.
+    //
+    for (const auto& info : diff.destroyedNodes()) {
+        VacElement* vacElement = findVacElement(info.nodeId());
         if (vacElement) {
-
             // Delete the corresponding DOM element if any.
             //
             dom::Element* domElement = vacElement->domElement();
@@ -563,168 +745,17 @@ void Workspace::onVacNodeDestroyed_(core::Id nodeId) {
             vacElement->vacNode_ = nullptr;
             removeElement_(vacElement);
         }
-        postUpdateDomFromVac_();
-    }
-}
-
-void Workspace::onVacNodeCreated_(
-    vacomplex::Node* node,
-    const vacomplex::NodeSourceOperation& /*nodeSourceOperation*/) {
-
-    if (isUpdatingVacFromDom_) {
-        return;
     }
 
-    // TODO: check id conflict
-
-    Element* parent = findVacElement(node->parentGroup());
-    if (!parent) {
-        VGC_ERROR(LogVgcWorkspace, "Unexpected vacomplex::Node parent.");
-        return;
-    }
-
-    // TODO: add constructors expecting operationSourceNodes
-
-    // Create the workspace element
-    std::unique_ptr<Element> u = {};
-    if (node->isGroup()) {
-        //vacomplex::Group* group = node->toGroup();
-        u = makeUniqueElement<Layer>(this);
-    }
-    else {
-        vacomplex::Cell* cell = node->toCell();
-        switch (cell->cellType()) {
-        case vacomplex::CellType::KeyVertex:
-            u = makeUniqueElement<VacKeyVertex>(this);
-            break;
-        case vacomplex::CellType::KeyEdge:
-            u = makeUniqueElement<VacKeyEdge>(this);
-            break;
-        case vacomplex::CellType::KeyFace:
-            u = makeUniqueElement<VacKeyFace>(this);
-            break;
-        case vacomplex::CellType::InbetweenVertex:
-        case vacomplex::CellType::InbetweenEdge:
-        case vacomplex::CellType::InbetweenFace:
-            break;
+    // Remove transient vac nodes
+    //
+    for (const auto& info : diff.transientNodes()) {
+        VacElement* vacElement = findVacElement(info.nodeId());
+        if (vacElement) {
+            removeElement_(vacElement);
         }
     }
 
-    VacElement* element = u->toVacElement();
-    if (!element) {
-        // TODO: error ?
-        return;
-    }
-
-    Element* nextSibling = findVacElement(node->nextSibling());
-    parent->insertChildUnchecked(nextSibling, element);
-
-    // dom update
-
-    dom::Element* domParent = parent->domElement();
-    if (!domParent) {
-        VGC_ERROR(LogVgcWorkspace, "Parent has no dom::Element.");
-        return;
-    }
-
-    preUpdateDomFromVac_();
-
-    // Create the DOM element
-    dom::ElementPtr domElement =
-        dom::Element::create(domParent, element->domTagName().value());
-    const core::Id id = domElement->internalId();
-
-    // TODO: move element to respect ordering under parent
-
-    const auto& p = elements_.emplace(id, std::move(u));
-    if (!p.second) {
-        // TODO: throw ?
-        postUpdateDomFromVac_();
-        return;
-    }
-
-    element->domElement_ = domElement.get();
-    element->id_ = id;
-    element->setVacNode(node);
-
-    element->updateFromVac_(vacomplex::ModifiedNodeFlag::All);
-
-    postUpdateDomFromVac_();
-}
-
-void Workspace::onVacNodeMoved_(vacomplex::Node* /*node*/) {
-    if (isUpdatingVacFromDom_) {
-        return;
-    }
-
-    throw core::LogicError(
-        "Moving VAC Nodes is not supported yet. It requires updating paths.");
-
-    /*
-    VacElement* vacElement = findVacElement(node->id());
-    if (!vacElement) {
-        VGC_ERROR(LogVgcWorkspace, "Unexpected vacomplex::Node");
-        // TODO: recover from error by creating the Cell in workspace and DOM ?
-        return;
-    }
-
-    Element* parent = findVacElement(node->parentGroup());
-    if (!parent) {
-        VGC_ERROR(LogVgcWorkspace, "Unexpected vacomplex::Node parent.");
-        return;
-    }
-
-    Element* nextSibling = findVacElement(node->nextSibling());
-    parent->insertChildUnchecked(nextSibling, vacElement);
-
-    // dom update
-
-    dom::Element* domElement = vacElement->domElement();
-    if (!domElement) {
-        VGC_ERROR(LogVgcWorkspace, "VacElement has no dom::Element.");
-        return;
-    }
-
-    dom::Element* domParent = parent->domElement();
-    if (!domParent) {
-        VGC_ERROR(LogVgcWorkspace, "Parent has no dom::Element.");
-        return;
-    }
-
-    dom::Element* domNext = nullptr;
-    if (nextSibling) {
-        domNext = nextSibling->domElement();
-        if (!domNext) {
-            VGC_ERROR(LogVgcWorkspace, "Next VacElement has no dom::Element.");
-            return;
-        }
-    }
-
-    preUpdateDomFromVac_();
-    domParent->insertChild(domNext, domElement);
-    postUpdateDomFromVac_();
-    */
-}
-
-void Workspace::onVacNodeModified_(
-    vacomplex::Node* node,
-    vacomplex::ModifiedNodeFlags flags) {
-
-    if (isUpdatingVacFromDom_) {
-        return;
-    }
-
-    VacElement* vacElement = findVacElement(node->id());
-    if (!vacElement) {
-        VGC_ERROR(LogVgcWorkspace, "Unexpected vacomplex::Node");
-        // TODO: recover from error by creating the Cell in workspace and DOM ?
-        return;
-    }
-
-    // dom update
-
-    preUpdateDomFromVac_();
-    vacElement->updateFromVac_(flags);
     postUpdateDomFromVac_();
 }
 
@@ -852,11 +883,11 @@ void Workspace::rebuildWorkspaceTreeFromDom_() {
 
     Element* vgcElement = createAppendElementFromDom_(domVgcElement, nullptr);
     VGC_ASSERT(vgcElement);
-    vgcElement_ = vgcElement->toVacElement();
-    VGC_ASSERT(vgcElement_);
+    rootVacElement_ = vgcElement->toVacElement();
+    VGC_ASSERT(rootVacElement_);
 
     Element* p = nullptr;
-    Element* e = vgcElement_;
+    Element* e = rootVacElement_;
     dom::Element* domElement = rebuildTreeFromDomIter(e, p);
     while (domElement) {
         e = createAppendElementFromDom_(domElement, p);
@@ -868,7 +899,7 @@ void Workspace::rebuildWorkspaceTreeFromDom_() {
 
 void Workspace::rebuildVacFromWorkspaceTree_() {
 
-    VGC_ASSERT(vgcElement_);
+    VGC_ASSERT(rootVacElement_);
     VGC_ASSERT(vac_);
 
     core::BoolGuard bgVac(isUpdatingVacFromDom_);
@@ -876,9 +907,9 @@ void Workspace::rebuildVacFromWorkspaceTree_() {
     // reset vac
     vac_->clear();
     vac_->resetRoot();
-    vgcElement_->setVacNode(vac_->rootGroup());
+    rootVacElement_->setVacNode(vac_->rootGroup());
 
-    Element* root = vgcElement_;
+    Element* root = rootVacElement_;
     Element* element = root->firstChild();
     Int depth = 1;
     while (element) {
@@ -891,7 +922,7 @@ void Workspace::rebuildVacFromWorkspaceTree_() {
 
 void Workspace::updateVacChildrenOrder_() {
     // todo: sync children order in all groups
-    Element* root = vgcElement_;
+    Element* root = rootVacElement_;
     Element* element = root;
     Int depth = 0;
     while (element) {
@@ -1100,7 +1131,7 @@ void Workspace::updateVacFromDom_(const dom::Diff& diff) {
         // TODO: An element dependent on a Path should have it in its dependencies
         // so we could force path reevaluation to the dependents of an element that moved,
         // as well as errored elements.
-        Element* root = vgcElement_;
+        Element* root = rootVacElement_;
         Element* element = root;
         Int depth = 0;
         while (element) {

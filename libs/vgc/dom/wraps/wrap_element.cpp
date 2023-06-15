@@ -120,10 +120,10 @@ OutputIt writeAttributesRepr(OutputIt out, const This& self) {
 
 void wrap_element(py::module& m) {
     vgc::core::wraps::ObjClass<This>(m, "Element")
-        .def_create<This*, Document*, std::string_view>()
-        .def_create<This*, Element*, std::string_view>()
-        .def_create<This*, Document*, StringId>()
-        .def_create<This*, Element*, StringId>()
+        .def_create<This*, Document*, std::string_view, Element*>()
+        .def_create<This*, Element*, std::string_view, Element*>()
+        .def_create<This*, Document*, StringId, Element*>()
+        .def_create<This*, Element*, StringId, Element*>()
         .def_property_readonly("tagName", &Element::tagName)
         // .name = "name" is simpler than .name = StringId("name") and often the name is new anyway so it has
         // to be registered.

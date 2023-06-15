@@ -37,7 +37,6 @@ void ComplexDiff::merge(const ComplexDiff& other) {
 
 void Complex::onDestroyed() {
     clear();
-    isDiffEnabled_ = false;
 }
 
 ComplexPtr Complex::create() {
@@ -50,21 +49,21 @@ void Complex::clear() {
 
     isBeingCleared_ = true;
 
-    // Emit about to be removed for all the nodes
-    for (const auto& node : nodes_) {
-        nodeDestroyed().emit(node.first);
-    }
+    // Notify removal of all the nodes
+    //for (const auto& node : nodes_) {
+    //    nodeDestroyed().emit(node.first);
+    //}
 
     // Remove all the nodes
     NodePtrMap nodesCopy = std::move(nodes_);
     nodes_ = NodePtrMap();
 
     // Add the removal of all the nodes to the diff
-    if (isDiffEnabled_) {
-        for (const auto& node : nodesCopy) {
-            diff_.onNodeDestroyed(node.first);
-        }
+    ComplexDiff diff;
+    for (const auto& node : nodesCopy) {
+        diff.onNodeDestroyed(node.first);
     }
+    nodesChanged().emit(diff);
 
     isBeingCleared_ = false;
     root_ = nullptr;

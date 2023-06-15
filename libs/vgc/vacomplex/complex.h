@@ -39,20 +39,20 @@ namespace vgc::vacomplex {
 
 VGC_DECLARE_OBJECT(Complex);
 
-// clang-format off
-enum class ModifiedNodeFlag {
-    Reparented               = 0x01,
-    ChildrenChanged          = 0x02,
-    TransformChanged         = 0x04,
-    GeometryChanged          = 0x08,
-    MeshChanged              = 0x10,
+enum class NodeModificationFlag {
+    // clang-format off
+    Reparented              = 0x01,
+    ChildrenChanged         = 0x02,
+    TransformChanged        = 0x04,
+    GeometryChanged         = 0x08,
+    MeshChanged             = 0x10,
     // do we need BoundaryMeshChanged ?
-    BoundaryChanged          = 0x20,
-    StarChanged              = 0x40,
-    All                      = 0x7F,
+    BoundaryChanged         = 0x20,
+    StarChanged             = 0x40,
+    All                     = 0x7F,
+    // clang-format on
 };
-VGC_DEFINE_FLAGS(ModifiedNodeFlags, ModifiedNodeFlag)
-// clang-format on
+VGC_DEFINE_FLAGS(NodeModificationFlags, NodeModificationFlag)
 
 class VGC_VACOMPLEX_API NodeSourceOperation {
     // TODO
@@ -88,6 +88,40 @@ private:
     NodeSourceOperation sourceOperation_;
 };
 
+class VGC_VACOMPLEX_API DestroyedNodeInfo {
+public:
+    explicit DestroyedNodeInfo(core::Id id)
+        : nodeId_(id) {
+    }
+
+    core::Id nodeId() const {
+        return nodeId_;
+    }
+
+private:
+    core::Id nodeId_;
+};
+
+class VGC_VACOMPLEX_API TransientNodeInfo {
+public:
+    TransientNodeInfo(core::Id nodeId, NodeSourceOperation sourceOperation)
+        : nodeId_(nodeId)
+        , sourceOperation_(std::move(sourceOperation)) {
+    }
+
+    core::Id nodeId() const {
+        return nodeId_;
+    }
+
+    const NodeSourceOperation& sourceOperation() const {
+        return sourceOperation_;
+    }
+
+private:
+    core::Id nodeId_;
+    NodeSourceOperation sourceOperation_;
+};
+
 class VGC_VACOMPLEX_API ModifiedNodeInfo {
 public:
     explicit ModifiedNodeInfo(Node* node)
@@ -103,32 +137,62 @@ public:
         return node_;
     }
 
-    ModifiedNodeFlags flags() const {
+    NodeModificationFlags flags() const {
         return flags_;
     }
 
-    void setFlags(ModifiedNodeFlags flags) {
+    void setFlags(NodeModificationFlags flags) {
         flags_ = flags;
     }
 
 private:
     core::Id nodeId_;
     Node* node_;
-    ModifiedNodeFlags flags_ = {};
+    NodeModificationFlags flags_ = {};
 };
 
-class VGC_VACOMPLEX_API DestroyedNodeInfo {
+enum class NodeInsertionType {
+    BeforeSibling,
+    AfterSibling,
+    FirstChild,
+    LastChild,
+};
+
+class VGC_VACOMPLEX_API NodeInsertionInfo {
 public:
-    explicit DestroyedNodeInfo(core::Id id)
-        : nodeId_(id) {
+    NodeInsertionInfo(
+        core::Id nodeId,
+        core::Id newParentId,
+        core::Id newSiblingId,
+        NodeInsertionType type)
+
+        : nodeId_(nodeId)
+        , newParentId_(newParentId)
+        , newSiblingId_(newSiblingId)
+        , type_(type) {
     }
 
     core::Id nodeId() const {
         return nodeId_;
     }
 
+    core::Id newParentId() const {
+        return newParentId_;
+    }
+
+    core::Id newSiblingId() const {
+        return newSiblingId_;
+    }
+
+    NodeInsertionType type() const {
+        return type_;
+    }
+
 private:
     core::Id nodeId_;
+    core::Id newParentId_;
+    core::Id newSiblingId_;
+    NodeInsertionType type_;
 };
 
 class VGC_VACOMPLEX_API ComplexDiff {
@@ -137,8 +201,9 @@ public:
 
     void clear() {
         createdNodes_.clear();
-        modifiedNodes_.clear();
         destroyedNodes_.clear();
+        modifiedNodes_.clear();
+        insertions_.clear();
     }
 
     bool isEmpty() const {
@@ -150,12 +215,22 @@ public:
         return createdNodes_;
     }
 
+    const core::Array<DestroyedNodeInfo>& destroyedNodes() const {
+        return destroyedNodes_;
+    }
+
+    const core::Array<TransientNodeInfo>& transientNodes() const {
+        return transientNodes_;
+    }
+
     const core::Array<ModifiedNodeInfo>& modifiedNodes() const {
         return modifiedNodes_;
     }
 
-    const core::Array<DestroyedNodeInfo>& destroyedNodes() const {
-        return destroyedNodes_;
+    /// History of node insertions. Cannot be compressed.
+    ///
+    const core::Array<NodeInsertionInfo>& insertions() const {
+        return insertions_;
     }
 
     void merge(const ComplexDiff& other);
@@ -165,8 +240,10 @@ private:
     friend class Complex;
 
     core::Array<CreatedNodeInfo> createdNodes_;
-    core::Array<ModifiedNodeInfo> modifiedNodes_;
     core::Array<DestroyedNodeInfo> destroyedNodes_;
+    core::Array<TransientNodeInfo> transientNodes_;
+    core::Array<ModifiedNodeInfo> modifiedNodes_;
+    core::Array<NodeInsertionInfo> insertions_;
 
     // ops helpers
 
@@ -174,7 +251,25 @@ private:
         createdNodes_.emplaceLast(node, std::move(sourceOperation));
     }
 
-    void onNodeModified(Node* node, ModifiedNodeFlags diffFlags) {
+    void onNodeDestroyed(core::Id id) {
+        for (Int i = 0; i < createdNodes_.length(); ++i) {
+            const CreatedNodeInfo& info = createdNodes_[i];
+            if (info.nodeId() == id) {
+                transientNodes_.emplaceLast(id, info.sourceOperation());
+                createdNodes_.removeAt(i);
+                break;
+            }
+        }
+        for (Int i = 0; i < modifiedNodes_.length(); ++i) {
+            if (modifiedNodes_[i].nodeId() == id) {
+                modifiedNodes_.removeAt(i);
+                break;
+            }
+        }
+        destroyedNodes_.emplaceLast(id);
+    }
+
+    void onNodeModified(Node* node, NodeModificationFlags diffFlags) {
         for (Int i = 0; i < createdNodes_.length(); ++i) {
             if (createdNodes_[i].node() == node) {
                 // swallow node diffs when node is new
@@ -191,20 +286,27 @@ private:
         modifiedNodeInfo.setFlags(modifiedNodeInfo.flags() | diffFlags);
     }
 
-    void onNodeDestroyed(core::Id id) {
-        for (Int i = 0; i < createdNodes_.length(); ++i) {
-            if (createdNodes_[i].nodeId() == id) {
-                createdNodes_.removeAt(i);
-                break;
-            }
+    void onNodeInserted(Node* node, Node* oldParent, NodeInsertionType insertionType) {
+        Node* parent = node->parentGroup();
+        Node* newSibling = nullptr;
+        if (insertionType == NodeInsertionType::BeforeSibling) {
+            newSibling = node->nextSibling();
         }
-        for (Int i = 0; i < modifiedNodes_.length(); ++i) {
-            if (modifiedNodes_[i].nodeId() == id) {
-                modifiedNodes_.removeAt(i);
-                break;
-            }
+        else if (insertionType == NodeInsertionType::AfterSibling) {
+            newSibling = node->previousSibling();
         }
-        destroyedNodes_.emplaceLast(id);
+        insertions_.emplaceLast(
+            node->id(),
+            parent->id(),
+            newSibling ? newSibling->id() : core::Id(),
+            insertionType);
+        onNodeModified(parent, NodeModificationFlag::ChildrenChanged);
+        if (oldParent != parent) {
+            if (oldParent) {
+                onNodeModified(oldParent, NodeModificationFlag::ChildrenChanged);
+            }
+            onNodeModified(node, NodeModificationFlag::Reparented);
+        }
     }
 };
 
@@ -247,18 +349,7 @@ public:
         return version_;
     }
 
-    //const ComplexDiff& pendingDiff() {
-    //    return diff_;
-    //}
-
-    //bool emitPendingDiff();
-
-    VGC_SIGNAL(nodeCreated, (Node*, node), (const NodeSourceOperation&, sourceOperation))
-    VGC_SIGNAL(nodeMoved, (Node*, node))
-    VGC_SIGNAL(nodeModified, (Node*, node), (ModifiedNodeFlags, flags))
-    VGC_SIGNAL(nodeDestroyed, (core::Id, nodeId))
-
-    //VGC_SIGNAL(changed, (const ComplexDiff&, diff))
+    VGC_SIGNAL(nodesChanged, (const ComplexDiff&, diff))
 
 private:
     friend detail::Operations;
@@ -273,8 +364,6 @@ private:
 
     // Version control
     Int64 version_ = 0;
-    ComplexDiff diff_ = {};
-    bool isDiffEnabled_ = false;
 
     // Guard against recursion when calling clear() / resetRoot()
     bool isBeingCleared_ = false;

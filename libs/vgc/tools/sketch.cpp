@@ -1368,13 +1368,18 @@ void Sketch::startCurve_(ui::MouseEvent* event) {
 
     // Append start point to geometry
     continueCurve_(event);
+    workspace->sync();
 
     // Set curve to fast tesselation to minimize lag. We do this after
     // continueCurve_() to rely on workspace->sync() called there.
     workspace::Element* edgeElement = workspace->find(edge_);
-    auto edgeCell = dynamic_cast<workspace::VacKeyEdge*>(edgeElement);
-    if (edgeCell) {
-        edgeCell->setTesselationMode(geometry::CurveSamplingQuality::AdaptiveLow);
+    auto keyEdgeElement = dynamic_cast<workspace::VacKeyEdge*>(edgeElement);
+    if (keyEdgeElement) {
+        keyEdgeElement->setTesselationMode(geometry::CurveSamplingQuality::AdaptiveLow);
+        auto ke = keyEdgeElement->vacNode();
+        if (ke) {
+            vacomplex::ops::moveBelowBoundary(ke);
+        }
     }
 
     // Update stroke tip
@@ -1481,6 +1486,13 @@ void Sketch::finishCurve_(ui::MouseEvent* /*event*/) {
             edge_->setAttribute(ds::positions, snappedPoints_);
 
             workspace->sync();
+
+            if (keyEdgeElement) {
+                auto ke = keyEdgeElement->vacNode();
+                if (ke) {
+                    vacomplex::ops::moveBelowBoundary(ke);
+                }
+            }
         }
     }
 

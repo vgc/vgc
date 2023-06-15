@@ -42,7 +42,7 @@ void Element::onDestroyed() {
 }
 
 /* static */
-Element* Element::create_(Node* parent, core::StringId tagName) {
+Element* Element::create_(Node* parent, core::StringId tagName, Element* nextSibling) {
     Document* doc = parent->document();
     ElementPtr e = new Element(doc, tagName);
 
@@ -50,22 +50,23 @@ Element* Element::create_(Node* parent, core::StringId tagName) {
         throw LogicError("Internal id collision error.");
     }
 
-    core::History::do_<CreateElementOperation>(doc->history(), e.get(), parent, nullptr);
+    core::History::do_<CreateElementOperation>(
+        doc->history(), e.get(), parent, nextSibling);
     return e.get();
 }
 
 /* static */
-Element* Element::create(Document* parent, core::StringId tagName) {
+Element* Element::create(Document* parent, core::StringId tagName, Element* nextSibling) {
     if (parent->rootElement()) {
         throw SecondRootElementError(parent);
     }
 
-    return create_(parent, tagName);
+    return create_(parent, tagName, nextSibling);
 }
 
 /* static */
-Element* Element::create(Element* parent, core::StringId tagName) {
-    return create_(parent, tagName);
+Element* Element::create(Element* parent, core::StringId tagName, Element* nextSibling) {
+    return create_(parent, tagName, nextSibling);
 }
 
 core::StringId Element::getOrCreateId() const {

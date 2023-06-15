@@ -130,28 +130,49 @@ bool PaintBucket::onMousePress(ui::MousePressEvent* event) {
         VGC_ASSERT(anyCell);
         vacomplex::Group* parentGroup = anyCell->parentGroup();
 
-        // Create the face. For now, we place it as first child of the group.
-        // In the future, we may want to place at the highest index which is
-        // still below all the cells in the face's boundary.
-        vacomplex::KeyFace* face = vacomplex::ops::createKeyFace(
-            faceCandidateCycles_, parentGroup, parentGroup->firstChild());
+        // Create the face. We place it at the highest index which is
+        // still below all the cells in the face's boundary that are in the current group.
+        //vacomplex::Node* nextSibling = parentGroup->firstChild();
+        //while (nextSibling) {
+        //    bool found = false;
+        //    for (const vacomplex::KeyCycle& cycle : faceCandidateCycles_) {
+        //        if (!cycle.isValid()) {
+        //            VGC_WARNING(
+        //                LogVgcToolsPaintBucket, "Invalid cycle: cannot create face.");
+        //            clearFaceCandidate_();
+        //            return false;
+        //        }
+        //        vacomplex::Cell* sv = cycle.steinerVertex();
+        //        if (!sv) {
+        //            for (const vacomplex::KeyHalfedge& khe : cycle.halfedges()) {
+        //                if (nextSibling == khe.edge() || nextSibling == khe.startVertex()) {
+        //                    found = true;
+        //                    break;
+        //                }
+        //            }
+        //        }
+        //        else if (sv == nextSibling) {
+        //            found = true;
+        //        }
+        //        if (found) {
+        //            break;
+        //        }
+        //    }
+        //    if (found) {
+        //        break;
+        //    }
+        //    nextSibling = nextSibling->nextSibling();
+        //}
+
+        vacomplex::KeyFace* face =
+            vacomplex::ops::createKeyFace(faceCandidateCycles_, parentGroup, nullptr);
+
+        vacomplex::ops::moveBelowBoundary(face);
+
         workspace::VacElement* workspaceFace = workspace_->findVacElement(face);
         dom::Element* domFace = workspaceFace ? workspaceFace->domElement() : nullptr;
         if (domFace) {
             domFace->setAttribute(dom::strings::color, color());
-
-            // Move the DOM element as first child of parent group. This is
-            // normally not needed: it is a workaround for the fact that
-            // currently, the update from VAC to DOM does not properly create
-            // the elements in the correct order.
-            //
-            workspace::VacElement* workspaceGroup =
-                workspace_->findVacElement(parentGroup);
-            dom::Element* domGroup =
-                workspaceGroup ? workspaceGroup->domElement() : nullptr;
-            if (domGroup) {
-                domGroup->insertChild(domGroup->firstChild(), domFace);
-            }
         }
 
         // Close the undo group

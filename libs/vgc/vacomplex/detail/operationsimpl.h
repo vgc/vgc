@@ -97,6 +97,7 @@ public:
     void softDelete(Node* node, bool deleteIsolatedVertices);
 
     void moveToGroup(Node* node, Group* parentGroup, Node* nextSibling = nullptr);
+    void moveBelowBoundary(Node* node);
 
     void setKeyVertexPosition(KeyVertex* kv, const geometry::Vec2d& pos);
 
@@ -109,8 +110,9 @@ private:
     Complex* complex_ = nullptr;
     ComplexDiff diff_ = {};
 
-    void onNodeModified_(Node* node, ModifiedNodeFlags diffFlags);
     void onNodeCreated_(Node* node, NodeSourceOperation sourceOperation);
+    void onNodeInserted_(Node* node, Node* oldParent, NodeInsertionType insertionType);
+    void onNodeModified_(Node* node, NodeModificationFlags diffFlags);
 
     // Creates a new node and inserts it to the complex.
     //
@@ -141,10 +143,14 @@ private:
         Args&&... args) {
 
         T* node = createNode_<T>(std::move(sourceOperation), std::forward<Args>(args)...);
-        parentGroup->insertChildUnchecked(nextSibling, node);
-        onNodeModified_(parentGroup, ModifiedNodeFlag::ChildrenChanged);
+        moveToGroup(node, parentGroup, nextSibling);
         return node;
     }
+
+    void insertNodeBeforeSibling_(Node* node, Node* nextSibling);
+    void insertNodeAfterSibling_(Node* node, Node* previousSibling);
+    void insertNodeAsFirstChild_(Node* node, Group* parent);
+    void insertNodeAsLastChild_(Node* node, Group* parent);
 
     // Assumes node has no children.
     void destroyNode_(Node* node);
