@@ -846,6 +846,37 @@ void Widget::cancelActionsFromDeadWidgets_() {
     }
 }
 
+namespace {
+
+struct CollectActionsParams {
+    Shortcut shortcut = {};
+    Widget* widget = {};
+    CommandType commandType = {};
+};
+
+// Sets the pending mouse widget/action to the first action
+// that has a shortcut matching the given shortcut.
+//
+void collectActions(
+    const CollectActionsParams& params,
+    WidgetPtr& pendingWidget_,
+    ActionPtr& pendingAction_) {
+
+    for (Action* action : params.widget->actions()) {
+        if (action->type() == params.commandType) {
+            for (const Shortcut& shortcut : action->userShortcuts()) {
+                if (shortcut == params.shortcut) {
+                    pendingWidget_ = params.widget;
+                    pendingAction_ = action;
+                    return;
+                }
+            }
+        }
+    }
+}
+
+} // namespace
+
 // Check for registered actions whose shortcut match the pressed mouse button
 // and modifiers. Returns true if an action has been handled this way, which
 // means that the mouse press shouldn't be propagated through the widget
@@ -871,35 +902,19 @@ bool Widget::handleMousePressActions_(MouseEvent* event) {
     // MouseDrag actions), then we prioritize the inner-most in widget depth,
     // then the first in action list order.
     //
-    MouseButton button = event->button();
-    ModifierKeys modifiers = event->modifierKeys();
+    CollectActionsParams params;
+    params.shortcut.setMouseButton(event->button());
+    params.shortcut.setModifierKeys(event->modifierKeys());
     for (Widget* widget = this; widget; widget = widget->hoverChainChild()) {
+        params.widget = widget;
 
         // Collect MouseClick actions
-        for (Action* action : widget->actions()) {
-            if (action->type() == CommandType::MouseClick
-                && action->shortcut().type() == ShortcutType::Mouse
-                && action->shortcut().mouseButton() == button
-                && action->shortcut().modifiers() == modifiers) {
-
-                pendingMouseClickWidget_ = widget;
-                pendingMouseClickAction_ = action;
-                break;
-            }
-        }
+        params.commandType = CommandType::MouseClick;
+        collectActions(params, pendingMouseClickWidget_, pendingMouseClickAction_);
 
         // Collect MouseDrag actions
-        for (Action* action : widget->actions()) {
-            if (action->type() == CommandType::MouseDrag
-                && action->shortcut().type() == ShortcutType::Mouse
-                && action->shortcut().mouseButton() == button
-                && action->shortcut().modifiers() == modifiers) {
-
-                pendingMouseDragWidget_ = widget;
-                pendingMouseDragAction_ = action;
-                break;
-            }
-        }
+        params.commandType = CommandType::MouseDrag;
+        collectActions(params, pendingMouseDragWidget_, pendingMouseDragAction_);
     }
 
     if (pendingMouseClickAction_ || pendingMouseDragAction_) {
@@ -908,7 +923,7 @@ bool Widget::handleMousePressActions_(MouseEvent* event) {
         // conflicts. We return true anyway so that the rest of the application
         // behaves as if the action was already in progress.
         //
-        mouseActionButton_ = button;
+        mouseActionButton_ = event->button();
         pendingMouseActionEvents_.clear();
         appendToPendingMouseActionEvents_(event);
         maybeStartPendingMouseAction_();
@@ -1926,18 +1941,19 @@ void Widget::keyEvent_(PropagatedKeyEvent* event, bool isKeyPress) {
 
     // Trigger action if it has a matching shortcut
     if (!event->handled_ && isKeyPress) {
-        for (Action* action : actions()) {
-            if (action->shortcut().modifiers() == event->modifierKeys()
-                && action->shortcut().key() == event->key()) {
-
-                event->handled_ = true;
-                action->trigger();
-                if (!isAlive()) {
-                    return;
-                }
-                else {
-                    break;
-                }
+        WidgetPtr matchingWidget;
+        ActionPtr matchingAction;
+        CollectActionsParams params;
+        params.shortcut.setKey(event->key());
+        params.shortcut.setModifierKeys(event->modifierKeys());
+        params.widget = this;
+        params.commandType = CommandType::Trigger;
+        collectActions(params, matchingWidget, matchingAction);
+        if (matchingAction) {
+            event->handled_ = true;
+            matchingAction->trigger();
+            if (!isAlive()) {
+                return;
             }
         }
     }

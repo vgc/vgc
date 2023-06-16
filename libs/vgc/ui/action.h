@@ -63,6 +63,12 @@ public:
         return command_;
     }
 
+    /// Returns the ID of the command associated with this action.
+    ///
+    core::StringId commandId() const {
+        return command_->id();
+    }
+
     /// Returns the type of the command associated with this action.
     ///
     CommandType type() const {
@@ -95,11 +101,18 @@ public:
     ///
     void setText(std::string_view text);
 
-    /// Returns the shortcut of the command associated with this action. This
-    /// can be an empty shortcut if the command has no shortcut.
+    /// Returns the default shortcuts (as registered in the global
+    /// `defaultShortcuts()`) associated with this action.
     ///
-    const Shortcut& shortcut() const {
-        return command_->shortcut();
+    const ShortcutArray& defaultShortcuts() const {
+        return ui::defaultShortcuts(commandId());
+    }
+
+    /// Returns the users shortcuts (as registered in the global
+    /// `userShortcuts()` map) associated with this action.
+    ///
+    const ShortcutArray& userShortcuts() const {
+        return ui::userShortcuts(commandId());
     }
 
     /// Returns the shortcut context of the command associated with this action.

@@ -47,47 +47,43 @@ using Key = ui::Key;
 
 constexpr ui::ModifierKey ctrl = ui::ModifierKey::Ctrl;
 
-#define DEFINE_MENU_COMMAND(var, id, name, shortcut)                                     \
-    VGC_UI_DEFINE_COMMAND(                                                               \
-        var, id, ui::CommandType::Trigger, name, ui::ShortcutContext::Window, shortcut)
-
-DEFINE_MENU_COMMAND(
+VGC_UI_DEFINE_WINDOW_COMMAND(
     createAction,
     "uitest.createActionInTestMenu",
     "Create action in Test menu",
     Shortcut(ctrl, Key::A))
 
-DEFINE_MENU_COMMAND(
+VGC_UI_DEFINE_WINDOW_COMMAND(
     createMenu,
     "uitest.createMenuInMenuBar",
     "Create menu in menubar",
     Shortcut(ctrl, Key::M))
 
-DEFINE_MENU_COMMAND(hello, "uitest.hello", "Hello", Shortcut())
+VGC_UI_DEFINE_WINDOW_COMMAND(hello, "uitest.hello", "Hello")
 
-DEFINE_MENU_COMMAND(_1_1, "uitest.1.1", "Action #1.1", Shortcut(ctrl, Key::G))
-DEFINE_MENU_COMMAND(_1_2, "uitest.1.2", "Action #1.2", Shortcut(ctrl, Key::L))
-DEFINE_MENU_COMMAND(_1_3, "uitest.1.3", "Action #1.3", Shortcut())
-DEFINE_MENU_COMMAND(_1_4, "uitest.1.4", "Action #1.4", Shortcut())
-DEFINE_MENU_COMMAND(_1_5, "uitest.1.5", "Action #1.5", Shortcut())
-DEFINE_MENU_COMMAND(_1_6, "uitest.1.6", "Action #1.6", Shortcut())
-DEFINE_MENU_COMMAND(_1_7, "uitest.1.7", "Action #1.7", Shortcut())
+VGC_UI_DEFINE_WINDOW_COMMAND(_1_1, "uitest.1.1", "Action #1.1", Shortcut(ctrl, Key::G))
+VGC_UI_DEFINE_WINDOW_COMMAND(_1_2, "uitest.1.2", "Action #1.2", Shortcut(ctrl, Key::L))
+VGC_UI_DEFINE_WINDOW_COMMAND(_1_3, "uitest.1.3", "Action #1.3")
+VGC_UI_DEFINE_WINDOW_COMMAND(_1_4, "uitest.1.4", "Action #1.4")
+VGC_UI_DEFINE_WINDOW_COMMAND(_1_5, "uitest.1.5", "Action #1.5")
+VGC_UI_DEFINE_WINDOW_COMMAND(_1_6, "uitest.1.6", "Action #1.6")
+VGC_UI_DEFINE_WINDOW_COMMAND(_1_7, "uitest.1.7", "Action #1.7")
 
-DEFINE_MENU_COMMAND(_1_8_1, "uitest.1.8.1", "Action #1.8.1", Shortcut())
-DEFINE_MENU_COMMAND(_1_8_2, "uitest.1.8.2", "Action #1.8.2", Shortcut())
-DEFINE_MENU_COMMAND(_1_8_3, "uitest.1.8.3", "Action #1.8.3", Shortcut())
-DEFINE_MENU_COMMAND(_1_8_4, "uitest.1.8.4", "Action #1.8.4", Shortcut())
-DEFINE_MENU_COMMAND(_1_8_5, "uitest.1.8.5", "Action #1.8.5", Shortcut())
-DEFINE_MENU_COMMAND(_1_8_6, "uitest.1.8.6", "Action #1.8.6", Shortcut())
-DEFINE_MENU_COMMAND(_1_8_7, "uitest.1.8.7", "Action #1.8.7", Shortcut())
+VGC_UI_DEFINE_WINDOW_COMMAND(_1_8_1, "uitest.1.8.1", "Action #1.8.1")
+VGC_UI_DEFINE_WINDOW_COMMAND(_1_8_2, "uitest.1.8.2", "Action #1.8.2")
+VGC_UI_DEFINE_WINDOW_COMMAND(_1_8_3, "uitest.1.8.3", "Action #1.8.3")
+VGC_UI_DEFINE_WINDOW_COMMAND(_1_8_4, "uitest.1.8.4", "Action #1.8.4")
+VGC_UI_DEFINE_WINDOW_COMMAND(_1_8_5, "uitest.1.8.5", "Action #1.8.5")
+VGC_UI_DEFINE_WINDOW_COMMAND(_1_8_6, "uitest.1.8.6", "Action #1.8.6")
+VGC_UI_DEFINE_WINDOW_COMMAND(_1_8_7, "uitest.1.8.7", "Action #1.8.7")
 
-DEFINE_MENU_COMMAND(_2_1, "uitest.2.1", "Action #2.1", Shortcut(ctrl, Key::F))
-DEFINE_MENU_COMMAND(_2_2, "uitest.2.2", "Action #2.2", Shortcut(ctrl, Key::K))
+VGC_UI_DEFINE_WINDOW_COMMAND(_2_1, "uitest.2.1", "Action #2.1", Shortcut(ctrl, Key::F))
+VGC_UI_DEFINE_WINDOW_COMMAND(_2_2, "uitest.2.2", "Action #2.2", Shortcut(ctrl, Key::K))
 
-DEFINE_MENU_COMMAND(_3_1, "uitest.action.3.1", "Action #3.1", Shortcut())
+VGC_UI_DEFINE_WINDOW_COMMAND(_3_1, "uitest.action.3.1", "Action #3.1")
 
-DEFINE_MENU_COMMAND(openPopup, "uitest.openPopup", "Open Popup", Shortcut())
-DEFINE_MENU_COMMAND(maybeQuit, "uitest.maybeQuit", "Maybe Quit", Shortcut())
+VGC_UI_DEFINE_WINDOW_COMMAND(openPopup, "uitest.openPopup", "Open Popup")
+VGC_UI_DEFINE_WINDOW_COMMAND(maybeQuit, "uitest.maybeQuit", "Maybe Quit")
 
 } // namespace commands
 } // namespace

@@ -1178,22 +1178,27 @@ void Window::addShortcut_(Action* action) {
     if (!isWindowShortcut_(action)) {
         return;
     }
-    Shortcut shortcut = action->shortcut();
-    if (shortcut.key() == Key::None) {
-        return;
+    bool anyShortcutInserted = false;
+    for (const Shortcut& shortcut : action->userShortcuts()) {
+        if (shortcut.key() == Key::None) {
+            break;
+        }
+        auto [it, inserted] = shortcutMap_.insert({shortcut, action});
+        if (inserted) {
+            anyShortcutInserted = true;
+        }
+        else {
+            Action* otherAction = it->second;
+            VGC_WARNING(
+                LogVgcUi,
+                "Shortcut [{}] for action \"{}\" ignored, "
+                "as it conflicts with action \"{}\".",
+                shortcut,
+                action->text(),
+                otherAction->text());
+        }
     }
-    auto [it, inserted] = shortcutMap_.insert({shortcut, action});
-    if (!inserted) {
-        Action* otherAction = it->second;
-        VGC_WARNING(
-            LogVgcUi,
-            "Shortcut [{}] for action \"{}\" ignored, "
-            "as it conflicts with action \"{}\".",
-            shortcut,
-            action->text(),
-            otherAction->text());
-    }
-    else {
+    if (anyShortcutInserted) {
         action->aboutToBeDestroyed().connect(onActionAboutToBeDestroyedSlot_());
     }
 }
@@ -1202,18 +1207,20 @@ void Window::removeShortcut_(Action* action) {
     if (!isWindowShortcut_(action)) {
         return;
     }
-    Shortcut shortcut = action->shortcut();
-    if (shortcut.key() == Key::None) {
-        return;
-    }
-    auto it = shortcutMap_.find(shortcut);
-    if (it != shortcutMap_.end()) {
-        Action* otherAction = it->second;
-        if (otherAction == action) {
-            shortcutMap_.erase(it);
+    for (const Shortcut& shortcut : action->userShortcuts()) {
+        if (shortcut.key() == Key::None) {
+            break;
+        }
+        auto it = shortcutMap_.find(shortcut);
+        if (it != shortcutMap_.end()) {
+            Action* otherAction = it->second;
+            if (otherAction == action) {
+                shortcutMap_.erase(it);
+            }
         }
     }
 }
+
 void Window::onActiveChanged_() {
     bool active = isActive();
     widget_->setTreeActive(active, FocusReason::Window);

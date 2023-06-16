@@ -157,17 +157,21 @@ void NativeMenuBar::doPopulateNativeMenu_(ui::Menu* menu, QMenu* qMenu) {
 }
 
 void NativeMenuBar::updateNativeAction_(ui::Action* action, QAction* qAction) {
-    ui::Shortcut shortcut = action->shortcut();
-    Qt::Key key = static_cast<Qt::Key>(shortcut.key());
-    Qt::KeyboardModifiers modifiers = toQt(shortcut.modifiers());
+    QList<QKeySequence> qShortcuts;
+    for (const ui::Shortcut& shortcut : action->userShortcuts()) {
+        Qt::Key key = static_cast<Qt::Key>(shortcut.key());
+        Qt::KeyboardModifiers keyboardModifiers = toQt(shortcut.modifierKeys());
+        qShortcuts.append(keyboardModifiers | key);
+    }
     qAction->setText(ui::toQt(action->text()));
-    qAction->setShortcut(modifiers | key);
+    qAction->setShortcuts(qShortcuts);
     qAction->setEnabled(action->isEnabled());
     // TODO: update check state and check mode
 }
 
 void NativeMenuBar::populateNativeMenuBar_(ui::Menu* menu, QMenuBar* qMenu) {
     menu->changed().connect(onMenuChangedSlot_());
+    ui::userShortcuts()->changed().connect(onMenuChangedSlot_());
     doPopulateNativeMenuBar_(menu, qMenu);
 }
 

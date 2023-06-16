@@ -103,12 +103,6 @@ public:
         return action_ ? action_->text() : "";
     }
 
-    /// Returns the Button's shortcut.
-    ///
-    Shortcut shortcut() const {
-        return action_ ? action_->shortcut() : Shortcut();
-    }
-
     /// Returns whether the shortcut is visible.
     ///
     bool isShortcutVisible() const {
@@ -274,11 +268,13 @@ private:
     void onActionPropertiesChanged_();
     void onActionCheckStateChanged_();
     void onActionEnabledChanged_();
+    void onUserShortcutsChanged_();
 
     VGC_SLOT(onActionAboutToBeDestroyedSlot_, onActionAboutToBeDestroyed_);
     VGC_SLOT(onActionPropertiesChangedSlot_, onActionPropertiesChanged_);
     VGC_SLOT(onActionCheckStateChangedSlot_, onActionCheckStateChanged_);
     VGC_SLOT(onActionEnabledChangedSlot_, onActionEnabledChanged_);
+    VGC_SLOT(onUserShortcutsChangedSlot_, onUserShortcutsChanged_);
 };
 
 } // namespace vgc::ui

@@ -29,9 +29,8 @@ CommandRegistry::CommandRegistry()
     , unknownCommand_(
           "",
           CommandType::Unknown,
-          "Unknown Command",
           ShortcutContext::Application,
-          Shortcut())
+          "Unknown Command")
     , mutex_() {
 }
 
@@ -45,7 +44,8 @@ const Command& CommandRegistry::find(core::StringId id) {
     CommandRegistry* registry = CommandRegistry::instance_();
     std::lock_guard<std::mutex> lock(registry->mutex_);
     auto it = registry->commands_.find(id);
-    if (it != registry->commands_.end()) {
+    bool found = (it != registry->commands_.end());
+    if (found) {
         return it->second;
     }
     else {
@@ -57,13 +57,14 @@ bool CommandRegistry::contains(core::StringId id) {
     CommandRegistry* registry = CommandRegistry::instance_();
     std::lock_guard<std::mutex> lock(registry->mutex_);
     auto it = registry->commands_.find(id);
-    return it == registry->commands_.end();
+    bool found = (it != registry->commands_.end());
+    return found;
 }
 
-void CommandRegistry::add(Command command) {
+void CommandRegistry::add(const Command& command) {
     CommandRegistry* registry = CommandRegistry::instance_();
     std::lock_guard<std::mutex> lock(registry->mutex_);
-    registry->commands_.insert_or_assign(command.id(), std::move(command));
+    registry->commands_.insert_or_assign(command.id(), command);
 }
 
 } // namespace vgc::ui

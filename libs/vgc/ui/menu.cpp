@@ -46,13 +46,10 @@ FlexDirection orthoDir(FlexDirection dir) {
 
 namespace commands {
 
-VGC_UI_DEFINE_COMMAND(
+VGC_UI_DEFINE_TRIGGER_COMMAND( //
     openMenu,
     "ui.menu.open",
-    CommandType::Trigger,
-    "Open Menu",
-    ShortcutContext::Widget,
-    Shortcut())
+    "Open Menu")
 
 }
 

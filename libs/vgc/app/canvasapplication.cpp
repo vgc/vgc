@@ -530,20 +530,49 @@ using Key = ui::Key;
 constexpr ui::ModifierKey ctrl = ui::ModifierKey::Ctrl;
 constexpr ui::ModifierKey shift = ui::ModifierKey::Shift;
 
-#define DEFINE_MENU_COMMAND(var, id, name, shortcut)                                     \
-    VGC_UI_DEFINE_COMMAND(                                                               \
-        var, id, ui::CommandType::Trigger, name, ui::ShortcutContext::Window, shortcut)
+VGC_UI_DEFINE_WINDOW_COMMAND( //
+    _new,
+    "file.new",
+    "New",
+    Shortcut(ctrl, Key::N))
 
-DEFINE_MENU_COMMAND(_new, "file.new", "New", Shortcut(ctrl, Key::N))
-DEFINE_MENU_COMMAND(open, "file.open", "Open", Shortcut(ctrl, Key::O))
-DEFINE_MENU_COMMAND(save, "file.save", "Save", Shortcut(ctrl, Key::S))
-DEFINE_MENU_COMMAND(saveAs, "file.saveAs", "Save As...", Shortcut(ctrl | shift, Key::S))
-DEFINE_MENU_COMMAND(quit, "file.quit", "Quit", Shortcut(ctrl, Key::Q))
+VGC_UI_DEFINE_WINDOW_COMMAND(
+    open, //
+    "file.open",
+    "Open",
+    Shortcut(ctrl, Key::O))
 
-DEFINE_MENU_COMMAND(undo, "edit.undo", "Undo", Shortcut(ctrl, Key::Z))
-DEFINE_MENU_COMMAND(redo, "edit.redo", "Redo", Shortcut(ctrl | shift, Key::Z))
+VGC_UI_DEFINE_WINDOW_COMMAND( //
+    save,
+    "file.save",
+    "Save",
+    Shortcut(ctrl, Key::S))
 
-DEFINE_MENU_COMMAND(
+VGC_UI_DEFINE_WINDOW_COMMAND( //
+    saveAs,
+    "file.saveAs",
+    "Save As...",
+    Shortcut(ctrl | shift, Key::S))
+
+VGC_UI_DEFINE_WINDOW_COMMAND( //
+    quit,
+    "file.quit",
+    "Quit",
+    Shortcut(ctrl, Key::Q))
+
+VGC_UI_DEFINE_WINDOW_COMMAND( //
+    undo,
+    "edit.undo",
+    "Undo",
+    Shortcut(ctrl, Key::Z))
+
+VGC_UI_DEFINE_WINDOW_COMMAND( //
+    redo,
+    "edit.redo",
+    "Redo",
+    Shortcut(ctrl | shift, Key::Z))
+
+VGC_UI_DEFINE_WINDOW_COMMAND(
     debugWidgetSizing,
     "debug.widgetSizing",
     "Debug Widget Sizing",
@@ -633,18 +662,29 @@ namespace {
 
 namespace commands {
 
-#define DEFINE_TOOL_COMMAND(var, id, name, shortcut)                                     \
-    VGC_UI_DEFINE_COMMAND(                                                               \
-        var, id, ui::CommandType::Trigger, name, ui::ShortcutContext::Window, shortcut)
+VGC_UI_DEFINE_WINDOW_COMMAND( //
+    selectTool,
+    "tools.select",
+    "Select Tool",
+    Shortcut(ctrl, Key::Digit1))
 
-// clang-format off
+VGC_UI_DEFINE_WINDOW_COMMAND( //
+    sketchTool,
+    "tools.sketch",
+    "Sketch Tool",
+    Shortcut(ctrl, Key::Digit2))
 
-DEFINE_TOOL_COMMAND(selectTool, "tools.select", "Select Tool", Shortcut({}, Key::S))
-DEFINE_TOOL_COMMAND(sketchTool, "tools.sketch", "Sketch Tool", Shortcut(ctrl, Key::Digit2))
-DEFINE_TOOL_COMMAND(paintBucketTool,"tools.paintBucket","Paint Bucket Tool", Shortcut(ctrl, Key::Digit3))
-DEFINE_TOOL_COMMAND(sculptTool, "tools.sculpt", "Sculpt Tool", Shortcut(ctrl, Key::Digit4))
+VGC_UI_DEFINE_WINDOW_COMMAND( //
+    paintBucketTool,
+    "tools.paintBucket",
+    "Paint Bucket Tool",
+    Shortcut(ctrl, Key::Digit3))
 
-// clang-format on
+VGC_UI_DEFINE_WINDOW_COMMAND( //
+    sculptTool,
+    "tools.sculpt",
+    "Sculpt Tool",
+    Shortcut(ctrl, Key::Digit4))
 
 } // namespace commands
 

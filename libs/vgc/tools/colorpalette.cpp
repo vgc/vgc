@@ -47,45 +47,33 @@ const core::Color cursorInnerColor(1.0f, 1.0f, 1.0f);
 
 namespace commands {
 
-VGC_UI_DEFINE_COMMAND(
+using Key = ui::Key;
+
+VGC_UI_DEFINE_WINDOW_COMMAND( //
     pickScreenColor,
     "colors.pickScreenColor",
-    ui::CommandType::Trigger,
     "Pick Screen Color",
-    ui::ShortcutContext::Window,
-    ui::Shortcut(ui::ModifierKey::None, ui::Key::P))
+    Key::P)
 
-VGC_UI_DEFINE_COMMAND(
+VGC_UI_DEFINE_WINDOW_COMMAND( //
     addToPalette,
     "colors.addToPalette",
-    ui::CommandType::Trigger,
-    "Add to Palette",
-    ui::ShortcutContext::Window,
-    ui::Shortcut())
+    "Add to Palette")
 
-VGC_UI_DEFINE_COMMAND(
+VGC_UI_DEFINE_WINDOW_COMMAND( //
     removeFromPalette,
     "colors.removeFromPalette",
-    ui::CommandType::Trigger,
-    "Remove from Palette",
-    ui::ShortcutContext::Window,
-    ui::Shortcut())
+    "Remove from Palette")
 
-VGC_UI_DEFINE_COMMAND(
+VGC_UI_DEFINE_WINDOW_COMMAND( //
     stepsMode,
     "colors.stepsMode",
-    ui::CommandType::Trigger,
-    "Steps Mode",
-    ui::ShortcutContext::Window,
-    ui::Shortcut())
+    "Steps Mode")
 
-VGC_UI_DEFINE_COMMAND(
+VGC_UI_DEFINE_WINDOW_COMMAND( //
     continuousMode,
     "colors.continuousMode",
-    ui::CommandType::Trigger,
-    "Continuous Mode",
-    ui::ShortcutContext::Window,
-    ui::Shortcut())
+    "Continuous Mode")
 
 } // namespace commands
 
