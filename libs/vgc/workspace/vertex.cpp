@@ -230,7 +230,7 @@ ElementStatus VacKeyVertex::updateFromDom_(Workspace* /*workspace*/) {
     return ElementStatus::Ok;
 }
 
-void VacKeyVertex::updateFromVac_(vacomplex::ModifiedNodeFlags flags) {
+void VacKeyVertex::updateFromVac_(vacomplex::NodeModificationFlags flags) {
     namespace ds = dom::strings;
     vacomplex::KeyVertex* kv = vacKeyVertexNode();
     if (!kv) {
@@ -248,15 +248,15 @@ void VacKeyVertex::updateFromVac_(vacomplex::ModifiedNodeFlags flags) {
         return;
     }
 
-    using vacomplex::ModifiedNodeFlag;
-    if (flags.has(ModifiedNodeFlag::GeometryChanged)) {
+    using vacomplex::NodeModificationFlag;
+    if (flags.has(NodeModificationFlag::GeometryChanged)) {
         const auto& position = domElement->getAttribute(ds::position).getVec2d();
         if (kv->position() != position) {
             domElement->setAttribute(ds::position, kv->position());
             dirtyPosition_();
         }
     }
-    else if (flags.has(ModifiedNodeFlag::MeshChanged)) {
+    else if (flags.has(NodeModificationFlag::MeshChanged)) {
         frameData_.isSelectionGeometryDirty_ = true;
     }
 }

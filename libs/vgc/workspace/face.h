@@ -179,7 +179,7 @@ private:
     ElementStatus onDependencyRemoved_(Element* dependency) override;
 
     ElementStatus updateFromDom_(Workspace* workspace) override;
-    void updateFromVac_(vacomplex::ModifiedNodeFlags flags) override;
+    void updateFromVac_(vacomplex::NodeModificationFlags flags) override;
 
     void updateDependencies_(core::Array<Element*> sortedNewDependencies);
 

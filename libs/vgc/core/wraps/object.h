@@ -122,13 +122,13 @@ public:
 
     static_assert(isObject<TObj>);
 
-    template<typename R = void, typename... Args>
-    ObjClass& def_create() {
+    template<typename R = void, typename... Args, typename... Extra>
+    ObjClass& def_create(const Extra&... extra) {
         if constexpr (std::is_same_v<R, void>) {
-            Base::def(py::init(&TObj::create));
+            Base::def(py::init(&TObj::create), extra...);
         }
         else {
-            Base::def(py::init(static_cast<R (*)(Args...)>(&TObj::create)));
+            Base::def(py::init(static_cast<R (*)(Args...)>(&TObj::create)), extra...);
         }
         return *this;
     }

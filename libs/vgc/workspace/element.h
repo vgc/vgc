@@ -366,7 +366,24 @@ private:
     // this pointer is not safe to use when tree is not synced with VAC
     vacomplex::Node* vacNode_ = nullptr;
 
-    virtual void updateFromVac_(vacomplex::ModifiedNodeFlags flags) = 0;
+    virtual void updateFromVac_(vacomplex::NodeModificationFlags flags) = 0;
+};
+
+class VGC_WORKSPACE_API TransientVacElement final : public VacElement {
+private:
+    friend class Workspace;
+
+public:
+    ~TransientVacElement() override = default;
+
+    TransientVacElement(Workspace* workspace)
+        : VacElement(workspace) {
+    }
+
+private:
+    void updateFromVac_(vacomplex::NodeModificationFlags) final {
+        // TODO: shouldn't happen, thus throw ?
+    }
 };
 
 vacomplex::Node* Element::vacNode() const {

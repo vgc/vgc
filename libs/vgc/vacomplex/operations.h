@@ -98,6 +98,9 @@ VGC_VACOMPLEX_API
 void moveToGroup(Node* node, Group* parentGroup, Node* nextSibling = nullptr);
 
 VGC_VACOMPLEX_API
+void moveBelowBoundary(Node* node);
+
+VGC_VACOMPLEX_API
 void setKeyVertexPosition(KeyVertex* vertex, const geometry::Vec2d& pos);
 
 VGC_VACOMPLEX_API

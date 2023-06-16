@@ -174,6 +174,14 @@ void moveToGroup(Node* node, Group* parentGroup, Node* nextSibling) {
     ops.moveToGroup(node, parentGroup, nextSibling);
 }
 
+void moveBelowBoundary(Node* node) {
+    if (!node) {
+        throw LogicError("moveBelowBoundary: node is nullptr.");
+    }
+    detail::Operations ops(node->complex());
+    ops.moveBelowBoundary(node);
+}
+
 void setKeyVertexPosition(KeyVertex* vertex, const geometry::Vec2d& pos) {
     if (!vertex) {
         throw LogicError("setKeyVertexPosition: vertex is nullptr.");

@@ -829,7 +829,7 @@ public:
     VGC_VACOMPLEX_DEFINE_CELL_CAST_METHOD(InbetweenFace)
 
 protected:
-    // This flag is used to not signal ModifiedNodeFlag::MeshChanged
+    // This flag is used to not signal NodeModificationFlag::MeshChanged
     // multiple times if no dependent nodes nor the user has queried
     // the new mesh. It should be set to true (either directly
     // or indirectly) in all mesh getters.
