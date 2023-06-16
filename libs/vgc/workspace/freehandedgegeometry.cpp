@@ -1185,8 +1185,8 @@ public:
         const geometry::Vec2d& position,
         double strength,
         double radius,
-        const geometry::Vec2dArray& points,
-        const core::DoubleArray& widths,
+        const geometry::Vec2dArray& knotPositions,
+        const core::DoubleArray& knotWidths,
         bool isClosed,
         geometry::CurveSamplingQuality samplingQuality,
         double maxDs,
@@ -1196,18 +1196,19 @@ public:
         VGC_DEBUG_TMP_EXPR(position);
         VGC_DEBUG_TMP_EXPR(strength);
         VGC_DEBUG_TMP_EXPR(radius);
-        VGC_DEBUG_TMP_EXPR(points);
-        VGC_DEBUG_TMP_EXPR(widths);
+        VGC_DEBUG_TMP_EXPR(knotPositions);
+        VGC_DEBUG_TMP_EXPR(knotWidths);
         VGC_DEBUG_TMP_EXPR(isClosed);
         VGC_DEBUG_TMP_EXPR(samplingQuality);
         VGC_DEBUG_TMP_EXPR(maxDs);
         VGC_DEBUG_TMP_EXPR(simplifyTolerance);
         */
 
-        points_ = &points;
-        widths_ = &widths;
+        numKnots_ = knotPositions.length();
+        knotPositions_ = &knotPositions;
+        knotWidths_ = &knotWidths;
         isClosed_ = isClosed;
-        hasWidths_ = widths_->length() == points_->length();
+        hasWidths_ = knotWidths_->length() == knotPositions_->length();
 
         outSculptCursorPosition = position;
 
@@ -1253,12 +1254,12 @@ public:
         // (c) Then append unmodified knots after the sculpted knots
         //
 
-        newStartPointIndex_ = 0;                          // See step 5
-        appendUnmodifiedKnotsBefore_();                   // (a)
-        appendModifiedKnots_(strength);                   // (b)
-        appendUnmodifiedKnotsAfter_();                    // (c)
-        if (newStartPointIndex_ == newPoints_.length()) { // See step 5
-            newStartPointIndex_ = 0;
+        newStartKnotIndex_ = 0;                                 // See step 5
+        appendUnmodifiedKnotsBefore_();                         // (a)
+        appendModifiedKnots_(strength);                         // (b)
+        appendUnmodifiedKnotsAfter_();                          // (c)
+        if (newStartKnotIndex_ == newKnotPositions_.length()) { // See step 5
+            newStartKnotIndex_ = 0;
         }
 
         //VGC_DEBUG_TMP_EXPR(newPoints_);
@@ -1291,14 +1292,16 @@ public:
         //
 
         Int simplifyFirstIndex = numUnmodifiedKnotsBefore_ - 1;
-        Int simplifyLastIndex = newPoints_.length() - numUnmodifiedKnotsAfter_;
-        simplifyFirstIndex = core::clamp(simplifyFirstIndex, 0, newPoints_.length() - 1);
-        simplifyLastIndex = core::clamp(simplifyLastIndex, 0, newPoints_.length() - 1);
+        Int simplifyLastIndex = newKnotPositions_.length() - numUnmodifiedKnotsAfter_;
+        simplifyFirstIndex =
+            core::clamp(simplifyFirstIndex, 0, newKnotPositions_.length() - 1);
+        simplifyLastIndex =
+            core::clamp(simplifyLastIndex, 0, newKnotPositions_.length() - 1);
 
         core::IntArray indices;
         indices.extend({simplifyFirstIndex, simplifyLastIndex});
         filterPointsStep(
-            newPoints_,
+            newKnotPositions_,
             indices,
             0,
             simplifyTolerance,
@@ -1324,35 +1327,38 @@ public:
         outPoints.clear();
         outWidths.clear();
         Int n = simplifyFirstIndex + indices.length()
-                + (newPoints_.length() - (simplifyLastIndex + 1));
+                + (newKnotPositions_.length() - (simplifyLastIndex + 1));
         outPoints.reserve(n);
         if (hasWidths_) {
             outWidths.reserve(n);
         }
 
-        if (newStartPointIndex_ == 0) { // Simple case: no knot rotation needed
+        if (newStartKnotIndex_ == 0) { // Simple case: no knot rotation needed
 
             // Copy the unmodified knots before
-            outPoints.extend(newPoints_.begin(), newPoints_.begin() + simplifyFirstIndex);
+            outPoints.extend(
+                newKnotPositions_.begin(),
+                newKnotPositions_.begin() + simplifyFirstIndex);
             if (hasWidths_) {
                 outWidths.extend(
-                    newWidths_.begin(), newWidths_.begin() + simplifyFirstIndex);
+                    newKnotWidths_.begin(), newKnotWidths_.begin() + simplifyFirstIndex);
             }
 
             // Copy the modified knots that survived simplification
             for (Int i : indices) {
-                outPoints.append(newPoints_[i]);
+                outPoints.append(newKnotPositions_[i]);
                 if (hasWidths_) {
-                    outWidths.append(newWidths_[i]);
+                    outWidths.append(newKnotWidths_[i]);
                 }
             }
 
             // Copy the unmodified knots after
             outPoints.extend(
-                newPoints_.begin() + simplifyLastIndex + 1, newPoints_.end());
+                newKnotPositions_.begin() + simplifyLastIndex + 1,
+                newKnotPositions_.end());
             if (hasWidths_) {
                 outWidths.extend(
-                    newWidths_.begin() + simplifyLastIndex + 1, newWidths_.end());
+                    newKnotWidths_.begin() + simplifyLastIndex + 1, newKnotWidths_.end());
             }
         }
         else { // newStartPointIndex_ > 0: rotation needed
@@ -1360,36 +1366,39 @@ public:
             // Copy the modified knots that survived simplification and
             // are equal or after the new first knot.
             for (Int i : indices) {
-                if (i >= newStartPointIndex_) {
-                    outPoints.append(newPoints_[i]);
+                if (i >= newStartKnotIndex_) {
+                    outPoints.append(newKnotPositions_[i]);
                     if (hasWidths_) {
-                        outWidths.append(newWidths_[i]);
+                        outWidths.append(newKnotWidths_[i]);
                     }
                 }
             }
 
             // Copy the unmodified knots before
             outPoints.extend(
-                newPoints_.begin() + simplifyLastIndex + 1, newPoints_.end());
+                newKnotPositions_.begin() + simplifyLastIndex + 1,
+                newKnotPositions_.end());
             if (hasWidths_) {
                 outWidths.extend(
-                    newWidths_.begin() + simplifyLastIndex + 1, newWidths_.end());
+                    newKnotWidths_.begin() + simplifyLastIndex + 1, newKnotWidths_.end());
             }
 
             // Copy the unmodified knots after
-            outPoints.extend(newPoints_.begin(), newPoints_.begin() + simplifyFirstIndex);
+            outPoints.extend(
+                newKnotPositions_.begin(),
+                newKnotPositions_.begin() + simplifyFirstIndex);
             if (hasWidths_) {
                 outWidths.extend(
-                    newWidths_.begin(), newWidths_.begin() + simplifyFirstIndex);
+                    newKnotWidths_.begin(), newKnotWidths_.begin() + simplifyFirstIndex);
             }
 
             // Copy the modified knots that survived simplification and
             // are before the new first knot.
             for (Int i : indices) {
-                if (i < newStartPointIndex_) {
-                    outPoints.append(newPoints_[i]);
+                if (i < newStartKnotIndex_) {
+                    outPoints.append(newKnotPositions_[i]);
                     if (hasWidths_) {
-                        outWidths.append(newWidths_[i]);
+                        outWidths.append(newKnotWidths_[i]);
                     }
                 }
             }
@@ -1404,29 +1413,28 @@ public:
 
 private:
     bool initCurveSampling_(geometry::CurveSamplingQuality quality) {
-        const Int numPoints = points_->length();
-        if (numPoints < 2) {
+        if (numKnots_ < 2) {
             return false;
         }
         geometry::Curve curve(
             isClosed_ ? geometry::Curve::Type::ClosedUniformCatmullRom
                       : geometry::Curve::Type::OpenUniformCatmullRom);
-        curve.setPositions(*points_);
-        curve.setWidths(*widths_);
-        pointsS_.resizeNoInit(numPoints);
-        pointsS_[0] = 0;
+        curve.setPositions(*knotPositions_);
+        curve.setWidths(*knotWidths_);
+        knotsS_.resizeNoInit(numKnots_);
+        knotsS_[0] = 0;
         samples_.clear();
-        samples_.reserve(numPoints);
+        samples_.reserve(numKnots_);
         bool computeArclength = true;
-        for (Int i = 0; i < numPoints - 1; ++i) {
+        for (Int i = 0; i < numKnots_ - 1; ++i) {
             Int numSegments = 1;
             curve.sampleRange(samples_, quality, i, numSegments, computeArclength);
-            pointsS_[i + 1] = samples_.last().s();
+            knotsS_[i + 1] = samples_.last().s();
             samples_.pop();
         }
-        Int numSegments = isClosed_ ? 1 : 0;
+        Int numExtraSegments = isClosed_ ? 1 : 0;
         curve.sampleRange(
-            samples_, quality, numPoints - 1, numSegments, computeArclength);
+            samples_, quality, numKnots_ - 1, numExtraSegments, computeArclength);
         totalS_ = samples_.last().s();
         return true;
     }
@@ -1455,7 +1463,7 @@ private:
 
         core::Array<SculptPoint>& sculptPoints = sculptSampling_.sculptPoints;
         s0_ = sculptPoints.first().s;
-        sN_ = sculptPoints.last().s;
+        sN_ = sculptPoints.last().s; // Note: for closed curve we may have sN < s0
 
         if (sculptSampling_.isClosed) {
             // Duplicate first point as last point.
@@ -1475,67 +1483,81 @@ private:
     KnotsInterval computeSculptedKnotsInterval_() {
 
         KnotsInterval res = {};
-        const Int numPoints = pointsS_.length();
 
-        // Search index of first point at or just after s0.
+        // Search index of first knot at or just after s0.
         Int i0 = 0;
-        for (; i0 < numPoints; ++i0) {
-            if (s0_ <= pointsS_[i0]) {
+        for (; i0 < numKnots_; ++i0) {
+            if (s0_ <= knotsS_[i0]) {
                 break;
             }
         }
-        if (i0 == numPoints) {
-            i0 = isClosed_ ? 0 : numPoints - 1;
+        if (i0 == numKnots_) {
+            if (isClosed_) {
+                // We found no knots with s >= s0, so we are in one of these cases:
+                //
+                //                   s =   41      49      0       8       16
+                //               index =   n-2     n-1     0       1       2
+                // Knots:               ---o-------o-------o-------o-------o---
+                //
+                // Case (1)          s =              52  56  3   7   11  15
+                // Sculpt points:                     x---x---x---x---x---x
+                //                                    s0          sN
+                //
+                // Case (2)          s =              52  56
+                // Sculpt points:                     x---x
+                //                                    s0  sN
+                //
+                if (sculptSampling_.isRadiusOverlappingStart) {
+                    // Case (1)
+                    i0 = 0;
+                }
+                else {
+                    // Case (2)
+                    res.count = 0;
+                    return res;
+                }
+            }
         }
         res.start = i0;
 
         // Count knots in interval
         if (sculptSampling_.isClosed) {
-            res.count = numPoints;
+            res.count = numKnots_;
         }
         else {
             // Search index of first point just after sN.
-            Int iN = 0;
-            for (; iN < numPoints; ++iN) {
-                if (sN_ < pointsS_[iN]) {
+            Int iN = isClosed_ ? 0 : i0;
+            for (; iN < numKnots_; ++iN) {
+                if (sN_ <= knotsS_[iN]) {
                     break;
                 }
             }
-            if (iN == numPoints) {
-                if (isClosed_) {
-                    if (sN_ >= totalS_) {
-                        iN = 1;
-                    }
-                    else {
-                        iN = 0;
-                    }
+
+            // Build interval.
+            //
+            // XXX: double-check that, for closed curves, it is robust in case
+            // of floating-point errors in the computation of s0, ..., sN.
+            // Probably best to update computeSculptSampling() to ensure that
+            // if `!sculptSampling_.isClosed`, then:
+            // - If `sculptSampling_.isRadiusOverlappingStart` if false, then s0 <= sN.
+            // - Otherwise, s0 > sN.
+            //
+            if (!isClosed_) {
+                res.count = iN - i0;
+            }
+            else if (i0 == iN) {
+                if (sculptSampling_.isRadiusOverlappingStart) {
+                    res.count = numKnots_;
                 }
                 else {
-                    iN = numPoints;
+                    res.count = 0;
                 }
             }
-            // Build interval.
-            if (sculptSampling_.isRadiusOverlappingStart && iN <= i0) {
-                res.count = numPoints - i0 + iN;
-                if (res.count > numPoints) {
-                    // If interval starts and ends exactly on a knot/
-                    // Note: this should happen only if interval is closed
-                    // but better be safe against floating point errors.
-                    res.count = numPoints;
-                }
+            else if (i0 < iN) {
+                res.count = iN - i0;
             }
             else {
-                if (isClosed_) {
-                    if (iN == 0 && i0 > 0) {
-                        res.count = numPoints - i0;
-                    }
-                    else {
-                        res.count = iN - i0;
-                    }
-                }
-                else {
-                    res.count = iN - i0;
-                }
+                res.count = (iN + numKnots_) - i0;
             }
         }
 
@@ -1543,9 +1565,8 @@ private:
     }
 
     void appendUnmodifiedKnotsBefore_() {
-        const Int numPoints = pointsS_.length();
         const bool isOverlappingStart =
-            sculptedKnotsInterval_.start + sculptedKnotsInterval_.count > numPoints;
+            sculptedKnotsInterval_.start + sculptedKnotsInterval_.count > numKnots_;
         if (!isOverlappingStart) {
             // Append first points that will not change.
             Int n = sculptedKnotsInterval_.start;
@@ -1555,45 +1576,45 @@ private:
                 // Is it to avoid to merge it with other knot (average s) in the
                 // first sculpt point segment?
             }
-            newPoints_.extend(points_->begin(), points_->begin() + n);
+            newKnotPositions_.extend(
+                knotPositions_->begin(), knotPositions_->begin() + n);
             if (hasWidths_) {
-                newWidths_.extend(widths_->begin(), widths_->begin() + n);
+                newKnotWidths_.extend(knotWidths_->begin(), knotWidths_->begin() + n);
             }
         }
         else {
             // Append all points that will not change.
             Int start = sculptedKnotsInterval_.start + sculptedKnotsInterval_.count;
-            Int n = numPoints - sculptedKnotsInterval_.count;
+            Int n = numKnots_ - sculptedKnotsInterval_.count;
             for (Int i = 0; i < n; ++i) {
                 Int j = start + i;
-                j = (numPoints + (j % numPoints)) % numPoints;
-                newPoints_.emplaceLast((*points_)[j]);
+                j = (numKnots_ + (j % numKnots_)) % numKnots_;
+                newKnotPositions_.emplaceLast((*knotPositions_)[j]);
                 if (hasWidths_) {
-                    newWidths_.emplaceLast((*widths_)[j]);
+                    newKnotWidths_.emplaceLast((*knotWidths_)[j]);
                 }
             }
         }
-        numUnmodifiedKnotsBefore_ = newPoints_.length();
+        numUnmodifiedKnotsBefore_ = newKnotPositions_.length();
     }
 
     void appendUnmodifiedKnotsAfter_() {
-        const Int oldNewPointsLength = newPoints_.length();
-        const Int numPoints = points_->length();
+        const Int oldNewPointsLength = newKnotPositions_.length();
         const bool isOverlappingStart =
-            sculptedKnotsInterval_.start + sculptedKnotsInterval_.count > numPoints;
+            sculptedKnotsInterval_.start + sculptedKnotsInterval_.count > numKnots_;
         if (!isOverlappingStart) {
             // Append end points that will not change.
             Int n = sculptedKnotsInterval_.start + sculptedKnotsInterval_.count;
-            if (!isClosed_ && n == numPoints) {
-                n = numPoints - 1;
+            if (!isClosed_ && n == numKnots_) {
+                n = numKnots_ - 1;
                 // XXX:Boris Same comment, see appendUnmodifiedKnotsBefore_
             }
-            newPoints_.extend(points_->begin() + n, points_->end());
+            newKnotPositions_.extend(knotPositions_->begin() + n, knotPositions_->end());
             if (hasWidths_) {
-                newWidths_.extend(widths_->begin() + n, widths_->end());
+                newKnotWidths_.extend(knotWidths_->begin() + n, knotWidths_->end());
             }
         }
-        numUnmodifiedKnotsAfter_ = newPoints_.length() - oldNewPointsLength;
+        numUnmodifiedKnotsAfter_ = newKnotPositions_.length() - oldNewPointsLength;
     }
 
     void appendModifiedKnots_(double strength) {
@@ -1616,10 +1637,11 @@ private:
             sculptedKnotsInterval_.start + sculptedKnotsInterval_.count;
         if (!isClosed_) {
             extendedStartIndex = std::max<Int>(extendedStartIndex, 0);
-            extendedEndIndex = (std::min)(extendedEndIndex, widths_->length() - 1);
+            extendedEndIndex = (std::min)(extendedEndIndex, knotWidths_->length() - 1);
         }
         for (Int i = extendedStartIndex; i <= extendedEndIndex; ++i) {
-            double w = isClosed_ ? widths_->getWrapped(i) : widths_->getUnchecked(i);
+            double w =
+                isClosed_ ? knotWidths_->getWrapped(i) : knotWidths_->getUnchecked(i);
             minModifiedKnotWidth = (std::min)(w, minModifiedKnotWidth);
             maxModifiedKnotWidth = (std::max)(w, maxModifiedKnotWidth);
         }
@@ -1632,7 +1654,7 @@ private:
         Int iWasp1 = -1;        // remember which index was last computed to reuse it
         Int pointIndex = sculptedKnotsInterval_.start;
         if (isClosed_ && pointIndex == 0) {
-            newStartPointIndex_ = newPoints_.length();
+            newStartKnotIndex_ = newKnotPositions_.length();
         }
 
         // For each pair of consecutive sculpt points:
@@ -1665,7 +1687,7 @@ private:
             if (isWrapping) {
                 pointIndex = 0;
                 if (pointIndex == 0) {
-                    newStartPointIndex_ = newPoints_.length();
+                    newStartKnotIndex_ = newKnotPositions_.length();
                 }
                 if (n > 0) {
                     meanS -= n * totalS_;
@@ -1694,13 +1716,13 @@ private:
             geometry::Vec2d dp = u * (wasp1.pos - sp1.pos) + t * (wasp2.pos - sp2.pos);
             geometry::Vec2d p = u * sp1.pos + t * sp2.pos;
             geometry::Vec2d np = p + strength * dp;
-            newPoints_.append(np);
+            newKnotPositions_.append(np);
 
             if (hasWidths_) {
                 double dw = u * (wasp1.width - sp1.width) + t * (wasp2.width - sp2.width);
                 double w = u * sp1.width + t * sp2.width;
                 double nw = w + strength * dw;
-                newWidths_.append(
+                newKnotWidths_.append(
                     core::clamp(nw, minModifiedKnotWidth, maxModifiedKnotWidth));
             }
         }
@@ -1712,24 +1734,25 @@ private:
     }
 
     void accumulatePointsS_(Int& i, double s1, double s2, double& meanS, Int& n) {
-        if (i < points_->length() && pointsS_[i] >= s1) {
-            while (pointsS_[i] <= s2) {
-                meanS += pointsS_[i];
+        if (i < knotPositions_->length() && knotsS_[i] >= s1) {
+            while (knotsS_[i] <= s2) {
+                meanS += knotsS_[i];
                 ++n;
                 ++i;
-                if (i >= points_->length()) {
+                if (i >= knotPositions_->length()) {
                     break;
                 }
             }
         }
     }
 
-    const geometry::Vec2dArray* points_ = nullptr;
-    const core::DoubleArray* widths_ = nullptr;
+    Int numKnots_ = 0;
+    const geometry::Vec2dArray* knotPositions_ = nullptr;
+    const core::DoubleArray* knotWidths_ = nullptr;
     bool isClosed_ = false;
     bool hasWidths_ = false;
     geometry::CurveSampleArray samples_;
-    core::Array<double> pointsS_;
+    core::Array<double> knotsS_;
     double totalS_ = 0;
     geometry::CurveSample mspSample_;
     SculptSampling sculptSampling_;
@@ -1738,10 +1761,10 @@ private:
     KnotsInterval sculptedKnotsInterval_ = {};
     Int numUnmodifiedKnotsBefore_ = 0;
     Int numUnmodifiedKnotsAfter_ = 0;
-    geometry::Vec2dArray newPoints_;
-    core::DoubleArray newWidths_;
+    geometry::Vec2dArray newKnotPositions_;
+    core::DoubleArray newKnotWidths_;
     geometry::Vec2d outSculptCursorPosition_;
-    Int newStartPointIndex_ = 0;
+    Int newStartKnotIndex_ = 0;
 };
 
 } // namespace
