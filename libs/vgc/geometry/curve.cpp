@@ -198,11 +198,13 @@ CurveSamplingParameters::CurveSamplingParameters(CurveSamplingQuality quality)
 namespace {
 
 constexpr bool isClosedType(Curve::Type type) {
-    using T = Curve::Type;
+    using Type = Curve::Type;
     switch (type) {
-    case T::OpenUniformCatmullRom:
+    case Type::OpenUniformCatmullRom:
+    case Type::OpenCentripetalCatmullRom:
         return false;
-    case T::ClosedUniformCatmullRom:
+    case Type::ClosedUniformCatmullRom:
+    case Type::ClosedCentripetalCatmullRom:
         return true;
     }
     return false;
@@ -223,6 +225,19 @@ Curve::Curve(double constantWidth, Type type)
     , widthVariability_(AttributeVariability::Constant)
     , widthConstant_(constantWidth)
     , color_(core::colors::black) {
+}
+
+Int Curve::numSegments() const {
+    Int numPositions = positions_.length();
+    switch (type_) {
+    case Type::OpenUniformCatmullRom:
+    case Type::OpenCentripetalCatmullRom:
+        return std::max<Int>(0, numPositions - 1);
+    case Type::ClosedUniformCatmullRom:
+    case Type::ClosedCentripetalCatmullRom:
+        return numPositions;
+    }
+    return 0;
 }
 
 double Curve::width() const {
@@ -546,9 +561,59 @@ struct CubicBezierData {
         }
 
         // Convert from Catmull-Rom to Bézier.
-        uniformCatmullRomToBezierCappedInPlace(positions.data());
-        if (!isWidthUniform) {
-            uniformCatmullRomToBezierInPlace(halfwidths.data());
+        switch (curve->type()) {
+        case Curve::Type::OpenUniformCatmullRom:
+        case Curve::Type::ClosedUniformCatmullRom: {
+            if (!isWidthUniform) {
+                std::array<double, 3> lengths = {
+                    (positions[1] - positions[0]).length(),
+                    (positions[2] - positions[1]).length(),
+                    (positions[3] - positions[2]).length()};
+                uniformCatmullRomToBezierCappedInPlace(positions.data());
+                double d02 = lengths[0] + lengths[1];
+                double d13 = lengths[1] + lengths[2];
+                double w1 = halfwidths[1]
+                            + (halfwidths[2] - halfwidths[0])
+                                  * ((positions[1] - positions[0]).length() / d02);
+                double w2 = halfwidths[2]
+                            - (halfwidths[3] - halfwidths[1])
+                                  * ((positions[3] - positions[2]).length() / d13);
+                halfwidths[0] = halfwidths[1];
+                halfwidths[3] = halfwidths[2];
+                halfwidths[1] = w1;
+                halfwidths[2] = w2;
+            }
+            else {
+                uniformCatmullRomToBezierCappedInPlace(positions.data());
+            }
+            break;
+        }
+        case Curve::Type::OpenCentripetalCatmullRom:
+        case Curve::Type::ClosedCentripetalCatmullRom: {
+            std::array<double, 3> lengths = {
+                (positions[1] - positions[0]).length(),
+                (positions[2] - positions[1]).length(),
+                (positions[3] - positions[2]).length()};
+            if (!isWidthUniform) {
+                centripetalCatmullRomToBezier<Vec2d>(positions, lengths, positions);
+                double d02 = lengths[0] + lengths[1];
+                double d13 = lengths[1] + lengths[2];
+                double w1 = halfwidths[1]
+                            + (halfwidths[2] - halfwidths[0])
+                                  * ((positions[1] - positions[0]).length() / d02);
+                double w2 = halfwidths[2]
+                            - (halfwidths[3] - halfwidths[1])
+                                  * ((positions[3] - positions[2]).length() / d13);
+                halfwidths[0] = halfwidths[1];
+                halfwidths[3] = halfwidths[2];
+                halfwidths[1] = w1;
+                halfwidths[2] = w2;
+            }
+            else {
+                centripetalCatmullRomToBezier<Vec2d>(positions, lengths, positions);
+            }
+            break;
+        }
         }
 
         // Set mirror tangents at endpoints.

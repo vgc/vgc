@@ -449,6 +449,13 @@ public:
         ///
         OpenUniformCatmullRom,
 
+        /// Represents an open uniform Catmull-Rom spline.
+        ///
+        /// Similar to `OpenUniformCatmullRom` but using centripetal
+        /// parametrization. This prevents cusps and loops.
+        ///
+        OpenCentripetalCatmullRom,
+
         /// Represents a closed uniform Catmull-Rom spline.
         ///
         /// This is similar to `OpenUniformCatmullRom` except that it forms a loop.
@@ -465,7 +472,14 @@ public:
         ///
         /// where n = numKnots().
         ///
-        ClosedUniformCatmullRom
+        ClosedUniformCatmullRom,
+
+        /// Represents a closed centripetal Catmull-Rom spline.
+        ///
+        /// Similar to `ClosedUniformCatmullRom` but using centripetal
+        /// parametrization. This prevents cusps and loops.
+        ///
+        ClosedCentripetalCatmullRom
     };
 
     /// Specifies the type of a variable attribute along the curve, that is,
@@ -515,16 +529,7 @@ public:
 
     /// Returns the number of segments of the curve.
     ///
-    Int numSegments() const {
-        Int numPositions = positions_.length();
-        switch (type_) {
-        case Type::OpenUniformCatmullRom:
-            return std::max<Int>(0, numPositions - 1);
-        case Type::ClosedUniformCatmullRom:
-            return numPositions;
-        }
-        return 0;
-    }
+    Int numSegments() const;
 
     /// Returns the position data of the curve.
     ///

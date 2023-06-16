@@ -17,6 +17,7 @@
 #ifndef VGC_GEOMETRY_CATMULLROM_H
 #define VGC_GEOMETRY_CATMULLROM_H
 
+#include <vgc/core/span.h>
 #include <vgc/geometry/api.h>
 #include <vgc/geometry/vec2d.h>
 
@@ -148,6 +149,75 @@ inline void uniformCatmullRomToBezierCappedInPlace(Vec2d* inoutFourPoints) {
     inoutFourPoints[3] = inoutFourPoints[2];
     inoutFourPoints[1] = pt0;
     inoutFourPoints[2] = pt1;
+}
+
+/// Convert four control points of a Catmull-Rom with centripetal paremetrization
+/// into the four cubic Bézier control points corresponding to the segment of the
+/// curve interpolating between the second and third points.
+///
+/// See http://www.cemyuksel.com/research/catmullrom_param/catmullrom.pdf
+///
+template<typename T>
+void centripetalCatmullRomToBezier(
+    core::ConstSpan<T, 4> points,
+    core::Span<T, 4> outPoints) {
+
+    std::array<double, 3> lengths = {
+        (points[1] - points[0]).length(),
+        (points[2] - points[1]).length(),
+        (points[3] - points[2]).length()};
+
+    centripetalCatmullRomToBezier<T>(points, lengths, outPoints);
+}
+
+/// Overload of `centripetalCatmullRomToBezier`.
+///
+template<typename T>
+void centripetalCatmullRomToBezier(
+    core::ConstSpan<T, 4> points,
+    core::ConstSpan<double, 3> lengths,
+    core::Span<T, 4> outPoints) {
+
+    std::array<double, 3> sqrtLengths = {
+        std::sqrt(lengths[0]), std::sqrt(lengths[1]), std::sqrt(lengths[2])};
+
+    centripetalCatmullRomToBezier<T>(points, lengths, sqrtLengths, outPoints);
+}
+
+/// Overload of `centripetalCatmullRomToBezier`.
+///
+template<typename T>
+void centripetalCatmullRomToBezier(
+    core::ConstSpan<T, 4> points,
+    core::ConstSpan<double, 3> lengths,
+    core::ConstSpan<double, 3> sqrtLengths,
+    core::Span<T, 4> outPoints) {
+
+    double d1 = lengths[0];
+    double d2 = lengths[1];
+    double d3 = lengths[2];
+    double d1a = sqrtLengths[0];
+    double d2a = sqrtLengths[1];
+    double d3a = sqrtLengths[2];
+
+    T p1 = points[1];
+    if (d1a > 0) {
+        double c1 = 2 * d1 + 3 * d1a * d2a + d2;
+        double c2 = 3 * d1a * (d1a + d2a);
+        p1 = (d1 * points[2] - d2 * points[0] + c1 * points[1]) / c2;
+    }
+
+    T p2 = points[2];
+    if (d3a > 0) {
+        double c1 = 2 * d3 + 3 * d2a * d3a + d2;
+        double c2 = 3 * d3a * (d2a + d3a);
+        p2 = (d3 * points[1] - d2 * points[3] + c1 * points[2]) / c2;
+    }
+
+    outPoints[0] = points[1];
+    outPoints[3] = points[2];
+    outPoints[1] = p1;
+    outPoints[2] = p2;
 }
 
 } // namespace vgc::geometry
