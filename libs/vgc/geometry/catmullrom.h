@@ -17,6 +17,7 @@
 #ifndef VGC_GEOMETRY_CATMULLROM_H
 #define VGC_GEOMETRY_CATMULLROM_H
 
+#include <vgc/core/span.h>
 #include <vgc/geometry/api.h>
 #include <vgc/geometry/vec2d.h>
 
@@ -84,6 +85,15 @@ namespace vgc::geometry {
 /// Which finishes the explanation why k = 1/6.
 ///
 template<typename T>
+std::array<T, 4> uniformCatmullRomToBezier(core::ConstSpan<T, 4> points) {
+    std::array<T, 4> res;
+    uniformCatmullRomToBezier(points.data(), res.data());
+    return res;
+}
+
+/// Overload of `uniformCatmullRomToBezier` with in/out parameter per point.
+///
+template<typename T>
 void uniformCatmullRomToBezier(
     const T& c0,
     const T& c1,
@@ -106,48 +116,125 @@ void uniformCatmullRomToBezier(
 ///
 template<typename T>
 void uniformCatmullRomToBezier(const T* inFourPoints, T* outFourPoints) {
-
     constexpr double k = 1.0 / 6; // = 1/6 up to double precision
-    outFourPoints[0] = inFourPoints[1];
-    outFourPoints[1] = inFourPoints[1] + k * (inFourPoints[2] - inFourPoints[0]);
-    outFourPoints[2] = inFourPoints[2] - k * (inFourPoints[3] - inFourPoints[1]);
-    outFourPoints[3] = inFourPoints[2];
+    T p1 = inFourPoints[1] + k * (inFourPoints[2] - inFourPoints[0]);
+    T p2 = inFourPoints[2] - k * (inFourPoints[3] - inFourPoints[1]);
+    outFourPoints[0] = inFourPoints[1]; // These two lines must be done first in order
+    outFourPoints[3] = inFourPoints[2]; // to support inFourPoints == outFourPoints
+    outFourPoints[1] = p1;
+    outFourPoints[2] = p2;
 }
 
-/// Variant of `uniformCatmullRomToBezier` expecting a pointer to a contiguous sequence
-/// of 4 control points and performs the operation in-place.
+/// Variant of `uniformCatmullRomToBezier` that caps the tangents
+/// to prevent p0p1 and p2p3 from intersecting.
 ///
 template<typename T>
-void uniformCatmullRomToBezierInPlace(T* inoutFourPoints) {
-
+void uniformCatmullRomToBezierCapped(const T* inFourPoints, T* outFourPoints) {
     constexpr double k = 1.0 / 6; // = 1/6 up to double precision
-    T p1 = inoutFourPoints[1] + k * (inoutFourPoints[2] - inoutFourPoints[0]);
-    T p2 = inoutFourPoints[2] - k * (inoutFourPoints[3] - inoutFourPoints[1]);
-    inoutFourPoints[0] = inoutFourPoints[1];
-    inoutFourPoints[3] = inoutFourPoints[2];
-    inoutFourPoints[1] = p1;
-    inoutFourPoints[2] = p2;
+    T t0 = inFourPoints[2] - inFourPoints[0];
+    T t1 = inFourPoints[3] - inFourPoints[1];
+    const double d0 = t0.length();
+    const double d1 = t1.length();
+    const double maxMagnitude = k * 2 * (inFourPoints[2] - inFourPoints[1]).length();
+    T tangent0 = {};
+    T tangent1 = {};
+    if (d0 > 0) {
+        tangent0 = (t0 / d0) * (std::min)(maxMagnitude, k * d0);
+    }
+    if (d1 > 0) {
+        tangent1 = (t1 / d1) * (std::min)(maxMagnitude, k * d1);
+    }
+    T pt0 = inFourPoints[1] + tangent0;
+    T pt1 = inFourPoints[2] - tangent1;
+    outFourPoints[0] = inFourPoints[1]; // These two lines must be done first in order
+    outFourPoints[3] = inFourPoints[2]; // to support inFourPoints == outFourPoints
+    outFourPoints[1] = pt0;
+    outFourPoints[2] = pt1;
 }
 
-/// Variant of `uniformCatmullRomToBezier` expecting a pointer to a contiguous sequence
-/// of 4 control points and performs the operation in-place.
-/// Also the tangents are capped to prevent p0p1 and p2p3 from intersecting.
+/// Convert four control points of a Catmull-Rom with centripetal paremetrization
+/// into the four cubic Bézier control points corresponding to the segment of the
+/// curve interpolating between the second and third points.
 ///
-inline void uniformCatmullRomToBezierCappedInPlace(Vec2d* inoutFourPoints) {
+/// See http://www.cemyuksel.com/research/catmullrom_param/catmullrom.pdf
+///
+template<typename T>
+std::array<T, 4> centripetalCatmullRomToBezier(core::ConstSpan<T, 4> points) {
 
-    constexpr double k = 1.0 / 6; // = 1/6 up to double precision
-    const double maxMagnitude =
-        k * 2 * (inoutFourPoints[2] - inoutFourPoints[1]).length();
-    Vec2d t0 = inoutFourPoints[2] - inoutFourPoints[0];
-    Vec2d t1 = inoutFourPoints[3] - inoutFourPoints[1];
-    const double kd0 = k * t0.length();
-    const double kd1 = k * t1.length();
-    Vec2d pt0 = inoutFourPoints[1] + t0.normalized() * (std::min)(maxMagnitude, kd0);
-    Vec2d pt1 = inoutFourPoints[2] - t1.normalized() * (std::min)(maxMagnitude, kd1);
-    inoutFourPoints[0] = inoutFourPoints[1];
-    inoutFourPoints[3] = inoutFourPoints[2];
-    inoutFourPoints[1] = pt0;
-    inoutFourPoints[2] = pt1;
+    const T* points_ = points.data();
+    std::array<double, 3> lengths = {
+        (points_[1] - points_[0]).length(),
+        (points_[2] - points_[1]).length(),
+        (points_[3] - points_[2]).length()};
+
+    return centripetalCatmullRomToBezier<T>(points, lengths);
+}
+
+/// Overload of `centripetalCatmullRomToBezier()` that accepts pre-computed lengths.
+///
+template<typename T>
+std::array<T, 4> centripetalCatmullRomToBezier(
+    core::ConstSpan<T, 4> points,
+    core::ConstSpan<double, 3> lengths) {
+
+    const double* lengths_ = lengths.data();
+    std::array<double, 3> sqrtLengths = {
+        std::sqrt(lengths_[0]), std::sqrt(lengths_[1]), std::sqrt(lengths_[2])};
+
+    return centripetalCatmullRomToBezier<T>(points, lengths, sqrtLengths);
+}
+
+/// Overload of `centripetalCatmullRomToBezier()` that accepts pre-computed lengths
+/// and square roots of lengths.
+///
+template<typename T>
+std::array<T, 4> centripetalCatmullRomToBezier(
+    core::ConstSpan<T, 4> points,
+    core::ConstSpan<double, 3> lengths,
+    core::ConstSpan<double, 3> sqrtLengths) {
+
+    std::array<T, 4> res;
+    centripetalCatmullRomToBezier(
+        points.data(), lengths.data(), sqrtLengths.data(), res.data());
+    return res;
+}
+
+/// Overload of `centripetalCatmullRomToBezier()` that accepts pre-computed
+/// lengths, square roots of lengths, and returns the results via an output
+/// parameter.
+///
+template<typename T>
+void centripetalCatmullRomToBezier(
+    const T* points,
+    const double* lengths,
+    const double* sqrtLengths,
+    T* outPoints) {
+
+    double d1 = lengths[0];
+    double d2 = lengths[1];
+    double d3 = lengths[2];
+    double d1a = sqrtLengths[0];
+    double d2a = sqrtLengths[1];
+    double d3a = sqrtLengths[2];
+
+    T p1 = points[1];
+    if (d1a > 0) {
+        double c1 = 2 * d1 + 3 * d1a * d2a + d2;
+        double c2 = 3 * d1a * (d1a + d2a);
+        p1 = (d1 * points[2] - d2 * points[0] + c1 * points[1]) / c2;
+    }
+
+    T p2 = points[2];
+    if (d3a > 0) {
+        double c1 = 2 * d3 + 3 * d2a * d3a + d2;
+        double c2 = 3 * d3a * (d2a + d3a);
+        p2 = (d3 * points[1] - d2 * points[3] + c1 * points[2]) / c2;
+    }
+
+    outPoints[0] = points[1];
+    outPoints[3] = points[2];
+    outPoints[1] = p1;
+    outPoints[2] = p2;
 }
 
 } // namespace vgc::geometry

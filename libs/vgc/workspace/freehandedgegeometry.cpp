@@ -29,6 +29,11 @@ double cubicEaseInOut(double t) {
     return -2 * t * t2 + 3 * t2;
 }
 
+using CurveType = geometry::Curve::Type;
+
+constexpr CurveType openCurveType = CurveType::OpenCentripetalCatmullRom;
+constexpr CurveType closedCurveType = CurveType::ClosedCentripetalCatmullRom;
+
 } // namespace
 
 void FreehandEdgeGeometry::setPoints(const SharedConstPoints& points) {
@@ -86,7 +91,7 @@ vacomplex::EdgeSampling FreehandEdgeGeometry::computeSampling(
     const geometry::Vec2d& snapEndPosition,
     vacomplex::EdgeSnapTransformationMode /*mode*/) const {
 
-    geometry::Curve curve;
+    geometry::Curve curve(openCurveType);
     geometry::CurveSampleArray samples;
     geometry::Vec2dArray tmpPoints;
     core::DoubleArray tmpWidths;
@@ -137,9 +142,8 @@ vacomplex::EdgeSampling FreehandEdgeGeometry::computeSampling(
     bool isClosed,
     vacomplex::EdgeSnapTransformationMode /*mode*/) const {
 
-    geometry::Curve curve(
-        isClosed ? geometry::Curve::Type::ClosedUniformCatmullRom
-                 : geometry::Curve::Type::OpenUniformCatmullRom);
+    geometry::Curve curve(isClosed ? closedCurveType : openCurveType);
+
     geometry::CurveSampleArray samples;
     geometry::Vec2dArray tmpPoints;
     core::DoubleArray tmpWidths;
@@ -668,9 +672,7 @@ geometry::Vec2d FreehandEdgeGeometry::sculptGrab(
     // We could benefit from a two step sampling (sample centerline points, then sample
     // cross sections on an sub-interval).
     geometry::CurveSampleArray samples;
-    geometry::Curve curve(
-        isClosed ? geometry::Curve::Type::ClosedUniformCatmullRom
-                 : geometry::Curve::Type::OpenUniformCatmullRom);
+    geometry::Curve curve(isClosed ? closedCurveType : openCurveType);
     curve.setPositions(points_);
     curve.setWidths(widths_);
     core::Array<double> pointsS(numPoints, core::noInit);
