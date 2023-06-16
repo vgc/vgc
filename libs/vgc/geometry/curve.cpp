@@ -572,6 +572,8 @@ struct CubicBezierData {
                 uniformCatmullRomToBezierCappedInPlace(positions.data());
                 double d02 = lengths[0] + lengths[1];
                 double d13 = lengths[1] + lengths[2];
+                // Choose width control points so that dw/ds is equal on left and
+                // right side of each knot. It is achieved by scaling dw/du by dp/du.
                 double w1 = halfwidths[1]
                             + (halfwidths[2] - halfwidths[0])
                                   * ((positions[1] - positions[0]).length() / d02);

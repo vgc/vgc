@@ -449,7 +449,7 @@ public:
         ///
         OpenUniformCatmullRom,
 
-        /// Represents an open uniform Catmull-Rom spline.
+        /// Represents an open centripetal Catmull-Rom spline.
         ///
         /// Similar to `OpenUniformCatmullRom` but using centripetal
         /// parametrization. This prevents cusps and loops.

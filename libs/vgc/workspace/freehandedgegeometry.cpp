@@ -91,7 +91,6 @@ vacomplex::EdgeSampling FreehandEdgeGeometry::computeSampling(
     const geometry::Vec2d& snapEndPosition,
     vacomplex::EdgeSnapTransformationMode /*mode*/) const {
 
-    //geometry::Curve curve(geometry::Curve::Type::OpenUniformCatmullRom);
     geometry::Curve curve(openCurveType);
     geometry::CurveSampleArray samples;
     geometry::Vec2dArray tmpPoints;
@@ -143,9 +142,6 @@ vacomplex::EdgeSampling FreehandEdgeGeometry::computeSampling(
     bool isClosed,
     vacomplex::EdgeSnapTransformationMode /*mode*/) const {
 
-    //geometry::Curve curve(
-    //    isClosed ? geometry::Curve::Type::ClosedUniformCatmullRom
-    //             : geometry::Curve::Type::OpenUniformCatmullRom);
     geometry::Curve curve(isClosed ? closedCurveType : openCurveType);
 
     geometry::CurveSampleArray samples;
@@ -676,9 +672,6 @@ geometry::Vec2d FreehandEdgeGeometry::sculptGrab(
     // We could benefit from a two step sampling (sample centerline points, then sample
     // cross sections on an sub-interval).
     geometry::CurveSampleArray samples;
-    //geometry::Curve curve(
-    //    isClosed ? geometry::Curve::Type::ClosedUniformCatmullRom
-    //             : geometry::Curve::Type::OpenUniformCatmullRom);
     geometry::Curve curve(isClosed ? closedCurveType : openCurveType);
     curve.setPositions(points_);
     curve.setWidths(widths_);
