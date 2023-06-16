@@ -574,12 +574,15 @@ struct CubicBezierData {
                 // right side of each knot. It is achieved by scaling dw/du by dp/du.
                 double d02 = lengths[0] + lengths[1];
                 double d13 = lengths[1] + lengths[2];
-                double dw_ds_1 = (halfwidths[2] - halfwidths[0]) / d02;  // desired dw/ds at start
-                double dw_ds_2 = (halfwidths[3] - halfwidths[1]) / d13;  // desired dw/ds at end
-                double ds_du_1 = (positions[1] - positions[0]).length(); // 1/3 of ds/du at start
-                double ds_du_2 = (positions[3] - positions[2]).length(); // 1/3 of ds/du at end
-                double w1 = halfwidths[1] + dw_ds_1 * ds_du_1; // w1 - w0 = 1/3 of dw/du at start
-                double w2 = halfwidths[2] - dw_ds_2 * ds_du_2; // w3 - w2 = 1/3 of dw/du at end
+                // desired dw/ds at start/end
+                double dw_ds_1 = (halfwidths[2] - halfwidths[0]) / d02;
+                double dw_ds_2 = (halfwidths[3] - halfwidths[1]) / d13;
+                // 1/3 of ds/du at start/end
+                double ds_du_1 = (positions[1] - positions[0]).length();
+                double ds_du_2 = (positions[3] - positions[2]).length();
+                // w1 - w0 = 1/3 of dw/du at start; w3 - w2 = 1/3 of dw/du at end
+                double w1 = halfwidths[1] + dw_ds_1 * ds_du_1;
+                double w2 = halfwidths[2] - dw_ds_2 * ds_du_2;
                 halfwidths[0] = halfwidths[1];
                 halfwidths[3] = halfwidths[2];
                 halfwidths[1] = w1;
@@ -600,12 +603,15 @@ struct CubicBezierData {
                 centripetalCatmullRomToBezier<Vec2d>(positions, lengths, positions);
                 double d02 = lengths[0] + lengths[1];
                 double d13 = lengths[1] + lengths[2];
-                double dw_ds_1 = (halfwidths[2] - halfwidths[0]) / d02;  // desired dw/ds at start
-                double dw_ds_2 = (halfwidths[3] - halfwidths[1]) / d13;  // desired dw/ds at end
-                double ds_du_1 = (positions[1] - positions[0]).length(); // 1/3 of ds/du at start
-                double ds_du_2 = (positions[3] - positions[2]).length(); // 1/3 of ds/du at end
-                double w1 = halfwidths[1] + dw_ds_1 * ds_du_1; // w1 - w0 = 1/3 of dw/du at start
-                double w2 = halfwidths[2] - dw_ds_2 * ds_du_2; // w3 - w2 = 1/3 of dw/du at end
+                // desired dw/ds at start/end
+                double dw_ds_1 = (halfwidths[2] - halfwidths[0]) / d02;
+                double dw_ds_2 = (halfwidths[3] - halfwidths[1]) / d13;
+                // 1/3 of ds/du at start/end
+                double ds_du_1 = (positions[1] - positions[0]).length();
+                double ds_du_2 = (positions[3] - positions[2]).length();
+                // w1 - w0 = 1/3 of dw/du at start; w3 - w2 = 1/3 of dw/du at end
+                double w1 = halfwidths[1] + dw_ds_1 * ds_du_1;
+                double w2 = halfwidths[2] - dw_ds_2 * ds_du_2;
                 halfwidths[0] = halfwidths[1];
                 halfwidths[3] = halfwidths[2];
                 halfwidths[1] = w1;
