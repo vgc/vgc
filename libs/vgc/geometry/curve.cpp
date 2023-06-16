@@ -305,12 +305,12 @@ Vec2dArray Curve::triangulate(double maxAngle, Int minQuads, Int maxQuads) const
             positions[i0], positions[i1], positions[i2], positions[i3]};
 
         // Convert positions from Catmull-Rom to Bézier
-        Vec2d q0, q1, q2, q3;
-        uniformCatmullRomToBezierCappedInPlace(points.data());
-        q0 = points[0];
-        q1 = points[1];
-        q2 = points[2];
-        q3 = points[3];
+        std::array<Vec2d, 4> catmullPoints;
+        uniformCatmullRomToBezierCapped(points.data(), catmullPoints.data());
+        const Vec2d& q0 = catmullPoints[0];
+        const Vec2d& q1 = catmullPoints[1];
+        const Vec2d& q2 = catmullPoints[2];
+        const Vec2d& q3 = catmullPoints[3];
 
         // Convert widths from Constant or Catmull-Rom to Bézier. Note: we
         // could handle the 'Constant' case more efficiently, but we chose code
@@ -502,23 +502,27 @@ struct CubicBezierData {
     // Returns the CubicBezierData corresponding to the segment at index [i,
     // i+1] in the given Curve.
     //
-    //
     CubicBezierData(const Curve* curve, Int i) {
 
         // Ensure we have a valid segment between two control points
         const Int numSegments = curve->numSegments();
+        const Int numKnots = curve->numKnots();
         VGC_ASSERT(i >= 0);
         VGC_ASSERT(i < numSegments);
 
-        const Int numKnots = curve->numKnots();
+        // Get whether the curve is closed
+        const bool isClosed = curve->isClosed();
 
-        // Get indices of points used by the Catmull-Rom interpolation
+        // Get whether the width is uniform
+        using Variability = Curve::AttributeVariability;
+        isWidthUniform = (curve->widthVariability() == Variability::Constant);
+
+        // Get indices of points used by the Catmull-Rom interpolation, handle
+        // wrapping for closed curves and boundary for open curves.
         Int i0 = i - 1;
         Int i1 = i;
         Int i2 = i + 1;
         Int i3 = i + 2;
-
-        bool isClosed = curve->isClosed();
         if (isClosed) {
             if (i0 < 0) {
                 i0 = numKnots - 1;
@@ -544,124 +548,131 @@ struct CubicBezierData {
             }
         }
 
-        // Get positions
-        const Vec2d* p = curve->positions().data();
-        positions = {p[i0], p[i1], p[i2], p[i3]};
-
-        // Get widths
-        isWidthUniform =
-            (curve->widthVariability() == Curve::AttributeVariability::Constant);
+        // Get positions/widths
+        const Vec2d* pd = curve->positions().data();
+        const double* wd = curve->widths().data();
+        std::array<Vec2d, 4> knotPositions = {pd[i0], pd[i1], pd[i2], pd[i3]};
+        std::array<double, 4> knotHalfwidths;
         if (isWidthUniform) {
-            double hw = curve->width() * 0.5;
-            halfwidths = {hw, hw, hw, hw};
+            double hw = 0.5 * curve->width();
+            knotHalfwidths = {hw, hw, hw, hw};
         }
         else {
-            const double* w = curve->widths().data();
-            halfwidths = {w[i0] * 0.5, w[i1] * 0.5, w[i2] * 0.5, w[i3] * 0.5};
+            knotHalfwidths = {0.5 * wd[i0], 0.5 * wd[i1], 0.5 * wd[i2], 0.5 * wd[i3]};
         }
 
-        // Convert from Catmull-Rom to Bézier.
+        // Compute distances between knots
+        // Note: due to corners, these are later potentially updated.
+        Vec2d& p0 = knotPositions[0];
+        Vec2d& p1 = knotPositions[1];
+        Vec2d& p2 = knotPositions[2];
+        Vec2d& p3 = knotPositions[3];
+        Vec2d p0p1 = p1 - p0;
+        Vec2d p1p2 = p2 - p1;
+        Vec2d p2p3 = p3 - p2;
+        std::array<double, 3> knotLengths = //
+            {p0p1.length(), p1p2.length(), p2p3.length()};
+        double& d01 = knotLengths[0];
+        double& d12 = knotLengths[1];
+        double& d23 = knotLengths[2];
+
+        // Handle "corner knots", defined as:
+        // 1. Two consecutive equal points, or
+        // 2. The first/last knot of an open curve
+        //
+        bool isAfterCorner = (d01 == 0);
+        bool isCorner = (d12 == 0);
+        bool isBeforeCorner = (d23 == 0);
+        if (isCorner || (isAfterCorner && isBeforeCorner)) {
+
+            // Linear parametrization
+            double u = 1.0 / 3;
+            double v = (1 - u);
+            positions[0] = knotPositions[0];
+            positions[1] = v * knotPositions[0] + u * knotPositions[1];
+            positions[2] = u * knotPositions[0] + v * knotPositions[1];
+            positions[3] = knotPositions[1];
+            if (!isWidthUniform) {
+                halfwidths[0] = knotHalfwidths[0];
+                halfwidths[1] = v * knotHalfwidths[0] + u * knotHalfwidths[1];
+                halfwidths[2] = u * knotHalfwidths[0] + v * knotHalfwidths[1];
+                halfwidths[3] = knotHalfwidths[1];
+            }
+            return;
+        }
+        else if (isAfterCorner) { // (d01 == 0) && (d12 > 0) && (d23 > 0)
+
+            // Creates an imaginary control point p0 that would extrapolate the
+            // curve, defined as:
+            //
+            //        p1    p2
+            //         o----o         distance(p0, p1)  == distance(p1, p2)
+            //        '      `        angle(p0, p1, p2) == angle(p1, p2, p3)
+            //       o        `       w1 - w0           == w2 - w1
+            //    p0           `
+            //                  o p3
+            //
+            // Similarly to using "mirror tangents", this prevents ugly
+            // inflexion points that would happen by keeping p0 = p1, as
+            // illustrated here: https://github.com/vgc/vgc/pull/1341
+            //
+            Vec2d d = p2p3 / d23;                    // unit vector to reflect
+            Vec2d n = (p1p2 / d12).orthogonalized(); // unit axis of reflexion
+            Vec2d q = 2 * d.dot(n) * n - d;          // refection of d along n
+            knotPositions[0] = p1 + d12 * q;
+            knotLengths[0] = d12;
+            knotHalfwidths[0] = 2 * knotHalfwidths[1] - knotHalfwidths[2];
+        }
+        else if (isBeforeCorner) { // (d01 > 0) && (d12 > 0) && (d23 == 0)
+
+            // Similar as above
+            Vec2d d = -p0p1 / d01;
+            Vec2d n = (p1p2 / d12).orthogonalized();
+            Vec2d q = 2 * d.dot(n) * n - d;
+            knotPositions[3] = p2 + d12 * q;
+            knotLengths[2] = d12;
+            knotHalfwidths[3] = 2 * knotHalfwidths[2] - knotHalfwidths[1];
+        }
+
+        // Compute Bézier control point for positions based on Catmull-Rom knots
         switch (curve->type()) {
         case Curve::Type::OpenUniformCatmullRom:
         case Curve::Type::ClosedUniformCatmullRom: {
-            if (!isWidthUniform) {
-                std::array<double, 3> lengths = {
-                    (positions[1] - positions[0]).length(),
-                    (positions[2] - positions[1]).length(),
-                    (positions[3] - positions[2]).length()};
-                uniformCatmullRomToBezierCappedInPlace(positions.data());
-                // Choose width control points so that dw/ds is equal on left and
-                // right side of each knot. It is achieved by scaling dw/du by dp/du.
-                double d02 = lengths[0] + lengths[1];
-                double d13 = lengths[1] + lengths[2];
-                // desired dw/ds at start/end
-                double dw_ds_1 = (halfwidths[2] - halfwidths[0]) / d02;
-                double dw_ds_2 = (halfwidths[3] - halfwidths[1]) / d13;
-                // 1/3 of ds/du at start/end
-                double ds_du_1 = (positions[1] - positions[0]).length();
-                double ds_du_2 = (positions[3] - positions[2]).length();
-                // w1 - w0 = 1/3 of dw/du at start; w3 - w2 = 1/3 of dw/du at end
-                double w1 = halfwidths[1] + dw_ds_1 * ds_du_1;
-                double w2 = halfwidths[2] - dw_ds_2 * ds_du_2;
-                halfwidths[0] = halfwidths[1];
-                halfwidths[3] = halfwidths[2];
-                halfwidths[1] = w1;
-                halfwidths[2] = w2;
-            }
-            else {
-                uniformCatmullRomToBezierCappedInPlace(positions.data());
-            }
+            positions = uniformCatmullRomToBezier<Vec2d>(knotPositions);
             break;
         }
         case Curve::Type::OpenCentripetalCatmullRom:
         case Curve::Type::ClosedCentripetalCatmullRom: {
-            std::array<double, 3> lengths = {
-                (positions[1] - positions[0]).length(),
-                (positions[2] - positions[1]).length(),
-                (positions[3] - positions[2]).length()};
-            if (!isWidthUniform) {
-                centripetalCatmullRomToBezier<Vec2d>(positions, lengths, positions);
-                double d02 = lengths[0] + lengths[1];
-                double d13 = lengths[1] + lengths[2];
-                // desired dw/ds at start/end
-                double dw_ds_1 = (halfwidths[2] - halfwidths[0]) / d02;
-                double dw_ds_2 = (halfwidths[3] - halfwidths[1]) / d13;
-                // 1/3 of ds/du at start/end
-                double ds_du_1 = (positions[1] - positions[0]).length();
-                double ds_du_2 = (positions[3] - positions[2]).length();
-                // w1 - w0 = 1/3 of dw/du at start; w3 - w2 = 1/3 of dw/du at end
-                double w1 = halfwidths[1] + dw_ds_1 * ds_du_1;
-                double w2 = halfwidths[2] - dw_ds_2 * ds_du_2;
-                halfwidths[0] = halfwidths[1];
-                halfwidths[3] = halfwidths[2];
-                halfwidths[1] = w1;
-                halfwidths[2] = w2;
-            }
-            else {
-                centripetalCatmullRomToBezier<Vec2d>(positions, lengths, positions);
-            }
+            positions = centripetalCatmullRomToBezier<Vec2d>(knotPositions, knotLengths);
             break;
         }
         }
 
-        // Set mirror tangents at endpoints.
-        // See https://github.com/vgc/vgc/pull/1341 for image explanation.
-        if (!isClosed) {
-            bool isStartSegment = (i == 0);
-            bool isEndSegment = ((i + 1) == numSegments);
-            if (isStartSegment) {
-                if (isEndSegment) {
-                    // Special case if only one segment: linear parametrization
-                    double u = 1.0 / 3;
-                    double v = (1 - u);
-                    positions[1] = v * positions[0] + u * positions[3];
-                    positions[2] = u * positions[0] + v * positions[3];
-                    halfwidths[1] = v * halfwidths[0] + u * halfwidths[3];
-                    halfwidths[2] = u * halfwidths[0] + v * halfwidths[3];
-                }
-                else {
-                    Vec2d n = (positions[3] - positions[0]).orthogonalized().normalized();
-                    Vec2d d = positions[2] - positions[3];
-                    d = (2.0 * (n.dot(d)) * n) - d;
-                    positions[1] = positions[0] + d;
-                    // TODO: something similar for halfwidths
-                }
-            }
-            else if (isEndSegment) {
-                Vec2d n = (positions[3] - positions[0]).orthogonalized().normalized();
-                Vec2d d = positions[1] - positions[0];
-                d = 2 * (n.dot(d)) * n - d;
-                positions[2] = positions[3] + d;
-                // TODO: something similar for halfwidths
-            }
-        }
+        // Compute Bézier control points for widths such that on both sides of
+        // each knot we have the same desired dw/ds.
+        //
+        double d02 = d01 + d12;
+        double d13 = d12 + d23;
+        // desired dw/ds at start/end
+        double dw_ds_1 = (knotHalfwidths[2] - knotHalfwidths[0]) / d02;
+        double dw_ds_2 = (knotHalfwidths[3] - knotHalfwidths[1]) / d13;
+        // 1/3 of ds/du at start/end
+        double ds_du_1 = (positions[1] - positions[0]).length();
+        double ds_du_2 = (positions[3] - positions[2]).length();
+        // w1 - w0 = 1/3 of dw/du at start; w3 - w2 = 1/3 of dw/du at end
+        double w1 = knotHalfwidths[1] + dw_ds_1 * ds_du_1;
+        double w2 = knotHalfwidths[2] - dw_ds_2 * ds_du_2;
+        halfwidths[0] = knotHalfwidths[1];
+        halfwidths[3] = knotHalfwidths[2];
+        halfwidths[1] = w1;
+        halfwidths[2] = w2;
     }
 };
 
 // Currently assumes first derivative at endpoint is non null.
 // TODO: Support null derivatives (using limit analysis).
 // TODO: Support different halfwidth on both sides.
-std::array<geometry::Vec2d, 2>
+std::array<Vec2d, 2>
 computeOffsetLineTangentsAtEndPoint(const CubicBezierData& data, Int endpoint) {
 
     Vec2d p = {};
@@ -784,8 +795,8 @@ bool testLine_(
     bool isWidthUniform) {
 
     // Test angle between curve normals and center segment normal.
-    geometry::Vec2d l = s1.pos - s0.pos;
-    geometry::Vec2d n = l.normalized().orthogonalized();
+    Vec2d l = s1.pos - s0.pos;
+    Vec2d n = l.normalized().orthogonalized();
     if (n.dot(s0.normal) < cosMaxAngle) {
         return false;
     }
@@ -797,16 +808,16 @@ bool testLine_(
     }
 
     // Test angle between curve normals and outline segments normal.
-    geometry::Vec2d ll = s1.leftPoint - s0.leftPoint;
-    geometry::Vec2d lln = -ll.normalized().orthogonalized();
+    Vec2d ll = s1.leftPoint - s0.leftPoint;
+    Vec2d lln = -ll.normalized().orthogonalized();
     if (lln.dot(s0.leftPointNormal) < cosMaxAngle) {
         return false;
     }
     if (lln.dot(s1.leftPointNormal) < cosMaxAngle) {
         return false;
     }
-    geometry::Vec2d rl = s1.rightPoint - s0.rightPoint;
-    geometry::Vec2d rln = rl.normalized().orthogonalized();
+    Vec2d rl = s1.rightPoint - s0.rightPoint;
+    Vec2d rln = rl.normalized().orthogonalized();
     if (rln.dot(s0.rightPointNormal) < cosMaxAngle) {
         return false;
     }
@@ -1017,11 +1028,11 @@ void Curve::sampleRange(
                 + (firstNewSample.position() - lastOldSample.position()).length();
         }
         it->setS(s);
-        geometry::Vec2d lastPoint = it->position();
+        Vec2d lastPoint = it->position();
 
         // Compute arclength of all subsequent samples
         for (++it; it != outAppend.end(); ++it) {
-            geometry::Vec2d point = it->position();
+            Vec2d point = it->position();
             s += (point - lastPoint).length();
             it->setS(s);
             lastPoint = point;
@@ -1029,7 +1040,7 @@ void Curve::sampleRange(
     }
 }
 
-std::array<geometry::Vec2d, 2>
+std::array<Vec2d, 2>
 Curve::getOffsetLineTangentsAtSegmentEndpoint(Int segmentIndex, Int endpointIndex) const {
 
     if (segmentIndex < 0 || segmentIndex >= numSegments()) {
