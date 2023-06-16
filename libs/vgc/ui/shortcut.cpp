@@ -98,16 +98,16 @@ std::string toString(const Shortcut& shortcut) {
         appendString(res, separator, "Meta");
     }
 #else
-    if (modifiers.has(ModifierKey::Meta)) {
+    if (modifierKeys.has(ModifierKey::Meta)) {
         appendString(res, separator, "⌃"); // U+2303 Control / Ctrl
     }
-    if (modifiers.has(ModifierKey::Alt)) {
+    if (modifierKeys.has(ModifierKey::Alt)) {
         appendString(res, separator, "⌥"); // U+2325 Option / Alt
     }
-    if (modifiers.has(ModifierKey::Shift)) {
+    if (modifierKeys.has(ModifierKey::Shift)) {
         appendString(res, separator, "⇧"); // U+21E7 Shift
     }
-    if (modifiers.has(ModifierKey::Ctrl)) {
+    if (modifierKeys.has(ModifierKey::Ctrl)) {
         appendString(res, separator, "⌘"); // U+2318 Command / Cmd
     }
 #endif
