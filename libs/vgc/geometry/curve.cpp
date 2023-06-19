@@ -804,11 +804,13 @@ bool isCenterLineSegmentUnderTolerance_(
 
     // Test angle between curve normals and center segment normal.
     Vec2d l = s1.pos - s0.pos;
-    Vec2d n = l.normalized().orthogonalized();
-    if (n.dot(s0.normal) < cosMaxAngle) {
+    Vec2d n = l.orthogonalized();
+    double nl = n.length();
+    double maxDot = cosMaxAngle * nl;
+    if (n.dot(s0.normal) < maxDot) {
         return false;
     }
-    if (n.dot(s1.normal) < cosMaxAngle) {
+    if (n.dot(s1.normal) < maxDot) {
         return false;
     }
     return true;
@@ -821,14 +823,16 @@ bool areOffsetLinesAnglesUnderTolerance_(
     double cosMaxAngle) {
 
     // Test angle between offset line segments of s0s1 and s1s2 on both sides.
-    Vec2d l01 = (s1.leftPoint - s0.leftPoint).normalized();
-    Vec2d l12 = (s2.leftPoint - s1.leftPoint).normalized();
-    if (l01.dot(l12) < cosMaxAngle) {
+    Vec2d l01 = s1.leftPoint - s0.leftPoint;
+    Vec2d l12 = s2.leftPoint - s1.leftPoint;
+    double ll = l01.length() * l12.length();
+    if (l01.dot(l12) < cosMaxAngle * ll) {
         return false;
     }
-    Vec2d r01 = (s1.rightPoint - s0.rightPoint).normalized();
-    Vec2d r12 = (s2.rightPoint - s1.rightPoint).normalized();
-    if (r01.dot(r12) < cosMaxAngle) {
+    Vec2d r01 = s1.rightPoint - s0.rightPoint;
+    Vec2d r12 = s2.rightPoint - s1.rightPoint;
+    double rl = r01.length() * r12.length();
+    if (r01.dot(r12) < cosMaxAngle * rl) {
         return false;
     }
     return true;
