@@ -485,13 +485,13 @@ void computeSculptSampling(
             // numSculptSamplesPerSide such that curveLength is a multiple of
             // ds.
             //
-            //            increasing s
-            //           -------------->
-            //             ds ds ds ds       o  middle sculpt point
-            //            b--b--o--a--a      b  sculpt point before (numBefore = n     = 5)
-            //          ds|           |ds    a  scuplt point after  (numAfter  = n - 1 = 4)
-            //            b--b--b--a--a      curveLength = 2 * n * ds = (numBefore + numAfter + 1) * ds
-            //             ds ds ds ds
+            //     increasing s
+            //    -------------->
+            //      ds ds ds ds       o  middle sculpt point
+            //     b--b--o--a--a      b  sculpt point before (numBefore = n     = 5)
+            //   ds|           |ds    a  scuplt point after  (numAfter  = n - 1 = 4)
+            //     b--b--b--a--a      curveLength = 2 * n * ds =
+            //      ds ds ds ds                   = (numBefore + numAfter + 1) * ds
             //
             double n = std::ceil(curveHalfLength / maxDs);
             numSculptPointsBeforeMsp = narrow_cast<Int>(n);
