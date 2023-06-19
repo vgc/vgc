@@ -588,15 +588,15 @@ struct CubicBezierData {
             // Linear parametrization
             double u = 1.0 / 3;
             double v = (1 - u);
-            positions[0] = knotPositions[0];
-            positions[1] = v * knotPositions[0] + u * knotPositions[1];
-            positions[2] = u * knotPositions[0] + v * knotPositions[1];
-            positions[3] = knotPositions[1];
+            positions[0] = knotPositions[1];
+            positions[1] = v * knotPositions[1] + u * knotPositions[2];
+            positions[2] = u * knotPositions[1] + v * knotPositions[2];
+            positions[3] = knotPositions[2];
             if (!isWidthUniform) {
-                halfwidths[0] = knotHalfwidths[0];
-                halfwidths[1] = v * knotHalfwidths[0] + u * knotHalfwidths[1];
-                halfwidths[2] = u * knotHalfwidths[0] + v * knotHalfwidths[1];
-                halfwidths[3] = knotHalfwidths[1];
+                halfwidths[0] = knotHalfwidths[1];
+                halfwidths[1] = v * knotHalfwidths[1] + u * knotHalfwidths[2];
+                halfwidths[2] = u * knotHalfwidths[1] + v * knotHalfwidths[2];
+                halfwidths[3] = knotHalfwidths[2];
             }
             return;
         }
