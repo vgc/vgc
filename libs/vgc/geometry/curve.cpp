@@ -30,7 +30,7 @@ namespace vgc::geometry {
 VGC_DEFINE_ENUM(
     CurveSamplingQuality,
     (Disabled, "Disabled"),
-    (UniformLow, "Uniform Low"),
+    (UniformVeryLow, "Uniform Very Low"),
     (AdaptiveLow, "Adaptive Low"),
     (UniformHigh, "Uniform High"),
     (AdaptiveHigh, "Adaptive High"),
@@ -167,25 +167,25 @@ CurveSamplingParameters::CurveSamplingParameters(CurveSamplingQuality quality)
         minIntraSegmentSamples_ = 0;
         maxIntraSegmentSamples_ = 0;
         break;
-    case CurveSamplingQuality::UniformLow:
+    case CurveSamplingQuality::UniformVeryLow:
         maxAngle_ = 100;
         minIntraSegmentSamples_ = 3;
         maxIntraSegmentSamples_ = 3;
         break;
     case CurveSamplingQuality::AdaptiveLow:
-        maxAngle_ = 0.05;
+        maxAngle_ = 0.075;
         minIntraSegmentSamples_ = 0;
-        maxIntraSegmentSamples_ = 7;
+        maxIntraSegmentSamples_ = 511;
         break;
     case CurveSamplingQuality::UniformHigh:
         maxAngle_ = 100;
-        minIntraSegmentSamples_ = 15;
-        maxIntraSegmentSamples_ = 15;
+        minIntraSegmentSamples_ = 31;
+        maxIntraSegmentSamples_ = 31;
         break;
     case CurveSamplingQuality::AdaptiveHigh:
         maxAngle_ = 0.025;
         minIntraSegmentSamples_ = 0;
-        maxIntraSegmentSamples_ = 31;
+        maxIntraSegmentSamples_ = 1023;
         break;
     case CurveSamplingQuality::UniformVeryHigh:
         maxAngle_ = 100;
@@ -716,9 +716,7 @@ struct IterativeSamplingSample {
         , normal(core::noInit)
         , tangent(core::noInit)
         , rightPoint(core::noInit)
-        , leftPoint(core::noInit)
-        , rightPointNormal(core::noInit)
-        , leftPointNormal(core::noInit) {
+        , leftPoint(core::noInit) {
     }
     VGC_WARNING_POP
 
@@ -727,8 +725,6 @@ struct IterativeSamplingSample {
     Vec2d tangent;
     Vec2d rightPoint;
     Vec2d leftPoint;
-    Vec2d rightPointNormal;
-    Vec2d leftPointNormal;
     double radius;
     double radiusDer;
     double u;
@@ -766,65 +762,91 @@ struct IterativeSamplingSample {
 
 private:
     void computeExtra_() {
-        if (radiusDer != 0) {
-            Vec2d dr = radiusDer * normal;
-            rightPointNormal = (tangent + dr).normalized().orthogonalized();
-            leftPointNormal = -(tangent - dr).normalized().orthogonalized();
-        }
-        else {
-            rightPointNormal = normal;
-            leftPointNormal = -normal;
-        }
         Vec2d orthoRadius = radius * normal;
         rightPoint = pos + orthoRadius;
         leftPoint = pos - orthoRadius;
     }
 };
 
-struct IterativeSamplingCache {
+struct IterativeSamplingSampleNode {
+    IterativeSamplingSample sample;
+    IterativeSamplingSampleNode* previous = nullptr;
+    IterativeSamplingSampleNode* next = nullptr;
+};
+
+class IterativeSamplingCache {
+public:
     std::optional<IterativeSamplingSample> previousSampleN;
     Int segmentIndex = 0;
     double cosMaxAngle;
+    // specific to sampleIterLegacy_
     core::Array<IterativeSamplingSample> sampleStack;
+    // specific to sampleIter_
+    core::Span<IterativeSamplingSampleNode> sampleTree;
+
+    void resetSampleTree(Int newStorageLength) {
+        if (newStorageLength > sampleTree.length()) {
+            sampleTreeStorage_ =
+                std::make_unique<IterativeSamplingSampleNode[]>(newStorageLength);
+            sampleTree = core::Span<IterativeSamplingSampleNode>(
+                sampleTreeStorage_.get(), newStorageLength);
+        }
+    }
+
+private:
+    std::unique_ptr<IterativeSamplingSampleNode[]> sampleTreeStorage_;
 };
 
-bool testLine_(
+bool isCenterLineSegmentUnderTolerance_(
     const IterativeSamplingSample& s0,
     const IterativeSamplingSample& s1,
-    double cosMaxAngle,
-    bool isWidthUniform) {
+    double cosMaxAngle) {
 
     // Test angle between curve normals and center segment normal.
     Vec2d l = s1.pos - s0.pos;
-    Vec2d n = l.normalized().orthogonalized();
-    if (n.dot(s0.normal) < cosMaxAngle) {
+    Vec2d n = l.orthogonalized();
+    double nl = n.length();
+    double maxDot = cosMaxAngle * nl;
+    if (n.dot(s0.normal) < maxDot) {
         return false;
     }
-    if (n.dot(s1.normal) < cosMaxAngle) {
-        return false;
-    }
-    if (isWidthUniform) {
-        return true;
-    }
-
-    // Test angle between curve normals and outline segments normal.
-    Vec2d ll = s1.leftPoint - s0.leftPoint;
-    Vec2d lln = -ll.normalized().orthogonalized();
-    if (lln.dot(s0.leftPointNormal) < cosMaxAngle) {
-        return false;
-    }
-    if (lln.dot(s1.leftPointNormal) < cosMaxAngle) {
-        return false;
-    }
-    Vec2d rl = s1.rightPoint - s0.rightPoint;
-    Vec2d rln = rl.normalized().orthogonalized();
-    if (rln.dot(s0.rightPointNormal) < cosMaxAngle) {
-        return false;
-    }
-    if (rln.dot(s1.rightPointNormal) < cosMaxAngle) {
+    if (n.dot(s1.normal) < maxDot) {
         return false;
     }
     return true;
+}
+
+bool areOffsetLinesAnglesUnderTolerance_(
+    const IterativeSamplingSample& s0,
+    const IterativeSamplingSample& s1,
+    const IterativeSamplingSample& s2,
+    double cosMaxAngle) {
+
+    // Test angle between offset line segments of s0s1 and s1s2 on both sides.
+    Vec2d l01 = s1.leftPoint - s0.leftPoint;
+    Vec2d l12 = s2.leftPoint - s1.leftPoint;
+    double ll = l01.length() * l12.length();
+    if (l01.dot(l12) < cosMaxAngle * ll) {
+        return false;
+    }
+    Vec2d r01 = s1.rightPoint - s0.rightPoint;
+    Vec2d r12 = s2.rightPoint - s1.rightPoint;
+    double rl = r01.length() * r12.length();
+    if (r01.dot(r12) < cosMaxAngle * rl) {
+        return false;
+    }
+    return true;
+}
+
+bool shouldKeepNewSample_(
+    const IterativeSamplingSample& previousSample,
+    const IterativeSamplingSample& sample,
+    const IterativeSamplingSample& nextSample,
+    double cosMaxAngle) {
+
+    return !isCenterLineSegmentUnderTolerance_(previousSample, nextSample, cosMaxAngle)
+           || !areOffsetLinesAnglesUnderTolerance_(
+               previousSample, sample, nextSample, cosMaxAngle);
 }
 
 // Samples the segment [data.segmentIndex, data.segmentIndex + 1], and append the
@@ -833,7 +855,7 @@ bool testLine_(
 // The first sample of the segment is appended only if the cache `data` is new.
 // The last sample is always appended.
 //
-bool sampleIter_(
+[[maybe_unused]] bool sampleIterLegacy_(
     const Curve* curve,
     const CurveSamplingParameters& params,
     IterativeSamplingCache& data,
@@ -889,15 +911,21 @@ bool sampleIter_(
         while (s != nullptr) {
             // Adaptive sampling
             Int subdivLevel = (std::max)(s0.subdivLevel, s->subdivLevel);
-            if (subdivLevel < maxSubdivLevels
-                && !testLine_(s0, *s, cosMaxAngle, bezierData.isWidthUniform)) {
-
+            bool subdivided = false;
+            if (subdivLevel < maxSubdivLevels) {
                 double u = (s0.u + s->u) * 0.5;
-                s = &sampleStack.emplaceLast();
-                s->computeFrom(bezierData, u);
-                s->subdivLevel = subdivLevel + 1;
+                IterativeSamplingSample* s1 = &sampleStack.emplaceLast();
+                s1->computeFrom(bezierData, u);
+                if (shouldKeepNewSample_(s0, *s1, *s, cosMaxAngle)) {
+                    subdivided = true;
+                    s1->subdivLevel = subdivLevel + 1;
+                    s = s1;
+                }
+                else {
+                    sampleStack.pop();
+                }
             }
-            else {
+            if (!subdivided) {
                 s0 = *s;
                 outAppend.emplaceLast(s0.pos, s0.normal, s0.radius);
                 sampleStack.pop();
@@ -908,6 +936,129 @@ bool sampleIter_(
 
     data.segmentIndex += 1;
     data.previousSampleN = sN;
+    return true;
+}
+
+// Samples the segment [data.segmentIndex, data.segmentIndex + 1], and append the
+// result to outAppend.
+//
+// The first sample of the segment is appended only if the cache `data` is new.
+// The last sample is always appended.
+//
+bool sampleIter_(
+    const Curve* curve,
+    const CurveSamplingParameters& params,
+    IterativeSamplingCache& data,
+    core::Array<CurveSample>& outAppend) {
+
+    const double cosMaxAngle = data.cosMaxAngle;
+    const Int minISS = params.minIntraSegmentSamples(); // 0 -> 2 samples minimum
+    const Int maxISS = params.maxIntraSegmentSamples(); // 1 -> 3 samples maximum
+    const Int minSamples = std::max<Int>(0, minISS) + 2;
+    const Int maxSamples = std::max<Int>(minSamples, maxISS + 2);
+
+    CubicBezierData bezierData(curve, data.segmentIndex);
+
+    data.resetSampleTree(maxSamples);
+
+    // Setup first and last sample nodes of segment.
+    IterativeSamplingSampleNode* s0 = &data.sampleTree[0];
+    if (data.previousSampleN.has_value()) {
+        // Re-use last sample of previous segment.
+        s0->sample = *data.previousSampleN;
+        s0->sample.u = 0;
+    }
+    else {
+        s0->sample.computeFrom(bezierData, 0);
+        const IterativeSamplingSample& ss = s0->sample;
+        outAppend.emplaceLast(ss.pos, ss.normal, ss.radius);
+    }
+    IterativeSamplingSampleNode* sN = &data.sampleTree[1];
+    sN->sample.computeFrom(bezierData, 1);
+    s0->previous = nullptr;
+    s0->next = sN;
+    sN->previous = s0;
+    sN->next = nullptr;
+    data.segmentIndex += 1;
+    data.previousSampleN = sN->sample;
+
+    auto linkNode = [](IterativeSamplingSampleNode* node,
+                       IterativeSamplingSampleNode* previous) {
+        IterativeSamplingSampleNode* next = previous->next;
+        next->previous = node;
+        previous->next = node;
+        node->previous = previous;
+        node->next = next;
+    };
+    Int nextNodeIndex = 2;
+
+    // Compute `minIntraSegmentSamples` uniform samples.
+    IterativeSamplingSampleNode* previousNode = s0;
+    for (Int i = 1; i < minISS; ++i) {
+        IterativeSamplingSampleNode* node = &data.sampleTree[nextNodeIndex++];
+        double u = static_cast<double>(i) / minISS;
+        node->sample.computeFrom(bezierData, u);
+        linkNode(node, previousNode);
+        previousNode = node;
+    }
+
+    const Int sampleTreeLength = data.sampleTree.length();
+    Int previousLevelStartIndex = 2;
+    Int previousLevelEndIndex = nextNodeIndex;
+
+    // Fallback to using the last sample as previous level sample
+    // when we added no uniform samples.
+    if (previousLevelStartIndex == previousLevelEndIndex) {
+        previousLevelStartIndex = 1;
+    }
+
+    auto trySubdivide = [&](IterativeSamplingSampleNode* n0,
+                            IterativeSamplingSampleNode* n1) -> bool {
+        IterativeSamplingSampleNode* node = &data.sampleTree[nextNodeIndex];
+        node->sample.computeFrom(bezierData, 0.5 * (n0->sample.u + n1->sample.u));
+        if (shouldKeepNewSample_(n0->sample, node->sample, n1->sample, cosMaxAngle)) {
+            nextNodeIndex++;
+            linkNode(node, n0);
+            return true;
+        }
+        return false;
+    };
+
+    while (nextNodeIndex < sampleTreeLength) {
+        // Since we create a candidate on the left and right of each previous level node,
+        // each pass can add as much as twice the amount of nodes of the previous level.
+        for (Int i = previousLevelStartIndex; i < previousLevelEndIndex; ++i) {
+            IterativeSamplingSampleNode* previousLevelNode = &data.sampleTree[i];
+            // Try subdivide left.
+            bool found = trySubdivide(previousLevelNode->previous, previousLevelNode);
+            if (found && nextNodeIndex == sampleTreeLength) {
+                break;
+            }
+            // We subdivide right only if it is not the last point.
+            if (!previousLevelNode->next) {
+                continue;
+            }
+            // Try subdivide right.
+            found = trySubdivide(previousLevelNode, previousLevelNode->next);
+            if (found && nextNodeIndex == sampleTreeLength) {
+                break;
+            }
+        }
+        if (nextNodeIndex == previousLevelEndIndex) {
+            // No new candidate, let's stop here.
+            break;
+        }
+        previousLevelStartIndex = previousLevelEndIndex;
+        previousLevelEndIndex = nextNodeIndex;
+    }
+
+    IterativeSamplingSampleNode* node = data.sampleTree[0].next;
+    while (node) {
+        const IterativeSamplingSample& ss = node->sample;
+        outAppend.emplaceLast(ss.pos, ss.normal, ss.radius);
+        node = node->next;
+    }
+
     return true;
 }
 

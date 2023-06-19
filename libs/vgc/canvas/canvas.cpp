@@ -292,9 +292,9 @@ bool Canvas::onKeyPress(ui::KeyPressEvent* event) {
     case ui::Key::I:
         switch (requestedTesselationMode_) {
         case CurveSamplingQuality::Disabled:
-            requestedTesselationMode_ = CurveSamplingQuality::UniformLow;
+            requestedTesselationMode_ = CurveSamplingQuality::UniformVeryLow;
             break;
-        case CurveSamplingQuality::UniformLow:
+        case CurveSamplingQuality::UniformVeryLow:
             requestedTesselationMode_ = CurveSamplingQuality::AdaptiveLow;
             break;
         case CurveSamplingQuality::AdaptiveLow:
