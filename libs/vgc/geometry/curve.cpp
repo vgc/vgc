@@ -30,7 +30,7 @@ namespace vgc::geometry {
 VGC_DEFINE_ENUM(
     CurveSamplingQuality,
     (Disabled, "Disabled"),
-    (UniformLow, "Uniform Low"),
+    (UniformVeryLow, "Uniform Very Low"),
     (AdaptiveLow, "Adaptive Low"),
     (UniformHigh, "Uniform High"),
     (AdaptiveHigh, "Adaptive High"),
@@ -167,10 +167,10 @@ CurveSamplingParameters::CurveSamplingParameters(CurveSamplingQuality quality)
         minIntraSegmentSamples_ = 0;
         maxIntraSegmentSamples_ = 0;
         break;
-    case CurveSamplingQuality::UniformLow:
+    case CurveSamplingQuality::UniformVeryLow:
         maxAngle_ = 100;
-        minIntraSegmentSamples_ = 7;
-        maxIntraSegmentSamples_ = 7;
+        minIntraSegmentSamples_ = 3;
+        maxIntraSegmentSamples_ = 3;
         break;
     case CurveSamplingQuality::AdaptiveLow:
         maxAngle_ = 0.075;

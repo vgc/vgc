@@ -33,7 +33,7 @@ class Curve;
 
 enum class CurveSamplingQuality {
     Disabled,
-    UniformLow,
+    UniformVeryLow,
     AdaptiveLow,
     UniformHigh,
     AdaptiveHigh,
