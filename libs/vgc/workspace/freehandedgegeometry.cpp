@@ -460,8 +460,23 @@ void computeSculptSampling(
         }
     }
     else { // isClosed
+
+        // If the curve is closed, then we need to determine whether the
+        // sampling itself is closed (the sculpt interval covers the full
+        // curve) or open (the sculpt internal only covers a subset of the
+        // curve, potentially including the start knot).
+        //
+        // Note: having an "almost closed" sampling is error-prone due to
+        // floating point imprecisions (possible loss of precision when
+        // wrapping s values may cause order inconsistencies between
+        // wrapped(sMsp - n * ds) and wrapped(sMsp - n + ds)). Therefore, we
+        // use a thresold to "snap the sampling to a closed sampling" when the
+        // sampling is nearly closed.
+        //
         double curveHalfLength = curveLength * 0.5;
-        if (curveHalfLength <= radius) {
+        double epsilon = maxDs / 100;
+        if (curveHalfLength < radius + epsilon) {
+
             // If the sculpt interval encompasses the full curve and the curve
             // is closed then we want to produce a closed sculpt sampling.
             //
@@ -469,6 +484,14 @@ void computeSculptSampling(
             // and looping around, we have to adjust ds and
             // numSculptSamplesPerSide such that curveLength is a multiple of
             // ds.
+            //
+            //            increasing s
+            //           -------------->
+            //             ds ds ds ds       o  middle sculpt point
+            //            b--b--o--a--a      b  sculpt point before (numBefore = n     = 5)
+            //          ds|           |ds    a  scuplt point after  (numAfter  = n - 1 = 4)
+            //            b--b--b--a--a      curveLength = 2 * n * ds = (numBefore + numAfter + 1) * ds
+            //             ds ds ds ds
             //
             double n = std::ceil(curveHalfLength / maxDs);
             numSculptPointsBeforeMsp = narrow_cast<Int>(n);
