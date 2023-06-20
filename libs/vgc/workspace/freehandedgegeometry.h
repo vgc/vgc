@@ -90,6 +90,13 @@ public:
         double tolerance,
         bool isClosed) override;
 
+    geometry::Vec2d sculptSmooth(
+        const geometry::Vec2d& position,
+        double radius,
+        double strength,
+        double tolerance,
+        bool isClosed) override;
+
     bool updateFromDomEdge_(dom::Element* element) override;
     void writeToDomEdge_(dom::Element* element) const override;
     void removeFromDomEdge_(dom::Element* element) const override;

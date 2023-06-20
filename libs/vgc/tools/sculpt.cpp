@@ -52,6 +52,12 @@ VGC_UI_DEFINE_MOUSE_DRAG_COMMAND( //
     MouseButton::Left)
 
 VGC_UI_DEFINE_MOUSE_DRAG_COMMAND( //
+    smooth,
+    "tools.sculpt.smooth",
+    "Sculpt Smooth",
+    Shortcut(ModifierKey::Shift, MouseButton::Left))
+
+VGC_UI_DEFINE_MOUSE_DRAG_COMMAND( //
     editRadius,
     "tools.sculpt.editRadius",
     "Edit Sculpt Radius",
@@ -244,6 +250,190 @@ public:
     }
 };
 
+VGC_DECLARE_OBJECT(SculptSmoothAction);
+
+class SculptSmoothAction : public ui::Action {
+private:
+    VGC_OBJECT(SculptSmoothAction, ui::Action)
+
+protected:
+    /// This is an implementation details.
+    /// Please use `SculptSmoothAction::create()` instead.
+    ///
+    SculptSmoothAction()
+        : ui::Action(commands::smooth) {
+    }
+
+public:
+    /// Creates a `SculptSmoothAction`.
+    ///
+    static SculptSmoothActionPtr create() {
+        return SculptSmoothActionPtr(new SculptSmoothAction());
+    }
+
+public:
+    void onMouseDragStart(ui::MouseEvent* event) override {
+        cursorPositionAtLastSmooth_ = event->position();
+        edgeId_ = tool_->candidateId();
+    }
+
+    void onMouseDragMove(ui::MouseEvent* event) override {
+        if (edgeId_ == -1) {
+            return;
+        }
+
+        canvas::Canvas* canvas = tool_->canvas();
+        workspace::Workspace* workspace = tool_->workspace();
+        if (!canvas || !workspace) {
+            return;
+        }
+
+        cursorPosition_ = event->position();
+
+        geometry::Mat4d inverseViewMatrix = canvas->camera().viewMatrix().inverted();
+
+        float pixelSize = static_cast<float>(
+            (inverseViewMatrix.transformPointAffine(geometry::Vec2d(0, 1))
+             - inverseViewMatrix.transformPointAffine(geometry::Vec2d(0, 0)))
+                .length());
+
+        // for now, smooth once in the middle of the cursor displacement
+        geometry::Vec2d positionInWorkspace = inverseViewMatrix.transformPointAffine(
+            geometry::Vec2d(0.5 * (cursorPosition_ + cursorPositionAtLastSmooth_)));
+        double disp = (cursorPosition_ - cursorPositionAtLastSmooth_).length()
+                      / canvas->camera().zoom();
+
+        // Open history group
+        core::UndoGroup* undoGroup = nullptr;
+        core::History* history = workspace->history();
+        if (history) {
+            undoGroup = history->createUndoGroup(actionName());
+        }
+
+        // Translate Vertices
+        workspace::Element* element = workspace->find(edgeId_);
+        if (element && element->vacNode() && element->vacNode()->isCell()) {
+            vacomplex::KeyEdge* ke = element->vacNode()->toCellUnchecked()->toKeyEdge();
+            if (ke) {
+                vacomplex::KeyEdgeGeometry* geometry = ke->geometry();
+                if (geometry) {
+                    if (!started_) {
+                        geometry->startEdit();
+                        started_ = true;
+                    }
+                    cursorPositionAtLastSmooth_ = cursorPosition_;
+                    double radius = options::sculptRadius()->value();
+                    double strength = 0.4;
+                    geometry::Vec2d smoothedPoint = geometry->sculptSmooth(
+                        positionInWorkspace,
+                        radius,
+                        std::min(1.0, disp / radius) * strength,
+                        pixelSize,
+                        ke->isClosed());
+                    tool_->setActionCircleCenter(smoothedPoint);
+                    tool_->setActionCircleEnabled(true);
+                }
+            }
+        }
+
+        // Close operation
+        if (undoGroup) {
+            bool amend = canAmendUndoGroup_ && undoGroup->parent()
+                         && undoGroup->parent()->name() == actionName();
+            undoGroup->close(amend);
+            canAmendUndoGroup_ = true;
+        }
+    }
+
+    void onMouseDragConfirm(ui::MouseEvent* /*event*/) override {
+        if (edgeId_ == -1) {
+            return;
+        }
+
+        canvas::Canvas* canvas = tool_->canvas();
+        workspace::Workspace* workspace = tool_->workspace();
+        if (!canvas || !workspace) {
+            return;
+        }
+
+        // Open history group
+        core::UndoGroup* undoGroup = nullptr;
+        core::History* history = workspace->history();
+        if (history) {
+            undoGroup = history->createUndoGroup(actionName());
+        }
+
+        workspace::Element* element = workspace->find(edgeId_);
+        if (element && element->vacNode() && element->vacNode()->isCell()) {
+            vacomplex::KeyEdge* ke = element->vacNode()->toCellUnchecked()->toKeyEdge();
+            if (ke) {
+                vacomplex::KeyEdgeGeometry* geometry = ke->geometry();
+                if (geometry) {
+                    geometry->finishEdit();
+                }
+            }
+        }
+
+        // Close operation
+        if (undoGroup) {
+            bool amend = canAmendUndoGroup_ && undoGroup->parent()
+                         && undoGroup->parent()->name() == actionName();
+            undoGroup->close(amend);
+            canAmendUndoGroup_ = true;
+        }
+
+        tool_->setActionCircleEnabled(false);
+        reset_();
+    }
+
+    void onMouseDragCancel(ui::MouseEvent* /*event*/) override {
+        if (edgeId_ == -1) {
+            return;
+        }
+
+        canvas::Canvas* canvas = tool_->canvas();
+        workspace::Workspace* workspace = tool_->workspace();
+        if (!canvas || !workspace) {
+            return;
+        }
+
+        workspace::Element* element = workspace->find(edgeId_);
+        if (element && element->vacNode() && element->vacNode()->isCell()) {
+            vacomplex::KeyEdge* ke = element->vacNode()->toCellUnchecked()->toKeyEdge();
+            if (ke) {
+                vacomplex::KeyEdgeGeometry* geometry = ke->geometry();
+                if (geometry) {
+                    geometry->resetEdit();
+                    geometry->finishEdit();
+                }
+            }
+        }
+
+        tool_->setActionCircleEnabled(false);
+        reset_();
+    }
+
+    void reset_() {
+        canAmendUndoGroup_ = false;
+        started_ = false;
+        edgeId_ = -1;
+    }
+
+public:
+    Sculpt* tool_ = nullptr;
+    bool canAmendUndoGroup_ = false;
+    bool started_ = false;
+    core::Id edgeId_ = -1;
+    geometry::Vec2f cursorPositionAtLastSmooth_;
+    geometry::Vec2f cursorPosition_;
+    geometry::Vec2d grabbedPoint_;
+
+    core::StringId actionName() const {
+        static core::StringId actionName_("Sculpt Smooth");
+        return actionName_;
+    }
+};
+
 VGC_DECLARE_OBJECT(EditSculptRadiusAction);
 
 class EditSculptRadiusAction : public ui::Action {
@@ -305,6 +495,8 @@ Sculpt::Sculpt()
 
     auto grabAction = createAction<SculptGrabAction>();
     grabAction->tool_ = this;
+    auto smoothAction = createAction<SculptSmoothAction>();
+    smoothAction->tool_ = this;
     auto editRadiusAction = createAction<EditSculptRadiusAction>();
     editRadiusAction->tool_ = this;
 }
