@@ -1478,12 +1478,14 @@ void Sketch::finishCurve_(ui::MouseEvent* /*event*/) {
                 edge_->clearAttribute(ds::endvertex);
                 if (snappedPoints_.length() > 1) {
                     snappedPoints_.removeLast();
+                    snappedWidths_.removeLast();
                 }
             }
             else {
                 edge_->setAttribute(ds::endvertex, endVertex_->getPathFromId());
             }
             edge_->setAttribute(ds::positions, snappedPoints_);
+            edge_->setAttribute(ds::widths, snappedWidths_);
 
             workspace->sync();
 
