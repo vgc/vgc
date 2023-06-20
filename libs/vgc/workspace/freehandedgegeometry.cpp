@@ -1704,7 +1704,7 @@ private:
             wasp1 = wasp2;
             iWasp1 = i;
         }
-        if (totalKnotsFound == numSculptedKnots_) {
+        if (totalKnotsFound != numSculptedKnots_) {
             VGC_WARNING(
                 LogVgcWorkspace,
                 "Number of knots found ({}) is different than excepted ({}) "
