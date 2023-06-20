@@ -1249,21 +1249,24 @@ public:
         // sculpt points, that is, affected by sculpt operation. These are called
         // the "sculpted knots".
 
-        sculptedKnotsInterval_ = computeSculptedKnotsInterval_();
-        if (sculptedKnotsInterval_.count == 0) {
+        computeSculptedKnotsInterval_();
+        if (numSculptedKnots_ == 0) {
             outSculptCursorPosition =
                 sculptSampling_.sculptPoints[sculptSampling_.middleSculptPointIndex].pos;
             return false;
-        }
+        };
 
         // Step 3:
         //
         // Compute new positions of original knots:
         // (a) First append unmodified knots before the sculpted knots
-        // (b) Then append the sculpted knots with their new position
-        //     computed thanks to the uniform sampling (sculpt points)
+        // (b) Then append the modified knots, computed based on the
+        //     sculpted knots and weighted average of sculpt points
         // (c) Then append unmodified knots after the sculpted knots
         //
+        // Note: fewer knots than numSculptedKnots_ may actually be appended in
+        // step (b), since we perform an average of knots in case there is more
+        // than one knot between two consecutive sculpt points.
 
         newStartKnotIndex_ = 0;                                 // See step 5
         appendUnmodifiedKnotsBefore_();                         // (a)
@@ -1272,13 +1275,6 @@ public:
         if (newStartKnotIndex_ == newKnotPositions_.length()) { // See step 5
             newStartKnotIndex_ = 0;
         }
-
-        // XXX TODO: Fix first point is duplicated when using an open curve
-        // and the middle sculpt point is exactly at s = 0. Perhaps caused
-        // by adding it both in appendUnmodifiedKnotsBefore_ and appendModifiedKnots_
-        // see comment in appendUnmodifiedKnotsBefore_.
-        //
-        // Same issue at the end.
 
         // Step 4:
         //
@@ -1469,108 +1465,119 @@ private:
             sculptSampling_, samples_, mspSample_.s(), radius, maxDs, isClosed_);
 
         core::Array<SculptPoint>& sculptPoints = sculptSampling_.sculptPoints;
-        s0_ = sculptPoints.first().s;
-        sN_ = sculptPoints.last().s; // Note: for closed curve we may have sN < s0
 
         if (sculptSampling_.isClosed) {
-            // Duplicate first point as last point.
-            // We intentionally keep the original s and d for the duplicated point.
+
+            // Duplicate first point as last point (including s and d values).
+            //
+            // With the following example values:
+            //
+            // totalS = 100
+            // ds = 10
+            // sMsp = 85
+            // radius = 80 (capped to 50)
+            //
+            // The sculpt points s-values now look like:
+            //
+            //                           wrap
+            //                           <-->
+            // [35, 45, 55, 65, 75, 85, 95, 5, 15, 25, 35]
+            //
+            // While the knot s-values may look like:
+            //
+            // [0, 38, 63, 92]
+            //
             sculptPoints.emplaceLast(sculptPoints.first());
         }
+
+        // Note: for a closed curve with non-closed sculpt sampling, we may have
+        // sN < s0.
+        //
+        // Example:
+        //
+        // totalS = 100
+        // ds = 10
+        // sMsp = 85
+        // radius = 40
+        //
+        // The sculpt points s-values now look like:
+        //
+        //                       wrap
+        //                       <-->
+        // [45, 55, 65, 75, 85, 95, 5, 15, 25]
+        //
 
         return true;
     }
 
-    struct KnotsInterval {
-        Int start = 0;
-        Int count = 0;
-    };
+    void computeSculptedKnotsInterval_() {
 
-    KnotsInterval computeSculptedKnotsInterval_() {
+        double s0 = sculptSampling_.sculptPoints.first().s;
+        double sN = sculptSampling_.sculptPoints.last().s;
 
-        KnotsInterval res = {};
-
-        // Search index of first knot at or just after s0.
+        // Search index of first knot after s0.
+        //
         // In case of open curves, we exclude the first knot as it cannot move.
-        Int i0 = isClosed_ ? 0 : 1;
-        for (; i0 < numKnots_; ++i0) {
-            if (s0_ <= knotsS_[i0]) {
-                break;
-            }
+        //
+        // XXX TODO: Actually allow the first and last knot of open curves to
+        // be modified. Indeed, even though the position cannot change, we want
+        // to be able to modify its width, otherwise a fully-smoothed open
+        // curve becomes a straight line whose start/end width are the original
+        // start/end width, instead of being the average width.
+        //
+        // In case of closed curves, we exclude the first knot as we prefer to
+        // use the equivalent index i0 = numKnots_ anyway (it makes the
+        // looping arithmetic easier).
+        //
+        Int i0 = 1;
+        while (i0 < numKnots_ && knotsS_[i0] <= s0) {
+            ++i0;
         }
-        if (i0 == numKnots_) {
-            if (isClosed_) {
-                // We found no knots with s >= s0, so we are in one of these cases:
-                //
-                //                   s =   41      49      0       8       16
-                //               index =   n-2     n-1     0       1       2
-                // Knots:               ---o-------o-------o-------o-------o---
-                //
-                // Case (1)          s =              52  56  3   7   11  15
-                // Sculpt points:                     x---x---x---x---x---x
-                //                                    s0          sN
-                //
-                // Case (2)          s =              52  56
-                // Sculpt points:                     x---x
-                //                                    s0  sN
-                //
-                if (sculptSampling_.isRadiusOverlappingStart) {
-                    // Case (1)
-                    i0 = 0;
-                }
-                else {
-                    // Case (2)
-                    res.count = 0;
-                    return res;
-                }
-            }
-        }
-        res.start = i0;
+        sculptedKnotsStart_ = i0;
 
-        // Count knots in interval
         if (sculptSampling_.isClosed) {
-            res.count = numKnots_;
+            numSculptedKnots_ = numKnots_;
         }
         else {
-            // Search index of first point just after sN.
+            // Search index of first knot after sN.
+            //
             // In case of open curves, we exclude the last knot as it cannot move.
-            Int iN = isClosed_ ? 0 : i0;
+            //
+            Int iN = isClosed_ ? 1 : i0;
             Int iEnd = isClosed_ ? numKnots_ : numKnots_ - 1;
-            for (; iN < iEnd; ++iN) {
-                if (sN_ < knotsS_[iN]) {
-                    break;
-                }
+            while (iN < iEnd && knotsS_[iN] <= sN) {
+                ++iN;
             }
 
             // Deduce count from i0 and iN.
             if (!isClosed_) {
-                res.count = iN - i0;
+                numSculptedKnots_ = iN - i0;
             }
             else if (i0 == iN) {
                 if (sculptSampling_.isRadiusOverlappingStart) {
-                    res.count = numKnots_;
+                    numSculptedKnots_ = numKnots_;
                 }
                 else {
-                    res.count = 0;
+                    numSculptedKnots_ = 0;
                 }
             }
             else if (i0 < iN) {
-                res.count = iN - i0;
+                numSculptedKnots_ = iN - i0;
             }
-            else {
-                res.count = (iN + numKnots_) - i0;
+            else { // i0 > iN
+                numSculptedKnots_ = (iN + numKnots_) - i0;
             }
         }
-
-        return res;
+        sculptedKnotsEnd_ = sculptedKnotsStart_ + numSculptedKnots_;
     }
 
     void appendUnmodifiedKnotsBefore_() {
-        const bool isOverlappingStart =
-            sculptedKnotsInterval_.start + sculptedKnotsInterval_.count > numKnots_;
+
+        bool isOverlappingStart = sculptedKnotsEnd_ > numKnots_;
+
         if (!isOverlappingStart) {
-            // Append first points that will not change.
-            Int n = sculptedKnotsInterval_.start;
+            // Append knots from index 0 (included) to first sculpted knot (excluded).
+            Int n = sculptedKnotsStart_;
             newKnotPositions_.extend(
                 knotPositions_->begin(), knotPositions_->begin() + n);
             if (hasWidths_) {
@@ -1578,11 +1585,10 @@ private:
             }
         }
         else {
-            // Append all points that will not change.
-            Int start = sculptedKnotsInterval_.start + sculptedKnotsInterval_.count;
-            Int n = numKnots_ - sculptedKnotsInterval_.count;
+            // Append all unmodified knots (before and after)
+            Int n = numKnots_ - numSculptedKnots_;
             for (Int i = 0; i < n; ++i) {
-                Int j = start + i;
+                Int j = sculptedKnotsEnd_ + i;
                 j = (numKnots_ + (j % numKnots_)) % numKnots_;
                 newKnotPositions_.emplaceLast((*knotPositions_)[j]);
                 if (hasWidths_) {
@@ -1590,28 +1596,28 @@ private:
                 }
             }
         }
+
         numUnmodifiedKnotsBefore_ = newKnotPositions_.length();
     }
 
     void appendUnmodifiedKnotsAfter_() {
-        const Int oldNewPointsLength = newKnotPositions_.length();
-        const bool isOverlappingStart =
-            sculptedKnotsInterval_.start + sculptedKnotsInterval_.count > numKnots_;
+
+        Int oldNewKnotsLength = newKnotPositions_.length();
+        bool isOverlappingStart = sculptedKnotsEnd_ > numKnots_;
+
         if (!isOverlappingStart) {
-            // Append end points that will not change.
-            Int n = sculptedKnotsInterval_.start + sculptedKnotsInterval_.count;
+            // Append knots from last modified knot (excluded) to last knot (included).
+            Int n = sculptedKnotsEnd_;
             newKnotPositions_.extend(knotPositions_->begin() + n, knotPositions_->end());
             if (hasWidths_) {
                 newKnotWidths_.extend(knotWidths_->begin() + n, knotWidths_->end());
             }
         }
-        numUnmodifiedKnotsAfter_ = newKnotPositions_.length() - oldNewPointsLength;
+
+        numUnmodifiedKnotsAfter_ = newKnotPositions_.length() - oldNewKnotsLength;
     }
 
     void appendModifiedKnots_(double strength) {
-        if (sculptedKnotsInterval_.count == 0) {
-            return;
-        }
 
         // Prevent widths from exploding (due to the Catmull-Rom interpolation
         // of knots outputing sculpt points with widths bigger than the knots)
@@ -1619,16 +1625,14 @@ private:
         //
         double minModifiedKnotWidth = core::DoubleInfinity;
         double maxModifiedKnotWidth = 0;
-        Int extendedStartIndex = sculptedKnotsInterval_.start - 1;
-        Int extendedEndIndex =
-            sculptedKnotsInterval_.start + sculptedKnotsInterval_.count;
+        Int extendedStart = sculptedKnotsStart_ - 1;
+        Int extendedEnd = sculptedKnotsEnd_ + 1;
         if (!isClosed_) {
-            extendedStartIndex = std::max<Int>(extendedStartIndex, 0);
-            extendedEndIndex = (std::min)(extendedEndIndex, knotWidths_->length() - 1);
+            extendedStart = core::clamp(extendedStart, 0, knotWidths_->length());
+            extendedEnd = core::clamp(extendedEnd, 0, knotWidths_->length());
         }
-        for (Int i = extendedStartIndex; i <= extendedEndIndex; ++i) {
-            double w =
-                isClosed_ ? knotWidths_->getWrapped(i) : knotWidths_->getUnchecked(i);
+        for (Int i = extendedStart; i < extendedEnd; ++i) {
+            double w = knotWidths_->getWrapped(i);
             minModifiedKnotWidth = (std::min)(w, minModifiedKnotWidth);
             maxModifiedKnotWidth = (std::max)(w, maxModifiedKnotWidth);
         }
@@ -1639,10 +1643,7 @@ private:
 
         SculptPoint wasp1 = {}; // weighted-averaged sculpt point
         Int iWasp1 = -1;        // remember which index was last computed to reuse it
-        Int knotIndex = sculptedKnotsInterval_.start;
-        if (isClosed_ && knotIndex == 0) {
-            newStartKnotIndex_ = newKnotPositions_.length();
-        }
+        Int knotIndex = sculptedKnotsStart_;
 
         // For each pair of consecutive sculpt points:
         // 1. Find all original knots in between (if any)
@@ -1652,6 +1653,8 @@ private:
         //    sculpt points.
         //
         core::Array<SculptPoint>& sculptPoints = sculptSampling_.sculptPoints;
+        bool hasSculptSamplingWrapped = false;
+        Int totalKnotsFound = 0;
         for (Int i = 1; i < sculptPoints.length(); ++i) {
 
             // Get two consecutive sculpt points (= "sculpt segment").
@@ -1662,13 +1665,15 @@ private:
             double s2 = sp2.s;
 
             // Find all knots in [s1, s2] and compute the mean of their s-values.
-            // Also add totalS to s2 in case the sculpt segment includes the start knot.
+            // Also add totalS to s1 and/or s2 in case the sculpt segment includes the start knot.
             //
             double sMean = 0;
-            Int numKnotsFound = findKnotsInSculptSegment_(knotIndex, s1, s2, sMean);
+            Int numKnotsFound = findKnotsInSculptSegment_(
+                knotIndex, s1, s2, sMean, hasSculptSamplingWrapped);
             if (numKnotsFound == 0) {
                 continue;
             }
+            totalKnotsFound += numKnotsFound;
 
             // Compute the new positions and widths of sculpt points, possibly
             // reusing already-computed wasp1 from previous segment.
@@ -1699,79 +1704,83 @@ private:
             wasp1 = wasp2;
             iWasp1 = i;
         }
+        if (totalKnotsFound == numSculptedKnots_) {
+            VGC_WARNING(
+                LogVgcWorkspace,
+                "Number of knots found ({}) is different than excepted ({}) "
+                "during smoothing.",
+                totalKnotsFound,
+                numSculptedKnots_);
+        }
 
         Int iMsp = sculptSampling_.middleSculptPointIndex;
         geometry::Vec2d scp = sculptPoints[iMsp].pos;
         geometry::Vec2d wascp = weightedAverage.computeAveraged(iMsp).pos;
         outSculptCursorPosition_ = scp + (wascp - scp) * strength;
+        // XXX TODO: Fix cursor not displayed exactly at the rendered curve.
+        // This is caused by the Catmull-Rom interpolation of the filtered
+        // smoothed knots not being the same curve as the smoothed sculpt points.
     }
 
     // Find all knots within [s1, s2], and compute the mean of their
     // arclength s-values.
     //
-    // For closed curve, we need to handle the case where the start
-    // knot is within the sculpt segment, in which case we have s2 <
-    // s1, and the knot s-values suddenly go from totalS to 0. In order
-    // to be able to compute the mean of the s-values, we consider the
-    // s-values past the "wrapping point" to be increased by totalS.
+    // For closed curves, in order to be able to compute a meaningful sMean and
+    // handle the case where s2 < s1, we virtually extend the s-value such that
+    // the s-values of knots and the s-values of sculpt points look as-if they
+    // were always increasing. This is done by adding totalS to the stored
+    // valued whenever we passed the "wrapping point", either of the sculpt
+    // points or the knot index.
     //
-    Int findKnotsInSculptSegment_(Int& knotIndex, double s1, double& s2, double& sMean) {
+    Int findKnotsInSculptSegment_(
+        Int& knotIndex,
+        double& s1,
+        double& s2,
+        double& sMean,
+        bool& hasSculptSamplingWrapped) {
 
-        Int numSculptedKnots = sculptedKnotsInterval_.count;
-        Int sculptedKnotFirstIndex = sculptedKnotsInterval_.start;
-        Int sculptedKnotLastIndex = sculptedKnotFirstIndex + numSculptedKnots - 1;
-        Int maxIndex = (std::min)(sculptedKnotLastIndex, numKnots_ - 1);
-
+        // Compute sum of s-values for all knots in the sculpt segment
         Int numKnotsFound = 0;
         double sSum = 0;
         if (!isClosed_) {
-            // Case when the curve is open.
-            while (knotIndex <= maxIndex && knotsS_[knotIndex] <= s2) {
-                sSum += knotsS_[knotIndex];
-                ++knotIndex;
-                ++numKnotsFound;
+            while (knotIndex < sculptedKnotsEnd_) {
+                double sKnot = knotsS_[knotIndex];
+                if (sKnot <= s2) {
+                    sSum += sKnot;
+                    ++knotIndex;
+                    ++numKnotsFound;
+                }
+                else {
+                    break;
+                }
             }
         }
         else { // isClosed
-
-            // Process knots up to s2 or totalS, whichever is smaller. Note
-            // that unlike for open curve, we need to check if
-            // knotS_[knotIndex] >= s1, since the next knot might be
-            // semantically "after" s2, but have a s smaller than both s1 and
-            // s2.
-            //
-            bool isWrapping = s2 < s1;
-            double s2Original = s2;
-            if (isWrapping) { // Ensure s2 >= s1
+            if (hasSculptSamplingWrapped) {
+                s1 += totalS_;
                 s2 += totalS_;
             }
-            // XXX: Can the if below be replaced by `if (knotIndex != 0)`?
-            if (knotIndex <= maxIndex && knotsS_[knotIndex] >= s1) {
-                while (knotIndex <= maxIndex && knotsS_[knotIndex] <= s2) {
-                    sSum += knotsS_[knotIndex];
-                    ++knotIndex;
-                    ++numKnotsFound;
-                }
+            else if (s2 < s1) {
+                hasSculptSamplingWrapped = true;
+                s2 += totalS_;
+                newStartKnotIndex_ = newKnotPositions_.length();
             }
-
-            // Process knots after totalS.
-            //
-            if (isWrapping) {
-                if (knotIndex != 0 && knotIndex != numKnots_) {
-                    VGC_WARNING(
-                        LogVgcWorkspace,
-                        "Unexpected knot index ({}) in findKnotsInSculptSegment_() with "
-                        "numKnots = {}",
-                        numKnots_);
+            while (knotIndex < sculptedKnotsEnd_) {
+                Int wrappedKnotIndex = knotIndex;
+                double sOffset = 0;
+                bool hasKnotIndexWrapped = (knotIndex >= numKnots_);
+                if (hasKnotIndexWrapped) {
+                    wrappedKnotIndex = knotIndex - numKnots_;
+                    sOffset = totalS_;
                 }
-                if (knotIndex == numKnots_) {
-                    knotIndex = 0;
-                    maxIndex = sculptedKnotLastIndex - numKnots_;
-                }
-                newStartKnotIndex_ = newKnotPositions_.length(); // XXX why?
-                while (knotIndex <= maxIndex && knotsS_[knotIndex] <= s2Original) {
+                double sKnot = knotsS_[wrappedKnotIndex] + sOffset;
+                if (sKnot <= s2) {
+                    sSum += sKnot;
                     ++knotIndex;
                     ++numKnotsFound;
+                }
+                else {
+                    break;
                 }
             }
         }
@@ -1784,25 +1793,41 @@ private:
         return numKnotsFound;
     }
 
+    // Input
     Int numKnots_ = 0;
     const geometry::Vec2dArray* knotPositions_ = nullptr;
     const core::DoubleArray* knotWidths_ = nullptr;
     bool isClosed_ = false;
     bool hasWidths_ = false;
+
+    // Computed sampling
     geometry::CurveSampleArray samples_;
     core::Array<double> knotsS_;
     double totalS_ = 0;
     geometry::CurveSample mspSample_;
+
+    // Computed sculpt sampling
     SculptSampling sculptSampling_;
-    double s0_ = 0;
-    double sN_ = 0;
-    KnotsInterval sculptedKnotsInterval_ = {};
-    Int numUnmodifiedKnotsBefore_ = 0;
-    Int numUnmodifiedKnotsAfter_ = 0;
+
+    // Sculpted Knot interval. Note that start and end are not necessarily
+    // valid indices and may require wrapping
+    Int sculptedKnotsStart_ = 0; // first knot after s0
+    Int sculptedKnotsEnd_ = 0;   // first knot after sN (end = start + num)
+    Int numSculptedKnots_ = 0;   // number of original knots in the sculpt range
+
+    // Number of unmodified knots appended to the array of new knot
+    Int numUnmodifiedKnotsBefore_ = 0; // appended before the sculpted knots
+    Int numUnmodifiedKnotsAfter_ = 0;  // appended after the sculpted knots
+
+    // Which knot among the new knots should be chosen as the knot of index 0,
+    // if the original knot that was at index 0 is not preserved during the
+    // averaging of simplification step.
+    Int newStartKnotIndex_ = 0;
+
+    // Output
     geometry::Vec2dArray newKnotPositions_;
     core::DoubleArray newKnotWidths_;
     geometry::Vec2d outSculptCursorPosition_;
-    Int newStartKnotIndex_ = 0;
 };
 
 } // namespace
