@@ -355,50 +355,6 @@ struct SculptSampling {
     Int middleSculptPointIndex = -1;
 };
 
-/// Converts between arithmetic types that may cause narrowing.
-///
-/// This is the same as `static_cast` but clarifies intent and makes it easy to
-/// search in the codebase.
-///
-// XXX Improve (SFINAE-restrict to arithmetic types?) and move to core/arithmetic.h
-//
-template<typename T, typename U>
-T narrow_cast(U x) {
-    return static_cast<T>(std::floor(x));
-}
-
-/// Rounds the given floating point `x` towards -infinity and narrow_cast it to
-/// an integer.
-///
-// XXX Add tests, SFINAE checks, and move to core/arithmetic.h
-//
-template<typename T, typename U>
-T floor_narrow_cast(U x) {
-    return static_cast<T>(std::floor(x));
-}
-
-/// Rounds the given floating point `x` towards the closest integer and narrow_cast it to
-/// an integer.
-///
-// XXX Add tests, SFINAE checks, and move to core/arithmetic.h
-//
-template<typename T, typename U>
-T round_narrow_cast(U x) {
-    return static_cast<T>(std::round(x));
-}
-
-/*
-/// Rounds the given floating point `x` towards infinity and narrow_cast it to
-/// an integer.
-///
-// XXX Add tests, SFINAE checks, and move to core/arithmetic.h
-//
-template<typename T, typename U>
-T ceil_narrow_cast(U x) {
-    return static_cast<T>(std::ceil(x));
-}
-*/
-
 // Computes a uniform sampling of the subset of the curve centered around the
 // middle sculpt point `sMsp` and extending on both sides by `radius` in
 // arclength (if possible, otherwise capped at the endpoints).
@@ -439,23 +395,23 @@ void computeSculptSampling(
         double sBeforeMsp = sMsp;
         if (radius <= sBeforeMsp) {
             // uncapped before
-            numSculptPointsBeforeMsp = narrow_cast<Int>(n);
+            numSculptPointsBeforeMsp = core::narrow_cast<Int>(n);
             cappedRadii[0] = radius;
         }
         else {
             // capped before
-            numSculptPointsBeforeMsp = floor_narrow_cast<Int>(sBeforeMsp / ds);
+            numSculptPointsBeforeMsp = core::floor_cast<Int>(sBeforeMsp / ds);
             cappedRadii[0] = sBeforeMsp;
         }
         double sAfterMsp = curveLength - sMsp;
         if (radius <= sAfterMsp) {
             // uncapped after
-            numSculptPointsAfterMsp = narrow_cast<Int>(n);
+            numSculptPointsAfterMsp = core::narrow_cast<Int>(n);
             cappedRadii[1] = radius;
         }
         else {
             // capped after
-            numSculptPointsAfterMsp = floor_narrow_cast<Int>(sAfterMsp / ds);
+            numSculptPointsAfterMsp = core::floor_cast<Int>(sAfterMsp / ds);
             cappedRadii[1] = sAfterMsp;
         }
     }
@@ -494,7 +450,7 @@ void computeSculptSampling(
             //      ds ds ds ds                   = (numBefore + numAfter + 1) * ds
             //
             double n = std::ceil(curveHalfLength / maxDs);
-            numSculptPointsBeforeMsp = narrow_cast<Int>(n);
+            numSculptPointsBeforeMsp = core::narrow_cast<Int>(n);
             numSculptPointsAfterMsp = std::max<Int>(numSculptPointsBeforeMsp - 1, 0);
             ds = curveHalfLength / n;
             outSampling.isClosed = true;
@@ -505,8 +461,8 @@ void computeSculptSampling(
             // If the curve is closed then we do not cap the radii to the input interval.
             //
             double n = std::ceil(radius / maxDs);
-            numSculptPointsBeforeMsp = narrow_cast<Int>(n);
-            numSculptPointsAfterMsp = narrow_cast<Int>(n);
+            numSculptPointsBeforeMsp = core::narrow_cast<Int>(n);
+            numSculptPointsAfterMsp = core::narrow_cast<Int>(n);
             ds = radius / n;
             cappedRadii[0] = radius;
             cappedRadii[1] = radius;
@@ -1093,7 +1049,7 @@ public:
         // no more than, say, 10x the edge length?
         //
         numInfluencingPointsPerSide_ =
-            round_narrow_cast<Int>(sculptSampling_.radius / sculptSampling_.ds);
+            core::round_cast<Int>(sculptSampling_.radius / sculptSampling_.ds);
 
         if (!sculptSampling_.isClosed) {
 
@@ -1134,7 +1090,7 @@ private:
         res.pos *= wSum;
         res.width *= wSum;
         for (Int j = 1; j < numInfluencingPointsPerSide_; ++j) {
-            double u = 1.0 - narrow_cast<double>(j) / numInfluencingPointsPerSide_;
+            double u = 1.0 - core::narrow_cast<double>(j) / numInfluencingPointsPerSide_;
             double w = cubicEaseInOut(u);
             SculptPoint sp1 = getInfluencePoint_<isSculptSamplingClosed>(i - j);
             SculptPoint sp2 = getInfluencePoint_<isSculptSamplingClosed>(i + j);
@@ -1191,8 +1147,8 @@ private:
             p = sp.pos;
             w = sp.width;
         }
-        p += repeatDelta_.pos * narrow_cast<double>(q);
-        w += repeatDelta_.width * narrow_cast<double>(q);
+        p += repeatDelta_.pos * core::narrow_cast<double>(q);
+        w += repeatDelta_.width * core::narrow_cast<double>(q);
         res.pos = p;
         res.width = w;
         return res;
@@ -1787,7 +1743,7 @@ private:
 
         // Compute mean
         if (numKnotsFound > 0) {
-            sMean = sSum / narrow_cast<double>(numKnotsFound);
+            sMean = sSum / core::narrow_cast<double>(numKnotsFound);
         }
 
         return numKnotsFound;
