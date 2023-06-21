@@ -1002,7 +1002,7 @@ FloatType nextbefore(FloatType x) {
 /// search in the codebase.
 ///
 /// If you need to convert from a floating point type to an integer type, it is
-/// recommended to `trunc_cast()` instead, which is equivalent by clarifies
+/// recommended to use `trunc_cast()` instead, which is equivalent but clarifies
 /// intent even more. If you need a different rounding behavior, see
 /// `floor_cast()`, `ceil_cast()`, and `round_cast()`. If you need checked
 /// casting, see `ifloor()`.
@@ -1020,7 +1020,7 @@ constexpr T narrow_cast(U x) noexcept {
 /// Unchecked casting (possibly narrowing) from the given floating point `x`
 /// into an integer type, using truncation behavior (rounds towards zero).
 ///
-/// This is equivalent to `static_cast<U>(x)` but clarifies intent.
+/// This is the same as `static_cast` but clarifies intent.
 ///
 /// \sa `narrow_cast()`, `floor_cast()`, `ceil_cast()`, `round_cast()`.
 ///
