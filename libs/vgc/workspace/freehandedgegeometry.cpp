@@ -24,6 +24,13 @@ namespace vgc::workspace {
 
 namespace {
 
+// cubicEaseInOut(t)
+//       ^
+//     1 |   .-
+//       |_.´
+//     0 +------> t
+//       0    1
+//
 double cubicEaseInOut(double t) {
     double t2 = t * t;
     return -2 * t * t2 + 3 * t2;
@@ -1212,7 +1219,14 @@ public:
             return false;
         };
 
-        // Step 3:
+        // Step 3a:
+        //
+        // Smooth the distances between sculpted knots, in order to prevent
+        // pairs of nearby knots that create undesirable corners.
+
+        smoothKnotDistances_(radius, strength);
+
+        // Step 3b:
         //
         // Compute new positions of original knots:
         // (a) First append unmodified knots before the sculpted knots
@@ -1224,13 +1238,9 @@ public:
         // step (b), since we perform an average of knots in case there is more
         // than one knot between two consecutive sculpt points.
 
-        newStartKnotIndex_ = 0;                                 // See step 5
-        appendUnmodifiedKnotsBefore_();                         // (a)
-        appendModifiedKnots_(strength);                         // (b)
-        appendUnmodifiedKnotsAfter_();                          // (c)
-        if (newStartKnotIndex_ == newKnotPositions_.length()) { // See step 5
-            newStartKnotIndex_ = 0;
-        }
+        appendUnmodifiedKnotsBefore_(); // (a)
+        appendModifiedKnots_(strength); // (b)
+        appendUnmodifiedKnotsAfter_();  // (c)
 
         // Step 4:
         //
@@ -1294,6 +1304,7 @@ public:
             outKnotWidths.reserve(n);
         }
 
+        newStartKnotIndex_ = newStartKnotIndex_ % newKnotPositions_.length();
         if (newStartKnotIndex_ == 0) { // Simple case: no knot rotation needed
 
             // Copy the unmodified knots before
@@ -1527,6 +1538,127 @@ private:
         sculptedKnotsEnd_ = sculptedKnotsStart_ + numSculptedKnots_;
     }
 
+    // Wrap s from [0, totalS) to [s0, s0 + totalS)
+    double getIncreasingS_(double s, double s0) {
+        if (s < s0) {
+            return s + totalS_;
+        }
+        else {
+            return s;
+        }
+    }
+
+    // Wrap s from [s0, s0 + totalS) to [0, totalS)
+    double getOriginalS_(double s) {
+        double rem = std::fmod(s, totalS_);
+        if (rem < 0) {
+            rem += totalS_;
+        }
+        return rem;
+    }
+
+    // Get the increasing-s value of the given knot and the
+    // offset between its original-s value and the returned value.
+    struct KnotIncreasingSAndOffset {
+        double s;
+        double offset;
+    };
+    KnotIncreasingSAndOffset getKnotIncreasingSAndOffset_(Int i) {
+        auto [quot, rem] = std::div(i, numKnots_);
+        if (rem < 0) {
+            quot -= 1;
+            rem += numKnots_;
+        }
+        KnotIncreasingSAndOffset res;
+        res.offset = quot * totalS_;
+        res.s = knotsS_[rem] + res.offset;
+        return res;
+    }
+
+    // Get the increasing-s value of the given knot, and also
+    // write the offset used as an output parameter
+    double getKnotIncreasingS_(Int i) {
+        KnotIncreasingSAndOffset res = getKnotIncreasingSAndOffset_(i);
+        return res.s;
+    }
+
+    // Smooth s-value based on values of neighboring s-values.
+    struct ComputeSmoothedKnotSParams {
+        double radius;
+        double strength;
+        double s0;
+        double sN;
+        double sMsp;
+    };
+    double computeSmoothedKnotS_(
+        const ComputeSmoothedKnotSParams& params,
+        double s,
+        double sBefore,
+        double sAfter) {
+
+        double d = s - params.sMsp;
+        double u = 1 - std::abs(d / params.radius);
+        u = cubicEaseInOut(core::clamp(u, 0, 1));
+        double targetS = 0.25 * (sBefore + 2 * s + sAfter);
+        double newS = s + (targetS - s) * params.strength * u;
+        newS = core::clamp(newS, params.s0, params.sN);
+        return newS;
+    }
+
+    void smoothKnotDistances_(double radius, double strength) {
+
+        ComputeSmoothedKnotSParams params;
+        params.radius = radius;
+        params.strength = strength;
+        params.s0 = sculptSampling_.sculptPoints.first().s;
+        params.sN = sculptSampling_.sculptPoints.last().s;
+        params.sMsp = mspSample_.s();
+
+        core::DoubleArray newKnotsS = knotsS_;
+
+        if (!isClosed_) {
+
+            // Prevent modifying the s-value of the first and last knot
+            Int start = (std::max)(sculptedKnotsStart_, Int{1});
+            Int end = (std::min)(sculptedKnotsEnd_, numKnots_ - 1);
+
+            // Smooth s-values based on neighboring s-values.
+            for (Int i = start; i < end; ++i) {
+                double s = knotsS_[i];
+                double sBefore = knotsS_[i - 1];
+                double sAfter = knotsS_[i + 1];
+                double newS = computeSmoothedKnotS_(params, s, sBefore, sAfter);
+                newKnotsS[i] = newS;
+            }
+        }
+        else { // isClosed
+
+            // Update values of sN and sMsp so that they are in our virtual
+            // increasing-s space instead of in the original-s space.
+            if (sculptSampling_.isClosed) {
+                // Note: before executing the line below, we have sN = s0.
+                // Therefore, getIncreasingS_(sN, s0) would return s0.
+                params.sN = params.s0 + totalS_;
+            }
+            else {
+                params.sN = getIncreasingS_(params.sN, params.s0);
+            }
+            params.sMsp = getIncreasingS_(params.sMsp, params.s0);
+
+            // Smooth increasing-s values based on neighboring increasing-s
+            // values, then write back in the original-s space
+            for (Int i = sculptedKnotsStart_; i < sculptedKnotsEnd_; ++i) {
+                auto [s, offset] = getKnotIncreasingSAndOffset_(i);
+                double sBefore = getKnotIncreasingS_(i - 1);
+                double sAfter = getKnotIncreasingS_(i + 1);
+                double newS = computeSmoothedKnotS_(params, s, sBefore, sAfter);
+                newKnotsS.getWrapped(i) = newS - offset;
+            }
+        }
+
+        swap(newKnotsS, knotsS_);
+    }
+
     void appendUnmodifiedKnotsBefore_() {
 
         bool isOverlappingStart = sculptedKnotsEnd_ > numKnots_;
@@ -1719,7 +1851,6 @@ private:
             else if (s2 < s1) {
                 hasSculptSamplingWrapped = true;
                 s2 += totalS_;
-                newStartKnotIndex_ = newKnotPositions_.length();
             }
             while (knotIndex < sculptedKnotsEnd_) {
                 Int wrappedKnotIndex = knotIndex;
@@ -1728,6 +1859,13 @@ private:
                 if (hasKnotIndexWrapped) {
                     wrappedKnotIndex = knotIndex - numKnots_;
                     sOffset = totalS_;
+                }
+                if (wrappedKnotIndex == 0) {
+                    // We are currently processing the knot that was originally
+                    // at index 0. This knot is about to be appended in the
+                    // array of new knots, so we remember this new index so
+                    // that we can later rotate it back to index 0.
+                    newStartKnotIndex_ = newKnotPositions_.length();
                 }
                 double sKnot = knotsS_[wrappedKnotIndex] + sOffset;
                 if (sKnot <= s2) {
