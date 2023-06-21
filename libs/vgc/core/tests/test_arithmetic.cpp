@@ -19,6 +19,111 @@
 
 using namespace vgc;
 
+TEST(TestArithmetic, NarrowCastDoubleToFloat) {
+    EXPECT_EQ(core::narrow_cast<float>(-2.0), -2.0f);
+    EXPECT_EQ(core::narrow_cast<float>(-1.75), -1.75f);
+    EXPECT_EQ(core::narrow_cast<float>(-1.5), -1.5f);
+    EXPECT_EQ(core::narrow_cast<float>(-1.25), -1.25f);
+    EXPECT_EQ(core::narrow_cast<float>(-1.0), -1.0f);
+    EXPECT_EQ(core::narrow_cast<float>(-0.75), -0.75f);
+    EXPECT_EQ(core::narrow_cast<float>(-0.5), -0.5f);
+    EXPECT_EQ(core::narrow_cast<float>(-0.25), -0.25f);
+    EXPECT_EQ(core::narrow_cast<float>(-0), -0.f);
+    EXPECT_EQ(core::narrow_cast<float>(0), 0.f);
+    EXPECT_EQ(core::narrow_cast<float>(0.25), 0.25f);
+    EXPECT_EQ(core::narrow_cast<float>(0.5), 0.5f);
+    EXPECT_EQ(core::narrow_cast<float>(0.75), 0.75f);
+    EXPECT_EQ(core::narrow_cast<float>(1.0), 1.0f);
+    EXPECT_EQ(core::narrow_cast<float>(1.25), 1.25f);
+    EXPECT_EQ(core::narrow_cast<float>(1.5), 1.5f);
+    EXPECT_EQ(core::narrow_cast<float>(1.75), 1.75f);
+    EXPECT_EQ(core::narrow_cast<float>(2.0), 2.0f);
+}
+
+TEST(TestArithmetic, TruncCast) {
+    EXPECT_EQ(core::trunc_cast<int>(-2.0), -2);
+    EXPECT_EQ(core::trunc_cast<int>(-1.75), -1);
+    EXPECT_EQ(core::trunc_cast<int>(-1.5), -1);
+    EXPECT_EQ(core::trunc_cast<int>(-1.25), -1);
+    EXPECT_EQ(core::trunc_cast<int>(-1.0), -1);
+    EXPECT_EQ(core::trunc_cast<int>(-0.75), 0);
+    EXPECT_EQ(core::trunc_cast<int>(-0.5), 0);
+    EXPECT_EQ(core::trunc_cast<int>(-0.25), 0);
+    EXPECT_EQ(core::trunc_cast<int>(-0.0), 0);
+    EXPECT_EQ(core::trunc_cast<int>(0.0), 0);
+    EXPECT_EQ(core::trunc_cast<int>(0.25), 0);
+    EXPECT_EQ(core::trunc_cast<int>(0.5), 0);
+    EXPECT_EQ(core::trunc_cast<int>(0.75), 0);
+    EXPECT_EQ(core::trunc_cast<int>(1.0), 1);
+    EXPECT_EQ(core::trunc_cast<int>(1.25), 1);
+    EXPECT_EQ(core::trunc_cast<int>(1.5), 1);
+    EXPECT_EQ(core::trunc_cast<int>(1.75), 1);
+    EXPECT_EQ(core::trunc_cast<int>(2.0), 2);
+}
+
+TEST(TestArithmetic, FloorCast) {
+    EXPECT_EQ(core::floor_cast<int>(-2.0), -2);
+    EXPECT_EQ(core::floor_cast<int>(-1.75), -2);
+    EXPECT_EQ(core::floor_cast<int>(-1.5), -2);
+    EXPECT_EQ(core::floor_cast<int>(-1.25), -2);
+    EXPECT_EQ(core::floor_cast<int>(-1.0), -1);
+    EXPECT_EQ(core::floor_cast<int>(-0.75), -1);
+    EXPECT_EQ(core::floor_cast<int>(-0.5), -1);
+    EXPECT_EQ(core::floor_cast<int>(-0.25), -1);
+    EXPECT_EQ(core::floor_cast<int>(-0.0), 0);
+    EXPECT_EQ(core::floor_cast<int>(0.0), 0);
+    EXPECT_EQ(core::floor_cast<int>(0.25), 0);
+    EXPECT_EQ(core::floor_cast<int>(0.5), 0);
+    EXPECT_EQ(core::floor_cast<int>(0.75), 0);
+    EXPECT_EQ(core::floor_cast<int>(1.0), 1);
+    EXPECT_EQ(core::floor_cast<int>(1.25), 1);
+    EXPECT_EQ(core::floor_cast<int>(1.5), 1);
+    EXPECT_EQ(core::floor_cast<int>(1.75), 1);
+    EXPECT_EQ(core::floor_cast<int>(2.0), 2);
+}
+
+TEST(TestArithmetic, CeilCast) {
+    EXPECT_EQ(core::ceil_cast<int>(-2.0), -2);
+    EXPECT_EQ(core::ceil_cast<int>(-1.75), -1);
+    EXPECT_EQ(core::ceil_cast<int>(-1.5), -1);
+    EXPECT_EQ(core::ceil_cast<int>(-1.25), -1);
+    EXPECT_EQ(core::ceil_cast<int>(-1.0), -1);
+    EXPECT_EQ(core::ceil_cast<int>(-0.75), 0);
+    EXPECT_EQ(core::ceil_cast<int>(-0.5), 0);
+    EXPECT_EQ(core::ceil_cast<int>(-0.25), 0);
+    EXPECT_EQ(core::ceil_cast<int>(-0.0), 0);
+    EXPECT_EQ(core::ceil_cast<int>(0.0), 0);
+    EXPECT_EQ(core::ceil_cast<int>(0.25), 1);
+    EXPECT_EQ(core::ceil_cast<int>(0.5), 1);
+    EXPECT_EQ(core::ceil_cast<int>(0.75), 1);
+    EXPECT_EQ(core::ceil_cast<int>(1.0), 1);
+    EXPECT_EQ(core::ceil_cast<int>(1.25), 2);
+    EXPECT_EQ(core::ceil_cast<int>(1.5), 2);
+    EXPECT_EQ(core::ceil_cast<int>(1.75), 2);
+    EXPECT_EQ(core::ceil_cast<int>(2.0), 2);
+}
+
+TEST(TestArithmetic, RoundCast) {
+    EXPECT_EQ(core::round_cast<int>(-2.0), -2);
+    EXPECT_EQ(core::round_cast<int>(-1.75), -2);
+    EXPECT_EQ(core::round_cast<int>(-1.5), -2);
+    EXPECT_EQ(core::round_cast<int>(-1.25), -1);
+    EXPECT_EQ(core::round_cast<int>(-1.0), -1);
+    EXPECT_EQ(core::round_cast<int>(-0.75), -1);
+    EXPECT_EQ(core::round_cast<int>(-0.5), -1);
+    EXPECT_EQ(core::round_cast<int>(-0.25), 0);
+    EXPECT_EQ(core::round_cast<int>(-0.0), 0);
+    EXPECT_EQ(core::round_cast<int>(0.0), 0);
+    EXPECT_EQ(core::round_cast<int>(0.25), 0);
+    EXPECT_EQ(core::round_cast<int>(0.5), 1);
+    EXPECT_EQ(core::round_cast<int>(0.75), 1);
+    EXPECT_EQ(core::round_cast<int>(1.0), 1);
+    EXPECT_EQ(core::round_cast<int>(1.25), 1);
+    EXPECT_EQ(core::round_cast<int>(1.5), 2);
+    EXPECT_EQ(core::round_cast<int>(1.75), 2);
+    EXPECT_EQ(core::round_cast<int>(2.0), 2);
+}
+
 TEST(TestArithmetic, IFloorAroundZeroSigned) {
     EXPECT_THROW(core::ifloor<Int8>(-129.0), core::IntegerOverflowError);
     EXPECT_THROW(core::ifloor<Int8>(-128.5), core::IntegerOverflowError);

@@ -996,6 +996,119 @@ FloatType nextbefore(FloatType x) {
     return std::nextafter(x, -tmax<FloatType>);
 }
 
+/// Unchecked casting between arithmetic types that may cause narrowing.
+///
+/// This is the same as `static_cast` but clarifies intent and makes it easy to
+/// search in the codebase.
+///
+/// If you need to convert from a floating point type to an integer type, it is
+/// recommended to `trunc_cast()` instead, which is equivalent by clarifies
+/// intent even more. If you need a different rounding behavior, see
+/// `floor_cast()`, `ceil_cast()`, and `round_cast()`. If you need checked
+/// casting, see `ifloor()`.
+///
+/// \sa `trunc_cast()`, `floor_cast()`, `ceil_cast()`, `round_cast()`, `ifloor()`.
+///
+template<
+    typename T,
+    typename U,
+    VGC_REQUIRES(std::is_arithmetic_v<T>&& std::is_arithmetic_v<U>)>
+constexpr T narrow_cast(U x) noexcept {
+    return static_cast<T>(x);
+}
+
+/// Unchecked casting (possibly narrowing) from the given floating point `x`
+/// into an integer type, using truncation behavior (rounds towards zero).
+///
+/// This is equivalent to `static_cast<U>(x)` but clarifies intent.
+///
+/// \sa `narrow_cast()`, `floor_cast()`, `ceil_cast()`, `round_cast()`.
+///
+template<
+    typename IntType,
+    typename FloatType,
+    VGC_REQUIRES(std::is_integral_v<IntType>&& std::is_floating_point_v<FloatType>)>
+constexpr IntType trunc_cast(FloatType x) noexcept {
+    return static_cast<IntType>(x);
+}
+
+/// Unchecked casting (possibly narrowing) from the given floating point `x`
+/// into an integer type, using floor behavior (rounds towards -infinity).
+///
+/// \sa `narrow_cast()`, `trunc_cast()`, `ceil_cast()`, `round_cast()`, `ifloor()`.
+///
+template<
+    typename IntType,
+    typename FloatType,
+    VGC_REQUIRES(std::is_integral_v<IntType>&& std::is_floating_point_v<FloatType>)>
+constexpr IntType floor_cast(FloatType x) noexcept {
+    if (x >= 0) {
+        return static_cast<IntType>(x);
+    }
+    else {
+        // Note: In C++23, std::floor becomes constexpr.
+        // We might then want to use the following (after performance comparison):
+        // return static_cast<IntType>(std::floor(x));
+        IntType yi = static_cast<IntType>(x);
+        FloatType y = static_cast<FloatType>(yi);
+        if (x == y) {
+            return yi;
+        }
+        else {
+            return yi - 1;
+        }
+    }
+}
+
+/// Unchecked casting (possibly narrowing) from the given floating point `x`
+/// into an integer type, using ceil behavior (rounds towards +infinity).
+///
+/// \sa `narrow_cast()`, `trunc_cast()`, `floor_cast()`, `round_cast()`.
+///
+template<
+    typename IntType,
+    typename FloatType,
+    VGC_REQUIRES(std::is_integral_v<IntType>&& std::is_floating_point_v<FloatType>)>
+constexpr IntType ceil_cast(FloatType x) noexcept {
+    if (x <= 0) {
+        return static_cast<IntType>(x);
+    }
+    else {
+        // Note: In C++23, std::ceil becomes constexpr.
+        // We might then want to use the following (after performance comparison):
+        // return static_cast<IntType>(std::ceil(x));
+        IntType yi = static_cast<IntType>(x);
+        FloatType y = static_cast<FloatType>(yi);
+        if (x == y) {
+            return yi;
+        }
+        else {
+            return yi + 1;
+        }
+    }
+}
+
+/// Unchecked casting (possibly narrowing) from the given floating point `x`
+/// into an integer type, using round behavior (rounds towards closest integer,
+/// or away from 0 if exactly at 0.5 between two integers).
+///
+/// \sa `narrow_cast()`, `trunc_cast()`, `floor_cast()`, `ceil_cast()`.
+///
+template<
+    typename IntType,
+    typename FloatType,
+    VGC_REQUIRES(std::is_integral_v<IntType>&& std::is_floating_point_v<FloatType>)>
+constexpr IntType round_cast(FloatType x) noexcept {
+    constexpr FloatType one = 1;
+    constexpr FloatType half = one / 2;
+    if (x >= 0) {
+        return static_cast<IntType>(x + half);
+    }
+    else {
+        return static_cast<IntType>(x - half);
+    }
+}
+
 /// Converts the given floating point `x` to an integer type using floor.
 ///
 /// If the given `x` is larger (resp. smaller) than the maximum (resp. minimum)
