@@ -48,6 +48,9 @@ public:
     static SelectPtr create();
 
 protected:
+    // Reimplementation of CanvasTool virtual methods
+    ui::WidgetPtr createOptionsWidget() const override;
+
     // Reimplementation of Widget virtual methods
     bool onMouseMove(ui::MouseMoveEvent* event) override;
     bool onMousePress(ui::MousePressEvent* event) override;
@@ -118,6 +121,23 @@ private:
     void finalizeDragMovedElements_(workspace::Workspace* workspace);
 
     void resetActionState_();
+
+    canvas::Canvas* connectedCanvas_ = nullptr;
+    void disconnectCanvas_();
+
+    void onCanvasChanged_();
+    VGC_SLOT(onCanvasChangedSlot_, onCanvasChanged_)
+
+    void onCanvasAboutToBeDestroyed_();
+    VGC_SLOT(onCanvasAboutToBeDestroyedSlot_, onCanvasAboutToBeDestroyed_)
+
+    void onSelectionChanged_();
+    VGC_SLOT(onSelectionChangedSlot_, onSelectionChanged_)
+
+    void onShowTransformBoxChanged_();
+    VGC_SLOT(onShowTransformBoxChangedSlot_, onShowTransformBoxChanged_)
+
+    void updateTransformBoxElements_();
 };
 
 } // namespace vgc::tools

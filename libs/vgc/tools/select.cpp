@@ -18,20 +18,48 @@
 
 #include <vgc/graphics/detail/shapeutil.h>
 #include <vgc/graphics/strings.h>
+#include <vgc/ui/boolsettingedit.h>
+#include <vgc/ui/column.h>
 #include <vgc/workspace/colors.h>
 
 #include <set>
 
 namespace vgc::tools {
 
+namespace {
+
+namespace options {
+
+ui::BoolSetting* showTransformBox() {
+    static ui::BoolSettingPtr setting = ui::BoolSetting::create(
+        ui::settings::session(), "tools.select.showTransformBox", "Transform Box", true);
+    return setting.get();
+    // Ideally, we'd want "Show Transform Box" to be the name of the command,
+    // but "Transform Box" to appear in the tool options.
+}
+
+} // namespace options
+
+} // namespace
+
 Select::Select()
     : CanvasTool() {
 
-    transformBox_ = createChild<TransformBox>();
+    canvasChanged().connect(onCanvasChangedSlot_());
+    onCanvasChanged_();
+
+    options::showTransformBox()->valueChanged().connect(onShowTransformBoxChangedSlot_());
+    onShowTransformBoxChanged_();
 }
 
 SelectPtr Select::create() {
     return SelectPtr(new Select());
+}
+
+ui::WidgetPtr Select::createOptionsWidget() const {
+    ui::WidgetPtr res = ui::Column::create();
+    res->createChild<ui::BoolSettingEdit>(options::showTransformBox());
+    return res;
 }
 
 namespace {
@@ -480,7 +508,6 @@ bool Select::onMouseRelease(ui::MouseReleaseEvent* event) {
 
     if (selectionChanged) {
         canvas->setSelection(selection);
-        transformBox_->setElements(selection);
     }
 
     resetActionState_();
@@ -545,7 +572,9 @@ void Select::onPaintDestroy(graphics::Engine* engine) {
 
 void Select::updateChildrenGeometry() {
     SuperClass::updateChildrenGeometry();
-    transformBox_->updateGeometry(rect());
+    if (transformBox_) {
+        transformBox_->updateGeometry(rect());
+    }
 }
 
 void Select::initializeDragMoveData_(
@@ -744,6 +773,62 @@ void Select::resetActionState_() {
     if (selectionRectangleGeometry_) {
         selectionRectangleGeometry_.reset();
         requestRepaint();
+    }
+}
+
+void Select::disconnectCanvas_() {
+    if (connectedCanvas_) {
+        connectedCanvas_->aboutToBeDestroyed().disconnect(
+            onCanvasAboutToBeDestroyedSlot_());
+        connectedCanvas_->selectionChanged().disconnect(onSelectionChangedSlot_());
+    }
+    // TODO: allow `oldCanvas_->disconnect(on..Slot_())` syntax?
+}
+
+void Select::onCanvasChanged_() {
+    disconnectCanvas_();
+    connectedCanvas_ = this->canvas();
+    if (connectedCanvas_) {
+        connectedCanvas_->aboutToBeDestroyed().connect(onCanvasAboutToBeDestroyedSlot_());
+        connectedCanvas_->selectionChanged().connect(onSelectionChangedSlot_());
+    }
+    onSelectionChanged_();
+}
+
+void Select::onCanvasAboutToBeDestroyed_() {
+    disconnectCanvas_();
+    onSelectionChanged_();
+}
+
+void Select::onSelectionChanged_() {
+    updateTransformBoxElements_();
+}
+
+void Select::onShowTransformBoxChanged_() {
+    if (options::showTransformBox()->value()) {
+        if (!transformBox_) {
+            transformBox_ = createChild<TransformBox>();
+            updateTransformBoxElements_();
+        }
+    }
+    else {
+        if (transformBox_) {
+            // Remove from parent and destroy
+            transformBox_->reparent(nullptr);
+            transformBox_ = nullptr;
+        }
+    }
+}
+
+void Select::updateTransformBoxElements_() {
+    if (transformBox_) {
+        canvas::Canvas* canvas = this->canvas();
+        if (canvas) {
+            transformBox_->setElements(canvas->selection());
+        }
+        else {
+            transformBox_->setElements({});
+        }
     }
 }
 

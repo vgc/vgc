@@ -82,6 +82,7 @@ ui::WidgetPtr CanvasTool::createOptionsWidget() const {
 
 void CanvasTool::onParentWidgetChanged(Widget* newParent) {
     canvas_ = dynamic_cast<canvas::Canvas*>(newParent);
+    canvasChanged().emit();
 }
 
 void CanvasTool::preMouseMove(ui::MouseMoveEvent* event) {

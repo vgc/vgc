@@ -52,9 +52,16 @@ public:
         return canvas_ ? canvas_->workspace() : nullptr;
     }
 
+    /// Returns the current canvas that this tool is operating on.
+    ///
     Canvas* canvas() const {
         return canvas_;
     }
+
+    /// This signal is emitted whenever the `canvas()` associated with this
+    /// canvas tool changed.
+    ///
+    VGC_SIGNAL(canvasChanged)
 
     /// Returns the widget that control options for this tool.
     ///
