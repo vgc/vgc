@@ -186,7 +186,6 @@ private:
     VGC_SLOT(onWorkspaceChangedSlot_, onWorkspaceChanged_);
 
     void updateFromElements_();
-    void updateBoxFromTransform_();
 
     bool isVisible_ = false;
     void hide_();
