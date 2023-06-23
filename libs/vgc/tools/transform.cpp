@@ -1246,12 +1246,12 @@ void TransformBox::computeHoverData_(canvas::Canvas* canvas) {
         bool isSmall = l < sideLengthThreshold;
         isTooSmallForBox_ &= isSmall;
         sideVectors_[i] = v;
-        sideLengths_[i] = l;
+        sideLengths_[i] = core::narrow_cast<float>(l);
         sideIsSmall_[i] = isSmall;
     }
 
     hoverTestEpsilon_ =
-        10e-6 * (sideLengths_[0] + sideLengths_[1] + sideLengths_[2] + sideLengths_[3]);
+        10e-6f * (sideLengths_[0] + sideLengths_[1] + sideLengths_[2] + sideLengths_[3]);
 
     // Compute sideScaleDirs_
     for (Int i = 0; i < 4; ++i) {
