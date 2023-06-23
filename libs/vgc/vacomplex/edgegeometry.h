@@ -187,6 +187,10 @@ public:
     ///
     virtual void translate(const geometry::Vec2d& delta) = 0;
 
+    /// Expects transformation in object space.
+    ///
+    virtual void transform(const geometry::Mat3d& transformation) = 0;
+
     /// Expects positions in object space.
     ///
     virtual void snap(

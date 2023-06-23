@@ -16,6 +16,7 @@
 
 #include <vgc/tools/select.h>
 
+#include <vgc/graphics/detail/shapeutil.h>
 #include <vgc/graphics/strings.h>
 #include <vgc/workspace/colors.h>
 
@@ -25,6 +26,8 @@ namespace vgc::tools {
 
 Select::Select()
     : CanvasTool() {
+
+    transformBox_ = createChild<TransformBox>();
 }
 
 SelectPtr Select::create() {
@@ -477,6 +480,7 @@ bool Select::onMouseRelease(ui::MouseReleaseEvent* event) {
 
     if (selectionChanged) {
         canvas->setSelection(selection);
+        transformBox_->setElements(selection);
     }
 
     resetActionState_();
@@ -509,10 +513,6 @@ void Select::onPaintDraw(graphics::Engine* engine, ui::PaintOptions options) {
 
     if (isDragging_ && dragAction_ == DragAction::Select) {
         if (!selectionRectangleGeometry_) {
-            selectionRectangleGeometry_ = engine->createDynamicTriangleStripView(
-                BuiltinGeometryLayout::XYDxDy_iXYRotWRGBA);
-            const BufferPtr& vertexBuffer = selectionRectangleGeometry_->vertexBuffer(0);
-
             geometry::Mat4d invView = canvas->camera().viewMatrix().inverted();
             Vec2f a(invView.transformPointAffine(Vec2d(cursorPositionAtPress_)));
             Vec2f b(invView.transformPointAffine(Vec2d(cursorPosition_)));
@@ -520,39 +520,11 @@ void Select::onPaintDraw(graphics::Engine* engine, ui::PaintOptions options) {
             rect.uniteWith(a);
             rect.uniteWith(b);
 
-            // XYDxDy
-            //
-            //   8/0┄┄┄┄┄┄2
-            //    ┆\     /┆
-            //    ┆9/1┄┄3 ┆
-            //    ┆ ┆   ┆ ┆
-            //    ┆ 7┄┄┄5 ┆
-            //    ┆/     \┆
-            //    6┄┄┄┄┄┄┄4
-            //
-            float rxMin = rect.xMin();
-            float ryMin = rect.yMin();
-            float rxMax = rect.xMax();
-            float ryMax = rect.yMax();
-            geometry::Vec4fArray vertices = {
-                {rxMin, ryMin, 1, 1},
-                {rxMin, ryMin, 0, 0},
-                {rxMax, ryMin, -1, 1},
-                {rxMax, ryMin, 0, 0},
-                {rxMax, ryMax, -1, -1},
-                {rxMax, ryMax, 0, 0},
-                {rxMin, ryMax, 1, -1},
-                {rxMin, ryMax, 0, 0},
-                {rxMin, ryMin, 1, 1},
-                {rxMin, ryMin, 0, 0}};
-            engine->updateBufferData(vertexBuffer, std::move(vertices));
+            const core::Color& color = workspace::colors::selection;
 
-            // XYRotWRGBA
-            const core::Color& c = workspace::colors::selection;
-            core::FloatArray instanceData({0, 0, 1.f, 2.f, c.r(), c.g(), c.b(), c.a()});
-
-            engine->updateBufferData(
-                selectionRectangleGeometry_->vertexBuffer(1), std::move(instanceData));
+            selectionRectangleGeometry_ =
+                graphics::detail::createRectangleWithScreenSpaceThickness(
+                    engine, rect, 2.f, color);
         }
 
         geometry::Mat4f currentView(engine->viewMatrix());
@@ -569,6 +541,11 @@ void Select::onPaintDraw(graphics::Engine* engine, ui::PaintOptions options) {
 void Select::onPaintDestroy(graphics::Engine* engine) {
     SuperClass::onPaintDestroy(engine);
     selectionRectangleGeometry_.reset();
+}
+
+void Select::updateChildrenGeometry() {
+    SuperClass::updateChildrenGeometry();
+    transformBox_->updateGeometry(rect());
 }
 
 void Select::initializeDragMoveData_(

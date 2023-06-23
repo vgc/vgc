@@ -256,6 +256,7 @@ std::optional<core::StringId> VacKeyEdge::domTagName() const {
 
 geometry::Rect2d VacKeyEdge::boundingBox(core::AnimTime t) const {
     if (frameData_.time() == t) {
+        const_cast<VacKeyEdge*>(this)->computePreJoinGeometry_();
         return frameData_.bbox_;
     }
     return geometry::Rect2d::empty;
@@ -1014,7 +1015,12 @@ bool VacKeyEdge::computeStrokeMesh_() {
                         centerU,
                         sign * sideSample.centerSTV[2]));
                 // indices in strip
-                stroke.appendIndicesUnchecked({idx, idx + 1});
+                if (side == 0) {
+                    stroke.appendIndicesUnchecked({idx + 1, idx});
+                }
+                else {
+                    stroke.appendIndicesUnchecked({idx, idx + 1});
+                }
             }
             stroke.appendPrimitiveRestartIndex();
         }
@@ -1446,7 +1452,12 @@ bool VacKeyEdge::computeStrokeMesh_() {
                         centerU,
                         sign * sideSample.centerSTV[2]));
                 // indices in strip
-                stroke.appendIndicesUnchecked({idx, idx + 1});
+                if (side == 0) {
+                    stroke.appendIndicesUnchecked({idx + 1, idx});
+                }
+                else {
+                    stroke.appendIndicesUnchecked({idx, idx + 1});
+                }
             }
             stroke.appendPrimitiveRestartIndex();
         }

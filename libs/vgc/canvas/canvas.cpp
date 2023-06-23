@@ -623,6 +623,8 @@ void Canvas::onPaintCreate(graphics::Engine* engine) {
     using namespace graphics;
 
     RasterizerStateCreateInfo createInfo = {};
+    createInfo.setCullMode(graphics::CullMode::Back);
+    createInfo.setFrontCounterClockwise_(true);
     fillRS_ = engine->createRasterizerState(createInfo);
     createInfo.setFillMode(FillMode::Wireframe);
     wireframeRS_ = engine->createRasterizerState(createInfo);

@@ -54,6 +54,8 @@ vgc_add_library(graphics
 
         d3d11/d3d11engine.cpp
 
+        detail/shapeutil.cpp
+
     RESOURCE_FILES
         fonts/SourceSansPro/LICENSE.md
         fonts/SourceSansPro/TTF/SourceSansPro-Regular.ttf # Kept for test_font.py

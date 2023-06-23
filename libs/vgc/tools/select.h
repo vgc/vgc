@@ -22,6 +22,7 @@
 #include <vgc/core/id.h>
 #include <vgc/geometry/vec2f.h>
 #include <vgc/tools/api.h>
+#include <vgc/tools/transform.h>
 #include <vgc/vacomplex/edgegeometry.h>
 
 namespace vgc::tools {
@@ -56,6 +57,7 @@ protected:
     void onPaintCreate(graphics::Engine* engine) override;
     void onPaintDraw(graphics::Engine* engine, ui::PaintOptions options) override;
     void onPaintDestroy(graphics::Engine* engine) override;
+    void updateChildrenGeometry() override;
 
 private:
     enum class SelectionMode {
@@ -86,6 +88,7 @@ private:
     core::Id lastDeselectedId_ = -1;
     graphics::GeometryViewPtr selectionRectangleGeometry_;
     geometry::Vec2d deltaInWorkspace_ = {};
+    TransformBoxPtr transformBox_ = {};
 
     // drag-move data
     struct KeyVertexDragData {

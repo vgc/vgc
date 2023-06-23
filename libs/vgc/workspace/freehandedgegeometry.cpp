@@ -217,8 +217,8 @@ void FreehandEdgeGeometry::finishEdit() {
         widths_ = core::DoubleArray();
         originalArclengths_.clear();
         originalArclengths_.shrinkToFit();
-        dirtyEdgeSampling();
         isBeingEdited_ = false;
+        dirtyEdgeSampling();
     }
 }
 
@@ -228,8 +228,8 @@ void FreehandEdgeGeometry::abortEdit() {
         widths_ = core::DoubleArray();
         originalArclengths_.clear();
         originalArclengths_.shrinkToFit();
-        dirtyEdgeSampling();
         isBeingEdited_ = false;
+        dirtyEdgeSampling();
     }
 }
 
@@ -238,6 +238,20 @@ void FreehandEdgeGeometry::translate(const geometry::Vec2d& delta) {
     points_ = points;
     for (geometry::Vec2d& p : points_) {
         p += delta;
+    }
+    if (!isBeingEdited_) {
+        sharedConstPoints_ = SharedConstPoints(std::move(points_));
+        points_ = geometry::Vec2dArray();
+    }
+    originalArclengths_.clear();
+    dirtyEdgeSampling();
+}
+
+void FreehandEdgeGeometry::transform(const geometry::Mat3d& transformation) {
+    const geometry::Vec2dArray& points = this->points();
+    points_ = points;
+    for (geometry::Vec2d& p : points_) {
+        p = transformation.transformPoint(p);
     }
     if (!isBeingEdited_) {
         sharedConstPoints_ = SharedConstPoints(std::move(points_));
