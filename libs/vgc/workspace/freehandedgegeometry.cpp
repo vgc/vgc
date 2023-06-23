@@ -358,6 +358,8 @@ struct SculptSampling {
     // distance between sculpt points that are after the middle sculpt point
     double ds1 = 0;
     double radius = 0;
+    // s of the middle sculpt point in the sampled curve.
+    double sMsp = 0;
     // is sculpt interval closed ?
     bool isClosed = false;
     // is sculpt interval across the join ?
@@ -608,6 +610,7 @@ void computeSculptSampling(
     outSampling.ds0 = ds0;
     outSampling.ds1 = ds1;
     outSampling.radius = radius;
+    outSampling.sMsp = sMsp;
 }
 
 [[maybe_unused]] Int filterSculptPointsWidthStep(
@@ -799,6 +802,7 @@ geometry::Vec2d FreehandEdgeGeometry::sculptGrab(
 
     SculptSampling sculptSampling = {};
     computeSculptSampling(sculptSampling, samples, sMsp, radius, maxDs, isClosed, false);
+    sMsp = sculptSampling.sMsp;
 
     core::Array<SculptPoint>& sculptPoints = sculptSampling.sculptPoints;
 
@@ -1446,14 +1450,14 @@ private:
         // Compute middle sculpt point info (closest point).
         Int mspSegmentIndex = d.segmentIndex();
         double mspSegmentParameter = d.segmentParameter();
-        mspSample_ = samples_[mspSegmentIndex];
+        geometry::CurveSample mspSample = samples_[mspSegmentIndex];
         if (mspSegmentParameter > 0 && mspSegmentIndex + 1 < samples_.length()) {
             const geometry::CurveSample& s2 = samples_[mspSegmentIndex + 1];
-            mspSample_ = geometry::lerp(mspSample_, s2, mspSegmentParameter);
+            mspSample = geometry::lerp(mspSample, s2, mspSegmentParameter);
         }
 
         computeSculptSampling(
-            sculptSampling_, samples_, mspSample_.s(), radius, maxDs, isClosed_, true);
+            sculptSampling_, samples_, mspSample.s(), radius, maxDs, isClosed_, true);
 
         core::Array<SculptPoint>& sculptPoints = sculptSampling_.sculptPoints;
 
@@ -1636,7 +1640,7 @@ private:
         params.strength = strength;
         params.s0 = sculptSampling_.sculptPoints.first().s;
         params.sN = sculptSampling_.sculptPoints.last().s;
-        params.sMsp = mspSample_.s();
+        params.sMsp = sculptSampling_.sMsp;
 
         core::DoubleArray newKnotsS = knotsS_;
 
@@ -1922,7 +1926,6 @@ private:
     geometry::CurveSampleArray samples_;
     core::Array<double> knotsS_;
     double totalS_ = 0;
-    geometry::CurveSample mspSample_;
 
     // Computed sculpt sampling
     SculptSampling sculptSampling_;
