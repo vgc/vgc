@@ -1143,9 +1143,6 @@ void TransformBox::onPaintDraw(graphics::Engine* engine, ui::PaintOptions option
     core::Color white(1, 1, 1, 1);
 
     for (Int i = 0; i < 4; ++i) {
-        if (!isCornerManipulatable_[i]) {
-            continue;
-        }
         Vec2f p = corners[i];
         Vec2f d0 = transformedSideDirections[(i - 1 + 4) % 4];
         Vec2f d1 = transformedSideDirections[i];
@@ -1206,10 +1203,6 @@ void TransformBox::onPaintDraw(graphics::Engine* engine, ui::PaintOptions option
     engine->draw(rectangleGeometry_);
 
     for (Int i = 0; i < 4; ++i) {
-        //if (isCornerManipulatable_[i]) {
-        //    engine->drawInstanced(cornerGeometry_[i]);
-        //}
-        // Always draw corners for now.
         engine->drawInstanced(cornerGeometry_[i]);
     }
 
