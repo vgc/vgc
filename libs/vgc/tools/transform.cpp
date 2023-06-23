@@ -1074,6 +1074,9 @@ void TransformBox::onPaintDraw(graphics::Engine* engine, ui::PaintOptions option
         return;
     }
 
+    // TODO: also check the bounding-box view when per-element/group transforms are implemented.
+    bool hasRotation = (cameraMatrix * geometry::Vec4d(0, 1, 0, 0)).x() != 0
+                       || (cameraMatrix * geometry::Vec4d(1, 0, 0, 0)).y() != 0;
     std::array<Vec2f, 4> corners;
     Vec2f pivot;
     if (isTransformActionOngoing_) {
@@ -1085,13 +1088,15 @@ void TransformBox::onPaintDraw(graphics::Engine* engine, ui::PaintOptions option
             Vec2d p = transformActionMatrix_.transformPoint(pivotPoint_);
             pivot = Vec2f(cameraMatrix.transformPoint(p));
         }
+        hasRotation |= (transformActionMatrix_ * geometry::Vec3d(0, 1, 0)).x() != 0
+                       || (transformActionMatrix_ * geometry::Vec3d(1, 0, 0)).y() != 0;
     }
     else {
         corners = corners_;
         pivot = Vec2f(cameraMatrix.transformPoint(pivotPoint_));
     }
 
-    if (doHinting) {
+    if (doHinting && !hasRotation) {
         for (Int i = 0; i < 4; ++i) {
             Vec2f& p = corners[i];
             p[0] = std::round(p[0]);
