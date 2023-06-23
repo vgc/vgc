@@ -360,11 +360,18 @@ struct SculptSampling {
     double radius = 0;
     // s of the middle sculpt point in the sampled curve.
     double sMiddle = 0;
+    // index of the sculpt point closest to sMiddle
+    Int closestSculptPointIndex = -1;
     // is sculpt interval closed ?
     bool isClosed = false;
-    // is sculpt interval across the join ?
+    // is sculpt interval touching the start knot?
+    // For closed curves, this is the same as isRadiusOverlappingEnd.
+    // For open curves, this means that the "before radius" was capped.
     bool isRadiusOverlappingStart = false;
-    Int closestSculptPointIndex = -1;
+    // is sculpt interval touching the end knot?
+    // For closed curve, this is the same as isRadiusOverlappingEnd.
+    // For open curves, this means that the "after radius" was capped.
+    bool isRadiusOverlappingEnd = false;
 };
 
 // Computes a uniform sampling of the subset of the curve centered around the
@@ -388,6 +395,7 @@ void computeSculptSampling(
 
     Int numSamples = samples.length();
     VGC_ASSERT(numSamples > 0);
+    VGC_ASSERT(samples.first().s() == 0);
 
     // First, we determine how many sculpt points we want (and the
     // corresponding ds), based on the curve length, the location of the middle
@@ -398,7 +406,7 @@ void computeSculptSampling(
     geometry::Vec2d cappedRadii = {};
     double ds0 = 0;
     double ds1 = 0;
-    double curveLength = samples.last().s();
+    double curveLength = samples.last().s(); // XXX substract samples.first().s()?
     double sMsp = sMiddle;
     if (!isClosed) {
         // Compute ds such that it is no larger than maxDs, and such that radius is
@@ -407,27 +415,31 @@ void computeSculptSampling(
         //
         double n = std::ceil(radius / maxDs);
         double ds = radius / n;
-        double sBeforeMsp = sMiddle;
-        if (radius <= sBeforeMsp) {
+        double sBeforeMsp = sMiddle; // XXX substract samples.first().s()?
+        if (radius < sBeforeMsp) {
             // uncapped before
             numSculptPointsBeforeMsp = core::narrow_cast<Int>(n);
             cappedRadii[0] = radius;
+            outSampling.isRadiusOverlappingStart = false;
         }
         else {
             // capped before
             numSculptPointsBeforeMsp = core::floor_cast<Int>(sBeforeMsp / ds);
             cappedRadii[0] = sBeforeMsp;
+            outSampling.isRadiusOverlappingStart = true;
         }
         double sAfterMsp = curveLength - sMiddle;
-        if (radius <= sAfterMsp) {
+        if (radius < sAfterMsp) {
             // uncapped after
             numSculptPointsAfterMsp = core::narrow_cast<Int>(n);
             cappedRadii[1] = radius;
+            outSampling.isRadiusOverlappingEnd = false;
         }
         else {
             // capped after
             numSculptPointsAfterMsp = core::floor_cast<Int>(sAfterMsp / ds);
             cappedRadii[1] = sAfterMsp;
+            outSampling.isRadiusOverlappingEnd = true;
         }
 
         if (allowHavingNoSculptPointAtSMiddleToKeepDsUniform) {
@@ -482,6 +494,8 @@ void computeSculptSampling(
             ds0 = curveHalfLength / n;
             ds1 = ds0;
             outSampling.isClosed = true;
+            outSampling.isRadiusOverlappingStart = true;
+            outSampling.isRadiusOverlappingEnd = true;
             cappedRadii[0] = curveHalfLength;
             cappedRadii[1] = curveHalfLength;
         }
@@ -495,9 +509,14 @@ void computeSculptSampling(
             ds1 = ds0;
             cappedRadii[0] = radius;
             cappedRadii[1] = radius;
-            // Find out if interval overlaps the start point.
-            if (sMiddle - radius < 0 || sMiddle + radius > curveLength) {
+            // Find out if interval overlaps the start (=end) point.
+            if (sMiddle - radius <= 0 || sMiddle + radius >= curveLength) {
                 outSampling.isRadiusOverlappingStart = true;
+                outSampling.isRadiusOverlappingEnd = true;
+            }
+            else {
+                outSampling.isRadiusOverlappingStart = false;
+                outSampling.isRadiusOverlappingEnd = false;
             }
         }
     }
@@ -520,9 +539,12 @@ void computeSculptSampling(
             sculptPointSOffset = curveLength;
         }
         double nextSculptPointS = sculptPointSOffset + sMsp + spIndex * ds0;
-        if (nextSculptPointS < 0) { // s of first sample is 0.
-            // Fix potential floating point error that made it overshoot the start of the curve.
-            nextSculptPointS = 0;
+        bool isOpenAndOverlappingStart =
+            !isClosed && outSampling.isRadiusOverlappingStart;
+        if (nextSculptPointS < 0 || isOpenAndOverlappingStart) {
+            // Fix potential floating point error that made it overshoot or
+            // undershoot the start of the curve.
+            nextSculptPointS = samples.first().s(); // = 0
         }
 
         const Int maxIter = isClosed ? 2 : 1; // If the curve is closed we allow 2 passes.
@@ -557,9 +579,12 @@ void computeSculptSampling(
                             }
                             else { // spIndex == spEndIndex - 1
                                 if (!isClosed || iter == 1) {
-                                    if (nextSculptPointS > samples.last().s()) {
+                                    bool isOpenAndOverlappingEnd =
+                                        !isClosed && outSampling.isRadiusOverlappingEnd;
+                                    if (nextSculptPointS > samples.last().s()
+                                        || isOpenAndOverlappingEnd) {
                                         // Fix potential floating point error that made it
-                                        // overshoot the end of the curve.
+                                        // overshoot or undershoot the end of the curve.
                                         nextSculptPointS = samples.last().s();
                                     }
                                 }
@@ -1510,22 +1535,18 @@ private:
         double s0 = sculptSampling_.sculptPoints.first().s;
         double sN = sculptSampling_.sculptPoints.last().s;
 
-        // Search index of first knot after s0.
+        // Search index of first knot at or after s0, that is, the first
+        // sculpted knot.
         //
-        // In case of open curves, we exclude the first knot as it cannot move.
+        // We want the invariant: s0 <= knotS_[i0] (if i0 < numKnots_)
         //
-        // XXX TODO: Actually allow the first and last knot of open curves to
-        // be modified. Indeed, even though the position cannot change, we want
-        // to be able to modify its width, otherwise a fully-smoothed open
-        // curve becomes a straight line whose start/end width are the original
-        // start/end width, instead of being the average width.
+        // In case of open curves, if the radius overlaps the start knot then
+        // we get i0 = 0, since we have both s0 = 0 (guaranteed by
+        // computeSculptSampling()) and knotsS_[0] = 0 (guaranteed by
+        // initCurveSampling_()).
         //
-        // In case of closed curves, we exclude the first knot as we prefer to
-        // use the equivalent index i0 = numKnots_ anyway (it makes the
-        // looping arithmetic easier).
-        //
-        Int i0 = 1;
-        while (i0 < numKnots_ && knotsS_[i0] <= s0) {
+        Int i0 = 0;
+        while (i0 < numKnots_ && knotsS_[i0] < s0) { // Important: `<` not `<=`
             ++i0;
         }
         sculptedKnotsStart_ = i0;
@@ -1534,13 +1555,22 @@ private:
             numSculptedKnots_ = numKnots_;
         }
         else {
-            // Search index of first knot after sN.
+
+            // Search index of first knot strictly after sN, that is, the first
+            // non-sculpted knot.
             //
-            // In case of open curves, we exclude the last knot as it cannot move.
+            // We want the invariant: knotS_[iN] <= sN (if iN < numKnots_)
             //
-            Int iN = isClosed_ ? 1 : i0;
-            Int iEnd = isClosed_ ? numKnots_ : numKnots_ - 1;
-            while (iN < iEnd && knotsS_[iN] <= sN) {
+            // For closed curves, note that if we are here then we cannot have
+            // s0 == sN, since we would have sculptSampling_.isClosed, which is
+            // already handled above.
+            //
+            // In case of open curves, if the radius overlaps the end knot then
+            // we get iN = numKnots_, since we have sN = knotsS_.last(), and
+            // knotsS_[i] <= knotsS_.last() for all i.
+            //
+            Int iN = isClosed_ ? 0 : i0;
+            while (iN < numKnots_ && knotsS_[iN] <= sN) { // Important: `<=` not `<`
                 ++iN;
             }
 
