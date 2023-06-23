@@ -16,7 +16,6 @@
 
 #include <vgc/tools/transform.h>
 
-#include <filesystem>
 #include <set>
 
 #include <QBitmap>
