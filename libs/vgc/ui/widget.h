@@ -1259,6 +1259,14 @@ public:
         return action.get();
     }
 
+    /// Removes the given `action` from the list of actions of this widget.
+    ///
+    void removeAction(ui::Action* action);
+
+    /// Clears the list of actions of this widget.
+    ///
+    void clearActions();
+
     /// Creates an action of type `ActionType::Trigger`, adds it to this
     /// widget, and returns the action.
     ///

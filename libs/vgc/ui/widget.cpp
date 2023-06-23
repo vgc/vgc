@@ -1897,6 +1897,18 @@ bool Widget::onKeyRelease(KeyReleaseEvent*) {
     return false;
 }
 
+void Widget::removeAction(ui::Action* action) {
+    actions_->remove(action);
+}
+
+void Widget::clearActions() {
+    ui::Action* child = actions_->first();
+    while (child) {
+        actions_->remove(child);
+        child = actions_->first();
+    }
+}
+
 void Widget::keyEvent_(PropagatedKeyEvent* event, bool isKeyPress) {
 
     // User-defined capture phase handler.
