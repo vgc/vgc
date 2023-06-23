@@ -302,6 +302,11 @@ public:
         // Compute delta in canvas space between cursor and manipulation point.
         cursorManipDelta_ =
             cameraMatrix.transformPoint(originalManipPoint_) - cursorPositionInCanvas;
+
+        geometry::Vec2d oppositeManipPointInCanvas =
+            cameraMatrix.transformPoint(oppositeManipPoint_);
+        cursorManipAngleStart_ =
+            (cursorPositionInCanvas - oppositeManipPointInCanvas).angle();
     }
 
     void onMouseDragMove(ui::MouseEvent* event) override {
@@ -327,11 +332,11 @@ public:
         const geometry::Mat4d& cameraMatrix = canvas->camera().viewMatrix();
         geometry::Mat4d invCameraMatrix = cameraMatrix.inverted();
         geometry::Vec2d cursorPositionInCanvas(event->position());
-        geometry::Vec2d cursorPosition =
-            invCameraMatrix.transformPoint(cursorPositionInCanvas + cursorManipDelta_);
 
         switch (transformType_) {
         case detail::TransformDragActionType::Scale: {
+            geometry::Vec2d cursorPosition = invCameraMatrix.transformPoint(
+                cursorPositionInCanvas + cursorManipDelta_);
             transform.translate(oppositeManipPoint_);
             geometry::Vec2d d0 = (originalManipPoint_ - oppositeManipPoint_);
             geometry::Vec2d d1 = (cursorPosition - oppositeManipPoint_);
@@ -355,9 +360,16 @@ public:
         }
         case detail::TransformDragActionType::Rotate: {
             transform.translate(oppositeManipPoint_);
-            geometry::Vec2d d0 = (originalManipPoint_ - oppositeManipPoint_);
-            geometry::Vec2d d1 = (cursorPosition - oppositeManipPoint_);
-            double angle = d0.angle(d1);
+
+            geometry::Vec2d oppositeManipPointInCanvas =
+                cameraMatrix.transformPoint(oppositeManipPoint_);
+            double cursorManipAngleNow =
+                (cursorPositionInCanvas - oppositeManipPointInCanvas).angle();
+
+            double angle = cursorManipAngleNow - cursorManipAngleStart_;
+
+            box_->cursorChanger_.set(rotationCursor(cursorManipAngleNow));
+
             transform.rotate(angle);
             transform.translate(-oppositeManipPoint_);
             break;
@@ -432,6 +444,7 @@ public:
     core::UndoGroup* undoGroup_ = nullptr;
 
     geometry::Vec2d cursorManipDelta_;
+    double cursorManipAngleStart_;
     geometry::Vec2d originalManipPoint_;
     geometry::Vec2d oppositeManipPoint_;
 
