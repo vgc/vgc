@@ -121,15 +121,15 @@ VGC_UI_DEFINE_MOUSE_DRAG_COMMAND( //
 namespace {
 
 // Returns the file path of a cursor svg file.
-std::filesystem::path cursorSvgPath_(const std::string& name) {
-    return std::filesystem::path(core::resourcePath("tools/cursors/" + name));
+std::string cursorSvgPath_(const std::string& name) {
+    return core::resourcePath("tools/cursors/" + name);
 }
 
 void drawScalingCursor(QPainter& painter, double angle) {
     painter.translate(16, 16);
     qreal angleDeg = angle / core::pi * 180.0;
     painter.rotate(angleDeg);
-    QString fpath(cursorSvgPath_("scaling.svg").string().c_str());
+    QString fpath(cursorSvgPath_("scaling.svg").c_str());
     QSvgRenderer* ren = new QSvgRenderer(fpath);
     ren->render(&painter, QRectF(-16, -16, 32, 32));
 }
@@ -138,7 +138,7 @@ void drawRotationCursor(QPainter& painter, double angle) {
     painter.translate(16, 16);
     qreal angleDeg = angle / core::pi * 180.0;
     painter.rotate(angleDeg + 90.0);
-    QString fpath(cursorSvgPath_("rotation.svg").string().c_str());
+    QString fpath(cursorSvgPath_("rotation.svg").c_str());
     QSvgRenderer* ren = new QSvgRenderer(fpath);
     ren->render(&painter, QRectF(-16, -16, 32, 32));
 }
@@ -911,7 +911,6 @@ void TransformBox::onMouseHover(ui::MouseHoverEvent* event) {
             setDragActions_(detail::TransformDragActionType::Scale, manipIndex);
             cursorChanger_.set(scalingCursor(cn[i].angle()));
             // Drag action found.
-            VGC_DEBUG_TMP("Corner Scale {}", i);
             return;
         }
         isInCornerScalingManipRadius[i] = isInScalingManipRadius;
@@ -937,7 +936,6 @@ void TransformBox::onMouseHover(ui::MouseHoverEvent* event) {
         Int manipIndex = i * 2 + 1;
         setDragActions_(detail::TransformDragActionType::Scale, manipIndex);
         cursorChanger_.set(scalingCursor(sideScaleDirs_[i].angle()));
-        VGC_DEBUG_TMP("Side Scale {}", i);
         // Drag action found.
         return;
     }
@@ -957,7 +955,6 @@ void TransformBox::onMouseHover(ui::MouseHoverEvent* event) {
         Int manipIndex = i * 2 + 1;
         setDragActions_(detail::TransformDragActionType::Scale, manipIndex);
         cursorChanger_.set(scalingCursor(sideScaleDirs_[i].angle()));
-        VGC_DEBUG_TMP("Side Scale {}", i);
         // Drag action found.
         return;
     }
@@ -978,7 +975,6 @@ void TransformBox::onMouseHover(ui::MouseHoverEvent* event) {
             setDragActions_(detail::TransformDragActionType::Rotate, manipIndex);
             cursorChanger_.set(rotationCursor(cn[i].angle()));
             // Drag action found.
-            VGC_DEBUG_TMP("Corner Rotate {}", i);
             return;
         }
     }
