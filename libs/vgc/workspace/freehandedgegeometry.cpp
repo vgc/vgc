@@ -543,8 +543,8 @@ void computeSculptSampling(
                         double u = 1.0 - t;
                         geometry::Vec2d p = u * sa1->position() + t * sa2->position();
                         double w = (u * sa1->halfwidth(0) + t * sa2->halfwidth(0)) * 2.0;
-                        double d = nextSculptPointS - sMiddle;
-                        sculptPoints.emplaceLast(p, w, d, nextSculptPointS);
+                        double d_ = nextSculptPointS - sMiddle;
+                        sculptPoints.emplaceLast(p, w, d_, nextSculptPointS);
                         // prepare next
                         ++spIndex;
                         double sRel = spIndex < 0 ? spIndex * ds0 : spIndex * ds1;
