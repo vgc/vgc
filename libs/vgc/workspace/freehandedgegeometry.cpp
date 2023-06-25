@@ -353,35 +353,49 @@ struct SculptSampling {
     core::Array<SculptPoint> sculptPoints;
     // sampling boundaries in arclength from central sculpt point.
     geometry::Vec2d cappedRadii = {};
-    double ds = 0;
+    // distance between sculpt points that are before the middle sculpt point
+    double ds0 = 0;
+    // distance between sculpt points that are after the middle sculpt point
+    double ds1 = 0;
     double radius = 0;
+    // s of the middle sculpt point in the sampled curve.
+    double sMiddle = 0;
+    // index of the sculpt point closest to sMiddle
+    Int closestSculptPointIndex = -1;
     // is sculpt interval closed ?
     bool isClosed = false;
-    // is sculpt interval across the join ?
+    // is sculpt interval touching the start knot?
+    // For closed curves, this is the same as isRadiusOverlappingEnd.
+    // For open curves, this means that the "before radius" was capped.
     bool isRadiusOverlappingStart = false;
-    Int middleSculptPointIndex = -1;
+    // is sculpt interval touching the end knot?
+    // For closed curve, this is the same as isRadiusOverlappingEnd.
+    // For open curves, this means that the "after radius" was capped.
+    bool isRadiusOverlappingEnd = false;
 };
 
 // Computes a uniform sampling of the subset of the curve centered around the
-// middle sculpt point `sMsp` and extending on both sides by `radius` in
+// closest curve point of s `sMiddle` and extending on both sides by `radius` in
 // arclength (if possible, otherwise capped at the endpoints).
 //
 // Assumes:
 // - radius > 0
-// - sMsp is in [samples.first.s(), samples.last.s()].
+// - sMiddle is in [samples.first.s(), samples.last.s()].
 //
 void computeSculptSampling(
     SculptSampling& outSampling,
     geometry::CurveSampleArray& samples,
-    double sMsp,
+    double sMiddle,
     double radius,
     double maxDs,
-    bool isClosed) {
+    bool isClosed,
+    bool allowHavingNoSculptPointAtSMiddleToKeepDsUniform) {
 
     core::Array<SculptPoint>& sculptPoints = outSampling.sculptPoints;
 
     Int numSamples = samples.length();
     VGC_ASSERT(numSamples > 0);
+    VGC_ASSERT(samples.first().s() == 0);
 
     // First, we determine how many sculpt points we want (and the
     // corresponding ds), based on the curve length, the location of the middle
@@ -390,36 +404,54 @@ void computeSculptSampling(
     Int numSculptPointsBeforeMsp = 0;
     Int numSculptPointsAfterMsp = 0;
     geometry::Vec2d cappedRadii = {};
-    double ds = 0;
-    double curveLength = samples.last().s();
+    double ds0 = 0;
+    double ds1 = 0;
+    double curveLength = samples.last().s(); // XXX substract samples.first().s()?
+    double sMsp = sMiddle;
     if (!isClosed) {
         // Compute ds such that it is no larger than maxDs, and such that radius is
         // a multiple of ds (if "uncapped", that is, if the radius doesn't
         // extend further than one of the endpoints of the curve).
         //
         double n = std::ceil(radius / maxDs);
-        ds = radius / n;
-        double sBeforeMsp = sMsp;
-        if (radius <= sBeforeMsp) {
+        double ds = radius / n;
+        double sBeforeMsp = sMiddle; // XXX substract samples.first().s()?
+        if (radius < sBeforeMsp) {
             // uncapped before
             numSculptPointsBeforeMsp = core::narrow_cast<Int>(n);
             cappedRadii[0] = radius;
+            outSampling.isRadiusOverlappingStart = false;
         }
         else {
             // capped before
             numSculptPointsBeforeMsp = core::floor_cast<Int>(sBeforeMsp / ds);
             cappedRadii[0] = sBeforeMsp;
+            outSampling.isRadiusOverlappingStart = true;
         }
-        double sAfterMsp = curveLength - sMsp;
-        if (radius <= sAfterMsp) {
+        double sAfterMsp = curveLength - sMiddle;
+        if (radius < sAfterMsp) {
             // uncapped after
             numSculptPointsAfterMsp = core::narrow_cast<Int>(n);
             cappedRadii[1] = radius;
+            outSampling.isRadiusOverlappingEnd = false;
         }
         else {
             // capped after
             numSculptPointsAfterMsp = core::floor_cast<Int>(sAfterMsp / ds);
             cappedRadii[1] = sAfterMsp;
+            outSampling.isRadiusOverlappingEnd = true;
+        }
+
+        if (allowHavingNoSculptPointAtSMiddleToKeepDsUniform) {
+            double s = cappedRadii[0] + cappedRadii[1];
+            ds = s / (numSculptPointsBeforeMsp + numSculptPointsAfterMsp);
+            ds0 = ds;
+            ds1 = ds;
+            sMsp = (sMiddle - cappedRadii[0]) + ds0 * numSculptPointsBeforeMsp;
+        }
+        else {
+            ds0 = cappedRadii[0] / std::max<Int>(1, numSculptPointsBeforeMsp);
+            ds1 = cappedRadii[1] / std::max<Int>(1, numSculptPointsAfterMsp);
         }
     }
     else { // isClosed
@@ -459,8 +491,11 @@ void computeSculptSampling(
             double n = std::ceil(curveHalfLength / maxDs);
             numSculptPointsBeforeMsp = core::narrow_cast<Int>(n);
             numSculptPointsAfterMsp = std::max<Int>(numSculptPointsBeforeMsp - 1, 0);
-            ds = curveHalfLength / n;
+            ds0 = curveHalfLength / n;
+            ds1 = ds0;
             outSampling.isClosed = true;
+            outSampling.isRadiusOverlappingStart = true;
+            outSampling.isRadiusOverlappingEnd = true;
             cappedRadii[0] = curveHalfLength;
             cappedRadii[1] = curveHalfLength;
         }
@@ -470,12 +505,18 @@ void computeSculptSampling(
             double n = std::ceil(radius / maxDs);
             numSculptPointsBeforeMsp = core::narrow_cast<Int>(n);
             numSculptPointsAfterMsp = core::narrow_cast<Int>(n);
-            ds = radius / n;
+            ds0 = radius / n;
+            ds1 = ds0;
             cappedRadii[0] = radius;
             cappedRadii[1] = radius;
-            // Find out if interval overlaps the start point.
-            if (sMsp - radius < 0 || sMsp + radius > curveLength) {
+            // Find out if interval overlaps the start (=end) point.
+            if (sMiddle - radius <= 0 || sMiddle + radius >= curveLength) {
                 outSampling.isRadiusOverlappingStart = true;
+                outSampling.isRadiusOverlappingEnd = true;
+            }
+            else {
+                outSampling.isRadiusOverlappingStart = false;
+                outSampling.isRadiusOverlappingEnd = false;
             }
         }
     }
@@ -494,13 +535,16 @@ void computeSculptSampling(
         Int spIndex = -numSculptPointsBeforeMsp;
 
         double sculptPointSOffset = 0;
-        if (isClosed && sMsp + spIndex * ds < 0) {
+        if (isClosed && sMsp + spIndex * ds0 < 0) {
             sculptPointSOffset = curveLength;
         }
-        double nextSculptPointS = sculptPointSOffset + sMsp + spIndex * ds;
-        if (nextSculptPointS < 0) { // s of first sample is 0.
-            // Fix potential floating point error that made it overshoot the start of the curve.
-            nextSculptPointS = 0;
+        double nextSculptPointS = sculptPointSOffset + sMsp + spIndex * ds0;
+        bool isOpenAndOverlappingStart =
+            !isClosed && outSampling.isRadiusOverlappingStart;
+        if (nextSculptPointS < 0 || isOpenAndOverlappingStart) {
+            // Fix potential floating point error that made it overshoot or
+            // undershoot the start of the curve.
+            nextSculptPointS = samples.first().s(); // = 0
         }
 
         const Int maxIter = isClosed ? 2 : 1; // If the curve is closed we allow 2 passes.
@@ -521,9 +565,24 @@ void computeSculptSampling(
                         double u = 1.0 - t;
                         geometry::Vec2d p = u * sa1->position() + t * sa2->position();
                         double w = (u * sa1->halfwidth(0) + t * sa2->halfwidth(0)) * 2.0;
-                        sculptPoints.emplaceLast(p, w, spIndex * ds, nextSculptPointS);
+                        double distanceToMiddle;
+                        if (isClosed) {
+                            // If the curve is closed, s can wrap so we need to compute
+                            // the distance based on a multiple of the index, which works
+                            // because we always have sMsp = sMiddle for closed curves
+                            distanceToMiddle = spIndex * ds0;
+                        }
+                        else {
+                            // If the curve is open, then s doesn't wrap so we can
+                            // directly compute the distance as a difference
+                            distanceToMiddle = nextSculptPointS - sMiddle;
+                        }
+                        sculptPoints.emplaceLast(
+                            p, w, distanceToMiddle, nextSculptPointS);
+                        // prepare next
                         ++spIndex;
-                        nextSculptPointS = sculptPointSOffset + sMsp + spIndex * ds;
+                        double sRel = spIndex < 0 ? spIndex * ds0 : spIndex * ds1;
+                        nextSculptPointS = sculptPointSOffset + sMsp + sRel;
                         if (spIndex >= spEndIndex - 1) {
                             if (spIndex == spEndIndex) {
                                 // All sculpt points have been sampled.
@@ -532,9 +591,12 @@ void computeSculptSampling(
                             }
                             else { // spIndex == spEndIndex - 1
                                 if (!isClosed || iter == 1) {
-                                    if (nextSculptPointS > samples.last().s()) {
+                                    bool isOpenAndOverlappingEnd =
+                                        !isClosed && outSampling.isRadiusOverlappingEnd;
+                                    if (nextSculptPointS > samples.last().s()
+                                        || isOpenAndOverlappingEnd) {
                                         // Fix potential floating point error that made it
-                                        // overshoot the end of the curve.
+                                        // overshoot or undershoot the end of the curve.
                                         nextSculptPointS = samples.last().s();
                                     }
                                 }
@@ -561,7 +623,7 @@ void computeSculptSampling(
     if (sculptPoints.length() != targetNumSculptPoints) {
 
         // This may indicate either a bug in this function, or dubious
-        // parameters passed to this function (e.g., sMsp not in
+        // parameters passed to this function (e.g., sMiddle not in
         // [samples.first.s(), samples.last.s()], or incorrect samples[i].s())
         //
         VGC_WARNING(
@@ -580,10 +642,12 @@ void computeSculptSampling(
         }
     }
 
-    outSampling.middleSculptPointIndex = numSculptPointsBeforeMsp;
+    outSampling.closestSculptPointIndex = numSculptPointsBeforeMsp;
     outSampling.cappedRadii = cappedRadii;
-    outSampling.ds = ds;
+    outSampling.ds0 = ds0;
+    outSampling.ds1 = ds1;
     outSampling.radius = radius;
+    outSampling.sMiddle = sMiddle;
 }
 
 [[maybe_unused]] Int filterSculptPointsWidthStep(
@@ -769,12 +833,13 @@ geometry::Vec2d FreehandEdgeGeometry::sculptGrab(
         const geometry::CurveSample& s2 = samples[mspSegmentIndex + 1];
         mspSample = geometry::lerp(mspSample, s2, mspSegmentParameter);
     }
-    double sMsp = mspSample.s();
+    double sMiddle = mspSample.s();
 
     const double maxDs = (tolerance * 2.0);
 
     SculptSampling sculptSampling = {};
-    computeSculptSampling(sculptSampling, samples, sMsp, radius, maxDs, isClosed);
+    computeSculptSampling(
+        sculptSampling, samples, sMiddle, radius, maxDs, isClosed, false);
 
     core::Array<SculptPoint>& sculptPoints = sculptSampling.sculptPoints;
 
@@ -968,7 +1033,7 @@ geometry::Vec2d FreehandEdgeGeometry::sculptGrab(
 
     dirtyEdgeSampling();
 
-    return sculptPoints[sculptSampling.middleSculptPointIndex].pos;
+    return sculptPoints[sculptSampling.closestSculptPointIndex].pos;
 
     // Depending on the sculpt kernel we may have to duplicate the points
     // at the sculpt boundary to "extrude" properly.
@@ -1055,8 +1120,8 @@ public:
         // Do we want to handle this case by capping sculptSampling_.radius to
         // no more than, say, 10x the edge length?
         //
-        numInfluencingPointsPerSide_ =
-            core::round_cast<Int>(sculptSampling_.radius / sculptSampling_.ds);
+        numInfluencingPointsPerSide_ = core::round_cast<Int>(
+            sculptSampling_.radius / std::min(sculptSampling_.ds0, sculptSampling_.ds1));
 
         if (!sculptSampling_.isClosed) {
 
@@ -1202,7 +1267,7 @@ public:
 
         if (totalS_ < maxDs * 0.5) {
             outSculptCursorPosition =
-                sculptSampling_.sculptPoints[sculptSampling_.middleSculptPointIndex].pos;
+                sculptSampling_.sculptPoints[sculptSampling_.closestSculptPointIndex].pos;
             return false;
         }
 
@@ -1215,7 +1280,7 @@ public:
         computeSculptedKnotsInterval_();
         if (numSculptedKnots_ == 0) {
             outSculptCursorPosition =
-                sculptSampling_.sculptPoints[sculptSampling_.middleSculptPointIndex].pos;
+                sculptSampling_.sculptPoints[sculptSampling_.closestSculptPointIndex].pos;
             return false;
         };
 
@@ -1422,14 +1487,14 @@ private:
         // Compute middle sculpt point info (closest point).
         Int mspSegmentIndex = d.segmentIndex();
         double mspSegmentParameter = d.segmentParameter();
-        mspSample_ = samples_[mspSegmentIndex];
+        geometry::CurveSample mspSample = samples_[mspSegmentIndex];
         if (mspSegmentParameter > 0 && mspSegmentIndex + 1 < samples_.length()) {
             const geometry::CurveSample& s2 = samples_[mspSegmentIndex + 1];
-            mspSample_ = geometry::lerp(mspSample_, s2, mspSegmentParameter);
+            mspSample = geometry::lerp(mspSample, s2, mspSegmentParameter);
         }
 
         computeSculptSampling(
-            sculptSampling_, samples_, mspSample_.s(), radius, maxDs, isClosed_);
+            sculptSampling_, samples_, mspSample.s(), radius, maxDs, isClosed_, true);
 
         core::Array<SculptPoint>& sculptPoints = sculptSampling_.sculptPoints;
 
@@ -1441,7 +1506,7 @@ private:
             //
             // totalS = 100
             // ds = 10
-            // sMsp = 85
+            // sMiddle = 85
             // radius = 80 (capped to 50)
             //
             // The sculpt points s-values now look like:
@@ -1482,22 +1547,18 @@ private:
         double s0 = sculptSampling_.sculptPoints.first().s;
         double sN = sculptSampling_.sculptPoints.last().s;
 
-        // Search index of first knot after s0.
+        // Search index of first knot at or after s0, that is, the first
+        // sculpted knot.
         //
-        // In case of open curves, we exclude the first knot as it cannot move.
+        // We want the invariant: s0 <= knotS_[i0] (if i0 < numKnots_)
         //
-        // XXX TODO: Actually allow the first and last knot of open curves to
-        // be modified. Indeed, even though the position cannot change, we want
-        // to be able to modify its width, otherwise a fully-smoothed open
-        // curve becomes a straight line whose start/end width are the original
-        // start/end width, instead of being the average width.
+        // In case of open curves, if the radius overlaps the start knot then
+        // we get i0 = 0, since we have both s0 = 0 (guaranteed by
+        // computeSculptSampling()) and knotsS_[0] = 0 (guaranteed by
+        // initCurveSampling_()).
         //
-        // In case of closed curves, we exclude the first knot as we prefer to
-        // use the equivalent index i0 = numKnots_ anyway (it makes the
-        // looping arithmetic easier).
-        //
-        Int i0 = 1;
-        while (i0 < numKnots_ && knotsS_[i0] <= s0) {
+        Int i0 = 0;
+        while (i0 < numKnots_ && knotsS_[i0] < s0) { // Important: `<` not `<=`
             ++i0;
         }
         sculptedKnotsStart_ = i0;
@@ -1506,13 +1567,22 @@ private:
             numSculptedKnots_ = numKnots_;
         }
         else {
-            // Search index of first knot after sN.
+
+            // Search index of first knot strictly after sN, that is, the first
+            // non-sculpted knot.
             //
-            // In case of open curves, we exclude the last knot as it cannot move.
+            // We want the invariant: knotS_[iN] <= sN (if iN < numKnots_)
             //
-            Int iN = isClosed_ ? 1 : i0;
-            Int iEnd = isClosed_ ? numKnots_ : numKnots_ - 1;
-            while (iN < iEnd && knotsS_[iN] <= sN) {
+            // For closed curves, note that if we are here then we cannot have
+            // s0 == sN, since we would have sculptSampling_.isClosed, which is
+            // already handled above.
+            //
+            // In case of open curves, if the radius overlaps the end knot then
+            // we get iN = numKnots_, since we have sN = knotsS_.last(), and
+            // knotsS_[i] <= knotsS_.last() for all i.
+            //
+            Int iN = isClosed_ ? 0 : i0;
+            while (iN < numKnots_ && knotsS_[iN] <= sN) { // Important: `<=` not `<`
                 ++iN;
             }
 
@@ -1588,7 +1658,7 @@ private:
         double strength;
         double s0;
         double sN;
-        double sMsp;
+        double sMiddle;
     };
     double computeSmoothedKnotS_(
         const ComputeSmoothedKnotSParams& params,
@@ -1596,7 +1666,7 @@ private:
         double sBefore,
         double sAfter) {
 
-        double d = s - params.sMsp;
+        double d = s - params.sMiddle;
         double u = 1 - std::abs(d / params.radius);
         u = cubicEaseInOut(core::clamp(u, 0, 1));
         double targetS = 0.25 * (sBefore + 2 * s + sAfter);
@@ -1612,7 +1682,7 @@ private:
         params.strength = strength;
         params.s0 = sculptSampling_.sculptPoints.first().s;
         params.sN = sculptSampling_.sculptPoints.last().s;
-        params.sMsp = mspSample_.s();
+        params.sMiddle = sculptSampling_.sMiddle;
 
         core::DoubleArray newKnotsS = knotsS_;
 
@@ -1633,7 +1703,7 @@ private:
         }
         else { // isClosed
 
-            // Update values of sN and sMsp so that they are in our virtual
+            // Update values of sN and sMiddle so that they are in our virtual
             // increasing-s space instead of in the original-s space.
             if (sculptSampling_.isClosed) {
                 // Note: before executing the line below, we have sN = s0.
@@ -1643,7 +1713,7 @@ private:
             else {
                 params.sN = getIncreasingS_(params.sN, params.s0);
             }
-            params.sMsp = getIncreasingS_(params.sMsp, params.s0);
+            params.sMiddle = getIncreasingS_(params.sMiddle, params.s0);
 
             // Smooth increasing-s values based on neighboring increasing-s
             // values, then write back in the original-s space
@@ -1801,7 +1871,7 @@ private:
                 numSculptedKnots_);
         }
 
-        Int iMsp = sculptSampling_.middleSculptPointIndex;
+        Int iMsp = sculptSampling_.closestSculptPointIndex;
         geometry::Vec2d scp = sculptPoints[iMsp].pos;
         geometry::Vec2d wascp = weightedAverage.computeAveraged(iMsp).pos;
         outSculptCursorPosition_ = scp + (wascp - scp) * strength;
@@ -1898,7 +1968,6 @@ private:
     geometry::CurveSampleArray samples_;
     core::Array<double> knotsS_;
     double totalS_ = 0;
-    geometry::CurveSample mspSample_;
 
     // Computed sculpt sampling
     SculptSampling sculptSampling_;
