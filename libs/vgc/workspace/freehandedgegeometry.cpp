@@ -565,8 +565,20 @@ void computeSculptSampling(
                         double u = 1.0 - t;
                         geometry::Vec2d p = u * sa1->position() + t * sa2->position();
                         double w = (u * sa1->halfwidth(0) + t * sa2->halfwidth(0)) * 2.0;
-                        double d_ = nextSculptPointS - sMiddle;
-                        sculptPoints.emplaceLast(p, w, d_, nextSculptPointS);
+                        double distanceToMiddle;
+                        if (isClosed) {
+                            // If the curve is closed, s can wrap so we need to compute
+                            // the distance based on a multiple of the index, which works
+                            // because we always have sMsp = sMiddle for closed curves
+                            distanceToMiddle = spIndex * ds0;
+                        }
+                        else {
+                            // If the curve is open, then s doesn't wrap so we can
+                            // directly compute the distance as a difference
+                            distanceToMiddle = nextSculptPointS - sMiddle;
+                        }
+                        sculptPoints.emplaceLast(
+                            p, w, distanceToMiddle, nextSculptPointS);
                         // prepare next
                         ++spIndex;
                         double sRel = spIndex < 0 ? spIndex * ds0 : spIndex * ds1;
