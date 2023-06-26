@@ -106,6 +106,20 @@ def qdump__vgc__core__Array(d, value):
         d.putArrayData(data, length, value.type[0])
 
 
+def qdump__vgc__core__Span(d, value):
+    extent = value["extent"].integer()
+    length = value["pair_"]["length"].value()
+    data = value["pair_"]["ptr"].pointer()
+    if extent == -1:
+        extentType = "dynamic"
+    else:
+        extentType = "static"
+    d.putValue(f"<{extentType} length={length}>")
+    d.putNumChild(length)
+    if d.isExpanded():
+        d.putArrayData(data, length, value.type[0])
+
+
 def qdump__vgc__core__ObjPtr(d, value):
     obj = hex(value["obj_"].pointer())
     refCount = value["obj_"]["refCount_"].integer()
