@@ -1075,6 +1075,13 @@ void TransformBox::onPaintDraw(graphics::Engine* engine, ui::PaintOptions option
     using geometry::Vec2d;
     using geometry::Vec2f;
 
+    // Recompute the bounding box whenever necessary.
+    //
+    if (isBoundingBoxDirty_) {
+        updateFromElements_();
+        isBoundingBoxDirty_ = false;
+    }
+
     // Let's check if the rect is not too small.
     const geometry::Mat4d& cameraMatrix = canvas->camera().viewMatrix();
 
@@ -1311,7 +1318,20 @@ void TransformBox::computeHoverData_(canvas::Canvas* canvas) {
 
 void TransformBox::onWorkspaceChanged_() {
     if (!isTransformActionOngoing_) {
-        updateFromElements_();
+
+        // We need to recompute the bounding box whenever the workspace changes
+        // and the change is not caused by the TransformBox widget itself.
+        //
+        // However, we cannot recompute it right now: it might be too early and
+        // cause undesired retro-action feedback. For example, if a face with a
+        // closed edge as boundary is selected and being dragged, then calling
+        // face->boundingBox() now causes the face to update its triangulation
+        // based on the old geometry of its closed edge boundary.
+        //
+        // Therefore, we defer recomputing the bounding box until we actually
+        // need to draw it.
+        //
+        isBoundingBoxDirty_ = true;
     }
 }
 
