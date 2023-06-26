@@ -120,7 +120,7 @@ private:
     // which is why we have to use `new` here.
     //
     template<class T, typename... Args>
-    T* createNode_(NodeSourceOperation sourceOperation = {}, Args&&... args) {
+    T* createNode_(NodeSourceOperation sourceOperation, Args&&... args) {
         core::Id id = core::genId();
         T* node = new T(id, std::forward<Args>(args)...);
         std::unique_ptr<T> nodePtr(node);
@@ -139,7 +139,7 @@ private:
     T* createNodeAt_(
         Group* parentGroup,
         Node* nextSibling,
-        NodeSourceOperation sourceOperation = {},
+        NodeSourceOperation sourceOperation,
         Args&&... args) {
 
         T* node = createNode_<T>(std::move(sourceOperation), std::forward<Args>(args)...);
