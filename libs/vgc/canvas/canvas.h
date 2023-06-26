@@ -171,6 +171,10 @@ public:
     ///
     void clearSelection();
 
+    /// This signal is emitted whenever the selection changes.
+    ///
+    VGC_SIGNAL(selectionChanged)
+
     /// Computes candidate elements for selection at `position`.
     ///
     /// Returns a list of pairs (element id, distance from position) with

@@ -75,6 +75,10 @@ public:
     ///
     void translate(const geometry::Vec2d& delta) override;
 
+    /// Expects transformation in object space.
+    ///
+    void transform(const geometry::Mat3d& transformation) override;
+
     /// Expects positions in object space.
     ///
     void snap(

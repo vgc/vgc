@@ -22,6 +22,7 @@
 #include <vgc/core/id.h>
 #include <vgc/geometry/vec2f.h>
 #include <vgc/tools/api.h>
+#include <vgc/tools/transform.h>
 #include <vgc/vacomplex/edgegeometry.h>
 
 namespace vgc::tools {
@@ -47,6 +48,9 @@ public:
     static SelectPtr create();
 
 protected:
+    // Reimplementation of CanvasTool virtual methods
+    ui::WidgetPtr createOptionsWidget() const override;
+
     // Reimplementation of Widget virtual methods
     bool onMouseMove(ui::MouseMoveEvent* event) override;
     bool onMousePress(ui::MousePressEvent* event) override;
@@ -56,6 +60,7 @@ protected:
     void onPaintCreate(graphics::Engine* engine) override;
     void onPaintDraw(graphics::Engine* engine, ui::PaintOptions options) override;
     void onPaintDestroy(graphics::Engine* engine) override;
+    void updateChildrenGeometry() override;
 
 private:
     enum class SelectionMode {
@@ -86,6 +91,7 @@ private:
     core::Id lastDeselectedId_ = -1;
     graphics::GeometryViewPtr selectionRectangleGeometry_;
     geometry::Vec2d deltaInWorkspace_ = {};
+    TransformBoxPtr transformBox_ = {};
 
     // drag-move data
     struct KeyVertexDragData {
@@ -115,6 +121,23 @@ private:
     void finalizeDragMovedElements_(workspace::Workspace* workspace);
 
     void resetActionState_();
+
+    canvas::Canvas* connectedCanvas_ = nullptr;
+    void disconnectCanvas_();
+
+    void onCanvasChanged_();
+    VGC_SLOT(onCanvasChangedSlot_, onCanvasChanged_)
+
+    void onCanvasAboutToBeDestroyed_();
+    VGC_SLOT(onCanvasAboutToBeDestroyedSlot_, onCanvasAboutToBeDestroyed_)
+
+    void onSelectionChanged_();
+    VGC_SLOT(onSelectionChangedSlot_, onSelectionChanged_)
+
+    void onShowTransformBoxChanged_();
+    VGC_SLOT(onShowTransformBoxChangedSlot_, onShowTransformBoxChanged_)
+
+    void updateTransformBoxElements_();
 };
 
 } // namespace vgc::tools

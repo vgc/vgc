@@ -144,6 +144,7 @@ std::optional<core::StringId> VacKeyFace::domTagName() const {
 
 geometry::Rect2d VacKeyFace::boundingBox(core::AnimTime t) const {
     if (frameData_.time() == t) {
+        const_cast<VacKeyFace*>(this)->computeFillMesh_();
         return frameData_.bbox_;
     }
     return geometry::Rect2d::empty;

@@ -16,19 +16,50 @@
 
 #include <vgc/tools/select.h>
 
+#include <vgc/graphics/detail/shapeutil.h>
 #include <vgc/graphics/strings.h>
+#include <vgc/ui/boolsettingedit.h>
+#include <vgc/ui/column.h>
 #include <vgc/workspace/colors.h>
 
 #include <set>
 
 namespace vgc::tools {
 
+namespace {
+
+namespace options {
+
+ui::BoolSetting* showTransformBox() {
+    static ui::BoolSettingPtr setting = ui::BoolSetting::create(
+        ui::settings::session(), "tools.select.showTransformBox", "Transform Box", true);
+    return setting.get();
+    // Ideally, we'd want "Show Transform Box" to be the name of the command,
+    // but "Transform Box" to appear in the tool options.
+}
+
+} // namespace options
+
+} // namespace
+
 Select::Select()
     : CanvasTool() {
+
+    canvasChanged().connect(onCanvasChangedSlot_());
+    onCanvasChanged_();
+
+    options::showTransformBox()->valueChanged().connect(onShowTransformBoxChangedSlot_());
+    onShowTransformBoxChanged_();
 }
 
 SelectPtr Select::create() {
     return SelectPtr(new Select());
+}
+
+ui::WidgetPtr Select::createOptionsWidget() const {
+    ui::WidgetPtr res = ui::Column::create();
+    res->createChild<ui::BoolSettingEdit>(options::showTransformBox());
+    return res;
 }
 
 namespace {
@@ -509,10 +540,6 @@ void Select::onPaintDraw(graphics::Engine* engine, ui::PaintOptions options) {
 
     if (isDragging_ && dragAction_ == DragAction::Select) {
         if (!selectionRectangleGeometry_) {
-            selectionRectangleGeometry_ = engine->createDynamicTriangleStripView(
-                BuiltinGeometryLayout::XYDxDy_iXYRotWRGBA);
-            const BufferPtr& vertexBuffer = selectionRectangleGeometry_->vertexBuffer(0);
-
             geometry::Mat4d invView = canvas->camera().viewMatrix().inverted();
             Vec2f a(invView.transformPointAffine(Vec2d(cursorPositionAtPress_)));
             Vec2f b(invView.transformPointAffine(Vec2d(cursorPosition_)));
@@ -520,39 +547,11 @@ void Select::onPaintDraw(graphics::Engine* engine, ui::PaintOptions options) {
             rect.uniteWith(a);
             rect.uniteWith(b);
 
-            // XYDxDy
-            //
-            //   8/0┄┄┄┄┄┄2
-            //    ┆\     /┆
-            //    ┆9/1┄┄3 ┆
-            //    ┆ ┆   ┆ ┆
-            //    ┆ 7┄┄┄5 ┆
-            //    ┆/     \┆
-            //    6┄┄┄┄┄┄┄4
-            //
-            float rxMin = rect.xMin();
-            float ryMin = rect.yMin();
-            float rxMax = rect.xMax();
-            float ryMax = rect.yMax();
-            geometry::Vec4fArray vertices = {
-                {rxMin, ryMin, 1, 1},
-                {rxMin, ryMin, 0, 0},
-                {rxMax, ryMin, -1, 1},
-                {rxMax, ryMin, 0, 0},
-                {rxMax, ryMax, -1, -1},
-                {rxMax, ryMax, 0, 0},
-                {rxMin, ryMax, 1, -1},
-                {rxMin, ryMax, 0, 0},
-                {rxMin, ryMin, 1, 1},
-                {rxMin, ryMin, 0, 0}};
-            engine->updateBufferData(vertexBuffer, std::move(vertices));
+            const core::Color& color = workspace::colors::selection;
 
-            // XYRotWRGBA
-            const core::Color& c = workspace::colors::selection;
-            core::FloatArray instanceData({0, 0, 1.f, 2.f, c.r(), c.g(), c.b(), c.a()});
-
-            engine->updateBufferData(
-                selectionRectangleGeometry_->vertexBuffer(1), std::move(instanceData));
+            selectionRectangleGeometry_ =
+                graphics::detail::createRectangleWithScreenSpaceThickness(
+                    engine, rect, 2.f, color);
         }
 
         geometry::Mat4f currentView(engine->viewMatrix());
@@ -569,6 +568,13 @@ void Select::onPaintDraw(graphics::Engine* engine, ui::PaintOptions options) {
 void Select::onPaintDestroy(graphics::Engine* engine) {
     SuperClass::onPaintDestroy(engine);
     selectionRectangleGeometry_.reset();
+}
+
+void Select::updateChildrenGeometry() {
+    SuperClass::updateChildrenGeometry();
+    if (transformBox_) {
+        transformBox_->updateGeometry(rect());
+    }
 }
 
 void Select::initializeDragMoveData_(
@@ -767,6 +773,62 @@ void Select::resetActionState_() {
     if (selectionRectangleGeometry_) {
         selectionRectangleGeometry_.reset();
         requestRepaint();
+    }
+}
+
+void Select::disconnectCanvas_() {
+    if (connectedCanvas_) {
+        connectedCanvas_->aboutToBeDestroyed().disconnect(
+            onCanvasAboutToBeDestroyedSlot_());
+        connectedCanvas_->selectionChanged().disconnect(onSelectionChangedSlot_());
+    }
+    // TODO: allow `oldCanvas_->disconnect(on..Slot_())` syntax?
+}
+
+void Select::onCanvasChanged_() {
+    disconnectCanvas_();
+    connectedCanvas_ = this->canvas();
+    if (connectedCanvas_) {
+        connectedCanvas_->aboutToBeDestroyed().connect(onCanvasAboutToBeDestroyedSlot_());
+        connectedCanvas_->selectionChanged().connect(onSelectionChangedSlot_());
+    }
+    onSelectionChanged_();
+}
+
+void Select::onCanvasAboutToBeDestroyed_() {
+    disconnectCanvas_();
+    onSelectionChanged_();
+}
+
+void Select::onSelectionChanged_() {
+    updateTransformBoxElements_();
+}
+
+void Select::onShowTransformBoxChanged_() {
+    if (options::showTransformBox()->value()) {
+        if (!transformBox_) {
+            transformBox_ = createChild<TransformBox>();
+            updateTransformBoxElements_();
+        }
+    }
+    else {
+        if (transformBox_) {
+            // Remove from parent and destroy
+            transformBox_->reparent(nullptr);
+            transformBox_ = nullptr;
+        }
+    }
+}
+
+void Select::updateTransformBoxElements_() {
+    if (transformBox_) {
+        canvas::Canvas* canvas = this->canvas();
+        if (canvas) {
+            transformBox_->setElements(canvas->selection());
+        }
+        else {
+            transformBox_->setElements({});
+        }
     }
 }
 

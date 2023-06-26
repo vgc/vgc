@@ -1,4 +1,7 @@
 vgc_add_library(tools
+    THIRD_DEPENDENCIES
+        ${VGC_QT_SVG}
+
     VGC_DEPENDENCIES
         canvas
 
@@ -11,6 +14,7 @@ vgc_add_library(tools
         select.h
         sketch.h
         strings.h
+        transform.h
 
     CPP_SOURCE_FILES
         colorpalette.cpp
@@ -20,4 +24,9 @@ vgc_add_library(tools
         select.cpp
         sketch.cpp
         strings.cpp
+        transform.cpp
+
+    RESOURCE_FILES
+        cursors/rotation.svg
+        cursors/scaling.svg
 )
