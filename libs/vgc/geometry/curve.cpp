@@ -159,10 +159,11 @@ CubicBezierStroke CubicBezierStroke::fromCatmullRomSpline(
 
     result.initPositions_(
         parameterization, knotPositions, knotIndices, knotSegments, knotSegmentLengths);
-    result.halfwidths_[0] = width;
-    result.halfwidths_[1] = width;
-    result.halfwidths_[2] = width;
-    result.halfwidths_[3] = width;
+    double halfwidth = 0.5 * width;
+    result.halfwidths_[0] = halfwidth;
+    result.halfwidths_[1] = halfwidth;
+    result.halfwidths_[2] = halfwidth;
+    result.halfwidths_[3] = halfwidth;
 
     return result;
 }

@@ -210,7 +210,7 @@ enum CatmullRomSplineParameterization {
     Centripetal
 };
 
-class CubicBezierStroke {
+class VGC_GEOMETRY_API CubicBezierStroke {
 public:
     // Uninitialized
     //
