@@ -80,6 +80,339 @@ void computeSample(
 
 } // namespace
 
+namespace detail {
+
+CubicBezierStroke CubicBezierStroke::fromCurve(const Curve* curve, Int i) {
+
+    core::ConstSpan<Vec2d> positions = curve->positions();
+    core::ConstSpan<double> widths = curve->widths();
+
+    CatmullRomSplineParameterization parameterization = {};
+    switch (curve->type()) {
+    case Curve::Type::OpenUniformCatmullRom:
+    case Curve::Type::ClosedUniformCatmullRom: {
+        parameterization = CatmullRomSplineParameterization::Uniform;
+        break;
+    }
+    case Curve::Type::OpenCentripetalCatmullRom:
+    case Curve::Type::ClosedCentripetalCatmullRom: {
+        parameterization = CatmullRomSplineParameterization::Centripetal;
+        break;
+    }
+    }
+
+    bool isWidthUniform =
+        (curve->widthVariability() == Curve::AttributeVariability::Constant
+         || widths.length() != positions.length());
+
+    if (isWidthUniform) {
+        double width = curve->width();
+        if (!widths.isEmpty()) {
+            // curve->width() is broken at the moment.
+            width = widths[0];
+        }
+        return fromCatmullRomSpline(
+            parameterization, positions, width, curve->isClosed(), i);
+    }
+    else {
+        return fromCatmullRomSpline(
+            parameterization, positions, widths, curve->isClosed(), i);
+    }
+}
+
+CubicBezierStroke CubicBezierStroke::fromCatmullRomSpline(
+    CatmullRomSplineParameterization parameterization,
+    core::ConstSpan<Vec2d> knotPositions,
+    core::ConstSpan<double> knotWidths,
+    bool isClosed,
+    Int i) {
+
+    CubicBezierStroke result;
+    result.isWidthUniform_ = false;
+
+    std::array<Int, 4> knotIndices =
+        computeKnotIndices_(isClosed, knotPositions.length(), i);
+    std::array<Vec2d, 3> knotSegments;
+    std::array<double, 3> knotSegmentLengths;
+
+    CornerCase cornerCase = result.initPositions_(
+        parameterization, knotPositions, knotIndices, knotSegments, knotSegmentLengths);
+    result.initHalfwidths_(knotWidths, knotIndices, knotSegmentLengths, cornerCase);
+
+    return result;
+}
+
+CubicBezierStroke CubicBezierStroke::fromCatmullRomSpline(
+    CatmullRomSplineParameterization parameterization,
+    core::ConstSpan<Vec2d> knotPositions,
+    double width,
+    bool isClosed,
+    Int i) {
+
+    CubicBezierStroke result;
+    result.isWidthUniform_ = true;
+
+    std::array<Int, 4> knotIndices =
+        computeKnotIndices_(isClosed, knotPositions.length(), i);
+    std::array<Vec2d, 3> knotSegments;
+    std::array<double, 3> knotSegmentLengths;
+
+    result.initPositions_(
+        parameterization, knotPositions, knotIndices, knotSegments, knotSegmentLengths);
+    double halfwidth = 0.5 * width;
+    result.halfwidths_[0] = halfwidth;
+    result.halfwidths_[1] = halfwidth;
+    result.halfwidths_[2] = halfwidth;
+    result.halfwidths_[3] = halfwidth;
+
+    return result;
+}
+
+Vec2d CubicBezierStroke::evalPosition(double u) const {
+    return cubicBezierPosCasteljau<Vec2d>(positions_, u);
+}
+
+void CubicBezierStroke::evalPositionAndDerivative(
+    double u,
+    Vec2d& position,
+    Vec2d& derivative) const {
+
+    cubicBezierPosAndDerCasteljau<Vec2d>(positions_, u, position, derivative);
+}
+
+double CubicBezierStroke::evalHalfwidths(double u) const {
+    return cubicBezierPosCasteljau<double>(halfwidths_, u);
+}
+
+void CubicBezierStroke::evalHalfwidthsAndDerivative(
+    double u,
+    double& halfwidth,
+    double& derivative) const {
+
+    cubicBezierPosAndDerCasteljau<double>(halfwidths_, u, halfwidth, derivative);
+}
+
+CubicBezierStroke::CornerCase CubicBezierStroke::initPositions_(
+    CatmullRomSplineParameterization parameterization,
+    core::ConstSpan<Vec2d> splineKnots,
+    const std::array<Int, 4>& knotIndices,
+    std::array<Vec2d, 3>& knotSegments,
+    std::array<double, 3>& knotSegmentLengths) {
+
+    std::array<Vec2d, 4> knots = {
+        splineKnots[knotIndices[0]],
+        splineKnots[knotIndices[1]],
+        splineKnots[knotIndices[2]],
+        splineKnots[knotIndices[3]]};
+
+    knotSegments = {knots[1] - knots[0], knots[2] - knots[1], knots[3] - knots[2]};
+    knotSegmentLengths = {
+        knotSegments[0].length(), knotSegments[1].length(), knotSegments[2].length()};
+
+    // Aliases
+    const Vec2d p0p1 = knotSegments[0];
+    const Vec2d p1p2 = knotSegments[1];
+    const Vec2d p2p3 = knotSegments[2];
+    const double d01 = knotSegmentLengths[0];
+    const double d12 = knotSegmentLengths[1];
+    const double d23 = knotSegmentLengths[2];
+
+    // Handle "corner knots", defined as:
+    // 1. Two consecutive equal points, or
+    // 2. The first/last knot of an open curve
+    //
+    CornerCase result = CornerCase::None;
+    bool isAfterCorner = (d01 == 0);
+    bool isCorner = (d12 == 0);
+    bool isBeforeCorner = (d23 == 0);
+    if (isCorner) {
+        positions_[0] = knots[1];
+        positions_[1] = knots[1];
+        positions_[2] = knots[2];
+        positions_[3] = knots[2];
+        return CornerCase::Corner;
+    }
+    else if (isAfterCorner) {
+        if (isBeforeCorner) { // (d01 == 0) && (d12 > 0) && (d23 == 0)
+            // Linear parametrization
+            double u = 1.0 / 3;
+            double v = (1 - u);
+            positions_[0] = knots[1];
+            positions_[1] = v * knots[1] + u * knots[2];
+            positions_[2] = u * knots[1] + v * knots[2];
+            positions_[3] = knots[2];
+            return CornerCase::BetweenCorners;
+        }
+        else { // (d01 == 0) && (d12 > 0) && (d23 > 0)
+            // Creates an imaginary control point p0 that would extrapolate the
+            // curve, defined as:
+            //
+            //        p1    p2
+            //         o----o         distance(p0, p1)  == distance(p1, p2)
+            //        '      `        angle(p0, p1, p2) == angle(p1, p2, p3)
+            //       o        `       w1 - w0           == w2 - w1
+            //    p0           `
+            //                  o p3
+            //
+            // Similarly to using "mirror tangents", this prevents ugly
+            // inflexion points that would happen by keeping p0 = p1, as
+            // illustrated here: https://github.com/vgc/vgc/pull/1341
+            //
+            Vec2d d = p2p3 / d23;                    // unit vector to reflect
+            Vec2d n = (p1p2 / d12).orthogonalized(); // unit axis of reflexion
+            Vec2d q = 2 * d.dot(n) * n - d;          // refection of d along n
+            positions_[0] = knots[1] + d12 * q;
+            positions_[1] = knots[1];
+            positions_[2] = knots[2];
+            positions_[3] = knots[3];
+            knotSegmentLengths[0] = d12;
+            result = CornerCase::AfterCorner;
+        }
+    }
+    else if (isBeforeCorner) { // (d01 > 0) && (d12 > 0) && (d23 == 0)
+        // Similar as AfterCorner case above.
+        Vec2d d = -p0p1 / d01;
+        Vec2d n = (p1p2 / d12).orthogonalized();
+        Vec2d q = 2 * d.dot(n) * n - d;
+        positions_[0] = knots[0];
+        positions_[1] = knots[1];
+        positions_[2] = knots[2];
+        positions_[3] = knots[2] + d12 * q;
+        knotSegmentLengths[2] = d12;
+        result = CornerCase::BeforeCorner;
+    }
+    else {
+        positions_ = knots;
+    }
+
+    switch (parameterization) {
+    case CatmullRomSplineParameterization::Uniform: {
+        positions_ = uniformCatmullRomToBezier<Vec2d>(positions_);
+        break;
+    }
+    case CatmullRomSplineParameterization::Centripetal: {
+        positions_ = centripetalCatmullRomToBezier<Vec2d>(positions_, knotSegmentLengths);
+        break;
+    }
+    }
+
+    return result;
+}
+
+void CubicBezierStroke::initHalfwidths_(
+    core::ConstSpan<double> splineKnots,
+    const std::array<Int, 4>& knotIndices,
+    const std::array<double, 3>& knotSegmentLengths,
+    CubicBezierStroke::CornerCase cornerCase) {
+
+    std::array<double, 4> knots = {
+        splineKnots[knotIndices[0]] * 0.5,
+        splineKnots[knotIndices[1]] * 0.5,
+        splineKnots[knotIndices[2]] * 0.5,
+        splineKnots[knotIndices[3]] * 0.5};
+
+    // Aliases
+    const double d01 = knotSegmentLengths[0];
+    const double d12 = knotSegmentLengths[1];
+    const double d23 = knotSegmentLengths[2];
+
+    // Handle "corner knots", defined as:
+    // 1. Two consecutive equal points, or
+    // 2. The first/last knot of an open curve
+    //
+    switch (cornerCase) {
+    case CornerCase::None: {
+        halfwidths_ = knots;
+        break;
+    }
+    case CornerCase::BetweenCorners:
+    case CornerCase::Corner: {
+        double u = 1.0 / 3;
+        double v = (1 - u);
+        halfwidths_[0] = knots[1];
+        halfwidths_[1] = v * knots[1] + u * knots[2];
+        halfwidths_[2] = u * knots[1] + v * knots[2];
+        halfwidths_[3] = knots[2];
+        // Fast return.
+        return;
+    }
+    case CornerCase::AfterCorner: {
+        // Imaginary control point, see `initPositions_()`.
+        halfwidths_[0] = 2 * knots[1] - knots[2];
+        halfwidths_[1] = knots[1];
+        halfwidths_[2] = knots[2];
+        halfwidths_[3] = knots[3];
+        break;
+    }
+    case CornerCase::BeforeCorner: {
+        // Imaginary control point, see `initPositions_()`.
+        halfwidths_[0] = knots[0];
+        halfwidths_[1] = knots[1];
+        halfwidths_[2] = knots[2];
+        halfwidths_[3] = 2 * knots[2] - knots[1];
+        break;
+    }
+    }
+
+    // Compute Bézier control points for widths such that on both sides of
+    // each knot we have the same desired dw/ds.
+    //
+    double d02 = d01 + d12;
+    double d13 = d12 + d23;
+    // desired dw/ds at start/end
+    double dw_ds_1 = (halfwidths_[2] - halfwidths_[0]) / d02;
+    double dw_ds_2 = (halfwidths_[3] - halfwidths_[1]) / d13;
+    // 1/3 of ds/du at start/end
+    double ds_du_1 = (positions_[1] - positions_[0]).length();
+    double ds_du_2 = (positions_[3] - positions_[2]).length();
+    // w1 - w0 = 1/3 of dw/du at start; w3 - w2 = 1/3 of dw/du at end
+    double w1 = halfwidths_[1] + dw_ds_1 * ds_du_1;
+    double w2 = halfwidths_[2] - dw_ds_2 * ds_du_2;
+    halfwidths_[0] = halfwidths_[1];
+    halfwidths_[3] = halfwidths_[2];
+    halfwidths_[1] = w1;
+    halfwidths_[2] = w2;
+}
+
+std::array<Int, 4>
+CubicBezierStroke::computeKnotIndices_(bool isClosed, Int numKnots, Int i) {
+    // Ensure we have a valid segment between two control points
+    const Int numSegments = isClosed ? numKnots : (numKnots ? numKnots - 1 : 0);
+    VGC_ASSERT(i >= 0);
+    VGC_ASSERT(i < numSegments);
+
+    // Get indices of points used by the Catmull-Rom interpolation, handle
+    // wrapping for closed curves and boundary for open curves.
+    std::array<Int, 4> indices = {i - 1, i, i + 1, i + 2};
+    if (isClosed) {
+        if (indices[0] < 0) {
+            indices[0] = numKnots - 1;
+        }
+        if (indices[2] > numKnots - 1) {
+            indices[2] = 0;
+            indices[3] = 1;
+        }
+        if (indices[3] > numKnots - 1) {
+            indices[3] = 0;
+        }
+    }
+    else {
+        if (indices[0] < 0) {
+            indices[0] = 0;
+        }
+        if (indices[2] > numKnots - 1) {
+            indices[2] = numKnots - 1;
+            indices[3] = numKnots - 1;
+        }
+        else if (indices[3] > numKnots - 1) {
+            indices[3] = numKnots - 1;
+        }
+    }
+    return indices;
+}
+
+} // namespace detail
+
 DistanceToCurve distanceToCurve(const CurveSampleArray& samples, const Vec2d& position) {
 
     DistanceToCurve result(core::DoubleInfinity, 0, 0, 0);
@@ -489,191 +822,13 @@ Vec2dArray Curve::triangulate(double maxAngle, Int minQuads, Int maxQuads) const
 
 namespace {
 
-struct CubicBezierData {
-    std::array<Vec2d, 4> positions;
-    std::array<double, 4> halfwidths;
-    bool isWidthUniform = false;
-
-    // Uninitialized
-    //
-    CubicBezierData() {
-    }
-
-    // Returns the CubicBezierData corresponding to the segment at index [i,
-    // i+1] in the given Curve.
-    //
-    CubicBezierData(const Curve* curve, Int i) {
-
-        // Ensure we have a valid segment between two control points
-        const Int numSegments = curve->numSegments();
-        const Int numKnots = curve->numKnots();
-        VGC_ASSERT(i >= 0);
-        VGC_ASSERT(i < numSegments);
-
-        // Get whether the curve is closed
-        const bool isClosed = curve->isClosed();
-
-        // Get whether the width is uniform
-        using Variability = Curve::AttributeVariability;
-        isWidthUniform = (curve->widthVariability() == Variability::Constant);
-
-        // Get indices of points used by the Catmull-Rom interpolation, handle
-        // wrapping for closed curves and boundary for open curves.
-        Int i0 = i - 1;
-        Int i1 = i;
-        Int i2 = i + 1;
-        Int i3 = i + 2;
-        if (isClosed) {
-            if (i0 < 0) {
-                i0 = numKnots - 1;
-            }
-            if (i2 > numKnots - 1) {
-                i2 = 0;
-                i3 = 1;
-            }
-            if (i3 > numKnots - 1) {
-                i3 = 0;
-            }
-        }
-        else {
-            if (i0 < 0) {
-                i0 = 0;
-            }
-            if (i2 > numKnots - 1) {
-                i2 = numKnots - 1;
-                i3 = numKnots - 1;
-            }
-            else if (i3 > numKnots - 1) {
-                i3 = numKnots - 1;
-            }
-        }
-
-        // Get positions/widths
-        const Vec2d* pd = curve->positions().data();
-        const double* wd = curve->widths().data();
-        std::array<Vec2d, 4> knotPositions = {pd[i0], pd[i1], pd[i2], pd[i3]};
-        std::array<double, 4> knotHalfwidths;
-        if (isWidthUniform) {
-            double hw = 0.5 * curve->width();
-            knotHalfwidths = {hw, hw, hw, hw};
-        }
-        else {
-            knotHalfwidths = {0.5 * wd[i0], 0.5 * wd[i1], 0.5 * wd[i2], 0.5 * wd[i3]};
-        }
-
-        // Compute distances between knots
-        // Note: due to corners, these are later potentially updated.
-        Vec2d& p0 = knotPositions[0];
-        Vec2d& p1 = knotPositions[1];
-        Vec2d& p2 = knotPositions[2];
-        Vec2d& p3 = knotPositions[3];
-        Vec2d p0p1 = p1 - p0;
-        Vec2d p1p2 = p2 - p1;
-        Vec2d p2p3 = p3 - p2;
-        std::array<double, 3> knotLengths = //
-            {p0p1.length(), p1p2.length(), p2p3.length()};
-        double& d01 = knotLengths[0];
-        double& d12 = knotLengths[1];
-        double& d23 = knotLengths[2];
-
-        // Handle "corner knots", defined as:
-        // 1. Two consecutive equal points, or
-        // 2. The first/last knot of an open curve
-        //
-        bool isAfterCorner = (d01 == 0);
-        bool isCorner = (d12 == 0);
-        bool isBeforeCorner = (d23 == 0);
-        if (isCorner || (isAfterCorner && isBeforeCorner)) {
-
-            // Linear parametrization
-            double u = 1.0 / 3;
-            double v = (1 - u);
-            positions[0] = knotPositions[1];
-            positions[1] = v * knotPositions[1] + u * knotPositions[2];
-            positions[2] = u * knotPositions[1] + v * knotPositions[2];
-            positions[3] = knotPositions[2];
-            if (!isWidthUniform) {
-                halfwidths[0] = knotHalfwidths[1];
-                halfwidths[1] = v * knotHalfwidths[1] + u * knotHalfwidths[2];
-                halfwidths[2] = u * knotHalfwidths[1] + v * knotHalfwidths[2];
-                halfwidths[3] = knotHalfwidths[2];
-            }
-            return;
-        }
-        else if (isAfterCorner) { // (d01 == 0) && (d12 > 0) && (d23 > 0)
-
-            // Creates an imaginary control point p0 that would extrapolate the
-            // curve, defined as:
-            //
-            //        p1    p2
-            //         o----o         distance(p0, p1)  == distance(p1, p2)
-            //        '      `        angle(p0, p1, p2) == angle(p1, p2, p3)
-            //       o        `       w1 - w0           == w2 - w1
-            //    p0           `
-            //                  o p3
-            //
-            // Similarly to using "mirror tangents", this prevents ugly
-            // inflexion points that would happen by keeping p0 = p1, as
-            // illustrated here: https://github.com/vgc/vgc/pull/1341
-            //
-            Vec2d d = p2p3 / d23;                    // unit vector to reflect
-            Vec2d n = (p1p2 / d12).orthogonalized(); // unit axis of reflexion
-            Vec2d q = 2 * d.dot(n) * n - d;          // refection of d along n
-            knotPositions[0] = p1 + d12 * q;
-            knotLengths[0] = d12;
-            knotHalfwidths[0] = 2 * knotHalfwidths[1] - knotHalfwidths[2];
-        }
-        else if (isBeforeCorner) { // (d01 > 0) && (d12 > 0) && (d23 == 0)
-
-            // Similar as above
-            Vec2d d = -p0p1 / d01;
-            Vec2d n = (p1p2 / d12).orthogonalized();
-            Vec2d q = 2 * d.dot(n) * n - d;
-            knotPositions[3] = p2 + d12 * q;
-            knotLengths[2] = d12;
-            knotHalfwidths[3] = 2 * knotHalfwidths[2] - knotHalfwidths[1];
-        }
-
-        // Compute Bézier control point for positions based on Catmull-Rom knots
-        switch (curve->type()) {
-        case Curve::Type::OpenUniformCatmullRom:
-        case Curve::Type::ClosedUniformCatmullRom: {
-            positions = uniformCatmullRomToBezier<Vec2d>(knotPositions);
-            break;
-        }
-        case Curve::Type::OpenCentripetalCatmullRom:
-        case Curve::Type::ClosedCentripetalCatmullRom: {
-            positions = centripetalCatmullRomToBezier<Vec2d>(knotPositions, knotLengths);
-            break;
-        }
-        }
-
-        // Compute Bézier control points for widths such that on both sides of
-        // each knot we have the same desired dw/ds.
-        //
-        double d02 = d01 + d12;
-        double d13 = d12 + d23;
-        // desired dw/ds at start/end
-        double dw_ds_1 = (knotHalfwidths[2] - knotHalfwidths[0]) / d02;
-        double dw_ds_2 = (knotHalfwidths[3] - knotHalfwidths[1]) / d13;
-        // 1/3 of ds/du at start/end
-        double ds_du_1 = (positions[1] - positions[0]).length();
-        double ds_du_2 = (positions[3] - positions[2]).length();
-        // w1 - w0 = 1/3 of dw/du at start; w3 - w2 = 1/3 of dw/du at end
-        double w1 = knotHalfwidths[1] + dw_ds_1 * ds_du_1;
-        double w2 = knotHalfwidths[2] - dw_ds_2 * ds_du_2;
-        halfwidths[0] = knotHalfwidths[1];
-        halfwidths[3] = knotHalfwidths[2];
-        halfwidths[1] = w1;
-        halfwidths[2] = w2;
-    }
-};
+using detail::CubicBezierStroke;
 
 // Currently assumes first derivative at endpoint is non null.
 // TODO: Support null derivatives (using limit analysis).
 // TODO: Support different halfwidth on both sides.
 std::array<Vec2d, 2>
-computeOffsetLineTangentsAtEndPoint(const CubicBezierData& data, Int endpoint) {
+computeOffsetLineTangentsAtEndPoint(const CubicBezierStroke& data, Int endpoint) {
 
     Vec2d p = {};
     Vec2d dp = {};
@@ -681,19 +836,22 @@ computeOffsetLineTangentsAtEndPoint(const CubicBezierData& data, Int endpoint) {
     double w = {};
     double dw = {};
 
+    const std::array<Vec2d, 4>& positions = data.positions();
+    const std::array<double, 4>& halfwidths = data.halfwidths();
+
     if (endpoint) {
-        p = data.positions[3];
-        dp = 3 * (data.positions[3] - data.positions[2]);
-        ddp = 6 * (data.positions[3] - 2 * data.positions[2] + data.positions[1]);
-        w = data.halfwidths[3];
-        dw = 3 * (data.halfwidths[3] - data.halfwidths[2]);
+        p = positions[3];
+        dp = 3 * (positions[3] - positions[2]);
+        ddp = 6 * (positions[3] - 2 * positions[2] + positions[1]);
+        w = halfwidths[3];
+        dw = 3 * (halfwidths[3] - halfwidths[2]);
     }
     else {
-        p = data.positions[0];
-        dp = 3 * (data.positions[1] - data.positions[0]);
-        ddp = 6 * (data.positions[2] - 2 * data.positions[1] + data.positions[0]);
-        w = data.halfwidths[0];
-        dw = 3 * (data.halfwidths[1] - data.halfwidths[0]);
+        p = positions[0];
+        dp = 3 * (positions[1] - positions[0]);
+        ddp = 6 * (positions[2] - 2 * positions[1] + positions[0]);
+        w = halfwidths[0];
+        dw = 3 * (halfwidths[1] - halfwidths[0]);
     }
 
     double dpl = dp.length();
@@ -730,14 +888,16 @@ struct IterativeSamplingSample {
     double u;
     Int subdivLevel = 0;
 
-    void computeFrom(const CubicBezierData& data, double u_) {
+    // TODO: move these methods into CubicBezierStroke
+
+    void computeFrom(const CubicBezierStroke& stroke, double u_) {
         u = u_;
-        cubicBezierPosAndDerCasteljau<Vec2d>(data.positions, u, pos, tangent);
-        if (!data.isWidthUniform) {
-            cubicBezierPosAndDerCasteljau<double>(data.halfwidths, u, radius, radiusDer);
+        stroke.evalPositionAndDerivative(u, pos, tangent);
+        if (!stroke.isWidthUniform()) {
+            stroke.evalHalfwidthsAndDerivative(u, radius, radiusDer);
         }
         else {
-            radius = data.halfwidths[0];
+            radius = stroke.halfwidths()[0];
             radiusDer = 0;
         }
         normal = tangent.normalized().orthogonalized();
@@ -861,7 +1021,7 @@ bool shouldKeepNewSample_(
     IterativeSamplingCache& data,
     core::Array<CurveSample>& outAppend) {
 
-    CubicBezierData bezierData(curve, data.segmentIndex);
+    auto bezierData = CubicBezierStroke::fromCurve(curve, data.segmentIndex);
 
     IterativeSamplingSample s0 = {};
     IterativeSamplingSample sN = {};
@@ -957,7 +1117,7 @@ bool sampleIter_(
     const Int minSamples = std::max<Int>(0, minISS) + 2;
     const Int maxSamples = std::max<Int>(minSamples, maxISS + 2);
 
-    CubicBezierData bezierData(curve, data.segmentIndex);
+    auto bezierData = CubicBezierStroke::fromCurve(curve, data.segmentIndex);
 
     data.resetSampleTree(maxSamples);
 
@@ -1135,14 +1295,14 @@ void Curve::sampleRange(
         if (numSegments == 0) {
             // Add a point manually if it is a single point segment.
             IterativeSamplingSample lastSample;
-            CubicBezierData bezierData;
+            CubicBezierStroke bezierData;
             double u;
             if (startKnot < n) {
-                bezierData = CubicBezierData(this, startKnot);
+                bezierData = CubicBezierStroke::fromCurve(this, startKnot);
                 u = 0;
             }
             else { // start == n
-                bezierData = CubicBezierData(this, n - 1);
+                bezierData = CubicBezierStroke::fromCurve(this, n - 1);
                 u = 1;
             }
             lastSample.computeFrom(bezierData, u);
@@ -1207,7 +1367,7 @@ Curve::getOffsetLineTangentsAtSegmentEndpoint(Int segmentIndex, Int endpointInde
             "The given `endpointIndex` ({}) must be `0` or `1`", endpointIndex));
     }
 
-    CubicBezierData bezierData = CubicBezierData(this, segmentIndex);
+    auto bezierData = CubicBezierStroke::fromCurve(this, segmentIndex);
     return computeOffsetLineTangentsAtEndPoint(bezierData, endpointIndex);
 }
 
