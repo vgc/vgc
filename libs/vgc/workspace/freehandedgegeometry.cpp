@@ -1451,9 +1451,7 @@ private:
         if (numKnots_ < 2) {
             return false;
         }
-        geometry::Curve curve(
-            isClosed_ ? geometry::Curve::Type::ClosedUniformCatmullRom
-                      : geometry::Curve::Type::OpenUniformCatmullRom);
+        geometry::Curve curve(isClosed_ ? closedCurveType : openCurveType);
         curve.setPositions(*knotPositions_);
         curve.setWidths(*knotWidths_);
         knotsS_.resizeNoInit(numKnots_);
