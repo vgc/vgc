@@ -17,6 +17,8 @@
 #ifndef VGC_GEOMETRY_CURVE_H
 #define VGC_GEOMETRY_CURVE_H
 
+#include <array>
+
 #include <vgc/core/arithmetic.h>
 #include <vgc/core/array.h>
 #include <vgc/core/color.h>
@@ -200,6 +202,99 @@ private:
     Vec2d halfwidths_;
     double s_; // total arclength from start point
 };
+
+namespace detail {
+
+enum CatmullRomSplineParameterization {
+    Uniform,
+    Centripetal
+};
+
+class CubicBezierStroke {
+public:
+    // Uninitialized
+    //
+    CubicBezierStroke() noexcept = default;
+
+    // Returns the CubicBezierStroke corresponding to the segment at
+    // index [`i`, `i`+1] in the given `curve`.
+    //
+    static CubicBezierStroke fromCurve(const Curve* curve, Int i);
+
+    // Returns the CubicBezierStroke corresponding to the segment at
+    // index [`i`, `i`+1] in the Catmull-Rom spline stroke defined by the
+    // given `parameterization`, `knots`, `knotWidths`, and `isClosed`.
+    //
+    static CubicBezierStroke fromCatmullRomSpline(
+        CatmullRomSplineParameterization parameterization,
+        core::ConstSpan<Vec2d> knotPositions,
+        core::ConstSpan<double> knotWidths,
+        bool isClosed,
+        Int i);
+
+    // Constructs the CubicBezierStroke corresponding to the segment at
+    // index [`i`, `i`+1] in the Catmull-Rom spline stroke defined by the
+    // given `parameterization`, `knots`, `width`, and `isClosed`.
+    //
+    static CubicBezierStroke fromCatmullRomSpline(
+        CatmullRomSplineParameterization parameterization,
+        core::ConstSpan<Vec2d> knotPositions,
+        double width,
+        bool isClosed,
+        Int i);
+
+    const std::array<Vec2d, 4>& positions() const {
+        return positions_;
+    }
+
+    const std::array<double, 4>& halfwidths() const {
+        return halfwidths_;
+    }
+
+    bool isWidthUniform() const {
+        return isWidthUniform_;
+    }
+
+    Vec2d evalPosition(double u) const;
+
+    void evalPositionAndDerivative(double u, Vec2d& position, Vec2d& derivative) const;
+
+    double evalHalfwidths(double u) const;
+
+    void
+    evalHalfwidthsAndDerivative(double u, double& halfwidth, double& derivative) const;
+
+private:
+    std::array<Vec2d, 4> positions_;
+    std::array<double, 4> halfwidths_;
+    bool isWidthUniform_ = false;
+
+    enum class CornerCase {
+        None = 0,
+        Corner = 1,
+        AfterCorner = 2,
+        BeforeCorner = 3,
+        BetweenCorners = 4,
+    };
+
+    // It also computes `knotSegments` and `knotSegmentLengths`.
+    CornerCase initPositions_(
+        CatmullRomSplineParameterization parameterization,
+        core::ConstSpan<Vec2d> splineKnots,
+        const std::array<Int, 4>& knotIndices,
+        std::array<Vec2d, 3>& knotSegments,
+        std::array<double, 3>& knotSegmentLengths);
+
+    void initHalfwidths_(
+        core::ConstSpan<double> splineKnots,
+        const std::array<Int, 4>& knotIndices,
+        const std::array<double, 3>& knotSegmentLengths,
+        CornerCase cornerCase);
+
+    static std::array<Int, 4> computeKnotIndices_(bool isClosed, Int numKnots, Int i);
+};
+
+} // namespace detail
 
 /// Returns a new sample with each attribute linearly interpolated.
 ///
