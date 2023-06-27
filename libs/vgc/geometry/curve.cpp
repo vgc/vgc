@@ -574,24 +574,28 @@ namespace {
 Vec2d segmentStartPositionOpenUnchecked_(
     core::ConstSpan<Vec2d> positions_,
     Int segmentIndex) {
+
     return positions_.getUnchecked(segmentIndex);
 }
 
 Vec2d segmentEndPositionOpenUnchecked_(
     core::ConstSpan<Vec2d> positions_,
     Int segmentIndex) {
+
     return positions_.getUnchecked(segmentIndex + 1);
 }
 
 Vec2d segmentStartPositionClosedUnchecked_(
     core::ConstSpan<Vec2d> positions_,
     Int segmentIndex) {
+
     return positions_.getUnchecked(segmentIndex);
 }
 
 Vec2d segmentEndPositionClosedUnchecked_(
     core::ConstSpan<Vec2d> positions_,
     Int segmentIndex) {
+
     if (segmentIndex == positions_.length()) {
         return positions_.getUnchecked(0);
     }
