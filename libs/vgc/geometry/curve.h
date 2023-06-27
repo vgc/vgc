@@ -491,6 +491,14 @@ private:
     core::Array<Vec2d> values_;
 };
 
+// TODO: Rename as Curve2dSampler?
+//       Or Stroke2dSampler? (stroke = positions + width)
+//
+// Note: Both CurveSampler and StrokeSampler might accept additional optional
+// attributes (e.g., color) interpolated along the curve, but that do not
+// affect how many samples are computed. This may or may not be templated
+// (non-templated version could be an array of DoubleArrays)
+
 /// \class vgc::geometry::Curve
 /// \brief A helper class to sample a 2D curve given external (non-owned) data.
 ///
@@ -637,9 +645,40 @@ public:
     /// Note that this `Curve` does not make a copy of the data. It is your
     /// responsibility to ensure that the data outlives this `Curve`.
     ///
-    void setPositions(core::ConstSpan<Vec2d> positions) {
-        positions_ = positions;
+    void setPositions(core::ConstSpan<Vec2d> positions);
+
+    /// Returns the position of the start knot of the given segment.
+    ///
+    /// Throws `IndexError` if `segmentIndex` is not in the range `[0,
+    /// numSegments() - 1]`.
+    ///
+    Vec2d segmentStartPosition(Int segmentIndex) const;
+
+    /// Returns the position of the end knot of the given segment.
+    ///
+    /// Throws `IndexError` if `segmentIndex` is not in the range `[0,
+    /// numSegments() - 1]`.
+    ///
+    Vec2d segmentEndPosition(Int segmentIndex) const;
+
+    /// Returns the line-length of each segment, that is, the distance between
+    /// the start knot and the end knot of the segment.
+    ///
+    /// This is different from the arclength of the segment, which is
+    /// the length along the curve.
+    ///
+    core::ConstSpan<double> segmentLineLengths() const {
+        return segmentLineLengths_;
     }
+
+    /// Returns whether the given segment is a "segment corner", that
+    /// is, a segment of length zero that behaves like a corner for the
+    /// adjacent segments.
+    ///
+    /// Throws `IndexError` if `segmentIndex` is not in the range `[0,
+    /// numSegments() - 1]`.
+    ///
+    bool isSegmentCorner(Int segmentIndex) const;
 
     /// Returns the AttributeVariability of the width attribute.
     ///
@@ -835,18 +874,36 @@ public:
 private:
     // Representation of the centerline of the curve
     Type type_;
-    core::Span<const Vec2d> positions_ = {};
+    core::ConstSpan<Vec2d> positions_ = {};
+
     bool isClosed_ = false;
 
     // Representation of the width of the curve
     AttributeVariability widthVariability_;
-    core::Span<const double> widths_ = {};
+    core::ConstSpan<double> widths_ = {};
     double widthConstant_ = 0;
     double averageWidth_ = 0;
     //double maxWidth_ = 0;
 
     // Color of the curve
     core::Color color_;
+
+    // Cached euclidean distances between knot positions.
+    //
+    // This should be recomputed either when the positions change,
+    // or when the curve type changes (e.g., from open to close).
+    //
+    // Note: this assumes that the non-owned positions haven't changed
+    // since the last call of setPositions, since this class cannot be
+    // aware of changes of positions.
+    //
+    core::DoubleArray segmentLineLengths_;
+    void computeSegmentLineLengths_();
+
+    // Whether all segments are corner segments (includes the case
+    // where numSegments() == 0).
+    //
+    bool areAllSegmentsCorners_ = false;
 
     void onWidthsChanged_();
 };

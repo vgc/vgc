@@ -573,6 +573,80 @@ Int Curve::numSegments() const {
     return 0;
 }
 
+void Curve::setPositions(core::ConstSpan<Vec2d> positions) {
+    positions_ = positions;
+    computeSegmentLineLengths_();
+}
+
+namespace {
+
+Vec2d segmentStartPositionOpenUnchecked_(
+    core::ConstSpan<Vec2d> positions_,
+    Int segmentIndex) {
+    return positions_.getUnchecked(segmentIndex);
+}
+
+Vec2d segmentEndPositionOpenUnchecked_(
+    core::ConstSpan<Vec2d> positions_,
+    Int segmentIndex) {
+    return positions_.getUnchecked(segmentIndex + 1);
+}
+
+Vec2d segmentStartPositionClosedUnchecked_(
+    core::ConstSpan<Vec2d> positions_,
+    Int segmentIndex) {
+    return positions_.getUnchecked(segmentIndex);
+}
+
+Vec2d segmentEndPositionClosedUnchecked_(
+    core::ConstSpan<Vec2d> positions_,
+    Int segmentIndex) {
+    if (segmentIndex == positions_.length()) {
+        return positions_.getUnchecked(0);
+    }
+    else {
+        return positions_.getUnchecked(segmentIndex + 1);
+    }
+}
+
+void checkSegmentIndex_(Int segmentIndex, Int numSegments) {
+    if (segmentIndex < 0 || segmentIndex > numSegments - 1) {
+        throw core::IndexError(core::format(
+            "Parameter segmentIndex ({}) out of range [{}, {}] (numSegments() == {})",
+            segmentIndex,
+            0,
+            numSegments - 1,
+            numSegments));
+    }
+}
+
+} // namespace
+
+Vec2d Curve::segmentStartPosition(Int segmentIndex) const {
+    checkSegmentIndex_(segmentIndex, numSegments());
+    if (isClosed()) {
+        return segmentStartPositionClosedUnchecked_(positions_, segmentIndex);
+    }
+    else {
+        return segmentStartPositionOpenUnchecked_(positions_, segmentIndex);
+    }
+}
+
+Vec2d Curve::segmentEndPosition(Int segmentIndex) const {
+    checkSegmentIndex_(segmentIndex, numSegments());
+    if (isClosed()) {
+        return segmentEndPositionClosedUnchecked_(positions_, segmentIndex);
+    }
+    else {
+        return segmentEndPositionOpenUnchecked_(positions_, segmentIndex);
+    }
+}
+
+bool Curve::isSegmentCorner(Int segmentIndex) const {
+    checkSegmentIndex_(segmentIndex, numSegments());
+    return !(segmentLineLengths_.getUnchecked(segmentIndex) > 0);
+}
+
 double Curve::width() const {
     return averageWidth_;
 }
@@ -936,8 +1010,6 @@ struct IterativeSamplingSampleNode {
 
 class IterativeSamplingCache {
 public:
-    std::optional<IterativeSamplingSample> previousSampleN;
-    Int segmentIndex = 0;
     double cosMaxAngle;
     // specific to sampleIterLegacy_
     core::Array<IterativeSamplingSample> sampleStack;
@@ -1016,26 +1088,17 @@ bool shouldKeepNewSample_(
 // The last sample is always appended.
 //
 [[maybe_unused]] bool sampleIterLegacy_(
-    const Curve* curve,
     const CurveSamplingParameters& params,
+    const CubicBezierStroke& bezierData,
     IterativeSamplingCache& data,
     core::Array<CurveSample>& outAppend) {
-
-    auto bezierData = CubicBezierStroke::fromCurve(curve, data.segmentIndex);
 
     IterativeSamplingSample s0 = {};
     IterativeSamplingSample sN = {};
 
     // Compute first sample of segment.
-    if (!data.previousSampleN.has_value()) {
-        s0.computeFrom(bezierData, 0);
-        outAppend.emplaceLast(s0.pos, s0.normal, s0.radius);
-    }
-    else {
-        // Re-use last sample of previous segment.
-        s0 = *data.previousSampleN;
-        s0.u = 0;
-    }
+    s0.computeFrom(bezierData, 0);
+    outAppend.emplaceLast(s0.pos, s0.normal, s0.radius);
 
     // Compute last sample of segment.
     { sN.computeFrom(bezierData, 1); }
@@ -1094,8 +1157,6 @@ bool shouldKeepNewSample_(
         }
     }
 
-    data.segmentIndex += 1;
-    data.previousSampleN = sN;
     return true;
 }
 
@@ -1106,8 +1167,8 @@ bool shouldKeepNewSample_(
 // The last sample is always appended.
 //
 bool sampleIter_(
-    const Curve* curve,
     const CurveSamplingParameters& params,
+    const CubicBezierStroke& bezierData,
     IterativeSamplingCache& data,
     core::Array<CurveSample>& outAppend) {
 
@@ -1117,30 +1178,17 @@ bool sampleIter_(
     const Int minSamples = std::max<Int>(0, minISS) + 2;
     const Int maxSamples = std::max<Int>(minSamples, maxISS + 2);
 
-    auto bezierData = CubicBezierStroke::fromCurve(curve, data.segmentIndex);
-
     data.resetSampleTree(maxSamples);
 
     // Setup first and last sample nodes of segment.
     IterativeSamplingSampleNode* s0 = &data.sampleTree[0];
-    if (data.previousSampleN.has_value()) {
-        // Re-use last sample of previous segment.
-        s0->sample = *data.previousSampleN;
-        s0->sample.u = 0;
-    }
-    else {
-        s0->sample.computeFrom(bezierData, 0);
-        const IterativeSamplingSample& ss = s0->sample;
-        outAppend.emplaceLast(ss.pos, ss.normal, ss.radius);
-    }
     IterativeSamplingSampleNode* sN = &data.sampleTree[1];
+    s0->sample.computeFrom(bezierData, 0);
     sN->sample.computeFrom(bezierData, 1);
     s0->previous = nullptr;
     s0->next = sN;
     sN->previous = s0;
     sN->next = nullptr;
-    data.segmentIndex += 1;
-    data.previousSampleN = sN->sample;
 
     auto linkNode = [](IterativeSamplingSampleNode* node,
                        IterativeSamplingSampleNode* previous) {
@@ -1212,7 +1260,7 @@ bool sampleIter_(
         previousLevelEndIndex = nextNodeIndex;
     }
 
-    IterativeSamplingSampleNode* node = data.sampleTree[0].next;
+    IterativeSamplingSampleNode* node = &data.sampleTree[0];
     while (node) {
         const IterativeSamplingSample& ss = node->sample;
         outAppend.emplaceLast(ss.pos, ss.normal, ss.radius);
@@ -1222,17 +1270,245 @@ bool sampleIter_(
     return true;
 }
 
+using OptionalInt = std::optional<Int>;
+
+// Returns the index of the segment just before the given `knotIndex`, if any.
+//
+OptionalInt segmentBeforeKnot_(const Curve* curve, Int knotIndex) {
+    if (curve->isClosed()) {
+        Int segmentIndex = knotIndex - 1;
+        if (segmentIndex < 0) {
+            segmentIndex += curve->numSegments();
+        }
+        return segmentIndex;
+    }
+    else {
+        if (knotIndex > 0) {
+            return knotIndex - 1;
+        }
+        else {
+            return std::nullopt;
+        }
+    }
+}
+
+OptionalInt firstNonCornerSegmentAfterKnot_(const Curve* curve, Int knotIndex) {
+    if (curve->isClosed()) {
+        Int numSegments = curve->numSegments();
+        for (Int i = 0; i < numSegments; ++i) {
+            Int segmentIndex = (knotIndex + i) % numSegments;
+            if (!curve->isSegmentCorner(segmentIndex)) {
+                return segmentIndex;
+            }
+        }
+        return std::nullopt;
+    }
+    else {
+        Int segmentIndex = knotIndex;
+        Int numSegments = curve->numSegments();
+        while (segmentIndex < numSegments) {
+            if (!curve->isSegmentCorner(segmentIndex)) {
+                return segmentIndex;
+            }
+            else {
+                ++segmentIndex;
+            }
+        }
+        return std::nullopt;
+    }
+}
+
+OptionalInt firstNonCornerSegmentBeforeKnot_(const Curve* curve, Int knotIndex) {
+    if (curve->isClosed()) {
+        Int numSegments = curve->numSegments();
+        Int start = knotIndex - 1 + numSegments; // Ensures `start - i >= 0`
+        for (Int i = 0; i < numSegments; ++i) {
+            Int segmentIndex = (start - i) % numSegments;
+            if (!curve->isSegmentCorner(segmentIndex)) {
+                return segmentIndex;
+            }
+        }
+        return std::nullopt;
+    }
+    else {
+        Int segmentIndex = knotIndex - 1;
+        while (segmentIndex >= 0) {
+            if (!curve->isSegmentCorner(segmentIndex)) {
+                return segmentIndex;
+            }
+            else {
+                --segmentIndex;
+            }
+        }
+        return std::nullopt;
+    }
+}
+
+// Handle cases where:
+// - open curve with numKnots == 1: there are no segments at all in the curve
+// - closed curve with numKnots == 1: there is one segment but whose
+//   start knot is equal to its end knot
+// - There is more than 1 knot but they are all equal.
+//
+// Note that this is different from `numSegmentsToSample == 0` with at
+// least one non-corner segment in the curve, in which case we still
+// need to evaluate one of the non-corner segments in order to provide
+// a meaningful normal.
+//
+CurveSample computeUniqueSampleOfZeroLengthCurve_(const Curve* curve) {
+    double halfwidth;
+    if (curve->widthVariability() == Curve::AttributeVariability::Constant) {
+        halfwidth = 0.5 * curve->width();
+    }
+    else {
+        halfwidth = 0.5 * curve->widths()[0];
+    }
+    Vec2d position = curve->positions()[0];
+    Vec2d normal(0, 0);
+    return CurveSample(position, normal, halfwidth);
+}
+
+CurveSample computeSampleFromBezier_(const Curve* curve, Int segmentIndex, double u) {
+    auto bezier = CubicBezierStroke::fromCurve(curve, segmentIndex);
+    IterativeSamplingSample s;
+    s.computeFrom(bezier, u);
+    return CurveSample(s.pos, s.normal, s.radius);
+}
+
+// We need to output a single sample, corresponding to the position/width/normal
+// at the given `startKnot`.
+//
+// We do this by finding a non-corner segment before (or after) the knot, and
+// using the last (or first) sample of this segment.
+//
+CurveSample computeSingleSampleAtKnot_(const Curve* curve, Int knotIndex) {
+
+    Int segmentIndex;
+    double u;
+
+    // Determine whether the segment just before the knot exists and is not a
+    // corner segment.
+    OptionalInt previousSegment = segmentBeforeKnot_(curve, knotIndex);
+    if (previousSegment && !curve->isSegmentCorner(*previousSegment)) {
+
+        // If this is the case, use the last sample of this previous segment.
+        segmentIndex = *previousSegment;
+        u = 1;
+    }
+    else {
+        // Otherwise, use the first non-corner segment after the knot.
+        if (OptionalInt i = firstNonCornerSegmentAfterKnot_(curve, knotIndex)) {
+            segmentIndex = *i;
+            u = 0;
+        }
+        else {
+            // If there is no non-corner segment after, use the first non-corner
+            // segment before.
+            if (OptionalInt i = firstNonCornerSegmentBeforeKnot_(curve, knotIndex)) {
+                segmentIndex = *i;
+                u = 1;
+            }
+            else {
+                // Otherwise, this means that all segments are corner segments.
+                return computeUniqueSampleOfZeroLengthCurve_(curve);
+            }
+        }
+    }
+
+    // Generate the sample from the selected segment
+    return computeSampleFromBezier_(curve, segmentIndex, u);
+}
+
+void appendSamplesOfCornerSegment_(
+    const Curve* curve,
+    Int segmentIndex,
+    core::Array<CurveSample>& out) {
+
+    Int numSegments = curve->numSegments();
+    Int isClosed = curve->isClosed();
+    Int startKnot = segmentIndex;
+    Int endKnot = segmentIndex + 1;
+    if (isClosed && endKnot > numSegments) {
+        endKnot -= numSegments;
+    }
+
+    // Determine whether the segment just before this segment
+    // exists and is non-corner.
+    OptionalInt nonCornerPrevious = segmentBeforeKnot_(curve, startKnot);
+    if (nonCornerPrevious && !curve->isSegmentCorner(*nonCornerPrevious)) {
+        nonCornerPrevious = std::nullopt;
+    }
+
+    // Determine whether a non-corner segment exists after this segment
+    OptionalInt nonCornerAfter = firstNonCornerSegmentBeforeKnot_(curve, endKnot);
+
+    if (nonCornerPrevious) {
+        if (nonCornerAfter) {
+
+            // If the previous segment is non-corner, and there exists a
+            // non-corner segment after this segment, then this corner segment
+            // is responsible for the join. For now, we do a bevel from the
+            // last sample of the previous segment to the first sample of the
+            // first non-corner segment after this segment.
+            //
+            // In the future, we may want to support round join/miter joins,
+            // although this is complicated in case of varying width, and for
+            // now the design is to only have such complicated joins we only
+            // implement this complexity at vertices, not at handle this
+            // complexity at vertices.
+            //
+            out.append(computeSampleFromBezier_(curve, *nonCornerPrevious, 1));
+            out.append(computeSampleFromBezier_(curve, *nonCornerAfter, 0));
+        }
+        else {
+            // This is the end of an open curve: no join to compute, just use
+            // the last sample of the previous segment.
+            //
+            out.append(computeSampleFromBezier_(curve, *nonCornerPrevious, 1));
+        }
+    }
+    else {
+        if (nonCornerAfter) {
+
+            // Only add the first sample of the first non-corner segment after
+            // this segment. Any potential join is already handled by a corner
+            // segment before this one.
+            //
+            out.append(computeSampleFromBezier_(curve, *nonCornerAfter, 0));
+        }
+        else {
+            // This is the end of an open curve: no join to compute, just use
+            // the last sample of the first non-corner segment before this
+            // segment.
+            //
+            OptionalInt nonCornerBefore =
+                firstNonCornerSegmentBeforeKnot_(curve, startKnot);
+
+            if (nonCornerBefore) {
+                out.append(computeSampleFromBezier_(curve, *nonCornerBefore, 1));
+            }
+            else {
+                // We are a corner segment, and there is no non-corner segment
+                // before or after us, so this means all segments are corners.
+                //
+                CurveSample sample = computeUniqueSampleOfZeroLengthCurve_(curve);
+                out.append(sample);
+            }
+        }
+    }
+}
+
 } // namespace
 
 void Curve::sampleRange(
     core::Array<CurveSample>& outAppend,
     const CurveSamplingParameters& parameters,
     Int startKnot,
-    Int numSegments,
+    Int numSegmentsToSample,
     bool computeArclength) const {
 
     Int numKnots = this->numKnots();
-    Int n = this->numSegments();
+    Int numSegmentsInCurve = this->numSegments();
 
     // Verify we have at least one knot, since a post-condition of this
     // function is to return at least one sample.
@@ -1253,74 +1529,60 @@ void Curve::sampleRange(
     }
 
     // Verify and wrap numSegments
-    if (numSegments < -n - 1 || numSegments > n) {
+    if (numSegmentsToSample < -numSegmentsInCurve - 1
+        || numSegmentsToSample > numSegmentsInCurve) {
+
         throw vgc::core::IndexError(vgc::core::format(
-            "Parameter numSegments ({}) out of valid number of segments range [{}, {}].",
-            numSegments,
-            -n - 1,
-            n));
+            "Parameter numSegmentsToSample ({}) out of valid number of segments range "
+            "[{}, {}].",
+            numSegmentsToSample,
+            -numSegmentsInCurve - 1,
+            numSegmentsInCurve));
     }
-    if (numSegments < 0) {
-        numSegments += n + 1; // -1 becomes n (=> all segments)
+    if (numSegmentsToSample < 0) {
+        numSegmentsToSample += numSegmentsInCurve + 1; // -1 becomes n (=> all segments)
     }
-    if (!isClosed() && numSegments > n - startKnot) {
+    if (!isClosed() && numSegmentsToSample > numSegmentsInCurve - startKnot) {
         throw vgc::core::IndexError(core::format(
-            "Parameter numSegments ({} after negative-wrap) exceeds remaining number of "
-            "segments when starting at the given startKnot ({} after negative-wrap): "
-            "valid range is [0, {}] since the curve is open and has {} knots.",
-            numSegments,
+            "Parameter numSegmentsToSample ({} after negative-wrap) exceeds remaining "
+            "number of segments when starting at the given startKnot ({} after "
+            "negative-wrap): valid range is [0, {}] since the curve is open and has {} "
+            "knots.",
+            numSegmentsToSample,
             startKnot,
-            n - startKnot,
+            numSegmentsInCurve - startKnot,
             numKnots));
     }
 
     // Remember old length of outAppend
     const Int oldLength = outAppend.length();
 
-    if (numKnots == 1) {
-        // Handle case where there are no segments at all the curve.
-        //
-        // Note that this is different from `start == end` with `n > 1`, in
-        // which case we need to actually evaluate a Bezier curve to get the
-        // normal.
-        //
-        const bool isWidthUniform =
-            (widthVariability() == Curve::AttributeVariability::Constant);
-        Vec2d position = positions()[0];
-        Vec2d normal(0, 0);
-        double halfwidth = 0.5 * (isWidthUniform ? width() : widths_[0]);
-        outAppend.emplaceLast(position, normal, halfwidth);
+    if (numSegmentsToSample == 0) {
+        CurveSample sample = computeSingleSampleAtKnot_(this, startKnot);
+        outAppend.append(sample);
     }
     else {
-        if (numSegments == 0) {
-            // Add a point manually if it is a single point segment.
-            IterativeSamplingSample lastSample;
-            CubicBezierStroke bezierData;
-            double u;
-            if (startKnot < n) {
-                bezierData = CubicBezierStroke::fromCurve(this, startKnot);
-                u = 0;
-            }
-            else { // start == n
-                bezierData = CubicBezierStroke::fromCurve(this, n - 1);
-                u = 1;
-            }
-            lastSample.computeFrom(bezierData, u);
-            outAppend.emplaceLast(lastSample.pos, lastSample.normal, lastSample.radius);
+        // Reserve memory space
+        if (outAppend.isEmpty()) {
+            Int minSegmentSamples = parameters.minIntraSegmentSamples() + 1;
+            outAppend.reserve(1 + numSegmentsToSample * minSegmentSamples);
         }
-        else {
-            // Reserve memory space
-            const Int minSegmentSamples =
-                std::max<Int>(0, parameters.minIntraSegmentSamples()) + 1;
-            outAppend.reserve(outAppend.length() + 1 + numSegments * minSegmentSamples);
 
-            // Iterate over all segments
-            IterativeSamplingCache data = {};
-            data.cosMaxAngle = std::cos(parameters.maxAngle());
-            data.segmentIndex = startKnot;
-            for (Int i = 0; i < numSegments; ++i) {
-                sampleIter_(this, parameters, data, outAppend);
-                data.segmentIndex = data.segmentIndex % n;
+        // Iterate over all segments
+        IterativeSamplingCache data = {};
+        data.cosMaxAngle = std::cos(parameters.maxAngle());
+        for (Int i = 0; i < numSegmentsToSample; ++i) {
+            Int segmentIndex = (startKnot + i) % numSegmentsInCurve;
+            if (i != 0) {
+                // Remove last sample of previous segment (recomputed below)
+                outAppend.pop();
+            }
+            if (isSegmentCorner(segmentIndex)) {
+                appendSamplesOfCornerSegment_(this, segmentIndex, outAppend);
+            }
+            else {
+                auto bezier = CubicBezierStroke::fromCurve(this, segmentIndex);
+                sampleIter_(parameters, bezier, data, outAppend);
             }
         }
     }
@@ -1354,14 +1616,7 @@ void Curve::sampleRange(
 std::array<Vec2d, 2>
 Curve::getOffsetLineTangentsAtSegmentEndpoint(Int segmentIndex, Int endpointIndex) const {
 
-    if (segmentIndex < 0 || segmentIndex >= numSegments()) {
-        throw vgc::core::IndexError(core::format(
-            "The given `segmentIndex` ({}) is out of range "
-            " `[0, numSegments() - 1]` ([0, {}])",
-            segmentIndex,
-            numSegments() - 1));
-    }
-
+    checkSegmentIndex_(segmentIndex, numSegments());
     if (endpointIndex < 0 || endpointIndex > 1) {
         throw vgc::core::IndexError(core::format(
             "The given `endpointIndex` ({}) must be `0` or `1`", endpointIndex));
@@ -1369,6 +1624,36 @@ Curve::getOffsetLineTangentsAtSegmentEndpoint(Int segmentIndex, Int endpointInde
 
     auto bezierData = CubicBezierStroke::fromCurve(this, segmentIndex);
     return computeOffsetLineTangentsAtEndPoint(bezierData, endpointIndex);
+}
+
+void Curve::computeSegmentLineLengths_() {
+
+    // Compte segment line lengths
+    Int n = numSegments();
+    segmentLineLengths_.resizeNoInit(n);
+    if (isClosed()) {
+        for (Int i = 0; i < n; ++i) {
+            Vec2d p1 = segmentStartPositionClosedUnchecked_(positions_, i);
+            Vec2d p2 = segmentEndPositionClosedUnchecked_(positions_, i);
+            segmentLineLengths_.getUnchecked(i) = (p2 - p1).length();
+        }
+    }
+    else {
+        for (Int i = 0; i < n; ++i) {
+            Vec2d p1 = segmentStartPositionOpenUnchecked_(positions_, i);
+            Vec2d p2 = segmentEndPositionOpenUnchecked_(positions_, i);
+            segmentLineLengths_.getUnchecked(i) = (p2 - p1).length();
+        }
+    }
+
+    // Check whether at least one segment have a non-zero line-length
+    areAllSegmentsCorners_ = true;
+    for (Int i = 0; i < n; ++i) {
+        if (segmentLineLengths_.getUnchecked(i) > 0) {
+            areAllSegmentsCorners_ = false;
+            break;
+        }
+    }
 }
 
 void Curve::onWidthsChanged_() {
