@@ -261,10 +261,7 @@ CubicBezierStroke::CornerCase CubicBezierStroke::initPositions_(
             Vec2d d = p2p3 / d23;                    // unit vector to reflect
             Vec2d n = (p1p2 / d12).orthogonalized(); // unit axis of reflexion
             Vec2d q = 2 * d.dot(n) * n - d;          // refection of d along n
-            positions_[0] = knots[1] + d12 * q;
-            positions_[1] = knots[1];
-            positions_[2] = knots[2];
-            positions_[3] = knots[3];
+            knots[0] = knots[1] + d12 * q;
             knotSegmentLengths[0] = d12;
             result = CornerCase::AfterCorner;
         }
@@ -274,24 +271,18 @@ CubicBezierStroke::CornerCase CubicBezierStroke::initPositions_(
         Vec2d d = -p0p1 / d01;
         Vec2d n = (p1p2 / d12).orthogonalized();
         Vec2d q = 2 * d.dot(n) * n - d;
-        positions_[0] = knots[0];
-        positions_[1] = knots[1];
-        positions_[2] = knots[2];
-        positions_[3] = knots[2] + d12 * q;
+        knots[3] = knots[2] + d12 * q;
         knotSegmentLengths[2] = d12;
         result = CornerCase::BeforeCorner;
-    }
-    else {
-        positions_ = knots;
     }
 
     switch (parameterization) {
     case CatmullRomSplineParameterization::Uniform: {
-        positions_ = uniformCatmullRomToBezier<Vec2d>(positions_);
+        positions_ = uniformCatmullRomToBezier<Vec2d>(knots);
         break;
     }
     case CatmullRomSplineParameterization::Centripetal: {
-        positions_ = centripetalCatmullRomToBezier<Vec2d>(positions_, knotSegmentLengths);
+        positions_ = centripetalCatmullRomToBezier<Vec2d>(knots, knotSegmentLengths);
         break;
     }
     }
