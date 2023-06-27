@@ -1395,8 +1395,8 @@ CurveSample computeSingleSampleAtKnot_(const Curve* curve, Int knotIndex) {
         else {
             // If there is no non-corner segment after, use the first non-corner
             // segment before.
-            if (OptionalInt i = firstNonCornerSegmentBeforeKnot_(curve, knotIndex)) {
-                segmentIndex = *i;
+            if (OptionalInt j = firstNonCornerSegmentBeforeKnot_(curve, knotIndex)) {
+                segmentIndex = *j;
                 u = 1;
             }
             else {
