@@ -14,9 +14,10 @@ More info: **[www.vgc.io](https://www.vgc.io)**
 
 ## Disclaimer
 
-This project is still in very early development (pre-alpha) and doesn't yet
-have any of the innovative features which make VGC unique. If you are curious,
-you can try our earlier research prototype [VPaint](https://www.vpaint.org).
+This project is still in early development (alpha versions). There is no animation yet, and
+only very basic features of VGC Illustration are implemented. If you are curious, you
+can try our earlier research prototype [VPaint](https://www.vpaint.org) which has
+more features for now.
 
 ## Dependencies
 
