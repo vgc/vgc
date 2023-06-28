@@ -93,7 +93,7 @@ Int computeWindingContribution(
     const KeyEdge* ke = keyHalfedge.edge();
 
     const EdgeSampling& sampling = ke->sampling();
-    const geometry::CurveSampleArray& samples = sampling.samples();
+    const geometry::StrokeSample2dArray& samples = sampling.samples();
     const geometry::Rect2d& bbox = sampling.centerlineBoundingBox();
 
     // The winding number of a closed curve C (cycle) at point P = (Px, Py)
@@ -259,7 +259,7 @@ void samplePointsOnCycleUniformly(
     double stepS = totalS / numSamples;
     double nextStepS = stepS / 2;
     for (const KeyHalfedge& khe : cycle) {
-        const geometry::CurveSampleArray& samples = khe.edge()->sampling().samples();
+        const geometry::StrokeSample2dArray& samples = khe.edge()->sampling().samples();
         double heS = samples.last().s();
         if (heS == 0) {
             // XXX TODO: handle cases where heS == 0 more appropriately.
@@ -340,7 +340,7 @@ core::Array<KeyCycle> computeKeyFaceCandidateAt(
         }
         KeyEdge* ke = cell->toKeyEdge();
         if (ke && ke->existsAt(t)) {
-            const geometry::CurveSampleArray& samples = ke->sampling().samples();
+            const geometry::StrokeSample2dArray& samples = ke->sampling().samples();
             geometry::DistanceToCurve d = geometry::distanceToCurve(samples, position);
 
             constexpr double hpi = core::pi / 2;
@@ -662,9 +662,9 @@ bool computeKeyFaceFillTriangles(
                     // lifetime.
                     const EdgeSampling& sampling =
                         quality ? ke->computeSampling(*quality) : ke->sampling();
-                    const geometry::CurveSampleArray& samples = sampling.samples();
+                    const geometry::StrokeSample2dArray& samples = sampling.samples();
                     if (khe.direction()) {
-                        for (const geometry::CurveSample& s : samples) {
+                        for (const geometry::StrokeSample2d& s : samples) {
                             geometry::Vec2d p = s.position();
                             if (isFirst) {
                                 curves2d.moveTo(p[0], p[1]);
@@ -677,7 +677,7 @@ bool computeKeyFaceFillTriangles(
                     }
                     else {
                         for (auto it = samples.rbegin(); it != samples.rend(); ++it) {
-                            const geometry::CurveSample& s = *it;
+                            const geometry::StrokeSample2d& s = *it;
                             geometry::Vec2d p = s.position();
                             if (isFirst) {
                                 curves2d.moveTo(p[0], p[1]);

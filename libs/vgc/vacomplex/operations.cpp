@@ -192,7 +192,7 @@ void setKeyVertexPosition(KeyVertex* vertex, const geometry::Vec2d& pos) {
 
 void setKeyEdgeGeometry(KeyEdge* edge, const std::shared_ptr<KeyEdgeGeometry>& geometry) {
     if (!edge) {
-        throw LogicError("setKeyEdgeCurvePoints: edge is nullptr.");
+        throw LogicError("setKeyEdgeGeometry: edge is nullptr.");
     }
     detail::Operations ops(edge->complex());
     return ops.setKeyEdgeGeometry(edge, geometry);
@@ -200,7 +200,7 @@ void setKeyEdgeGeometry(KeyEdge* edge, const std::shared_ptr<KeyEdgeGeometry>& g
 
 void setKeyEdgeSamplingQuality(KeyEdge* edge, geometry::CurveSamplingQuality quality) {
     if (!edge) {
-        throw LogicError("setKeyEdgeSamplingParameters: edge is nullptr.");
+        throw LogicError("setKeyEdgeSamplingQuality: edge is nullptr.");
     }
     detail::Operations ops(edge->complex());
     return ops.setKeyEdgeSamplingQuality(edge, quality);

@@ -22,10 +22,10 @@
 
 void wrap_curve(py::module& m) {
 
-    using This = vgc::geometry::Curve;
+    using This = vgc::geometry::StrokeView2d;
     //using Vec2d = vgc::geometry::Vec2d;
 
-    vgc::core::wraps::Class<This>(m, "Curve")
+    vgc::core::wraps::Class<This>(m, "StrokeView2d")
         .def(py::init<>())
 
         // Note: there's a more readable syntax to disambiguate function
@@ -40,7 +40,7 @@ void wrap_curve(py::module& m) {
             py::overload_cast<const Vec2d&, double>(&This::addControlPoint))*/
 
         .def("__repr__", [](const This& c) {
-            return "<Curve containing "                     //
+            return "<StrokeView2d: "                        //
                    + std::to_string(c.positions().length()) //
                    + " control points>";
         });

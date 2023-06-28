@@ -115,7 +115,7 @@ private:
     void dirtyMesh_() override;
     void onBoundaryMeshChanged_() override;
 
-    geometry::CurveSampleArray
+    geometry::StrokeSample2dArray
     computeInputSamples_(const geometry::CurveSamplingParameters& parameters) const;
 };
 

@@ -176,15 +176,15 @@ private:
     geometry::Vec2d outgoingTangent_ = {};
     geometry::Vec2d halfwidths_ = {};
     geometry::Vec2d patchCutLimits_ = {};
-    geometry::CurveSample joinSample_;
-    geometry::CurveSample joinPreviousSample_;
-    core::Array<geometry::CurveSample> inputSamples_;
+    geometry::StrokeSample2d joinSample_;
+    geometry::StrokeSample2d joinPreviousSample_;
+    core::Array<geometry::StrokeSample2d> inputSamples_;
     double angle_ = 0.0;
     double angleToNext_ = 0.0;
 
     // join result
     double patchLength_ = 0;
-    core::Array<geometry::CurveSample> workingSamples_;
+    core::Array<geometry::StrokeSample2d> workingSamples_;
     struct SidePatchData {
         // straight join model data
         double filletLength = 0;
