@@ -75,19 +75,19 @@ class VGC_VACOMPLEX_API EdgeSampling {
 public:
     EdgeSampling() noexcept = default;
 
-    explicit EdgeSampling(const geometry::CurveSampleArray& samples)
+    explicit EdgeSampling(const geometry::StrokeSample2dArray& samples)
         : samples_(samples) {
 
         computeCenterlineBoundingBox();
     }
 
-    explicit EdgeSampling(geometry::CurveSampleArray&& samples)
+    explicit EdgeSampling(geometry::StrokeSample2dArray&& samples)
         : samples_(std::move(samples)) {
 
         computeCenterlineBoundingBox();
     }
 
-    const geometry::CurveSampleArray& samples() const {
+    const geometry::StrokeSample2dArray& samples() const {
         return samples_;
     }
 
@@ -117,7 +117,7 @@ public:
     }
 
 private:
-    geometry::CurveSampleArray samples_ = {};
+    geometry::StrokeSample2dArray samples_ = {};
     geometry::Rect2d centerlineBoundingBox_ = geometry::Rect2d::empty;
     // offsetLineTangents_[i][j] is tangent at endpoint i and side j.
     std::array<std::array<geometry::Vec2d, 2>, 2> offsetLineTangents_ = {};
@@ -125,7 +125,7 @@ private:
 
     void computeCenterlineBoundingBox() {
         centerlineBoundingBox_ = geometry::Rect2d::empty;
-        for (const geometry::CurveSample& cs : samples_) {
+        for (const geometry::StrokeSample2d& cs : samples_) {
             centerlineBoundingBox_.uniteWith(cs.position());
         }
     }

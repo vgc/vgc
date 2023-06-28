@@ -139,7 +139,7 @@ bool VacEdgeCellFrameData::isSelectableAt(
 
     double shortestDistance = core::DoubleInfinity;
 
-    const geometry::CurveSampleArray& samples = sampling_->samples();
+    const geometry::StrokeSample2dArray& samples = sampling_->samples();
     auto it1 = samples.begin();
     // is p in sample outline-mode-selection disk?
     shortestDistance =
@@ -199,10 +199,10 @@ bool VacEdgeCellFrameData::isSelectableInRect(const geometry::Rect2d& rect) cons
         return false;
     }
 
-    const geometry::CurveSampleArray& samples = sampling_->samples();
+    const geometry::StrokeSample2dArray& samples = sampling_->samples();
 
     struct SamplePositionGetter {
-        Vec2d operator()(const geometry::CurveSample& s) {
+        Vec2d operator()(const geometry::StrokeSample2d& s) {
             return s.position();
         }
     };
@@ -446,7 +446,7 @@ void VacKeyEdge::onPaintDraw(
         geometry::Vec4fArray offsetLine1Vertices;
 
         constexpr Int nCap = 2;
-        const geometry::CurveSampleArray& preJoinSamples = data.preJoinSamples();
+        const geometry::StrokeSample2dArray& preJoinSamples = data.preJoinSamples();
         if (!preJoinSamples.isEmpty()) {
             {
                 // start cap
@@ -465,7 +465,7 @@ void VacKeyEdge::onPaintDraw(
                     lineVertices.emplaceLast(p.x(), p.y(), sp2.x(), sp2.y());
                 }
             }
-            for (const geometry::CurveSample& s : preJoinSamples) {
+            for (const geometry::StrokeSample2d& s : preJoinSamples) {
                 geometry::Vec2f p = geometry::Vec2f(s.position());
                 geometry::Vec2f n = geometry::Vec2f(s.normal());
                 // clang-format off
@@ -953,7 +953,7 @@ bool VacKeyEdge::computeStrokeMesh_() {
 
     if (data.sampling_ && data.sampling_->samples().size() >= 2) {
 
-        const geometry::CurveSampleArray& samples = data.sampling_->samples();
+        const geometry::StrokeSample2dArray& samples = data.sampling_->samples();
 
         const auto& patch0 = data.patches_[0];
         const auto& patch1 = data.patches_[1];
@@ -976,7 +976,7 @@ bool VacKeyEdge::computeStrokeMesh_() {
             totalS = core::DoubleInfinity;
         }
 
-        core::Span<const geometry::CurveSample> prejoinSamples(samples);
+        core::Span<const geometry::StrokeSample2d> prejoinSamples(samples);
 
         Int previousTrioStartIndex = 0;
         Int trioStartIndex = 0;
@@ -1027,7 +1027,7 @@ bool VacKeyEdge::computeStrokeMesh_() {
 
         offsetS = patch0.extensionS + patch0.overrideS;
 
-        auto tessIterSample = [&](const geometry::CurveSample& sample) {
+        auto tessIterSample = [&](const geometry::StrokeSample2d& sample) {
             std::array<Vec2d, 3> qs = {
                 sample.sidePoint(0), sample.position(), sample.sidePoint(1)};
 
@@ -1400,7 +1400,7 @@ bool VacKeyEdge::computeStrokeMesh_() {
             previousS = s;
         };
 
-        const geometry::CurveSample& mergeSample0 = mergeLocation0.sample;
+        const geometry::StrokeSample2d& mergeSample0 = mergeLocation0.sample;
         offsetS -= mergeSample0.s();
 
         if (mergeLocation0.halfedgeNextSampleIndex > 0 && mergeLocation0.t < 1.0) {
@@ -1415,7 +1415,7 @@ bool VacKeyEdge::computeStrokeMesh_() {
                 prejoinSamples.begin() + mergeLocation0.halfedgeNextSampleIndex,
                 prejoinSamples.end() - mergeLocation1.halfedgeNextSampleIndex);
 
-            for (const geometry::CurveSample& coreSample : coreSamples) {
+            for (const geometry::StrokeSample2d& coreSample : coreSamples) {
                 tessIterSample(coreSample);
             }
         }

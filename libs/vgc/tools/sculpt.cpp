@@ -547,7 +547,7 @@ void Sculpt::onMouseHover(ui::MouseHoverEvent* event) {
                     vacomplex::KeyEdge* ke = node->toCellUnchecked()->toKeyEdge();
                     if (ke) {
                         const vacomplex::EdgeSampling& sampling = ke->sampling();
-                        const geometry::CurveSampleArray& samples = sampling.samples();
+                        const geometry::StrokeSample2dArray& samples = sampling.samples();
                         geometry::DistanceToCurve dtc =
                             geometry::distanceToCurve(samples, worldCursor);
                         if (dtc.distance() <= minDistance) {

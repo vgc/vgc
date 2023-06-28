@@ -305,7 +305,7 @@ Int findJoinPatchLimit(
     Int side) {
 
     Int index = 0;
-    const geometry::CurveSampleArray& samples = edgeData->preJoinSamples();
+    const geometry::StrokeSample2dArray& samples = edgeData->preJoinSamples();
     if constexpr (!fromEnd) {
         for (auto it = samples.begin(); it != samples.end(); ++it, ++index) {
             const double hw = it->halfwidth(side);
@@ -371,7 +371,7 @@ void VacKeyVertex::computeJoin_() {
             continue;
         }
 
-        const geometry::CurveSampleArray& samples = edgeData->preJoinSamples();
+        const geometry::StrokeSample2dArray& samples = edgeData->preJoinSamples();
         Int numSamples = samples.length();
 
         if (numSamples < 2) {
@@ -384,20 +384,21 @@ void VacKeyVertex::computeJoin_() {
 
         const bool isReverse = he.isReverse();
         if (!isReverse) {
-            geometry::CurveSample sample = samples.getUnchecked(0);
+            geometry::StrokeSample2d sample = samples.getUnchecked(0);
             heData.halfwidths_ = sample.halfwidths();
             heData.joinSample_ = sample;
             heData.joinPreviousSample_ = samples.getUnchecked(1);
         }
         else {
-            geometry::CurveSample sample = samples.getUnchecked(numSamples - 1);
+            geometry::StrokeSample2d sample = samples.getUnchecked(numSamples - 1);
             heData.halfwidths_[0] = sample.halfwidth(1);
             heData.halfwidths_[1] = sample.halfwidth(0);
-            heData.joinSample_ = geometry::CurveSample(
+            heData.joinSample_ = geometry::StrokeSample2d(
                 sample.position(), -sample.normal(), heData.halfwidths_, 0);
-            geometry::CurveSample previousSample = samples.getUnchecked(numSamples - 2);
+            geometry::StrokeSample2d previousSample =
+                samples.getUnchecked(numSamples - 2);
             geometry::Vec2d previousHw = previousSample.halfwidths();
-            heData.joinPreviousSample_ = geometry::CurveSample(
+            heData.joinPreviousSample_ = geometry::StrokeSample2d(
                 previousSample.position(),
                 -previousSample.normal(),
                 geometry::Vec2d(previousHw[1], previousHw[0]),
@@ -418,7 +419,7 @@ void VacKeyVertex::computeJoin_() {
         heData.patchCutLimits_ = cutLimitCoefficient * heData.halfwidths_;
     }
 
-    using geometry::CurveSample;
+    using geometry::StrokeSample2d;
     using geometry::Vec2d;
     using geometry::Vec3d;
     using geometry::Vec3f;
@@ -438,7 +439,7 @@ void VacKeyVertex::computeJoin_() {
             double maxHalfwidth =
                 (std::max)(halfedgeData.halfwidths_[0], halfedgeData.halfwidths_[1]);
 
-            CurveSample joinSample = halfedgeData.joinSample_;
+            StrokeSample2d joinSample = halfedgeData.joinSample_;
             Vec2d normal = halfedgeData.joinSample_.normal();
             Vec2d capDir = -halfedgeData.joinSample_.tangent();
 
@@ -566,7 +567,7 @@ void VacKeyVertex::computeJoin_() {
                     }
                 }
                 else {
-                    geometry::CurveSample joinSamplePrev =
+                    geometry::StrokeSample2d joinSamplePrev =
                         halfedgeData.joinPreviousSample_;
 
                     bool isT0Valid = false;
@@ -845,7 +846,7 @@ void VacKeyVertex::computeJoin_() {
         for (detail::VacJoinHalfedgeFrameData& heData : joinData.halfedgesFrameData_) {
             // We approximate the tangent using the position of the first sample
             //
-            const geometry::CurveSampleArray& preJoinSamples =
+            const geometry::StrokeSample2dArray& preJoinSamples =
                 heData.edgeData_->preJoinSamples();
             const bool isReverse = heData.isReverse();
             const double endS = preJoinSamples.last().s();
@@ -858,7 +859,8 @@ void VacKeyVertex::computeJoin_() {
             const double sqPatchLengthLimit = patchLengthLimit * patchLengthLimit;
             double patchLength = patchLengthLimit;
             //
-            core::Array<geometry::CurveSample>& workingSamples = heData.workingSamples_;
+            core::Array<geometry::StrokeSample2d>& workingSamples =
+                heData.workingSamples_;
             geometry::Vec2d outgoingTangent;
             workingSamples.clear();
             if (!isReverse) {
@@ -867,7 +869,7 @@ void VacKeyVertex::computeJoin_() {
                 auto previousIt = it;
                 double previousSqDist = 0;
                 for (; it != preJoinSamples.end(); previousIt = it++, ++i) {
-                    const geometry::CurveSample& sample = *it;
+                    const geometry::StrokeSample2d& sample = *it;
                     const geometry::Vec2d position = it->position();
                     if (i == 1) {
                         outgoingTangent = (position - vertexPosition).normalized();
@@ -888,7 +890,7 @@ void VacKeyVertex::computeJoin_() {
                                 / (distance - previousDistance));
                     }
                     if (tStop <= 1) {
-                        geometry::CurveSample mergeSample =
+                        geometry::StrokeSample2d mergeSample =
                             geometry::lerp(*previousIt, *it, tStop);
                         const double distance =
                             (vertexPosition - mergeSample.position()).length();
@@ -914,7 +916,7 @@ void VacKeyVertex::computeJoin_() {
                 auto previousIt = it;
                 double previousSqDist = 0;
                 for (; it != preJoinSamples.rend(); previousIt = it++, ++i) {
-                    const geometry::CurveSample& sample = *it;
+                    const geometry::StrokeSample2d& sample = *it;
                     const geometry::Vec2d position = it->position();
                     if (i == 1) {
                         outgoingTangent = (position - vertexPosition).normalized();
@@ -936,7 +938,7 @@ void VacKeyVertex::computeJoin_() {
                                 / (distance - previousDistance));
                     }
                     if (tStop <= 1) {
-                        geometry::CurveSample mergeSample =
+                        geometry::StrokeSample2d mergeSample =
                             geometry::lerp(*previousIt, *it, tStop);
                         const double distance =
                             (vertexPosition - mergeSample.position()).length();
@@ -1107,7 +1109,7 @@ void VacKeyVertex::computeJoin_() {
 
         // now create the actual patches
         for (auto& halfedgeData : data.joinData_.halfedgesFrameData_) {
-            geometry::CurveSampleArray& workingSamples = halfedgeData.workingSamples_;
+            geometry::StrokeSample2dArray& workingSamples = halfedgeData.workingSamples_;
 
             const double maxFilletLength = (std::max)(
                 halfedgeData.sidePatchData_[0].filletLength,
@@ -1132,7 +1134,7 @@ void VacKeyVertex::computeJoin_() {
                         double d = (sFilletMax / sMax) * halfedgeData.patchLength_;
                         const double t = (sFilletMax - previousS) / (s - previousS);
                         const double ot = 1 - t;
-                        geometry::CurveSample newSample(
+                        geometry::StrokeSample2d newSample(
                             centerBorder.pointAt(d),
                             centerBorderNormal,
                             previousIt->halfwidths() * ot + it->halfwidths() * t,

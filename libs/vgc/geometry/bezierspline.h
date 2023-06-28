@@ -29,7 +29,7 @@ namespace vgc::geometry {
 /// \brief Represents a piecewise-cubic continuous curve represented via
 ///        Bezier control points.
 ///
-/// This class is low-level. You may prefer to use the Curve class
+/// This class is low-level. You may prefer to use the Curves2d class
 /// instead.
 ///
 /// All the Bezier control points (both knots and tangents) are stored

@@ -294,7 +294,7 @@ constexpr size_t aaaa = sizeof(EdgeJoinPatchSample);
 struct EdgeJoinPatchMergeLocation {
     Int halfedgeNextSampleIndex = 0;
     double t = 1.0;
-    geometry::CurveSample sample;
+    geometry::StrokeSample2d sample;
 };
 
 struct EdgeJoinPatch {
@@ -367,7 +367,7 @@ public:
         return bbox_;
     }
 
-    const geometry::CurveSampleArray& preJoinSamples() const {
+    const geometry::StrokeSample2dArray& preJoinSamples() const {
         return sampling_ ? sampling_->samples() : defaultSamples_;
     }
 
@@ -395,7 +395,7 @@ private:
 
     // stage PreJoinGeometry
     std::shared_ptr<const vacomplex::EdgeSampling> sampling_;
-    geometry::CurveSampleArray defaultSamples_;
+    geometry::StrokeSample2dArray defaultSamples_;
 
     // stage PostJoinGeometry
     // [0]: start patch

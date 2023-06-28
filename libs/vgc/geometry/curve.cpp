@@ -82,41 +82,41 @@ void computeSample(
 
 namespace detail {
 
-CubicBezierStroke CubicBezierStroke::fromCurve(const Curve* curve, Int i) {
+CubicBezierStroke CubicBezierStroke::fromStroke(const StrokeView2d* stroke, Int i) {
 
-    core::ConstSpan<Vec2d> positions = curve->positions();
-    core::ConstSpan<double> widths = curve->widths();
+    core::ConstSpan<Vec2d> positions = stroke->positions();
+    core::ConstSpan<double> widths = stroke->widths();
 
     CatmullRomSplineParameterization parameterization = {};
-    switch (curve->type()) {
-    case Curve::Type::OpenUniformCatmullRom:
-    case Curve::Type::ClosedUniformCatmullRom: {
+    switch (stroke->type()) {
+    case CurveType::OpenUniformCatmullRom:
+    case CurveType::ClosedUniformCatmullRom: {
         parameterization = CatmullRomSplineParameterization::Uniform;
         break;
     }
-    case Curve::Type::OpenCentripetalCatmullRom:
-    case Curve::Type::ClosedCentripetalCatmullRom: {
+    case CurveType::OpenCentripetalCatmullRom:
+    case CurveType::ClosedCentripetalCatmullRom: {
         parameterization = CatmullRomSplineParameterization::Centripetal;
         break;
     }
     }
 
     bool isWidthUniform =
-        (curve->widthVariability() == Curve::AttributeVariability::Constant
+        (stroke->widthVariability() == StrokeView2d::AttributeVariability::Constant
          || widths.length() != positions.length());
 
     if (isWidthUniform) {
-        double width = curve->width();
+        double width = stroke->width();
         if (!widths.isEmpty()) {
-            // curve->width() is broken at the moment.
+            // stroke->width() is broken at the moment.
             width = widths[0];
         }
         return fromCatmullRomSpline(
-            parameterization, positions, width, curve->isClosed(), i);
+            parameterization, positions, width, stroke->isClosed(), i);
     }
     else {
         return fromCatmullRomSpline(
-            parameterization, positions, widths, curve->isClosed(), i);
+            parameterization, positions, widths, stroke->isClosed(), i);
     }
 }
 
@@ -404,7 +404,8 @@ CubicBezierStroke::computeKnotIndices_(bool isClosed, Int numKnots, Int i) {
 
 } // namespace detail
 
-DistanceToCurve distanceToCurve(const CurveSampleArray& samples, const Vec2d& position) {
+DistanceToCurve
+distanceToCurve(const StrokeSample2dArray& samples, const Vec2d& position) {
 
     DistanceToCurve result(core::DoubleInfinity, 0, 0, 0);
     constexpr double hpi = core::pi / 2;
@@ -461,7 +462,7 @@ DistanceToCurve distanceToCurve(const CurveSampleArray& samples, const Vec2d& po
     }
 
     // test last sample as point
-    const CurveSample& sample = samples.last();
+    const StrokeSample2d& sample = samples.last();
     Vec2d q = sample.position();
     Vec2d qp = position - q;
     double d = qp.length();
@@ -521,14 +522,13 @@ CurveSamplingParameters::CurveSamplingParameters(CurveSamplingQuality quality)
 
 namespace {
 
-constexpr bool isClosedType(Curve::Type type) {
-    using Type = Curve::Type;
+constexpr bool isClosedType(CurveType type) {
     switch (type) {
-    case Type::OpenUniformCatmullRom:
-    case Type::OpenCentripetalCatmullRom:
+    case CurveType::OpenUniformCatmullRom:
+    case CurveType::OpenCentripetalCatmullRom:
         return false;
-    case Type::ClosedUniformCatmullRom:
-    case Type::ClosedCentripetalCatmullRom:
+    case CurveType::ClosedUniformCatmullRom:
+    case CurveType::ClosedCentripetalCatmullRom:
         return true;
     }
     return false;
@@ -536,14 +536,14 @@ constexpr bool isClosedType(Curve::Type type) {
 
 } // namespace
 
-Curve::Curve(Type type)
+StrokeView2d::StrokeView2d(CurveType type)
     : type_(type)
     , isClosed_(isClosedType(type))
     , widthVariability_(AttributeVariability::PerControlPoint)
     , color_(core::colors::black) {
 }
 
-Curve::Curve(double constantWidth, Type type)
+StrokeView2d::StrokeView2d(double constantWidth, CurveType type)
     : type_(type)
     , isClosed_(isClosedType(type))
     , widthVariability_(AttributeVariability::Constant)
@@ -551,20 +551,20 @@ Curve::Curve(double constantWidth, Type type)
     , color_(core::colors::black) {
 }
 
-Int Curve::numSegments() const {
+Int StrokeView2d::numSegments() const {
     Int numPositions = positions_.length();
     switch (type_) {
-    case Type::OpenUniformCatmullRom:
-    case Type::OpenCentripetalCatmullRom:
+    case CurveType::OpenUniformCatmullRom:
+    case CurveType::OpenCentripetalCatmullRom:
         return std::max<Int>(0, numPositions - 1);
-    case Type::ClosedUniformCatmullRom:
-    case Type::ClosedCentripetalCatmullRom:
+    case CurveType::ClosedUniformCatmullRom:
+    case CurveType::ClosedCentripetalCatmullRom:
         return numPositions;
     }
     return 0;
 }
 
-void Curve::setPositions(core::ConstSpan<Vec2d> positions) {
+void StrokeView2d::setPositions(core::ConstSpan<Vec2d> positions) {
     positions_ = positions;
     computeSegmentLineLengths_();
 }
@@ -617,7 +617,7 @@ void checkSegmentIndex_(Int segmentIndex, Int numSegments) {
 
 } // namespace
 
-Vec2d Curve::segmentStartPosition(Int segmentIndex) const {
+Vec2d StrokeView2d::segmentStartPosition(Int segmentIndex) const {
     checkSegmentIndex_(segmentIndex, numSegments());
     if (isClosed()) {
         return segmentStartPositionClosedUnchecked_(positions_, segmentIndex);
@@ -627,7 +627,7 @@ Vec2d Curve::segmentStartPosition(Int segmentIndex) const {
     }
 }
 
-Vec2d Curve::segmentEndPosition(Int segmentIndex) const {
+Vec2d StrokeView2d::segmentEndPosition(Int segmentIndex) const {
     checkSegmentIndex_(segmentIndex, numSegments());
     if (isClosed()) {
         return segmentEndPositionClosedUnchecked_(positions_, segmentIndex);
@@ -637,16 +637,16 @@ Vec2d Curve::segmentEndPosition(Int segmentIndex) const {
     }
 }
 
-bool Curve::isSegmentCorner(Int segmentIndex) const {
+bool StrokeView2d::isSegmentCorner(Int segmentIndex) const {
     checkSegmentIndex_(segmentIndex, numSegments());
     return !(segmentLineLengths_.getUnchecked(segmentIndex) > 0);
 }
 
-double Curve::width() const {
+double StrokeView2d::width() const {
     return averageWidth_;
 }
 
-Vec2dArray Curve::triangulate(double maxAngle, Int minQuads, Int maxQuads) const {
+Vec2dArray StrokeView2d::triangulate(double maxAngle, Int minQuads, Int maxQuads) const {
 
     if (positions_.isEmpty()) {
         return {};
@@ -1024,7 +1024,7 @@ private:
     std::unique_ptr<IterativeSamplingSampleNode[]> sampleTreeStorage_;
 };
 
-bool isCenterLineSegmentUnderTolerance_(
+bool isCenterlineSegmentUnderTolerance_(
     const IterativeSamplingSample& s0,
     const IterativeSamplingSample& s1,
     double cosMaxAngle) {
@@ -1071,7 +1071,7 @@ bool shouldKeepNewSample_(
     const IterativeSamplingSample& nextSample,
     double cosMaxAngle) {
 
-    return !isCenterLineSegmentUnderTolerance_(previousSample, nextSample, cosMaxAngle)
+    return !isCenterlineSegmentUnderTolerance_(previousSample, nextSample, cosMaxAngle)
            || !areOffsetLinesAnglesUnderTolerance_(
                previousSample, sample, nextSample, cosMaxAngle);
 }
@@ -1086,7 +1086,7 @@ bool shouldKeepNewSample_(
     const CurveSamplingParameters& params,
     const CubicBezierStroke& bezierData,
     IterativeSamplingCache& data,
-    core::Array<CurveSample>& outAppend) {
+    core::Array<StrokeSample2d>& outAppend) {
 
     IterativeSamplingSample s0 = {};
     IterativeSamplingSample sN = {};
@@ -1165,7 +1165,7 @@ bool sampleIter_(
     const CurveSamplingParameters& params,
     const CubicBezierStroke& bezierData,
     IterativeSamplingCache& data,
-    core::Array<CurveSample>& outAppend) {
+    core::Array<StrokeSample2d>& outAppend) {
 
     const double cosMaxAngle = data.cosMaxAngle;
     const Int minISS = params.minIntraSegmentSamples(); // 0 -> 2 samples minimum
@@ -1269,11 +1269,11 @@ using OptionalInt = std::optional<Int>;
 
 // Returns the index of the segment just before the given `knotIndex`, if any.
 //
-OptionalInt segmentBeforeKnot_(const Curve* curve, Int knotIndex) {
-    if (curve->isClosed()) {
+OptionalInt segmentBeforeKnot_(const StrokeView2d* stroke, Int knotIndex) {
+    if (stroke->isClosed()) {
         Int segmentIndex = knotIndex - 1;
         if (segmentIndex < 0) {
-            segmentIndex += curve->numSegments();
+            segmentIndex += stroke->numSegments();
         }
         return segmentIndex;
     }
@@ -1287,12 +1287,12 @@ OptionalInt segmentBeforeKnot_(const Curve* curve, Int knotIndex) {
     }
 }
 
-OptionalInt firstNonCornerSegmentAfterKnot_(const Curve* curve, Int knotIndex) {
-    if (curve->isClosed()) {
-        Int numSegments = curve->numSegments();
+OptionalInt firstNonCornerSegmentAfterKnot_(const StrokeView2d* stroke, Int knotIndex) {
+    if (stroke->isClosed()) {
+        Int numSegments = stroke->numSegments();
         for (Int i = 0; i < numSegments; ++i) {
             Int segmentIndex = (knotIndex + i) % numSegments;
-            if (!curve->isSegmentCorner(segmentIndex)) {
+            if (!stroke->isSegmentCorner(segmentIndex)) {
                 return segmentIndex;
             }
         }
@@ -1300,9 +1300,9 @@ OptionalInt firstNonCornerSegmentAfterKnot_(const Curve* curve, Int knotIndex) {
     }
     else {
         Int segmentIndex = knotIndex;
-        Int numSegments = curve->numSegments();
+        Int numSegments = stroke->numSegments();
         while (segmentIndex < numSegments) {
-            if (!curve->isSegmentCorner(segmentIndex)) {
+            if (!stroke->isSegmentCorner(segmentIndex)) {
                 return segmentIndex;
             }
             else {
@@ -1313,13 +1313,13 @@ OptionalInt firstNonCornerSegmentAfterKnot_(const Curve* curve, Int knotIndex) {
     }
 }
 
-OptionalInt firstNonCornerSegmentBeforeKnot_(const Curve* curve, Int knotIndex) {
-    if (curve->isClosed()) {
-        Int numSegments = curve->numSegments();
+OptionalInt firstNonCornerSegmentBeforeKnot_(const StrokeView2d* stroke, Int knotIndex) {
+    if (stroke->isClosed()) {
+        Int numSegments = stroke->numSegments();
         Int start = knotIndex - 1 + numSegments; // Ensures `start - i >= 0`
         for (Int i = 0; i < numSegments; ++i) {
             Int segmentIndex = (start - i) % numSegments;
-            if (!curve->isSegmentCorner(segmentIndex)) {
+            if (!stroke->isSegmentCorner(segmentIndex)) {
                 return segmentIndex;
             }
         }
@@ -1328,7 +1328,7 @@ OptionalInt firstNonCornerSegmentBeforeKnot_(const Curve* curve, Int knotIndex) 
     else {
         Int segmentIndex = knotIndex - 1;
         while (segmentIndex >= 0) {
-            if (!curve->isSegmentCorner(segmentIndex)) {
+            if (!stroke->isSegmentCorner(segmentIndex)) {
                 return segmentIndex;
             }
             else {
@@ -1350,24 +1350,25 @@ OptionalInt firstNonCornerSegmentBeforeKnot_(const Curve* curve, Int knotIndex) 
 // need to evaluate one of the non-corner segments in order to provide
 // a meaningful normal.
 //
-CurveSample computeUniqueSampleOfZeroLengthCurve_(const Curve* curve) {
+StrokeSample2d computeUniqueSampleOfZeroLengthStroke_(const StrokeView2d* stroke) {
     double halfwidth;
-    if (curve->widthVariability() == Curve::AttributeVariability::Constant) {
-        halfwidth = 0.5 * curve->width();
+    if (stroke->widthVariability() == StrokeView2d::AttributeVariability::Constant) {
+        halfwidth = 0.5 * stroke->width();
     }
     else {
-        halfwidth = 0.5 * curve->widths()[0];
+        halfwidth = 0.5 * stroke->widths()[0];
     }
-    Vec2d position = curve->positions()[0];
+    Vec2d position = stroke->positions()[0];
     Vec2d normal(0, 0);
-    return CurveSample(position, normal, halfwidth);
+    return StrokeSample2d(position, normal, halfwidth);
 }
 
-CurveSample computeSampleFromBezier_(const Curve* curve, Int segmentIndex, double u) {
-    auto bezier = CubicBezierStroke::fromCurve(curve, segmentIndex);
+StrokeSample2d
+computeSampleFromBezier_(const StrokeView2d* stroke, Int segmentIndex, double u) {
+    auto bezier = CubicBezierStroke::fromStroke(stroke, segmentIndex);
     IterativeSamplingSample s;
     s.computeFrom(bezier, u);
-    return CurveSample(s.pos, s.normal, s.radius);
+    return StrokeSample2d(s.pos, s.normal, s.radius);
 }
 
 // We need to output a single sample, corresponding to the position/width/normal
@@ -1376,15 +1377,15 @@ CurveSample computeSampleFromBezier_(const Curve* curve, Int segmentIndex, doubl
 // We do this by finding a non-corner segment before (or after) the knot, and
 // using the last (or first) sample of this segment.
 //
-CurveSample computeSingleSampleAtKnot_(const Curve* curve, Int knotIndex) {
+StrokeSample2d computeSingleSampleAtKnot_(const StrokeView2d* stroke, Int knotIndex) {
 
     Int segmentIndex;
     double u;
 
     // Determine whether the segment just before the knot exists and is not a
     // corner segment.
-    OptionalInt previousSegment = segmentBeforeKnot_(curve, knotIndex);
-    if (previousSegment && !curve->isSegmentCorner(*previousSegment)) {
+    OptionalInt previousSegment = segmentBeforeKnot_(stroke, knotIndex);
+    if (previousSegment && !stroke->isSegmentCorner(*previousSegment)) {
 
         // If this is the case, use the last sample of this previous segment.
         segmentIndex = *previousSegment;
@@ -1392,35 +1393,35 @@ CurveSample computeSingleSampleAtKnot_(const Curve* curve, Int knotIndex) {
     }
     else {
         // Otherwise, use the first non-corner segment after the knot.
-        if (OptionalInt i = firstNonCornerSegmentAfterKnot_(curve, knotIndex)) {
+        if (OptionalInt i = firstNonCornerSegmentAfterKnot_(stroke, knotIndex)) {
             segmentIndex = *i;
             u = 0;
         }
         else {
             // If there is no non-corner segment after, use the first non-corner
             // segment before.
-            if (OptionalInt j = firstNonCornerSegmentBeforeKnot_(curve, knotIndex)) {
+            if (OptionalInt j = firstNonCornerSegmentBeforeKnot_(stroke, knotIndex)) {
                 segmentIndex = *j;
                 u = 1;
             }
             else {
                 // Otherwise, this means that all segments are corner segments.
-                return computeUniqueSampleOfZeroLengthCurve_(curve);
+                return computeUniqueSampleOfZeroLengthStroke_(stroke);
             }
         }
     }
 
     // Generate the sample from the selected segment
-    return computeSampleFromBezier_(curve, segmentIndex, u);
+    return computeSampleFromBezier_(stroke, segmentIndex, u);
 }
 
 void appendSamplesOfCornerSegment_(
-    const Curve* curve,
+    const StrokeView2d* stroke,
     Int segmentIndex,
-    core::Array<CurveSample>& out) {
+    core::Array<StrokeSample2d>& out) {
 
-    Int numSegments = curve->numSegments();
-    Int isClosed = curve->isClosed();
+    Int numSegments = stroke->numSegments();
+    Int isClosed = stroke->isClosed();
     Int startKnot = segmentIndex;
     Int endKnot = segmentIndex + 1;
     if (isClosed && endKnot > numSegments) {
@@ -1429,13 +1430,13 @@ void appendSamplesOfCornerSegment_(
 
     // Determine whether the segment just before this segment
     // exists and is non-corner.
-    OptionalInt nonCornerPrevious = segmentBeforeKnot_(curve, startKnot);
-    if (nonCornerPrevious && !curve->isSegmentCorner(*nonCornerPrevious)) {
+    OptionalInt nonCornerPrevious = segmentBeforeKnot_(stroke, startKnot);
+    if (nonCornerPrevious && !stroke->isSegmentCorner(*nonCornerPrevious)) {
         nonCornerPrevious = std::nullopt;
     }
 
     // Determine whether a non-corner segment exists after this segment
-    OptionalInt nonCornerAfter = firstNonCornerSegmentBeforeKnot_(curve, endKnot);
+    OptionalInt nonCornerAfter = firstNonCornerSegmentBeforeKnot_(stroke, endKnot);
 
     if (nonCornerPrevious) {
         if (nonCornerAfter) {
@@ -1452,14 +1453,14 @@ void appendSamplesOfCornerSegment_(
             // implement this complexity at vertices, not at handle this
             // complexity at vertices.
             //
-            out.append(computeSampleFromBezier_(curve, *nonCornerPrevious, 1));
-            out.append(computeSampleFromBezier_(curve, *nonCornerAfter, 0));
+            out.append(computeSampleFromBezier_(stroke, *nonCornerPrevious, 1));
+            out.append(computeSampleFromBezier_(stroke, *nonCornerAfter, 0));
         }
         else {
             // This is the end of an open curve: no join to compute, just use
             // the last sample of the previous segment.
             //
-            out.append(computeSampleFromBezier_(curve, *nonCornerPrevious, 1));
+            out.append(computeSampleFromBezier_(stroke, *nonCornerPrevious, 1));
         }
     }
     else {
@@ -1469,7 +1470,7 @@ void appendSamplesOfCornerSegment_(
             // this segment. Any potential join is already handled by a corner
             // segment before this one.
             //
-            out.append(computeSampleFromBezier_(curve, *nonCornerAfter, 0));
+            out.append(computeSampleFromBezier_(stroke, *nonCornerAfter, 0));
         }
         else {
             // This is the end of an open curve: no join to compute, just use
@@ -1477,16 +1478,16 @@ void appendSamplesOfCornerSegment_(
             // segment.
             //
             OptionalInt nonCornerBefore =
-                firstNonCornerSegmentBeforeKnot_(curve, startKnot);
+                firstNonCornerSegmentBeforeKnot_(stroke, startKnot);
 
             if (nonCornerBefore) {
-                out.append(computeSampleFromBezier_(curve, *nonCornerBefore, 1));
+                out.append(computeSampleFromBezier_(stroke, *nonCornerBefore, 1));
             }
             else {
                 // We are a corner segment, and there is no non-corner segment
                 // before or after us, so this means all segments are corners.
                 //
-                CurveSample sample = computeUniqueSampleOfZeroLengthCurve_(curve);
+                StrokeSample2d sample = computeUniqueSampleOfZeroLengthStroke_(stroke);
                 out.append(sample);
             }
         }
@@ -1495,15 +1496,15 @@ void appendSamplesOfCornerSegment_(
 
 } // namespace
 
-void Curve::sampleRange(
-    core::Array<CurveSample>& outAppend,
+void StrokeView2d::sampleRange(
+    core::Array<StrokeSample2d>& outAppend,
     const CurveSamplingParameters& parameters,
     Int startKnot,
     Int numSegmentsToSample,
     bool computeArclength) const {
 
     Int numKnots = this->numKnots();
-    Int numSegmentsInCurve = this->numSegments();
+    Int numSegmentsInStroke = this->numSegments();
 
     // Verify we have at least one knot, since a post-condition of this
     // function is to return at least one sample.
@@ -1524,20 +1525,20 @@ void Curve::sampleRange(
     }
 
     // Verify and wrap numSegments
-    if (numSegmentsToSample < -numSegmentsInCurve - 1
-        || numSegmentsToSample > numSegmentsInCurve) {
+    if (numSegmentsToSample < -numSegmentsInStroke - 1
+        || numSegmentsToSample > numSegmentsInStroke) {
 
         throw vgc::core::IndexError(vgc::core::format(
             "Parameter numSegmentsToSample ({}) out of valid number of segments range "
             "[{}, {}].",
             numSegmentsToSample,
-            -numSegmentsInCurve - 1,
-            numSegmentsInCurve));
+            -numSegmentsInStroke - 1,
+            numSegmentsInStroke));
     }
     if (numSegmentsToSample < 0) {
-        numSegmentsToSample += numSegmentsInCurve + 1; // -1 becomes n (=> all segments)
+        numSegmentsToSample += numSegmentsInStroke + 1; // -1 becomes n (=> all segments)
     }
-    if (!isClosed() && numSegmentsToSample > numSegmentsInCurve - startKnot) {
+    if (!isClosed() && numSegmentsToSample > numSegmentsInStroke - startKnot) {
         throw vgc::core::IndexError(core::format(
             "Parameter numSegmentsToSample ({} after negative-wrap) exceeds remaining "
             "number of segments when starting at the given startKnot ({} after "
@@ -1545,7 +1546,7 @@ void Curve::sampleRange(
             "knots.",
             numSegmentsToSample,
             startKnot,
-            numSegmentsInCurve - startKnot,
+            numSegmentsInStroke - startKnot,
             numKnots));
     }
 
@@ -1553,7 +1554,7 @@ void Curve::sampleRange(
     const Int oldLength = outAppend.length();
 
     if (numSegmentsToSample == 0) {
-        CurveSample sample = computeSingleSampleAtKnot_(this, startKnot);
+        StrokeSample2d sample = computeSingleSampleAtKnot_(this, startKnot);
         outAppend.append(sample);
     }
     else {
@@ -1567,7 +1568,7 @@ void Curve::sampleRange(
         IterativeSamplingCache data = {};
         data.cosMaxAngle = std::cos(parameters.maxAngle());
         for (Int i = 0; i < numSegmentsToSample; ++i) {
-            Int segmentIndex = (startKnot + i) % numSegmentsInCurve;
+            Int segmentIndex = (startKnot + i) % numSegmentsInStroke;
             if (i != 0) {
                 // Remove last sample of previous segment (recomputed below)
                 outAppend.pop();
@@ -1576,7 +1577,7 @@ void Curve::sampleRange(
                 appendSamplesOfCornerSegment_(this, segmentIndex, outAppend);
             }
             else {
-                auto bezier = CubicBezierStroke::fromCurve(this, segmentIndex);
+                auto bezier = CubicBezierStroke::fromStroke(this, segmentIndex);
                 sampleIter_(parameters, bezier, data, outAppend);
             }
         }
@@ -1590,8 +1591,8 @@ void Curve::sampleRange(
         double s = 0;
         auto it = outAppend.begin() + oldLength;
         if (oldLength > 0) {
-            CurveSample& firstNewSample = *it;
-            CurveSample& lastOldSample = *(it - 1);
+            StrokeSample2d& firstNewSample = *it;
+            StrokeSample2d& lastOldSample = *(it - 1);
             s = lastOldSample.s()
                 + (firstNewSample.position() - lastOldSample.position()).length();
         }
@@ -1608,8 +1609,9 @@ void Curve::sampleRange(
     }
 }
 
-std::array<Vec2d, 2>
-Curve::getOffsetLineTangentsAtSegmentEndpoint(Int segmentIndex, Int endpointIndex) const {
+std::array<Vec2d, 2> StrokeView2d::getOffsetLineTangentsAtSegmentEndpoint(
+    Int segmentIndex,
+    Int endpointIndex) const {
 
     checkSegmentIndex_(segmentIndex, numSegments());
     if (endpointIndex < 0 || endpointIndex > 1) {
@@ -1617,11 +1619,11 @@ Curve::getOffsetLineTangentsAtSegmentEndpoint(Int segmentIndex, Int endpointInde
             "The given `endpointIndex` ({}) must be `0` or `1`", endpointIndex));
     }
 
-    auto bezierData = CubicBezierStroke::fromCurve(this, segmentIndex);
+    auto bezierData = CubicBezierStroke::fromStroke(this, segmentIndex);
     return computeOffsetLineTangentsAtEndPoint(bezierData, endpointIndex);
 }
 
-void Curve::computeSegmentLineLengths_() {
+void StrokeView2d::computeSegmentLineLengths_() {
 
     // Compte segment line lengths
     Int n = numSegments();
@@ -1651,7 +1653,7 @@ void Curve::computeSegmentLineLengths_() {
     }
 }
 
-void Curve::onWidthsChanged_() {
+void StrokeView2d::onWidthsChanged_() {
     // todo, compute max and average
 }
 
@@ -1662,7 +1664,7 @@ void Curve::onWidthsChanged_() {
 
 [1]
 
-In the future, we may want to extend the Curve class with:
+In the future, we may want to extend the StrokeView2d class with:
     - more curve type (e.g., bezier, bspline, nurbs, ellipticalarc. etc.)
     - variable color
     - variable custom attributes (e.g., that can be passed to shaders)
@@ -1680,7 +1682,5 @@ drawbacks, in particular, switching from one curve type to the other
 dynamically would be harder. Also, it is quite useful to have a continuous
 array of doubles that can directly be passed to C-style functions, such as
 OpenGL, etc.
-
-[2] Should the "Curve" class be called Curve2d?
 
 */

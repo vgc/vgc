@@ -56,8 +56,8 @@ if there is only one header in a given group.
 ```
 
 Don't rely on includes from other headers. For example, if you need both
-`vgc::geometry::Curve` and `vgc::geometry::Vec2d`, include both
-`<vgc/geometry/curve.h>` and `<vgc/geometry/vec2d.h>`.
+`vgc::geometry::Curves2d` and `vgc::geometry::Vec2d`, include both
+`<vgc/geometry/curves2d.h>` and `<vgc/geometry/vec2d.h>`.
 
 Never use `using lib::foo;` or `using namespace lib;` in a header file at
 global or namespace scope (where `lib` is any namespace, including `std`,

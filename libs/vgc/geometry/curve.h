@@ -31,7 +31,7 @@
 
 namespace vgc::geometry {
 
-class Curve;
+class StrokeView2d;
 
 enum class CurveSamplingQuality {
     Disabled,
@@ -46,21 +46,21 @@ enum class CurveSamplingQuality {
 VGC_GEOMETRY_API
 VGC_DECLARE_ENUM(CurveSamplingQuality)
 
-class CurveSample {
+class StrokeSample2d {
 public:
-    constexpr CurveSample() noexcept
+    constexpr StrokeSample2d() noexcept
         : s_(0) {
     }
 
     VGC_WARNING_PUSH
     VGC_WARNING_MSVC_DISABLE(26495) // member variable uninitialized
-    CurveSample(core::NoInit) noexcept
+    StrokeSample2d(core::NoInit) noexcept
         : position_(core::noInit)
         , normal_(core::noInit) {
     }
     VGC_WARNING_POP
 
-    constexpr CurveSample(
+    constexpr StrokeSample2d(
         const Vec2d& position,
         const Vec2d& normal,
         double halfwidth = 0.5) noexcept
@@ -71,7 +71,7 @@ public:
         , s_(0) {
     }
 
-    constexpr CurveSample(
+    constexpr StrokeSample2d(
         const Vec2d& position,
         const Vec2d& normal,
         const Vec2d& halfwidths,
@@ -219,7 +219,7 @@ public:
     // Returns the CubicBezierStroke corresponding to the segment at
     // index [`i`, `i`+1] in the given `curve`.
     //
-    static CubicBezierStroke fromCurve(const Curve* curve, Int i);
+    static CubicBezierStroke fromStroke(const StrokeView2d* stroke, Int i);
 
     // Returns the CubicBezierStroke corresponding to the segment at
     // index [`i`, `i`+1] in the Catmull-Rom spline stroke defined by the
@@ -301,10 +301,10 @@ private:
 /// Please note that due to the linear interpolation the new normal may
 /// no longer be of length 1. Use `nlerp()` if you want it re-normalized.
 ///
-inline geometry::CurveSample
-lerp(const geometry::CurveSample& a, const geometry::CurveSample& b, double t) {
+inline geometry::StrokeSample2d
+lerp(const geometry::StrokeSample2d& a, const geometry::StrokeSample2d& b, double t) {
     const double ot = (1 - t);
-    return geometry::CurveSample(
+    return geometry::StrokeSample2d(
         a.position() * ot + b.position() * t,
         a.normal() * ot + b.normal() * t,
         a.halfwidths() * ot + b.halfwidths() * t,
@@ -316,16 +316,16 @@ lerp(const geometry::CurveSample& a, const geometry::CurveSample& b, double t) {
 ///
 /// Use `lerp()` if you don't need the re-normalization.
 ///
-inline geometry::CurveSample
-nlerp(const geometry::CurveSample& a, const geometry::CurveSample& b, double t) {
-    geometry::CurveSample ret = lerp(a, b, t);
+inline geometry::StrokeSample2d
+nlerp(const geometry::StrokeSample2d& a, const geometry::StrokeSample2d& b, double t) {
+    geometry::StrokeSample2d ret = lerp(a, b, t);
     ret.setNormal(ret.normal().normalized());
     return ret;
 }
 
-/// Alias for `vgc::core::Array<vgc::geometry::CurveSample>`.
+/// Alias for `vgc::core::Array<vgc::geometry::StrokeSample2d>`.
 ///
-using CurveSampleArray = core::Array<CurveSample>;
+using StrokeSample2dArray = core::Array<StrokeSample2d>;
 
 class VGC_GEOMETRY_API DistanceToCurve {
 public:
@@ -379,11 +379,12 @@ private:
 };
 
 VGC_GEOMETRY_API
-DistanceToCurve distanceToCurve(const CurveSampleArray& samples, const Vec2d& position);
+DistanceToCurve
+distanceToCurve(const StrokeSample2dArray& samples, const Vec2d& position);
 
-/// Alias for `vgc::core::SharedConstArray<vgc::geometry::CurveSample>`.
+/// Alias for `vgc::core::SharedConstArray<vgc::geometry::StrokeSample2d>`.
 ///
-using SharedConstCurveSampleArray = core::SharedConstArray<CurveSample>;
+using SharedConstStrokeSample2dArray = core::SharedConstArray<StrokeSample2d>;
 
 /// \class vgc::geometry::CurveSamplingParameters
 /// \brief Parameters for the sampling.
@@ -491,100 +492,97 @@ private:
     core::Array<Vec2d> values_;
 };
 
-// TODO: Rename as Curve2dSampler?
-//       Or Stroke2dSampler? (stroke = positions + width)
-//
-// Note: Both CurveSampler and StrokeSampler might accept additional optional
+/// Specifies the type of the curve, that is, how the
+/// position of its centerline is represented.
+///
+enum class CurveType {
+
+    /// Represents an open uniform Catmull-Rom spline.
+    ///
+    /// With this curve type, we have `numSegment() == numKnots() - 1`.
+    ///
+    /// Each position p in `positions()` represent a control points (= knot
+    /// in this case) of the spline. The curve starts at the first control
+    /// point, ends at the last control point, and go through all control
+    /// points.
+    ///
+    /// Each curve segment between two control points p[i] and p[i+1] is a
+    /// cubic curve P_i(u) parameterized by u in [0, 1]. The derivative
+    /// P_i'(u) at each control point (except end points) is automatically
+    /// determined from its two adjacent control points:
+    ///
+    /// P_{i-1}'(1) = P_i'(0) = (p[i+1] - p[i-1]) / 2
+    ///
+    /// At end control points, we use a tangent mirrored from the adjacent control
+    /// point, see: https://github.com/vgc/vgc/pull/1341.
+    ///
+    /// In addition, tangents are capped based on the distance between control points
+    /// to avoid loops.
+    ///
+    /// Note: "uniform" refers here to the fact that this corresponds to a
+    /// Catmull-Rom spline with knot values uniformly spaced, that is: [0,
+    /// 1, 2, ..., n-1]. There exist other types of Catmull-Rom splines
+    /// using different knot values, such as the Cardinal or Chordal
+    /// Catmull-Rom, that uses the distance between control points to
+    /// determine more suitable knot values to avoid loops, see:
+    ///
+    /// https://en.wikipedia.org/wiki/Centripetal_Catmull%E2%80%93Rom_spline
+    ///
+    OpenUniformCatmullRom,
+
+    /// Represents an open centripetal Catmull-Rom spline.
+    ///
+    /// Similar to `OpenUniformCatmullRom` but using centripetal
+    /// parametrization. This prevents cusps and loops.
+    ///
+    OpenCentripetalCatmullRom,
+
+    /// Represents a closed uniform Catmull-Rom spline.
+    ///
+    /// This is similar to `OpenUniformCatmullRom` except that it forms a loop.
+    ///
+    /// With this curve type, we have `numSegment() == numKnots()`: the last segment
+    /// goes from the knot at index `numKnots() - 1` (the last knot) back to the knot
+    /// at index `0` (the first knot).
+    ///
+    /// Unlike `OpenUniformCatmullRom`, there is no special handling of tangents
+    /// for the first/last segment, since all knots have adjacent knots. In particular,
+    /// the tangent at the first/last control point is determined by:
+    ///
+    /// P' = (p[1] - p[n-1]) / 2
+    ///
+    /// where n = numKnots().
+    ///
+    ClosedUniformCatmullRom,
+
+    /// Represents a closed centripetal Catmull-Rom spline.
+    ///
+    /// Similar to `ClosedUniformCatmullRom` but using centripetal
+    /// parametrization. This prevents cusps and loops.
+    ///
+    ClosedCentripetalCatmullRom
+};
+
+// Note: StrokeView2d might accept additional optional
 // attributes (e.g., color) interpolated along the curve, but that do not
 // affect how many samples are computed. This may or may not be templated
 // (non-templated version could be an array of DoubleArrays)
 
-/// \class vgc::geometry::Curve
-/// \brief A helper class to sample a 2D curve given external (non-owned) data.
+/// \class vgc::geometry::StrokeView2d
+/// \brief A helper class to sample a 2D stroke given external (non-owned) data.
 ///
-/// This class can be used to sample a 2D curve given external (non-owned) data.
+/// This class can be used to sample a 2D stroke given external (non-owned) data.
 ///
 /// Note that this class does not own the data provided, for example via the
 /// `setPositions(positions)` and `setWidths(widths)` function. It is the
 /// responsability of the programmer to ensure that the data referred to by the
-/// given `Span` outlives the `Curve`.
+/// given `Span` outlives the `StrokeView2d`.
 ///
 /// Currently, only Catmull-Rom curves are supported, but more curve types are
 /// expected in future versions.
 ///
-class VGC_GEOMETRY_API Curve {
+class VGC_GEOMETRY_API StrokeView2d {
 public:
-    /// Specifies the type of the curve, that is, how the
-    /// position of its centerline is represented.
-    ///
-    enum class Type {
-
-        /// Represents an open uniform Catmull-Rom spline.
-        ///
-        /// With this curve type, we have `numSegment() == numKnots() - 1`.
-        ///
-        /// Each position p in `positions()` represent a control points (= knot
-        /// in this case) of the spline. The curve starts at the first control
-        /// point, ends at the last control point, and go through all control
-        /// points.
-        ///
-        /// Each curve segment between two control points p[i] and p[i+1] is a
-        /// cubic curve P_i(u) parameterized by u in [0, 1]. The derivative
-        /// P_i'(u) at each control point (except end points) is automatically
-        /// determined from its two adjacent control points:
-        ///
-        /// P_{i-1}'(1) = P_i'(0) = (p[i+1] - p[i-1]) / 2
-        ///
-        /// At end control points, we use a tangent mirrored from the adjacent control
-        /// point, see: https://github.com/vgc/vgc/pull/1341.
-        ///
-        /// In addition, tangents are capped based on the distance between control points
-        /// to avoid loops.
-        ///
-        /// Note: "uniform" refers here to the fact that this corresponds to a
-        /// Catmull-Rom spline with knot values uniformly spaced, that is: [0,
-        /// 1, 2, ..., n-1]. There exist other types of Catmull-Rom splines
-        /// using different knot values, such as the Cardinal or Chordal
-        /// Catmull-Rom, that uses the distance between control points to
-        /// determine more suitable knot values to avoid loops, see:
-        ///
-        /// https://en.wikipedia.org/wiki/Centripetal_Catmull%E2%80%93Rom_spline
-        ///
-        OpenUniformCatmullRom,
-
-        /// Represents an open centripetal Catmull-Rom spline.
-        ///
-        /// Similar to `OpenUniformCatmullRom` but using centripetal
-        /// parametrization. This prevents cusps and loops.
-        ///
-        OpenCentripetalCatmullRom,
-
-        /// Represents a closed uniform Catmull-Rom spline.
-        ///
-        /// This is similar to `OpenUniformCatmullRom` except that it forms a loop.
-        ///
-        /// With this curve type, we have `numSegment() == numKnots()`: the last segment
-        /// goes from the knot at index `numKnots() - 1` (the last knot) back to the knot
-        /// at index `0` (the first knot).
-        ///
-        /// Unlike `OpenUniformCatmullRom`, there is no special handling of tangents
-        /// for the first/last segment, since all knots have adjacent knots. In particular,
-        /// the tangent at the first/last control point is determined by:
-        ///
-        /// P' = (p[1] - p[n-1]) / 2
-        ///
-        /// where n = numKnots().
-        ///
-        ClosedUniformCatmullRom,
-
-        /// Represents a closed centripetal Catmull-Rom spline.
-        ///
-        /// Similar to `ClosedUniformCatmullRom` but using centripetal
-        /// parametrization. This prevents cusps and loops.
-        ///
-        ClosedCentripetalCatmullRom
-    };
-
     /// Specifies the type of a variable attribute along the curve, that is,
     /// how it is represented.
     ///
@@ -602,35 +600,35 @@ public:
         PerControlPoint
     };
 
-    /// Creates an empty curve of the given \p type and PerControlPoint width
+    /// Creates an empty stroke of the given \p type and PerControlPoint width
     /// variability.
     ///
-    Curve(Type type = Type::OpenUniformCatmullRom);
+    StrokeView2d(CurveType type = CurveType::OpenUniformCatmullRom);
 
-    /// Creates an empty curve of the given \p type and the given constant
+    /// Creates an empty stroke of the given \p type and the given constant
     /// width variability.
     ///
-    Curve(double constantWidth, Type type = Type::OpenUniformCatmullRom);
+    StrokeView2d(double constantWidth, CurveType type = CurveType::OpenUniformCatmullRom);
 
-    /// Returns the Type of the curve.
+    /// Returns the CurveType of the centerline.
     ///
-    Type type() const {
+    CurveType type() const {
         return type_;
     }
 
-    /// Returns whether the curve is closed.
+    /// Returns whether the stroke is closed.
     ///
     bool isClosed() const {
         return isClosed_;
     }
 
-    /// Returns the number of knots of the curve.
+    /// Returns the number of knots of the stroke.
     ///
     Int numKnots() const {
         return positions_.length();
     }
 
-    /// Returns the number of segments of the curve.
+    /// Returns the number of segments of the stroke.
     ///
     Int numSegments() const;
 
@@ -640,10 +638,10 @@ public:
         return positions_;
     }
 
-    /// Sets the position data of the curve.
+    /// Sets the position data of the centerline.
     ///
-    /// Note that this `Curve` does not make a copy of the data. It is your
-    /// responsibility to ensure that the data outlives this `Curve`.
+    /// Note that this `StrokeView2d` does not make a copy of the data.
+    /// It is your responsibility to ensure that the data outlives this `StrokeView2d`.
     ///
     void setPositions(core::ConstSpan<Vec2d> positions);
 
@@ -692,10 +690,10 @@ public:
         return widths_;
     }
 
-    /// Sets the width data of the curve.
+    /// Sets the width data of the stroke.
     ///
-    /// Note that this `Curve` does not make a copy of the data. It is your
-    /// responsibility to ensure that the data outlives this `Curve`.
+    /// Note that this `StrokeView2d` does not make a copy of the data.
+    /// It is your responsibility to ensure that the data outlives this `StrokeView2d`.
     ///
     void setWidths(core::ConstSpan<double> widths) {
         widths_ = widths;
@@ -828,7 +826,7 @@ public:
     /// unique sample with a normal set to zero.
     ///
     void sampleRange(
-        core::Array<CurveSample>& outAppend,
+        core::Array<StrokeSample2d>& outAppend,
         const CurveSamplingParameters& parameters,
         Int startKnot = 0,
         Int numSegments = -1,
@@ -873,7 +871,7 @@ public:
 
 private:
     // Representation of the centerline of the curve
-    Type type_;
+    CurveType type_;
     core::ConstSpan<Vec2d> positions_ = {};
 
     bool isClosed_ = false;
