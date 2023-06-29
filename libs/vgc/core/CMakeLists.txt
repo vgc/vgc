@@ -44,6 +44,7 @@ vgc_add_library(core
         stringid.h
         templateutil.h
         typeid.h
+        xml.h
 
         detail/containerutil.h
         detail/signal.h
@@ -72,6 +73,7 @@ vgc_add_library(core
         stopwatch.cpp
         stringid.cpp
         typeid.cpp
+        xml.cpp
 
         detail/signal.cpp
 

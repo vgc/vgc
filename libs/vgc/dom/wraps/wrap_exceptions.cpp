@@ -32,7 +32,6 @@ void wrap_exceptions(py::module& m) {
 
     VGC_CORE_WRAP_EXCEPTION(dom, RuntimeError, core, RuntimeError);
     VGC_CORE_WRAP_EXCEPTION(dom, ParseError, m, RuntimeError);
-    VGC_CORE_WRAP_EXCEPTION(dom, XmlSyntaxError, m, ParseError);
     VGC_CORE_WRAP_EXCEPTION(dom, VgcSyntaxError, m, ParseError);
     VGC_CORE_WRAP_EXCEPTION(dom, FileError, m, RuntimeError);
 }

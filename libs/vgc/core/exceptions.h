@@ -585,6 +585,25 @@ public:
     }
 };
 
+/// \class vgc::core::XmlSyntaxError
+/// \brief Raised when an input file or string has an invalid XML syntax.
+///
+/// This exception is raised when an input file or string is not a valid XML
+/// fragment. For example, <path></vertex> is not a valid XML fragment because
+/// the end tag does not match the start tag.
+///
+class VGC_CORE_API_EXCEPTION XmlSyntaxError : public ParseError {
+private:
+    VGC_CORE_EXCEPTIONS_DECLARE_ANCHOR
+
+public:
+    /// Constructs a XmlSyntaxError with the given \p reason.
+    ///
+    XmlSyntaxError(const std::string& reason)
+        : ParseError(reason) {
+    }
+};
+
 /// \class vgc::core::RangeError
 /// \brief Raised when the input of a conversion is outside the range of the
 /// output type.

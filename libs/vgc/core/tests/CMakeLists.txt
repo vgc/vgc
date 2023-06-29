@@ -24,4 +24,5 @@ vgc_test_library(core
         test_paths.py
         test_signal.py
         test_stringid.py
+        test_xml.py
 )

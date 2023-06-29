@@ -1,4 +1,4 @@
-// Copyright 2021 The VGC Developers
+// Copyright 2023 The VGC Developers
 // See the COPYRIGHT file at the top-level directory of this distribution
 // and at https://github.com/vgc/vgc/blob/master/COPYRIGHT
 //
@@ -14,40 +14,23 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <vgc/dom/document.h>
+#include <vgc/core/xml.h>
 
-#include <cerrno>
-#include <cstring>
-#include <fstream>
+#include <vgc/core/format.h>
+#include <vgc/core/io.h>
 
-#include <vgc/core/logging.h>
-#include <vgc/dom/element.h>
-#include <vgc/dom/io.h>
-#include <vgc/dom/operation.h>
-#include <vgc/dom/schema.h>
-#include <vgc/dom/strings.h>
+namespace vgc::core {
 
-namespace vgc::dom {
-
-using core::XmlSyntaxError;
-
-Document::Document()
-    : Node(this, NodeType::Document)
-    , hasXmlDeclaration_(true)
-    , hasXmlEncoding_(true)
-    , hasXmlStandalone_(true)
-    , xmlVersion_("1.0")
-    , xmlEncoding_("UTF-8")
-    , xmlStandalone_(false)
-    , versionId_(core::genId()) {
-
-    generateXmlDeclaration_();
-}
-
-/* static */
-DocumentPtr Document::create() {
-    return DocumentPtr(new Document());
-}
+VGC_DEFINE_ENUM(
+    XmlTokenType,
+    (None, "None"),
+    (Invalid, "Invalid"),
+    (StartDocument, "StartDocument"),
+    (EndDocument, "EndDocument"),
+    (StartTag, "StartTag"),
+    (EndTag, "EndTag"),
+    (CharacterData, "CharacterData"),
+    (Comment, "Comment"))
 
 namespace {
 
@@ -98,50 +81,113 @@ bool isNameChar_(char c) {
     return isNameStartChar_(c) || c == '-' || c == '.' || ('0' <= c && c <= '9');
 }
 
-class Parser {
+} // namespace
+
+namespace detail {
+
+class XmlStreamReaderImpl {
 public:
-    static DocumentPtr parse(std::ifstream& in) {
-        DocumentPtr res = Document::create();
-        Parser parser(in, res.get());
-        parser.readAll_();
+    std::string ownedData; // Empty if constructed via fromView()
+    std::string_view data; // Points either to ownedData or external data
+    const char* end;       // End of the data
+
+    XmlTokenType tokenType;
+    const char* tokenStart; // Start of the last read token
+    const char* tokenEnd;   // End of the last read token
+
+    const char* cursor; // Current cursor position while parsing
+
+    std::string_view characterData;
+
+    void init() {
+        const char* start = data.data();
+        end = start + data.size();
+        tokenType = XmlTokenType::StartDocument;
+        tokenStart = start;
+        tokenEnd = start;
+        cursor = start;
+    }
+
+    bool readNext() {
+        tokenStart = tokenEnd; // == cursor
+        bool res = readNext_();
+        tokenEnd = cursor;
         return res;
     }
 
 private:
-    std::ifstream& in_;
-    Node* currentNode_;
-    std::string tagName_;
-    const ElementSpec* elementSpec_;
-    std::string attributeName_;
-    std::string attributeValue_;
-    std::string referenceName_;
-
-    // Create the parser object
-    Parser(std::ifstream& in, Document* document)
-        : in_(in)
-        , currentNode_(document)
-        , elementSpec_(nullptr) {
-
-        readAll_();
+    // Same API as std::ifstream, to make it easier to support streams later.
+    bool get(char& c) {
+        if (cursor == end) {
+            return false;
+        }
+        else {
+            c = *cursor;
+            ++cursor;
+            return true;
+        }
     }
 
-    // Main function. Nothing read yet.
-    void readAll_() {
-        char c;
-        while (in_.get(c)) {
+    void unget() {
+        --cursor;
+    }
+
+    bool readNext_() {
+        if (cursor == end) {
+            tokenType = XmlTokenType::EndDocument;
+            return false;
+        }
+        else {
+            char c;
+            get(c);
             if (c == '<') {
                 readMarkup_();
             }
             else {
-                // For now, we ignore everything that is not markup.
+                readCharacterData_();
             }
+            return true;
         }
+    }
+
+    // https://www.w3.org/TR/REC-xml/#syntax
+    //
+    // CharData ::= [^<&]* - ([^<&]* ']]>' [^<&]*)
+    //
+    // => Everything that does not include `<`, `&`, or `]]>`.
+    //
+    // TODO: any white space that is at the top level of the document entity (that is, outside the document element and not inside any other markup)
+    // should normally not be considered "character data". However, we do want to report it somehow.
+    //
+    // Maybe as part of the "DocumentStart", and "DocumentEnd" tokens?
+    //
+    void readCharacterData_() {
+        tokenType = XmlTokenType::CharacterData;
+        char c;
+        while (get(c)) {
+            if (c == '&') {
+                // character reference or entity reference.
+                // TODO: resolve it
+                continue;
+            }
+            else if (c == '<') {
+                unget();
+                break;
+            }
+            else if (c == ']') {
+                if (get(c) && c == ']') {
+                    if (get(c) && c == '>') {
+                        throw XmlSyntaxError("Unexpected `]]>` outside CDATA section.");
+                    }
+                }
+            }
+        };
     }
 
     // Read from '<' (not included) to matching '>' (included)
     void readMarkup_() {
         char c;
-        if (in_.get(c)) {
+        if (get(c)) {
             if (c == '?') {
                 readProcessingInstruction_();
             }
@@ -175,9 +221,9 @@ private:
         // a valid name
         bool isClosed = false;
         char c;
-        while (!isClosed && in_.get(c)) {
+        while (!isClosed && get(c)) {
             if (c == '?') {
-                if (!in_.get(c)) {
+                if (!get(c)) {
                     throw XmlSyntaxError(
                         "Unexpected end-of-file after reading '?' in processing "
                         "instruction. Expected '>' or further instructions.");
@@ -207,14 +253,14 @@ private:
         onStartTag_();
 
         // Reading attributes or whitespaces until closed
-        while (!isClosed && in_.get(c)) {
+        while (!isClosed && get(c)) {
             if (c == '>') {
                 isClosed = true;
                 isEmpty = false;
             }
             else if (c == '/') {
                 // '/' must be immediately followed by '>'
-                if (!(in_.get(c))) {
+                if (!(get(c))) {
                     throw XmlSyntaxError(
                         "Unexpected end-of-file after reading '/' in start tag '"
                         + tagName_ + "'. Expected '>'.");
@@ -251,14 +297,14 @@ private:
     // Read from '</' (not included) to matching '>' (included)
     void readEndTag_() {
         char c;
-        if (!(in_.get(c))) {
+        if (!(get(c))) {
             throw XmlSyntaxError("Unexpected end-of-file after reading '</' in end tag. "
                                  "Expected tag name.");
         }
 
         bool isClosed = readTagName_(c);
 
-        while (!isClosed && in_.get(c)) {
+        while (!isClosed && get(c)) {
             if (isWhitespace_(c)) {
                 // Keep reading whitespaces
             }
@@ -283,6 +329,7 @@ private:
     // Action to be performed when a start tag is encountered.
     // The name of the tag is available in tagName_.
     void onStartTag_() {
+        /*
         elementSpec_ = schema().findElementSpec(tagName_);
         if (!elementSpec_) {
             throw VgcSyntaxError(
@@ -317,12 +364,14 @@ private:
                   "node type '"
                 + core::toString(currentNode_->nodeType()) + "'.");
         }
+        */
     }
 
     // Action to be performed when an end tag (or the closing '/>' of an empty
     // element tag) is encountered. The name of the tag is available in
     // tagName_.
     void onEndTag_() {
+        /*
         if (!currentNode_ || currentNode_->nodeType() != NodeType::Element) {
             throw XmlSyntaxError(
                 "Unexpected end tag '" + tagName_
@@ -345,6 +394,7 @@ private:
                 elementSpec_ = nullptr;
             }
         }
+        */
     }
 
     // Read from given first character \p c (not included) to first whitespace
@@ -388,7 +438,7 @@ private:
         }
 
         bool done = false;
-        while (!done && in_.get(c)) {
+        while (!done && get(c)) {
             if (isNameChar_(c)) {
                 tagName_ += c;
             }
@@ -409,7 +459,7 @@ private:
                         "Unexpected '/' while reading end tag name '" + tagName_
                         + "'. Expected valid name characters, whitespaces, or '>'.");
                 }
-                if (in_.get(c)) {
+                if (get(c)) {
                     if (c == '>') {
                         done = true;
                         isClosed = true;
@@ -474,7 +524,7 @@ private:
 
         bool isNameRead = false;
         bool isEqRead = false;
-        while (!isNameRead && in_.get(c)) {
+        while (!isNameRead && get(c)) {
             if (isNameChar_(c)) {
                 attributeName_ += c;
             }
@@ -499,7 +549,7 @@ private:
                 + "'. Expected valid name characters, whitespaces, or '='.");
         }
 
-        while (!isEqRead && in_.get(c)) {
+        while (!isEqRead && get(c)) {
             if (c == '=') {
                 isEqRead = true;
             }
@@ -526,7 +576,7 @@ private:
 
         char c;
         char quoteSign = 0;
-        while (!quoteSign && in_.get(c)) {
+        while (!quoteSign && get(c)) {
             if (c == '\"' || c == '\'') {
                 quoteSign = c;
             }
@@ -552,7 +602,7 @@ private:
         }
 
         bool isClosed = false;
-        while (!isClosed && in_.get(c)) {
+        while (!isClosed && get(c)) {
             if (c == quoteSign) {
                 isClosed = true;
             }
@@ -588,6 +638,7 @@ private:
     // attribute name and string value are available in attributeName_ and
     // attributeValue_.
     void onAttribute_() {
+        /*
         core::StringId name(attributeName_);
 
         ValueType valueType = {};
@@ -609,6 +660,7 @@ private:
 
         Value value = parseValue(attributeValue_, valueType);
         Element::cast(currentNode_)->setAttribute(name, value);
+        */
     }
 
     // Read from '&' (not included) to ';' (included). Returns the character
@@ -630,7 +682,7 @@ private:
         referenceName_.clear();
 
         char c;
-        if (in_.get(c)) {
+        if (get(c)) {
             referenceName_ += c;
             if (!isNameStartChar_(c)) {
                 throw XmlSyntaxError(
@@ -646,7 +698,7 @@ private:
         }
 
         bool isSemicolonRead = false;
-        while (!isSemicolonRead && in_.get(c)) {
+        while (!isSemicolonRead && get(c)) {
             if (isNameChar_(c)) {
                 referenceName_ += c;
             }
@@ -684,289 +736,82 @@ private:
     }
 };
 
-} // namespace
+} // namespace detail
 
-/* static */
-DocumentPtr Document::open(const std::string& filePath) {
-    // Note: in the future, we want to be able to detect formatting style of
-    // input XML files, and preserve this style, as well as existing
-    // non-significant whitespaces, etc. This is why we write our own parser,
-    // since XML parsers typically discard all non-significant data. For
-    // example, <foo name="hello"> and <foo    name="hello"> would typically
-    // generate the same XmlStream events and we wouldn't be able to preserve
-    // the formatting when saving back.
+XmlStreamReader::XmlStreamReader(ConstructorKey)
+    : impl_(std::make_unique<detail::XmlStreamReaderImpl>()) {
+}
 
-    std::ifstream in(filePath);
-    if (!in.is_open()) {
-        throw FileError("Cannot open file " + filePath + ": " + std::strerror(errno));
+XmlStreamReader::XmlStreamReader(std::string_view data)
+    : XmlStreamReader(ConstructorKey{}) {
+
+    impl_->ownedData = data;        // Copy the data
+    impl_->data = impl_->ownedData; // Reference the copy
+    impl_->init();
+}
+
+XmlStreamReader::XmlStreamReader(std::string&& data)
+    : XmlStreamReader(ConstructorKey{}) {
+
+    impl_->ownedData = std::move(data); // Move the data
+    impl_->data = impl_->ownedData;     // Reference the moved-to data holder
+    impl_->init();
+}
+
+XmlStreamReader XmlStreamReader::fromView(std::string_view data) {
+    XmlStreamReader res(ConstructorKey{});
+    res.impl_->data = data;
+    res.impl_->init();
+    return res;
+}
+
+XmlStreamReader XmlStreamReader::fromFile(std::string_view filePath) {
+    return XmlStreamReader(readFile(filePath));
+}
+
+XmlStreamReader::XmlStreamReader(const XmlStreamReader& other)
+    : XmlStreamReader(ConstructorKey{}) {
+
+    *impl_ = *other.impl_;
+}
+
+XmlStreamReader::XmlStreamReader(XmlStreamReader&& other)
+    : impl_(std::move(other.impl_)) {
+}
+
+XmlStreamReader& XmlStreamReader::operator=(const XmlStreamReader& other) {
+    if (this != &other) {
+        *impl_ = *other.impl_;
     }
-
-    return Parser::parse(in);
+    return *this;
 }
 
-Element* Document::rootElement() const {
-    for (Node* node : children()) {
-        if (node->nodeType() == NodeType::Element) {
-            return Element::cast(node);
-        }
+XmlStreamReader& XmlStreamReader::operator=(XmlStreamReader&& other) {
+    if (this != &other) {
+        impl_ = std::move(other.impl_);
     }
-    return nullptr;
+    return *this;
 }
 
-std::string Document::xmlDeclaration() const {
-    return xmlDeclaration_;
+XmlStreamReader::~XmlStreamReader() {
+    // Must be in the .cpp otherwise unique_ptr cannot call the
+    // destructor of XmlStreamReaderImpl (incomplete type).
 }
 
-bool Document::hasXmlDeclaration() const {
-    return hasXmlDeclaration_;
+XmlTokenType XmlStreamReader::tokenType() const {
+    return impl_->tokenType;
 }
 
-void Document::setXmlDeclaration() {
-    hasXmlDeclaration_ = true;
-    generateXmlDeclaration_();
+bool XmlStreamReader::readNext() const {
+    return impl_->readNext();
 }
 
-void Document::setNoXmlDeclaration() {
-    hasXmlDeclaration_ = false;
-    generateXmlDeclaration_();
+std::string_view XmlStreamReader::rawText() const {
+    return std::string_view(impl_->tokenStart, impl_->tokenEnd - impl_->tokenStart);
 }
 
-std::string Document::xmlVersion() const {
-    return xmlVersion_;
+std::string_view XmlStreamReader::characterData() const {
+    return impl_->characterData;
 }
 
-void Document::setXmlVersion(const std::string& version) {
-    xmlVersion_ = version;
-    hasXmlDeclaration_ = true;
-    generateXmlDeclaration_();
-}
-
-std::string Document::xmlEncoding() const {
-    return xmlEncoding_;
-}
-
-bool Document::hasXmlEncoding() const {
-    return hasXmlEncoding_;
-}
-
-void Document::setXmlEncoding(const std::string& encoding) {
-    xmlEncoding_ = encoding;
-    hasXmlEncoding_ = true;
-    hasXmlDeclaration_ = true;
-    generateXmlDeclaration_();
-}
-
-void Document::setNoXmlEncoding() {
-    xmlEncoding_ = "UTF-8";
-    hasXmlEncoding_ = false;
-    generateXmlDeclaration_();
-}
-
-bool Document::xmlStandalone() const {
-    return xmlStandalone_;
-}
-
-bool Document::hasXmlStandalone() const {
-    return hasXmlStandalone_;
-}
-
-void Document::setXmlStandalone(bool standalone) {
-    xmlStandalone_ = standalone;
-    hasXmlStandalone_ = true;
-    hasXmlDeclaration_ = true;
-    generateXmlDeclaration_();
-}
-
-void Document::setNoXmlStandalone() {
-    xmlStandalone_ = false;
-    hasXmlStandalone_ = false;
-    generateXmlDeclaration_();
-}
-
-void Document::generateXmlDeclaration_() {
-    xmlDeclaration_.clear();
-    if (hasXmlDeclaration_) {
-        xmlDeclaration_.append("<?xml version=\"");
-        xmlDeclaration_.append(xmlVersion_);
-        xmlDeclaration_.append("\"");
-        if (hasXmlEncoding_) {
-            xmlDeclaration_.append(" encoding=\"");
-            xmlDeclaration_.append(xmlEncoding_);
-            xmlDeclaration_.append("\"");
-        }
-        if (hasXmlStandalone_) {
-            xmlDeclaration_.append(" standalone=\"");
-            xmlDeclaration_.append(xmlStandalone_ ? "yes" : "no");
-            xmlDeclaration_.append("\"");
-        }
-        xmlDeclaration_.append("?>");
-    }
-}
-
-void Document::save(const std::string& filePath, const XmlFormattingStyle& style) const {
-    std::ofstream out(filePath);
-    if (!out.is_open()) {
-        throw FileError("Cannot save file " + filePath + ": " + std::strerror(errno));
-    }
-
-    out << xmlDeclaration_ << std::endl;
-    writeChildren(out, style, 0, this);
-}
-
-Element* Document::elementById(core::StringId id) const {
-    auto it = elementByIdMap_.find(id);
-    if (it != elementByIdMap_.end()) {
-        return it->second;
-    }
-    return nullptr;
-}
-
-Element* Document::elementByInternalId(core::Id id) const {
-    auto it = elementByInternalIdMap_.find(id);
-    if (it != elementByInternalIdMap_.end()) {
-        return it->second;
-    }
-    return nullptr;
-}
-
-core::History* Document::enableHistory(core::StringId entrypointName) {
-    if (!history_) {
-        history_ = core::History::create(entrypointName);
-        history_->headChanged().connect(onHistoryHeadChanged());
-        history_->aboutToUndo().connect(onHistoryAboutToUndo());
-        history_->undone().connect(onHistoryUndone());
-        history_->aboutToRedo().connect(onHistoryAboutToRedo());
-        history_->redone().connect(onHistoryRedone());
-    }
-    return history_.get();
-}
-
-void Document::disableHistory() {
-    if (history_) {
-        history_->disconnect(this);
-        history_ = nullptr;
-    }
-}
-
-bool Document::hasPendingDiff() {
-    return !pendingDiff_.isEmpty();
-}
-
-bool Document::emitPendingDiff() {
-
-    // Do nothing if there is no pending diff.
-    //
-    if (!hasPendingDiff()) {
-        return false;
-    }
-
-    // Compress the diff.
-    //
-    // Note that pendingDiff_ might be non-empty before compression, but empty
-    // after compression. If pendingDiff_ is empty after compression, we still
-    // emits this empty diff since we want to provide the invariant that if
-    // hasPendingDiff() is true, then a signal is emitted. This allows clients
-    // to ignore the "next" document changed() signal if they know that the
-    // change comes from them.
-    //
-    compressPendingDiff_();
-
-    // Emits the diff now.
-    //
-    changed().emit(pendingDiff_);
-    pendingDiff_.reset();
-    pendingDiffKeepAllocPointers_.clear();
-    return true;
-}
-
-void Document::compressPendingDiff_() {
-
-    for (const auto& [node, oldRelatives] : previousRelativesMap_) {
-        if (pendingDiff_.createdNodes_.contains(node)) {
-            continue;
-        }
-        if (pendingDiff_.removedNodes_.contains(node)) {
-            continue;
-        }
-
-        NodeRelatives newRelatives(node);
-        if (oldRelatives.parent_ != newRelatives.parent_) {
-            pendingDiff_.reparentedNodes_.insert(node);
-            //pendingDiff_.childrenReorderedNodes_.insert(newRelatives.parent_);
-        }
-        else if (
-            oldRelatives.nextSibling_ != newRelatives.nextSibling_
-            || oldRelatives.previousSibling_ != newRelatives.previousSibling_) {
-            // this introduces false positives if old siblings were removed or
-            // new siblings were added.
-            pendingDiff_.childrenReorderedNodes_.insert(newRelatives.parent_);
-        }
-    }
-    previousRelativesMap_.clear();
-
-    // remove created and removed nodes from modified elements
-    auto& modifiedElements = pendingDiff_.modifiedElements_;
-    for (auto it = modifiedElements.begin(), last = modifiedElements.end(); it != last;) {
-        Node* node = it->first;
-        if (pendingDiff_.createdNodes_.contains(node)) {
-            it = modifiedElements.erase(it);
-            continue;
-        }
-        if (pendingDiff_.removedNodes_.contains(node)) {
-            it = modifiedElements.erase(it);
-            continue;
-        }
-        ++it;
-    }
-}
-
-void Document::onHistoryHeadChanged_() {
-    //emitPendingDiff();
-}
-
-void Document::onHistoryAboutToUndo_() {
-    emitPendingDiff();
-    pendingDiff_.isUndoOrRedo_ = true;
-}
-
-void Document::onHistoryUndone_() {
-    emitPendingDiff();
-    pendingDiff_.isUndoOrRedo_ = false;
-}
-
-void Document::onHistoryAboutToRedo_() {
-    emitPendingDiff();
-    pendingDiff_.isUndoOrRedo_ = true;
-}
-
-void Document::onHistoryRedone_() {
-    emitPendingDiff();
-    pendingDiff_.isUndoOrRedo_ = false;
-}
-
-void Document::onCreateNode_(Node* node) {
-    pendingDiff_.createdNodes_.emplaceLast(node);
-}
-
-void Document::onRemoveNode_(Node* node) {
-    if (!pendingDiff_.createdNodes_.removeOne(node)) {
-        pendingDiff_.removedNodes_.emplaceLast(node);
-        pendingDiffKeepAllocPointers_.emplaceLast(node);
-    }
-    else {
-        previousRelativesMap_.erase(node);
-        pendingDiff_.modifiedElements_.erase(static_cast<Element*>(node));
-        pendingDiff_.reparentedNodes_.erase(node);
-        pendingDiff_.childrenReorderedNodes_.erase(node);
-    }
-}
-
-void Document::onMoveNode_(Node* node, const NodeRelatives& savedRelatives) {
-    previousRelativesMap_.try_emplace(node, savedRelatives);
-}
-
-void Document::onChangeAttribute_(Element* element, core::StringId name) {
-    pendingDiff_.modifiedElements_[element].insert(name);
-}
-
-} // namespace vgc::dom
+} // namespace vgc::core

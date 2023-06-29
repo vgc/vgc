@@ -266,25 +266,6 @@ public:
     }
 };
 
-/// \class vgc::dom::XmlSyntaxError
-/// \brief Raised when an input file or string is not a valid XML document.
-///
-/// This exception is raised when an input file or string is not a valid XML
-/// document. For example, <path></vertex> is not a valid XML fragment because
-/// the end tag does not match the start tag.
-///
-class VGC_DOM_API_EXCEPTION XmlSyntaxError : public ParseError {
-private:
-    VGC_CORE_EXCEPTIONS_DECLARE_ANCHOR
-
-public:
-    /// Constructs a XmlSyntaxError with the given \p reason.
-    ///
-    XmlSyntaxError(const std::string& reason)
-        : ParseError(reason) {
-    }
-};
-
 /// \class vgc::dom::VgcSyntaxError
 /// \brief Raised when an input file or string is not a valid VGC document.
 ///
