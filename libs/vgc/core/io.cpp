@@ -20,17 +20,19 @@
 #include <ios>
 
 #include <vgc/core/exceptions.h>
+#include <vgc/core/format.h>
 
 namespace vgc::core {
 
-std::string readFile(const std::string& filePath) {
+std::string readFile(std::string_view filePath) {
     // Open an input file stream that throws on badbit, and check that the
     // file stream was successfully opened.
     //
-    std::ifstream in(filePath);
+    std::string filePath_(filePath); // Ensures null-terminated const char*
+    std::ifstream in(filePath_.data());
     in.exceptions(std::ifstream::badbit);
     if (!in) {
-        throw FileError("Cannot open file " + filePath);
+        throw FileError(core::format("Cannot open file {}.", filePath));
     }
 
     try {
@@ -70,7 +72,7 @@ std::string readFile(const std::string& filePath) {
         std::ifstream::iostate ok1 = std::ifstream::goodbit;
         std::ifstream::iostate ok2 = std::ifstream::failbit | std::ifstream::eofbit;
         if (state != ok1 && state != ok2) {
-            throw FileError("Cannot read file " + filePath);
+            throw FileError(core::format("Cannot read file {}.", filePath));
         }
 
         // Query the number of successfully extracted characters, and shrink the
@@ -85,12 +87,13 @@ std::string readFile(const std::string& filePath) {
         return res;
     }
     catch (std::ios_base::failure& fail) {
-        throw FileError("Cannot read file " + filePath + ": " + fail.what());
+        throw FileError(core::format("Cannot read file {}: {}", filePath, fail.what()));
     }
 }
 
-bool fileExists(const std::string& filePath) {
-    std::ifstream in(filePath);
+bool fileExists(std::string_view filePath) {
+    std::string filePath_(filePath); // Ensures null-terminated const char*
+    std::ifstream in(filePath_.data());
     return in.good();
 }
 
