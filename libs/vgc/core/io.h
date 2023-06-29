@@ -28,12 +28,12 @@ namespace vgc::core {
 /// - Raises `FileError` if the file cannot be read for any reason.
 ///
 VGC_CORE_API
-std::string readFile(const std::string& filePath);
+std::string readFile(std::string_view filePath);
 
 /// Returns whether the file at the given `filePath` exists.
 ///
 VGC_CORE_API
-bool fileExists(const std::string& filePath);
+bool fileExists(std::string_view filePath);
 
 } // namespace vgc::core
 
