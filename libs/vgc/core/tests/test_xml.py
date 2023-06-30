@@ -20,48 +20,74 @@ import unittest
 
 from vgc.core import XmlTokenType, XmlStreamReader
 
-xmlExample1 = """
+xmlExample = """
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
 <vgc>
-  <path id="p0" />
+  <b>Some &quot;bold&quot; text</b>
+  <path id="p0"/>
 </vgc>
 """
 
 class TestXmlStreamReader(unittest.TestCase):
 
     def testConstructor(self):
-        xml = XmlStreamReader(xmlExample1)
+        xml = XmlStreamReader(xmlExample)
         self.assertIsNotNone(xml)
 
     # TODO: testFromFile(self)
 
     def testReadNext(self):
-        xml = XmlStreamReader(xmlExample1)
+        xml = XmlStreamReader(xmlExample)
         self.assertTrue(xml.readNext())
         while xml.readNext():
             pass
         self.assertFalse(xml.readNext())
 
     def testStartDocument(self):
-        xml = XmlStreamReader(xmlExample1)
+        xml = XmlStreamReader(xmlExample)
         self.assertEqual(xml.tokenType, XmlTokenType.StartDocument)
 
     def testEndDocument(self):
-        xml = XmlStreamReader(xmlExample1)
+        xml = XmlStreamReader(xmlExample)
         while xml.readNext():
             pass
         self.assertEqual(xml.tokenType, XmlTokenType.EndDocument)
 
+    def testName(self):
+        xml = XmlStreamReader(xmlExample)
+        expectedStartNames = ['vgc', 'b', 'path']
+        expectedEndNames = ['b', 'path', 'vgc']
+        startNames = []
+        endNames = []
+        while xml.readNext():
+            if xml.tokenType == XmlTokenType.StartElement:
+                startNames.append(xml.name)
+            elif xml.tokenType == XmlTokenType.EndElement:
+                endNames.append(xml.name)
+        self.assertEqual(startNames, expectedStartNames)
+        self.assertEqual(endNames, expectedEndNames)
+
     def testCharacterData(self):
-        xml = XmlStreamReader(xmlExample1)
-        #while xml.readNext():
-        #    print(xml.characterData)
-        #self.assertFalse(true)
+        xml = XmlStreamReader(xmlExample)
+        while xml.readNext():
+            if xml.tokenType == XmlTokenType.StartElement and xml.name == 'b':
+                xml.readNext();
+                self.assertEqual(xml.tokenType, XmlTokenType.CharacterData)
+                self.assertEqual(xml.rawText, 'Some &quot;bold&quot; text')
+                self.assertEqual(xml.characterData, 'Some "bold" text')
 
     def testRawText(self):
-        xml = XmlStreamReader(xmlExample1)
+        xml = XmlStreamReader(xmlExample)
+        allRawText = ""
+        while xml.readNext():
+            allRawText += xml.rawText;
+        self.assertEqual(allRawText, xmlExample)
+
+    # Useful for testing
+    def printRawText(self):
+        xml = XmlStreamReader(xmlExample)
         while xml.readNext():
             print(f'{xml.tokenType}: "{xml.rawText}"')
-        self.assertFalse(true)
 
 
 if __name__ == '__main__':

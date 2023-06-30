@@ -16,6 +16,7 @@
 
 #include <vgc/core/xml.h>
 
+#include <vgc/core/assert.h>
 #include <vgc/core/format.h>
 #include <vgc/core/io.h>
 
@@ -27,10 +28,11 @@ VGC_DEFINE_ENUM(
     (Invalid, "Invalid"),
     (StartDocument, "StartDocument"),
     (EndDocument, "EndDocument"),
-    (StartTag, "StartTag"),
-    (EndTag, "EndTag"),
+    (StartElement, "StartElement"),
+    (EndElement, "EndElement"),
     (CharacterData, "CharacterData"),
-    (Comment, "Comment"))
+    (Comment, "Comment"),
+    (ProcessingInstruction, "ProcessingInstruction"))
 
 namespace {
 
@@ -89,15 +91,73 @@ class XmlStreamReaderImpl {
 public:
     std::string ownedData; // Empty if constructed via fromView()
     std::string_view data; // Points either to ownedData or external data
-    const char* end;       // End of the data
+    const char* end = {};  // End of the data
 
-    XmlTokenType tokenType;
-    const char* tokenStart; // Start of the last read token
-    const char* tokenEnd;   // End of the last read token
+    XmlTokenType tokenType = {};
+    const char* tokenStart = {}; // Start of the last read token
+    const char* tokenEnd = {};   // End of the last read token
 
-    const char* cursor; // Current cursor position while parsing
+    const char* cursor = {}; // Current cursor position while parsing
 
-    std::string_view characterData;
+    // Name of a StartElement or EndElement
+    const char* nameStart = {};
+    const char* nameEnd = {};
+    std::string_view name() const {
+        return std::string_view(nameStart, nameEnd - nameStart);
+    }
+
+    bool isSelfClosing = {}; // Whether the current start element is self-closing
+
+    // Content of CharacterData
+    std::string characterData;
+
+    // Store attribute data.
+    //
+    // Note: we use arrays of size `reservedAttributes_`, for two reasons:
+    //
+    // 1. Avoid destructing `XmlStreamAttributeData` objects, so that
+    //    we can reuse the capacity of data.value strings.
+    //
+    // 2. Control exactly when are the array resized, so that we can update the
+    //    `XmlStreamAttributeData` pointers in `XmlStreamAttributeView` objects.
+    //
+    Int numAttributes_ = 0;      // semantic size of the arrays
+    Int reservedAttributes_ = 0; // actual size of the arrays
+    core::Array<detail::XmlStreamAttributeData> attributesData_;
+    core::Array<XmlStreamAttributeView> attributes_;
+    ConstSpan<XmlStreamAttributeView> attributes() const {
+        return ConstSpan<XmlStreamAttributeView>(attributes_.data(), numAttributes_);
+    }
+    void clearAttributes() {
+        numAttributes_ = 0;
+    }
+    detail::XmlStreamAttributeData& appendAttribute() {
+        Int indexOfAppendedAttribute = numAttributes_;
+        ++numAttributes_;
+        if (reservedAttributes_ < numAttributes_) {
+            if (reservedAttributes_ < 8) {
+                reservedAttributes_ = 8; // [1]
+            }
+            else {
+                reservedAttributes_ *= 2; // [2]
+            }
+            // We now have numAttributes <= reservedAttributes_.
+            //
+            // Proof:
+            // - Entering the function: numAttributes_ <=  reservedAttributes_ (invariant)
+            // - Executing first line:  numAttributes_ <=  reservedAttributes_ + 1
+            // - Executing inner if: reservedAttributes_ (= k) increases by at least one
+            //   [1] k in [0..7]:  k' = 8     (> k)
+            //   [2] k in [8...]:  k' = 2 * k (> k)
+            //
+            attributesData_.resize(reservedAttributes_, {});
+            attributes_.resize(reservedAttributes_, {});
+            for (Int i = 0; i < reservedAttributes_; ++i) {
+                attributes_.getUnchecked(i).d_ = &attributesData_.getUnchecked(i);
+            }
+        }
+        return attributesData_.getUnchecked(indexOfAppendedAttribute);
+    }
 
     void init() {
         const char* start = data.data();
@@ -137,6 +197,11 @@ private:
             tokenType = XmlTokenType::EndDocument;
             return false;
         }
+        else if (tokenType == XmlTokenType::StartElement && isSelfClosing) {
+            tokenType = XmlTokenType::EndElement;
+            onEndTag_();
+            return true;
+        }
         else {
             char c;
             get(c);
@@ -144,6 +209,7 @@ private:
                 readMarkup_();
             }
             else {
+                unget();
                 readCharacterData_();
             }
             return true;
@@ -163,12 +229,12 @@ private:
     //
     void readCharacterData_() {
         tokenType = XmlTokenType::CharacterData;
+        characterData.clear();
         char c;
         while (get(c)) {
             if (c == '&') {
                 // character reference or entity reference.
-                // TODO: resolve it
-                continue;
+                c = readReference_();
             }
             else if (c == '<') {
                 unget();
@@ -181,6 +247,7 @@ private:
                     }
                 }
             }
+            characterData += c;
         };
     }
 
@@ -212,10 +279,13 @@ private:
     // also use this function to read the XML declaration, even though it is
     // technically not a PI. In the future, we may want to actually read the
     // content of the XML declaration, and check that it is valid and that
-    // encoding is UTF-8 (the only encoding supported in VGC files).
+    // encoding is UTF-8 (the only encoding that we support).
+    //
     void readProcessingInstruction_() {
         // PI       ::= '<?' PITarget (S (Char* - (Char* '?>' Char*)))? '?>'
         // PITarget ::= Name - (('X' | 'x') ('M' | 'm') ('L' | 'l'))
+
+        tokenType = XmlTokenType::ProcessingInstruction;
 
         // For now, for simplicity, we accept PIs even if they don't start with
         // a valid name
@@ -246,51 +316,68 @@ private:
     }
 
     // Read from '<c' (not included) to matching '>' or '/>' (included)
+    //
     void readStartTag_(char c) {
-        bool isEmpty = false;
-        bool isClosed = readTagName_(c, &isEmpty);
 
+        tokenType = XmlTokenType::StartElement;
+
+        bool isAngleBracketClosed = readTagName_(c, &isSelfClosing);
         onStartTag_();
 
+        // Initialize attributes.
+        // Note: we set attributeStart now so that it includes leading whitespace.
+        clearAttributes();
+        const char* attributeStart = cursor;
+
         // Reading attributes or whitespaces until closed
-        while (!isClosed && get(c)) {
+        while (!isAngleBracketClosed && get(c)) {
             if (c == '>') {
-                isClosed = true;
-                isEmpty = false;
+                isAngleBracketClosed = true;
+                isSelfClosing = false;
             }
             else if (c == '/') {
                 // '/' must be immediately followed by '>'
                 if (!(get(c))) {
-                    throw XmlSyntaxError(
-                        "Unexpected end-of-file after reading '/' in start tag '"
-                        + tagName_ + "'. Expected '>'.");
+                    throw XmlSyntaxError(format(
+                        "Unexpected end-of-file after reading '/' in start tag '{}'. "
+                        "Expected '>'.",
+                        name()));
                 }
                 else if (c == '>') {
-                    isClosed = true;
-                    isEmpty = true;
+                    isAngleBracketClosed = true;
+                    isSelfClosing = true;
                 }
                 else {
-                    throw XmlSyntaxError(
-                        std::string("Unexpected '") + c
-                        + "' after reading '/' in start tag '" + tagName_
-                        + "'. Expected '>'.");
+                    throw XmlSyntaxError(format(
+                        "Unexpected '{}' after reading '/' in start tag '{}'. "
+                        "Expected '>'.",
+                        c,
+                        name()));
                 }
             }
             else if (isWhitespace_(c)) {
                 // Keep reading
             }
             else {
-                readAttribute_(c);
+                // Append a new attribute and initialize its rawText so that
+                // attributeStart is available in readAttribute_(c)
+                XmlStreamAttributeData& attribute = appendAttribute();
+                attribute.rawText = std::string_view(attributeStart, 1);
+
+                // Read the attribute
+                readAttribute_(attribute, c);
+
+                // Set the value of rawText_ and attributeStart of next attribute
+                Int n = cursor - attributeStart;
+                attribute.rawText = std::string_view(attributeStart, n);
+                attributeStart = cursor;
             }
         }
-        if (!isClosed) {
-            throw XmlSyntaxError(
-                "Unexpected end-of-file while reading start tag '" + tagName_
-                + "'. Expected whitespaces, attribute name, '>', or '/>'");
-        }
-
-        if (isEmpty) {
-            onEndTag_();
+        if (!isAngleBracketClosed) {
+            throw XmlSyntaxError(format(
+                "Unexpected end-of-file while reading start tag '{}'. "
+                "Expected whitespaces, attribute name, '>', or '/>'",
+                name()));
         }
     }
 
@@ -302,25 +389,29 @@ private:
                                  "Expected tag name.");
         }
 
-        bool isClosed = readTagName_(c);
+        tokenType = XmlTokenType::EndElement;
+        bool isAngleBracketClosed = readTagName_(c);
 
-        while (!isClosed && get(c)) {
+        while (!isAngleBracketClosed && get(c)) {
             if (isWhitespace_(c)) {
                 // Keep reading whitespaces
             }
             else if (c == '>') {
-                isClosed = true;
+                isAngleBracketClosed = true;
             }
             else {
-                throw XmlSyntaxError(
-                    std::string("Unexpected '") + c + "' while reading end tag '"
-                    + tagName_ + "'. Expected whitespaces or '>'.");
+                throw XmlSyntaxError(format(
+                    "Unexpected '{}' while reading end tag '{}'. "
+                    "Expected whitespaces or '>'.",
+                    c,
+                    name()));
             }
         }
-        if (!isClosed) {
-            throw XmlSyntaxError(
-                "Unexpected end-of-file while reading end tag '" + tagName_
-                + "'. Expected whitespaces or '>'.");
+        if (!isAngleBracketClosed) {
+            throw XmlSyntaxError(format(
+                "Unexpected end-of-file while reading end tag '{}'. "
+                "Expected whitespaces or '>'.",
+                name()));
         }
 
         onEndTag_();
@@ -404,10 +495,10 @@ private:
     // You must pass empty = nullptr (the default) when reading the name of an
     // end tag, and you must pass a non-null pointer to a bool when reading a
     // start tag. If non-null, it is used as an output parameter to indicate
-    // whether the start tag was in fact an empty element tag (e.g.,
+    // whether the start tag was in fact a self-closing element tag (e.g.,
     // <tagname/>).
     //
-    // Returns whether the tag was closed. Exhaustive cases below.
+    // Returns whether the angle bracket of tag was closed. Exhaustive cases below.
     //
     // If empty == nullptr:
     //     "</tagname " => returns false
@@ -418,115 +509,125 @@ private:
     // 1. "<tagname>" => returns true, set *empty = false
     // 1. "<tagname/>" => returns true, set *empty = true
     //
-    // Returned value is undefined on error. Check error_.
-    //
     // XXX Wouldn't it be a better design to simply call this readName(c),
     // return the first character after the tag name, and let the caller handle
     // this character?
     //
-    bool readTagName_(char c, bool* empty = nullptr) {
-        bool isClosed = false;
-
-        tagName_.clear();
-        tagName_ += c;
+    bool readTagName_(char c, bool* isSelfClosing = nullptr) {
 
         if (!isNameStartChar_(c)) {
-            throw XmlSyntaxError(
-                std::string("Unexpected '") + c
-                + "' while reading start character of tag name. Expected valid name "
-                  "start character.");
+            throw XmlSyntaxError(format(
+                "Unexpected '{}' while reading start character of tag name. "
+                "Expected valid name start character.",
+                c));
         }
+
+        bool isAngleBracketClosed = false;
+        nameStart = cursor - 1;
+        nameEnd = cursor;
 
         bool done = false;
         while (!done && get(c)) {
             if (isNameChar_(c)) {
-                tagName_ += c;
+                nameEnd = cursor;
             }
             else if (isWhitespace_(c)) {
                 done = true;
-                isClosed = false;
+                isAngleBracketClosed = false;
             }
             else if (c == '>') {
                 done = true;
-                isClosed = true;
-                if (empty) {
-                    *empty = false;
+                isAngleBracketClosed = true;
+                if (isSelfClosing) {
+                    *isSelfClosing = false;
                 }
             }
             else if (c == '/') {
-                if (!empty) {
-                    throw XmlSyntaxError(
-                        "Unexpected '/' while reading end tag name '" + tagName_
-                        + "'. Expected valid name characters, whitespaces, or '>'.");
+                if (!isSelfClosing) {
+                    throw XmlSyntaxError(format(
+                        "Unexpected '/' while reading end tag name '{}'. "
+                        "Expected valid name characters, whitespaces, or '>'.",
+                        name()));
                 }
                 if (get(c)) {
                     if (c == '>') {
                         done = true;
-                        isClosed = true;
-                        *empty = true;
+                        isAngleBracketClosed = true;
+                        *isSelfClosing = true;
                     }
                     else {
-                        throw XmlSyntaxError(
-                            "Unexpected end-of-file after reading '/' after reading "
-                            "start tag name '"
-                            + tagName_ + "'. Expected '>'.");
+                        throw XmlSyntaxError(format(
+                            "Unexpected '{}' after reading '/' after reading start "
+                            "tag name '{}'. Expected '>'.",
+                            c,
+                            name()));
                     }
                 }
                 else {
-                    throw XmlSyntaxError(
+                    throw XmlSyntaxError(format(
                         "Unexpected end-of-file after reading '/' after reading start "
-                        "tag name '"
-                        + tagName_ + "'. Expected '>'.");
+                        "tag name '{}'. Expected '>'.",
+                        name()));
                 }
             }
             else {
-                throw XmlSyntaxError(
-                    std::string("Unexpected '") + c + "' while reading "
-                    + (empty ? "start" : "end") + " tag name '" + tagName_
-                    + "'. Expected valid name characters, whitespaces, "
-                    + (empty ? "'>', or '/>" : "or '>'") + ".");
+                throw XmlSyntaxError(format(
+                    "Unexpected '{}' while reading {} tag name '{}'. Expected valid name "
+                    "",
+                    c,
+                    isSelfClosing ? "start" : "end",
+                    name(),
+                    (isSelfClosing ? "'>', or '/>" : "or '>'")));
             }
         }
         if (!done) {
-            throw XmlSyntaxError(
-                std::string("Unexpected end-of-file while reading ")
-                + (empty ? "start" : "end") + " tag name '" + tagName_
-                + "'. Expected valid name characters, whitespaces, "
-                + (empty ? "'>', or '/>" : "or '>'") + ".");
+            throw XmlSyntaxError(format(
+                "Unexpected end-of-file while reading {} tag name '{}'. Expected valid "
+                "name characters, whitespaces, {}.",
+                (isSelfClosing ? "start" : "end"),
+                name(),
+                (isSelfClosing ? "'>', or '/>" : "or '>'")));
         }
 
-        return isClosed;
+        return isAngleBracketClosed;
     }
 
-    // Read from given first character \p c (not included) to '=' (included)
-    void readAttribute_(char c) {
+    // Read from given first character \p c (not included) to the quotation mark
+    // of the attribute value (included)
+    void readAttribute_(XmlStreamAttributeData& attribute, char c) {
         // Attribute ::= Name Eq AttValue
         // Eq        ::= S? '=' S?
         // AttValue  ::= '"' ([^<&"] | Reference)* '"'
         //            |  "'" ([^<&'] | Reference)* "'"
 
-        readAttributeName_(c);
-        readAttributeValue_();
+        readAttributeName_(attribute, c);
+        readAttributeValue_(attribute);
         onAttribute_();
     }
 
     // Read from given first character \p c (not included) to '=' (included)
-    void readAttributeName_(char c) {
-        attributeName_.clear();
-        attributeName_ += c;
+    void readAttributeName_(XmlStreamAttributeData& attribute, char c) {
 
         if (!isNameStartChar_(c)) {
-            throw XmlSyntaxError(
-                std::string("Unexpected '") + c
-                + "' while reading start character of attribute name in start tag "
-                + tagName_ + ". Expected valid name start character.");
+            throw XmlSyntaxError(format(
+                "Unexpected '{}' while reading start character of attribute name in "
+                "start tag '{}'. Expected valid name start character.",
+                c,
+                name()));
         }
+
+        const char* attributeNameStart = cursor - 1;
+        const char* attributeNameEnd = cursor;
+        auto attributeName = [&]() {
+            return std::string_view(
+                attributeNameStart, attributeNameEnd - attributeNameStart);
+        };
 
         bool isNameRead = false;
         bool isEqRead = false;
         while (!isNameRead && get(c)) {
             if (isNameChar_(c)) {
-                attributeName_ += c;
+                attributeNameEnd = cursor;
             }
             else if (c == '=') {
                 isNameRead = true;
@@ -536,17 +637,21 @@ private:
                 isNameRead = true;
             }
             else {
-                throw XmlSyntaxError(
-                    std::string("Unexpected '") + c + "' while reading attribute name '"
-                    + attributeName_ + "' in start tag '" + tagName_
-                    + "'. Expected valid name characters, whitespaces, or '='.");
+                throw XmlSyntaxError(format(
+                    "Unexpected '{}' while reading attribute name '{}' in start tag "
+                    "'{}'. Expected valid name characters, whitespaces, or '='.",
+                    c,
+                    attributeName(),
+                    name()));
             }
         }
         if (!isNameRead) {
-            throw XmlSyntaxError(
-                "Unexpected end-of-file while reading attribute name '" + attributeName_
-                + "' in start tag '" + tagName_
-                + "'. Expected valid name characters, whitespaces, or '='.");
+            throw XmlSyntaxError(format(
+                "Unexpected end-of-file while reading attribute name '{}' in start tag "
+                "'{}'. Expected valid name characters, whitespaces, or '='.",
+                c,
+                attributeName(),
+                name()));
         }
 
         while (!isEqRead && get(c)) {
@@ -557,80 +662,98 @@ private:
                 // Keep reading
             }
             else {
-                throw XmlSyntaxError(
-                    std::string("Unexpected '") + c + "' after reading attribute name '"
-                    + attributeName_ + "' in start tag '" + tagName_
-                    + "'. Expected whitespaces or '='.");
+                throw XmlSyntaxError(format(
+                    "Unexpected '{}' after reading attribute name '{}' in start tag "
+                    "'{}'. Expected whitespaces or '='.",
+                    c,
+                    attributeName(),
+                    name()));
             }
         }
         if (!isEqRead) {
-            throw XmlSyntaxError(
-                "Unexpected end-of-file after reading attribute name '" + attributeName_
-                + "' in start tag '" + tagName_ + "'. Expected whitespaces or '='.");
+            throw XmlSyntaxError(format(
+                "Unexpected end-of-file after reading attribute name '{}' in start tag "
+                "'{}'. Expected whitespaces or '='.",
+                c,
+                attributeName(),
+                name()));
         }
+
+        attribute.name = attributeName();
     }
 
     // Read from '=' (not included) to closing '\'' or '\"' (included)
-    void readAttributeValue_() {
-        attributeValue_.clear();
+    void readAttributeValue_(XmlStreamAttributeData& attribute) {
+
+        attribute.value.clear();
+        attribute.rawValueIndex = {};
 
         char c;
-        char quoteSign = 0;
-        while (!quoteSign && get(c)) {
+        char quotationMark = 0;
+        while (!quotationMark && get(c)) {
             if (c == '\"' || c == '\'') {
-                quoteSign = c;
+                quotationMark = c;
+                attribute.rawValueIndex = cursor - attribute.rawText.data();
             }
             else if (isWhitespace_(c)) {
                 // Keep reading
             }
             else {
-                throw XmlSyntaxError(
-                    std::string("Unexpected '") + c
-                    + "' after reading '=' after reading attribute name '"
-                    + attributeName_ + "' in start tag '" + tagName_
-                    + "'. Expected '\"' (double quote), or '\'' (single quote), or "
-                      "whitespaces.");
+                throw XmlSyntaxError(format(
+                    "Unexpected '{}' after reading '=' after reading attribute name '{}' "
+                    "in start tag '{}'. Expected '\"' (double quote), or '\'' (single "
+                    "quote), or whitespaces.",
+                    c,
+                    attribute.name,
+                    name()));
             }
         }
-        if (!quoteSign) {
-            throw XmlSyntaxError(
-                "Unexpected end-of-file after reading '=' "
-                "after reading attribute name '"
-                + attributeName_ + "' in start tag '" + tagName_
-                + "'. Expected '\"' (double quote), or '\'' (single quote), or "
-                  "whitespaces.");
+        if (!quotationMark) {
+            throw XmlSyntaxError(format(
+                "Unexpected end-of-file after reading '=' after reading attribute name "
+                "'{}' in start tag '{}'. Expected '\"' (double quote), or '\'' (single "
+                "quote), or whitespaces.",
+                c,
+                attribute.name,
+                name()));
         }
 
         bool isClosed = false;
         while (!isClosed && get(c)) {
-            if (c == quoteSign) {
+            if (c == quotationMark) {
                 isClosed = true;
             }
             else if (c == '&') {
                 char replacementChar = readReference_();
-                attributeValue_ += replacementChar;
+                attribute.value += replacementChar;
             }
             else if (c == '<') {
-                // This is illegal XML, so we reject it. In the future, we may
-                // want to accept it with a warning, and auto-convert it to
-                // &lt; when saving back the file. It is quite unclear why did the
-                // W3C decide that '<' was illegal in attribute values.
-                throw XmlSyntaxError(
-                    "Unexpected '<' while reading value of attribute '" + attributeName_
-                    + "' in start tag '" + tagName_
-                    + "'. This character is now allowed in attribute values, please "
-                      "replace it with '&lt;'.");
+                // This is illegal XML, so we reject it to be compliant. In the
+                // future, we may want to have a "lax" mode where we accept it
+                // with a warning. It is unclear why the W3C decided that '<'
+                // was illegal in attribute values, since there is no
+                // ambiguity: no markup is allowed in attribute value (perhaps
+                // to make it easier to find all markup with regular
+                // expressions?).
+                throw XmlSyntaxError(format(
+                    "Unexpected '<' while reading value of attribute '{}' in start tag "
+                    "'{}'. This character is not allowed in attribute values, please "
+                    "replace it with '&lt;'.",
+                    attribute.name,
+                    name()));
             }
             else {
-                attributeValue_ += c;
+                attribute.value += c;
             }
         }
         if (!isClosed) {
-            throw XmlSyntaxError(
-                "Unexpected end-of-file while reading value of attribute '"
-                + attributeName_ + "' in start tag '" + tagName_
-                + "'. Expected more characters or the closing quote '" + quoteSign
-                + "'.");
+            throw XmlSyntaxError(format(
+                "Unexpected end-of-file while reading value of attribute '{}' in start "
+                "tag "
+                "'{}'. Expected more characters or the closing quotation mark '{}'.",
+                attribute.name,
+                name(),
+                quotationMark));
         }
     }
 
@@ -673,22 +796,20 @@ private:
     // XXX We do not yet support character references, that is, unicode
     // codes such as '&#...;'
     // TODO support them
+
     char readReference_() {
         // Reference ::= EntityRef | CharRef
         // EntityRef ::= '&' Name ';'
         // CharRef   ::= '&#' [0-9]+ ';'
         //            |  '&#x' [0-9a-fA-F]+ ';'
 
-        referenceName_.clear();
-
         char c;
         if (get(c)) {
-            referenceName_ += c;
             if (!isNameStartChar_(c)) {
-                throw XmlSyntaxError(
-                    std::string("Unexpected '") + c
-                    + "' while reading start character of entity reference name. "
-                      "Expected valid name start character.");
+                throw XmlSyntaxError(format(
+                    "Unexpected '{}' while reading start character of entity reference "
+                    "name. Expected valid name start character.",
+                    c));
             }
         }
         else {
@@ -697,25 +818,34 @@ private:
                 "reference name. Expected valid name start character.");
         }
 
+        const char* referenceNameStart = cursor - 1;
+        const char* referenceNameEnd = cursor;
+        auto referenceName = [&]() {
+            return std::string_view(
+                referenceNameStart, referenceNameEnd - referenceNameStart);
+        };
+
         bool isSemicolonRead = false;
         while (!isSemicolonRead && get(c)) {
             if (isNameChar_(c)) {
-                referenceName_ += c;
+                referenceNameEnd = cursor;
             }
             else if (c == ';') {
                 isSemicolonRead = true;
             }
             else {
-                throw XmlSyntaxError(
-                    std::string("Unexpected '") + c
-                    + "' while reading entity reference name '" + referenceName_
-                    + "'. Expected valid name characters or ';'.");
+                throw XmlSyntaxError(format(
+                    "Unexpected '{}' while reading entity reference name '{}'. "
+                    "Expected valid name characters or ';'.",
+                    c,
+                    referenceName()));
             }
         }
         if (!isSemicolonRead) {
-            throw XmlSyntaxError(
-                "Unexpected end-of-file while reading entity reference name '"
-                + referenceName_ + "'. Expected valid name characters or ';'.");
+            throw XmlSyntaxError(format(
+                "Unexpected end-of-file while reading entity reference name '{}'. "
+                "Expected valid name characters or ';'.",
+                referenceName()));
         }
 
         const std::vector<std::pair<const char*, char>> table = {
@@ -727,12 +857,12 @@ private:
         };
 
         for (const auto& pair : table) {
-            if (referenceName_ == pair.first) {
+            if (referenceName() == pair.first) {
                 return pair.second;
             }
         }
 
-        throw XmlSyntaxError("Unknown entity reference '&" + referenceName_ + ";'.");
+        throw XmlSyntaxError(format("Unknown entity reference '&{};'.", referenceName()));
     }
 };
 
@@ -810,8 +940,51 @@ std::string_view XmlStreamReader::rawText() const {
     return std::string_view(impl_->tokenStart, impl_->tokenEnd - impl_->tokenStart);
 }
 
+std::string_view XmlStreamReader::name() const {
+    XmlTokenType type = tokenType();
+    if (type != XmlTokenType::StartElement && type != XmlTokenType::EndElement) {
+        throw LogicError(format(
+            "Cannot call XmlStreamReader::name() "
+            "if tokenType() (= {}) is not {} or {}.",
+            type,
+            XmlTokenType::StartElement,
+            XmlTokenType::EndElement));
+    }
+    return impl_->name();
+}
+
 std::string_view XmlStreamReader::characterData() const {
+    XmlTokenType type = tokenType();
+    if (type != XmlTokenType::CharacterData) {
+        throw LogicError(format(
+            "Cannot call XmlStreamReader::characterData() "
+            "if tokenType() (= {}) is not {}.",
+            type,
+            XmlTokenType::CharacterData));
+    }
     return impl_->characterData;
+}
+
+ConstSpan<XmlStreamAttributeView> XmlStreamReader::attributes() const {
+    XmlTokenType type = tokenType();
+    if (type != XmlTokenType::StartElement) {
+        throw LogicError(format(
+            "Cannot call XmlStreamReader::attributes() "
+            "if tokenType() (= {}) is not {}.",
+            type,
+            XmlTokenType::CharacterData));
+    }
+    return impl_->attributes();
+}
+
+std::optional<XmlStreamAttributeView>
+XmlStreamReader::attribute(std::string_view name) const {
+    for (XmlStreamAttributeView attr : attributes()) {
+        if (attr.name() == name) {
+            return attr;
+        }
+    }
+    return std::nullopt;
 }
 
 } // namespace vgc::core
