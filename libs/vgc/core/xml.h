@@ -70,24 +70,24 @@ struct VGC_CORE_API XmlStreamAttributeData {
 ///
 enum class XmlEventType : Int8 {
     None,          // nothing has been read yet
-    Space,         // non-content whitespace (e.g., outside of the document element)
     StartDocument, // can be an xml-declaration or a missing xml-declaration
     EndDocument,
     StartElement, // can be a start tag (<b>) or an empty element tag (<img/>)
     EndElement,   // can be an end tag (</b>) or just after an empty element tag
     Characters,   // can be character data, CDATA section, resolved entities
-    Comment,
     ProcessingInstruction,
 
     // TODO:
-    // XmlDeclaration,
+    // Comment,
+    // Space,         // non-content whitespace (e.g., outside of the document element)
     // DoctypeDeclaration,
 
-    // Currently, character reference and entity references are automatically
-    // resolved and merge with adjacent character data. Also, CData sections
-    // are automatically merged with adjacent character data.
+    // Currently, entity references are automatically resolved and merged with
+    // adjacent character data. When implemented, CDATA sections and character
+    // references will also at first be automatically merged with adjacent
+    // character data.
     //
-    // In the future, we may may to report them as separate tokens so that it
+    // In the future, we may may to report them as separate events so that it
     // is possible to rewrite the file exactly as it was initially.
     //
     // CharacterReference, // Only reported if not automatically resolved

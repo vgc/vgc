@@ -35,7 +35,6 @@ void wrap_XmlEventType(py::module& m) {
         .value("StartElement", This::StartElement)
         .value("EndElement", This::EndElement)
         .value("Characters", This::Characters)
-        .value("Comment", This::Comment)
         .value("ProcessingInstruction", This::ProcessingInstruction);
 }
 

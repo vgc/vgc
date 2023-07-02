@@ -31,7 +31,6 @@ VGC_DEFINE_ENUM(
     (StartElement, "StartElement"),
     (EndElement, "EndElement"),
     (Characters, "Characters"),
-    (Comment, "Comment"),
     (ProcessingInstruction, "ProcessingInstruction"))
 
 namespace {
