@@ -23,6 +23,7 @@
 namespace vgc::core {
 
 VGC_DECLARE_LOG_CATEGORY(VGC_CORE_API, LogVgcCore, Debug)
+VGC_DECLARE_LOG_CATEGORY(VGC_CORE_API, LogVgcCoreXml, Debug)
 
 } // namespace vgc::core
 

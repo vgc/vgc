@@ -26,16 +26,15 @@ using vgc::Int;
 
 namespace {
 
-void wrap_XmlTokenType(py::module& m) {
-    using This = vgc::core::XmlTokenType;
-    py::enum_<This>(m, "XmlTokenType")
-        .value("None", This::None)
-        .value("Invalid", This::Invalid)
+void wrap_XmlEventType(py::module& m) {
+    using This = vgc::core::XmlEventType;
+    py::enum_<This>(m, "XmlEventType")
+        .value("None_", This::None)
         .value("StartDocument", This::StartDocument)
         .value("EndDocument", This::EndDocument)
         .value("StartElement", This::StartElement)
         .value("EndElement", This::EndElement)
-        .value("CharacterData", This::CharacterData)
+        .value("Characters", This::Characters)
         .value("Comment", This::Comment)
         .value("ProcessingInstruction", This::ProcessingInstruction);
 }
@@ -60,26 +59,38 @@ void wrap_XmlStringReader(py::module& m) {
         .def(py::init<std::string_view>())
         .def_static("fromFile", &This::fromFile)
         .def("readNext", &This::readNext)
-        .def_property_readonly("tokenType", &This::tokenType)
+        .def_property_readonly("eventType", &This::eventType)
         .def_property_readonly("rawText", &This::rawText)
+        .def_property_readonly("hasXmlDeclaration", &This::hasXmlDeclaration)
+        .def_property_readonly("xmlDeclaration", &This::xmlDeclaration)
+        .def_property_readonly("version", &This::version)
+        .def_property_readonly("encoding", &This::encoding)
+        .def_property_readonly("isEncodingSet", &This::isEncodingSet)
+        .def_property_readonly("isStandalone", &This::isStandalone)
+        .def_property_readonly("isStandaloneSet", &This::isStandaloneSet)
         .def_property_readonly("name", &This::name)
-        .def_property_readonly("characterData", &This::characterData)
-        .def_property_readonly("numAttributes", &This::characterData)
+        .def_property_readonly("characters", &This::characters)
+        // TODO: wrap attributes() (requires to write python wrappers for core::Span)
+        .def_property_readonly("numAttributes", &This::numAttributes)
         .def("attribute", overload_cast<Int>(&This::attribute, const_))
         .def("attribute", overload_cast<string_view>(&This::attribute, const_))
         .def("attributeName", &This::attributeName)
         .def("attributeValue", overload_cast<Int>(&This::attributeValue, const_))
-        .def("attributeValue", overload_cast<string_view>(&This::attributeValue, const_));
+        .def("attributeValue", overload_cast<string_view>(&This::attributeValue, const_))
+        .def_property_readonly(
+            "processingInstructionTarget", &This::processingInstructionTarget)
+        .def_property_readonly(
+            "processingInstructionData", &This::processingInstructionData);
 
-    // TODO: wrap attributes() (requires to write python wrappers for core::Span)
-    // TODO: ensures everything works as expected with string_view:
+    // TODO: ensures everything works as expected with string_view, especially
+    // when given as argument, e.g., attributeValue(attrName)
     // https://zpz.github.io/blog/python-cpp-pybind11-stringview/
 }
 
 } // namespace
 
 void wrap_xml(py::module& m) {
-    wrap_XmlTokenType(m);
+    wrap_XmlEventType(m);
     wrap_XmlStreamAttributeView(m);
     wrap_XmlStringReader(m);
 }

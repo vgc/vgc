@@ -19,18 +19,18 @@
 #include <vgc/core/assert.h>
 #include <vgc/core/format.h>
 #include <vgc/core/io.h>
+#include <vgc/core/logcategories.h>
 
 namespace vgc::core {
 
 VGC_DEFINE_ENUM(
-    XmlTokenType,
+    XmlEventType,
     (None, "None"),
-    (Invalid, "Invalid"),
     (StartDocument, "StartDocument"),
     (EndDocument, "EndDocument"),
     (StartElement, "StartElement"),
     (EndElement, "EndElement"),
-    (CharacterData, "CharacterData"),
+    (Characters, "Characters"),
     (Comment, "Comment"),
     (ProcessingInstruction, "ProcessingInstruction"))
 
@@ -54,6 +54,10 @@ bool isWhitespace_(char c) {
     return c == ' ' || c == '\n' || c == '\r' || c == '\t';
 
     // TODO: remove '\r' characters or replace them with '\n' if encountered
+}
+
+bool isDigit_(char c) {
+    return ('0' <= c && c <= '9');
 }
 
 bool isNameStartChar_(char c) {
@@ -83,6 +87,26 @@ bool isNameChar_(char c) {
     return isNameStartChar_(c) || c == '-' || c == '.' || ('0' <= c && c <= '9');
 }
 
+// https://www.w3.org/TR/xml/#NT-EncName
+// EncName ::= [A-Za-z] ([A-Za-z0-9._] | '-')*
+
+bool isEncodingNameStartChar_(char c) {
+    return ('a' <= c && c <= 'z') || ('A' <= c && c <= 'Z');
+}
+
+bool isEncodingNameChar_(char c) {
+    return isEncodingNameStartChar_(c) //
+           || ('0' <= c && c <= '9') || c == '.' || c == '_' || c == '-';
+}
+
+bool isXmlDeclarationAttributeNameChar_(char c) {
+    return ('a' <= c && c <= 'z');
+}
+
+bool isXmlDeclarationAttributeValueChar_(char c) {
+    return isEncodingNameChar_(c);
+}
+
 } // namespace
 
 namespace detail {
@@ -93,11 +117,19 @@ public:
     std::string_view data; // Points either to ownedData or external data
     const char* end = {};  // End of the data
 
-    XmlTokenType tokenType = {};
-    const char* tokenStart = {}; // Start of the last read token
-    const char* tokenEnd = {};   // End of the last read token
+    XmlEventType eventType = XmlEventType::None;
+    const char* eventStart = {}; // Start of the last read event
+    const char* eventEnd = {};   // End of the last read event
 
     const char* cursor = {}; // Current cursor position while parsing
+
+    // XML Declaration (xmlDeclaration is empty if there is no XML declaration)
+    std::string_view xmlDeclaration;
+    std::string_view version = "1.0";
+    std::string_view encoding = "UTF-8";
+    bool isStandalone = false;
+    bool isEncodingSet = false;
+    bool isStandaloneSet = false;
 
     // Name of a StartElement or EndElement
     const char* nameStart = {};
@@ -106,10 +138,18 @@ public:
         return std::string_view(nameStart, nameEnd - nameStart);
     }
 
-    bool isSelfClosing = {}; // Whether the current start element is self-closing
+    // Whether the StartElement is a start tag (<b>) or empty element tag (<img/>)
+    bool isEmptyElementTag = {};
 
-    // Content of CharacterData
-    std::string characterData;
+    // Whether a root element has been found
+    bool hasRootElement = false;
+
+    // Characters
+    std::string characters;
+
+    // Processing instruction
+    std::string processingInstructionTarget;
+    std::string processingInstructionData;
 
     // Store attribute data.
     //
@@ -162,23 +202,37 @@ public:
     void init() {
         const char* start = data.data();
         end = start + data.size();
-        tokenType = XmlTokenType::StartDocument;
-        tokenStart = start;
-        tokenEnd = start;
+        eventType = XmlEventType::None;
+        eventStart = start;
+        eventEnd = start;
         cursor = start;
     }
 
     bool readNext() {
-        tokenStart = tokenEnd; // == cursor
+        eventStart = eventEnd; // == cursor
         bool res = readNext_();
-        tokenEnd = cursor;
+        eventEnd = cursor;
         return res;
     }
 
 private:
     // Same API as std::ifstream, to make it easier to support streams later.
+    // TODO: keep track of line number / column number, for better error
+    // message and make it available in the API (
     bool get(char& c) {
         if (cursor == end) {
+            return false;
+        }
+        else {
+            c = *cursor;
+            ++cursor;
+            return true;
+        }
+    }
+
+    bool getOrZero_(char& c) {
+        if (cursor == end) {
+            c = '\0';
             return false;
         }
         else {
@@ -192,15 +246,68 @@ private:
         --cursor;
     }
 
+    // Returns the next n characters without extracting them.
+    // That is, they stay available with get().
+    std::string_view peek(size_t n) const {
+        size_t i = cursor - data.data();
+        return data.substr(i, n); // clamps at data.end()
+    }
+
+    // Advance the cursor by n characters
+    void advance(size_t n) {
+        cursor += n;
+        if (cursor > end) {
+            cursor = end;
+        }
+    }
+
+    // Returns the same string as the given input if not empty,
+    // otherwise return "end-of-file".
+    //
+    std::string_view endOfFileIfEmpty_(std::string_view s) {
+        if (s.empty()) {
+            return "end-of-file";
+        }
+        else {
+            return s;
+        }
+    }
+
+    // Returns the same character as the given input if not zero,
+    // otherwise return "end-of-file".
+    //
+    // Note: we take the argument by reference to ensure that it's not a
+    // temporary, and that the string_view is valid as long as the referenced
+    // char exists.
+    //
+    std::string_view endOfFileIfZero_(char& c) {
+        if (c == '\0') {
+            return "end-of-file";
+        }
+        else {
+            return std::string_view(&c, 1);
+        }
+    }
+
     bool readNext_() {
+
+        // Return false if we're at the end
         if (cursor == end) {
-            tokenType = XmlTokenType::EndDocument;
+            // TODO: throw if we haven't found the root element:
+            //       https://www.w3.org/TR/xml/#NT-document
+            //       document ::= prolog element Misc*
+            eventType = XmlEventType::EndDocument;
             return false;
         }
-        else if (tokenType == XmlTokenType::StartElement && isSelfClosing) {
-            tokenType = XmlTokenType::EndElement;
+
+        // Otherwise, read something and return true
+        if (eventType == XmlEventType::None) {
+            eventType = XmlEventType::StartDocument;
+            readStartDocument_();
+        }
+        else if (eventType == XmlEventType::StartElement && isEmptyElementTag) {
+            eventType = XmlEventType::EndElement;
             onEndTag_();
-            return true;
         }
         else {
             char c;
@@ -210,10 +317,257 @@ private:
             }
             else {
                 unget();
-                readCharacterData_();
+                readCharacters_();
             }
-            return true;
         }
+        return true;
+    }
+
+    void readWhitespaces_() {
+        char c;
+        while (get(c)) {
+            if (!isWhitespace_(c)) {
+                unget();
+                break;
+            }
+        }
+    }
+
+    // https://www.w3.org/TR/xml/#dt-xmldecl
+    //
+    //  [22] prolog       ::= XMLDecl? Misc* (doctypedecl Misc*)?
+    //  [23] XMLDecl      ::= '<?xml' VersionInfo EncodingDecl? SDDecl? S? '?>'
+    //  [27] Misc         ::= Comment | PI | S
+
+    void readStartDocument_() {
+
+        // Checks whether the document starts with `<?xml` followed by a
+        // whitespace character (6 characters total). The whitespace character
+        // is necessary to disambiguate with a processing instruction whose
+        // name starts with `xml`.
+        //
+        std::string_view s = peek(6);
+        if (s.size() < 6 || s.substr(0, 5) != "<?xml" || !isWhitespace_(s.back())) {
+
+            // This is not an XML declaration, therefore there is no XML
+            // declaration in this document, since the XML declaration, if
+            // present, must appear before anything else including whitespaces.
+            //
+            return;
+        }
+
+        const char* declStart = cursor;
+
+        // Consumes `<?xml`. We do not consume the following whitespace since
+        // readXmlDeclarationAttribute_() expects a leading whitespace.
+        //
+        advance(5);
+
+        // Version
+        readVersion_();
+
+        // Encoding / Standalone
+        XmlDeclarationAttribute attr = readXmlDeclarationAttribute_();
+        if (attr.name == "encoding") {
+            readEncoding_(attr);
+            attr = readXmlDeclarationAttribute_();
+            if (attr.name == "standalone") {
+                readStandalone_(attr);
+            }
+            else if (!attr.name.empty()) {
+                throw ParseError(format(
+                    "Unexpected '{}' attribute in XML declaration after 'encoding'. "
+                    "Expected 'standalone' or '?>'.",
+                    attr.name));
+            }
+        }
+        else if (attr.name == "standalone") {
+            readStandalone_(attr);
+        }
+        else if (!attr.name.empty()) {
+            throw ParseError(format(
+                "Unexpected '{}' attribute in XML declaration after 'version'. "
+                "Expected 'encoding', 'standalone', or '?>'.",
+                attr.name));
+        }
+
+        // Closing
+        readWhitespaces_();
+        s = peek(2);
+        if (s != "?>") {
+            std::string_view expected;
+            if (isStandaloneSet) {
+                expected = "'?>'";
+            }
+            else if (isEncodingSet) {
+                expected = "'standalone' or '?>'";
+            }
+            else {
+                expected = "'encoding', 'standalone', or '?>'";
+            }
+            throw ParseError(
+                format("Unexpected '{}' in XML declaration. Expected {}.", expected));
+        }
+        advance(2);
+
+        xmlDeclaration = std::string_view(declStart, cursor - declStart);
+    }
+
+    // Helper function to read 'version', 'encoding', and 'standalone'
+    // attribute names and values. These are slightly different than normal
+    // element attributes: they cannot contain entity references for example.
+    //
+    // VersionInfo  ::= S 'version'    Eq ("'" VersionNum "'" | '"' VersionNum '"')
+    // EncodingDecl ::= S 'encoding'   Eq ("'" EncName    "'" | '"' EncName    '"')
+    // SDDecl       ::= S 'standalone' Eq ("'" YesOrNo    "'" | '"' YesOrNo    '"')
+    //
+    // Eq ::= S? '=' S?
+    //
+    // VersionNum   ::= '1.' [0-9]+
+    // EncName      ::= [A-Za-z] ([A-Za-z0-9._] | '-')*
+    // YesOrNo      ::= ('yes' | 'no')
+    //
+    struct XmlDeclarationAttribute {
+        std::string_view name;
+        std::string_view value;
+    };
+    XmlDeclarationAttribute readXmlDeclarationAttribute_() {
+        XmlDeclarationAttribute res;
+        std::string_view s = peek(1);
+        if (s.empty() || !isWhitespace_(s.front())) {
+            // First character must be a whitespace character to separate
+            // this attribute from the previous one of from `<?xml`.
+            return res; // no attribute read.
+        }
+        readWhitespaces_();
+        s = peek(1);
+        if (!s.empty() && isXmlDeclarationAttributeNameChar_(s.front())) {
+            // If we're here, we either have a valid attribute or an error
+            const char* attrNameStart = cursor;
+            char c;
+            while (get(c)) {
+                if (!isXmlDeclarationAttributeNameChar_(c)) {
+                    unget();
+                    break;
+                }
+            }
+            res.name = std::string_view(attrNameStart, cursor - attrNameStart);
+            readWhitespaces_();
+            getOrZero_(c);
+            if (c != '=') {
+                throw ParseError(format(
+                    "Unexpected '{}' while reading '{}' attribute in XML declaration. "
+                    "Expected '='.",
+                    endOfFileIfZero_(c),
+                    res.name));
+            }
+            readWhitespaces_();
+            char quotationMark;
+            getOrZero_(quotationMark);
+            if (quotationMark != '\'' && quotationMark != '"') {
+                throw ParseError(format(
+                    "Unexpected '{}' while reading '{}' attribute in XML declaration. "
+                    "Expected \"'\" or '\"'.",
+                    endOfFileIfZero_(quotationMark),
+                    res.name));
+            }
+            const char* attrValueStart = cursor;
+            while (get(c)) {
+                if (!isXmlDeclarationAttributeValueChar_(c)) {
+                    unget();
+                    break;
+                }
+            }
+            res.value = std::string_view(attrValueStart, cursor - attrValueStart);
+            getOrZero_(c);
+            if (c != quotationMark) {
+                throw ParseError(format(
+                    "Unexpected '{}' while reading '{}' value in XML declaration.",
+                    endOfFileIfZero_(c),
+                    res.name,
+                    quotationMark));
+            }
+        }
+        return res;
+    }
+
+    // VersionNum ::= '1.' [0-9]+
+    void readVersion_() {
+        XmlDeclarationAttribute attr = readXmlDeclarationAttribute_();
+        if (attr.name != "version") {
+            throw ParseError("Unexpected characters while reading XML declaration. "
+                             "Expected 'version'.");
+        }
+        if (attr.value.size() != 3             //
+            || attr.value.substr(0, 2) != "1." //
+            || !isDigit_(attr.value.back())) {
+
+            throw ParseError(format(
+                "Unexpected '{}' value of 'version' in XML declaration. "
+                "Expected '1.x' with x being a digit between 0 and 9.",
+                attr.value));
+        }
+        if (attr.value.back() != '0') {
+            // https://www.w3.org/TR/xml/#NT-VersionNum
+            // When an XML 1.0 processor encounters a document that specifies a 1.x
+            // version number other than '1.0', it will process it as a 1.0 document.
+            // This means that an XML 1.0 processor will accept 1.x documents provided
+            // they do not use any non-1.0 features.
+            VGC_WARNING(
+                LogVgcCoreXml,
+                "The XML document specifies version {}, but we only support "
+                "XML 1.0, so we process it as an XML 1.0 document.",
+                attr.value);
+        }
+        version = attr.value;
+    }
+
+    // EncName ::= [A-Za-z] ([A-Za-z0-9._] | '-')*
+    void readEncoding_(const XmlDeclarationAttribute& attr) {
+        bool ok = true;
+        size_t n = attr.value.size();
+        if (n == 0) {
+            ok = false;
+        }
+        else if (!isEncodingNameStartChar_(attr.value.front())) {
+            ok = false;
+        }
+        else {
+            for (size_t i = 1; i < n; ++i) {
+                if (!isEncodingNameChar_(attr.value[i])) {
+                    ok = false;
+                }
+            }
+        }
+        if (!ok) {
+            throw ParseError(format(
+                "Unexpected '{}' value of 'encoding' in XML declaration. "
+                "Expected a value of the form '[A-Za-z][A-Za-z0-9._\\-]*'.",
+                attr.value));
+        }
+        if (attr.value != "UTF-8") {
+            // Conforming XML processors are supposed to support at least
+            // UTF-8 and UTF-16, but we only support UTF-8 at the moment.
+            VGC_WARNING(
+                LogVgcCoreXml,
+                "The XML document specifies encoding {}, but we only support "
+                "UTF-8, so we will process it as UTF-8.",
+                attr.value);
+        }
+        encoding = attr.value;
+        isEncodingSet = true;
+    }
+
+    // YesOrNo ::= ('yes' | 'no')
+    void readStandalone_(const XmlDeclarationAttribute& attr) {
+        if (attr.value != "yes" && attr.value != "no") {
+            throw ParseError(format(
+                "Unexpected '{}' value of 'standalone' in XML declaration. "
+                "Expected 'yes' or 'no'.",
+                attr.value));
+        }
+        isStandalone = (attr.value == "yes");
+        isStandaloneSet = true;
     }
 
     // https://www.w3.org/TR/REC-xml/#syntax
@@ -222,14 +576,14 @@ private:
     //
     // => Everything that does not include `<`, `&`, or `]]>`.
     //
-    // TODO: any white space that is at the top level of the document entity (that is, outside the document element and not inside any other markup)
-    // should normally not be considered "character data". However, we do want to report it somehow.
+    // TODO: any white space that is at the top level of the document entity
+    // (that is, outside the document element and not inside any other markup)
+    // should be reported as `Space`: it is not considered to be "character
+    // data" as per XML terminology, that is, it is not part of the content.
     //
-    // Maybe as part of the "DocumentStart", and "DocumentEnd" tokens?
-    //
-    void readCharacterData_() {
-        tokenType = XmlTokenType::CharacterData;
-        characterData.clear();
+    void readCharacters_() {
+        eventType = XmlEventType::Characters;
+        characters.clear();
         char c;
         while (get(c)) {
             if (c == '&') {
@@ -243,11 +597,11 @@ private:
             else if (c == ']') {
                 if (get(c) && c == ']') {
                     if (get(c) && c == '>') {
-                        throw XmlSyntaxError("Unexpected `]]>` outside CDATA section.");
+                        throw XmlSyntaxError("Unexpected ']]>' outside CDATA section.");
                     }
                 }
             }
-            characterData += c;
+            characters += c;
         };
     }
 
@@ -275,20 +629,32 @@ private:
         }
     }
 
-    // Read from '<?' (not included) to matching '?>' (included). For now, we
-    // also use this function to read the XML declaration, even though it is
-    // technically not a PI. In the future, we may want to actually read the
-    // content of the XML declaration, and check that it is valid and that
-    // encoding is UTF-8 (the only encoding that we support).
+    // Read from '<?' (not included) to matching '?>' (included).
+    //
+    // PI       ::= '<?' PITarget (S (Char* - (Char* '?>' Char*)))? '?>'
+    // PITarget ::= Name - (('X' | 'x') ('M' | 'm') ('L' | 'l'))
+    //
+    // Note: the above rules mean that the data of a processing instruction
+    // cannot include the character sequence '?>', and there is not way to
+    // escape it. For example, the following is not a valid XML file:
+    //
+    // <html><?php echo "?><"; ?></html>
+    //
+    // (Parsed as :
+    //    StartElement:          <html>
+    //    ProcessingInstruction: <?php echo "?>
+    //    Error while reading `<"`: `"` is not a valid name start character
+    //
+    // Interestingly, Chrome accepts this and displays `<"; ?>`, since it
+    // considers any `<` not followed by a valid name start character
+    // to be character data instead of an error. The other characters
+    // (`"; ?>`) are well-formed XML character data: the only special
+    // characters in character data are `<`, `&`, and `]]>`.
     //
     void readProcessingInstruction_() {
-        // PI       ::= '<?' PITarget (S (Char* - (Char* '?>' Char*)))? '?>'
-        // PITarget ::= Name - (('X' | 'x') ('M' | 'm') ('L' | 'l'))
-
-        tokenType = XmlTokenType::ProcessingInstruction;
-
-        // For now, for simplicity, we accept PIs even if they don't start with
-        // a valid name
+        eventType = XmlEventType::ProcessingInstruction;
+        readProcessingInstructionName_();
+        const char* piDataStart = cursor;
         bool isClosed = false;
         char c;
         while (!isClosed && get(c)) {
@@ -313,15 +679,54 @@ private:
             throw XmlSyntaxError("Unexpected end-of-file while reading processing "
                                  "instruction. Expected '?>' or further instructions.");
         }
+        processingInstructionData = std::string(piDataStart, cursor - piDataStart - 2);
+    }
+
+    void readProcessingInstructionName_() {
+
+        // Read name
+        const char* piNameStart = cursor;
+        char c;
+        getOrZero_(c);
+        if (!isNameStartChar_(c)) {
+            throw XmlSyntaxError(format(
+                "Unexpected '{}' while reading processing instruction target. "
+                "Expected valid name start character.",
+                endOfFileIfZero_(c)));
+        }
+        while (get(c)) {
+            if (!isNameChar_(c)) {
+                unget();
+                break;
+            }
+        }
+        std::string_view name(piNameStart, cursor - piNameStart);
+
+        // Reject 'xml' and other variants
+        if (name.size() == 3                      //
+            && (name[0] == 'x' || name[0] == 'X') //
+            && (name[1] == 'm' || name[1] == 'M') //
+            && (name[2] == 'l' || name[2] == 'L')) {
+
+            throw XmlSyntaxError(format(
+                "Unexpected target '{}' while reading processing instruction. "
+                "Targets such as 'xml', 'XML', 'XmL' or any other capitalizations of "
+                "'xml' are not allowed.",
+                name));
+        }
+
+        processingInstructionTarget = name;
     }
 
     // Read from '<c' (not included) to matching '>' or '/>' (included)
-    //
     void readStartTag_(char c) {
 
-        tokenType = XmlTokenType::StartElement;
+        eventType = XmlEventType::StartElement;
+        hasRootElement = true;
 
-        bool isAngleBracketClosed = readTagName_(c, &isSelfClosing);
+        isEmptyElementTag = false;
+        bool isEndTag = false;
+        bool isAngleBracketClosed = readTagName_(c, isEndTag);
         onStartTag_();
 
         // Initialize attributes.
@@ -333,7 +738,7 @@ private:
         while (!isAngleBracketClosed && get(c)) {
             if (c == '>') {
                 isAngleBracketClosed = true;
-                isSelfClosing = false;
+                isEmptyElementTag = false;
             }
             else if (c == '/') {
                 // '/' must be immediately followed by '>'
@@ -345,7 +750,7 @@ private:
                 }
                 else if (c == '>') {
                     isAngleBracketClosed = true;
-                    isSelfClosing = true;
+                    isEmptyElementTag = true;
                 }
                 else {
                     throw XmlSyntaxError(format(
@@ -389,8 +794,9 @@ private:
                                  "Expected tag name.");
         }
 
-        tokenType = XmlTokenType::EndElement;
-        bool isAngleBracketClosed = readTagName_(c);
+        eventType = XmlEventType::EndElement;
+        bool isEndTag = true;
+        bool isAngleBracketClosed = readTagName_(c, isEndTag);
 
         while (!isAngleBracketClosed && get(c)) {
             if (isWhitespace_(c)) {
@@ -513,7 +919,7 @@ private:
     // return the first character after the tag name, and let the caller handle
     // this character?
     //
-    bool readTagName_(char c, bool* isSelfClosing = nullptr) {
+    bool readTagName_(char c, bool isEndTag) {
 
         if (!isNameStartChar_(c)) {
             throw XmlSyntaxError(format(
@@ -538,22 +944,22 @@ private:
             else if (c == '>') {
                 done = true;
                 isAngleBracketClosed = true;
-                if (isSelfClosing) {
-                    *isSelfClosing = false;
+                if (!isEndTag) {
+                    isEmptyElementTag = false;
                 }
             }
             else if (c == '/') {
-                if (!isSelfClosing) {
+                if (isEndTag) {
                     throw XmlSyntaxError(format(
                         "Unexpected '/' while reading end tag name '{}'. "
                         "Expected valid name characters, whitespaces, or '>'.",
                         name()));
                 }
-                if (get(c)) {
+                else if (get(c)) {
                     if (c == '>') {
                         done = true;
                         isAngleBracketClosed = true;
-                        *isSelfClosing = true;
+                        isEmptyElementTag = true;
                     }
                     else {
                         throw XmlSyntaxError(format(
@@ -575,18 +981,18 @@ private:
                     "Unexpected '{}' while reading {} tag name '{}'. Expected valid name "
                     "",
                     c,
-                    isSelfClosing ? "start" : "end",
+                    isEndTag ? "end" : "start",
                     name(),
-                    (isSelfClosing ? "'>', or '/>" : "or '>'")));
+                    (isEndTag ? "or '>'" : "'>', or '/>")));
             }
         }
         if (!done) {
             throw XmlSyntaxError(format(
                 "Unexpected end-of-file while reading {} tag name '{}'. Expected valid "
                 "name characters, whitespaces, {}.",
-                (isSelfClosing ? "start" : "end"),
+                (isEndTag ? "end" : "start"),
                 name(),
-                (isSelfClosing ? "'>', or '/>" : "or '>'")));
+                (isEndTag ? "or '>'" : "'>', or '/>")));
         }
 
         return isAngleBracketClosed;
@@ -928,52 +1334,113 @@ XmlStreamReader::~XmlStreamReader() {
     // destructor of XmlStreamReaderImpl (incomplete type).
 }
 
-XmlTokenType XmlStreamReader::tokenType() const {
-    return impl_->tokenType;
-}
-
 bool XmlStreamReader::readNext() const {
     return impl_->readNext();
 }
 
+XmlEventType XmlStreamReader::eventType() const {
+    return impl_->eventType;
+}
+
 std::string_view XmlStreamReader::rawText() const {
-    return std::string_view(impl_->tokenStart, impl_->tokenEnd - impl_->tokenStart);
+    return std::string_view(impl_->eventStart, impl_->eventEnd - impl_->eventStart);
+}
+
+namespace {
+
+void checkNotType(
+    std::string_view functionName,
+    XmlEventType type,
+    XmlEventType unexpectedType) {
+
+    if (type == unexpectedType) {
+        throw LogicError(format(
+            "Cannot call {}() if eventType() is {}.",
+            functionName,
+            type,
+            unexpectedType));
+    }
+}
+
+void checkType(
+    std::string_view functionName,
+    XmlEventType type,
+    XmlEventType expectedType) {
+
+    if (type != expectedType) {
+        throw LogicError(format(
+            "Cannot call {}() if eventType() (= {}) is not {}.",
+            functionName,
+            type,
+            expectedType));
+    }
+}
+
+void checkType(
+    std::string_view functionName,
+    XmlEventType type,
+    XmlEventType expectedType1,
+    XmlEventType expectedType2) {
+
+    if (type != expectedType1 && type != expectedType2) {
+        throw LogicError(format(
+            "Cannot call {}() if eventType() (= {}) is not {} or {}.",
+            functionName,
+            type,
+            expectedType1,
+            expectedType2));
+    }
+}
+
+} // namespace
+
+bool XmlStreamReader::hasXmlDeclaration() const {
+    checkNotType("hasXmlDeclaration", eventType(), XmlEventType::None);
+    return !impl_->xmlDeclaration.empty();
+}
+
+std::string_view XmlStreamReader::xmlDeclaration() const {
+    checkNotType("xmlDeclaration", eventType(), XmlEventType::None);
+    return impl_->xmlDeclaration;
+}
+
+std::string_view XmlStreamReader::version() const {
+    checkNotType("version", eventType(), XmlEventType::None);
+    return impl_->version;
+}
+
+std::string_view XmlStreamReader::encoding() const {
+    checkNotType("encoding", eventType(), XmlEventType::None);
+    return impl_->encoding;
+}
+
+bool XmlStreamReader::isEncodingSet() const {
+    checkNotType("isEncodingSet", eventType(), XmlEventType::None);
+    return impl_->isEncodingSet;
+}
+
+bool XmlStreamReader::isStandalone() const {
+    checkNotType("isStandalone", eventType(), XmlEventType::None);
+    return impl_->isStandalone;
+}
+
+bool XmlStreamReader::isStandaloneSet() const {
+    checkNotType("isStandaloneSet", eventType(), XmlEventType::None);
+    return impl_->isStandaloneSet;
 }
 
 std::string_view XmlStreamReader::name() const {
-    XmlTokenType type = tokenType();
-    if (type != XmlTokenType::StartElement && type != XmlTokenType::EndElement) {
-        throw LogicError(format(
-            "Cannot call XmlStreamReader::name() "
-            "if tokenType() (= {}) is not {} or {}.",
-            type,
-            XmlTokenType::StartElement,
-            XmlTokenType::EndElement));
-    }
+    checkType("name", eventType(), XmlEventType::StartElement, XmlEventType::EndElement);
     return impl_->name();
 }
 
-std::string_view XmlStreamReader::characterData() const {
-    XmlTokenType type = tokenType();
-    if (type != XmlTokenType::CharacterData) {
-        throw LogicError(format(
-            "Cannot call XmlStreamReader::characterData() "
-            "if tokenType() (= {}) is not {}.",
-            type,
-            XmlTokenType::CharacterData));
-    }
-    return impl_->characterData;
+std::string_view XmlStreamReader::characters() const {
+    checkType("characters", eventType(), XmlEventType::Characters);
+    return impl_->characters;
 }
 
 ConstSpan<XmlStreamAttributeView> XmlStreamReader::attributes() const {
-    XmlTokenType type = tokenType();
-    if (type != XmlTokenType::StartElement) {
-        throw LogicError(format(
-            "Cannot call XmlStreamReader::attributes() "
-            "if tokenType() (= {}) is not {}.",
-            type,
-            XmlTokenType::CharacterData));
-    }
+    checkType("attributes", eventType(), XmlEventType::StartElement);
     return impl_->attributes();
 }
 
@@ -985,6 +1452,18 @@ XmlStreamReader::attribute(std::string_view name) const {
         }
     }
     return std::nullopt;
+}
+
+std::string_view XmlStreamReader::processingInstructionTarget() const {
+    checkType(
+        "processingInstructionTarget", eventType(), XmlEventType::ProcessingInstruction);
+    return impl_->processingInstructionTarget;
+}
+
+std::string_view XmlStreamReader::processingInstructionData() const {
+    checkType(
+        "processingInstructionData", eventType(), XmlEventType::ProcessingInstruction);
+    return impl_->processingInstructionData;
 }
 
 } // namespace vgc::core

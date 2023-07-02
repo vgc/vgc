@@ -19,5 +19,6 @@
 namespace vgc::core {
 
 VGC_DEFINE_LOG_CATEGORY(LogVgcCore, "vgc.core")
+VGC_DEFINE_LOG_CATEGORY(LogVgcCoreXml, "vgc.core.xml")
 
 } // namespace vgc::core

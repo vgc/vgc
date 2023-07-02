@@ -65,21 +65,22 @@ struct VGC_CORE_API XmlStreamAttributeData {
 
 } // namespace detail
 
-/// \enum vgc::core::XmlTokenType
+/// \enum vgc::core::XmlEventType
 /// \brief The type of an XML token.
 ///
-enum class XmlTokenType : Int8 {
-    None,
-    Invalid,
-    StartDocument,
+enum class XmlEventType : Int8 {
+    None,          // nothing has been read yet
+    Space,         // non-content whitespace (e.g., outside of the document element)
+    StartDocument, // can be an xml-declaration or a missing xml-declaration
     EndDocument,
-    StartElement,
-    EndElement,
-    CharacterData,
+    StartElement, // can be a start tag (<b>) or an empty element tag (<img/>)
+    EndElement,   // can be an end tag (</b>) or just after an empty element tag
+    Characters,   // can be character data, CDATA section, resolved entities
     Comment,
     ProcessingInstruction,
 
     // TODO:
+    // XmlDeclaration,
     // DoctypeDeclaration,
 
     // Currently, character reference and entity references are automatically
@@ -91,11 +92,16 @@ enum class XmlTokenType : Int8 {
     //
     // CharacterReference, // Only reported if not automatically resolved
     // EntityReference,    // Only reported if not automatically resolved
-    // CDataSection,       // Only if not automatically merged as CharacterData
+    // CDataSection,       // Only if not automatically merged as Characters
+    //
+    // Also see: javax.xml.stream.isCoalescing
 };
 
+// Terminology note:
+// - StartElement means either start not
+
 VGC_CORE_API
-VGC_DECLARE_ENUM(XmlTokenType)
+VGC_DECLARE_ENUM(XmlEventType)
 
 /// \class vgc::core::XmlStreamAttributeView
 /// \brief A non-owning view of an attribute read by `XmlStreamReader`
@@ -180,7 +186,122 @@ private:
 };
 
 /// \class vgc::core::XmlStreamReader
-/// \brief Reads an XML file using a stream-based API
+/// \brief Reads an XML document using a stream-based API
+///
+/// `XmlStreamReader` provides a stream-based API to read an XML document (also
+/// known as ["StAX"](https://en.wikipedia.org/wiki/StAX)).
+///
+/// The basic usage consists in creating an instance of `XmlStreamReader`, then
+/// calling its `readNext()` method until it returns `false`, indicating that
+/// the end of the document was reached:
+///
+/// ```cpp
+/// using vgc::core::XmlStreamReader;
+/// using vgc::core::XmlEventType;
+/// using vgc::core::print;
+///
+/// XmlStreamReader xml = "<hello><world/></hello>";
+/// std::string indent = "";
+/// while (xml.readNext()) {
+///     switch (xml.eventType()) {
+///     case XmlEventType::StartElement:
+///         print("{}{}\n", indent, xml.name());
+///         indent.push_back(' ');
+///         break;
+///     case XmlEventType::EndElement:
+///         indent.pop_back();
+///         break;
+///     default:
+///         break;
+///     }
+/// }
+/// ```
+///
+/// Output:
+///
+/// ```
+/// hello
+///  world
+/// ```
+///
+/// # Initial State
+///
+/// When creating an `XmlStreamReader`, its `eventType()` is initially equal to
+/// `None`, and calling most methods (such as `text()`, etc.) would raise a
+/// `LogicError`.
+///
+/// # Prolog
+///
+/// The prolog of an XML document is defined as everything that appears before
+/// the root element.
+///
+/// It may contain:
+/// - an XML declaration (always first if present),
+/// - a document type definition (DTD),
+/// - comments, processing instructions, or whitespaces between the
+///   XML declaration or the DTD, or before the root element.
+///
+/// # XML Declaration
+///
+/// The XML Declaration is an optional header for XML files that looks like this:
+///
+/// ```
+/// <?xml version="1.0" encoding="UTF-8" standalone="no"?>
+/// ```
+///
+/// Where `encoding` and `standalone` are optional.
+///
+/// After calling `readNext()` for the first time, the `eventType()` will
+/// become equal to `StartDocument`, and from this moment on it is possible to
+/// query the content of the XML declaration with `hasXmlDeclaration()`,
+/// `xmlDeclaration()`, `version()`, `encoding()`, `isEncodingSet()`,
+/// `standalone()`, and `isStandaloneSet()`.
+///
+/// # Document Type Declaration
+///
+/// For now, document type declarations are not supported by `XmlStreamReader`.
+///
+/// # Start/End Elements
+///
+/// XML elements are reported with `StartElement` and `EndElement`. When the `eventType()`
+/// is one of these two, then `name()` provides the name of the element.
+///
+/// In case of "empty-element tags" (also called "self-closing", e.g., `<img
+/// />`), then there are still both a `StartElement` and `EndElement` issued.
+/// The `rawText()` of the `StartElement` event will be equal to the whole
+/// empty-element tag, while the `rawText()` of the `EndElement` event will be
+/// empty.
+///
+/// If the event is `StartElement`, then it is possible to query its attributes
+/// with `attributes()`, `numAttributes()`, `attribute(index)`,
+/// `attribute(name)`, attributeName(index)`, `attributeValue(index)`, and
+/// `attributeValue(name)`.
+///
+/// # Characters
+///
+/// Content between the elements, comments, or processing instructions is referred to
+/// as "characters". It consists either of raw characters, or entity references that
+/// have been resolved to their corresponding characters, or CDATA sections.
+///
+/// Note that for now, CDATA sections are not supported.
+///
+/// # Comments
+///
+/// Comments are reports as `Comment` events, whose content is then available
+/// via `comment()`.
+///
+/// # Processing Instructions
+///
+/// Processing instructions refer to application-specific data
+/// that looks like:
+///
+/// ```
+/// <?php echo "Hello World!";?>
+/// ```
+///
+/// These are reported as `ProcessingInstruction` events, and its "target"
+/// (e.g., `php`) and data (e.g., ` echo "Hello World!";`) can be queried via
+/// `processingInstructionTarget()` and `processingInstructionData()`.
 ///
 class VGC_CORE_API XmlStreamReader {
 private:
@@ -250,16 +371,16 @@ public:
     ///
     ~XmlStreamReader();
 
-    /// Returns the type of the token that has just been read.
-    ///
-    XmlTokenType tokenType() const;
-
     /// Reads the next token.
     ///
     /// Returns false if the token is `EndDocument` or `Invalid`, otherwise
     /// return true.
     ///
     bool readNext() const;
+
+    /// Returns the type of the token that has just been read.
+    ///
+    XmlEventType eventType() const;
 
     /// Returns the raw text of the token, that is, all characters including
     /// any markup and whitespaces.
@@ -269,31 +390,125 @@ public:
     ///
     std::string_view rawText() const;
 
+    /// Returns whether there is an XML declaration in the document.
+    ///
+    /// This can only be called if `eventType()` is not `None`, that is, if the
+    /// `StartDocument` event was reached.
+    ///
+    /// Exceptions:
+    /// - `LogicError` is raised if `eventType()` is `None`.
+    ///
+    /// \sa `xmlDeclaration()`.
+    ///
+    bool hasXmlDeclaration() const;
+
+    /// Returns the XML declaration of the document.
+    ///
+    /// Returns an empty string if `hasXmlDeclaration()` if false.
+    ///
+    /// This can only be called if `eventType()` is not `None`, that is, if the
+    /// `StartDocument` event was reached.
+    ///
+    /// Exceptions:
+    /// - `LogicError` is raised if `eventType()` is `None`.
+    ///
+    /// \sa `hasXmlDeclaration()`, `version()`, `encoding()`, `isStandalone()`,
+    ///     `isEncodingSet()`, `isStandaloneSet()`.
+    ///
+    std::string_view xmlDeclaration() const;
+
+    /// Returns the XML version of the document, as declared in the XML
+    /// declaration, or "1.0" if there is no XML declaration.
+    ///
+    /// This can only be called if `eventType()` is not `None`, that is, if the
+    /// `StartDocument` event was reached.
+    ///
+    /// Exceptions:
+    /// - `LogicError` is raised if `eventType()` is `None`.
+    ///
+    /// \sa `xmlDeclaration()`.
+    ///
+    std::string_view version() const;
+
+    /// Returns the character encoding of the document, as declared in the XML
+    /// declaration, or "UTF-8" if there is no XML declaration, or if the
+    /// encoding was omitted in the XML declaration.
+    ///
+    /// This can only be called if `eventType()` is not `None`, that is, if the
+    /// `StartDocument` event was reached.
+    ///
+    /// Exceptions:
+    /// - `LogicError` is raised if `eventType()` is `None`.
+    ///
+    /// \sa `xmlDeclaration()`, `isEncodingSet()`.
+    ///
+    std::string_view encoding() const;
+
+    /// Returns whether there is an XML declaration with an explicit encoding
+    /// specified.
+    ///
+    /// This can only be called if `eventType()` is not `None`, that is, if the
+    /// `StartDocument` event was reached.
+    ///
+    /// Exceptions:
+    /// - `LogicError` is raised if `eventType()` is `None`.
+    ///
+    /// \sa `xmlDeclaration()`, `encoding()`.
+    ///
+    bool isEncodingSet() const;
+
+    /// Returns whether the document is "standalone", as declared in the XML
+    /// declaration, or `false` if there is no XML declaration, or if the
+    /// standalone attribute was omitted in the XML declaration.
+    ///
+    /// This can only be called if `eventType()` is not `None`, that is, if the
+    /// `StartDocument` event was reached.
+    ///
+    /// Exceptions:
+    /// - `LogicError` is raised if `eventType()` is `None`.
+    ///
+    /// \sa `xmlDeclaration()`, `isStandaloneSet()`.
+    ///
+    bool isStandalone() const;
+
+    /// Returns whether there is an XML declaration with an explicit standalone
+    /// attribute specified.
+    ///
+    /// This can only be called if `eventType()` is not `None`, that is, if the
+    /// `StartDocument` event was reached.
+    ///
+    /// Exceptions:
+    /// - `LogicError` is raised if `eventType()` is `None`.
+    ///
+    /// \sa `xmlDeclaration()`, `isStandalone()`.
+    ///
+    bool isStandaloneSet() const;
+
     /// Returns the name of the current `StartElement` or `EndElement`.
     ///
     /// Exceptions:
-    /// - `LogicError` is raised if `tokenType()` is not `StartElement` or `EndElement`.
+    /// - `LogicError` is raised if `eventType()` is not `StartElement` or `EndElement`.
     ///
     std::string_view name() const;
 
-    /// Returns the content of the current character data.
+    /// Returns the content of `Characters`
     ///
     /// Exceptions:
-    /// - `LogicError` is raised if `tokenType()` is not `CharacterData`.
+    /// - `LogicError` is raised if `eventType()` is not `Characters`.
     ///
-    std::string_view characterData() const;
+    std::string_view characters() const;
 
     /// Returns all the attributes of the current `StartElement` token.
     ///
     /// Exceptions:
-    /// - `LogicError` is raised if `tokenType()` is not `StartElement`.
+    /// - `LogicError` is raised if `eventType()` is not `StartElement`.
     ///
     ConstSpan<XmlStreamAttributeView> attributes() const;
 
     /// Returns the number of attributes of a StartElement.
     ///
     /// Exceptions:
-    /// - `LogicError` is raised if `tokenType()` is not `StartElement`.
+    /// - `LogicError` is raised if `eventType()` is not `StartElement`.
     ///
     Int numAttributes() const {
         return attributes().length();
@@ -303,7 +518,7 @@ public:
     /// given by its attribute `index`.
     ///
     /// Exceptions:
-    /// - `LogicError` is raised if `tokenType()` is not `StartElement`.
+    /// - `LogicError` is raised if `eventType()` is not `StartElement`.
     /// - `IndexError` is raised if `index` is not in `[0, numAttributes() - 1]`.
     ///
     XmlStreamAttributeView attribute(Int index) const {
@@ -315,14 +530,14 @@ public:
     /// name.
     ///
     /// Exceptions:
-    /// - `LogicError` is raised if `tokenType()` is not `StartElement`.
+    /// - `LogicError` is raised if `eventType()` is not `StartElement`.
     ///
     std::optional<XmlStreamAttributeView> attribute(std::string_view name) const;
 
     /// Returns the name of the attribute at the given `index`.
     ///
     /// Exceptions:
-    /// - `LogicError` is raised if `tokenType()` is not `StartElement`.
+    /// - `LogicError` is raised if `eventType()` is not `StartElement`.
     /// - `IndexError` is raised if `index` is not in `[0, numAttributes() - 1]`.
     ///
     std::string_view attributeName(Int index) const {
@@ -332,7 +547,7 @@ public:
     /// Returns the value of the attribute at the given `index`.
     ///
     /// Exceptions:
-    /// - `LogicError` is raised if `tokenType()` is not `StartElement`.
+    /// - `LogicError` is raised if `eventType()` is not `StartElement`.
     /// - `IndexError` is raised if `index` is not in `[0, numAttributes() - 1]`.
     ///
     std::string_view attributeValue(Int index) const {
@@ -343,7 +558,7 @@ public:
     /// `std::nullopt` if there is no attribute with the given name.
     ///
     /// Exceptions:
-    /// - `LogicError` is raised if `tokenType()` is not `StartElement`.
+    /// - `LogicError` is raised if `eventType()` is not `StartElement`.
     ///
     std::optional<std::string_view> attributeValue(std::string_view name) const {
         if (std::optional<XmlStreamAttributeView> attr = attribute(name)) {
@@ -353,6 +568,24 @@ public:
             return std::nullopt;
         }
     }
+
+    /// Returns the target of the processing instruction.
+    ///
+    /// Exceptions:
+    /// - `LogicError` is raised if `eventType()` is not `ProcessingInstruction`.
+    ///
+    /// \sa `processingInstructionData()`.
+    ///
+    std::string_view processingInstructionTarget() const;
+
+    /// Returns the data of the processing instruction.
+    ///
+    /// Exceptions:
+    /// - `LogicError` is raised if `eventType()` is not `ProcessingInstruction`.
+    ///
+    /// \sa `processingInstructionTarget()`.
+    ///
+    std::string_view processingInstructionData() const;
 
 private:
     std::unique_ptr<detail::XmlStreamReaderImpl> impl_;

@@ -18,15 +18,22 @@
 
 import unittest
 
-from vgc.core import XmlTokenType, XmlStreamReader
+from vgc.core import XmlEventType, XmlStreamReader, LogicError, ParseError
 
-xmlExample = """
-<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+xmlExample = """<?xml version="1.0" encoding="UTF-8"?>
 <vgc>
   <b>Some &quot;bold&quot; text</b>
-  <path id="p0"/>
+  <path id="p0" d="M 0 0 L 10 10"/>
 </vgc>
 """
+
+xmlEventTypeExample = '<?xml version="1.0"?><b>foo</b>'
+
+# Useful for testing
+def printRawText(xmlData):
+    xml = XmlStreamReader(xmlData)
+    while xml.readNext():
+        print(f'{xml.eventType}: "{xml.rawText}"')
 
 class TestXmlStreamReader(unittest.TestCase):
 
@@ -43,15 +50,114 @@ class TestXmlStreamReader(unittest.TestCase):
             pass
         self.assertFalse(xml.readNext())
 
+    def testEventType(self):
+        xml = XmlStreamReader(xmlEventTypeExample)
+        eventTypes = []
+        expectedEventTypes = [
+            XmlEventType.None_,
+            XmlEventType.StartDocument,
+            XmlEventType.StartElement,
+            XmlEventType.Characters,
+            XmlEventType.EndElement,
+            XmlEventType.EndDocument]
+        eventTypes.append(xml.eventType)
+        while xml.readNext():
+            eventTypes.append(xml.eventType)
+        eventTypes.append(xml.eventType)
+        self.assertEqual(eventTypes, expectedEventTypes)
+
+    def testXmlDeclaration(self):
+        xml = XmlStreamReader('<vgc/>')
+        xml.readNext()
+        self.assertFalse(xml.hasXmlDeclaration)
+        self.assertFalse(xml.isEncodingSet)
+        self.assertFalse(xml.isStandaloneSet)
+        self.assertEqual(xml.version, '1.0')
+        self.assertEqual(xml.encoding, 'UTF-8')
+        self.assertEqual(xml.isStandalone, False)
+
+        xml = XmlStreamReader('<?xml version="1.0"?><vgc/>')
+        xml.readNext()
+        self.assertTrue(xml.hasXmlDeclaration)
+        self.assertFalse(xml.isEncodingSet)
+        self.assertFalse(xml.isStandaloneSet)
+        self.assertEqual(xml.version, '1.0')
+        self.assertEqual(xml.encoding, 'UTF-8')
+        self.assertEqual(xml.isStandalone, False)
+
+        xml = XmlStreamReader('<?xml version="1.2"?><vgc/>')
+        xml.readNext()
+        self.assertTrue(xml.hasXmlDeclaration)
+        self.assertFalse(xml.isEncodingSet)
+        self.assertFalse(xml.isStandaloneSet)
+        self.assertEqual(xml.version, '1.2')
+        self.assertEqual(xml.encoding, 'UTF-8')
+        self.assertEqual(xml.isStandalone, False)
+
+        xml = XmlStreamReader('<?xml version="1.0" encoding="UTF-8"?><vgc/>')
+        xml.readNext()
+        self.assertTrue(xml.hasXmlDeclaration)
+        self.assertTrue(xml.isEncodingSet)
+        self.assertFalse(xml.isStandaloneSet)
+        self.assertEqual(xml.version, '1.0')
+        self.assertEqual(xml.encoding, 'UTF-8')
+        self.assertEqual(xml.isStandalone, False)
+
+        xml = XmlStreamReader('<?xml version="1.0" encoding="UTF-16"?><vgc/>')
+        xml.readNext()
+        self.assertTrue(xml.hasXmlDeclaration)
+        self.assertTrue(xml.isEncodingSet)
+        self.assertFalse(xml.isStandaloneSet)
+        self.assertEqual(xml.version, '1.0')
+        self.assertEqual(xml.encoding, 'UTF-16')
+        self.assertEqual(xml.isStandalone, False)
+
+        xml = XmlStreamReader('<?xml version="1.0" standalone="no"?><vgc/>')
+        xml.readNext()
+        self.assertTrue(xml.hasXmlDeclaration)
+        self.assertFalse(xml.isEncodingSet)
+        self.assertTrue(xml.isStandaloneSet)
+        self.assertEqual(xml.version, '1.0')
+        self.assertEqual(xml.encoding, 'UTF-8')
+        self.assertEqual(xml.isStandalone, False)
+
+        xml = XmlStreamReader('<?xml version="1.0" standalone="yes"?><vgc/>')
+        xml.readNext()
+        self.assertTrue(xml.hasXmlDeclaration)
+        self.assertFalse(xml.isEncodingSet)
+        self.assertTrue(xml.isStandaloneSet)
+        self.assertEqual(xml.version, '1.0')
+        self.assertEqual(xml.encoding, 'UTF-8')
+        self.assertEqual(xml.isStandalone, True)
+
+        xml = XmlStreamReader('<?xml version="1.0" encoding="UTF-8" standalone="no"?><vgc/>')
+        xml.readNext()
+        self.assertTrue(xml.hasXmlDeclaration)
+        self.assertTrue(xml.isEncodingSet)
+        self.assertTrue(xml.isStandaloneSet)
+        self.assertEqual(xml.version, '1.0')
+        self.assertEqual(xml.encoding, 'UTF-8')
+        self.assertEqual(xml.isStandalone, False)
+
+        xml = XmlStreamReader('<?xml version="1.0" encoding="UTF-8" standalone="yes"?><vgc/>')
+        xml.readNext()
+        self.assertTrue(xml.hasXmlDeclaration)
+        self.assertTrue(xml.isEncodingSet)
+        self.assertTrue(xml.isStandaloneSet)
+        self.assertEqual(xml.version, '1.0')
+        self.assertEqual(xml.encoding, 'UTF-8')
+        self.assertEqual(xml.isStandalone, True)
+
     def testStartDocument(self):
         xml = XmlStreamReader(xmlExample)
-        self.assertEqual(xml.tokenType, XmlTokenType.StartDocument)
+        xml.readNext()
+        self.assertEqual(xml.eventType, XmlEventType.StartDocument)
 
     def testEndDocument(self):
         xml = XmlStreamReader(xmlExample)
         while xml.readNext():
             pass
-        self.assertEqual(xml.tokenType, XmlTokenType.EndDocument)
+        self.assertEqual(xml.eventType, XmlEventType.EndDocument)
 
     def testName(self):
         xml = XmlStreamReader(xmlExample)
@@ -60,21 +166,27 @@ class TestXmlStreamReader(unittest.TestCase):
         startNames = []
         endNames = []
         while xml.readNext():
-            if xml.tokenType == XmlTokenType.StartElement:
+            if xml.eventType == XmlEventType.StartElement:
                 startNames.append(xml.name)
-            elif xml.tokenType == XmlTokenType.EndElement:
+            elif xml.eventType == XmlEventType.EndElement:
                 endNames.append(xml.name)
         self.assertEqual(startNames, expectedStartNames)
         self.assertEqual(endNames, expectedEndNames)
 
-    def testCharacterData(self):
+    def testCharacters(self):
         xml = XmlStreamReader(xmlExample)
         while xml.readNext():
-            if xml.tokenType == XmlTokenType.StartElement and xml.name == 'b':
+            if xml.eventType == XmlEventType.StartElement and xml.name == 'b':
                 xml.readNext();
-                self.assertEqual(xml.tokenType, XmlTokenType.CharacterData)
+                self.assertEqual(xml.eventType, XmlEventType.Characters)
                 self.assertEqual(xml.rawText, 'Some &quot;bold&quot; text')
-                self.assertEqual(xml.characterData, 'Some "bold" text')
+                self.assertEqual(xml.characters, 'Some "bold" text')
+
+    def testCharactersExceptions(self):
+        xml = XmlStreamReader(xmlExample)
+        while xml.readNext():
+            if xml.eventType != XmlEventType.Characters:
+                self.assertRaises(LogicError, lambda: xml.characters)
 
     def testRawText(self):
         xml = XmlStreamReader(xmlExample)
@@ -83,11 +195,19 @@ class TestXmlStreamReader(unittest.TestCase):
             allRawText += xml.rawText;
         self.assertEqual(allRawText, xmlExample)
 
-    # Useful for testing
-    def printRawText(self):
+    def testNumAttributes(self):
         xml = XmlStreamReader(xmlExample)
         while xml.readNext():
-            print(f'{xml.tokenType}: "{xml.rawText}"')
+            if xml.eventType == XmlEventType.StartElement and xml.name == 'path':
+                self.assertEqual(xml.numAttributes, 2)
+
+    def testProcessingInstruction(self):
+        xml = XmlStreamReader('<html><?php echo "Hello World!"; ?></html>')
+        while xml.readNext():
+            if xml.eventType == XmlEventType.ProcessingInstruction:
+                self.assertEqual(xml.processingInstructionTarget, 'php')
+                self.assertEqual(xml.processingInstructionData, ' echo "Hello World!"; ')
+
 
 
 if __name__ == '__main__':
