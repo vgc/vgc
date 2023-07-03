@@ -21,6 +21,7 @@ import unittest
 from vgc.core import XmlEventType, XmlStreamReader, LogicError, ParseError
 
 xmlExample = """<?xml version="1.0" encoding="UTF-8"?>
+<!-- Created with VGC Illustration -->
 <vgc>
   <b>Some &quot;bold&quot; text</b>
   <path id="p0&lt;"  d =  'M 0 0 L 10 10'/>
@@ -49,11 +50,12 @@ class TestXmlStreamReader(unittest.TestCase):
         self.assertFalse(xml.readNext())
 
     def testEventType(self):
-        xml = XmlStreamReader('<?xml version="1.0"?><?php?><b>foo</b>')
+        xml = XmlStreamReader('<?xml version="1.0"?><!--bar--><?php?><b>foo</b>')
         eventTypes = []
         expectedEventTypes = [
             XmlEventType.NoEvent,
             XmlEventType.StartDocument,
+            XmlEventType.Comment,
             XmlEventType.ProcessingInstruction,
             XmlEventType.StartElement,
             XmlEventType.Characters,
@@ -257,13 +259,47 @@ class TestXmlStreamReader(unittest.TestCase):
                 self.assertEqual(xml.attributeValue('d'), 'M 0 0 L 10 10')
                 self.assertIsNone(xml.attributeValue('foo'))
 
+    def testComment(self):
+        xml = XmlStreamReader('<html><!-- Hello World! --></html>')
+        while xml.readNext():
+            if xml.eventType == XmlEventType.Comment:
+                self.assertEqual(xml.rawText, '<!-- Hello World! -->')
+                self.assertEqual(xml.comment, ' Hello World! ')
+
+        xml = XmlStreamReader('<html><!--- Hello World! --></html>')
+        while xml.readNext():
+            if xml.eventType == XmlEventType.Comment:
+                self.assertEqual(xml.rawText, '<!--- Hello World! -->')
+                self.assertEqual(xml.comment, '- Hello World! ')
+
+        xml = XmlStreamReader('<html><!--Hello-World!--></html>')
+        while xml.readNext():
+            if xml.eventType == XmlEventType.Comment:
+                self.assertEqual(xml.rawText, '<!--Hello-World!-->')
+                self.assertEqual(xml.comment, 'Hello-World!')
+
+        xml = XmlStreamReader('<!----><html/>')
+        while xml.readNext():
+            if xml.eventType == XmlEventType.Comment:
+                self.assertEqual(xml.rawText, '<!---->')
+                self.assertEqual(xml.comment, '')
+
+        xml = XmlStreamReader('<!-- Hello World ---><html/>')
+        xml.readNext()
+        self.assertEqual(xml.eventType, XmlEventType.StartDocument)
+        self.assertRaises(ParseError, xml.readNext)
+
+        xml = XmlStreamReader('<!-- Hello--World --><html/>')
+        xml.readNext()
+        self.assertEqual(xml.eventType, XmlEventType.StartDocument)
+        self.assertRaises(ParseError, xml.readNext)
+
     def testProcessingInstruction(self):
         xml = XmlStreamReader('<html><?php echo "Hello World!"; ?></html>')
         while xml.readNext():
             if xml.eventType == XmlEventType.ProcessingInstruction:
                 self.assertEqual(xml.processingInstructionTarget, 'php')
                 self.assertEqual(xml.processingInstructionData, ' echo "Hello World!"; ')
-
 
 
 if __name__ == '__main__':

@@ -35,6 +35,7 @@ void wrap_XmlEventType(py::module& m) {
         .value("StartElement", This::StartElement)
         .value("EndElement", This::EndElement)
         .value("Characters", This::Characters)
+        .value("Comment", This::Comment)
         .value("ProcessingInstruction", This::ProcessingInstruction);
 }
 
@@ -76,6 +77,7 @@ void wrap_XmlStringReader(py::module& m) {
         .def("attributeName", &This::attributeName)
         .def("attributeValue", overload_cast<Int>(&This::attributeValue, const_))
         .def("attributeValue", overload_cast<string_view>(&This::attributeValue, const_))
+        .def_property_readonly("comment", &This::comment)
         .def_property_readonly(
             "processingInstructionTarget", &This::processingInstructionTarget)
         .def_property_readonly(

@@ -74,11 +74,11 @@ enum class XmlEventType : Int8 {
     EndDocument,
     StartElement, // can be a start tag (<b>) or an empty element tag (<img/>)
     EndElement,   // can be an end tag (</b>) or just after an empty element tag
-    Characters,   // can be character data, CDATA section, resolved entities
+    Characters,   // can be character data, CDATA section, resolved entities,
+    Comment,
     ProcessingInstruction,
 
     // TODO:
-    // Comment,
     // Space,         // non-content whitespace (e.g., outside of the document element)
     // DoctypeDeclaration,
 
@@ -287,7 +287,7 @@ private:
 ///
 /// # Comments
 ///
-/// Comments are reports as `Comment` events, whose content is then available
+/// Comments are reported as `Comment` events, whose content is then available
 /// via `comment()`.
 ///
 /// # Processing Instructions
@@ -569,6 +569,13 @@ public:
             return std::nullopt;
         }
     }
+
+    /// Returns the content of the comment.
+    ///
+    /// Exceptions:
+    /// - `LogicError` is raised if `eventType()` is not `Comment`.
+    ///
+    std::string_view comment() const;
 
     /// Returns the target of the processing instruction.
     ///

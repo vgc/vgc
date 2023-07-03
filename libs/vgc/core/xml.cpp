@@ -615,8 +615,24 @@ private:
                 readEndTag_();
             }
             else if (c == '!') {
-                throw XmlSyntaxError("Unexpected '<!': Comments, CDATA sections, and "
-                                     "DOCTYPE declaration are not yet supported.");
+                if (peek(2) == "--") {
+                    advance(2);
+                    readComment_();
+                }
+                else if (peek(7) == "[CDATA[") {
+                    throw XmlSyntaxError(
+                        "Unexpected '<![CDATA[': CDATA sections are not yet supported.");
+                }
+                else if (peek(7) == "DOCTYPE") {
+                    throw XmlSyntaxError("Unexpected '<!DOCTYPE': Document type "
+                                         "declarations are not yet supported.");
+                }
+                else {
+                    throw XmlSyntaxError(
+                        format("Unexpected '{}' after reading `<!`.  "
+                               "Expected '--' (comment), '[CDATA[' (CDATA section), or "
+                               "'DOCTYPE' (document type declaration)."));
+                }
             }
             else {
                 readStartTag_(c);
@@ -625,6 +641,48 @@ private:
         else {
             throw XmlSyntaxError("Unexpected end-of-file after reading '<' in markup. "
                                  "Expected '?', '/', '!', or tag name.");
+        }
+    }
+
+    // Read from '<!--' (not included) to matching '-->' (included).
+    //
+    // Comment ::= '<!--' ((Char - '-') | ('-' (Char - '-')))* '-->'
+    //
+    // In other words:
+    //
+    // Comment    ::= '<!--' CommentData '-->'
+    //
+    // Where CommentData is Char* but does not include '--' or ends in `-`.
+    //
+    void readComment_() {
+        eventType = XmlEventType::Comment;
+        bool isClosed = false;
+        char c;
+        while (!isClosed) {
+            if (peek(2) == "--") {
+                // End of comment or error
+                advance(2);
+                getOrZero_(c);
+                if (c == '>') {
+                    isClosed = true;
+                }
+                else {
+                    throw XmlSyntaxError(format(
+                        "Unexpected '{}' after reading '--' in comment. "
+                        "Expected '>' character to close the comment.",
+                        endOfFileIfZero_(c)));
+                }
+            }
+            else {
+                // Consume one more comment character, break if end-of-file
+                if (!get(c)) {
+                    break;
+                }
+            }
+        }
+        if (!isClosed) {
+            throw XmlSyntaxError("Unexpected end-of-file while reading comment. "
+                                 "Expected '-->' or additional comment characters.");
         }
     }
 
@@ -1452,6 +1510,12 @@ XmlStreamReader::attribute(std::string_view name) const {
         }
     }
     return std::nullopt;
+}
+
+std::string_view XmlStreamReader::comment() const {
+    checkType("comment", eventType(), XmlEventType::Comment);
+    std::string_view r = rawText();
+    return r.substr(4, r.size() - 7); // Exclude `<!--` and `-->`
 }
 
 std::string_view XmlStreamReader::processingInstructionTarget() const {
