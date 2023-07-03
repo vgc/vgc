@@ -31,6 +31,21 @@ PythonInterpreter::ScopedInterpreter_::ScopedInterpreter_(
 
     if (!Py_IsInitialized()) {
 
+        programName_ = Py_DecodeLocale(programName.data(), nullptr);
+        pythonHome_ = Py_DecodeLocale(pythonHome.data(), nullptr);
+
+#if VGC_CORE_PYCONFIG_
+        PyConfig config;
+        config.isolated = 0;
+        config.use_environment = 1;
+        config.install_signal_handlers = 0;
+        config.program_name = programName_;
+        config.home = pythonHome_;
+        int argc = 0;
+        const char* const* argv = nullptr;
+        bool addProgramDirToPath = true;
+        pybind11::initialize_interpreter(&config, argc, argv, addProgramDirToPath);
+#else
         // https://docs.python.org/3.8/c-api/init.html#c.Py_SetProgramName
         //
         // This function should be called before Py_Initialize() is called for
@@ -45,7 +60,6 @@ PythonInterpreter::ScopedInterpreter_::ScopedInterpreter_(
         // the program’s execution. No code in the Python interpreter will
         // change the contents of this storage.
         //
-        programName_ = Py_DecodeLocale(programName.data(), nullptr);
         Py_SetProgramName(programName_);
 
         // https://docs.python.org/3.8/c-api/init.html#c.Py_SetPythonHome
@@ -67,7 +81,6 @@ PythonInterpreter::ScopedInterpreter_::ScopedInterpreter_(
         // program’s execution. No code in the Python interpreter will change
         // the contents of this storage.
         //
-        pythonHome_ = Py_DecodeLocale(pythonHome.data(), nullptr);
         Py_SetPythonHome(pythonHome_);
 
         // https://docs.python.org/3.8/c-api/init.html#c.Py_Initialize
@@ -128,6 +141,7 @@ PythonInterpreter::ScopedInterpreter_::ScopedInterpreter_(
         //   }
         int updatepath = 0;
         PySys_SetArgvEx(argc_, argv_, updatepath);
+#endif
     }
 }
 
@@ -154,9 +168,11 @@ PythonInterpreter::ScopedInterpreter_::~ScopedInterpreter_() {
     //
     PyMem_RawFree(programName_);
     PyMem_RawFree(pythonHome_);
+#if !(VGC_CORE_PYCONFIG_)
     for (int i = 0; i < argc_; ++i) {
         PyMem_RawFree(argv_[i]);
     }
+#endif
 }
 
 PythonInterpreter::PythonInterpreter(
