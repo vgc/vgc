@@ -168,7 +168,7 @@ public:
     /// - Raises FileError if the document cannot be opened due to system errors.
     /// - Raises ParseError if the document cannot be opened due to syntax errors.
     ///
-    static DocumentPtr open(const std::string& filePath);
+    static DocumentPtr open(std::string_view filePath);
 
     /// Casts the given \p node to a Document. Returns nullptr if node is
     /// nullptr or if node->nodeType() != NodeType::Document.
@@ -258,7 +258,7 @@ public:
     ///
     /// \sa xmlDeclaration() and xmlVersion().
     ///
-    void setXmlVersion(const std::string& version);
+    void setXmlVersion(std::string_view version);
 
     /// Returns the value of the 'encoding' attribute of the XML declaration.
     ///
@@ -287,7 +287,7 @@ public:
     /// \sa xmlDeclaration(), xmlEncoding(), hasXmlEncoding(), and
     /// setNoXmlEncoding().
     ///
-    void setXmlEncoding(const std::string& encoding);
+    void setXmlEncoding(std::string_view encoding);
 
     /// Removes the 'encoding' attribute of the XML declaration. After calling
     /// this function, hasXmlEncoding() = false and xmlEncoding() = "UTF-8".
