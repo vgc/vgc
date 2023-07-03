@@ -29,7 +29,7 @@ namespace {
 void wrap_XmlEventType(py::module& m) {
     using This = vgc::core::XmlEventType;
     py::enum_<This>(m, "XmlEventType")
-        .value("None_", This::None)
+        .value("NoEvent", This::NoEvent)
         .value("StartDocument", This::StartDocument)
         .value("EndDocument", This::EndDocument)
         .value("StartElement", This::StartElement)

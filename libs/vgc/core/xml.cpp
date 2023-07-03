@@ -25,7 +25,7 @@ namespace vgc::core {
 
 VGC_DEFINE_ENUM(
     XmlEventType,
-    (None, "None"),
+    (NoEvent, "NoEvent"),
     (StartDocument, "StartDocument"),
     (EndDocument, "EndDocument"),
     (StartElement, "StartElement"),
@@ -116,7 +116,7 @@ public:
     std::string_view data; // Points either to ownedData or external data
     const char* end = {};  // End of the data
 
-    XmlEventType eventType = XmlEventType::None;
+    XmlEventType eventType = XmlEventType::NoEvent;
     const char* eventStart = {}; // Start of the last read event
     const char* eventEnd = {};   // End of the last read event
 
@@ -201,7 +201,7 @@ public:
     void init() {
         const char* start = data.data();
         end = start + data.size();
-        eventType = XmlEventType::None;
+        eventType = XmlEventType::NoEvent;
         eventStart = start;
         eventEnd = start;
         cursor = start;
@@ -300,7 +300,7 @@ private:
         }
 
         // Otherwise, read something and return true
-        if (eventType == XmlEventType::None) {
+        if (eventType == XmlEventType::NoEvent) {
             eventType = XmlEventType::StartDocument;
             readStartDocument_();
         }
@@ -1394,37 +1394,37 @@ void checkType(
 } // namespace
 
 bool XmlStreamReader::hasXmlDeclaration() const {
-    checkNotType("hasXmlDeclaration", eventType(), XmlEventType::None);
+    checkNotType("hasXmlDeclaration", eventType(), XmlEventType::NoEvent);
     return !impl_->xmlDeclaration.empty();
 }
 
 std::string_view XmlStreamReader::xmlDeclaration() const {
-    checkNotType("xmlDeclaration", eventType(), XmlEventType::None);
+    checkNotType("xmlDeclaration", eventType(), XmlEventType::NoEvent);
     return impl_->xmlDeclaration;
 }
 
 std::string_view XmlStreamReader::version() const {
-    checkNotType("version", eventType(), XmlEventType::None);
+    checkNotType("version", eventType(), XmlEventType::NoEvent);
     return impl_->version;
 }
 
 std::string_view XmlStreamReader::encoding() const {
-    checkNotType("encoding", eventType(), XmlEventType::None);
+    checkNotType("encoding", eventType(), XmlEventType::NoEvent);
     return impl_->encoding;
 }
 
 bool XmlStreamReader::isEncodingSet() const {
-    checkNotType("isEncodingSet", eventType(), XmlEventType::None);
+    checkNotType("isEncodingSet", eventType(), XmlEventType::NoEvent);
     return impl_->isEncodingSet;
 }
 
 bool XmlStreamReader::isStandalone() const {
-    checkNotType("isStandalone", eventType(), XmlEventType::None);
+    checkNotType("isStandalone", eventType(), XmlEventType::NoEvent);
     return impl_->isStandalone;
 }
 
 bool XmlStreamReader::isStandaloneSet() const {
-    checkNotType("isStandaloneSet", eventType(), XmlEventType::None);
+    checkNotType("isStandaloneSet", eventType(), XmlEventType::NoEvent);
     return impl_->isStandaloneSet;
 }
 

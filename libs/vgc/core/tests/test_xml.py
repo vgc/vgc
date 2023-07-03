@@ -54,7 +54,7 @@ class TestXmlStreamReader(unittest.TestCase):
         xml = XmlStreamReader(xmlEventTypeExample)
         eventTypes = []
         expectedEventTypes = [
-            XmlEventType.None_,
+            XmlEventType.NoEvent,
             XmlEventType.StartDocument,
             XmlEventType.StartElement,
             XmlEventType.Characters,

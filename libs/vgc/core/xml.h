@@ -69,7 +69,7 @@ struct VGC_CORE_API XmlStreamAttributeData {
 /// \brief The type of an XML token.
 ///
 enum class XmlEventType : Int8 {
-    None,          // nothing has been read yet
+    NoEvent,       // nothing has been read yet
     StartDocument, // can be an xml-declaration or a missing xml-declaration
     EndDocument,
     StartElement, // can be a start tag (<b>) or an empty element tag (<img/>)
@@ -227,7 +227,7 @@ private:
 /// # Initial State
 ///
 /// When creating an `XmlStreamReader`, its `eventType()` is initially equal to
-/// `None`, and calling most methods (such as `text()`, etc.) would raise a
+/// `NoEvent`, and calling most methods (such as `text()`, etc.) would raise a
 /// `LogicError`.
 ///
 /// # Prolog
@@ -392,11 +392,11 @@ public:
 
     /// Returns whether there is an XML declaration in the document.
     ///
-    /// This can only be called if `eventType()` is not `None`, that is, if the
-    /// `StartDocument` event was reached.
+    /// This can only be called if `eventType()` is not `NoEvent`, that is, if
+    /// the `StartDocument` event was reached.
     ///
     /// Exceptions:
-    /// - `LogicError` is raised if `eventType()` is `None`.
+    /// - `LogicError` is raised if `eventType()` is `NoEvent`.
     ///
     /// \sa `xmlDeclaration()`.
     ///
@@ -406,11 +406,11 @@ public:
     ///
     /// Returns an empty string if `hasXmlDeclaration()` if false.
     ///
-    /// This can only be called if `eventType()` is not `None`, that is, if the
-    /// `StartDocument` event was reached.
+    /// This can only be called if `eventType()` is not `NoEvent`, that is, if
+    /// the `StartDocument` event was reached.
     ///
     /// Exceptions:
-    /// - `LogicError` is raised if `eventType()` is `None`.
+    /// - `LogicError` is raised if `eventType()` is `NoEvent`.
     ///
     /// \sa `hasXmlDeclaration()`, `version()`, `encoding()`, `isStandalone()`,
     ///     `isEncodingSet()`, `isStandaloneSet()`.
@@ -420,11 +420,11 @@ public:
     /// Returns the XML version of the document, as declared in the XML
     /// declaration, or "1.0" if there is no XML declaration.
     ///
-    /// This can only be called if `eventType()` is not `None`, that is, if the
-    /// `StartDocument` event was reached.
+    /// This can only be called if `eventType()` is not `NoEvent`, that is, if
+    /// the `StartDocument` event was reached.
     ///
     /// Exceptions:
-    /// - `LogicError` is raised if `eventType()` is `None`.
+    /// - `LogicError` is raised if `eventType()` is `NoEvent`.
     ///
     /// \sa `xmlDeclaration()`.
     ///
@@ -434,11 +434,11 @@ public:
     /// declaration, or "UTF-8" if there is no XML declaration, or if the
     /// encoding was omitted in the XML declaration.
     ///
-    /// This can only be called if `eventType()` is not `None`, that is, if the
-    /// `StartDocument` event was reached.
+    /// This can only be called if `eventType()` is not `NoEvent`, that is, if
+    /// the `StartDocument` event was reached.
     ///
     /// Exceptions:
-    /// - `LogicError` is raised if `eventType()` is `None`.
+    /// - `LogicError` is raised if `eventType()` is `NoEvent`.
     ///
     /// \sa `xmlDeclaration()`, `isEncodingSet()`.
     ///
@@ -447,11 +447,11 @@ public:
     /// Returns whether there is an XML declaration with an explicit encoding
     /// specified.
     ///
-    /// This can only be called if `eventType()` is not `None`, that is, if the
-    /// `StartDocument` event was reached.
+    /// This can only be called if `eventType()` is not `NoEvent`, that is, if
+    /// the `StartDocument` event was reached.
     ///
     /// Exceptions:
-    /// - `LogicError` is raised if `eventType()` is `None`.
+    /// - `LogicError` is raised if `eventType()` is `NoEvent`.
     ///
     /// \sa `xmlDeclaration()`, `encoding()`.
     ///
@@ -461,11 +461,11 @@ public:
     /// declaration, or `false` if there is no XML declaration, or if the
     /// standalone attribute was omitted in the XML declaration.
     ///
-    /// This can only be called if `eventType()` is not `None`, that is, if the
-    /// `StartDocument` event was reached.
+    /// This can only be called if `eventType()` is not `NoEvent`, that is, if
+    /// the `StartDocument` event was reached.
     ///
     /// Exceptions:
-    /// - `LogicError` is raised if `eventType()` is `None`.
+    /// - `LogicError` is raised if `eventType()` is `NoEvent`.
     ///
     /// \sa `xmlDeclaration()`, `isStandaloneSet()`.
     ///
@@ -474,11 +474,11 @@ public:
     /// Returns whether there is an XML declaration with an explicit standalone
     /// attribute specified.
     ///
-    /// This can only be called if `eventType()` is not `None`, that is, if the
-    /// `StartDocument` event was reached.
+    /// This can only be called if `eventType()` is not `NoEvent`, that is, if
+    /// the `StartDocument` event was reached.
     ///
     /// Exceptions:
-    /// - `LogicError` is raised if `eventType()` is `None`.
+    /// - `LogicError` is raised if `eventType()` is `NoEvent`.
     ///
     /// \sa `xmlDeclaration()`, `isStandalone()`.
     ///
@@ -486,8 +486,9 @@ public:
 
     /// Returns the name of the current `StartElement` or `EndElement`.
     ///
-    /// Exceptions:
-    /// - `LogicError` is raised if `eventType()` is not `StartElement` or `EndElement`.
+    /// Exceptions:    ///
+    ///- `LogicError` is raised if `eventType()` is not `StartElement` or
+    ///  `EndElement`.
     ///
     std::string_view name() const;
 
