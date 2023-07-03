@@ -27,10 +27,10 @@
 #    include <pybind11/pybind11.h>
 #endif
 
-// Starting 3.8, there is a new way to configure the Python interpreter, called
-// PyConfig. The old way of doing things is deprecated since 3.11.
-
-#if PY_VERSION_HEX >= PYBIND11_PYCONFIG_SUPPORT_PY_VERSION_HEX
+// Starting with Python 3.8, there is a new way to configure the interpreter,
+// called PyConfig. The old way of doing things is deprecated since 3.11.
+//
+#if PY_VERSION_HEX >= 0x03080000
 #    define VGC_CORE_PYCONFIG_ 1
 #else
 #    define VGC_CORE_PYCONFIG_ 0
