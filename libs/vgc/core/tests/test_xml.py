@@ -23,11 +23,9 @@ from vgc.core import XmlEventType, XmlStreamReader, LogicError, ParseError
 xmlExample = """<?xml version="1.0" encoding="UTF-8"?>
 <vgc>
   <b>Some &quot;bold&quot; text</b>
-  <path id="p0" d="M 0 0 L 10 10"/>
+  <path id="p0&lt;"  d =  'M 0 0 L 10 10'/>
 </vgc>
 """
-
-xmlEventTypeExample = '<?xml version="1.0"?><b>foo</b>'
 
 # Useful for testing
 def printRawText(xmlData):
@@ -51,11 +49,12 @@ class TestXmlStreamReader(unittest.TestCase):
         self.assertFalse(xml.readNext())
 
     def testEventType(self):
-        xml = XmlStreamReader(xmlEventTypeExample)
+        xml = XmlStreamReader('<?xml version="1.0"?><?php?><b>foo</b>')
         eventTypes = []
         expectedEventTypes = [
             XmlEventType.NoEvent,
             XmlEventType.StartDocument,
+            XmlEventType.ProcessingInstruction,
             XmlEventType.StartElement,
             XmlEventType.Characters,
             XmlEventType.EndElement,
@@ -200,6 +199,63 @@ class TestXmlStreamReader(unittest.TestCase):
         while xml.readNext():
             if xml.eventType == XmlEventType.StartElement and xml.name == 'path':
                 self.assertEqual(xml.numAttributes, 2)
+
+    def testAttributeByIndex(self):
+        xml = XmlStreamReader(xmlExample)
+        while xml.readNext():
+            if xml.eventType == XmlEventType.StartElement and xml.name == 'path':
+                self.assertEqual(xml.numAttributes, 2)
+
+                attr = xml.attribute(0)
+                self.assertEqual(attr.name, 'id')
+                self.assertEqual(attr.value, 'p0<')
+                self.assertEqual(attr.rawText, ' id="p0&lt;"')
+                self.assertEqual(attr.leadingWhitespace, ' ')
+                self.assertEqual(attr.separator, '=')
+                self.assertEqual(attr.rawValue, 'p0&lt;')
+                self.assertEqual(attr.quotationMark, '"')
+
+                attr = xml.attribute(1)
+                self.assertEqual(attr.name, 'd')
+                self.assertEqual(attr.value, 'M 0 0 L 10 10')
+                self.assertEqual(attr.rawText, "  d =  'M 0 0 L 10 10'")
+                self.assertEqual(attr.leadingWhitespace, '  ')
+                self.assertEqual(attr.separator, ' =  ')
+                self.assertEqual(attr.rawValue, 'M 0 0 L 10 10')
+                self.assertEqual(attr.quotationMark, "'")
+
+    def testAttributeByName(self):
+        xml = XmlStreamReader(xmlExample)
+        while xml.readNext():
+            if xml.eventType == XmlEventType.StartElement and xml.name == 'path':
+                attr = xml.attribute('id')
+                self.assertEqual(attr.value, 'p0<')
+                attr = xml.attribute('d')
+                self.assertEqual(attr.value, 'M 0 0 L 10 10')
+                attr = xml.attribute('foo')
+                self.assertIsNone(attr)
+
+    def testAttributeName(self):
+        xml = XmlStreamReader(xmlExample)
+        while xml.readNext():
+            if xml.eventType == XmlEventType.StartElement and xml.name == 'path':
+                self.assertEqual(xml.attributeName(0), 'id')
+                self.assertEqual(xml.attributeName(1), 'd')
+
+    def testAttributeValueByIndex(self):
+        xml = XmlStreamReader(xmlExample)
+        while xml.readNext():
+            if xml.eventType == XmlEventType.StartElement and xml.name == 'path':
+                self.assertEqual(xml.attributeValue(0), 'p0<')
+                self.assertEqual(xml.attributeValue(1), 'M 0 0 L 10 10')
+
+    def testAttributeValueByName(self):
+        xml = XmlStreamReader(xmlExample)
+        while xml.readNext():
+            if xml.eventType == XmlEventType.StartElement and xml.name == 'path':
+                self.assertEqual(xml.attributeValue('id'), 'p0<')
+                self.assertEqual(xml.attributeValue('d'), 'M 0 0 L 10 10')
+                self.assertIsNone(xml.attributeValue('foo'))
 
     def testProcessingInstruction(self):
         xml = XmlStreamReader('<html><?php echo "Hello World!"; ?></html>')

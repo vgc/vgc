@@ -21,6 +21,7 @@
 
 #include <pybind11/functional.h>
 #include <pybind11/operators.h>
+#include <pybind11/stl.h> // wrap std::vector, set, optional, variant, etc.
 
 namespace py = pybind11;
 using namespace py::literals;

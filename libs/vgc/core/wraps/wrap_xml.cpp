@@ -80,10 +80,6 @@ void wrap_XmlStringReader(py::module& m) {
             "processingInstructionTarget", &This::processingInstructionTarget)
         .def_property_readonly(
             "processingInstructionData", &This::processingInstructionData);
-
-    // TODO: ensures everything works as expected with string_view, especially
-    // when given as argument, e.g., attributeValue(attrName)
-    // https://zpz.github.io/blog/python-cpp-pybind11-stringview/
 }
 
 } // namespace

@@ -894,7 +894,7 @@ private:
     }
 
     // Read from given first character \p c (not included) to first whitespace
-    // character (included), or to '>' or '/>' (included) if it follows
+    // character (not included), or to '>' or '/>' (included) if it follows
     // immediately the tag name with no whitespaces.
     //
     // You must pass empty = nullptr (the default) when reading the name of an
@@ -939,6 +939,7 @@ private:
             else if (isWhitespace_(c)) {
                 done = true;
                 isAngleBracketClosed = false;
+                unget();
             }
             else if (c == '>') {
                 done = true;
