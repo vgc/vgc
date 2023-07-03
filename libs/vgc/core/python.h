@@ -27,6 +27,15 @@
 #    include <pybind11/pybind11.h>
 #endif
 
+// Starting with Python 3.8, there is a new way to configure the interpreter,
+// called PyConfig. The old way of doing things is deprecated since 3.11.
+//
+#if PY_VERSION_HEX >= 0x03080000
+#    define VGC_CORE_PYCONFIG_ 1
+#else
+#    define VGC_CORE_PYCONFIG_ 0
+#endif
+
 #include <vgc/core/api.h>
 #include <vgc/core/object.h>
 
@@ -102,8 +111,10 @@ private:
         ~ScopedInterpreter_();
         wchar_t* programName_;
         wchar_t* pythonHome_;
+#if !(VGC_CORE_PYCONFIG_)
         int argc_;
         wchar_t** argv_;
+#endif
     };
     ScopedInterpreter_ scopedInterpreter_;
 
