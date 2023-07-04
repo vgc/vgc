@@ -306,7 +306,6 @@ private:
         }
         else if (eventType == XmlEventType::StartElement && isEmptyElementTag) {
             eventType = XmlEventType::EndElement;
-            onEndTag_();
         }
         else {
             char c;
@@ -784,7 +783,6 @@ private:
         isEmptyElementTag = false;
         bool isEndTag = false;
         bool isAngleBracketClosed = readTagName_(c, isEndTag);
-        onStartTag_();
 
         // Initialize attributes.
         // Note: we set attributeStart now so that it includes leading whitespace.
@@ -876,79 +874,6 @@ private:
                 "Expected whitespaces or '>'.",
                 name()));
         }
-
-        onEndTag_();
-    }
-
-    // Action to be performed when a start tag is encountered.
-    // The name of the tag is available in tagName_.
-    void onStartTag_() {
-        /*
-        elementSpec_ = schema().findElementSpec(tagName_);
-        if (!elementSpec_) {
-            throw VgcSyntaxError(
-                "Unknown element name '" + tagName_
-                + "'. Expected an element name defined in the VGC schema.");
-        }
-
-        if (currentNode_->nodeType() == NodeType::Document) {
-            Document* doc = Document::cast(currentNode_);
-            if (doc->rootElement()) {
-                throw XmlSyntaxError(
-                    "Unexpected second root element '" + tagName_ + "'. A root element '"
-                    + doc->rootElement()->tagName().string()
-                    + "' has already been defined, and there cannot be more than one.");
-            }
-            else {
-                currentNode_ = Element::create(doc, tagName_);
-            }
-        }
-        else if (currentNode_->nodeType() == NodeType::Element) {
-            Element* element = Element::cast(currentNode_);
-            currentNode_ = Element::create(element, tagName_);
-        }
-        else {
-            // Note: this cannot happen yet, but we keep it as safeguard for
-            // the future when adding more node types, or when restricting
-            // in the schema which elements are allowed to be children of other
-            // elements.
-            throw XmlSyntaxError(
-                "Unexpected element '" + tagName_
-                + "'. Elements of this type are not allowed as children of the current "
-                  "node type '"
-                + core::toString(currentNode_->nodeType()) + "'.");
-        }
-        */
-    }
-
-    // Action to be performed when an end tag (or the closing '/>' of an empty
-    // element tag) is encountered. The name of the tag is available in
-    // tagName_.
-    void onEndTag_() {
-        /*
-        if (!currentNode_ || currentNode_->nodeType() != NodeType::Element) {
-            throw XmlSyntaxError(
-                "Unexpected end tag '" + tagName_
-                + "'. It does not have a matching start tag.");
-        }
-        else if (tagName_ != Element::cast(currentNode_)->tagName()) {
-            throw XmlSyntaxError(
-                "Unexpected end tag '" + tagName_ + "'. Its matching start '"
-                + Element::cast(currentNode_)->tagName().string()
-                + "' has a different name.");
-        }
-        else {
-            currentNode_ = currentNode_->parent();
-            if (currentNode_->nodeType() == NodeType::Element) {
-                tagName_ = Element::cast(currentNode_)->tagName();
-                elementSpec_ = schema().findElementSpec(tagName_);
-            }
-            else {
-                tagName_.clear();
-                elementSpec_ = nullptr;
-            }
-        }
-        */
     }
 
     // Read from given first character \p c (not included) to first whitespace
@@ -1066,7 +991,6 @@ private:
 
         readAttributeName_(attribute, c);
         readAttributeValue_(attribute);
-        onAttribute_();
     }
 
     // Read from given first character \p c (not included) to '=' (included)
@@ -1220,35 +1144,6 @@ private:
         }
     }
 
-    // Action to be performed when an element attribute is encountered. The
-    // attribute name and string value are available in attributeName_ and
-    // attributeValue_.
-    void onAttribute_() {
-        /*
-        core::StringId name(attributeName_);
-
-        ValueType valueType = {};
-        if (name == strings::name) {
-            valueType = ValueType::StringId;
-        }
-        else if (name == strings::id) {
-            valueType = ValueType::StringId;
-        }
-        else {
-            const AttributeSpec* spec = elementSpec_->findAttributeSpec(name);
-            if (!spec) {
-                throw VgcSyntaxError(
-                    "Unknown attribute '" + attributeName_ + "' for element '" + tagName_
-                    + "'. Expected an attribute name defined in the VGC schema.");
-            }
-            valueType = spec->valueType();
-        }
-
-        Value value = parseValue(attributeValue_, valueType);
-        Element::cast(currentNode_)->setAttribute(name, value);
-        */
-    }
-
     // Read from '&' (not included) to ';' (included). Returns the character
     // represented by the character entity. Supported entities are:
     //   &amp;   -->  &
@@ -1256,10 +1151,9 @@ private:
     //   &gt;    -->  >
     //   &apos;  -->  '
     //   &quot;  -->  "
-    // XXX We do not yet support character references, that is, unicode
-    // codes such as '&#...;'
-    // TODO support them
-
+    //
+    // TODO Support character references ('&#...;')
+    //
     char readReference_() {
         // Reference ::= EntityRef | CharRef
         // EntityRef ::= '&' Name ';'
