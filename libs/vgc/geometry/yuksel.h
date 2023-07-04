@@ -25,6 +25,9 @@
 
 namespace vgc::geometry {
 
+// Implements Bézier variant of Yuksel Splines:
+// http://www.cemyuksel.com/research/interpolating_curves/
+
 template<typename T, typename Scalar>
 class YukselBezierSegment {
 private:
