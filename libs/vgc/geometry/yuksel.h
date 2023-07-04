@@ -310,4 +310,4 @@ private:
 
 } // namespace vgc::geometry
 
-#endif // VGC_GEOMETRY_CATMULLROM_H
+#endif // VGC_GEOMETRY_YUKSEL_H
