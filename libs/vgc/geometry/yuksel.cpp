@@ -231,7 +231,7 @@ std::array<Vec2d, 2> YukselSplineStroke2d::computeOffsetLineTangentsAtSegmentEnd
 
     Vec2d dp = core::noInit;
     Vec2d ddp = core::noInit;
-    Vec2d p = centerlineSegment.computeEndPointDerivatives(endpointIndex, dp, ddp);
+    centerlineSegment.computeEndPointDerivatives(endpointIndex, dp, ddp);
     Vec2d dw = core::noInit;
     // TODO: can be optimized if necessary.
     Vec2d w = halfwidthsSegment.eval(endpointIndex == 0 ? 0 : 1, dw);

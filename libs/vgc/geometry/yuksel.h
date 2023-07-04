@@ -108,7 +108,10 @@ public:
             position = computeEndPointDerivatives(0, velocity, acceleration);
             if (velocity == T()) {
                 if (acceleration == T()) {
-                    quadratics_[0].controlPoints()[2] - quadratics_[0].controlPoints()[0];
+                    tangent = (quadratics_[0].controlPoints()[2]
+                               - quadratics_[0].controlPoints()[0])
+                                  .normalized();
+                    speed = 0;
                     return position;
                 }
                 tangent = acceleration.normalized();
@@ -121,7 +124,10 @@ public:
             position = computeEndPointDerivatives(1, velocity, acceleration);
             if (velocity == T()) {
                 if (acceleration == T()) {
-                    quadratics_[1].controlPoints()[2] - quadratics_[1].controlPoints()[0];
+                    tangent = (quadratics_[1].controlPoints()[2]
+                               - quadratics_[1].controlPoints()[0])
+                                  .normalized();
+                    speed = 0;
                     return position;
                 }
                 tangent = -1.0 * acceleration.normalized();
