@@ -667,10 +667,6 @@ void computeSculptSampling(
                         geometry::Vec2d p = u * sa1->position() + t * sa2->position();
                         double w = (u * sa1->halfwidth(0) + t * sa2->halfwidth(0)) * 2.0;
 
-                        //VGC_DEBUG_TMP("sa1: {}", sa1->position());
-                        //VGC_DEBUG_TMP("sa2: {}", sa2->position());
-                        //VGC_DEBUG_TMP("t={} p={} p1={}", t, p, p1);
-
                         double distanceToMiddle;
                         if (isClosed) {
                             // If the curve is closed, s can wrap so we need to compute
