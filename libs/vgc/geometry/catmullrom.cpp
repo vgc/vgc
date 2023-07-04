@@ -21,43 +21,6 @@
 
 namespace vgc::geometry {
 
-namespace {
-
-Vec2d segmentStartPositionOpenUnchecked(
-    core::ConstSpan<Vec2d> knotPositions,
-    Int segmentIndex) {
-
-    return knotPositions.getUnchecked(segmentIndex);
-}
-
-Vec2d segmentEndPositionOpenUnchecked(
-    core::ConstSpan<Vec2d> knotPositions,
-    Int segmentIndex) {
-
-    return knotPositions.getUnchecked(segmentIndex + 1);
-}
-
-Vec2d segmentStartPositionClosedUnchecked(
-    core::ConstSpan<Vec2d> knotPositions,
-    Int segmentIndex) {
-
-    return knotPositions.getUnchecked(segmentIndex);
-}
-
-Vec2d segmentEndPositionClosedUnchecked(
-    core::ConstSpan<Vec2d> knotPositions,
-    Int segmentIndex) {
-
-    if (segmentIndex == knotPositions.length()) {
-        return knotPositions.getUnchecked(0);
-    }
-    else {
-        return knotPositions.getUnchecked(segmentIndex + 1);
-    }
-}
-
-} // namespace
-
 Int CatmullRomSplineStroke2d::numKnots_() const {
     return positions_.length();
 }

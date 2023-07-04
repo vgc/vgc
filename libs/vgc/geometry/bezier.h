@@ -77,23 +77,36 @@ public:
         }
     }
 
-    template<size_t d_ = degree, VGC_REQUIRES(d_ >= 1)>
     const T& value() {
-        return values_[size - 1];
+        if constexpr (degree >= 1) {
+            return values_[size - 1];
+        }
+        else {
+            static T zero = {};
+            return zero;
+        }
     }
 
-    template<size_t d_ = degree, VGC_REQUIRES(d_ >= 2)>
     T derivative() {
-        constexpr size_t i = levelOffset_<degree - 1>;
-        constexpr Scalar n = static_cast<Scalar>(degree);
-        return n * (values_[i + 1] - values_[i]);
+        if constexpr (degree >= 2) {
+            constexpr size_t i = levelOffset_<degree - 1>;
+            constexpr Scalar n = static_cast<Scalar>(degree);
+            return n * (values_[i + 1] - values_[i]);
+        }
+        else {
+            return T();
+        }
     }
 
-    template<size_t d_ = degree, VGC_REQUIRES(d_ >= 3)>
     T secondDerivative() {
-        constexpr size_t i = levelOffset_<degree - 2>;
-        constexpr Scalar n = static_cast<Scalar>(degree);
-        return n * (n - 1) * (values_[i + 2] - 2 * values_[i + 1] + values_[i]);
+        if constexpr (degree >= 3) {
+            constexpr size_t i = levelOffset_<degree - 2>;
+            constexpr Scalar n = static_cast<Scalar>(degree);
+            return n * (n - 1) * (values_[i + 2] - 2 * values_[i + 1] + values_[i]);
+        }
+        else {
+            return T();
+        }
     }
 
     template<
