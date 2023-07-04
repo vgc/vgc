@@ -188,8 +188,8 @@ private:
 /// \class vgc::core::XmlStreamReader
 /// \brief Reads an XML document using a stream-based API
 ///
-/// `XmlStreamReader` provides a stream-based API to read an XML document (also
-/// known as ["StAX"](https://en.wikipedia.org/wiki/StAX)).
+/// `XmlStreamReader` provides a stream-based API (also known as
+/// ["StAX"](https://en.wikipedia.org/wiki/StAX)) to read an XML document.
 ///
 /// The basic usage consists in creating an instance of `XmlStreamReader`, then
 /// calling its `readNext()` method until it returns `false`, indicating that
@@ -224,11 +224,17 @@ private:
 ///  world
 /// ```
 ///
+/// If the input document is not a well-formed XML document, then `XmlParseError`
+/// is raised by `readNext()` when encountering the ill-formed syntax.
+///
+/// If you call a method which is not compatible with the current `eventType()`
+/// (for example, calling `comment()` for an event that is not `Comment`), then
+/// `LogicError` is raised.
+///
 /// # Initial State
 ///
 /// When creating an `XmlStreamReader`, its `eventType()` is initially equal to
-/// `NoEvent`, and calling most methods (such as `text()`, etc.) would raise a
-/// `LogicError`.
+/// `NoEvent`, and most methods would raise `LogicError` if called.
 ///
 /// # Prolog
 ///
@@ -249,13 +255,13 @@ private:
 /// <?xml version="1.0" encoding="UTF-8" standalone="no"?>
 /// ```
 ///
-/// Where `encoding` and `standalone` are optional.
+/// Where `version` is mandatory, but `encoding` and `standalone` are optional.
 ///
 /// After calling `readNext()` for the first time, the `eventType()` will
-/// become equal to `StartDocument`, and from this moment on it is possible to
-/// query the content of the XML declaration with `hasXmlDeclaration()`,
-/// `xmlDeclaration()`, `version()`, `encoding()`, `isEncodingSet()`,
-/// `standalone()`, and `isStandaloneSet()`.
+/// become equal to `StartDocument` (unless `XmlParseError` is raised), and
+/// from this moment on it is possible to query the content of the XML
+/// declaration with `hasXmlDeclaration()`, `xmlDeclaration()`, `version()`,
+/// `encoding()`, `isEncodingSet()`, `standalone()`, and `isStandaloneSet()`.
 ///
 /// # Document Type Declaration
 ///
@@ -263,14 +269,15 @@ private:
 ///
 /// # Start/End Elements
 ///
-/// XML elements are reported with `StartElement` and `EndElement`. When the `eventType()`
-/// is one of these two, then `name()` provides the name of the element.
+/// XML elements are reported as `StartElement` and `EndElement` events. When
+/// `eventType()` is equal to `StartElement` and `EndElement`, then `name()`
+/// provides the name of the element.
 ///
 /// In case of "empty-element tags" (also called "self-closing", e.g., `<img
-/// />`), then there are still both a `StartElement` and `EndElement` issued.
-/// The `rawText()` of the `StartElement` event will be equal to the whole
-/// empty-element tag, while the `rawText()` of the `EndElement` event will be
-/// empty.
+/// />`), then there are still both a `StartElement` event and `EndElement`
+/// event reported. The `rawText()` of the `StartElement` event will be equal
+/// to the whole empty-element tag, while the `rawText()` of the `EndElement`
+/// event will be empty.
 ///
 /// If the event is `StartElement`, then it is possible to query its attributes
 /// with `attributes()`, `numAttributes()`, `attribute(index)`,
