@@ -144,11 +144,11 @@ double computeTi_(const Vec2d& knot0, const Vec2d& knot1, const Vec2d& knot2) {
     }
     double p = (3 * a * c - b * b) / (3 * a * a);
     double q = (2 * b * b * b - 9 * a * b * c + 27 * a * a * d) / (27 * a * a * a);
-    double discriminant = -(4 * p * p * p + 27 * q * q);
+    double discriminant = q * q / 4 + p * p * p / 27;
     double t = 0;
-    if (discriminant < 0) {
+    if (discriminant >= 0) {
         // 1 real root
-        double r = std::sqrt(q * q / 4 + p * p * p / 27);
+        double r = std::sqrt(discriminant);
         return std::cbrt(-q / 2 + r) + std::cbrt(-q / 2 - r) - b / (3 * a);
     }
     else {
