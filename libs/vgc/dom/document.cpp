@@ -36,7 +36,7 @@ Document::Document()
     : Node(this, NodeType::Document)
     , hasXmlDeclaration_(true)
     , hasXmlEncoding_(true)
-    , hasXmlStandalone_(true)
+    , hasXmlStandalone_(false)
     , xmlVersion_("1.0")
     , xmlEncoding_("UTF-8")
     , xmlStandalone_(false)
@@ -335,7 +335,9 @@ void Document::save(const std::string& filePath, const XmlFormattingStyle& style
         throw FileError("Cannot save file " + filePath + ": " + std::strerror(errno));
     }
 
-    out << xmlDeclaration_ << std::endl;
+    if (hasXmlDeclaration()) {
+        out << xmlDeclaration_ << std::endl;
+    }
     writeChildren(out, style, 0, this);
 }
 
