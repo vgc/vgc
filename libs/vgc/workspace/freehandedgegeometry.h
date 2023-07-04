@@ -17,6 +17,8 @@
 #ifndef VGC_WORKSPACE_FREEHANDEDGEGEOMETRY_H
 #define VGC_WORKSPACE_FREEHANDEDGEGEOMETRY_H
 
+#include <vgc/geometry/catmullrom.h>
+#include <vgc/geometry/yuksel.h>
 #include <vgc/vacomplex/keyedge.h>
 #include <vgc/workspace/api.h>
 #include <vgc/workspace/edgegeometry.h>
@@ -25,27 +27,54 @@ namespace vgc::workspace {
 
 class VGC_WORKSPACE_API FreehandEdgeGeometry : public EdgeGeometry {
 public:
-    using SharedConstPoints = geometry::SharedConstVec2dArray;
+    using SharedConstPositions = geometry::SharedConstVec2dArray;
     using SharedConstWidths = core::SharedConstDoubleArray;
 
-    FreehandEdgeGeometry() = default;
+    using StrokeType = geometry::CatmullRomSplineStroke2d;
+    //using StrokeType = geometry::YukselSplineStroke2d;
 
-    FreehandEdgeGeometry(const SharedConstPoints& points, const SharedConstWidths& widths)
-        : points_(points)
-        , widths_(widths) {
+    FreehandEdgeGeometry(bool isClosed)
+        : EdgeGeometry(isClosed) {
+
+        stroke_ = createStroke_();
     }
 
-    const geometry::Vec2dArray& points() const {
-        return isBeingEdited_ ? points_ : sharedConstPoints_;
+    FreehandEdgeGeometry(bool isClosed, double constantWidth)
+        : EdgeGeometry(isClosed) {
+
+        stroke_ = createStroke_();
+        stroke_->setConstantWidth(constantWidth);
+    }
+
+    FreehandEdgeGeometry(
+        const SharedConstPositions& positions,
+        const SharedConstWidths& widths,
+        bool isClosed,
+        bool isWidthConstant)
+
+        : EdgeGeometry(isClosed) {
+
+        stroke_ = createStroke_();
+        if (isWidthConstant) {
+            stroke_->setConstantWidth(widths.get()[0]);
+        }
+        else {
+            stroke_->setWidths(widths);
+        }
+        stroke_->setPositions(positions);
+    }
+
+    const geometry::Vec2dArray& positions() const {
+        return isBeingEdited_ ? editPositions_ : stroke_->positions();
     }
 
     const core::DoubleArray& widths() const {
-        return isBeingEdited_ ? widths_ : sharedConstWidths_;
+        return isBeingEdited_ ? editWidths_ : stroke_->widths();
     }
 
-    void setPoints(const SharedConstPoints& points);
+    void setPositions(const SharedConstPositions& positions);
 
-    void setPoints(geometry::Vec2dArray points);
+    void setPositions(geometry::Vec2dArray positions);
 
     void setWidths(const SharedConstWidths& widths);
 
@@ -56,15 +85,13 @@ public:
     /// Expects positions in object space.
     ///
     vacomplex::EdgeSampling computeSampling(
-        geometry::CurveSamplingQuality quality,
+        const geometry::CurveSamplingParameters& params,
         const geometry::Vec2d& snapStartPosition,
         const geometry::Vec2d& snapEndPosition,
         vacomplex::EdgeSnapTransformationMode mode) const override;
 
-    vacomplex::EdgeSampling computeSampling(
-        geometry::CurveSamplingQuality quality,
-        bool isClosed,
-        vacomplex::EdgeSnapTransformationMode mode) const override;
+    vacomplex::EdgeSampling
+    computeSampling(const geometry::CurveSamplingParameters& params) const override;
 
     void startEdit() override;
     void resetEdit() override;
@@ -94,6 +121,13 @@ public:
         double tolerance,
         bool isClosed) override;
 
+    geometry::Vec2d sculptRadius(
+        const geometry::Vec2d& position,
+        double delta,
+        double radius,
+        double tolerance,
+        bool isClosed = false) override;
+
     geometry::Vec2d sculptSmooth(
         const geometry::Vec2d& position,
         double radius,
@@ -106,24 +140,26 @@ public:
     void removeFromDomEdge_(dom::Element* element) const override;
 
 private:
-    SharedConstPoints sharedConstPoints_;
+    SharedConstPositions sharedConstPositions_;
     SharedConstWidths sharedConstWidths_;
-    core::DoubleArray originalArclengths_;
-    geometry::Vec2dArray points_;
-    core::DoubleArray widths_;
+    std::unique_ptr<StrokeType> stroke_;
+    geometry::Vec2dArray editPositions_;
+    core::DoubleArray editWidths_;
+    core::DoubleArray originalKnotArclengths_;
     geometry::Vec2d editStartPosition_ = {};
     bool isBeingEdited_ = false;
 
     static void computeSnappedLinearS_(
         geometry::Vec2dArray& outPoints,
-        const geometry::Vec2dArray& srcPoints,
+        StrokeType* srcStroke,
         core::DoubleArray& srcArclengths,
         const geometry::Vec2d& snapStartPosition,
         const geometry::Vec2d& snapEndPosition);
 
-    static void computeArclengths_(
-        core::DoubleArray& outArclengths,
-        const geometry::Vec2dArray& srcPoints);
+    static void
+    computeKnotArclengths_(core::DoubleArray& outArclengths, StrokeType* srcStroke);
+
+    std::unique_ptr<StrokeType> createStroke_() const;
 };
 
 } // namespace vgc::workspace

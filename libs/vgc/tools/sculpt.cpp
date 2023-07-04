@@ -58,8 +58,14 @@ VGC_UI_DEFINE_MOUSE_DRAG_COMMAND( //
     Shortcut(ModifierKey::Shift, MouseButton::Left))
 
 VGC_UI_DEFINE_MOUSE_DRAG_COMMAND( //
-    editRadius,
-    "tools.sculpt.editRadius",
+    radius,
+    "tools.sculpt.radius",
+    "Sculpt Radius",
+    Shortcut(ModifierKey::Alt, MouseButton::Left))
+
+VGC_UI_DEFINE_MOUSE_DRAG_COMMAND( //
+    editSculptRadius,
+    "tools.sculpt.editSculptRadius",
     "Edit Sculpt Radius",
     Shortcut(ModifierKey::Ctrl, MouseButton::Left))
 
@@ -147,6 +153,193 @@ public:
                         pixelSize,
                         ke->isClosed());
                     tool_->setActionCircleCenter(grabbedPoint);
+                    tool_->setActionCircleEnabled(true);
+                }
+            }
+        }
+
+        // Close operation
+        if (undoGroup) {
+            bool amend = canAmendUndoGroup_ && undoGroup->parent()
+                         && undoGroup->parent()->name() == actionName();
+            undoGroup->close(amend);
+            canAmendUndoGroup_ = true;
+        }
+    }
+
+    void onMouseDragConfirm(ui::MouseEvent* /*event*/) override {
+        if (edgeId_ == -1) {
+            return;
+        }
+
+        canvas::Canvas* canvas = tool_->canvas();
+        workspace::Workspace* workspace = tool_->workspace();
+        if (!canvas || !workspace) {
+            return;
+        }
+
+        // Open history group
+        core::UndoGroup* undoGroup = nullptr;
+        core::History* history = workspace->history();
+        if (history) {
+            undoGroup = history->createUndoGroup(actionName());
+        }
+
+        workspace::Element* element = workspace->find(edgeId_);
+        if (element && element->vacNode() && element->vacNode()->isCell()) {
+            vacomplex::KeyEdge* ke = element->vacNode()->toCellUnchecked()->toKeyEdge();
+            if (ke) {
+                vacomplex::KeyEdgeGeometry* geometry = ke->geometry();
+                if (geometry) {
+                    geometry->finishEdit();
+                }
+            }
+        }
+
+        // Close operation
+        if (undoGroup) {
+            bool amend = canAmendUndoGroup_ && undoGroup->parent()
+                         && undoGroup->parent()->name() == actionName();
+            undoGroup->close(amend);
+            canAmendUndoGroup_ = true;
+        }
+
+        tool_->setActionCircleEnabled(false);
+        reset_();
+    }
+
+    void onMouseDragCancel(ui::MouseEvent* /*event*/) override {
+        if (edgeId_ == -1) {
+            return;
+        }
+
+        canvas::Canvas* canvas = tool_->canvas();
+        workspace::Workspace* workspace = tool_->workspace();
+        if (!canvas || !workspace) {
+            return;
+        }
+
+        workspace::Element* element = workspace->find(edgeId_);
+        if (element && element->vacNode() && element->vacNode()->isCell()) {
+            vacomplex::KeyEdge* ke = element->vacNode()->toCellUnchecked()->toKeyEdge();
+            if (ke) {
+                vacomplex::KeyEdgeGeometry* geometry = ke->geometry();
+                if (geometry) {
+                    geometry->resetEdit();
+                    geometry->finishEdit();
+                }
+            }
+        }
+
+        tool_->setActionCircleEnabled(false);
+        reset_();
+    }
+
+    void reset_() {
+        canAmendUndoGroup_ = false;
+        started_ = false;
+        edgeId_ = -1;
+    }
+
+public:
+    Sculpt* tool_ = nullptr;
+    bool canAmendUndoGroup_ = false;
+    bool started_ = false;
+    core::Id edgeId_ = -1;
+    geometry::Vec2f cursorPositionAtPress_;
+    geometry::Vec2f cursorPosition_;
+    geometry::Vec2d grabbedPoint_;
+
+    core::StringId actionName() const {
+        static core::StringId actionName_("Sculpt Grab");
+        return actionName_;
+    }
+};
+
+VGC_DECLARE_OBJECT(SculptRadiusAction);
+
+class SculptRadiusAction : public ui::Action {
+private:
+    VGC_OBJECT(SculptRadiusAction, ui::Action)
+
+protected:
+    /// This is an implementation details.
+    /// Please use `SculptRadiusAction::create()` instead.
+    ///
+    SculptRadiusAction()
+        : ui::Action(commands::radius) {
+    }
+
+public:
+    /// Creates a `SculptRadiusAction`.
+    ///
+    static SculptRadiusActionPtr create() {
+        return SculptRadiusActionPtr(new SculptRadiusAction());
+    }
+
+public:
+    void onMouseDragStart(ui::MouseEvent* event) override {
+        cursorPositionAtPress_ = event->position();
+        edgeId_ = tool_->candidateId();
+    }
+
+    void onMouseDragMove(ui::MouseEvent* event) override {
+        if (edgeId_ == -1) {
+            return;
+        }
+
+        canvas::Canvas* canvas = tool_->canvas();
+        workspace::Workspace* workspace = tool_->workspace();
+        if (!canvas || !workspace) {
+            return;
+        }
+
+        cursorPosition_ = event->position();
+
+        geometry::Mat4d inverseViewMatrix = canvas->camera().viewMatrix().inverted();
+
+        float pixelSize = static_cast<float>(
+            (inverseViewMatrix.transformPointAffine(geometry::Vec2d(0, 1))
+             - inverseViewMatrix.transformPointAffine(geometry::Vec2d(0, 0)))
+                .length());
+
+        geometry::Vec2d cursorPositionInWorkspaceAtPress =
+            inverseViewMatrix.transformPointAffine(
+                geometry::Vec2d(cursorPositionAtPress_));
+
+        geometry::Vec2f deltaCursor = cursorPosition_ - cursorPositionAtPress_;
+        double sinAngle = deltaCursor.normalized().det(geometry::Vec2f(1, 0));
+        double delta = (cursorPosition_ - cursorPositionAtPress_).x();
+        delta *= (1 + sinAngle);
+
+        // Open history group
+        core::UndoGroup* undoGroup = nullptr;
+        core::History* history = workspace->history();
+        if (history) {
+            undoGroup = history->createUndoGroup(actionName());
+        }
+
+        // Translate Vertices
+        workspace::Element* element = workspace->find(edgeId_);
+        if (element && element->vacNode() && element->vacNode()->isCell()) {
+            vacomplex::KeyEdge* ke = element->vacNode()->toCellUnchecked()->toKeyEdge();
+            if (ke) {
+                vacomplex::KeyEdgeGeometry* geometry = ke->geometry();
+                if (geometry) {
+                    if (started_) {
+                        geometry->resetEdit();
+                    }
+                    else {
+                        geometry->startEdit();
+                        started_ = true;
+                    }
+                    geometry::Vec2d closestPoint = geometry->sculptRadius(
+                        cursorPositionInWorkspaceAtPress,
+                        delta,
+                        options::sculptRadius()->value(),
+                        pixelSize,
+                        ke->isClosed());
+                    tool_->setActionCircleCenter(closestPoint);
                     tool_->setActionCircleEnabled(true);
                 }
             }
@@ -445,7 +638,7 @@ protected:
     /// Please use `EditSculptRadiusAction::create()` instead.
     ///
     EditSculptRadiusAction()
-        : ui::Action(commands::editRadius) {
+        : ui::Action(commands::editSculptRadius) {
     }
 
 public:
@@ -495,10 +688,12 @@ Sculpt::Sculpt()
 
     auto grabAction = createAction<SculptGrabAction>();
     grabAction->tool_ = this;
+    auto radiusAction = createAction<SculptRadiusAction>();
+    radiusAction->tool_ = this;
     auto smoothAction = createAction<SculptSmoothAction>();
     smoothAction->tool_ = this;
-    auto editRadiusAction = createAction<EditSculptRadiusAction>();
-    editRadiusAction->tool_ = this;
+    auto editSculptRadiusAction = createAction<EditSculptRadiusAction>();
+    editSculptRadiusAction->tool_ = this;
 }
 
 SculptPtr Sculpt::create() {

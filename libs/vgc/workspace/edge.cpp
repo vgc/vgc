@@ -472,12 +472,12 @@ void VacKeyEdge::onPaintDraw(
                 lineVertices.emplaceLast(p.x(), p.y(), -n.x(), -n.y());
                 lineVertices.emplaceLast(p.x(), p.y(),  n.x(),  n.y());
                 if (isPaintingOffsetLine0) {
-                    geometry::Vec2f p0 = geometry::Vec2f(s.sidePoint(0));
+                    geometry::Vec2f p0 = geometry::Vec2f(s.offsetPoint(0));
                     offsetLine0Vertices.emplaceLast(p0.x(), p0.y(), -n.x(), -n.y());
                     offsetLine0Vertices.emplaceLast(p0.x(), p0.y(),  n.x(),  n.y());
                 }
                 if (isPaintingOffsetLine1) {
-                    geometry::Vec2f p1 = geometry::Vec2f(s.sidePoint(1));
+                    geometry::Vec2f p1 = geometry::Vec2f(s.offsetPoint(1));
                     offsetLine1Vertices.emplaceLast(p1.x(), p1.y(), -n.x(), -n.y());
                     offsetLine1Vertices.emplaceLast(p1.x(), p1.y(),  n.x(),  n.y());
                 }
@@ -727,7 +727,8 @@ ElementStatus VacKeyEdge::updateFromDom_(Workspace* workspace) {
 
     // create/rebuild/update VAC node
     if (!ke) {
-        auto geometry = std::make_shared<workspace::FreehandEdgeGeometry>();
+        auto geometry =
+            std::make_shared<workspace::FreehandEdgeGeometry>(isClosed);
         geometry->updateFromDomEdge_(domElement);
         if (isClosed) {
             ke = vacomplex::ops::createKeyClosedEdge(std::move(geometry), parentGroup);
@@ -886,7 +887,7 @@ bool VacKeyEdge::computePreJoinGeometry_() {
     auto fhGeometry =
         dynamic_cast<const workspace::FreehandEdgeGeometry*>(ke->geometry());
     if (fhGeometry) {
-        for (const geometry::Vec2d& p : fhGeometry->points()) {
+        for (const geometry::Vec2d& p : fhGeometry->positions()) {
             controlPoints_.emplaceLast(geometry::Vec2f(p));
         }
     }
@@ -1029,7 +1030,7 @@ bool VacKeyEdge::computeStrokeMesh_() {
 
         auto tessIterSample = [&](const geometry::StrokeSample2d& sample) {
             std::array<Vec2d, 3> qs = {
-                sample.sidePoint(0), sample.position(), sample.sidePoint(1)};
+                sample.offsetPoint(0), sample.position(), sample.offsetPoint(1)};
 
             double s = offsetS + sample.s();
             float sf = static_cast<float>(s);

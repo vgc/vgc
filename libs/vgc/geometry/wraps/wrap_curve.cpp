@@ -20,28 +20,28 @@
 #include <vgc/core/wraps/class.h>
 #include <vgc/core/wraps/common.h>
 
-void wrap_curve(py::module& m) {
+void wrap_curve(py::module& /*m*/) {
 
-    using This = vgc::geometry::StrokeView2d;
-    //using Vec2d = vgc::geometry::Vec2d;
-
-    vgc::core::wraps::Class<This>(m, "StrokeView2d")
-        .def(py::init<>())
-
-        // Note: there's a more readable syntax to disambiguate function
-        // overloads if we use C++14. See:
-        // http://pybind11.readthedocs.io/en/latest/classes.html#overloaded-methods
-
-        /*.def(
-            "addControlPoint",
-            py::overload_cast<double, double, double>(&This::addControlPoint))
-        .def(
-            "addControlPoint",
-            py::overload_cast<const Vec2d&, double>(&This::addControlPoint))*/
-
-        .def("__repr__", [](const This& c) {
-            return "<StrokeView2d: "                        //
-                   + std::to_string(c.positions().length()) //
-                   + " control points>";
-        });
+    //using This = vgc::geometry::StrokeView2d;
+    ////using Vec2d = vgc::geometry::Vec2d;
+    //
+    //vgc::core::wraps::Class<This>(m, "StrokeView2d")
+    //    .def(py::init<>())
+    //
+    //    // Note: there's a more readable syntax to disambiguate function
+    //    // overloads if we use C++14. See:
+    //    // http://pybind11.readthedocs.io/en/latest/classes.html#overloaded-methods
+    //
+    //    /*.def(
+    //        "addControlPoint",
+    //        py::overload_cast<double, double, double>(&This::addControlPoint))
+    //    .def(
+    //        "addControlPoint",
+    //        py::overload_cast<const Vec2d&, double>(&This::addControlPoint))*/
+    //
+    //    .def("__repr__", [](const This& c) {
+    //        return "<StrokeView2d: "                        //
+    //               + std::to_string(c.positions().length()) //
+    //               + " control points>";
+    //    });
 }

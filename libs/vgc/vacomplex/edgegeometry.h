@@ -154,29 +154,32 @@ private:
     friend KeyEdge;
 
 public:
-    KeyEdgeGeometry() noexcept = default;
+    KeyEdgeGeometry(bool isClosed)
+        : isClosed_(isClosed) {
+    }
 
     virtual ~KeyEdgeGeometry() = default;
 
     KeyEdgeGeometry(const KeyEdgeGeometry&) = delete;
     KeyEdgeGeometry& operator=(const KeyEdgeGeometry&) = delete;
 
+    bool isClosed() const {
+        return isClosed_;
+    }
+
     virtual std::shared_ptr<KeyEdgeGeometry> clone() const = 0;
 
     /// Expects positions in object space.
     ///
     virtual EdgeSampling computeSampling(
-        geometry::CurveSamplingQuality quality,
+        const geometry::CurveSamplingParameters& params,
         const geometry::Vec2d& snapStartPosition,
         const geometry::Vec2d& snapEndPosition,
         EdgeSnapTransformationMode mode =
             EdgeSnapTransformationMode::LinearInArclength) const = 0;
 
-    virtual EdgeSampling computeSampling(
-        geometry::CurveSamplingQuality quality,
-        bool isClosed = false,
-        EdgeSnapTransformationMode mode =
-            EdgeSnapTransformationMode::LinearInArclength) const = 0;
+    virtual EdgeSampling
+    computeSampling(const geometry::CurveSamplingParameters& params) const = 0;
 
     virtual void startEdit() = 0;
     virtual void resetEdit() = 0;
@@ -218,6 +221,18 @@ public:
         double tolerance,
         bool isClosed = false) = 0;
 
+    /// Returns the position of the grabbed point (center of deformation falloff).
+    ///
+    // Note: choose properly between tolerance/samplingDelta/quality.
+    // Todo: later add falloff kind, arclength/spatial, keep vertices.
+    //
+    virtual geometry::Vec2d sculptRadius(
+        const geometry::Vec2d& position,
+        double delta,
+        double radius,
+        double tolerance,
+        bool isClosed = false) = 0;
+
     /// Returns the new position of the smooth point.
     ///
     // Todo: later add falloff kind, arclength/spatial.
@@ -235,6 +250,7 @@ protected:
 
 private:
     KeyEdge* edge_ = nullptr;
+    const bool isClosed_;
 };
 
 //std::shared_ptr<const EdgeSampling> snappedSampling_;

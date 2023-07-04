@@ -395,9 +395,9 @@ void Sketch::onPaintDraw(graphics::Engine* engine, ui::PaintOptions options) {
                         + tipNormal * widthRatio * edgeLastSample.halfwidth(0);
 
                     strokeVertices.emplaceLast(
-                        geometry::Vec2f(edgeLastSample.leftPoint()));
+                        geometry::Vec2f(edgeLastSample.offsetPoint(1)));
                     strokeVertices.emplaceLast(
-                        geometry::Vec2f(edgeLastSample.rightPoint()));
+                        geometry::Vec2f(edgeLastSample.offsetPoint(0)));
                     strokeVertices.emplaceLast(geometry::Vec2f(tipPoint0));
                     strokeVertices.emplaceLast(geometry::Vec2f(tipPoint1));
                 }
