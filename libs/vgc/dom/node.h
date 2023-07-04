@@ -48,7 +48,7 @@ enum class NodeType {
      *
      * Attribute = 2,       // Note: we won't add this in VGC DOM (attributes aren't nodes in the VGC DOM)
      * Text = 3,            // Note: rename to TextNode in VGC DOM? We may want to reserve "Text" for <text> elements
-     * CDATA = 4,           // Note: rename to CharacterData in VGC DOM?
+     * CDATA = 4,           // Note: rename to CDataSection in VGC DOM?
      * EntityReference = 5,
      * Entity = 6,
      * ProcessingInstruction = 7,
