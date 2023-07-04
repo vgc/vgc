@@ -267,7 +267,7 @@ protected:
     /// Please use `SculptWidthAction::create()` instead.
     ///
     SculptWidthAction()
-        : ui::Action(commands::radius) {
+        : ui::Action(commands::width) {
     }
 
 public:
