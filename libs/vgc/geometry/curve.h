@@ -188,14 +188,14 @@ public:
     }
 
 private:
-    Vec2d position_;
-    Vec2d tangent_;
-    Vec2d halfwidths_;
-    double s_; // arclength from stroke start point.
+    Vec2d position_ = {};
+    Vec2d tangent_ = {};
+    Vec2d halfwidths_ = {};
+    double s_ = 0; // arclength from stroke start point.
     // isCornerStart_ is true only for the first sample of the two that makes
     // a corner (hard turn).
     // TODO: add enum/flags for corner kind ? knot corner, centerline cusp, offsetline cusp..
-    bool isCornerStart_;
+    bool isCornerStart_ = false;
 };
 
 /// Returns a new sample with each attribute linearly interpolated.
