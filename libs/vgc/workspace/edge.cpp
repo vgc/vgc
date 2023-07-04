@@ -987,7 +987,7 @@ bool VacKeyEdge::computeStrokeMesh_() {
         double offsetS = patch0.extensionS;
 
         // TODO: Rescale V values of the patch to makes V values match at merge location.
-        //       This will become necessary when we implement parametrization styles.
+        //       This will become necessary when we implement parameterization styles.
 
         for (Int side = 0; side < 2; ++side) {
             float sign = (side == 0) ? 1.f : -1.f;

@@ -249,27 +249,27 @@ enum CatmullRomSplineParameterization {
 class VGC_GEOMETRY_API CatmullRomSplineStroke2d : public AbstractStroke2d {
 public:
     CatmullRomSplineStroke2d(
-        CatmullRomSplineParameterization parametrization,
+        CatmullRomSplineParameterization parameterization,
         bool isClosed)
 
         : AbstractStroke2d(isClosed)
-        , parametrization_(parametrization) {
+        , parameterization_(parameterization) {
     }
 
     CatmullRomSplineStroke2d(
-        CatmullRomSplineParameterization parametrization,
+        CatmullRomSplineParameterization parameterization,
         bool isClosed,
         double constantWidth)
 
         : AbstractStroke2d(isClosed)
         , widths_(1, constantWidth)
         , isWidthConstant_(true)
-        , parametrization_(parametrization) {
+        , parameterization_(parameterization) {
     }
 
     template<typename TRangePositions, typename TRangeWidths>
     CatmullRomSplineStroke2d(
-        CatmullRomSplineParameterization parametrization,
+        CatmullRomSplineParameterization parameterization,
         bool isClosed,
         bool isWidthConstant,
         TRangePositions&& positions,
@@ -279,7 +279,7 @@ public:
         , positions_(std::forward<TRangePositions>(positions))
         , widths_(std::forward<TRangeWidths>(widths))
         , isWidthConstant_(isWidthConstant)
-        , parametrization_(parametrization) {
+        , parameterization_(parameterization) {
 
         computeChordLengths_();
     }
@@ -360,7 +360,7 @@ private:
     core::Array<double> widths_;
     core::Array<double> chordLengths_;
     bool isWidthConstant_ = false;
-    CatmullRomSplineParameterization parametrization_;
+    CatmullRomSplineParameterization parameterization_;
 
     void computeChordLengths_();
 };

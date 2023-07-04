@@ -942,7 +942,7 @@ enum class CurveType {
     /// Represents an open centripetal Catmull-Rom spline.
     ///
     /// Similar to `OpenUniformCatmullRom` but using centripetal
-    /// parametrization. This prevents cusps and loops.
+    /// parameterization. This prevents cusps and loops.
     ///
     OpenCentripetalCatmullRom,
 
@@ -967,7 +967,7 @@ enum class CurveType {
     /// Represents a closed centripetal Catmull-Rom spline.
     ///
     /// Similar to `ClosedUniformCatmullRom` but using centripetal
-    /// parametrization. This prevents cusps and loops.
+    /// parameterization. This prevents cusps and loops.
     ///
     ClosedCentripetalCatmullRom
 };

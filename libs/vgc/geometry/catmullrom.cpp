@@ -240,7 +240,7 @@ SegmentType computeSegmentCenterlineCubicBezier_(
         if (isBeforeCorner) {
             // (d01 == 0) && (d12 > 0) && (d23 == 0)
             //
-            // Linear parametrization
+            // Linear parameterization
             double u = 1.0 / 3;
             double v = (1 - u);
             bezier = CubicBezier2d(
@@ -393,7 +393,7 @@ CubicBezier2d CatmullRomSplineStroke2d::segmentToBezier(Int segmentIndex) const 
     std::array<double, 3> fixedChordLengths;
     computeSegmentCenterlineCubicBezier_(
         centerlineBezier,
-        parametrization_,
+        parameterization_,
         positions(),
         chordLengths(),
         knotIndices,
@@ -414,7 +414,7 @@ CubicBezier2d CatmullRomSplineStroke2d::segmentToBezier(
     std::array<double, 3> fixedChordLengths;
     SegmentType segmentType = computeSegmentCenterlineCubicBezier_(
         centerlineBezier,
-        parametrization_,
+        parameterization_,
         positions(),
         chordLengths(),
         knotIndices,
