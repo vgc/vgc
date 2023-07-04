@@ -641,7 +641,7 @@ private:
     double cosMaxAngle_;
     Int minIntraSegmentSamples_ = 0;
     Int maxIntraSegmentSamples_ = 63;
-    bool isScreenspace_ = false;
+    //bool isScreenspace_ = false;
 };
 
 /// \class vgc::geometry::WidthProfile
