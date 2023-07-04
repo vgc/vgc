@@ -1177,7 +1177,6 @@ private:
                 "Unexpected end-of-file after reading '=' after reading attribute name "
                 "'{}' in start tag '{}'. Expected '\"' (double quote), or '\'' (single "
                 "quote), or whitespaces.",
-                c,
                 attribute.name,
                 name()));
         }
