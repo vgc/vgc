@@ -1188,7 +1188,7 @@ geometry::Vec2d FreehandEdgeGeometry::sculptGrab(
     // In spatial mode, step is supported and we may have to do this at every step.
 }
 
-geometry::Vec2d FreehandEdgeGeometry::sculptRadius(
+geometry::Vec2d FreehandEdgeGeometry::sculptWidth(
     const geometry::Vec2d& position,
     double delta,
     double radius,

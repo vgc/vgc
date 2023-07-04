@@ -226,7 +226,7 @@ public:
     // Note: choose properly between tolerance/samplingDelta/quality.
     // Todo: later add falloff kind, arclength/spatial, keep vertices.
     //
-    virtual geometry::Vec2d sculptRadius(
+    virtual geometry::Vec2d sculptWidth(
         const geometry::Vec2d& position,
         double delta,
         double radius,

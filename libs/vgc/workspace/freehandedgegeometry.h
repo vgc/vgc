@@ -121,7 +121,7 @@ public:
         double tolerance,
         bool isClosed) override;
 
-    geometry::Vec2d sculptRadius(
+    geometry::Vec2d sculptWidth(
         const geometry::Vec2d& position,
         double delta,
         double radius,
