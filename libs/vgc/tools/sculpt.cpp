@@ -58,14 +58,14 @@ VGC_UI_DEFINE_MOUSE_DRAG_COMMAND( //
     Shortcut(ModifierKey::Shift, MouseButton::Left))
 
 VGC_UI_DEFINE_MOUSE_DRAG_COMMAND( //
-    radius,
-    "tools.sculpt.radius",
-    "Sculpt Radius",
+    width,
+    "tools.sculpt.width",
+    "Sculpt Width",
     Shortcut(ModifierKey::Alt, MouseButton::Left))
 
 VGC_UI_DEFINE_MOUSE_DRAG_COMMAND( //
-    editSculptRadius,
-    "tools.sculpt.editSculptRadius",
+    editRadius,
+    "tools.sculpt.editRadius",
     "Edit Sculpt Radius",
     Shortcut(ModifierKey::Ctrl, MouseButton::Left))
 
@@ -256,25 +256,25 @@ public:
     }
 };
 
-VGC_DECLARE_OBJECT(SculptRadiusAction);
+VGC_DECLARE_OBJECT(SculptWidthAction);
 
-class SculptRadiusAction : public ui::Action {
+class SculptWidthAction : public ui::Action {
 private:
-    VGC_OBJECT(SculptRadiusAction, ui::Action)
+    VGC_OBJECT(SculptWidthAction, ui::Action)
 
 protected:
     /// This is an implementation details.
-    /// Please use `SculptRadiusAction::create()` instead.
+    /// Please use `SculptWidthAction::create()` instead.
     ///
-    SculptRadiusAction()
+    SculptWidthAction()
         : ui::Action(commands::radius) {
     }
 
 public:
-    /// Creates a `SculptRadiusAction`.
+    /// Creates a `SculptWidthAction`.
     ///
-    static SculptRadiusActionPtr create() {
-        return SculptRadiusActionPtr(new SculptRadiusAction());
+    static SculptWidthActionPtr create() {
+        return SculptWidthActionPtr(new SculptWidthAction());
     }
 
 public:
@@ -333,7 +333,7 @@ public:
                         geometry->startEdit();
                         started_ = true;
                     }
-                    geometry::Vec2d closestPoint = geometry->sculptRadius(
+                    geometry::Vec2d closestPoint = geometry->sculptWidth(
                         cursorPositionInWorkspaceAtPress,
                         delta,
                         options::sculptRadius()->value(),
@@ -627,25 +627,25 @@ public:
     }
 };
 
-VGC_DECLARE_OBJECT(EditSculptRadiusAction);
+VGC_DECLARE_OBJECT(SculptEditRadiusAction);
 
-class EditSculptRadiusAction : public ui::Action {
+class SculptEditRadiusAction : public ui::Action {
 private:
-    VGC_OBJECT(EditSculptRadiusAction, ui::Action)
+    VGC_OBJECT(SculptEditRadiusAction, ui::Action)
 
 protected:
     /// This is an implementation details.
-    /// Please use `EditSculptRadiusAction::create()` instead.
+    /// Please use `SculptEditRadiusAction::create()` instead.
     ///
-    EditSculptRadiusAction()
-        : ui::Action(commands::editSculptRadius) {
+    SculptEditRadiusAction()
+        : ui::Action(commands::width) {
     }
 
 public:
-    /// Creates a `EditSculptRadiusAction`.
+    /// Creates a `SculptEditRadiusAction`.
     ///
-    static EditSculptRadiusActionPtr create() {
-        return EditSculptRadiusActionPtr(new EditSculptRadiusAction());
+    static SculptEditRadiusActionPtr create() {
+        return SculptEditRadiusActionPtr(new SculptEditRadiusAction());
     }
 
 public:
@@ -688,12 +688,12 @@ Sculpt::Sculpt()
 
     auto grabAction = createAction<SculptGrabAction>();
     grabAction->tool_ = this;
-    auto radiusAction = createAction<SculptRadiusAction>();
-    radiusAction->tool_ = this;
+    //auto widthAction = createAction<SculptWidthAction>();
+    //widthAction->tool_ = this;
     auto smoothAction = createAction<SculptSmoothAction>();
     smoothAction->tool_ = this;
-    auto editSculptRadiusAction = createAction<EditSculptRadiusAction>();
-    editSculptRadiusAction->tool_ = this;
+    auto editRadiusAction = createAction<SculptEditRadiusAction>();
+    editRadiusAction->tool_ = this;
 }
 
 SculptPtr Sculpt::create() {
