@@ -330,7 +330,7 @@ SegmentType computeSegmentCenterlineYukselSegment_(
         if (isBeforeCorner) {
             // (d01 == 0) && (d12 > 0) && (d23 == 0)
             //
-            // Linear parametrization
+            // Linear parameterization
             Vec2d mid = 0.5 * (knots[1] + knots[2]);
             segment = YukselBezierSegment2d(knots, mid, 0.5, mid, 0.5);
             return SegmentType::BetweenCorners;
