@@ -761,7 +761,7 @@ template<typename TPoint, typename PositionGetter, typename WidthGetter>
     core::Array<TPoint>& points,
     core::IntArray& indices,
     Int intervalStart,
-    bool isClosed,
+    bool /*isClosed*/,
     double /*tolerance*/,
     PositionGetter positionGetter,
     WidthGetter widthGetter) {
