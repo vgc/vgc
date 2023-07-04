@@ -142,29 +142,28 @@ double computeTi_(const Vec2d& knot0, const Vec2d& knot1, const Vec2d& knot2) {
         // knot0 == knot2
         return 0.5;
     }
-    double p = (3 * a * c - b * b) / 3 / a / a;
-    double q = (2 * b * b * b - 9 * a * b * c + 27 * a * a * d) / 27 / a / a / a;
-    double discriminant = 4 * p * p * p + 27 * q * q;
+    double p = (3 * a * c - b * b) / (3 * a * a);
+    double q = (2 * b * b * b - 9 * a * b * c + 27 * a * a * d) / (27 * a * a * a);
+    double discriminant = -(4 * p * p * p + 27 * q * q);
     double t = 0;
-    if (discriminant >= 0) {
-        // Single real root
-        return std::cbrt(-q / 2 + std::sqrt(q * q / 4 + p * p * p / 27))
-               + std::cbrt(-q / 2 - std::sqrt(q * q / 4 + p * p * p / 27)) - b / 3 / a;
+    if (discriminant < 0) {
+        // 1 real root
+        double r = std::sqrt(q * q / 4 + p * p * p / 27);
+        return std::cbrt(-q / 2 + r) + std::cbrt(-q / 2 - r) - b / (3 * a);
     }
     else {
-        // Three real roots
-        for (int k = 0; k < 3; ++k) {
-            t = 2 * std::sqrt(-p / 3)
-                    * std::cos(
-                        1.0 / 3 * std::acos(3.0 * q / 2 / p * std::sqrt(-3.0 / p))
-                        - 2.0 * core::pi * k / 3)
-                - b / 3 / a;
-            if (0 <= t && t <= 1) {
+        // 3 real roots
+        for (int i = 0; i < 3; ++i) {
+            double cc = std::cos(
+                1.0 / 3 * std::acos(3.0 * q / (2 * p) * std::sqrt(-3.0 / p))
+                - 2.0 * core::pi * i / 3);
+            t = 2 * std::sqrt(-p / 3) * cc - b / (3 * a);
+            if (t >= 0 && t <= 1) {
                 return t;
             }
         }
     }
-    // error
+    // fallback
     return 0.5;
 }
 
