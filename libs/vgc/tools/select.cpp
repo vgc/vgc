@@ -699,7 +699,10 @@ void Select::updateDragMovedElements_(
         workspace::Element* element = workspace->find(ked.elementId);
         if (element && element->vacNode() && element->vacNode()->isCell()) {
             vacomplex::KeyEdge* ke = element->vacNode()->toCellUnchecked()->toKeyEdge();
-            if (ke && ked.isUniformTranslation) {
+            if (!ke) {
+                continue;
+            }
+            if (ked.isUniformTranslation) {
                 vacomplex::KeyEdgeGeometry* geometry = ke->geometry();
                 if (geometry) {
                     if (!ked.isEditStarted) {
@@ -711,6 +714,10 @@ void Select::updateDragMovedElements_(
                     }
                     geometry->translate(translationInWorkspace);
                 }
+            }
+            else {
+                // Vertices are already translated here.
+                ke->snapGeometry();
             }
         }
     }

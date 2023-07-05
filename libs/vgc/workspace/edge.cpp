@@ -18,6 +18,7 @@
 
 #include <vgc/core/span.h>
 #include <vgc/geometry/triangle2d.h>
+#include <vgc/graphics/detail/shapeutil.h>
 #include <vgc/workspace/colors.h>
 #include <vgc/workspace/edgegeometry.h>
 #include <vgc/workspace/freehandedgegeometry.h>
@@ -322,6 +323,10 @@ void VacKeyEdge::onPaintDraw(
 
     bool isPaintingOffsetLine0 = false;
     bool isPaintingOffsetLine1 = false;
+    constexpr float selectionCenterlineThickness = 2.0f;
+    constexpr float selectionDiskOutlineThickness = 1.0f;
+    constexpr float selectionDiskRadius = 2.5f;
+    constexpr Int selectionDiskNumSides = 16;
 
     // TODO: reuse buffers and geometry views
 
@@ -439,7 +444,8 @@ void VacKeyEdge::onPaintDraw(
         graphics.setSelectionGeometry(engine->createGeometryView(createInfo));
 
         // X, Y, Rot, Width, R, G, B, A
-        core::FloatArray lineInstData({0.f, 0.f, 1.f, 2.f, 0.02f, 0.64f, 1.0f, 1.f});
+        float lineHw = 0.5f * selectionCenterlineThickness;
+        core::FloatArray lineInstData({0.f, 0.f, 1.f, lineHw, 0.02f, 0.64f, 1.0f, 1.f});
 
         geometry::Vec4fArray lineVertices;
         geometry::Vec4fArray offsetLine0Vertices;
@@ -530,11 +536,13 @@ void VacKeyEdge::onPaintDraw(
                 std::move(offsetLineInstData));
         }
     }
+
     if (graphics.selectionGeometry()
         && (data.hasPendingColorChange_ || hasNewCenterlineGraphics)) {
 
         const core::Color& c = colors::selection;
-        core::FloatArray bufferData = {0.f, 0.f, 1.f, 2.f, c.r(), c.g(), c.b(), c.a()};
+        float hw = selectionCenterlineThickness * 0.5f;
+        core::FloatArray bufferData = {0.f, 0.f, 1.f, hw, c.r(), c.g(), c.b(), c.a()};
         const BufferPtr& buffer = graphics.selectionGeometry()->vertexBuffer(1);
         engine->updateBufferData(buffer, std::move(bufferData));
     }
@@ -542,39 +550,31 @@ void VacKeyEdge::onPaintDraw(
     constexpr PaintOptions pointsOptions = {PaintOption::Outline};
 
     if (flags.hasAny(pointsOptions) && !controlPointsGeometry_) {
-        controlPointsGeometry_ = engine->createDynamicTriangleStripView(
-            BuiltinGeometryLayout::XYDxDy_iXYRotWRGBA);
 
-        float pointHalfSize = 5.f;
+        controlPointsGeometry_ =
+            graphics::detail::createScreenSpaceDisk(engine, selectionDiskNumSides);
 
-        core::Array<geometry::Vec4f> pointVertices;
-        // clang-format off
-        pointVertices.extend({
-            {0, 0, -pointHalfSize, -pointHalfSize},
-            {0, 0, -pointHalfSize,  pointHalfSize},
-            {0, 0,  pointHalfSize, -pointHalfSize},
-            {0, 0,  pointHalfSize,  pointHalfSize} });
-        // clang-format on
-
-        core::FloatArray pointInstData;
-        const Int numPoints = controlPoints_.length();
+        // Do not show first and last control points.
+        const Int numPoints = std::max<Int>(0, controlPoints_.length() - 2);
+        core::Array<graphics::detail::ScreenSpaceInstanceData> pointInstData(
+            numPoints * 2);
         const float dl = 1.f / numPoints;
-        for (Int j = 0; j < numPoints; ++j) {
-            geometry::Vec2f p = geometry::Vec2f(controlPoints_[j]);
-            float l = j * dl;
-            pointInstData.extend(
-                {p.x(),
-                 p.y(),
-                 0.f,
-                 1.5f,
-                 (l > 0.5f ? 2 * (1.f - l) : 1.f),
-                 0.f,
-                 (l < 0.5f ? 2 * l : 1.f),
-                 1.f});
+        for (Int i = 0; i < numPoints; ++i) {
+            geometry::Vec2f p = geometry::Vec2f(controlPoints_[i + 1]);
+            float l = i * dl;
+            core::Color color = core::Color::hsl(210 + 90 * l, 1.0, 0.5);
+            //(l > 0.5f ? 2 * (1.f - l) : 1.f), 0, (l < 0.5f ? 2 * l : 1.f));
+            Int j = i * 2;
+            graphics::detail::ScreenSpaceInstanceData& inst0 = pointInstData[j];
+            graphics::detail::ScreenSpaceInstanceData& inst1 = pointInstData[j + 1];
+            inst0.position = p;
+            inst0.displacementScale = selectionDiskRadius + selectionDiskOutlineThickness;
+            inst0.color = color;
+            inst1.position = p;
+            inst1.displacementScale = selectionDiskRadius;
+            inst1.color = core::Color(1, 1, 1);
         }
 
-        engine->updateBufferData(
-            controlPointsGeometry_->vertexBuffer(0), std::move(pointVertices));
         engine->updateBufferData(
             controlPointsGeometry_->vertexBuffer(1), std::move(pointInstData));
     }
@@ -584,11 +584,19 @@ void VacKeyEdge::onPaintDraw(
     if (flags.has(PaintOption::Selected)) {
         engine->setProgram(graphics::BuiltinProgram::ScreenSpaceDisplacement);
         engine->draw(graphics.selectionGeometry());
+        if (flags.has(PaintOption::Outline)) {
+            engine->drawInstanced(controlPointsGeometry_);
+        }
     }
     else if (!flags.has(PaintOption::Outline)) {
         engine->setProgram(graphics::BuiltinProgram::Simple /*TexturedDebug*/);
         engine->draw(graphics.strokeGeometry());
         //engine->draw(graphics.joinGeometry());
+    }
+    else {
+        engine->setProgram(graphics::BuiltinProgram::ScreenSpaceDisplacement);
+        engine->draw(graphics.centerlineGeometry());
+        engine->drawInstanced(controlPointsGeometry_);
     }
 
     if (isPaintingOffsetLine0) {
@@ -599,12 +607,6 @@ void VacKeyEdge::onPaintDraw(
     if (isPaintingOffsetLine1) {
         engine->setProgram(graphics::BuiltinProgram::ScreenSpaceDisplacement);
         engine->draw(graphics.offsetLineGeometry(1));
-    }
-
-    if (flags.has(PaintOption::Outline)) {
-        engine->setProgram(graphics::BuiltinProgram::ScreenSpaceDisplacement);
-        engine->draw(graphics.centerlineGeometry());
-        engine->drawInstanced(controlPointsGeometry_);
     }
 }
 

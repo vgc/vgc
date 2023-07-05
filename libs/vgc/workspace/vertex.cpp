@@ -170,17 +170,15 @@ void VacKeyVertex::onPaintDraw(
 
     if (flags.hasAny(PaintOption::Outline | PaintOption::Selected)) {
 
-        constexpr float selectionDiskRadius = 6.f;
+        constexpr float selectionDiskRadius = 4.0f;
+        constexpr float selectionDiskOutlineThickness = 2.f;
         constexpr Int selectionDiskNumSides = 16;
 
         if (!data.selectionGeometry_) {
-            data.selectionGeometry_ = graphics::detail::createScreenSpaceDisk(
-                engine,
-                posF,
-                selectionDiskRadius,
-                colors::selection,
-                selectionDiskNumSides);
+            data.selectionGeometry_ =
+                graphics::detail::createScreenSpaceDisk(engine, selectionDiskNumSides);
         }
+
         else if (data.isSelectionGeometryDirty_) {
             graphics::detail::updateScreenSpaceDisk(
                 engine,
@@ -190,8 +188,22 @@ void VacKeyVertex::onPaintDraw(
                 colors::selection);
         }
 
+        core::Array<graphics::detail::ScreenSpaceInstanceData> pointInstData(2);
+        graphics::detail::ScreenSpaceInstanceData& inst0 = pointInstData[0];
+        graphics::detail::ScreenSpaceInstanceData& inst1 = pointInstData[1];
+        inst0.position = posF;
+        inst0.displacementScale = selectionDiskRadius + selectionDiskOutlineThickness;
+        inst0.color = colors::selection;
+        inst1.position = posF;
+        inst1.displacementScale = selectionDiskRadius;
+        inst1.color = core::Color(1, 1, 1);
+        colors::selection;
+
+        engine->updateBufferData(
+            data.selectionGeometry_->vertexBuffer(1), std::move(pointInstData));
+
         engine->setProgram(graphics::BuiltinProgram::ScreenSpaceDisplacement);
-        engine->draw(data.selectionGeometry_);
+        engine->drawInstanced(data.selectionGeometry_);
     }
 }
 

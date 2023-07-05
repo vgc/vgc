@@ -672,6 +672,9 @@ void Canvas::onPaintDraw(graphics::Engine* engine, ui::PaintOptions options) {
     geometry::Mat4f cameraViewf(camera_.viewMatrix());
     engine->pushViewMatrix(vm * cameraViewf);
 
+    core::Array<workspace::Element*> selectedElements = selectedElements_();
+    core::Array<workspace::Element*> selectedElementsOrdered;
+
     // render visit
     // todo:
     //  - use transforms
@@ -702,7 +705,7 @@ void Canvas::onPaintDraw(graphics::Engine* engine, ui::PaintOptions options) {
                 // we always visit children for now
                 return true;
             },
-            [=](workspace::Element* e, Int /*depth*/) {
+            [=, &selectedElementsOrdered](workspace::Element* e, Int /*depth*/) {
                 if (!e) {
                     return;
                 }
@@ -710,12 +713,19 @@ void Canvas::onPaintDraw(graphics::Engine* engine, ui::PaintOptions options) {
                 if (paintOutline) {
                     e->paint(engine, {}, workspace::PaintOption::Outline);
                 }
+                if (selectedElements.contains(e)) {
+                    selectedElementsOrdered.append(e);
+                }
             });
         reTesselate = false;
     }
 
-    for (workspace::Element* selectedElement : selectedElements_()) {
-        selectedElement->paint(engine, {}, workspace::PaintOption::Selected);
+    for (workspace::Element* selectedElement : selectedElementsOrdered) {
+        workspace::PaintOptions options = workspace::PaintOption::Selected;
+        if (paintOutline) {
+            options.set(workspace::PaintOption::Outline);
+        }
+        selectedElement->paint(engine, {}, options);
     }
 
     engine->popViewMatrix();

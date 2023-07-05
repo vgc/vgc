@@ -82,6 +82,12 @@ GeometryViewPtr createScreenSpaceDisk(
     return engine->createGeometryView(createInfo);
 }
 
+// numSides is always rounded to the next even number.
+GeometryViewPtr createScreenSpaceDisk(Engine* engine, Int numSides) {
+    return createScreenSpaceDisk(
+        engine, geometry::Vec2f(), 1, core::Color(0, 0, 0), numSides);
+}
+
 void updateScreenSpaceDisk(
     Engine* engine,
     const GeometryViewPtr& geometry,
