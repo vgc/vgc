@@ -321,8 +321,14 @@ void VacKeyEdge::onPaintDraw(
     core::AnimTime t,
     PaintOptions flags) const {
 
-    bool isPaintingOffsetLine0 = false;
-    bool isPaintingOffsetLine1 = false;
+    // Offset lines settings
+    constexpr bool isPaintingOffsetLine0 = false;
+    constexpr bool isPaintingOffsetLine1 = false;
+    constexpr float offsetLineHalfwidth = 1.5f;
+    constexpr core::Color offsetLine0Color(0.64f, 1.0f, 0.02f, 1.f);
+    constexpr core::Color offsetLine1Color(1.0f, 0.02f, 0.64f, 1.f);
+
+    // Selection settings
     constexpr float selectionCenterlineThickness = 2.0f;
     constexpr float selectionDiskOutlineThickness = 1.0f;
     constexpr float selectionDiskRadius = 2.5f;
@@ -445,7 +451,10 @@ void VacKeyEdge::onPaintDraw(
 
         // X, Y, Rot, Width, R, G, B, A
         float lineHw = 0.5f * selectionCenterlineThickness;
-        core::FloatArray lineInstData({0.f, 0.f, 1.f, lineHw, 0.02f, 0.64f, 1.0f, 1.f});
+        const core::Color& uc = colors::outline;
+        //core::FloatArray lineInstData({0.f, 0.f, 1.f, lineHw, 0.902f, 0.64f, 1.0f, 1.f});
+        core::FloatArray lineInstData(
+            {0.f, 0.f, 1.f, lineHw, uc.r(), uc.g(), uc.b(), uc.a()});
 
         geometry::Vec4fArray lineVertices;
         geometry::Vec4fArray offsetLine0Vertices;
@@ -515,25 +524,25 @@ void VacKeyEdge::onPaintDraw(
 
         if (isPaintingOffsetLine0) {
             // X, Y, Rot, Width, R, G, B, A
-            core::FloatArray offsetLineInstData(
-                {0.f, 0.f, 1.f, 1.5f, 0.64f, 1.0f, 0.02f, 1.f});
-            engine->updateBufferData(
-                graphics.offsetLineGeometry(0)->vertexBuffer(0),
-                std::move(offsetLine0Vertices));
-            engine->updateBufferData(
-                graphics.offsetLineGeometry(0)->vertexBuffer(1),
-                std::move(offsetLineInstData));
+            const float hw = offsetLineHalfwidth;
+            const core::Color& c = offsetLine0Color;
+            core::FloatArray instData({0.f, 0.f, 1.f, hw, c.r(), c.g(), c.b(), c.a()});
+            const GeometryViewPtr& geometryView = graphics.offsetLineGeometry(0);
+            const BufferPtr& vertBuffer = geometryView->vertexBuffer(0);
+            const BufferPtr& instBuffer = geometryView->vertexBuffer(1);
+            engine->updateBufferData(vertBuffer, std::move(offsetLine0Vertices));
+            engine->updateBufferData(instBuffer, std::move(instData));
         }
         if (isPaintingOffsetLine1) {
             // X, Y, Rot, Width, R, G, B, A
-            core::FloatArray offsetLineInstData(
-                {0.f, 0.f, 1.f, 1.5f, 1.0f, 0.02f, 0.64f, 1.f});
-            engine->updateBufferData(
-                graphics.offsetLineGeometry(1)->vertexBuffer(0),
-                std::move(offsetLine1Vertices));
-            engine->updateBufferData(
-                graphics.offsetLineGeometry(1)->vertexBuffer(1),
-                std::move(offsetLineInstData));
+            const float hw = offsetLineHalfwidth;
+            const core::Color& c = offsetLine1Color;
+            core::FloatArray instData({0.f, 0.f, 1.f, hw, c.r(), c.g(), c.b(), c.a()});
+            const GeometryViewPtr& geometryView = graphics.offsetLineGeometry(1);
+            const BufferPtr& vertBuffer = geometryView->vertexBuffer(0);
+            const BufferPtr& instBuffer = geometryView->vertexBuffer(1);
+            engine->updateBufferData(vertBuffer, std::move(offsetLine1Vertices));
+            engine->updateBufferData(instBuffer, std::move(instData));
         }
     }
 

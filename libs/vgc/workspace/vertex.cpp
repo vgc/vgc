@@ -160,6 +160,8 @@ void VacKeyVertex::onPaintDraw(
 
     // TODO: share the disk mesh
 
+    constexpr core::Color vertexFillColor(1.0f, 1.0f, 1.0f);
+
     VacVertexCellFrameData& data = frameData_;
     vacomplex::KeyVertex* kv = vacKeyVertexNode();
     if (!kv || t != kv->time()) {
@@ -169,6 +171,8 @@ void VacKeyVertex::onPaintDraw(
     geometry::Vec2f posF(kv->position());
 
     if (flags.hasAny(PaintOption::Outline | PaintOption::Selected)) {
+
+        const bool isSelected = flags.has(PaintOption::Selected);
 
         constexpr float selectionDiskRadius = 4.0f;
         constexpr float selectionDiskOutlineThickness = 2.f;
@@ -193,10 +197,10 @@ void VacKeyVertex::onPaintDraw(
         graphics::detail::ScreenSpaceInstanceData& inst1 = pointInstData[1];
         inst0.position = posF;
         inst0.displacementScale = selectionDiskRadius + selectionDiskOutlineThickness;
-        inst0.color = colors::selection;
+        inst0.color = isSelected ? colors::selection : colors::outline;
         inst1.position = posF;
         inst1.displacementScale = selectionDiskRadius;
-        inst1.color = core::Color(1, 1, 1);
+        inst1.color = vertexFillColor;
 
         engine->updateBufferData(
             data.selectionGeometry_->vertexBuffer(1), std::move(pointInstData));
