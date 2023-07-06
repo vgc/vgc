@@ -486,6 +486,14 @@ public:
     const VacEdgeCellFrameData*
     computeFrameDataAt(core::AnimTime t, VacEdgeComputationStage stage) override;
 
+    VacKeyVertex* startVertex() const {
+        return verticesInfo_[0].element;
+    }
+
+    VacKeyVertex* endVertex() const {
+        return verticesInfo_[1].element;
+    }
+
 protected:
     void onPaintPrepare(core::AnimTime t, PaintOptions flags) override;
 

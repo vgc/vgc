@@ -726,6 +726,21 @@ void Canvas::onPaintDraw(graphics::Engine* engine, ui::PaintOptions options) {
             elementOptions.set(workspace::PaintOption::Outline);
         }
         selectedElement->paint(engine, {}, elementOptions);
+        if (paintOutline) {
+            // Redraw outline of end vertices on top of selected edges,
+            // otherwise the centerline of the selected edge is on top of the
+            // outline of its end vertices and it doesn't look good.
+            if (auto edge = dynamic_cast<workspace::VacKeyEdge*>(selectedElement)) {
+                workspace::VacKeyVertex* startVertex = edge->startVertex();
+                workspace::VacKeyVertex* endVertex = edge->endVertex();
+                if (startVertex && !selectedElements.contains(startVertex)) {
+                    startVertex->paint(engine, {}, workspace::PaintOption::Outline);
+                }
+                if (endVertex && !selectedElements.contains(endVertex)) {
+                    endVertex->paint(engine, {}, workspace::PaintOption::Outline);
+                }
+            }
+        }
     }
 
     engine->popViewMatrix();
