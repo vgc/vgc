@@ -330,9 +330,12 @@ void VacKeyEdge::onPaintDraw(
 
     // Selection settings
     constexpr float selectionCenterlineThickness = 2.0f;
-    constexpr float selectionDiskOutlineThickness = 1.0f;
-    constexpr float selectionDiskRadius = 2.5f;
-    constexpr Int selectionDiskNumSides = 16;
+
+    // Disk settings
+    constexpr core::Color diskFillColor(1.0f, 1.0f, 1.0f);
+    constexpr float diskStrokeWidth = 1.0f;
+    constexpr float diskFillRadius = 2.5f;
+    constexpr Int diskNumSides = 16;
 
     // TODO: reuse buffers and geometry views
 
@@ -556,36 +559,51 @@ void VacKeyEdge::onPaintDraw(
         engine->updateBufferData(buffer, std::move(bufferData));
     }
 
-    constexpr PaintOptions pointsOptions = {PaintOption::Outline};
-
-    if (flags.hasAny(pointsOptions) && !controlPointsGeometry_) {
-
-        controlPointsGeometry_ =
-            graphics::detail::createScreenSpaceDisk(engine, selectionDiskNumSides);
-
-        // Do not show first and last control points.
-        const Int numPoints = std::max<Int>(0, controlPoints_.length() - 2);
-        core::Array<graphics::detail::ScreenSpaceInstanceData> pointInstData(
-            numPoints * 2);
-        const float dl = 1.f / numPoints;
-        for (Int i = 0; i < numPoints; ++i) {
-            geometry::Vec2f p = geometry::Vec2f(controlPoints_[i + 1]);
-            float l = i * dl;
-            core::Color color = core::Color::hsl(210 + 90 * l, 1.0, 0.5);
-            //(l > 0.5f ? 2 * (1.f - l) : 1.f), 0, (l < 0.5f ? 2 * l : 1.f));
-            Int j = i * 2;
-            graphics::detail::ScreenSpaceInstanceData& inst0 = pointInstData[j];
-            graphics::detail::ScreenSpaceInstanceData& inst1 = pointInstData[j + 1];
-            inst0.position = p;
-            inst0.displacementScale = selectionDiskRadius + selectionDiskOutlineThickness;
-            inst0.color = color;
-            inst1.position = p;
-            inst1.displacementScale = selectionDiskRadius;
-            inst1.color = core::Color(1, 1, 1);
+    // Draw control points (CP)
+    bool isSelected = flags.has(PaintOption::Selected);
+    bool showCPs = flags.has(PaintOption::Outline);
+    if (showCPs) {
+        bool wasSelected = isLastDrawOfControlPointsSelected_;
+        isLastDrawOfControlPointsSelected_ = isSelected;
+        bool shouldUpdateCPColor = isSelected != wasSelected;
+        bool shouldCreateCPBuffers = !controlPointsGeometry_;
+        bool shouldUpdateCPBuffers = shouldCreateCPBuffers || shouldUpdateCPColor;
+        if (shouldCreateCPBuffers) {
+            controlPointsGeometry_ =
+                graphics::detail::createScreenSpaceDisk(engine, diskNumSides);
         }
+        if (shouldUpdateCPBuffers) {
+            const Int numPoints = controlPoints_.length();
+            core::Array<graphics::detail::ScreenSpaceInstanceData> pointInstData(
+                numPoints * 2);
+            const float dl = 1.f / numPoints;
+            for (Int i = 0; i < numPoints; ++i) {
+                geometry::Vec2f p = geometry::Vec2f(controlPoints_[i]);
+                core::Color strokeColor;
+                if (isSelected) {
+                    // Use gradient to visualize direction of the curve (from start to end)
+                    float l = i * dl;
+                    strokeColor = core::Color::hsl(210 + 90 * l, 1.0, 0.5);
+                    //(l > 0.5f ? 2 * (1.f - l) : 1.f), 0, (l < 0.5f ? 2 * l : 1.f));
+                }
+                else {
+                    // Use constant color
+                    strokeColor = colors::outline;
+                }
+                Int j = i * 2;
+                graphics::detail::ScreenSpaceInstanceData& inst0 = pointInstData[j];
+                graphics::detail::ScreenSpaceInstanceData& inst1 = pointInstData[j + 1];
+                inst0.position = p;
+                inst0.displacementScale = diskFillRadius + diskStrokeWidth;
+                inst0.color = strokeColor;
+                inst1.position = p;
+                inst1.displacementScale = diskFillRadius;
+                inst1.color = diskFillColor;
+            }
 
-        engine->updateBufferData(
-            controlPointsGeometry_->vertexBuffer(1), std::move(pointInstData));
+            engine->updateBufferData(
+                controlPointsGeometry_->vertexBuffer(1), std::move(pointInstData));
+        }
     }
 
     data.hasPendingColorChange_ = false;
@@ -593,7 +611,7 @@ void VacKeyEdge::onPaintDraw(
     if (flags.has(PaintOption::Selected)) {
         engine->setProgram(graphics::BuiltinProgram::ScreenSpaceDisplacement);
         engine->draw(graphics.selectionGeometry());
-        if (flags.has(PaintOption::Outline)) {
+        if (showCPs) {
             engine->drawInstanced(controlPointsGeometry_);
         }
     }
@@ -605,7 +623,9 @@ void VacKeyEdge::onPaintDraw(
     else {
         engine->setProgram(graphics::BuiltinProgram::ScreenSpaceDisplacement);
         engine->draw(graphics.centerlineGeometry());
-        engine->drawInstanced(controlPointsGeometry_);
+        if (showCPs) {
+            engine->drawInstanced(controlPointsGeometry_);
+        }
     }
 
     if (isPaintingOffsetLine0) {

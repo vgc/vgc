@@ -504,6 +504,7 @@ private:
     mutable VacKeyEdgeFrameData frameData_;
     geometry::Vec2dArray controlPoints_;
     mutable graphics::GeometryViewPtr controlPointsGeometry_;
+    mutable bool isLastDrawOfControlPointsSelected_ = false;
 
     geometry::CurveSamplingQuality edgeTesselationMode_ =
         geometry::CurveSamplingQuality::AdaptiveHigh;
