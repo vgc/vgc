@@ -38,9 +38,6 @@ double cubicEaseInOut(double t) {
 
 using CurveType = geometry::CurveType;
 
-constexpr CurveType openCurveType = CurveType::OpenCentripetalCatmullRom;
-constexpr CurveType closedCurveType = CurveType::ClosedCentripetalCatmullRom;
-
 } // namespace
 
 void FreehandEdgeGeometry::setPositions(const SharedConstPositions& positions) {
