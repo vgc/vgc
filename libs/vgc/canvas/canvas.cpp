@@ -721,11 +721,11 @@ void Canvas::onPaintDraw(graphics::Engine* engine, ui::PaintOptions options) {
     }
 
     for (workspace::Element* selectedElement : selectedElementsOrdered) {
-        workspace::PaintOptions options = workspace::PaintOption::Selected;
+        workspace::PaintOptions elementOptions = workspace::PaintOption::Selected;
         if (paintOutline) {
-            options.set(workspace::PaintOption::Outline);
+            elementOptions.set(workspace::PaintOption::Outline);
         }
-        selectedElement->paint(engine, {}, options);
+        selectedElement->paint(engine, {}, elementOptions);
     }
 
     engine->popViewMatrix();

@@ -197,7 +197,6 @@ void VacKeyVertex::onPaintDraw(
         inst1.position = posF;
         inst1.displacementScale = selectionDiskRadius;
         inst1.color = core::Color(1, 1, 1);
-        colors::selection;
 
         engine->updateBufferData(
             data.selectionGeometry_->vertexBuffer(1), std::move(pointInstData));
