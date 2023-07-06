@@ -686,6 +686,17 @@ void TopologyAwareTransformer::startDragTransform() {
             }
         }
     }
+
+    // Edges to snap
+    for (const KeyEdgeTransformData& td : edgesToSnap_) {
+        vacomplex::KeyEdge* ke = findKeyEdge_(td.elementId);
+        if (ke) {
+            vacomplex::KeyEdgeGeometry* geometry = ke->geometry();
+            if (geometry) {
+                geometry->startEdit();
+            }
+        }
+    }
 }
 
 void TopologyAwareTransformer::updateDragTransform(const geometry::Mat3d& transform) {
@@ -712,6 +723,18 @@ void TopologyAwareTransformer::updateDragTransform(const geometry::Mat3d& transf
             if (geometry) {
                 geometry->resetEdit();
                 geometry->transform(transform);
+            }
+        }
+    }
+
+    // Edges to snap
+    for (const KeyEdgeTransformData& td : edgesToSnap_) {
+        vacomplex::KeyEdge* ke = findKeyEdge_(td.elementId);
+        if (ke) {
+            vacomplex::KeyEdgeGeometry* geometry = ke->geometry();
+            if (geometry) {
+                geometry->resetEdit();
+                ke->snapGeometry();
             }
         }
     }
@@ -743,6 +766,18 @@ void TopologyAwareTransformer::updateDragTransform(const geometry::Vec2d& transl
             }
         }
     }
+
+    // Edges to snap
+    for (const KeyEdgeTransformData& td : edgesToSnap_) {
+        vacomplex::KeyEdge* ke = findKeyEdge_(td.elementId);
+        if (ke) {
+            vacomplex::KeyEdgeGeometry* geometry = ke->geometry();
+            if (geometry) {
+                geometry->resetEdit();
+                ke->snapGeometry();
+            }
+        }
+    }
 }
 
 void TopologyAwareTransformer::finalizeDragTransform() {
@@ -765,7 +800,10 @@ void TopologyAwareTransformer::finalizeDragTransform() {
     for (const KeyEdgeTransformData& td : edgesToSnap_) {
         vacomplex::KeyEdge* ke = findKeyEdge_(td.elementId);
         if (ke) {
-            ke->snapGeometry();
+            vacomplex::KeyEdgeGeometry* geometry = ke->geometry();
+            if (geometry) {
+                geometry->finishEdit();
+            }
         }
     }
 
