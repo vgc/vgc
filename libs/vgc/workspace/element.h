@@ -56,7 +56,7 @@ namespace vgc::workspace {
 // We can identify some reusable buffers (all times or specific time but all renderers):
 //    mesh vertices
 //    mesh indices
-//    parametrization
+//    parameterization
 //    outline strip
 //    color buffers
 //    gradient params (gradient palette ?)

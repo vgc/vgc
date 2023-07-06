@@ -58,6 +58,12 @@ VGC_UI_DEFINE_MOUSE_DRAG_COMMAND( //
     Shortcut(ModifierKey::Shift, MouseButton::Left))
 
 VGC_UI_DEFINE_MOUSE_DRAG_COMMAND( //
+    width,
+    "tools.sculpt.width",
+    "Sculpt Width",
+    Shortcut(ModifierKey::Alt, MouseButton::Left))
+
+VGC_UI_DEFINE_MOUSE_DRAG_COMMAND( //
     editRadius,
     "tools.sculpt.editRadius",
     "Edit Sculpt Radius",
@@ -147,6 +153,193 @@ public:
                         pixelSize,
                         ke->isClosed());
                     tool_->setActionCircleCenter(grabbedPoint);
+                    tool_->setActionCircleEnabled(true);
+                }
+            }
+        }
+
+        // Close operation
+        if (undoGroup) {
+            bool amend = canAmendUndoGroup_ && undoGroup->parent()
+                         && undoGroup->parent()->name() == actionName();
+            undoGroup->close(amend);
+            canAmendUndoGroup_ = true;
+        }
+    }
+
+    void onMouseDragConfirm(ui::MouseEvent* /*event*/) override {
+        if (edgeId_ == -1) {
+            return;
+        }
+
+        canvas::Canvas* canvas = tool_->canvas();
+        workspace::Workspace* workspace = tool_->workspace();
+        if (!canvas || !workspace) {
+            return;
+        }
+
+        // Open history group
+        core::UndoGroup* undoGroup = nullptr;
+        core::History* history = workspace->history();
+        if (history) {
+            undoGroup = history->createUndoGroup(actionName());
+        }
+
+        workspace::Element* element = workspace->find(edgeId_);
+        if (element && element->vacNode() && element->vacNode()->isCell()) {
+            vacomplex::KeyEdge* ke = element->vacNode()->toCellUnchecked()->toKeyEdge();
+            if (ke) {
+                vacomplex::KeyEdgeGeometry* geometry = ke->geometry();
+                if (geometry) {
+                    geometry->finishEdit();
+                }
+            }
+        }
+
+        // Close operation
+        if (undoGroup) {
+            bool amend = canAmendUndoGroup_ && undoGroup->parent()
+                         && undoGroup->parent()->name() == actionName();
+            undoGroup->close(amend);
+            canAmendUndoGroup_ = true;
+        }
+
+        tool_->setActionCircleEnabled(false);
+        reset_();
+    }
+
+    void onMouseDragCancel(ui::MouseEvent* /*event*/) override {
+        if (edgeId_ == -1) {
+            return;
+        }
+
+        canvas::Canvas* canvas = tool_->canvas();
+        workspace::Workspace* workspace = tool_->workspace();
+        if (!canvas || !workspace) {
+            return;
+        }
+
+        workspace::Element* element = workspace->find(edgeId_);
+        if (element && element->vacNode() && element->vacNode()->isCell()) {
+            vacomplex::KeyEdge* ke = element->vacNode()->toCellUnchecked()->toKeyEdge();
+            if (ke) {
+                vacomplex::KeyEdgeGeometry* geometry = ke->geometry();
+                if (geometry) {
+                    geometry->resetEdit();
+                    geometry->finishEdit();
+                }
+            }
+        }
+
+        tool_->setActionCircleEnabled(false);
+        reset_();
+    }
+
+    void reset_() {
+        canAmendUndoGroup_ = false;
+        started_ = false;
+        edgeId_ = -1;
+    }
+
+public:
+    Sculpt* tool_ = nullptr;
+    bool canAmendUndoGroup_ = false;
+    bool started_ = false;
+    core::Id edgeId_ = -1;
+    geometry::Vec2f cursorPositionAtPress_;
+    geometry::Vec2f cursorPosition_;
+    geometry::Vec2d grabbedPoint_;
+
+    core::StringId actionName() const {
+        static core::StringId actionName_("Sculpt Grab");
+        return actionName_;
+    }
+};
+
+VGC_DECLARE_OBJECT(SculptWidthAction);
+
+class SculptWidthAction : public ui::Action {
+private:
+    VGC_OBJECT(SculptWidthAction, ui::Action)
+
+protected:
+    /// This is an implementation details.
+    /// Please use `SculptWidthAction::create()` instead.
+    ///
+    SculptWidthAction()
+        : ui::Action(commands::width) {
+    }
+
+public:
+    /// Creates a `SculptWidthAction`.
+    ///
+    static SculptWidthActionPtr create() {
+        return SculptWidthActionPtr(new SculptWidthAction());
+    }
+
+public:
+    void onMouseDragStart(ui::MouseEvent* event) override {
+        cursorPositionAtPress_ = event->position();
+        edgeId_ = tool_->candidateId();
+    }
+
+    void onMouseDragMove(ui::MouseEvent* event) override {
+        if (edgeId_ == -1) {
+            return;
+        }
+
+        canvas::Canvas* canvas = tool_->canvas();
+        workspace::Workspace* workspace = tool_->workspace();
+        if (!canvas || !workspace) {
+            return;
+        }
+
+        cursorPosition_ = event->position();
+
+        geometry::Mat4d inverseViewMatrix = canvas->camera().viewMatrix().inverted();
+
+        float pixelSize = static_cast<float>(
+            (inverseViewMatrix.transformPointAffine(geometry::Vec2d(0, 1))
+             - inverseViewMatrix.transformPointAffine(geometry::Vec2d(0, 0)))
+                .length());
+
+        geometry::Vec2d cursorPositionInWorkspaceAtPress =
+            inverseViewMatrix.transformPointAffine(
+                geometry::Vec2d(cursorPositionAtPress_));
+
+        geometry::Vec2f deltaCursor = cursorPosition_ - cursorPositionAtPress_;
+        double sinAngle = deltaCursor.normalized().det(geometry::Vec2f(1, 0));
+        double delta = (cursorPosition_ - cursorPositionAtPress_).x();
+        delta *= (1 + sinAngle);
+
+        // Open history group
+        core::UndoGroup* undoGroup = nullptr;
+        core::History* history = workspace->history();
+        if (history) {
+            undoGroup = history->createUndoGroup(actionName());
+        }
+
+        // Translate Vertices
+        workspace::Element* element = workspace->find(edgeId_);
+        if (element && element->vacNode() && element->vacNode()->isCell()) {
+            vacomplex::KeyEdge* ke = element->vacNode()->toCellUnchecked()->toKeyEdge();
+            if (ke) {
+                vacomplex::KeyEdgeGeometry* geometry = ke->geometry();
+                if (geometry) {
+                    if (started_) {
+                        geometry->resetEdit();
+                    }
+                    else {
+                        geometry->startEdit();
+                        started_ = true;
+                    }
+                    geometry::Vec2d closestPoint = geometry->sculptWidth(
+                        cursorPositionInWorkspaceAtPress,
+                        delta,
+                        options::sculptRadius()->value(),
+                        pixelSize,
+                        ke->isClosed());
+                    tool_->setActionCircleCenter(closestPoint);
                     tool_->setActionCircleEnabled(true);
                 }
             }
@@ -434,25 +627,25 @@ public:
     }
 };
 
-VGC_DECLARE_OBJECT(EditSculptRadiusAction);
+VGC_DECLARE_OBJECT(SculptEditRadiusAction);
 
-class EditSculptRadiusAction : public ui::Action {
+class SculptEditRadiusAction : public ui::Action {
 private:
-    VGC_OBJECT(EditSculptRadiusAction, ui::Action)
+    VGC_OBJECT(SculptEditRadiusAction, ui::Action)
 
 protected:
     /// This is an implementation details.
-    /// Please use `EditSculptRadiusAction::create()` instead.
+    /// Please use `SculptEditRadiusAction::create()` instead.
     ///
-    EditSculptRadiusAction()
-        : ui::Action(commands::editRadius) {
+    SculptEditRadiusAction()
+        : ui::Action(commands::width) {
     }
 
 public:
-    /// Creates a `EditSculptRadiusAction`.
+    /// Creates a `SculptEditRadiusAction`.
     ///
-    static EditSculptRadiusActionPtr create() {
-        return EditSculptRadiusActionPtr(new EditSculptRadiusAction());
+    static SculptEditRadiusActionPtr create() {
+        return SculptEditRadiusActionPtr(new SculptEditRadiusAction());
     }
 
 public:
@@ -495,9 +688,11 @@ Sculpt::Sculpt()
 
     auto grabAction = createAction<SculptGrabAction>();
     grabAction->tool_ = this;
+    //auto widthAction = createAction<SculptWidthAction>();
+    //widthAction->tool_ = this;
     auto smoothAction = createAction<SculptSmoothAction>();
     smoothAction->tool_ = this;
-    auto editRadiusAction = createAction<EditSculptRadiusAction>();
+    auto editRadiusAction = createAction<SculptEditRadiusAction>();
     editRadiusAction->tool_ = this;
 }
 

@@ -1,21 +1,30 @@
 <?xml version="1.0" encoding="utf-8"?>
 <AutoVisualizer xmlns="http://schemas.microsoft.com/vstudio/debugger/natvis/2010">
-  <Type Name="vgc::core::Array&lt;*&gt;">
-    <DisplayString>{{length={length_} reserved={reservedLength_}}}</DisplayString>
-    <Expand>
-      <ArrayItems>
-        <Size>length_</Size>
-        <ValuePointer>data_</ValuePointer>
-      </ArrayItems>
-    </Expand>
-  </Type>
-  <Type Name="vgc::core::ObjPtr&lt;*&gt;">
-    <DisplayString>{{refCount={obj_->refCount_} obj={obj_}}}</DisplayString>
-    <Expand>
-      <ExpandedItem>obj_</ExpandedItem>
-    </Expand>
-  </Type>
-  <Type Name="vgc::core::StringId">
-    <DisplayString>{*stringPtr_} (id={(void*)stringPtr_})</DisplayString>
-  </Type>
+    <Type Name="vgc::core::Array&lt;*&gt;">
+        <DisplayString>{{length={length_} reserved={reservedLength_}}}</DisplayString>
+        <Expand>
+            <ArrayItems>
+                <Size>length_</Size>
+                <ValuePointer>data_</ValuePointer>
+            </ArrayItems>
+        </Expand>
+    </Type>
+    <Type Name="vgc::core::Span&lt;*&gt;">
+        <DisplayString>{{length={pair_.length}}}</DisplayString>
+        <Expand>
+            <ArrayItems>
+                <Size>pair_.length</Size>
+                <ValuePointer>pair_.ptr</ValuePointer>
+            </ArrayItems>
+        </Expand>
+    </Type>
+    <Type Name="vgc::core::ObjPtr&lt;*&gt;">
+        <DisplayString>{{refCount={obj_->refCount_} obj={obj_}}}</DisplayString>
+        <Expand>
+            <ExpandedItem>obj_</ExpandedItem>
+        </Expand>
+    </Type>
+    <Type Name="vgc::core::StringId">
+        <DisplayString>{*stringPtr_} (id={(void*)stringPtr_})</DisplayString>
+    </Type>
 </AutoVisualizer>

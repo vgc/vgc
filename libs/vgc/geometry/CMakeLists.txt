@@ -38,9 +38,11 @@ vgc_add_library(geometry
         vec3f.h
         vec4d.h
         vec4f.h
+        yuksel.h
 
     CPP_SOURCE_FILES
         camera2d.cpp
+        catmullrom.cpp
         curve.cpp
         curves2d.cpp
         logcategories.cpp
@@ -62,6 +64,7 @@ vgc_add_library(geometry
         vec3f.cpp
         vec4d.cpp
         vec4f.cpp
+        yuksel.cpp
 
     NATVIS_FILES
         tools/vgcgeometry.natvis

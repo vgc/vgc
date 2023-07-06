@@ -25,6 +25,10 @@ namespace vgc::workspace {
 
 class VGC_WORKSPACE_API EdgeGeometry : public vacomplex::KeyEdgeGeometry {
 public:
+    EdgeGeometry(bool isClosed)
+        : vacomplex::KeyEdgeGeometry(isClosed) {
+    }
+
     std::shared_ptr<EdgeGeometry> cloneWorkspaceEdgeGeometry() {
         return std::static_pointer_cast<EdgeGeometry>(clone());
     }

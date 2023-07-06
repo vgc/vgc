@@ -391,18 +391,19 @@ void VacKeyVertex::computeJoin_() {
         }
         else {
             geometry::StrokeSample2d sample = samples.getUnchecked(numSamples - 1);
-            heData.halfwidths_[0] = sample.halfwidth(1);
-            heData.halfwidths_[1] = sample.halfwidth(0);
-            heData.joinSample_ = geometry::StrokeSample2d(
-                sample.position(), -sample.normal(), heData.halfwidths_, 0);
+            sample.reverseTangent();
+            sample.swapHalfwidths();
+            sample.setS(0);
+
             geometry::StrokeSample2d previousSample =
                 samples.getUnchecked(numSamples - 2);
-            geometry::Vec2d previousHw = previousSample.halfwidths();
-            heData.joinPreviousSample_ = geometry::StrokeSample2d(
-                previousSample.position(),
-                -previousSample.normal(),
-                geometry::Vec2d(previousHw[1], previousHw[0]),
-                sample.s() - previousSample.s());
+            previousSample.reverseTangent();
+            previousSample.swapHalfwidths();
+            previousSample.setS(sample.s() - previousSample.s());
+
+            heData.halfwidths_ = sample.halfwidths();
+            heData.joinSample_ = sample;
+            heData.joinPreviousSample_ = previousSample;
         }
     }
 
@@ -529,8 +530,8 @@ void VacKeyVertex::computeJoin_() {
             else { // !isCircular
                 constexpr double oneThird = 1.0 / 3.0;
 
-                Vec2d sp0 = joinSample.sidePoint(0);
-                Vec2d sp1 = joinSample.sidePoint(1);
+                Vec2d sp0 = joinSample.offsetPoint(0);
+                Vec2d sp1 = joinSample.offsetPoint(1);
                 Vec2d halfwidths = joinSample.halfwidths();
 
                 const vacomplex::EdgeSampling* sampling =
@@ -572,8 +573,8 @@ void VacKeyVertex::computeJoin_() {
 
                     bool isT0Valid = false;
                     bool isT1Valid = false;
-                    t0 = (sp0 - joinSamplePrev.sidePoint(0)).normalized(&isT0Valid);
-                    t1 = (sp1 - joinSamplePrev.sidePoint(1)).normalized(&isT1Valid);
+                    t0 = (sp0 - joinSamplePrev.offsetPoint(0)).normalized(&isT0Valid);
+                    t1 = (sp1 - joinSamplePrev.offsetPoint(1)).normalized(&isT1Valid);
 
                     // fix-up tangents if there is a cusp
                     if (!isT0Valid) {
@@ -613,8 +614,7 @@ void VacKeyVertex::computeJoin_() {
                     Int i = 0;
                     for (; i < numPoints; ++i) {
                         double u = static_cast<double>(i + 1) / (numPoints + 1);
-                        Vec2d p =
-                            geometry::cubicBezierPosCasteljau<Vec2d>(controlPoints, u);
+                        Vec2d p = geometry::cubicBezierCasteljau<Vec2d>(controlPoints, u);
                         Vec2d op = p - capOrigin;
                         double side = op.dot(normal);
                         if (side < 0) {
@@ -635,8 +635,7 @@ void VacKeyVertex::computeJoin_() {
                     }
                     for (; i < numPoints; ++i) {
                         double u = static_cast<double>(i + 1) / (numPoints + 1);
-                        Vec2d p =
-                            geometry::cubicBezierPosCasteljau<Vec2d>(controlPoints, u);
+                        Vec2d p = geometry::cubicBezierCasteljau<Vec2d>(controlPoints, u);
                         points.append(p);
                     }
                 }
@@ -942,12 +941,12 @@ void VacKeyVertex::computeJoin_() {
                             geometry::lerp(*previousIt, *it, tStop);
                         const double distance =
                             (vertexPosition - mergeSample.position()).length();
-                        workingSamples.emplaceLast(
-                            mergeSample.position(),
-                            -mergeSample.normal(),
-                            geometry::Vec2d(
-                                mergeSample.halfwidth(1), mergeSample.halfwidth(0)),
-                            endS - mergeSample.s());
+                        geometry::StrokeSample2d& newSample =
+                            workingSamples.emplaceLast(mergeSample);
+                        newSample.setS(endS - mergeSample.s());
+                        newSample.reverseTangent();
+                        newSample.swapHalfwidths();
+
                         patchLength = (std::min)(patchLengthLimit, distance);
                         detail::EdgeJoinPatchMergeLocation& mergeLocation =
                             heData.edgeData_->patches_[1].mergeLocation;
@@ -957,11 +956,11 @@ void VacKeyVertex::computeJoin_() {
                         break;
                     }
                     else {
-                        workingSamples.emplaceLast(
-                            sample.position(),
-                            -sample.normal(),
-                            geometry::Vec2d(sample.halfwidth(1), sample.halfwidth(0)),
-                            s);
+                        geometry::StrokeSample2d& newSample =
+                            workingSamples.emplaceLast(sample);
+                        newSample.setS(s);
+                        newSample.reverseTangent();
+                        newSample.swapHalfwidths();
                         previousSqDist = sqDist;
                     }
                 }
@@ -1136,9 +1135,9 @@ void VacKeyVertex::computeJoin_() {
                         const double ot = 1 - t;
                         geometry::StrokeSample2d newSample(
                             centerBorder.pointAt(d),
-                            centerBorderNormal,
-                            previousIt->halfwidths() * ot + it->halfwidths() * t,
-                            sFilletMax);
+                            -centerBorderNormal.orthogonalized(),
+                            previousIt->halfwidths() * ot + it->halfwidths() * t);
+                        newSample.setS(sFilletMax);
                         it = workingSamples.emplace(it, newSample);
                         previousIt = it++;
                         break;
@@ -1146,7 +1145,7 @@ void VacKeyVertex::computeJoin_() {
                     double ts = s / sMax;
                     double d = ts * halfedgeData.patchLength_;
                     it->setPosition(centerBorder.pointAt(d));
-                    it->setNormal(centerBorderNormal);
+                    it->setTangent(-centerBorderNormal.orthogonalized());
                     geometry::Vec2f hwf(it->halfwidths());
                     if (s == sFilletMax) {
                         previousIt = it++;
@@ -1163,8 +1162,9 @@ void VacKeyVertex::computeJoin_() {
                         const double ot = 1 - t;
                         Vec2d rayPoint = centerBorder.pointAt(d);
                         it->setPosition(rayPoint * ot + it->position() * t);
-                        it->setNormal(
-                            (centerBorderNormal * ot + it->normal() * t).normalized());
+                        it->setTangent(-(centerBorderNormal * ot + it->normal() * t)
+                                            .normalized()
+                                            .orthogonalized());
                     }
                 }
             }
