@@ -382,11 +382,17 @@ public:
     ///
     /// Returns false if the event is `EndDocument`, otherwise return true.
     ///
+    /// Exceptions:
+    /// - `XmlSyntaxError` if encountered not well-formed XML data.
+    ///
     bool readNext();
 
     /// Reads the next `StartElement` or `EndDocument` event.
     ///
     /// Returns false if the event is `EndDocument` , otherwise return true.
+    ///
+    /// Exceptions:
+    /// - `XmlSyntaxError` if encountered not well-formed XML data.
     ///
     bool readNextStartElement();
 
@@ -403,6 +409,7 @@ public:
     /// go up the stack of unclosed `StartElement`.
     ///
     /// Exceptions:
+    /// - `XmlSyntaxError` if encountered not well-formed XML data.
     /// - `LogicError` if no `StartElement` event has been reported yet
     /// - `LogicError` if all reported `StartElement` have already had their
     ///   corresponding `EndElement` reported.
