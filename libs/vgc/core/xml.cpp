@@ -1316,7 +1316,7 @@ XmlStreamReader XmlStreamReader::fromFile(std::string_view filePath) {
 }
 
 XmlStreamReader::XmlStreamReader(const XmlStreamReader& other)
-    : impl_() {
+    : impl_(std::make_unique<detail::XmlStreamReaderImpl>(*other.impl())) {
 }
 
 XmlStreamReader::XmlStreamReader(XmlStreamReader&&) noexcept = default;
