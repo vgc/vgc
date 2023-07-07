@@ -140,8 +140,12 @@ public:
     // Whether the StartElement is a start tag (<b>) or empty element tag (<img/>)
     bool isEmptyElementTag = {};
 
-    // Whether a root element has been found
+    // Whether a root element has been found, and what's its name.
     bool hasRootElement = false;
+    std::string_view rootElementName;
+
+    // Stack of nested current element names
+    core::Array<std::string_view> elementStack;
 
     // Characters
     std::string characters;
@@ -290,22 +294,25 @@ private:
 
     bool readNext_() {
 
-        // Return false if we're at the end
-        if (cursor == end) {
-            // TODO: throw if we haven't found the root element:
-            //       https://www.w3.org/TR/xml/#NT-document
-            //       document ::= prolog element Misc*
-            eventType = XmlEventType::EndDocument;
-            return false;
+        // Note: the following order of `if...else if...else if...` matters.
+        //
+        // For example, if we both have `cursor == end` and `eventType ==
+        // NoEvent`, it is important to call `readStartDocument_()`, which will
+        // read nothing and set the eventType to `StartDocument`. Then on the
+        // next readNext(), we will call `onEndDocument_()`, which will read
+        // nothing and set the eventType to `EndDocument`.
+        //
+        if (eventType == XmlEventType::EndDocument) {
+            // Already reached the end: nothing to do
         }
-
-        // Otherwise, read something and return true
-        if (eventType == XmlEventType::NoEvent) {
-            eventType = XmlEventType::StartDocument;
+        else if (eventType == XmlEventType::NoEvent) {
             readStartDocument_();
         }
         else if (eventType == XmlEventType::StartElement && isEmptyElementTag) {
-            eventType = XmlEventType::EndElement;
+            onEndElement_();
+        }
+        else if (cursor == end) {
+            onEndDocument_();
         }
         else {
             char c;
@@ -318,7 +325,7 @@ private:
                 readCharacters_();
             }
         }
-        return true;
+        return eventType != XmlEventType::EndDocument;
     }
 
     void readWhitespaces_() {
@@ -338,6 +345,8 @@ private:
     //  [27] Misc         ::= Comment | PI | S
 
     void readStartDocument_() {
+
+        eventType = XmlEventType::StartDocument;
 
         // Checks whether the document starts with `<?xml` followed by a
         // whitespace character (6 characters total). The whitespace character
@@ -612,6 +621,7 @@ private:
             }
             else if (c == '/') {
                 readEndTag_();
+                onEndElement_();
             }
             else if (c == '!') {
                 if (peek(2) == "--") {
@@ -635,6 +645,7 @@ private:
             }
             else {
                 readStartTag_(c);
+                onStartElement_();
             }
         }
         else {
@@ -777,9 +788,6 @@ private:
     // Read from '<c' (not included) to matching '>' or '/>' (included)
     void readStartTag_(char c) {
 
-        eventType = XmlEventType::StartElement;
-        hasRootElement = true;
-
         isEmptyElementTag = false;
         bool isEndTag = false;
         bool isAngleBracketClosed = readTagName_(c, isEndTag);
@@ -849,7 +857,6 @@ private:
                                  "Expected tag name.");
         }
 
-        eventType = XmlEventType::EndElement;
         bool isEndTag = true;
         bool isAngleBracketClosed = readTagName_(c, isEndTag);
 
@@ -873,6 +880,58 @@ private:
                 "Unexpected end-of-file while reading end tag '{}'. "
                 "Expected whitespaces or '>'.",
                 name()));
+        }
+    }
+
+    // Set event type and check well-formed constraints when reaching StartElement
+    void onStartElement_() {
+        eventType = XmlEventType::StartElement;
+        if (elementStack.isEmpty()) {
+            if (hasRootElement) {
+                throw XmlSyntaxError(format(
+                    "Unexpected second root element '{}'. A root element '{}' has "
+                    "already been defined, and there cannot be more than one.",
+                    name(),
+                    rootElementName));
+            }
+            else {
+                hasRootElement = true;
+                rootElementName = name();
+            }
+        }
+        elementStack.append(name());
+    }
+
+    // Set event type and check well-formed constraints when reaching EndElement
+    void onEndElement_() {
+        eventType = XmlEventType::EndElement;
+        if (elementStack.isEmpty()) {
+            throw XmlSyntaxError(format(
+                "Unexpected end tag '{}'. "
+                "It does not have a matching start tag.",
+                name()));
+        }
+        else if (elementStack.last() != name()) {
+            throw XmlSyntaxError(format(
+                "Unexpected end tag '{}'. "
+                "Its matching start tag '{}' has a different name.",
+                name(),
+                elementStack.last()));
+        }
+        elementStack.removeLast();
+    }
+
+    // Set event type and check well-formed constraints when reaching EndDocument
+    void onEndDocument_() {
+        eventType = XmlEventType::EndDocument;
+        if (!elementStack.isEmpty()) {
+            throw XmlSyntaxError(format(
+                "Unexpected end of document while start element '{}' "
+                "still not closed.",
+                elementStack.last()));
+        }
+        else if (!hasRootElement) {
+            throw XmlSyntaxError("Unexpected end of document with no root element");
         }
     }
 

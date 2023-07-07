@@ -28,6 +28,68 @@ xmlExample = """<?xml version="1.0" encoding="UTF-8"?>
 </vgc>
 """
 
+svgInkscapeExample= """<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<svg
+   xmlns:dc="http://purl.org/dc/elements/1.1/"
+   xmlns:cc="http://creativecommons.org/ns#"
+   xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+   xmlns:svg="http://www.w3.org/2000/svg"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   sodipodi:docname="test-icon.svg"
+   inkscape:version="1.0rc1 (09960d6, 2020-04-09)"
+   id="svg8"
+   version="1.1"
+   viewBox="0 0 210 297"
+   height="297mm"
+   width="210mm">
+  <defs
+     id="defs2" />
+  <sodipodi:namedview
+     inkscape:window-maximized="0"
+     inkscape:window-y="52"
+     inkscape:window-x="1378"
+     inkscape:window-height="943"
+     inkscape:window-width="1252"
+     showgrid="false"
+     inkscape:document-rotation="0"
+     inkscape:current-layer="layer1"
+     inkscape:document-units="mm"
+     inkscape:cy="445.71429"
+     inkscape:cx="400"
+     inkscape:zoom="0.35"
+     inkscape:pageshadow="2"
+     inkscape:pageopacity="0.0"
+     borderopacity="1.0"
+     bordercolor="#666666"
+     pagecolor="#ffffff"
+     id="base" />
+  <metadata
+     id="metadata5">
+    <rdf:RDF>
+      <cc:Work
+         rdf:about="">
+        <dc:format>image/svg+xml</dc:format>
+        <dc:type
+           rdf:resource="http://purl.org/dc/dcmitype/StillImage" />
+        <dc:title></dc:title>
+      </cc:Work>
+    </rdf:RDF>
+  </metadata>
+  <g
+     id="layer1"
+     inkscape:groupmode="layer"
+     inkscape:label="Layer 1">
+    <path
+       inkscape:connector-curvature="0"
+       id="path833"
+       d="m 21.166666,35.52976 5.291667,-12.095236 6.047618,12.851191 H 44.60119 l -9.07143,9.827379 3.779764,11.339287 -13.607143,-6.803572 -11.339286,4.535714 4.535714,-9.827381 -9.0714282,-9.827382 z"
+       style="fill:#000000;stroke:#000000;stroke-width:0.26458300000000001px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1" />
+  </g>
+</svg>
+"""
+
 # Useful for testing
 def printRawText(xmlData):
     xml = XmlStreamReader(xmlData)
@@ -300,6 +362,63 @@ class TestXmlStreamReader(unittest.TestCase):
             if xml.eventType == XmlEventType.ProcessingInstruction:
                 self.assertEqual(xml.processingInstructionTarget, 'php')
                 self.assertEqual(xml.processingInstructionData, ' echo "Hello World!"; ')
+
+    def testNoRootElement(self):
+        xml = XmlStreamReader('')
+        xml.readNext()
+        self.assertEqual(xml.eventType, XmlEventType.StartDocument)
+        self.assertRaises(ParseError, xml.readNext)
+
+    def testSecondRootError(self):
+        xml = XmlStreamReader('<a></a><b></b>')
+        xml.readNext()
+        self.assertEqual(xml.eventType, XmlEventType.StartDocument)
+        xml.readNext()
+        self.assertEqual(xml.eventType, XmlEventType.StartElement)
+        xml.readNext()
+        self.assertEqual(xml.eventType, XmlEventType.EndElement)
+        self.assertRaises(ParseError, xml.readNext)
+
+    def testElementStartEndMismatchError(self):
+        xml = XmlStreamReader('<a><b></a>')
+        xml.readNext()
+        self.assertEqual(xml.eventType, XmlEventType.StartDocument)
+        xml.readNext()
+        self.assertEqual(xml.eventType, XmlEventType.StartElement)
+        xml.readNext()
+        self.assertEqual(xml.eventType, XmlEventType.StartElement)
+        self.assertRaises(ParseError, xml.readNext)
+
+    def testElementNotStartedError1(self):
+        xml = XmlStreamReader('</a>')
+        xml.readNext()
+        self.assertEqual(xml.eventType, XmlEventType.StartDocument)
+        self.assertRaises(ParseError, xml.readNext)
+
+    def testElementNotStartedError2(self):
+        xml = XmlStreamReader('<a></a></b>')
+        xml.readNext()
+        self.assertEqual(xml.eventType, XmlEventType.StartDocument)
+        xml.readNext()
+        self.assertEqual(xml.eventType, XmlEventType.StartElement)
+        xml.readNext()
+        self.assertEqual(xml.eventType, XmlEventType.EndElement)
+        self.assertRaises(ParseError, xml.readNext)
+
+    def testElementNotEndedError(self):
+        xml = XmlStreamReader('<a>')
+        xml.readNext()
+        self.assertEqual(xml.eventType, XmlEventType.StartDocument)
+        xml.readNext()
+        self.assertEqual(xml.eventType, XmlEventType.StartElement)
+        self.assertRaises(ParseError, xml.readNext)
+
+    def testInkscapeFile(self):
+        xml = XmlStreamReader(svgInkscapeExample)
+        self.assertTrue(xml.readNext())
+        while xml.readNext():
+            pass
+        self.assertFalse(xml.readNext())
 
 
 if __name__ == '__main__':
