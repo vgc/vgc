@@ -364,7 +364,7 @@ public:
 
     /// Move-constructs an `XmlStreamReader`.
     ///
-    XmlStreamReader(XmlStreamReader&& other);
+    XmlStreamReader(XmlStreamReader&& other) noexcept;
 
     /// Copy-assigns an `XmlStreamReader`.
     ///
@@ -372,18 +372,42 @@ public:
 
     /// Move-assigns an `XmlStreamReader`.
     ///
-    XmlStreamReader& operator=(XmlStreamReader&& other);
+    XmlStreamReader& operator=(XmlStreamReader&& other) noexcept;
 
     /// Destructs this `XmlStreamReader`.
     ///
     ~XmlStreamReader();
 
-    /// Reads the next token.
+    /// Reads until the next event.
     ///
-    /// Returns false if the token is `EndDocument` or `Invalid`, otherwise
-    /// return true.
+    /// Returns false if the event is `EndDocument`, otherwise return true.
     ///
-    bool readNext() const;
+    bool readNext();
+
+    /// Reads the next `StartElement` or `EndDocument` event.
+    ///
+    /// Returns false if the event is `EndDocument` , otherwise return true.
+    ///
+    bool readNextStartElement();
+
+    /// Skips the current element, that is, keeps reading until the
+    /// `EndElement` event that closes the element is reached.
+    ///
+    /// You would typically call this function on response to a `StartElement`
+    /// event whose `name` is an unsupported element, in order to skip it as
+    /// well as all its children.
+    ///
+    /// After calling this function, `eventType()` is equal to `EndElement`,
+    /// and the new current element becomes the parent of the previous current
+    /// element. This means that if you call `skipElement()` successively, you
+    /// go up the stack of unclosed `StartElement`.
+    ///
+    /// Exceptions:
+    /// - `LogicError` if no `StartElement` event has been reported yet
+    /// - `LogicError` if all reported `StartElement` have already had their
+    ///   corresponding `EndElement` reported.
+    ///
+    void skipElement();
 
     /// Returns the type of the token that has just been read.
     ///
@@ -604,6 +628,14 @@ public:
 
 private:
     std::unique_ptr<detail::XmlStreamReaderImpl> impl_;
+
+    const detail::XmlStreamReaderImpl* impl() const {
+        return impl_.get();
+    }
+
+    detail::XmlStreamReaderImpl* impl() {
+        return impl_.get();
+    }
 };
 
 } // namespace vgc::core

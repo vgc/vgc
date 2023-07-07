@@ -59,6 +59,8 @@ void wrap_XmlStringReader(py::module& m) {
         .def(py::init<std::string_view>())
         .def_static("fromFile", &This::fromFile)
         .def("readNext", &This::readNext)
+        .def("readNextStartElement", &This::readNextStartElement)
+        .def("skipElement", &This::skipElement)
         .def_property_readonly("eventType", &This::eventType)
         .def_property_readonly("rawText", &This::rawText)
         .def_property_readonly("hasXmlDeclaration", &This::hasXmlDeclaration)

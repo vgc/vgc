@@ -111,6 +111,26 @@ class TestXmlStreamReader(unittest.TestCase):
             pass
         self.assertFalse(xml.readNext())
 
+    def testReadNextStartElement(self):
+        expectedNames = ['vgc', 'b', 'path']
+        names = []
+        xml = XmlStreamReader(xmlExample)
+        while xml.readNextStartElement():
+            names.append(xml.name)
+        self.assertEqual(names, expectedNames)
+
+    def testSkipElement(self):
+        expectedNames = ['svg', 'defs', 'sodipodi:namedview', 'g', 'path']
+        names = []
+        xml = XmlStreamReader(svgInkscapeExample)
+        while xml.readNextStartElement():
+            if xml.name == 'metadata':
+                xml.skipElement()
+                self.assertEqual(xml.eventType, XmlEventType.EndElement)
+            else:
+                names.append(xml.name)
+        self.assertEqual(names, expectedNames)
+
     def testEventType(self):
         xml = XmlStreamReader('<?xml version="1.0"?><!--bar--><?php?><b>foo</b>')
         eventTypes = []
@@ -412,13 +432,6 @@ class TestXmlStreamReader(unittest.TestCase):
         xml.readNext()
         self.assertEqual(xml.eventType, XmlEventType.StartElement)
         self.assertRaises(ParseError, xml.readNext)
-
-    def testInkscapeFile(self):
-        xml = XmlStreamReader(svgInkscapeExample)
-        self.assertTrue(xml.readNext())
-        while xml.readNext():
-            pass
-        self.assertFalse(xml.readNext())
 
 
 if __name__ == '__main__':
