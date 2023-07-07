@@ -26,7 +26,9 @@ namespace vgc::workspace {
 ///
 namespace colors {
 
+// TODO: make these user-customizable
 const core::Color selection = core::Color(0.0f, 0.7f, 1.0f, 1.0f);
+const core::Color outline = core::Color(1.0f, 0.3f, 0.3f, 1.0f);
 
 } // namespace colors
 

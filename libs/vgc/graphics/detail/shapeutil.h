@@ -27,7 +27,7 @@ namespace vgc::graphics::detail {
 struct ScreenSpaceInstanceData {
     // XYRotWRGBA
     geometry::Vec2f position = {};
-    float isRotationEnabled = 1.f;
+    float isRotationEnabled = 0.f;
     float displacementScale = 1.f;
     core::Color color = {0, 0, 0, 1};
 };
@@ -48,6 +48,8 @@ VGC_GRAPHICS_API GeometryViewPtr createScreenSpaceDisk(
     float radius,
     const core::Color& color,
     Int numSides = 128);
+
+VGC_GRAPHICS_API GeometryViewPtr createScreenSpaceDisk(Engine* engine, Int numSides);
 
 VGC_GRAPHICS_API void updateScreenSpaceDisk(
     Engine* engine,
