@@ -130,15 +130,7 @@ private:
 
         if (currentNode_->nodeType() == NodeType::Document) {
             Document* doc = Document::cast(currentNode_);
-            if (doc->rootElement()) {
-                throw XmlSyntaxError(
-                    "Unexpected second root element '" + tagName_ + "'. A root element '"
-                    + doc->rootElement()->tagName().string()
-                    + "' has already been defined, and there cannot be more than one.");
-            }
-            else {
-                currentNode_ = Element::create(doc, tagName_);
-            }
+            currentNode_ = Element::create(doc, tagName_);
         }
         else if (currentNode_->nodeType() == NodeType::Element) {
             Element* element = Element::cast(currentNode_);
@@ -149,7 +141,7 @@ private:
             // the future when adding more node types, or when restricting
             // in the schema which elements are allowed to be children of other
             // elements.
-            throw XmlSyntaxError(
+            throw VgcSyntaxError(
                 "Unexpected element '" + tagName_
                 + "'. Elements of this type are not allowed as children of the current "
                   "node type '"
@@ -161,27 +153,14 @@ private:
     // element tag) is encountered. The name of the tag is available in
     // tagName_.
     void onEndTag_() {
-        if (!currentNode_ || currentNode_->nodeType() != NodeType::Element) {
-            throw XmlSyntaxError(
-                "Unexpected end tag '" + tagName_
-                + "'. It does not have a matching start tag.");
-        }
-        else if (tagName_ != Element::cast(currentNode_)->tagName()) {
-            throw XmlSyntaxError(
-                "Unexpected end tag '" + tagName_ + "'. Its matching start '"
-                + Element::cast(currentNode_)->tagName().string()
-                + "' has a different name.");
+        currentNode_ = currentNode_->parent();
+        if (currentNode_->nodeType() == NodeType::Element) {
+            tagName_ = Element::cast(currentNode_)->tagName();
+            elementSpec_ = schema().findElementSpec(tagName_);
         }
         else {
-            currentNode_ = currentNode_->parent();
-            if (currentNode_->nodeType() == NodeType::Element) {
-                tagName_ = Element::cast(currentNode_)->tagName();
-                elementSpec_ = schema().findElementSpec(tagName_);
-            }
-            else {
-                tagName_.clear();
-                elementSpec_ = nullptr;
-            }
+            tagName_.clear();
+            elementSpec_ = nullptr;
         }
     }
 
