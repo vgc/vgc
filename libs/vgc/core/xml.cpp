@@ -1291,23 +1291,23 @@ XmlStreamReader::XmlStreamReader(ConstructorKey)
 XmlStreamReader::XmlStreamReader(std::string_view data)
     : XmlStreamReader(ConstructorKey{}) {
 
-    impl_->ownedData = data;        // Copy the data
-    impl_->data = impl_->ownedData; // Reference the copy
-    impl_->init();
+    impl()->ownedData = data;         // Copy the data
+    impl()->data = impl()->ownedData; // Reference the copy
+    impl()->init();
 }
 
 XmlStreamReader::XmlStreamReader(std::string&& data)
     : XmlStreamReader(ConstructorKey{}) {
 
-    impl_->ownedData = std::move(data); // Move the data
-    impl_->data = impl_->ownedData;     // Reference the moved-to data holder
-    impl_->init();
+    impl()->ownedData = std::move(data); // Move the data
+    impl()->data = impl()->ownedData;    // Reference the moved-to data holder
+    impl()->init();
 }
 
 XmlStreamReader XmlStreamReader::fromView(std::string_view data) {
     XmlStreamReader res(ConstructorKey{});
-    res.impl_->data = data;
-    res.impl_->init();
+    res.impl()->data = data;
+    res.impl()->init();
     return res;
 }
 
@@ -1316,44 +1316,55 @@ XmlStreamReader XmlStreamReader::fromFile(std::string_view filePath) {
 }
 
 XmlStreamReader::XmlStreamReader(const XmlStreamReader& other)
-    : XmlStreamReader(ConstructorKey{}) {
-
-    *impl_ = *other.impl_;
+    : impl_(std::make_unique<detail::XmlStreamReaderImpl>(*other.impl())) {
 }
 
-XmlStreamReader::XmlStreamReader(XmlStreamReader&& other)
-    : impl_(std::move(other.impl_)) {
-}
+XmlStreamReader::XmlStreamReader(XmlStreamReader&&) noexcept = default;
 
 XmlStreamReader& XmlStreamReader::operator=(const XmlStreamReader& other) {
     if (this != &other) {
-        *impl_ = *other.impl_;
+        *impl() = *other.impl();
     }
     return *this;
 }
 
-XmlStreamReader& XmlStreamReader::operator=(XmlStreamReader&& other) {
-    if (this != &other) {
-        impl_ = std::move(other.impl_);
+XmlStreamReader& XmlStreamReader::operator=(XmlStreamReader&&) noexcept = default;
+
+// Must be in the .cpp otherwise unique_ptr cannot call the
+// destructor of XmlStreamReaderImpl (incomplete type).
+XmlStreamReader::~XmlStreamReader() = default;
+
+bool XmlStreamReader::readNext() {
+    return impl()->readNext();
+}
+
+bool XmlStreamReader::readNextStartElement() {
+    while (impl()->readNext()) {
+        if (eventType() == XmlEventType::StartElement) {
+            return true;
+        }
     }
-    return *this;
+    return false;
 }
 
-XmlStreamReader::~XmlStreamReader() {
-    // Must be in the .cpp otherwise unique_ptr cannot call the
-    // destructor of XmlStreamReaderImpl (incomplete type).
-}
-
-bool XmlStreamReader::readNext() const {
-    return impl_->readNext();
+void XmlStreamReader::skipElement() {
+    Int currentDepth = impl()->elementStack.length();
+    if (currentDepth == 0) {
+        throw LogicError(
+            "Cannot call skipElement(): there is no current element, that is, all "
+            "StartElement have already had their corresponding EndElement reported.");
+    }
+    while (impl()->elementStack.length() >= currentDepth) {
+        readNext();
+    }
 }
 
 XmlEventType XmlStreamReader::eventType() const {
-    return impl_->eventType;
+    return impl()->eventType;
 }
 
 std::string_view XmlStreamReader::rawText() const {
-    return std::string_view(impl_->eventStart, impl_->eventEnd - impl_->eventStart);
+    return std::string_view(impl()->eventStart, impl()->eventEnd - impl()->eventStart);
 }
 
 namespace {
@@ -1406,52 +1417,52 @@ void checkType(
 
 bool XmlStreamReader::hasXmlDeclaration() const {
     checkNotType("hasXmlDeclaration", eventType(), XmlEventType::NoEvent);
-    return !impl_->xmlDeclaration.empty();
+    return !impl()->xmlDeclaration.empty();
 }
 
 std::string_view XmlStreamReader::xmlDeclaration() const {
     checkNotType("xmlDeclaration", eventType(), XmlEventType::NoEvent);
-    return impl_->xmlDeclaration;
+    return impl()->xmlDeclaration;
 }
 
 std::string_view XmlStreamReader::version() const {
     checkNotType("version", eventType(), XmlEventType::NoEvent);
-    return impl_->version;
+    return impl()->version;
 }
 
 std::string_view XmlStreamReader::encoding() const {
     checkNotType("encoding", eventType(), XmlEventType::NoEvent);
-    return impl_->encoding;
+    return impl()->encoding;
 }
 
 bool XmlStreamReader::isEncodingSet() const {
     checkNotType("isEncodingSet", eventType(), XmlEventType::NoEvent);
-    return impl_->isEncodingSet;
+    return impl()->isEncodingSet;
 }
 
 bool XmlStreamReader::isStandalone() const {
     checkNotType("isStandalone", eventType(), XmlEventType::NoEvent);
-    return impl_->isStandalone;
+    return impl()->isStandalone;
 }
 
 bool XmlStreamReader::isStandaloneSet() const {
     checkNotType("isStandaloneSet", eventType(), XmlEventType::NoEvent);
-    return impl_->isStandaloneSet;
+    return impl()->isStandaloneSet;
 }
 
 std::string_view XmlStreamReader::name() const {
     checkType("name", eventType(), XmlEventType::StartElement, XmlEventType::EndElement);
-    return impl_->name();
+    return impl()->name();
 }
 
 std::string_view XmlStreamReader::characters() const {
     checkType("characters", eventType(), XmlEventType::Characters);
-    return impl_->characters;
+    return impl()->characters;
 }
 
 ConstSpan<XmlStreamAttributeView> XmlStreamReader::attributes() const {
     checkType("attributes", eventType(), XmlEventType::StartElement);
-    return impl_->attributes();
+    return impl()->attributes();
 }
 
 std::optional<XmlStreamAttributeView>
@@ -1473,13 +1484,13 @@ std::string_view XmlStreamReader::comment() const {
 std::string_view XmlStreamReader::processingInstructionTarget() const {
     checkType(
         "processingInstructionTarget", eventType(), XmlEventType::ProcessingInstruction);
-    return impl_->processingInstructionTarget;
+    return impl()->processingInstructionTarget;
 }
 
 std::string_view XmlStreamReader::processingInstructionData() const {
     checkType(
         "processingInstructionData", eventType(), XmlEventType::ProcessingInstruction);
-    return impl_->processingInstructionData;
+    return impl()->processingInstructionData;
 }
 
 } // namespace vgc::core
