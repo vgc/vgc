@@ -51,13 +51,14 @@ public:
     }
 
 private:
-    void substituteKeyVertex_(KeyVertex* oldVertex, KeyVertex* newVertex) override {
+    void
+    substituteKeyVertex_(KeyVertex* /*oldVertex*/, KeyVertex* /*newVertex*/) override {
         // TODO
     }
 
     void substituteKeyHalfedge_(
-        const class KeyHalfedge& oldHalfedge,
-        const class KeyHalfedge& newHalfedge) override {
+        const class KeyHalfedge& /*oldHalfedge*/,
+        const class KeyHalfedge& /*newHalfedge*/) override {
         // TODO
     }
 };
