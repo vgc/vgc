@@ -51,13 +51,14 @@ struct VGC_CORE_API XmlStreamAttributeData {
 
     //  <edge   positions = "[(12, 42), (20, 30)]" />
     //          \_______/    ^
-    //            name    rawValueIndex
+    //        qualifiedName  rawValueIndex
     //       \___________________________________/
     //                     rawText
     //
     std::string_view rawText;
-    std::string_view name;    // subset of rawText
-    size_t rawValueIndex = 0; // index into rawText
+    std::string_view qualifiedName; // subset of rawText
+    size_t rawValueIndex = 0;       // index into rawText
+    size_t localNameIndex = 0;      // index into qualifiedName
 
     // Resolved value
     std::string value;
@@ -97,9 +98,6 @@ enum class XmlEventType : Int8 {
     // Also see: javax.xml.stream.isCoalescing
 };
 
-// Terminology note:
-// - StartElement means either start not
-
 VGC_CORE_API
 VGC_DECLARE_ENUM(XmlEventType)
 
@@ -108,10 +106,27 @@ VGC_DECLARE_ENUM(XmlEventType)
 ///
 class VGC_CORE_API XmlStreamAttributeView {
 public:
-    /// Returns the name of this attribute.
+    /// Returns the qualified name of this attribute.
+    ///
+    std::string_view qualifiedName() const {
+        return d_->qualifiedName;
+    }
+
+    /// Returns the local name of this attribute.
     ///
     std::string_view name() const {
-        return d_->name;
+        return d_->qualifiedName.substr(d_->localNameIndex);
+    }
+
+    /// Returns the namespace name prefix of this attribute, if any.
+    ///
+    std::string_view prefix() const {
+        if (d_->localNameIndex == 0) {
+            return "";
+        }
+        else {
+            return d_->qualifiedName.substr(0, d_->localNameIndex - 1);
+        }
     }
 
     /// Returns the value of this attribute.
@@ -144,7 +159,7 @@ public:
     /// XML document while preserving the original formatting.
     ///
     std::string_view leadingWhitespace() const {
-        size_t n = d_->name.data() - d_->rawText.data();
+        size_t n = d_->qualifiedName.data() - d_->rawText.data();
         return d_->rawText.substr(0, n);
     }
 
@@ -155,7 +170,8 @@ public:
     /// character `=`, followed by zero or more whitespace characters.
     ///
     std::string_view separator() const {
-        Int separatorIndex = d_->name.data() - d_->rawText.data() + d_->name.size();
+        Int separatorIndex =
+            d_->qualifiedName.data() - d_->rawText.data() + d_->qualifiedName.size();
         Int n = d_->rawValueIndex - 1 - separatorIndex;
         return d_->rawText.substr(separatorIndex, n);
     }
@@ -193,7 +209,17 @@ private:
 ///
 /// The basic usage consists in creating an instance of `XmlStreamReader`, then
 /// calling its `readNext()` method until it returns `false`, indicating that
-/// the end of the document was reached:
+/// the end of the document was reached.
+///
+/// Each call to `readNext()` reads the XML document until the next "XML event"
+/// is reached. For example, if a start tag `<a>` is read, then this indicates
+/// the start of an XML element, so the `XmlStreamReader` stops reading, and:
+///
+/// - `eventType() == "StartElement"`
+/// - `rawText()   == "<a>"`
+/// - `name()      == "a"`
+///
+/// Example:
 ///
 /// ```cpp
 /// using vgc::core::XmlStreamReader;
@@ -224,12 +250,16 @@ private:
 ///  world
 /// ```
 ///
+/// The method `rawText()` can always be called and returns all the characters
+/// read since the last call of `readNext()`.
+///
+/// Most other methods can only be called for specific event types. For
+/// example `name()` can only be called when `eventType()` is `StartElement` or
+/// `EndElement`, otherwise `LogicError` is raised. The documentation of each
+/// method details for which event types it is allowed to call the method.
+///
 /// If the input document is not a well-formed XML document, then `XmlParseError`
 /// is raised by `readNext()` when encountering the ill-formed syntax.
-///
-/// If you call a method which is not compatible with the current `eventType()`
-/// (for example, calling `comment()` for an event that is not `Comment`), then
-/// `LogicError` is raised.
 ///
 /// # Initial State
 ///
@@ -271,7 +301,15 @@ private:
 ///
 /// XML elements are reported as `StartElement` and `EndElement` events. When
 /// `eventType()` is equal to `StartElement` and `EndElement`, then `name()`
-/// provides the name of the element.
+/// returns the "local name" of the element (that is, excluding its namespace prefix),
+/// `prefix()` returns the namespace prefix if any, and `qualifiedName()` returns
+/// both the prefix and the local name.
+///
+/// For example, after reading `<dc:title>`, we have:
+///
+/// - `name()           == "title"`
+/// - `prefix()         == "dc"`
+/// - `qualifiedNname() == "dc:title"`
 ///
 /// In case of "empty-element tags" (also called "self-closing", e.g., `<img
 /// />`), then there are still both a `StartElement` event and `EndElement`
@@ -522,13 +560,46 @@ public:
     ///
     bool isStandaloneSet() const;
 
-    /// Returns the name of the current `StartElement` or `EndElement`.
+    /// Returns the qualified name of the current `StartElement` or
+    /// `EndElement`, that is, the name including its namespace prefix, if any.
     ///
-    /// Exceptions:    ///
-    ///- `LogicError` is raised if `eventType()` is not `StartElement` or
-    ///  `EndElement`.
+    /// For example, if the `XmlStreamReader` reads `<dc:title>`, then `qualifiedName()`
+    /// returns `dc:title`.
+    ///
+    /// Exceptions:
+    /// - `LogicError` is raised if `eventType()` is not `StartElement` or
+    ///   `EndElement`.
+    ///
+    /// \sa `name()`, `prefix()`.
+    ///
+    std::string_view qualifiedName() const;
+
+    /// Returns the local name of the current `StartElement` or `EndElement`.
+    ///
+    /// For example, if the `XmlStreamReader` reads `<dc:title>`, then `name()`
+    /// returns `title`.
+    ///
+    /// Exceptions:
+    /// - `LogicError` is raised if `eventType()` is not `StartElement` or
+    ///   `EndElement`.
+    ///
+    /// \sa `qualifiedName()`, `prefix()`.
     ///
     std::string_view name() const;
+
+    /// Returns the namespace prefix of the current `StartElement` or
+    /// `EndElement`, if any.
+    ///
+    /// For example, if the `XmlStreamReader` reads `<dc:title>`, then `prefix()`
+    /// returns `dc`.
+    ///
+    /// Exceptions:
+    /// - `LogicError` is raised if `eventType()` is not `StartElement` or
+    ///   `EndElement`.
+    ///
+    /// \sa `qualifiedName()`, `name()`.
+    ///
+    std::string_view prefix() const;
 
     /// Returns the content of `Characters`
     ///

@@ -42,7 +42,9 @@ void wrap_XmlEventType(py::module& m) {
 void wrap_XmlStreamAttributeView(py::module& m) {
     using This = vgc::core::XmlStreamAttributeView;
     vgc::core::wraps::Class<This>(m, "XmlStreamAttributeView")
+        .def_property_readonly("qualifiedName", &This::qualifiedName)
         .def_property_readonly("name", &This::name)
+        .def_property_readonly("prefix", &This::prefix)
         .def_property_readonly("value", &This::value)
         .def_property_readonly("rawText", &This::rawText)
         .def_property_readonly("leadingWhitespace", &This::leadingWhitespace)
@@ -70,7 +72,9 @@ void wrap_XmlStringReader(py::module& m) {
         .def_property_readonly("isEncodingSet", &This::isEncodingSet)
         .def_property_readonly("isStandalone", &This::isStandalone)
         .def_property_readonly("isStandaloneSet", &This::isStandaloneSet)
+        .def_property_readonly("qualifiedName", &This::qualifiedName)
         .def_property_readonly("name", &This::name)
+        .def_property_readonly("prefix", &This::prefix)
         .def_property_readonly("characters", &This::characters)
         // TODO: wrap attributes() (requires to write python wrappers for core::Span)
         .def_property_readonly("numAttributes", &This::numAttributes)
