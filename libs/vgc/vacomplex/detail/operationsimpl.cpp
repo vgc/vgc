@@ -381,8 +381,6 @@ KeyEdge* Operations::glue(
         nextSibling,
         NodeSourceOperation{});
 
-    moveBelowBoundary(newKe);
-
     KeyHalfedge newKhe(newKe, true);
     for (const KeyHalfedge& khe : khes) {
         substitute_(khe, newKhe);
