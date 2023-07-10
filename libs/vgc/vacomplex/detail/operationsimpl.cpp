@@ -31,33 +31,31 @@ Operations::Operations(Complex* complex)
         throw LogicError("Cannot instantiate a VAC `Operations` with a null complex.");
     }
 
-    if (complex->operationsInProgress_) {
-        throw LogicError("Cannot instantiate a VAC `Operations` when another is still "
-                         "alive for the same complex.");
+    if (++complex->numOperationsInProgress_ == 1) {
+        // Increment version
+        complex->version_ += 1;
     }
-    complex->operationsInProgress_ = this;
-
-    // Increment version
-    complex->version_ += 1;
 }
 
 Operations::~Operations() {
     Complex* complex = this->complex();
-    // Do geometric updates
-    for (const ModifiedNodeInfo& info : diff_.modifiedNodes_) {
-        if (info.flags().has(NodeModificationFlag::BoundaryMeshChanged)
-            && !info.flags().has(NodeModificationFlag::GeometryChanged)) {
-            //
-            // Let the cell snap to its boundary..
-            Cell* cell = info.node()->toCell();
-            if (cell && cell->updateGeometryFromBoundary_()) {
-                onNodeModified_(cell, NodeModificationFlag::GeometryChanged);
+    // TODO: try/catch
+    if (--complex->numOperationsInProgress_ == 0) {
+        // Do geometric updates
+        for (const ModifiedNodeInfo& info : complex->opDiff_.modifiedNodes_) {
+            if (info.flags().has(NodeModificationFlag::BoundaryMeshChanged)
+                && !info.flags().has(NodeModificationFlag::GeometryChanged)) {
+                //
+                // Let the cell snap to its boundary..
+                Cell* cell = info.node()->toCell();
+                if (cell && cell->updateGeometryFromBoundary_()) {
+                    onNodeModified_(cell, NodeModificationFlag::GeometryChanged);
+                }
             }
         }
+        complex->nodesChanged().emit(complex->opDiff_);
+        complex->opDiff_.clear();
     }
-    // TODO: try/catch
-    complex->nodesChanged().emit(diff_);
-    complex->operationsInProgress_ = nullptr;
 }
 
 Group* Operations::createRootGroup() {
@@ -488,18 +486,18 @@ void Operations::setKeyEdgeSamplingQuality(
 }
 
 void Operations::onNodeCreated_(Node* node, NodeSourceOperation sourceOperation) {
-    diff_.onNodeCreated(node, std::move(sourceOperation));
+    complex_->opDiff_.onNodeCreated(node, std::move(sourceOperation));
 }
 
 void Operations::onNodeInserted_(
     Node* node,
     Node* oldParent,
     NodeInsertionType insertionType) {
-    diff_.onNodeInserted(node, oldParent, insertionType);
+    complex_->opDiff_.onNodeInserted(node, oldParent, insertionType);
 }
 
 void Operations::onNodeModified_(Node* node, NodeModificationFlags diffFlags) {
-    diff_.onNodeModified(node, diffFlags);
+    complex_->opDiff_.onNodeModified(node, diffFlags);
 }
 
 void Operations::insertNodeBeforeSibling_(Node* node, Node* nextSibling) {
@@ -568,9 +566,10 @@ void Operations::destroyNode_(Node* node) {
     core::Id nodeId = node->id();
     node->unparent();
     complex()->nodes_.erase(nodeId);
-    diff_.onNodeDestroyed(nodeId);
+    complex_->opDiff_.onNodeDestroyed(nodeId);
     if (parentGroup) {
-        diff_.onNodeModified(parentGroup, NodeModificationFlag::ChildrenChanged);
+        complex_->opDiff_.onNodeModified(
+            parentGroup, NodeModificationFlag::ChildrenChanged);
     }
 }
 
@@ -588,9 +587,10 @@ void Operations::destroyNodes_(const std::unordered_set<Node*>& nodes) {
     for (Node* node : nodes) {
         Group* parentGroup = node->parentGroup();
         node->unparent();
-        diff_.onNodeDestroyed(node->id());
+        complex_->opDiff_.onNodeDestroyed(node->id());
         if (parentGroup) {
-            diff_.onNodeModified(parentGroup, NodeModificationFlag::ChildrenChanged);
+            complex_->opDiff_.onNodeModified(
+                parentGroup, NodeModificationFlag::ChildrenChanged);
         }
     }
     for (Node* node : nodes) {

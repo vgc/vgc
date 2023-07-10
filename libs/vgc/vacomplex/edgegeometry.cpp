@@ -23,13 +23,8 @@ namespace vgc::vacomplex {
 void KeyEdgeGeometry::dirtyEdgeSampling() const {
     if (edge_) {
         Complex* complex = edge_->complex();
-        if (complex->operationsInProgress_) {
-            complex->operationsInProgress_->onGeometryChanged_(edge_);
-        }
-        else {
-            detail::Operations ops(complex);
-            ops.onGeometryChanged_(edge_);
-        }
+        detail::Operations ops(complex);
+        ops.onGeometryChanged_(edge_);
     }
 }
 

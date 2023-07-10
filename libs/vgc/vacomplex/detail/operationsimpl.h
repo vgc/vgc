@@ -117,7 +117,6 @@ public:
 
 private:
     Complex* complex_ = nullptr;
-    ComplexDiff diff_ = {};
 
     void onNodeCreated_(Node* node, NodeSourceOperation sourceOperation);
     void onNodeInserted_(Node* node, Node* oldParent, NodeInsertionType insertionType);

@@ -21,6 +21,7 @@
 #include <vgc/tools/topology.h>
 #include <vgc/ui/boolsettingedit.h>
 #include <vgc/ui/column.h>
+#include <vgc/vacomplex/detail/operationsimpl.h>
 #include <vgc/workspace/colors.h>
 
 #include <set>
@@ -685,6 +686,20 @@ void Select::updateDragMovedElements_(
         undoGroup = history->createUndoGroup(Translate_Elements);
     }
 
+    core::Array<vacomplex::detail::Operations> ops;
+    auto initOperationOn = [&ops](vacomplex::Cell* cell) {
+        bool found = false;
+        for (const vacomplex::detail::Operations& op : ops) {
+            if (op.complex() == cell->complex()) {
+                found = true;
+                break;
+            }
+        }
+        if (!found) {
+            ops.emplaceLast(cell->complex());
+        }
+    };
+
     // Translate Vertices
     for (const KeyVertexDragData& kvd : draggedVertices_) {
         workspace::Element* element = workspace->find(kvd.elementId);
@@ -692,6 +707,7 @@ void Select::updateDragMovedElements_(
             vacomplex::KeyVertex* kv =
                 element->vacNode()->toCellUnchecked()->toKeyVertex();
             if (kv) {
+                initOperationOn(kv);
                 vacomplex::ops::setKeyVertexPosition(
                     kv, kvd.position + translationInWorkspace);
             }
@@ -706,6 +722,7 @@ void Select::updateDragMovedElements_(
             if (!ke) {
                 continue;
             }
+            initOperationOn(ke);
             if (ked.isUniformTranslation) {
                 vacomplex::KeyEdgeGeometry* geometry = ke->geometry();
                 if (geometry) {
@@ -727,6 +744,7 @@ void Select::updateDragMovedElements_(
     }
 
     // Close operation
+    ops.clear();
     if (undoGroup) {
         bool amend = canAmendUndoGroup_ && undoGroup->parent()
                      && undoGroup->parent()->name() == Translate_Elements;
@@ -744,21 +762,15 @@ void Select::finalizeDragMovedElements_(workspace::Workspace* workspace) {
         undoGroup = history->createUndoGroup(Translate_Elements);
     }
 
-    // Snap edges' geometry
+    // Finish edges' geometry edit
     for (const KeyEdgeDragData& ked : draggedEdges_) {
         workspace::Element* element = workspace->find(ked.elementId);
         if (element && element->vacNode() && element->vacNode()->isCell()) {
             vacomplex::KeyEdge* ke = element->vacNode()->toCellUnchecked()->toKeyEdge();
-            if (ke) {
-                // Vertices are already translated here.
-                if (!ked.isUniformTranslation) {
-                    ke->snapGeometry();
-                }
-                else if (ked.isEditStarted) {
-                    vacomplex::KeyEdgeGeometry* geometry = ke->geometry();
-                    if (geometry) {
-                        geometry->finishEdit();
-                    }
+            if (ke && ked.isEditStarted) {
+                vacomplex::KeyEdgeGeometry* geometry = ke->geometry();
+                if (geometry) {
+                    geometry->finishEdit();
                 }
             }
         }
