@@ -698,7 +698,7 @@ void Select::updateDragMovedElements_(
         }
     }
 
-    // Translate closed edges' geometry
+    // Translate or snap edges' geometry
     for (const KeyEdgeDragData& ked : draggedEdges_) {
         workspace::Element* element = workspace->find(ked.elementId);
         if (element && element->vacNode() && element->vacNode()->isCell()) {
