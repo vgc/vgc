@@ -901,7 +901,7 @@ template<typename SpatialCell, typename TemporalCell>
 class SpatioTemporalCell : public TemporalCell, public SpatialCell {
 public:
     static_assert(std::is_base_of_v<Cell, SpatialCell>);
-    static_assert(std::is_base_of_v<CellProxy, TemporalCell>);
+    static_assert(core::isTemplateBaseOf<CellProxy, TemporalCell>);
 
     template<typename... TemporalCellArgs>
     SpatioTemporalCell(core::Id id, TemporalCellArgs&&... args)
