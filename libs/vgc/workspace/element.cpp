@@ -109,6 +109,14 @@ VacElement* Element::findFirstSiblingVacElement_(Element* start) {
     return static_cast<VacElement*>(e);
 }
 
+VacElement* Element::findFirstSiblingVacElementReverse_(Element* start) {
+    Element* e = start;
+    while (e && !e->isVacElement()) {
+        e = e->previousSibling();
+    }
+    return static_cast<VacElement*>(e);
+}
+
 ElementStatus Element::updateFromDom_(Workspace* /*workspace*/) {
     return ElementStatus::Ok;
 }

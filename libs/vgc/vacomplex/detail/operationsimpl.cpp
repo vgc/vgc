@@ -542,14 +542,7 @@ Node* Operations::findTopMost(core::Span<Node*> nodes) {
     Group* parent = node0->parentGroup();
     Node* topMostNode = parent->lastChild();
     while (topMostNode) {
-        bool found = false;
-        for (Node* node : nodes) {
-            if (node == topMostNode) {
-                found = true;
-                break;
-            }
-        }
-        if (found) {
+        if (nodes.contains(topMostNode)) {
             break;
         }
         topMostNode = topMostNode->previousSibling();

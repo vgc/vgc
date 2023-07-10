@@ -1151,16 +1151,17 @@ void Workspace::updateVacChildrenOrder_() {
     // todo: sync children order in all groups
     Element* root = rootVacElement_;
     Element* element = root;
+
     Int depth = 0;
     while (element) {
         vacomplex::Node* node = element->vacNode();
         if (node) {
             if (node->isGroup()) {
+                vacomplex::Group* group = static_cast<vacomplex::Group*>(node);
                 // synchronize first common child
                 VacElement* childVacElement = element->firstChildVacElement();
                 while (childVacElement) {
                     if (childVacElement->vacNode()) {
-                        vacomplex::Group* group = static_cast<vacomplex::Group*>(node);
                         vacomplex::ops::moveToGroup(
                             childVacElement->vacNode(), group, group->firstChild());
                         break;
@@ -1169,20 +1170,21 @@ void Workspace::updateVacChildrenOrder_() {
                 }
             }
 
-            if (element->parent()) {
-                // synchronize as previous sibling of next sibling VAC node
+            if (node->parentGroup()) {
+                // synchronize next sibling element's node as node's next sibling
                 VacElement* nextSiblingVacElement = element->nextSiblingVacElement();
                 while (nextSiblingVacElement) {
-                    if (nextSiblingVacElement->vacNode()) {
+                    vacomplex::Node* nextSiblingElementNode =
+                        nextSiblingVacElement->vacNode();
+                    if (nextSiblingElementNode) {
                         vacomplex::ops::moveToGroup(
-                            node, node->parentGroup(), nextSiblingVacElement->vacNode());
+                            nextSiblingElementNode,
+                            node->parentGroup(),
+                            node->nextSibling());
                         break;
                     }
                     nextSiblingVacElement =
                         nextSiblingVacElement->nextSiblingVacElement();
-                }
-                if (!nextSiblingVacElement) {
-                    vacomplex::ops::moveToGroup(node, node->parentGroup(), nullptr);
                 }
             }
         }

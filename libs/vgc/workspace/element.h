@@ -191,6 +191,11 @@ public:
         return Base::previousSibling();
     }
 
+    VacElement* previousSiblingVacElement() const {
+        Element* e = previousSibling();
+        return findFirstSiblingVacElementReverse_(e);
+    }
+
     Element* nextSibling() const {
         return Base::nextSibling();
     }
@@ -306,6 +311,7 @@ private:
     core::Array<Element*> dependents_;
 
     static VacElement* findFirstSiblingVacElement_(Element* start);
+    static VacElement* findFirstSiblingVacElementReverse_(Element* start);
 
     virtual ElementStatus onDependencyChanged_(Element* dependency, ChangeFlags changes);
     virtual ElementStatus onDependencyRemoved_(Element* dependency);
