@@ -508,10 +508,11 @@ void VacKeyFace::updateFromVac_(vacomplex::NodeModificationFlags flags) {
     }
 
     using vacomplex::NodeModificationFlag;
-    if (flags.hasAny(
-            {NodeModificationFlag::BoundaryChanged, NodeModificationFlag::MeshChanged})) {
-
+    if (flags.has(NodeModificationFlag::MeshChanged)) {
         dirtyFillMesh_();
+    }
+    if (flags.has(NodeModificationFlag::BoundaryChanged)) {
+
         // rebuild cycles attribute
         core::Array<DomCycle> domCycles;
         cyclesElementsSequence_.clear();
@@ -545,6 +546,18 @@ void VacKeyFace::updateFromVac_(vacomplex::NodeModificationFlags flags) {
         core::StringWriter cyclesDescriptionWriter(cyclesDescription);
         write(cyclesDescriptionWriter, domCycles);
         domElement->setAttribute(ds::cycles, std::move(cyclesDescription));
+
+        // Update dependencies_
+        core::Array<Element*> newDependencies;
+        vacomplex::CellRangeView boundary = kf->boundary();
+        newDependencies.reserve(boundary.length());
+        for (vacomplex::Cell* cell : boundary) {
+            if (VacElement* element = workspace()->findVacElement(cell)) {
+                newDependencies.append(element);
+            }
+        }
+        std::sort(newDependencies.begin(), newDependencies.end());
+        updateDependencies_(newDependencies);
     }
 }
 
