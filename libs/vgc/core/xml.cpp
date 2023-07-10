@@ -131,10 +131,24 @@ public:
     bool isStandaloneSet = false;
 
     // Name of a StartElement or EndElement
-    const char* nameStart = {};
-    const char* nameEnd = {};
+    std::string_view qualifiedName_;
+    size_t localNameIndex_ = 0;
+
+    std::string_view qualifiedName() const {
+        return qualifiedName_;
+    }
+
     std::string_view name() const {
-        return std::string_view(nameStart, nameEnd - nameStart);
+        return qualifiedName_.substr(localNameIndex_);
+    }
+
+    std::string_view prefix() const {
+        if (localNameIndex_ == 0) {
+            return "";
+        }
+        else {
+            return qualifiedName_.substr(0, localNameIndex_ - 1);
+        }
     }
 
     // Whether the StartElement is a start tag (<b>) or empty element tag (<img/>)
@@ -809,7 +823,7 @@ private:
                     throw XmlSyntaxError(format(
                         "Unexpected end-of-file after reading '/' in start tag '{}'. "
                         "Expected '>'.",
-                        name()));
+                        qualifiedName()));
                 }
                 else if (c == '>') {
                     isAngleBracketClosed = true;
@@ -820,7 +834,7 @@ private:
                         "Unexpected '{}' after reading '/' in start tag '{}'. "
                         "Expected '>'.",
                         c,
-                        name()));
+                        qualifiedName()));
                 }
             }
             else if (isWhitespace_(c)) {
@@ -845,7 +859,7 @@ private:
             throw XmlSyntaxError(format(
                 "Unexpected end-of-file while reading start tag '{}'. "
                 "Expected whitespaces, attribute name, '>', or '/>'",
-                name()));
+                qualifiedName()));
         }
     }
 
@@ -872,14 +886,14 @@ private:
                     "Unexpected '{}' while reading end tag '{}'. "
                     "Expected whitespaces or '>'.",
                     c,
-                    name()));
+                    qualifiedName()));
             }
         }
         if (!isAngleBracketClosed) {
             throw XmlSyntaxError(format(
                 "Unexpected end-of-file while reading end tag '{}'. "
                 "Expected whitespaces or '>'.",
-                name()));
+                qualifiedName()));
         }
     }
 
@@ -891,15 +905,15 @@ private:
                 throw XmlSyntaxError(format(
                     "Unexpected second root element '{}'. A root element '{}' has "
                     "already been defined, and there cannot be more than one.",
-                    name(),
+                    qualifiedName(),
                     rootElementName));
             }
             else {
                 hasRootElement = true;
-                rootElementName = name();
+                rootElementName = qualifiedName();
             }
         }
-        elementStack.append(name());
+        elementStack.append(qualifiedName());
     }
 
     // Set event type and check well-formed constraints when reaching EndElement
@@ -909,13 +923,13 @@ private:
             throw XmlSyntaxError(format(
                 "Unexpected end tag '{}'. "
                 "It does not have a matching start tag.",
-                name()));
+                qualifiedName()));
         }
-        else if (elementStack.last() != name()) {
+        else if (elementStack.last() != qualifiedName()) {
             throw XmlSyntaxError(format(
                 "Unexpected end tag '{}'. "
                 "Its matching start tag '{}' has a different name.",
-                name(),
+                qualifiedName(),
                 elementStack.last()));
         }
         elementStack.removeLast();
@@ -932,6 +946,27 @@ private:
         }
         else if (!hasRootElement) {
             throw XmlSyntaxError("Unexpected end of document with no root element");
+        }
+    }
+
+    // Splits qualified name into prefix and local part.
+    //
+    // https://www.w3.org/TR/xml-names
+    //
+    // [4]   NCName         ::= Name - (Char* ':' Char*)       (non-colon name)
+    // [7]   QName	        ::= PrefixedName | UnprefixedName  (qualified name)
+    // [8]   PrefixedName	::= Prefix ':' LocalPart
+    // [9]   UnprefixedName	::= LocalPart
+    // [10]  Prefix	        ::= NCName
+    // [11]  LocalPart	    ::= NCName
+    //
+    static size_t getLocalNameIndex_(std::string_view qualifiedName) {
+        size_t lastColonIndex = qualifiedName.find_last_of(':');
+        if (lastColonIndex == std::string_view::npos) {
+            return 0;
+        }
+        else {
+            return lastColonIndex + 1;
         }
     }
 
@@ -970,13 +1005,18 @@ private:
         }
 
         bool isAngleBracketClosed = false;
-        nameStart = cursor - 1;
-        nameEnd = cursor;
+
+        const char* qualifiedNameStart = cursor - 1;
+        const char* qualifiedNameEnd = cursor;
+        auto qname = [&]() {
+            return std::string_view(
+                qualifiedNameStart, qualifiedNameEnd - qualifiedNameStart);
+        };
 
         bool done = false;
         while (!done && get(c)) {
             if (isNameChar_(c)) {
-                nameEnd = cursor;
+                qualifiedNameEnd = cursor;
             }
             else if (isWhitespace_(c)) {
                 done = true;
@@ -995,7 +1035,7 @@ private:
                     throw XmlSyntaxError(format(
                         "Unexpected '/' while reading end tag name '{}'. "
                         "Expected valid name characters, whitespaces, or '>'.",
-                        name()));
+                        qname()));
                 }
                 else if (get(c)) {
                     if (c == '>') {
@@ -1008,14 +1048,14 @@ private:
                             "Unexpected '{}' after reading '/' after reading start "
                             "tag name '{}'. Expected '>'.",
                             c,
-                            name()));
+                            qname()));
                     }
                 }
                 else {
                     throw XmlSyntaxError(format(
                         "Unexpected end-of-file after reading '/' after reading start "
                         "tag name '{}'. Expected '>'.",
-                        name()));
+                        qname()));
                 }
             }
             else {
@@ -1024,7 +1064,7 @@ private:
                     "",
                     c,
                     isEndTag ? "end" : "start",
-                    name(),
+                    qname(),
                     (isEndTag ? "or '>'" : "'>', or '/>")));
             }
         }
@@ -1033,9 +1073,13 @@ private:
                 "Unexpected end-of-file while reading {} tag name '{}'. Expected valid "
                 "name characters, whitespaces, {}.",
                 (isEndTag ? "end" : "start"),
-                name(),
+                qname(),
                 (isEndTag ? "or '>'" : "'>', or '/>")));
         }
+
+        // Set qualified name and split it into prefix and local name
+        qualifiedName_ = qname();
+        localNameIndex_ = getLocalNameIndex_(qualifiedName_);
 
         return isAngleBracketClosed;
     }
@@ -1060,7 +1104,7 @@ private:
                 "Unexpected '{}' while reading start character of attribute name in "
                 "start tag '{}'. Expected valid name start character.",
                 c,
-                name()));
+                qualifiedName()));
         }
 
         const char* attributeNameStart = cursor - 1;
@@ -1089,7 +1133,7 @@ private:
                     "'{}'. Expected valid name characters, whitespaces, or '='.",
                     c,
                     attributeName(),
-                    name()));
+                    qualifiedName()));
             }
         }
         if (!isNameRead) {
@@ -1098,7 +1142,7 @@ private:
                 "'{}'. Expected valid name characters, whitespaces, or '='.",
                 c,
                 attributeName(),
-                name()));
+                qualifiedName()));
         }
 
         while (!isEqRead && get(c)) {
@@ -1114,7 +1158,7 @@ private:
                     "'{}'. Expected whitespaces or '='.",
                     c,
                     attributeName(),
-                    name()));
+                    qualifiedName()));
             }
         }
         if (!isEqRead) {
@@ -1123,10 +1167,12 @@ private:
                 "'{}'. Expected whitespaces or '='.",
                 c,
                 attributeName(),
-                name()));
+                qualifiedName()));
         }
 
-        attribute.name = attributeName();
+        // Set qualified name and split it into prefix and local name
+        attribute.qualifiedName = attributeName();
+        attribute.localNameIndex = getLocalNameIndex_(attribute.qualifiedName);
     }
 
     // Read from '=' (not included) to closing '\'' or '\"' (included)
@@ -1151,8 +1197,8 @@ private:
                     "in start tag '{}'. Expected '\"' (double quote), or '\'' (single "
                     "quote), or whitespaces.",
                     c,
-                    attribute.name,
-                    name()));
+                    attribute.qualifiedName,
+                    qualifiedName()));
             }
         }
         if (!quotationMark) {
@@ -1160,8 +1206,8 @@ private:
                 "Unexpected end-of-file after reading '=' after reading attribute name "
                 "'{}' in start tag '{}'. Expected '\"' (double quote), or '\'' (single "
                 "quote), or whitespaces.",
-                attribute.name,
-                name()));
+                attribute.qualifiedName,
+                qualifiedName()));
         }
 
         bool isClosed = false;
@@ -1185,8 +1231,8 @@ private:
                     "Unexpected '<' while reading value of attribute '{}' in start tag "
                     "'{}'. This character is not allowed in attribute values, please "
                     "replace it with '&lt;'.",
-                    attribute.name,
-                    name()));
+                    attribute.qualifiedName,
+                    qualifiedName()));
             }
             else {
                 attribute.value += c;
@@ -1197,8 +1243,8 @@ private:
                 "Unexpected end-of-file while reading value of attribute '{}' in start "
                 "tag "
                 "'{}'. Expected more characters or the closing quotation mark '{}'.",
-                attribute.name,
-                name(),
+                attribute.qualifiedName,
+                qualifiedName(),
                 quotationMark));
         }
     }
@@ -1450,9 +1496,21 @@ bool XmlStreamReader::isStandaloneSet() const {
     return impl()->isStandaloneSet;
 }
 
+std::string_view XmlStreamReader::qualifiedName() const {
+    using T = XmlEventType;
+    checkType("qualifiedName", eventType(), T::StartElement, T::EndElement);
+    return impl()->qualifiedName();
+}
+
 std::string_view XmlStreamReader::name() const {
     checkType("name", eventType(), XmlEventType::StartElement, XmlEventType::EndElement);
     return impl()->name();
+}
+
+std::string_view XmlStreamReader::prefix() const {
+    using T = XmlEventType;
+    checkType("prefix", eventType(), T::StartElement, T::EndElement);
+    return impl()->prefix();
 }
 
 std::string_view XmlStreamReader::characters() const {

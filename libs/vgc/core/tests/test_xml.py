@@ -120,7 +120,7 @@ class TestXmlStreamReader(unittest.TestCase):
         self.assertEqual(names, expectedNames)
 
     def testSkipElement(self):
-        expectedNames = ['svg', 'defs', 'sodipodi:namedview', 'g', 'path']
+        expectedNames = ['svg', 'defs', 'namedview', 'g', 'path']
         names = []
         xml = XmlStreamReader(svgInkscapeExample)
         while xml.readNextStartElement():
@@ -255,6 +255,59 @@ class TestXmlStreamReader(unittest.TestCase):
                 endNames.append(xml.name)
         self.assertEqual(startNames, expectedStartNames)
         self.assertEqual(endNames, expectedEndNames)
+
+    def testQualifiedNameAndPrefix(self):
+        xml = XmlStreamReader('<vgc a="foo"><dc:type rdf:resource="bar"/></vgc>')
+
+        expectedStartQualifiedNames = ['vgc', 'dc:type']
+        expectedStartPrefixes = ['', 'dc']
+        expectedStartNames = ['vgc', 'type']
+
+        expectedEndQualifiedNames = ['dc:type', 'vgc']
+        expectedEndPrefixes = ['dc', '']
+        expectedEndNames = ['type', 'vgc']
+
+        expectedAttributesQualifiedNames = ['a', 'rdf:resource']
+        expectedAttributesPrefixes = ['', 'rdf']
+        expectedAttributesNames = ['a', 'resource']
+
+        startQualifiedNames = []
+        startPrefixes = []
+        startNames = []
+
+        endQualifiedNames = []
+        endPrefixes = []
+        endNames = []
+
+        attributesQualifiedNames = []
+        attributesPrefixes = []
+        attributesNames = []
+
+        while xml.readNext():
+            if xml.eventType == XmlEventType.StartElement:
+                startQualifiedNames.append(xml.qualifiedName)
+                startPrefixes.append(xml.prefix)
+                startNames.append(xml.name)
+                for i in range(xml.numAttributes):
+                    attributesQualifiedNames.append(xml.attribute(i).qualifiedName)
+                    attributesPrefixes.append(xml.attribute(i).prefix)
+                    attributesNames.append(xml.attribute(i).name)
+            elif xml.eventType == XmlEventType.EndElement:
+                endQualifiedNames.append(xml.qualifiedName)
+                endPrefixes.append(xml.prefix)
+                endNames.append(xml.name)
+
+        self.assertEqual(startQualifiedNames, expectedStartQualifiedNames)
+        self.assertEqual(startPrefixes, expectedStartPrefixes)
+        self.assertEqual(startNames, expectedStartNames)
+
+        self.assertEqual(endQualifiedNames, expectedEndQualifiedNames)
+        self.assertEqual(endPrefixes, expectedEndPrefixes)
+        self.assertEqual(endNames, expectedEndNames)
+
+        self.assertEqual(attributesQualifiedNames, expectedAttributesQualifiedNames)
+        self.assertEqual(attributesPrefixes, expectedAttributesPrefixes)
+        self.assertEqual(attributesNames, expectedAttributesNames)
 
     def testCharacters(self):
         xml = XmlStreamReader(xmlExample)
