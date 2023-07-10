@@ -367,7 +367,8 @@ private:
 
     // Guard against recursion when calling clear() / resetRoot()
     bool isBeingCleared_ = false;
-    bool isOperationInProgress_ = false;
+    Int numOperationsInProgress_ = 0;
+    ComplexDiff opDiff_ = {};
 };
 
 } // namespace vgc::vacomplex
