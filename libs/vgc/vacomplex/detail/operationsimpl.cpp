@@ -15,6 +15,9 @@
 // limitations under the License.
 
 #include <vgc/vacomplex/detail/operationsimpl.h>
+
+#include <unordered_set>
+
 #include <vgc/vacomplex/exceptions.h>
 #include <vgc/vacomplex/logcategories.h>
 
@@ -28,11 +31,11 @@ Operations::Operations(Complex* complex)
         throw LogicError("Cannot instantiate a VAC `Operations` with a null complex.");
     }
 
-    if (complex->isOperationInProgress_) {
+    if (complex->operationsInProgress_) {
         throw LogicError("Cannot instantiate a VAC `Operations` when another is still "
                          "alive for the same complex.");
     }
-    complex->isOperationInProgress_ = true;
+    complex->operationsInProgress_ = this;
 
     // Increment version
     complex->version_ += 1;
@@ -40,8 +43,21 @@ Operations::Operations(Complex* complex)
 
 Operations::~Operations() {
     Complex* complex = this->complex();
+    // Do geometric updates
+    for (const ModifiedNodeInfo& info : diff_.modifiedNodes_) {
+        if (info.flags().has(NodeModificationFlag::BoundaryMeshChanged)
+            && !info.flags().has(NodeModificationFlag::GeometryChanged)) {
+            //
+            // Let the cell snap to its boundary..
+            Cell* cell = info.node()->toCell();
+            if (cell && cell->updateGeometryFromBoundary_()) {
+                onNodeModified_(cell, NodeModificationFlag::GeometryChanged);
+            }
+        }
+    }
+    // TODO: try/catch
     complex->nodesChanged().emit(diff_);
-    complex->isOperationInProgress_ = false;
+    complex->operationsInProgress_ = nullptr;
 }
 
 Group* Operations::createRootGroup() {
@@ -82,11 +98,10 @@ KeyEdge* Operations::createKeyOpenEdge(
     const std::shared_ptr<KeyEdgeGeometry>& geometry,
     Group* parentGroup,
     Node* nextSibling,
-    NodeSourceOperation sourceOperation,
-    core::AnimTime t) {
+    NodeSourceOperation sourceOperation) {
 
-    KeyEdge* ke =
-        createNodeAt_<KeyEdge>(parentGroup, nextSibling, std::move(sourceOperation), t);
+    KeyEdge* ke = createNodeAt_<KeyEdge>(
+        parentGroup, nextSibling, std::move(sourceOperation), startVertex->time());
 
     // Topological attributes
     ke->startVertex_ = startVertex;
@@ -275,6 +290,109 @@ void Operations::softDelete(Node* /*node*/, bool /*deleteIsolatedVertices*/) {
     throw core::LogicError("Soft Delete topological operator is not implemented yet.");
 }
 
+KeyVertex* Operations::glue(core::Span<KeyVertex*> kvs, const geometry::Vec2d& position) {
+    if (kvs.isEmpty()) {
+        return nullptr;
+    }
+    KeyVertex* kv0 = kvs[0];
+
+    bool hasDifferentKvs = false;
+    for (KeyVertex* kv : kvs.subspan(1)) {
+        if (kv != kv0) {
+            hasDifferentKvs = true;
+            break;
+        }
+    }
+
+    if (!hasDifferentKvs) {
+        setKeyVertexPosition(kv0, position);
+        return kv0;
+    }
+
+    // Location: top-most input vertex
+    Int n = kvs.length();
+    core::Array<Node*> nodes(n);
+    for (Int i = 0; i < n; ++i) {
+        nodes[i] = kvs[i];
+    }
+    Node* topMostVertex = findTopMost(nodes);
+    Group* parentGroup = topMostVertex->parentGroup();
+    Node* nextSibling = topMostVertex->nextSibling();
+
+    // TODO: define source operation
+    KeyVertex* newKv = createKeyVertex(
+        position, parentGroup, nextSibling, NodeSourceOperation{}, kv0->time());
+
+    std::unordered_set<KeyVertex*> seen;
+    for (KeyVertex* kv : kvs) {
+        bool inserted = seen.insert(kv).second;
+        if (inserted) {
+            substitute_(kv, newKv);
+            hardDelete(kv, false);
+        }
+    }
+
+    return newKv;
+}
+
+KeyEdge* Operations::glue(
+    core::Span<KeyHalfedge> khes,
+    std::shared_ptr<KeyEdgeGeometry> geometry,
+    const geometry::Vec2d& startPosition,
+    const geometry::Vec2d& endPosition) {
+
+    if (khes.isEmpty()) {
+        return nullptr;
+    }
+
+    Int n = khes.length();
+
+    core::Array<KeyVertex*> startVertices;
+    startVertices.reserve(n);
+    for (const KeyHalfedge& khe : khes) {
+        startVertices.append(khe.startVertex());
+    }
+    KeyVertex* startKv = glue(startVertices, startPosition);
+
+    // Note: we can only list end vertices after the glue of
+    // start vertices since it can substitute end vertices.
+    core::Array<KeyVertex*> endVertices;
+    endVertices.reserve(n);
+    for (const KeyHalfedge& khe : khes) {
+        endVertices.append(khe.endVertex());
+    }
+    KeyVertex* endKv = glue(endVertices, endPosition);
+
+    // Location: top-most input edge
+    core::Array<Node*> edgeNodes(n);
+    for (Int i = 0; i < n; ++i) {
+        edgeNodes[i] = khes[i].edge();
+    }
+    Node* topMostEdge = findTopMost(edgeNodes);
+    Group* parentGroup = topMostEdge->parentGroup();
+    Node* nextSibling = topMostEdge->nextSibling();
+
+    // TODO: define source operation
+    KeyEdge* newKe = createKeyOpenEdge(
+        startKv,
+        endKv,
+        std::move(geometry),
+        parentGroup,
+        nextSibling,
+        NodeSourceOperation{});
+
+    moveBelowBoundary(newKe);
+
+    KeyHalfedge newKhe(newKe, true);
+    for (const KeyHalfedge& khe : khes) {
+        substitute_(khe, newKhe);
+        // It is important that no 2 halfedges refer to the same edge.
+        hardDelete(khe.edge(), true);
+    }
+
+    return newKe;
+}
+
 void Operations::moveToGroup(Node* node, Group* parentGroup, Node* nextSibling) {
     if (nextSibling) {
         insertNodeBeforeSibling_(node, nextSibling);
@@ -368,7 +486,6 @@ void Operations::setKeyEdgeSamplingQuality(
     }
 
     ke->samplingQuality_ = quality;
-
     dirtyMesh_(ke);
 }
 
@@ -419,6 +536,31 @@ void Operations::insertNodeAsLastChild_(Node* node, Group* parent) {
     }
 }
 
+Node* Operations::findTopMost(core::Span<Node*> nodes) {
+    // currently only looking under a single parent
+    // TODO: tree-wide top most.
+    if (nodes.isEmpty()) {
+        return nullptr;
+    }
+    Node* node0 = nodes[0];
+    Group* parent = node0->parentGroup();
+    Node* topMostNode = parent->lastChild();
+    while (topMostNode) {
+        bool found = false;
+        for (Node* node : nodes) {
+            if (node == topMostNode) {
+                found = true;
+                break;
+            }
+        }
+        if (found) {
+            break;
+        }
+        topMostNode = topMostNode->previousSibling();
+    }
+    return topMostNode;
+}
+
 // Assumes node has no children.
 // maybe we should also handle star/boundary changes here
 void Operations::destroyNode_(Node* node) {
@@ -458,35 +600,37 @@ void Operations::destroyNodes_(const std::unordered_set<Node*>& nodes) {
     }
 }
 
-void Operations::dirtyMesh_(Cell* cell) {
-    if (!cell->hasMeshBeenQueriedSinceLastDirtyEvent_) {
-        return;
-    }
-
-    core::Array<Cell*> dirtyList;
-
-    dirtyList.append(cell);
-    cell->hasMeshBeenQueriedSinceLastDirtyEvent_ = false;
-
-    for (Cell* starCell : cell->star_) {
-        if (starCell->hasMeshBeenQueriedSinceLastDirtyEvent_) {
-            // There is no need to call onBoundaryMeshChanged_ for
-            // starCell since starCell.star() is a subset of cell.star().
-            dirtyList.append(starCell);
-            starCell->hasMeshBeenQueriedSinceLastDirtyEvent_ = false;
-            starCell->onBoundaryMeshChanged_();
-        }
-    }
-
-    for (Cell* dirtyCell : dirtyList) {
-        dirtyCell->dirtyMesh_();
-        onNodeModified_(dirtyCell, NodeModificationFlag::MeshChanged);
-    }
+void Operations::onBoundaryChanged_(Cell* cell) {
+    onNodeModified_(cell, NodeModificationFlag::BoundaryChanged);
+    onBoundaryMeshChanged_(cell);
 }
 
 void Operations::onGeometryChanged_(Cell* cell) {
-    dirtyMesh_(cell);
     onNodeModified_(cell, NodeModificationFlag::GeometryChanged);
+    dirtyMesh_(cell);
+}
+
+void Operations::onBoundaryMeshChanged_(Cell* cell) {
+    onNodeModified_(cell, NodeModificationFlag::BoundaryMeshChanged);
+    dirtyMesh_(cell);
+}
+
+void Operations::dirtyMesh_(Cell* cell) {
+    if (cell->hasMeshBeenQueriedSinceLastDirtyEvent_) {
+        cell->hasMeshBeenQueriedSinceLastDirtyEvent_ = false;
+        cell->dirtyMesh_();
+        onNodeModified_(cell, NodeModificationFlag::MeshChanged);
+        for (Cell* starCell : cell->star_) {
+            // No need for recursion since starCell.star() is a subset
+            // of cell.star().
+            if (starCell->hasMeshBeenQueriedSinceLastDirtyEvent_) {
+                starCell->hasMeshBeenQueriedSinceLastDirtyEvent_ = false;
+                onNodeModified_(starCell, NodeModificationFlag::BoundaryMeshChanged);
+                starCell->dirtyMesh_();
+                onNodeModified_(starCell, NodeModificationFlag::MeshChanged);
+            }
+        }
+    }
 }
 
 void Operations::addToBoundary_(Cell* boundedCell, Cell* boundingCell) {
@@ -499,12 +643,12 @@ void Operations::addToBoundary_(Cell* boundedCell, Cell* boundingCell) {
     else if (!boundedCell->boundary_.contains(boundingCell)) {
         boundedCell->boundary_.append(boundingCell);
         boundingCell->star_.append(boundedCell);
-        onNodeModified_(boundedCell, NodeModificationFlag::BoundaryChanged);
+        onBoundaryChanged_(boundedCell);
         onNodeModified_(boundingCell, NodeModificationFlag::StarChanged);
     }
 }
 
-void Operations::addToBoundary_(Cell* face, const KeyCycle& cycle) {
+void Operations::addToBoundary_(FaceCell* face, const KeyCycle& cycle) {
     if (cycle.steinerVertex()) {
         // Steiner cycle
         addToBoundary_(face, cycle.steinerVertex());
@@ -520,6 +664,35 @@ void Operations::addToBoundary_(Cell* face, const KeyCycle& cycle) {
             addToBoundary_(face, halfedge.endVertex());
         }
     }
+}
+
+void Operations::substitute_(KeyVertex* oldVertex, KeyVertex* newVertex) {
+    for (Cell* starCell : oldVertex->star_) {
+        *starCell->boundary_.find(oldVertex) = newVertex;
+        newVertex->star_.append(starCell);
+        onBoundaryChanged_(starCell);
+        starCell->substituteKeyVertex_(oldVertex, newVertex);
+    }
+    oldVertex->star_.clear();
+    onNodeModified_(oldVertex, NodeModificationFlag::StarChanged);
+    onNodeModified_(newVertex, NodeModificationFlag::StarChanged);
+}
+
+void Operations::substitute_(
+    const KeyHalfedge& oldHalfedge,
+    const KeyHalfedge& newHalfedge) {
+
+    KeyEdge* const oldEdge = oldHalfedge.edge();
+    KeyEdge* const newEdge = newHalfedge.edge();
+    for (Cell* starCell : oldEdge->star_) {
+        *starCell->boundary_.find(oldEdge) = newEdge;
+        newEdge->star_.append(starCell);
+        onBoundaryChanged_(starCell);
+        starCell->substituteKeyHalfedge_(oldHalfedge, newHalfedge);
+    }
+    oldEdge->star_.clear();
+    onNodeModified_(oldEdge, NodeModificationFlag::StarChanged);
+    onNodeModified_(newEdge, NodeModificationFlag::StarChanged);
 }
 
 void Operations::collectDependentNodes_(

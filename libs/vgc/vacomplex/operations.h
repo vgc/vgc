@@ -18,6 +18,7 @@
 #define VGC_VACOMPLEX_OPERATIONS_H
 
 #include <vgc/core/id.h>
+#include <vgc/core/span.h>
 #include <vgc/vacomplex/api.h>
 #include <vgc/vacomplex/complex.h>
 #include <vgc/vacomplex/exceptions.h>
@@ -91,6 +92,16 @@ void hardDelete(Node* node, bool deleteIsolatedVertices);
 
 VGC_VACOMPLEX_API
 void softDelete(Node* node, bool deleteIsolatedVertices);
+
+VGC_VACOMPLEX_API
+KeyVertex* glue(core::Span<KeyVertex*> kvs, const geometry::Vec2d& position);
+
+VGC_VACOMPLEX_API
+KeyEdge* glue(
+    core::Span<KeyHalfedge> khes,
+    std::shared_ptr<KeyEdgeGeometry> geometry,
+    const geometry::Vec2d& startPosition,
+    const geometry::Vec2d& endPosition);
 
 /// Throws `NotAChildError` if `nextSibling` is not a child of `parentGroup` or `nullptr`.
 // XXX should check if node belongs to same VAC.

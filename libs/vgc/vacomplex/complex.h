@@ -44,12 +44,14 @@ enum class NodeModificationFlag {
     Reparented              = 0x01,
     ChildrenChanged         = 0x02,
     TransformChanged        = 0x04,
+    // edge model, vertex position, ...
     GeometryChanged         = 0x08,
+    // edge sampling, ...
     MeshChanged             = 0x10,
-    // do we need BoundaryMeshChanged ?
-    BoundaryChanged         = 0x20,
-    StarChanged             = 0x40,
-    All                     = 0x7F,
+    BoundaryMeshChanged     = 0x20,
+    BoundaryChanged         = 0x40,
+    StarChanged             = 0x80,
+    All                     = 0xFF,
     // clang-format on
 };
 VGC_DEFINE_FLAGS(NodeModificationFlags, NodeModificationFlag)
@@ -353,6 +355,7 @@ public:
 
 private:
     friend detail::Operations;
+    friend class KeyEdgeGeometry;
     using NodePtrMap = std::unordered_map<core::Id, std::unique_ptr<Node>>;
 
     // Container storing and owning all the nodes in the Complex.
@@ -367,7 +370,7 @@ private:
 
     // Guard against recursion when calling clear() / resetRoot()
     bool isBeingCleared_ = false;
-    bool isOperationInProgress_ = false;
+    class detail::Operations* operationsInProgress_ = nullptr;
 };
 
 } // namespace vgc::vacomplex

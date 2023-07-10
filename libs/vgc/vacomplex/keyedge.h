@@ -61,7 +61,7 @@ public:
         return samplingQuality_;
     }
 
-    void snapGeometry();
+    bool snapGeometry();
 
     std::shared_ptr<const EdgeSampling> samplingShared() const;
     const EdgeSampling& sampling() const;
@@ -113,7 +113,12 @@ private:
     void updateSampling_() const;
 
     void dirtyMesh_() override;
-    void onBoundaryMeshChanged_() override;
+    bool updateGeometryFromBoundary_() override;
+
+    void substituteKeyVertex_(KeyVertex* oldVertex, KeyVertex* newVertex) override;
+    void substituteKeyHalfedge_(
+        const class KeyHalfedge& oldHalfedge,
+        const class KeyHalfedge& newHalfedge) override;
 
     geometry::StrokeSample2dArray
     computeInputSamples_(const geometry::CurveSamplingParameters& parameters) const;

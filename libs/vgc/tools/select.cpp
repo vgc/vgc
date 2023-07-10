@@ -18,6 +18,7 @@
 
 #include <vgc/graphics/detail/shapeutil.h>
 #include <vgc/graphics/strings.h>
+#include <vgc/tools/topology.h>
 #include <vgc/ui/boolsettingedit.h>
 #include <vgc/ui/column.h>
 #include <vgc/workspace/colors.h>
@@ -50,6 +51,9 @@ Select::Select()
 
     options::showTransformBox()->valueChanged().connect(onShowTransformBoxChangedSlot_());
     onShowTransformBoxChanged_();
+
+    ui::Action* glueAction = createTriggerAction(glueCommandId());
+    glueAction->triggered().connect(onGlueSlot_());
 }
 
 SelectPtr Select::create() {
@@ -836,6 +840,36 @@ void Select::updateTransformBoxElements_() {
         else {
             transformBox_->setElements({});
         }
+    }
+}
+
+void Select::onGlue_() {
+    canvas::Canvas* canvas = this->canvas();
+    if (!canvas) {
+        return;
+    }
+
+    workspace::Workspace* workspace = canvas->workspace();
+    if (!workspace) {
+        return;
+    }
+
+    // Open history group
+    core::UndoGroup* undoGroup = nullptr;
+    core::History* history = workspace->history();
+    if (history) {
+        undoGroup = history->createUndoGroup(glueCommandId());
+    }
+
+    core::Array<core::Id> selection = canvas->selection();
+    core::Id gluedId = workspace->glue(selection);
+    if (gluedId >= 0) {
+        canvas->setSelection({gluedId});
+    }
+
+    // Close history group
+    if (undoGroup) {
+        undoGroup->close();
     }
 }
 

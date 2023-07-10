@@ -55,7 +55,8 @@ Complex* Cell::complex() const {
 void Cell::dirtyMesh_() {
 }
 
-void Cell::onBoundaryMeshChanged_() {
+bool Cell::updateGeometryFromBoundary_() {
+    return false;
 }
 
 Transform Group::computeInverseTransformTo(Group* ancestor) const {

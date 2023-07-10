@@ -38,18 +38,27 @@ private:
 public:
     VGC_VACOMPLEX_DEFINE_SPATIOTEMPORAL_CELL_CAST_METHODS(Key, Vertex)
 
-    constexpr geometry::Vec2d position() const {
-        hasMeshBeenQueriedSinceLastDirtyEvent_ = true;
+    geometry::Vec2d position() const {
+        onMeshQueried();
         return position_;
     }
 
     geometry::Vec2d position(core::AnimTime /*t*/) const override {
-        hasMeshBeenQueriedSinceLastDirtyEvent_ = true;
+        onMeshQueried();
         return position_;
     }
 
 private:
     geometry::Vec2d position_;
+
+    void substituteKeyVertex_(KeyVertex*, KeyVertex*) override {
+        // no-op
+    }
+
+    void
+    substituteKeyHalfedge_(const class KeyHalfedge&, const class KeyHalfedge&) override {
+        // no-op
+    }
 };
 
 } // namespace vgc::vacomplex

@@ -25,7 +25,7 @@
 namespace vgc::vacomplex::detail {
 
 class VGC_VACOMPLEX_API Operations {
-    friend class vacomplex::KeyEdgeGeometry;
+    friend vacomplex::KeyEdgeGeometry;
     using GroupChildrenIterator = Group;
     //using GroupChildrenConstIterator = decltype(Group::children_)::const_iterator;
 
@@ -71,8 +71,7 @@ public:
         const std::shared_ptr<KeyEdgeGeometry>& geometry,
         Group* parentGroup,
         Node* nextSibling = nullptr,
-        NodeSourceOperation sourceOperation = {},
-        core::AnimTime t = {});
+        NodeSourceOperation sourceOperation = {});
 
     // Assumes `nextSibling` is either `nullptr` or a child of `parentGroup`.
     //
@@ -95,6 +94,16 @@ public:
 
     void hardDelete(Node* node, bool deleteIsolatedVertices);
     void softDelete(Node* node, bool deleteIsolatedVertices);
+
+    KeyVertex* glue(core::Span<KeyVertex*> kvs, const geometry::Vec2d& position);
+
+    // Assumes `khes` does not contain more than one halfedge for any edge.
+    //
+    KeyEdge* glue(
+        core::Span<KeyHalfedge> khes,
+        std::shared_ptr<KeyEdgeGeometry> geometry,
+        const geometry::Vec2d& startPosition,
+        const geometry::Vec2d& endPosition);
 
     void moveToGroup(Node* node, Group* parentGroup, Node* nextSibling = nullptr);
     void moveBelowBoundary(Node* node);
@@ -152,14 +161,18 @@ private:
     void insertNodeAsFirstChild_(Node* node, Group* parent);
     void insertNodeAsLastChild_(Node* node, Group* parent);
 
+    static Node* findTopMost(core::Span<Node*> nodes);
+
     // Assumes node has no children.
     void destroyNode_(Node* node);
 
     // Assumes that all descendants of all `nodes` are also in `nodes`.
     void destroyNodes_(const std::unordered_set<Node*>& nodes);
 
-    void dirtyMesh_(Cell* cell);
+    void onBoundaryChanged_(Cell* cell);
     void onGeometryChanged_(Cell* cell);
+    void onBoundaryMeshChanged_(Cell* cell);
+    void dirtyMesh_(Cell* cell);
 
     // Adds the `boundingCell` to the boundary of the `boundedCell`.
     //
@@ -172,7 +185,10 @@ private:
 
     // Adds all the cells in the given `cycle` to the boundary of the `face`.
     //
-    void addToBoundary_(Cell* face, const KeyCycle& cycle);
+    void addToBoundary_(FaceCell* face, const KeyCycle& cycle);
+
+    void substitute_(KeyVertex* oldVertex, KeyVertex* newVertex);
+    void substitute_(const KeyHalfedge& oldHalfedge, const KeyHalfedge& newHalfedge);
 
     // Other helper methods
     void collectDependentNodes_(Node* node, std::unordered_set<Node*>& dependentNodes);

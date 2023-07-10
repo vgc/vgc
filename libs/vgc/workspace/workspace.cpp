@@ -25,6 +25,7 @@
 #include <vgc/vacomplex/operations.h>
 #include <vgc/workspace/edge.h>
 #include <vgc/workspace/face.h>
+#include <vgc/workspace/freehandedgegeometry.h>
 #include <vgc/workspace/layer.h>
 #include <vgc/workspace/logcategories.h>
 #include <vgc/workspace/vertex.h>
@@ -289,13 +290,21 @@ std::optional<Element*> Workspace::getElementFromPathAttribute(
     std::optional<dom::Element*> domTargetElement =
         domElement->getElementFromPathAttribute(attrName, tagNameFilter);
 
-    if (domTargetElement.has_value()) {
-        auto it = elements_.find(domTargetElement.value()->internalId());
-        return {it->second.get()};
-    }
-    else {
+    if (!domTargetElement.has_value()) {
         return std::nullopt;
     }
+
+    dom::Element* domTargetElementValue = domTargetElement.value();
+    if (!domTargetElementValue) {
+        return nullptr;
+    }
+
+    auto it = elements_.find(domTargetElementValue->internalId());
+    if (it == elements_.end()) {
+        return nullptr;
+    }
+
+    return {it->second.get()};
 }
 
 void Workspace::visitDepthFirstPreOrder(
@@ -307,6 +316,205 @@ void Workspace::visitDepthFirst(
     const std::function<bool(Element*, Int)>& preOrderFn,
     const std::function<void(Element*, Int)>& postOrderFn) {
     workspace::visitDfs<Element>(vgcElement(), preOrderFn, postOrderFn);
+}
+
+core::Id Workspace::glue(core::Span<core::Id> elements) {
+    core::Id resultId = -1;
+
+    // Open history group
+    static core::StringId commandId = core::StringId("workspace.glue");
+    core::UndoGroup* undoGroup = nullptr;
+    core::History* history = this->history();
+    if (history) {
+        undoGroup = history->createUndoGroup(commandId);
+    }
+
+    core::Array<vacomplex::KeyVertex*> kvs;
+    core::Array<vacomplex::KeyEdge*> openKes;
+    bool hasOtherCells = false;
+    bool hasNonVacElements = false;
+    for (core::Id id : elements) {
+        workspace::Element* element = find(id);
+        if (!element) {
+            continue;
+        }
+        vacomplex::Node* node = element->vacNode();
+        if (!node || !node->isCell()) {
+            hasNonVacElements = true;
+            continue;
+        }
+        vacomplex::Cell* cell = node->toCellUnchecked();
+        switch (cell->cellType()) {
+        case vacomplex::CellType::KeyVertex: {
+            kvs.append(cell->toKeyVertexUnchecked());
+            break;
+        }
+        case vacomplex::CellType::KeyEdge: {
+            vacomplex::KeyEdge* ke = cell->toKeyEdgeUnchecked();
+            if (ke->isClosed()) {
+                hasOtherCells = true;
+            }
+            else {
+                openKes.append(ke);
+            }
+            break;
+        }
+        default:
+            hasOtherCells = true;
+            break;
+        }
+    }
+
+    if (hasOtherCells || hasNonVacElements) {
+        // do not glue
+    }
+    else if (!kvs.isEmpty()) {
+        if (openKes.isEmpty()) {
+            geometry::Vec2d cog = {};
+            for (vacomplex::KeyVertex* kv : kvs) {
+                cog += kv->position();
+            }
+            cog /= core::narrow_cast<double>(kvs.length());
+
+            vacomplex::Cell* result = vacomplex::ops::glue(kvs, cog);
+            Element* e = this->findVacElement(result);
+            if (e) {
+                resultId = e->id();
+            }
+        }
+    }
+    else if (!openKes.isEmpty()) {
+        if (openKes.length() == 2) {
+
+            // sample both edges
+            vacomplex::KeyEdge* ke0 = openKes[0];
+            vacomplex::KeyEdge* ke1 = openKes[1];
+
+            // TODO: use source operations for blends
+            bool isEdge0Longer = ke0->sampling().samples().last().s()
+                                 > ke1->sampling().samples().last().s();
+            VacKeyEdge* colorEdge = dynamic_cast<VacKeyEdge*>(
+                this->findVacElement(isEdge0Longer ? ke0 : ke1));
+            core::Color color =
+                colorEdge
+                    ? colorEdge
+                          ->computeFrameData(VacEdgeComputationStage::PreJoinGeometry)
+                          ->color()
+                    : core::Color{};
+
+            const geometry::StrokeSample2dArray& samples0 = ke0->sampling().samples();
+            const geometry::StrokeSample2dArray& samples1 = ke1->sampling().samples();
+
+            if (samples0.length() >= 2 && samples1.length() >= 2) {
+                double l0 = samples0.last().s();
+                double l1 = samples1.last().s();
+
+                Int n0 = samples0.length();
+                Int n1 = samples1.length();
+                Int n = std::max<Int>(0, n0 - 2) + std::max<Int>(0, n1 - 2) + 2;
+
+                FreehandEdgePoint p0a = samples0.first();
+                FreehandEdgePoint p1a = samples1.first();
+
+                core::Array<FreehandEdgePoint> points0(n, core::noInit);
+                points0.first() = p0a;
+                points0.last() = FreehandEdgePoint(samples0.last());
+
+                core::Array<FreehandEdgePoint> points1(n, core::noInit);
+                points1.first() = p1a;
+                points1.last() = FreehandEdgePoint(samples1.last());
+
+                double u0a = 0;
+                Int i0 = std::min<Int>(1, n0);
+                double u1a = 0;
+                Int i1 = std::min<Int>(1, n1);
+
+                for (Int i = 1; i < n - 1; ++i) {
+                    const geometry::StrokeSample2d& currentSample0 = samples0[i0];
+                    const geometry::StrokeSample2d& currentSample1 = samples1[i1];
+                    double u0b = currentSample0.s() / l0;
+                    double u1b = currentSample1.s() / l1;
+                    FreehandEdgePoint p0 = currentSample0;
+                    FreehandEdgePoint p1 = currentSample1;
+                    if ((u0b > u1b && i1 + 1 < n1) || !(i0 + 1 < n0)) {
+                        double t = (u1b - u0a) / (u0b - u0a);
+                        points0[i] = p0a.lerp(p0, t);
+                        points1[i] = p1;
+                        u1a = u1b;
+                        p1a = p1;
+                        ++i1;
+                    }
+                    else {
+                        double t = (u0b - u1a) / (u1b - u1a);
+                        points0[i] = p0;
+                        points1[i] = p1a.lerp(p1, t);
+                        u0a = u0b;
+                        p0a = p0;
+                        ++i0;
+                    }
+                }
+
+                // Test best halfedge orientation.
+                double costA = 0;
+                double costB = 0;
+                for (Int i = 0; i < n; ++i) {
+                    costA +=
+                        (points0[i].position() - points1[i].position()).squaredLength();
+                    costB += (points0[i].position() - points1[n - 1 - i].position())
+                                 .squaredLength();
+                }
+
+                core::Array<vacomplex::KeyHalfedge> halfedges({{ke0, true}, {ke1, true}});
+                core::Array<FreehandEdgePoint> newPoints(n, core::noInit);
+                if (costA <= costB) {
+                    for (Int i = 0; i < n; ++i) {
+                        newPoints[i] = points0[i].average(points1[i]);
+                        //newPoints[i] = points0[i];
+                    }
+                }
+                else {
+                    halfedges[1] = halfedges[1].opposite();
+                    for (Int i = 0; i < n; ++i) {
+                        newPoints[i] = points0[i].average(points1[n - 1 - i]);
+                        //newPoints[i] = points0[n - 1 - i];
+                    }
+                }
+
+                double maxWidth = 0;
+                for (Int i = 0; i < n; ++i) {
+                    double w = newPoints[i].width();
+                    if (w > maxWidth) {
+                        maxWidth = w;
+                    }
+                }
+
+                // tolerance = 5% of max width
+                std::shared_ptr<vacomplex::KeyEdgeGeometry> newGeometry =
+                    FreehandEdgeGeometry::createFromPoints(
+                        newPoints, false, maxWidth * 0.05);
+
+                vacomplex::Cell* result = vacomplex::ops::glue(
+                    halfedges,
+                    std::move(newGeometry),
+                    newPoints.first().position(),
+                    newPoints.last().position());
+                Element* e = this->findVacElement(result);
+                if (e) {
+                    e->domElement()->setAttribute(dom::strings::color, color);
+                    resultId = e->id();
+                }
+            }
+            else {
+                // TODO: warning ?
+            }
+        }
+    }
+    // Close history group
+    if (undoGroup) {
+        undoGroup->close();
+    }
+
+    return resultId;
 }
 
 std::unordered_map<core::StringId, Workspace::ElementCreator>&
@@ -481,6 +689,16 @@ void Workspace::postUpdateDomFromVac_() {
     // TODO: delay for batch VAC-to-DOM updates?
 }
 
+void Workspace::updateElementFromVac_(
+    VacElement* element,
+    vacomplex::NodeModificationFlags flags) {
+
+    element->updateFromVac_(flags);
+    // Note: VAC always has a correct state so this element should
+    //       be errorless after being updated from VAC.
+    element->status_ = ElementStatus::Ok;
+}
+
 void Workspace::rebuildDomFromWorkspaceTree_() {
     // todo later
     throw core::RuntimeError("not implemented");
@@ -531,6 +749,8 @@ void Workspace::onVacNodesChanged_(const vacomplex::ComplexDiff& diff) {
 
     // Process created vac nodes
     //
+    core::Array<VacElement*> createdElements;
+    createdElements.reserve(diff.createdNodes().length());
     for (const auto& info : diff.createdNodes()) {
         vacomplex::Node* node = info.node();
 
@@ -594,7 +814,7 @@ void Workspace::onVacNodesChanged_(const vacomplex::ComplexDiff& diff) {
         element->id_ = id;
         element->setVacNode(node);
 
-        element->updateFromVac_(vacomplex::NodeModificationFlag::All);
+        createdElements.append(element);
     }
 
     // Process transient vac nodes
@@ -630,6 +850,7 @@ void Workspace::onVacNodesChanged_(const vacomplex::ComplexDiff& diff) {
 
         element->domElement_ = nullptr;
         element->id_ = id;
+        element->status_ = ElementStatus::Ok;
 
         // Note: One must not forget to remove it manually when destroying
         //       the transient element before leaving this function.
@@ -702,6 +923,12 @@ void Workspace::onVacNodesChanged_(const vacomplex::ComplexDiff& diff) {
         }
     }
 
+    // Update created vac nodes
+    //
+    for (VacElement* element : createdElements) {
+        updateElementFromVac_(element, vacomplex::NodeModificationFlag::All);
+    }
+
     // Process modified vac nodes
     //
     for (const auto& info : diff.modifiedNodes()) {
@@ -711,7 +938,7 @@ void Workspace::onVacNodesChanged_(const vacomplex::ComplexDiff& diff) {
             // TODO: recover from error by creating the Cell in workspace and DOM ?
             continue;
         }
-        vacElement->updateFromVac_(info.flags());
+        updateElementFromVac_(vacElement, info.flags());
     }
 
     // Process destroyed vac nodes

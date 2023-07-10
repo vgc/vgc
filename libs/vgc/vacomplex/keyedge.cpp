@@ -24,7 +24,8 @@ KeyEdge::~KeyEdge() {
     }
 }
 
-void KeyEdge::snapGeometry() {
+// TODO: make it an operation, otherwise it won't get saved in dom.
+bool KeyEdge::snapGeometry() {
     geometry::Vec2d snapStartPosition = {};
     geometry::Vec2d snapEndPosition = {};
 
@@ -37,6 +38,7 @@ void KeyEdge::snapGeometry() {
         snapEndPosition = snapStartPosition;
     }
     geometry_->snap(snapStartPosition, snapEndPosition);
+    return true;
 }
 
 std::shared_ptr<const EdgeSampling> KeyEdge::samplingShared() const {
@@ -72,7 +74,7 @@ EdgeSampling KeyEdge::computeSampling(geometry::CurveSamplingQuality quality) co
 
     if (samplingQuality_ == quality) {
         sampling_ = std::make_shared<const EdgeSampling>(sampling);
-        hasMeshBeenQueriedSinceLastDirtyEvent_ = true;
+        onMeshQueried();
     }
 
     return sampling;
@@ -118,16 +120,33 @@ void KeyEdge::updateSampling_() const {
         EdgeSampling sampling = computeSampling_(samplingQuality_);
         sampling_ = std::make_shared<const EdgeSampling>(std::move(sampling));
     }
-    hasMeshBeenQueriedSinceLastDirtyEvent_ = true;
+    onMeshQueried();
 }
 
 void KeyEdge::dirtyMesh_() {
     sampling_.reset();
 }
 
-void KeyEdge::onBoundaryMeshChanged_() {
-    // possible optimization: check if positions really changed.
-    dirtyMesh_();
+bool KeyEdge::updateGeometryFromBoundary_() {
+    return snapGeometry();
+}
+
+// Assumes `oldVertex != nullptr`.
+void KeyEdge::substituteKeyVertex_(KeyVertex* oldVertex, KeyVertex* newVertex) {
+    if (!isClosed()) {
+        if (startVertex_ == oldVertex) {
+            startVertex_ = newVertex;
+        }
+        if (endVertex_ == oldVertex) {
+            endVertex_ = newVertex;
+        }
+    }
+}
+
+void KeyEdge::substituteKeyHalfedge_(
+    const class KeyHalfedge& /*oldHalfedge*/,
+    const class KeyHalfedge& /*newHalfedge*/) {
+    // no-op
 }
 
 } // namespace vgc::vacomplex

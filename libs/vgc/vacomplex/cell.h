@@ -829,18 +829,27 @@ public:
     VGC_VACOMPLEX_DEFINE_CELL_CAST_METHOD(InbetweenFace)
 
 protected:
+    void onMeshQueried() const {
+        hasMeshBeenQueriedSinceLastDirtyEvent_ = true;
+    }
+
+    virtual void dirtyMesh_();
+    virtual bool updateGeometryFromBoundary_();
+
+private:
+    core::Array<Cell*> star_;
+    core::Array<Cell*> boundary_;
+
     // This flag is used to not signal NodeModificationFlag::MeshChanged
     // multiple times if no dependent nodes nor the user has queried
     // the new mesh. It should be set to true (either directly
     // or indirectly) in all mesh getters.
     mutable bool hasMeshBeenQueriedSinceLastDirtyEvent_ = false;
 
-    virtual void dirtyMesh_();
-    virtual void onBoundaryMeshChanged_();
-
-private:
-    core::Array<Cell*> star_;
-    core::Array<Cell*> boundary_;
+    virtual void substituteKeyVertex_(KeyVertex* oldVertex, KeyVertex* newVertex) = 0;
+    virtual void substituteKeyHalfedge_(
+        const class KeyHalfedge& oldHalfedge,
+        const class KeyHalfedge& newHalfedge) = 0;
 };
 
 inline Complex* Node::complex() const {
@@ -885,9 +894,15 @@ public:
     }
 };
 
+// Note: CellProxy is first in the layout, allowing for direct reinterpretation
+//       of KeyCell* and InbetweenCell* to any final type.
+//       However a Cell* needs to be shifted when casting to any final type.
 template<typename SpatialCell, typename TemporalCell>
 class SpatioTemporalCell : public TemporalCell, public SpatialCell {
 public:
+    static_assert(std::is_base_of_v<Cell, SpatialCell>);
+    static_assert(std::is_base_of_v<CellProxy, TemporalCell>);
+
     template<typename... TemporalCellArgs>
     SpatioTemporalCell(core::Id id, TemporalCellArgs&&... args)
         : TemporalCell(std::forward<TemporalCellArgs>(args)...)
@@ -1069,7 +1084,7 @@ struct CellTemporalTraits<
 
     static constexpr bool hasTemporalType = true;
     static constexpr CellTemporalType temporalType = T::temporalType();
-    using TemporalAny = SpatioTemporalCell<T, DummySpatialCell>;
+    using TemporalAny = SpatioTemporalCell<DummySpatialCell, T>;
 };
 
 } // namespace detail

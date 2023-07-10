@@ -738,7 +738,7 @@ void Sculpt::onMouseHover(ui::MouseHoverEvent* event) {
             }
             if (e->isVacElement()) {
                 vacomplex::Node* node = e->toVacElement()->vacNode();
-                if (node->isCell()) {
+                if (node && node->isCell()) {
                     vacomplex::KeyEdge* ke = node->toCellUnchecked()->toKeyEdge();
                     if (ke) {
                         const vacomplex::EdgeSampling& sampling = ke->sampling();

@@ -14,6 +14,7 @@ vgc_add_library(tools
         select.h
         sketch.h
         strings.h
+        topology.h
         transform.h
 
     CPP_SOURCE_FILES
@@ -24,6 +25,7 @@ vgc_add_library(tools
         select.cpp
         sketch.cpp
         strings.cpp
+        topology.cpp
         transform.cpp
 
     RESOURCE_FILES

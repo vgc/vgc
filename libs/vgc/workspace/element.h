@@ -170,7 +170,7 @@ public:
     }
 
     bool hasError() const {
-        return !status_;
+        return status_ != ElementStatus::Ok;
     }
 
     bool hasPendingUpdate() const {

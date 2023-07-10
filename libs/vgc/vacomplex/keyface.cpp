@@ -725,4 +725,31 @@ bool computeKeyFaceFillTriangles(
 
 } // namespace detail
 
+void KeyFace::substituteKeyVertex_(KeyVertex* oldVertex, KeyVertex* newVertex) {
+    for (KeyCycle& cycle : cycles_) {
+        if (cycle.steinerVertex_ == oldVertex) {
+            cycle.steinerVertex_ = newVertex;
+        }
+    }
+}
+
+void KeyFace::substituteKeyHalfedge_(
+    const class KeyHalfedge& oldHalfedge,
+    const class KeyHalfedge& newHalfedge) {
+    for (KeyCycle& cycle : cycles_) {
+        if (cycle.steinerVertex_) {
+            continue;
+        }
+        for (KeyHalfedge& khe : cycle.halfedges_) {
+            if (khe.edge() == oldHalfedge.edge()) {
+                bool direction = newHalfedge.direction();
+                if (khe.direction() != oldHalfedge.direction()) {
+                    direction = !direction;
+                }
+                khe = KeyHalfedge(newHalfedge.edge(), direction);
+            }
+        }
+    }
+}
+
 } // namespace vgc::vacomplex
