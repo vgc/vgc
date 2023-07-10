@@ -318,6 +318,40 @@ void Workspace::visitDepthFirst(
     workspace::visitDfs<Element>(vgcElement(), preOrderFn, postOrderFn);
 }
 
+namespace {
+
+// Assumes `!samples.isEmpty()` and `numSamples >= 2`.
+core::Array<geometry::Vec2d> computeApproximateUniformSamplingPositions(
+    const geometry::StrokeSample2dArray& samples,
+    Int numSamples) {
+
+    core::Array<geometry::Vec2d> result;
+    result.reserve(numSamples);
+    result.append(samples.first().position());
+    double l = samples.last().s();
+    if (l > 0) {
+        double deltaS = l / (numSamples - 2);
+        double targetS = deltaS;
+        const geometry::StrokeSample2d* s0 = &samples[0];
+        for (const geometry::StrokeSample2d& s1 : samples) {
+            double ds = s1.s() - s0->s();
+            if (ds > 0 && targetS <= s1.s()) {
+                double t = (targetS - s0->s()) / ds;
+                result.append(t * s1.position() + (1 - t) * s0->position());
+                targetS += deltaS;
+            }
+            s0 = &s1;
+        }
+    }
+    while (result.length() < numSamples) {
+        result.append(samples.last().position());
+    }
+
+    return result;
+}
+
+} // namespace
+
 core::Id Workspace::glue(core::Span<core::Id> elements) {
     core::Id resultId = -1;
 
@@ -404,7 +438,7 @@ core::Id Workspace::glue(core::Span<core::Id> elements) {
                     : core::Color{};
 
             const geometry::StrokeSample2dArray& samples0 = ke0->sampling().samples();
-            const geometry::StrokeSample2dArray& samples1 = ke1->sampling().samples();
+            geometry::StrokeSample2dArray samples1 = ke1->sampling().samples();
 
             if (samples0.length() >= 2 && samples1.length() >= 2) {
                 double l0 = samples0.last().s();
@@ -413,6 +447,35 @@ core::Id Workspace::glue(core::Span<core::Id> elements) {
                 Int n0 = samples0.length();
                 Int n1 = samples1.length();
                 Int n = std::max<Int>(0, n0 - 2) + std::max<Int>(0, n1 - 2) + 2;
+                bool reverse1 = false;
+
+                if (l0 > 0 && l1 > 0) {
+                    core::Array<geometry::Vec2d> us0 =
+                        computeApproximateUniformSamplingPositions(samples0, 10);
+                    core::Array<geometry::Vec2d> us1 =
+                        computeApproximateUniformSamplingPositions(samples1, 10);
+
+                    // test best halfedge orientation
+                    double costA = 0;
+                    double costB = 0;
+
+                    Int m = us0.length();
+                    for (Int i = 0; i < m; ++i) {
+                        costA += (us0[i] - us1[i]).squaredLength();
+                        costB += (us0[i] - us1[m - 1 - i]).squaredLength();
+                    }
+
+                    // reverse samples1 if necessary
+                    if (costB < costA) {
+                        reverse1 = true;
+                        geometry::StrokeSample2dArray reversedSamples1(n1, core::noInit);
+                        for (Int i = 0; i < n1; ++i) {
+                            reversedSamples1[i] = samples1[n1 - 1 - i];
+                            reversedSamples1[i].setS(l1 - reversedSamples1[i].s());
+                        }
+                        samples1 = std::move(reversedSamples1);
+                    }
+                }
 
                 FreehandEdgePoint p0a = samples0.first();
                 FreehandEdgePoint p1a = samples1.first();
@@ -455,30 +518,12 @@ core::Id Workspace::glue(core::Span<core::Id> elements) {
                     }
                 }
 
-                // Test best halfedge orientation.
-                double costA = 0;
-                double costB = 0;
-                for (Int i = 0; i < n; ++i) {
-                    costA +=
-                        (points0[i].position() - points1[i].position()).squaredLength();
-                    costB += (points0[i].position() - points1[n - 1 - i].position())
-                                 .squaredLength();
-                }
+                core::Array<vacomplex::KeyHalfedge> halfedges(
+                    {{ke0, true}, {ke1, !reverse1}});
 
-                core::Array<vacomplex::KeyHalfedge> halfedges({{ke0, true}, {ke1, true}});
                 core::Array<FreehandEdgePoint> newPoints(n, core::noInit);
-                if (costA <= costB) {
-                    for (Int i = 0; i < n; ++i) {
-                        newPoints[i] = points0[i].average(points1[i]);
-                        //newPoints[i] = points0[i];
-                    }
-                }
-                else {
-                    halfedges[1] = halfedges[1].opposite();
-                    for (Int i = 0; i < n; ++i) {
-                        newPoints[i] = points0[i].average(points1[n - 1 - i]);
-                        //newPoints[i] = points0[n - 1 - i];
-                    }
+                for (Int i = 0; i < n; ++i) {
+                    newPoints[i] = points0[i].average(points1[i]);
                 }
 
                 double maxWidth = 0;
