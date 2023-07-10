@@ -95,11 +95,12 @@ public:
     void hardDelete(Node* node, bool deleteIsolatedVertices);
     void softDelete(Node* node, bool deleteIsolatedVertices);
 
-    KeyVertex* glue(core::Span<KeyVertex*> kvs, const geometry::Vec2d& position);
+    KeyVertex*
+    glueKeyVertices(core::Span<KeyVertex*> kvs, const geometry::Vec2d& position);
 
     // Assumes `khes` does not contain more than one halfedge for any edge.
     //
-    KeyEdge* glue(
+    KeyEdge* glueKeyOpenEdges(
         core::Span<KeyHalfedge> khes,
         std::shared_ptr<KeyEdgeGeometry> geometry,
         const geometry::Vec2d& startPosition,

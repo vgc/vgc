@@ -94,10 +94,10 @@ VGC_VACOMPLEX_API
 void softDelete(Node* node, bool deleteIsolatedVertices);
 
 VGC_VACOMPLEX_API
-KeyVertex* glue(core::Span<KeyVertex*> kvs, const geometry::Vec2d& position);
+KeyVertex* glueKeyVertices(core::Span<KeyVertex*> kvs, const geometry::Vec2d& position);
 
 VGC_VACOMPLEX_API
-KeyEdge* glue(
+KeyEdge* glueKeyOpenEdges(
     core::Span<KeyHalfedge> khes,
     std::shared_ptr<KeyEdgeGeometry> geometry,
     const geometry::Vec2d& startPosition,

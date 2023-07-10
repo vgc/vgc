@@ -331,6 +331,7 @@ core::Id Workspace::glue(core::Span<core::Id> elements) {
 
     core::Array<vacomplex::KeyVertex*> kvs;
     core::Array<vacomplex::KeyEdge*> openKes;
+    core::Array<vacomplex::KeyEdge*> closedKes;
     bool hasOtherCells = false;
     bool hasNonVacElements = false;
     for (core::Id id : elements) {
@@ -352,7 +353,7 @@ core::Id Workspace::glue(core::Span<core::Id> elements) {
         case vacomplex::CellType::KeyEdge: {
             vacomplex::KeyEdge* ke = cell->toKeyEdgeUnchecked();
             if (ke->isClosed()) {
-                hasOtherCells = true;
+                closedKes.append(ke);
             }
             else {
                 openKes.append(ke);
@@ -369,14 +370,14 @@ core::Id Workspace::glue(core::Span<core::Id> elements) {
         // do not glue
     }
     else if (!kvs.isEmpty()) {
-        if (openKes.isEmpty()) {
+        if (openKes.isEmpty() && closedKes.isEmpty()) {
             geometry::Vec2d cog = {};
             for (vacomplex::KeyVertex* kv : kvs) {
                 cog += kv->position();
             }
             cog /= core::narrow_cast<double>(kvs.length());
 
-            vacomplex::Cell* result = vacomplex::ops::glue(kvs, cog);
+            vacomplex::Cell* result = vacomplex::ops::glueKeyVertices(kvs, cog);
             Element* e = this->findVacElement(result);
             if (e) {
                 resultId = e->id();
@@ -384,7 +385,7 @@ core::Id Workspace::glue(core::Span<core::Id> elements) {
         }
     }
     else if (!openKes.isEmpty()) {
-        if (openKes.length() == 2) {
+        if (closedKes.isEmpty() && openKes.length() == 2) {
 
             // sample both edges
             vacomplex::KeyEdge* ke0 = openKes[0];
@@ -493,7 +494,7 @@ core::Id Workspace::glue(core::Span<core::Id> elements) {
                     FreehandEdgeGeometry::createFromPoints(
                         newPoints, false, maxWidth * 0.05);
 
-                vacomplex::Cell* result = vacomplex::ops::glue(
+                vacomplex::Cell* result = vacomplex::ops::glueKeyOpenEdges(
                     halfedges,
                     std::move(newGeometry),
                     newPoints.first().position(),
@@ -507,6 +508,10 @@ core::Id Workspace::glue(core::Span<core::Id> elements) {
             else {
                 // TODO: warning ?
             }
+        }
+    }
+    else if (!closedKes.isEmpty()) {
+        if (closedKes.length() == 2) {
         }
     }
     // Close history group

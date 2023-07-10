@@ -161,46 +161,46 @@ void softDelete(Node* node, bool deleteIsolatedVertices) {
     ops.softDelete(node, deleteIsolatedVertices);
 }
 
-KeyVertex* glue(core::Span<KeyVertex*> vertices, const geometry::Vec2d& position) {
+KeyVertex*
+glueKeyVertices(core::Span<KeyVertex*> vertices, const geometry::Vec2d& position) {
     if (vertices.isEmpty()) {
-        throw LogicError("glue: requires at least 1 vertex.");
+        throw LogicError("glueKeyVertices: requires at least 1 vertex.");
     }
     KeyVertex* kv0 = vertices[0];
 
     if (vertices.contains(nullptr)) {
-        throw LogicError("glue: a vertex in vertices is nullptr.");
+        throw LogicError("glueKeyVertices: a vertex in vertices is nullptr.");
     }
 
     Complex* complex = kv0->complex();
     core::AnimTime t0 = kv0->time();
     for (KeyVertex* vertex : vertices.subspan(1)) {
         if (vertex->complex() != complex) {
-            throw LogicError(
-                "glue: a key vertex is from a different complex than the others.");
+            throw LogicError("glueKeyVertices: a key vertex is from a different complex "
+                             "than the others.");
         }
         if (vertex->time() != t0) {
-            throw LogicError(
-                "glue: a key vertex is from a different time than the others.");
+            throw LogicError("glueKeyVertices: a key vertex is from a different time "
+                             "than the others.");
         }
     }
 
     detail::Operations ops(complex);
-    return ops.glue(vertices, position);
+    return ops.glueKeyVertices(vertices, position);
 }
 
-// For open edges only.
-KeyEdge* glue(
+KeyEdge* glueKeyOpenEdges(
     core::Span<KeyHalfedge> khes,
     std::shared_ptr<KeyEdgeGeometry> geometry,
     const geometry::Vec2d& startPosition,
     const geometry::Vec2d& endPosition) {
 
     if (khes.isEmpty()) {
-        throw LogicError("glue: requires at least 1 halfedge.");
+        throw LogicError("glueKeyOpenEdges: requires at least 1 halfedge.");
     }
     KeyHalfedge khe0 = khes[0];
     if (khe0.isClosed()) {
-        throw LogicError("glue: cannot mix open/closed edges.");
+        throw LogicError("glueKeyOpenEdges: a key halfedge is from a closed edge.");
     }
 
     Complex* complex = khe0.edge()->complex();
@@ -212,24 +212,24 @@ KeyEdge* glue(
         KeyEdge* ke = khe.edge();
         bool inserted = seen.insert(ke).second;
         if (!inserted) {
-            throw LogicError(
-                "glue: cannot glue two key halfedges that use the same key edge.");
+            throw LogicError("glueKeyOpenEdges: cannot glue two key halfedges that use "
+                             "the same key edge.");
         }
         if (ke->complex() != complex) {
-            throw LogicError(
-                "glue: a key halfedge is from a different complex than the others.");
+            throw LogicError("glueKeyOpenEdges: a key halfedge is from a different "
+                             "complex than the others.");
         }
         if (ke->time() != t0) {
-            throw LogicError(
-                "glue: a key halfedge is from a different time than the others.");
+            throw LogicError("glueKeyOpenEdges: a key halfedge is from a different time "
+                             "than the others.");
         }
         if (ke->isClosed()) {
-            throw LogicError("glue: cannot mix open/closed edges.");
+            throw LogicError("glueKeyOpenEdges: a key halfedge is from a closed edge.");
         }
     }
 
     detail::Operations ops(complex);
-    return ops.glue(khes, std::move(geometry), startPosition, endPosition);
+    return ops.glueKeyOpenEdges(khes, std::move(geometry), startPosition, endPosition);
 }
 
 void moveToGroup(Node* node, Group* parentGroup, Node* nextSibling) {

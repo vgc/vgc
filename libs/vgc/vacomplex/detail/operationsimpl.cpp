@@ -288,7 +288,8 @@ void Operations::softDelete(Node* /*node*/, bool /*deleteIsolatedVertices*/) {
     throw core::LogicError("Soft Delete topological operator is not implemented yet.");
 }
 
-KeyVertex* Operations::glue(core::Span<KeyVertex*> kvs, const geometry::Vec2d& position) {
+KeyVertex*
+Operations::glueKeyVertices(core::Span<KeyVertex*> kvs, const geometry::Vec2d& position) {
     if (kvs.isEmpty()) {
         return nullptr;
     }
@@ -333,7 +334,7 @@ KeyVertex* Operations::glue(core::Span<KeyVertex*> kvs, const geometry::Vec2d& p
     return newKv;
 }
 
-KeyEdge* Operations::glue(
+KeyEdge* Operations::glueKeyOpenEdges(
     core::Span<KeyHalfedge> khes,
     std::shared_ptr<KeyEdgeGeometry> geometry,
     const geometry::Vec2d& startPosition,
@@ -350,7 +351,7 @@ KeyEdge* Operations::glue(
     for (const KeyHalfedge& khe : khes) {
         startVertices.append(khe.startVertex());
     }
-    KeyVertex* startKv = glue(startVertices, startPosition);
+    KeyVertex* startKv = glueKeyVertices(startVertices, startPosition);
 
     // Note: we can only list end vertices after the glue of
     // start vertices since it can substitute end vertices.
@@ -359,7 +360,7 @@ KeyEdge* Operations::glue(
     for (const KeyHalfedge& khe : khes) {
         endVertices.append(khe.endVertex());
     }
-    KeyVertex* endKv = glue(endVertices, endPosition);
+    KeyVertex* endKv = glueKeyVertices(endVertices, endPosition);
 
     // Location: top-most input edge
     core::Array<Node*> edgeNodes(n);
