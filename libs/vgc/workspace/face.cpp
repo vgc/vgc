@@ -509,7 +509,8 @@ void VacKeyFace::updateFromVac_(vacomplex::NodeModificationFlags flags) {
 
     using vacomplex::NodeModificationFlag;
 
-    if (flags.has(NodeModificationFlag::BoundaryChanged)) {
+    bool boundaryChanged = flags.has(NodeModificationFlag::BoundaryChanged);
+    if (boundaryChanged) {
 
         // rebuild cycles attribute
         core::Array<DomCycle> domCycles;
@@ -556,7 +557,9 @@ void VacKeyFace::updateFromVac_(vacomplex::NodeModificationFlags flags) {
         }
         std::sort(newDependencies.begin(), newDependencies.end());
         updateDependencies_(newDependencies);
+    }
 
+    if (boundaryChanged || flags.has(NodeModificationFlag::BoundaryMeshChanged)) {
         dirtyFillMesh_();
     }
 }
