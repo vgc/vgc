@@ -500,7 +500,7 @@ core::Id Workspace::glue(core::Span<core::Id> elements) {
                     double u1b = currentSample1.s() / l1;
                     FreehandEdgePoint p0 = currentSample0;
                     FreehandEdgePoint p1 = currentSample1;
-                    if ((u0b > u1b && i1 + 1 < n1) || !(i0 + 1 < n0)) {
+                    if ((u0b > u1b || !(i0 + 1 < n0)) && (i1 + 1 < n1)) {
                         double t = (u1b - u0a) / (u0b - u0a);
                         points0[i] = p0a.lerp(p0, t);
                         points1[i] = p1;
@@ -508,13 +508,16 @@ core::Id Workspace::glue(core::Span<core::Id> elements) {
                         p1a = p1;
                         ++i1;
                     }
-                    else {
+                    else if (i0 + 1 < n0) {
                         double t = (u0b - u1a) / (u1b - u1a);
                         points0[i] = p0;
                         points1[i] = p1a.lerp(p1, t);
                         u0a = u0b;
                         p0a = p0;
                         ++i0;
+                    }
+                    else {
+                        break;
                     }
                 }
 
