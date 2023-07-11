@@ -106,6 +106,12 @@ public:
         const geometry::Vec2d& startPosition,
         const geometry::Vec2d& endPosition);
 
+    // Assumes `khes` does not contain more than one halfedge for any edge.
+    //
+    KeyEdge* glueKeyClosedEdges( //
+        core::Span<KeyHalfedge> khes,
+        std::shared_ptr<KeyEdgeGeometry> geometry);
+
     void moveToGroup(Node* node, Group* parentGroup, Node* nextSibling = nullptr);
     void moveBelowBoundary(Node* node);
 

@@ -390,6 +390,39 @@ KeyEdge* Operations::glueKeyOpenEdges(
     return newKe;
 }
 
+KeyEdge* Operations::glueKeyClosedEdges( //
+    core::Span<KeyHalfedge> khes,
+    std::shared_ptr<KeyEdgeGeometry> geometry) {
+
+    if (khes.isEmpty()) {
+        return nullptr;
+    }
+
+    Int n = khes.length();
+
+    // Location: top-most input edge
+    core::Array<Node*> edgeNodes(n);
+    for (Int i = 0; i < n; ++i) {
+        edgeNodes[i] = khes[i].edge();
+    }
+    Node* topMostEdge = findTopMost(edgeNodes);
+    Group* parentGroup = topMostEdge->parentGroup();
+    Node* nextSibling = topMostEdge->nextSibling();
+
+    // TODO: define source operation
+    KeyEdge* newKe = createKeyClosedEdge(
+        std::move(geometry), parentGroup, nextSibling, NodeSourceOperation{});
+
+    KeyHalfedge newKhe(newKe, true);
+    for (const KeyHalfedge& khe : khes) {
+        substitute_(khe, newKhe);
+        // It is important that no 2 halfedges refer to the same edge.
+        hardDelete(khe.edge(), true);
+    }
+
+    return newKe;
+}
+
 void Operations::moveToGroup(Node* node, Group* parentGroup, Node* nextSibling) {
     if (nextSibling) {
         insertNodeBeforeSibling_(node, nextSibling);
