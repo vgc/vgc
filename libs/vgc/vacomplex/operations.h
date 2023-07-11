@@ -103,6 +103,11 @@ KeyEdge* glueKeyOpenEdges(
     const geometry::Vec2d& startPosition,
     const geometry::Vec2d& endPosition);
 
+VGC_VACOMPLEX_API
+KeyEdge* glueKeyClosedEdges(
+    core::Span<KeyHalfedge> khes,
+    std::shared_ptr<KeyEdgeGeometry> geometry);
+
 /// Throws `NotAChildError` if `nextSibling` is not a child of `parentGroup` or `nullptr`.
 // XXX should check if node belongs to same VAC.
 VGC_VACOMPLEX_API

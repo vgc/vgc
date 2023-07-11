@@ -232,6 +232,47 @@ KeyEdge* glueKeyOpenEdges(
     return ops.glueKeyOpenEdges(khes, std::move(geometry), startPosition, endPosition);
 }
 
+KeyEdge* glueKeyClosedEdges(
+    core::Span<KeyHalfedge> khes,
+    std::shared_ptr<KeyEdgeGeometry> geometry) {
+
+    if (khes.isEmpty()) {
+        throw LogicError("glue: requires at least 1 halfedge.");
+    }
+    KeyHalfedge khe0 = khes[0];
+    if (!khe0.isClosed()) {
+        throw LogicError("glueKeyClosedEdges: a key halfedge is from an open edge.");
+    }
+
+    Complex* complex = khe0.edge()->complex();
+    core::AnimTime t0 = khe0.edge()->time();
+    std::unordered_set<KeyEdge*> seen;
+    seen.insert(khe0.edge());
+
+    for (const KeyHalfedge& khe : khes.subspan(1)) {
+        KeyEdge* ke = khe.edge();
+        bool inserted = seen.insert(ke).second;
+        if (!inserted) {
+            throw LogicError("glueKeyClosedEdges: cannot glue two key halfedges that use "
+                             "the same key edge.");
+        }
+        if (ke->complex() != complex) {
+            throw LogicError("glueKeyClosedEdges: a key halfedge is from a different "
+                             "complex than the others.");
+        }
+        if (ke->time() != t0) {
+            throw LogicError("glueKeyClosedEdges: a key halfedge is from a different "
+                             "time than the others.");
+        }
+        if (!ke->isClosed()) {
+            throw LogicError("glueKeyClosedEdges: a key halfedge is from an open edge.");
+        }
+    }
+
+    detail::Operations ops(complex);
+    return ops.glueKeyClosedEdges(khes, std::move(geometry));
+}
+
 void moveToGroup(Node* node, Group* parentGroup, Node* nextSibling) {
     if (!node) {
         throw LogicError("moveToGroup: node is nullptr.");
