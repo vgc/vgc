@@ -28,10 +28,14 @@ vgc_add_library(vacomplex
         complex.cpp
         edgegeometry.cpp
         exceptions.cpp
+        inbetweenedge.cpp
+        inbetweenface.cpp
+        inbetweenvertex.cpp
         keycycle.cpp
         keyedge.cpp
         keyface.cpp
         keyhalfedge.cpp
+        keyvertex.cpp
         logcategories.cpp
         operations.cpp
         transform.cpp

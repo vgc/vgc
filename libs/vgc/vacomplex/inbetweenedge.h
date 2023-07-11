@@ -22,6 +22,8 @@
 
 namespace vgc::vacomplex {
 
+class KeyHalfedge;
+
 class VGC_VACOMPLEX_API InbetweenEdge final
     : public SpatioTemporalCell<EdgeCell, InbetweenCell> {
 
@@ -35,32 +37,18 @@ private:
 public:
     VGC_VACOMPLEX_DEFINE_SPATIOTEMPORAL_CELL_CAST_METHODS(Inbetween, Edge)
 
-    bool isStartVertex(VertexCell* /*v*/) const override {
-        // TODO: check whether v is one of the start vertices of this inbetween edge.
-        return false;
-    }
-
-    bool isEndVertex(VertexCell* /*v*/) const override {
-        // TODO: check whether v is one of the end vertices of this inbetween edge.
-        return false;
-    }
-
-    bool isClosed() const override {
-        // TODO: return whether this inbetween edge is open or closed.
-        return false;
-    }
+    bool isStartVertex(VertexCell* v) const override;
+    bool isEndVertex(VertexCell* v) const override;
+    bool isClosed() const override;
 
 private:
-    void
-    substituteKeyVertex_(KeyVertex* /*oldVertex*/, KeyVertex* /*newVertex*/) override {
-        // TODO
-    }
+    void substituteKeyVertex_(KeyVertex* oldVertex, KeyVertex* newVertex) override;
 
     void substituteKeyHalfedge_(
-        const class KeyHalfedge& /*oldHalfedge*/,
-        const class KeyHalfedge& /*newHalfedge*/) override {
-        // TODO
-    }
+        const KeyHalfedge& oldHalfedge,
+        const KeyHalfedge& newHalfedge) override;
+
+    void debugPrint_(core::StringWriter& out) override;
 };
 
 } // namespace vgc::vacomplex

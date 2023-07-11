@@ -149,4 +149,25 @@ void KeyEdge::substituteKeyHalfedge_(
     // no-op
 }
 
+namespace {
+
+std::string vertexId_(KeyVertex* v) {
+    if (v) {
+        return core::format("{}", v->id());
+    }
+    else {
+        return "_";
+    }
+}
+
+} // namespace
+
+void KeyEdge::debugPrint_(core::StringWriter& out) {
+    out << core::format( //
+        "{:<12} startVertex={}, endVertex={}",
+        "KeyEdge",
+        vertexId_(startVertex_),
+        vertexId_(endVertex_));
+}
+
 } // namespace vgc::vacomplex

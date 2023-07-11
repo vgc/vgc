@@ -30,6 +30,8 @@
 
 namespace vgc::vacomplex {
 
+class KeyHalfedge;
+
 class VGC_VACOMPLEX_API KeyEdge final : public SpatioTemporalCell<EdgeCell, KeyCell> {
 private:
     friend detail::Operations;
@@ -116,9 +118,12 @@ private:
     bool updateGeometryFromBoundary_() override;
 
     void substituteKeyVertex_(KeyVertex* oldVertex, KeyVertex* newVertex) override;
+
     void substituteKeyHalfedge_(
-        const class KeyHalfedge& oldHalfedge,
-        const class KeyHalfedge& newHalfedge) override;
+        const KeyHalfedge& oldHalfedge,
+        const KeyHalfedge& newHalfedge) override;
+
+    void debugPrint_(core::StringWriter& out) override;
 
     geometry::StrokeSample2dArray
     computeInputSamples_(const geometry::CurveSamplingParameters& parameters) const;

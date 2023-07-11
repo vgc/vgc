@@ -31,6 +31,12 @@ Node::Node(core::Id id, CellType cellType) noexcept
 Node::~Node() {
 }
 
+void Node::debugPrint(core::StringWriter& out) {
+    std::string idString = core::format("[{}]", id());
+    out << core::format("{:<6}", idString);
+    debugPrint_(out);
+}
+
 Cell::Cell()
     : Node(-1, CellType::KeyVertex) {
 
@@ -84,6 +90,13 @@ void Group::updateTransformFromRoot_() {
     else {
         transformFromRoot_ = transform_;
     }
+}
+
+void Group::debugPrint_(core::StringWriter& out) {
+    out << core::format( //
+        "{:<12} numChildren={} ",
+        "Group",
+        numChildren());
 }
 
 } // namespace vgc::vacomplex
