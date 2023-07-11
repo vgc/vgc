@@ -615,9 +615,9 @@ void Operations::dirtyMesh_(Cell* cell) {
         for (Cell* starCell : cell->star_) {
             // No need for recursion since starCell.star() is a subset
             // of cell.star().
+            onNodeModified_(starCell, NodeModificationFlag::BoundaryMeshChanged);
             if (starCell->hasMeshBeenQueriedSinceLastDirtyEvent_) {
                 starCell->hasMeshBeenQueriedSinceLastDirtyEvent_ = false;
-                onNodeModified_(starCell, NodeModificationFlag::BoundaryMeshChanged);
                 starCell->dirtyMesh_();
                 onNodeModified_(starCell, NodeModificationFlag::MeshChanged);
             }

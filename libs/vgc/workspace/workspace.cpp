@@ -330,7 +330,7 @@ core::Array<geometry::Vec2d> computeApproximateUniformSamplingPositions(
     result.append(samples.first().position());
     double l = samples.last().s();
     if (l > 0) {
-        double deltaS = l / (numSamples - 2);
+        double deltaS = l / (numSamples - 1);
         double targetS = deltaS;
         const geometry::StrokeSample2d* s0 = &samples[0];
         for (const geometry::StrokeSample2d& s1 : samples) {
