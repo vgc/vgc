@@ -138,6 +138,9 @@ private:
     VGC_SLOT(onShowTransformBoxChangedSlot_, onShowTransformBoxChanged_)
 
     void updateTransformBoxElements_();
+
+    void onGlue_();
+    VGC_SLOT(onGlueSlot_, onGlue_)
 };
 
 } // namespace vgc::tools

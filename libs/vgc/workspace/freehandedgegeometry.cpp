@@ -838,7 +838,7 @@ template<typename TPoint, typename PositionGetter, typename WidthGetter>
 
 template<typename TPoint, typename PositionGetter, typename WidthGetter>
 Int filterPointsStep(
-    core::Array<TPoint>& points,
+    core::Span<TPoint> points,
     core::IntArray& indices,
     Int intervalStart,
     bool /*isClosed*/,
@@ -904,6 +904,47 @@ Int filterPointsStep(
 }
 
 } // namespace
+
+std::shared_ptr<FreehandEdgeGeometry> FreehandEdgeGeometry::createFromPoints(
+    core::Span<FreehandEdgePoint> points,
+    bool isClosed,
+    double tolerance) {
+
+    // TODO: detect constant width
+    geometry::Vec2dArray positions;
+    core::Array<double> widths;
+    if (points.length() > 2) {
+        core::IntArray indices;
+        indices.extend({0, points.length() - 1});
+        filterPointsStep<FreehandEdgePoint>(
+            points,
+            indices,
+            0,
+            isClosed,
+            tolerance,
+            [](const FreehandEdgePoint& p, Int) { return p.position(); },
+            [](const FreehandEdgePoint& p, Int) { return p.width(); });
+        Int n = indices.length();
+        positions.reserve(n);
+        widths.reserve(n);
+        for (Int i = 0; i < n; ++i) {
+            const FreehandEdgePoint& point = points[indices[i]];
+            positions.append(point.position());
+            widths.append(point.width());
+        }
+    }
+    else {
+        Int n = points.length();
+        positions.reserve(n);
+        widths.reserve(n);
+        for (const FreehandEdgePoint& point : points) {
+            positions.append(point.position());
+            widths.append(point.width());
+        }
+    }
+    return std::make_shared<FreehandEdgeGeometry>(
+        std::move(positions), std::move(widths), isClosed, false);
+}
 
 geometry::Vec2d FreehandEdgeGeometry::sculptGrab(
     const geometry::Vec2d& startPosition,
@@ -1055,7 +1096,7 @@ geometry::Vec2d FreehandEdgeGeometry::sculptGrab(
             }
         }
         indices.extend({0, sculptPoints.length() - 1});
-        filterPointsStep(
+        filterPointsStep<SculptPoint>(
             sculptPoints,
             indices,
             0,
@@ -1560,7 +1601,7 @@ public:
         core::IntArray indices;
         indices.extend({simplifyFirstIndex, simplifyLastIndex});
         if (hasWidths_) {
-            filterPointsStep(
+            filterPointsStep<geometry::Vec2d>(
                 newKnotPositions_,
                 indices,
                 0,
@@ -1572,7 +1613,7 @@ public:
                 });
         }
         else {
-            filterPointsStep(
+            filterPointsStep<geometry::Vec2d>(
                 newKnotPositions_,
                 indices,
                 0,

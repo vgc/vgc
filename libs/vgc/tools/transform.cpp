@@ -28,6 +28,7 @@
 #include <vgc/graphics/detail/shapeutil.h>
 #include <vgc/graphics/strings.h>
 #include <vgc/vacomplex/complex.h>
+#include <vgc/vacomplex/detail/operationsimpl.h>
 #include <vgc/workspace/colors.h>
 
 namespace vgc::tools {
@@ -587,7 +588,36 @@ void TopologyAwareTransformer::clear() {
     workspace_ = nullptr;
 }
 
+namespace {
+
+class MultiComplexMainOperation {
+public:
+    void addComplex(vacomplex::Complex* complex) {
+        bool found = false;
+        for (const vacomplex::detail::Operations& op : ops_) {
+            if (op.complex() == complex) {
+                found = true;
+                break;
+            }
+        }
+        if (!found) {
+            ops_.emplaceLast(complex);
+        }
+    }
+
+    void finish() {
+        ops_.clear();
+    }
+
+private:
+    core::Array<vacomplex::detail::Operations> ops_;
+};
+
+} // namespace
+
 void TopologyAwareTransformer::transform(const geometry::Mat3d& transform) {
+
+    MultiComplexMainOperation mainOp = {};
 
     // TODO: take group transformations into account.
 
@@ -599,6 +629,7 @@ void TopologyAwareTransformer::transform(const geometry::Mat3d& transform) {
     for (const KeyVertexTransformData& td : vertices_) {
         vacomplex::KeyVertex* kv = findKeyVertex_(td.elementId);
         if (kv) {
+            mainOp.addComplex(kv->complex());
             vacomplex::ops::setKeyVertexPosition(
                 kv, transform.transformPoint(kv->position()));
         }
@@ -608,6 +639,7 @@ void TopologyAwareTransformer::transform(const geometry::Mat3d& transform) {
     for (const KeyEdgeTransformData& td : edges_) {
         vacomplex::KeyEdge* ke = findKeyEdge_(td.elementId);
         if (ke) {
+            mainOp.addComplex(ke->complex());
             vacomplex::KeyEdgeGeometry* geometry = ke->geometry();
             if (geometry) {
                 // TODO: take layer transformations into account.
@@ -620,12 +652,15 @@ void TopologyAwareTransformer::transform(const geometry::Mat3d& transform) {
     for (const KeyEdgeTransformData& td : edgesToSnap_) {
         vacomplex::KeyEdge* ke = findKeyEdge_(td.elementId);
         if (ke) {
+            mainOp.addComplex(ke->complex());
             ke->snapGeometry();
         }
     }
 }
 
 void TopologyAwareTransformer::transform(const geometry::Vec2d& translation) {
+
+    MultiComplexMainOperation mainOp = {};
 
     // TODO: take group transformations into account.
 
@@ -637,6 +672,7 @@ void TopologyAwareTransformer::transform(const geometry::Vec2d& translation) {
     for (const KeyVertexTransformData& td : vertices_) {
         vacomplex::KeyVertex* kv = findKeyVertex_(td.elementId);
         if (kv) {
+            mainOp.addComplex(kv->complex());
             vacomplex::ops::setKeyVertexPosition(kv, kv->position() + translation);
         }
     }
@@ -645,6 +681,7 @@ void TopologyAwareTransformer::transform(const geometry::Vec2d& translation) {
     for (const KeyEdgeTransformData& td : edges_) {
         vacomplex::KeyEdge* ke = findKeyEdge_(td.elementId);
         if (ke) {
+            mainOp.addComplex(ke->complex());
             vacomplex::KeyEdgeGeometry* geometry = ke->geometry();
             if (geometry) {
                 // TODO: take layer transformations into account.
@@ -657,6 +694,7 @@ void TopologyAwareTransformer::transform(const geometry::Vec2d& translation) {
     for (const KeyEdgeTransformData& td : edgesToSnap_) {
         vacomplex::KeyEdge* ke = findKeyEdge_(td.elementId);
         if (ke) {
+            mainOp.addComplex(ke->complex());
             ke->snapGeometry();
         }
     }
@@ -704,12 +742,15 @@ void TopologyAwareTransformer::updateDragTransform(const geometry::Mat3d& transf
         return;
     }
 
+    MultiComplexMainOperation mainOp = {};
+
     // TODO: take group transformations into account.
 
     // Vertices
     for (const KeyVertexTransformData& td : vertices_) {
         vacomplex::KeyVertex* kv = findKeyVertex_(td.elementId);
         if (kv) {
+            mainOp.addComplex(kv->complex());
             vacomplex::ops::setKeyVertexPosition(
                 kv, transform.transformPoint(td.originalPosition));
         }
@@ -719,6 +760,7 @@ void TopologyAwareTransformer::updateDragTransform(const geometry::Mat3d& transf
     for (const KeyEdgeTransformData& td : edges_) {
         vacomplex::KeyEdge* ke = findKeyEdge_(td.elementId);
         if (ke) {
+            mainOp.addComplex(ke->complex());
             vacomplex::KeyEdgeGeometry* geometry = ke->geometry();
             if (geometry) {
                 geometry->resetEdit();
@@ -731,6 +773,7 @@ void TopologyAwareTransformer::updateDragTransform(const geometry::Mat3d& transf
     for (const KeyEdgeTransformData& td : edgesToSnap_) {
         vacomplex::KeyEdge* ke = findKeyEdge_(td.elementId);
         if (ke) {
+            mainOp.addComplex(ke->complex());
             vacomplex::KeyEdgeGeometry* geometry = ke->geometry();
             if (geometry) {
                 geometry->resetEdit();
@@ -745,12 +788,15 @@ void TopologyAwareTransformer::updateDragTransform(const geometry::Vec2d& transl
         return;
     }
 
+    MultiComplexMainOperation mainOp = {};
+
     // TODO: take group transformations into account.
 
     // Vertices
     for (const KeyVertexTransformData& td : vertices_) {
         vacomplex::KeyVertex* kv = findKeyVertex_(td.elementId);
         if (kv) {
+            mainOp.addComplex(kv->complex());
             vacomplex::ops::setKeyVertexPosition(kv, td.originalPosition + translation);
         }
     }
@@ -759,6 +805,7 @@ void TopologyAwareTransformer::updateDragTransform(const geometry::Vec2d& transl
     for (const KeyEdgeTransformData& td : edges_) {
         vacomplex::KeyEdge* ke = findKeyEdge_(td.elementId);
         if (ke) {
+            mainOp.addComplex(ke->complex());
             vacomplex::KeyEdgeGeometry* geometry = ke->geometry();
             if (geometry) {
                 geometry->resetEdit();
@@ -771,6 +818,7 @@ void TopologyAwareTransformer::updateDragTransform(const geometry::Vec2d& transl
     for (const KeyEdgeTransformData& td : edgesToSnap_) {
         vacomplex::KeyEdge* ke = findKeyEdge_(td.elementId);
         if (ke) {
+            mainOp.addComplex(ke->complex());
             vacomplex::KeyEdgeGeometry* geometry = ke->geometry();
             if (geometry) {
                 geometry->resetEdit();

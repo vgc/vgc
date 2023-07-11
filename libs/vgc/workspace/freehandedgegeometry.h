@@ -25,6 +25,49 @@
 
 namespace vgc::workspace {
 
+class FreehandEdgePoint {
+public:
+    VGC_WARNING_PUSH
+    VGC_WARNING_MSVC_DISABLE(26495) // member variable uninitialized
+    FreehandEdgePoint(core::NoInit)
+        : pos_(core::noInit) {
+    }
+    VGC_WARNING_POP
+
+    FreehandEdgePoint(const geometry::Vec2d& position, double width)
+        : pos_(position)
+        , width_(width) {
+    }
+
+    FreehandEdgePoint(const geometry::StrokeSample2d& sample)
+        : pos_(sample.position())
+        , width_(sample.halfwidth(0) * 2) {
+    }
+
+    FreehandEdgePoint lerp(const FreehandEdgePoint& b, double u) {
+        FreehandEdgePoint result = *this;
+        result.pos_ += u * (b.pos_ - pos_);
+        result.width_ += u * (b.width_ - width_);
+        return result;
+    }
+
+    FreehandEdgePoint average(const FreehandEdgePoint& b) {
+        return FreehandEdgePoint(0.5 * (pos_ + b.pos_), 0.5 * (width_ + b.width_));
+    }
+
+    geometry::Vec2d position() const {
+        return pos_;
+    }
+
+    double width() const {
+        return width_;
+    }
+
+private:
+    geometry::Vec2d pos_;
+    double width_ = 0;
+};
+
 class VGC_WORKSPACE_API FreehandEdgeGeometry : public EdgeGeometry {
 public:
     using SharedConstPositions = geometry::SharedConstVec2dArray;
@@ -32,6 +75,11 @@ public:
 
     using StrokeType = geometry::CatmullRomSplineStroke2d;
     //using StrokeType = geometry::YukselSplineStroke2d;
+
+    static std::shared_ptr<FreehandEdgeGeometry> createFromPoints(
+        core::Span<FreehandEdgePoint> points,
+        bool isClosed,
+        double tolerance);
 
     FreehandEdgeGeometry(bool isClosed)
         : EdgeGeometry(isClosed) {
@@ -52,7 +100,9 @@ public:
         bool isClosed,
         bool isWidthConstant)
 
-        : EdgeGeometry(isClosed) {
+        : EdgeGeometry(isClosed)
+        , sharedConstPositions_(positions)
+        , sharedConstWidths_(widths) {
 
         stroke_ = createStroke_();
         if (isWidthConstant) {

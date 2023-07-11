@@ -1,4 +1,4 @@
-// Copyright 2022 The VGC Developers
+// Copyright 2023 The VGC Developers
 // See the COPYRIGHT file at the top-level directory of this distribution
 // and at https://github.com/vgc/vgc/blob/master/COPYRIGHT
 //
@@ -14,18 +14,40 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <vgc/vacomplex/detail/operationsimpl.h>
-#include <vgc/vacomplex/edgegeometry.h>
-#include <vgc/vacomplex/keyedge.h>
+#include <vgc/tools/topology.h>
 
-namespace vgc::vacomplex {
+namespace vgc::tools {
 
-void KeyEdgeGeometry::dirtyEdgeSampling() const {
-    if (edge_) {
-        Complex* complex = edge_->complex();
-        detail::Operations ops(complex);
-        ops.onGeometryChanged_(edge_);
-    }
+namespace commands {
+
+using ui::Key;
+
+// TODO: Use VGC_UI_DEFINE_TRIGGER_COMMAND
+#undef VGC_UI_DEFINE_TRIGGER_COMMAND
+#define VGC_UI_DEFINE_TRIGGER_COMMAND VGC_UI_DEFINE_WINDOW_COMMAND
+
+VGC_UI_DEFINE_TRIGGER_COMMAND( //
+    glue,
+    "tools.topology.glue",
+    "Glue",
+    Key::G);
+
+VGC_UI_DEFINE_TRIGGER_COMMAND( //
+    unglue,
+    "tools.topology.unglue",
+    "Unglue",
+    Key::U);
+
+} // namespace commands
+
+VGC_TOOLS_API
+core::StringId glueCommandId() {
+    return commands::glue;
 }
 
-} // namespace vgc::vacomplex
+VGC_TOOLS_API
+core::StringId unglueCommandId() {
+    return commands::unglue;
+}
+
+} // namespace vgc::tools

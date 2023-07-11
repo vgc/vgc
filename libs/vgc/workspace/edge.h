@@ -363,6 +363,10 @@ public:
         return time_;
     }
 
+    const core::Color& color() const {
+        return color_;
+    }
+
     const geometry::Rect2d& boundingBox() const {
         return bbox_;
     }
@@ -385,6 +389,8 @@ public:
 
 private:
     core::AnimTime time_;
+    core::Color color_;
+
     geometry::Rect2d bbox_ = {};
     geometry::Rect2d strokeBbox_ = {};
 
@@ -404,7 +410,6 @@ private:
 
     // stage StrokeMesh
     StuvMesh2d stroke_;
-    core::Color color_;
     bool hasPendingColorChange_ = false;
 
     // Note: only valid for a single engine at the moment.

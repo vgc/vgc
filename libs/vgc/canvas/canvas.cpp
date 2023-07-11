@@ -212,7 +212,7 @@ Canvas::computeSelectionCandidates(const geometry::Vec2f& position) const {
                 Int priority = 1;
                 if (e->isVacElement()) {
                     vacomplex::Node* node = e->toVacElement()->vacNode();
-                    if (node->isCell()) {
+                    if (node && node->isCell()) {
                         vacomplex::Cell* cell = node->toCellUnchecked();
                         switch (cell->cellType()) {
                         case vacomplex::CellType::KeyVertex:

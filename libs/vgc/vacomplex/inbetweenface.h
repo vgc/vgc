@@ -34,6 +34,18 @@ private:
 
 public:
     VGC_VACOMPLEX_DEFINE_SPATIOTEMPORAL_CELL_CAST_METHODS(Inbetween, Face)
+
+private:
+    void
+    substituteKeyVertex_(KeyVertex* /*oldVertex*/, KeyVertex* /*newVertex*/) override {
+        // TODO
+    }
+
+    void substituteKeyHalfedge_(
+        const class KeyHalfedge& /*oldHalfedge*/,
+        const class KeyHalfedge& /*newHalfedge*/) override {
+        // TODO
+    }
 };
 
 } // namespace vgc::vacomplex

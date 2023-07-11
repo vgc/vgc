@@ -39,6 +39,18 @@ public:
         // XXX todo interp
         return geometry::Vec2d();
     }
+
+private:
+    void
+    substituteKeyVertex_(KeyVertex* /*oldVertex*/, KeyVertex* /*newVertex*/) override {
+        // TODO
+    }
+
+    void substituteKeyHalfedge_(
+        const class KeyHalfedge& /*oldHalfedge*/,
+        const class KeyHalfedge& /*newHalfedge*/) override {
+        // TODO
+    }
 };
 
 } // namespace vgc::vacomplex

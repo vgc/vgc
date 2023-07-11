@@ -18,8 +18,10 @@
 
 #include <vgc/graphics/detail/shapeutil.h>
 #include <vgc/graphics/strings.h>
+#include <vgc/tools/topology.h>
 #include <vgc/ui/boolsettingedit.h>
 #include <vgc/ui/column.h>
+#include <vgc/vacomplex/detail/operationsimpl.h>
 #include <vgc/workspace/colors.h>
 
 #include <set>
@@ -50,6 +52,9 @@ Select::Select()
 
     options::showTransformBox()->valueChanged().connect(onShowTransformBoxChangedSlot_());
     onShowTransformBoxChanged_();
+
+    ui::Action* glueAction = createTriggerAction(glueCommandId());
+    glueAction->triggered().connect(onGlueSlot_());
 }
 
 SelectPtr Select::create() {
@@ -681,6 +686,20 @@ void Select::updateDragMovedElements_(
         undoGroup = history->createUndoGroup(Translate_Elements);
     }
 
+    core::Array<vacomplex::detail::Operations> ops;
+    auto initOperationOn = [&ops](vacomplex::Cell* cell) {
+        bool found = false;
+        for (const vacomplex::detail::Operations& op : ops) {
+            if (op.complex() == cell->complex()) {
+                found = true;
+                break;
+            }
+        }
+        if (!found) {
+            ops.emplaceLast(cell->complex());
+        }
+    };
+
     // Translate Vertices
     for (const KeyVertexDragData& kvd : draggedVertices_) {
         workspace::Element* element = workspace->find(kvd.elementId);
@@ -688,13 +707,14 @@ void Select::updateDragMovedElements_(
             vacomplex::KeyVertex* kv =
                 element->vacNode()->toCellUnchecked()->toKeyVertex();
             if (kv) {
+                initOperationOn(kv);
                 vacomplex::ops::setKeyVertexPosition(
                     kv, kvd.position + translationInWorkspace);
             }
         }
     }
 
-    // Translate closed edges' geometry
+    // Translate or snap edges' geometry
     for (const KeyEdgeDragData& ked : draggedEdges_) {
         workspace::Element* element = workspace->find(ked.elementId);
         if (element && element->vacNode() && element->vacNode()->isCell()) {
@@ -702,6 +722,7 @@ void Select::updateDragMovedElements_(
             if (!ke) {
                 continue;
             }
+            initOperationOn(ke);
             if (ked.isUniformTranslation) {
                 vacomplex::KeyEdgeGeometry* geometry = ke->geometry();
                 if (geometry) {
@@ -723,6 +744,7 @@ void Select::updateDragMovedElements_(
     }
 
     // Close operation
+    ops.clear();
     if (undoGroup) {
         bool amend = canAmendUndoGroup_ && undoGroup->parent()
                      && undoGroup->parent()->name() == Translate_Elements;
@@ -740,21 +762,15 @@ void Select::finalizeDragMovedElements_(workspace::Workspace* workspace) {
         undoGroup = history->createUndoGroup(Translate_Elements);
     }
 
-    // Snap edges' geometry
+    // Finish edges' geometry edit
     for (const KeyEdgeDragData& ked : draggedEdges_) {
         workspace::Element* element = workspace->find(ked.elementId);
         if (element && element->vacNode() && element->vacNode()->isCell()) {
             vacomplex::KeyEdge* ke = element->vacNode()->toCellUnchecked()->toKeyEdge();
-            if (ke) {
-                // Vertices are already translated here.
-                if (!ked.isUniformTranslation) {
-                    ke->snapGeometry();
-                }
-                else if (ked.isEditStarted) {
-                    vacomplex::KeyEdgeGeometry* geometry = ke->geometry();
-                    if (geometry) {
-                        geometry->finishEdit();
-                    }
+            if (ke && ked.isEditStarted) {
+                vacomplex::KeyEdgeGeometry* geometry = ke->geometry();
+                if (geometry) {
+                    geometry->finishEdit();
                 }
             }
         }
@@ -836,6 +852,36 @@ void Select::updateTransformBoxElements_() {
         else {
             transformBox_->setElements({});
         }
+    }
+}
+
+void Select::onGlue_() {
+    canvas::Canvas* canvas = this->canvas();
+    if (!canvas) {
+        return;
+    }
+
+    workspace::Workspace* workspace = canvas->workspace();
+    if (!workspace) {
+        return;
+    }
+
+    // Open history group
+    core::UndoGroup* undoGroup = nullptr;
+    core::History* history = workspace->history();
+    if (history) {
+        undoGroup = history->createUndoGroup(glueCommandId());
+    }
+
+    core::Array<core::Id> selection = canvas->selection();
+    core::Id gluedId = workspace->glue(selection);
+    if (gluedId >= 0) {
+        canvas->setSelection({gluedId});
+    }
+
+    // Close history group
+    if (undoGroup) {
+        undoGroup->close();
     }
 }
 

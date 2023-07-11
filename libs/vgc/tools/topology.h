@@ -1,4 +1,4 @@
-// Copyright 2022 The VGC Developers
+// Copyright 2023 The VGC Developers
 // See the COPYRIGHT file at the top-level directory of this distribution
 // and at https://github.com/vgc/vgc/blob/master/COPYRIGHT
 //
@@ -14,18 +14,20 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <vgc/vacomplex/detail/operationsimpl.h>
-#include <vgc/vacomplex/edgegeometry.h>
-#include <vgc/vacomplex/keyedge.h>
+#ifndef VGC_TOOLS_TOPOLOGY_H
+#define VGC_TOOLS_TOPOLOGY_H
 
-namespace vgc::vacomplex {
+#include <vgc/tools/api.h>
+#include <vgc/ui/command.h>
 
-void KeyEdgeGeometry::dirtyEdgeSampling() const {
-    if (edge_) {
-        Complex* complex = edge_->complex();
-        detail::Operations ops(complex);
-        ops.onGeometryChanged_(edge_);
-    }
-}
+namespace vgc::tools {
 
-} // namespace vgc::vacomplex
+VGC_TOOLS_API
+core::StringId glueCommandId();
+
+VGC_TOOLS_API
+core::StringId unglueCommandId();
+
+} // namespace vgc::tools
+
+#endif // VGC_TOOLS_TOPOLOGY_H

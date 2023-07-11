@@ -848,7 +848,7 @@ void VacKeyEdge::updateFromVac_(vacomplex::NodeModificationFlags flags) {
         }
         if (oldVertices[1] != newVertices[1]) {
             domElement->setAttribute(
-                ds::startvertex, newVertices[1]->domElement()->getPathFromId());
+                ds::endvertex, newVertices[1]->domElement()->getPathFromId());
         }
     }
 }

@@ -273,6 +273,16 @@ public:
         const std::function<bool(Element*, Int)>& preOrderFn,
         const std::function<void(Element*, Int)>& postOrderFn);
 
+    /// Performs a glue operation on the given `elements`.
+    /// This is both a geometrical and topological operation.
+    ///
+    /// If the type of elements are mixed, does nothing.
+    /// Currently supported sets are:
+    /// - 2+ key vertices.
+    /// - 2 key edges.
+    ///
+    core::Id glue(core::Span<core::Id> elements);
+
     /// This signal is emitted whenever the workspace changes, either
     /// as a result of the DOM changing, or the topological complex
     /// changing.
@@ -332,6 +342,9 @@ private:
 
     void preUpdateDomFromVac_();
     void postUpdateDomFromVac_();
+    void updateElementFromVac_( //
+        VacElement* element,
+        vacomplex::NodeModificationFlags flags);
 
     // Full rebuild
 

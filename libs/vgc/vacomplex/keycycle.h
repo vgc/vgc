@@ -57,6 +57,7 @@ public:
 
 private:
     friend detail::Operations;
+    friend class KeyFace;
 
     KeyVertex* steinerVertex_ = nullptr;
     core::Array<KeyHalfedge> halfedges_;
