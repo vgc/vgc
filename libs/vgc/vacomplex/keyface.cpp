@@ -752,4 +752,24 @@ void KeyFace::substituteKeyHalfedge_(
     }
 }
 
+void KeyFace::debugPrint_(core::StringWriter& out) {
+
+    out << core::format( //
+        "{:<12}",
+        "KeyFace");
+
+    out << " cycles=[";
+    bool isFirst = true;
+    for (const KeyCycle& cycle : cycles()) {
+        if (isFirst) {
+            isFirst = false;
+        }
+        else {
+            out << ", ";
+        }
+        cycle.debugPrint(out);
+    }
+    out << ']';
+}
+
 } // namespace vgc::vacomplex

@@ -23,6 +23,8 @@
 
 namespace vgc::vacomplex {
 
+class KeyHalfedge;
+
 // dev note: position could be a variant<vec2d, func, provider>
 //           provider could have a dirty flag to not update data, especially important for
 //           big value types like curve geometry in edges.
@@ -51,14 +53,13 @@ public:
 private:
     geometry::Vec2d position_;
 
-    void substituteKeyVertex_(KeyVertex*, KeyVertex*) override {
-        // no-op
-    }
+    void substituteKeyVertex_(KeyVertex* oldVertex, KeyVertex* newVertex) override;
 
-    void
-    substituteKeyHalfedge_(const class KeyHalfedge&, const class KeyHalfedge&) override {
-        // no-op
-    }
+    void substituteKeyHalfedge_(
+        const KeyHalfedge& oldHalfedge,
+        const KeyHalfedge& newHalfedge) override;
+
+    void debugPrint_(core::StringWriter& out) override;
 };
 
 } // namespace vgc::vacomplex

@@ -351,6 +351,10 @@ public:
         return version_;
     }
 
+    /// Prints the tree of nodes of the Complex for debug purposes.
+    ///
+    void debugPrint();
+
     VGC_SIGNAL(nodesChanged, (const ComplexDiff&, diff))
 
 private:

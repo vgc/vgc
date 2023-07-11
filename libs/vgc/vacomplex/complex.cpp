@@ -16,6 +16,8 @@
 
 #include <vgc/vacomplex/complex.h>
 
+#include <vgc/vacomplex/logcategories.h>
+
 #include <vgc/vacomplex/detail/operationsimpl.h>
 
 namespace vgc::vacomplex {
@@ -97,6 +99,34 @@ Group* Complex::findGroup(core::Id id) const {
 
 bool Complex::containsNode(core::Id id) const {
     return find(id) != nullptr;
+}
+
+namespace {
+
+void debugPrintRec(core::StringWriter& out, Node* node, Int indent) {
+    out << core::format("{:<{}}", "", indent);
+    node->debugPrint(out);
+    out << "\n";
+    if (Group* group = node->toGroup()) {
+        ++indent;
+        Node* child = group->firstChild();
+        while (child) {
+            debugPrintRec(out, child, indent);
+            child = child->nextSibling();
+        }
+    }
+}
+
+} // namespace
+
+void Complex::debugPrint() {
+    std::string out_;
+    core::StringWriter out(out_);
+    out << core::format("{}\n", ptr(this));
+    if (root_) {
+        debugPrintRec(out, root_, 0);
+    }
+    VGC_DEBUG(LogVgcVacomplex, out_);
 }
 
 //bool Complex::emitPendingDiff() {

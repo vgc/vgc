@@ -22,6 +22,8 @@
 
 namespace vgc::vacomplex {
 
+class KeyHalfedge;
+
 class VGC_VACOMPLEX_API InbetweenVertex final
     : public SpatioTemporalCell<VertexCell, InbetweenCell> {
 
@@ -35,22 +37,16 @@ private:
 public:
     VGC_VACOMPLEX_DEFINE_SPATIOTEMPORAL_CELL_CAST_METHODS(Inbetween, Vertex)
 
-    geometry::Vec2d position(core::AnimTime /*t*/) const override {
-        // XXX todo interp
-        return geometry::Vec2d();
-    }
+    geometry::Vec2d position(core::AnimTime t) const override;
 
 private:
-    void
-    substituteKeyVertex_(KeyVertex* /*oldVertex*/, KeyVertex* /*newVertex*/) override {
-        // TODO
-    }
+    void substituteKeyVertex_(KeyVertex* oldVertex, KeyVertex* newVertex) override;
 
     void substituteKeyHalfedge_(
-        const class KeyHalfedge& /*oldHalfedge*/,
-        const class KeyHalfedge& /*newHalfedge*/) override {
-        // TODO
-    }
+        const KeyHalfedge& oldHalfedge,
+        const KeyHalfedge& newHalfedge) override;
+
+    void debugPrint_(core::StringWriter& out) override;
 };
 
 } // namespace vgc::vacomplex

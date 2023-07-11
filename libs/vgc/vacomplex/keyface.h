@@ -72,9 +72,12 @@ private:
     core::Array<KeyCycle> cycles_;
 
     void substituteKeyVertex_(KeyVertex* oldVertex, KeyVertex* newVertex) override;
+
     void substituteKeyHalfedge_(
         const class KeyHalfedge& oldHalfedge,
         const class KeyHalfedge& newHalfedge) override;
+
+    void debugPrint_(core::StringWriter& out) override;
 };
 
 } // namespace vgc::vacomplex

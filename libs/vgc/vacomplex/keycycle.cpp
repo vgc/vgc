@@ -56,4 +56,33 @@ KeyCycle::KeyCycle(core::Span<const KeyHalfedge> halfedges) noexcept
     }
 }
 
+// TODO: implement KeyCycleType to make the switch below more readable/convenient
+
+void KeyCycle::debugPrint(core::StringWriter& out) const {
+    if (steinerVertex()) {
+        // Steiner cycle
+        out << steinerVertex()->id();
+    }
+    else if (!halfedges().isEmpty()) {
+        // Simple or Non-simple cycle
+        bool isFirst = true;
+        for (const KeyHalfedge& h : halfedges_) {
+            if (isFirst) {
+                isFirst = false;
+            }
+            else {
+                out << ' ';
+            }
+            out << h.edge()->id();
+            if (!h.direction()) {
+                out << '*';
+            }
+        }
+    }
+    else {
+        // invalid cycle
+        out << "Invalid";
+    }
+}
+
 } // namespace vgc::vacomplex

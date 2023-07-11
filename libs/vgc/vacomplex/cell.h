@@ -449,6 +449,8 @@ public:
         return const_cast<Node*>(this)->toGroupUnchecked();
     }
 
+    void debugPrint(core::StringWriter& out);
+
 protected:
     CellType cellTypeUnchecked() const {
         return static_cast<CellType>(cellType_);
@@ -461,6 +463,8 @@ private:
     const UInt8 cellType_;
     // used during hard/soft delete operations
     bool isBeingDeleted_ = false;
+
+    virtual void debugPrint_(core::StringWriter& out) = 0;
 };
 
 class VGC_VACOMPLEX_API Group : public Node, public detail::TreeParentBase<Group, Node> {
@@ -544,6 +548,8 @@ private:
 
     void setTransform_(const Transform& transform);
     void updateTransformFromRoot_();
+
+    void debugPrint_(core::StringWriter& out) override;
 };
 
 template<typename T>

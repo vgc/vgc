@@ -55,6 +55,8 @@ public:
         return steinerVertex_ || !halfedges_.isEmpty();
     }
 
+    void debugPrint(core::StringWriter& out) const;
+
 private:
     friend detail::Operations;
     friend class KeyFace;
