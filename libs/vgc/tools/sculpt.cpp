@@ -638,7 +638,7 @@ protected:
     /// Please use `SculptEditRadiusAction::create()` instead.
     ///
     SculptEditRadiusAction()
-        : ui::Action(commands::width) {
+        : ui::Action(commands::editRadius) {
     }
 
 public:
