@@ -475,12 +475,25 @@ core::Array<KeyEdge*> Operations::unglueKeyEdges(KeyEdge* targetKe) {
                 if (cycle.steinerVertex_) {
                     continue;
                 }
-                for (KeyHalfedge& kheRef : cycle.halfedges_) {
-                    if (kheRef.edge() == targetKe) {
-                        KeyEdge* newKe = duplicateTargetKe();
-                        kheRef = KeyHalfedge(newKe, kheRef.direction());
-                        addToBoundary_(kf, newKe);
+                KeyHalfedge first = cycle.halfedges_.first();
+                if (!first.isClosed()) {
+                    for (KeyHalfedge& kheRef : cycle.halfedges_) {
+                        if (kheRef.edge() == targetKe) {
+                            KeyEdge* newKe = duplicateTargetKe();
+                            kheRef = KeyHalfedge(newKe, kheRef.direction());
+                            addToBoundary_(kf, newKe);
+                        }
                     }
+                }
+                else if (first.edge() == targetKe) {
+                    KeyEdge* newKe = duplicateTargetKe();
+                    for (KeyHalfedge& kheRef : cycle.halfedges_) {
+                        kheRef = KeyHalfedge(newKe, kheRef.direction());
+                    }
+                    addToBoundary_(kf, newKe);
+                    // TODO: instead of having a copy of the edge used N times
+                    // use a single edge with its geometry looped N times.
+                    // See Boris Dalstein's thesis page 187.
                 }
             }
             removeTargetKeFromBoundary(kf);
