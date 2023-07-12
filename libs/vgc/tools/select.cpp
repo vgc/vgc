@@ -55,6 +55,9 @@ Select::Select()
 
     ui::Action* glueAction = createTriggerAction(glueCommandId());
     glueAction->triggered().connect(onGlueSlot_());
+
+    ui::Action* unglueAction = createTriggerAction(unglueCommandId());
+    unglueAction->triggered().connect(onUnglueSlot_());
 }
 
 SelectPtr Select::create() {
@@ -877,6 +880,36 @@ void Select::onGlue_() {
     core::Id gluedId = workspace->glue(selection);
     if (gluedId >= 0) {
         canvas->setSelection({gluedId});
+    }
+
+    // Close history group
+    if (undoGroup) {
+        undoGroup->close();
+    }
+}
+
+void Select::onUnglue_() {
+    canvas::Canvas* canvas = this->canvas();
+    if (!canvas) {
+        return;
+    }
+
+    workspace::Workspace* workspace = canvas->workspace();
+    if (!workspace) {
+        return;
+    }
+
+    // Open history group
+    core::UndoGroup* undoGroup = nullptr;
+    core::History* history = workspace->history();
+    if (history) {
+        undoGroup = history->createUndoGroup(unglueCommandId());
+    }
+
+    core::Array<core::Id> selection = canvas->selection();
+    if (selection.length() == 1) {
+        core::Array<core::Id> ungluedIds = workspace->unglue(selection[0]);
+        canvas->setSelection(std::move(ungluedIds));
     }
 
     // Close history group

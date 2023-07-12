@@ -108,6 +108,17 @@ KeyEdge* glueKeyClosedEdges(
     core::Span<KeyHalfedge> khes,
     std::shared_ptr<KeyEdgeGeometry> geometry);
 
+VGC_VACOMPLEX_API
+core::Array<KeyEdge*> unglueKeyEdges(KeyEdge* ke);
+
+// ungluedKeyEdges is temporary and will probably be replaced by a more generic
+// container to support more types of unglued cells.
+//
+VGC_VACOMPLEX_API
+core::Array<KeyVertex*> unglueKeyVertices(
+    KeyVertex* kv,
+    core::Array<std::pair<core::Id, core::Array<KeyEdge*>>>& ungluedKeyEdges);
+
 /// Throws `NotAChildError` if `nextSibling` is not a child of `parentGroup` or `nullptr`.
 // XXX should check if node belongs to same VAC.
 VGC_VACOMPLEX_API

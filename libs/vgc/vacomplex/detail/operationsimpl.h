@@ -112,6 +112,11 @@ public:
         core::Span<KeyHalfedge> khes,
         std::shared_ptr<KeyEdgeGeometry> geometry);
 
+    core::Array<KeyEdge*> unglueKeyEdges(KeyEdge* ke);
+    core::Array<KeyVertex*> unglueKeyVertices(
+        KeyVertex* kv,
+        core::Array<std::pair<core::Id, core::Array<KeyEdge*>>>& ungluedKeyEdges);
+
     void moveToGroup(Node* node, Group* parentGroup, Node* nextSibling = nullptr);
     void moveBelowBoundary(Node* node);
 
@@ -198,6 +203,9 @@ private:
 
     // Other helper methods
     void collectDependentNodes_(Node* node, std::unordered_set<Node*>& dependentNodes);
+
+    Int countUses_(KeyVertex* kv);
+    Int countUses_(KeyEdge* ke);
 };
 
 } // namespace vgc::vacomplex::detail

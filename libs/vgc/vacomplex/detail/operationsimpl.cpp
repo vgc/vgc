@@ -18,6 +18,7 @@
 
 #include <unordered_set>
 
+#include <vgc/vacomplex/edgegeometry.h>
 #include <vgc/vacomplex/exceptions.h>
 #include <vgc/vacomplex/logcategories.h>
 
@@ -423,6 +424,226 @@ KeyEdge* Operations::glueKeyClosedEdges( //
     return newKe;
 }
 
+core::Array<KeyEdge*> Operations::unglueKeyEdges(KeyEdge* targetKe) {
+    core::Array<KeyEdge*> result;
+    if (countUses_(targetKe) <= 1) {
+        result.append(targetKe);
+        return result;
+    }
+
+    // TODO: handle temporal star.
+
+    // Helper
+    auto duplicateTargetKe = [this, targetKe, &result]() {
+        KeyEdge* newKe = nullptr;
+        std::shared_ptr<KeyEdgeGeometry> geomDuplicate = targetKe->geometry()->clone();
+        if (targetKe->isClosed()) {
+            // TODO: define source operation
+            newKe = createKeyClosedEdge(
+                std::move(geomDuplicate),
+                targetKe->parentGroup(),
+                targetKe->nextSibling(),
+                NodeSourceOperation{});
+        }
+        else {
+            // TODO: define source operation
+            newKe = createKeyOpenEdge(
+                targetKe->startVertex(),
+                targetKe->endVertex(),
+                std::move(geomDuplicate),
+                targetKe->parentGroup(),
+                targetKe->nextSibling(),
+                NodeSourceOperation{});
+        }
+        result.append(newKe);
+        return newKe;
+    };
+
+    // Helper. Assumes targetKe's star will be cleared later.
+    auto removeTargetKeFromBoundary = [this, targetKe](Cell* boundedCell) {
+        boundedCell->boundary_.removeOne(targetKe);
+        onBoundaryChanged_(boundedCell);
+    };
+
+    // Substitute targetKe by a duplicate in each of its use.
+    // Note: star is copied for safety since it may be modified in loop.
+    for (Cell* cell : core::Array(targetKe->star_)) {
+        switch (cell->cellType()) {
+        case CellType::KeyFace: {
+            KeyFace* kf = cell->toKeyFaceUnchecked();
+            for (KeyCycle& cycle : kf->cycles_) {
+                if (cycle.steinerVertex_) {
+                    continue;
+                }
+                for (KeyHalfedge& kheRef : cycle.halfedges_) {
+                    if (kheRef.edge() == targetKe) {
+                        KeyEdge* newKe = duplicateTargetKe();
+                        kheRef = KeyHalfedge(newKe, kheRef.direction());
+                        addToBoundary_(kf, newKe);
+                    }
+                }
+            }
+            removeTargetKeFromBoundary(kf);
+            break;
+        }
+        default:
+            throw core::LogicError(
+                "unglueKeyEdges() doesn't support temporal cells in edge star.");
+        }
+    }
+
+    // Delete targetKe
+    targetKe->star_.clear();
+    hardDelete(targetKe, true);
+
+    return result;
+}
+
+core::Array<KeyVertex*> Operations::unglueKeyVertices(
+    KeyVertex* targetKv,
+    core::Array<std::pair<core::Id, core::Array<KeyEdge*>>>& ungluedKeyEdges) {
+
+    core::Array<KeyVertex*> result;
+    if (countUses_(targetKv) <= 1) {
+        result.append(targetKv);
+        return result;
+    }
+
+    // TODO: handle temporal star.
+
+    // Unglue incident key edges.
+    for (Cell* cell : core::Array(targetKv->star_)) {
+        switch (cell->cellType()) {
+        case CellType::KeyEdge: {
+            KeyEdge* ke = cell->toKeyEdgeUnchecked();
+            core::Id id = ke->id();
+            core::Array<KeyEdge*> a = unglueKeyEdges(ke);
+            if (a.length() > 1) {
+                ungluedKeyEdges.emplaceLast(id, std::move(a));
+            }
+            break;
+        }
+        default:
+            break;
+        }
+    }
+
+    // Helper
+    auto duplicateTargetKv = [this, targetKv, &result]() {
+        KeyVertex* newKv = createKeyVertex(
+            targetKv->position(),
+            targetKv->parentGroup(),
+            targetKv->nextSibling(),
+            NodeSourceOperation{},
+            targetKv->time());
+        result.append(newKv);
+        return newKv;
+    };
+
+    // Helper. Assumes targetKv's star will be cleared later.
+    auto removeTargetKvFromBoundary = [this, targetKv](Cell* boundedCell) {
+        boundedCell->boundary_.removeOne(targetKv);
+        onBoundaryChanged_(boundedCell);
+    };
+
+    // Helper. Assumes the replaced key vertex is `targetKv` and that
+    // targetKv's star will be cleared later.
+    auto substituteTargetKvAtStartOrEndOfKhe = //
+        [this, targetKv, &removeTargetKvFromBoundary](
+            const KeyHalfedge& khe, bool startVertex, KeyVertex* newKv) {
+            //
+            KeyEdge* ke = khe.edge();
+
+            KeyVertex* endKv = nullptr;
+            if (khe.direction() == startVertex) {
+                endKv = ke->endVertex_;
+                ke->startVertex_ = newKv;
+            }
+            else {
+                endKv = ke->startVertex_;
+                ke->endVertex_ = newKv;
+            }
+
+            if (endKv != targetKv) {
+                removeTargetKvFromBoundary(ke);
+            }
+
+            addToBoundary_(ke, newKv);
+        };
+
+    // Substitute targetKv by a duplicate in each of its use.
+    // Note: star is copied for safety since it may be modified in loop.
+    for (Cell* cell : core::Array(targetKv->star_)) {
+        switch (cell->cellType()) {
+        case CellType::KeyEdge: {
+            KeyEdge* ke = cell->toKeyEdgeUnchecked();
+            bool hasFaceInStar = false;
+            for (Cell* keStarCell : ke->star_) {
+                if (keStarCell->cellType() == CellType::KeyFace) {
+                    hasFaceInStar = true;
+                    break;
+                }
+            }
+            if (!hasFaceInStar) {
+                if (ke->isStartVertex(targetKv)) {
+                    KeyVertex* newKv = duplicateTargetKv();
+                    ke->startVertex_ = newKv;
+                    addToBoundary_(ke, newKv);
+                }
+                if (ke->isEndVertex(targetKv)) {
+                    KeyVertex* newKv = duplicateTargetKv();
+                    ke->endVertex_ = newKv;
+                    addToBoundary_(ke, newKv);
+                }
+                removeTargetKvFromBoundary(ke);
+            }
+            break;
+        }
+        case CellType::KeyFace: {
+            KeyFace* kf = cell->toKeyFaceUnchecked();
+            for (KeyCycle& cycle : kf->cycles_) {
+                if (cycle.steinerVertex_) {
+                    if (cycle.steinerVertex_ == targetKv) {
+                        KeyVertex* newKv = duplicateTargetKv();
+                        cycle.steinerVertex_ = newKv;
+                        addToBoundary_(kf, newKv);
+                    }
+                    continue;
+                }
+                Int numHalfedges = cycle.halfedges_.length();
+                // substitute at face corner uses
+                for (Int i = 0; i < numHalfedges; ++i) {
+                    KeyHalfedge& khe1 = cycle.halfedges_[i];
+                    if (khe1.startVertex() == targetKv) {
+                        Int previousKheIndex = (i - 1 + numHalfedges) % numHalfedges;
+                        KeyHalfedge& khe0 = cycle.halfedges_[previousKheIndex];
+
+                        // (?)---khe0-->(targetKv)---khe1-->(?)
+                        KeyVertex* newKv = duplicateTargetKv();
+                        substituteTargetKvAtStartOrEndOfKhe(khe0, false, newKv);
+                        substituteTargetKvAtStartOrEndOfKhe(khe1, true, newKv);
+                        // (?)---khe0-->( newKv  )---khe1-->(?)
+
+                        addToBoundary_(kf, newKv);
+                    }
+                }
+            }
+            removeTargetKvFromBoundary(kf);
+            break;
+        }
+        default:
+            throw core::LogicError(
+                "unglueKeyVertices() doesn't support temporal cells in edge star.");
+        }
+    }
+
+    // Delete targetKv
+    targetKv->star_.clear();
+    hardDelete(targetKv, false);
+
+    return result;
+}
+
 void Operations::moveToGroup(Node* node, Group* parentGroup, Node* nextSibling) {
     if (nextSibling) {
         insertNodeBeforeSibling_(node, nextSibling);
@@ -695,8 +916,8 @@ void Operations::substitute_(KeyVertex* oldVertex, KeyVertex* newVertex) {
     for (Cell* starCell : oldVertex->star_) {
         *starCell->boundary_.find(oldVertex) = newVertex;
         newVertex->star_.append(starCell);
-        onBoundaryChanged_(starCell);
         starCell->substituteKeyVertex_(oldVertex, newVertex);
+        onBoundaryChanged_(starCell);
     }
     oldVertex->star_.clear();
     onNodeModified_(oldVertex, NodeModificationFlag::StarChanged);
@@ -712,8 +933,8 @@ void Operations::substitute_(
     for (Cell* starCell : oldEdge->star_) {
         *starCell->boundary_.find(oldEdge) = newEdge;
         newEdge->star_.append(starCell);
-        onBoundaryChanged_(starCell);
         starCell->substituteKeyHalfedge_(oldHalfedge, newHalfedge);
+        onBoundaryChanged_(starCell);
     }
     oldEdge->star_.clear();
     onNodeModified_(oldEdge, NodeModificationFlag::StarChanged);
@@ -742,6 +963,82 @@ void Operations::collectDependentNodes_(
             }
         }
     }
+}
+
+Int Operations::countUses_(KeyVertex* kv) {
+    Int count = 0;
+
+    for (Cell* starCell : kv->star_) {
+        switch (starCell->cellType()) {
+        case CellType::KeyEdge: {
+            KeyEdge* ke = starCell->toKeyEdgeUnchecked();
+            bool hasFaceInStar = false;
+            for (Cell* keStarCell : ke->star_) {
+                if (keStarCell->cellType() == CellType::KeyFace) {
+                    hasFaceInStar = true;
+                    break;
+                }
+            }
+            if (!hasFaceInStar) {
+                if (ke->isStartVertex(kv)) {
+                    ++count;
+                }
+                if (ke->isEndVertex(kv)) {
+                    ++count;
+                }
+            }
+            break;
+        }
+        case CellType::KeyFace: {
+            KeyFace* kf = starCell->toKeyFaceUnchecked();
+            for (KeyCycle& cycle : kf->cycles_) {
+                if (cycle.steinerVertex_) {
+                    if (cycle.steinerVertex_ == kv) {
+                        ++count;
+                    }
+                    continue;
+                }
+                for (const KeyHalfedge& khe : cycle.halfedges_) {
+                    if (khe.startVertex() == kv) {
+                        ++count;
+                    }
+                }
+            }
+            break;
+        }
+        default:
+            break;
+        }
+    }
+
+    return count;
+}
+
+Int Operations::countUses_(KeyEdge* ke) {
+    Int count = 0;
+
+    for (Cell* starCell : ke->star_) {
+        switch (starCell->cellType()) {
+        case CellType::KeyFace: {
+            KeyFace* kf = starCell->toKeyFaceUnchecked();
+            for (KeyCycle& cycle : kf->cycles_) {
+                if (cycle.steinerVertex_) {
+                    continue;
+                }
+                for (const KeyHalfedge& khe : cycle.halfedges_) {
+                    if (khe.edge() == ke) {
+                        ++count;
+                    }
+                }
+            }
+            break;
+        }
+        default:
+            break;
+        }
+    }
+
+    return count;
 }
 
 } // namespace vgc::vacomplex::detail

@@ -141,6 +141,9 @@ private:
 
     void onGlue_();
     VGC_SLOT(onGlueSlot_, onGlue_)
+
+    void onUnglue_();
+    VGC_SLOT(onUnglueSlot_, onUnglue_)
 };
 
 } // namespace vgc::tools
