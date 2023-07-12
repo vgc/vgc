@@ -802,7 +802,8 @@ core::Array<core::Id> Workspace::unglue(core::Id elementId) {
             if (ke) {
                 VacKeyEdge* e = dynamic_cast<VacKeyEdge*>(findVacElement(ke->id()));
                 if (e && e->domElement()) {
-                    starEdgeColors[ke->id()] = e->domElement()->getAttribute(dom::strings::color).getColor();
+                    starEdgeColors[ke->id()] =
+                        e->domElement()->getAttribute(dom::strings::color).getColor();
                 }
             }
         }
@@ -816,7 +817,8 @@ core::Array<core::Id> Workspace::unglue(core::Id elementId) {
             core::Id id = entry.first;
             const core::Array<vacomplex::KeyEdge*>& kes = entry.second;
             auto it = starEdgeColors.find(id);
-            core::Color color = it != starEdgeColors.end() ? it->second : core::Color(1, 0, 0);
+            core::Color color =
+                it != starEdgeColors.end() ? it->second : core::Color(1, 0, 0);
             for (vacomplex::KeyEdge* ke : kes) {
                 Element* e = this->findVacElement(ke);
                 if (e) {
