@@ -300,6 +300,9 @@ private:
     core::PerformanceLogTask renderTask_;
     core::PerformanceLogTask updateTask_;
     core::PerformanceLogTask drawTask_;
+
+    void onFrameContent_();
+    VGC_SLOT(onFrameContentSlot_, onFrameContent_)
 };
 
 } // namespace vgc::canvas
