@@ -43,11 +43,7 @@ namespace commands {
 
 using ui::Key;
 
-// TODO: Use VGC_UI_DEFINE_TRIGGER_COMMAND
-#undef VGC_UI_DEFINE_TRIGGER_COMMAND
-#define VGC_UI_DEFINE_TRIGGER_COMMAND VGC_UI_DEFINE_WINDOW_COMMAND
-
-VGC_UI_DEFINE_TRIGGER_COMMAND( //
+VGC_UI_DEFINE_WINDOW_COMMAND( //
     frameContent,
     "canvas.frameContent",
     "Frame Content",
