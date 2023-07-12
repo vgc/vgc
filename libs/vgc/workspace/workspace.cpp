@@ -812,6 +812,7 @@ core::Array<core::Id> Workspace::unglue(core::Id elementId) {
             ungluedKeyEdges;
         core::Array<vacomplex::KeyVertex*> ungluedKeyVertices =
             vacomplex::ops::unglueKeyVertices(targetKv, ungluedKeyEdges);
+
         // TODO: use operation source in onVacNodesChanged_ to do the color copy
         for (const auto& entry : ungluedKeyEdges) {
             core::Id id = entry.first;
@@ -843,8 +844,6 @@ core::Array<core::Id> Workspace::unglue(core::Id elementId) {
     }
     case vacomplex::CellType::KeyEdge: {
         vacomplex::KeyEdge* targetKe = cell->toKeyEdgeUnchecked();
-        core::Array<vacomplex::KeyEdge*> ungluedKeyEdges =
-            vacomplex::ops::unglueKeyEdges(targetKe);
         // TODO: use operation source in onVacNodesChanged_ to do the color copy
         core::Color color(1, 0, 0);
         dom::Element* sourceDomElement = element->domElement();
@@ -854,6 +853,9 @@ core::Array<core::Id> Workspace::unglue(core::Id elementId) {
         else {
             // TODO: warn ?
         }
+        core::Array<vacomplex::KeyEdge*> ungluedKeyEdges =
+            vacomplex::ops::unglueKeyEdges(targetKe);
+
         for (vacomplex::KeyEdge* ke : ungluedKeyEdges) {
             Element* e = this->findVacElement(ke);
             if (e) {
@@ -870,7 +872,7 @@ core::Array<core::Id> Workspace::unglue(core::Id elementId) {
         break;
     }
     default:
-        return result;
+        break;
     }
 
     // Close history group
