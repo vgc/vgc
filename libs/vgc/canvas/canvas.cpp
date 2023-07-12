@@ -39,6 +39,22 @@
 
 namespace vgc::canvas {
 
+namespace commands {
+
+using ui::Key;
+
+// TODO: Use VGC_UI_DEFINE_TRIGGER_COMMAND
+#undef VGC_UI_DEFINE_TRIGGER_COMMAND
+#define VGC_UI_DEFINE_TRIGGER_COMMAND VGC_UI_DEFINE_WINDOW_COMMAND
+
+VGC_UI_DEFINE_TRIGGER_COMMAND( //
+    frameContent,
+    "canvas.frameContent",
+    "Frame Content",
+    Key::F);
+
+} // namespace commands
+
 SelectionListHistoryPtr SelectionListHistory::create() {
     return SelectionListHistoryPtr(new SelectionListHistory());
 }
@@ -78,6 +94,9 @@ Canvas::Canvas(workspace::Workspace* workspace)
     }
 
     addStyleClass(canvas::strings::Canvas);
+
+    ui::Action* frameContentAction = createTriggerAction(commands::frameContent);
+    frameContentAction->triggered().connect(onFrameContentSlot_());
 }
 
 void Canvas::setWorkspace(workspace::Workspace* workspace) {
@@ -776,6 +795,63 @@ core::Array<workspace::Element*> Canvas::selectedElements_() const {
         }
     }
     return result;
+}
+
+void Canvas::onFrameContent_() {
+    if (!workspace_) {
+        return;
+    }
+
+    geometry::Rect2d frame = geometry::Rect2d::empty;
+    if (selectedElementIds_.isEmpty()) {
+        // Frame All
+        // TODO: implement Workspace::boundingBox().
+        workspace_->visitDepthFirstPreOrder( //
+            [&frame](workspace::Element* e, Int /*depth*/) {
+                frame.uniteWith(e->boundingBox());
+            });
+    }
+    else {
+        // Frame Selection
+        for (core::Id id : selectedElementIds_) {
+            workspace::Element* e = workspace_->find(id);
+            if (e) {
+                frame.uniteWith(e->boundingBox());
+            }
+        }
+    }
+
+    if (!frame.isDegenerate()) {
+
+        double oldRotation = camera_.rotation();
+        geometry::Vec2d boundingCircleDiameter(frame.width(), frame.height());
+        double a = boundingCircleDiameter.length();
+        double b = camera_.viewportWidth() / camera_.viewportHeight();
+        double z = 1;
+        if (b <= 1) {
+            z = camera_.viewportWidth() / (a * 1.1);
+        }
+        else {
+            z = camera_.viewportHeight() / (a * 1.1);
+        }
+
+        geometry::Vec2d bboxCenter = 0.5 * (frame.pMin() + frame.pMax());
+
+        camera_.setRotation(0);
+        camera_.setZoom(z);
+        camera_.setCenter(z * bboxCenter);
+
+        // now re-rotate.
+        // camera setters are not trivial.
+        geometry::Vec2d c0 =
+            0.5 * geometry::Vec2d(camera_.viewportWidth(), camera_.viewportHeight());
+        geometry::Vec2d c1 = camera_.viewMatrix().inverted().transformPointAffine(c0);
+        camera_.setRotation(oldRotation);
+        geometry::Vec2d c2 = camera_.viewMatrix().transformPointAffine(c1);
+        camera_.setCenter(camera_.center() - c0 + c2);
+
+        requestRepaint();
+    }
 }
 
 } // namespace vgc::canvas
