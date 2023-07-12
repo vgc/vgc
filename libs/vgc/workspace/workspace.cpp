@@ -782,7 +782,7 @@ core::Array<core::Id> Workspace::unglue(core::Id elementId) {
     if (!node || !node->isCell()) {
         return result;
     }
-    vacomplex::Cell* cell = node->toCellUnchecked();
+    vacomplex::Cell* targetCell = node->toCellUnchecked();
 
     // Open history group
     static core::StringId commandId = core::StringId("workspace.unglue");
@@ -792,9 +792,9 @@ core::Array<core::Id> Workspace::unglue(core::Id elementId) {
         undoGroup = history->createUndoGroup(commandId);
     }
 
-    switch (cell->cellType()) {
+    switch (targetCell->cellType()) {
     case vacomplex::CellType::KeyVertex: {
-        vacomplex::KeyVertex* targetKv = cell->toKeyVertexUnchecked();
+        vacomplex::KeyVertex* targetKv = targetCell->toKeyVertexUnchecked();
 
         std::unordered_map<core::Id, core::Color> starEdgeColors;
         for (vacomplex::Cell* cell : targetKv->star()) {
@@ -823,7 +823,7 @@ core::Array<core::Id> Workspace::unglue(core::Id elementId) {
             for (vacomplex::KeyEdge* ke : kes) {
                 Element* e = this->findVacElement(ke);
                 if (e) {
-                    result.append(e->id());
+                    //result.append(e->id());
                     dom::Element* domElement = e->domElement();
                     if (domElement) {
                         domElement->setAttribute(dom::strings::color, color);
@@ -843,7 +843,7 @@ core::Array<core::Id> Workspace::unglue(core::Id elementId) {
         break;
     }
     case vacomplex::CellType::KeyEdge: {
-        vacomplex::KeyEdge* targetKe = cell->toKeyEdgeUnchecked();
+        vacomplex::KeyEdge* targetKe = targetCell->toKeyEdgeUnchecked();
         // TODO: use operation source in onVacNodesChanged_ to do the color copy
         core::Color color(1, 0, 0);
         dom::Element* sourceDomElement = element->domElement();
