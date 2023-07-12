@@ -569,11 +569,11 @@ core::Array<KeyVertex*> Operations::unglueKeyVertices(
 
             KeyVertex* endKv = nullptr;
             if (khe.direction() == startVertex) {
-                endKv = ke->endVertex_;
+                endKv = ke->endVertex();
                 ke->startVertex_ = newKv;
             }
             else {
-                endKv = ke->startVertex_;
+                endKv = ke->startVertex();
                 ke->endVertex_ = newKv;
             }
 
@@ -591,7 +591,7 @@ core::Array<KeyVertex*> Operations::unglueKeyVertices(
         case CellType::KeyEdge: {
             KeyEdge* ke = cell->toKeyEdgeUnchecked();
             bool hasFaceInStar = false;
-            for (Cell* keStarCell : ke->star_) {
+            for (Cell* keStarCell : ke->star()) {
                 if (keStarCell->cellType() == CellType::KeyFace) {
                     hasFaceInStar = true;
                     break;
@@ -615,8 +615,8 @@ core::Array<KeyVertex*> Operations::unglueKeyVertices(
         case CellType::KeyFace: {
             KeyFace* kf = cell->toKeyFaceUnchecked();
             for (KeyCycle& cycle : kf->cycles_) {
-                if (cycle.steinerVertex_) {
-                    if (cycle.steinerVertex_ == targetKv) {
+                if (cycle.steinerVertex()) {
+                    if (cycle.steinerVertex() == targetKv) {
                         KeyVertex* newKv = duplicateTargetKv();
                         cycle.steinerVertex_ = newKv;
                         addToBoundary_(kf, newKv);
@@ -879,7 +879,7 @@ void Operations::dirtyMesh_(Cell* cell) {
         cell->hasMeshBeenQueriedSinceLastDirtyEvent_ = false;
         cell->dirtyMesh_();
         onNodeModified_(cell, NodeModificationFlag::MeshChanged);
-        for (Cell* starCell : cell->star_) {
+        for (Cell* starCell : cell->star()) {
             // No need for recursion since starCell.star() is a subset
             // of cell.star().
             onNodeModified_(starCell, NodeModificationFlag::BoundaryMeshChanged);
@@ -926,7 +926,7 @@ void Operations::addToBoundary_(FaceCell* face, const KeyCycle& cycle) {
 }
 
 void Operations::substitute_(KeyVertex* oldVertex, KeyVertex* newVertex) {
-    for (Cell* starCell : oldVertex->star_) {
+    for (Cell* starCell : oldVertex->star()) {
         *starCell->boundary_.find(oldVertex) = newVertex;
         newVertex->star_.append(starCell);
         starCell->substituteKeyVertex_(oldVertex, newVertex);
@@ -981,12 +981,12 @@ void Operations::collectDependentNodes_(
 Int Operations::countUses_(KeyVertex* kv) {
     Int count = 0;
 
-    for (Cell* starCell : kv->star_) {
+    for (Cell* starCell : kv->star()) {
         switch (starCell->cellType()) {
         case CellType::KeyEdge: {
             KeyEdge* ke = starCell->toKeyEdgeUnchecked();
             bool hasFaceInStar = false;
-            for (Cell* keStarCell : ke->star_) {
+            for (Cell* keStarCell : ke->star()) {
                 if (keStarCell->cellType() == CellType::KeyFace) {
                     hasFaceInStar = true;
                     break;
@@ -1004,14 +1004,14 @@ Int Operations::countUses_(KeyVertex* kv) {
         }
         case CellType::KeyFace: {
             KeyFace* kf = starCell->toKeyFaceUnchecked();
-            for (KeyCycle& cycle : kf->cycles_) {
-                if (cycle.steinerVertex_) {
-                    if (cycle.steinerVertex_ == kv) {
+            for (const KeyCycle& cycle : kf->cycles()) {
+                if (cycle.steinerVertex()) {
+                    if (cycle.steinerVertex() == kv) {
                         ++count;
                     }
                     continue;
                 }
-                for (const KeyHalfedge& khe : cycle.halfedges_) {
+                for (const KeyHalfedge& khe : cycle.halfedges()) {
                     if (khe.startVertex() == kv) {
                         ++count;
                     }
@@ -1030,15 +1030,15 @@ Int Operations::countUses_(KeyVertex* kv) {
 Int Operations::countUses_(KeyEdge* ke) {
     Int count = 0;
 
-    for (Cell* starCell : ke->star_) {
+    for (Cell* starCell : ke->star()) {
         switch (starCell->cellType()) {
         case CellType::KeyFace: {
             KeyFace* kf = starCell->toKeyFaceUnchecked();
-            for (KeyCycle& cycle : kf->cycles_) {
-                if (cycle.steinerVertex_) {
+            for (const KeyCycle& cycle : kf->cycles()) {
+                if (cycle.steinerVertex()) {
                     continue;
                 }
-                for (const KeyHalfedge& khe : cycle.halfedges_) {
+                for (const KeyHalfedge& khe : cycle.halfedges()) {
                     if (khe.edge() == ke) {
                         ++count;
                     }
