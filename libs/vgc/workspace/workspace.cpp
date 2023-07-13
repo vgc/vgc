@@ -426,6 +426,7 @@ core::Id Workspace::glue(core::Span<core::Id> elementIds) {
             vacomplex::KeyEdge* ke1 = openKes[1];
 
             // TODO: use operation source in onVacNodesChanged_ to do the color blend
+            // Note: at least 1 sample is guaranteed.
             bool isEdge0Longer = ke0->sampling().samples().last().s()
                                  > ke1->sampling().samples().last().s();
             VacKeyEdge* colorEdge = dynamic_cast<VacKeyEdge*>(
@@ -461,7 +462,6 @@ core::Id Workspace::glue(core::Span<core::Id> elementIds) {
             core::Array<FreehandEdgePoint> newPoints;
 
             if (samples0.length() < 2) {
-                VGC_ASSERT(samples0.length() == 1);
                 Int n = samples1.length();
                 newPoints.resizeNoInit(n);
                 FreehandEdgePoint fep0(samples0.first());
@@ -470,7 +470,6 @@ core::Id Workspace::glue(core::Span<core::Id> elementIds) {
                 }
             }
             else if (samples1.length() < 2) {
-                VGC_ASSERT(samples1.length() == 1);
                 Int n = samples0.length();
                 newPoints.resizeNoInit(n);
                 FreehandEdgePoint fep1(samples1.first());
