@@ -93,9 +93,13 @@ void readTo(DomCycle& cycle, IStream& in) {
 
 bool VacFaceCellFrameData::isSelectableAt(
     const geometry::Vec2d& position,
-    bool /*outlineOnly*/,
+    bool outlineOnly,
     double tol,
     double* outDistance) const {
+
+    if (outlineOnly) {
+        return false;
+    }
 
     using Vec2f = geometry::Vec2f;
     using Vec2d = geometry::Vec2d;

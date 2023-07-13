@@ -33,6 +33,16 @@
 
 namespace vgc::canvas {
 
+/// \enum vgc::canvas::DisplayMode
+/// \brief Specifies display mode.
+///
+enum class DisplayMode {
+    Normal,
+    Outline,
+    OutlineOverlay,
+    // Draft, Preview, Pixel, Print..
+};
+
 VGC_DECLARE_OBJECT(SelectionListHistory);
 VGC_DECLARE_OBJECT(Canvas);
 
@@ -112,6 +122,16 @@ public:
     workspace::Workspace* workspace() const {
         return workspace_;
     }
+
+    /// Returns the current display mode.
+    ///
+    DisplayMode displayMode() const {
+        return displayMode_;
+    }
+
+    /// Sets the current display mode.
+    ///
+    void setDisplayMode(DisplayMode displayMode);
 
     /// Sets the observed document workspace.
     ///
@@ -222,6 +242,7 @@ private:
 
     // Scene
     workspace::Workspace* workspace_ = nullptr;
+    DisplayMode displayMode_ = DisplayMode::Normal;
 
     void onWorkspaceChanged_();
     void onDocumentChanged_(const dom::Diff& diff);
@@ -303,6 +324,9 @@ private:
 
     void onFrameContent_();
     VGC_SLOT(onFrameContentSlot_, onFrameContent_)
+
+    void cycleDisplayMode_();
+    VGC_SLOT(cycleDisplayModeSlot_, cycleDisplayMode_)
 };
 
 } // namespace vgc::canvas

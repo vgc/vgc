@@ -49,6 +49,12 @@ VGC_UI_DEFINE_WINDOW_COMMAND( //
     "Frame Content",
     Key::F);
 
+VGC_UI_DEFINE_WINDOW_COMMAND( //
+    cycleDisplayMode,
+    "canvas.cycleDisplayMode",
+    "Cycle Display Mode",
+    Key::M);
+
 } // namespace commands
 
 SelectionListHistoryPtr SelectionListHistory::create() {
@@ -93,6 +99,16 @@ Canvas::Canvas(workspace::Workspace* workspace)
 
     ui::Action* frameContentAction = createTriggerAction(commands::frameContent);
     frameContentAction->triggered().connect(onFrameContentSlot_());
+
+    ui::Action* cycleDisplayModeAction = createTriggerAction(commands::cycleDisplayMode);
+    cycleDisplayModeAction->triggered().connect(cycleDisplayModeSlot_());
+}
+
+void Canvas::setDisplayMode(DisplayMode displayMode) {
+    if (displayMode_ != displayMode) {
+        displayMode_ = displayMode;
+        requestRepaint();
+    }
 }
 
 void Canvas::setWorkspace(workspace::Workspace* workspace) {
@@ -215,6 +231,10 @@ Canvas::computeSelectionCandidates(const geometry::Vec2f& position) const {
     style::Length dpTol = 7.0_dp;
     double tol = dpTol.toPx(styleMetrics()) / camera_.zoom();
 
+    bool isOutlineOverlay = (displayMode_ == DisplayMode::OutlineOverlay);
+    bool isMeshEnabled = isOutlineOverlay || (displayMode_ == DisplayMode::Normal);
+    bool isOutlineEnabled = isOutlineOverlay || (displayMode_ == DisplayMode::Outline);
+
     if (workspace_) {
         workspace_->visitDepthFirst(
             [](workspace::Element*, Int) { return true; },
@@ -222,25 +242,37 @@ Canvas::computeSelectionCandidates(const geometry::Vec2f& position) const {
                 if (!e) {
                     return;
                 }
-                double tolerance = tol;
-                double dist = 0;
-                Int priority = 1;
+                vacomplex::Cell* cell = nullptr;
                 if (e->isVacElement()) {
                     vacomplex::Node* node = e->toVacElement()->vacNode();
                     if (node && node->isCell()) {
-                        vacomplex::Cell* cell = node->toCellUnchecked();
+                        cell = node->toCellUnchecked();
+                    }
+                }
+                double tolerance = tol;
+                double dist = 0;
+                bool outlineOnly = isOutlineEnabled;
+                if (isMeshEnabled) {
+                    // keep faces selectable
+                    if (cell && cell->cellType() == vacomplex::CellType::KeyFace) {
+                        outlineOnly = false;
+                    }
+                }
+                if (e->isSelectableAt(worldCoords, outlineOnly, tolerance, &dist)) {
+                    Int priority = 1000;
+                    if (isOutlineEnabled && cell) {
                         switch (cell->cellType()) {
                         case vacomplex::CellType::KeyVertex:
-                            tolerance *= 2;
-                            priority = 2;
+                            priority = 3000;
+                            break;
+                        case vacomplex::CellType::KeyEdge:
+                            priority = 2000;
                             break;
                         default:
                             break;
                         }
                     }
-                }
-                if (e->isSelectableAt(worldCoords, false, tolerance, &dist)) {
-                    result.emplaceLast(e->id(), dist, priority);
+                    result.emplaceLast(e->id(), 0, priority);
                 }
             });
 
@@ -255,9 +287,10 @@ Canvas::computeSelectionCandidates(const geometry::Vec2f& position) const {
                 if (a.priority() != b.priority()) {
                     return a.priority() > b.priority();
                 }
-                else {
-                    return a.distance() < b.distance();
-                }
+                //else {
+                //    return a.distance() < b.distance();
+                //}
+                return false;
             });
     }
 
@@ -688,13 +721,17 @@ void Canvas::onPaintDraw(graphics::Engine* engine, ui::PaintOptions options) {
     engine->pushViewMatrix(vm * cameraViewf);
 
     core::Array<workspace::Element*> selectedElements = selectedElements_();
-    core::Array<workspace::Element*> selectedElementsOrdered;
 
     // render visit
     // todo:
     //  - use transforms
     //  - setup target for layers (painting a layer means using its result)
-    bool paintOutline = showControlPoints_;
+
+    workspace::PaintOptions commonPaintOptions = {};
+    if (showControlPoints_) {
+        commonPaintOptions.set(workspace::PaintOption::Editing);
+    }
+
     if (workspace_) {
         workspace_->sync();
         //VGC_PROFILE_SCOPE("Canvas:WorkspaceVisit");
@@ -715,47 +752,81 @@ void Canvas::onPaintDraw(graphics::Engine* engine, ui::PaintOptions options) {
                     }
                 });
         }
-        workspace_->visitDepthFirst(
-            [](workspace::Element* /*e*/, Int /*depth*/) {
-                // we always visit children for now
-                return true;
-            },
-            [=, &selectedElementsOrdered](workspace::Element* e, Int /*depth*/) {
-                if (!e) {
-                    return;
-                }
-                e->paint(engine);
-                if (paintOutline) {
-                    e->paint(engine, {}, workspace::PaintOption::Outline);
-                }
-                if (selectedElements.contains(e)) {
-                    selectedElementsOrdered.append(e);
-                }
-            });
-        reTesselate = false;
-    }
 
-    for (workspace::Element* selectedElement : selectedElementsOrdered) {
-        workspace::PaintOptions elementOptions = workspace::PaintOption::Selected;
-        if (paintOutline) {
-            elementOptions.set(workspace::PaintOption::Outline);
+        // Draw Normal
+        if (displayMode_ == DisplayMode::Normal
+            || displayMode_ == DisplayMode::OutlineOverlay) {
+            workspace::PaintOptions paintOptions = commonPaintOptions;
+            workspace_->visitDepthFirst(
+                [](workspace::Element* /*e*/, Int /*depth*/) {
+                    // we always visit children for now
+                    return true;
+                },
+                [=](workspace::Element* e, Int /*depth*/) {
+                    if (e) {
+                        e->paint(engine, {}, paintOptions);
+                    }
+                });
         }
-        selectedElement->paint(engine, {}, elementOptions);
-        if (paintOutline) {
-            // Redraw outline of end vertices on top of selected edges,
-            // otherwise the centerline of the selected edge is on top of the
-            // outline of its end vertices and it doesn't look good.
-            if (auto edge = dynamic_cast<workspace::VacKeyEdge*>(selectedElement)) {
-                workspace::VacKeyVertex* startVertex = edge->startVertex();
-                workspace::VacKeyVertex* endVertex = edge->endVertex();
-                if (startVertex && !selectedElements.contains(startVertex)) {
-                    startVertex->paint(engine, {}, workspace::PaintOption::Outline);
-                }
-                if (endVertex && !selectedElements.contains(endVertex)) {
-                    endVertex->paint(engine, {}, workspace::PaintOption::Outline);
-                }
+
+        // Draw Outline
+        bool isOutlineEnabled = displayMode_ == DisplayMode::Outline
+                                || displayMode_ == DisplayMode::OutlineOverlay;
+        if (isOutlineEnabled) {
+            workspace::PaintOptions paintOptions = commonPaintOptions;
+            paintOptions.set(workspace::PaintOption::Outline);
+            workspace_->visitDepthFirst(
+                [](workspace::Element* /*e*/, Int /*depth*/) {
+                    // we always visit children for now
+                    return true;
+                },
+                [=](workspace::Element* e, Int /*depth*/) {
+                    if (e) {
+                        e->paint(engine, {}, paintOptions);
+                    }
+                });
+        }
+
+        // Draw Selection
+        if (!selectedElements.isEmpty()) {
+            workspace::PaintOptions paintOptions = commonPaintOptions;
+            paintOptions.set(workspace::PaintOption::Selected);
+            if (isOutlineEnabled) {
+                paintOptions.set(workspace::PaintOption::Outline);
             }
+            workspace_->visitDepthFirst(
+                [](workspace::Element* /*e*/, Int /*depth*/) {
+                    // we always visit children for now
+                    return true;
+                },
+                [=, &selectedElements](workspace::Element* e, Int /*depth*/) {
+                    if (e && selectedElements.contains(e)) {
+                        e->paint(engine, {}, paintOptions);
+                        if (isOutlineEnabled
+                            || paintOptions.has(workspace::PaintOption::Editing)) {
+                            // Redraw outline of end vertices on top of selected edges,
+                            // otherwise the centerline of the selected edge is on top of the
+                            // outline of its end vertices and it doesn't look good.
+                            if (auto edge = dynamic_cast<workspace::VacKeyEdge*>(e)) {
+                                workspace::VacKeyVertex* startVertex =
+                                    edge->startVertex();
+                                workspace::VacKeyVertex* endVertex = edge->endVertex();
+                                workspace::PaintOptions paintOptions2 = paintOptions;
+                                paintOptions2.unset(workspace::PaintOption::Selected);
+                                if (startVertex
+                                    && !selectedElements.contains(startVertex)) {
+                                    startVertex->paint(engine, {}, paintOptions2);
+                                }
+                                if (endVertex && !selectedElements.contains(endVertex)) {
+                                    endVertex->paint(engine, {}, paintOptions2);
+                                }
+                            }
+                        }
+                    }
+                });
         }
+
+        reTesselate = false;
     }
 
     engine->popViewMatrix();
@@ -848,6 +919,21 @@ void Canvas::onFrameContent_() {
 
         requestRepaint();
     }
+}
+
+void Canvas::cycleDisplayMode_() {
+    switch (displayMode_) {
+    case DisplayMode::Normal:
+        displayMode_ = DisplayMode::Outline;
+        break;
+    case DisplayMode::Outline:
+        displayMode_ = DisplayMode::OutlineOverlay;
+        break;
+    case DisplayMode::OutlineOverlay:
+        displayMode_ = DisplayMode::Normal;
+        break;
+    }
+    requestRepaint();
 }
 
 } // namespace vgc::canvas

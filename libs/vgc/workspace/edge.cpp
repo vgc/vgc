@@ -321,13 +321,6 @@ void VacKeyEdge::onPaintDraw(
     core::AnimTime t,
     PaintOptions flags) const {
 
-    // Offset lines settings
-    constexpr bool isPaintingOffsetLine0 = false;
-    constexpr bool isPaintingOffsetLine1 = false;
-    constexpr float offsetLineHalfwidth = 1.5f;
-    constexpr core::Color offsetLine0Color(0.64f, 1.0f, 0.02f, 1.f);
-    constexpr core::Color offsetLine1Color(1.0f, 0.02f, 0.64f, 1.f);
-
     // Selection settings
     constexpr float selectionCenterlineThickness = 2.0f;
 
@@ -336,6 +329,24 @@ void VacKeyEdge::onPaintDraw(
     constexpr float diskStrokeWidth = 1.0f;
     constexpr float diskFillRadius = 2.5f;
     constexpr Int diskNumSides = 16;
+
+    // Offset lines settings
+    constexpr float offsetLineHalfwidth = 1.5f;
+    constexpr core::Color offsetLine0Color(0.64f, 1.0f, 0.02f, 1.f);
+    constexpr core::Color offsetLine1Color(1.0f, 0.02f, 0.64f, 1.f);
+
+    bool isPaintingStroke = !flags.hasAny({PaintOption::Outline, PaintOption::Selected});
+    bool isPaintingCPs = flags.has(PaintOption::Editing);
+    bool isPaintingOutline = flags.has(PaintOption::Outline) || isPaintingCPs;
+
+    bool isSelected = flags.has(PaintOption::Selected);
+
+    bool isPaintingOffsetLine0 = false;
+    bool isPaintingOffsetLine1 = false;
+
+    bool needsCenterlineGeometry =
+        (isPaintingOutline || isSelected
+         || flags.hasAny({PaintOption::Hovered, PaintOption::Editing}));
 
     // TODO: reuse buffers and geometry views
 
@@ -356,17 +367,14 @@ void VacKeyEdge::onPaintDraw(
     const dom::Element* const domElement = this->domElement();
     // XXX "implicit" cells' domElement would be the composite ?
 
-    constexpr PaintOptions strokeOptions = {PaintOption::Selected, PaintOption::Draft};
-
     // XXX todo: reuse geometry objects, create buffers separately (attributes waiting in EdgeGraphics).
 
     core::Color color = domElement->getAttribute(ds::color).getColor();
 
     EdgeGraphics& graphics = data.graphics_;
     bool hasNewStrokeGraphics = false;
-    if ((flags.hasAny(strokeOptions) || !flags.has(PaintOption::Outline))
-        && !graphics.strokeGeometry()) {
 
+    if (isPaintingStroke && !graphics.strokeGeometry()) {
         hasNewStrokeGraphics = true;
 
         graphics.setStrokeGeometry(engine->createDynamicTriangleStripView(
@@ -418,15 +426,10 @@ void VacKeyEdge::onPaintDraw(
         //    core::Array<float>({color.r(), color.g(), color.b(), color.a()}));
     }
 
-    constexpr PaintOptions centerlineOptions = {
-        PaintOption::Outline, PaintOption::Selected};
-
     bool hasNewCenterlineGraphics = false;
 
-    if ((flags.hasAny(centerlineOptions) || isPaintingOffsetLine0
-         || isPaintingOffsetLine1)
+    if ((needsCenterlineGeometry || isPaintingOffsetLine0 || isPaintingOffsetLine1)
         && !graphics.centerlineGeometry()) {
-
         hasNewCenterlineGraphics = true;
         graphics.setCenterlineGeometry(engine->createDynamicTriangleStripView(
             BuiltinGeometryLayout::XYDxDy_iXYRotWRGBA));
@@ -551,7 +554,6 @@ void VacKeyEdge::onPaintDraw(
 
     if (graphics.selectionGeometry()
         && (data.hasPendingColorChange_ || hasNewCenterlineGraphics)) {
-
         const core::Color& c = colors::selection;
         float hw = selectionCenterlineThickness * 0.5f;
         core::FloatArray bufferData = {0.f, 0.f, 1.f, hw, c.r(), c.g(), c.b(), c.a()};
@@ -560,9 +562,7 @@ void VacKeyEdge::onPaintDraw(
     }
 
     // Draw control points (CP)
-    bool isSelected = flags.has(PaintOption::Selected);
-    bool showCPs = flags.has(PaintOption::Outline);
-    if (showCPs) {
+    if (isPaintingCPs) {
         bool wasSelected = isLastDrawOfControlPointsSelected_;
         isLastDrawOfControlPointsSelected_ = isSelected;
         bool shouldUpdateCPColor = isSelected != wasSelected;
@@ -608,24 +608,24 @@ void VacKeyEdge::onPaintDraw(
 
     data.hasPendingColorChange_ = false;
 
-    if (flags.has(PaintOption::Selected)) {
-        engine->setProgram(graphics::BuiltinProgram::ScreenSpaceDisplacement);
-        engine->draw(graphics.selectionGeometry());
-        if (showCPs) {
-            engine->drawInstanced(controlPointsGeometry_);
-        }
-    }
-    else if (!flags.has(PaintOption::Outline)) {
+    if (isPaintingStroke) {
         engine->setProgram(graphics::BuiltinProgram::Simple /*TexturedDebug*/);
         engine->draw(graphics.strokeGeometry());
         //engine->draw(graphics.joinGeometry());
     }
-    else {
+
+    if (isSelected) {
+        engine->setProgram(graphics::BuiltinProgram::ScreenSpaceDisplacement);
+        engine->draw(graphics.selectionGeometry());
+    }
+    else if (isPaintingOutline) {
         engine->setProgram(graphics::BuiltinProgram::ScreenSpaceDisplacement);
         engine->draw(graphics.centerlineGeometry());
-        if (showCPs) {
-            engine->drawInstanced(controlPointsGeometry_);
-        }
+    }
+
+    if (isPaintingCPs) {
+        engine->setProgram(graphics::BuiltinProgram::ScreenSpaceDisplacement);
+        engine->drawInstanced(controlPointsGeometry_);
     }
 
     if (isPaintingOffsetLine0) {
