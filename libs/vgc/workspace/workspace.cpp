@@ -812,6 +812,9 @@ core::Id Workspace::glue(core::Span<core::Id> elementIds) {
             }
         }
     }
+
+    sync();
+
     // Close history group
     if (undoGroup) {
         undoGroup->close();
@@ -923,6 +926,8 @@ core::Array<core::Id> Workspace::unglue(core::Id elementId) {
     default:
         break;
     }
+
+    sync();
 
     // Close history group
     if (undoGroup) {
