@@ -449,7 +449,21 @@ core::Id Workspace::glue(core::Span<core::Id> elementIds) {
                 Int n = std::max<Int>(0, n0 - 2) + std::max<Int>(0, n1 - 2) + 2;
                 bool reverse1 = false;
 
-                if (l0 > 0 && l1 > 0) {
+                vacomplex::KeyVertex* ke00 = ke0->startVertex();
+                vacomplex::KeyVertex* ke01 = ke0->endVertex();
+                vacomplex::KeyVertex* ke10 = ke1->startVertex();
+                vacomplex::KeyVertex* ke11 = ke1->endVertex();
+
+                bool isLoop0 = ke00 == ke01;
+                bool isLoop1 = ke10 == ke11;
+                bool isAnyLoop = isLoop0 || isLoop1;
+                if (!isAnyLoop && ((ke00 == ke10) || (ke01 == ke11))) {
+                    reverse1 = false;
+                }
+                else if (!isAnyLoop && ((ke00 == ke11) || (ke01 == ke10))) {
+                    reverse1 = true;
+                }
+                else if (l0 > 0 && l1 > 0) {
                     core::Array<geometry::Vec2d> us0 =
                         computeApproximateUniformSamplingPositions(samples0, 10);
                     core::Array<geometry::Vec2d> us1 =
@@ -468,13 +482,16 @@ core::Id Workspace::glue(core::Span<core::Id> elementIds) {
                     // reverse samples1 if necessary
                     if (costB < costA) {
                         reverse1 = true;
-                        geometry::StrokeSample2dArray reversedSamples1(n1, core::noInit);
-                        for (Int i = 0; i < n1; ++i) {
-                            reversedSamples1[i] = samples1[n1 - 1 - i];
-                            reversedSamples1[i].setS(l1 - reversedSamples1[i].s());
-                        }
-                        samples1 = std::move(reversedSamples1);
                     }
+                }
+
+                if (reverse1) {
+                    geometry::StrokeSample2dArray reversedSamples1(n1, core::noInit);
+                    for (Int i = 0; i < n1; ++i) {
+                        reversedSamples1[i] = samples1[n1 - 1 - i];
+                        reversedSamples1[i].setS(l1 - reversedSamples1[i].s());
+                    }
+                    samples1 = std::move(reversedSamples1);
                 }
 
                 FreehandEdgePoint p0a = samples0.first();
