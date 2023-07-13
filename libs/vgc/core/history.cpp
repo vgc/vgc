@@ -318,7 +318,10 @@ bool History::closeUndoGroupUnchecked_(UndoGroup* node) {
     if (node->operations_.isEmpty()) {
         // group is empty
         // -> destroy it and leave head unchanged.
+        UndoGroup* parent = node->parent();
         node->destroyObject_();
+        head_ = parent;
+        headChanged().emit(head_);
         return true;
     }
 
