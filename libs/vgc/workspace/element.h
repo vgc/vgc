@@ -72,8 +72,10 @@ struct Component {};
 enum class PaintOption : UInt64 {
     None = 0x00,
     Draft = 0x02,
-    Selected = 0x04,
-    Outline = 0x08,
+    Hovered = 0x04,
+    Selected = 0x08,
+    Outline = 0x10,
+    Editing = 0x20,
 };
 VGC_DEFINE_FLAGS(PaintOptions, PaintOption)
 

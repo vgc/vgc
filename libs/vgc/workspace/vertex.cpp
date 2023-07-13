@@ -170,7 +170,8 @@ void VacKeyVertex::onPaintDraw(
 
     geometry::Vec2f posF(kv->position());
 
-    if (flags.hasAny(PaintOption::Outline | PaintOption::Selected)) {
+    if (flags.hasAny(
+            PaintOption::Outline | PaintOption::Selected | PaintOption::Editing)) {
 
         const bool isSelected = flags.has(PaintOption::Selected);
 
