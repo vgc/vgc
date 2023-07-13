@@ -441,6 +441,9 @@ core::Id Workspace::glue(core::Span<core::Id> elementIds) {
             const geometry::StrokeSample2dArray& samples0 = ke0->sampling().samples();
             geometry::StrokeSample2dArray samples1 = ke1->sampling().samples();
 
+            // Detect which edge direction should be used for gluing.
+            // Here, we handle the simple cases where the two edges already share
+            // at least one vertex.
             vacomplex::KeyVertex* ke00 = ke0->startVertex();
             vacomplex::KeyVertex* ke01 = ke0->endVertex();
             vacomplex::KeyVertex* ke10 = ke1->startVertex();
@@ -450,10 +453,14 @@ core::Id Workspace::glue(core::Span<core::Id> elementIds) {
             bool reverse1 = false;
             if (!isAnyLoop) {
                 if ((ke00 == ke10) || (ke01 == ke11)) {
+                    // If the two edges have the same start vertex or the same
+                    // end vertex, we glue them in their intrinsic direction.
                     reverse1 = false;
                     isBestDirectionKnown = true;
                 }
                 else if ((ke00 == ke11) || (ke01 == ke10)) {
+                    // If the start (resp. end) vertex of ke0 is equal to the
+                    // end (resp. start) vertex of ke1, we want to glue them in reverse.
                     reverse1 = true;
                     isBestDirectionKnown = true;
                 }
@@ -485,6 +492,10 @@ core::Id Workspace::glue(core::Span<core::Id> elementIds) {
                 Int n1 = samples1.length();
                 Int n = std::max<Int>(0, n0 - 2) + std::max<Int>(0, n1 - 2) + 2;
 
+                // If we don't know yet which direction to use for gluing, we
+                // detect the best direction now by choosing the one minimizing
+                // the squared distance between the curves.
+                //
                 if (!isBestDirectionKnown && l0 > 0 && l1 > 0) {
                     core::Array<geometry::Vec2d> us0 =
                         computeApproximateUniformSamplingPositions(samples0, 10);
@@ -506,6 +517,8 @@ core::Id Workspace::glue(core::Span<core::Id> elementIds) {
                         reverse1 = true;
                     }
                 }
+
+                // Now, compute an interpolation between the two curve with the given direction.
 
                 if (reverse1) {
                     geometry::StrokeSample2dArray reversedSamples1(n1, core::noInit);
@@ -581,6 +594,7 @@ core::Id Workspace::glue(core::Span<core::Id> elementIds) {
             }
 
             // tolerance = 5% of max width
+            // TODO: what if maxWidth = 0? Better heuristic for tolerance?
             std::shared_ptr<vacomplex::KeyEdgeGeometry> newGeometry =
                 FreehandEdgeGeometry::createFromPoints(newPoints, false, maxWidth * 0.05);
 
