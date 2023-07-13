@@ -141,6 +141,7 @@ bool PaintBucket::onMousePress(ui::MousePressEvent* event) {
         if (domFace) {
             domFace->setAttribute(dom::strings::color, color());
         }
+        workspace_->sync();
 
         // Close the undo group
         if (undoGroup) {
