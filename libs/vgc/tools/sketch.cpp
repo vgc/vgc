@@ -1504,8 +1504,8 @@ void Sketch::finishCurve_(ui::MouseEvent* /*event*/) {
 
 void Sketch::resetData_() {
     if (drawCurveUndoGroup_) {
-        drawCurveUndoGroup_->close();
         drawCurveUndoGroup_->undone().disconnect(drawCurveUndoGroupConnectionHandle_);
+        drawCurveUndoGroup_->close();
         drawCurveUndoGroup_ = nullptr;
     }
     endVertex_ = nullptr;

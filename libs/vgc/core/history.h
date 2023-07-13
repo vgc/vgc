@@ -133,11 +133,13 @@ public:
 
     /// Closes this undo group.
     ///
+    /// If this node contains no operations, it is simply destroyed.
+    ///
     /// If `tryAmendParent` is true then:
     /// - If the parent node of this node is
     /// both closed and has a single child, then the parent node
     /// is amended with the operations of this node and this node is
-    /// removed.
+    /// destroyed.
     /// - Otherwise, this node is simply closed as if `tryAmendParent` was false.
     ///
     /// Throws `LogicError` if:
