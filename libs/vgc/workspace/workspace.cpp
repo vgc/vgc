@@ -440,30 +440,53 @@ core::Id Workspace::glue(core::Span<core::Id> elementIds) {
             const geometry::StrokeSample2dArray& samples0 = ke0->sampling().samples();
             geometry::StrokeSample2dArray samples1 = ke1->sampling().samples();
 
-            if (samples0.length() >= 2 && samples1.length() >= 2) {
+            vacomplex::KeyVertex* ke00 = ke0->startVertex();
+            vacomplex::KeyVertex* ke01 = ke0->endVertex();
+            vacomplex::KeyVertex* ke10 = ke1->startVertex();
+            vacomplex::KeyVertex* ke11 = ke1->endVertex();
+            bool isAnyLoop = (ke00 == ke01) || (ke10 == ke11);
+            bool isBestDirectionKnown = false;
+            bool reverse1 = false;
+            if (!isAnyLoop) {
+                if ((ke00 == ke10) || (ke01 == ke11)) {
+                    reverse1 = false;
+                    isBestDirectionKnown = true;
+                }
+                else if ((ke00 == ke11) || (ke01 == ke10)) {
+                    reverse1 = true;
+                    isBestDirectionKnown = true;
+                }
+            }
+
+            core::Array<FreehandEdgePoint> newPoints;
+
+            if (samples0.length() < 2) {
+                VGC_ASSERT(samples0.length() == 1);
+                Int n = samples1.length();
+                newPoints.resizeNoInit(n);
+                FreehandEdgePoint fep0(samples0.first());
+                for (Int i = 0; i < n; ++i) {
+                    newPoints[i] = fep0.average(samples1[i]);
+                }
+            }
+            else if (samples1.length() < 2) {
+                VGC_ASSERT(samples1.length() == 1);
+                Int n = samples0.length();
+                newPoints.resizeNoInit(n);
+                FreehandEdgePoint fep1(samples1.first());
+                for (Int i = 0; i < n; ++i) {
+                    newPoints[i] = fep1.average(samples1[i]);
+                }
+            }
+            else {
                 double l0 = samples0.last().s();
                 double l1 = samples1.last().s();
 
                 Int n0 = samples0.length();
                 Int n1 = samples1.length();
                 Int n = std::max<Int>(0, n0 - 2) + std::max<Int>(0, n1 - 2) + 2;
-                bool reverse1 = false;
 
-                vacomplex::KeyVertex* ke00 = ke0->startVertex();
-                vacomplex::KeyVertex* ke01 = ke0->endVertex();
-                vacomplex::KeyVertex* ke10 = ke1->startVertex();
-                vacomplex::KeyVertex* ke11 = ke1->endVertex();
-
-                bool isLoop0 = ke00 == ke01;
-                bool isLoop1 = ke10 == ke11;
-                bool isAnyLoop = isLoop0 || isLoop1;
-                if (!isAnyLoop && ((ke00 == ke10) || (ke01 == ke11))) {
-                    reverse1 = false;
-                }
-                else if (!isAnyLoop && ((ke00 == ke11) || (ke01 == ke10))) {
-                    reverse1 = true;
-                }
-                else if (l0 > 0 && l1 > 0) {
+                if (!isBestDirectionKnown && l0 > 0 && l1 > 0) {
                     core::Array<geometry::Vec2d> us0 =
                         computeApproximateUniformSamplingPositions(samples0, 10);
                     core::Array<geometry::Vec2d> us1 =
@@ -544,40 +567,36 @@ core::Id Workspace::glue(core::Span<core::Id> elementIds) {
                 points0.emplaceLast(samples0.last());
                 points1.emplaceLast(samples1.last());
 
-                core::Array<vacomplex::KeyHalfedge> halfedges(
-                    {{ke0, true}, {ke1, !reverse1}});
-
-                core::Array<FreehandEdgePoint> newPoints(n, core::noInit);
+                newPoints.resizeNoInit(n);
                 for (Int i = 0; i < n; ++i) {
                     newPoints[i] = points0[i].average(points1[i]);
                 }
+            }
 
-                double maxWidth = 0;
-                for (Int i = 0; i < n; ++i) {
-                    double w = newPoints[i].width();
-                    if (w > maxWidth) {
-                        maxWidth = w;
-                    }
-                }
-
-                // tolerance = 5% of max width
-                std::shared_ptr<vacomplex::KeyEdgeGeometry> newGeometry =
-                    FreehandEdgeGeometry::createFromPoints(
-                        newPoints, false, maxWidth * 0.05);
-
-                vacomplex::Cell* result = vacomplex::ops::glueKeyOpenEdges(
-                    halfedges,
-                    std::move(newGeometry),
-                    newPoints.first().position(),
-                    newPoints.last().position());
-                Element* e = this->findVacElement(result);
-                if (e) {
-                    e->domElement()->setAttribute(dom::strings::color, color);
-                    resultId = e->id();
+            double maxWidth = 0;
+            for (Int i = 0; i < newPoints.length(); ++i) {
+                double w = newPoints[i].width();
+                if (w > maxWidth) {
+                    maxWidth = w;
                 }
             }
-            else {
-                // TODO: warning ?
+
+            // tolerance = 5% of max width
+            std::shared_ptr<vacomplex::KeyEdgeGeometry> newGeometry =
+                FreehandEdgeGeometry::createFromPoints(newPoints, false, maxWidth * 0.05);
+
+            core::Array<vacomplex::KeyHalfedge> halfedges(
+                {{ke0, true}, {ke1, !reverse1}});
+
+            vacomplex::Cell* result = vacomplex::ops::glueKeyOpenEdges(
+                halfedges,
+                std::move(newGeometry),
+                newPoints.first().position(),
+                newPoints.last().position());
+            Element* e = this->findVacElement(result);
+            if (e) {
+                e->domElement()->setAttribute(dom::strings::color, color);
+                resultId = e->id();
             }
         }
     }
