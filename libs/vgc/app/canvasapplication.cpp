@@ -198,6 +198,16 @@ bool CanvasApplication::recoverySave_() {
         return false;
     }
 
+    // It is risky to try to undo or abort the history since
+    // it could cause another exception.
+    // Thus we simply disable the history for the color palette
+    // save operation.
+    //
+    core::History* history = document_->history();
+    if (history) {
+        document_->disableHistory();
+    }
+
     // Determine where to save the recovery file.
     //
     QDir dir;         // "/home/user/Documents/MyPictures"
