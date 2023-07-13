@@ -352,7 +352,7 @@ core::Array<geometry::Vec2d> computeApproximateUniformSamplingPositions(
 
 } // namespace
 
-core::Id Workspace::glue(core::Span<core::Id> elements) {
+core::Id Workspace::glue(core::Span<core::Id> elementIds) {
     core::Id resultId = -1;
 
     // Open history group
@@ -368,7 +368,7 @@ core::Id Workspace::glue(core::Span<core::Id> elements) {
     core::Array<vacomplex::KeyEdge*> closedKes;
     bool hasOtherCells = false;
     bool hasNonVacElements = false;
-    for (core::Id id : elements) {
+    for (core::Id id : elementIds) {
         workspace::Element* element = find(id);
         if (!element) {
             continue;
@@ -425,7 +425,7 @@ core::Id Workspace::glue(core::Span<core::Id> elements) {
             vacomplex::KeyEdge* ke0 = openKes[0];
             vacomplex::KeyEdge* ke1 = openKes[1];
 
-            // TODO: use source operations for blends
+            // TODO: use operation source in onVacNodesChanged_ to do the color blend
             bool isEdge0Longer = ke0->sampling().samples().last().s()
                                  > ke1->sampling().samples().last().s();
             VacKeyEdge* colorEdge = dynamic_cast<VacKeyEdge*>(
@@ -571,7 +571,7 @@ core::Id Workspace::glue(core::Span<core::Id> elements) {
             vacomplex::KeyEdge* ke0 = closedKes[0];
             vacomplex::KeyEdge* ke1 = closedKes[1];
 
-            // TODO: use source operations for blends
+            // TODO: use operation source in onVacNodesChanged_ to do the color blend
             bool isEdge0Longer = ke0->sampling().samples().last().s()
                                  > ke1->sampling().samples().last().s();
             VacKeyEdge* colorEdge = dynamic_cast<VacKeyEdge*>(
@@ -769,6 +769,118 @@ core::Id Workspace::glue(core::Span<core::Id> elements) {
     }
 
     return resultId;
+}
+
+core::Array<core::Id> Workspace::unglue(core::Id elementId) {
+    core::Array<core::Id> result;
+
+    workspace::Element* element = find(elementId);
+    if (!element) {
+        return result;
+    }
+    vacomplex::Node* node = element->vacNode();
+    if (!node || !node->isCell()) {
+        return result;
+    }
+    vacomplex::Cell* targetCell = node->toCellUnchecked();
+
+    // Open history group
+    static core::StringId commandId = core::StringId("workspace.unglue");
+    core::UndoGroup* undoGroup = nullptr;
+    core::History* history = this->history();
+    if (history) {
+        undoGroup = history->createUndoGroup(commandId);
+    }
+
+    switch (targetCell->cellType()) {
+    case vacomplex::CellType::KeyVertex: {
+        vacomplex::KeyVertex* targetKv = targetCell->toKeyVertexUnchecked();
+
+        std::unordered_map<core::Id, core::Color> starEdgeColors;
+        for (vacomplex::Cell* cell : targetKv->star()) {
+            vacomplex::KeyEdge* ke = cell->toKeyEdge();
+            if (ke) {
+                VacKeyEdge* e = dynamic_cast<VacKeyEdge*>(findVacElement(ke->id()));
+                if (e && e->domElement()) {
+                    starEdgeColors[ke->id()] =
+                        e->domElement()->getAttribute(dom::strings::color).getColor();
+                }
+            }
+        }
+
+        core::Array<std::pair<core::Id, core::Array<vacomplex::KeyEdge*>>>
+            ungluedKeyEdges;
+        core::Array<vacomplex::KeyVertex*> ungluedKeyVertices =
+            vacomplex::ops::unglueKeyVertices(targetKv, ungluedKeyEdges);
+
+        // TODO: use operation source in onVacNodesChanged_ to do the color copy
+        for (const auto& entry : ungluedKeyEdges) {
+            core::Id id = entry.first;
+            const core::Array<vacomplex::KeyEdge*>& kes = entry.second;
+            auto it = starEdgeColors.find(id);
+            core::Color color =
+                it != starEdgeColors.end() ? it->second : core::Color(1, 0, 0);
+            for (vacomplex::KeyEdge* ke : kes) {
+                Element* e = this->findVacElement(ke);
+                if (e) {
+                    //result.append(e->id());
+                    dom::Element* domElement = e->domElement();
+                    if (domElement) {
+                        domElement->setAttribute(dom::strings::color, color);
+                    }
+                    else {
+                        // TODO: warn ?
+                    }
+                }
+            }
+        }
+        for (vacomplex::KeyVertex* kv : ungluedKeyVertices) {
+            Element* e = this->findVacElement(kv);
+            if (e) {
+                result.append(e->id());
+            }
+        }
+        break;
+    }
+    case vacomplex::CellType::KeyEdge: {
+        vacomplex::KeyEdge* targetKe = targetCell->toKeyEdgeUnchecked();
+        // TODO: use operation source in onVacNodesChanged_ to do the color copy
+        core::Color color(1, 0, 0);
+        dom::Element* sourceDomElement = element->domElement();
+        if (sourceDomElement) {
+            color = sourceDomElement->getAttribute(dom::strings::color).getColor();
+        }
+        else {
+            // TODO: warn ?
+        }
+        core::Array<vacomplex::KeyEdge*> ungluedKeyEdges =
+            vacomplex::ops::unglueKeyEdges(targetKe);
+
+        for (vacomplex::KeyEdge* ke : ungluedKeyEdges) {
+            Element* e = this->findVacElement(ke);
+            if (e) {
+                result.append(e->id());
+                dom::Element* domElement = e->domElement();
+                if (domElement) {
+                    domElement->setAttribute(dom::strings::color, color);
+                }
+                else {
+                    // TODO: warn ?
+                }
+            }
+        }
+        break;
+    }
+    default:
+        break;
+    }
+
+    // Close history group
+    if (undoGroup) {
+        undoGroup->close();
+    }
+
+    return result;
 }
 
 std::unordered_map<core::StringId, Workspace::ElementCreator>&
@@ -990,6 +1102,7 @@ void Workspace::onVacNodesChanged_(const vacomplex::ComplexDiff& diff) {
                 // If we find the element despite being updating VAC from DOM,
                 // this means the element is now corrupted, so mark it as such.
                 //
+                elementByVacInternalId_.erase(vacElement->vacNode_->id());
                 vacElement->vacNode_ = nullptr;
                 setPendingUpdateFromDom_(vacElement);
 
@@ -997,6 +1110,17 @@ void Workspace::onVacNodesChanged_(const vacomplex::ComplexDiff& diff) {
             }
         }
         return;
+    }
+
+    // Process destroyed vac nodes.
+    // Corresponding workspace element are kept until the end of this function but
+    // their vacNode_ pointer must be set to null.
+    //
+    for (const auto& info : diff.destroyedNodes()) {
+        VacElement* vacElement = findVacElement(info.nodeId());
+        if (vacElement) {
+            vacElement->vacNode_ = nullptr;
+        }
     }
 
     preUpdateDomFromVac_();
@@ -1223,6 +1347,7 @@ void Workspace::onVacNodesChanged_(const vacomplex::ComplexDiff& diff) {
             // nullptr before removal since the destructor of the VacElement
             // will hardDelete() its vacNode_ if any.
             //
+            elementByVacInternalId_.erase(info.nodeId());
             vacElement->vacNode_ = nullptr;
             removeElement_(vacElement);
         }
@@ -1232,6 +1357,7 @@ void Workspace::onVacNodesChanged_(const vacomplex::ComplexDiff& diff) {
     //
     for (const auto& info : diff.transientNodes()) {
         VacElement* vacElement = findVacElement(info.nodeId());
+        elementByVacInternalId_.erase(info.nodeId());
         if (vacElement) {
             removeElement_(vacElement);
         }

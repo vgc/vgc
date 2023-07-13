@@ -63,7 +63,7 @@ public:
     }
 
     KeyHalfedge next() const;
-    KeyHalfedge previous() const;
+    //KeyHalfedge previous() const;
 
     KeyHalfedge opposite() const {
         return KeyHalfedge(edge_, !direction_);

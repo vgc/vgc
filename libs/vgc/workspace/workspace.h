@@ -273,7 +273,7 @@ public:
         const std::function<bool(Element*, Int)>& preOrderFn,
         const std::function<void(Element*, Int)>& postOrderFn);
 
-    /// Performs a glue operation on the given `elements`.
+    /// Performs a glue operation on the elements of ids `elementIds`.
     /// This is both a geometrical and topological operation.
     ///
     /// If the type of elements are mixed, does nothing.
@@ -281,7 +281,14 @@ public:
     /// - 2+ key vertices.
     /// - 2 key edges.
     ///
-    core::Id glue(core::Span<core::Id> elements);
+    core::Id glue(core::Span<core::Id> elementIds);
+
+    /// Performs an unglue operation on the element of id `elementId`.
+    /// This is both a geometrical and topological operation.
+    ///
+    /// Currently supported cell types: keyVertex, keyEdge.
+    ///
+    core::Array<core::Id> unglue(core::Id elementId);
 
     /// This signal is emitted whenever the workspace changes, either
     /// as a result of the DOM changing, or the topological complex

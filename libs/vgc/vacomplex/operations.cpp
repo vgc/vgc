@@ -268,6 +268,25 @@ KeyEdge* glueKeyClosedEdges(
     return ops.glueKeyClosedEdges(khes, std::move(geometry));
 }
 
+core::Array<KeyEdge*> unglueKeyEdges(KeyEdge* ke) {
+    if (!ke) {
+        throw LogicError("unglueKeyEdges: ke is nullptr.");
+    }
+    detail::Operations ops(ke->complex());
+    return ops.unglueKeyEdges(ke);
+}
+
+core::Array<KeyVertex*> unglueKeyVertices(
+    KeyVertex* kv,
+    core::Array<std::pair<core::Id, core::Array<KeyEdge*>>>& ungluedKeyEdges) {
+
+    if (!kv) {
+        throw LogicError("unglueKeyVertices: kv is nullptr.");
+    }
+    detail::Operations ops(kv->complex());
+    return ops.unglueKeyVertices(kv, ungluedKeyEdges);
+}
+
 void moveToGroup(Node* node, Group* parentGroup, Node* nextSibling) {
     if (!node) {
         throw LogicError("moveToGroup: node is nullptr.");

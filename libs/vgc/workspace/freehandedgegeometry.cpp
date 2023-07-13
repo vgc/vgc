@@ -89,7 +89,6 @@ void FreehandEdgeGeometry::setWidths(core::DoubleArray widths) {
 std::shared_ptr<vacomplex::KeyEdgeGeometry> FreehandEdgeGeometry::clone() const {
     auto ret =
         std::make_shared<FreehandEdgeGeometry>(isClosed(), stroke_->isWidthConstant());
-    // TODO
     ret->sharedConstPositions_ = sharedConstPositions_;
     ret->sharedConstWidths_ = sharedConstWidths_;
     ret->stroke_ = std::make_unique<StrokeType>(*stroke_);
