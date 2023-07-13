@@ -899,6 +899,11 @@ void Select::onUnglue_() {
         return;
     }
 
+    core::Array<core::Id> selection = canvas->selection();
+    if (selection.isEmpty()) {
+        return;
+    }
+
     // Open history group
     core::UndoGroup* undoGroup = nullptr;
     core::History* history = workspace->history();
@@ -906,11 +911,8 @@ void Select::onUnglue_() {
         undoGroup = history->createUndoGroup(unglueCommandId());
     }
 
-    core::Array<core::Id> selection = canvas->selection();
-    if (selection.length() == 1) {
-        core::Array<core::Id> ungluedIds = workspace->unglue(selection[0]);
-        canvas->setSelection(std::move(ungluedIds));
-    }
+    core::Array<core::Id> ungluedIds = workspace->unglue(selection);
+    canvas->setSelection(std::move(ungluedIds));
 
     // Close history group
     if (undoGroup) {

@@ -823,18 +823,52 @@ core::Id Workspace::glue(core::Span<core::Id> elementIds) {
     return resultId;
 }
 
-core::Array<core::Id> Workspace::unglue(core::Id elementId) {
+core::Array<core::Id> Workspace::unglue(core::Span<core::Id> elementIds) {
     core::Array<core::Id> result;
 
-    workspace::Element* element = find(elementId);
-    if (!element) {
+    struct TargetEdge {
+        vacomplex::KeyEdge* ke;
+        core::Color color;
+    };
+
+    core::Array<vacomplex::KeyVertex*> kvs;
+    core::Array<TargetEdge> edges;
+    for (core::Id id : elementIds) {
+        workspace::Element* element = find(id);
+        if (!element) {
+            continue;
+        }
+        vacomplex::Node* node = element->vacNode();
+        if (!node || !node->isCell()) {
+            continue;
+        }
+        vacomplex::Cell* cell = node->toCellUnchecked();
+        switch (cell->cellType()) {
+        case vacomplex::CellType::KeyVertex: {
+            kvs.append(cell->toKeyVertexUnchecked());
+            break;
+        }
+        case vacomplex::CellType::KeyEdge: {
+            vacomplex::KeyEdge* ke = cell->toKeyEdgeUnchecked();
+            core::Color color(1, 0, 0);
+            dom::Element* sourceDomElement = element->domElement();
+            if (sourceDomElement) {
+                color = sourceDomElement->getAttribute(dom::strings::color).getColor();
+            }
+            else {
+                // TODO: warn ?
+            }
+            edges.append(TargetEdge{ke, color});
+            break;
+        }
+        default:
+            break;
+        }
+    }
+
+    if (kvs.isEmpty() && edges.isEmpty()) {
         return result;
     }
-    vacomplex::Node* node = element->vacNode();
-    if (!node || !node->isCell()) {
-        return result;
-    }
-    vacomplex::Cell* targetCell = node->toCellUnchecked();
 
     // Open history group
     static core::StringId commandId = core::StringId("workspace.unglue");
@@ -844,10 +878,28 @@ core::Array<core::Id> Workspace::unglue(core::Id elementId) {
         undoGroup = history->createUndoGroup(commandId);
     }
 
-    switch (targetCell->cellType()) {
-    case vacomplex::CellType::KeyVertex: {
-        vacomplex::KeyVertex* targetKv = targetCell->toKeyVertexUnchecked();
+    for (const TargetEdge& targetEdge : edges) {
+        // TODO: use operation source in onVacNodesChanged_ to do the color copy
+        vacomplex::KeyEdge* targetKe = targetEdge.ke;
+        core::Array<vacomplex::KeyEdge*> ungluedKeyEdges =
+            vacomplex::ops::unglueKeyEdges(targetKe);
 
+        for (vacomplex::KeyEdge* ke : ungluedKeyEdges) {
+            Element* e = this->findVacElement(ke);
+            if (e) {
+                result.append(e->id());
+                dom::Element* domElement = e->domElement();
+                if (domElement) {
+                    domElement->setAttribute(dom::strings::color, targetEdge.color);
+                }
+                else {
+                    // TODO: warn ?
+                }
+            }
+        }
+    }
+
+    for (vacomplex::KeyVertex* targetKv : kvs) {
         std::unordered_map<core::Id, core::Color> starEdgeColors;
         for (vacomplex::Cell* cell : targetKv->star()) {
             vacomplex::KeyEdge* ke = cell->toKeyEdge();
@@ -892,40 +944,9 @@ core::Array<core::Id> Workspace::unglue(core::Id elementId) {
                 result.append(e->id());
             }
         }
-        break;
     }
-    case vacomplex::CellType::KeyEdge: {
-        vacomplex::KeyEdge* targetKe = targetCell->toKeyEdgeUnchecked();
-        // TODO: use operation source in onVacNodesChanged_ to do the color copy
-        core::Color color(1, 0, 0);
-        dom::Element* sourceDomElement = element->domElement();
-        if (sourceDomElement) {
-            color = sourceDomElement->getAttribute(dom::strings::color).getColor();
-        }
-        else {
-            // TODO: warn ?
-        }
-        core::Array<vacomplex::KeyEdge*> ungluedKeyEdges =
-            vacomplex::ops::unglueKeyEdges(targetKe);
 
-        for (vacomplex::KeyEdge* ke : ungluedKeyEdges) {
-            Element* e = this->findVacElement(ke);
-            if (e) {
-                result.append(e->id());
-                dom::Element* domElement = e->domElement();
-                if (domElement) {
-                    domElement->setAttribute(dom::strings::color, color);
-                }
-                else {
-                    // TODO: warn ?
-                }
-            }
-        }
-        break;
-    }
-    default:
-        break;
-    }
+    sync();
 
     sync();
 

@@ -283,12 +283,12 @@ public:
     ///
     core::Id glue(core::Span<core::Id> elementIds);
 
-    /// Performs an unglue operation on the element of id `elementId`.
+    /// Performs an unglue operation on the elements of ids `elementIds`.
     /// This is both a geometrical and topological operation.
     ///
     /// Currently supported cell types: keyVertex, keyEdge.
     ///
-    core::Array<core::Id> unglue(core::Id elementId);
+    core::Array<core::Id> unglue(core::Span<core::Id> elementIds);
 
     /// This signal is emitted whenever the workspace changes, either
     /// as a result of the DOM changing, or the topological complex
