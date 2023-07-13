@@ -391,6 +391,7 @@ KeyEdge* Operations::glueKeyOpenEdges(
         hardDelete(khe.edge(), true);
     }
 
+    newKe->snapGeometry();
     return newKe;
 }
 

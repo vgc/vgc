@@ -426,6 +426,7 @@ core::Id Workspace::glue(core::Span<core::Id> elementIds) {
             vacomplex::KeyEdge* ke1 = openKes[1];
 
             // TODO: use operation source in onVacNodesChanged_ to do the color blend
+            // Note: at least 1 sample is guaranteed.
             bool isEdge0Longer = ke0->sampling().samples().last().s()
                                  > ke1->sampling().samples().last().s();
             VacKeyEdge* colorEdge = dynamic_cast<VacKeyEdge*>(
@@ -440,16 +441,62 @@ core::Id Workspace::glue(core::Span<core::Id> elementIds) {
             const geometry::StrokeSample2dArray& samples0 = ke0->sampling().samples();
             geometry::StrokeSample2dArray samples1 = ke1->sampling().samples();
 
-            if (samples0.length() >= 2 && samples1.length() >= 2) {
+            // Detect which edge direction should be used for gluing.
+            // Here, we handle the simple cases where the two edges already share
+            // at least one vertex.
+            vacomplex::KeyVertex* ke00 = ke0->startVertex();
+            vacomplex::KeyVertex* ke01 = ke0->endVertex();
+            vacomplex::KeyVertex* ke10 = ke1->startVertex();
+            vacomplex::KeyVertex* ke11 = ke1->endVertex();
+            bool isAnyLoop = (ke00 == ke01) || (ke10 == ke11);
+            bool isBestDirectionKnown = false;
+            bool reverse1 = false;
+            if (!isAnyLoop) {
+                if ((ke00 == ke10) || (ke01 == ke11)) {
+                    // If the two edges have the same start vertex or the same
+                    // end vertex, we glue them in their intrinsic direction.
+                    reverse1 = false;
+                    isBestDirectionKnown = true;
+                }
+                else if ((ke00 == ke11) || (ke01 == ke10)) {
+                    // If the start (resp. end) vertex of ke0 is equal to the
+                    // end (resp. start) vertex of ke1, we want to glue them in reverse.
+                    reverse1 = true;
+                    isBestDirectionKnown = true;
+                }
+            }
+
+            core::Array<FreehandEdgePoint> newPoints;
+
+            if (samples0.length() < 2) {
+                Int n = samples1.length();
+                newPoints.resizeNoInit(n);
+                FreehandEdgePoint fep0(samples0.first());
+                for (Int i = 0; i < n; ++i) {
+                    newPoints[i] = fep0.average(samples1[i]);
+                }
+            }
+            else if (samples1.length() < 2) {
+                Int n = samples0.length();
+                newPoints.resizeNoInit(n);
+                FreehandEdgePoint fep1(samples1.first());
+                for (Int i = 0; i < n; ++i) {
+                    newPoints[i] = fep1.average(samples1[i]);
+                }
+            }
+            else {
                 double l0 = samples0.last().s();
                 double l1 = samples1.last().s();
 
                 Int n0 = samples0.length();
                 Int n1 = samples1.length();
                 Int n = std::max<Int>(0, n0 - 2) + std::max<Int>(0, n1 - 2) + 2;
-                bool reverse1 = false;
 
-                if (l0 > 0 && l1 > 0) {
+                // If we don't know yet which direction to use for gluing, we
+                // detect the best direction now by choosing the one minimizing
+                // the squared distance between the curves.
+                //
+                if (!isBestDirectionKnown && l0 > 0 && l1 > 0) {
                     core::Array<geometry::Vec2d> us0 =
                         computeApproximateUniformSamplingPositions(samples0, 10);
                     core::Array<geometry::Vec2d> us1 =
@@ -468,13 +515,18 @@ core::Id Workspace::glue(core::Span<core::Id> elementIds) {
                     // reverse samples1 if necessary
                     if (costB < costA) {
                         reverse1 = true;
-                        geometry::StrokeSample2dArray reversedSamples1(n1, core::noInit);
-                        for (Int i = 0; i < n1; ++i) {
-                            reversedSamples1[i] = samples1[n1 - 1 - i];
-                            reversedSamples1[i].setS(l1 - reversedSamples1[i].s());
-                        }
-                        samples1 = std::move(reversedSamples1);
                     }
+                }
+
+                // Now, compute an interpolation between the two curve with the given direction.
+
+                if (reverse1) {
+                    geometry::StrokeSample2dArray reversedSamples1(n1, core::noInit);
+                    for (Int i = 0; i < n1; ++i) {
+                        reversedSamples1[i] = samples1[n1 - 1 - i];
+                        reversedSamples1[i].setS(l1 - reversedSamples1[i].s());
+                    }
+                    samples1 = std::move(reversedSamples1);
                 }
 
                 FreehandEdgePoint p0a = samples0.first();
@@ -527,40 +579,37 @@ core::Id Workspace::glue(core::Span<core::Id> elementIds) {
                 points0.emplaceLast(samples0.last());
                 points1.emplaceLast(samples1.last());
 
-                core::Array<vacomplex::KeyHalfedge> halfedges(
-                    {{ke0, true}, {ke1, !reverse1}});
-
-                core::Array<FreehandEdgePoint> newPoints(n, core::noInit);
+                newPoints.resizeNoInit(n);
                 for (Int i = 0; i < n; ++i) {
                     newPoints[i] = points0[i].average(points1[i]);
                 }
+            }
 
-                double maxWidth = 0;
-                for (Int i = 0; i < n; ++i) {
-                    double w = newPoints[i].width();
-                    if (w > maxWidth) {
-                        maxWidth = w;
-                    }
-                }
-
-                // tolerance = 5% of max width
-                std::shared_ptr<vacomplex::KeyEdgeGeometry> newGeometry =
-                    FreehandEdgeGeometry::createFromPoints(
-                        newPoints, false, maxWidth * 0.05);
-
-                vacomplex::Cell* result = vacomplex::ops::glueKeyOpenEdges(
-                    halfedges,
-                    std::move(newGeometry),
-                    newPoints.first().position(),
-                    newPoints.last().position());
-                Element* e = this->findVacElement(result);
-                if (e) {
-                    e->domElement()->setAttribute(dom::strings::color, color);
-                    resultId = e->id();
+            double maxWidth = 0;
+            for (Int i = 0; i < newPoints.length(); ++i) {
+                double w = newPoints[i].width();
+                if (w > maxWidth) {
+                    maxWidth = w;
                 }
             }
-            else {
-                // TODO: warning ?
+
+            // tolerance = 5% of max width
+            // TODO: what if maxWidth = 0? Better heuristic for tolerance?
+            std::shared_ptr<vacomplex::KeyEdgeGeometry> newGeometry =
+                FreehandEdgeGeometry::createFromPoints(newPoints, false, maxWidth * 0.05);
+
+            core::Array<vacomplex::KeyHalfedge> halfedges(
+                {{ke0, true}, {ke1, !reverse1}});
+
+            vacomplex::Cell* result = vacomplex::ops::glueKeyOpenEdges(
+                halfedges,
+                std::move(newGeometry),
+                newPoints.first().position(),
+                newPoints.last().position());
+            Element* e = this->findVacElement(result);
+            if (e) {
+                e->domElement()->setAttribute(dom::strings::color, color);
+                resultId = e->id();
             }
         }
     }
