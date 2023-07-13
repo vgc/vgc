@@ -352,7 +352,7 @@ KeyEdge* Operations::glueKeyOpenEdges(
     for (const KeyHalfedge& khe : khes) {
         startVertices.append(khe.startVertex());
     }
-    KeyVertex* startKv = glueKeyVertices(startVertices, startPosition);
+    glueKeyVertices(startVertices, startPosition);
 
     // Note: we can only list end vertices after the glue of
     // start vertices since it can substitute end vertices.
@@ -361,7 +361,7 @@ KeyEdge* Operations::glueKeyOpenEdges(
     for (const KeyHalfedge& khe : khes) {
         endVertices.append(khe.endVertex());
     }
-    KeyVertex* endKv = glueKeyVertices(endVertices, endPosition);
+    glueKeyVertices(endVertices, endPosition);
 
     // Location: top-most input edge
     core::Array<Node*> edgeNodes(n);
@@ -371,6 +371,9 @@ KeyEdge* Operations::glueKeyOpenEdges(
     Node* topMostEdge = findTopMost(edgeNodes);
     Group* parentGroup = topMostEdge->parentGroup();
     Node* nextSibling = topMostEdge->nextSibling();
+
+    KeyVertex* startKv = khes[0].startVertex();
+    KeyVertex* endKv = khes[0].endVertex();
 
     // TODO: define source operation
     KeyEdge* newKe = createKeyOpenEdge(

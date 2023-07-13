@@ -1218,7 +1218,9 @@ void Workspace::onVacNodesChanged_(const vacomplex::ComplexDiff& diff) {
         // let us move it to its final destination later in this function.
         rootVacElement_->appendChild(element);
 
-        core::Id id = core::genId();
+        dom::ElementPtr domElement =
+            dom::Element::create(document_->rootElement(), "transient", nullptr);
+        const core::Id id = domElement->internalId();
 
         const auto& p = elements_.emplace(id, std::move(u));
         if (!p.second) {
@@ -1226,7 +1228,7 @@ void Workspace::onVacNodesChanged_(const vacomplex::ComplexDiff& diff) {
             continue;
         }
 
-        element->domElement_ = nullptr;
+        element->domElement_ = domElement.get();
         element->id_ = id;
         element->status_ = ElementStatus::Ok;
 
@@ -1333,6 +1335,8 @@ void Workspace::onVacNodesChanged_(const vacomplex::ComplexDiff& diff) {
     // Get Workspace element corresponding to the destroyed VAC node. Nothing
     // to do if there is no such element.
     //
+    // Note: transient vac nodes are included.
+    //
     for (const auto& info : diff.destroyedNodes()) {
         VacElement* vacElement = findVacElement(info.nodeId());
         if (vacElement) {
@@ -1349,16 +1353,6 @@ void Workspace::onVacNodesChanged_(const vacomplex::ComplexDiff& diff) {
             //
             elementByVacInternalId_.erase(info.nodeId());
             vacElement->vacNode_ = nullptr;
-            removeElement_(vacElement);
-        }
-    }
-
-    // Remove transient vac nodes
-    //
-    for (const auto& info : diff.transientNodes()) {
-        VacElement* vacElement = findVacElement(info.nodeId());
-        elementByVacInternalId_.erase(info.nodeId());
-        if (vacElement) {
             removeElement_(vacElement);
         }
     }
