@@ -204,6 +204,7 @@ public:
     void clear() {
         createdNodes_.clear();
         destroyedNodes_.clear();
+        transientNodes_.clear();
         modifiedNodes_.clear();
         insertions_.clear();
     }
