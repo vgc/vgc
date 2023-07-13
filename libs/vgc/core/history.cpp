@@ -82,6 +82,10 @@ bool History::abort() {
         throw LogicError("Cannot abort when the history is already doing an undo/redo.");
     }
 
+    if (!head_->isOpen()) {
+        return false;
+    }
+
     isUndoingOrRedoing_ = true;
     aboutToUndo().emit();
 
@@ -309,6 +313,16 @@ bool History::closeUndoGroupUnchecked_(UndoGroup* node) {
             node->operations_.emplaceLast(std::move(op));
         }
         x->operations_.clear();
+    }
+
+    if (node->operations_.isEmpty()) {
+        // group is empty
+        // -> destroy it and leave head unchanged.
+        UndoGroup* parent = node->parent();
+        node->destroyObject_();
+        head_ = parent;
+        headChanged().emit(head_);
+        return true;
     }
 
     // Remove descendants and set node as head.

@@ -133,11 +133,13 @@ public:
 
     /// Closes this undo group.
     ///
+    /// If this node contains no operations, it is simply destroyed.
+    ///
     /// If `tryAmendParent` is true then:
     /// - If the parent node of this node is
     /// both closed and has a single child, then the parent node
     /// is amended with the operations of this node and this node is
-    /// removed.
+    /// destroyed.
     /// - Otherwise, this node is simply closed as if `tryAmendParent` was false.
     ///
     /// Throws `LogicError` if:
@@ -366,16 +368,20 @@ public:
     ///
     bool redo();
 
+    bool isUndoingOrRedoing() const {
+        return isUndoingOrRedoing_;
+    }
+
     /// Returns whether it is possible to undo the head group.
     ///
     bool canUndo() const {
-        return head_ != root_;
+        return (head_ != root_) && !isUndoingOrRedoing_;
     }
 
     /// Returns whether it is possible to redo the main child of the head group.
     ///
     bool canRedo() const {
-        return head_->mainChild() != nullptr;
+        return (head_->mainChild() != nullptr) && !isUndoingOrRedoing_;
     }
 
     /// Undoes all groups between the head group and its common ancestor with `node`, ancestor
