@@ -19,41 +19,62 @@
 namespace vgc::vacomplex {
 
 KeyHalfedge KeyHalfedge::next() const {
-    KeyHalfedge result = opposite();
-    double a = endAngle();
-    double minAngle = core::DoubleInfinity;
-    KeyVertex* kv = endVertex();
 
-    auto angleDist = [](double a, double b) {
-        double c = b - a;
-        while (c < 0) {
-            c += core::pi * 2;
+    struct Candidate {
+        Candidate(KeyEdge* ke, bool direction, double angle)
+            : khe(ke, direction)
+            , angle(angle)
+            , id(ke->id()) {
         }
-        return c;
+
+        KeyHalfedge khe;
+        double angle;
+        Int id;
     };
 
-    for (Cell* cell : endVertex()->star()) {
+    KeyVertex* kv = this->endVertex();
+    core::Array<Candidate> candidates;
+
+    for (Cell* cell : kv->star()) {
         KeyEdge* ke = cell->toKeyEdge();
         if (ke) {
-            bool isOtherEdge = ke != edge_;
-            if (ke->isStartVertex(kv) && (isOtherEdge || direction_)) {
-                double d = angleDist(ke->startAngle(), a);
-                if (d < minAngle) {
-                    minAngle = d;
-                    result = KeyHalfedge(ke, true);
-                }
+            if (ke->isStartVertex(kv)) {
+                candidates.emplaceLast(ke, true, ke->startAngle());
             }
-            if (ke->isEndVertex(kv) && (isOtherEdge || !direction_)) {
-                double d = angleDist(ke->endAngle(), a);
-                if (d < minAngle) {
-                    minAngle = d;
-                    result = KeyHalfedge(ke, false);
-                }
+            if (ke->isEndVertex(kv)) {
+                candidates.emplaceLast(ke, false, ke->endAngle());
             }
         }
     }
 
-    return result;
+    std::sort(
+        candidates.begin(),
+        candidates.end(),
+        [=](const Candidate& a, const Candidate& b) {
+            if (a.angle != b.angle) {
+                return a.angle < b.angle;
+            }
+            if (a.id != b.id) {
+                return a.id < b.id;
+            }
+            // assumes `a.khe.direction() != b.khe.direction()`
+            return a.khe.direction();
+        });
+
+    KeyHalfedge opposite = this->opposite();
+
+    Int i = 0;
+    Int n = candidates.length();
+    for (; i < n; ++i) {
+        if (candidates[i].khe == opposite) {
+            break;
+        }
+    }
+
+    // first smaller angle is next halfedge
+    i = (i - 1 + n) % n;
+
+    return candidates[i].khe;
 }
 
 } // namespace vgc::vacomplex
