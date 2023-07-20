@@ -18,54 +18,6 @@
 
 namespace vgc::core {
 
-std::string
-replace(const std::string& s, const std::string& from, const std::string& to) {
-    std::string res;
-    res.reserve(s.size());
-
-    // Early return if either `s` or `from` are empty strings
-    size_t ns = s.size();
-    size_t nf = from.size();
-    if (ns == 0 || nf == 0) {
-        res = s;
-        return res;
-    }
-
-    size_t i = 0;
-    size_t k = 0;
-    while (i + k <= ns) {
-        // Invariants:
-        // 0 <= k <= from.size()
-        // 0 <= i+k <= s.size()
-        // if k>0, then s[i..i+k-1] == from[0..k-1]
-
-        if (k == nf) {
-            // Found. We replace from by to.
-            res += to;
-            i += k;
-            k = 0;
-        }
-        else if (i + k == ns || s[i + k] != from[k]) {
-            // Not found, let's copy s into res.
-            // In most loop iteration, we end up here, and k == 0, that
-            // is, we copy one more character from s to res.
-            size_t imax = (std::min)(i + k, ns - 1);
-            while (i <= imax) {
-                res += s[i];
-                ++i;
-            }
-            if (i == ns)
-                break;
-            else
-                k = 0;
-        }
-        else {
-            // Partial match found. Let's keep looking.
-            ++k;
-        }
-    }
-
-    return res;
-}
+// Empty for now
 
 } // namespace vgc::core
