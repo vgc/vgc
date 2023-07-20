@@ -25,6 +25,7 @@
 #include <numeric>
 #include <string>
 #include <vector>
+
 #include <vgc/core/api.h>
 #include <vgc/core/logging.h>
 
@@ -146,12 +147,6 @@ int upper_bound(const std::vector<T>& v, const T& x) {
     return toIndex(v, it);
 }
 
-/// Returns a copy of the string \p s where all occurences of
-/// \p from are replaced by \p to.
-///
-VGC_CORE_API
-std::string replace(const std::string& s, const std::string& from, const std::string& to);
-
 template<typename T>
 void hashCombine(std::size_t& res, const T& v) {
     res ^= std::hash<T>()(v) + 0x9E3779B1 // closest prime to commonly used 0x9E3779B9
@@ -162,18 +157,6 @@ template<typename... Ts>
 std::enable_if_t<(sizeof...(Ts) > 1), void>
 hashCombine(std::size_t& res, const Ts&... values) {
     (hashCombine(res, values), ...);
-}
-
-constexpr bool startsWith(std::string_view s, std::string_view prefix) {
-    const size_t n = s.size();
-    const size_t k = prefix.size();
-    return n >= k && s.compare(0, k, prefix) == 0;
-}
-
-constexpr bool endsWith(std::string_view s, std::string_view suffix) {
-    const size_t n = s.size();
-    const size_t k = suffix.size();
-    return n >= k && s.compare(n - k, k, suffix) == 0;
 }
 
 } // namespace vgc::core

@@ -633,6 +633,7 @@ double readDoubleApprox(IStream& in) {
     int exponent = 0;
     if (c == 'e' || c == 'E') {
         if (!in.get(c)) {
+            // XXX unget exponent part instead of throwing?
             throw ParseError(
                 "Unexpected end of stream while attempting to read the first "
                 "character following the exponent symbol of a number. "
@@ -642,6 +643,7 @@ double readDoubleApprox(IStream& in) {
         if (c == '-' || c == '+') {
             isExponentPositive = (c == '+');
             if (!in.get(c)) {
+                // XXX unget exponent part instead of throwing?
                 throw ParseError(
                     "Unexpected end of stream while attempting to read the first "
                     "character following the sign of the exponent part "
@@ -678,6 +680,7 @@ double readDoubleApprox(IStream& in) {
             }
         }
         if (!hasExponentDigits) {
+            // XXX unget exponent part instead of throwing?
             throw ParseError(
                 std::string("Unexpected '") + c
                 + " in the exponent part of "
