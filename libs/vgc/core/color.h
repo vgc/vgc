@@ -60,7 +60,19 @@ public:
     /// color), and the saturation and lightness should be given in [0, 1] and
     /// are implicitly clamped to this range.
     ///
+    /// \sa `hsla()`.
+    ///
     static Color hsl(float h, float s, float l);
+
+    /// Creates a Color from the given HSL values and alpha channel.
+    ///
+    /// ```cpp
+    /// core::Color c = core::Color::hsla(270, 0.6, 0.7, 1.0);
+    /// ```
+    ///
+    /// \sa `hsl()`.
+    ///
+    static Color hsla(float h, float s, float l, float a);
 
     /// Creates a Color initialized with the given r, g, b in [0, 1]. The alpha
     /// channel is set to 1.0.

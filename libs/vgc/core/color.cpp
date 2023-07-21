@@ -187,6 +187,11 @@ Color Color::hsl(float h, float s, float l) {
     return Color(r, g, b);
 }
 
+Color Color::hsla(float h, float s, float l, float a) {
+    auto [r, g, b] = rgbFromHsl(h, s, l);
+    return Color(r, g, b, a);
+}
+
 std::array<float, 3> Color::toHsl() const {
     return hslFromRgb(r(), g(), b());
 }
