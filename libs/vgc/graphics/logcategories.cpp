@@ -19,5 +19,6 @@
 namespace vgc::graphics {
 
 VGC_DEFINE_LOG_CATEGORY(LogVgcGraphics, "vgc.graphics")
+VGC_DEFINE_LOG_CATEGORY(LogVgcGraphicsSvg, "vgc.graphics.svg")
 
 } // namespace vgc::graphics
