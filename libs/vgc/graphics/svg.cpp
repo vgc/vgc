@@ -1506,8 +1506,8 @@ void readPath(
 
 } // namespace
 
-// Read the SVG.
-// --------------
+// Note about error handling.
+// -------------------------
 //
 // In case of errors in path data or basic shapes attributes, such as if
 // rect.height < 0, the SVG specification mandates to stop processing the
@@ -1539,21 +1539,17 @@ void readPath(
 // less than the ability to import whatever geometry exists in the document.
 // Also, this makes the importer more robust to bugs in its implementation.
 //
-// Besides, this is the error handling policy which we will use for VGC.
-// Indeed, for VGC, we will use a different error handling policy that the one
-// specified by SVG. In a VGC document, if an XML element is erroneous, then it
-// should simply be ignored (or be partially rendered via a well-defined
-// behavior, like SVG path data), but processing should continue for other XML
-// elements, as long as it isn't an XML syntax error. This makes it much more
-// robust to small bugs in user scripts or implementation which invariably
-// happen, especially when approaching a deadline. When producing a movie,
-// things are messy, and a broken image is much more useful than no image at
-// all. Especially for geometric data, where some interpolation that overshoots
+// Besides, this is the error handling policy that we want to use for VGC. In a
+// VGC document, if an XML element is erroneous, then it should still be
+// imported and marked as "in error" and not rendered (or partially rendered,
+// as for SVG paths), but processing should continue for other XML elements, as
+// long as it isn't an XML syntax error. This makes it much more robust to
+// small bugs in user scripts or implementation which invariably happen,
+// especially when approaching a deadline. When producing a movie, things are
+// messy, and a broken image is much more useful than no image at all.
+// Especially for geometric data, where some interpolation that overshoots
 // (e.g., Catmull-Rom) might easily make height < 0 temporarily, in which case
 // it is really silly not to render subsequent valid elements.
-//
-// Of course, we should have a proper warning system to let users be aware of
-// errors, which we don't have in VPaint, but we will have in VGC.
 //
 core::Array<SvgSimplePath> getSvgSimplePaths(std::string_view svg) {
 
