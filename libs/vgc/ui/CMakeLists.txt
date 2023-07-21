@@ -27,6 +27,7 @@ vgc_add_library(ui
         exceptions.h
         flex.h
         grid.h
+        iconwidget.h
         imagebox.h
         key.h
         keyevent.h
@@ -83,6 +84,7 @@ vgc_add_library(ui
         exceptions.cpp
         flex.cpp
         grid.cpp
+        iconwidget.cpp
         imagebox.cpp
         key.cpp
         keyevent.cpp
