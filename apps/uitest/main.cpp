@@ -19,6 +19,7 @@
 #include <vgc/core/random.h>
 #include <vgc/ui/column.h>
 #include <vgc/ui/grid.h>
+#include <vgc/ui/iconwidget.h>
 #include <vgc/ui/imagebox.h>
 #include <vgc/ui/lineedit.h>
 #include <vgc/ui/messagedialog.h>
@@ -187,7 +188,9 @@ private:
         createMessageDialogButtons_(rightBottomContent);
         createLineEdits_(rightBottomContent);
         createNumberEdits_(rightBottomContent);
-        createImageBox_(rightBottomContent);
+        ui::Row* imageAndIconRow = rightBottomContent->createChild<ui::Row>();
+        createImageBox_(imageAndIconRow);
+        createIconWidget_(imageAndIconRow);
     }
 
     void createPlot2d_(ui::Widget* parent) {
@@ -353,6 +356,11 @@ private:
     void createImageBox_(ui::Widget* parent) {
         std::string imagePath = core::resourcePath("apps/uitest/icons/512.png");
         parent->createChild<ui::ImageBox>(imagePath);
+    }
+
+    void createIconWidget_(ui::Widget* parent) {
+        std::string iconPath = core::resourcePath("apps/uitest/icons/heart.svg");
+        parent->createChild<ui::IconWidget>(iconPath);
     }
 };
 

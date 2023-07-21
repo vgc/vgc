@@ -22,6 +22,7 @@ vgc_add_library(graphics
         font.h
         framebuffer.h
         geometryview.h
+        icon.h
         image.h
         imageview.h
         logcategories.h
@@ -47,6 +48,7 @@ vgc_add_library(graphics
         engine.cpp
         exceptions.cpp
         font.cpp
+        icon.cpp
         image.cpp
         logcategories.cpp
         richtext.cpp
