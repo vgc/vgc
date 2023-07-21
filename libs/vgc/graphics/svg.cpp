@@ -1017,8 +1017,8 @@ std::optional<core::Color> parseColor(std::string_view s) {
         float hue = parse<float>(sSplit[0]);
 
         // Saturation and lightness are read as percentages and mapped to [0, 1]
-        float saturation = parse<float>(sSplit[1]) / 100.0;
-        float lightness = parse<float>(sSplit[2]) / 100.0;
+        float saturation = parse<float>(sSplit[1]) / 100.0f;
+        float lightness = parse<float>(sSplit[2]) / 100.0f;
 
         // Alpha channel is a double from 0.0 to 1.0 inclusive
         float alpha = parse<float>(sSplit[3]);
@@ -1054,8 +1054,8 @@ std::optional<core::Color> parseColor(std::string_view s) {
         float hue = parse<float>(sSplit[0]);
 
         // Saturation and lightness are read as percentages and mapped to [0, 1]
-        float saturation = parse<float>(sSplit[1]) / 100.0;
-        float lightness = parse<float>(sSplit[2]) / 100.0;
+        float saturation = parse<float>(sSplit[1]) / 100.0f;
+        float lightness = parse<float>(sSplit[2]) / 100.0f;
 
         // Return result
         return core::Color::hsl(hue, saturation, lightness);
