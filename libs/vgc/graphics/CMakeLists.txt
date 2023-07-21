@@ -31,6 +31,7 @@ vgc_add_library(graphics
         richtext.h
         samplerstate.h
         strings.h
+        svg.h
         swapchain.h
         text.h
 
@@ -50,6 +51,7 @@ vgc_add_library(graphics
         logcategories.cpp
         richtext.cpp
         strings.cpp
+        svg.cpp
         text.cpp
 
         d3d11/d3d11engine.cpp
