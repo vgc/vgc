@@ -823,8 +823,8 @@ parsePathData(std::string_view d, std::string* error = nullptr) {
                     readCommaWhitespaces(it, end);
                 }
                 // Check whether next symbol is a valid argument
-                bool isArg;
-                double number;
+                bool isArg = false;
+                double number = 0;
                 switch (sig[i]) {
                 case a::Number:
                     isArg = readNumber(it, end, &number);
