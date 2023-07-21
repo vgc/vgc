@@ -45,6 +45,7 @@ vgc_add_library(geometry
         catmullrom.cpp
         curve.cpp
         curves2d.cpp
+        curvecommand.cpp
         logcategories.cpp
         mat2d.cpp
         mat2f.cpp

@@ -19,6 +19,7 @@
 
 #include <vgc/core/arithmetic.h>
 #include <vgc/core/array.h>
+#include <vgc/core/enum.h>
 #include <vgc/geometry/api.h>
 
 namespace vgc::geometry {
@@ -34,28 +35,15 @@ enum class CurveCommandType : UInt8 {
     CubicBezierTo
 };
 
+VGC_GEOMETRY_API
+VGC_DECLARE_ENUM(CurveCommandType)
+
 /// Writes the given CurveCommandType to the output stream.
 ///
 template<typename OStream>
 void write(OStream& out, CurveCommandType c) {
     using core::write;
-    switch (c) {
-    case CurveCommandType::Close:
-        write(out, "Close");
-        break;
-    case CurveCommandType::MoveTo:
-        write(out, "MoveTo");
-        break;
-    case CurveCommandType::LineTo:
-        write(out, "LineTo");
-        break;
-    case CurveCommandType::QuadraticBezierTo:
-        write(out, "QuadraticBezierTo");
-        break;
-    case CurveCommandType::CubicBezierTo:
-        write(out, "CubicBezierTo");
-        break;
-    }
+    write(out, core::Enum::shortName(c));
 }
 
 namespace detail {

@@ -573,4 +573,81 @@ inline Curves2dCommandIterator& Curves2dCommandIterator::operator--() {
 
 } // namespace vgc::geometry
 
+template<>
+struct fmt::formatter<vgc::geometry::Curves2dCommandRef> : fmt::formatter<double> {
+    template<typename FormatContext>
+    auto format(const vgc::geometry::Curves2dCommandRef& c, FormatContext& ctx)
+        -> decltype(ctx.out()) {
+
+        using vgc::core::copyStringTo;
+        using vgc::core::Enum;
+        using vgc::geometry::CurveCommandType;
+        using DoubleFormatter = fmt::formatter<double>;
+
+        auto out = ctx.out();
+        out = copyStringTo(out, Enum::shortName(c.type()));
+        *out++ = '(';
+        switch (c.type()) {
+        case CurveCommandType::Close:
+            break;
+        case CurveCommandType::MoveTo:
+        case CurveCommandType::LineTo:
+            out = DoubleFormatter::format(c.p().x(), ctx);
+            out = copyStringTo(out, ", ");
+            out = DoubleFormatter::format(c.p().y(), ctx);
+            break;
+        case CurveCommandType::QuadraticBezierTo:
+            out = DoubleFormatter::format(c.p1().x(), ctx);
+            out = copyStringTo(out, ", ");
+            out = DoubleFormatter::format(c.p1().y(), ctx);
+            out = copyStringTo(out, ", ");
+            out = DoubleFormatter::format(c.p2().x(), ctx);
+            out = copyStringTo(out, ", ");
+            out = DoubleFormatter::format(c.p2().y(), ctx);
+            break;
+        case CurveCommandType::CubicBezierTo:
+            out = DoubleFormatter::format(c.p1().x(), ctx);
+            out = copyStringTo(out, ", ");
+            out = DoubleFormatter::format(c.p1().y(), ctx);
+            out = copyStringTo(out, ", ");
+            out = DoubleFormatter::format(c.p2().x(), ctx);
+            out = copyStringTo(out, ", ");
+            out = DoubleFormatter::format(c.p2().y(), ctx);
+            out = copyStringTo(out, ", ");
+            out = DoubleFormatter::format(c.p3().x(), ctx);
+            out = copyStringTo(out, ", ");
+            out = DoubleFormatter::format(c.p3().y(), ctx);
+            break;
+        }
+        *out++ = ')';
+        ctx.advance_to(out);
+        return out;
+    }
+};
+
+template<>
+struct fmt::formatter<vgc::geometry::Curves2d>
+    : fmt::formatter<vgc::geometry::Curves2dCommandRef> {
+    template<typename FormatContext>
+    auto format(const vgc::geometry::Curves2d& curves, FormatContext& ctx)
+        -> decltype(ctx.out()) {
+
+        auto out = ctx.out();
+        *out++ = '[';
+        bool first = true;
+        for (vgc::geometry::Curves2dCommandRef c : curves.commands()) {
+            if (first) {
+                first = false;
+            }
+            else {
+                out = vgc::core::copyStringTo(out, ", ");
+            }
+            out = fmt::formatter<vgc::geometry::Curves2dCommandRef>::format(c, ctx);
+        }
+        *out++ = ']';
+        ctx.advance_to(out);
+        return out;
+    }
+};
+
 #endif // VGC_GEOMETRY_CURVES2D_H
