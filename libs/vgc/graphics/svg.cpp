@@ -1266,7 +1266,7 @@ void SvgPresentationAttributes::applyChildStyle(const core::XmlStreamReader& xml
     // Nice example to test behaviour:
     // https://www.w3.org/TR/SVG11/images/masking/opacity01.svg
     //
-    if (std::optional<double> x = getNumber(xml, style, "stroke-opacity")) {
+    if (std::optional<double> x = getNumber(xml, style, "opacity")) {
         opacity_ *= core::clamp(*x, 0.0, 1.0);
     }
 
@@ -1276,7 +1276,8 @@ void SvgPresentationAttributes::applyChildStyle(const core::XmlStreamReader& xml
 SvgPaint applyOpacity(SvgPaint paint, double localOpacity, double opacity) {
     if (paint.paintType() == SvgPaintType::Color) {
         core::Color c = paint.color();
-        c.setA(c.a() * localOpacity * opacity);
+        float totalOpacity = core::narrow_cast<float>(localOpacity * opacity);
+        c.setA(c.a() * totalOpacity);
         paint.setColor(c);
     }
     return paint;
