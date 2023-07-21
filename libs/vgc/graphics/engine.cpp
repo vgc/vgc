@@ -529,10 +529,10 @@ void Engine::setRasterizerState(const RasterizerStatePtr& state) {
 }
 
 void Engine::pushRasterizerState(const RasterizerStatePtr& state) {
-    rasterizerStateStack_.push(state);
     if (rasterizerStateStack_.top() != state) {
         dirtyPipelineParameters_ |= PipelineParameter::RasterizerState;
     }
+    rasterizerStateStack_.push(state);
 }
 
 void Engine::popRasterizerState() {
