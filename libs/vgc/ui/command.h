@@ -110,12 +110,14 @@ public:
         std::string_view id,
         ui::CommandType type,
         ShortcutContext shortcutContext,
-        std::string_view name)
+        std::string_view name,
+        std::string_view icon = "")
 
         : id_(id)
         , type_(type)
         , shortcutContext_(shortcutContext)
-        , name_(name) {
+        , name_(name)
+        , icon_(icon) {
     }
 
     /// Returns the ID of the command, which is a string that uniquely identifies a
@@ -161,11 +163,20 @@ public:
         return name_;
     }
 
+    /// Returns the icon URL of the command.
+    ///
+    /// Example: `"tools/icons/select.svg"`.
+    ///
+    core::StringId icon() const {
+        return icon_;
+    }
+
 private:
     core::StringId id_;
     ui::CommandType type_;
     ShortcutContext shortcutContext_;
     core::StringId name_;
+    core::StringId icon_;
 };
 
 } // namespace vgc::ui
@@ -219,14 +230,21 @@ struct CommandRegistrer {
 
 } // namespace vgc::ui
 
-#define VGC_UI_DEFINE_COMMAND_5(variableName, id, type, shortcutContext, name)           \
+#define VGC_UI_DEFINE_COMMAND_BASE(variableName, id, ...)                                \
     static const ::vgc::core::StringId variableName(id);                                 \
     static const ::vgc::ui::detail::CommandRegistrer variableName##_detail(              \
-        ::vgc::ui::Command(id, type, shortcutContext, name));
+        ::vgc::ui::Command(id, __VA_ARGS__));
+
+#define VGC_UI_DEFINE_COMMAND_5(variableName, id, type, shortcutContext, name)           \
+    VGC_UI_DEFINE_COMMAND_BASE(variableName, id, type, shortcutContext, name)
 
 #define VGC_UI_DEFINE_COMMAND_6(variableName, id, type, shortcutContext, name, shortcut) \
-    VGC_UI_DEFINE_COMMAND_5(variableName, id, type, shortcutContext, name)               \
+    VGC_UI_DEFINE_COMMAND_BASE(variableName, id, type, shortcutContext, name)            \
     VGC_UI_ADD_DEFAULT_SHORTCUT(variableName, shortcut)
+
+#define VGC_UI_DEFINE_COMMAND_7(vName, id, type, shortcutContext, name, shortcut, icon)  \
+    VGC_UI_DEFINE_COMMAND_BASE(vName, id, type, shortcutContext, name, icon)             \
+    VGC_UI_ADD_DEFAULT_SHORTCUT(vName, shortcut)
 
 /// Defines a command and adds it to the `CommandRegistry`.
 ///

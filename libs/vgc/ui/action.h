@@ -83,6 +83,12 @@ public:
         return command_->name();
     }
 
+    /// Returns the icon URL of the command associated with this action.
+    ///
+    std::string_view icon() const {
+        return command_->icon();
+    }
+
     /// Returns the displayed text for this action.
     ///
     /// By default, this is the same as the `name()` of the action, but it can
