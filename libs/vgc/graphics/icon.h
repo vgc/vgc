@@ -55,12 +55,12 @@ private:
     VGC_PRIVATIZE_OBJECT_TREE_MUTATORS
 
 protected:
-    Icon(float size, std::string_view svgPath);
+    Icon(std::string_view svgPath);
 
 public:
     /// Creates an icon of the given size with the given SVG path.
     ///
-    static IconPtr create(float size, std::string_view svgPath);
+    static IconPtr create(std::string_view svgPath);
 
     /// Draws this icon with the given engine.
     ///
@@ -73,12 +73,12 @@ public:
     /// possibly a small margin for aesthetic reasons.
     ///
     geometry::Vec2f size() const {
-        return geometry::Vec2f(size_, size_);
+        return size_;
     }
 
 private:
     // Source data
-    float size_;
+    geometry::Vec2f size_;
 
     // Graphics resources
     detail::IconDataPtr data_;

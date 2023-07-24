@@ -35,16 +35,19 @@ void IconDataDeleter::operator()(IconData* p) {
 
 } // namespace detail
 
-Icon::Icon(float size, std::string_view svgPath)
-    : size_(std::abs(size)) {
+Icon::Icon(std::string_view svgPath) {
 
     data_.reset(new detail::IconData());
     std::string svg = core::readFile(svgPath);
     data_->paths = getSvgSimplePaths(svg);
+
+    geometry::Vec2d sized = getSvgViewBox(svg).size();
+    size_[0] = core::narrow_cast<float>(sized[0]);
+    size_[1] = core::narrow_cast<float>(sized[1]);
 }
 
-IconPtr Icon::create(float size, std::string_view svgPath) {
-    return IconPtr(new Icon(size, svgPath));
+IconPtr Icon::create(std::string_view svgPath) {
+    return IconPtr(new Icon(svgPath));
 }
 
 void Icon::draw(graphics::Engine* engine) {

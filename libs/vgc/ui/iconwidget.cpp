@@ -24,7 +24,10 @@ IconWidget::IconWidget(std::string_view svgPath)
     : Widget() {
 
     //addStyleClass(strings::IconWidget);
-    icon_ = graphics::Icon::create(32, svgPath);
+    if (!svgPath.empty()) {
+        icon_ = graphics::Icon::create(svgPath);
+        // TODO: error handling if file not found?
+    }
 }
 
 IconWidgetPtr IconWidget::create(std::string_view svgPath) {
@@ -39,6 +42,10 @@ void IconWidget::onResize() {
 void IconWidget::onPaintDraw(graphics::Engine* engine, PaintOptions options) {
 
     SuperClass::onPaintDraw(engine, options);
+
+    if (!icon_) {
+        return;
+    }
 
     if (isIconGeometryDirty_) {
         isIconGeometryDirty_ = false;
