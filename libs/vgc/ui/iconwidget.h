@@ -32,13 +32,20 @@ private:
     VGC_OBJECT(IconWidget, Widget)
 
 protected:
-    IconWidget(std::string_view svgPath);
+    IconWidget(std::string_view filePath);
 
 public:
-    /// Creates a IconWidget with the given text.
+    /// Creates a IconWidget using the icon at the given file path.
     ///
-    static IconWidgetPtr create(std::string_view svgPath);
+    /// Only SVG files are supported for now.
+    ///
+    static IconWidgetPtr create(std::string_view filePath = "");
 
+    /// Sets the SVG file path of the icon.
+    ///
+    void setFilePath(std::string_view filePath);
+
+    /// Sets the SVG poth svgPath of the icon
     // Reimplementation of Widget virtual methods
     void onResize() override;
     void onPaintDraw(graphics::Engine* engine, PaintOptions options) override;

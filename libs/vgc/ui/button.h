@@ -28,6 +28,7 @@
 
 namespace vgc::ui {
 
+VGC_DECLARE_OBJECT(IconWidget);
 VGC_DECLARE_OBJECT(Button);
 
 /// \class vgc::ui::Button
@@ -103,12 +104,25 @@ public:
         return action_ ? action_->text() : "";
     }
 
+    /// Returns whether the icon is visible.
+    ///
+    bool isIconVisible() const;
+
+    /// Sets whether the icon is visible. By default, it is hidden.
+    ///
+    void setIconVisible(bool visible);
+
+    /// Returns whether the text is visible.
+    ///
+    bool isTextVisible() const;
+
+    /// Sets whether the shortcut is visible. By default, it is visible.
+    ///
+    void setTextVisible(bool visible);
+
     /// Returns whether the shortcut is visible.
     ///
-    bool isShortcutVisible() const {
-        return shortcutLabel_ ? shortcutLabel_->visibility() == Visibility::Inherit
-                              : false;
-    }
+    bool isShortcutVisible() const;
 
     /// Sets whether the shortcut is visible. By default, it is hidden.
     ///
@@ -231,7 +245,7 @@ protected:
     // Reimplementation of Object virtual methods
     void onDestroyed() override;
 
-    Widget* iconWidget() const {
+    IconWidget* iconWidget() const {
         return iconWidget_;
     }
 
@@ -248,7 +262,7 @@ protected:
 private:
     // Components
     Action* action_ = nullptr;
-    Widget* iconWidget_ = nullptr;
+    IconWidget* iconWidget_ = nullptr;
     Label* textLabel_ = nullptr;
     Label* shortcutLabel_ = nullptr;
 

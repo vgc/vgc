@@ -20,18 +20,23 @@
 
 namespace vgc::ui {
 
-IconWidget::IconWidget(std::string_view svgPath)
+IconWidget::IconWidget(std::string_view filePath)
     : Widget() {
 
     //addStyleClass(strings::IconWidget);
-    if (!svgPath.empty()) {
-        icon_ = graphics::Icon::create(svgPath);
+    setFilePath(filePath);
+}
+
+void IconWidget::setFilePath(std::string_view filePath) {
+    icon_ = nullptr;
+    if (!filePath.empty()) {
+        icon_ = graphics::Icon::create(filePath);
         // TODO: error handling if file not found?
     }
 }
 
-IconWidgetPtr IconWidget::create(std::string_view svgPath) {
-    return IconWidgetPtr(new IconWidget(svgPath));
+IconWidgetPtr IconWidget::create(std::string_view filePath) {
+    return IconWidgetPtr(new IconWidget(filePath));
 }
 
 void IconWidget::onResize() {
