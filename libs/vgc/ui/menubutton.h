@@ -27,6 +27,7 @@
 #include <vgc/ui/api.h>
 #include <vgc/ui/button.h>
 #include <vgc/ui/flex.h>
+#include <vgc/ui/iconwidget.h>
 #include <vgc/ui/label.h>
 #include <vgc/ui/margins.h>
 #include <vgc/ui/widget.h>

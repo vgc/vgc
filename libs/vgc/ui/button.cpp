@@ -17,7 +17,9 @@
 #include <vgc/ui/button.h>
 
 #include <vgc/core/array.h>
+#include <vgc/core/paths.h>
 #include <vgc/graphics/strings.h>
+#include <vgc/ui/iconwidget.h>
 #include <vgc/ui/logcategories.h>
 #include <vgc/ui/strings.h>
 
@@ -30,7 +32,7 @@ Button::Button(Action* action, FlexDirection layoutDirection)
 
     addStyleClass(strings::Button);
 
-    iconWidget_ = createChild<Widget>();
+    iconWidget_ = createChild<IconWidget>();
     iconWidget_->addStyleClass(core::StringId("Icon"));
     textLabel_ = createChild<Label>();
     textLabel_->addStyleClass(core::StringId("Text"));
@@ -79,10 +81,34 @@ void Button::setActive(bool isActive) {
     }
 }
 
+bool Button::isIconVisible() const {
+    return iconWidget_ ? iconWidget_->visibility() == Visibility::Inherit : false;
+}
+
+void Button::setIconVisible(bool visible) {
+    if (iconWidget_) {
+        iconWidget_->setVisibility(visible ? Visibility::Inherit : Visibility::Invisible);
+    }
+}
+
+bool Button::isShortcutVisible() const {
+    return shortcutLabel_ ? shortcutLabel_->visibility() == Visibility::Inherit : false;
+}
+
 void Button::setShortcutVisible(bool visible) {
     if (shortcutLabel_) {
         shortcutLabel_->setVisibility(
             visible ? Visibility::Inherit : Visibility::Invisible);
+    }
+}
+
+bool Button::isTextVisible() const {
+    return textLabel_ ? textLabel_->visibility() == Visibility::Inherit : false;
+}
+
+void Button::setTextVisible(bool visible) {
+    if (textLabel_) {
+        textLabel_->setVisibility(visible ? Visibility::Inherit : Visibility::Invisible);
     }
 }
 
@@ -189,6 +215,14 @@ void Button::disconnectOldAction_() {
 }
 
 void Button::updateWidgetsBasedOnAction_() {
+
+    // Update icon
+    std::string iconFilePath;
+    if (action_) {
+        std::string_view iconUrl = action_->icon();
+        iconFilePath = !iconUrl.empty() ? core::resourcePath(iconUrl) : "";
+    }
+    iconWidget_->setFilePath(iconFilePath);
 
     // Update text
     std::string_view text_ = text();
