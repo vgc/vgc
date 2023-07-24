@@ -21,6 +21,7 @@
 
 #include <vgc/core/color.h>
 #include <vgc/geometry/curves2d.h>
+#include <vgc/geometry/rect2d.h>
 #include <vgc/graphics/api.h>
 
 namespace vgc::graphics {
@@ -188,6 +189,12 @@ private:
 ///
 VGC_GRAPHICS_API
 core::Array<SvgSimplePath> getSvgSimplePaths(std::string_view svg);
+
+/// Parses the given `svg` data and returns the size of the view the `<path>` elements as an
+/// array of `SvgSimplePath` instances.
+///
+VGC_GRAPHICS_API
+geometry::Rect2d getSvgViewBox(std::string_view svg);
 
 } // namespace vgc::graphics
 

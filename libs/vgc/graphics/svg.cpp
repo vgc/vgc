@@ -1562,7 +1562,6 @@ core::Array<SvgSimplePath> getSvgSimplePaths(std::string_view svg) {
     xml.readNextStartElement();
     if (xml.name() != "svg") {
         throw core::ParseError("The root element of the given `svg` data is not <svg>");
-        return res;
     }
 
     // Initialize attribute stack
@@ -1889,6 +1888,43 @@ core::Array<SvgSimplePath> getSvgSimplePaths(std::string_view svg) {
     }
 
     return res;
+}
+
+// https://www.w3.org/TR/SVG/coords.html#ViewBoxAttribute
+//
+// > The value of the ‘viewBox’ attribute is a list of four numbers <min-x>,
+// > <min-y>, <width> and <height>, separated by whitespace and/or a comma.
+//
+// The exact grammar for viewBox is not formally specified, but we take it to be:
+//
+// ViewBox ::= number comma-wsp number comma-wsp number comma-wsp number
+//
+geometry::Rect2d getSvgViewBox(std::string_view svg) {
+
+    core::XmlStreamReader xml(svg);
+
+    // Ensure that this is a SVG file
+    xml.readNextStartElement();
+    if (xml.name() != "svg") {
+        throw core::ParseError("The root element of the given `svg` data is not <svg>");
+    }
+
+    geometry::Vec2d position;
+    geometry::Vec2d size;
+
+    if (std::optional<std::string_view> s = xml.attributeValue("viewBox")) {
+        bool isSignAllowed = true;
+        auto it = s->cbegin();
+        auto end = s->cend();
+        readNumber(isSignAllowed, it, end, &position[0]);
+        readCommaWhitespaces(it, end);
+        readNumber(isSignAllowed, it, end, &position[1]);
+        readCommaWhitespaces(it, end);
+        readNumber(isSignAllowed, it, end, &size[0]);
+        readCommaWhitespaces(it, end);
+        readNumber(isSignAllowed, it, end, &size[1]);
+    }
+    return geometry::Rect2d::fromPositionSize(position, size);
 }
 
 } // namespace vgc::graphics
