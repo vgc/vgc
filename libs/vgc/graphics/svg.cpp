@@ -1895,7 +1895,7 @@ core::Array<SvgSimplePath> getSvgSimplePaths(std::string_view svg) {
 // > The value of the ‘viewBox’ attribute is a list of four numbers <min-x>,
 // > <min-y>, <width> and <height>, separated by whitespace and/or a comma.
 //
-// The exact gramma for viewBox is not formally specified, but we take it to be:
+// The exact grammar for viewBox is not formally specified, but we take it to be:
 //
 // ViewBox ::= number comma-wsp number comma-wsp number comma-wsp number
 //
