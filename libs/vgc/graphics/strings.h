@@ -40,6 +40,9 @@ VGC_GRAPHICS_API extern const core::StringId text_horizontal_align;
 VGC_GRAPHICS_API extern const core::StringId text_vertical_align;
 VGC_GRAPHICS_API extern const core::StringId caret_color;
 
+VGC_GRAPHICS_API extern const core::StringId icon_foreground_color;
+VGC_GRAPHICS_API extern const core::StringId icon_accent_color;
+
 // Values
 // ------
 

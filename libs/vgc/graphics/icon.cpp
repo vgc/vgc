@@ -18,7 +18,9 @@
 
 #include <vgc/core/colors.h>
 #include <vgc/core/io.h>
+#include <vgc/graphics/strings.h>
 #include <vgc/graphics/svg.h>
+#include <vgc/style/parse.h>
 
 namespace vgc::graphics {
 
@@ -35,10 +37,23 @@ void IconDataDeleter::operator()(IconData* p) {
 
 } // namespace detail
 
-Icon::Icon(std::string_view svgPath) {
+namespace {
+
+core::Color getColor(const Icon* icon, core::StringId property) {
+    core::Color res;
+    style::Value value = icon->style(property);
+    if (value.has<core::Color>()) {
+        res = value.to<core::Color>();
+    }
+    return res;
+}
+
+} // namespace
+
+Icon::Icon(std::string_view filePath) {
 
     data_.reset(new detail::IconData());
-    std::string svg = core::readFile(svgPath);
+    std::string svg = core::readFile(filePath);
     data_->paths = getSvgSimplePaths(svg);
 
     geometry::Vec2d sized = getSvgViewBox(svg).size();
@@ -46,8 +61,8 @@ Icon::Icon(std::string_view svgPath) {
     size_[1] = core::narrow_cast<float>(sized[1]);
 }
 
-IconPtr Icon::create(std::string_view svgPath) {
-    return IconPtr(new Icon(svgPath));
+IconPtr Icon::create(std::string_view filePath) {
+    return IconPtr(new Icon(filePath));
 }
 
 void Icon::draw(graphics::Engine* engine) {
@@ -56,6 +71,20 @@ void Icon::draw(graphics::Engine* engine) {
 
     // XXX: do we want to support clipping in this class, or defer
     // that to client code? See implementation of ui::Widget::paint().
+}
+
+void Icon::populateStyleSpecTable(style::SpecTable* table) {
+    if (!table->setRegistered(staticClassName())) {
+        return;
+    }
+    auto black = style::Value::custom(core::colors::black);
+    table->insert(strings::icon_foreground_color, black, true, &style::parseColor);
+    table->insert(strings::icon_accent_color, black, true, &style::parseColor);
+    SuperClass::populateStyleSpecTable(table);
+}
+
+void Icon::onStyleChanged() {
+    isInstanceBufferDirty_ = true;
 }
 
 void Icon::updateEngine_(graphics::Engine* engine) {
@@ -102,20 +131,24 @@ void Icon::onPaintCreate_(graphics::Engine* engine) {
     BufferPtr vertexBuffer = engine->createVertexBuffer(std::move(vertices), false);
 
     // Instance Buffer: RGBA
-    core::Color c = core::colors::red;
-    core::FloatArray instanceData({c.r(), c.g(), c.b(), c.a()});
-    BufferPtr instanceBuffer = engine->createVertexBuffer(std::move(instanceData), true);
+    instanceBuffer_ = engine->createVertexBuffer(core::FloatArray(), true);
 
     // Create GeometryView
     graphics::GeometryViewCreateInfo createInfo = {};
     createInfo.setBuiltinGeometryLayout(graphics::BuiltinGeometryLayout::XY_iRGBA);
     createInfo.setPrimitiveType(graphics::PrimitiveType::TriangleList);
     createInfo.setVertexBuffer(0, vertexBuffer);
-    createInfo.setVertexBuffer(1, instanceBuffer);
+    createInfo.setVertexBuffer(1, instanceBuffer_);
     geometryView_ = engine->createGeometryView(createInfo);
 }
 
 void Icon::onPaintDraw_(graphics::Engine* engine) {
+    if (isInstanceBufferDirty_) {
+        isInstanceBufferDirty_ = false;
+        core::Color c = getColor(this, strings::icon_foreground_color);
+        core::FloatArray instanceData({c.r(), c.g(), c.b(), c.a()});
+        engine->updateBufferData(instanceBuffer_, std::move(instanceData));
+    }
     engine->setProgram(graphics::BuiltinProgram::Simple);
     engine->draw(geometryView_);
 }

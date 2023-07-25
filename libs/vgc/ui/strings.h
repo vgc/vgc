@@ -27,6 +27,7 @@ VGC_UI_API extern const core::StringId Button;
 VGC_UI_API extern const core::StringId Dialog;
 VGC_UI_API extern const core::StringId Flex;
 VGC_UI_API extern const core::StringId Grid;
+VGC_UI_API extern const core::StringId IconWidget;
 VGC_UI_API extern const core::StringId Label;
 VGC_UI_API extern const core::StringId LineEdit;
 VGC_UI_API extern const core::StringId Menu;

@@ -26,6 +26,7 @@ const core::StringId Button("Button");
 const core::StringId Dialog("Dialog");
 const core::StringId Flex("Flex");
 const core::StringId Grid("Grid");
+const core::StringId IconWidget("IconWidget");
 const core::StringId Label("Label");
 const core::StringId LineEdit("LineEdit");
 const core::StringId Menu("Menu");

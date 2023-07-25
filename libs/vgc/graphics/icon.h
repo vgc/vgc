@@ -17,13 +17,10 @@
 #ifndef VGC_GRAPHICS_ICON_H
 #define VGC_GRAPHICS_ICON_H
 
-#include <vgc/core/object.h>
-
-#include <vgc/geometry/rect2d.h>
-#include <vgc/geometry/vec2d.h>
-
+#include <vgc/geometry/vec2f.h>
 #include <vgc/graphics/api.h>
 #include <vgc/graphics/engine.h>
+#include <vgc/style/stylableobject.h>
 
 namespace vgc::graphics {
 
@@ -42,25 +39,18 @@ VGC_DECLARE_OBJECT(Icon);
 /// \class vgc::graphics::Icon
 /// \brief Utility to be able to draw
 ///
-// XXX Overkill to make it an object?
-//     We use a slot for now, reason why it is an object.
-//     In the future, we may want to allow using slot in
-//     lightweight non-tree-based objects, e.g.:
-//
-//     SignalBase > Object > TreeObject
-//
-class VGC_GRAPHICS_API Icon : public core::Object {
+class VGC_GRAPHICS_API Icon : public style::StylableObject {
 private:
-    VGC_OBJECT(Icon, core::Object)
+    VGC_OBJECT(Icon, style::StylableObject)
     VGC_PRIVATIZE_OBJECT_TREE_MUTATORS
 
 protected:
-    Icon(std::string_view svgPath);
+    Icon(std::string_view filePath);
 
 public:
-    /// Creates an icon of the given size with the given SVG path.
+    /// Creates an icon of the given size with the given SVG file path.
     ///
-    static IconPtr create(std::string_view svgPath);
+    static IconPtr create(std::string_view filePath);
 
     /// Draws this icon with the given engine.
     ///
@@ -76,12 +66,22 @@ public:
         return size_;
     }
 
+protected:
+    // Implementation of StylableObject interface
+    static void populateStyleSpecTable(style::SpecTable* table);
+    void populateStyleSpecTableVirtual(style::SpecTable* table) override {
+        populateStyleSpecTable(table);
+    }
+    void onStyleChanged() override;
+
 private:
     // Source data
     geometry::Vec2f size_;
 
     // Graphics resources
+    bool isInstanceBufferDirty_ = true;
     detail::IconDataPtr data_;
+    BufferPtr instanceBuffer_;
     graphics::GeometryViewPtr geometryView_;
 
     // Engine management
