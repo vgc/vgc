@@ -36,6 +36,9 @@ const core::StringId text_horizontal_align("text-horizontal-align");
 const core::StringId text_vertical_align("text-vertical-align");
 const core::StringId caret_color("caret-color");
 
+const core::StringId icon_foreground_color("icon-foreground-color");
+const core::StringId icon_accent_color("icon-accent-color");
+
 // Values
 // ------
 
