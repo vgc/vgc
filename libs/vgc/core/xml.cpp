@@ -609,20 +609,25 @@ private:
         while (get(c)) {
             if (c == '&') {
                 // character reference or entity reference.
-                c = readReference_();
+                characters += readReference_();
             }
             else if (c == '<') {
-                unget();
-                break;
-            }
-            else if (c == ']') {
-                if (get(c) && c == ']') {
-                    if (get(c) && c == '>') {
-                        throw XmlSyntaxError("Unexpected ']]>' outside CDATA section.");
-                    }
+                if (peek(8) == "![CDATA[") {
+                    advance(8);
+                    readCDataSection_();
+                }
+                else {
+                    // End of Characters event
+                    unget();
+                    break;
                 }
             }
-            characters += c;
+            else if (c == ']' && peek(2) == "]>") {
+                throw XmlSyntaxError("Unexpected ']]>' outside CDATA section.");
+            }
+            else {
+                characters += c;
+            }
         };
     }
 
@@ -643,8 +648,9 @@ private:
                     readComment_();
                 }
                 else if (peek(7) == "[CDATA[") {
-                    throw XmlSyntaxError(
-                        "Unexpected '<![CDATA[': CDATA sections are not yet supported.");
+                    unget();
+                    unget();
+                    readCharacters_();
                 }
                 else if (peek(7) == "DOCTYPE") {
                     throw XmlSyntaxError("Unexpected '<!DOCTYPE': Document type "
@@ -707,6 +713,30 @@ private:
         if (!isClosed) {
             throw XmlSyntaxError("Unexpected end-of-file while reading comment. "
                                  "Expected '-->' or additional comment characters.");
+        }
+    }
+
+    // Read from '<![CDATA[' (not included) to matching ']]>' (included).
+    //
+    // CDSect  ::= '<![CDATA[' CData ']]>'
+    // CData   ::= Char* - (Char* ']]>' Char*)
+    //
+    void readCDataSection_() {
+        bool isClosed = false;
+        char c;
+        while (get(c)) {
+            if (c == ']' && peek(2) == "]>") {
+                advance(2);
+                isClosed = true;
+                break;
+            }
+            else {
+                characters += c;
+            }
+        }
+        if (!isClosed) {
+            throw XmlSyntaxError("Unexpected end-of-file while reading CDATA section. "
+                                 "Expected ']]>' or additional CDATA characters.");
         }
     }
 

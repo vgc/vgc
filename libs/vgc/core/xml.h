@@ -75,7 +75,7 @@ enum class XmlEventType : Int8 {
     EndDocument,
     StartElement, // can be a start tag (<b>) or an empty element tag (<img/>)
     EndElement,   // can be an end tag (</b>) or just after an empty element tag
-    Characters,   // can be character data, CDATA section, resolved entities,
+    Characters,   // can be character data, CDATA section, or resolved entities
     Comment,
     ProcessingInstruction,
 
@@ -84,12 +84,14 @@ enum class XmlEventType : Int8 {
     // DoctypeDeclaration,
 
     // Currently, entity references are automatically resolved and merged with
-    // adjacent character data. When implemented, CDATA sections and character
-    // references will also at first be automatically merged with adjacent
+    // adjacent character data. CDATA sections are also merged with adjacent
     // character data.
     //
-    // In the future, we may may to report them as separate events so that it
-    // is possible to rewrite the file exactly as it was initially.
+    // When implemented, character references will also at first be
+    // automatically resolved and merged with adjacent character data.
+    //
+    // In the future, we may may to report these as separate events to make it
+    // possible to rewrite the file exactly as it was initially read.
     //
     // CharacterReference, // Only reported if not automatically resolved
     // EntityReference,    // Only reported if not automatically resolved
@@ -327,8 +329,6 @@ private:
 /// Content between the elements, comments, or processing instructions is referred to
 /// as "characters". It consists either of raw characters, or entity references that
 /// have been resolved to their corresponding characters, or CDATA sections.
-///
-/// Note that for now, CDATA sections are not supported.
 ///
 /// # Comments
 ///
