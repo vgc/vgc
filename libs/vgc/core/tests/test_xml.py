@@ -429,6 +429,13 @@ class TestXmlStreamReader(unittest.TestCase):
         self.assertEqual(xml.eventType, XmlEventType.StartDocument)
         self.assertRaises(ParseError, xml.readNext)
 
+    def testCDataSection(self):
+        xml = XmlStreamReader('<script>echo <![CDATA[x + y < 2]]>;</script>')
+        while xml.readNext():
+            if xml.eventType == XmlEventType.Characters:
+                self.assertEqual(xml.rawText, 'echo <![CDATA[x + y < 2]]>;')
+                self.assertEqual(xml.characters, 'echo x + y < 2;')
+
     def testProcessingInstruction(self):
         xml = XmlStreamReader('<html><?php echo "Hello World!"; ?></html>')
         while xml.readNext():
