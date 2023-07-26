@@ -92,7 +92,7 @@ trimmed(std::string_view s, std::string_view trimChars = " \t\n\r") {
     return std::string_view(s.data() + first, last - first + 1);
 }
 
-/// Splits the given string `s` each time the character `c` is encountered,
+/// Splits the given string `s` each time the character `sep` is encountered,
 /// returning an array with all the substrings inbetween.
 ///
 /// Empty strings are preserved, that is, the returned array has a length of `n
@@ -100,32 +100,83 @@ trimmed(std::string_view s, std::string_view trimChars = " \t\n\r") {
 /// given string.
 ///
 /// ```cpp
-/// split(":hello::world:", ':'); // => ["", "hello", "", "world", ""]
+/// split(" hello  world", ' '); // => ["", "hello", "", "world"]
 /// ```
 ///
-// TODO: Make Array constructors and emplaceLast constexpr so that this
-//       function can be constexpr too.
-//
-inline core::Array<std::string_view> split(std::string_view s, char c) {
-    core::Array<std::string_view> res;
-    size_t begin = 0;
-    size_t end = 0;
-    while (end < s.size()) {
-        if (s[end] == c) {
-            res.emplaceLast(s.data() + begin, end - begin);
-            begin = end + 1;
-        }
-        ++end;
-    }
-    res.emplaceLast(s.data() + begin, end - begin);
-    return res;
+/// \sa `splitSkipEmpty()`, `splitAny()`, `splitAnySkipEmpty()`.
+///
+VGC_CORE_API
+core::Array<std::string_view> split(std::string_view s, char sep);
+
+/// Splits the given string `s` each time the character `sep` is encountered,
+/// returning an array with all the substrings inbetween.
+///
+/// Unlike the related function `split()`, this function removes from the
+/// output any empty strings.
+///
+/// ```cpp
+/// splitSkipEmpty(" hello    world", ' '); // => ["hello", "world"]
+/// ```
+///
+/// \sa `split()`.
+///
+VGC_CORE_API
+core::Array<std::string_view> splitSkipEmpty(std::string_view s, char sep);
+
+// TODO: split(std::string_view s, std::string_view sep)
+//       -> splits where the entire string `sep` is found.
+
+/// Splits the given string `s` each time any of the characters in `sep` is
+/// encountered, returning an array with all the substrings inbetween.
+///
+/// Empty strings are preserved, that is, the returned array has a length of `n
+/// + 1`, where `n` is the number of times any of the characters in `sep`
+/// appears in the given string.
+///
+/// ```cpp
+/// splitAny(":a;b:c:;d", ":;"); // => ["", "a", "b", "c", "", "d"]
+/// ```
+///
+/// \sa `split()`, `splitAnySkipEmpty()`.
+///
+VGC_CORE_API
+core::Array<std::string_view> splitAny(std::string_view s, std::string_view sep);
+
+/// Splits the given string `s` each time any of the characters in `sep` is
+/// encountered, returning an array with all the substrings inbetween.
+///
+/// Unlike the related function `splitAny()`, this function removes from the
+/// output any empty strings.
+///
+/// ```cpp
+/// splitAnySkipEmpty(":a;b:c:;d", ":;"); // => ["a", "b", "c", "d"]
+/// ```
+///
+/// \sa `split()`, `splitAnySkipEmpty()`.
+///
+VGC_CORE_API
+core::Array<std::string_view> splitAnySkipEmpty(std::string_view s, std::string_view sep);
+
+/// Splits the given string `s` at any whitespace character, returning all the
+/// non-empty trimmed words in `s`.
+///
+/// This is equivalent to `splitAnySkipEmpty(s, " \t\n\r")`.
+///
+/// ```cpp
+/// splitWhitespaces(" hello    world", ' '); // => ["hello", "world"]
+/// ```
+///
+/// \sa `split()`, `splitSkipEmpty()`, `splitAny()`, `splitAnySkipEmpty()`.
+///
+inline core::Array<std::string_view> splitWhitespaces(std::string_view s) {
+    return splitAnySkipEmpty(s, " \t\n\r");
 }
 
 /// Returns a copy of the string `s` where all occurences of
 /// `from` are replaced by `to`.
 ///
-VGC_CORE_API
-std::string replace(std::string_view s, std::string_view from, std::string_view to);
+VGC_CORE_API std::string
+replace(std::string_view s, std::string_view from, std::string_view to);
 
 } // namespace vgc::core
 
