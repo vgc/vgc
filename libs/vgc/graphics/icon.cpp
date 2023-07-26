@@ -24,14 +24,61 @@
 
 namespace vgc::graphics {
 
+namespace {
+
+enum class ColorType {
+    Custom,
+    Foreground,
+    Accent
+};
+
+struct ColorSpec {
+    ColorType type = ColorType::Custom;
+    core::Color color; // only alpha is used if non-custom
+
+    bool operator==(const ColorSpec& other) {
+        return (type == other.type) && (color == other.color);
+    }
+
+    bool operator!=(const ColorSpec& other) {
+        return !(*this == other);
+    }
+};
+
+struct Batch {
+
+    explicit Batch(const ColorSpec& colorSpec)
+        : colorSpec(colorSpec) {
+    }
+
+    // Data that can be reused on Engine change
+    ColorSpec colorSpec;
+    core::FloatArray vertices;
+
+    // Data that needs to be recreatesd on Engine change
+    BufferPtr instanceBuffer;
+    GeometryViewPtr geometryView;
+};
+
+} // namespace
+
 namespace detail {
 
 class IconData {
 public:
-    core::Array<graphics::SvgSimplePath> paths;
+    core::Array<SvgSimplePath> paths;
+};
+
+class IconResources {
+public:
+    core::Array<Batch> batches;
 };
 
 void IconDataDeleter::operator()(IconData* p) {
+    delete p;
+}
+
+void IconResourcesDeleter::operator()(IconResources* p) {
     delete p;
 }
 
@@ -48,6 +95,61 @@ core::Color getColor(const Icon* icon, core::StringId property) {
     return res;
 }
 
+// Create the batches, leaving Engine resources uninitialized for now.
+//
+core::Array<Batch> createBatchesFromPaths(const core::Array<SvgSimplePath>& paths) {
+
+    core::Array<Batch> res;
+
+    // Use pixelSize to avoid having too many triangles for
+    // curves that span less than a pixel.
+    //
+    // TODO: what if pixelSize is not 1.0? How to handle icon displayed
+    // zoomed in? We may want to have SizedIcon vs. Icon, similarly to
+    // SizedFont vs. Font.
+    //
+    double pixelSize = 1.0;
+    auto params = geometry::Curves2dSampleParams::semiAdaptive(pixelSize);
+
+    for (const SvgSimplePath& path : paths) {
+
+        // Determine which color to draw the path
+        ColorSpec colorSpec;
+        if (path.styleClasses().contains("background")) {
+            continue;
+        }
+        else if (path.styleClasses().contains("fill-foreground-color")) {
+            colorSpec.type = ColorType::Foreground;
+            if (path.fill().paintType() == SvgPaintType::Color) {
+                colorSpec.color.setA(path.fill().color().a());
+            }
+        }
+        else if (path.styleClasses().contains("fill-accent-color")) {
+            colorSpec.type = ColorType::Accent;
+            if (path.fill().paintType() == SvgPaintType::Color) {
+                colorSpec.color.setA(path.fill().color().a());
+            }
+        }
+        else if (path.fill().paintType() == SvgPaintType::Color) {
+            colorSpec.color = path.fill().color();
+        }
+        else {
+            continue;
+        }
+
+        // Create a new batch if necessary, or keep using the same batch
+        if (res.isEmpty() || res.last().colorSpec != colorSpec) {
+            res.emplaceLast(colorSpec);
+        }
+        Batch& batch = res.last();
+
+        // Triangulate the path (Layout: XY)
+        path.curves().fill(batch.vertices, params);
+    }
+
+    return res;
+}
+
 } // namespace
 
 Icon::Icon(std::string_view filePath) {
@@ -59,6 +161,10 @@ Icon::Icon(std::string_view filePath) {
     geometry::Vec2d sized = getSvgViewBox(svg).size();
     size_[0] = core::narrow_cast<float>(sized[0]);
     size_[1] = core::narrow_cast<float>(sized[1]);
+
+    // Triangulate the icon data and convert to batches
+    resources_.reset(new detail::IconResources());
+    resources_->batches = createBatchesFromPaths(data_->paths);
 }
 
 IconPtr Icon::create(std::string_view filePath) {
@@ -84,7 +190,7 @@ void Icon::populateStyleSpecTable(style::SpecTable* table) {
 }
 
 void Icon::onStyleChanged() {
-    isInstanceBufferDirty_ = true;
+    shouldUpdateInstanceBuffers_ = true;
 }
 
 void Icon::updateEngine_(graphics::Engine* engine) {
@@ -110,51 +216,61 @@ void Icon::releaseEngine_() {
 
 void Icon::onPaintCreate_(graphics::Engine* engine) {
 
-    // Vertex Buffer: XY
-    core::FloatArray vertices;
-    if (data_) {
-        // Use pixelSize to avoid having too many triangles for
-        // curves that span less than a pixel.
-        //
-        // TODO: what if pixelSize is not 1.0? How to handle icon displayed
-        // zoomed in? We may want to have SizedIcon vs. Icon, similarly to
-        // SizedFont vs. Font.
-        //
-        double pixelSize = 1.0;
-        auto params = geometry::Curves2dSampleParams::semiAdaptive(pixelSize);
+    for (Batch& batch : resources_->batches) {
 
-        // Triangulate all curves
-        for (const SvgSimplePath& path : data_->paths) {
-            path.curves().fill(vertices, params);
-        }
+        // Vertex buffer: XY
+        BufferPtr vertexBuffer = engine->createVertexBuffer(batch.vertices, false);
+
+        // Instance Buffer: RGBA
+        batch.instanceBuffer = engine->createVertexBuffer(core::FloatArray(), true);
+
+        // Create GeometryView
+        graphics::GeometryViewCreateInfo createInfo = {};
+        createInfo.setBuiltinGeometryLayout(graphics::BuiltinGeometryLayout::XY_iRGBA);
+        createInfo.setPrimitiveType(graphics::PrimitiveType::TriangleList);
+        createInfo.setVertexBuffer(0, vertexBuffer);
+        createInfo.setVertexBuffer(1, batch.instanceBuffer);
+        batch.geometryView = engine->createGeometryView(createInfo);
     }
-    BufferPtr vertexBuffer = engine->createVertexBuffer(std::move(vertices), false);
 
-    // Instance Buffer: RGBA
-    instanceBuffer_ = engine->createVertexBuffer(core::FloatArray(), true);
-
-    // Create GeometryView
-    graphics::GeometryViewCreateInfo createInfo = {};
-    createInfo.setBuiltinGeometryLayout(graphics::BuiltinGeometryLayout::XY_iRGBA);
-    createInfo.setPrimitiveType(graphics::PrimitiveType::TriangleList);
-    createInfo.setVertexBuffer(0, vertexBuffer);
-    createInfo.setVertexBuffer(1, instanceBuffer_);
-    geometryView_ = engine->createGeometryView(createInfo);
+    shouldUpdateInstanceBuffers_ = true;
 }
 
 void Icon::onPaintDraw_(graphics::Engine* engine) {
-    if (isInstanceBufferDirty_) {
-        isInstanceBufferDirty_ = false;
-        core::Color c = getColor(this, strings::icon_foreground_color);
-        core::FloatArray instanceData({c.r(), c.g(), c.b(), c.a()});
-        engine->updateBufferData(instanceBuffer_, std::move(instanceData));
+    if (shouldUpdateInstanceBuffers_) {
+        shouldUpdateInstanceBuffers_ = false;
+        core::Color foregroundColor = getColor(this, strings::icon_foreground_color);
+        core::Color accentColor = getColor(this, strings::icon_accent_color);
+        for (Batch& batch : resources_->batches) {
+            core::Color c;
+            switch (batch.colorSpec.type) {
+            case ColorType::Custom:
+                c = batch.colorSpec.color;
+                break;
+            case ColorType::Foreground:
+                c = foregroundColor;
+                c.setA(batch.colorSpec.color.a());
+                break;
+            case ColorType::Accent:
+                c = accentColor;
+                c.setA(batch.colorSpec.color.a());
+                break;
+            }
+            core::FloatArray instanceData({c.r(), c.g(), c.b(), c.a()});
+            engine->updateBufferData(batch.instanceBuffer, std::move(instanceData));
+        }
     }
     engine->setProgram(graphics::BuiltinProgram::Simple);
-    engine->draw(geometryView_);
+    for (const Batch& batch : resources_->batches) {
+        engine->draw(batch.geometryView);
+    }
 }
 
 void Icon::onPaintDestroy_(graphics::Engine*) {
-    geometryView_.reset();
+    for (Batch& batch : resources_->batches) {
+        batch.instanceBuffer.reset();
+        batch.geometryView.reset();
+    }
 }
 
 } // namespace vgc::graphics

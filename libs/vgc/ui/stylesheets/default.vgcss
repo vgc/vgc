@@ -248,6 +248,7 @@
     text-selection-color: rgb(241, 241, 241);
     text-selection-background-color: rgb(11, 82, 172);
     icon-foreground-color: rgb(241, 241, 241);
+    icon-accent-color: rgb(0, 0, 241);
 }
 
 .PanelArea {
