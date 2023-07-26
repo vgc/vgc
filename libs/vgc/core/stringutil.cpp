@@ -18,6 +18,80 @@
 
 namespace vgc::core {
 
+core::Array<std::string_view> split(std::string_view s, char sep) {
+    core::Array<std::string_view> res;
+    size_t begin = 0;
+    size_t end = 0;
+    while (end < s.size()) {
+        if (s[end] == sep) {
+            res.emplaceLast(s.data() + begin, end - begin);
+            begin = end + 1;
+        }
+        ++end;
+    }
+    res.emplaceLast(s.data() + begin, end - begin);
+    return res;
+}
+
+core::Array<std::string_view> splitSkipEmpty(std::string_view s, char sep) {
+    core::Array<std::string_view> res;
+    size_t begin = 0;
+    size_t end = 0;
+    while (end < s.size()) {
+        if (s[end] == sep) {
+            size_t count = end - begin;
+            if (count > 0) {
+                res.emplaceLast(s.data() + begin, count);
+            }
+            begin = end + 1;
+        }
+        ++end;
+    }
+    size_t count = end - begin;
+    if (count > 0) {
+        res.emplaceLast(s.data() + begin, count);
+    }
+    return res;
+}
+
+core::Array<std::string_view> splitAny(std::string_view s, std::string_view sep) {
+    core::Array<std::string_view> res;
+    size_t begin = 0;
+    size_t end = 0;
+    while (end < s.size()) {
+        if (contains(sep, s[end])) {
+            res.emplaceLast(s.data() + begin, end - begin);
+            begin = end + 1;
+        }
+        ++end;
+    }
+    res.emplaceLast(s.data() + begin, end - begin);
+    return res;
+}
+
+core::Array<std::string_view>
+splitAnySkipEmpty(std::string_view s, std::string_view sep) {
+
+    core::Array<std::string_view> res;
+    size_t begin = 0;
+    size_t end = 0;
+    while (end < s.size()) {
+        if (contains(sep, s[end])) {
+            size_t count = end - begin;
+            if (count > 0) {
+                res.emplaceLast(s.data() + begin, count);
+            }
+            begin = end + 1;
+        }
+        ++end;
+    }
+    size_t count = end - begin;
+    if (count > 0) {
+        res.emplaceLast(s.data() + begin, count);
+    }
+    return res;
+}
+
 std::string replace(std::string_view s, std::string_view from, std::string_view to) {
 
     std::string res;
