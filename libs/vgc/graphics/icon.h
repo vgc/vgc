@@ -32,6 +32,12 @@ struct IconDataDeleter {
 };
 using IconDataPtr = std::unique_ptr<IconData, IconDataDeleter>;
 
+class IconResources;
+struct IconResourcesDeleter {
+    void operator()(IconResources* p);
+};
+using IconResourcesPtr = std::unique_ptr<IconResources, IconResourcesDeleter>;
+
 } // namespace detail
 
 VGC_DECLARE_OBJECT(Icon);
@@ -77,12 +83,11 @@ protected:
 private:
     // Source data
     geometry::Vec2f size_;
-
-    // Graphics resources
-    bool isInstanceBufferDirty_ = true;
     detail::IconDataPtr data_;
-    BufferPtr instanceBuffer_;
-    graphics::GeometryViewPtr geometryView_;
+
+    // Engine's graphics resources
+    bool shouldUpdateInstanceBuffers_ = true;
+    detail::IconResourcesPtr resources_;
 
     // Engine management
     graphics::Engine* lastPaintEngine_ = nullptr;
