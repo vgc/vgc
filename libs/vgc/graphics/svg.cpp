@@ -1466,6 +1466,7 @@ class SvgParser {
 public:
     static SvgSimplePath pathToSimplePath(
         const std::vector<SvgPathCommand>& commands,
+        const core::XmlStreamReader& xml,
         const SvgPresentationAttributes& pa,
         const geometry::Mat3d& ctm) {
 
@@ -1474,6 +1475,30 @@ public:
         res.fill_ = pa.fill;
         res.stroke_ = pa.stroke;
         res.strokeWidth_ = applyTransform(ctm, pa.strokeWidth);
+
+        // The grammar for the value of the 'class' attribute is defined in the
+        // HTML spec as a "space-separated tokens":
+        //
+        // https://www.w3.org/TR/SVG2/styling.html#ElementSpecificStyling
+        // https://html.spec.whatwg.org/multipage/common-microsyntaxes.html#set-of-space-separated-tokens
+        //
+        // Like in CSS, the form feed character `\f' is here considered a
+        // whitespace character, while it isn't in XML / SVG syntax.
+        //
+        if (OptionalStringView s = xml.attributeValue("class")) {
+            std::string_view htmlWsp = " \t\r\n\f";
+            res.styleClass_ = *s;
+            for (std::string_view sv :
+                 core::splitAnySkipEmpty(res.styleClass_, htmlWsp)) {
+                res.styleClasses_.append(std::string(sv));
+            }
+            // Note: if we want to store res.styleClasses_ as an array of
+            // string_view instead of an array of strings, we need to
+            // re-implement the copy constructor of SvgSimplePath to remap the
+            // string_views of the copy into the new styleClass_ string. For
+            // reference, we do something similar in
+            // UnparsedValue::remapPointers_() in vgc/style/value.cpp.
+        }
         return res;
     }
 };
@@ -1496,7 +1521,7 @@ void readPath(
         }
 
         // Import path data (up to, but not including, first invalid command)
-        out.append(detail::SvgParser::pathToSimplePath(cmds, pa, ctm));
+        out.append(detail::SvgParser::pathToSimplePath(cmds, xml, pa, ctm));
     }
     else {
         // Don't output anything if no path data provided

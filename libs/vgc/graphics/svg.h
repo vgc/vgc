@@ -171,6 +171,18 @@ public:
         return strokeWidth_;
     }
 
+    /// Returns the value of the style "class" attribute.
+    ///
+    std::string_view styleClass() const {
+        return styleClass_;
+    }
+
+    /// Returns the classes value of the style "class" attribute.
+    ///
+    const core::Array<std::string>& styleClasses() const {
+        return styleClasses_;
+    }
+
     // XXX Have a "transform()" rather than having baked-in transforms?
 
 private:
@@ -180,6 +192,9 @@ private:
     SvgPaint fill_ = {};
     SvgPaint stroke_ = {};
     double strokeWidth_ = 0;
+
+    std::string styleClass_;
+    core::Array<std::string> styleClasses_;
 
     SvgSimplePath() = default;
 };
