@@ -1303,6 +1303,10 @@ pathToCurves2d(const std::vector<SvgPathCommand>& commands, const geometry::Mat3
     // The current position in the path
     geometry::Vec2d currentPosition = {};
 
+    // The position of the last MoveTo command. This is used to compute the
+    // new current position when encountering a ClosePath command.
+    geometry::Vec2d lastMoveToPosition = {};
+
     // Previous command and last Bezier tangent control point. This is used
     // for the "smooth" bezier curveto variants, that is, S and T.
     SvgPathCommandType previousCommandType = SvgPathCommandType::MoveTo;
@@ -1329,6 +1333,7 @@ pathToCurves2d(const std::vector<SvgPathCommand>& commands, const geometry::Mat3
             switch (thisCommandType) {
             case SvgPathCommandType::ClosePath: {
                 res.close();
+                currentPosition = lastMoveToPosition;
                 break;
             }
             case SvgPathCommandType::MoveTo: {
@@ -1339,6 +1344,7 @@ pathToCurves2d(const std::vector<SvgPathCommand>& commands, const geometry::Mat3
                     currentPosition = {args[0], args[1]};
                 }
                 res.moveTo(applyTransform(ctm, currentPosition));
+                lastMoveToPosition = currentPosition;
 
                 // If a MoveTo is followed by multiple pairs of coords, the
                 // subsequent pairs are treated as implicit LineTo commands.
