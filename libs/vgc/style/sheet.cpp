@@ -319,12 +319,22 @@ private:
             --valueEnd;
         }
 
-        // Store unparsed value. Parsing is defer until the attribute is
-        // actually queried, that is, until we have an appropriate SpecTable.
+        // Handle common global identifiers, e.g., inherit.
         //
-        // XXX We might still want to check here for global keywords like 'inherit'/etc.
+        if (valueEnd == valueBegin + 1                     //
+            && valueBegin->type() == TokenType::Identifier //
+            && valueBegin->stringValue() == "inherit") {
+
+            declaration->value_ = Value::inherit();
+        }
+
+        // Unless already handled, store unparsed value. Parsing is deferred
+        // until the attribute is actually queried, that is, until we have an
+        // appropriate SpecTable.
         //
-        declaration->value_ = Value::unparsed(valueBegin, valueEnd);
+        if (!declaration->value_.isValid()) {
+            declaration->value_ = Value::unparsed(valueBegin, valueEnd);
+        }
 
         return declaration;
     }
