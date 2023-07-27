@@ -359,7 +359,8 @@ private:
     }
 
     void createIconWidget_(ui::Widget* parent) {
-        std::string iconPath = core::resourcePath("apps/uitest/icons/heart.svg");
+        std::string iconPath =
+            core::resourcePath("apps/uitest/icons/vgcsoftware-flat.svg");
         parent->createChild<ui::IconWidget>(iconPath);
     }
 };
