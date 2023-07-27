@@ -23,10 +23,6 @@
 namespace vgc::style {
 
 Value parseColor(TokenIterator begin, TokenIterator end) {
-    if (end == begin + 1 && begin->type() == TokenType::Identifier
-        && begin->stringValue() == "inherit") {
-        return Value::inherit();
-    }
     try {
         const char* b = begin->begin();
         const char* e = (end - 1)->end();
