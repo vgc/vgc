@@ -493,9 +493,20 @@ void fill_(core::Array<TFloat>& data, const Curves2d& samples, WindingRule windi
     const TESSreal normal[] = {0, 0, 1}; // Normal for 2D points is the Z unit vector
     TESStesselator* tess = tessNewTess(alloc);
     core::Array<TESSreal> coords;
+    auto addContour = [&]() {
+        if (coords.size() > 4) { // ignore contour if 2 points or less
+            tessAddContour(
+                tess,
+                vertexSize,
+                coords.data(),
+                sizeof(TESSreal) * vertexSize,
+                core::int_cast<int>(coords.length() / 2));
+        }
+        coords.clear();
+    };
     for (Curves2dCommandRef c : samples.commands()) {
         if (c.type() == CurveCommandType::MoveTo) {
-            coords.clear();
+            addContour();
             Vec2d p = c.p();
             coords.append(static_cast<TESSreal>(p[0]));
             coords.append(static_cast<TESSreal>(p[1]));
@@ -512,16 +523,10 @@ void fill_(core::Array<TFloat>& data, const Curves2d& samples, WindingRule windi
             coords.append(static_cast<TESSreal>(p[1]));
         }
         else if (c.type() == CurveCommandType::Close) {
-            if (coords.size() > 4) { // ignore contour if 2 points or less
-                tessAddContour(
-                    tess,
-                    vertexSize,
-                    coords.data(),
-                    sizeof(TESSreal) * vertexSize,
-                    core::int_cast<int>(coords.length() / 2));
-            }
+            addContour();
         }
     }
+    addContour();
     int success =
         tessTesselate(tess, windingRule, elementType, maxPolySize, vertexSize, normal);
     if (success) {
