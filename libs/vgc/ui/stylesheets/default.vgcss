@@ -25,7 +25,7 @@
 }
 
 .PanelArea.left-sidebar {
-    min-width: 152dp; /* = 4*28 + 5*8 = 4 tool icons (28dp) with 5 padding/gap (8dp) */
+    min-width: 150dp; /* = 4*32 (4 icons) + 3*2 (3 gaps) + 2*8 (2 paddings) */
     horizontal-stretch: 0;
 }
 
@@ -406,20 +406,48 @@
     main-spacing: packed;
 }
 
+.tools .Panel > .Flex {
+    column-gap: 2dp;
+}
+
 .tools .Button {
-    preferred-height: 28dp;
-    preferred-width: 28dp;
+    preferred-height: 32dp;
+    preferred-width: 32dp;
     horizontal-stretch: 0;
     horizontal-shrink: 0;
     vertical-stretch: 0;
     vertical-shrink: 0;
 }
 
+.tools .Button {
+    background-color: rgba(0, 0, 0, 0);
+}
+
+.tools .Button.hovered {
+    background-color: rgb(110, 114, 118);
+}
+
+.tools .Button.pressed {
+    background-color: rgb(120, 124, 128);
+}
+
+.tools .Button.checked {
+    background-color: rgb(11, 82, 172);
+}
+
+.tools .Button.checked.hovered {
+    background-color: rgb(31, 102, 192);
+}
+
+.tools .Button.checked.pressed {
+    background-color: rgb(41, 112, 202);
+}
+
 .tools .Button > .Icon {
-    margin-top: 6dp;
-    margin-right: 6dp;
-    margin-bottom: 6dp;
-    margin-left: 6dp;
+    margin-top: 8dp;
+    margin-right: 8dp;
+    margin-bottom: 8dp;
+    margin-left: 8dp;
     horizontal-stretch: 1;
     horizontal-shrink: 1;
     vertical-stretch: 1;
