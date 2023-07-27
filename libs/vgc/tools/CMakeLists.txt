@@ -31,4 +31,8 @@ vgc_add_library(tools
     RESOURCE_FILES
         cursors/rotation.svg
         cursors/scaling.svg
+        icons/paintBucket.svg
+        icons/sculpt.svg
+        icons/select.svg
+        icons/sketch.svg
 )

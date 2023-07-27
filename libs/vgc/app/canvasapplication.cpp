@@ -27,6 +27,7 @@
 #include <vgc/tools/sculpt.h>
 #include <vgc/tools/select.h>
 #include <vgc/ui/qtutil.h>
+#include <vgc/ui/row.h>
 #include <vgc/ui/shortcut.h>
 #include <vgc/ui/tabbar.h>
 
@@ -676,25 +677,29 @@ VGC_UI_DEFINE_WINDOW_COMMAND( //
     selectTool,
     "tools.select",
     "Select Tool",
-    Shortcut(ctrl, Key::Digit1))
+    Shortcut(ctrl, Key::Digit1),
+    "tools/icons/select.svg")
 
 VGC_UI_DEFINE_WINDOW_COMMAND( //
     sketchTool,
     "tools.sketch",
     "Sketch Tool",
-    Shortcut(ctrl, Key::Digit2))
+    Shortcut(ctrl, Key::Digit2),
+    "tools/icons/sketch.svg")
 
 VGC_UI_DEFINE_WINDOW_COMMAND( //
     paintBucketTool,
     "tools.paintBucket",
     "Paint Bucket Tool",
-    Shortcut(ctrl, Key::Digit3))
+    Shortcut(ctrl, Key::Digit3),
+    "tools/icons/paintBucket.svg")
 
 VGC_UI_DEFINE_WINDOW_COMMAND( //
     sculptTool,
     "tools.sculpt",
     "Sculpt Tool",
-    Shortcut(ctrl, Key::Digit4))
+    Shortcut(ctrl, Key::Digit4),
+    "tools/icons/sculpt.svg")
 
 } // namespace commands
 
@@ -706,7 +711,7 @@ void CanvasApplication::createTools_(ui::Widget* parent) {
     toolsActionGroup_ = ui::ActionGroup::create(ui::CheckPolicy::ExactlyOne);
 
     // Create and register all tools
-    ui::Column* tools = parent->createChild<ui::Column>();
+    ui::Row* tools = parent->createChild<ui::Row>();
     tools::SelectPtr selectTool = tools::Select::create();
     tools::SketchPtr sketchTool = tools::Sketch::create();
     tools::PaintBucketPtr paintBucketTool = tools::PaintBucket::create();
@@ -741,7 +746,9 @@ void CanvasApplication::registerTool_(
     toolMapInv_[tool.get()] = action;
 
     // Create corresponding button in the Tools panel
-    parent->createChild<ui::Button>(action);
+    auto button = parent->createChild<ui::Button>(action);
+    button->setIconVisible(true);
+    button->setTextVisible(false);
 }
 
 void CanvasApplication::setCurrentTool_(canvas::CanvasTool* canvasTool) {
