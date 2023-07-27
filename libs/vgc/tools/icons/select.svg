@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<svg
+   viewBox="0 0 32 32"
+   version="1.1"
+   id="svg1"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg">
+  <defs
+     id="defs1">
+    <style
+       id="style1"><![CDATA[.background { fill:#404244; }
+.fill-foreground-color { fill:#f5f5f5; }
+.fill-accent-color { fill:#0b52ac; }
+.stop-foreground-color { stop-color:#f5f5f5; }
+.stop-accent-color { stop-color: #0b52ac; }
+]]></style>
+  </defs>
+  <rect
+     class="background"
+     x="0"
+     y="0"
+     width="32"
+     height="32"
+     id="rect1" />
+  <path
+     class="fill-foreground-color"
+     d="m 28.767031,15.150547 c 1.881356,-1.271186 1.457627,-3.457627 0,-4 L 6.2711864,2.1355932 c -3,-1 -5.1569287,1.0569546 -4,4 L 11.054668,28.479395 c 0.543009,1.493276 2.828848,1.706728 4,0 l 5.59322,-7.763711 z m -8.428048,9.154538 4.68096,4.714858 c 2.955075,2.976475 6.790944,-1.353144 4,-4 l -4.630112,-4.528418 -2.40399,1.604338 z"
+     id="path1" />
+</svg>
