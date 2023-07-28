@@ -128,6 +128,12 @@ bool Action::trigger(Widget* from) {
     if (!isEnabled_) {
         return false;
     }
+    if (isCheckable()) {
+        toggle();
+        // Note: even if toggle() returns false (i.e., the check state
+        // didn't change), we still want trigger() to return true, because
+        // the trigger was indeed performed.
+    }
     triggered().emit(from);
     return true;
 }

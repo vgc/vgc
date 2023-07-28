@@ -123,15 +123,7 @@ bool Button::toggle() {
 
 bool Button::click(const geometry::Vec2f& pos) {
     if (isClickable()) {
-        if (action_->isCheckable()) {
-            action_->toggle();
-            // Note: even if toggle() returns false (i.e., the check state
-            // didn't change), we still want click() to return true, because
-            // the click was indeed performed.
-        }
-        else {
-            action_->trigger(this);
-        }
+        action_->trigger(this);
         clicked().emit(this, pos);
         return true;
     }
