@@ -140,12 +140,13 @@ void SignalHub::debugInboundConnections(const Object* receiver) {
                 }
             }
         }
-        //VGC_DEBUG_TMP(
-        //    "{}/{} connections of {} are to {}",
-        //    count,
-        //    shub.connections_.length(),
-        //    sender->className(),
-        //    receiver->className());
+        VGC_DEBUG(
+            LogVgcCore,
+            "{}/{} connections of {} are to {}",
+            count,
+            shub.connections_.length(),
+            sender->className(),
+            receiver->className());
         VGC_ASSERT(count == info.numInboundConnections);
     }
 }
@@ -232,7 +233,25 @@ void SignalHub::emit_(SignalId from, const TransmitArgs& args) {
     bool outermostEmit = (emitting_ == false);
     emitting_ = true;
     // Keep weak pointer on owner to detect our own death (`this` becomes dangling).
-    ObjectPtr ownerPtr(owner_);
+    ObjectPtr ownerPtr;
+    if (owner_->parentObject() || owner_->refCount() > 0) {
+        ownerPtr = owner_;
+    }
+    else {
+        // If we are here, this typically means that owner_ is an object still
+        // being constructed. Therefore, we do not want to create an ObjPtr to
+        // owner_, otherwise the destructor of ObjPtr would destroy owner_.
+        //
+        // TODO: ObjectStage::Constructing.
+        //       stage_ = Constructing in the constructor of Object
+        //       stage_ = Constructed at the end of make_object<T>(...)
+        //
+        // TODO 2: warning when creating an ObjPtr<T> to a Constructing object,
+        //         other than when calling make_object<T>.
+        //
+        // TODO 3: do not delete the object in ~ObjPtr<T> if the object
+        //         is Constructing.
+    }
     Object* outerEmitter = emitter;
     emitter = owner_;
     // We do it by index because connect() can happen in transmit..
