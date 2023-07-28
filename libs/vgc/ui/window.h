@@ -327,6 +327,8 @@ private:
     void onKeyboardCaptureStopped_();
     void onWidgetAddedToTree_(Widget* widget);
     void onWidgetRemovedFromTree_(Widget* widget);
+    void onActionAdded_(Action* action);
+    void onActionRemoved_(Action* action);
     void onActionAboutToBeDestroyed_(Object* object);
 
     VGC_SLOT(onRepaintRequestedSlot_, onRepaintRequested_);
@@ -336,6 +338,8 @@ private:
     VGC_SLOT(onKeyboardCaptureStoppedSlot_, onKeyboardCaptureStopped_);
     VGC_SLOT(onWidgetAddedToTreeSlot_, onWidgetAddedToTree_);
     VGC_SLOT(onWidgetRemovedFromTreeSlot_, onWidgetRemovedFromTree_);
+    VGC_SLOT(onActionAddedSlot_, onActionAdded_);
+    VGC_SLOT(onActionRemovedSlot_, onActionRemoved_);
     VGC_SLOT(onActionAboutToBeDestroyedSlot_, onActionAboutToBeDestroyed_);
 
     Int debugIndent_ = 0;

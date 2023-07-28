@@ -1255,13 +1255,23 @@ public:
     template<typename TAction, typename... Args>
     TAction* createAction(Args&&... args) {
         core::ObjPtr<TAction> action = TAction::create(std::forward<Args>(args)...);
-        actions_->append(action.get());
-        return action.get();
+        TAction* action_ = action.get();
+        addAction(action_);
+        return action_;
     }
+
+    /// Adds the given `action` to the list of actions of this widget.
+    ///
+    /// The widget takes ownership of the action.
+    ///
+    /// If the action previously belonged to another widget, it is first removed
+    /// from the other widget.
+    ///
+    void addAction(Action* action);
 
     /// Removes the given `action` from the list of actions of this widget.
     ///
-    void removeAction(ui::Action* action);
+    void removeAction(Action* action);
 
     /// Clears the list of actions of this widget.
     ///
@@ -1275,6 +1285,14 @@ public:
         return createAction<Action>(std::forward<Args>(args)...);
     }
 
+    /// This signal is emitted whenever an action is added to this widget.
+    ///
+    VGC_SIGNAL(actionAdded, (Action*, addedAction));
+
+    /// This signal is emitted whenever an action is removed from this widget.
+    ///
+    VGC_SIGNAL(actionRemoved, (Action*, removedAction));
+
     // Implementation of StylableObject interface
     static void populateStyleSpecTable(style::SpecTable* table);
     void populateStyleSpecTableVirtual(style::SpecTable* table) override {
@@ -1283,7 +1301,7 @@ public:
 
     /// Returns the current mouse drag action, if any.
     ///
-    ui::Action* currentMouseDragAction() const {
+    Action* currentMouseDragAction() const {
         return root()->currentMouseDragAction_.getIfAlive();
     }
 
@@ -1490,6 +1508,9 @@ private:
     void onWidgetAdded_(Widget* widget, bool wasOnlyReordered);
     void onWidgetRemoved_(Widget* widget);
 
+    void onActionAdded_(Action* action, bool wasOnlyReordered);
+    void onActionRemoved_(Action* action);
+
     // Layout
     mutable geometry::Vec2f preferredSize_ = {};
     mutable bool isPreferredSizeComputed_ = false;
@@ -1624,6 +1645,8 @@ private:
     VGC_SLOT(onEngineAboutToBeDestroyed_, releaseEngine_)
     VGC_SLOT(onWidgetAddedSlot_, onWidgetAdded_)
     VGC_SLOT(onWidgetRemovedSlot_, onWidgetRemoved_)
+    VGC_SLOT(onActionAddedSlot_, onActionAdded_)
+    VGC_SLOT(onActionRemovedSlot_, onActionRemoved_)
 };
 
 } // namespace vgc::ui

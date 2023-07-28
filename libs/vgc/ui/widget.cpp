@@ -44,6 +44,8 @@ Widget::Widget()
     addStyleClass(strings::Widget);
     children_->childAdded().connect(onWidgetAddedSlot_());
     children_->childRemoved().connect(onWidgetRemovedSlot_());
+    actions_->childAdded().connect(onActionAddedSlot_());
+    actions_->childRemoved().connect(onActionRemovedSlot_());
 }
 
 void Widget::onDestroyed() {
@@ -1897,15 +1899,19 @@ bool Widget::onKeyRelease(KeyReleaseEvent*) {
     return false;
 }
 
-void Widget::removeAction(ui::Action* action) {
+void Widget::addAction(Action* action) {
+    actions_->append(action);
+}
+
+void Widget::removeAction(Action* action) {
     actions_->remove(action);
 }
 
 void Widget::clearActions() {
-    ui::Action* child = actions_->first();
-    while (child) {
-        actions_->remove(child);
-        child = actions_->first();
+    Action* action = actions_->first();
+    while (action) {
+        removeAction(action);
+        action = actions_->first();
     }
 }
 
@@ -2127,6 +2133,16 @@ void Widget::onWidgetRemoved_(Widget* widget) {
     if (!widget->isReparentingWithinSameTree_) {
         root()->widgetRemovedFromTree().emit(widget);
     }
+}
+
+void Widget::onActionAdded_(Action* action, bool wasOnlyReordered) {
+    if (!wasOnlyReordered) {
+        actionAdded().emit(action);
+    }
+}
+
+void Widget::onActionRemoved_(Action* action) {
+    actionRemoved().emit(action);
 }
 
 void Widget::resendPendingRequests_() {

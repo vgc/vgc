@@ -1157,6 +1157,8 @@ bool isWindowShortcut_(Action* action) {
 } // namespace
 
 void Window::addShortcuts_(Widget* widget) {
+    widget->actionAdded().connect(onActionAddedSlot_());
+    widget->actionRemoved().connect(onActionRemovedSlot_());
     for (Action* action : widget->actions()) {
         addShortcut_(action);
     }
@@ -1166,6 +1168,8 @@ void Window::addShortcuts_(Widget* widget) {
 }
 
 void Window::removeShortcuts_(Widget* widget) {
+    widget->actionAdded().disconnect(onActionAddedSlot_());
+    widget->actionRemoved().disconnect(onActionRemovedSlot_());
     for (Action* action : widget->actions()) {
         removeShortcut_(action);
     }
@@ -1256,6 +1260,14 @@ void Window::onWidgetRemovedFromTree_(Widget* widget) {
     if (!widget->hasReachedStage(core::ObjectStage::AboutToBeDestroyed)) {
         removeShortcuts_(widget);
     }
+}
+
+void Window::onActionAdded_(Action* action) {
+    addShortcut_(action);
+}
+
+void Window::onActionRemoved_(Action* action) {
+    removeShortcut_(action);
 }
 
 void Window::onActionAboutToBeDestroyed_(Object* obj) {
