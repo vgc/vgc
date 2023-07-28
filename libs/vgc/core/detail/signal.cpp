@@ -140,12 +140,13 @@ void SignalHub::debugInboundConnections(const Object* receiver) {
                 }
             }
         }
-        //VGC_DEBUG_TMP(
-        //    "{}/{} connections of {} are to {}",
-        //    count,
-        //    shub.connections_.length(),
-        //    sender->className(),
-        //    receiver->className());
+        VGC_DEBUG(
+            LogVgcCore,
+            "{}/{} connections of {} are to {}",
+            count,
+            shub.connections_.length(),
+            sender->className(),
+            receiver->className());
         VGC_ASSERT(count == info.numInboundConnections);
     }
 }
