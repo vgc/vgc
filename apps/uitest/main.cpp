@@ -47,23 +47,28 @@ using Shortcut = ui::Shortcut;
 using Key = ui::Key;
 
 constexpr ui::ModifierKey ctrl = ui::ModifierKey::Ctrl;
+constexpr ui::ModifierKey alt = ui::ModifierKey::Alt;
+constexpr ui::ModifierKey shift = ui::ModifierKey::Shift;
+
+// Make the test shortcut unlikely to conflict with other shortcuts
+constexpr ui::ModifierKeys mod = ctrl | alt | shift;
 
 VGC_UI_DEFINE_WINDOW_COMMAND(
     createAction,
     "uitest.createActionInTestMenu",
     "Create action in Test menu",
-    Shortcut(ctrl, Key::A))
+    Shortcut(mod, Key::A))
 
 VGC_UI_DEFINE_WINDOW_COMMAND(
     createMenu,
     "uitest.createMenuInMenuBar",
     "Create menu in menubar",
-    Shortcut(ctrl, Key::M))
+    Shortcut(mod, Key::M))
 
 VGC_UI_DEFINE_WINDOW_COMMAND(hello, "uitest.hello", "Hello")
 
-VGC_UI_DEFINE_WINDOW_COMMAND(_1_1, "uitest.1.1", "Action #1.1", Shortcut(ctrl, Key::G))
-VGC_UI_DEFINE_WINDOW_COMMAND(_1_2, "uitest.1.2", "Action #1.2", Shortcut(ctrl, Key::L))
+VGC_UI_DEFINE_WINDOW_COMMAND(_1_1, "uitest.1.1", "Action #1.1", Shortcut(mod, Key::G))
+VGC_UI_DEFINE_WINDOW_COMMAND(_1_2, "uitest.1.2", "Action #1.2", Shortcut(mod, Key::L))
 VGC_UI_DEFINE_WINDOW_COMMAND(_1_3, "uitest.1.3", "Action #1.3")
 VGC_UI_DEFINE_WINDOW_COMMAND(_1_4, "uitest.1.4", "Action #1.4")
 VGC_UI_DEFINE_WINDOW_COMMAND(_1_5, "uitest.1.5", "Action #1.5")
@@ -78,8 +83,8 @@ VGC_UI_DEFINE_WINDOW_COMMAND(_1_8_5, "uitest.1.8.5", "Action #1.8.5")
 VGC_UI_DEFINE_WINDOW_COMMAND(_1_8_6, "uitest.1.8.6", "Action #1.8.6")
 VGC_UI_DEFINE_WINDOW_COMMAND(_1_8_7, "uitest.1.8.7", "Action #1.8.7")
 
-VGC_UI_DEFINE_WINDOW_COMMAND(_2_1, "uitest.2.1", "Action #2.1", Shortcut(ctrl, Key::F))
-VGC_UI_DEFINE_WINDOW_COMMAND(_2_2, "uitest.2.2", "Action #2.2", Shortcut(ctrl, Key::K))
+VGC_UI_DEFINE_WINDOW_COMMAND(_2_1, "uitest.2.1", "Action #2.1", Shortcut(mod, Key::F))
+VGC_UI_DEFINE_WINDOW_COMMAND(_2_2, "uitest.2.2", "Action #2.2", Shortcut(mod, Key::K))
 
 VGC_UI_DEFINE_WINDOW_COMMAND(_3_1, "uitest.action.3.1", "Action #3.1")
 

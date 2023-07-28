@@ -43,17 +43,31 @@ namespace commands {
 
 using ui::Key;
 
+// TODO:
+// Rename this to "FitSelectionToView" (F)
+// Add "FitDocumentToView" (Shift+F, or the more standard Ctrl + 0, or both)
+//
 VGC_UI_DEFINE_WINDOW_COMMAND( //
     frameContent,
     "canvas.frameContent",
     "Frame Content",
     Key::F);
 
+// TODO:
+//
+// D: Toggle between the last two display modes used (default: Normal + OutlineOverlay)
+// Shift + D: Cycle between all display modes
+//
+// Note: using "D" for changing the display mode is nice since it is
+// easy to remember (D = Display), is easily accessibly with the left
+// hand on QWERTY keyboards, and is rarely used for anything very useful
+// on other software (sometimes used for "reset colors to default")
+//
 VGC_UI_DEFINE_WINDOW_COMMAND( //
     cycleDisplayMode,
     "canvas.cycleDisplayMode",
     "Cycle Display Mode",
-    Key::M);
+    Key::D);
 
 } // namespace commands
 
@@ -329,6 +343,10 @@ core::Array<core::Id> Canvas::computeRectangleSelectionCandidates(
     return result;
 }
 
+// TODO:
+// - Use commands/actions instead of hard-coded onKeyPress
+// - Review shortcuts (advanced/debug shortcut should probably use key modifiers)
+//
 bool Canvas::onKeyPress(ui::KeyPressEvent* event) {
 
     using geometry::CurveSamplingQuality;

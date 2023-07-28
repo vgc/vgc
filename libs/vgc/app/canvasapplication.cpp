@@ -673,32 +673,36 @@ namespace {
 
 namespace commands {
 
+// Note: These shortcuts are standards in existing software (except "S" for
+// sculpt), and quite nice on QWERTY keyboards since they are all easy to
+// access with the left hand.
+
 VGC_UI_DEFINE_WINDOW_COMMAND( //
     selectTool,
     "tools.select",
     "Select Tool",
-    Shortcut(ctrl, Key::Digit1),
+    Key::V,
     "tools/icons/select.svg")
 
 VGC_UI_DEFINE_WINDOW_COMMAND( //
     sketchTool,
     "tools.sketch",
     "Sketch Tool",
-    Shortcut(ctrl, Key::Digit2),
+    Key::B,
     "tools/icons/sketch.svg")
 
 VGC_UI_DEFINE_WINDOW_COMMAND( //
     paintBucketTool,
     "tools.paintBucket",
     "Paint Bucket Tool",
-    Shortcut(ctrl, Key::Digit3),
+    Key::G,
     "tools/icons/paintBucket.svg")
 
 VGC_UI_DEFINE_WINDOW_COMMAND( //
     sculptTool,
     "tools.sculpt",
     "Sculpt Tool",
-    Shortcut(ctrl, Key::Digit4),
+    Key::S,
     "tools/icons/sculpt.svg")
 
 } // namespace commands

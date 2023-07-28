@@ -53,7 +53,7 @@ VGC_UI_DEFINE_WINDOW_COMMAND( //
     pickScreenColor,
     "colors.pickScreenColor",
     "Pick Screen Color",
-    Key::P)
+    Key::I)
 
 VGC_UI_DEFINE_WINDOW_COMMAND( //
     addToPalette,
