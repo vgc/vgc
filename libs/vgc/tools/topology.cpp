@@ -21,6 +21,9 @@ namespace vgc::tools {
 namespace commands {
 
 using ui::Key;
+using ui::Shortcut;
+
+constexpr ui::ModifierKey alt = ui::ModifierKey::Alt;
 
 // TODO: Use VGC_UI_DEFINE_TRIGGER_COMMAND
 #undef VGC_UI_DEFINE_TRIGGER_COMMAND
@@ -30,13 +33,13 @@ VGC_UI_DEFINE_TRIGGER_COMMAND( //
     glue,
     "tools.topology.glue",
     "Glue",
-    Key::G);
+    Shortcut(alt, Key::G));
 
 VGC_UI_DEFINE_TRIGGER_COMMAND( //
     unglue,
     "tools.topology.unglue",
     "Unglue",
-    Key::U);
+    Shortcut(alt, Key::U));
 
 } // namespace commands
 
