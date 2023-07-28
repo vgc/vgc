@@ -1263,7 +1263,7 @@ void Window::onFocusWidgetChanged_() {
         focusedWidget_->textInputReceiverChanged().connect(
             onTextInputReceiverChangedSlot_());
     }
-    onTextInputReceiverChangedSlot_();
+    onTextInputReceiverChanged_();
 }
 
 void Window::onTextInputReceiverChanged_() {
