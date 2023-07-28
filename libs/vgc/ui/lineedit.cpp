@@ -58,6 +58,7 @@ LineEdit::LineEdit(std::string_view text)
     , richText_(graphics::RichText::create()) {
 
     setFocusPolicy(FocusPolicy::Click | FocusPolicy::Tab);
+    setTextInputReceiver(true);
     addStyleClass(strings::LineEdit);
     appendChildStylableObject(richText_.get());
     setText(text);

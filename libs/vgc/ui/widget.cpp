@@ -1798,6 +1798,13 @@ void Widget::setTreeActive(bool active, FocusReason reason) {
     }
 }
 
+void Widget::setTextInputReceiver(bool isTextInputReceiver) {
+    if (isTextInputReceiver != isTextInputReceiver_) {
+        isTextInputReceiver_ = isTextInputReceiver;
+        textInputReceiverChanged().emit(isTextInputReceiver_);
+    }
+}
+
 void Widget::setFocus(FocusReason reason) {
     if (!isFocusedWidget()) {
         clearFocus(reason);
