@@ -131,6 +131,8 @@ Window::Window(const WidgetPtr& widget)
 
     //setMouseTracking(true);
     widget_->repaintRequested().connect(onRepaintRequestedSlot_());
+    widget_->focusSet().connect(onFocusWidgetChangedSlot_());
+    widget_->focusCleared().connect(onFocusWidgetChangedSlot_());
     widget_->mouseCaptureStarted().connect(onMouseCaptureStartedSlot_());
     widget_->mouseCaptureStopped().connect(onMouseCaptureStoppedSlot_());
     widget_->keyboardCaptureStarted().connect(onKeyboardCaptureStartedSlot_());
@@ -145,11 +147,7 @@ Window::Window(const WidgetPtr& widget)
 
     // Handle dead keys and complex input methods.
     //
-    // XXX TODO: We should enable/disable this property based on whether the
-    // current keyboard-focused widget is a text-editing widget, similarly to
-    // what Qt::WA_InputMethodEnabled is used for.
-    //
-    QGuiApplication::inputMethod()->update(Qt::ImEnabled);
+    onTextInputReceiverChanged_();
 
     // Sets this Window as an application-wide filter to listen to events not
     // redirected to Window by default (e.g., TabletProximity).
@@ -580,11 +578,11 @@ QVariant Window::inputMethodQuery(Qt::InputMethodQuery query) {
     //
     // https://github.com/qt/qtbase/blob/ec7ff5cede92412b929ff30207b0eeafce93ee3b/src/widgets/widgets/qlineedit.cpp#L1849
     //
-    // For now, we simply return `true` for the `Enabled` query (to ensure that
-    // we receive further queries and input method events), and return an empty
-    // QVariant for all other queries. Most likely, this means that many
-    // (most?) IME won't work with our app, but at least dead keys work. Fixing
-    // this is left for future work.
+    // For now, we simply return something relevant for the `Enabled` query (to
+    // ensure that we receive further queries and input method events), and
+    // return an empty QVariant for all other queries. Most likely, this means
+    // that many (most?) IME won't work with our app, but at least dead keys
+    // work. Fixing this is left for future work.
     //
     // Also see:
     //
@@ -593,8 +591,11 @@ QVariant Window::inputMethodQuery(Qt::InputMethodQuery query) {
     // - https://stackoverflow.com/questions/434048/how-do-you-use-ime
     //
     if (query == Qt::ImEnabled) {
-        // TODO: return true only if the current focus widget accepts text input.
-        return QVariant(true);
+        bool res = false;
+        if (focusedWidget_ && focusedWidget_->isTextInputReceiver()) {
+            res = true;
+        }
+        return QVariant(res);
     }
     else {
         // TODO: handle other queries more appropriately.
@@ -1250,6 +1251,23 @@ void Window::onKeyboardCaptureStarted_() {
 
 void Window::onKeyboardCaptureStopped_() {
     setKeyboardGrabEnabled(false);
+}
+
+void Window::onFocusWidgetChanged_() {
+    if (focusedWidget_) {
+        focusedWidget_->textInputReceiverChanged().disconnect(
+            onTextInputReceiverChangedSlot_());
+    }
+    focusedWidget_ = widget_->focusedWidget();
+    if (focusedWidget_) {
+        focusedWidget_->textInputReceiverChanged().connect(
+            onTextInputReceiverChangedSlot_());
+    }
+    onTextInputReceiverChanged_();
+}
+
+void Window::onTextInputReceiverChanged_() {
+    QGuiApplication::inputMethod()->update(Qt::ImEnabled);
 }
 
 void Window::onWidgetAddedToTree_(Widget* widget) {

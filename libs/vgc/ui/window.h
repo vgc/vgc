@@ -291,6 +291,8 @@ private:
     bool isBackgroundPainted_ = true;
     core::Color backgroundColor_ = {};
 
+    WidgetPtr focusedWidget_;
+
     MouseButtons pressedMouseButtons_;
     MouseButtons pressedTabletButtons_;
     geometry::Vec2f accumulatedScrollDelta_ = {};
@@ -325,6 +327,8 @@ private:
     void onMouseCaptureStopped_();
     void onKeyboardCaptureStarted_();
     void onKeyboardCaptureStopped_();
+    void onFocusWidgetChanged_();
+    void onTextInputReceiverChanged_();
     void onWidgetAddedToTree_(Widget* widget);
     void onWidgetRemovedFromTree_(Widget* widget);
     void onActionAdded_(Action* action);
@@ -334,6 +338,8 @@ private:
     VGC_SLOT(onRepaintRequestedSlot_, onRepaintRequested_);
     VGC_SLOT(onMouseCaptureStartedSlot_, onMouseCaptureStarted_);
     VGC_SLOT(onMouseCaptureStoppedSlot_, onMouseCaptureStopped_);
+    VGC_SLOT(onFocusWidgetChangedSlot_, onFocusWidgetChanged_);
+    VGC_SLOT(onTextInputReceiverChangedSlot_, onTextInputReceiverChanged_);
     VGC_SLOT(onKeyboardCaptureStartedSlot_, onKeyboardCaptureStarted_);
     VGC_SLOT(onKeyboardCaptureStoppedSlot_, onKeyboardCaptureStopped_);
     VGC_SLOT(onWidgetAddedToTreeSlot_, onWidgetAddedToTree_);

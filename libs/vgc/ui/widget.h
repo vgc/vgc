@@ -1087,6 +1087,32 @@ public:
         focusPolicy_ = policy;
     }
 
+    /// Returns whether this widget accepts text input.
+    ///
+    /// \sa `setTextInputReceiver()`.
+    ///
+    bool isTextInputReceiver() const {
+        return isTextInputReceiver_;
+    }
+
+    /// Sets whether this widget accepts text input.
+    ///
+    /// This should be set to `true` for widgets that behave like text editors
+    /// (e.g., `LineEdit`), so that dead keys can be combined with the
+    /// follow-up characters before being transmitted to the widget, and so
+    /// that virtual keyboards can appear in contexts where it makes sense
+    /// (e.g., mobile operating systems, Chinese input, accessibility
+    /// settings).
+    ///
+    /// \sa `isTextInputReceiver()`.
+    ///
+    void setTextInputReceiver(bool isTextInputReceiver);
+
+    /// This signal is emitted whenever the value of `isTextInputReceiver()`
+    /// changes.
+    ///
+    VGC_SIGNAL(textInputReceiverChanged, (bool, newValue))
+
     /// This signal is emitted whenever this widget, or any of its descendants,
     /// became the focused widget.
     ///
@@ -1631,6 +1657,7 @@ private:
     //
     bool isTreeActive_ = false; // TODO: move to future class WidgetTree
     FocusPolicyFlags focusPolicy_ = FocusPolicy::Never;
+    bool isTextInputReceiver_ = false;
     Widget* focus_ = nullptr;
     Widget* keyboardCaptor_ = nullptr; // TODO: move to future class WidgetTree
 
