@@ -99,12 +99,12 @@ class UiTestApplication : public app::CanvasApplication {
 
 public:
     static UiTestApplicationPtr create(int argc, char* argv[]) {
-        return UiTestApplicationPtr(new UiTestApplication(argc, argv));
+        return core::createObject<UiTestApplication>(argc, argv);
     }
 
 protected:
-    UiTestApplication(int argc, char* argv[])
-        : app::CanvasApplication(argc, argv, "VGC UI Test") {
+    UiTestApplication(CreateKey key, int argc, char* argv[])
+        : app::CanvasApplication(key, argc, argv, "VGC UI Test") {
 
         setOrganizationName("VGC Software");
         setOrganizationDomain("vgc.io");
