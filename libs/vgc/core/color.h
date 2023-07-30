@@ -49,6 +49,19 @@ public:
         : data_{0.0f, 0.0f, 0.0f, 1.0f} {
     }
 
+    /// Creates a Color initialized with the given r, g, b in [0, 1]. The alpha
+    /// channel is set to 1.0.
+    ///
+    constexpr Color(float r, float g, float b) noexcept
+        : data_{r, g, b, 1.0f} {
+    }
+
+    /// Creates a Color initialized with the given r, g, b, a in [0, 1].
+    ///
+    constexpr Color(float r, float g, float b, float a) noexcept
+        : data_{r, g, b, a} {
+    }
+
     /// Creates a Color from the given HSL values.
     ///
     /// ```cpp
@@ -74,17 +87,10 @@ public:
     ///
     static Color hsla(float h, float s, float l, float a);
 
-    /// Creates a Color initialized with the given r, g, b in [0, 1]. The alpha
-    /// channel is set to 1.0.
+    /// Creates a Color from the given 8-bit RGB values (from 0 to 255).
     ///
-    constexpr Color(float r, float g, float b) noexcept
-        : data_{r, g, b, 1.0f} {
-    }
-
-    /// Creates a Color initialized with the given r, g, b, a in [0, 1].
-    ///
-    constexpr Color(float r, float g, float b, float a) noexcept
-        : data_{r, g, b, a} {
+    static Color fromRgb8(UInt8 r, UInt8 g, UInt8 b) {
+        return Color(mapFromUInt8(r), mapFromUInt8(g), mapFromUInt8(b));
     }
 
     /// Creates a Color from the given hexadecimal string.
@@ -95,6 +101,18 @@ public:
     /// ```
     ///
     static Color fromHex(std::string_view hex);
+
+    /// Creates a Color from the given color name.
+    ///
+    /// Supported color names are the 147 names defined in SVG 1.1, see:
+    ///
+    /// https://www.w3.org/TR/SVG11/types.html#ColorKeywords
+    ///
+    /// ```cpp
+    /// core::Color c = core::Color::fromName("red");
+    /// ```
+    ///
+    static Color fromName(std::string_view hex);
 
     /// Accesses the i-th channel of the Color.
     ///
@@ -312,14 +330,20 @@ public:
 
     /// Converts a floating point in [0, 1] to an integer in [0..255].
     ///
-    static UInt8 mapTo255(float x) {
+    static UInt8 mapToUInt8(float x) {
         float y = std::round(clamp(x, 0.0f, 1.0f) * 255.0f);
         return static_cast<UInt8>(y);
     }
 
     /// Converts an integer in [0..255] to a floating point in [0, 1].
     ///
-    static float mapFrom255(Int x) {
+    static constexpr float mapFromUInt8(UInt8 x) {
+        return static_cast<float>(x) / 255.0f;
+    }
+
+    /// Converts an integer in [0..255] to a floating point in [0, 1].
+    ///
+    static constexpr float mapFrom255(Int x) {
         Int y = clamp(x, Int(0), Int(255));
         return static_cast<float>(y) / 255.0f;
     }
@@ -363,11 +387,11 @@ void write(OStream& out, const Color& c) {
     write(out, writeAlpha ? "rgba(" : "rgb(");
     write(
         out,
-        Color::mapTo255(c.r()),
+        Color::mapToUInt8(c.r()),
         ", ",
-        Color::mapTo255(c.g()),
+        Color::mapToUInt8(c.g()),
         ", ",
-        Color::mapTo255(c.b()));
+        Color::mapToUInt8(c.b()));
     if (writeAlpha) {
         write(out, ", ", c.a());
     }
@@ -422,9 +446,9 @@ struct fmt::formatter<vgc::core::Color> {
     }
     template<typename FormatContext>
     auto format(const vgc::core::Color& c, FormatContext& ctx) {
-        vgc::UInt8 r = vgc::core::Color::mapTo255(c.r());
-        vgc::UInt8 g = vgc::core::Color::mapTo255(c.g());
-        vgc::UInt8 b = vgc::core::Color::mapTo255(c.b());
+        vgc::UInt8 r = vgc::core::Color::mapToUInt8(c.r());
+        vgc::UInt8 g = vgc::core::Color::mapToUInt8(c.g());
+        vgc::UInt8 b = vgc::core::Color::mapToUInt8(c.b());
         double a = c.a();
         if (a == 1.0) {
             return format_to(ctx.out(), "rgb({}, {}, {})", r, g, b);
