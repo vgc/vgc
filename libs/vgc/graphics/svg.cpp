@@ -1060,6 +1060,10 @@ std::optional<core::Color> parseColor(std::string_view s) {
         // Return result
         return core::Color::hsl(hue, saturation, lightness);
     }
+    else if (startsWith(s, "#")) {
+        s = trimmed(s);
+        return core::Color::fromHex(s);
+    }
     else {
         // TODO: handle named constants and #* formats
         return core::Color();
