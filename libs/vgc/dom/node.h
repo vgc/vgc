@@ -121,7 +121,7 @@ protected:
     /// Element* element = Element::create(parent, name);
     /// ```
     ///
-    Node(Document* document, NodeType nodeType);
+    Node(CreateKey, Document* document, NodeType nodeType);
 
     void onDestroyed() override;
 

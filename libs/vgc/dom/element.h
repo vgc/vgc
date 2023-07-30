@@ -153,7 +153,7 @@ protected:
     /// ElementPtr element = Element::create(parent, tagName);
     /// ```
     ///
-    Element(Document* document, core::StringId tagName);
+    Element(CreateKey, Document* document, core::StringId tagName);
 
     void onDestroyed() override;
 

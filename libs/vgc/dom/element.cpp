@@ -25,8 +25,8 @@
 
 namespace vgc::dom {
 
-Element::Element(Document* document, core::StringId tagName)
-    : Node(document, NodeType::Element)
+Element::Element(CreateKey key, Document* document, core::StringId tagName)
+    : Node(key, document, NodeType::Element)
     , tagName_(tagName)
     , internalId_(core::genId()) {
 }
@@ -44,7 +44,7 @@ void Element::onDestroyed() {
 /* static */
 Element* Element::create_(Node* parent, core::StringId tagName, Element* nextSibling) {
     Document* doc = parent->document();
-    ElementPtr e = new Element(doc, tagName);
+    ElementPtr e = core::createObject<Element>(doc, tagName);
 
     if (!doc->elementByInternalIdMap_.try_emplace(e->internalId(), e.get()).second) {
         throw LogicError("Internal id collision error.");

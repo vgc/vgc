@@ -32,8 +32,8 @@ namespace vgc::dom {
 
 using core::XmlSyntaxError;
 
-Document::Document()
-    : Node(this, NodeType::Document)
+Document::Document(CreateKey key)
+    : Node(key, this, NodeType::Document)
     , hasXmlDeclaration_(true)
     , hasXmlEncoding_(true)
     , hasXmlStandalone_(false)
@@ -47,7 +47,7 @@ Document::Document()
 
 /* static */
 DocumentPtr Document::create() {
-    return DocumentPtr(new Document());
+    return core::createObject<Document>();
 }
 
 namespace {
