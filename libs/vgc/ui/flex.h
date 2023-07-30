@@ -278,7 +278,10 @@ protected:
     /// This is an implementation details. Please use
     /// Flex::create() instead.
     ///
-    Flex(FlexDirection direction = FlexDirection::Row, FlexWrap wrap = FlexWrap::NoWrap);
+    Flex(
+        CreateKey,
+        FlexDirection direction = FlexDirection::Row,
+        FlexWrap wrap = FlexWrap::NoWrap);
 
 public:
     /// Creates a Row.

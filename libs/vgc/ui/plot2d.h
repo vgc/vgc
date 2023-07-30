@@ -44,7 +44,7 @@ protected:
     /// This is an implementation details.
     /// Please use Plot2d::create(text) instead.
     ///
-    Plot2d(Int numYs, Int maxXs);
+    Plot2d(CreateKey, Int numYs, Int maxXs);
 
 public:
     /// Creates a Plot2d.

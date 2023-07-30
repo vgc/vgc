@@ -44,15 +44,15 @@ float allocSize(float requested, float& remaining) {
 
 } // namespace
 
-MenuButton::MenuButton(Action* action, FlexDirection layoutDirection)
-    : Button(action, layoutDirection) {
+MenuButton::MenuButton(CreateKey key, Action* action, FlexDirection layoutDirection)
+    : Button(key, action, layoutDirection) {
 
     addStyleClass(strings::MenuButton);
     setShortcutVisible(true);
 }
 
 MenuButtonPtr MenuButton::create(Action* action, FlexDirection layoutDirection) {
-    return MenuButtonPtr(new MenuButton(action, layoutDirection));
+    return core::createObject<MenuButton>(action, layoutDirection);
 }
 
 bool MenuButton::closePopupMenu() {

@@ -81,15 +81,15 @@ protected:
     /// This is an implementation details.
     /// Please use `SculptGrabAction::create()` instead.
     ///
-    SculptGrabAction()
-        : ui::Action(commands::grab) {
+    SculptGrabAction(CreateKey key)
+        : ui::Action(key, commands::grab) {
     }
 
 public:
     /// Creates a `SculptGrabAction`.
     ///
     static SculptGrabActionPtr create() {
-        return SculptGrabActionPtr(new SculptGrabAction());
+        return core::createObject<SculptGrabAction>();
     }
 
 public:
@@ -266,15 +266,15 @@ protected:
     /// This is an implementation details.
     /// Please use `SculptWidthAction::create()` instead.
     ///
-    SculptWidthAction()
-        : ui::Action(commands::width) {
+    SculptWidthAction(CreateKey key)
+        : ui::Action(key, commands::width) {
     }
 
 public:
     /// Creates a `SculptWidthAction`.
     ///
     static SculptWidthActionPtr create() {
-        return SculptWidthActionPtr(new SculptWidthAction());
+        return core::createObject<SculptWidthAction>();
     }
 
 public:
@@ -453,15 +453,15 @@ protected:
     /// This is an implementation details.
     /// Please use `SculptSmoothAction::create()` instead.
     ///
-    SculptSmoothAction()
-        : ui::Action(commands::smooth) {
+    SculptSmoothAction(CreateKey key)
+        : ui::Action(key, commands::smooth) {
     }
 
 public:
     /// Creates a `SculptSmoothAction`.
     ///
     static SculptSmoothActionPtr create() {
-        return SculptSmoothActionPtr(new SculptSmoothAction());
+        return core::createObject<SculptSmoothAction>();
     }
 
 public:
@@ -637,15 +637,15 @@ protected:
     /// This is an implementation details.
     /// Please use `SculptEditRadiusAction::create()` instead.
     ///
-    SculptEditRadiusAction()
-        : ui::Action(commands::editRadius) {
+    SculptEditRadiusAction(CreateKey key)
+        : ui::Action(key, commands::editRadius) {
     }
 
 public:
     /// Creates a `SculptEditRadiusAction`.
     ///
     static SculptEditRadiusActionPtr create() {
-        return SculptEditRadiusActionPtr(new SculptEditRadiusAction());
+        return core::createObject<SculptEditRadiusAction>();
     }
 
 public:
@@ -683,8 +683,8 @@ public:
 
 } // namespace
 
-Sculpt::Sculpt()
-    : CanvasTool() {
+Sculpt::Sculpt(CreateKey key)
+    : CanvasTool(key) {
 
     auto grabAction = createAction<SculptGrabAction>();
     grabAction->tool_ = this;
@@ -697,7 +697,7 @@ Sculpt::Sculpt()
 }
 
 SculptPtr Sculpt::create() {
-    return SculptPtr(new Sculpt());
+    return core::createObject<Sculpt>();
 }
 
 ui::WidgetPtr Sculpt::createOptionsWidget() const {

@@ -80,8 +80,8 @@ void appendLineOpaqueNoAA(
 
 } // namespace xyrgb
 
-Plot2d::Plot2d(Int numYs, Int maxXs)
-    : Widget()
+Plot2d::Plot2d(CreateKey key, Int numYs, Int maxXs)
+    : Widget(key)
     , data_((1 + numYs) * maxXs)
     , yLabels_(numYs)
     , maxXs_(maxXs) {
@@ -101,7 +101,7 @@ Plot2d::Plot2d(Int numYs, Int maxXs)
 }
 
 Plot2dPtr Plot2d::create(Int numYs, Int maxXs) {
-    return Plot2dPtr(new Plot2d(numYs, maxXs));
+    return core::createObject<Plot2d>(numYs, maxXs);
 }
 
 void Plot2d::onResize() {

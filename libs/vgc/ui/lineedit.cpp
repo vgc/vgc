@@ -53,8 +53,8 @@ void copyToX11SelectionClipboard_(graphics::RichText* richText) {
 
 } // namespace
 
-LineEdit::LineEdit(std::string_view text)
-    : Widget()
+LineEdit::LineEdit(CreateKey key, std::string_view text)
+    : Widget(key)
     , richText_(graphics::RichText::create()) {
 
     setFocusPolicy(FocusPolicy::Click | FocusPolicy::Tab);
@@ -65,11 +65,11 @@ LineEdit::LineEdit(std::string_view text)
 }
 
 LineEditPtr LineEdit::create() {
-    return LineEditPtr(new LineEdit(""));
+    return core::createObject<LineEdit>("");
 }
 
 LineEditPtr LineEdit::create(std::string_view text) {
-    return LineEditPtr(new LineEdit(text));
+    return core::createObject<LineEdit>(text);
 }
 
 void LineEdit::setText(std::string_view text) {

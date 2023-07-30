@@ -71,8 +71,12 @@ VGC_UI_DEFINE_WINDOW_COMMAND( //
 
 } // namespace commands
 
+SelectionListHistory::SelectionListHistory(CreateKey key, PrivateKey)
+    : Object(key) {
+}
+
 SelectionListHistoryPtr SelectionListHistory::create() {
-    return SelectionListHistoryPtr(new SelectionListHistory());
+    return core::createObject<SelectionListHistory>(SelectionListHistory::PrivateKey{});
 }
 
 void SelectionListHistory::pushSelection(const SelectionList& list) {
@@ -85,12 +89,8 @@ void SelectionListHistory::pushSelection(SelectionList&& list) {
     selectionChanged().emit();
 }
 
-CanvasPtr Canvas::create(workspace::Workspace* workspace) {
-    return CanvasPtr(new Canvas(workspace));
-}
-
-Canvas::Canvas(workspace::Workspace* workspace)
-    : Widget()
+Canvas::Canvas(CreateKey key, workspace::Workspace* workspace)
+    : Widget(key)
     , workspace_(workspace)
     , renderTask_("Render")
     , updateTask_("Update")
@@ -116,6 +116,10 @@ Canvas::Canvas(workspace::Workspace* workspace)
 
     ui::Action* cycleDisplayModeAction = createTriggerAction(commands::cycleDisplayMode);
     cycleDisplayModeAction->triggered().connect(cycleDisplayModeSlot_());
+}
+
+CanvasPtr Canvas::create(workspace::Workspace* workspace) {
+    return core::createObject<Canvas>(workspace);
 }
 
 void Canvas::setDisplayMode(DisplayMode displayMode) {

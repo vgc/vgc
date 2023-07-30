@@ -44,7 +44,7 @@ private:
     VGC_OBJECT(Button, Flex)
 
 protected:
-    Button(Action* action, FlexDirection layoutDirection);
+    Button(CreateKey, Action* action, FlexDirection layoutDirection);
 
 public:
     /// Creates a Button associated with the given `action`.

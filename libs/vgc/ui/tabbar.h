@@ -33,7 +33,7 @@ private:
     VGC_OBJECT(TabBar, Label)
 
 protected:
-    TabBar();
+    TabBar(CreateKey);
 
 public:
     /// Creates a `TabBar`.

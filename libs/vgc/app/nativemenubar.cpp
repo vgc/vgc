@@ -29,8 +29,9 @@ namespace vgc::app {
 
 NativeMenuBar* NativeMenuBar::nativeMenuBar_ = nullptr;
 
-NativeMenuBar::NativeMenuBar(ui::Menu* menu)
-    : menu_(menu) {
+NativeMenuBar::NativeMenuBar(CreateKey key, ui::Menu* menu)
+    : core::Object(key)
+    , menu_(menu) {
 
     if (nativeMenuBar_) {
         VGC_WARNING(
@@ -49,7 +50,7 @@ NativeMenuBar::NativeMenuBar(ui::Menu* menu)
 }
 
 NativeMenuBarPtr NativeMenuBar::create(ui::Menu* menu) {
-    return NativeMenuBarPtr(new NativeMenuBar(menu));
+    return core::createObject<NativeMenuBar>(menu);
 }
 
 void NativeMenuBar::onDestroyed() {

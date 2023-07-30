@@ -427,20 +427,21 @@ void SizedGlyphImplDeleter::operator()(SizedGlyphImpl* p) {
 
 } // namespace detail
 
-FontLibrary::FontLibrary()
-    : Object()
+FontLibrary::FontLibrary(CreateKey key)
+    : Object(key)
     , impl_(new detail::FontLibraryImpl()) {
 }
 
 // static
 FontLibraryPtr FontLibrary::create() {
-    return FontLibraryPtr(new FontLibrary());
+    return core::createObject<FontLibrary>();
 }
 
 Font* FontLibrary::addFont(const std::string& filename, Int index) {
-    Font* res = new Font(this);
-    res->impl_.reset(new detail::FontImpl(filename, index, impl_->library));
-    return res;
+    FontPtr font = core::createObject<Font>(Font::PrivateKey{}, this);
+    Font* font_ = font.get();
+    font_->impl_.reset(new detail::FontImpl(filename, index, impl_->library));
+    return font_;
 }
 
 Font* FontLibrary::defaultFont() const {
@@ -486,8 +487,8 @@ FontLibrary* fontLibrary() {
     return res.get();
 }
 
-Font::Font(FontLibrary* library)
-    : Object()
+Font::Font(CreateKey key, PrivateKey, FontLibrary* library)
+    : Object(key)
     , impl_() {
 
     appendObjectToParent_(library);
@@ -511,7 +512,8 @@ SizedFont* Font::getSizedFont(const SizedFontParams& params) {
 
     // If no existing SizedGlyph*, create it
     if (!sizedFont) {
-        sizedFont = new SizedFont(this);
+        SizedFontPtr p = core::createObject<SizedFont>(SizedFont::PrivateKey{}, this);
+        sizedFont = p.get();
         sizedFont->impl_.reset(new detail::SizedFontImpl(this, params));
     }
 
@@ -556,7 +558,9 @@ Glyph* Font::getGlyphFromIndex(Int glyphIndex) {
         }
 
         // Create Glyph object
-        glyph = new Glyph(this, glyphIndex, name);
+        GlyphPtr p =
+            core::createObject<Glyph>(Glyph::PrivateKey{}, this, glyphIndex, name);
+        glyph = p.get();
     }
 
     return glyph;
@@ -574,8 +578,9 @@ void Font::onDestroyed() {
     impl_.reset();
 }
 
-Glyph::Glyph(Font* font, Int index, const std::string& name)
-    : index_(index)
+Glyph::Glyph(CreateKey key, PrivateKey, Font* font, Int index, const std::string& name)
+    : Object(key)
+    , index_(index)
     , name_(name) {
 
     appendObjectToParent_(font);
@@ -585,8 +590,8 @@ Font* Glyph::font() const {
     return static_cast<Font*>(parentObject());
 }
 
-SizedFont::SizedFont(Font* font)
-    : Object()
+SizedFont::SizedFont(CreateKey key, PrivateKey, Font* font)
+    : Object(key)
     , impl_() {
 
     appendObjectToParent_(font);
@@ -670,7 +675,8 @@ SizedGlyph* SizedFont::getSizedGlyphFromIndex(Int glyphIndex) {
         Glyph* glyph = font()->getGlyphFromIndex(glyphIndex);
 
         // Create SizedGlyph object and copy data to object
-        sizedGlyph = new SizedGlyph(this);
+        SizedGlyphPtr p = core::createObject<SizedGlyph>(SizedGlyph::PrivateKey{}, this);
+        sizedGlyph = p.get();
         FT_GlyphSlot slot = face->glyph;
         sizedGlyph->impl_.reset(new detail::SizedGlyphImpl(glyph, slot));
     }
@@ -690,8 +696,8 @@ void SizedFont::onDestroyed() {
     impl_.reset();
 }
 
-SizedGlyph::SizedGlyph(SizedFont* sizedFont)
-    : Object()
+SizedGlyph::SizedGlyph(CreateKey key, PrivateKey, SizedFont* sizedFont)
+    : Object(key)
     , impl_() {
 
     appendObjectToParent_(sizedFont);

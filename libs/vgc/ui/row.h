@@ -47,7 +47,7 @@ protected:
     /// This is an implementation details. Please use
     /// Row::create() instead.
     ///
-    Row();
+    Row(CreateKey);
 
 public:
     /// Creates a Row.

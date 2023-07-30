@@ -155,7 +155,7 @@ protected:
     /// DocumentPtr document = Document::create();
     /// ```
     ///
-    Document();
+    Document(CreateKey);
 
 public:
     /// Creates a new document with no root element.

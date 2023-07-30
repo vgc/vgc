@@ -36,8 +36,8 @@ VGC_DEFINE_ENUM(
     (VerticalSplit, "VerticalSplit"),
     (Tabs, "Tabs"))
 
-PanelArea::PanelArea(PanelAreaType type)
-    : Widget()
+PanelArea::PanelArea(CreateKey key, PanelAreaType type)
+    : Widget(key)
     , type_(type) {
 
     addStyleClass(strings::PanelArea);
@@ -45,7 +45,7 @@ PanelArea::PanelArea(PanelAreaType type)
 }
 
 PanelAreaPtr PanelArea::create(PanelAreaType type) {
-    return PanelAreaPtr(new PanelArea(type));
+    return core::createObject<PanelArea>(type);
 }
 
 void PanelArea::setType(PanelAreaType newType) {

@@ -20,14 +20,14 @@
 
 namespace vgc::ui {
 
-TabBar::TabBar()
-    : Label("Untitled Tab") {
+TabBar::TabBar(CreateKey key)
+    : Label(key, "Untitled Tab") {
 
     addStyleClass(strings::TabBar);
 }
 
 TabBarPtr TabBar::create() {
-    return TabBarPtr(new TabBar());
+    return core::createObject<TabBar>();
 }
 
 } // namespace vgc::ui

@@ -112,7 +112,7 @@ protected:
     /// This is an implementation details. Please use
     /// TransformBox::create() instead.
     ///
-    TransformBox();
+    TransformBox(CreateKey);
 
 public:
     /// Creates a TransformBox.

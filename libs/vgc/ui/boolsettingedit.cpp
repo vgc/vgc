@@ -20,9 +20,9 @@
 
 namespace vgc::ui {
 
-BoolSettingEdit::BoolSettingEdit(BoolSettingPtr setting)
+BoolSettingEdit::BoolSettingEdit(CreateKey key, BoolSettingPtr setting)
 
-    : SettingEdit(setting)
+    : SettingEdit(key, setting)
     , boolSetting_(setting) {
 
     addStyleClass(strings::BoolSettingEdit);
@@ -36,7 +36,7 @@ BoolSettingEdit::BoolSettingEdit(BoolSettingPtr setting)
 
 BoolSettingEditPtr BoolSettingEdit::create(BoolSettingPtr setting) {
 
-    return BoolSettingEditPtr(new BoolSettingEdit(setting));
+    return core::createObject<BoolSettingEdit>(setting);
 }
 
 void BoolSettingEdit::onToggleToggled_(bool state) {

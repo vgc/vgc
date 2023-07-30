@@ -20,15 +20,15 @@
 
 namespace vgc::ui {
 
-Panel::Panel(std::string_view title)
-    : Widget()
+Panel::Panel(CreateKey key, std::string_view title)
+    : Widget(key)
     , title_(title) {
 
     addStyleClass(strings::Panel);
 }
 
 PanelPtr Panel::create(std::string_view title) {
-    return PanelPtr(new Panel(title));
+    return core::createObject<Panel>(title);
 }
 
 void Panel::setTitle(std::string_view title) {

@@ -56,7 +56,7 @@ class VGC_UI_API Window : public core::Object, public QWindow {
 protected:
     /// Constructs a `Window` containing the given `Widget`.
     ///
-    Window(const WidgetPtr& widget);
+    Window(CreateKey, const WidgetPtr& widget);
 
     /// Destructs the `Window`.
     ///

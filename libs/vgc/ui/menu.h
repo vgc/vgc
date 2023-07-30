@@ -93,7 +93,7 @@ protected:
     /// This is an implementation details. Please use
     /// Menu::create(title) instead.
     ///
-    Menu(std::string_view title);
+    Menu(CreateKey, std::string_view title);
 
 public:
     /// Creates a `Menu`.

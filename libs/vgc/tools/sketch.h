@@ -42,7 +42,7 @@ protected:
     /// This is an implementation details.
     /// Please use `SketchTool::create()` instead.
     ///
-    Sketch();
+    Sketch(CreateKey);
 
 public:
     /// Creates a `SketchTool`.

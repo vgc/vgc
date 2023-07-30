@@ -34,7 +34,7 @@ private:
     VGC_OBJECT(Panel, Widget)
 
 protected:
-    Panel(std::string_view title);
+    Panel(CreateKey, std::string_view title);
 
 public:
     /// Creates a `Panel`.

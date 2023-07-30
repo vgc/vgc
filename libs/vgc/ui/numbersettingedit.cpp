@@ -20,9 +20,9 @@
 
 namespace vgc::ui {
 
-NumberSettingEdit::NumberSettingEdit(NumberSettingPtr setting)
+NumberSettingEdit::NumberSettingEdit(CreateKey key, NumberSettingPtr setting)
 
-    : SettingEdit(setting)
+    : SettingEdit(key, setting)
     , numberSetting_(setting) {
 
     addStyleClass(strings::NumberSettingEdit);
@@ -40,7 +40,7 @@ NumberSettingEdit::NumberSettingEdit(NumberSettingPtr setting)
 
 NumberSettingEditPtr NumberSettingEdit::create(NumberSettingPtr setting) {
 
-    return NumberSettingEditPtr(new NumberSettingEdit(setting));
+    return core::createObject<NumberSettingEdit>(setting);
 }
 
 void NumberSettingEdit::onNumberEditValueChanged_(double value) {

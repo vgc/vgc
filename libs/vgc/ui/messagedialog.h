@@ -36,7 +36,7 @@ protected:
     /// This is an implementation details. Please use
     /// MessageDialog::create() instead.
     ///
-    MessageDialog();
+    MessageDialog(CreateKey);
 
 public:
     /// Creates a `MessageDialog`.

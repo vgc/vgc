@@ -70,7 +70,10 @@ private:
     VGC_PRIVATIZE_OBJECT_TREE_MUTATORS
 
     friend class RichText;
-    RichTextSpan(RichTextSpan* parent = nullptr);
+
+    struct PrivateKey {};
+    RichTextSpan(CreateKey, PrivateKey, RichTextSpan* parent = nullptr);
+
     static RichTextSpanPtr createRoot();
     RichTextSpan* createChild();
 
@@ -164,8 +167,9 @@ private:
 class VGC_GRAPHICS_API RichText : public RichTextSpan {
 private:
     VGC_OBJECT(RichText, RichTextSpan)
-    RichText();
-    RichText(std::string_view text);
+
+    RichText(CreateKey);
+    RichText(CreateKey, std::string_view text);
 
 public:
     static RichTextPtr create();

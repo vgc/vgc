@@ -37,8 +37,8 @@ core::StringId front("front");
 
 } // namespace
 
-Toggle::Toggle()
-    : Widget() {
+Toggle::Toggle(CreateKey key)
+    : Widget(key) {
 
     back_ = createChild<Widget>();
     front_ = createChild<Widget>();
@@ -50,7 +50,7 @@ Toggle::Toggle()
 }
 
 TogglePtr Toggle::create() {
-    return TogglePtr(new Toggle());
+    return core::createObject<Toggle>();
 }
 
 void Toggle::setState(bool state) {

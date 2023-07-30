@@ -36,8 +36,8 @@
 
 namespace vgc::ui {
 
-Widget::Widget()
-    : StylableObject()
+Widget::Widget(CreateKey key)
+    : StylableObject(key)
     , children_(WidgetList::create(this))
     , actions_(ActionList::create(this)) {
 
@@ -75,7 +75,7 @@ void Widget::onDestroyed() {
 }
 
 WidgetPtr Widget::create() {
-    return WidgetPtr(new Widget());
+    return core::createObject<Widget>();
 }
 
 namespace {

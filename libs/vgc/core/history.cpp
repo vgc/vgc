@@ -29,6 +29,17 @@ UndoGroupIndex genUndoGroupIndex() {
     return ++lastId;
 }
 
+UndoGroup::UndoGroup(CreateKey key, StringId name, History* history)
+    : Object(key)
+    , name_(name)
+    , history_(history)
+    , index_(genUndoGroupIndex()) {
+}
+
+UndoGroupPtr UndoGroup::create(StringId name, History* history) {
+    return createObject<UndoGroup>(name, history);
+}
+
 bool UndoGroup::close(bool tryAmendParent) {
     return history_->closeUndoGroup_(this, tryAmendParent);
 }
@@ -63,13 +74,19 @@ void UndoGroup::redo_() {
     redone().emit(this);
 }
 
-History::History(core::StringId entrypointName)
-    : numNodes_(0) // root doesn't count
+History::History(CreateKey key, StringId entrypointName)
+    : Object(key)
+    , numNodes_(0) // root doesn't count
 {
-    UndoGroup* ptr = new UndoGroup(entrypointName, this);
-    this->appendChildObject_(ptr);
-    root_ = ptr;
-    head_ = ptr;
+    UndoGroupPtr undoGroup = createObject<UndoGroup>(entrypointName, this);
+    UndoGroup* undoGroup_ = undoGroup.get();
+    this->appendChildObject_(undoGroup_);
+    root_ = undoGroup_;
+    head_ = undoGroup_;
+}
+
+HistoryPtr History::create(StringId entrypointName) {
+    return createObject<History>(entrypointName);
 }
 
 void History::setMaxLevels(Int n) {

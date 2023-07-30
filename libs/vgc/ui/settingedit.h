@@ -37,7 +37,7 @@ private:
     VGC_OBJECT(SettingEdit, Flex)
 
 protected:
-    SettingEdit(SettingPtr setting);
+    SettingEdit(CreateKey, SettingPtr setting);
 
 public:
     /// Creates a `SettingEdit`.

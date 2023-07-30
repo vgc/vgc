@@ -40,7 +40,7 @@ protected:
     /// This is an implementation details. Please use
     /// LineEdit::create(text) instead.
     ///
-    LineEdit(std::string_view text);
+    LineEdit(CreateKey, std::string_view text);
 
 public:
     /// Creates a LineEdit.

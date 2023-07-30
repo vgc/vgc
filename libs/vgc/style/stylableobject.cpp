@@ -21,7 +21,8 @@
 
 namespace vgc::style {
 
-StylableObject::StylableObject() {
+StylableObject::StylableObject(CreateKey key)
+    : Object(key) {
 
     // Create the spec table. Note that we do not populate it here since
     // calling the populateStyleSpecTableVirtual() would be pointless: it would
@@ -32,7 +33,7 @@ StylableObject::StylableObject() {
 }
 
 StylableObjectPtr StylableObject::create() {
-    return StylableObjectPtr(new StylableObject);
+    return core::createObject<StylableObject>();
 }
 
 void StylableObject::setStyleSheet(SheetPtr styleSheet) {

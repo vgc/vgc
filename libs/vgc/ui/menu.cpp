@@ -66,8 +66,8 @@ MenuItem::MenuItem(Action* action, MenuButton* button, Menu* menu) noexcept
     , menu_(menu) {
 }
 
-Menu::Menu(std::string_view title)
-    : Flex(FlexDirection::Column, FlexWrap::NoWrap) {
+Menu::Menu(CreateKey key, std::string_view title)
+    : Flex(key, FlexDirection::Column, FlexWrap::NoWrap) {
 
     addStyleClass(strings::Menu);
     action_ = createTriggerAction(commands::openMenu, title);
@@ -76,11 +76,11 @@ Menu::Menu(std::string_view title)
 }
 
 MenuPtr Menu::create() {
-    return MenuPtr(new Menu(""));
+    return core::createObject<Menu>("");
 }
 
 MenuPtr Menu::create(std::string_view text) {
-    return MenuPtr(new Menu(text));
+    return core::createObject<Menu>(text);
 }
 
 void Menu::setTitle(std::string_view title) {

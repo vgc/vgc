@@ -87,7 +87,7 @@ private:
     VGC_OBJECT(Settings, core::Object)
 
 protected:
-    Settings(std::string_view filePath);
+    Settings(CreateKey, std::string_view filePath);
 
 public:
     /// Creates a `Settings` object.

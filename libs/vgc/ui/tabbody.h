@@ -31,7 +31,7 @@ private:
     VGC_OBJECT(TabBody, Widget)
 
 protected:
-    TabBody();
+    TabBody(CreateKey);
 
 public:
     /// Creates a `TabBody`.

@@ -234,7 +234,7 @@ protected:
     /// FontLibraryPtr fontLibrary = FontLibrary::create();
     /// ```
     ///
-    FontLibrary();
+    FontLibrary(CreateKey);
 
 public:
     /// Creates an empty FontLibrary, that is, a font library which doesn't
@@ -281,7 +281,7 @@ public:
 
     /// Sets the default font.
     ///
-    /// \sa defaultFont().
+    /// \sa `defaultFont()`.
     ///
     void setDefaultFont(Font* font);
 
@@ -309,22 +309,17 @@ VGC_GRAPHICS_API FontLibrary* fontLibrary();
 /// information (e.g, '12pt @ 72 dpi') as well as hinting parameters and other
 /// options which affect rendering.
 ///
-/// \sa FontLibrary, SizedFont
+/// \sa `FontLibrary`, `SizedFont`
 ///
 class VGC_GRAPHICS_API Font : public core::Object {
 private:
     VGC_OBJECT(Font, core::Object)
     VGC_PRIVATIZE_OBJECT_TREE_MUTATORS
 
-protected:
-    /// Creates a new Font. This constructor is an implementation
-    /// detail. In order to create a Font, please use the following:
-    ///
-    /// ```cpp
-    /// Font* font = fontLibrary->addFont(filename);
-    /// ```
-    ///
-    Font(FontLibrary* library);
+    friend FontLibrary;
+    struct PrivateKey {};
+
+    Font(CreateKey, PrivateKey, FontLibrary* library);
 
 public:
     /// Returns the library this font belongs to.
@@ -390,21 +385,24 @@ private:
 /// \class vgc::graphics::Glyph
 /// \brief A given glyph of a given Font.
 ///
+/// This class represents a given glyph of a given Font.
+///
+/// Glyphs can be obtained via the following functions:
+///
+/// ```cpp
+/// Glyph* glyph1 = font->getGlyphFromCodePoint(codePoint);
+/// Glyph* glyph2 = font->getGlyphFromIndex(glyphIndex);
+/// ```
+///
 class VGC_GRAPHICS_API Glyph : public core::Object {
 private:
     VGC_OBJECT(Glyph, core::Object)
     VGC_PRIVATIZE_OBJECT_TREE_MUTATORS
 
-protected:
-    /// Creates a new Glyph. This constructor is an implementation detail.
-    /// In order to get a glyph in a given font, please use one of the following:
-    ///
-    /// ```cpp
-    /// Glyph* glyph1 = font->getGlyphFromCodePoint(codePoint);
-    /// Glyph* glyph2 = font->getGlyphFromIndex(glyphIndex);
-    /// ```
-    ///
-    Glyph(Font* font, Int index, const std::string& name);
+    friend class Font;
+    struct PrivateKey {};
+
+    Glyph(CreateKey, PrivateKey, Font* font, Int index, const std::string& name);
 
 public:
     /// Returns the font this glyph belongs to.
@@ -428,7 +426,6 @@ public:
 private:
     Int index_;
     std::string name_;
-    friend class Font;
 };
 
 /// \class vgc::graphics::SizedFont
@@ -436,6 +433,12 @@ private:
 ///
 /// A `SizedFont` represents a given typeface, in a given style, in a given size.
 /// For example, "Source Sans Pro, bold, 12pt @ 72dpi".
+///
+/// In order to obtain a SizedFont, you can use the following:
+///
+/// ```cpp
+/// SizedFont* sizedFont = font->getSizedFont(params);
+/// ```
 ///
 /// Note that a given typeface, even with a given style (example:
 /// "Roboto-Bold.ttf"), may still use different glyphs based on the
@@ -452,15 +455,10 @@ private:
     VGC_OBJECT(SizedFont, core::Object)
     VGC_PRIVATIZE_OBJECT_TREE_MUTATORS
 
-protected:
-    /// Creates a new SizedFont. This constructor is an implementation
-    /// detail. In order to create a SizedFont, please use the following:
-    ///
-    /// ```cpp
-    /// SizedFont* sizedFont = font->getSizedFont(params);
-    /// ```
-    ///
-    SizedFont(Font* font);
+    friend class Font;
+    struct PrivateKey {};
+
+    SizedFont(CreateKey, PrivateKey, Font* font);
 
 public:
     /// Returns the `Font` that this `SizedFont` is a sized version of.
@@ -526,7 +524,6 @@ protected:
 private:
     detail::SizedFontPimpl impl_;
     friend class FontLibrary;
-    friend class Font;
     friend class detail::FontLibraryImpl;
     friend class detail::ShapedTextImpl;
 };
@@ -534,21 +531,22 @@ private:
 /// \class vgc::graphics::SizedGlyph
 /// \brief A given glyph of a given SizedFont.
 ///
+/// In order to get a glyph in a given font, please use one of the following:
+///
+/// ```cpp
+/// SizedGlyph* sizedGlyph1 = sizedFont->getSizedGlyphFromCodePoint(codePoint);
+/// SizedGlyph* sizedGlyph2 = sizedFont->getSizedGlyphFromIndex(glyphIndex);
+/// ```
+///
 class VGC_GRAPHICS_API SizedGlyph : public core::Object {
 private:
     VGC_OBJECT(SizedGlyph, core::Object)
     VGC_PRIVATIZE_OBJECT_TREE_MUTATORS
 
-protected:
-    /// Creates a new SizedGlyph. This constructor is an implementation detail.
-    /// In order to get a glyph in a given font, please use one of the following:
-    ///
-    /// ```cpp
-    /// SizedGlyph* sizedGlyph1 = sizedFont->getSizedGlyphFromCodePoint(codePoint);
-    /// SizedGlyph* sizedGlyph2 = sizedFont->getSizedGlyphFromIndex(glyphIndex);
-    /// ```
-    ///
-    SizedGlyph(SizedFont* font);
+    friend class SizedFont;
+    struct PrivateKey {};
+
+    SizedGlyph(CreateKey, PrivateKey, SizedFont* font);
 
 public:
     /// Returns the `SizedFont` that this `SizedGlyph` belongs to.
@@ -622,7 +620,6 @@ protected:
 private:
     detail::SizedGlyphPimpl impl_;
     friend class FontLibrary;
-    friend class SizedFont;
     friend class detail::FontLibraryImpl;
     friend class detail::SizedFontImpl;
 };

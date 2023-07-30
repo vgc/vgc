@@ -44,7 +44,7 @@ protected:
     /// This is an implementation details. Please use
     /// OverlayArea::create() instead.
     ///
-    OverlayArea();
+    OverlayArea(CreateKey);
 
 public:
     /// Creates an overlay area.

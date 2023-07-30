@@ -248,7 +248,7 @@ protected:
     /// This is an implementation details. Please use
     /// Grid::create() instead.
     ///
-    Grid();
+    Grid(CreateKey);
 
 public:
     /// Creates a Row.

@@ -18,12 +18,12 @@
 
 namespace vgc::ui {
 
-Row::Row()
-    : Flex(FlexDirection::Row, FlexWrap::NoWrap) {
+Row::Row(CreateKey key)
+    : Flex(key, FlexDirection::Row, FlexWrap::NoWrap) {
 }
 
 RowPtr Row::create() {
-    return RowPtr(new Row());
+    return core::createObject<Row>();
 }
 
 } // namespace vgc::ui

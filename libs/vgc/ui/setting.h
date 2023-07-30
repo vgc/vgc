@@ -34,7 +34,7 @@ private:
     VGC_OBJECT(Setting, core::Object)
 
 protected:
-    Setting(Settings* settings, std::string_view key, std::string_view label);
+    Setting(CreateKey, Settings* settings, std::string_view key, std::string_view label);
 
 public:
     /// Creates a `Setting`.

@@ -34,8 +34,8 @@ void destroyNode(Node* node) {
 
 } // namespace detail
 
-Node::Node(Document* document, NodeType nodeType)
-    : Object()
+Node::Node(CreateKey key, ProtectedKey, Document* document, NodeType nodeType)
+    : Object(key)
     , document_(document)
     , nodeType_(nodeType) {
 }

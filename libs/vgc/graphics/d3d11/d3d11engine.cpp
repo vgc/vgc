@@ -809,8 +809,8 @@ D3D11_CULL_MODE cullModeToD3DCullMode(CullMode mode) {
 
 // ENGINE FUNCTIONS
 
-D3d11Engine::D3d11Engine(const EngineCreateInfo& createInfo)
-    : Engine(createInfo) {
+D3d11Engine::D3d11Engine(CreateKey key, const EngineCreateInfo& createInfo)
+    : Engine(key, createInfo) {
 
     // XXX add success checks (S_OK)
 
@@ -856,7 +856,7 @@ void D3d11Engine::onDestroyed() {
 
 /* static */
 D3d11EnginePtr D3d11Engine::create(const EngineCreateInfo& createInfo) {
-    D3d11EnginePtr engine(new D3d11Engine(createInfo));
+    D3d11EnginePtr engine = core::createObject<D3d11Engine>(createInfo);
     engine->init_();
     return engine;
 }

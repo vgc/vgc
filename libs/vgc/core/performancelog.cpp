@@ -20,8 +20,12 @@
 
 namespace vgc::core {
 
-PerformanceLog::PerformanceLog(PerformanceLog* parent, const std::string& name)
-    : Object()
+PerformanceLog::PerformanceLog(
+    CreateKey key,
+    PerformanceLog* parent,
+    const std::string& name)
+
+    : Object(key)
     , params_(nullptr)
     , name_(name)
     , time_(0.0) {
@@ -33,11 +37,11 @@ PerformanceLog::PerformanceLog(PerformanceLog* parent, const std::string& name)
 
 /* static */
 PerformanceLogPtr PerformanceLog::create(const std::string& name) {
-    return PerformanceLogPtr(new PerformanceLog(nullptr, name));
+    return createObject<PerformanceLog>(nullptr, name);
 }
 
 PerformanceLog* PerformanceLog::createChild(const std::string& name) {
-    return new PerformanceLog(this, name);
+    return createObject<PerformanceLog>(this, name).get();
 }
 
 PerformanceLogParams* PerformanceLog::params() const {
@@ -64,13 +68,13 @@ double PerformanceLog::lastTime() const {
     return time_;
 }
 
-PerformanceLogParams::PerformanceLogParams()
-    : Object() {
+PerformanceLogParams::PerformanceLogParams(CreateKey key)
+    : Object(key) {
 }
 
 /* static */
 PerformanceLogParamsPtr PerformanceLogParams::create() {
-    return PerformanceLogParamsPtr(new PerformanceLogParams());
+    return createObject<PerformanceLogParams>();
 }
 
 PerformanceLogTask::PerformanceLogTask(const std::string& name)

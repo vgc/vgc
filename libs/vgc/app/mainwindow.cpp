@@ -23,8 +23,8 @@
 
 namespace vgc::app {
 
-MainWindow::MainWindow(std::string_view title)
-    : ui::Window(MainWidget::create()) {
+MainWindow::MainWindow(CreateKey key, std::string_view title)
+    : ui::Window(key, MainWidget::create()) {
 
     setTitle(ui::toQt(title));
     resize(QSize(1100, 800));
@@ -32,7 +32,7 @@ MainWindow::MainWindow(std::string_view title)
 }
 
 MainWindowPtr MainWindow::create(std::string_view title) {
-    return MainWindowPtr(new MainWindow(title));
+    return core::createObject<MainWindow>(title);
 }
 
 } // namespace vgc::app

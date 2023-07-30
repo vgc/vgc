@@ -48,7 +48,7 @@ protected:
     /// This is an implementation details. Please use
     /// Column::create() instead.
     ///
-    Column();
+    Column(CreateKey);
 
 public:
     /// Creates a Column.

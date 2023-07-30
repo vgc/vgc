@@ -807,8 +807,12 @@ GLenum minMipFilterModesToGLenum(FilterMode minMode, FilterMode mipMode) {
 
 // ENGINE FUNCTIONS
 
-QglEngine::QglEngine(const EngineCreateInfo& createInfo, QOpenGLContext* ctx)
-    : Engine(createInfo)
+QglEngine::QglEngine(
+    CreateKey key,
+    const EngineCreateInfo& createInfo,
+    QOpenGLContext* ctx)
+
+    : Engine(key, createInfo)
     , ctx_(ctx)
     , isExternalCtx_(ctx ? true : false) {
 
@@ -862,7 +866,7 @@ void QglEngine::onDestroyed() {
 
 /* static */
 QglEnginePtr QglEngine::create(const EngineCreateInfo& createInfo) {
-    QglEnginePtr engine(new QglEngine(createInfo, nullptr));
+    QglEnginePtr engine = core::createObject<QglEngine>(createInfo, nullptr);
     engine->init_();
     return engine;
 }
@@ -872,7 +876,7 @@ QglEnginePtr
 QglEngine::create(const EngineCreateInfo& createInfo, QOpenGLContext* externalCtx) {
     // Multithreading not supported atm, Qt does thread affinity
     VGC_CORE_ASSERT(!createInfo.isMultithreadingEnabled());
-    QglEnginePtr engine(new QglEngine(createInfo, externalCtx));
+    QglEnginePtr engine = core::createObject<QglEngine>(createInfo, externalCtx);
     engine->init_();
     return engine;
 }

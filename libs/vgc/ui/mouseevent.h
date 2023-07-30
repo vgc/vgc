@@ -132,7 +132,11 @@ protected:
     /// This is an implementation details. Please use
     /// MouseEvent::create() instead.
     ///
-    MouseEvent(double timestamp, ModifierKeys modifiers, const MouseEventData& data);
+    MouseEvent(
+        CreateKey,
+        double timestamp,
+        ModifierKeys modifiers,
+        const MouseEventData& data);
 
 public:
     /// Creates a MouseEvent.
@@ -311,6 +315,7 @@ protected:
     /// to use the public method `PropagatedMouseEvent::create()` instead.
     ///
     PropagatedMouseEvent(
+        CreateKey,
         double timestamp,
         ModifierKeys modifiers,
         const MouseEventData& data);
@@ -358,7 +363,11 @@ protected:
     /// Protected constructor for `MousePressEvent`. You typically want
     /// to use the public method `MousePressEvent::create()` instead.
     ///
-    MousePressEvent(double timestamp, ModifierKeys modifiers, const MouseEventData& data);
+    MousePressEvent(
+        CreateKey,
+        double timestamp,
+        ModifierKeys modifiers,
+        const MouseEventData& data);
 
 public:
     /// Creates a `MousePressEvent`.
@@ -382,7 +391,11 @@ protected:
     /// Protected constructor for `MouseMoveEvent`. You typically want
     /// to use the public method `MouseMoveEvent::create()` instead.
     ///
-    MouseMoveEvent(double timestamp, ModifierKeys modifiers, const MouseEventData& data);
+    MouseMoveEvent(
+        CreateKey,
+        double timestamp,
+        ModifierKeys modifiers,
+        const MouseEventData& data);
 
 public:
     /// Creates a `MouseMoveEvent`.
@@ -407,6 +420,7 @@ protected:
     /// to use the public method `MouseReleaseEvent::create()` instead.
     ///
     MouseReleaseEvent(
+        CreateKey,
         double timestamp,
         ModifierKeys modifiers,
         const MouseEventData& data);
@@ -433,7 +447,11 @@ protected:
     /// Protected constructor for `MouseHoverEvent`. You typically want
     /// to use the public method `MouseHoverEvent::create()` instead.
     ///
-    MouseHoverEvent(double timestamp, ModifierKeys modifiers, const MouseEventData& data);
+    MouseHoverEvent(
+        CreateKey,
+        double timestamp,
+        ModifierKeys modifiers,
+        const MouseEventData& data);
 
 public:
     /// Creates a `MouseReleaseEvent`.
@@ -459,6 +477,7 @@ protected:
     /// to use the public method `MouseActionEvent::create()` instead.
     ///
     MouseActionEvent(
+        CreateKey,
         double timestamp,
         ModifierKeys modifiers,
         const MouseEventData& data,

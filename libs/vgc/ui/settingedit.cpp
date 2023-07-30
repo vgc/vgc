@@ -20,8 +20,8 @@
 
 namespace vgc::ui {
 
-SettingEdit::SettingEdit(SettingPtr setting)
-    : Flex(FlexDirection::Row, FlexWrap::NoWrap)
+SettingEdit::SettingEdit(CreateKey key, SettingPtr setting)
+    : Flex(key, FlexDirection::Row, FlexWrap::NoWrap)
     , setting_(setting) {
 
     addStyleClass(strings::SettingEdit);
@@ -29,7 +29,7 @@ SettingEdit::SettingEdit(SettingPtr setting)
 }
 
 SettingEditPtr SettingEdit::create(SettingPtr setting) {
-    return SettingEditPtr(new SettingEdit(setting));
+    return core::createObject<SettingEdit>(setting);
 }
 
 } // namespace vgc::ui

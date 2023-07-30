@@ -250,7 +250,7 @@ private:
     VGC_OBJECT(ShortcutMap, core::Object)
 
 protected:
-    ShortcutMap(const ShortcutMap* inheritedMap);
+    ShortcutMap(CreateKey, const ShortcutMap* inheritedMap);
 
 public:
     /// Creates a `ShortcutMap` object. If `inheritedMap` is not null,

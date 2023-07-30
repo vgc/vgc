@@ -25,12 +25,12 @@
 
 namespace vgc::tools {
 
-PaintBucket::PaintBucket()
-    : CanvasTool() {
+PaintBucket::PaintBucket(CreateKey key)
+    : CanvasTool(key) {
 }
 
 PaintBucketPtr PaintBucket::create() {
-    return PaintBucketPtr(new PaintBucket());
+    return core::createObject<PaintBucket>();
 }
 
 void PaintBucket::setColor(const core::Color& color) {

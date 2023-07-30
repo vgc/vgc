@@ -312,7 +312,7 @@ public:
     }
 
 protected:
-    StylableObject();
+    StylableObject(CreateKey);
 
     /// Adds a `StylableObject` child to this `StylableObject`.
     ///

@@ -39,7 +39,7 @@ protected:
     /// This is an implementation details. Please use
     /// CanvasTool::create() instead.
     ///
-    CanvasTool();
+    CanvasTool(CreateKey);
 
 public:
     /// Creates a CanvasTool.

@@ -125,7 +125,7 @@ private:
     VGC_OBJECT(PanelArea, Widget)
 
 protected:
-    PanelArea(PanelAreaType type);
+    PanelArea(CreateKey, PanelAreaType type);
 
 public:
     /// Creates a `PanelArea`.

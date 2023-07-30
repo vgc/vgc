@@ -43,8 +43,8 @@ private:
     VGC_PRIVATIZE_OBJECT_TREE_MUTATORS
 
 protected:
-    explicit Action(core::StringId commandId);
-    Action(core::StringId commandId, std::string_view text);
+    Action(CreateKey, core::StringId commandId);
+    Action(CreateKey, core::StringId commandId, std::string_view text);
 
 public:
     /// Creates an action.

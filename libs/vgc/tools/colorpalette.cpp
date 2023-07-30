@@ -315,13 +315,13 @@ void ScreenColorPickerButton::stopPicking_() {
 
 // TODO: This should be action implemented as an action
 //
-ScreenColorPickerButton::ScreenColorPickerButton()
-    : Button(nullptr, ui::FlexDirection::Row) {
+ScreenColorPickerButton::ScreenColorPickerButton(CreateKey key)
+    : Button(key, nullptr, ui::FlexDirection::Row) {
 }
 
 ScreenColorPickerButtonPtr ScreenColorPickerButton::create() {
     ui::Action* action = nullptr;
-    ScreenColorPickerButtonPtr button = new ScreenColorPickerButton();
+    ScreenColorPickerButtonPtr button = core::createObject<ScreenColorPickerButton>();
     action = button->createTriggerAction(commands::pickScreenColor);
     button->setAction(action);
     action->triggered().connect(button->startPickingSlot_());
@@ -478,8 +478,8 @@ ui::Button* createCheckableButton_(
 
 } // namespace
 
-ColorPalette::ColorPalette()
-    : Column() {
+ColorPalette::ColorPalette(CreateKey key)
+    : Column(key) {
 
     // Color preview
     colorPreview_ = createChild<ColorPreview>();
@@ -558,7 +558,7 @@ ColorPalette::ColorPalette()
 }
 
 ColorPalettePtr ColorPalette::create() {
-    return ColorPalettePtr(new ColorPalette());
+    return core::createObject<ColorPalette>();
 }
 
 void ColorPalette::setSelectedColor(const core::Color& color) {
@@ -800,8 +800,8 @@ void ColorPalette::setSelectedColorNoCheckNoEmit_(const core::Color& color) {
     colorListView_->setSelectedColor(selectedColor_);
 }
 
-ColorPaletteSelector::ColorPaletteSelector()
-    : Widget()
+ColorPaletteSelector::ColorPaletteSelector(CreateKey key)
+    : Widget(key)
     , selectedColor_(core::colors::black)
     , oldWidth_(0)
     , oldHeight_(0)
@@ -824,7 +824,7 @@ ColorPaletteSelector::ColorPaletteSelector()
 
 /* static */
 ColorPaletteSelectorPtr ColorPaletteSelector::create() {
-    return ColorPaletteSelectorPtr(new ColorPaletteSelector());
+    return core::createObject<ColorPaletteSelector>();
 }
 
 namespace {
@@ -2425,12 +2425,14 @@ bool ColorPaletteSelector::selectContinuousColor_(const geometry::Vec2f& p) {
     return true;
 }
 
-ColorPreview::ColorPreview() {
+ColorPreview::ColorPreview(CreateKey key)
+    : ui::Widget(key) {
+
     addStyleClass(strings::ColorPreview);
 }
 
 ColorPreviewPtr ColorPreview::create() {
-    return ColorPreviewPtr(new ColorPreview());
+    return core::createObject<ColorPreview>();
 }
 
 void ColorPreview::setColor(const core::Color& color) {
@@ -2476,8 +2478,9 @@ void ColorPreview::onPaintDestroy(graphics::Engine* engine) {
     triangles_.reset();
 }
 
-ColorListView::ColorListView()
-    : item_(style::StylableObject::create()) {
+ColorListView::ColorListView(CreateKey key)
+    : ui::Widget(key)
+    , item_(style::StylableObject::create()) {
 
     appendChildStylableObject(item_.get());
     addStyleClass(strings::ColorListView);
@@ -2485,7 +2488,7 @@ ColorListView::ColorListView()
 }
 
 ColorListViewPtr ColorListView::create() {
-    return ColorListViewPtr(new ColorListView());
+    return core::createObject<ColorListView>();
 }
 
 void ColorListView::setSelectedColorIndex(Int index) {

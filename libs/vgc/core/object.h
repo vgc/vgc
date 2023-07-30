@@ -33,6 +33,75 @@ namespace vgc::core {
 class Object;
 using ConnectionHandle = detail::ConnectionHandle;
 
+template<typename T>
+class ObjPtr;
+
+/// \enum vgc::core::ObjectStage
+/// \brief The different stages of construction / destruction of an `Object`.
+///
+/// This enum describes the ordered sequence of stages an `Object` goes through
+/// during its lifetime.
+///
+/// Note that the integer value of `Object::stage()` is guaranteed to be
+/// increasing for a given object, so in order to test whether an object is at
+/// least at a given stage, you can use expressions such as:
+///
+/// ```cpp
+/// if (stage() >= ObjectStage::ChildrenDestroyed) {
+///     ...
+/// }
+/// ```
+///
+/// Or equivalently, you can simply use
+/// `hasReachedStage(ObjectStage::ChildrenDestroyed)`.
+///
+/// # Description of the different stages
+///
+/// Initially, an `Object` is `Constructing`, which is when we are still in the
+/// constructor of the object.
+///
+/// At the end of the constructor, the stage becomes `Constructed`. This change
+/// of stage is performed by the function `createObject<T>`, which is called
+/// under the hood by any creation of new `Object`.
+///
+/// When its `destroyObject_()` method is called (or equivalently, if it is a
+/// root object, when its refCount reaches zero), then the object is
+/// immediately marked as `AboutToBeDestroyed`, and the signal
+/// `aboutToBeDestroyed()` is emitted.
+///
+/// Then, its child objects are recursively destroyed, each of them going
+/// through all the stages of destruction.
+///
+/// Once all its child objects are `Destroyed`, the object is
+/// marked as `ChildrenDestroyed`.
+///
+/// Then, all incoming signals are disconnected.
+///
+/// Then, the `onDestroyed()` virtual method is called.
+///
+/// Finally, all outgoing signals are disconnected, and the object is marked as
+/// `Destroyed`.
+///
+/// # Signals and slots
+///
+/// Note that up to the `ChildrenDestroyed` stage, all the signal-slot
+/// connections of an object are kept intact. In particular, this means that
+/// during its own destruction, an object can still receive the
+/// `aboutToBeDestroyed()` signals from its children.
+///
+/// Therefore, if you implement an object (A) that listens to the
+/// `aboutToBeDestroyed()` signal of one of its children (B), make sure
+/// to take into account the fact that the signal can be received while
+/// (A) is already partially destructed.
+///
+enum class ObjectStage : UInt8 {
+    Constructing = 0,
+    Constructed,
+    AboutToBeDestroyed,
+    ChildrenDestroyed,
+    Destroyed
+};
+
 namespace detail {
 
 // This class is befriended by Object to allow ObjPtr<T> to access and modify
@@ -60,6 +129,17 @@ public:
     // construct an ObjPtr<T>.
     //
     static void decref(const void* obj, Int64 k = 1);
+
+    // Creates an object.
+    //
+    template<typename T, typename... Args>
+    static ObjPtr<T> createObject(Args&&... args) {
+        typename T::CreateKey key = {};
+        T* obj = new T(key, std::forward<Args>(args)...); // refCount = 1
+        obj->refCount_ -= 1;                              // decref without destroying
+        obj->stage_ = ObjectStage::Constructed;           // set as Constructed
+        return ObjPtr<T>(obj);                            // re-incref
+    }
 };
 
 } // namespace detail
@@ -368,25 +448,27 @@ ObjPtr<T> const_pointer_cast(ObjPtr<U>&& r) noexcept {
 public:                                                                                  \
     using ThisClass = T;                                                                 \
     using SuperClass = S;                                                                \
+                                                                                         \
     /*static_assert(std::is_base_of_v<SuperClass, ThisClass>,             */             \
     /*    "ThisClass is expected to inherit from SuperClass.");           */             \
     static_assert(                                                                       \
         ::vgc::core::isObject<SuperClass>,                                               \
-        "Superclass must inherit from Object and use VGC_OBJECT(..).");                  \
+        "Superclass must inherit from Object and use VGC_OBJECT(...).");                 \
                                                                                          \
-    static core::StringId staticClassName() {                                            \
-        static core::StringId res(#T);                                                   \
+    static ::vgc::core::StringId staticClassName() {                                     \
+        static ::vgc::core::StringId res(#T);                                            \
         return res;                                                                      \
     }                                                                                    \
                                                                                          \
-    core::StringId className() const override {                                          \
+    ::vgc::core::StringId className() const override {                                   \
         return ThisClass::staticClassName();                                             \
     }                                                                                    \
                                                                                          \
 protected:                                                                               \
     ~T() = default;                                                                      \
                                                                                          \
-private:
+private:                                                                                 \
+    friend ::vgc::core::detail::ObjPtrAccess;
 
 /// This macro ensures that unsafe base protected methods of `Object` are not
 /// accessible in subclasses. This macro should typically be added to a private
@@ -423,65 +505,16 @@ using ObjectListView = ObjListView<Object>;
 //
 using ObjectPtr = ObjPtr<Object>;
 
-/// \enum vgc::core::ObjectStage
-/// \brief The different stages of construction / destruction of an `Object`.
+/// Creates an object.
 ///
-/// This enum describes the ordered sequence of stages an `Object` goes through
-/// during its lifetime.
-///
-/// Note that the integer value of `Object::stage()` is guaranteed to be
-/// increasing for a given object, so in order to test whether an object is at
-/// least at a given stage, you can use expressions such as:
-///
-/// ```cpp
-/// if (stage() >= ObjectStage::ChildrenDestroyed) {
-///     ...
-/// }
-/// ```
-///
-/// Or equivalently, you can simply use
-/// `hasReachedStage(ObjectStage::ChildrenDestroyed)`.
-///
-/// # Description of the different stages
-///
-/// Initially, an `Object` is `Constructed`.
-///
-/// When its `destroyObject_()` method is called (or equivalently, if it is a
-/// root object, when its refCount reaches zero), then the object is
-/// immediately marked as `AboutToBeDestroyed`, and the signal
-/// `aboutToBeDestroyed()` is emitted.
-///
-/// Then, its child objects are recursively destroyed, each of them going
-/// through all the stages of destruction.
-///
-/// Once all its child objects are `Destroyed`, the object is
-/// marked as `ChildrenDestroyed`.
-///
-/// Then, all incoming signals are disconnected.
-///
-/// Then, the `onDestroyed()` virtual method is called.
-///
-/// Finally, all outgoing signals are disconnected, and the object is marked as
-/// `Destroyed`.
-///
-/// # Signals and slots
-///
-/// Note that up to the `ChildrenDestroyed` stage, all the signal-slot
-/// connections of an object are kept intact. In particular, this means that
-/// during its own destruction, an object can still receive the
-/// `aboutToBeDestroyed()` signals from its children.
-///
-/// Therefore, if you implement an object (A) that listens to the
-/// `aboutToBeDestroyed()` signal of one of its children (B), make sure
-/// to take into account the fact that the signal can be received while
-/// (A) is already partially destructed.
-///
-enum class ObjectStage : UInt8 {
-    Constructed = 0,
-    AboutToBeDestroyed,
-    ChildrenDestroyed,
-    Destroyed
-};
+template<typename T, typename... Args>
+ObjPtr<T> createObject(Args&&... args) {
+    static_assert(
+        isObject<T>,
+        "Cannot call createObject<T>(...) because T does not inherit from "
+        "vgc::core::Object.");
+    return detail::ObjPtrAccess::createObject<T>(std::forward<Args>(args)...);
+}
 
 /// \class vgc::core::Object
 /// \brief Provides a common API for object-based tree hierarchies.
@@ -647,12 +680,12 @@ private:
     Object& operator=(Object&&) = delete;
 
 public:
-    static core::StringId staticClassName() {
-        static core::StringId res("Object");
+    static StringId staticClassName() {
+        static StringId res("Object");
         return res;
     }
 
-    virtual core::StringId className() const {
+    virtual StringId className() const {
         return ThisClass::staticClassName();
     }
 
@@ -883,9 +916,17 @@ protected:
     virtual void onChildRemoved(Object* child);
 
 protected:
+    /// Enforces that objects are always created via `createObject<T>()`.
+    ///
+    class CreateKey {
+    private:
+        friend detail::ObjPtrAccess;
+        CreateKey() = default;
+    };
+
     /// Constructs an `Object`.
     ///
-    Object();
+    Object(CreateKey key);
 
     /// Calls the destructor of this `Object`. Note that you should never call
     /// this method or `delete` directly. Under normal usage, the objects
@@ -1189,9 +1230,15 @@ private:
     //     isAlive() = false
     //     refCount() = refCount_ - Int64Min
     //
-    friend class detail::ObjPtrAccess;
-    mutable Int64 refCount_ = 0;
-    ObjectStage stage_ = ObjectStage::Constructed;
+    // The refCount_ is initially set to 1 so that creating a temporary
+    // `ObjPtr` to an object (typically, to keep it alive) doesn't
+    // inadvertantly destroy it when its stage is `Constructing`. The object
+    // can be thought as of being owned by createObject<T>() during
+    // construction.
+    //
+    friend detail::ObjPtrAccess;
+    mutable Int64 refCount_ = 1;
+    ObjectStage stage_ = ObjectStage::Constructing;
 
     // Parent-child relationship
     Object* parentObject_ = nullptr;
@@ -1570,14 +1617,15 @@ private:
     VGC_PRIVATIZE_OBJECT_TREE_MUTATORS
 
 protected:
-    ObjList() {
+    ObjList(CreateKey key)
+        : Object(key) {
     }
 
 public:
     static ObjList* create(Object* parent) {
-        ObjList* res = new ObjList();
-        res->appendObjectToParent_(parent);
-        return res;
+        ObjPtr<ObjList> list = createObject<ObjList>();
+        list->appendObjectToParent_(parent);
+        return list.get();
     }
 
     T* first() {
@@ -1598,7 +1646,7 @@ public:
 
     void insert(Int i, T* child) {
         if (i < 0 || i > numChildObjects()) {
-            throw IndexError(core::format("Cannot insert child in list at index {}.", i));
+            throw IndexError(format("Cannot insert child in list at index {}.", i));
         }
         Object* nextSibling = firstChildObject();
         for (; i > 0; --i) {
@@ -1607,9 +1655,9 @@ public:
         insertChildObject_(nextSibling, child);
     }
 
-    core::ObjPtr<T> remove(T* child) {
-        core::ObjPtr<Object> removed = removeChildObject_(child);
-        core::ObjPtr<T> res(static_cast<T*>(removed.get()));
+    ObjPtr<T> remove(T* child) {
+        ObjPtr<Object> removed = removeChildObject_(child);
+        ObjPtr<T> res(static_cast<T*>(removed.get()));
         return res;
 
         // Note: if we were using std::shared_ptr, then we would have to use
@@ -1678,11 +1726,11 @@ inline Int Object::numChildObjects() const {
 ///
 #define VGC_DECLARE_OBJECT(T)                                                            \
     class T;                                                                             \
-    using T##Ptr = vgc::core::ObjPtr<T>;                                                 \
-    using T##ConstPtr = vgc::core::ObjPtr<const T>;                                      \
-    using T##List = vgc::core::ObjList<T>;                                               \
-    using T##ListIterator = vgc::core::ObjListIterator<T>;                               \
-    using T##ListView = vgc::core::ObjListView<T>
+    using T##Ptr = ::vgc::core::ObjPtr<T>;                                               \
+    using T##ConstPtr = ::vgc::core::ObjPtr<const T>;                                    \
+    using T##List = ::vgc::core::ObjList<T>;                                             \
+    using T##ListIterator = ::vgc::core::ObjListIterator<T>;                             \
+    using T##ListView = ::vgc::core::ObjListView<T>;
 
 namespace vgc::core {
 
@@ -1699,7 +1747,9 @@ class VGC_CORE_API ConstructibleTestObject : public Object {
     VGC_OBJECT(ConstructibleTestObject, Object)
 
 protected:
-    ConstructibleTestObject() = default;
+    ConstructibleTestObject(CreateKey key)
+        : Object(key) {
+    }
 
 public:
     static ConstructibleTestObjectPtr create();
@@ -1710,9 +1760,14 @@ VGC_DECLARE_OBJECT(SignalTestObject);
 class VGC_CORE_API SignalTestObject : public Object {
     VGC_OBJECT(SignalTestObject, Object)
 
+protected:
+    SignalTestObject(CreateKey key)
+        : Object(key) {
+    }
+
 public:
     static SignalTestObjectPtr create() {
-        return new SignalTestObject();
+        return createObject<SignalTestObject>();
     }
 
     static inline bool sfnIntCalled = false;

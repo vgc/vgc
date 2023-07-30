@@ -27,8 +27,8 @@
 
 namespace vgc::ui {
 
-Button::Button(Action* action, FlexDirection layoutDirection)
-    : Flex(layoutDirection, FlexWrap::NoWrap) {
+Button::Button(CreateKey key, Action* action, FlexDirection layoutDirection)
+    : Flex(key, layoutDirection, FlexWrap::NoWrap) {
 
     addStyleClass(strings::Button);
 
@@ -46,7 +46,7 @@ Button::Button(Action* action, FlexDirection layoutDirection)
 }
 
 ButtonPtr Button::create(Action* action, FlexDirection layoutDirection) {
-    return ButtonPtr(new Button(action, layoutDirection));
+    return core::createObject<Button>(action, layoutDirection);
 }
 
 void Button::setAction(Action* action) {

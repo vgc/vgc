@@ -24,8 +24,8 @@
 
 namespace vgc::app {
 
-MainWidget::MainWidget()
-    : ui::OverlayArea()
+MainWidget::MainWidget(CreateKey key)
+    : ui::OverlayArea(key)
     , overlayArea_(this) {
 
     // Note: in the future, we may want to make overlay_ a child of MainWidget
@@ -64,7 +64,7 @@ MainWidget::MainWidget()
 }
 
 MainWidgetPtr MainWidget::create() {
-    return MainWidgetPtr(new MainWidget());
+    return core::createObject<MainWidget>();
 }
 
 } // namespace vgc::app

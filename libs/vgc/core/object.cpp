@@ -181,8 +181,9 @@ void Object::onChildRemoved_(Object* child) {
     onChildRemoved(child);
 }
 
-Object::Object()
+Object::Object([[maybe_unused]] CreateKey key)
     : signalHub_(this) {
+
     printDebugInfo_(this, "constructed");
 }
 
@@ -476,7 +477,7 @@ namespace detail {
 //   [clang-analyzer-cplusplus.NewDeleteLeaks]
 //
 ConstructibleTestObjectPtr ConstructibleTestObject::create() {
-    return new ConstructibleTestObject();
+    return createObject<ConstructibleTestObject>();
 }
 
 void SignalTestObject::connectToOtherNoArgs(SignalTestObject* other) const {

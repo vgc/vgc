@@ -18,14 +18,14 @@
 
 namespace vgc::ui {
 
-TabBody::TabBody()
-    : Widget() {
+TabBody::TabBody(CreateKey key)
+    : Widget(key) {
 
     addStyleClass(strings::TabBody);
 }
 
 TabBodyPtr TabBody::create() {
-    return TabBodyPtr(new TabBody());
+    return core::createObject<TabBody>();
 }
 
 void TabBody::updateChildrenGeometry() {

@@ -19,12 +19,13 @@
 namespace vgc::ui {
 
 BoolSetting::BoolSetting(
+    CreateKey createKey,
     Settings* settings,
     std::string_view key,
     std::string_view label,
     bool defaultValue)
 
-    : Setting(settings, key, label)
+    : Setting(createKey, settings, key, label)
     , defaultValue_(defaultValue) {
 }
 
@@ -34,7 +35,7 @@ BoolSettingPtr BoolSetting::create(
     std::string_view label,
     bool defaultValue) {
 
-    return BoolSettingPtr(new BoolSetting(settings, key, label, defaultValue));
+    return core::createObject<BoolSetting>(settings, key, label, defaultValue);
 }
 
 bool BoolSetting::value() const {

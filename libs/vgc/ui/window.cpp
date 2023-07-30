@@ -122,8 +122,10 @@ static constexpr bool debugEvents = false;
 #    endif
 #endif
 
-Window::Window(const WidgetPtr& widget)
-    : QWindow()
+Window::Window(CreateKey key, const WidgetPtr& widget)
+    : Object(key)
+    , QWindow()
+
     , widget_(widget)
     , proj_(geometry::Mat4f::identity) {
 
@@ -161,7 +163,7 @@ void Window::onDestroyed() {
 }
 
 WindowPtr Window::create(const WidgetPtr& widget) {
-    return WindowPtr(new Window(widget));
+    return core::createObject<Window>(widget);
 }
 
 float Window::globalToWindowScale() const {

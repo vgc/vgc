@@ -137,7 +137,7 @@ protected:
     /// WidgetPtr widget = Widget::create();
     /// ```
     ///
-    Widget();
+    Widget(CreateKey);
 
     /// Reimplements `Object::onDestroyed()`.
     ///
