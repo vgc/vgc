@@ -37,12 +37,18 @@ void ComplexDiff::merge(const ComplexDiff& other) {
     }
 }
 
+Complex::Complex(CreateKey key)
+    : Object(key) {
+
+    resetRoot();
+}
+
 void Complex::onDestroyed() {
     clear();
 }
 
 ComplexPtr Complex::create() {
-    return ComplexPtr(new Complex());
+    return core::createObject<Complex>();
 }
 
 // TODO: Move to Operations

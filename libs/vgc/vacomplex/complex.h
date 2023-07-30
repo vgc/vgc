@@ -321,9 +321,7 @@ private:
     VGC_OBJECT(Complex, core::Object)
 
 protected:
-    Complex() {
-        resetRoot();
-    }
+    Complex(CreateKey);
 
     void onDestroyed() override;
 
