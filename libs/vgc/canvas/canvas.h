@@ -52,7 +52,8 @@ class VGC_CANVAS_API SelectionListHistory : public core::Object {
 private:
     VGC_OBJECT(SelectionListHistory, core::Object)
 
-    SelectionListHistory() = default;
+    struct PrivateKey {};
+    SelectionListHistory(CreateKey, PrivateKey);
 
 public:
     SelectionListHistoryPtr create();
@@ -110,7 +111,7 @@ protected:
     /// This is an implementation details. Please use
     /// Canvas::create() instead.
     ///
-    Canvas(workspace::Workspace* workspace);
+    Canvas(CreateKey, workspace::Workspace* workspace);
 
 public:
     /// Creates a Canvas.

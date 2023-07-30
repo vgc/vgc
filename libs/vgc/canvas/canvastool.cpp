@@ -27,14 +27,8 @@
 
 namespace vgc::canvas {
 
-CanvasToolPtr CanvasTool::create() {
-    CanvasToolPtr res = new CanvasTool();
-    res->optionsWidget_ = res->createOptionsWidget();
-    return res;
-}
-
-CanvasTool::CanvasTool()
-    : Widget() {
+CanvasTool::CanvasTool(CreateKey key)
+    : Widget(key) {
 
     // Set Click+Sticky focus policy by default, so that:
     // - clicking on the canvas gives the keyboard focus to the tool, and
@@ -61,6 +55,12 @@ CanvasTool::CanvasTool()
     // Enable clipping, so that tools don't draw outside the canvas.
     //
     setClippingEnabled(true);
+}
+
+CanvasToolPtr CanvasTool::create() {
+    CanvasToolPtr res = core::createObject<CanvasTool>();
+    res->optionsWidget_ = res->createOptionsWidget();
+    return res;
 }
 
 ui::Widget* CanvasTool::optionsWidget() const {
