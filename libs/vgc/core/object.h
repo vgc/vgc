@@ -96,7 +96,7 @@ class ObjPtr;
 ///
 enum class ObjectStage : UInt8 {
     Constructing = 0,
-    Constructed = 0,
+    Constructed,
     AboutToBeDestroyed,
     ChildrenDestroyed,
     Destroyed
