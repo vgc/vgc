@@ -534,24 +534,24 @@ bool SpecTable::setRegistered(core::StringId className) {
     return res.second;
 }
 
-Sheet::Sheet()
-    : Object() {
+Sheet::Sheet(CreateKey key)
+    : Object(key) {
 }
 
 SheetPtr Sheet::create() {
-    return SheetPtr(new Sheet());
+    return core::createObject<Sheet>();
 }
 
 SheetPtr Sheet::create(std::string_view s) {
     return detail::Parser::parseSheet(s);
 }
 
-RuleSet::RuleSet()
-    : Object() {
+RuleSet::RuleSet(CreateKey key)
+    : Object(key) {
 }
 
 RuleSetPtr RuleSet::create() {
-    return RuleSetPtr(new RuleSet());
+    return core::createObject<RuleSet>();
 }
 
 VGC_DEFINE_ENUM(
@@ -687,8 +687,8 @@ bool Selector::matches(StylableObject* node) {
     }
 }
 
-Selector::Selector(core::Array<SelectorItem>&& items)
-    : Object()
+Selector::Selector(CreateKey key, core::Array<SelectorItem>&& items)
+    : Object(key)
     , items_(std::move(items))
     , specificity_(0) {
 
@@ -701,15 +701,15 @@ Selector::Selector(core::Array<SelectorItem>&& items)
 }
 
 SelectorPtr Selector::create(core::Array<SelectorItem>&& items) {
-    return SelectorPtr(new Selector(std::move(items)));
+    return core::createObject<Selector>(std::move(items));
 }
 
-Declaration::Declaration()
-    : Object() {
+Declaration::Declaration(CreateKey key)
+    : Object(key) {
 }
 
 DeclarationPtr Declaration::create() {
-    return DeclarationPtr(new Declaration());
+    return core::createObject<Declaration>();
 }
 
 } // namespace vgc::style

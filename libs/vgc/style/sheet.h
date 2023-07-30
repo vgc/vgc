@@ -64,7 +64,7 @@ private:
     RuleSetArray ruleSets_;
 
     friend class detail::Parser;
-    Sheet();
+    Sheet(CreateKey);
     static SheetPtr create();
 };
 
@@ -90,7 +90,7 @@ private:
     DeclarationArray declarations_;
 
     friend class detail::Parser;
-    RuleSet();
+    RuleSet(CreateKey);
     static RuleSetPtr create();
 };
 
@@ -187,7 +187,7 @@ private:
     Specificity specificity_;
 
     friend class detail::Parser;
-    Selector(core::Array<SelectorItem>&& items);
+    Selector(CreateKey, core::Array<SelectorItem>&& items);
     static SelectorPtr create(core::Array<SelectorItem>&& items);
 };
 
@@ -224,7 +224,7 @@ private:
     Value value_;
 
     friend class detail::Parser;
-    Declaration();
+    Declaration(CreateKey);
     static DeclarationPtr create();
 };
 
