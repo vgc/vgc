@@ -44,8 +44,8 @@ ui::BoolSetting* showTransformBox() {
 
 } // namespace
 
-Select::Select()
-    : CanvasTool() {
+Select::Select(CreateKey key)
+    : CanvasTool(key) {
 
     canvasChanged().connect(onCanvasChangedSlot_());
     onCanvasChanged_();
@@ -61,7 +61,7 @@ Select::Select()
 }
 
 SelectPtr Select::create() {
-    return SelectPtr(new Select());
+    return core::createObject<Select>();
 }
 
 ui::WidgetPtr Select::createOptionsWidget() const {

@@ -130,8 +130,8 @@ void drawScalingCursor(QPainter& painter, double angle) {
     qreal angleDeg = angle / core::pi * 180.0;
     painter.rotate(angleDeg);
     QString fpath(cursorSvgPath_("scaling.svg").c_str());
-    QSvgRenderer* ren = new QSvgRenderer(fpath);
-    ren->render(&painter, QRectF(-16, -16, 32, 32));
+    QSvgRenderer svgRenderer(fpath);
+    svgRenderer.render(&painter, QRectF(-16, -16, 32, 32));
 }
 
 void drawRotationCursor(QPainter& painter, double angle) {
@@ -139,8 +139,8 @@ void drawRotationCursor(QPainter& painter, double angle) {
     qreal angleDeg = angle / core::pi * 180.0;
     painter.rotate(angleDeg + 90.0);
     QString fpath(cursorSvgPath_("rotation.svg").c_str());
-    QSvgRenderer* ren = new QSvgRenderer(fpath);
-    ren->render(&painter, QRectF(-16, -16, 32, 32));
+    QSvgRenderer svgRenderer(fpath);
+    svgRenderer.render(&painter, QRectF(-16, -16, 32, 32));
 }
 
 constexpr Int cursorCount = 128;
@@ -215,12 +215,14 @@ protected:
     /// Please use `TransformDragAction::create()` instead.
     ///
     TransformDragAction(
+        CreateKey key,
         TransformBox* box,
         core::StringId commandId,
         TransformDragActionType transformType,
         Int manipIndex,
         bool usePivot)
-        : ui::Action(commandId)
+
+        : ui::Action(key, commandId)
         , box_(box)
         , transformType_(transformType)
         , manipIndex_(manipIndex)
@@ -236,8 +238,9 @@ public:
         TransformDragActionType transformType,
         Int manipIndex,
         bool usePivot) {
-        return TransformDragActionPtr(
-            new TransformDragAction(box, commandId, transformType, manipIndex, usePivot));
+
+        return core::createObject<TransformDragAction>(
+            box, commandId, transformType, manipIndex, usePivot);
     }
 
 public:
@@ -916,8 +919,8 @@ constexpr float sideLengthThreshold = scaleManipDistance * 2.f;
 
 } // namespace
 
-TransformBox::TransformBox()
-    : ui::Widget() {
+TransformBox::TransformBox(CreateKey key)
+    : ui::Widget(key) {
 
     // Enable clipping, so that the box is not drawn outside the canvas.
     //
@@ -926,7 +929,7 @@ TransformBox::TransformBox()
 }
 
 TransformBoxPtr TransformBox::create() {
-    return TransformBoxPtr(new TransformBox());
+    return core::createObject<TransformBox>();
 }
 
 void TransformBox::setElements(const core::Array<core::Id>& elementIds) {

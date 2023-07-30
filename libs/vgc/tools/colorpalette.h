@@ -58,7 +58,7 @@ private:
     VGC_OBJECT(ScreenColorPickerButton, ui::Button)
 
 protected:
-    ScreenColorPickerButton();
+    ScreenColorPickerButton(CreateKey);
 
 public:
     /// Creates a `ScreenColorPickerButton`.
@@ -100,7 +100,7 @@ protected:
     /// This is an implementation details. Please use
     /// ColorPalette::create() instead.
     ///
-    ColorPalette();
+    ColorPalette(CreateKey);
 
 public:
     /// Creates a ColorPalette.
@@ -218,7 +218,7 @@ protected:
     /// This is an implementation details. Please use
     /// ColorPalette::create() instead.
     ///
-    ColorPaletteSelector();
+    ColorPaletteSelector(CreateKey);
 
 public:
     /// Creates a ColorPalette.
@@ -383,7 +383,7 @@ private:
     VGC_OBJECT(ColorPreview, ui::Widget)
 
 protected:
-    ColorPreview();
+    ColorPreview(CreateKey);
 
 public:
     /// Creates a ColorPreview.
@@ -424,7 +424,7 @@ private:
     VGC_OBJECT(ColorListView, ui::Widget)
 
 protected:
-    ColorListView();
+    ColorListView(CreateKey);
 
 public:
     /// Creates a ColorListView.

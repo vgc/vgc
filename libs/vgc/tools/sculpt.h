@@ -40,7 +40,7 @@ protected:
     /// This is an implementation details.
     /// Please use `Sculpt::create()` instead.
     ///
-    Sculpt();
+    Sculpt(CreateKey);
 
 public:
     /// Creates a `Sculpt`.

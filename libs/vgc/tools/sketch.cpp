@@ -110,12 +110,12 @@ geometry::Vec2d applySnapFalloff(
 
 } // namespace
 
-Sketch::Sketch()
-    : CanvasTool() {
+Sketch::Sketch(CreateKey key)
+    : CanvasTool(key) {
 }
 
 SketchPtr Sketch::create() {
-    return SketchPtr(new Sketch());
+    return core::createObject<Sketch>();
 }
 
 double Sketch::penWidth() const {

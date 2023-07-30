@@ -40,7 +40,7 @@ protected:
     /// This is an implementation details.
     /// Please use `SketchTool::create()` instead.
     ///
-    Select();
+    Select(CreateKey);
 
 public:
     /// Creates a `SelectTool`.

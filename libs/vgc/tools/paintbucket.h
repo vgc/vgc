@@ -40,7 +40,7 @@ protected:
     /// This is an implementation details.
     /// Please use `PaintBucketTool::create()` instead.
     ///
-    PaintBucket();
+    PaintBucket(CreateKey);
 
 public:
     /// Creates a `SketchTool`.
