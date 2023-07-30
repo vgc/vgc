@@ -32,7 +32,7 @@ protected:
     /// This is an implementation details. Please use
     /// NumberEdit::create() instead.
     ///
-    NumberEdit();
+    NumberEdit(CreateKey);
 
 public:
     /// Creates a `NumberEdit`.

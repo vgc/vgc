@@ -54,7 +54,7 @@ class VGC_UI_API Application : public core::Object {
     VGC_OBJECT(Application, core::Object)
 
 protected:
-    Application(int argc, char* argv[]);
+    Application(CreateKey, int argc, char* argv[]);
     void onDestroyed() override;
 
 public:

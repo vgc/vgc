@@ -21,25 +21,27 @@
 namespace vgc::ui {
 
 MouseEvent::MouseEvent(
+    CreateKey key,
     double timestamp,
     ModifierKeys modifiers,
     const MouseEventData& data)
 
-    : Event(timestamp, modifiers)
+    : Event(key, timestamp, modifiers)
     , data_(data) {
 }
 
 MouseEventPtr
 MouseEvent::create(double timestamp, ModifierKeys modifiers, const MouseEventData& data) {
-    return MouseEventPtr(new MouseEvent(timestamp, modifiers, data));
+    return core::createObject<MouseEvent>(timestamp, modifiers, data);
 }
 
 PropagatedMouseEvent::PropagatedMouseEvent(
+    CreateKey key,
     double timestamp,
     ModifierKeys modifiers,
     const MouseEventData& data)
 
-    : MouseEvent(timestamp, modifiers, data) {
+    : MouseEvent(key, timestamp, modifiers, data) {
 }
 
 PropagatedMouseEventPtr PropagatedMouseEvent::create(
@@ -47,15 +49,16 @@ PropagatedMouseEventPtr PropagatedMouseEvent::create(
     ModifierKeys modifiers,
     const MouseEventData& data) {
 
-    return PropagatedMouseEventPtr(new PropagatedMouseEvent(timestamp, modifiers, data));
+    return core::createObject<PropagatedMouseEvent>(timestamp, modifiers, data);
 }
 
 MousePressEvent::MousePressEvent(
+    CreateKey key,
     double timestamp,
     ModifierKeys modifiers,
     const MouseEventData& data)
 
-    : PropagatedMouseEvent(timestamp, modifiers, data) {
+    : PropagatedMouseEvent(key, timestamp, modifiers, data) {
 }
 
 MousePressEventPtr MousePressEvent::create(
@@ -63,15 +66,16 @@ MousePressEventPtr MousePressEvent::create(
     ModifierKeys modifiers,
     const MouseEventData& data) {
 
-    return MousePressEventPtr(new MousePressEvent(timestamp, modifiers, data));
+    return core::createObject<MousePressEvent>(timestamp, modifiers, data);
 }
 
 MouseMoveEvent::MouseMoveEvent(
+    CreateKey key,
     double timestamp,
     ModifierKeys modifiers,
     const MouseEventData& data)
 
-    : PropagatedMouseEvent(timestamp, modifiers, data) {
+    : PropagatedMouseEvent(key, timestamp, modifiers, data) {
 }
 
 MouseMoveEventPtr MouseMoveEvent::create(
@@ -79,15 +83,16 @@ MouseMoveEventPtr MouseMoveEvent::create(
     ModifierKeys modifiers,
     const MouseEventData& data) {
 
-    return MouseMoveEventPtr(new MouseMoveEvent(timestamp, modifiers, data));
+    return core::createObject<MouseMoveEvent>(timestamp, modifiers, data);
 }
 
 MouseReleaseEvent::MouseReleaseEvent(
+    CreateKey key,
     double timestamp,
     ModifierKeys modifiers,
     const MouseEventData& data)
 
-    : PropagatedMouseEvent(timestamp, modifiers, data) {
+    : PropagatedMouseEvent(key, timestamp, modifiers, data) {
 }
 
 MouseReleaseEventPtr MouseReleaseEvent::create(
@@ -95,15 +100,16 @@ MouseReleaseEventPtr MouseReleaseEvent::create(
     ModifierKeys modifiers,
     const MouseEventData& data) {
 
-    return MouseReleaseEventPtr(new MouseReleaseEvent(timestamp, modifiers, data));
+    return core::createObject<MouseReleaseEvent>(timestamp, modifiers, data);
 }
 
 MouseHoverEvent::MouseHoverEvent(
+    CreateKey key,
     double timestamp,
     ModifierKeys modifiers,
     const MouseEventData& data)
 
-    : MouseEvent(timestamp, modifiers, data) {
+    : MouseEvent(key, timestamp, modifiers, data) {
 }
 
 MouseHoverEventPtr MouseHoverEvent::create(
@@ -111,16 +117,17 @@ MouseHoverEventPtr MouseHoverEvent::create(
     ModifierKeys modifiers,
     const MouseEventData& data) {
 
-    return MouseHoverEventPtr(new MouseHoverEvent(timestamp, modifiers, data));
+    return core::createObject<MouseHoverEvent>(timestamp, modifiers, data);
 }
 
 MouseActionEvent::MouseActionEvent(
+    CreateKey key,
     double timestamp,
     ModifierKeys modifiers,
     const MouseEventData& data,
     Widget* widget)
 
-    : MouseEvent(timestamp, modifiers, data)
+    : MouseEvent(key, timestamp, modifiers, data)
     , widget_(widget) {
 }
 
@@ -130,12 +137,12 @@ MouseActionEventPtr MouseActionEvent::create(
     const MouseEventData& data,
     Widget* widget) {
 
-    return MouseActionEventPtr(new MouseActionEvent(timestamp, modifiers, data, widget));
+    return core::createObject<MouseActionEvent>(timestamp, modifiers, data, widget);
 }
 
 MouseActionEventPtr MouseActionEvent::create(const MouseEvent* other, Widget* widget) {
-    return MouseActionEventPtr(new MouseActionEvent(
-        other->timestamp(), other->modifierKeys(), other->data(), widget));
+    return core::createObject<MouseActionEvent>(
+        other->timestamp(), other->modifierKeys(), other->data(), widget);
 }
 
 // Note: the two functions below cannot be in the .h file since assigning an

@@ -20,8 +20,8 @@
 
 namespace vgc::ui {
 
-IconWidget::IconWidget(std::string_view filePath)
-    : Widget() {
+IconWidget::IconWidget(CreateKey key, std::string_view filePath)
+    : Widget(key) {
 
     addStyleClass(strings::IconWidget);
     setFilePath(filePath);
@@ -39,7 +39,7 @@ void IconWidget::setFilePath(std::string_view filePath) {
 }
 
 IconWidgetPtr IconWidget::create(std::string_view filePath) {
-    return IconWidgetPtr(new IconWidget(filePath));
+    return core::createObject<IconWidget>(filePath);
 }
 
 void IconWidget::onResize() {

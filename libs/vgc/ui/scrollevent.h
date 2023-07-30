@@ -36,6 +36,7 @@ protected:
     /// ScrollEvent::create() instead.
     ///
     ScrollEvent(
+        CreateKey,
         double timestamp,
         ModifierKeys modifiers,
         const geometry::Vec2f& position,

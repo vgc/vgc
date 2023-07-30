@@ -18,12 +18,12 @@
 
 namespace vgc::ui {
 
-Column::Column()
-    : Flex(FlexDirection::Column, FlexWrap::NoWrap) {
+Column::Column(CreateKey key)
+    : Flex(key, FlexDirection::Column, FlexWrap::NoWrap) {
 }
 
 ColumnPtr Column::create() {
-    return ColumnPtr(new Column());
+    return core::createObject<Column>();
 }
 
 } // namespace vgc::ui

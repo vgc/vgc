@@ -84,7 +84,11 @@ protected:
     /// This is an implementation details. Please use
     /// KeyEvent::create() instead.
     ///
-    KeyEvent(double timestamp, ModifierKeys modifiers, const KeyEventData& data);
+    KeyEvent(
+        CreateKey,
+        double timestamp,
+        ModifierKeys modifiers,
+        const KeyEventData& data);
 
 public:
     /// Creates a KeyEvent.
@@ -160,6 +164,7 @@ protected:
     /// to use the public method `KeyEventData::create()` instead.
     ///
     PropagatedKeyEvent(
+        CreateKey,
         double timestamp,
         ModifierKeys modifiers,
         const KeyEventData& data);
@@ -186,7 +191,11 @@ protected:
     /// Protected constructor for `KeyPressEvent`. You typically want
     /// to use the public method `KeyPressEvent::create()` instead.
     ///
-    KeyPressEvent(double timestamp, ModifierKeys modifiers, const KeyEventData& data);
+    KeyPressEvent(
+        CreateKey,
+        double timestamp,
+        ModifierKeys modifiers,
+        const KeyEventData& data);
 
 public:
     /// Creates a `KeyPressEvent`.
@@ -210,7 +219,11 @@ protected:
     /// Protected constructor for `KeyReleaseEvent`. You typically want
     /// to use the public method `KeyReleaseEvent::create()` instead.
     ///
-    KeyReleaseEvent(double timestamp, ModifierKeys modifiers, const KeyEventData& data);
+    KeyReleaseEvent(
+        CreateKey,
+        double timestamp,
+        ModifierKeys modifiers,
+        const KeyEventData& data);
 
 public:
     /// Creates a `KeyReleaseEvent`.

@@ -36,7 +36,7 @@ protected:
     /// This is an implementation details. Please use
     /// ImageBox::create(text) instead.
     ///
-    ImageBox(std::string_view relativePath);
+    ImageBox(CreateKey, std::string_view relativePath);
 
 public:
     /// Creates a ImageBox with the given text.

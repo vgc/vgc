@@ -37,7 +37,7 @@ private:
     VGC_OBJECT(PopupLayer, Widget)
 
 protected:
-    PopupLayer(Widget* underlyingWidget);
+    PopupLayer(CreateKey, Widget* underlyingWidget);
 
 public:
     /// Creates a PopupLayer.

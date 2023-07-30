@@ -19,6 +19,7 @@
 namespace vgc::ui {
 
 NumberSetting::NumberSetting(
+    CreateKey createKey,
     Settings* settings,
     std::string_view key,
     std::string_view label,
@@ -28,7 +29,7 @@ NumberSetting::NumberSetting(
     core::Precision precision,
     double step)
 
-    : Setting(settings, key, label)
+    : Setting(createKey, settings, key, label)
     , defaultValue_(defaultValue)
     , minimum_(min)
     , maximum_(max)
@@ -46,8 +47,8 @@ NumberSettingPtr NumberSetting::create(
     core::Precision precision,
     double step) {
 
-    return NumberSettingPtr(
-        new NumberSetting(settings, key, label, defaultValue, min, max, precision, step));
+    return core::createObject<NumberSetting>(
+        settings, key, label, defaultValue, min, max, precision, step);
 }
 
 double NumberSetting::value() const {

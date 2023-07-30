@@ -34,7 +34,7 @@ private:
     VGC_OBJECT(BoolSettingEdit, SettingEdit)
 
 protected:
-    BoolSettingEdit(BoolSettingPtr setting);
+    BoolSettingEdit(CreateKey, BoolSettingPtr setting);
 
 public:
     /// Creates a `BoolSettingEdit`.

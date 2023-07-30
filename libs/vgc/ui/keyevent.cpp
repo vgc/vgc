@@ -18,22 +18,28 @@
 
 namespace vgc::ui {
 
-KeyEvent::KeyEvent(double timestamp, ModifierKeys modifiers, const KeyEventData& data)
-    : Event(timestamp, modifiers)
+KeyEvent::KeyEvent(
+    CreateKey key,
+    double timestamp,
+    ModifierKeys modifiers,
+    const KeyEventData& data)
+
+    : Event(key, timestamp, modifiers)
     , data_(data) {
 }
 
 KeyEventPtr
 KeyEvent::create(double timestamp, ModifierKeys modifiers, const KeyEventData& data) {
-    return KeyEventPtr(new KeyEvent(timestamp, modifiers, data));
+    return core::createObject<KeyEvent>(timestamp, modifiers, data);
 }
 
 PropagatedKeyEvent::PropagatedKeyEvent(
+    CreateKey key,
     double timestamp,
     ModifierKeys modifiers,
     const KeyEventData& data)
 
-    : KeyEvent(timestamp, modifiers, data) {
+    : KeyEvent(key, timestamp, modifiers, data) {
 }
 
 PropagatedKeyEventPtr PropagatedKeyEvent::create(
@@ -41,15 +47,16 @@ PropagatedKeyEventPtr PropagatedKeyEvent::create(
     ModifierKeys modifiers,
     const KeyEventData& data) {
 
-    return PropagatedKeyEventPtr(new PropagatedKeyEvent(timestamp, modifiers, data));
+    return core::createObject<PropagatedKeyEvent>(timestamp, modifiers, data);
 }
 
 KeyPressEvent::KeyPressEvent(
+    CreateKey key,
     double timestamp,
     ModifierKeys modifiers,
     const KeyEventData& data)
 
-    : PropagatedKeyEvent(timestamp, modifiers, data) {
+    : PropagatedKeyEvent(key, timestamp, modifiers, data) {
 }
 
 KeyPressEventPtr KeyPressEvent::create(
@@ -57,15 +64,16 @@ KeyPressEventPtr KeyPressEvent::create(
     ModifierKeys modifiers,
     const KeyEventData& data) {
 
-    return KeyPressEventPtr(new KeyPressEvent(timestamp, modifiers, data));
+    return core::createObject<KeyPressEvent>(timestamp, modifiers, data);
 }
 
 KeyReleaseEvent::KeyReleaseEvent(
+    CreateKey key,
     double timestamp,
     ModifierKeys modifiers,
     const KeyEventData& data)
 
-    : PropagatedKeyEvent(timestamp, modifiers, data) {
+    : PropagatedKeyEvent(key, timestamp, modifiers, data) {
 }
 
 KeyReleaseEventPtr KeyReleaseEvent::create(
@@ -73,7 +81,7 @@ KeyReleaseEventPtr KeyReleaseEvent::create(
     ModifierKeys modifiers,
     const KeyEventData& data) {
 
-    return KeyReleaseEventPtr(new KeyReleaseEvent(timestamp, modifiers, data));
+    return core::createObject<KeyReleaseEvent>(timestamp, modifiers, data);
 }
 
 } // namespace vgc::ui

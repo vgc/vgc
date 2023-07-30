@@ -69,7 +69,7 @@ protected:
     /// This is an implementation details. Please use
     /// `Dialog::create()` instead.
     ///
-    Dialog();
+    Dialog(CreateKey);
 
 public:
     /// Creates a `Dialog`.

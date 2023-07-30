@@ -21,22 +21,24 @@
 
 namespace vgc::ui {
 
-Action::Action(core::StringId id)
-    : command_(&CommandRegistry::find(id))
+Action::Action(CreateKey key, core::StringId id)
+    : Object(key)
+    , command_(&CommandRegistry::find(id))
     , text_(command_->name()) {
 }
 
-Action::Action(core::StringId id, std::string_view text)
-    : command_(&CommandRegistry::find(id))
+Action::Action(CreateKey key, core::StringId id, std::string_view text)
+    : Object(key)
+    , command_(&CommandRegistry::find(id))
     , text_(text) {
 }
 
 ActionPtr Action::create(core::StringId id) {
-    return ActionPtr(new Action(id));
+    return core::createObject<Action>(id);
 }
 
 ActionPtr Action::create(core::StringId id, std::string_view text) {
-    return ActionPtr(new Action(id, text));
+    return core::createObject<Action>(id, text);
 }
 
 void Action::setText(std::string_view text) {

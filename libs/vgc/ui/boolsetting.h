@@ -33,6 +33,7 @@ private:
 
 protected:
     BoolSetting(
+        CreateKey,
         Settings* settings,
         std::string_view key,
         std::string_view label,

@@ -80,7 +80,7 @@ class VGC_WORKSPACE_API Workspace : public core::Object {
 private:
     VGC_OBJECT(Workspace, core::Object)
 
-    Workspace(dom::DocumentPtr document);
+    Workspace(CreateKey, dom::DocumentPtr document);
 
     void onDestroyed() override;
 

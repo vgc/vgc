@@ -37,7 +37,7 @@ private:
 protected:
     /// This is an implementation detail. please use Event::create() instead.
     ///
-    Event(double timestamp, ModifierKeys modifiers);
+    Event(CreateKey, double timestamp, ModifierKeys modifiers);
 
 public:
     /// Creates an Event.

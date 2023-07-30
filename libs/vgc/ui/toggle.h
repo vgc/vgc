@@ -31,7 +31,7 @@ private:
     VGC_OBJECT(Toggle, Widget)
 
 protected:
-    Toggle();
+    Toggle(CreateKey);
 
 public:
     /// Creates a Toggle.

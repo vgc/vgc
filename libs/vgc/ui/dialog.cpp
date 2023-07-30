@@ -25,14 +25,14 @@
 
 namespace vgc::ui {
 
-Dialog::Dialog()
-    : Widget() {
+Dialog::Dialog(CreateKey key)
+    : Widget(key) {
 
     addStyleClass(strings::Dialog);
 }
 
 DialogPtr Dialog::create() {
-    return DialogPtr(new Dialog());
+    return core::createObject<Dialog>();
 }
 
 void Dialog::setContent(Widget* widget) {

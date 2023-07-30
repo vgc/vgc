@@ -32,7 +32,7 @@ private:
     VGC_OBJECT(IconWidget, Widget)
 
 protected:
-    IconWidget(std::string_view filePath);
+    IconWidget(CreateKey, std::string_view filePath);
 
 public:
     /// Creates a IconWidget using the icon at the given file path.

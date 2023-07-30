@@ -21,16 +21,17 @@
 
 namespace vgc::ui {
 
-ActionGroup::ActionGroup(CheckPolicy checkPolicy)
-    : checkPolicy_(checkPolicy) {
+ActionGroup::ActionGroup(CreateKey key, CheckPolicy checkPolicy)
+    : Object(key)
+    , checkPolicy_(checkPolicy) {
 }
 
 ActionGroupPtr ActionGroup::create() {
-    return ActionGroupPtr(new ActionGroup(CheckPolicy::ZeroOrMore));
+    return core::createObject<ActionGroup>(CheckPolicy::ZeroOrMore);
 }
 
 ActionGroupPtr ActionGroup::create(CheckPolicy checkPolicy) {
-    return ActionGroupPtr(new ActionGroup(checkPolicy));
+    return core::createObject<ActionGroup>(checkPolicy);
 }
 
 void ActionGroup::clear() {

@@ -20,15 +20,21 @@
 
 namespace vgc::ui {
 
-Setting::Setting(ui::Settings* settings, std::string_view key, std::string_view label)
-    : settings_(settings)
+Setting::Setting(
+    CreateKey createKey,
+    ui::Settings* settings,
+    std::string_view key,
+    std::string_view label)
+
+    : Object(createKey)
+    , settings_(settings)
     , key_(key)
     , label_(label) {
 }
 
 SettingPtr
 Setting::create(ui::Settings* settings, std::string_view key, std::string_view label) {
-    return SettingPtr(new Setting(settings, key, label));
+    return core::createObject<Setting>(settings, key, label);
 }
 
 } // namespace vgc::ui

@@ -30,14 +30,14 @@
 
 namespace vgc::ui {
 
-Grid::Grid()
-    : Widget() {
+Grid::Grid(CreateKey key)
+    : Widget(key) {
 
     addStyleClass(strings::Grid);
 }
 
 GridPtr Grid::create() {
-    return GridPtr(new Grid());
+    return core::createObject<Grid>();
 }
 
 void Grid::setWidgetAt(Widget* widget, Int i, Int j) {

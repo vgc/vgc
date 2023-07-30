@@ -56,8 +56,8 @@ VGC_DEFINE_ENUM( //
     FlexWrap,
     (NoWrap, "nowrap"))
 
-Flex::Flex(FlexDirection direction, FlexWrap wrap)
-    : Widget()
+Flex::Flex(CreateKey key, FlexDirection direction, FlexWrap wrap)
+    : Widget(key)
     , direction_(direction)
     , wrap_(wrap) {
 
@@ -65,7 +65,7 @@ Flex::Flex(FlexDirection direction, FlexWrap wrap)
 }
 
 FlexPtr Flex::create(FlexDirection direction, FlexWrap wrap) {
-    return FlexPtr(new Flex(direction, wrap));
+    return core::createObject<Flex>(direction, wrap);
 }
 
 void Flex::setDirection(FlexDirection direction) {

@@ -25,8 +25,8 @@
 
 namespace vgc::ui {
 
-Label::Label(std::string_view text)
-    : Widget()
+Label::Label(CreateKey key, std::string_view text)
+    : Widget(key)
     , richText_(graphics::RichText::create()) {
 
     addStyleClass(strings::Label);
@@ -35,11 +35,11 @@ Label::Label(std::string_view text)
 }
 
 LabelPtr Label::create() {
-    return LabelPtr(new Label(""));
+    return core::createObject<Label>("");
 }
 
 LabelPtr Label::create(std::string_view text) {
-    return LabelPtr(new Label(text));
+    return core::createObject<Label>(text);
 }
 
 void Label::setText(std::string_view text) {

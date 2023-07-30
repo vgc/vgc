@@ -69,7 +69,8 @@ Application* application() {
     return globalApplication_;
 }
 
-Application::Application(int /*argc*/, char* /*argv*/[]) {
+Application::Application(CreateKey key, int /*argc*/, char* /*argv*/[])
+    : Object(key) {
 
     if (globalApplication_) {
         throw core::LogicError(
@@ -83,7 +84,7 @@ void Application::onDestroyed() {
 }
 
 ApplicationPtr Application::create(int argc, char* argv[]) {
-    return ApplicationPtr(new Application(argc, argv));
+    return core::createObject<Application>(argc, argv);
 }
 
 int Application::exec() {

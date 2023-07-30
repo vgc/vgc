@@ -54,7 +54,7 @@ private:
     friend Menu;
 
 protected:
-    MenuButton(Action* action, FlexDirection layoutDirection);
+    MenuButton(CreateKey, Action* action, FlexDirection layoutDirection);
 
 public:
     /// Creates an MenuButton with the given `action`.

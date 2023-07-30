@@ -81,14 +81,15 @@ Settings* session() {
 
 } // namespace settings
 
-Settings::Settings(std::string_view filePath)
-    : filePath_(filePath) {
+Settings::Settings(CreateKey key, std::string_view filePath)
+    : Object(key)
+    , filePath_(filePath) {
 
     readFromFile();
 }
 
 SettingsPtr Settings::create(std::string_view filePath) {
-    return SettingsPtr(new Settings(filePath));
+    return core::createObject<Settings>(filePath);
 }
 
 void Settings::clear() {

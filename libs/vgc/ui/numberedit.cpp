@@ -25,8 +25,8 @@
 
 namespace vgc::ui {
 
-NumberEdit::NumberEdit()
-    : LineEdit("") {
+NumberEdit::NumberEdit(CreateKey key)
+    : LineEdit(key, "") {
 
     addStyleClass(strings::NumberEdit);
     setTextMode_(false);
@@ -35,7 +35,7 @@ NumberEdit::NumberEdit()
 }
 
 NumberEditPtr NumberEdit::create() {
-    return NumberEditPtr(new NumberEdit());
+    return core::createObject<NumberEdit>();
 }
 
 void NumberEdit::setValue(double value) {

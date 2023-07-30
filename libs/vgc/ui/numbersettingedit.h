@@ -33,7 +33,7 @@ private:
     VGC_OBJECT(NumberSettingEdit, SettingEdit)
 
 protected:
-    NumberSettingEdit(NumberSettingPtr setting);
+    NumberSettingEdit(CreateKey, NumberSettingPtr setting);
 
 public:
     /// Creates a `NumberSettingEdit`.

@@ -34,6 +34,7 @@ MouseEventData makeMouseEventData(const geometry::Vec2f& position) {
 } // namespace
 
 ScrollEvent::ScrollEvent(
+    CreateKey key,
     double timestamp,
     ModifierKeys modifiers,
     const geometry::Vec2f& position,
@@ -41,7 +42,7 @@ ScrollEvent::ScrollEvent(
     Int horizontalSteps,
     Int verticalSteps)
 
-    : PropagatedMouseEvent(timestamp, modifiers, makeMouseEventData(position))
+    : PropagatedMouseEvent(key, timestamp, modifiers, makeMouseEventData(position))
     , scrollDelta_(scrollDelta)
     , horizontalSteps_(horizontalSteps)
     , verticalSteps_(verticalSteps) {
@@ -56,8 +57,8 @@ ScrollEventPtr ScrollEvent::create(
     Int horizontalSteps,
     Int verticalSteps) {
 
-    return ScrollEventPtr(new ScrollEvent(
-        timestamp, modifiers, position, scrollDelta, horizontalSteps, verticalSteps));
+    return core::createObject<ScrollEvent>(
+        timestamp, modifiers, position, scrollDelta, horizontalSteps, verticalSteps);
 }
 
 } // namespace vgc::ui

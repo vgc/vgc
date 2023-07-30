@@ -23,15 +23,15 @@
 
 namespace vgc::ui {
 
-MessageDialog::MessageDialog()
-    : Dialog() {
+MessageDialog::MessageDialog(CreateKey key)
+    : Dialog(key) {
 
     addStyleClass(strings::MessageDialog);
     content_ = createContent<Flex>(FlexDirection::Column);
 }
 
 MessageDialogPtr MessageDialog::create() {
-    return MessageDialogPtr(new MessageDialog());
+    return core::createObject<MessageDialog>();
 }
 
 void MessageDialog::clear() {

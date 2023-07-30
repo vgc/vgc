@@ -21,8 +21,9 @@
 
 namespace vgc::ui {
 
-PopupLayer::PopupLayer(Widget* underlyingWidget)
-    : underlyingWidget_(underlyingWidget) {
+PopupLayer::PopupLayer(CreateKey key, Widget* underlyingWidget)
+    : Widget(key)
+    , underlyingWidget_(underlyingWidget) {
 
     if (underlyingWidget_) {
         underlyingWidget_->aboutToBeDestroyed().connect(
@@ -31,11 +32,11 @@ PopupLayer::PopupLayer(Widget* underlyingWidget)
 }
 
 PopupLayerPtr PopupLayer::create() {
-    return PopupLayerPtr(new PopupLayer(nullptr));
+    return core::createObject<PopupLayer>(nullptr);
 }
 
 PopupLayerPtr PopupLayer::create(Widget* underlyingWidget) {
-    return PopupLayerPtr(new PopupLayer(underlyingWidget));
+    return core::createObject<PopupLayer>(underlyingWidget);
 }
 
 void PopupLayer::onWidgetAdded(Widget* child, bool /*wasOnlyReordered*/) {

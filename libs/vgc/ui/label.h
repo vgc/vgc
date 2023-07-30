@@ -38,7 +38,7 @@ protected:
     /// This is an implementation details. Please use
     /// Label::create(text) instead.
     ///
-    Label(std::string_view text);
+    Label(CreateKey, std::string_view text);
 
 public:
     /// Creates a Label.

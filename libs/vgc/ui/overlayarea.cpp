@@ -23,12 +23,12 @@
 
 namespace vgc::ui {
 
-OverlayArea::OverlayArea()
-    : Widget() {
+OverlayArea::OverlayArea(CreateKey key)
+    : Widget(key) {
 }
 
 OverlayAreaPtr OverlayArea::create() {
-    return OverlayAreaPtr(new OverlayArea());
+    return core::createObject<OverlayArea>();
 }
 
 void OverlayArea::setAreaWidget(Widget* widget) {

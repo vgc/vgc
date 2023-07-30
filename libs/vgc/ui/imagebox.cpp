@@ -28,8 +28,8 @@
 
 namespace vgc::ui {
 
-ImageBox::ImageBox(std::string_view relativePath)
-    : Widget() {
+ImageBox::ImageBox(CreateKey key, std::string_view relativePath)
+    : Widget(key) {
 
     QImageReader reader(relativePath.data());
     reader.setAutoTransform(true);
@@ -39,7 +39,7 @@ ImageBox::ImageBox(std::string_view relativePath)
 }
 
 ImageBoxPtr ImageBox::create(std::string_view relativePath) {
-    return ImageBoxPtr(new ImageBox(relativePath));
+    return core::createObject<ImageBox>(relativePath);
 }
 
 void ImageBox::onResize() {

@@ -87,7 +87,7 @@ private:
     VGC_OBJECT(QglEngine, Engine)
 
 protected:
-    QglEngine(const EngineCreateInfo& createInfo, QOpenGLContext* ctx);
+    QglEngine(CreateKey, const EngineCreateInfo& createInfo, QOpenGLContext* ctx);
 
     void onDestroyed() override;
 

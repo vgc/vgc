@@ -123,8 +123,9 @@ std::string toString(const Shortcut& shortcut) {
 
 } // namespace detail
 
-ShortcutMap::ShortcutMap(const ShortcutMap* inheritedMap)
-    : inheritedMap_(inheritedMap) {
+ShortcutMap::ShortcutMap(CreateKey key, const ShortcutMap* inheritedMap)
+    : Object(key)
+    , inheritedMap_(inheritedMap) {
 
     if (inheritedMap_) {
         inheritedMap_->changed().connect(changed());
@@ -132,7 +133,7 @@ ShortcutMap::ShortcutMap(const ShortcutMap* inheritedMap)
 }
 
 ShortcutMapPtr ShortcutMap::create(const ShortcutMap* inheritedMap) {
-    return ShortcutMapPtr(new ShortcutMap(inheritedMap));
+    return core::createObject<ShortcutMap>(inheritedMap);
 }
 
 bool ShortcutMap::isSet(core::StringId commandId) const {

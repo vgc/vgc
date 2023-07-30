@@ -170,8 +170,9 @@ void visitDfs(
 
 } // namespace
 
-Workspace::Workspace(dom::DocumentPtr document)
-    : document_(document) {
+Workspace::Workspace(CreateKey key, dom::DocumentPtr document)
+    : Object(key)
+    , document_(document) {
 
     document->changed().connect(onDocumentDiff());
 
@@ -219,7 +220,6 @@ std::unique_ptr<Element> makeUniqueElement(Workspace* workspace) {
 
 } // namespace
 
-/* static */
 WorkspacePtr Workspace::create(dom::DocumentPtr document) {
 
     namespace ds = dom::strings;
@@ -232,7 +232,7 @@ WorkspacePtr Workspace::create(dom::DocumentPtr document) {
         registerElementClass_(ds::face, &makeUniqueElement<VacKeyFace>);
     });
 
-    return WorkspacePtr(new Workspace(document));
+    return core::createObject<Workspace>(document);
 }
 
 void Workspace::registerElementClass_(

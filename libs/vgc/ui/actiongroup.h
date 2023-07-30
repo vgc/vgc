@@ -111,7 +111,7 @@ private:
     VGC_PRIVATIZE_OBJECT_TREE_MUTATORS
 
 protected:
-    ActionGroup(CheckPolicy checkPolicy);
+    ActionGroup(CreateKey, CheckPolicy checkPolicy);
 
 public:
     /// Creates a non-exclusive `ActionGroup`, that is, a group with the policy
