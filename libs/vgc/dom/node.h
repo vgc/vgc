@@ -85,6 +85,13 @@ void destroyNode(Node* node);
 ///
 /// See Document for details.
 ///
+/// In order to create nodes, please use one of the following:
+///
+/// ```cpp
+/// DocumentPtr document = Document::create();
+/// Element* element = Element::create(parent, name);
+/// ```
+///
 /// Owner Document
 /// --------------
 ///
@@ -111,17 +118,12 @@ private:
     VGC_OBJECT(Node, core::Object)
 
 protected:
-    /// Constructs a parent-less Node of the given \p nodeType, owned by the
-    /// given \p document. This constructor is an implementation detail only
-    /// available to derived classes. In order to create nodes, please use one
-    /// of the following:
+    struct ProtectedKey {};
+
+    /// Constructs a parent-less `Node` of the given `nodeType`, owned by the
+    /// given `document`.
     ///
-    /// ```cpp
-    /// DocumentPtr document = Document::create();
-    /// Element* element = Element::create(parent, name);
-    /// ```
-    ///
-    Node(CreateKey, Document* document, NodeType nodeType);
+    Node(CreateKey, ProtectedKey, Document* document, NodeType nodeType);
 
     void onDestroyed() override;
 

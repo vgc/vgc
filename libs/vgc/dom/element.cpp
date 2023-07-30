@@ -26,7 +26,7 @@
 namespace vgc::dom {
 
 Element::Element(CreateKey key, Document* document, core::StringId tagName)
-    : Node(key, document, NodeType::Element)
+    : Node(key, ProtectedKey{}, document, NodeType::Element)
     , tagName_(tagName)
     , internalId_(core::genId()) {
 }

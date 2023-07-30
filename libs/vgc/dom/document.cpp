@@ -33,7 +33,7 @@ namespace vgc::dom {
 using core::XmlSyntaxError;
 
 Document::Document(CreateKey key)
-    : Node(key, this, NodeType::Document)
+    : Node(key, ProtectedKey{}, this, NodeType::Document)
     , hasXmlDeclaration_(true)
     , hasXmlEncoding_(true)
     , hasXmlStandalone_(false)
