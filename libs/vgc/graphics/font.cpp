@@ -558,7 +558,8 @@ Glyph* Font::getGlyphFromIndex(Int glyphIndex) {
         }
 
         // Create Glyph object
-        GlyphPtr p = core::createObject<Glyph>(Glyph::PrivateKey{}, this, glyphIndex, name);
+        GlyphPtr p =
+            core::createObject<Glyph>(Glyph::PrivateKey{}, this, glyphIndex, name);
         glyph = p.get();
     }
 
@@ -674,8 +675,7 @@ SizedGlyph* SizedFont::getSizedGlyphFromIndex(Int glyphIndex) {
         Glyph* glyph = font()->getGlyphFromIndex(glyphIndex);
 
         // Create SizedGlyph object and copy data to object
-        SizedGlyphPtr p =
-            core::createObject<SizedGlyph>(SizedGlyph::PrivateKey{}, this);
+        SizedGlyphPtr p = core::createObject<SizedGlyph>(SizedGlyph::PrivateKey{}, this);
         sizedGlyph = p.get();
         FT_GlyphSlot slot = face->glyph;
         sizedGlyph->impl_.reset(new detail::SizedGlyphImpl(glyph, slot));
