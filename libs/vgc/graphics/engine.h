@@ -173,7 +173,7 @@ protected:
     /// Constructs an Engine. This constructor is an implementation detail only
     /// available to derived classes.
     ///
-    Engine(const EngineCreateInfo& createInfo);
+    Engine(CreateKey, const EngineCreateInfo& createInfo);
 
     void onDestroyed() override;
 

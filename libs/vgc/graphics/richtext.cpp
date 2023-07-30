@@ -26,19 +26,19 @@
 
 namespace vgc::graphics {
 
-RichTextSpan::RichTextSpan(RichTextSpan* parent)
-    : StylableObject()
+RichTextSpan::RichTextSpan(CreateKey key, PrivateKey, RichTextSpan* parent)
+    : StylableObject(key)
     , parent_(parent)
     , root_(parent ? parent->root() : this)
     , children_(RichTextSpanList::create(this)) {
 }
 
 RichTextSpanPtr RichTextSpan::createRoot() {
-    return RichTextSpanPtr(new RichTextSpan());
+    return core::createObject<RichTextSpan>(PrivateKey{});
 }
 
 RichTextSpan* RichTextSpan::createChild() {
-    RichTextSpanPtr childPtr(new RichTextSpan(this));
+    RichTextSpanPtr childPtr = core::createObject<RichTextSpan>(PrivateKey{}, this);
     RichTextSpan* child = childPtr.get();
     children_->append(child);
     return child;
@@ -144,8 +144,8 @@ SizedFont* getDefaultSizedFont_() {
 
 } // namespace
 
-RichText::RichText()
-    : RichTextSpan()
+RichText::RichText(CreateKey key)
+    : RichTextSpan(key, RichTextSpan::PrivateKey{})
     , text_()
     , shapedText_(getDefaultSizedFont_(), "")
     , isSelectionVisible_(false)
@@ -155,8 +155,8 @@ RichText::RichText()
     , horizontalScroll_(0.0f) {
 }
 
-RichText::RichText(std::string_view text)
-    : RichText() {
+RichText::RichText(CreateKey key, std::string_view text)
+    : RichText(key) {
 
     insertText_(text);
     selectionStart_ = 0;
@@ -165,11 +165,11 @@ RichText::RichText(std::string_view text)
 }
 
 RichTextPtr RichText::create() {
-    return RichTextPtr(new RichText());
+    return core::createObject<RichText>();
 }
 
 RichTextPtr RichText::create(std::string_view text) {
-    return RichTextPtr(new RichText(text));
+    return core::createObject<RichText>(text);
 }
 
 void RichText::clear() {

@@ -152,7 +152,8 @@ core::Array<Batch> createBatchesFromPaths(const core::Array<SvgSimplePath>& path
 
 } // namespace
 
-Icon::Icon(std::string_view filePath) {
+Icon::Icon(CreateKey key, std::string_view filePath)
+    : StylableObject(key) {
 
     data_.reset(new detail::IconData());
     std::string svg = core::readFile(filePath);
@@ -168,7 +169,7 @@ Icon::Icon(std::string_view filePath) {
 }
 
 IconPtr Icon::create(std::string_view filePath) {
-    return IconPtr(new Icon(filePath));
+    return core::createObject<Icon>(filePath);
 }
 
 void Icon::draw(graphics::Engine* engine) {

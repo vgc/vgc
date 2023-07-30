@@ -21,8 +21,8 @@
 
 namespace vgc::graphics {
 
-Engine::Engine(const EngineCreateInfo& createInfo)
-    : Object()
+Engine::Engine(CreateKey key, const EngineCreateInfo& createInfo)
+    : Object(key)
     , resourceRegistry_(new detail::ResourceRegistry())
     , createInfo_(createInfo) {
 

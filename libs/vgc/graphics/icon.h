@@ -51,7 +51,7 @@ private:
     VGC_PRIVATIZE_OBJECT_TREE_MUTATORS
 
 protected:
-    Icon(std::string_view filePath);
+    Icon(CreateKey, std::string_view filePath);
 
 public:
     /// Creates an icon of the given size with the given SVG file path.

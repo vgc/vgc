@@ -56,7 +56,7 @@ private:
     VGC_OBJECT(D3d11Engine, Engine)
 
 protected:
-    explicit D3d11Engine(const EngineCreateInfo& createInfo);
+    explicit D3d11Engine(CreateKey, const EngineCreateInfo& createInfo);
 
     void onDestroyed() override;
 

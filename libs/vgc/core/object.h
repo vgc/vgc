@@ -1632,14 +1632,15 @@ private:
     VGC_PRIVATIZE_OBJECT_TREE_MUTATORS
 
 protected:
-    ObjList() {
+    ObjList(CreateKey key)
+        : Object(key) {
     }
 
 public:
     static ObjList* create(Object* parent) {
-        ObjList* res = new ObjList();
-        res->appendObjectToParent_(parent);
-        return res;
+        ObjPtr<ObjList> list = createObject<ObjList>();
+        list->appendObjectToParent_(parent);
+        return list.get();
     }
 
     T* first() {
