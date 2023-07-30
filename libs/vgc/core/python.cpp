@@ -176,10 +176,12 @@ PythonInterpreter::ScopedInterpreter_::~ScopedInterpreter_() {
 }
 
 PythonInterpreter::PythonInterpreter(
+    CreateKey key,
     const std::string& programName,
     const std::string& pythonHome)
 
-    : scopedInterpreter_(programName, pythonHome) {
+    : Object(key)
+    , scopedInterpreter_(programName, pythonHome) {
 
     // Store useful Python objects
     main_ = pybind11::module::import("__main__");
@@ -194,7 +196,7 @@ PythonInterpreter::PythonInterpreter(
 /* static */
 PythonInterpreterPtr
 PythonInterpreter::create(const std::string& programName, const std::string& pythonHome) {
-    return PythonInterpreterPtr(new PythonInterpreter(programName, pythonHome));
+    return createObject<PythonInterpreter>(programName, pythonHome);
 }
 
 void PythonInterpreter::run(const std::string& str) {

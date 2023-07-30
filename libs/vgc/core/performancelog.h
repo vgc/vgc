@@ -192,7 +192,7 @@ private:
     VGC_PRIVATIZE_OBJECT_TREE_MUTATORS
 
 protected:
-    PerformanceLog(PerformanceLog* parent, const std::string& name);
+    PerformanceLog(CreateKey, PerformanceLog* parent, const std::string& name);
 
 public:
     /// Creates a PerformanceLog with the given \p name.
@@ -287,7 +287,7 @@ private:
     friend class PerformanceLog;
 
 protected:
-    PerformanceLogParams();
+    PerformanceLogParams(CreateKey);
 
 public:
     /// Creates a new PerformanceLogParams.

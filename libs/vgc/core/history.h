@@ -108,11 +108,7 @@ private:
 protected:
     friend History;
 
-    explicit UndoGroup(core::StringId name, History* history)
-        : name_(name)
-        , history_(history)
-        , index_(genUndoGroupIndex()) {
-    }
+    UndoGroup(CreateKey key, StringId name, History* history);
 
 public:
     // non-copyable
@@ -121,7 +117,7 @@ public:
 
     /// Returns the name of this group, given at construction.
     ///
-    core::StringId name() const {
+    StringId name() const {
         return name_;
     }
 
@@ -262,9 +258,7 @@ private:
     UndoGroupIndex index_ = -1;
     bool isUndone_ = false;
 
-    static UndoGroupPtr create(core::StringId name, History* history) {
-        return UndoGroupPtr(new UndoGroup(name, history));
-    }
+    static UndoGroupPtr create(StringId name, History* history);
 
     // Undo the contained operations.
     // isAbort is passed to the undone signal.
@@ -286,7 +280,7 @@ private:
 protected:
     friend UndoGroup;
 
-    History(core::StringId entrypointName);
+    History(CreateKey, core::StringId entrypointName);
 
     template<typename T>
     struct EnableConstruct : T {
@@ -297,10 +291,7 @@ protected:
     };
 
 public:
-    static HistoryPtr create(core::StringId entrypointName) {
-        HistoryPtr p(new History(entrypointName));
-        return p;
-    }
+    static HistoryPtr create(StringId entrypointName);
 
     /// Returns the root undo group of this history.
     ///

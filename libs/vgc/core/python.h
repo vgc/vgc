@@ -51,7 +51,10 @@ private:
     VGC_OBJECT(PythonInterpreter, Object)
 
 protected:
-    PythonInterpreter(const std::string& programName, const std::string& pythonHome);
+    PythonInterpreter(
+        CreateKey,
+        const std::string& programName,
+        const std::string& pythonHome);
 
 public:
     /// Creates a PythonInterpreter, with the following settings:
