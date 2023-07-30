@@ -130,21 +130,6 @@ public:
     //
     static void decref(const void* obj, Int64 k = 1);
 
-    // Decrements by k the refCount of the given obj and of all its ancestors.
-    // Destroys the root of the given obj if its refcount reaches zero. Does
-    // nothing if obj == nullptr.
-    //
-    // Using `void*` instead of `const Object*` makes it possible to call the
-    // destructor of an ObjPtr with just a forward declaration. This is useful
-    // for classes holding an ObjPtr<T> as data member with just a forward
-    // declaration of T: they would otherwise have to define a destructor in
-    // the .cpp file, after including the full definition of T. This design is
-    // still relatively safe since we do have a `const Object* obj` signature
-    // for incref(), which verifies that T derives from Object whenever we
-    // construct an ObjPtr<T>.
-    //
-    static void setConstructed(const void* obj, Int64 k = 1);
-
     // Creates an object.
     //
     template<typename T, typename... Args>
