@@ -59,7 +59,7 @@ class VGC_APP_API QtWidgetsApplication : public ui::Application {
     VGC_OBJECT(QtWidgetsApplication, ui::Application)
 
 protected:
-    QtWidgetsApplication(int argc, char* argv[]);
+    QtWidgetsApplication(CreateKey, int argc, char* argv[]);
 
 public:
     /// Creates the application. Note that you must never create more than one

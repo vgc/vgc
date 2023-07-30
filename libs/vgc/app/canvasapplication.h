@@ -64,7 +64,11 @@ class VGC_APP_API CanvasApplication : public QtWidgetsApplication {
     VGC_OBJECT(CanvasApplication, QtWidgetsApplication)
 
 protected:
-    CanvasApplication(int argc, char* argv[], std::string_view applicationName);
+    CanvasApplication(
+        CreateKey,
+        int argc,
+        char* argv[],
+        std::string_view applicationName);
 
 public:
     /// Creates the `CanvasApplication`.

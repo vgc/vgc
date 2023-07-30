@@ -37,7 +37,7 @@ class VGC_APP_API MainWindow : public ui::Window {
     VGC_OBJECT(MainWindow, ui::Window)
 
 protected:
-    MainWindow(std::string_view title);
+    MainWindow(CreateKey, std::string_view title);
 
 public:
     /// Creates a `MainWindow`.

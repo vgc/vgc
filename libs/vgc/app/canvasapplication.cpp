@@ -155,11 +155,12 @@ ui::Panel* createPanelWithPadding(ui::PanelArea* panelArea, std::string_view pan
 } // namespace detail
 
 CanvasApplication::CanvasApplication(
+    CreateKey key,
     int argc,
     char* argv[],
     std::string_view applicationName)
 
-    : QtWidgetsApplication(argc, argv) {
+    : QtWidgetsApplication(key, argc, argv) {
 
     setApplicationName(applicationName);
     window_ = app::MainWindow::create(applicationName);
@@ -172,7 +173,7 @@ CanvasApplication::CanvasApplication(
 
 CanvasApplicationPtr
 CanvasApplication::create(int argc, char* argv[], std::string_view applicationName) {
-    return CanvasApplicationPtr(new CanvasApplication(argc, argv, applicationName));
+    return core::createObject<CanvasApplication>(argc, argv, applicationName);
 }
 
 void CanvasApplication::quit() {

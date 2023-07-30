@@ -257,8 +257,8 @@ void systemSignalHandler(int sig) {
 
 } // namespace detail
 
-QtWidgetsApplication::QtWidgetsApplication(int argc, char* argv[])
-    : ui::Application(argc, argv)
+QtWidgetsApplication::QtWidgetsApplication(CreateKey key, int argc, char* argv[])
+    : ui::Application(key, argc, argv)
     , preInitializer_()
     , argc_(argc)
     , application_(argc_, argv, this) {
@@ -282,7 +282,7 @@ QtWidgetsApplication::QtWidgetsApplication(int argc, char* argv[])
 }
 
 QtWidgetsApplicationPtr QtWidgetsApplication::create(int argc, char* argv[]) {
-    return QtWidgetsApplicationPtr(new QtWidgetsApplication(argc, argv));
+    return core::createObject<QtWidgetsApplication>(argc, argv);
 }
 
 void QtWidgetsApplication::onUnhandledException(std::string_view errorMessage) {

@@ -46,7 +46,7 @@ class VGC_APP_API MainWidget : public ui::OverlayArea {
     VGC_OBJECT(MainWidget, ui::OverlayArea)
 
 protected:
-    MainWidget();
+    MainWidget(CreateKey);
 
 public:
     /// Creates a `MainWidget`.

@@ -62,7 +62,7 @@ class VGC_APP_API NativeMenuBar : public core::Object {
     VGC_OBJECT(NativeMenuBar, core::Object)
 
 protected:
-    NativeMenuBar(ui::Menu* menu);
+    NativeMenuBar(CreateKey, ui::Menu* menu);
     void onDestroyed() override;
 
 public:
