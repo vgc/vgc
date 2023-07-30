@@ -43,10 +43,10 @@ std::string fromQt(const QString& s) {
 
 QColor toQt(const core::Color& c) {
     return QColor(
-        core::Color::mapTo255(c.r()),
-        core::Color::mapTo255(c.g()),
-        core::Color::mapTo255(c.b()),
-        core::Color::mapTo255(c.a()));
+        core::Color::mapToUInt8(c.r()),
+        core::Color::mapToUInt8(c.g()),
+        core::Color::mapToUInt8(c.b()),
+        core::Color::mapToUInt8(c.a()));
 }
 
 core::Color fromQt(const QColor& c) {

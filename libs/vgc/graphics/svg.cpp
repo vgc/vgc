@@ -1065,8 +1065,8 @@ std::optional<core::Color> parseColor(std::string_view s) {
         return core::Color::fromHex(s);
     }
     else {
-        // TODO: handle named constants and #* formats
-        return core::Color();
+        s = trimmed(s);
+        return core::Color::fromName(s);
     }
 }
 
