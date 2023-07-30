@@ -546,12 +546,12 @@ SheetPtr Sheet::create(std::string_view s) {
     return detail::Parser::parseSheet(s);
 }
 
-RuleSet::RuleSet(CreateKey key)
+RuleSet::RuleSet(CreateKey key, PrivateKey)
     : Object(key) {
 }
 
 RuleSetPtr RuleSet::create() {
-    return core::createObject<RuleSet>();
+    return core::createObject<RuleSet>(PrivateKey{});
 }
 
 VGC_DEFINE_ENUM(
@@ -687,7 +687,7 @@ bool Selector::matches(StylableObject* node) {
     }
 }
 
-Selector::Selector(CreateKey key, core::Array<SelectorItem>&& items)
+Selector::Selector(CreateKey key, PrivateKey, core::Array<SelectorItem>&& items)
     : Object(key)
     , items_(std::move(items))
     , specificity_(0) {
@@ -701,15 +701,15 @@ Selector::Selector(CreateKey key, core::Array<SelectorItem>&& items)
 }
 
 SelectorPtr Selector::create(core::Array<SelectorItem>&& items) {
-    return core::createObject<Selector>(std::move(items));
+    return core::createObject<Selector>(PrivateKey{}, std::move(items));
 }
 
-Declaration::Declaration(CreateKey key)
+Declaration::Declaration(CreateKey key, PrivateKey)
     : Object(key) {
 }
 
 DeclarationPtr Declaration::create() {
-    return core::createObject<Declaration>();
+    return core::createObject<Declaration>(PrivateKey{});
 }
 
 } // namespace vgc::style

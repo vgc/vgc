@@ -90,7 +90,9 @@ private:
     DeclarationArray declarations_;
 
     friend class detail::Parser;
-    RuleSet(CreateKey);
+    struct PrivateKey {};
+
+    RuleSet(CreateKey, PrivateKey);
     static RuleSetPtr create();
 };
 
@@ -187,7 +189,9 @@ private:
     Specificity specificity_;
 
     friend class detail::Parser;
-    Selector(CreateKey, core::Array<SelectorItem>&& items);
+    struct PrivateKey {};
+
+    Selector(CreateKey, PrivateKey, core::Array<SelectorItem>&& items);
     static SelectorPtr create(core::Array<SelectorItem>&& items);
 };
 
@@ -224,7 +228,9 @@ private:
     Value value_;
 
     friend class detail::Parser;
-    Declaration(CreateKey);
+    struct PrivateKey {};
+
+    Declaration(CreateKey, PrivateKey);
     static DeclarationPtr create();
 };
 
