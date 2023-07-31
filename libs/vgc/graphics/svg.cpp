@@ -259,36 +259,6 @@ bool readUnsigned(CharIterator& it, CharIterator end, double* number = nullptr) 
     return readNumber(false, it, end, number);
 }
 
-// Applies the given transform to the given width.
-//
-// Note that as per spec, the transform also affects stroke-width. In case of
-// non-uniform scaling (or skewing), we can't really be fully compliant (see
-// https://stackoverflow.com/q/10357292 for what compliance looks like in case
-// of non-uniform scaling), so we just scale the stroke width by sqrt(|det(t)|),
-// which is basically the geometric mean of the x-scale and y-scale. We could
-// do a bit better by taking the stroke tangent into account, but this would
-// complicate the architecture a bit for something which is probably a rarely
-// used edge case, and would still not be 100% compliant anyway.
-//
-// Also note that SVG Tiny 1.2 and SVG 2 define a "non-scaling-size" vector
-// effect, which makes stroke-width ignoring the current transform. We don't
-// implement that, but the implementation notes on SVG 2 are where we used the
-// inspiration for choosing sqrt(|det(t)|) as our scale factor:
-//
-// https://www.w3.org/TR/2018/CR-SVG2-20181004/coords.html#VectorEffects
-//
-double applyTransform(const geometry::Mat3d& t, double width) {
-    // Note: Ideally, we may want to cache meanScale for performance
-    double meanScale = std::sqrt(std::abs(t(0, 0) * t(1, 1) - t(1, 0) * t(0, 1)));
-    return meanScale * width;
-}
-
-// Applies the given transform to the given Vector2d.
-//
-geometry::Vec2d applyTransform(const geometry::Mat3d& t, const geometry::Vec2d& v) {
-    return t.transformPoint(v);
-}
-
 // All possible path command types.
 //
 enum class SvgPathCommandType : unsigned char {
