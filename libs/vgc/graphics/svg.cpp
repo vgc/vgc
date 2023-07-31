@@ -241,7 +241,7 @@ bool readNumber(CharIterator& it, CharIterator end, double* number = nullptr) {
     return readNumber(true, it, end, number);
 }
 
-// Returns whether the given QString starts with a number.
+// Returns whether the given string starts with a number.
 //
 // If a number is found, and the optional output parameter `number` is given,
 // then it is set to the value of the number. Otherwise, it is left unchanged.
@@ -1541,6 +1541,16 @@ public:
 
 namespace {
 
+void appendSimplePath(
+    core::Array<SvgSimplePath>& out,
+    const core::XmlStreamReader& xml,
+    SvgPresentationAttributes& pa,
+    const geometry::Mat3d& ctm,
+    const std::vector<SvgPathCommand>& cmds) {
+
+    out.append(detail::SvgParser::pathToSimplePath(cmds, xml, pa, ctm));
+}
+
 void readPath(
     core::Array<SvgSimplePath>& out,
     const core::XmlStreamReader& xml,
@@ -1555,14 +1565,417 @@ void readPath(
         }
 
         // Import path data (up to, but not including, first invalid command)
-        out.append(detail::SvgParser::pathToSimplePath(cmds, xml, pa, ctm));
+        appendSimplePath(out, xml, pa, ctm, cmds);
     }
     else {
         // Don't output anything if no path data provided
     }
 }
 
-// TODO: readRect, readLine, etc.
+// Reads the value of an optional number attribute.
+//
+// If the attribute was given and was a valid number, then returns true.
+// Otherwise, returns false.
+//
+// This function emits an error if the attribute was given but was not
+// a valid number.
+//
+// This function allows leading/trailing whitespaces (e.g., `<rect x=" 10"/>`).
+//
+// Whether leading/trailing whitespaces are allowed in SVG for number attributes
+// is currently unclear. There is a proposal to clarify, discussed in 2013-2014, but
+// not yet closed as of 2023. See:
+//
+// - https://www.w3.org/Graphics/SVG/WG/track/issues/2447
+// - https://www.w3.org/Graphics/SVG/WG/wiki/Proposals/AttributeWhitespace
+// - https://www.w3.org/2014/02/20-svg-minutes.html#item03
+//
+bool readOptionalNumberAttribute(
+    const core::XmlStreamReader& xml,
+    std::string_view attributeName,
+    double& value) {
+
+    bool hadValidNumber = false;
+    if (OptionalStringView s = xml.attributeValue(attributeName)) {
+        if (readNumber(core::trimmed(*s), &value)) {
+            hadValidNumber = true;
+        }
+        else {
+            VGC_ERROR(
+                LogVgcGraphicsSvg,
+                "Invalid value '{}' for attribute '{}'",
+                *s,
+                attributeName);
+        }
+    }
+    return hadValidNumber;
+}
+
+// Reads the value of a mandatory number attribute.
+//
+// If the attribute was given and was a valid number, then returns true.
+// Otherwise, returns false.
+//
+// This function emits an error if the attribute was not given or was not a
+// valid number.
+//
+// This function allows leading/trailing whitespaces.
+//
+bool readMandatoryNumberAttribute(
+    const core::XmlStreamReader& xml,
+    std::string_view attributeName,
+    double& value) {
+
+    bool hadValidNumber = false;
+    if (OptionalStringView s = xml.attributeValue(attributeName)) {
+        if (readNumber(core::trimmed(*s), &value)) {
+            hadValidNumber = true;
+        }
+        else {
+            VGC_ERROR(
+                LogVgcGraphicsSvg,
+                "Invalid value '{}' for attribute '{}'",
+                *s,
+                attributeName);
+        }
+    }
+    else {
+        VGC_ERROR(LogVgcGraphicsSvg, "Missing attribute '{}'", attributeName);
+    }
+    return hadValidNumber;
+}
+
+bool checkNonNegative(std::string_view attributeName, double value) {
+    if (value < 0) {
+        VGC_ERROR(
+            LogVgcGraphicsSvg,
+            "Negative value '{}' for attribute '{}'",
+            value,
+            attributeName);
+        return false;
+    }
+    else {
+        return true;
+    }
+}
+
+// Basic shapes: https://www.w3.org/TR/SVG11/shapes.html
+
+void readRect(
+    core::Array<SvgSimplePath>& out,
+    const core::XmlStreamReader& xml,
+    SvgPresentationAttributes& pa,
+    const geometry::Mat3d& ctm) {
+
+    // X position
+    double x = 0;
+    readOptionalNumberAttribute(xml, "x", x);
+
+    // Y position
+    double y = 0;
+    readOptionalNumberAttribute(xml, "y", y);
+
+    // Width
+    double width = 0;
+    readMandatoryNumberAttribute(xml, "width", width);
+    checkNonNegative("width", width);
+
+    // Height
+    double height = 0;
+    readMandatoryNumberAttribute(xml, "height", height);
+    checkNonNegative("height", height);
+
+    // A width or height of 0 disables rendering. A negative width or height is
+    // an error (already issued above) and disables rendering.
+    if (width <= 0 || height <= 0) {
+        return;
+    }
+
+    // The rx and ry attributes have a slightly more advanced default value,
+    // see W3 specifications for details.
+    double rx = 0;
+    double ry = 0;
+    bool hasRx = readOptionalNumberAttribute(xml, "rx", rx);
+    bool hasRy = readOptionalNumberAttribute(xml, "ry", ry);
+    if (hasRx) {
+        if (!hasRy) {
+            ry = rx;
+        }
+    }
+    else if (hasRy) {
+        rx = ry;
+    }
+    rx = core::clamp(rx, 0.0, 0.5 * width);
+    ry = core::clamp(ry, 0.0, 0.5 * height);
+
+    // Create equivalent path
+    using T = SvgPathCommandType;
+    std::vector<SvgPathCommand> cmds;
+    if (rx > 0 && ry > 0) {
+        // Rounded rect
+        cmds = {
+            {T::MoveTo, false, {x + rx, y}},
+            {T::HLineTo, false, {x + width - rx}},
+            {T::ArcTo, false, {rx, ry, 0, 0, 1, x + width, y + ry}},
+            {T::VLineTo, false, {y + height - ry}},
+            {T::ArcTo, false, {rx, ry, 0, 0, 1, x + width - rx, y + height}},
+            {T::HLineTo, false, {x + rx}},
+            {T::ArcTo, false, {rx, ry, 0, 0, 1, x, y + height - ry}},
+            {T::VLineTo, false, {y + ry}},
+            {T::ArcTo, false, {rx, ry, 0, 0, 1, x + rx, y}},
+            {T::ClosePath, false, {}}};
+    }
+    else {
+        // Sharp rect
+        cmds = {
+            {T::MoveTo, false, {x, y}},
+            {T::HLineTo, false, {x + width}},
+            {T::VLineTo, false, {y + height}},
+            {T::HLineTo, false, {x}},
+            {T::ClosePath, false, {}}};
+    }
+    appendSimplePath(out, xml, pa, ctm, cmds);
+}
+
+void readCircle(
+    core::Array<SvgSimplePath>& out,
+    const core::XmlStreamReader& xml,
+    SvgPresentationAttributes& pa,
+    const geometry::Mat3d& ctm) {
+
+    // Center X position
+    double cx = 0;
+    readOptionalNumberAttribute(xml, "cx", cx);
+
+    // Center Y position
+    double cy = 0;
+    readOptionalNumberAttribute(xml, "cy", cy);
+
+    // Radius
+    double r = 0;
+    readMandatoryNumberAttribute(xml, "r", r);
+    checkNonNegative("r", r);
+
+    // A radius of 0 disables rendering. A negative radius is
+    // an error (already issued above) and disables rendering.
+    if (r <= 0) {
+        return;
+    }
+
+    // Create equivalent path
+    //
+    // Note: as per 2019-12-10, the SVG 2 draft specifies that we should
+    // use sweep-flag=0. I believe this is an error in the draft and
+    // that we should use sweep-flag=1 instead, like for rounded rects.
+    // The code below uses sweep-flag=1.
+    // See: https://github.com/w3c/svgwg/issues/765
+    //
+    std::vector<SvgPathCommand> cmds = {
+        {SvgPathCommandType::MoveTo, false, {cx + r, cy}},
+        {SvgPathCommandType::ArcTo, false, {r, r, 0, 0, 1, cx, cy + r}},
+        {SvgPathCommandType::ArcTo, false, {r, r, 0, 0, 1, cx - r, cy}},
+        {SvgPathCommandType::ArcTo, false, {r, r, 0, 0, 1, cx, cy - r}},
+        {SvgPathCommandType::ArcTo, false, {r, r, 0, 0, 1, cx + r, cy}},
+        {SvgPathCommandType::ClosePath, false, {}}};
+
+    appendSimplePath(out, xml, pa, ctm, cmds);
+}
+
+void readEllipse(
+    core::Array<SvgSimplePath>& out,
+    const core::XmlStreamReader& xml,
+    SvgPresentationAttributes& pa,
+    const geometry::Mat3d& ctm) {
+
+    // Center X position
+    double cx = 0;
+    readOptionalNumberAttribute(xml, "cx", cx);
+
+    // Center Y position
+    double cy = 0;
+    readOptionalNumberAttribute(xml, "cy", cy);
+
+    // X Radius
+    double rx = 0;
+    readMandatoryNumberAttribute(xml, "rx", rx);
+    checkNonNegative("rx", rx);
+
+    // Y Radius
+    double ry = 0;
+    readMandatoryNumberAttribute(xml, "ry", ry);
+    checkNonNegative("ry", ry);
+
+    // A radius of 0 disables rendering. A negative radius is
+    // an error (already issued above) and disables rendering.
+    if (rx <= 0 || ry <= 0) {
+        return;
+    }
+
+    // Create equivalent path
+    //
+    // Note: as per 2019-12-10, the SVG 2 draft specifies that we should
+    // use sweep-flag=0. I believe this is an error in the draft and
+    // that we should use sweep-flag=1 instead, like for rounded rects.
+    // The code below uses sweep-flag=1.
+    // See: https://github.com/w3c/svgwg/issues/765
+    //
+    std::vector<SvgPathCommand> cmds = {
+        {SvgPathCommandType::MoveTo, false, {cx + rx, cy}},
+        {SvgPathCommandType::ArcTo, false, {rx, ry, 0, 0, 1, cx, cy + ry}},
+        {SvgPathCommandType::ArcTo, false, {rx, ry, 0, 0, 1, cx - rx, cy}},
+        {SvgPathCommandType::ArcTo, false, {rx, ry, 0, 0, 1, cx, cy - ry}},
+        {SvgPathCommandType::ArcTo, false, {rx, ry, 0, 0, 1, cx + rx, cy}},
+        {SvgPathCommandType::ClosePath, false, {}}};
+
+    appendSimplePath(out, xml, pa, ctm, cmds);
+}
+
+void readLine(
+    core::Array<SvgSimplePath>& out,
+    const core::XmlStreamReader& xml,
+    SvgPresentationAttributes& pa,
+    const geometry::Mat3d& ctm) {
+
+    // X position 1
+    double x1 = 0;
+    readOptionalNumberAttribute(xml, "x1", x1);
+
+    // Y position 1
+    double y1 = 0;
+    readOptionalNumberAttribute(xml, "y1", y1);
+
+    // X position 2
+    double x2 = 0;
+    readOptionalNumberAttribute(xml, "x2", x2);
+
+    // Y position 2
+    double y2 = 0;
+    readOptionalNumberAttribute(xml, "y2", y2);
+
+    // Create equivalent path
+    std::vector<SvgPathCommand> cmds = {
+        {SvgPathCommandType::MoveTo, false, {x1, y1}},
+        {SvgPathCommandType::LineTo, false, {x2, y2}}};
+
+    appendSimplePath(out, xml, pa, ctm, cmds);
+}
+
+// C++20 adds std::string_view(first, last). In the meantime, we can use this.
+//
+template<class It, class End>
+std::string_view stringViewFromRange(It first, End last) {
+    if (first == last) {
+        return std::string_view();
+    }
+    else {
+        return std::string_view(&(*first), last - first);
+    }
+}
+
+void readPolylineOrPolygon(
+    core::Array<SvgSimplePath>& out,
+    const core::XmlStreamReader& xml,
+    SvgPresentationAttributes& pa,
+    const geometry::Mat3d& ctm,
+    bool isPolygon) {
+
+    // Don't render if no points provided
+    OptionalStringView s = xml.attributeValue("points");
+    if (!s) {
+        return;
+    }
+
+    // Parse points attribute.
+    //
+    // Note 1: Things like "100-200" are considered valid. See:
+    // https://github.com/w3c/svgwg/issues/763
+    //
+    // Note 2: If we fail to read a number, then we still render the points up
+    // to the last non-erroneous point. It's not clear from the spec whether
+    // this is the recommended approach (vs. not rendering anything at all),
+    // but our choice is consistent with path data error handling. See:
+    // https://github.com/w3c/svgwg/issues/764
+    //
+    const auto begin = s->begin();
+    const auto end = s->end();
+    auto it = begin;
+    readCommaWhitespaces(it, end);
+    if (core::contains(stringViewFromRange(begin, it), ',')) {
+        VGC_ERROR(
+            LogVgcGraphicsSvg,
+            "Invalid ',' before the first coordinate in 'points' attribute.");
+    }
+    core::DoubleArray coords;
+    auto lastNumberEnd = it;
+    while (it != end) {
+        double x;
+        if (readNumber(it, end, &x)) {
+            lastNumberEnd = it;
+            coords.append(x);
+            readCommaWhitespaces(it, end);
+        }
+        else {
+            break;
+        }
+    }
+    if (it != end) {
+        VGC_ERROR(
+            LogVgcGraphicsSvg, "Invalid character '{}' in 'points' attribute.", *it);
+    }
+    else if (core::contains(stringViewFromRange(lastNumberEnd, it), ',')) {
+        VGC_ERROR(
+            LogVgcGraphicsSvg,
+            "Invalid ',' after the last coordinate in 'points' attribute.");
+    }
+
+    // Create equivalent path. As per spec:
+    //
+    // - If the number of coords is odd, it is an error
+    //   but we still render, ignoring the last coord.
+    //
+    // - If there are no points, it is a valid element
+    //   but there's nothing to render.
+    //
+    Int numCoords = coords.length();
+    Int numPoints = numCoords / 2;
+    if (2 * numPoints != numCoords) {
+        VGC_ERROR(
+            LogVgcGraphicsSvg, "Odd number of coordinate values in 'points' attribute.");
+    }
+    if (numPoints > 0) {
+        std::vector<SvgPathCommand> cmds;
+        cmds.reserve(static_cast<size_t>(numPoints));
+        cmds.push_back({SvgPathCommandType::MoveTo, false, {coords[0], coords[1]}});
+        for (Int i = 1; i < numPoints; ++i) {
+            cmds.push_back(
+                {SvgPathCommandType::LineTo, false, {coords[2 * i], coords[2 * i + 1]}});
+        }
+        if (isPolygon) {
+            cmds.push_back({SvgPathCommandType::ClosePath, false, {}});
+        }
+        appendSimplePath(out, xml, pa, ctm, cmds);
+    }
+}
+
+void readPolyline(
+    core::Array<SvgSimplePath>& out,
+    const core::XmlStreamReader& xml,
+    SvgPresentationAttributes& pa,
+    const geometry::Mat3d& ctm) {
+
+    bool isPolygon = false;
+    readPolylineOrPolygon(out, xml, pa, ctm, isPolygon);
+}
+
+void readPolygon(
+    core::Array<SvgSimplePath>& out,
+    const core::XmlStreamReader& xml,
+    SvgPresentationAttributes& pa,
+    const geometry::Mat3d& ctm) {
+
+    bool isPolygon = true;
+    readPolylineOrPolygon(out, xml, pa, ctm, isPolygon);
+}
 
 } // namespace
 
@@ -1777,22 +2190,22 @@ core::Array<SvgSimplePath> getSvgSimplePaths(std::string_view svg) {
                 readPath(res, xml, pa, ctm);
             }
             else if (xml.name() == "rect") {
-                // TODO
+                readRect(res, xml, pa, ctm);
             }
             else if (xml.name() == "circle") {
-                // TODO
+                readCircle(res, xml, pa, ctm);
             }
             else if (xml.name() == "ellipse") {
-                // TODO
+                readEllipse(res, xml, pa, ctm);
             }
             else if (xml.name() == "line") {
-                // TODO
+                readLine(res, xml, pa, ctm);
             }
             else if (xml.name() == "polyline") {
-                // TODO
+                readPolyline(res, xml, pa, ctm);
             }
             else if (xml.name() == "polygon") {
-                // TODO
+                readPolygon(res, xml, pa, ctm);
             }
 
             // TEXT-FONT ELEMENTS: text, font, font-face, altGlyphDef
