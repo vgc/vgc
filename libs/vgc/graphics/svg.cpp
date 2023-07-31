@@ -1458,7 +1458,31 @@ pathToCurves2d(const std::vector<SvgPathCommand>& commands, const geometry::Mat3
                 break;
             }
             case SvgPathCommandType::ArcTo: {
-                // TODO
+                // XXX The code below only works if there is no
+                // non-isometric transformation (non-uniform scale, skew).
+                // Converting the arc params to transformed arc params is non-trivial.
+                //
+                // TODO: Expose the transform matrix instead of pre-apply it, so
+                //       that non-isometric transformations work as expected
+                //       for arcs and stroked paths.
+                //
+                geometry::Vec2d r(args[0], args[1]);
+                double xAxisRotation = args[2] / 180.0 * core::pi;
+                bool largeArcFlag = args[3] > 0.5;
+                bool sweepFlag = args[4] > 0.5;
+                geometry::Vec2d q(args[5], args[6]);
+                if (isRelative) {
+                    q += currentPosition;
+                }
+                double scaling = applyTransform(ctm, 1.0);
+                double rotation = geometry::Vec2d(ctm(0, 0), ctm(1, 0)).angle();
+                currentPosition = q;
+                res.arcTo( //
+                    scaling * r,
+                    rotation + xAxisRotation,
+                    largeArcFlag,
+                    sweepFlag,
+                    applyTransform(ctm, q));
                 break;
             }
             }
