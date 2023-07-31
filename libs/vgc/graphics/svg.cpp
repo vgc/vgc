@@ -1301,8 +1301,7 @@ void SvgPresentationAttributes::update_() {
 
 // Converts path data to Curves2d.
 
-geometry::Curves2d
-pathToCurves2d(const std::vector<SvgPathCommand>& commands, const geometry::Mat3d& ctm) {
+geometry::Curves2d pathToCurves2d(const std::vector<SvgPathCommand>& commands) {
 
     // The current position in the path
     geometry::Vec2d currentPosition = {};
@@ -1347,7 +1346,7 @@ pathToCurves2d(const std::vector<SvgPathCommand>& commands, const geometry::Mat3
                 else {
                     currentPosition = {args[0], args[1]};
                 }
-                res.moveTo(applyTransform(ctm, currentPosition));
+                res.moveTo(currentPosition);
                 lastMoveToPosition = currentPosition;
 
                 // If a MoveTo is followed by multiple pairs of coords, the
@@ -1380,7 +1379,7 @@ pathToCurves2d(const std::vector<SvgPathCommand>& commands, const geometry::Mat3
                         currentPosition = {args[0], args[1]};
                     }
                 }
-                res.lineTo(applyTransform(ctm, currentPosition));
+                res.lineTo(currentPosition);
                 break;
             }
             case SvgPathCommandType::CCurveTo:
@@ -1417,10 +1416,7 @@ pathToCurves2d(const std::vector<SvgPathCommand>& commands, const geometry::Mat3
                 }
                 lastTangentControlPoint = r;
                 currentPosition = s;
-                res.cubicBezierTo(
-                    applyTransform(ctm, q),
-                    applyTransform(ctm, r),
-                    applyTransform(ctm, s));
+                res.cubicBezierTo(q, r, s);
                 break;
             }
             case SvgPathCommandType::QCurveTo:
@@ -1452,20 +1448,10 @@ pathToCurves2d(const std::vector<SvgPathCommand>& commands, const geometry::Mat3
                 }
                 lastTangentControlPoint = q;
                 currentPosition = r;
-                res.quadraticBezierTo( //
-                    applyTransform(ctm, q),
-                    applyTransform(ctm, r));
+                res.quadraticBezierTo(q, r);
                 break;
             }
             case SvgPathCommandType::ArcTo: {
-                // XXX The code below only works if there is no
-                // non-isometric transformation (non-uniform scale, skew).
-                // Converting the arc params to transformed arc params is non-trivial.
-                //
-                // TODO: Expose the transform matrix instead of pre-apply it, so
-                //       that non-isometric transformations work as expected
-                //       for arcs and stroked paths.
-                //
                 geometry::Vec2d r(args[0], args[1]);
                 double xAxisRotation = args[2] / 180.0 * core::pi;
                 bool largeArcFlag = args[3] > 0.5;
@@ -1474,15 +1460,8 @@ pathToCurves2d(const std::vector<SvgPathCommand>& commands, const geometry::Mat3
                 if (isRelative) {
                     q += currentPosition;
                 }
-                double scaling = applyTransform(ctm, 1.0);
-                double rotation = geometry::Vec2d(ctm(0, 0), ctm(1, 0)).angle();
                 currentPosition = q;
-                res.arcTo( //
-                    scaling * r,
-                    rotation + xAxisRotation,
-                    largeArcFlag,
-                    sweepFlag,
-                    applyTransform(ctm, q));
+                res.arcTo(r, xAxisRotation, largeArcFlag, sweepFlag, q);
                 break;
             }
             }
@@ -1505,10 +1484,11 @@ public:
         const geometry::Mat3d& ctm) {
 
         SvgSimplePath res;
-        res.curves_ = pathToCurves2d(commands, ctm);
+        res.curves_ = pathToCurves2d(commands);
+        res.transform_ = ctm;
         res.fill_ = pa.fill;
         res.stroke_ = pa.stroke;
-        res.strokeWidth_ = applyTransform(ctm, pa.strokeWidth);
+        res.strokeWidth_ = pa.strokeWidth;
 
         // The grammar for the value of the 'class' attribute is defined in the
         // HTML spec as a "space-separated tokens":
