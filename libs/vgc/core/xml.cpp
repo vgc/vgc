@@ -31,7 +31,8 @@ VGC_DEFINE_ENUM(
     (StartElement, "StartElement"),
     (EndElement, "EndElement"),
     (Characters, "Characters"),
-    (ProcessingInstruction, "ProcessingInstruction"))
+    (ProcessingInstruction, "ProcessingInstruction"),
+    (DoctypeDeclaration, "DoctypeDeclaration"))
 
 namespace {
 
@@ -653,8 +654,8 @@ private:
                     readCharacters_();
                 }
                 else if (peek(7) == "DOCTYPE") {
-                    throw XmlSyntaxError("Unexpected '<!DOCTYPE': Document type "
-                                         "declarations are not yet supported.");
+                    advance(7);
+                    readDoctypeDeclaration_();
                 }
                 else {
                     throw XmlSyntaxError(
@@ -737,6 +738,39 @@ private:
         if (!isClosed) {
             throw XmlSyntaxError("Unexpected end-of-file while reading CDATA section. "
                                  "Expected ']]>' or additional CDATA characters.");
+        }
+    }
+
+    // Read from `<!DOCTYPE` (not included) to matching `>`.
+    //
+    // For now, this is a very naive implementation in order to at least accept
+    // XML files with basic doctype declarations (e.g., example SVG files from
+    // https://www.w3.org/TR/SVG11/paths.html).
+    //
+    // TODO: Actually do some proper parsing of the doctype declaration.
+    // For example, a doctype declaration may include comments or PI sections,
+    // in which case the simple count of `<` and `>` would not work.
+    //
+    // TODO: Only accept doctype declaration before the root element.
+    //
+    void readDoctypeDeclaration_() {
+        eventType = XmlEventType::DoctypeDeclaration;
+        Int numOpenedAngleBrackets = 1;
+        char c;
+        while (numOpenedAngleBrackets > 0 && get(c)) {
+            if (c == '<') {
+                numOpenedAngleBrackets += 1;
+            }
+            else if (c == '>') {
+                numOpenedAngleBrackets -= 1;
+            }
+            else {
+                // Keep reading DoctypeDeclaration
+            }
+        }
+        if (numOpenedAngleBrackets > 0) {
+            throw XmlSyntaxError("Unexpected end-of-file while reading doctype "
+                                 "declaration. Expected '>' or further declarations.");
         }
     }
 

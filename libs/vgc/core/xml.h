@@ -78,10 +78,10 @@ enum class XmlEventType : Int8 {
     Characters,   // can be character data, CDATA section, or resolved entities
     Comment,
     ProcessingInstruction,
+    DoctypeDeclaration,
 
     // TODO:
     // Space,         // non-content whitespace (e.g., outside of the document element)
-    // DoctypeDeclaration,
 
     // Currently, entity references are automatically resolved and merged with
     // adjacent character data. CDATA sections are also merged with adjacent
@@ -297,7 +297,18 @@ private:
 ///
 /// # Document Type Declaration
 ///
-/// For now, document type declarations are not supported by `XmlStreamReader`.
+/// If present, the document type declaration is reported as
+/// `DoctypeDeclaration`.
+///
+/// Note that the current implementation of `XmlStreamReader` is not yet fully
+/// compliant regarding doctype declarations: it may fail to parse complex
+/// declarations, notably with comments and processing intructions.
+///
+/// Also, note that no validation is performed by `XmlStreamReader`, and entity
+/// references declared in the doctype declaration are not substituted in the
+/// document data. In other words, the doctype declaration is merely read by
+/// the `XmlStreamReader` so that the file is accepted, but it is completely
+/// ignored.
 ///
 /// # Start/End Elements
 ///

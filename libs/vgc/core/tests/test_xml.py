@@ -443,6 +443,20 @@ class TestXmlStreamReader(unittest.TestCase):
                 self.assertEqual(xml.processingInstructionTarget, 'php')
                 self.assertEqual(xml.processingInstructionData, ' echo "Hello World!"; ')
 
+    def testDoctypeDeclaration(self):
+        xml = XmlStreamReader("""<?xml version="1.0" standalone="no"?>
+            <!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN"
+              "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
+            <svg/>""")
+        doctypeDeclaration = """<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN"
+              "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">"""
+        hasDoctype = False
+        while xml.readNext():
+            if xml.eventType == XmlEventType.DoctypeDeclaration:
+                hasDoctype = True
+                self.assertEqual(xml.rawText, doctypeDeclaration)
+        self.assertTrue(hasDoctype)
+
     def testNoRootElement(self):
         xml = XmlStreamReader('')
         xml.readNext()

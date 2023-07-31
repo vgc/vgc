@@ -36,7 +36,8 @@ void wrap_XmlEventType(py::module& m) {
         .value("EndElement", This::EndElement)
         .value("Characters", This::Characters)
         .value("Comment", This::Comment)
-        .value("ProcessingInstruction", This::ProcessingInstruction);
+        .value("ProcessingInstruction", This::ProcessingInstruction)
+        .value("DoctypeDeclaration", This::DoctypeDeclaration);
 }
 
 void wrap_XmlStreamAttributeView(py::module& m) {
