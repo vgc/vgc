@@ -32,7 +32,8 @@ enum class CurveCommandType : UInt8 {
     MoveTo,
     LineTo,
     QuadraticBezierTo,
-    CubicBezierTo
+    CubicBezierTo,
+    ArcTo
 };
 
 VGC_GEOMETRY_API
