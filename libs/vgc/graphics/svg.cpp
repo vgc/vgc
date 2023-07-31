@@ -259,36 +259,6 @@ bool readUnsigned(CharIterator& it, CharIterator end, double* number = nullptr) 
     return readNumber(false, it, end, number);
 }
 
-// Applies the given transform to the given width.
-//
-// Note that as per spec, the transform also affects stroke-width. In case of
-// non-uniform scaling (or skewing), we can't really be fully compliant (see
-// https://stackoverflow.com/q/10357292 for what compliance looks like in case
-// of non-uniform scaling), so we just scale the stroke width by sqrt(|det(t)|),
-// which is basically the geometric mean of the x-scale and y-scale. We could
-// do a bit better by taking the stroke tangent into account, but this would
-// complicate the architecture a bit for something which is probably a rarely
-// used edge case, and would still not be 100% compliant anyway.
-//
-// Also note that SVG Tiny 1.2 and SVG 2 define a "non-scaling-size" vector
-// effect, which makes stroke-width ignoring the current transform. We don't
-// implement that, but the implementation notes on SVG 2 are where we used the
-// inspiration for choosing sqrt(|det(t)|) as our scale factor:
-//
-// https://www.w3.org/TR/2018/CR-SVG2-20181004/coords.html#VectorEffects
-//
-double applyTransform(const geometry::Mat3d& t, double width) {
-    // Note: Ideally, we may want to cache meanScale for performance
-    double meanScale = std::sqrt(std::abs(t(0, 0) * t(1, 1) - t(1, 0) * t(0, 1)));
-    return meanScale * width;
-}
-
-// Applies the given transform to the given Vector2d.
-//
-geometry::Vec2d applyTransform(const geometry::Mat3d& t, const geometry::Vec2d& v) {
-    return t.transformPoint(v);
-}
-
 // All possible path command types.
 //
 enum class SvgPathCommandType : unsigned char {
@@ -1301,8 +1271,7 @@ void SvgPresentationAttributes::update_() {
 
 // Converts path data to Curves2d.
 
-geometry::Curves2d
-pathToCurves2d(const std::vector<SvgPathCommand>& commands, const geometry::Mat3d& ctm) {
+geometry::Curves2d pathToCurves2d(const std::vector<SvgPathCommand>& commands) {
 
     // The current position in the path
     geometry::Vec2d currentPosition = {};
@@ -1347,7 +1316,7 @@ pathToCurves2d(const std::vector<SvgPathCommand>& commands, const geometry::Mat3
                 else {
                     currentPosition = {args[0], args[1]};
                 }
-                res.moveTo(applyTransform(ctm, currentPosition));
+                res.moveTo(currentPosition);
                 lastMoveToPosition = currentPosition;
 
                 // If a MoveTo is followed by multiple pairs of coords, the
@@ -1380,7 +1349,7 @@ pathToCurves2d(const std::vector<SvgPathCommand>& commands, const geometry::Mat3
                         currentPosition = {args[0], args[1]};
                     }
                 }
-                res.lineTo(applyTransform(ctm, currentPosition));
+                res.lineTo(currentPosition);
                 break;
             }
             case SvgPathCommandType::CCurveTo:
@@ -1417,10 +1386,7 @@ pathToCurves2d(const std::vector<SvgPathCommand>& commands, const geometry::Mat3
                 }
                 lastTangentControlPoint = r;
                 currentPosition = s;
-                res.cubicBezierTo(
-                    applyTransform(ctm, q),
-                    applyTransform(ctm, r),
-                    applyTransform(ctm, s));
+                res.cubicBezierTo(q, r, s);
                 break;
             }
             case SvgPathCommandType::QCurveTo:
@@ -1452,20 +1418,10 @@ pathToCurves2d(const std::vector<SvgPathCommand>& commands, const geometry::Mat3
                 }
                 lastTangentControlPoint = q;
                 currentPosition = r;
-                res.quadraticBezierTo( //
-                    applyTransform(ctm, q),
-                    applyTransform(ctm, r));
+                res.quadraticBezierTo(q, r);
                 break;
             }
             case SvgPathCommandType::ArcTo: {
-                // XXX The code below only works if there is no
-                // non-isometric transformation (non-uniform scale, skew).
-                // Converting the arc params to transformed arc params is non-trivial.
-                //
-                // TODO: Expose the transform matrix instead of pre-apply it, so
-                //       that non-isometric transformations work as expected
-                //       for arcs and stroked paths.
-                //
                 geometry::Vec2d r(args[0], args[1]);
                 double xAxisRotation = args[2] / 180.0 * core::pi;
                 bool largeArcFlag = args[3] > 0.5;
@@ -1474,15 +1430,8 @@ pathToCurves2d(const std::vector<SvgPathCommand>& commands, const geometry::Mat3
                 if (isRelative) {
                     q += currentPosition;
                 }
-                double scaling = applyTransform(ctm, 1.0);
-                double rotation = geometry::Vec2d(ctm(0, 0), ctm(1, 0)).angle();
                 currentPosition = q;
-                res.arcTo( //
-                    scaling * r,
-                    rotation + xAxisRotation,
-                    largeArcFlag,
-                    sweepFlag,
-                    applyTransform(ctm, q));
+                res.arcTo(r, xAxisRotation, largeArcFlag, sweepFlag, q);
                 break;
             }
             }
@@ -1505,10 +1454,11 @@ public:
         const geometry::Mat3d& ctm) {
 
         SvgSimplePath res;
-        res.curves_ = pathToCurves2d(commands, ctm);
+        res.curves_ = pathToCurves2d(commands);
+        res.transform_ = ctm;
         res.fill_ = pa.fill;
         res.stroke_ = pa.stroke;
-        res.strokeWidth_ = applyTransform(ctm, pa.strokeWidth);
+        res.strokeWidth_ = pa.strokeWidth;
 
         // The grammar for the value of the 'class' attribute is defined in the
         // HTML spec as a "space-separated tokens":

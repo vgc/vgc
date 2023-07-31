@@ -108,8 +108,8 @@ core::Array<Batch> createBatchesFromPaths(const core::Array<SvgSimplePath>& path
     // zoomed in? We may want to have SizedIcon vs. Icon, similarly to
     // SizedFont vs. Font.
     //
-    double pixelSize = 1.0;
-    auto params = geometry::Curves2dSampleParams::semiAdaptive(pixelSize);
+    const double basePixelSize = 1.0;
+    auto params = geometry::Curves2dSampleParams::semiAdaptive(basePixelSize);
 
     for (const SvgSimplePath& path : paths) {
 
@@ -143,8 +143,28 @@ core::Array<Batch> createBatchesFromPaths(const core::Array<SvgSimplePath>& path
         }
         Batch& batch = res.last();
 
-        // Triangulate the path (Layout: XY)
+        // Triangulate the path in local coordinates (Layout: XY)
+        const geometry::Mat3d& t = path.transform();
+        double meanScale = std::sqrt(std::abs(t(0, 0) * t(1, 1) - t(1, 0) * t(0, 1)));
+        if (meanScale == 0) {
+            // Nothing to draw if scaled by zero.
+            continue;
+        }
+        double pixelSizeInLocalCoordinates = basePixelSize / meanScale;
+        params.setMinDistance(pixelSizeInLocalCoordinates);
+        Int oldLength = batch.vertices.length();
         path.curves().fill(batch.vertices, params);
+        Int newLength = batch.vertices.length();
+
+        // Apply transformation
+        geometry::Mat3f tf(t);
+        for (Int i = oldLength; i + 1 < newLength; i += 2) {
+            float& x = batch.vertices.getUnchecked(i);
+            float& y = batch.vertices.getUnchecked(i + 1);
+            geometry::Vec2f p = tf.transformPoint(geometry::Vec2f(x, y));
+            x = p.x();
+            y = p.y();
+        }
     }
 
     return res;

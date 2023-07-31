@@ -21,6 +21,7 @@
 
 #include <vgc/core/color.h>
 #include <vgc/geometry/curves2d.h>
+#include <vgc/geometry/mat3d.h>
 #include <vgc/geometry/rect2d.h>
 #include <vgc/graphics/api.h>
 
@@ -126,21 +127,26 @@ class SvgParser;
 
 } // namespace detail
 
-/// A simplified representation of an SVG path element.
+/// A simplified "flattened" representation of an SVG path element.
 ///
-/// Group `transform` attributes are already applied to the returned `curves()`
-/// data, and `fill`, `stroke`, and `stroke-width` attributes have been
-/// resolved to simple color.
+/// The `transform()` method returns the cumulated transform of this path and
+/// its ancestors.
+///
+/// The `fill()`, `stroke()`, and `strokeWidth` methods returns the resolved
+/// style taking into account ancestor's style if any.
 ///
 class VGC_GRAPHICS_API SvgSimplePath {
 public:
-    /// Returns the geometry of the centerline of the path.
-    ///
-    /// Note that any `transform` attributes on the path itself or any of its
-    /// ancestors are already baked in the returned geometry.
+    /// Returns the geometry of the centerline of the path, in local coordinates.
     ///
     const geometry::Curves2d& curves() const {
         return curves_;
+    }
+
+    /// Returns the cumulated `transform` attribute of the path.
+    ///
+    const geometry::Mat3d& transform() const {
+        return transform_;
     }
 
     /// Returns the resolved `fill` attribute of the path.
@@ -156,16 +162,6 @@ public:
     }
 
     /// Returns the resolved `stroke-width` attribute of the path.
-    ///
-    /// Note that any `transform` attributes on the path itself or any of its
-    /// ancestors are already baked in the returned stroke width.
-    ///
-    /// In the presence of skewing or non-uniform scaling, it is unfortunately
-    /// not possible to correctly bake in the `transform` attributes into the
-    /// stroke width: transforming a stroked curve is not the same as stroking
-    /// a transformed curve. In this cases, we choose to scale the stroke width
-    /// by `sqrt(|det(transform)|)`, which can be interpreted as the geometric
-    /// mean of the x-scale and y-scale.
     ///
     double strokeWidth() const {
         return strokeWidth_;
@@ -183,12 +179,11 @@ public:
         return styleClasses_;
     }
 
-    // XXX Have a "transform()" rather than having baked-in transforms?
-
 private:
     friend detail::SvgParser;
 
     geometry::Curves2d curves_;
+    geometry::Mat3d transform_;
     SvgPaint fill_ = {};
     SvgPaint stroke_ = {};
     double strokeWidth_ = 0;
