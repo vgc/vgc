@@ -1860,6 +1860,18 @@ void readLine(
     appendSimplePath(out, xml, pa, ctm, cmds);
 }
 
+// C++20 adds std::string_view(first, last). In the meantime, we can use this.
+//
+template<class It, class End>
+std::string_view stringViewFromRange(It first, End last) {
+    if (first == last) {
+        return std::string_view();
+    }
+    else {
+        return std::string_view(&(*first), last - first);
+    }
+}
+
 void readPolylineOrPolygon(
     core::Array<SvgSimplePath>& out,
     const core::XmlStreamReader& xml,
@@ -1888,7 +1900,7 @@ void readPolylineOrPolygon(
     const auto end = s->end();
     auto it = begin;
     readCommaWhitespaces(it, end);
-    if (core::contains(std::string_view(begin, it - begin), ',')) {
+    if (core::contains(stringViewFromRange(begin, it), ',')) {
         VGC_ERROR(
             LogVgcGraphicsSvg,
             "Invalid ',' before the first coordinate in 'points' attribute.");
@@ -1910,7 +1922,7 @@ void readPolylineOrPolygon(
         VGC_ERROR(
             LogVgcGraphicsSvg, "Invalid character '{}' in 'points' attribute.", *it);
     }
-    else if (core::contains(std::string_view(lastNumberEnd, it - lastNumberEnd), ',')) {
+    else if (core::contains(stringViewFromRange(lastNumberEnd, it), ',')) {
         VGC_ERROR(
             LogVgcGraphicsSvg,
             "Invalid ',' after the last coordinate in 'points' attribute.");
