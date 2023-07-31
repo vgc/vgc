@@ -18,6 +18,8 @@
 
 #include <tesselator.h> // libtess2
 
+#include <vgc/geometry/mat2d.h>
+
 namespace vgc::geometry {
 
 bool isWindingNumberSatisfyingRule(Int windingNumber, WindingRule rule) {
@@ -93,6 +95,35 @@ void Curves2d::cubicBezierTo(
     commandData_.append({CurveCommandType::CubicBezierTo, data_.length()});
 }
 
+void Curves2d::arcTo(
+    const Vec2d& r,
+    double xAxisRotation,
+    bool largeArcFlag,
+    bool sweepFlag,
+    const Vec2d& p) {
+
+    arcTo(r.x(), r.y(), xAxisRotation, largeArcFlag, sweepFlag, p.x(), p.y());
+}
+
+void Curves2d::arcTo(
+    double rx,
+    double ry,
+    double xAxisRotation,
+    bool largeArcFlag,
+    bool sweepFlag,
+    double x,
+    double y) {
+
+    data_.append(x);
+    data_.append(y);
+    data_.append(rx);
+    data_.append(ry);
+    data_.append(xAxisRotation);
+    data_.append(largeArcFlag ? 1.0 : 0.0);
+    data_.append(sweepFlag ? 1.0 : 0.0);
+    commandData_.append({CurveCommandType::ArcTo, data_.length()});
+}
+
 namespace {
 
 struct Sample {
@@ -151,6 +182,151 @@ struct CubicSegment {
                + 3 * u * (1 - u) * (1 - u) * p1 //
                + 3 * u * u * (1 - u) * p2       //
                + u * u * u * p3;
+    }
+};
+
+class ArcSegment {
+public:
+    // Note: phi must be in radian ( = svgValue / 180.0 * phi)
+    //
+    ArcSegment(Vec2d p, Vec2d r, double phi, bool fa, bool fs, Vec2d q)
+        : p(p)
+        , q(q)
+        , rx(std::abs(r.x()))
+        , ry(std::abs(r.y()))
+        , phi(phi)
+        , fa(fa)
+        , fs(fs) {
+
+        const double eps = 1e-6;
+        if (rx < eps || ry < eps) {
+            isLineSegment = true;
+        }
+        else {
+            isLineSegment = false;
+            precomputeCenterParameterization_();
+        }
+    }
+
+    Vec2d startPosition() const {
+        return p;
+    }
+    Vec2d endPosition() const {
+        return q;
+    }
+
+    Vec2d startTangent() const {
+        if (isLineSegment) {
+            return q - p;
+        }
+        else {
+            return tangent_(theta1);
+        }
+    }
+
+    Vec2d endTangent() const {
+        if (isLineSegment) {
+            return q - p;
+        }
+        else {
+            return tangent_(theta1 + dTheta);
+        }
+    }
+
+    Vec2d operator()(double u) const {
+        if (isLineSegment) {
+            return (1 - u) * p + u * q;
+        }
+        else {
+            double theta = theta1 + u * dTheta;
+            Vec2d b(rx * std::cos(theta), ry * std::sin(theta));
+            return c + rot * b;
+        }
+    }
+
+private:
+    // Input data
+    Vec2d p;
+    Vec2d q;
+    double rx;
+    double ry;
+    double phi;
+    bool fa;
+    bool fs;
+
+    // Degenerate cases
+    bool isLineSegment;
+
+    // Center parameterization
+    Mat2d rot;
+    Vec2d c;
+    double theta1;
+    double dTheta;
+
+    Vec2d tangent_(double theta) const {
+        Vec2d b(-rx * std::sin(theta), ry * std::cos(theta));
+        if (dTheta > 0) {
+            return rot * b;
+        }
+        else {
+            return -rot * b;
+        }
+    }
+
+    // See https://www.w3.org/TR/SVG11/implnote.html#ArcImplementationNotes
+    //
+    void precomputeCenterParameterization_() {
+        const double eps = 1e-6;
+        if (rx < eps || ry < eps) {
+            isLineSegment = true;
+        }
+        else {
+            isLineSegment = false;
+
+            // Correction of out-of-range radii
+            double cosphi = std::cos(phi);
+            double sinphi = std::sin(phi);
+            double rx2 = rx * rx;
+            double ry2 = ry * ry;
+            rot = Mat2d(cosphi, -sinphi, sinphi, cosphi);
+            Mat2d rotInv(cosphi, sinphi, -sinphi, cosphi);
+            Vec2d p_ = rotInv * (0.5 * (p - q));
+            double px_2 = p_[0] * p_[0];
+            double py_2 = p_[1] * p_[1];
+            double d2 = px_2 / rx2 + py_2 / ry2;
+            if (d2 > 1) {
+                double d = std::sqrt(d2);
+                rx *= d;
+                ry *= d;
+                rx2 = rx * rx;
+                ry2 = ry * ry;
+            }
+
+            // Conversion from endpoint to center parameterization.
+            double rx2py_2 = rx2 * py_2;
+            double ry2px_2 = ry2 * px_2;
+            double a2 = (rx2 * ry2 - rx2py_2 - ry2px_2) / (rx2py_2 + ry2px_2);
+            double a = std::sqrt(std::abs(a2));
+            if (fa == fs) {
+                a *= -1;
+            }
+            Vec2d c_(a * p_[1] * rx / ry, -a * p_[0] * ry / rx);
+            c = rot * c_ + 0.5 * (p + q);
+            Vec2d pc = p_ - c_;
+            Vec2d mpc = -p_ - c_;
+            Vec2d rInv(1 / rx, 1 / ry);
+            Vec2d e1(1, 0);
+            Vec2d e2(pc.x() * rInv.x(), pc.y() * rInv.y());
+            Vec2d e3(mpc.x() * rInv.x(), mpc.y() * rInv.y());
+            theta1 = e1.angle(e2);
+            dTheta = e2.angle(e3);
+            if (fs == false && dTheta > 0) {
+                dTheta -= 2 * core::pi;
+            }
+            else if (fs == true && dTheta < 0) {
+                dTheta += 2 * core::pi;
+            }
+        }
     }
 };
 
@@ -252,31 +428,41 @@ Curves2d Curves2d::sample(const Curves2dSampleParams& params) const {
     Vec2d p0, p1, p2, p3;
     SampleBuffer buffer;
 
-    for (vgc::geometry::Curves2dCommandRef c : commands()) {
+    for (Curves2dCommandRef c : commands()) {
         switch (c.type()) {
         case vgc::geometry::CurveCommandType::Close:
             res.close();
             break;
-        case vgc::geometry::CurveCommandType::MoveTo:
+        case CurveCommandType::MoveTo:
             p0 = c.p();
             res.moveTo(p0);
             break;
-        case vgc::geometry::CurveCommandType::LineTo:
+        case CurveCommandType::LineTo:
             p0 = c.p();
             res.lineTo(p0);
             break;
-        case vgc::geometry::CurveCommandType::QuadraticBezierTo:
+        case CurveCommandType::QuadraticBezierTo:
             p1 = c.p1();
             p2 = c.p2();
             sampleSegment(res, buffer, params, QuadraticSegment{p0, p1, p2});
             p0 = p2;
             break;
-        case vgc::geometry::CurveCommandType::CubicBezierTo:
+        case CurveCommandType::CubicBezierTo:
             p1 = c.p1();
             p2 = c.p2();
             p3 = c.p3();
             sampleSegment(res, buffer, params, CubicSegment{p0, p1, p2, p3});
             p0 = p3;
+            break;
+        case CurveCommandType::ArcTo:
+            p1 = c.p();
+            sampleSegment(
+                res,
+                buffer,
+                params,
+                ArcSegment(
+                    p0, c.r(), c.xAxisRotation(), c.largeArcFlag(), c.sweepFlag(), p1));
+            p0 = p1;
             break;
         }
     }

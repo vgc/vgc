@@ -33,25 +33,27 @@ class Curves2d;
 /// command. It provides access to a Curves2d command type and its parameters.
 ///
 /// ```cpp
-/// std::string s;
-/// vgc::core::StringWriter out(s);
-/// vgc::geometry::Curves2d curves;
-/// for (vgc::geometry::Curves2dCommandRef c : curves.commands()) {
+/// Curves2d curves;
+/// for (Curves2dCommandRef c : curves.commands()) {
 ///     switch (c.type()) {
-///     case vgc::geometry::CurveCommandType::Close:
-///         vgc::core::write(out, " Z");
+///     case CurveCommandType::Close:
+///         print(" Z");
 ///         break;
-///     case vgc::geometry::CurveCommandType::MoveTo:
-///         vgc::core::write(out, " M ", c.p());
+///     case CurveCommandType::MoveTo:
+///         print(" M {}", c.p());
 ///         break;
-///     case vgc::geometry::CurveCommandType::LineTo:
-///         vgc::core::write(out, " L ", c.p());
+///     case CurveCommandType::LineTo:
+///         print(" L {}", c.p());
 ///         break;
-///     case vgc::geometry::CurveCommandType::QuadraticBezierTo:
-///         vgc::core::write(out, " Q ", c.p1(), ' ', c.p2());
+///     case CurveCommandType::QuadraticBezierTo:
+///         print(" Q {} {}", c.p1(), c.p2());
 ///         break;
-///     case vgc::geometry::CurveCommandType::CubicBezierTo:
-///         vgc::core::write(out, " C ", c.p1(), ' ', c.p2(), ' ', c.p3());
+///     case CurveCommandType::CubicBezierTo:
+///         print(" C {} {}", c.p1(), c.p2(), c.p3());
+///         break;
+///     case CurveCommandType::ArcTo:
+///         print(" A {} {} {} {} {}",
+///               c.r(), c.xAxisRotation(), x.largeArcFlag(), x.sweepFlag(), c.p());
 ///         break;
 ///     }
 /// }
@@ -64,6 +66,10 @@ class Curves2d;
 /// an iterator, you typically shouldn't store a Curves2dCommandRef in a member
 /// variable, and instead only use it temporarily in a loop.
 ///
+/// Note that unlike in SVG, the (x, y) endpoint of the `ArcTo` command is actually
+/// physically stored in memory as first parameter, so that the `p()` method can
+/// be shared with the MoveTo and LineTo command.
+///
 class VGC_GEOMETRY_API Curves2dCommandRef {
 public:
     // Copy and move constructors
@@ -74,7 +80,7 @@ public:
     ///
     CurveCommandType type() const;
 
-    /// Returns the Vec2d parameter of the MoveTo or LineTo command.
+    /// Returns the target point (x,y) of the MoveTo, LineTo, or ArcTo command.
     ///
     Vec2d p() const;
 
@@ -91,6 +97,22 @@ public:
     /// Returns the third Vec2d parameter of the CubicBezier command.
     ///
     Vec2d p3() const;
+
+    /// Returns the two radii of the ArcTo command.
+    ///
+    Vec2d r() const;
+
+    /// Returns the X-axis rotation of the ArcTo command.
+    ///
+    double xAxisRotation() const;
+
+    /// Returns the large-arc flag of the ArcTo command.
+    ///
+    bool largeArcFlag() const;
+
+    /// Returns the sweep flag of the ArcTo command.
+    ///
+    bool sweepFlag() const;
 
     /// Returns whether the two Curves2dCommandRef are equal, that is, whether
     /// they reference the same command of the same Curve2d, similar to
@@ -436,6 +458,26 @@ public:
     ///
     void cubicBezierTo(double x1, double y1, double x2, double y2, double x3, double y3);
 
+    /// Adds a new ArcTo command.
+    ///
+    void arcTo(
+        const Vec2d& r,
+        double xAxisRotation,
+        bool largeArcFlag,
+        bool sweepFlag,
+        const Vec2d& p);
+
+    /// Adds a new ArcTo command.
+    ///
+    void arcTo(
+        double rx,
+        double ry,
+        double xAxisRotation,
+        bool largeArcFlag,
+        bool sweepFlag,
+        double x,
+        double y);
+
     /// Computes and returns an approximation of this Curves2d using line
     /// segments only (MoveTo, LineTo, and Close commands).
     ///
@@ -531,38 +573,52 @@ inline CurveCommandType Curves2dCommandRef::type() const {
 }
 
 inline Vec2d Curves2dCommandRef::p() const {
-    // TODO: exception if Close?
     const double* d = &(curves_->data_[paramIndex_]);
     return Vec2d(*d, *(d + 1));
 }
 
 inline Vec2d Curves2dCommandRef::p1() const {
-    // TODO: exception if Close?
     const double* d = &(curves_->data_[paramIndex_]);
     return Vec2d(*d, *(d + 1));
 }
 
 inline Vec2d Curves2dCommandRef::p2() const {
-    // TODO: exception if Close, MoveTo, LineTo?
     const double* d = &(curves_->data_[paramIndex_ + 2]);
     return Vec2d(*d, *(d + 1));
 }
 
 inline Vec2d Curves2dCommandRef::p3() const {
-    // TODO: exception if Close, MoveTo, LineTo, QuadraticBezierTo?
     const double* d = &(curves_->data_[paramIndex_ + 4]);
     return Vec2d(*d, *(d + 1));
 }
 
+inline Vec2d Curves2dCommandRef::r() const {
+    const double* d = &(curves_->data_[paramIndex_ + 2]);
+    return Vec2d(*d, *(d + 1));
+}
+
+inline double Curves2dCommandRef::xAxisRotation() const {
+    const double* d = &(curves_->data_[paramIndex_ + 4]);
+    return *d;
+}
+
+inline bool Curves2dCommandRef::largeArcFlag() const {
+    const double* d = &(curves_->data_[paramIndex_ + 5]);
+    return *d != 0.0;
+}
+
+inline bool Curves2dCommandRef::sweepFlag() const {
+    const double* d = &(curves_->data_[paramIndex_ + 6]);
+    return *d != 0.0;
+}
+
 inline Curves2dCommandIterator& Curves2dCommandIterator::operator++() {
-    // TODO: support subcommands
     c_.paramIndex_ = c_.curves_->commandData_[c_.commandIndex_].endParamIndex;
     c_.commandIndex_ += 1;
     return *this;
 }
 
 inline Curves2dCommandIterator& Curves2dCommandIterator::operator--() {
-    // TODO: support subcommands
     c_.commandIndex_ -= 1;
     if (c_.commandIndex_ == 0) {
         c_.paramIndex_ = 0;
@@ -617,6 +673,21 @@ struct fmt::formatter<vgc::geometry::Curves2dCommandRef> : fmt::formatter<double
             out = DoubleFormatter::format(c.p3().x(), ctx);
             out = copyStringTo(out, ", ");
             out = DoubleFormatter::format(c.p3().y(), ctx);
+            break;
+        case CurveCommandType::ArcTo:
+            out = DoubleFormatter::format(c.r().x(), ctx);
+            out = copyStringTo(out, ", ");
+            out = DoubleFormatter::format(c.r().y(), ctx);
+            out = copyStringTo(out, ", ");
+            out = DoubleFormatter::format(c.xAxisRotation(), ctx);
+            out = copyStringTo(out, ", ");
+            out = DoubleFormatter::format(c.largeArcFlag(), ctx);
+            out = copyStringTo(out, ", ");
+            out = DoubleFormatter::format(c.sweepFlag(), ctx);
+            out = copyStringTo(out, ", ");
+            out = DoubleFormatter::format(c.p().x(), ctx);
+            out = copyStringTo(out, ", ");
+            out = DoubleFormatter::format(c.p().y(), ctx);
             break;
         }
         *out++ = ')';
