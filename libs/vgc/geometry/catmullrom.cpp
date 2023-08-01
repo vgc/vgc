@@ -524,8 +524,7 @@ CubicBezier2d CatmullRomSplineStroke2d::segmentToBezier(Int segmentIndex) const 
     computeCache_();
 
     Int numSegments = this->numSegments();
-    VGC_ASSERT(segmentIndex >= 0);
-    VGC_ASSERT(segmentIndex < numSegments);
+    checkSegmentIndexIsValid(segmentIndex, numSegments);
 
     Int numKnots = this->numKnots();
     if (segmentIndex == numKnots - 1) {
@@ -552,8 +551,7 @@ CubicBezier2d CatmullRomSplineStroke2d::segmentToBezier(
     computeCache_();
 
     Int numSegments = this->numSegments();
-    VGC_ASSERT(segmentIndex >= 0);
-    VGC_ASSERT(segmentIndex < numSegments);
+    checkSegmentIndexIsValid(segmentIndex, numSegments);
 
     Int numKnots = this->numKnots();
     if (segmentIndex == numKnots - 1) {
