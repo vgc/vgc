@@ -452,6 +452,38 @@ public:
         return controlPoints_;
     }
 
+    const T& controlPoint0() {
+        return controlPoints_[0];
+    }
+
+    void setControlPoint0(const T& cp) {
+        controlPoints_[0] = cp;
+    }
+
+    const T& controlPoint1() {
+        return controlPoints_[1];
+    }
+
+    void setControlPoint1(const T& cp) {
+        controlPoints_[1] = cp;
+    }
+
+    const T& controlPoint2() {
+        return controlPoints_[2];
+    }
+
+    void setControlPoint2(const T& cp) {
+        controlPoints_[2] = cp;
+    }
+
+    const T& controlPoint3() {
+        return controlPoints_[3];
+    }
+
+    void setControlPoint3(const T& cp) {
+        controlPoints_[3] = cp;
+    }
+
     T eval(Scalar u) const {
         return cubicBezierCasteljau<T, Scalar>(controlPoints_, u);
     }
