@@ -36,6 +36,9 @@ void IconWidget::setFilePath(std::string_view filePath) {
         icon_ = graphics::Icon::create(filePath);
         appendChildStylableObject(icon_.get());
     }
+    isIconGeometryDirty_ = true;
+    requestGeometryUpdate();
+    requestRepaint();
 }
 
 IconWidgetPtr IconWidget::create(std::string_view filePath) {
