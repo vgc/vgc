@@ -34,6 +34,7 @@ vgc_add_app(uitest
         svg/paths/README.md
         svg/paths/arcs01.svg
         svg/paths/arcs02.svg
+        svg/paths/arcs02-nodefs.svg
         svg/paths/cubic01.svg
         svg/paths/cubic02.svg
         svg/paths/quad01.svg
