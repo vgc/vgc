@@ -531,39 +531,27 @@ void editQuadData(core::Array<TFloat>& data, Int i, const Vec2d& a, const Vec2d&
 // For the last sample, we don't have c2.
 //
 
-template<typename TFloat>
-void processFirstSample(
-    core::Array<TFloat>& /*data*/,
-    double width,
-    const Vec2d& c1,
-    const Vec2d& c2,
-    Vec2d& l1,
-    Vec2d& r1,
-    Vec2d& n1) {
+struct StrokeTmpData {
+    Int numSamples = 0;
+    Int firstVertexIndex;
+    Vec2d firstPoint, secondPoint;
+    Vec2d c0, c1, c2, l0, l1, r0, r1, n0, n1;
+};
 
-    n1 = (c2 - c1).normalize().orthogonalized();
-    l1 = c1 + 0.5 * width * n1;
-    r1 = c1 - 0.5 * width * n1;
+template<typename TFloat>
+void processFirstSample(core::Array<TFloat>& /*data*/, double width, StrokeTmpData& d) {
+    d.n1 = (d.c2 - d.c1).normalize().orthogonalized();
+    d.l1 = d.c1 + 0.5 * width * d.n1;
+    d.r1 = d.c1 - 0.5 * width * d.n1;
 }
 
 template<typename TFloat>
-void processMiddleSample(
-    core::Array<TFloat>& data,
-    double width,
-    const Vec2d& /*c0*/,
-    const Vec2d& c1,
-    const Vec2d& c2,
-    const Vec2d& l0,
-    Vec2d& l1,
-    const Vec2d& r0,
-    Vec2d& r1,
-    const Vec2d& n0,
-    Vec2d& n1) {
+void processMiddleSample(core::Array<TFloat>& data, double width, StrokeTmpData& d) {
 
     // Compute n1
-    n1 = (c2 - c1).normalize().orthogonalized();
+    d.n1 = (d.c2 - d.c1).normalize().orthogonalized();
 
-    // Compute miterLenght. We have miterLength = width / sin(t/2)
+    // Compute miterLength. We have miterLength = width / sin(t/2)
     // where t is the angle between the two segments. See:
     //
     // https://www.w3.org/TR/SVG2/painting.html#StrokeMiterlimitProperty.
@@ -571,79 +559,87 @@ void processMiddleSample(
     // We use the double angle formula giving sin(t/2) = sqrt((1-cos(t))/2),
     // and since n0 and n1 are normal vectors, cos(t) is just a dot product.
     //
-    double cost = n0.dot(-n1);
+    double cost = d.n0.dot(-d.n1);
     double sint2 = std::sqrt(0.5 * (1 - cost));
-    double miterLength = width / sint2; // TODO: handle miterclip (sint2 close to 0)
-    Vec2d miterDir = (n0 + n1).normalized();
-    l1 = c1 + 0.5 * miterLength * miterDir;
-    r1 = c1 - 0.5 * miterLength * miterDir;
+    double miterLimit = 4.0; // SVG default value
+    double miterLength;
+    if (miterLimit * sint2 < 1) {
+        // <=> miterLimit * width < width / sint2
+        // <=> miterLimit * width < unclippedMiterLength
+        miterLength = miterLimit * width;
+        // TODO: actually do a bevel (or clipped Miter) with two samples,
+        // instead of using a unique sample at a clamped width.
+    }
+    else {
+        miterLength = width / sint2;
+    }
+    Vec2d miterDir = (d.n0 + d.n1).normalized();
+    d.l1 = d.c1 + 0.5 * miterLength * miterDir;
+    d.r1 = d.c1 - 0.5 * miterLength * miterDir;
 
     // Insert
-    insertQuad(data, l0, r0, l1, r1);
+    insertQuad(data, d.l0, d.r0, d.l1, d.r1);
 }
 
 template<typename TFloat>
-void processLastOpenSample(
-    core::Array<TFloat>& data,
-    double width,
-    const Vec2d& c0,
-    const Vec2d& c1,
-    const Vec2d& l0,
-    Vec2d& l1,
-    const Vec2d& r0,
-    Vec2d& r1,
-    const Vec2d& /*n0*/,
-    Vec2d& n1) {
+void processLastOpenSample(core::Array<TFloat>& data, double width, StrokeTmpData& d) {
+    d.n1 = (d.c1 - d.c0).normalize().orthogonalized();
+    d.l1 = d.c1 + 0.5 * width * d.n1;
+    d.r1 = d.c1 - 0.5 * width * d.n1;
+    insertQuad(data, d.l0, d.r0, d.l1, d.r1);
+}
 
-    n1 = (c1 - c0).normalize().orthogonalized();
-    l1 = c1 + 0.5 * width * n1;
-    r1 = c1 - 0.5 * width * n1;
-    insertQuad(data, l0, r0, l1, r1);
+template<typename TFloat>
+void onLineTo(core::Array<TFloat>& data, double width, StrokeTmpData& d, const Vec2d& p) {
+    d.c2 = p;
+    if (d.numSamples == 1) {
+        d.secondPoint = d.c2;
+        processFirstSample(data, width, d);
+    }
+    else {
+        processMiddleSample(data, width, d);
+    }
+    d.c0 = d.c1;
+    d.c1 = d.c2;
+    d.l0 = d.l1;
+    d.r0 = d.r1;
+    d.n0 = d.n1;
+    d.numSamples += 1;
 }
 
 template<typename TFloat>
 void stroke_(core::Array<TFloat>& data, const Curves2d& samples, double width) {
-    Int numSamples = 0;
-    Int firstVertexIndex = data.length();
-    Vec2d firstPoint, secondPoint;
-    Vec2d c0, c1, c2, l0, l1, r0, r1, n0, n1;
+    width = std::abs(width);
+    StrokeTmpData d;
+    d.numSamples = 0;
+    d.firstVertexIndex = data.length();
     for (Curves2dCommandRef c : samples.commands()) {
         if (c.type() == CurveCommandType::MoveTo) {
-            if (numSamples > 1) {
-                processLastOpenSample(data, width, c0, c1, l0, l1, r0, r1, n0, n1);
+            if (d.numSamples > 1) {
+                processLastOpenSample(data, width, d);
             }
-            firstVertexIndex = data.length();
-            firstPoint = c.p();
-            c1 = firstPoint;
-            numSamples = 1;
+            d.firstVertexIndex = data.length();
+            d.firstPoint = c.p();
+            d.c1 = d.firstPoint;
+            d.numSamples = 1;
         }
         else if (c.type() == CurveCommandType::LineTo) {
-            c2 = c.p();
-            if (numSamples == 1) {
-                secondPoint = c2;
-                processFirstSample(data, width, c1, c2, l1, r1, n1);
-            }
-            else {
-                processMiddleSample(data, width, c0, c1, c2, l0, l1, r0, r1, n0, n1);
-            }
-            c0 = c1;
-            c1 = c2;
-            l0 = l1;
-            r0 = r1;
-            n0 = n1;
-            numSamples += 1;
+            onLineTo(data, width, d, c.p());
         }
         else if (c.type() == CurveCommandType::Close) {
-            if (numSamples > 2) {
-                c2 = secondPoint;
-                processMiddleSample(data, width, c0, c1, c2, l0, l1, r0, r1, n0, n1);
-                editQuadData(data, firstVertexIndex, l1, r1);
-                numSamples = 0;
+            if (d.c2 != d.firstPoint) {
+                onLineTo(data, width, d, d.firstPoint);
+            }
+            if (d.numSamples > 2) {
+                d.c2 = d.secondPoint;
+                processMiddleSample(data, width, d);
+                editQuadData(data, d.firstVertexIndex, d.l1, d.r1);
+                d.numSamples = 0;
             }
         }
     }
-    if (numSamples > 1) {
-        processLastOpenSample(data, width, c0, c1, l0, l1, r0, r1, n0, n1);
+    if (d.numSamples > 1) {
+        processLastOpenSample(data, width, d);
     }
 }
 
