@@ -136,7 +136,7 @@ double computeTi_(const Vec2d& knot0, const Vec2d& knot1, const Vec2d& knot2) {
     double b = 3 * v02.dot(v10);
     double c = (3 * knot0 - 2 * knot1 - knot2).dot(v10);
     double d = -v10.dot(v10);
-    // Solving `ax³ + bx² + cx + d = 0` in [0, 1]
+    // Solving `axÂ³ + bxÂ² + cx + d = 0` in [0, 1]
     // https://en.wikipedia.org/wiki/Cubic_equation
     if (a == 0) {
         // knot0 == knot2
@@ -434,7 +434,7 @@ void computeSegmentHalfwidthsCubicBezier_(
     }
     }
 
-    // Compute Bézier control points for halfwidths such that on both sides of
+    // Compute BÃ©zier control points for halfwidths such that on both sides of
     // each knot we have the same desired dw/ds.
     //
     // desired dw/ds at start/end
