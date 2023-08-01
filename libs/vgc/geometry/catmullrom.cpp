@@ -497,7 +497,7 @@ CubicBezier2d computeSegmentHalfwidthsCubicBezier(
     }
     }
 
-    // Compute Bézier control points for halfwidths such that on both sides of
+    // Compute BÃ©zier control points for halfwidths such that on both sides of
     // each knot we have the same desired dw/ds.
     //
     double d012 = d01 + d12;
