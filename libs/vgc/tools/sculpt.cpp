@@ -162,8 +162,7 @@ public:
         if (undoGroup) {
             bool amend = canAmendUndoGroup_ && undoGroup->parent()
                          && undoGroup->parent()->name() == actionName();
-            undoGroup->close(amend);
-            canAmendUndoGroup_ = true;
+            canAmendUndoGroup_ |= undoGroup->close(amend);
         }
     }
 
@@ -200,8 +199,7 @@ public:
         if (undoGroup) {
             bool amend = canAmendUndoGroup_ && undoGroup->parent()
                          && undoGroup->parent()->name() == actionName();
-            undoGroup->close(amend);
-            canAmendUndoGroup_ = true;
+            canAmendUndoGroup_ |= undoGroup->close(amend);
         }
 
         tool_->setActionCircleEnabled(false);
@@ -311,6 +309,7 @@ public:
         double sinAngle = deltaCursor.normalized().det(geometry::Vec2f(1, 0));
         double delta = (cursorPosition_ - cursorPositionAtPress_).x();
         delta *= (1 + sinAngle);
+        delta *= pixelSize;
 
         // Open history group
         core::UndoGroup* undoGroup = nullptr;
@@ -349,8 +348,7 @@ public:
         if (undoGroup) {
             bool amend = canAmendUndoGroup_ && undoGroup->parent()
                          && undoGroup->parent()->name() == actionName();
-            undoGroup->close(amend);
-            canAmendUndoGroup_ = true;
+            canAmendUndoGroup_ |= undoGroup->close(amend);
         }
     }
 
@@ -387,8 +385,7 @@ public:
         if (undoGroup) {
             bool amend = canAmendUndoGroup_ && undoGroup->parent()
                          && undoGroup->parent()->name() == actionName();
-            undoGroup->close(amend);
-            canAmendUndoGroup_ = true;
+            canAmendUndoGroup_ |= undoGroup->close(amend);
         }
 
         tool_->setActionCircleEnabled(false);
@@ -438,7 +435,7 @@ public:
     geometry::Vec2d grabbedPoint_;
 
     core::StringId actionName() const {
-        static core::StringId actionName_("Sculpt Grab");
+        static core::StringId actionName_("Sculpt Width");
         return actionName_;
     }
 };
@@ -520,7 +517,7 @@ public:
                     geometry::Vec2d smoothedPoint = geometry->sculptSmooth(
                         positionInWorkspace,
                         radius,
-                        std::min(1.0, disp / radius) * strength,
+                        (std::min)(1.0, disp / radius) * strength,
                         pixelSize,
                         ke->isClosed());
                     tool_->setActionCircleCenter(smoothedPoint);
@@ -533,8 +530,7 @@ public:
         if (undoGroup) {
             bool amend = canAmendUndoGroup_ && undoGroup->parent()
                          && undoGroup->parent()->name() == actionName();
-            undoGroup->close(amend);
-            canAmendUndoGroup_ = true;
+            canAmendUndoGroup_ |= undoGroup->close(amend);
         }
     }
 
@@ -571,8 +567,7 @@ public:
         if (undoGroup) {
             bool amend = canAmendUndoGroup_ && undoGroup->parent()
                          && undoGroup->parent()->name() == actionName();
-            undoGroup->close(amend);
-            canAmendUndoGroup_ = true;
+            canAmendUndoGroup_ |= undoGroup->close(amend);
         }
 
         tool_->setActionCircleEnabled(false);
@@ -688,8 +683,8 @@ Sculpt::Sculpt(CreateKey key)
 
     auto grabAction = createAction<SculptGrabAction>();
     grabAction->tool_ = this;
-    //auto widthAction = createAction<SculptWidthAction>();
-    //widthAction->tool_ = this;
+    auto widthAction = createAction<SculptWidthAction>();
+    widthAction->tool_ = this;
     auto smoothAction = createAction<SculptSmoothAction>();
     smoothAction->tool_ = this;
     auto editRadiusAction = createAction<SculptEditRadiusAction>();
