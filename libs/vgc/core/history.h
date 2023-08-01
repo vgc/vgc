@@ -437,8 +437,13 @@ private:
     // Assumes head_->mainChild() exists. Does not emit headChanged().
     void redoOne_();
 
+    // Returns true if the group was not empty.
     bool closeUndoGroup_(UndoGroup* node, bool tryAmendParent);
+
+    // Returns true if the group was not empty.
     bool closeUndoGroupUnchecked_(UndoGroup* node);
+
+    // Returns true if the group was not empty.
     bool amendUndoGroupUnchecked_(UndoGroup* amendNode);
 
     void prune_();
