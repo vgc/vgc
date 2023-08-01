@@ -19,8 +19,8 @@ vgc_add_app(uitest
         svg/coords/NewCoordSys.svg
         svg/coords/OrigCoordSys-notext.svg
         svg/coords/OrigCoordSys.svg
-        svg/coords/PreserveAspectRatio-notext-noentity.svg
-        svg/coords/PreserveAspectRatio-notext.svg
+        svg/coords/PreserveAspectRatio-noentity-notext.svg
+        svg/coords/PreserveAspectRatio-noentity.svg
         svg/coords/PreserveAspectRatio.svg
         svg/coords/RotateScale-notext.svg
         svg/coords/RotateScale.svg
