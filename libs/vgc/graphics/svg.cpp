@@ -2371,15 +2371,15 @@ geometry::Rect2d getSvgViewBox(std::string_view svg) {
     else {
         // TODO: properly support units. For now, we simply ignore the unit and
         // assume it is either unit-less or `px` (which have the same meaning)
-        if (OptionalStringView s = xml.attributeValue("width")) {
-            auto it = s->cbegin();
-            auto end = s->cend();
+        if (OptionalStringView s2 = xml.attributeValue("width")) {
+            auto it = s2->cbegin();
+            auto end = s2->cend();
             readWhitespaces(it, end);
             readNumber(isSignAllowed, it, end, &size[0]);
         }
-        if (OptionalStringView s = xml.attributeValue("height")) {
-            auto it = s->cbegin();
-            auto end = s->cend();
+        if (OptionalStringView s2 = xml.attributeValue("height")) {
+            auto it = s2->cbegin();
+            auto end = s2->cend();
             readWhitespaces(it, end);
             readNumber(isSignAllowed, it, end, &size[1]);
         }
