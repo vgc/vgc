@@ -1297,7 +1297,6 @@ geometry::Vec2d FreehandEdgeGeometry::sculptWidth(
     }
     else {
         double dMax = 0.5 * curveLength;
-        bool isLooped = false;
         for (double targetD : targetsD) {
             if (targetD <= dMax) {
                 if (targetD + minD < dMax) {
@@ -1318,7 +1317,6 @@ geometry::Vec2d FreehandEdgeGeometry::sculptWidth(
                         s += curveLength;
                     }
                     targetsS.append(s);
-                    isLooped = true;
                 }
             }
         }
