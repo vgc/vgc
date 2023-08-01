@@ -316,18 +316,18 @@ void chordalCatmullRomToBezier(
     return detail::catmullRomToBezier(points, sqLengths, lengths, outPoints);
 }
 
-enum CatmullRomSplineParameterization {
+enum class CatmullRomSplineParameterization : UInt8 {
     Uniform,
     Centripetal,
     Chordal
 };
 
-enum class CurveSegmentType {
-    Simple = 0,
-    Corner = 1,
-    AfterCorner = 2,
-    BeforeCorner = 3,
-    BetweenCorners = 4,
+enum class CurveSegmentType : UInt8 {
+    Simple,
+    Corner,
+    AfterCorner,
+    BeforeCorner,
+    BetweenCorners,
 };
 
 // TODO: immutable version with ConstShared storage
@@ -408,7 +408,6 @@ public:
         isWidthConstant_ = true;
         widths_.resize(1);
         widths_[0] = width;
-        centerlineControlPoints_.clear();
         halfwidthsControlPoints_.clear();
     }
 

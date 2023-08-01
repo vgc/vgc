@@ -995,6 +995,7 @@ void checkSegmentIndex(Int segmentIndex, Int numSegments);
 
 using AdaptiveSamplingParameters = CurveSamplingParameters;
 
+// TSample must be constructible from core::noInit.
 template<typename TSample>
 class AdaptiveSampler {
 private:
@@ -1002,7 +1003,7 @@ private:
     public:
         Node() = default;
 
-        TSample sample;
+        TSample sample = core::noInit;
         double u;
         Node* previous = nullptr;
         Node* next = nullptr;
