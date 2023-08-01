@@ -339,7 +339,7 @@ bool History::closeUndoGroupUnchecked_(UndoGroup* node) {
         node->destroyObject_();
         head_ = parent;
         headChanged().emit(head_);
-        return true;
+        return false;
     }
 
     // Remove descendants and set node as head.
@@ -365,13 +365,18 @@ bool History::closeUndoGroupUnchecked_(UndoGroup* node) {
 
 bool History::amendUndoGroupUnchecked_(UndoGroup* amendNode) {
 
+    bool result = false;
+
     // Collect all operations in descendant nodes to form a single one.
     for (UndoGroup* x = amendNode; x != head_;) {
         x = x->mainChild(); // iterate after test
-        for (auto& op : x->operations_) {
-            amendNode->operations_.emplaceLast(std::move(op));
+        if (!x->operations_.isEmpty()) {
+            result = true;
+            for (auto& op : x->operations_) {
+                amendNode->operations_.emplaceLast(std::move(op));
+            }
+            x->operations_.clear();
         }
-        x->operations_.clear();
     }
 
     // Remove descendants and set node as head.
@@ -384,7 +389,7 @@ bool History::amendUndoGroupUnchecked_(UndoGroup* amendNode) {
     }
 
     //dumpObjectTree();
-    return true;
+    return result;
 }
 
 void History::prune_() {
