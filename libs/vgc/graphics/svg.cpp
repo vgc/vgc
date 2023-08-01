@@ -586,7 +586,6 @@ geometry::Mat3d parseTransform(std::string_view s) {
                     // Error: incorrect number of arguments
                     return geometry::Mat3d::identity;
                 }
-                // TODO: check that we don't mess up row-major vs column-major
                 // clang-format off
                 geometry::Mat3d m(
                     args[0], args[2], args[4],
@@ -634,7 +633,6 @@ geometry::Mat3d parseTransform(std::string_view s) {
                     return geometry::Mat3d::identity;
                 }
                 double t = std::tan(args[0] / 180.0 * core::pi);
-                // TODO: check that we don't mess up row-major vs column-major
                 // clang-format off
                 geometry::Mat3d m(
                     1, t, 0,
@@ -649,7 +647,6 @@ geometry::Mat3d parseTransform(std::string_view s) {
                     return geometry::Mat3d::identity;
                 }
                 double t = std::tan(args[0] / 180.0 * core::pi);
-                // TODO: check that we don't mess up row-major vs column-major
                 // clang-format off
                 geometry::Mat3d m(
                     1, 0, 0,
