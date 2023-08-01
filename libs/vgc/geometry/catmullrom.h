@@ -384,7 +384,6 @@ public:
         centerlineControlPoints_.clear();
         halfwidthsControlPoints_.clear();
         isCacheDirty_ = true;
-        VGC_DEBUG_TMP("[{}]::setPositions", (void*)this);
     }
 
     const core::Array<double>& widths() const {
@@ -403,7 +402,6 @@ public:
         centerlineControlPoints_.clear();
         halfwidthsControlPoints_.clear();
         isCacheDirty_ = true;
-        VGC_DEBUG_TMP("[{}]::setWidths", (void*)this);
     }
 
     void setConstantWidth(double width) {

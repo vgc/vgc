@@ -155,7 +155,6 @@ PointData computeSegmentEndpointData(
         result.curvature = core::DoubleInfinity;
     }
     else {
-        VGC_ASSERT(std::isnormal(speed));
         result.curvature = ddp.det(dp) / (speed * speed * speed);
     }
 
@@ -598,9 +597,6 @@ void CatmullRomSplineStroke2d::computeCache_() const {
     Int numKnots = positions.length();
     Int numSegments = this->numSegments();
     bool isClosed = this->isClosed();
-
-    VGC_DEBUG_TMP(
-        "[{}]::computeCache_() with {} positions", (void*)this, positions.length());
 
     Vec2dArray chords = computeChords(positions);
     if (!isClosed) {
