@@ -710,8 +710,6 @@ void CatmullRomSplineStroke2d::computeCache_() const {
                     // use previous segment offset line end tangents as
                     // current segment offset line start tangents.
 
-                    Vec2d n = ed1.dp.orthogonalized() / ed1.speed;
-
                     double speed0 = ed0.speed;
                     double k0 = ed0.curvature;
                     double tc00 = (1 + k0 * ed0.w[0]) * speed0;
@@ -746,8 +744,6 @@ void CatmullRomSplineStroke2d::computeCache_() const {
                 else {
                     // use current segment offset line start tangents as
                     // previous segment offset line end tangents.
-
-                    Vec2d n = ed1.dp.orthogonalized() / ed1.speed;
 
                     double speed1 = ed1.speed;
                     double k1 = ed1.curvature;
