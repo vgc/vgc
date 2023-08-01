@@ -530,6 +530,13 @@ public:
         double width,
         const Curves2dSampleParams& params) const;
 
+    /// \overload
+    ///
+    void stroke( //
+        core::FloatArray& data,
+        double width,
+        const Curves2dSampleParams& params) const;
+
     /// Fills this Curves2d, that is, triangulate the interior of the curves
     /// interpreted as contours of a polygon, using the non-zero winding rule.
     /// Subcurves which are not closed are ignored. The triangle data is

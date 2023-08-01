@@ -479,8 +479,9 @@ namespace {
 //    o---------------->o
 //    b   right-side    d
 //
+template<typename TFloat>
 void insertQuad(
-    core::DoubleArray& data,
+    core::Array<TFloat>& data,
     const Vec2d& a,
     const Vec2d& b,
     const Vec2d& c,
@@ -489,27 +490,28 @@ void insertQuad(
     // Two triangles: ABC and CBD
     data.insert(
         data.end(),
-        {a[0],
-         a[1],
-         b[0],
-         b[1],
-         c[0],
-         c[1], //
-         c[0],
-         c[1],
-         b[0],
-         b[1],
-         d[0],
-         d[1]});
+        {static_cast<TFloat>(a[0]),
+         static_cast<TFloat>(a[1]),
+         static_cast<TFloat>(b[0]),
+         static_cast<TFloat>(b[1]),
+         static_cast<TFloat>(c[0]),
+         static_cast<TFloat>(c[1]),
+         static_cast<TFloat>(c[0]),
+         static_cast<TFloat>(c[1]),
+         static_cast<TFloat>(b[0]),
+         static_cast<TFloat>(b[1]),
+         static_cast<TFloat>(d[0]),
+         static_cast<TFloat>(d[1])});
 }
 
-void editQuadData(core::DoubleArray& data, Int i, const Vec2d& a, const Vec2d& b) {
-    data[i + 0] = a[0];
-    data[i + 1] = a[1];
-    data[i + 2] = b[0];
-    data[i + 3] = b[1];
-    data[i + 8] = b[0];
-    data[i + 9] = b[1];
+template<typename TFloat>
+void editQuadData(core::Array<TFloat>& data, Int i, const Vec2d& a, const Vec2d& b) {
+    data[i + 0] = static_cast<TFloat>(a[0]);
+    data[i + 1] = static_cast<TFloat>(a[1]);
+    data[i + 2] = static_cast<TFloat>(b[0]);
+    data[i + 3] = static_cast<TFloat>(b[1]);
+    data[i + 8] = static_cast<TFloat>(b[0]);
+    data[i + 9] = static_cast<TFloat>(b[1]);
 }
 
 // Each of the "process" methods computes n1, l1, and r1 based
@@ -528,8 +530,10 @@ void editQuadData(core::DoubleArray& data, Int i, const Vec2d& a, const Vec2d& b
 // For the first sample, we don't have c0 and n0.
 // For the last sample, we don't have c2.
 //
+
+template<typename TFloat>
 void processFirstSample(
-    core::DoubleArray& /*data*/,
+    core::Array<TFloat>& /*data*/,
     double width,
     const Vec2d& c1,
     const Vec2d& c2,
@@ -542,8 +546,9 @@ void processFirstSample(
     r1 = c1 - 0.5 * width * n1;
 }
 
+template<typename TFloat>
 void processMiddleSample(
-    core::DoubleArray& data,
+    core::Array<TFloat>& data,
     double width,
     const Vec2d& /*c0*/,
     const Vec2d& c1,
@@ -577,8 +582,9 @@ void processMiddleSample(
     insertQuad(data, l0, r0, l1, r1);
 }
 
+template<typename TFloat>
 void processLastOpenSample(
-    core::DoubleArray& data,
+    core::Array<TFloat>& data,
     double width,
     const Vec2d& c0,
     const Vec2d& c1,
@@ -588,23 +594,15 @@ void processLastOpenSample(
     Vec2d& r1,
     const Vec2d& /*n0*/,
     Vec2d& n1) {
+
     n1 = (c1 - c0).normalize().orthogonalized();
     l1 = c1 + 0.5 * width * n1;
     r1 = c1 - 0.5 * width * n1;
     insertQuad(data, l0, r0, l1, r1);
 }
 
-} // namespace
-
-void Curves2d::stroke(
-    core::DoubleArray& data,
-    double width,
-    const Curves2dSampleParams& params) const {
-
-    // Compute adaptive sampling
-    Curves2d samples = sample(params);
-
-    // Stroke samples
+template<typename TFloat>
+void stroke_(core::Array<TFloat>& data, const Curves2d& samples, double width) {
     Int numSamples = 0;
     Int firstVertexIndex = data.length();
     Vec2d firstPoint, secondPoint;
@@ -647,6 +645,26 @@ void Curves2d::stroke(
     if (numSamples > 1) {
         processLastOpenSample(data, width, c0, c1, l0, l1, r0, r1, n0, n1);
     }
+}
+
+} // namespace
+
+void Curves2d::stroke(
+    core::DoubleArray& data,
+    double width,
+    const Curves2dSampleParams& params) const {
+
+    Curves2d samples = sample(params);
+    stroke_(data, samples, width);
+}
+
+void Curves2d::stroke(
+    core::FloatArray& data,
+    double width,
+    const Curves2dSampleParams& params) const {
+
+    Curves2d samples = sample(params);
+    stroke_(data, samples, width);
 }
 
 namespace {
