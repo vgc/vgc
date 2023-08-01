@@ -738,8 +738,7 @@ void CatmullRomSplineStroke2d::computeCache_() const {
                     double hw111 = -do01_du * (1 - k1 * hws10[1]) * speed1 / 3 + hws10[1];
 
                     Int j = i * 2;
-                    halfwidthsControlPoints_[j] =
-                        Vec2d(hw110, hw111); //Vec2d(hw110, hw111);
+                    halfwidthsControlPoints_[j] = Vec2d(hw110, hw111);
                 }
                 else {
                     // use current segment offset line start tangents as
@@ -773,8 +772,7 @@ void CatmullRomSplineStroke2d::computeCache_() const {
                     double hw021 = +do11_du * (1 - k0 * hws03[1]) * speed0 / 3 + hws03[1];
 
                     Int j = previousSegmentIndex * 2;
-                    halfwidthsControlPoints_[j + 1] =
-                        Vec2d(hw020, hw021); //Vec2d(hw020, hw021);
+                    halfwidthsControlPoints_[j + 1] = Vec2d(hw020, hw021);
                 }
             }
         }
