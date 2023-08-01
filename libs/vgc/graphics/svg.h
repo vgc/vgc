@@ -200,8 +200,10 @@ private:
 VGC_GRAPHICS_API
 core::Array<SvgSimplePath> getSvgSimplePaths(std::string_view svg);
 
-/// Parses the given `svg` data and returns the size of the view the `<path>` elements as an
-/// array of `SvgSimplePath` instances.
+/// Parses the given `svg` data and returns the SVG's viewbox.
+///
+/// If the `viewBox` attribute is not provided, it is determined
+/// from the `width` and `height` attribute.
 ///
 VGC_GRAPHICS_API
 geometry::Rect2d getSvgViewBox(std::string_view svg);
