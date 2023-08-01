@@ -223,10 +223,6 @@ void computeLengths(const Vec2dArray& vectors, core::DoubleArray& outLengths) {
     }
 }
 
-constexpr Int calcNumSegments(Int numKnots, bool isClosed) {
-    return isClosed ? numKnots : (numKnots ? numKnots - 1 : 0);
-}
-
 void checkSegmentIndexIsValid(Int segmentIndex, Int numSegments) {
     VGC_ASSERT(segmentIndex >= 0);
     VGC_ASSERT(segmentIndex < numSegments);
