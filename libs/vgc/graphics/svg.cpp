@@ -2312,6 +2312,9 @@ core::Array<SvgSimplePath> getSvgSimplePaths(std::string_view svg) {
     return res;
 }
 
+// viewBox attribute
+// -----------------
+//
 // https://www.w3.org/TR/SVG/coords.html#ViewBoxAttribute
 //
 // > The value of the ‘viewBox’ attribute is a list of four numbers <min-x>,
@@ -2320,6 +2323,25 @@ core::Array<SvgSimplePath> getSvgSimplePaths(std::string_view svg) {
 // The exact grammar for viewBox is not formally specified, but we take it to be:
 //
 // ViewBox ::= number comma-wsp number comma-wsp number comma-wsp number
+//
+// x, y, width, height attributes
+// ------------------------------
+//
+// https://www.w3.org/TR/SVG11/struct.html#SVGElementXAttribute
+//
+// > x/y = "<coordinate>"
+// > (Has no meaning or effect on outermost svg elements.)
+// > The x/y-axis coordinate of one corner of the rectangular region into which
+// > an embedded ‘svg’ element is placed. If the attribute is not specified,
+// > the effect is as if a value of '0' were specified.
+// >
+// > width/height = "<length>"
+// > For outermost svg elements, the intrinsic width/height of the SVG document
+// > fragment. For embedded ‘svg’ elements, the width/height of the rectangular
+// > region into which the ‘svg’ element is placed. A negative value is an
+// > error (see Error processing). A value of zero disables rendering of the
+// > element. If the attribute is not specified, the effect is as if a value of
+// > '100%' were specified.
 //
 geometry::Rect2d getSvgViewBox(std::string_view svg) {
 
@@ -2334,8 +2356,8 @@ geometry::Rect2d getSvgViewBox(std::string_view svg) {
     geometry::Vec2d position;
     geometry::Vec2d size;
 
-    if (std::optional<std::string_view> s = xml.attributeValue("viewBox")) {
-        bool isSignAllowed = true;
+    bool isSignAllowed = true;
+    if (OptionalStringView s = xml.attributeValue("viewBox")) {
         auto it = s->cbegin();
         auto end = s->cend();
         readNumber(isSignAllowed, it, end, &position[0]);
@@ -2345,6 +2367,22 @@ geometry::Rect2d getSvgViewBox(std::string_view svg) {
         readNumber(isSignAllowed, it, end, &size[0]);
         readCommaWhitespaces(it, end);
         readNumber(isSignAllowed, it, end, &size[1]);
+    }
+    else {
+        // TODO: properly support units. For now, we simply ignore the unit and
+        // assume it is either unit-less or `px` (which have the same meaning)
+        if (OptionalStringView s2 = xml.attributeValue("width")) {
+            auto it = s2->cbegin();
+            auto end = s2->cend();
+            readWhitespaces(it, end);
+            readNumber(isSignAllowed, it, end, &size[0]);
+        }
+        if (OptionalStringView s2 = xml.attributeValue("height")) {
+            auto it = s2->cbegin();
+            auto end = s2->cend();
+            readWhitespaces(it, end);
+            readNumber(isSignAllowed, it, end, &size[1]);
+        }
     }
     return geometry::Rect2d::fromPositionSize(position, size);
 }
