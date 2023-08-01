@@ -36,7 +36,9 @@ vgc_add_app(uitest
         svg/paths/arcs02.svg
         svg/paths/arcs02-nodefs.svg
         svg/paths/cubic01.svg
+        svg/paths/cubic01-nostylesheet.svg
         svg/paths/cubic02.svg
+        svg/paths/cubic02-nostylesheet.svg
         svg/paths/quad01.svg
         svg/paths/triangle01.svg
 

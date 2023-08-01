@@ -91,6 +91,12 @@ VGC_UI_DEFINE_WINDOW_COMMAND(_3_1, "uitest.action.3.1", "Action #3.1")
 VGC_UI_DEFINE_WINDOW_COMMAND(openPopup, "uitest.openPopup", "Open Popup")
 VGC_UI_DEFINE_WINDOW_COMMAND(maybeQuit, "uitest.maybeQuit", "Maybe Quit")
 
+VGC_UI_DEFINE_WINDOW_COMMAND(
+    cycleSvgIcon,
+    "uitest.cycleSvgIcon",
+    "Cycle between available SVG icons",
+    Shortcut(mod, Key::S))
+
 } // namespace commands
 } // namespace
 
@@ -177,25 +183,28 @@ private:
         ui::PanelArea* mainArea = panelArea();
         ui::PanelArea* rightArea = ui::PanelArea::createVerticalSplit(mainArea);
         ui::PanelArea* rightTopArea = ui::PanelArea::createTabs(rightArea);
+        ui::PanelArea* rightMiddleArea = ui::PanelArea::createTabs(rightArea);
         ui::PanelArea* rightBottomArea = ui::PanelArea::createTabs(rightArea);
 
         // Create panels
         ui::Panel* rightTopPanel = createPanelWithPadding(rightTopArea, "Plot 2D");
+        ui::Panel* rightMiddlePanel =
+            createPanelWithPadding(rightMiddleArea, "Misc Tests");
         ui::Panel* rightBottomPanel =
-            createPanelWithPadding(rightBottomArea, "Misc Tests");
+            createPanelWithPadding(rightBottomArea, "Images and icons");
         ui::Column* rightTopContent = rightTopPanel->createChild<ui::Column>();
-        ui::Column* rightBottomContent = rightBottomPanel->createChild<ui::Column>();
+        ui::Column* rightMiddleContent = rightMiddlePanel->createChild<ui::Column>();
+        ui::Row* rightBottomContent = rightBottomPanel->createChild<ui::Row>();
 
         // Create widgets inside panels
         createPlot2d_(rightTopContent);
-        createGrid_(rightBottomContent);
-        createClickMePopups_(rightBottomContent);
-        createMessageDialogButtons_(rightBottomContent);
-        createLineEdits_(rightBottomContent);
-        createNumberEdits_(rightBottomContent);
-        ui::Row* imageAndIconRow = rightBottomContent->createChild<ui::Row>();
-        createImageBox_(imageAndIconRow);
-        createIconWidget_(imageAndIconRow);
+        createGrid_(rightMiddleContent);
+        createClickMePopups_(rightMiddleContent);
+        createMessageDialogButtons_(rightMiddleContent);
+        createLineEdits_(rightMiddleContent);
+        createNumberEdits_(rightMiddleContent);
+        createImageBox_(rightBottomContent);
+        createIconWidget_(rightBottomContent);
     }
 
     void createPlot2d_(ui::Widget* parent) {
@@ -363,10 +372,48 @@ private:
         parent->createChild<ui::ImageBox>(imagePath);
     }
 
+    core::Array<std::string_view> iconNames_ = {
+        "apps/uitest/svg/samples/tiger.svg",
+        "apps/uitest/svg/coords/InitialCoords-notext.svg",
+        "apps/uitest/svg/coords/Nested-notext.svg",
+        "apps/uitest/svg/coords/NewCoordSys-notext.svg",
+        "apps/uitest/svg/coords/OrigCoordSys-notext.svg",
+        "apps/uitest/svg/coords/PreserveAspectRatio-noentity-notext.svg",
+        "apps/uitest/svg/coords/RotateScale-notext.svg",
+        "apps/uitest/svg/coords/Skew-notext.svg",
+        "apps/uitest/svg/coords/Units-notext.svg",
+        "apps/uitest/svg/coords/Viewbox-notext.svg",
+        "apps/uitest/svg/paths/arcs01.svg",
+        "apps/uitest/svg/paths/arcs02-nodefs.svg",
+        "apps/uitest/svg/paths/cubic01-nostylesheet.svg",
+        "apps/uitest/svg/paths/cubic02-nostylesheet.svg",
+        "apps/uitest/svg/paths/quad01.svg",
+        "apps/uitest/svg/paths/triangle01.svg",
+        "apps/uitest/svg/shapes/circle01.svg",
+        "apps/uitest/svg/shapes/ellipse01.svg",
+        "apps/uitest/svg/shapes/line01.svg",
+        "apps/uitest/svg/shapes/polygon01.svg",
+        "apps/uitest/svg/shapes/polyline01.svg",
+        "apps/uitest/svg/shapes/rect01.svg",
+        "apps/uitest/svg/shapes/rect02.svg"};
+
+    Int iconIndex_ = 0;
+    ui::IconWidgetPtr iconWidget_ = nullptr;
+
+    void cycleSvgIcon_() {
+        if (iconWidget_) {
+            iconIndex_ = (iconIndex_ + 1) % iconNames_.length();
+            iconWidget_->setFilePath(core::resourcePath(iconNames_[iconIndex_]));
+        }
+    }
+    VGC_SLOT(cycleSvgIconSlot_, cycleSvgIcon_)
+
     void createIconWidget_(ui::Widget* parent) {
-        std::string_view name = "apps/uitest/svg/samples/tiger.svg";
-        std::string iconPath = core::resourcePath(name);
-        parent->createChild<ui::IconWidget>(iconPath);
+        std::string iconPath = core::resourcePath(iconNames_[iconIndex_]);
+        iconWidget_ = parent->createChild<ui::IconWidget>(iconPath);
+
+        ui::Action* action = parent->createTriggerAction(commands::cycleSvgIcon);
+        action->triggered().connect(cycleSvgIconSlot_());
     }
 };
 
