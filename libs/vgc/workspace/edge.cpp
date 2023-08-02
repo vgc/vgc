@@ -586,9 +586,9 @@ void VacKeyEdge::onPaintDraw(
                     float l = i * dl;
                     strokeColor = core::Color::hsl(210 + 90 * l, 1.0, 0.5);
                     //(l > 0.5f ? 2 * (1.f - l) : 1.f), 0, (l < 0.5f ? 2 * l : 1.f));
-                    if (i == 0 && startVertex() == nullptr) {
-                        // Make the first control point of closed edge bigger
-                        // help identify it.
+                    if (i == 0 && isClosed()) {
+                        // Make the first control point of closed edges bigger:
+                        // this helps identify them.
                         adjustedDiskFillRadius *= 1.5;
                     }
                 }

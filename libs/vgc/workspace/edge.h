@@ -446,6 +446,13 @@ public:
     virtual const VacEdgeCellFrameData*
     computeFrameDataAt(core::AnimTime t, VacEdgeComputationStage stage) = 0;
 
+    /// Returns whether this edge is a closed edge.
+    ///
+    bool isClosed() const {
+        vacomplex::EdgeCell* edgeCell = vacEdgeCellNode();
+        return edgeCell ? edgeCell->isClosed() : false;
+    }
+
 private:
     virtual void dirtyJoinDataAtVertex_(const VacVertexCell* vertexCell) = 0;
 };
