@@ -16,6 +16,8 @@
 
 #include <vgc/graphics/icon.h>
 
+#include <optional>
+
 #include <vgc/core/colors.h>
 #include <vgc/core/io.h>
 #include <vgc/graphics/strings.h>
