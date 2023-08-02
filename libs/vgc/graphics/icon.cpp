@@ -16,6 +16,8 @@
 
 #include <vgc/graphics/icon.h>
 
+#include <optional>
+
 #include <vgc/core/colors.h>
 #include <vgc/core/io.h>
 #include <vgc/graphics/strings.h>
@@ -95,11 +97,21 @@ core::Color getColor(const Icon* icon, core::StringId property) {
     return res;
 }
 
-// Create the batches, leaving Engine resources uninitialized for now.
+// Create a new batch if necessary, or keep using the same batch
+// if the color of the last batch is the same as the next color.
 //
-core::Array<Batch> createBatchesFromPaths(const core::Array<SvgSimplePath>& paths) {
+Batch& getOrCreateBatch(core::Array<Batch>& batches, const ColorSpec& colorSpec) {
+    if (batches.isEmpty() || batches.last().colorSpec != colorSpec) {
+        batches.emplaceLast(colorSpec);
+    }
+    return batches.last();
+}
 
-    core::Array<Batch> res;
+// Returns the params that make sense in the context of the given transform.
+//
+// Returns no params if we should not continue drawing due to scale too small.
+//
+std::optional<geometry::Curves2dSampleParams> getParams(const SvgSimplePath& path) {
 
     // Use pixelSize to avoid having too many triangles for
     // curves that span less than a pixel.
@@ -109,64 +121,119 @@ core::Array<Batch> createBatchesFromPaths(const core::Array<SvgSimplePath>& path
     // SizedFont vs. Font.
     //
     const double basePixelSize = 1.0;
-    auto params = geometry::Curves2dSampleParams::semiAdaptive(basePixelSize);
 
-    for (const SvgSimplePath& path : paths) {
+    // Triangulate the path in local coordinates (Layout: XY)
+    const geometry::Mat3d& t = path.transform();
+    double meanScale = std::sqrt(std::abs(t(0, 0) * t(1, 1) - t(1, 0) * t(0, 1)));
+    if (meanScale > 0) {
+        return geometry::Curves2dSampleParams::semiAdaptive(basePixelSize / meanScale);
+    }
+    else {
+        return std::nullopt;
+    }
+}
 
-        // Determine which color to draw the path
-        ColorSpec colorSpec;
-        if (path.styleClasses().contains("background")) {
-            continue;
-        }
-        else if (path.styleClasses().contains("fill-foreground-color")) {
-            colorSpec.type = ColorType::Foreground;
-            if (path.fill().paintType() == SvgPaintType::Color) {
-                colorSpec.color.setA(path.fill().color().a());
-            }
-        }
-        else if (path.styleClasses().contains("fill-accent-color")) {
-            colorSpec.type = ColorType::Accent;
-            if (path.fill().paintType() == SvgPaintType::Color) {
-                colorSpec.color.setA(path.fill().color().a());
-            }
-        }
-        else if (path.fill().paintType() == SvgPaintType::Color) {
-            colorSpec.color = path.fill().color();
-        }
-        else {
-            continue;
-        }
+void applyTransform(Batch& batch, const SvgSimplePath& path, Int oldLength) {
 
-        // Create a new batch if necessary, or keep using the same batch
-        if (res.isEmpty() || res.last().colorSpec != colorSpec) {
-            res.emplaceLast(colorSpec);
-        }
-        Batch& batch = res.last();
+    Int newLength = batch.vertices.length();
+    VGC_ASSERT(0 <= oldLength && oldLength <= newLength);
 
-        // Triangulate the path in local coordinates (Layout: XY)
-        const geometry::Mat3d& t = path.transform();
-        double meanScale = std::sqrt(std::abs(t(0, 0) * t(1, 1) - t(1, 0) * t(0, 1)));
-        if (meanScale == 0) {
-            // Nothing to draw if scaled by zero.
-            continue;
-        }
-        double pixelSizeInLocalCoordinates = basePixelSize / meanScale;
-        params.setMinDistance(pixelSizeInLocalCoordinates);
-        Int oldLength = batch.vertices.length();
-        path.curves().fill(batch.vertices, params);
-        Int newLength = batch.vertices.length();
+    geometry::Mat3f tf(path.transform()); // double to float
 
-        // Apply transformation
-        geometry::Mat3f tf(t);
-        for (Int i = oldLength; i + 1 < newLength; i += 2) {
-            float& x = batch.vertices.getUnchecked(i);
-            float& y = batch.vertices.getUnchecked(i + 1);
-            geometry::Vec2f p = tf.transformPoint(geometry::Vec2f(x, y));
-            x = p.x();
-            y = p.y();
+    for (Int i = oldLength; i + 1 < newLength; i += 2) {
+        float& x = batch.vertices.getUnchecked(i);
+        float& y = batch.vertices.getUnchecked(i + 1);
+        geometry::Vec2f p = tf.transformPoint(geometry::Vec2f(x, y));
+        x = p.x();
+        y = p.y();
+    }
+}
+
+std::optional<ColorSpec> getColorSpec(
+    const SvgPaint& paint,
+    const core::Array<std::string>& styleClasses,
+    const std::string& foregroundClass,
+    const std::string& accentClass) {
+
+    ColorSpec colorSpec;
+    if (styleClasses.contains(foregroundClass)) {
+        colorSpec.type = ColorType::Foreground;
+        if (paint.paintType() == SvgPaintType::Color) {
+            colorSpec.color.setA(paint.color().a());
         }
     }
+    else if (styleClasses.contains(accentClass)) {
+        colorSpec.type = ColorType::Accent;
+        if (paint.paintType() == SvgPaintType::Color) {
+            colorSpec.color.setA(paint.color().a());
+        }
+    }
+    else if (paint.paintType() == SvgPaintType::Color) {
+        colorSpec.type = ColorType::Custom;
+        colorSpec.color = paint.color();
+    }
+    else {
+        return std::nullopt;
+    }
+    return colorSpec;
+}
 
+void appendFillTriangles(
+    core::Array<Batch>& batches,
+    const SvgSimplePath& path,
+    const geometry::Curves2dSampleParams& params) {
+
+    // Get color spec, fast return if nothing to draw
+    static const std::string foregroundClass = "fill-foreground-color";
+    static const std::string accentClass = "fill-accent-color";
+    std::optional<ColorSpec> colorSpec =
+        getColorSpec(path.fill(), path.styleClasses(), foregroundClass, accentClass);
+    if (!colorSpec) {
+        return;
+    }
+
+    // Convert to triangles
+    Batch& batch = getOrCreateBatch(batches, *colorSpec);
+    Int oldLength = batch.vertices.length();
+    path.curves().fill(batch.vertices, params);
+    applyTransform(batch, path, oldLength);
+}
+
+void appendStrokeTriangles(
+    core::Array<Batch>& batches,
+    const SvgSimplePath& path,
+    const geometry::Curves2dSampleParams& params) {
+
+    // Get color spec, fast return if nothing to draw
+    static const std::string foregroundClass = "stroke-foreground-color";
+    static const std::string accentClass = "stroke-accent-color";
+    std::optional<ColorSpec> colorSpec =
+        getColorSpec(path.stroke(), path.styleClasses(), foregroundClass, accentClass);
+    if (!colorSpec) {
+        return;
+    }
+
+    // Convert to triangles
+    Batch& batch = getOrCreateBatch(batches, *colorSpec);
+    Int oldLength = batch.vertices.length();
+    path.curves().stroke(batch.vertices, path.strokeWidth(), params);
+    applyTransform(batch, path, oldLength);
+}
+
+// Create the batches, leaving Engine resources uninitialized for now.
+//
+core::Array<Batch> createBatchesFromPaths(const core::Array<SvgSimplePath>& paths) {
+    core::Array<Batch> res;
+    for (const SvgSimplePath& path : paths) {
+        if (path.styleClasses().contains("background")) {
+            // Nothing to draw if this is the icon background
+            continue;
+        }
+        if (std::optional<geometry::Curves2dSampleParams> params = getParams(path)) {
+            appendFillTriangles(res, path, *params);
+            appendStrokeTriangles(res, path, *params);
+        }
+    }
     return res;
 }
 
