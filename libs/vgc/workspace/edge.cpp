@@ -580,11 +580,17 @@ void VacKeyEdge::onPaintDraw(
             for (Int i = 0; i < numPoints; ++i) {
                 geometry::Vec2f p = geometry::Vec2f(controlPoints_[i]);
                 core::Color strokeColor;
+                float adjustedDiskFillRadius = diskFillRadius;
                 if (isSelected) {
                     // Use gradient to visualize direction of the curve (from start to end)
                     float l = i * dl;
                     strokeColor = core::Color::hsl(210 + 90 * l, 1.0, 0.5);
                     //(l > 0.5f ? 2 * (1.f - l) : 1.f), 0, (l < 0.5f ? 2 * l : 1.f));
+                    if (i == 0 && isClosed()) {
+                        // Increase radius of the first control point of closed
+                        // edges: this helps identify them.
+                        adjustedDiskFillRadius *= 1.5f;
+                    }
                 }
                 else {
                     // Use constant color
@@ -594,10 +600,10 @@ void VacKeyEdge::onPaintDraw(
                 graphics::detail::ScreenSpaceInstanceData& inst0 = pointInstData[j];
                 graphics::detail::ScreenSpaceInstanceData& inst1 = pointInstData[j + 1];
                 inst0.position = p;
-                inst0.displacementScale = diskFillRadius + diskStrokeWidth;
+                inst0.displacementScale = adjustedDiskFillRadius + diskStrokeWidth;
                 inst0.color = strokeColor;
                 inst1.position = p;
-                inst1.displacementScale = diskFillRadius;
+                inst1.displacementScale = adjustedDiskFillRadius;
                 inst1.color = diskFillColor;
             }
 
