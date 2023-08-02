@@ -642,16 +642,6 @@ void computeSculptSampling(
                 if (d > 0) {
                     double invD = 1.0 / d;
 
-                    //CubicBezierStroke
-                    //auto stroke =
-                    //    geometry::detail::CubicBezierStroke::fromCatmullRomSpline(
-                    //        geometry::detail::CatmullRomSplineParameterization::
-                    //            Centripetal,
-                    //        positions,
-                    //        widths,
-                    //        isClosed,
-                    //        iSample2 - 1);
-
                     while (nextSculptPointS <= sa2->s()) {
                         // Sample a sculpt point at t in segment [sa1:0, sa2:1].
                         double t = (nextSculptPointS - sa1->s()) * invD;
@@ -750,7 +740,7 @@ void computeSculptSampling(
 
 template<typename TPoint, typename PositionGetter, typename WidthGetter>
 [[maybe_unused]] Int filterSculptPointsWidthStep(
-    core::Array<TPoint>& points,
+    core::Span<TPoint> points,
     core::IntArray& indices,
     Int intervalStart,
     bool /*isClosed*/,
@@ -773,30 +763,6 @@ template<typename TPoint, typename PositionGetter, typename WidthGetter>
         double wA = widthGetter(points[iA], iA);
         double wB = widthGetter(points[iB], iB);
 
-        //core::Array<geometry::Vec2d> knotPs;
-        //core::Array<double> knotWs;
-        //if (i - 1 >= 0) {
-        //    Int j = indices[i - 1];
-        //    knotPs.append(positionGetter(points[j], j));
-        //    knotWs.append(widthGetter(points[j], j));
-        //}
-        //Int i0 = knotPs.length();
-        //knotPs.append(a);
-        //knotWs.append(wA);
-        //knotPs.append(b);
-        //knotWs.append(wB);
-        //if (i + 2 < indices.length()) {
-        //    Int j = indices[i + 1];
-        //    knotPs.append(positionGetter(points[j], j));
-        //    knotWs.append(widthGetter(points[j], j));
-        //}
-        //auto stroke = geometry::detail::CubicBezierStroke::fromCatmullRomSpline(
-        //    geometry::detail::CatmullRomSplineParameterization::Centripetal,
-        //    knotPs,
-        //    knotWs,
-        //    isClosed,
-        //    i0);
-
         geometry::Vec2d ab = b - a;
         double abLen = ab.length();
 
@@ -805,17 +771,16 @@ template<typename TPoint, typename PositionGetter, typename WidthGetter>
         Int maxOffsetDiffPointIndex = -1;
         if (abLen > 0) {
             geometry::Vec2d dir = ab / abLen;
-
             // Catmull-Rom is not a linear interpolation, since we don't
             // compute the ground truth here we thus need a bigger threshold.
-            // For now we use X% of the max width from linear interp. value.
-            double maxOffsetDiff = /*std::max(wA, wB)*/ abLen * 0.05;
+            // For now we use X% of the width from linear interp. value.
             for (Int j = iA + 1; j < iB; ++j) {
                 geometry::Vec2d p = positionGetter(points[j], j);
                 geometry::Vec2d ap = p - a;
                 double t = ap.dot(dir) / abLen;
                 double w = (1 - t) * wA + t * wB;
                 double dist = (std::abs)(w - widthGetter(points[j], j));
+                double maxOffsetDiff = w * 0.05;
                 if (dist > maxOffsetDiff) {
                     maxOffsetDiff = dist;
                     maxOffsetDiffPointIndex = j;
@@ -840,10 +805,10 @@ Int filterPointsStep(
     core::Span<TPoint> points,
     core::IntArray& indices,
     Int intervalStart,
-    bool /*isClosed*/,
+    bool isClosed,
     double tolerance,
     PositionGetter positionGetter,
-    WidthGetter /*widthGetter*/) {
+    WidthGetter widthGetter) {
 
     Int i = intervalStart;
     Int endIndex = indices[i + 1];
@@ -894,9 +859,9 @@ Int filterPointsStep(
             indices.insert(i + 1, maxDistPointIndex);
         }
         else {
-            //i = filterSculptPointsWidthStep(
-            //    points, indices, i, isClosed, tolerance, positionGetter, widthGetter);
-            ++i;
+            i = filterSculptPointsWidthStep(
+                points, indices, i, isClosed, tolerance, positionGetter, widthGetter);
+            //++i;
         }
     }
     return i;
@@ -1230,21 +1195,25 @@ geometry::Vec2d FreehandEdgeGeometry::sculptWidth(
 
     VGC_ASSERT(isBeingEdited_);
 
-    Int numPoints = editPositions_.length();
-    if (numPoints == 0) {
+    Int numKnots = editPositions_.length();
+    if (numKnots == 0) {
         return position;
     }
 
     // Sanitize editWidths_.
-    if (editWidths_.length() != numPoints) {
+    if (editWidths_.length() != numKnots) {
         if (editWidths_.isEmpty()) {
-            editWidths_.resize(numPoints, 1.0);
+            editWidths_.resize(numKnots, 1.0);
         }
         else {
             editWidths_.resize(1);
-            editWidths_.resize(numPoints, editWidths_[0]);
+            editWidths_.resize(numKnots, editWidths_[0]);
         }
     }
+
+    // It seems `curvature * width` is what we want to not
+    // let increase too much.
+    //
 
     // Let's consider tolerance is ~= pixelSize for now.
     //const double maxDs = (tolerance * 2.0);
@@ -1256,15 +1225,15 @@ geometry::Vec2d FreehandEdgeGeometry::sculptWidth(
     geometry::CurveSamplingParameters samplingParams(
         geometry::CurveSamplingQuality::AdaptiveLow);
 
-    core::Array<Int> knotToSampleIndex(numPoints, core::noInit);
+    core::Array<Int> knotToSampleIndex(numKnots, core::noInit);
     knotToSampleIndex[0] = 0;
-    for (Int i = 0; i < numPoints - 1; ++i) {
+    for (Int i = 0; i < numKnots - 1; ++i) {
         stroke_->sampleRange(samples, samplingParams, i, 1, true);
         knotToSampleIndex[i + 1] = samples.length() - 1;
         samples.pop();
     }
     stroke_->sampleRange(
-        samples, samplingParams, numPoints - 1, Int{isClosed ? 1 : 0}, true);
+        samples, samplingParams, numKnots - 1, Int{isClosed ? 1 : 0}, true);
     const double curveLength = samples.last().s();
 
     // Note: we could have a distanceToCurve specialized for our geometry.
@@ -1286,19 +1255,134 @@ geometry::Vec2d FreehandEdgeGeometry::sculptWidth(
     double sMiddle = closestSample.s();
 
     // First pass: update widths of original knots.
-    for (Int i = 0; i < numPoints; ++i) {
+    for (Int i = 0; i < numKnots; ++i) {
         geometry::StrokeSampleEx2d& sample = samples[knotToSampleIndex[i]];
         double s = sample.s();
         double d = std::abs(s - sMiddle);
         if (isClosed) {
-            d = std::min(d, std::abs(s + curveLength - sMiddle));
+            double d2 = (s + curveLength) - sMiddle;
+            double d3 = sMiddle - (s - curveLength);
+            if (d2 < d) {
+                d = d2;
+            }
+            if (d3 < d) {
+                d = d3;
+            }
         }
         if (d < radius) {
             double w = editWidths_[i];
-            double t = 1.0 - cubicEaseInOut(d / radius);
-            w = std::max<double>(0, w + delta * t);
+            double wt = 1.0 - cubicEaseInOut(d / radius);
+            w = std::max<double>(0, w + 2. * delta * wt);
             editWidths_[i] = w;
         }
+    }
+
+    // Second pass: add knots if there isn't enough already.
+    // Add each only if there is no knot in a range a*r around it.
+    double minD = 0.2 * radius;
+    std::array<double, 3> targetsD = {0.25 * radius, 0.75 * radius, radius};
+    core::Array<double> targetsS;
+    if (!isClosed) {
+        double dLeft = sMiddle;
+        double dRight = curveLength - dLeft;
+        for (double targetD : targetsD) {
+            if (dLeft > targetD + minD) {
+                targetsS.prepend(sMiddle - targetD);
+            }
+        }
+        if (dLeft > minD && dRight > minD) {
+            targetsS.append(sMiddle);
+        }
+        for (double targetD : targetsD) {
+            if (dRight > targetD + minD) {
+                targetsS.append(sMiddle + targetD);
+            }
+        }
+    }
+    else {
+        double dMax = 0.5 * curveLength;
+        for (double targetD : targetsD) {
+            if (targetD <= dMax) {
+                if (targetD + minD < dMax) {
+                    double s0 = sMiddle - targetD;
+                    if (s0 < 0) {
+                        s0 += curveLength;
+                    }
+                    targetsS.append(s0);
+                    double s1 = sMiddle + targetD;
+                    if (s1 >= curveLength) {
+                        s1 -= curveLength;
+                    }
+                    targetsS.append(s1);
+                }
+                else {
+                    double s = sMiddle - dMax;
+                    if (s < 0) {
+                        s += curveLength;
+                    }
+                    targetsS.append(s);
+                }
+            }
+        }
+        if (dMax > minD) {
+            targetsS.append(0);
+        }
+        std::sort(targetsS.begin(), targetsS.end());
+    }
+    // Loop is reversed to simplify the closed case.
+    double s1 = curveLength;
+    Int j1 = samples.length() - 1;
+    Int iKnot = numKnots - 2;
+    Int iTarget = targetsS.length() - 1;
+    if (isClosed) {
+        iKnot = numKnots - 1;
+    }
+    geometry::Vec2dArray tmpPositions;
+    core::Array<double> tmpWidths;
+    for (; iKnot >= 0 && iTarget >= 0; --iKnot) {
+        Int j0 = knotToSampleIndex[iKnot];
+        const geometry::StrokeSampleEx2d& sample = samples[j0];
+        double s0 = sample.s();
+        tmpPositions.clear();
+        tmpWidths.clear();
+        while (iTarget >= 0) {
+            double targetS = targetsS[iTarget];
+            if (targetS < s0) {
+                break;
+            }
+            if ((targetS >= s0 + minD) && (targetS <= s1 - minD)) {
+                // new knot -> find the sampled segment it belongs too.
+                for (Int j = j0 + 1; j <= j1; ++j) {
+                    const geometry::StrokeSampleEx2d& sample1 = samples[j];
+                    if (targetS < sample1.s()) {
+                        // compute and add new knot
+                        const geometry::StrokeSampleEx2d& sample0 = samples[j - 1];
+                        // (targetS >= s0 + minD) => sample1.s() != sample0.s()
+                        double t = (targetS - sample0.s()) / (sample1.s() - sample0.s());
+                        geometry::Vec2d p =
+                            (1 - t) * sample0.position() + t * sample1.position();
+                        geometry::Vec2d hws =
+                            (1 - t) * sample0.halfwidths() + t * sample1.halfwidths();
+                        double w = hws[0] * 2;
+                        double d = (std::min)(
+                            std::abs(targetS - sMiddle),
+                            std::abs(targetS + curveLength - sMiddle));
+                        double wt = 1.0 - cubicEaseInOut(d / radius);
+                        w = std::max<double>(0, w + 2. * delta * wt);
+                        tmpPositions.prepend(p);
+                        tmpWidths.prepend(w);
+                        break;
+                    }
+                }
+            }
+            --iTarget;
+        }
+        if (!tmpPositions.isEmpty()) {
+            editPositions_.insert(iKnot + 1, tmpPositions);
+            editWidths_.insert(iKnot + 1, tmpWidths);
+        }
+        s1 = s0;
+        j1 = j0;
     }
 
     //samplingParams.setMaxDs(0.5 * maxDs);
@@ -1386,7 +1470,8 @@ public:
         // no more than, say, 10x the edge length?
         //
         numInfluencingPointsPerSide_ = core::round_cast<Int>(
-            sculptSampling_.radius / std::min(sculptSampling_.ds0, sculptSampling_.ds1));
+            sculptSampling_.radius
+            / (std::min)(sculptSampling_.ds0, sculptSampling_.ds1));
 
         if (!sculptSampling_.isClosed) {
 
