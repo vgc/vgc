@@ -1260,9 +1260,13 @@ geometry::Vec2d FreehandEdgeGeometry::sculptWidth(
         double s = sample.s();
         double d = std::abs(s - sMiddle);
         if (isClosed) {
-            double d2 = std::abs(s + curveLength - sMiddle);
+            double d2 = (s + curveLength) - sMiddle;
+            double d3 = sMiddle - (s - curveLength);
             if (d2 < d) {
                 d = d2;
+            }
+            if (d3 < d) {
+                d = d3;
             }
         }
         if (d < radius) {
