@@ -18,7 +18,7 @@
 
 #include <unordered_set>
 
-#include <vgc/geometry/curves2d.h>
+#include <vgc/geometry/tesselator.h>
 #include <vgc/vacomplex/complex.h>
 
 namespace vgc::vacomplex {
@@ -645,15 +645,16 @@ bool computeKeyFaceFillTriangles(
 
     trianglesBuffer.clear();
 
-    geometry::Curves2d curves2d;
+    geometry::Tesselator tess;
+    core::Array<double> coords;
     for (const KeyCycle& cycle : cycles) {
+        coords.clear();
         KeyVertex* kv = cycle.steinerVertex();
         if (kv) {
             geometry::Vec2d p = kv->position();
-            curves2d.moveTo(p[0], p[1]);
+            coords.extend({p[0], p[1]});
         }
         else {
-            bool isFirst = true;
             for (const KeyHalfedge& khe : cycle.halfedges()) {
                 const KeyEdge* ke = khe.edge();
                 if (ke) {
@@ -666,26 +667,14 @@ bool computeKeyFaceFillTriangles(
                     if (khe.direction()) {
                         for (const geometry::StrokeSample2d& s : samples) {
                             geometry::Vec2d p = s.position();
-                            if (isFirst) {
-                                curves2d.moveTo(p[0], p[1]);
-                                isFirst = false;
-                            }
-                            else {
-                                curves2d.lineTo(p[0], p[1]);
-                            }
+                            coords.extend({p[0], p[1]});
                         }
                     }
                     else {
                         for (auto it = samples.rbegin(); it != samples.rend(); ++it) {
                             const geometry::StrokeSample2d& s = *it;
                             geometry::Vec2d p = s.position();
-                            if (isFirst) {
-                                curves2d.moveTo(p[0], p[1]);
-                                isFirst = false;
-                            }
-                            else {
-                                curves2d.lineTo(p[0], p[1]);
-                            }
+                            coords.extend({p[0], p[1]});
                         }
                     }
                 }
@@ -695,11 +684,10 @@ bool computeKeyFaceFillTriangles(
                 }
             }
         }
-        curves2d.close();
+        tess.addContour(coords);
     }
 
-    auto params = geometry::Curves2dSampleParams::adaptive();
-    curves2d.fill(trianglesBuffer, params, windingRule);
+    tess.tesselate(trianglesBuffer, windingRule);
 
     return true;
 }
