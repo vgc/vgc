@@ -55,7 +55,13 @@ void Tesselator::addContour(core::ConstSpan<float> coords) {
 }
 
 void Tesselator::addContour(core::ConstSpan<double> coords) {
-    buffer_.assign(coords);
+    // Note: `buffer_.assign(coords)` compiles but with double to float warning.
+    //       Perhaps we want to implement Array::narrow_assign?
+    buffer_.clear();
+    buffer_.reserve(coords.length());
+    for (double x : coords) {
+        buffer_.append(core::narrow_cast<float>(x));
+    }
     addContour(buffer_);
 }
 
