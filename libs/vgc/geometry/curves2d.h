@@ -21,6 +21,7 @@
 #include <vgc/geometry/api.h>
 #include <vgc/geometry/curvecommand.h>
 #include <vgc/geometry/vec2d.h>
+#include <vgc/geometry/windingrule.h>
 
 namespace vgc::geometry {
 
@@ -366,19 +367,6 @@ private:
     Int maxSamplesPerSegment_;
 };
 
-/// \class vgc::geometry::WindingRule
-/// \brief Specifies which area of polygons must be considered filled in case of overlaps.
-///
-enum class WindingRule {
-    Odd,
-    NonZero,
-    Positive,
-    Negative,
-};
-
-VGC_GEOMETRY_API
-bool isWindingNumberSatisfyingRule(Int windingNumber, WindingRule rule);
-
 /// \class vgc::geometry::Curves2d
 /// \brief Sequence of double-precision 2D curves.
 ///
@@ -554,8 +542,6 @@ public:
     ///  ...]
     /// ```
     ///
-    // TODO: add winding rule, anti-aliasing options, auto-closing open subcurves, etc.
-    //
     void fill(
         core::DoubleArray& data,
         const Curves2dSampleParams& params,

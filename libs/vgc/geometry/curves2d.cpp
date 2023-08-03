@@ -16,25 +16,10 @@
 
 #include <vgc/geometry/curves2d.h>
 
-#include <tesselator.h> // libtess2
-
 #include <vgc/geometry/mat2d.h>
+#include <vgc/geometry/tesselator.h>
 
 namespace vgc::geometry {
-
-bool isWindingNumberSatisfyingRule(Int windingNumber, WindingRule rule) {
-    switch (rule) {
-    case geometry::WindingRule::Odd:
-        return (windingNumber / 2 * 2) != windingNumber;
-    case geometry::WindingRule::NonZero:
-        return windingNumber != 0;
-    case geometry::WindingRule::Positive:
-        return windingNumber > 0;
-    case geometry::WindingRule::Negative:
-        return windingNumber < 0;
-    }
-    return false;
-}
 
 void Curves2d::close() {
     commandData_.append({CurveCommandType::Close, data_.length()});
@@ -665,106 +650,31 @@ void Curves2d::stroke(
 
 namespace {
 
-int getTessWindingRule(WindingRule windingRule) {
-    switch (windingRule) {
-    case WindingRule::Odd:
-        return TESS_WINDING_ODD;
-    case WindingRule::NonZero:
-        return TESS_WINDING_NONZERO;
-    case WindingRule::Positive:
-        return TESS_WINDING_POSITIVE;
-    case WindingRule::Negative:
-        return TESS_WINDING_NEGATIVE;
-    }
-    return TESS_WINDING_NONZERO;
-}
-
 template<typename TFloat>
-void fill_(core::Array<TFloat>& data, const Curves2d& samples, WindingRule windingRule_) {
-    // Triangulate using libtess2
-    TESSalloc* alloc = nullptr; // Default allocator
-    int vertexSize = 2;         // Number of coordinates per vertex (must be 2 or 3)
-    int windingRule = getTessWindingRule(windingRule_); // Winding rule
-    int elementType = TESS_POLYGONS;
-    // ^ Use sequence of polygons as output. Note: we could use
-    // TESS_CONNECTED_POLYGONS to detect which edges have no neighbor
-    // polygons, which can be useful for anti-aliasing.
-    int maxPolySize = 3;                 // Triangles only
-    const TESSreal normal[] = {0, 0, 1}; // Normal for 2D points is the Z unit vector
-    TESStesselator* tess = tessNewTess(alloc);
-    core::Array<TESSreal> coords;
-    auto addContour = [&]() {
-        if (coords.size() > 4) { // ignore contour if 2 points or less
-            tessAddContour(
-                tess,
-                vertexSize,
-                coords.data(),
-                sizeof(TESSreal) * vertexSize,
-                core::int_cast<int>(coords.length() / 2));
-        }
-        coords.clear();
-    };
+void fill_(core::Array<TFloat>& data, const Curves2d& samples, WindingRule windingRule) {
+    Tesselator tess;
+    core::Array<double> coords;
     for (Curves2dCommandRef c : samples.commands()) {
         if (c.type() == CurveCommandType::MoveTo) {
-            addContour();
+            tess.addContour(coords);
+            coords.clear();
             Vec2d p = c.p();
-            coords.append(static_cast<TESSreal>(p[0]));
-            coords.append(static_cast<TESSreal>(p[1]));
-            // Note: currently, TESSreal == float.
-            // Ideally, we'd like to be able to tesslate using either floats
-            // or doubles. Once question would still be, in the case of
-            // Curves2d::fill(FloatArray& out, ...), should we first cast
-            // the contours to float then tesselate in float, or keep the
-            // contours in double then tesselate in double then cast to float?
+            coords.append(p[0]);
+            coords.append(p[1]);
         }
         else if (c.type() == CurveCommandType::LineTo) {
             Vec2d p = c.p();
-            coords.append(static_cast<TESSreal>(p[0]));
-            coords.append(static_cast<TESSreal>(p[1]));
+            coords.append(p[0]);
+            coords.append(p[1]);
         }
         else if (c.type() == CurveCommandType::Close) {
-            addContour();
+            tess.addContour(coords);
+            coords.clear();
         }
     }
-    addContour();
-    int success =
-        tessTesselate(tess, windingRule, elementType, maxPolySize, vertexSize, normal);
-    if (success) {
-        const TESSreal* vertices = tessGetVertices(tess);
-        const TESSindex* polygons = tessGetElements(tess);
-        const int numPolygons = tessGetElementCount(tess);
-        Int numOutputVertices = 0;
-        for (int i = 0; i < numPolygons; ++i) {
-            const TESSindex* p = &polygons[i * maxPolySize];
-            int polySize = maxPolySize;
-            while (p[polySize - 1] == TESS_UNDEF) {
-                --polySize;
-            }
-            numOutputVertices += 6 * (polySize - 2);
-        }
-        data.reserve(data.length() + numOutputVertices);
-        for (int i = 0; i < numPolygons; ++i) {
-            const TESSindex* p = &polygons[i * maxPolySize];
-            int polySize = maxPolySize;
-            while (p[polySize - 1] == TESS_UNDEF) {
-                --polySize;
-            }
-            for (int j = 0; j < polySize - 2; ++j) { // triangle fan
-                const TESSreal* v1 = &vertices[p[j] * vertexSize];
-                const TESSreal* v2 = &vertices[p[j + 1] * vertexSize];
-                const TESSreal* v3 = &vertices[p[j + 2] * vertexSize];
-                data.append(static_cast<TFloat>(v1[0]));
-                data.append(static_cast<TFloat>(v1[1]));
-                data.append(static_cast<TFloat>(v2[0]));
-                data.append(static_cast<TFloat>(v2[1]));
-                data.append(static_cast<TFloat>(v3[0]));
-                data.append(static_cast<TFloat>(v3[1]));
-            }
-        }
-    }
-    else {
-        // TODO: error reporting?
-    }
+    tess.addContour(coords);
+    coords.clear();
+    tess.tesselate(data, windingRule);
 }
 
 } // namespace

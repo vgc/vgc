@@ -29,6 +29,7 @@ vgc_add_library(geometry
         rect2d.h
         rect2f.h
         stride.h
+        tesselator.h
         triangle2d.h
         triangle2f.h
         vec.h
@@ -38,6 +39,7 @@ vgc_add_library(geometry
         vec3f.h
         vec4d.h
         vec4f.h
+        windingrule.h
         yuksel.h
 
     CPP_SOURCE_FILES
@@ -57,6 +59,7 @@ vgc_add_library(geometry
         range1f.cpp
         rect2d.cpp
         rect2f.cpp
+        tesselator.cpp
         triangle2d.cpp
         triangle2f.cpp
         vec2d.cpp
@@ -65,6 +68,7 @@ vgc_add_library(geometry
         vec3f.cpp
         vec4d.cpp
         vec4f.cpp
+        windingrule.cpp
         yuksel.cpp
 
     NATVIS_FILES
