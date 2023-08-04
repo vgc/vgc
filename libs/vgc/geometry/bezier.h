@@ -319,7 +319,7 @@ public:
     }
 
 private:
-    std::array<Vec2d, 3> controlPoints_;
+    std::array<T, 3> controlPoints_;
 };
 
 using QuadraticBezier2d = QuadraticBezier<Vec2d, double>;
@@ -511,7 +511,7 @@ public:
     }
 
 private:
-    std::array<Vec2d, 4> controlPoints_;
+    std::array<T, 4> controlPoints_;
 };
 
 using CubicBezier2d = CubicBezier<Vec2d, double>;

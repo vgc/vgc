@@ -47,39 +47,56 @@ Vec2d CatmullRomSplineStroke2d::evalNonZeroCenterline(
 StrokeSampleEx2d CatmullRomSplineStroke2d::evalNonZero(Int segmentIndex, double u) const {
     if (isWidthConstant_) {
         CubicBezier2d centerlineBezier = segmentToBezier(segmentIndex);
+        CubicBezier1d tu = segmentToNormalReparametrization(segmentIndex);
         double hw = 0.5 * widths_[0];
         Vec2d dp(core::noInit);
         Vec2d p = centerlineBezier.eval(u, dp);
+        double t = tu.eval(u);
+        Vec2d dp2 = centerlineBezier.evalDerivative(t);
         double speed = dp.length();
-        return StrokeSampleEx2d(p, dp / speed, hw, speed, segmentIndex, u);
+        return StrokeSampleEx2d(
+            p, dp / speed, dp2.normalized().orthogonalized(), hw, speed, segmentIndex, u);
     }
     else {
         CubicBezier2d halfwidthsBezier(core::noInit);
         CubicBezier2d centerlineBezier = segmentToBezier(segmentIndex, halfwidthsBezier);
+        CubicBezier1d tu = segmentToNormalReparametrization(segmentIndex);
         Vec2d dp(core::noInit);
         Vec2d p = centerlineBezier.eval(u, dp);
+        double t = tu.eval(u);
+        Vec2d dp2 = centerlineBezier.evalDerivative(t);
         double speed = dp.length();
         Vec2d hw = halfwidthsBezier.eval(u);
-        return StrokeSampleEx2d(p, dp / speed, hw, speed, segmentIndex, u);
+        return StrokeSampleEx2d(
+            p, dp / speed, dp2.normalized().orthogonalized(), hw, speed, segmentIndex, u);
     }
 }
 
 void CatmullRomSplineStroke2d::sampleNonZeroSegment(
     StrokeSampleEx2dArray& out,
     Int segmentIndex,
-    const CurveSamplingParameters& params) const {
-
-    detail::AdaptiveStrokeSampler sampler = {};
+    const CurveSamplingParameters& params,
+    detail::AdaptiveStrokeSampler& sampler) const {
 
     if (isWidthConstant_) {
         CubicBezier2d centerlineBezier = segmentToBezier(segmentIndex);
+        CubicBezier1d tu = segmentToNormalReparametrization(segmentIndex);
         double hw = 0.5 * widths_[0];
         sampler.sample(
             [&, hw](double u) -> StrokeSampleEx2d {
                 Vec2d dp(core::noInit);
                 Vec2d p = centerlineBezier.eval(u, dp);
+                double t = tu.eval(u);
+                Vec2d dp2 = centerlineBezier.evalDerivative(t);
                 double speed = dp.length();
-                return StrokeSampleEx2d(p, dp / speed, hw, speed, segmentIndex, u);
+                return StrokeSampleEx2d(
+                    p,
+                    dp / speed,
+                    dp2.normalized().orthogonalized(),
+                    hw,
+                    speed,
+                    segmentIndex,
+                    u);
             },
             params,
             out);
@@ -87,13 +104,23 @@ void CatmullRomSplineStroke2d::sampleNonZeroSegment(
     else {
         CubicBezier2d halfwidthsBezier(core::noInit);
         CubicBezier2d centerlineBezier = segmentToBezier(segmentIndex, halfwidthsBezier);
+        CubicBezier1d tu = segmentToNormalReparametrization(segmentIndex);
         sampler.sample(
             [&](double u) -> StrokeSampleEx2d {
                 Vec2d dp(core::noInit);
                 Vec2d p = centerlineBezier.eval(u, dp);
+                double t = tu.eval(u);
+                Vec2d dp2 = centerlineBezier.evalDerivative(t);
                 double speed = dp.length();
                 Vec2d hw = halfwidthsBezier.eval(u);
-                return StrokeSampleEx2d(p, dp / speed, hw, speed, segmentIndex, u);
+                return StrokeSampleEx2d(
+                    p,
+                    dp / speed,
+                    dp2.normalized().orthogonalized(),
+                    hw,
+                    speed,
+                    segmentIndex,
+                    u);
             },
             params,
             out);
@@ -102,7 +129,7 @@ void CatmullRomSplineStroke2d::sampleNonZeroSegment(
 
 StrokeSampleEx2d CatmullRomSplineStroke2d::zeroLengthStrokeSample() const {
     return StrokeSampleEx2d(
-        positions().first(), Vec2d(0, 1), 0.5 /*constantHalfwidth_*/, 0, 0);
+        positions().first(), Vec2d(0, 1), Vec2d(-1, 0), 0.5 /*constantHalfwidth_*/, 0, 0);
 }
 
 namespace {
@@ -523,9 +550,6 @@ CubicBezier2d CatmullRomSplineStroke2d::segmentToBezier(Int segmentIndex) const 
     checkSegmentIndexIsValid(segmentIndex, numSegments);
 
     Int numKnots = this->numKnots();
-    if (segmentIndex == numKnots - 1) {
-    }
-
     bool isClosed = this->isClosed();
 
     Int i0 = segmentIndex;
@@ -550,9 +574,6 @@ CubicBezier2d CatmullRomSplineStroke2d::segmentToBezier(
     checkSegmentIndexIsValid(segmentIndex, numSegments);
 
     Int numKnots = this->numKnots();
-    if (segmentIndex == numKnots - 1) {
-    }
-
     bool isClosed = this->isClosed();
 
     Int i0 = segmentIndex;
@@ -578,6 +599,20 @@ CubicBezier2d CatmullRomSplineStroke2d::segmentToBezier(
     const Vec2d* p = positions_.data();
     const Vec2d* cp = centerlineControlPoints_.data();
     return CubicBezier2d(p[i0], cp[j], cp[j + 1], p[i3]);
+}
+
+CubicBezier1d
+CatmullRomSplineStroke2d::segmentToNormalReparametrization(Int segmentIndex) const {
+
+    computeCache_();
+
+    Int numSegments = this->numSegments();
+    checkSegmentIndexIsValid(segmentIndex, numSegments);
+
+    Int i = segmentIndex;
+
+    const Vec2d* cp = normalReparametrizationControlValues_.data();
+    return CubicBezier1d(0, cp[i][0], cp[i][1], 1);
 }
 
 void CatmullRomSplineStroke2d::computeCache_() const {
@@ -606,6 +641,7 @@ void CatmullRomSplineStroke2d::computeCache_() const {
 
     centerlineControlPoints_.resizeNoInit(numSegments * 2);
     halfwidthsControlPoints_.resizeNoInit(numSegments * 2);
+    normalReparametrizationControlValues_.resizeNoInit(numSegments);
 
     core::Array<SegmentComputeData> computeDataArray(numSegments, core::noInit);
 
@@ -677,6 +713,54 @@ void CatmullRomSplineStroke2d::computeCache_() const {
         Int j = i * 2;
         halfwidthsControlPoints_.getUnchecked(j) = halfwidthsBezier.controlPoint1();
         halfwidthsControlPoints_.getUnchecked(j + 1) = halfwidthsBezier.controlPoint2();
+    }
+
+    // Here we relax tangents to make their derivative continuous.
+    constexpr bool enableRelaxedNormals = true;
+    for (Int i = 0; i < numSegments; ++i) {
+        SegmentComputeData& computeData = computeDataArray[i];
+
+        CurveSegmentType segmentType = segmentTypes_[i];
+
+        normalReparametrizationControlValues_[i] = Vec2d(1. / 3, 2. / 3);
+
+        if (enableRelaxedNormals && (isClosed || i > 1)
+            && (segmentType == CurveSegmentType::Simple
+                || segmentType == CurveSegmentType::BeforeCorner)) {
+
+            Int previousSegmentIndex = i - 1;
+            if (previousSegmentIndex < 0) {
+                previousSegmentIndex = numSegments - 1;
+            }
+            SegmentComputeData& previousSegmentComputeData =
+                computeDataArray[previousSegmentIndex];
+
+            PointData& ed0 = previousSegmentComputeData.endpointDataPair[1];
+            PointData& ed1 = computeData.endpointDataPair[0];
+
+            double np0 = std::abs(ed0.curvature);
+            double np1 = std::abs(ed1.curvature);
+
+            Int i0 = previousSegmentIndex;
+            Int i1 = i;
+
+            if (ed0.curvature * ed1.curvature < 0) {
+                // Signs of curvature are different, it is impossible to make
+                // k1 match k2 with a positive coefficient.
+                // Thus we force both sides to have a fake curvature of 0
+                // (fake C1 inflexion point).
+                normalReparametrizationControlValues_[i0][1] = 1;
+                normalReparametrizationControlValues_[i1][0] = 0;
+            }
+            else if (np0 < np1) {
+                double dt = np0 / np1;
+                normalReparametrizationControlValues_[i1][0] = dt / 3;
+            }
+            else if (np1 < np0) {
+                double dt = np1 / np0;
+                normalReparametrizationControlValues_[i0][1] = 1.0 - dt / 3;
+            }
+        }
     }
 
     constexpr bool enableOffsetLineTangentContinuity = false;

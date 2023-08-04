@@ -429,7 +429,8 @@ protected:
     void sampleNonZeroSegment(
         StrokeSampleEx2dArray& out,
         Int segmentIndex,
-        const CurveSamplingParameters& params) const override;
+        const CurveSamplingParameters& params,
+        detail::AdaptiveStrokeSampler& sampler) const override;
 
     StrokeSampleEx2d zeroLengthStrokeSample() const override;
 
@@ -439,6 +440,8 @@ protected:
 
     CubicBezier2d segmentToBezier(Int segmentIndex) const;
     CubicBezier2d segmentToBezier(Int segmentIndex, CubicBezier2d& halfwidths) const;
+
+    CubicBezier1d segmentToNormalReparametrization(Int segmentIndex) const;
 
     double constantWidth() const {
         return widths_[0];
@@ -454,6 +457,7 @@ private:
     // These two cannot be computed separately at the moment.
     mutable Vec2dArray centerlineControlPoints_;
     mutable Vec2dArray halfwidthsControlPoints_;
+    mutable Vec2dArray normalReparametrizationControlValues_;
 
     mutable bool isCacheDirty_ = true;
     bool isWidthConstant_ = false;

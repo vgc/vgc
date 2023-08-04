@@ -299,6 +299,16 @@ void AbstractStroke2d::sampleSegment(
     Int segmentIndex,
     const CurveSamplingParameters& params) const {
 
+    detail::AdaptiveStrokeSampler sampler = {};
+    sampleSegment(out, segmentIndex, params, sampler);
+}
+
+void AbstractStroke2d::sampleSegment(
+    StrokeSampleEx2dArray& out,
+    Int segmentIndex,
+    const CurveSamplingParameters& params,
+    detail::AdaptiveStrokeSampler& sampler) const {
+
     if (isZeroLengthSegment(segmentIndex)) {
         Int numSegments = this->numSegments();
         Int startKnot = segmentIndex;
@@ -371,7 +381,7 @@ void AbstractStroke2d::sampleSegment(
         }
     }
     else {
-        return sampleNonZeroSegment(out, segmentIndex, params);
+        return sampleNonZeroSegment(out, segmentIndex, params, sampler);
     }
 }
 
@@ -572,14 +582,13 @@ bool isCenterlineSegmentUnderTolerance(
     double cosMaxAngle) {
 
     // Test angle between curve normals and center segment normal.
-    Vec2d l = s1.position() - s0.position();
-    Vec2d n = l.orthogonalized();
-    double nl = n.length();
-    double maxDot = cosMaxAngle * nl;
-    if (n.dot(s0.normal()) < maxDot) {
+    Vec2d t = s1.position() - s0.position();
+    double tl = t.length();
+    double maxDot = cosMaxAngle * tl;
+    if (t.dot(s0.tangent()) < maxDot) {
         return false;
     }
-    if (n.dot(s1.normal()) < maxDot) {
+    if (t.dot(s1.tangent()) < maxDot) {
         return false;
     }
     return true;
