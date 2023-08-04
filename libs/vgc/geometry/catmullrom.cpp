@@ -738,8 +738,8 @@ void CatmullRomSplineStroke2d::computeCache_() const {
             PointData& ed0 = previousSegmentComputeData.endpointDataPair[1];
             PointData& ed1 = computeData.endpointDataPair[0];
 
-            double np0 = std::abs(ed0.curvature /* * ed0.speed*/);
-            double np1 = std::abs(ed1.curvature /* * ed1.speed*/);
+            double np0 = std::abs(ed0.curvature);
+            double np1 = std::abs(ed1.curvature);
 
             Int i0 = previousSegmentIndex;
             Int i1 = i;
