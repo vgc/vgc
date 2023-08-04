@@ -44,6 +44,7 @@ public:
     StrokeSample2d(core::NoInit) noexcept
         : position_(core::noInit)
         , tangent_(core::noInit)
+        , normal_(core::noInit)
         , halfwidths_(core::noInit) {
     }
     VGC_WARNING_POP
@@ -51,11 +52,13 @@ public:
     StrokeSample2d(
         const Vec2d& position,
         const Vec2d& tangent,
+        const Vec2d& normal,
         const Vec2d& halfwidths,
         double s = 0) noexcept
 
         : position_(position)
         , tangent_(tangent)
+        , normal_(normal)
         , halfwidths_(halfwidths)
         , s_(s) {
     }
@@ -63,10 +66,11 @@ public:
     StrokeSample2d(
         const Vec2d& position,
         const Vec2d& tangent,
+        const Vec2d& normal,
         double halfwidth,
         double s = 0) noexcept
 
-        : StrokeSample2d(position, tangent, Vec2d(halfwidth, halfwidth), s) {
+        : StrokeSample2d(position, tangent, normal, Vec2d(halfwidth, halfwidth), s) {
     }
 
     const Vec2d& position() const {
@@ -94,7 +98,11 @@ public:
     // y  ↓ normal
     //
     Vec2d normal() const {
-        return tangent().orthogonalized();
+        return normal_;
+    }
+
+    void setNormal(const Vec2d& normal) {
+        normal_ = normal;
     }
 
     // ┌─── x
@@ -190,6 +198,7 @@ public:
 private:
     Vec2d position_ = {};
     Vec2d tangent_ = {};
+    Vec2d normal_ = {};
     Vec2d halfwidths_ = {};
     double s_ = 0; // arclength from stroke start point.
     // isCornerStart_ is true only for the first sample of the two that makes
@@ -208,19 +217,21 @@ inline StrokeSample2d lerp(const StrokeSample2d& a, const StrokeSample2d& b, dou
     StrokeSample2d result(
         a.position() * ot + b.position() * t,
         a.tangent() * ot + b.tangent() * t,
+        a.normal() * ot + b.normal() * t,
         a.halfwidths() * ot + b.halfwidths() * t,
         a.s() * ot + b.s() * t);
     return result;
 }
 
-/// Returns a new sample with each attribute linearly interpolated and
-/// the normal also re-normalized.
+/// Returns a new sample with each attribute linearly interpolated except
+/// the normal and the tangent that also re-normalized.
 ///
 /// Use `lerp()` if you don't need the re-normalization.
 ///
 inline StrokeSample2d nlerp(const StrokeSample2d& a, const StrokeSample2d& b, double t) {
     StrokeSample2d result = lerp(a, b, t);
     result.setTangent(result.tangent().normalized());
+    result.setNormal(result.normal().normalized());
     return result;
 }
 
@@ -251,12 +262,13 @@ public:
     StrokeSampleEx2d(
         const Vec2d& position,
         const Vec2d& tangent,
+        const Vec2d& normal,
         const Vec2d& halfwidths,
         double speed,
         Int segmentIndex = -1,
         double u = 0) noexcept
 
-        : sample_(position, tangent, halfwidths)
+        : sample_(position, tangent, normal, halfwidths)
         , speed_(speed)
         , segmentIndex_(segmentIndex)
         , u_(u) {
@@ -267,6 +279,7 @@ public:
     StrokeSampleEx2d(
         const Vec2d& position,
         const Vec2d& tangent,
+        const Vec2d& normal,
         double halfwidth,
         double speed,
         Int segmentIndex = -1,
@@ -275,6 +288,7 @@ public:
         : StrokeSampleEx2d(
             position,
             tangent,
+            normal,
             Vec2d(halfwidth, halfwidth),
             speed,
             segmentIndex,
@@ -300,7 +314,6 @@ public:
 
     void setTangent(const Vec2d& tangent) {
         sample_.setTangent(tangent);
-        updateOffsetPoints_();
     }
 
     double speed() const {
@@ -339,6 +352,11 @@ public:
     //
     Vec2d normal() const {
         return sample_.normal();
+    }
+
+    void setNormal(const Vec2d& normal) {
+        sample_.setNormal(normal);
+        updateOffsetPoints_();
     }
 
     // ┌─── x
@@ -692,6 +710,8 @@ public:
     virtual Vec2d eval(Int segmentIndex, double u, Vec2d& velocity) const = 0;
 };
 
+class AdaptiveStrokeSampler;
+
 } // namespace detail
 
 /// \class vgc::geometry::AbstractStroke2d
@@ -771,6 +791,14 @@ public:
         StrokeSampleEx2dArray& out,
         Int segmentIndex,
         const CurveSamplingParameters& params) const;
+
+    /// Variant of sampleSegment() accepting a sampler to reuse its storage.
+    ///
+    void sampleSegment(
+        StrokeSampleEx2dArray& out,
+        Int segmentIndex,
+        const CurveSamplingParameters& params,
+        detail::AdaptiveStrokeSampler& sampler) const;
 
     /// Computes a sampling of the subset of this curve consisting of
     /// `numSegments` segments starting at the knot at index `startKnot`.
@@ -875,7 +903,8 @@ protected:
     virtual void sampleNonZeroSegment(
         StrokeSampleEx2dArray& out,
         Int segmentIndex,
-        const CurveSamplingParameters& params) const = 0;
+        const CurveSamplingParameters& params,
+        detail::AdaptiveStrokeSampler& sampler) const = 0;
 
     // Handle cases where:
     // - open curve with numKnots == 1: there are no segments at all in the curve

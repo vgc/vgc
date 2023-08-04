@@ -1152,6 +1152,7 @@ void VacKeyVertex::computeJoin_() {
                         geometry::StrokeSample2d newSample(
                             centerBorder.pointAt(d),
                             -centerBorderNormal.orthogonalized(),
+                            centerBorderNormal,
                             previousIt->halfwidths() * ot + it->halfwidths() * t);
                         newSample.setS(sFilletMax);
                         it = workingSamples.emplace(it, newSample);
@@ -1162,6 +1163,7 @@ void VacKeyVertex::computeJoin_() {
                     double d = ts * halfedgeData.patchLength_;
                     it->setPosition(centerBorder.pointAt(d));
                     it->setTangent(-centerBorderNormal.orthogonalized());
+                    it->setNormal(centerBorderNormal);
                     geometry::Vec2f hwf(it->halfwidths());
                     if (s == sFilletMax) {
                         previousIt = it++;
@@ -1178,9 +1180,10 @@ void VacKeyVertex::computeJoin_() {
                         const double ot = 1 - t;
                         Vec2d rayPoint = centerBorder.pointAt(d);
                         it->setPosition(rayPoint * ot + it->position() * t);
-                        it->setTangent(-(centerBorderNormal * ot + it->normal() * t)
-                                            .normalized()
-                                            .orthogonalized());
+                        Vec2d normal =
+                            (centerBorderNormal * ot + it->normal() * t).normalized();
+                        it->setTangent(-normal.orthogonalized());
+                        it->setNormal(normal);
                     }
                 }
             }

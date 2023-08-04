@@ -284,7 +284,8 @@ protected:
     void sampleNonZeroSegment(
         StrokeSampleEx2dArray& out,
         Int segmentIndex,
-        const CurveSamplingParameters& params) const override;
+        const CurveSamplingParameters& params,
+        detail::AdaptiveStrokeSampler& sampler) const override;
 
     StrokeSampleEx2d zeroLengthStrokeSample() const override;
 

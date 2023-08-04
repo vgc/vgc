@@ -48,7 +48,8 @@ StrokeSampleEx2d YukselSplineStroke2d::evalNonZero(Int segmentIndex, double u) c
         Vec2d tangent = core::noInit;
         double speed;
         Vec2d p = centerlineSegment.eval(u, tangent, speed);
-        return StrokeSampleEx2d(p, tangent, hw, speed, segmentIndex, u);
+        Vec2d normal = tangent.orthogonalized() / speed;
+        return StrokeSampleEx2d(p, tangent, normal, hw, speed, segmentIndex, u);
     }
     else {
         CubicBezier2d halfwidthsSegment(core::noInit);
@@ -58,16 +59,16 @@ StrokeSampleEx2d YukselSplineStroke2d::evalNonZero(Int segmentIndex, double u) c
         double speed;
         Vec2d p = centerlineSegment.eval(u, tangent, speed);
         Vec2d hw = halfwidthsSegment.eval(u);
-        return StrokeSampleEx2d(p, tangent, hw, speed, segmentIndex, u);
+        Vec2d normal = tangent.orthogonalized() / speed;
+        return StrokeSampleEx2d(p, tangent, normal, hw, speed, segmentIndex, u);
     }
 }
 
 void YukselSplineStroke2d::sampleNonZeroSegment(
     StrokeSampleEx2dArray& out,
     Int segmentIndex,
-    const CurveSamplingParameters& params) const {
-
-    detail::AdaptiveStrokeSampler sampler = {};
+    const CurveSamplingParameters& params,
+    detail::AdaptiveStrokeSampler& sampler) const {
 
     if (isWidthConstant_) {
         YukselBezierSegment2d centerlineSegment = segmentEvaluator(segmentIndex);
@@ -77,7 +78,8 @@ void YukselSplineStroke2d::sampleNonZeroSegment(
                 Vec2d tangent = core::noInit;
                 double speed;
                 Vec2d p = centerlineSegment.eval(u, tangent, speed);
-                return StrokeSampleEx2d(p, tangent, hw, speed, segmentIndex, u);
+                Vec2d normal = tangent.orthogonalized() / speed;
+                return StrokeSampleEx2d(p, tangent, normal, hw, speed, segmentIndex, u);
             },
             params,
             out);
@@ -92,7 +94,8 @@ void YukselSplineStroke2d::sampleNonZeroSegment(
                 double speed;
                 Vec2d p = centerlineSegment.eval(u, tangent, speed);
                 Vec2d hw = halfwidthsSegment.eval(u);
-                return StrokeSampleEx2d(p, tangent, hw, speed, segmentIndex, u);
+                Vec2d normal = tangent.orthogonalized() / speed;
+                return StrokeSampleEx2d(p, tangent, normal, hw, speed, segmentIndex, u);
             },
             params,
             out);
@@ -101,7 +104,13 @@ void YukselSplineStroke2d::sampleNonZeroSegment(
 
 StrokeSampleEx2d YukselSplineStroke2d::zeroLengthStrokeSample() const {
     return StrokeSampleEx2d(
-        positions().first(), Vec2d(0, 1), 0.5 /*constantHalfwidth_*/, 0 /*speed*/, 0, 0);
+        positions().first(),
+        Vec2d(0, 1),
+        Vec2d(-1, 0),
+        0.5 /*constantHalfwidth_*/,
+        0 /*speed*/,
+        0,
+        0);
 }
 
 namespace {
