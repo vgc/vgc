@@ -31,6 +31,9 @@
 
 namespace vgc::geometry {
 
+/// Note: normal and tangent are not necessarily orthogonal, for instance
+/// when using relaxed normals.
+///
 class VGC_GEOMETRY_API StrokeSample2d {
 public:
     constexpr StrokeSample2d() noexcept
@@ -89,8 +92,9 @@ public:
         tangent_ = tangent;
     }
 
-    void reverseTangent() {
+    void reverseDirection() {
         tangent_ = -tangent_;
+        normal_ = -normal_;
     }
 
     // ┌─── x
@@ -243,6 +247,9 @@ using StrokeSample2dArray = core::Array<StrokeSample2d>;
 ///
 using SharedConstStrokeSample2dArray = core::SharedConstArray<StrokeSample2d>;
 
+/// Note: normal and tangent are not necessarily orthogonal, for instance
+/// when using relaxed normals.
+///
 class VGC_GEOMETRY_API StrokeSampleEx2d {
 public:
     constexpr StrokeSampleEx2d() noexcept
@@ -342,7 +349,7 @@ public:
     }
 
     void reverseVelocity() {
-        sample_.reverseTangent();
+        sample_.reverseDirection();
         std::swap(offsetPoints_[0], offsetPoints_[1]);
     }
 
