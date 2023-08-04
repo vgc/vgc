@@ -407,13 +407,13 @@ void VacKeyVertex::computeJoin_() {
         }
         else {
             geometry::StrokeSample2d sample = samples.getUnchecked(numSamples - 1);
-            sample.reverseTangent();
+            sample.reverseDirection();
             sample.swapHalfwidths();
             sample.setS(0);
 
             geometry::StrokeSample2d previousSample =
                 samples.getUnchecked(numSamples - 2);
-            previousSample.reverseTangent();
+            previousSample.reverseDirection();
             previousSample.swapHalfwidths();
             previousSample.setS(sample.s() - previousSample.s());
 
@@ -960,7 +960,7 @@ void VacKeyVertex::computeJoin_() {
                         geometry::StrokeSample2d& newSample =
                             workingSamples.emplaceLast(mergeSample);
                         newSample.setS(endS - mergeSample.s());
-                        newSample.reverseTangent();
+                        newSample.reverseDirection();
                         newSample.swapHalfwidths();
 
                         patchLength = (std::min)(patchLengthLimit, distance);
@@ -975,7 +975,7 @@ void VacKeyVertex::computeJoin_() {
                         geometry::StrokeSample2d& newSample =
                             workingSamples.emplaceLast(sample);
                         newSample.setS(s);
-                        newSample.reverseTangent();
+                        newSample.reverseDirection();
                         newSample.swapHalfwidths();
                         previousSqDist = sqDist;
                     }
