@@ -1021,17 +1021,20 @@ public:
     // The first sample of the segment is appended only if the cache `data` is new.
     // The last sample is always appended.
     //
+    // `minSamples` and `maxSamples` are respectively the minimum and maximum number of samples
+    // that this function should produce, including the first and last sample.
+    //
+
     template<typename USample, typename Evaluator, typename KeepPredicate>
     void sample(
-        Evaluator evaluator,
-        KeepPredicate keepPredicate,
-        const AdaptiveSamplingParameters& params,
+        Evaluator&& evaluator,
+        KeepPredicate&& keepPredicate,
+        Int minSamples,
+        Int maxSamples,
         core::Array<USample>& outAppend) {
 
-        const Int minISS = params.minIntraSegmentSamples(); // 0 -> 2 samples minimum
-        const Int maxISS = params.maxIntraSegmentSamples(); // 1 -> 3 samples maximum
-        const Int minSamples = std::max<Int>(0, minISS) + 2;
-        const Int maxSamples = std::max<Int>(minSamples, maxISS + 2);
+        minSamples = std::max<Int>(minSamples, 2);
+        maxSamples = std::max<Int>(minSamples, maxSamples);
 
         resetSampleTree_(maxSamples);
 
@@ -1050,10 +1053,13 @@ public:
         Int nextNodeIndex = 2;
 
         // Compute `minIntraSegmentSamples` uniform samples.
+        Int minISS = minSamples - 2;
+        double du = 1.0 / core::narrow_cast<double>(minISS + 1);
+        double u = 0;
         Node* previousNode = s0;
         for (Int i = 0; i < minISS; ++i) {
+            u += du;
             Node* node = &sampleTree_[nextNodeIndex];
-            double u = static_cast<double>(i + 1) / (minISS + 1);
             node->sample = evaluator(u);
             node->u = u;
             ++nextNodeIndex;
@@ -1078,8 +1084,8 @@ public:
                 Node* previousLevelNode = &sampleTree_[i];
                 // Try subdivide left.
                 if (trySubdivide_(
-                        evaluator,
-                        keepPredicate,
+                        std::forward<Evaluator>(evaluator),
+                        std::forward<KeepPredicate>(keepPredicate),
                         nextNodeIndex,
                         previousLevelNode->previous,
                         previousLevelNode)
@@ -1092,8 +1098,8 @@ public:
                 }
                 // Try subdivide right.
                 if (trySubdivide_(
-                        evaluator,
-                        keepPredicate,
+                        std::forward<Evaluator>(evaluator),
+                        std::forward<KeepPredicate>(keepPredicate),
                         nextNodeIndex,
                         previousLevelNode,
                         previousLevelNode->next)
@@ -1116,6 +1122,28 @@ public:
         }
     }
 
+    // Overload taking AdaptiveSamplingParameters.
+    //
+    template<typename USample, typename Evaluator, typename KeepPredicate>
+    void sample(
+        Evaluator&& evaluator,
+        KeepPredicate&& keepPredicate,
+        const AdaptiveSamplingParameters& params,
+        core::Array<USample>& outAppend) {
+
+        const Int minISS = params.minIntraSegmentSamples(); // 0 -> 2 samples minimum
+        const Int maxISS = params.maxIntraSegmentSamples(); // 1 -> 3 samples maximum
+        const Int minSamples = std::max<Int>(0, minISS) + 2;
+        const Int maxSamples = std::max<Int>(minSamples, maxISS + 2);
+
+        sample(
+            std::forward<Evaluator>(evaluator),
+            std::forward<KeepPredicate>(keepPredicate),
+            minSamples,
+            maxSamples,
+            outAppend);
+    }
+
 private:
     core::Span<Node> sampleTree_;
     std::unique_ptr<Node[]> sampleTreeStorage_;
@@ -1129,8 +1157,8 @@ private:
 
     template<typename Evaluator, typename KeepPredicate>
     bool trySubdivide_(
-        Evaluator evaluator,
-        KeepPredicate keepPredicate,
+        Evaluator&& evaluator,
+        KeepPredicate&& keepPredicate,
         Int& nodeIndex,
         Node* n0,
         Node* n1) {
