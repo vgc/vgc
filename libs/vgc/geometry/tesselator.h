@@ -20,6 +20,8 @@
 #include <vgc/core/array.h>
 #include <vgc/core/span.h>
 #include <vgc/geometry/api.h>
+#include <vgc/geometry/vec2d.h>
+#include <vgc/geometry/vec2f.h>
 #include <vgc/geometry/windingrule.h>
 
 namespace vgc::geometry {
@@ -50,6 +52,14 @@ public:
     /// Adds a contour to the polygon being tesselated.
     ///
     void addContour(core::ConstSpan<double> coords);
+
+    /// Adds a contour to the polygon being tesselated.
+    ///
+    void addContour(core::ConstSpan<Vec2f> vertices);
+
+    /// Adds a contour to the polygon being tesselated.
+    ///
+    void addContour(core::ConstSpan<Vec2d> vertices);
 
     /// Computes the tesselation, filling the given array with the (X, Y)
     /// values as a list of triangles.

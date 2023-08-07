@@ -65,6 +65,31 @@ void Tesselator::addContour(core::ConstSpan<double> coords) {
     addContour(buffer_);
 }
 
+void Tesselator::addContour(core::ConstSpan<Vec2f> vertices) {
+
+    static_assert(std::is_same_v<float, TESSreal>);
+
+    int vertexSize = 2;
+    if (vertices.size() > 2) { // ignore contour if 2 points or less
+        tessAddContour(
+            getTess(tess_),
+            vertexSize,
+            vertices.data(),
+            sizeof(TESSreal) * vertexSize,
+            core::int_cast<int>(vertices.length()));
+    }
+}
+
+void Tesselator::addContour(core::ConstSpan<Vec2d> vertices) {
+    buffer_.clear();
+    buffer_.reserve(vertices.length() * 2);
+    for (const Vec2d& v : vertices) {
+        buffer_.append(core::narrow_cast<float>(v.x()));
+        buffer_.append(core::narrow_cast<float>(v.y()));
+    }
+    addContour(buffer_);
+}
+
 namespace {
 
 int getTessWindingRule(WindingRule windingRule) {
