@@ -287,7 +287,22 @@ private:
 };
 
 /// \class vgc::core::Curves2dSampleParams
-/// \brief Parameters for Curves2d::sample()
+/// \brief Specifies parameters for adaptive sampling of a `Curves2d` instance.
+///
+/// The parameter `maxAngle` (in radian) specifies that consecutive samples
+/// should not have an angle greater than the given value.
+///
+/// \verbatim
+///                  o p2
+///                .`
+///              .` } maxAngle
+/// o----------o`- - - - -
+/// p0         p1
+/// \endverbatim
+///
+/// The parameter `maxSamplesPerSegment` allows to limit how many samples there
+/// can be for each original curved segment. This is necessary to break
+/// infinite loops in case the segment contains a cusp.
 ///
 // TODO:
 //   minSamplesPerSegment?
@@ -465,32 +480,6 @@ public:
         bool sweepFlag,
         double x,
         double y);
-
-    /// Computes and returns an approximation of this Curves2d using line
-    /// segments only (MoveTo, LineTo, and Close commands).
-    ///
-    /// Using the default parameters, the sampling is "adaptive". This means
-    /// that the number of samples generated for each original curved segment
-    /// depends on the curvature: the higher the curvature, the more samples
-    /// are generated. More precisely, consecutive line segments within a given
-    /// original curved segment never have an angle more than the given \p
-    /// maxAngle (expressed in radian). This ensures that the curve looks
-    /// "smooth" at any zoom level, except of course when the curve has an
-    /// intentional corner.
-    ///
-    /// \verbatim
-    ///                  o p2
-    ///                .`
-    ///              .` } maxAngle
-    /// o----------o`- - - - -
-    /// p0         p1
-    /// \endverbatim
-    ///
-    /// The additional parameter \p maxSamplesPerSegment allows you to limit
-    /// how many samples there can be for each original curved segment. This is
-    /// necessary to break infinite loops in case the segment contains a cusp.
-    ///
-    Curves2d sample(const Curves2dSampleParams& params) const;
 
     /// Strokes this curve, that is, appends triangle data to the
     /// given DoubleArray. The appended data is of the form:

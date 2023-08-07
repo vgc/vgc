@@ -16,6 +16,9 @@
 
 #include <vgc/geometry/curves2d.h>
 
+#include <vgc/geometry/arc.h>
+#include <vgc/geometry/bezier.h>
+#include <vgc/geometry/curve.h>
 #include <vgc/geometry/mat2d.h>
 #include <vgc/geometry/tesselator.h>
 
@@ -111,521 +114,362 @@ void Curves2d::arcTo(
 
 namespace {
 
-struct Sample {
-    double u;
-    Vec2d position;
-};
+template<typename SegmentType>
+class CenterlineEvaluator {
+    const SegmentType& seg_;
 
-struct SampleBuffer {
-    core::Array<Sample> samples;
-    core::IntArray failed;
-    core::IntArray added;
-};
-
-struct QuadraticSegment {
-    Vec2d p0, p1, p2;
-
-    Vec2d startPosition() const {
-        return p0;
-    }
-
-    Vec2d endPosition() const {
-        return p2;
-    }
-
-    Vec2d startTangent() const {
-        return p1 - p0;
-    }
-
-    Vec2d endTangent() const {
-        return p2 - p1;
-    }
-
-    Vec2d operator()(double u) const {
-        return (1 - u) * (1 - u) * p0 //
-               + 2 * u * (1 - u) * p1 //
-               + u * u * p2;
-    }
-};
-
-struct CubicSegment {
-    Vec2d p0, p1, p2, p3;
-    Vec2d startPosition() const {
-        return p0;
-    }
-    Vec2d endPosition() const {
-        return p3;
-    }
-    Vec2d startTangent() const {
-        return p1 - p0;
-    }
-    Vec2d endTangent() const {
-        return p3 - p2;
-    }
-    Vec2d operator()(double u) const {
-        return (1 - u) * (1 - u) * (1 - u) * p0 //
-               + 3 * u * (1 - u) * (1 - u) * p1 //
-               + 3 * u * u * (1 - u) * p2       //
-               + u * u * u * p3;
-    }
-};
-
-class ArcSegment {
 public:
-    // Note: phi must be in radian ( = svgValue / 180.0 * phi)
-    //
-    ArcSegment(Vec2d p, Vec2d r, double phi, bool fa, bool fs, Vec2d q)
-        : p(p)
-        , q(q)
-        , rx(std::abs(r.x()))
-        , ry(std::abs(r.y()))
-        , phi(phi)
-        , fa(fa)
-        , fs(fs) {
+    CenterlineEvaluator(const SegmentType& seg)
+        : seg_(seg) {
+    }
 
-        const double eps = 1e-6;
-        if (rx < eps || ry < eps) {
-            isLineSegment = true;
+    Vec2d operator()(double u) {
+        return seg_.eval(u);
+    }
+};
+
+template<bool side, typename SegmentType>
+class OffsetLineEvaluator {
+    const SegmentType& seg_;
+    double halfwidth_;
+
+public:
+    OffsetLineEvaluator(const SegmentType& seg, double halfwidth)
+        : seg_(seg)
+        , halfwidth_(halfwidth) {
+    }
+
+    Vec2d operator()(double u) {
+        Vec2d tangent = core::noInit;
+        Vec2d position = seg_.eval(u, tangent);
+        if constexpr (side) {
+            return position + halfwidth_ * tangent.normalized().orthogonalized();
         }
         else {
-            isLineSegment = false;
-            precomputeCenterParameterization_();
+            return position - halfwidth_ * tangent.normalized().orthogonalized();
         }
     }
+};
 
-    Vec2d startPosition() const {
-        return p;
-    }
-    Vec2d endPosition() const {
-        return q;
+class KeepPredicate {
+public:
+    KeepPredicate(double minDistance, double maxAngle)
+        : minDistance_(minDistance)
+        , maxAngle_(maxAngle) {
     }
 
-    Vec2d startTangent() const {
-        if (isLineSegment) {
-            return q - p;
+    bool operator()(const Vec2d& s0, const Vec2d& s1, const Vec2d& s2) {
+        Vec2d u01 = s1 - s0;
+        Vec2d u12 = s2 - s1;
+        double d01 = u01.length();
+        double d12 = u12.length();
+        if (d01 < minDistance_ && d12 < minDistance_) {
+            return false;
+        }
+        else if (std::abs(u01.angle(u12)) < maxAngle_) {
+            return false;
         }
         else {
-            return tangent_(theta1);
+            return true;
         }
+    };
+
+private:
+    double minDistance_;
+    double maxAngle_;
+};
+
+// For now, using minSamples = 3 is necessary because with only
+// minSamples = 2, we would fail to capture a symmetric cubic Bézier
+// with an inflexion point, see:
+//
+//  .--. P(0.5)
+// o    \    o P(1)
+// P(0)  '__'
+//
+// In this example, P(0.5) is exactly in the middle of P(0) and P(1).
+//
+// Using minSamples = 2 would just evaluate P(0.5), concluding that
+// it's not needed, and only output the two samples P(0) and P(1).
+//
+// Using minSamples = 3 forces to also evaluate P(0.25) and P(0.75),
+// reducing the likelihood to miss such false negative "keep
+// predicate".
+//
+// This is not a perfect solution, we might still miss things if we're
+// unlucky. The proper solution would be to have a more advanced keep
+// predicate, for example taking into account actual curve tangents, or
+// an estimation of the actual curve length. Another solution might be
+// to change the AdaptiveSampler itself, to not give up as soon as one
+// keep predicate
+
+template<typename TFloat>
+class StrokeVisitor {
+public:
+    StrokeVisitor(
+        core::Array<TFloat>& data,
+        double width,
+        const Curves2dSampleParams& params)
+
+        : data_(data)
+        , halfwidth_(width / 2)
+        , minSamples_(3) // see note above
+        , maxSamples_(params.maxSamplesPerSegment())
+        , keepPredicate_(params.minDistance(), params.maxAngle()) {
+
+        leftSegmentIndices_.append(0);
+        rightSegmentIndices_.append(0);
     }
 
-    Vec2d endTangent() const {
-        if (isLineSegment) {
-            return q - p;
-        }
-        else {
-            return tangent_(theta1 + dTheta);
-        }
+    void endSegment() {
+        leftSegmentIndices_.append(leftSamples_.length());
+        rightSegmentIndices_.append(rightSamples_.length());
     }
 
-    Vec2d operator()(double u) const {
-        if (isLineSegment) {
-            return (1 - u) * p + u * q;
+    void line(Vec2d p1, Vec2d p2) {
+
+        if (p1 == p2) {
+            // Skip LineTo
+            return;
         }
-        else {
-            double theta = theta1 + u * dTheta;
-            Vec2d b(rx * std::cos(theta), ry * std::sin(theta));
-            return c + rot * b;
+
+        Vec2d t = (p2 - p1).normalized();
+        startTangents_.append(t);
+        endTangents_.append(t);
+
+        Vec2d offset = halfwidth_ * t.orthogonalized();
+        leftSamples_.append(p1 + offset);
+        rightSamples_.append(p1 - offset);
+        leftSamples_.append(p2 + offset);
+        rightSamples_.append(p2 - offset);
+
+        endSegment();
+    }
+
+    template<typename SegmentType>
+    void segment(const SegmentType& seg) {
+
+        startTangents_.append(seg.evalDerivative(0).normalized());
+        endTangents_.append(seg.evalDerivative(1).normalized());
+
+        sampler_.sample(
+            OffsetLineEvaluator<true, SegmentType>(seg, halfwidth_),
+            keepPredicate_,
+            minSamples_,
+            maxSamples_,
+            leftSamples_);
+
+        sampler_.sample(
+            OffsetLineEvaluator<false, SegmentType>(seg, halfwidth_),
+            keepPredicate_,
+            minSamples_,
+            maxSamples_,
+            rightSamples_);
+
+        endSegment();
+    }
+
+    void endOpenSubpath() {
+        // TODO: step 2 and 3.
+        vertices_.clear();
+        for (const Vec2d& p : leftSamples_) {
+            vertices_.append(Vec2f(p));
         }
+        for (auto it = rightSamples_.rbegin(); it != rightSamples_.rend(); ++it) {
+            const Vec2d& p = *it;
+            vertices_.append(Vec2f(p));
+        }
+        tess_.addContour(vertices_);
+    }
+
+    void endClosedSubpath() {
+        // TODO: step 2 and 3.
+        vertices_.clear();
+        for (const Vec2d& p : leftSamples_) {
+            vertices_.append(Vec2f(p));
+        }
+        tess_.addContour(vertices_);
+        vertices_.clear();
+        for (auto it = rightSamples_.rbegin(); it != rightSamples_.rend(); ++it) {
+            const Vec2d& p = *it;
+            vertices_.append(Vec2f(p));
+        }
+        tess_.addContour(vertices_);
+    }
+
+    void endCurves() {
+        tess_.tesselate(data_, WindingRule::NonZero);
     }
 
 private:
-    // Input data
-    Vec2d p;
-    Vec2d q;
-    double rx;
-    double ry;
-    double phi;
-    bool fa;
-    bool fs;
+    // Final output
+    core::Array<TFloat>& data_;
 
-    // Degenerate cases
-    bool isLineSegment;
+    // Input params
+    double halfwidth_;
+    Int minSamples_;
+    Int maxSamples_;
 
-    // Center parameterization
-    Mat2d rot;
-    Vec2d c;
-    double theta1;
-    double dTheta;
+    // Buffers
+    detail::AdaptiveSampler<Vec2d> sampler_;
+    KeepPredicate keepPredicate_;
+    Tesselator tess_;
+    core::Array<Vec2f> vertices_;
+    // Note: we use Vec2f for vertices, otherwise Tesselator would cast them
+    // anyway to a temporary buffer of floats.
 
-    Vec2d tangent_(double theta) const {
-        Vec2d b(-rx * std::sin(theta), ry * std::cos(theta));
-        if (dTheta > 0) {
-            return rot * b;
-        }
-        else {
-            return -rot * b;
-        }
-    }
+    // Intermediate outputs
+    core::Array<Vec2d> startTangents_; // length = numSegments
+    core::Array<Vec2d> endTangents_;   // length = numSegments
 
-    // See https://www.w3.org/TR/SVG11/implnote.html#ArcImplementationNotes
-    //
-    void precomputeCenterParameterization_() {
-        const double eps = 1e-6;
-        if (rx < eps || ry < eps) {
-            isLineSegment = true;
-        }
-        else {
-            isLineSegment = false;
+    // Samples of the left offset line
+    // indices[i] = start index of samples for segment i
+    core::Array<Vec2d> leftSamples_;      // length = at least 2 * numSegments
+    core::Array<Int> leftSegmentIndices_; // length = numSegments + 1
 
-            // Correction of out-of-range radii
-            double cosphi = std::cos(phi);
-            double sinphi = std::sin(phi);
-            double rx2 = rx * rx;
-            double ry2 = ry * ry;
-            rot = Mat2d(cosphi, -sinphi, sinphi, cosphi);
-            Mat2d rotInv(cosphi, sinphi, -sinphi, cosphi);
-            Vec2d p_ = rotInv * (0.5 * (p - q));
-            double px_2 = p_[0] * p_[0];
-            double py_2 = p_[1] * p_[1];
-            double d2 = px_2 / rx2 + py_2 / ry2;
-            if (d2 > 1) {
-                double d = std::sqrt(d2);
-                rx *= d;
-                ry *= d;
-                rx2 = rx * rx;
-                ry2 = ry * ry;
-            }
-
-            // Conversion from endpoint to center parameterization.
-            double rx2py_2 = rx2 * py_2;
-            double ry2px_2 = ry2 * px_2;
-            double a2 = (rx2 * ry2 - rx2py_2 - ry2px_2) / (rx2py_2 + ry2px_2);
-            double a = std::sqrt(std::abs(a2));
-            if (fa == fs) {
-                a *= -1;
-            }
-            Vec2d c_(a * p_[1] * rx / ry, -a * p_[0] * ry / rx);
-            c = rot * c_ + 0.5 * (p + q);
-            Vec2d pc = p_ - c_;
-            Vec2d mpc = -p_ - c_;
-            Vec2d rInv(1 / rx, 1 / ry);
-            Vec2d e1(1, 0);
-            Vec2d e2(pc.x() * rInv.x(), pc.y() * rInv.y());
-            Vec2d e3(mpc.x() * rInv.x(), mpc.y() * rInv.y());
-            theta1 = e1.angle(e2);
-            dTheta = e2.angle(e3);
-            if (fs == false && dTheta > 0) {
-                dTheta -= 2 * core::pi;
-            }
-            else if (fs == true && dTheta < 0) {
-                dTheta += 2 * core::pi;
-            }
-        }
-    }
+    core::Array<Vec2d> rightSamples_;
+    core::Array<Int> rightSegmentIndices_;
 };
 
-template<typename SegmentType>
-void sampleSegment(
-    Curves2d& res,
-    SampleBuffer& buffer,
-    const Curves2dSampleParams& params,
-    SegmentType segment) {
+template<typename TFloat>
+class FillVisitor {
+public:
+    FillVisitor(
+        core::Array<TFloat>& data,
+        WindingRule windingRule,
+        const Curves2dSampleParams& params)
 
-    double minDistanceSquared = params.minDistance() * params.minDistance();
-    double maxAngle = params.maxAngle();
-    Int maxSamplesPerSegment = params.maxSamplesPerSegment();
-
-    core::Array<Sample>& samples = buffer.samples;
-    core::IntArray& failed = buffer.failed;
-    core::IntArray& added = buffer.added;
-
-    // Initialization. The first and last samples are sentinel values to
-    // be able to conveniently compute angles for first and last samples.
-    samples.clear();
-    samples.append(Sample{-1, segment.startPosition() - segment.startTangent()});
-    samples.append(Sample{0, segment.startPosition()});
-    samples.append(Sample{1, segment.endPosition()});
-    samples.append(Sample{2, segment.endPosition() + segment.endTangent()});
-
-    // Adaptive sampling
-    while (samples.length() - 3 < maxSamplesPerSegment) {
-
-        // Find which angles are too large and followed by a segment
-        // longer than the minDistance.
-        failed.clear();
-        for (Int i = 1; i < samples.length() - 1; ++i) {
-            Vec2d a = samples[i].position - samples[i - 1].position;
-            Vec2d b = samples[i + 1].position - samples[i].position;
-            if (std::abs(a.angle(b)) > maxAngle
-                && b.squaredLength() > minDistanceSquared) {
-
-                failed.append(i);
-            }
-        }
-        if (failed.isEmpty()) {
-            break; // => success!
-        }
-
-        // Determine where to insert new samples. After this code block, each index
-        // in `added` means "we should insert a new sample just before this index".
-        added.clear();
-        for (Int i : failed) {
-            Int lastAdded = (added.isEmpty() ? -1 : added.last());
-            if (i != 1 && i != lastAdded) {
-                added.append(i);
-                if (samples.length() + added.length() - 3 == maxSamplesPerSegment) {
-                    break; // => stop adding samples (max reached)
-                }
-            }
-            if (i != samples.length() - 2) {
-                added.append(i + 1);
-                if (samples.length() + added.length() - 3 == maxSamplesPerSegment) {
-                    break; // => stop adding samples (max reached)
-                }
-            }
-        }
-
-        // Push existing samples to the right to make space for new samples.
-        // Note: the `added` array is also mutated to contain the new indices.
-        Int numSamplesToAdd = added.length();
-        Int numSamplesBefore = samples.length();
-        Int numSamplesAfter = samples.length() + numSamplesToAdd;
-        samples.resize(numSamplesAfter);
-        for (Int i = numSamplesBefore - 1; numSamplesToAdd > 0; --i) {
-            samples[i + numSamplesToAdd] = samples[i];
-            if (i == added[numSamplesToAdd - 1]) {
-                --numSamplesToAdd;
-                added[numSamplesToAdd] = i + numSamplesToAdd;
-            }
-        }
-
-        // Compute new samples. Note that the above guarantees that new samples
-        // are never consecutive, so we can do u[i] = (u[i-1] + u[i+1]) / 2.
-        for (Int i : added) {
-            double u = 0.5 * (samples[i - 1].u + samples[i + 1].u);
-            samples[i].u = u;
-            samples[i].position = segment(u);
-        }
+        : data_(data)
+        , windingRule_(windingRule)
+        , minSamples_(3) // see note above StrokeVisitor
+        , maxSamples_(params.maxSamplesPerSegment())
+        , keepPredicate_(params.minDistance(), params.maxAngle()) {
     }
 
-    // Append result
-    for (Int i = 2; i < samples.length() - 1; ++i) {
-        res.lineTo(samples[i].position);
+    void line(Vec2d p1, Vec2d p2) {
+        if (p1 == p2) {
+            // Skip LineTo
+            return;
+        }
+        samples_.append(p1);
+        samples_.append(p2);
+        // TODO: Do not add p1 if already there from last sample?
     }
-}
 
-} // namespace
+    template<typename SegmentType>
+    void segment(const SegmentType& seg) {
+        sampler_.sample(
+            CenterlineEvaluator<SegmentType>(seg),
+            keepPredicate_,
+            minSamples_,
+            maxSamples_,
+            samples_);
+        // TODO: Do not add first sample if already there from last sample?
+    }
 
-Curves2d Curves2d::sample(const Curves2dSampleParams& params) const {
+    void endOpenSubpath() {
+        tess_.addContour(samples_);
+        samples_.clear();
+    }
 
-    Curves2d res;
-    Vec2d p0, p1, p2, p3;
-    SampleBuffer buffer;
+    void endClosedSubpath() {
+        endOpenSubpath();
+    }
 
-    for (Curves2dCommandRef c : commands()) {
+    void endCurves() {
+        tess_.tesselate(data_, windingRule_);
+    }
+
+private:
+    // Final output
+    core::Array<TFloat>& data_;
+
+    // Input params
+    WindingRule windingRule_;
+    Int minSamples_;
+    Int maxSamples_;
+
+    // Buffers
+    detail::AdaptiveSampler<Vec2d> sampler_;
+    KeepPredicate keepPredicate_;
+    Tesselator tess_;
+    core::Array<Vec2d> samples_;
+};
+
+template<typename Visitor>
+void visit_(const Curves2d& curves, Visitor& visitor) {
+
+    // Note: if the first command is not a MoveTo, we behave as if there was an
+    // implicit MoveTo(0, 0) before the first command
+    //
+    CurveCommandType lastCommandType = CurveCommandType::MoveTo;
+    Vec2d firstPointOfSubpath(0, 0);
+    Vec2d currentPoint(0, 0);
+
+    for (Curves2dCommandRef c : curves.commands()) {
         switch (c.type()) {
-        case vgc::geometry::CurveCommandType::Close:
-            res.close();
+        case CurveCommandType::Close:
+            if (currentPoint != firstPointOfSubpath) {
+                // Implicit LineTo
+                visitor.line(currentPoint, firstPointOfSubpath);
+                currentPoint = firstPointOfSubpath;
+            }
+            if (lastCommandType != CurveCommandType::Close
+                && lastCommandType != CurveCommandType::MoveTo) {
+
+                visitor.endClosedSubpath();
+            }
+            // Note: a Close followed by a Close or a MoveTo followed by a
+            // Close does nothing. There is even no need to update
+            // firstPointOfSubpath, since the next subpath will have the same
+            // first point as the previous one, unless a MoveTo is called.
             break;
         case CurveCommandType::MoveTo:
-            p0 = c.p();
-            res.moveTo(p0);
+            // A Close followed by a MoveTo or a MoveTo followed by a Close is ignored.
+            if (lastCommandType != CurveCommandType::Close
+                && lastCommandType != CurveCommandType::MoveTo) {
+
+                visitor.endOpenSubpath();
+            }
+            currentPoint = c.p();
+            firstPointOfSubpath = currentPoint;
+            // Note: a Close followed by a MoveTo or a MoveTo followed by a
+            // MoveTo does not create a new subpath, but we still need to update
+            // currentPoint and firstPointOfSubpath.
             break;
         case CurveCommandType::LineTo:
-            p0 = c.p();
-            res.lineTo(p0);
+            visitor.line(currentPoint, c.p());
+            currentPoint = c.p();
             break;
         case CurveCommandType::QuadraticBezierTo:
-            p1 = c.p1();
-            p2 = c.p2();
-            sampleSegment(res, buffer, params, QuadraticSegment{p0, p1, p2});
-            p0 = p2;
+            visitor.segment(QuadraticBezier2d(currentPoint, c.p1(), c.p2()));
+            currentPoint = c.p2();
             break;
         case CurveCommandType::CubicBezierTo:
-            p1 = c.p1();
-            p2 = c.p2();
-            p3 = c.p3();
-            sampleSegment(res, buffer, params, CubicSegment{p0, p1, p2, p3});
-            p0 = p3;
+            visitor.segment(CubicBezier2d(currentPoint, c.p1(), c.p2(), c.p3()));
+            currentPoint = c.p3();
             break;
         case CurveCommandType::ArcTo:
-            p1 = c.p();
-            sampleSegment(
-                res,
-                buffer,
-                params,
-                ArcSegment(
-                    p0, c.r(), c.xAxisRotation(), c.largeArcFlag(), c.sweepFlag(), p1));
-            p0 = p1;
+            visitor.segment(EllipticalArc2d::fromSvgParameters(
+                currentPoint,
+                c.p(),
+                c.r(),
+                c.xAxisRotation(),
+                c.largeArcFlag(),
+                c.sweepFlag()));
+            currentPoint = c.p();
             break;
         }
+        lastCommandType = c.type();
     }
 
-    return res;
-}
+    if (lastCommandType != CurveCommandType::Close
+        && lastCommandType != CurveCommandType::MoveTo) {
 
-namespace {
-
-//    a    left-side    c
-//    o---------------->o
-//    |                 |
-//    |                 |
-//    o---------------->o
-//    b   right-side    d
-//
-template<typename TFloat>
-void insertQuad(
-    core::Array<TFloat>& data,
-    const Vec2d& a,
-    const Vec2d& b,
-    const Vec2d& c,
-    const Vec2d& d) {
-
-    // Two triangles: ABC and CBD
-    data.insert(
-        data.end(),
-        {static_cast<TFloat>(a[0]),
-         static_cast<TFloat>(a[1]),
-         static_cast<TFloat>(b[0]),
-         static_cast<TFloat>(b[1]),
-         static_cast<TFloat>(c[0]),
-         static_cast<TFloat>(c[1]),
-         static_cast<TFloat>(c[0]),
-         static_cast<TFloat>(c[1]),
-         static_cast<TFloat>(b[0]),
-         static_cast<TFloat>(b[1]),
-         static_cast<TFloat>(d[0]),
-         static_cast<TFloat>(d[1])});
-}
-
-template<typename TFloat>
-void editQuadData(core::Array<TFloat>& data, Int i, const Vec2d& a, const Vec2d& b) {
-    data[i + 0] = static_cast<TFloat>(a[0]);
-    data[i + 1] = static_cast<TFloat>(a[1]);
-    data[i + 2] = static_cast<TFloat>(b[0]);
-    data[i + 3] = static_cast<TFloat>(b[1]);
-    data[i + 8] = static_cast<TFloat>(b[0]);
-    data[i + 9] = static_cast<TFloat>(b[1]);
-}
-
-// Each of the "process" methods computes n1, l1, and r1 based
-// on c0, c1, c2, and n0:
-//
-//    l0  left-side     l1              l2
-//    o---------------->o-------------->o
-//    |       ^         |       ^       |
-//    |       | n0      |c1     | n1    |
-// c0 o---------------->o-------------->o c2
-//    |   centerline    |               |
-//    |                 |               |
-//    o---------------->o-------------->o
-//    r0  right-side    r1              r3
-//
-// For the first sample, we don't have c0 and n0.
-// For the last sample, we don't have c2.
-//
-
-struct StrokeTmpData {
-    Int numSamples = 0;
-    Int firstVertexIndex;
-    Vec2d firstPoint, secondPoint;
-    Vec2d c0, c1, c2, l0, l1, r0, r1, n0, n1;
-};
-
-template<typename TFloat>
-void processFirstSample(core::Array<TFloat>& /*data*/, double width, StrokeTmpData& d) {
-    d.n1 = (d.c2 - d.c1).normalize().orthogonalized();
-    d.l1 = d.c1 + 0.5 * width * d.n1;
-    d.r1 = d.c1 - 0.5 * width * d.n1;
-}
-
-template<typename TFloat>
-void processMiddleSample(core::Array<TFloat>& data, double width, StrokeTmpData& d) {
-
-    // Compute n1
-    d.n1 = (d.c2 - d.c1).normalize().orthogonalized();
-
-    // Compute miterLength. We have miterLength = width / sin(t/2)
-    // where t is the angle between the two segments. See:
-    //
-    // https://www.w3.org/TR/SVG2/painting.html#StrokeMiterlimitProperty.
-    //
-    // We use the double angle formula giving sin(t/2) = sqrt((1-cos(t))/2),
-    // and since n0 and n1 are normal vectors, cos(t) is just a dot product.
-    //
-    double cost = d.n0.dot(-d.n1);
-    double sint2 = std::sqrt(0.5 * (1 - cost));
-    double miterLimit = 4.0; // SVG default value
-    double miterLength;
-    if (miterLimit * sint2 < 1) {
-        // <=> miterLimit * width < width / sint2
-        // <=> miterLimit * width < unclippedMiterLength
-        miterLength = miterLimit * width;
-        // TODO: actually do a bevel (or clipped Miter) with two samples,
-        // instead of using a unique sample at a clamped width.
+        visitor.endOpenSubpath();
     }
-    else {
-        miterLength = width / sint2;
-    }
-    Vec2d miterDir = (d.n0 + d.n1).normalized();
-    d.l1 = d.c1 + 0.5 * miterLength * miterDir;
-    d.r1 = d.c1 - 0.5 * miterLength * miterDir;
 
-    // Insert
-    insertQuad(data, d.l0, d.r0, d.l1, d.r1);
-}
-
-template<typename TFloat>
-void processLastOpenSample(core::Array<TFloat>& data, double width, StrokeTmpData& d) {
-    d.n1 = (d.c1 - d.c0).normalize().orthogonalized();
-    d.l1 = d.c1 + 0.5 * width * d.n1;
-    d.r1 = d.c1 - 0.5 * width * d.n1;
-    insertQuad(data, d.l0, d.r0, d.l1, d.r1);
-}
-
-template<typename TFloat>
-void onLineTo(core::Array<TFloat>& data, double width, StrokeTmpData& d, const Vec2d& p) {
-    d.c2 = p;
-    if (d.numSamples == 1) {
-        d.secondPoint = d.c2;
-        processFirstSample(data, width, d);
-    }
-    else {
-        processMiddleSample(data, width, d);
-    }
-    d.c0 = d.c1;
-    d.c1 = d.c2;
-    d.l0 = d.l1;
-    d.r0 = d.r1;
-    d.n0 = d.n1;
-    d.numSamples += 1;
-}
-
-template<typename TFloat>
-void stroke_(core::Array<TFloat>& data, const Curves2d& samples, double width) {
-    width = std::abs(width);
-    StrokeTmpData d;
-    d.numSamples = 0;
-    d.firstVertexIndex = data.length();
-    for (Curves2dCommandRef c : samples.commands()) {
-        if (c.type() == CurveCommandType::MoveTo) {
-            if (d.numSamples > 1) {
-                processLastOpenSample(data, width, d);
-            }
-            d.firstVertexIndex = data.length();
-            d.firstPoint = c.p();
-            d.c1 = d.firstPoint;
-            d.numSamples = 1;
-        }
-        else if (c.type() == CurveCommandType::LineTo) {
-            onLineTo(data, width, d, c.p());
-        }
-        else if (c.type() == CurveCommandType::Close) {
-            if (d.c2 != d.firstPoint) {
-                onLineTo(data, width, d, d.firstPoint);
-            }
-            if (d.numSamples > 2) {
-                d.c2 = d.secondPoint;
-                processMiddleSample(data, width, d);
-                editQuadData(data, d.firstVertexIndex, d.l1, d.r1);
-                d.numSamples = 0;
-            }
-        }
-    }
-    if (d.numSamples > 1) {
-        processLastOpenSample(data, width, d);
-    }
+    visitor.endCurves();
 }
 
 } // namespace
@@ -635,8 +479,8 @@ void Curves2d::stroke(
     double width,
     const Curves2dSampleParams& params) const {
 
-    Curves2d samples = sample(params);
-    stroke_(data, samples, width);
+    StrokeVisitor<double> visitor(data, width, params);
+    visit_(*this, visitor);
 }
 
 void Curves2d::stroke(
@@ -644,47 +488,17 @@ void Curves2d::stroke(
     double width,
     const Curves2dSampleParams& params) const {
 
-    Curves2d samples = sample(params);
-    stroke_(data, samples, width);
+    StrokeVisitor<float> visitor(data, width, params);
+    visit_(*this, visitor);
 }
-
-namespace {
-
-template<typename TFloat>
-void fill_(core::Array<TFloat>& data, const Curves2d& samples, WindingRule windingRule) {
-    Tesselator tess;
-    core::Array<double> coords;
-    for (Curves2dCommandRef c : samples.commands()) {
-        if (c.type() == CurveCommandType::MoveTo) {
-            tess.addContour(coords);
-            coords.clear();
-            Vec2d p = c.p();
-            coords.append(p[0]);
-            coords.append(p[1]);
-        }
-        else if (c.type() == CurveCommandType::LineTo) {
-            Vec2d p = c.p();
-            coords.append(p[0]);
-            coords.append(p[1]);
-        }
-        else if (c.type() == CurveCommandType::Close) {
-            tess.addContour(coords);
-            coords.clear();
-        }
-    }
-    tess.addContour(coords);
-    coords.clear();
-    tess.tesselate(data, windingRule);
-}
-
-} // namespace
 
 void Curves2d::fill(
     core::DoubleArray& data,
     const Curves2dSampleParams& params,
     WindingRule windingRule) const {
 
-    fill_(data, sample(params), windingRule);
+    FillVisitor<double> visitor(data, windingRule, params);
+    visit_(*this, visitor);
 }
 
 void Curves2d::fill(
@@ -692,7 +506,8 @@ void Curves2d::fill(
     const Curves2dSampleParams& params,
     WindingRule windingRule) const {
 
-    fill_(data, sample(params), windingRule);
+    FillVisitor<float> visitor(data, windingRule, params);
+    visit_(*this, visitor);
 }
 
 } // namespace vgc::geometry
