@@ -7,6 +7,7 @@ vgc_add_library(geometry
 
     CPP_HEADER_FILES
         api.h
+        arc.h
         bezier.h
         bezierspline.h
         bezierspline1d.h
