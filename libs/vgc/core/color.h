@@ -112,7 +112,9 @@ public:
     /// core::Color c = core::Color::fromName("red");
     /// ```
     ///
-    static Color fromName(std::string_view hex);
+    /// Throws `ParseError` if the name is unknown.
+    ///
+    static Color fromName(std::string_view name);
 
     /// Accesses the i-th channel of the Color.
     ///

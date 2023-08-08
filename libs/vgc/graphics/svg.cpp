@@ -1031,9 +1031,18 @@ std::optional<core::Color> parseColor(std::string_view s) {
         s = trimmed(s);
         return core::Color::fromHex(s);
     }
+    else if (startsWith(s, "url") && endsWith(s, ")") && contains(s, "(")) {
+        VGC_WARNING(LogVgcGraphicsSvg, "Unsupported color type: {}", s);
+        return std::nullopt;
+    }
     else {
-        s = trimmed(s);
-        return core::Color::fromName(s);
+        try {
+            s = trimmed(s);
+            return core::Color::fromName(s);
+        }
+        catch (core::ParseError&) {
+            return std::nullopt;
+        }
     }
 }
 
