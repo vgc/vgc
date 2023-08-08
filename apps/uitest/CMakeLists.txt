@@ -31,6 +31,22 @@ vgc_add_app(uitest
         svg/coords/Viewbox-notext.svg
         svg/coords/Viewbox.svg
 
+        svg/painting/README.md
+        svg/painting/fillrule-evenodd-nodefs.svg
+        svg/painting/fillrule-evenodd.svg
+        svg/painting/fillrule-nonzero-nodefs.svg
+        svg/painting/fillrule-nonzero.svg
+        svg/painting/inheritance.svg
+        svg/painting/inheritance-nogradient.svg
+        svg/painting/linecap-nostylesheet-nodefs-notext.svg
+        svg/painting/linecap-nostylesheet-nodefs.svg
+        svg/painting/linecap.svg
+        svg/painting/linejoin-nostylesheet-nodefs-notext.svg
+        svg/painting/linejoin-nostylesheet-nodefs.svg
+        svg/painting/linejoin.svg
+        svg/painting/marker-simulated.svg
+        svg/painting/marker.svg
+
         svg/paths/README.md
         svg/paths/arcs01.svg
         svg/paths/arcs02.svg

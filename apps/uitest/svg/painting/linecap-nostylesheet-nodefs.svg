@@ -1,0 +1,30 @@
+<?xml version="1.0" standalone="no"?>
+<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" 
+  "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
+<svg width="12cm" height="2cm" viewBox="0 0 1200 200" version="1.1"
+     xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+  <desc>Example linecap - demonstrates three stroke-linecap values</desc>
+  <rect x="1" y="1" width="1198" height="198" fill="none" stroke="blue" />
+  <g transform="translate(200,75)">
+    <line style="stroke:black; stroke-width:70" x1="-125" x2="125" y1="0" y2="0" fill="none" stroke-linecap="butt"/>
+    <line style="stroke:#ffcccc; stroke-width:5" x1="-125" x2="125" y1="0" y2="0" fill="none"/>
+    <circle style="fill:#ffcccc; stroke:none" cx="-125" cy="0" r="8"/>
+    <circle style="fill:#ffcccc; stroke:none" cx="125" cy="0" r="8"/>
+    <text style="text-anchor:middle; font-size:50; font-family:Verdana" y="90">'butt' cap</text>
+  </g>
+  <g transform="translate(600,75)">
+    <line style="stroke:black; stroke-width:70" x1="-125" x2="125" y1="0" y2="0" fill="none" stroke-linecap="round"/>
+    <line style="stroke:#ffcccc; stroke-width:5" x1="-125" x2="125" y1="0" y2="0" fill="none"/>
+    <circle style="fill:#ffcccc; stroke:none" cx="-125" cy="0" r="8"/>
+    <circle style="fill:#ffcccc; stroke:none" cx="125" cy="0" r="8"/>
+    <text style="text-anchor:middle; font-size:50; font-family:Verdana" y="90">'round' cap</text>
+  </g>
+  <g transform="translate(1000,75)">
+    <line style="stroke:black; stroke-width:70" x1="-125" x2="125" y1="0" y2="0" fill="none" stroke-linecap="square"/>
+    <line style="stroke:#ffcccc; stroke-width:5" x1="-125" x2="125" y1="0" y2="0" fill="none"/>
+    <circle style="fill:#ffcccc; stroke:none" cx="-125" cy="0" r="8"/>
+    <circle style="fill:#ffcccc; stroke:none" cx="125" cy="0" r="8"/>
+    <text style="text-anchor:middle; font-size:50; font-family:Verdana" y="90">'square' cap</text>
+  </g>
+</svg>
+
