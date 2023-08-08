@@ -54,6 +54,7 @@ protected:
     geometry::Vec2f computePreferredSize() const override;
 
 private:
+    std::string filePath_;
     graphics::IconPtr icon_;
 
     // Cache computation of icon position/size

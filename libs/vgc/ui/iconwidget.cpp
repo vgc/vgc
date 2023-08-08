@@ -28,6 +28,10 @@ IconWidget::IconWidget(CreateKey key, std::string_view filePath)
 }
 
 void IconWidget::setFilePath(std::string_view filePath) {
+    if (filePath_ == filePath) {
+        return;
+    }
+    filePath_ = filePath;
     if (icon_.get()) {
         removeChildStylableObject(icon_.get());
     }
