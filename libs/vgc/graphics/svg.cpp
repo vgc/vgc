@@ -24,6 +24,12 @@
 
 namespace vgc::graphics {
 
+VGC_DEFINE_ENUM( //
+    SvgStrokeLineCap,
+    (Butt, "Butt"),
+    (Round, "Round"),
+    (Square, "Square"))
+
 namespace {
 
 /* Below are potential classes that we may or may not want to use/expose in the future.
@@ -1054,6 +1060,36 @@ SvgPaint parsePaint(std::string_view s) {
     }
 }
 
+// https://www.w3.org/TR/SVG11/painting.html#SpecifyingPaint
+SvgStrokeLineCap parseStrokeLineCap(std::string_view s) {
+    s = core::trimmed(s);
+    if (s == "butt") {
+        return SvgStrokeLineCap::Butt;
+    }
+    else if (s == "round") {
+        return SvgStrokeLineCap::Round;
+    }
+    else if (s == "square") {
+        return SvgStrokeLineCap::Square;
+    }
+    else {
+        VGC_WARNING(LogVgcGraphicsSvg, "Unknown stroke-linecap: {}", s);
+        return SvgStrokeLineCap::Butt;
+    }
+}
+
+geometry::StrokeCap toVgc(SvgStrokeLineCap cap) {
+    switch (cap) {
+    case SvgStrokeLineCap::Butt:
+        return geometry::StrokeCap::Butt;
+    case SvgStrokeLineCap::Round:
+        return geometry::StrokeCap::Round;
+    case SvgStrokeLineCap::Square:
+        return geometry::StrokeCap::Square;
+    }
+    return geometry::StrokeCap::Butt;
+}
+
 class SvgPresentationAttributes {
 public:
     SvgPresentationAttributes() {
@@ -1069,6 +1105,8 @@ public:
     SvgPaint fill = core::colors::black;
     SvgPaint stroke = {}; // none
     double strokeWidth = 1.0;
+
+    SvgStrokeLineCap strokeLineCap = SvgStrokeLineCap::Butt;
 
 private:
     // Computed values after applying inheritance rules.
@@ -1119,6 +1157,24 @@ StringViewMap parseStyleAttribute(std::string_view style) {
     return res;
 }
 
+template<typename ParseFunction>
+auto getStyleValue(
+    const core::XmlStreamReader& xml,
+    const StringViewMap& style,
+    std::string_view property,
+    ParseFunction parseFunction)
+    -> std::optional<typename core::CallableTraits<ParseFunction>::ReturnType> {
+
+    auto it = style.find(property);
+    if (it != style.end()) {
+        return parseFunction(it->second);
+    }
+    else if (OptionalStringView s = xml.attributeValue(property)) {
+        return parseFunction(*s);
+    }
+    return std::nullopt;
+}
+
 std::optional<double> getNumber(
     const core::XmlStreamReader& xml,
     const StringViewMap& style,
@@ -1164,6 +1220,12 @@ void SvgPresentationAttributes::applyChildStyle(const core::XmlStreamReader& xml
     // Stroke width
     if (std::optional<double> x = getNumber(xml, style, "stroke-width")) {
         strokeWidth_ = (std::max)(0.0, *x);
+    }
+
+    // Stroke line cap
+    if (std::optional<SvgStrokeLineCap> x =
+            getStyleValue(xml, style, "stroke-linecap", &parseStrokeLineCap)) {
+        strokeLineCap = *x;
     }
 
     // Fill (color)
@@ -1456,6 +1518,7 @@ public:
         res.fill_ = pa.fill;
         res.stroke_ = pa.stroke;
         res.strokeWidth_ = pa.strokeWidth;
+        res.strokeStyle_ = geometry::StrokeStyle(toVgc(pa.strokeLineCap));
 
         // The grammar for the value of the 'class' attribute is defined in the
         // HTML spec as a "space-separated tokens":

@@ -216,7 +216,7 @@ void appendStrokeTriangles(
     // Convert to triangles
     Batch& batch = getOrCreateBatch(batches, *colorSpec);
     Int oldLength = batch.vertices.length();
-    path.curves().stroke(batch.vertices, path.strokeWidth(), params);
+    path.curves().stroke(batch.vertices, path.strokeWidth(), path.strokeStyle(), params);
     applyTransform(batch, path, oldLength);
 }
 

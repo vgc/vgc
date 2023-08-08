@@ -23,6 +23,7 @@
 #include <vgc/geometry/curves2d.h>
 #include <vgc/geometry/mat3d.h>
 #include <vgc/geometry/rect2d.h>
+#include <vgc/geometry/strokestyle.h>
 #include <vgc/graphics/api.h>
 
 namespace vgc::graphics {
@@ -121,13 +122,37 @@ private:
     core::Color color_ = {0, 0, 0, 0}; // transparent
 };
 
+/// \enum vgc::graphics::SvgStrokeCap
+/// \brief Specifies the style of SVG stroke caps
+///
+enum class SvgStrokeLineCap : UInt8 {
+
+    /// The stroke is terminated by a straight line passing through the curve
+    /// endpoint.
+    ///
+    Butt,
+
+    /// The stroke is terminated by a half disk.
+    ///
+    Round,
+
+    /// The stroke is terminated by straight line, similar to `Butt` but
+    /// extending the length of the curve by half its width.
+    ///
+    Square
+};
+
+VGC_GRAPHICS_API
+VGC_DECLARE_ENUM(SvgStrokeLineCap)
+
 namespace detail {
 
 class SvgParser;
 
 } // namespace detail
 
-/// A simplified "flattened" representation of an SVG path element.
+/// \class vgc::graphics::SvgSimplePath
+/// \brief A simplified "flattened" representation of an SVG path element.
 ///
 /// The `transform()` method returns the cumulated transform of this path and
 /// its ancestors.
@@ -167,6 +192,12 @@ public:
         return strokeWidth_;
     }
 
+    /// Returns the resolved `StrokeStyle` of the path.
+    ///
+    const geometry::StrokeStyle& strokeStyle() const {
+        return strokeStyle_;
+    }
+
     /// Returns the value of the style "class" attribute.
     ///
     std::string_view styleClass() const {
@@ -187,6 +218,7 @@ private:
     SvgPaint fill_ = {};
     SvgPaint stroke_ = {};
     double strokeWidth_ = 0;
+    geometry::StrokeStyle strokeStyle_;
 
     std::string styleClass_;
     core::Array<std::string> styleClasses_;

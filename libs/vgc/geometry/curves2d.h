@@ -20,6 +20,7 @@
 #include <vgc/core/array.h>
 #include <vgc/geometry/api.h>
 #include <vgc/geometry/curvecommand.h>
+#include <vgc/geometry/strokestyle.h>
 #include <vgc/geometry/vec2d.h>
 #include <vgc/geometry/windingrule.h>
 
@@ -505,6 +506,7 @@ public:
     void stroke( //
         core::DoubleArray& data,
         double width,
+        const StrokeStyle& style,
         const Curves2dSampleParams& params) const;
 
     /// \overload
@@ -512,6 +514,7 @@ public:
     void stroke( //
         core::FloatArray& data,
         double width,
+        const StrokeStyle& style,
         const Curves2dSampleParams& params) const;
 
     /// Fills this Curves2d, that is, triangulate the interior of the curves

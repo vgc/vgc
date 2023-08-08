@@ -30,6 +30,7 @@ vgc_add_library(geometry
         rect2d.h
         rect2f.h
         stride.h
+        strokestyle.h
         tesselator.h
         triangle2d.h
         triangle2f.h
@@ -60,6 +61,7 @@ vgc_add_library(geometry
         range1f.cpp
         rect2d.cpp
         rect2f.cpp
+        strokestyle.cpp
         tesselator.cpp
         triangle2d.cpp
         triangle2f.cpp
