@@ -710,8 +710,8 @@ public:
     /// If the current reserved length of the `Array` is zero, then this
     /// function increases the reserved length to be exactly equal to `length`.
     ///
-    /// If the current reserved length of the `Array` is more than than
-    /// `length`, then this function does nothing.
+    /// If the current reserved length of the `Array` is more than `length`,
+    /// then this function does nothing.
     ///
     /// After calling this function, it is guaranteed that inserting or
     /// appending elements to the array will never cause a reallocation or
