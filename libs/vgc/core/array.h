@@ -704,18 +704,89 @@ public:
         return reservedLength_;
     }
 
-    /// Increases the reserved length of this `Array`, that is, the maximum
-    /// number of elements this `Array` can contain without having to perform a
-    /// reallocation. It may improve performance to call this function before
-    /// performing multiple `append()`, when you know an upper bound or an
+    /// Increases the reserved length of this `Array` to be at least equal to
+    /// `length`.
+    ///
+    /// If the current reserved length of the `Array` is zero, then this
+    /// function increases the reserved length to be exactly equal to `length`.
+    ///
+    /// If the current reserved length of the `Array` is more than than
+    /// `length`, then this function does nothing.
+    ///
+    /// After calling this function, it is guaranteed that inserting or
+    /// appending elements to the array will never cause a reallocation or
+    /// invalidate iterators as long and there isn't more than `length`
+    /// elements in the array.
+    ///
+    /// It may improve performance to call this function before performing
+    /// multiple `append()` or `extend()`, when you know an upper bound or an
     /// estimate of the number of elements to append.
+    ///
+    /// Calling this function successively guarantees a O(n log(n)) complexity,
+    /// where n is the final reserved length. By comparison,
+    /// `std::vector::reserve()` only guarantees a O(n²) complexity. This is
+    /// achieved by using a geometric growth policy, like most other methods of
+    /// `Array`, such as `append()`, `extend()`, `resize()`, etc.
+    ///
+    /// Example:
+    ///
+    /// ```cpp
+    /// template<typename ArrayType>
+    /// void appendAFewElements(ArrayType& a) {
+    ///     int m = 10;
+    ///     a.reserve(a.length() + m);
+    ///     for (int i = 0; i < m; ++i) {
+    ///         a.push_back(i);
+    ///     }
+    /// }
+    ///
+    /// int main() {
+    ///
+    ///     int n = 1000;
+    ///
+    ///     // Possibly quadratic complexity in n
+    ///     std::vector<int> v;
+    ///     for (int i = 0; i < n; ++i) {
+    ///         appendAFewElements(v);
+    ///     }
+    ///
+    ///     // Guaranteed log-linear complexity in n
+    ///     vgc::core::Array<int> a;
+    ///     for (int i = 0; i < n; ++i) {
+    ///         appendAFewElements(a);
+    ///     }
+    /// }
+    /// ```
     ///
     /// Throws `NegativeIntegerError` if `length` is negative.
     /// Throws `LengthError` if `length` is greater than `maxLength()`.
     ///
-    /// \sa `reservedLength()`
+    /// \sa `reservedLength()`, `reserveExactly()`.
     ///
     void reserve(Int length) {
+        checkLengthForReserve_(length);
+        if (length > reservedLength_) {
+            Int newReservedLength = calculateGrowth_(length);
+            reallocateExactly_(newReservedLength);
+        }
+    }
+
+    /// If the current reserved length of the `Array` is less than the given
+    /// `length`, then this function increases the reserved length to be
+    /// exactly equal to `length`. Otherwise, this function does nothing.
+    ///
+    /// Calling this function successively only guarantees a O(n²) complexity,
+    /// where n is the final reserved length. Under most circumstances,
+    /// including when you just created an `Array` and know exactly how many
+    /// elements will be inserted, you should prefer using `Array::reserve()`
+    /// which guarantees a O(n log(n)) complexity.
+    ///
+    /// Throws `NegativeIntegerError` if `length` is negative.
+    /// Throws `LengthError` if `length` is greater than `maxLength()`.
+    ///
+    /// \sa `reservedLength()`, `reserve()`.
+    ///
+    void reserveExactly(Int length) {
         checkLengthForReserve_(length);
         if (length > reservedLength_) {
             reallocateExactly_(length);
