@@ -209,16 +209,17 @@ public:
     StrokeVisitor(
         core::Array<TFloat>& data,
         double width,
+        const StrokeStyle& style,
         const Curves2dSampleParams& params)
 
         : data_(data)
         , halfwidth_(width / 2)
+        , style_(style)
         , minSamples_(3) // see note above
         , maxSamples_(params.maxSamplesPerSegment())
         , keepPredicate_(params.minDistance(), params.maxAngle()) {
 
-        leftSegmentIndices_.append(0);
-        rightSegmentIndices_.append(0);
+        clearSamples_();
     }
 
     void endSegment() {
@@ -269,12 +270,88 @@ public:
         endSegment();
     }
 
+    void addCap_(const Vec2d& p1, const Vec2d& p2) {
+        switch (style_.cap()) {
+        case StrokeCap::Butt:
+            break;
+        case StrokeCap::Round: {
+            Vec2d center = 0.5 * (p1 + p2);
+            Vec2d xAxis = p1 - center;
+            Vec2d yAxis = -xAxis.orthogonalized();
+            double startAngle = 0;
+            double endAngle = core::pi;
+            auto arc = EllipticalArc2d::fromCenterParameters(
+                center, xAxis, yAxis, startAngle, endAngle);
+            auto evaluator = CenterlineEvaluator<EllipticalArc2d>(arc);
+            sampler_.sample(
+                evaluator, keepPredicate_, minSamples_, maxSamples_, capSamples_);
+            if (capSamples_.length() > 2) {
+                auto begin = capSamples_.cbegin();
+                auto end = capSamples_.cend();
+                ++begin; // don't append first sample of cap
+                --end;   // don't append last sample of cap
+                for (auto it = begin; it != end; ++it) {
+                    const Vec2d& p = *it;
+                    vertices_.append(Vec2f(p));
+                }
+            }
+            break;
+        }
+        case StrokeCap::Square: {
+            Vec2d center = 0.5 * (p1 + p2);
+            Vec2d xAxis = p1 - center;
+            Vec2d yAxis = -xAxis.orthogonalized();
+            vertices_.append(Vec2f(p1 + yAxis));
+            vertices_.append(Vec2f(p2 + yAxis));
+            return;
+        }
+        }
+        capSamples_.clear();
+    }
+
     void endOpenSubpath() {
-        // TODO: step 2 and 3.
+        // TODO: Add joins
+
+        // Fast return if not enough samples.
+        //
+        // TODO: draw caps for single moveto and zero-length subpaths, see:
+        //
+        // https://www.w3.org/TR/SVG11/painting.html#StrokeProperties
+        //
+        // > A subpath (see Paths) consisting of a single moveto shall not
+        // > be stroked. Any zero length subpath shall not be stroked if
+        // > the ‘stroke-linecap’ property has a value of butt but shall be
+        // > stroked if the ‘stroke-linecap’ property has a value of round
+        // > or square, producing respectively a circle or a square
+        // > centered at the given point. Examples of zero length subpaths
+        // > include 'M 10,10 L 10,10', 'M 20,20 h 0', 'M 30,30 z' and
+        // > 'M 40,40 c 0,0 0,0 0,0'.
+        //
+        if (leftSamples_.length() == 0 || rightSamples_.length() == 0) {
+            return;
+        }
+
         vertices_.clear();
         for (const Vec2d& p : leftSamples_) {
             vertices_.append(Vec2f(p));
         }
+        addCap_(leftSamples_.last(), rightSamples_.last());
+        for (auto it = rightSamples_.rbegin(); it != rightSamples_.rend(); ++it) {
+            const Vec2d& p = *it;
+            vertices_.append(Vec2f(p));
+        }
+        addCap_(rightSamples_.first(), leftSamples_.first());
+        tess_.addContour(vertices_);
+    }
+
+    void endClosedSubpath() {
+        // TODO: add joins
+        vertices_.clear();
+        for (const Vec2d& p : leftSamples_) {
+            vertices_.append(Vec2f(p));
+        }
+        tess_.addContour(vertices_);
+        vertices_.clear();
         for (auto it = rightSamples_.rbegin(); it != rightSamples_.rend(); ++it) {
             const Vec2d& p = *it;
             vertices_.append(Vec2f(p));
@@ -282,19 +359,16 @@ public:
         tess_.addContour(vertices_);
     }
 
-    void endClosedSubpath() {
-        // TODO: step 2 and 3.
+    void clearSamples_() {
         vertices_.clear();
-        for (const Vec2d& p : leftSamples_) {
-            vertices_.append(Vec2f(p));
-        }
-        tess_.addContour(vertices_);
-        vertices_.clear();
-        for (auto it = rightSamples_.rbegin(); it != rightSamples_.rend(); ++it) {
-            const Vec2d& p = *it;
-            vertices_.append(Vec2f(p));
-        }
-        tess_.addContour(vertices_);
+        startTangents_.clear();
+        endTangents_.clear();
+        leftSamples_.clear();
+        rightSamples_.clear();
+        leftSegmentIndices_.clear();
+        rightSegmentIndices_.clear();
+        leftSegmentIndices_.append(0);
+        rightSegmentIndices_.append(0);
     }
 
     void endCurves() {
@@ -307,6 +381,7 @@ private:
 
     // Input params
     double halfwidth_;
+    const StrokeStyle& style_;
     Int minSamples_;
     Int maxSamples_;
 
@@ -329,6 +404,8 @@ private:
 
     core::Array<Vec2d> rightSamples_;
     core::Array<Int> rightSegmentIndices_;
+
+    core::Array<Vec2d> capSamples_;
 };
 
 template<typename TFloat>
@@ -425,7 +502,7 @@ void visit_(const Curves2d& curves, Visitor& visitor) {
             // first point as the previous one, unless a MoveTo is called.
             break;
         case CurveCommandType::MoveTo:
-            // A Close followed by a MoveTo or a MoveTo followed by a Close is ignored.
+            // A Close followed by a MoveTo or a MoveTo followed by a MoveTo is ignored.
             if (lastCommandType != CurveCommandType::Close
                 && lastCommandType != CurveCommandType::MoveTo) {
 
@@ -477,18 +554,20 @@ void visit_(const Curves2d& curves, Visitor& visitor) {
 void Curves2d::stroke(
     core::DoubleArray& data,
     double width,
+    const StrokeStyle& style,
     const Curves2dSampleParams& params) const {
 
-    StrokeVisitor<double> visitor(data, width, params);
+    StrokeVisitor<double> visitor(data, width, style, params);
     visit_(*this, visitor);
 }
 
 void Curves2d::stroke(
     core::FloatArray& data,
     double width,
+    const StrokeStyle& style,
     const Curves2dSampleParams& params) const {
 
-    StrokeVisitor<float> visitor(data, width, params);
+    StrokeVisitor<float> visitor(data, width, style, params);
     visit_(*this, visitor);
 }
 
