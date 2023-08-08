@@ -383,6 +383,15 @@ private:
         "apps/uitest/svg/coords/Skew-notext.svg",
         "apps/uitest/svg/coords/Units-notext.svg",
         "apps/uitest/svg/coords/Viewbox-notext.svg",
+
+        "apps/uitest/svg/painting/fillrule-evenodd-nodefs.svg",
+        "apps/uitest/svg/painting/fillrule-nonzero-nodefs.svg",
+        "apps/uitest/svg/painting/inheritance-nogradient.svg",
+        "apps/uitest/svg/painting/linecap-nostylesheet-nodefs-notext.svg",
+        "apps/uitest/svg/painting/linejoin-nostylesheet-nodefs-notext.svg",
+        "apps/uitest/svg/painting/marker-simulated.svg",
+        "apps/uitest/svg/painting/marker.svg",
+
         "apps/uitest/svg/paths/arcs01.svg",
         "apps/uitest/svg/paths/arcs02-nodefs.svg",
         "apps/uitest/svg/paths/cubic01-nostylesheet.svg",
