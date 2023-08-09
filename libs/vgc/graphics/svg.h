@@ -122,7 +122,7 @@ private:
     core::Color color_ = {0, 0, 0, 0}; // transparent
 };
 
-/// \enum vgc::graphics::SvgStrokeCap
+/// \enum vgc::graphics::SvgStrokeLineCap
 /// \brief Specifies the style of SVG stroke caps
 ///
 enum class SvgStrokeLineCap : UInt8 {
@@ -144,6 +144,31 @@ enum class SvgStrokeLineCap : UInt8 {
 
 VGC_GRAPHICS_API
 VGC_DECLARE_ENUM(SvgStrokeLineCap)
+
+/// \enum vgc::graphics::SvgStrokeLineJoin
+/// \brief Specifies the style of SVG stroke joins
+///
+enum class SvgStrokeLineJoin : UInt8 {
+
+    /// The stroke segments are joined by a straight line between the endpoints
+    /// of the offset lines of each segment.
+    ///
+    Bevel,
+
+    /// The stroke segments are joined by a circular arc.
+    ///
+    Round,
+
+    /// The stroke offset lines of each segment are extrapolated by a straight
+    /// line until they intersect. If the intersection is too far away (as
+    /// determined by the "miter limit"), then the join fall backs to the
+    /// `Bevel` behavior.
+    ///
+    Miter
+};
+
+VGC_GRAPHICS_API
+VGC_DECLARE_ENUM(SvgStrokeLineJoin)
 
 namespace detail {
 
