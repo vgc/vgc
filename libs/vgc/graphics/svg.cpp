@@ -30,6 +30,12 @@ VGC_DEFINE_ENUM( //
     (Round, "Round"),
     (Square, "Square"))
 
+VGC_DEFINE_ENUM( //
+    SvgStrokeLineJoin,
+    (Bevel, "Bevel"),
+    (Round, "Round"),
+    (Miter, "Miter"))
+
 namespace {
 
 /* Below are potential classes that we may or may not want to use/expose in the future.
@@ -1069,7 +1075,7 @@ SvgPaint parsePaint(std::string_view s) {
     }
 }
 
-// https://www.w3.org/TR/SVG11/painting.html#SpecifyingPaint
+// https://www.w3.org/TR/SVG11/painting.html#StrokeLinecapProperty
 SvgStrokeLineCap parseStrokeLineCap(std::string_view s) {
     s = core::trimmed(s);
     if (s == "butt") {
@@ -1082,7 +1088,10 @@ SvgStrokeLineCap parseStrokeLineCap(std::string_view s) {
         return SvgStrokeLineCap::Square;
     }
     else {
-        VGC_WARNING(LogVgcGraphicsSvg, "Unknown stroke-linecap: {}", s);
+        VGC_WARNING(
+            LogVgcGraphicsSvg,
+            "Unknown stroke-linecap: '{}'. Falling back to 'butt'.",
+            s);
         return SvgStrokeLineCap::Butt;
     }
 }
@@ -1097,6 +1106,39 @@ geometry::StrokeCap toVgc(SvgStrokeLineCap cap) {
         return geometry::StrokeCap::Square;
     }
     return geometry::StrokeCap::Butt;
+}
+
+// https://www.w3.org/TR/SVG11/painting.html#StrokeLinejoinProperty
+SvgStrokeLineJoin parseStrokeLineJoin(std::string_view s) {
+    s = core::trimmed(s);
+    if (s == "bevel") {
+        return SvgStrokeLineJoin::Bevel;
+    }
+    else if (s == "round") {
+        return SvgStrokeLineJoin::Round;
+    }
+    else if (s == "miter") {
+        return SvgStrokeLineJoin::Miter;
+    }
+    else {
+        VGC_WARNING(
+            LogVgcGraphicsSvg,
+            "Unknown stroke-linejoin: '{}'. Falling back to 'miter'.",
+            s);
+        return SvgStrokeLineJoin::Miter;
+    }
+}
+
+geometry::StrokeJoin toVgc(SvgStrokeLineJoin join) {
+    switch (join) {
+    case SvgStrokeLineJoin::Bevel:
+        return geometry::StrokeJoin::Bevel;
+    case SvgStrokeLineJoin::Round:
+        return geometry::StrokeJoin::Round;
+    case SvgStrokeLineJoin::Miter:
+        return geometry::StrokeJoin::Miter;
+    }
+    return geometry::StrokeJoin::Miter;
 }
 
 class SvgPresentationAttributes {
@@ -1116,6 +1158,8 @@ public:
     double strokeWidth = 1.0;
 
     SvgStrokeLineCap strokeLineCap = SvgStrokeLineCap::Butt;
+    SvgStrokeLineJoin strokeLineJoin = SvgStrokeLineJoin::Miter;
+    double strokeMiterLimit = 4.0;
 
 private:
     // Computed values after applying inheritance rules.
@@ -1227,14 +1271,45 @@ void SvgPresentationAttributes::applyChildStyle(const core::XmlStreamReader& xml
     }
 
     // Stroke width
+    // https://www.w3.org/TR/SVG11/painting.html#StrokeWidthProperty
+    // > A zero value causes no stroke to be painted. A negative value is an error.
     if (std::optional<double> x = getNumber(xml, style, "stroke-width")) {
-        strokeWidth_ = (std::max)(0.0, *x);
+        if (*x < 0) {
+            VGC_WARNING(
+                LogVgcGraphicsSvg, "Negative stroke-width ({}): falling back to 0.", *x);
+            strokeWidth_ = 0;
+        }
+        else {
+            strokeWidth_ = *x;
+        }
     }
 
     // Stroke line cap
     if (std::optional<SvgStrokeLineCap> x =
             getStyleValue(xml, style, "stroke-linecap", &parseStrokeLineCap)) {
         strokeLineCap = *x;
+    }
+
+    // Stroke line join
+    if (std::optional<SvgStrokeLineJoin> x =
+            getStyleValue(xml, style, "stroke-linejoin", &parseStrokeLineJoin)) {
+        strokeLineJoin = *x;
+    }
+
+    // Stroke miter limit
+    // https://www.w3.org/TR/SVG11/painting.html#StrokeMiterlimitProperty
+    // > Must be a <number> greater than or equal to 1. Any other value is an error.
+    if (std::optional<double> x = getNumber(xml, style, "stroke-miterlimit")) {
+        if (*x < 1) {
+            VGC_WARNING(
+                LogVgcGraphicsSvg,
+                "Invalid stroke-miterlimit ({} < 1): falling back to 1.",
+                *x);
+            strokeMiterLimit = 1;
+        }
+        else {
+            strokeMiterLimit = *x;
+        }
     }
 
     // Fill (color)
@@ -1527,7 +1602,8 @@ public:
         res.fill_ = pa.fill;
         res.stroke_ = pa.stroke;
         res.strokeWidth_ = pa.strokeWidth;
-        res.strokeStyle_ = geometry::StrokeStyle(toVgc(pa.strokeLineCap));
+        res.strokeStyle_ = geometry::StrokeStyle(
+            toVgc(pa.strokeLineCap), toVgc(pa.strokeLineJoin), pa.strokeMiterLimit);
 
         // The grammar for the value of the 'class' attribute is defined in the
         // HTML spec as a "space-separated tokens":

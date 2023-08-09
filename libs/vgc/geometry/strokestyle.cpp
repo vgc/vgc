@@ -24,4 +24,10 @@ VGC_DEFINE_ENUM( //
     (Round, "Round"),
     (Square, "Square"))
 
+VGC_DEFINE_ENUM( //
+    StrokeJoin,
+    (Bevel, "Bevel"),
+    (Round, "Round"),
+    (Miter, "Miter"))
+
 } // namespace vgc::geometry

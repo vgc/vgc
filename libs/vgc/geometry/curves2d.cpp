@@ -205,6 +205,20 @@ private:
 
 template<typename TFloat>
 class StrokeVisitor {
+private:
+    struct IndexSpan {
+        Int startIndex;
+        Int numIndices;
+    };
+    struct SegmentData {
+        Vec2d startTangent;
+        Vec2d endTangent;
+        IndexSpan leftSamples;  // at least 2
+        IndexSpan rightSamples; // at least 2
+        // Note: we use indices since we cannot directly use core::Span: it
+        // would be invadidated when sampling the other segments.
+    };
+
 public:
     StrokeVisitor(
         core::Array<TFloat>& data,
@@ -218,13 +232,6 @@ public:
         , minSamples_(3) // see note above
         , maxSamples_(params.maxSamplesPerSegment())
         , keepPredicate_(params.minDistance(), params.maxAngle()) {
-
-        clearSamples_();
-    }
-
-    void endSegment() {
-        leftSegmentIndices_.append(leftSamples_.length());
-        rightSegmentIndices_.append(rightSamples_.length());
     }
 
     void line(Vec2d p1, Vec2d p2) {
@@ -234,40 +241,136 @@ public:
             return;
         }
 
+        SegmentData data;
+
         Vec2d t = (p2 - p1).normalized();
-        startTangents_.append(t);
-        endTangents_.append(t);
+        data.startTangent = t;
+        data.endTangent = t;
 
         Vec2d offset = halfwidth_ * t.orthogonalized();
+        Int leftOldLength = leftSamples_.length();
+        Int rightOldLength = rightSamples_.length();
         leftSamples_.append(p1 + offset);
         rightSamples_.append(p1 - offset);
         leftSamples_.append(p2 + offset);
         rightSamples_.append(p2 - offset);
+        data.leftSamples = {leftOldLength, 2};
+        data.rightSamples = {rightOldLength, 2};
 
-        endSegment();
+        segmentData_.append(data);
+    }
+
+    template<bool side, typename SegmentType>
+    auto computeSegmentSampling(const SegmentType& seg, core::Array<Vec2d>& samples) {
+        Int oldLength = samples.length();
+        sampler_.sample(
+            OffsetLineEvaluator<side, SegmentType>(seg, halfwidth_),
+            keepPredicate_,
+            minSamples_,
+            maxSamples_,
+            samples);
+        Int newLength = samples.length();
+        return IndexSpan{oldLength, newLength - oldLength};
     }
 
     template<typename SegmentType>
     void segment(const SegmentType& seg) {
+        SegmentData data;
+        data.startTangent = seg.evalDerivative(0).normalized();
+        data.endTangent = seg.evalDerivative(1).normalized();
+        data.leftSamples = computeSegmentSampling<1, SegmentType>(seg, leftSamples_);
+        data.rightSamples = computeSegmentSampling<0, SegmentType>(seg, rightSamples_);
+        segmentData_.append(data);
+    }
 
-        startTangents_.append(seg.evalDerivative(0).normalized());
-        endTangents_.append(seg.evalDerivative(1).normalized());
+    void
+    addJoin_(const Vec2d& p1, const Vec2d& p2, const Vec2d& t1, const Vec2d& /*t2*/) {
+        if (p1 == p2) {
+            return;
+        }
+        Vec2d p1p2 = p2 - p1;
+        double sinHalfThetaTimesP1P2 = p1p2.dot(t1);
+        if (sinHalfThetaTimesP1P2 <= 0) {
+            // inner join (nothing to do)
+            return;
+        }
+        switch (style_.join()) {
+        case StrokeJoin::Bevel:
+            break;
+        case StrokeJoin::Round: {
+            Vec2d center = p1 - t1.orthogonalized() * halfwidth_;
+            Vec2d xAxis = p1 - center;
+            Vec2d yAxis = -xAxis.orthogonalized();
+            double sinHalfTheta = sinHalfThetaTimesP1P2 / p1p2.length();
+            double startAngle = 0;
+            double endAngle = core::pi - 2 * std::asin(sinHalfTheta);
+            auto arc = EllipticalArc2d::fromCenterParameters(
+                center, xAxis, yAxis, startAngle, endAngle);
+            auto evaluator = CenterlineEvaluator<EllipticalArc2d>(arc);
+            sampler_.sample(
+                evaluator, keepPredicate_, minSamples_, maxSamples_, capSamples_);
+            if (capSamples_.length() > 2) {
+                auto begin = capSamples_.cbegin();
+                auto end = capSamples_.cend();
+                ++begin; // don't append first sample of join
+                --end;   // don't append last sample of join
+                for (auto it = begin; it != end; ++it) {
+                    const Vec2d& p = *it;
+                    vertices_.append(Vec2f(p));
+                }
+            }
+            break;
+        }
+        case StrokeJoin::Miter: {
+            // https://www.w3.org/TR/SVG11/painting.html#StrokeMiterlimitProperty
+            double d = p1p2.length();
+            double miterRatio = d / sinHalfThetaTimesP1P2;
+            if (miterRatio < style_.miterLimit()) {
+                double halfMiterLength = halfwidth_ * miterRatio;
+                Vec2d center = p1 - t1.orthogonalized() * halfwidth_;
+                Vec2d miterDir = (p1p2 / d).orthogonalized();
+                Vec2d miterPoint = center + miterDir * halfMiterLength;
+                vertices_.append(Vec2f(miterPoint));
+            }
+            else {
+                // fallback to Bevel (nothing to do)
+            }
+            break;
+        }
+        }
+        capSamples_.clear();
+    }
 
-        sampler_.sample(
-            OffsetLineEvaluator<true, SegmentType>(seg, halfwidth_),
-            keepPredicate_,
-            minSamples_,
-            maxSamples_,
-            leftSamples_);
+    //     1     join    2
+    // o--->---o  ?  o--->---o  left samples
+    //         p1    p2
+    // o--->------o------>---o  centerline
+    //     1             2
+    //
+    void addLeftJoin_(const SegmentData& segmentData1, const SegmentData& segmentData2) {
+        core::Span<Vec2d> samples1 = getLeftSamples(segmentData1);
+        core::Span<Vec2d> samples2 = getLeftSamples(segmentData2);
+        const Vec2d& p1 = samples1.last();
+        const Vec2d& p2 = samples2.first();
+        const Vec2d& t1 = segmentData1.endTangent;
+        const Vec2d& t2 = segmentData2.startTangent;
+        addJoin_(p1, p2, t1, t2);
+    }
 
-        sampler_.sample(
-            OffsetLineEvaluator<false, SegmentType>(seg, halfwidth_),
-            keepPredicate_,
-            minSamples_,
-            maxSamples_,
-            rightSamples_);
-
-        endSegment();
+    //     2             1
+    // o---<------o------<---o  centerline
+    //         p2    p1
+    // o---<---o  ?  o---<---o  right samples
+    //     2     join    1
+    //
+    void addRightJoin_(const SegmentData& segmentData1, const SegmentData& segmentData2) {
+        core::Span<Vec2d> samples1 = getRightSamples(segmentData1);
+        core::Span<Vec2d> samples2 = getRightSamples(segmentData2);
+        const Vec2d& p1 = samples1.first();
+        const Vec2d& p2 = samples2.last();
+        const Vec2d& t1 = -segmentData1.startTangent;
+        const Vec2d& t2 = -segmentData2.endTangent;
+        addJoin_(p1, p2, t1, t2);
     }
 
     void addCap_(const Vec2d& p1, const Vec2d& p2) {
@@ -303,14 +406,13 @@ public:
             Vec2d yAxis = -xAxis.orthogonalized();
             vertices_.append(Vec2f(p1 + yAxis));
             vertices_.append(Vec2f(p2 + yAxis));
-            return;
+            break;
         }
         }
         capSamples_.clear();
     }
 
     void endOpenSubpath() {
-        // TODO: Add joins
 
         // Fast return if not enough samples.
         //
@@ -327,48 +429,91 @@ public:
         // > include 'M 10,10 L 10,10', 'M 20,20 h 0', 'M 30,30 z' and
         // > 'M 40,40 c 0,0 0,0 0,0'.
         //
-        if (leftSamples_.length() == 0 || rightSamples_.length() == 0) {
+        Int numSegments = segmentData_.length();
+        if (numSegments == 0) {
             return;
         }
 
-        vertices_.clear();
-        for (const Vec2d& p : leftSamples_) {
-            vertices_.append(Vec2f(p));
+        // TODO: fast path for Bevel?
+        // TODO: handling of zero-length segments? (e.g., like in Stroke2d)
+
+        // Left samples
+        for (Int k = 0; k < numSegments; ++k) {
+            const SegmentData& segmentData = segmentData_.getUnchecked(k);
+            if (k > 0) {
+                const SegmentData& prevSegmentData = segmentData_.getUnchecked(k - 1);
+                addLeftJoin_(prevSegmentData, segmentData);
+            }
+            core::Span<Vec2d> samples = getLeftSamples(segmentData);
+            for (const Vec2d& p : samples) {
+                vertices_.append(Vec2f(p));
+            }
         }
         addCap_(leftSamples_.last(), rightSamples_.last());
-        for (auto it = rightSamples_.rbegin(); it != rightSamples_.rend(); ++it) {
-            const Vec2d& p = *it;
-            vertices_.append(Vec2f(p));
+
+        // Right samples
+        for (Int k = numSegments - 1; k >= 0; --k) {
+            const SegmentData& segmentData = segmentData_.getUnchecked(k);
+            if (k < numSegments - 1) {
+                const SegmentData& nextSegmentData = segmentData_.getUnchecked(k + 1);
+                addRightJoin_(nextSegmentData, segmentData);
+            }
+            core::Span<Vec2d> samples = getRightSamples(segmentData);
+            for (auto it = samples.rbegin(); it != samples.rend(); ++it) {
+                vertices_.append(Vec2f(*it));
+            }
         }
         addCap_(rightSamples_.first(), leftSamples_.first());
-        tess_.addContour(vertices_);
+
+        addContour_();
+        endSubpath_();
     }
 
     void endClosedSubpath() {
-        // TODO: add joins
-        vertices_.clear();
-        for (const Vec2d& p : leftSamples_) {
-            vertices_.append(Vec2f(p));
+
+        Int numSegments = segmentData_.length();
+        if (numSegments == 0) {
+            return;
         }
-        tess_.addContour(vertices_);
-        vertices_.clear();
-        for (auto it = rightSamples_.rbegin(); it != rightSamples_.rend(); ++it) {
-            const Vec2d& p = *it;
-            vertices_.append(Vec2f(p));
+
+        // Left samples
+        for (Int k = 0; k < numSegments; ++k) {
+            const SegmentData& segmentData = segmentData_.getUnchecked(k);
+            Int prevIndex = (k + numSegments - 1) % numSegments;
+            const SegmentData& prevSegmentData = segmentData_.getUnchecked(prevIndex);
+            addLeftJoin_(prevSegmentData, segmentData);
+            core::Span<Vec2d> samples = getLeftSamples(segmentData);
+            for (const Vec2d& p : samples) {
+                vertices_.append(Vec2f(p));
+            }
         }
-        tess_.addContour(vertices_);
+        addContour_();
+
+        // Right samples
+        for (Int k = numSegments - 1; k >= 0; --k) {
+            const SegmentData& segmentData = segmentData_.getUnchecked(k);
+            Int nextIndex = (k + 1) % numSegments;
+            const SegmentData& nextSegmentData = segmentData_.getUnchecked(nextIndex);
+            addRightJoin_(nextSegmentData, segmentData);
+            core::Span<Vec2d> samples = getRightSamples(segmentData);
+            for (auto it = samples.rbegin(); it != samples.rend(); ++it) {
+                vertices_.append(Vec2f(*it));
+            }
+        }
+        addContour_();
+
+        endSubpath_();
     }
 
-    void clearSamples_() {
+    void addContour_() {
+        tess_.addContour(vertices_);
         vertices_.clear();
-        startTangents_.clear();
-        endTangents_.clear();
+    }
+
+    void endSubpath_() {
+        segmentData_.clear();
         leftSamples_.clear();
         rightSamples_.clear();
-        leftSegmentIndices_.clear();
-        rightSegmentIndices_.clear();
-        leftSegmentIndices_.append(0);
-        rightSegmentIndices_.append(0);
     }
 
     void endCurves() {
@@ -389,23 +534,25 @@ private:
     detail::AdaptiveSampler<Vec2d> sampler_;
     KeepPredicate keepPredicate_;
     Tesselator tess_;
+
+    // Subpath buffers
+    core::Span<Vec2d> getLeftSamples(const SegmentData& segmentData) {
+        IndexSpan indices = segmentData.leftSamples;
+        core::Span span = leftSamples_;
+        return span.subspan(indices.startIndex, indices.numIndices);
+    };
+    core::Span<Vec2d> getRightSamples(const SegmentData& segmentData) {
+        IndexSpan indices = segmentData.rightSamples;
+        core::Span<Vec2d> span = rightSamples_;
+        return span.subspan(indices.startIndex, indices.numIndices);
+    };
+    core::Array<SegmentData> segmentData_;
+    core::Array<Vec2d> leftSamples_;
+    core::Array<Vec2d> rightSamples_;
+    core::Array<Vec2d> capSamples_;
     core::Array<Vec2f> vertices_;
     // Note: we use Vec2f for vertices, otherwise Tesselator would cast them
     // anyway to a temporary buffer of floats.
-
-    // Intermediate outputs
-    core::Array<Vec2d> startTangents_; // length = numSegments
-    core::Array<Vec2d> endTangents_;   // length = numSegments
-
-    // Samples of the left offset line
-    // indices[i] = start index of samples for segment i
-    core::Array<Vec2d> leftSamples_;      // length = at least 2 * numSegments
-    core::Array<Int> leftSegmentIndices_; // length = numSegments + 1
-
-    core::Array<Vec2d> rightSamples_;
-    core::Array<Int> rightSegmentIndices_;
-
-    core::Array<Vec2d> capSamples_;
 };
 
 template<typename TFloat>
