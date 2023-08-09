@@ -276,7 +276,7 @@ public:
         return static_cast<U*>(p_);
     }
 
-    constexpr explicit operator bool() const noexcept {
+    explicit constexpr operator bool() const noexcept {
         return p_ != nullptr;
     }
 
