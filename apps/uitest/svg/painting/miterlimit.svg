@@ -1,0 +1,222 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<svg
+   width="11.975872cm"
+   height="7.3617005cm"
+   viewBox="0 0 1197.5872 736.17006"
+   version="1.1"
+   id="svg371"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg">
+  <defs
+     id="defs375" />
+  <desc
+     id="desc337">Example miterlimit - demonstrates three stroke-miterlimit values</desc>
+  <g
+     transform="translate(198.77139,562.31696)"
+     id="g349">
+    <text
+       style="font-size:50px;font-family:Verdana;text-anchor:middle"
+       y="141.31441"
+       id="text347"
+       x="-10.01079">miterlimit = 4</text>
+    <g
+       id="g727"
+       transform="translate(0,-479.03601)">
+      <path
+         style="stroke:#000000;stroke-width:70"
+         d="M -125,150 0,0 125,150"
+         fill="none"
+         stroke-linejoin="miter"
+         id="path721" />
+      <path
+         style="stroke:#ffcccc;stroke-width:5"
+         d="M -125,150 0,0 125,150"
+         fill="none"
+         id="path723" />
+      <circle
+         style="fill:#ffcccc;stroke:none"
+         cx="0"
+         cy="0"
+         r="8"
+         id="circle725" />
+    </g>
+    <g
+       id="g735"
+       transform="translate(0,-278.145)">
+      <path
+         style="stroke:#000000;stroke-width:70"
+         d="M -48.446705,150 0,0 48.446705,150"
+         fill="none"
+         stroke-linejoin="miter"
+         id="path729" />
+      <path
+         style="stroke:#ffcccc;stroke-width:5"
+         d="M -48.446705,150 0,0 48.446705,150"
+         fill="none"
+         id="path731" />
+      <circle
+         style="fill:#ffcccc;stroke:none"
+         cx="0"
+         cy="0"
+         r="8"
+         id="circle733" />
+    </g>
+    <g
+       id="g743"
+       transform="translate(0,-87.889807)">
+      <path
+         style="stroke:#000000;stroke-width:70"
+         d="M -27.4732,150 0,0 27.4732,150"
+         fill="none"
+         stroke-linejoin="miter"
+         id="path737" />
+      <path
+         style="stroke:#ffcccc;stroke-width:5"
+         d="M -27.4732,150 0,0 27.4732,150"
+         fill="none"
+         id="path739" />
+      <circle
+         style="fill:#ffcccc;stroke:none"
+         cx="0"
+         cy="0"
+         r="8"
+         id="circle741" />
+    </g>
+    <g
+       id="g855"
+       transform="translate(392.20456,-479.03601)">
+      <path
+         style="stroke:#000000;stroke-width:70;stroke-miterlimit:2"
+         d="M -125,150 0,0 125,150"
+         fill="none"
+         stroke-linejoin="miter"
+         id="path849" />
+      <path
+         style="stroke:#ffcccc;stroke-width:5"
+         d="M -125,150 0,0 125,150"
+         fill="none"
+         id="path851" />
+      <circle
+         style="fill:#ffcccc;stroke:none"
+         cx="0"
+         cy="0"
+         r="8"
+         id="circle853" />
+    </g>
+    <g
+       id="g863"
+       transform="translate(392.20456,-278.145)">
+      <path
+         style="stroke:#000000;stroke-width:70;stroke-miterlimit:2"
+         d="M -48.446705,150 0,0 48.446705,150"
+         fill="none"
+         stroke-linejoin="miter"
+         id="path857" />
+      <path
+         style="stroke:#ffcccc;stroke-width:5"
+         d="M -48.446705,150 0,0 48.446705,150"
+         fill="none"
+         id="path859" />
+      <circle
+         style="fill:#ffcccc;stroke:none"
+         cx="0"
+         cy="0"
+         r="8"
+         id="circle861" />
+    </g>
+    <g
+       id="g871"
+       transform="translate(392.20456,-87.889807)">
+      <path
+         style="stroke:#000000;stroke-width:70;stroke-miterlimit:2"
+         d="M -27.4732,150 0,0 27.4732,150"
+         fill="none"
+         stroke-linejoin="miter"
+         id="path865" />
+      <path
+         style="stroke:#ffcccc;stroke-width:5"
+         d="M -27.4732,150 0,0 27.4732,150"
+         fill="none"
+         id="path867" />
+      <circle
+         style="fill:#ffcccc;stroke:none"
+         cx="0"
+         cy="0"
+         r="8"
+         id="circle869" />
+    </g>
+    <g
+       id="g887"
+       transform="translate(799.09056,-479.03601)">
+      <path
+         style="stroke:#000000;stroke-width:70;stroke-miterlimit:1"
+         d="M -125,150 0,0 125,150"
+         fill="none"
+         stroke-linejoin="miter"
+         id="path881" />
+      <path
+         style="stroke:#ffcccc;stroke-width:5"
+         d="M -125,150 0,0 125,150"
+         fill="none"
+         id="path883" />
+      <circle
+         style="fill:#ffcccc;stroke:none"
+         cx="0"
+         cy="0"
+         r="8"
+         id="circle885" />
+    </g>
+    <g
+       id="g895"
+       transform="translate(799.09056,-278.145)">
+      <path
+         style="stroke:#000000;stroke-width:70;stroke-miterlimit:1"
+         d="M -48.446705,150 0,0 48.446705,150"
+         fill="none"
+         stroke-linejoin="miter"
+         id="path889" />
+      <path
+         style="stroke:#ffcccc;stroke-width:5"
+         d="M -48.446705,150 0,0 48.446705,150"
+         fill="none"
+         id="path891" />
+      <circle
+         style="fill:#ffcccc;stroke:none"
+         cx="0"
+         cy="0"
+         r="8"
+         id="circle893" />
+    </g>
+    <g
+       id="g903"
+       transform="translate(799.09056,-87.889807)">
+      <path
+         style="stroke:#000000;stroke-width:70;stroke-miterlimit:1"
+         d="M -27.4732,150 0,0 27.4732,150"
+         fill="none"
+         stroke-linejoin="miter"
+         id="path897" />
+      <path
+         style="stroke:#ffcccc;stroke-width:5"
+         d="M -27.4732,150 0,0 27.4732,150"
+         fill="none"
+         id="path899" />
+      <circle
+         style="fill:#ffcccc;stroke:none"
+         cx="0"
+         cy="0"
+         r="8"
+         id="circle901" />
+    </g>
+    <text
+       style="font-size:50px;font-family:Verdana;text-anchor:middle"
+       y="141.31441"
+       id="text1459"
+       x="398.97256">miterlimit = 2</text>
+    <text
+       style="font-size:50px;font-family:Verdana;text-anchor:middle"
+       y="141.31441"
+       id="text1461"
+       x="805.85858">miterlimit =1</text>
+  </g>
+</svg>

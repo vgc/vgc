@@ -391,6 +391,7 @@ private:
         "apps/uitest/svg/painting/linejoin-nostylesheet-nodefs-notext.svg",
         "apps/uitest/svg/painting/marker-simulated.svg",
         "apps/uitest/svg/painting/marker.svg",
+        "apps/uitest/svg/painting/miterlimit-notext.svg",
 
         "apps/uitest/svg/paths/arcs01.svg",
         "apps/uitest/svg/paths/arcs02-nodefs.svg",

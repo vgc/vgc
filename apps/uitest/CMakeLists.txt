@@ -46,6 +46,8 @@ vgc_add_app(uitest
         svg/painting/linejoin.svg
         svg/painting/marker-simulated.svg
         svg/painting/marker.svg
+        svg/painting/miterlimit-notext.svg
+        svg/painting/miterlimit.svg
 
         svg/paths/README.md
         svg/paths/arcs01.svg
