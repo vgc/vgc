@@ -327,7 +327,7 @@ private: // the VGC_OBJECT macro goes first
     VGC_OBJECT(Flex, Widget)
 
 protected: // then protected constructors                   
-    Flex(FlexDirection direction = FlexDirection::Row);
+    Flex(CreateKey, FlexDirection direction = FlexDirection::Row);
 
 public:
     // then create(...) static functions
@@ -344,7 +344,43 @@ protected: // then other protected methods
 
 private:: // then private member variables and methods
     FlexDirection direction_;
-}
+};
+```
+
+Note that `core::createObject<MyObject>(...)` bypasses access control (because
+we had to use friendship to allow it to create objects), and therefore someone
+can technically use it (even though they shoudn't) to create an instance of
+`MyObject` even if its constructor is protected or private.
+
+If you need to implement an object class whose construction is semantically
+private (or protected), then the recommended approach is to use private (or
+protected) keys like this:
+
+```cpp
+class VGC_UI_API ManagedObject : public core::Object {
+private:
+    VGC_OBJECT(ManagedObject, core::Object)
+
+    friend Manager;
+    struct PrivateKey {};
+
+    ManagedObject(CreateKey, PrivateKey) {
+        // ...
+    }
+
+    static ManagedObjectPtr create() {
+        return core::createObject<ManagedObject>(PrivateKey{});
+    }
+};
+
+struct Manager {
+    static ManagedObjectPtr createManagedObject() {
+        auto res = ManagedObject::create();
+        // ... (do some management such as registering the object, etc.)
+        return res
+    }
+};
+
 ```
 
 ## Templates
@@ -403,6 +439,61 @@ T int_cast(U value) {
     return static_cast<T>(value);
 }
 ```
+
+## Keyword Order
+
+Follow this [keyword order convention](https://quuxplusone.github.io/blog/2021/04/03/static-constexpr-whittling-knife/):
+
+```
+attributes-friendness-storage-constness-virtualness-explicitness-signedness-length-type
+```
+
+- attributes: `[[maybe_unused]]`, `[[nodiscard]]`, etc.
+- friendness: `friend`
+- storage: `extern`, `static`, `inline`, `thread_local`, `mutable`
+- constness: `const`, `constexpr`, `consteval`, `constinit`
+- virtualness: `virtual`
+- explicitness: `explicit`
+- signedness: `signed`, `unsigned`
+- length: `short`, `long`, `long long`
+- type: `int`, etc.
+
+The idea is that the "most important" qualifiers must be placed closer to the variable/function name.
+
+Examples:
+
+```cpp
+template<int dimension>
+class Foo {
+public:
+    static constexpr dimension = 1;
+    static constexpr createFoo();
+    constexpr explicit Foo(const Bar& bar);
+};
+
+void foo() {
+    static constexpr unsigned long int x = 10;
+}
+```
+
+Note that the keyword `static` has [three meanings](https://en.cppreference.com/w/cpp/keyword/static):
+
+- For namespace members: specifies static storage duration and internal linkage
+- For block-scope variables: specifies static storage duration and initialized once
+- For class members: specifies that it is not bound to a specific instance
+
+Only the first two meanings are about storage, so it would make sense, when
+used for the third meaning, to place the keywork `static` at the same level
+as "virtualness". Inded, for class methods, both `virtual` and `static` have
+the same level of importance and are definitely more important than `constexpr`
+since they affect the API.
+
+However, since the order `static constexpr` is in practice heavilly preferred
+by the community in template metaprogramming, and since it would be harder
+both for humans and machines (e.g., a Python script) to enforce consistent
+keyword order if it was context-dependent, our policy is to always use the
+order `static constexpr` even in situations where the opposite order would
+make more sense.
 
 ## Polymorphic Classes
 
