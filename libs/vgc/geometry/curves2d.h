@@ -20,6 +20,7 @@
 #include <vgc/core/array.h>
 #include <vgc/geometry/api.h>
 #include <vgc/geometry/curvecommand.h>
+#include <vgc/geometry/fillstyle.h>
 #include <vgc/geometry/strokestyle.h>
 #include <vgc/geometry/vec2d.h>
 #include <vgc/geometry/windingrule.h>
@@ -518,9 +519,9 @@ public:
         const Curves2dSampleParams& params) const;
 
     /// Fills this Curves2d, that is, triangulate the interior of the curves
-    /// interpreted as contours of a polygon, using the non-zero winding rule.
-    /// Subcurves which are not closed are ignored. The triangle data is
-    /// appended to the given DoubleArray in this form:
+    /// using the given fill style (e.g., with a given winding rule).
+    ///
+    /// The triangle data is appended to the given DoubleArray in this form:
     ///
     /// ```
     /// [x1, y1,     // First vertex of first triangle
@@ -536,15 +537,15 @@ public:
     ///
     void fill(
         core::DoubleArray& data,
-        const Curves2dSampleParams& params,
-        WindingRule windingRule = WindingRule::NonZero) const;
+        FillStyle fillStyle,
+        const Curves2dSampleParams& params) const;
 
     /// \overload
     ///
     void fill(
         core::FloatArray& data,
-        const Curves2dSampleParams& params,
-        WindingRule windingRule = WindingRule::NonZero) const;
+        FillStyle fillStyle,
+        const Curves2dSampleParams& params) const;
 
 private:
     friend Curves2dCommandRef;

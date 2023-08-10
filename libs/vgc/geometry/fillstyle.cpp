@@ -14,29 +14,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef VGC_GEOMETRY_WINDINGRULE_H
-#define VGC_GEOMETRY_WINDINGRULE_H
-
-#include <vgc/core/arithmetic.h>
-#include <vgc/geometry/api.h>
+#include <vgc/geometry/fillstyle.h>
 
 namespace vgc::geometry {
 
-/// \class vgc::geometry::WindingRule
-/// \brief Specifies which area of polygons must be considered filled in case of overlaps.
-///
-enum class WindingRule : UInt8 {
-    Odd,
-    NonZero,
-    Positive,
-    Negative,
-};
-
-/// Returns whether the given number satisfies the given winding rule.
-///
-VGC_GEOMETRY_API
-bool isWindingNumberSatisfyingRule(Int windingNumber, WindingRule rule);
+// nothing
 
 } // namespace vgc::geometry
-
-#endif // VGC_GEOMETRY_WINDINGRULE_H
