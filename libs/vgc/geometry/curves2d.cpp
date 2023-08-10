@@ -560,11 +560,11 @@ class FillVisitor {
 public:
     FillVisitor(
         core::Array<TFloat>& data,
-        WindingRule windingRule,
+        FillStyle fillStyle,
         const Curves2dSampleParams& params)
 
         : data_(data)
-        , windingRule_(windingRule)
+        , windingRule_(fillStyle.windingRule())
         , minSamples_(3) // see note above StrokeVisitor
         , maxSamples_(params.maxSamplesPerSegment())
         , keepPredicate_(params.minDistance(), params.maxAngle()) {
@@ -720,19 +720,19 @@ void Curves2d::stroke(
 
 void Curves2d::fill(
     core::DoubleArray& data,
-    const Curves2dSampleParams& params,
-    WindingRule windingRule) const {
+    FillStyle fillStyle,
+    const Curves2dSampleParams& params) const {
 
-    FillVisitor<double> visitor(data, windingRule, params);
+    FillVisitor<double> visitor(data, fillStyle, params);
     visit_(*this, visitor);
 }
 
 void Curves2d::fill(
     core::FloatArray& data,
-    const Curves2dSampleParams& params,
-    WindingRule windingRule) const {
+    FillStyle fillStyle,
+    const Curves2dSampleParams& params) const {
 
-    FillVisitor<float> visitor(data, windingRule, params);
+    FillVisitor<float> visitor(data, fillStyle, params);
     visit_(*this, visitor);
 }
 

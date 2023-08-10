@@ -17,6 +17,7 @@ vgc_add_library(geometry
         curve.h
         curvecommand.h
         curves2d.h
+        fillstyle.h
         logcategories.h
         mat.h
         mat2d.h
@@ -50,6 +51,7 @@ vgc_add_library(geometry
         curve.cpp
         curves2d.cpp
         curvecommand.cpp
+        fillstyle.cpp
         logcategories.cpp
         mat2d.cpp
         mat2f.cpp

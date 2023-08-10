@@ -195,7 +195,7 @@ void appendFillTriangles(
     // Convert to triangles
     Batch& batch = getOrCreateBatch(batches, *colorSpec);
     Int oldLength = batch.vertices.length();
-    path.curves().fill(batch.vertices, params);
+    path.curves().fill(batch.vertices, path.fillStyle(), params);
     applyTransform(batch, path, oldLength);
 }
 

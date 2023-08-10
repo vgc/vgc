@@ -21,6 +21,7 @@
 
 #include <vgc/core/color.h>
 #include <vgc/geometry/curves2d.h>
+#include <vgc/geometry/fillstyle.h>
 #include <vgc/geometry/mat3d.h>
 #include <vgc/geometry/rect2d.h>
 #include <vgc/geometry/strokestyle.h>
@@ -122,6 +123,23 @@ private:
     core::Color color_ = {0, 0, 0, 0}; // transparent
 };
 
+/// \enum vgc::graphics::SvgFillRule
+/// \brief Specifies the winding rule to use for filling SVG shapes
+///
+enum class SvgFillRule : UInt8 {
+
+    /// The filled area consists of sub-areas whose winding number is non-zero.
+    ///
+    NonZero,
+
+    /// The filled area consists of sub-areas whose winding number is odd.
+    ///
+    EvenOdd
+};
+
+VGC_GRAPHICS_API
+VGC_DECLARE_ENUM(SvgFillRule)
+
 /// \enum vgc::graphics::SvgStrokeLineCap
 /// \brief Specifies the style of SVG stroke caps
 ///
@@ -205,6 +223,12 @@ public:
         return fill_;
     }
 
+    /// Returns the resolved `FillStyle` of the path.
+    ///
+    const geometry::FillStyle& fillStyle() const {
+        return fillStyle_;
+    }
+
     /// Returns the resolved `stroke` attribute of the path.
     ///
     const SvgPaint& stroke() const {
@@ -240,7 +264,10 @@ private:
 
     geometry::Curves2d curves_;
     geometry::Mat3d transform_;
+
     SvgPaint fill_ = {};
+    geometry::FillStyle fillStyle_;
+
     SvgPaint stroke_ = {};
     double strokeWidth_ = 0;
     geometry::StrokeStyle strokeStyle_;

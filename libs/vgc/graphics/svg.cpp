@@ -25,6 +25,11 @@
 namespace vgc::graphics {
 
 VGC_DEFINE_ENUM( //
+    SvgFillRule,
+    (NonZero, "NonZero"),
+    (EvenOdd, "EvenOdd"))
+
+VGC_DEFINE_ENUM( //
     SvgStrokeLineCap,
     (Butt, "Butt"),
     (Round, "Round"),
@@ -1075,8 +1080,54 @@ SvgPaint parsePaint(std::string_view s) {
     }
 }
 
+template<typename ParseFunction>
+auto invalidValueFallback(
+    std::string_view property,
+    std::string_view value,
+    std::string_view fallback,
+    ParseFunction parseFunction) ->
+    typename core::CallableTraits<ParseFunction>::ReturnType {
+
+    VGC_WARNING(
+        LogVgcGraphicsSvg,
+        "Invalid {}: '{}'. Falling back to '{}'.",
+        property,
+        value,
+        fallback);
+
+    return parseFunction(fallback);
+}
+
+// https://www.w3.org/TR/SVG11/painting.html#FillRuleProperty
+SvgFillRule parseFillRule(std::string_view s) {
+    std::string_view property = "fill-rule";
+    std::string_view fallback = "nonzero";
+    s = core::trimmed(s);
+    if (s == "nonzero") {
+        return SvgFillRule::NonZero;
+    }
+    else if (s == "evenodd") {
+        return SvgFillRule::EvenOdd;
+    }
+    else {
+        return invalidValueFallback(property, s, fallback, &parseFillRule);
+    }
+}
+
+geometry::WindingRule toVgc(SvgFillRule rule) {
+    switch (rule) {
+    case SvgFillRule::NonZero:
+        return geometry::WindingRule::NonZero;
+    case SvgFillRule::EvenOdd:
+        return geometry::WindingRule::Odd;
+    }
+    return geometry::WindingRule::NonZero;
+}
+
 // https://www.w3.org/TR/SVG11/painting.html#StrokeLinecapProperty
 SvgStrokeLineCap parseStrokeLineCap(std::string_view s) {
+    std::string_view property = "stroke-linecap";
+    std::string_view fallback = "butt";
     s = core::trimmed(s);
     if (s == "butt") {
         return SvgStrokeLineCap::Butt;
@@ -1088,11 +1139,7 @@ SvgStrokeLineCap parseStrokeLineCap(std::string_view s) {
         return SvgStrokeLineCap::Square;
     }
     else {
-        VGC_WARNING(
-            LogVgcGraphicsSvg,
-            "Unknown stroke-linecap: '{}'. Falling back to 'butt'.",
-            s);
-        return SvgStrokeLineCap::Butt;
+        return invalidValueFallback(property, s, fallback, &parseStrokeLineCap);
     }
 }
 
@@ -1110,6 +1157,8 @@ geometry::StrokeCap toVgc(SvgStrokeLineCap cap) {
 
 // https://www.w3.org/TR/SVG11/painting.html#StrokeLinejoinProperty
 SvgStrokeLineJoin parseStrokeLineJoin(std::string_view s) {
+    std::string_view property = "stroke-linejoin";
+    std::string_view fallback = "miter";
     s = core::trimmed(s);
     if (s == "bevel") {
         return SvgStrokeLineJoin::Bevel;
@@ -1121,11 +1170,7 @@ SvgStrokeLineJoin parseStrokeLineJoin(std::string_view s) {
         return SvgStrokeLineJoin::Miter;
     }
     else {
-        VGC_WARNING(
-            LogVgcGraphicsSvg,
-            "Unknown stroke-linejoin: '{}'. Falling back to 'miter'.",
-            s);
-        return SvgStrokeLineJoin::Miter;
+        return invalidValueFallback(property, s, fallback, &parseStrokeLineJoin);
     }
 }
 
@@ -1153,10 +1198,14 @@ public:
     // already factored in the alpha channel of the public
     // variables `fill` and `stroke` below. Also, strokeWidth
     // is set to zero if stroke.hasColor = false.
+
+    // Fill
     SvgPaint fill = core::colors::black;
+    SvgFillRule fillRule = SvgFillRule::NonZero;
+
+    // Stroke
     SvgPaint stroke = {}; // none
     double strokeWidth = 1.0;
-
     SvgStrokeLineCap strokeLineCap = SvgStrokeLineCap::Butt;
     SvgStrokeLineJoin strokeLineJoin = SvgStrokeLineJoin::Miter;
     double strokeMiterLimit = 4.0;
@@ -1270,6 +1319,22 @@ void SvgPresentationAttributes::applyChildStyle(const core::XmlStreamReader& xml
         style = parseStyleAttribute(*s);
     }
 
+    // Fill (color)
+    if (std::optional<SvgPaint> p = getPaint(xml, style, "fill")) {
+        fill_ = *p;
+    }
+
+    // Fill rule
+    if (std::optional<SvgFillRule> x =
+            getStyleValue(xml, style, "fill-rule", &parseFillRule)) {
+        fillRule = *x;
+    }
+
+    // Stroke (color)
+    if (std::optional<SvgPaint> p = getPaint(xml, style, "stroke")) {
+        stroke_ = *p;
+    }
+
     // Stroke width
     // https://www.w3.org/TR/SVG11/painting.html#StrokeWidthProperty
     // > A zero value causes no stroke to be painted. A negative value is an error.
@@ -1310,16 +1375,6 @@ void SvgPresentationAttributes::applyChildStyle(const core::XmlStreamReader& xml
         else {
             strokeMiterLimit = *x;
         }
-    }
-
-    // Fill (color)
-    if (std::optional<SvgPaint> p = getPaint(xml, style, "fill")) {
-        fill_ = *p;
-    }
-
-    // Stroke (color)
-    if (std::optional<SvgPaint> p = getPaint(xml, style, "stroke")) {
-        stroke_ = *p;
     }
 
     // Fill opacity
@@ -1600,6 +1655,7 @@ public:
         res.curves_ = pathToCurves2d(commands);
         res.transform_ = ctm;
         res.fill_ = pa.fill;
+        res.fillStyle_ = geometry::FillStyle(toVgc(pa.fillRule));
         res.stroke_ = pa.stroke;
         res.strokeWidth_ = pa.strokeWidth;
         res.strokeStyle_ = geometry::StrokeStyle(
