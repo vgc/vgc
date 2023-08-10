@@ -7,3 +7,4 @@ CMakeLists.txt.user*
 CMakeSettings.json
 __pycache__
 /*.patch
+/cpp.hint
