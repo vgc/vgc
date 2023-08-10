@@ -329,9 +329,6 @@ void preparePathForUpdate(const Path& path, const Node* workingNode) {
     else {
         path.targetInternalId_ = {};
     }
-
-    VGC_DEBUG_TMP(
-        "preparePathForUpdate: {} {}", path.baseInternalId_, path.targetInternalId_);
 }
 
 void updatePath(Path& path, const Node* workingNode, const PathUpdateData& data) {
@@ -352,7 +349,6 @@ void updatePath(Path& path, const Node* workingNode, const PathUpdateData& data)
     }
     auto it = copiedElements.find(targetIid);
     if (it != copiedElements.end()) {
-        VGC_DEBUG_TMP("updatePath[{}]: {}->{}", Element::cast(const_cast<Node*>(workingNode))->internalId(), targetIid, it->second);
         targetIid = it->second;
         update = true;
     }
@@ -368,9 +364,6 @@ void updatePath(Path& path, const Node* workingNode, const PathUpdateData& data)
             newPath.appendAttributePath(path);
             path = std::move(newPath);
         }
-    }
-    else {
-        VGC_DEBUG_TMP("updatePath[{}]: no need", Element::cast(const_cast<Node*>(workingNode))->internalId());
     }
 }
 
