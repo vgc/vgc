@@ -107,14 +107,12 @@ struct PySeqElementCompLess {
 
 template<typename T>
 bool operator<(const Array<T>& a, py::sequence s) {
-    using SeqElement = decltype(*s.begin());
     return std::lexicographical_compare(
         a.begin(), a.end(), s.begin(), s.end(), PySeqElementCompLess<T>());
 };
 
 template<typename T>
 bool operator<(py::sequence s, const Array<T>& a) {
-    using SeqElement = decltype(*s.begin());
     return std::lexicographical_compare(
         s.begin(), s.end(), a.begin(), a.end(), PySeqElementCompLess<T>());
 };
