@@ -81,4 +81,4 @@ private:
 
 } // namespace vgc::geometry
 
-#endif
+#endif // VGC_GEOMETRY_FILLSTYLE_H
