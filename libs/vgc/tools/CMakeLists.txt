@@ -8,6 +8,7 @@ vgc_add_library(tools
     CPP_HEADER_FILES
         api.h
         colorpalette.h
+        copypaste.h
         logcategories.h
         paintbucket.h
         sculpt.h
@@ -19,6 +20,7 @@ vgc_add_library(tools
 
     CPP_SOURCE_FILES
         colorpalette.cpp
+        copypaste.cpp
         logcategories.cpp
         paintbucket.cpp
         sculpt.cpp

@@ -290,6 +290,19 @@ public:
     ///
     core::Array<core::Id> unglue(core::Span<core::Id> elementIds);
 
+    /// Copies the elements of ids `elementIds` in the form
+    /// of a new document. This document can be used as argument
+    /// to paste().
+    ///
+    /// The resulting document does not follow the schema.
+    ///
+    dom::DocumentPtr copy(core::Span<core::Id> elementIds);
+
+    /// Pastes the elements of the given `document` in this
+    /// workspace's document.
+    ///
+    void paste(dom::DocumentPtr document);
+
     /// This signal is emitted whenever the workspace changes, either
     /// as a result of the DOM changing, or the topological complex
     /// changing.

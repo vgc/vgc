@@ -20,6 +20,7 @@
 
 #include <vgc/core/array.h>
 #include <vgc/core/colors.h>
+#include <vgc/dom/detail/facecycles.h>
 #include <vgc/dom/path.h>
 #include <vgc/geometry/vec2d.h>
 
@@ -120,7 +121,7 @@ const Schema& schema() {
         }},
         { "face", "f", {
             {"color", core::colors::black},
-            {"cycles", std::string()},
+            {"cycles", detail::DomFaceCycles()},
         }},
         { "user", {
             // No attributes

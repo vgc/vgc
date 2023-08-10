@@ -27,7 +27,9 @@
 #include <vgc/core/array.h>
 #include <vgc/core/color.h>
 #include <vgc/core/enum.h>
+#include <vgc/core/exceptions.h>
 #include <vgc/core/format.h>
+#include <vgc/core/parse.h>
 #include <vgc/core/sharedconst.h>
 #include <vgc/core/stringid.h>
 #include <vgc/dom/api.h>
@@ -36,7 +38,11 @@
 
 namespace vgc::dom {
 
+VGC_DECLARE_OBJECT(Element);
 class Value;
+
+using StreamReader = core::StringReader;
+using StreamWriter = core::StringWriter;
 
 /// \enum vgc::dom::ValueType
 /// \brief Specifies the type of an attribute Value
@@ -112,6 +118,7 @@ enum class ValueType {
     Path,
     NoneOrPath,
     PathArray,
+    Custom,
     VGC_ENUM_ENDMAX
 };
 VGC_DOM_API
@@ -168,6 +175,146 @@ public:
 
 namespace detail {
 
+class CustomValueHolder;
+
+}
+
+using FormatterBufferCtx = fmt::buffer_context<char>;
+using FormatterBufferIterator = decltype(std::declval<FormatterBufferCtx>().out());
+
+class PathUpdateData {
+public:
+    PathUpdateData() = default;
+
+    const std::unordered_map<core::Id, core::Id>& copiedElements() const {
+        return copiedElements_;
+    }
+
+    void addCopiedElement(core::Id oldInternalId, core::Id newInternalId) {
+        copiedElements_[oldInternalId] = newInternalId;
+    }
+
+    const core::Array<core::Id>& absolutePathChangedElements() const {
+        return absolutePathChangedElements_;
+    }
+
+    void addAbsolutePathChangedElement(core::Id internalId) {
+        if (!absolutePathChangedElements_.contains(internalId)) {
+            absolutePathChangedElements_.append(internalId);
+        }
+    }
+
+private:
+    std::unordered_map<core::Id, core::Id> copiedElements_;
+    core::Array<core::Id> absolutePathChangedElements_;
+};
+
+class VGC_DOM_API CustomValue {
+public:
+    virtual ~CustomValue() = default;
+
+    std::unique_ptr<CustomValue> clone(bool move = false) const {
+        return clone_(move);
+    }
+
+    bool compareEqual(const CustomValue* rhs) const {
+        return compareEqual_(rhs);
+    }
+    bool compareLess(const CustomValue* rhs) const {
+        return compareLess_(rhs);
+    }
+
+    void read(StreamReader& in) {
+        read_(in);
+    }
+    void write(StreamWriter& out) const {
+        write_(out);
+    }
+
+    FormatterBufferIterator format(FormatterBufferCtx& ctx) const {
+        return format_(ctx);
+    }
+
+protected:
+    explicit CustomValue(bool hasPaths) noexcept
+        : hasPaths_(hasPaths) {
+    }
+
+    friend detail::CustomValueHolder;
+    friend Value;
+
+    // must be called before doing any rename or hierarchical moves in the dom.
+    virtual void preparePathsForUpdate_(const Element* owner) const = 0;
+    virtual void updatePaths_(const Element* owner, const PathUpdateData& data) = 0;
+
+    virtual std::unique_ptr<CustomValue> clone_(bool move) const = 0;
+
+    virtual bool compareEqual_(const CustomValue* rhs) const = 0;
+    virtual bool compareLess_(const CustomValue* rhs) const = 0;
+
+    virtual void read_(StreamReader& in) = 0;
+    virtual void write_(StreamWriter& out) const = 0;
+
+    virtual FormatterBufferIterator format_(FormatterBufferCtx& ctx) const = 0;
+
+private:
+    const bool hasPaths_;
+};
+
+namespace detail {
+
+class VGC_DOM_API CustomValueHolder {
+public:
+    explicit CustomValueHolder(std::unique_ptr<CustomValue>&& uptr)
+        : uptr_(std::move(uptr)) {
+    }
+
+    CustomValueHolder(const CustomValueHolder& other)
+        : uptr_(other.uptr_->clone()) {
+    }
+
+    CustomValueHolder(CustomValueHolder&& other)
+        : uptr_(std::move(other.uptr_)) {
+    }
+
+    CustomValueHolder& operator=(const CustomValueHolder& other) {
+        uptr_ = other.uptr_->clone();
+        return *this;
+    }
+
+    CustomValueHolder& operator=(CustomValueHolder&& other) {
+        uptr_ = std::move(other.uptr_);
+        return *this;
+    }
+
+    CustomValue& operator*() const noexcept {
+        return *uptr_;
+    }
+
+    CustomValue* operator->() const noexcept {
+        return uptr_.get();
+    }
+
+    CustomValue* get() const {
+        return uptr_.get();
+    }
+
+    friend bool operator==(const CustomValueHolder& lhs, const CustomValueHolder& rhs) {
+        return lhs->compareEqual(rhs.get());
+    }
+
+    friend bool operator!=(const CustomValueHolder& lhs, const CustomValueHolder& rhs) {
+        return !lhs->compareEqual(rhs.get());
+    }
+
+    friend bool operator<(const CustomValueHolder& lhs, const CustomValueHolder& rhs) {
+        return lhs->compareLess(rhs.get());
+    }
+
+private:
+    std::unique_ptr<CustomValue> uptr_;
+};
+
 template<ValueType valueType>
 struct ValueTypeTraits {};
 
@@ -200,7 +347,8 @@ VGC_DOM_VALUETYPE_TYPE_(Vec2d,         geometry::Vec2d)
 VGC_DOM_VALUETYPE_TYPE_(Vec2dArray,    geometry::SharedConstVec2dArray)
 VGC_DOM_VALUETYPE_TYPE_(Path,          Path)
 VGC_DOM_VALUETYPE_TYPE_(NoneOrPath,    NoneOr<Path>)
-VGC_DOM_VALUETYPE_TYPE_(PathArray,     SharedConstPathArray)
+VGC_DOM_VALUETYPE_TYPE_(PathArray,     PathArray)
+VGC_DOM_VALUETYPE_TYPE_(Custom,        CustomValueHolder)
 // clang-format on
 #undef VGC_DOM_VALUETYPE_TYPE_
 
@@ -222,24 +370,23 @@ static_assert(std::is_move_constructible_v<ValueVariant>);
 static_assert(std::is_move_assignable_v<ValueVariant>);
 
 template<typename T, typename SFINAE = void>
-struct IsValidValueType : std::false_type {};
+struct IsValueVariantAlternative : std::false_type {};
 
 template<typename T>
-struct IsValidValueType<T, core::RequiresValid<typename ValueTypeTraitsFromType<T>::Type>>
-    : std::true_type {};
+struct IsValueVariantAlternative<
+    T,
+    core::RequiresValid<typename ValueTypeTraitsFromType<T>::Type>> : std::true_type {};
 
 template<typename T>
-inline constexpr bool isValidValueType = IsValidValueType<T>::value;
-
-template<typename T>
-using ValueMakeSharedConstIfValid =
-    std::conditional_t<isValidValueType<core::SharedConst<T>>, core::SharedConst<T>, T>;
+inline constexpr bool isValueVariantAlternative = IsValueVariantAlternative<T>::value;
 
 } // namespace detail
 
 template<typename T>
-inline constexpr bool isCompatibleValueType =
-    detail::isValidValueType<detail::ValueMakeSharedConstIfValid<T>>;
+inline constexpr bool isValueConstructibleFrom =
+    (detail::isValueVariantAlternative<T>                       //
+     || detail::isValueVariantAlternative<core::SharedConst<T>> //
+     || std::is_base_of_v<CustomValue, T>);
 
 /// \class vgc::dom::Value
 /// \brief Holds the value of an attribute
@@ -360,28 +507,34 @@ public:
         : var_(std::move(vec2dArray)) {
     }
 
-    /// Constructs a `Value` holding a `dom::Path`.
+    /// Constructs a `Value` holding a `Path`.
     ///
-    Value(dom::Path path)
+    Value(Path path)
         : var_(path) {
     }
 
-    /// Constructs a `Value` holding a `dom::NoneOr<dom::Path>`.
+    /// Constructs a `Value` holding a `NoneOr<Path>`.
     ///
-    Value(dom::NoneOr<dom::Path> noneOrPath)
+    Value(NoneOr<Path> noneOrPath)
         : var_(std::move(noneOrPath)) {
     }
 
-    /// Constructs a `Value` holding a shared const array of `dom::Path`.
+    /// Constructs a `Value` holding an array of `Path`.
     ///
-    Value(dom::PathArray pathArray)
-        : var_(std::in_place_type<dom::SharedConstPathArray>, std::move(pathArray)) {
+    Value(PathArray pathArray)
+        : var_(std::move(pathArray)) {
     }
 
-    /// Constructs a `Value` holding a shared const array of `dom::Path`.
+    /// Constructs a `Value` holding a clone of the given `customValue`.
     ///
-    Value(dom::SharedConstPathArray pathArray)
-        : var_(std::move(pathArray)) {
+    Value(const CustomValue& customValue) {
+        var_ = detail::CustomValueHolder(customValue.clone());
+    }
+
+    /// Constructs a `Value` holding a moved clone of the given `customValue`.
+    ///
+    Value(const CustomValue&& customValue) {
+        var_ = detail::CustomValueHolder(customValue.clone(true));
     }
 
     /// Returns the ValueType of this Value.
@@ -490,6 +643,12 @@ public:
         return std::get<core::SharedConstIntArray>(var_);
     }
 
+    /// Sets this `Value` to the given `intArray`.
+    ///
+    void set(core::IntArray intArray) {
+        emplace_(core::SharedConstIntArray(std::move(intArray)));
+    }
+
     /// Sets this `Value` to the given shared const `intArray`.
     ///
     void set(core::SharedConstIntArray intArray) {
@@ -514,6 +673,12 @@ public:
     ///
     const core::SharedConstDoubleArray& getDoubleArray() const {
         return std::get<core::SharedConstDoubleArray>(var_);
+    }
+
+    /// Sets this `Value` to the given `doubleArray`.
+    ///
+    void set(core::DoubleArray doubleArray) {
+        emplace_(core::SharedConstDoubleArray(std::move(doubleArray)));
     }
 
     /// Sets this `Value` to the given shared const `doubleArray`.
@@ -542,6 +707,12 @@ public:
         return std::get<core::SharedConstColorArray>(var_);
     }
 
+    /// Sets this `Value` to the given `colorArray`.
+    ///
+    void set(core::ColorArray colorArray) {
+        emplace_(core::SharedConstColorArray(std::move(colorArray)));
+    }
+
     /// Sets this `Value` to the given shared const `colorArray`.
     ///
     void set(core::SharedConstColorArray colorArray) {
@@ -568,49 +739,74 @@ public:
         return std::get<geometry::SharedConstVec2dArray>(var_);
     }
 
+    /// Sets this `Value` to the given `vec2dArray`.
+    ///
+    void set(geometry::Vec2dArray vec2dArray) {
+        emplace_(geometry::SharedConstVec2dArray(std::move(vec2dArray)));
+    }
+
     /// Sets this `Value` to the given shared const `vec2dArray`.
     ///
     void set(geometry::SharedConstVec2dArray vec2dArray) {
         emplace_(std::move(vec2dArray));
     }
 
-    /// Returns the `dom::Path` held by this `Value`.
+    /// Returns the `Path` held by this `Value`.
     /// The behavior is undefined if `type() != ValueType::Path`.
     ///
-    const dom::Path& getPath() const {
-        return std::get<dom::Path>(var_);
+    const Path& getPath() const {
+        return std::get<Path>(var_);
     }
 
     /// Sets this `Value` to the given `path`.
     ///
-    void set(dom::Path path) {
+    void set(Path path) {
         var_ = std::move(path);
     }
 
-    /// Returns the `dom::NoneOr<dom::Path>` held by this `Value`.
+    /// Returns the `NoneOr<Path>` held by this `Value`.
     /// The behavior is undefined if `type() != ValueType::NoneOrPath`.
     ///
-    const dom::NoneOr<dom::Path>& getNoneOrPath() const {
-        return std::get<dom::NoneOr<dom::Path>>(var_);
+    const NoneOr<Path>& getNoneOrPath() const {
+        return std::get<NoneOr<Path>>(var_);
     }
 
     /// Sets this `Value` to the given `path`.
     ///
-    void set(dom::NoneOr<dom::Path> noneOrPath) {
+    void set(NoneOr<Path> noneOrPath) {
         var_ = std::move(noneOrPath);
     }
 
-    /// Returns the `dom::SharedConstPathArray` held by this `Value`.
+    /// Returns the `SharedConstPathArray` held by this `Value`.
     /// The behavior is undefined if `type() != ValueType::PathArray`.
     ///
-    const dom::SharedConstPathArray& getPathArray() const {
-        return std::get<dom::SharedConstPathArray>(var_);
+    const PathArray& getPathArray() const {
+        return std::get<PathArray>(var_);
     }
 
     /// Sets this `Value` to the given shared const `pathArray`.
     ///
-    void set(dom::SharedConstPathArray pathArray) {
+    void set(PathArray pathArray) {
         emplace_(std::move(pathArray));
+    }
+
+    /// Returns the `CustomValue*` held by this `Value`.
+    /// The behavior is undefined if `type() != ValueType::Custom`.
+    ///
+    const CustomValue* getCustomValuePtr() const {
+        return std::get<detail::CustomValueHolder>(var_).get();
+    }
+
+    /// Sets this `Value` to a clone of the given `customValue`.
+    ///
+    void set(const CustomValue& customValue) {
+        emplace_(detail::CustomValueHolder(customValue.clone()));
+    }
+
+    /// Sets this `Value` to a moved clone of the given `customValue`.
+    ///
+    void set(const CustomValue&& customValue) {
+        emplace_(detail::CustomValueHolder(customValue.clone(true)));
     }
 
     template<typename Visitor>
@@ -621,23 +817,54 @@ public:
     }
 
     /// Note: For a held value of type `SharedConst<U>`, both `has<SharedConst<U>>()`
-    /// and `has<U>()` return true.
+    /// and `has<U>()` return true. And for a held value of type `CustomType*`,
+    /// returns whether `dynamic_cast<T>(value) != nullptr`.
     ///
     template<typename T>
     constexpr bool has() const {
-        using Type = detail::ValueMakeSharedConstIfValid<std::decay_t<T>>;
-        static_assert(detail::isValidValueType<Type>);
-        return var_.index() == detail::ValueTypeTraitsFromType<Type>::index;
+        using U = std::decay_t<T>;
+        if constexpr (std::is_base_of_v<CustomValue, U>) {
+            if (type() == ValueType::Custom) {
+                return dynamic_cast<T>(std::get<detail::CustomValueHolder>(var_))
+                       != nullptr;
+            }
+            return false;
+        }
+        else if constexpr (detail::isValueVariantAlternative<core::SharedConst<U>>) {
+            return var_.index()
+                   == detail::ValueTypeTraitsFromType<core::SharedConst<U>>::index;
+        }
+        else {
+            static_assert(detail::isValueVariantAlternative<U>);
+            return var_.index() == detail::ValueTypeTraitsFromType<U>::index;
+        }
     }
 
     /// Note: For a held value of type `SharedConst<U>`, both `get<SharedConst<U>>()`
-    /// and `get<U>()` are defined and return `const T&`.
+    /// and `get<U>()` are defined and return `const U&`.
     ///
     template<typename T>
     const T& get() const {
-        using Type = detail::ValueMakeSharedConstIfValid<std::decay_t<T>>;
-        static_assert(detail::isValidValueType<Type>);
-        return std::get<Type>(var_);
+        using U = std::decay_t<T>;
+        if constexpr (detail::isValueVariantAlternative<core::SharedConst<U>>) {
+            return std::get<core::SharedConst<U>>(var_);
+        }
+        else if constexpr (std::is_base_of_v<CustomValue, U>) {
+            if (type() == ValueType::Custom) {
+                // assumes p is never null
+                CustomValue* p = std::get<detail::CustomValueHolder>(var_).get();
+                T* casted = dynamic_cast<T*>(p);
+                if (casted == nullptr) {
+                    throw std::bad_variant_access();
+                }
+                return *casted;
+            }
+            throw std::bad_variant_access();
+        }
+        else {
+            static_assert(detail::isValueVariantAlternative<U>);
+            return std::get<U>(var_);
+        }
     }
 
     friend constexpr bool operator==(const Value& a, const Value& b) noexcept {
@@ -666,14 +893,31 @@ public:
 
     template<typename T>
     friend constexpr bool operator==(const Value& a, const T& b) noexcept {
-        using Type = detail::ValueMakeSharedConstIfValid<std::decay_t<T>>;
-        return a.has<Type>() && a.get<Type>() == b;
+        using U = std::decay_t<T>;
+        if constexpr (detail::isValueVariantAlternative<U>) {
+            if (a.has<U>()) {
+                return a.get<U>() == b;
+            }
+        }
+        else if constexpr (detail::isValueVariantAlternative<core::SharedConst<U>>) {
+            if (a.has<core::SharedConst<U>>()) {
+                return a.get<core::SharedConst<U>>() == b;
+            }
+        }
+        else if constexpr (std::is_base_of_v<CustomValue, U>) {
+            if (type() == ValueType::Custom) {
+                // assumes p is never null
+                CustomValue* p = a.getCustomValuePtr();
+                // TODO: what about b == p ?
+                return p->compareEqual(&b);
+            }
+        }
+        return false;
     }
 
     template<typename T>
     friend constexpr bool operator==(const T& a, const Value& b) noexcept {
-        using Type = detail::ValueMakeSharedConstIfValid<std::decay_t<T>>;
-        return b.has<Type>() && a == b.get<Type>();
+        return (b == a);
     }
 
     template<typename T>
@@ -683,7 +927,7 @@ public:
 
     template<typename T>
     friend constexpr bool operator!=(const T& a, const Value& b) noexcept {
-        return !(a == b);
+        return !(b == a);
     }
 
 private:
@@ -693,10 +937,15 @@ private:
 
     template<typename T>
     void emplace_(T&& value) {
-        using Type = detail::ValueMakeSharedConstIfValid<std::decay_t<T>>;
-        static_assert(detail::isValidValueType<Type>);
-        var_.emplace<Type>(std::forward<T>(value));
+        using U = std::decay_t<T>;
+        static_assert(detail::isValueVariantAlternative<U>);
+        var_.emplace<U>(std::forward<T>(value));
     }
+
+    friend Element;
+
+    void preparePathsForUpdate_(const Element* owner) const;
+    void updatePaths_(const Element* owner, const PathUpdateData& data);
 
     detail::ValueVariant var_;
 };
@@ -713,6 +962,9 @@ void write(OStream& out, const Value& v) {
         else if constexpr (std::is_same_v<T, InvalidValue>) {
             write(out, "Invalid");
         }
+        else if constexpr (std::is_same_v<T, detail::CustomValueHolder>) {
+            arg->write(out);
+        }
         else {
             write(out, arg);
         }
@@ -723,11 +975,10 @@ void write(OStream& out, const Value& v) {
 /// the given string does not represent a `Value` of the given ValueType.
 ///
 VGC_DOM_API
-Value parseValue(const std::string& s, ValueType t);
+void parseValue(Value& value, const std::string& s);
 
 template<typename OStream, typename T>
 void write(OStream& out, const NoneOr<T>& v) {
-    fmt::memory_buffer b;
     if (v.has_value()) {
         write(out, v.value());
     }
@@ -772,6 +1023,21 @@ void readTo(NoneOr<T>& v, IStream& in) {
     readTo(v.emplace(), in);
 }
 
+template<typename OStream>
+void write(OStream& out, const detail::CustomValueHolder& v) {
+    if constexpr (std::is_same_v<OStream, StreamWriter>) {
+        v->write(out);
+    }
+    else {
+        std::string tmp;
+        v->write(StreamWriter(tmp));
+        write(out, tmp);
+    }
+}
+
+VGC_DOM_API
+void readTo(detail::CustomValueHolder& v, StreamReader& in);
+
 } // namespace vgc::dom
 
 template<typename T>
@@ -804,18 +1070,18 @@ struct fmt::formatter<vgc::dom::InvalidValue> : fmt::formatter<std::string_view>
 };
 
 template<>
-struct fmt::formatter<vgc::dom::Value> {
-    constexpr auto parse(format_parse_context& ctx) {
-        auto it = ctx.begin(), end = ctx.end();
-        if (it != end && *it != '}') {
-            throw format_error("invalid format");
-        }
-        return it;
-    }
+struct fmt::formatter<vgc::dom::Value> : fmt::formatter<double> {
     template<typename FormatContext>
     auto format(const vgc::dom::Value& v, FormatContext& ctx) -> decltype(ctx.out()) {
         return v.visit([&](auto&& arg) {
-            return fmt::format_to(ctx.out(), "{}", std::forward<decltype(arg)>(arg));
+            using T = std::decay_t<decltype(arg)>;
+            if constexpr (std::is_same_v<T, vgc::dom::detail::CustomValueHolder>) {
+                return arg->format(ctx);
+            }
+            else {
+                return vgc::core::formatTo(
+                    ctx.out(), "{}", std::forward<decltype(arg)>(arg));
+            }
         });
     }
 };

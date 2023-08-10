@@ -18,6 +18,7 @@
 
 #include <array>
 
+#include <vgc/dom/document.h>
 #include <vgc/dom/element.h>
 #include <vgc/dom/logcategories.h>
 #include <vgc/dom/strings.h>
@@ -31,19 +32,19 @@ const core::StringId nameAttrName("name");
 } // namespace
 
 PathSegment::PathSegment(
-    core::StringId name,
+    core::StringId nameOrId,
     PathSegmentType type,
     PathSegmentFlags flags,
     Int arrayIndex) noexcept
 
-    : name_(name)
+    : nameOrId_(nameOrId)
     , type_(type)
     , flags_(flags)
     , arrayIndex_(arrayIndex) {
 }
 
 bool PathSegment::operator==(const PathSegment& other) const noexcept {
-    if (name_ != other.name_ || type_ != other.type_ || flags_ != other.flags_) {
+    if (nameOrId_ != other.nameOrId_ || type_ != other.type_ || flags_ != other.flags_) {
         return false;
     }
     if (flags_.has(PathSegmentFlag::Indexed) && arrayIndex_ != other.arrayIndex_) {
@@ -56,7 +57,7 @@ bool PathSegment::operator<(const PathSegment& other) const noexcept {
     if (type_ != other.type_) {
         return core::toUnderlying(type_) < core::toUnderlying(other.type_);
     }
-    int c = name_.compare(other.name());
+    int c = nameOrId_.compare(other.nameOrId_);
     if (c != 0) {
         return c < 0;
     }
@@ -114,8 +115,7 @@ Path::Path(std::string_view path) {
         ++i;
         j = findReservedCharOrEnd(path, i);
         if (j == i) {
-            VGC_ERROR(
-                LogVgcDom, "Empty unique name (starts with '#') in path \"{}\".", path);
+            VGC_ERROR(LogVgcDom, "Empty id (starts with '#') in path \"{}\".", path);
             segments_.clear();
             return;
         }
@@ -145,7 +145,7 @@ Path::Path(std::string_view path) {
         ++i;
         j = findReservedCharOrEnd(path, i);
         if (j == i) {
-            VGC_ERROR(LogVgcDom, "Empty element name in path \"{}\".", path);
+            VGC_ERROR(LogVgcDom, "Empty element id in path \"{}\".", path);
             segments_.clear();
             return;
         }
@@ -239,7 +239,16 @@ Path Path::getElementRelativeAttributePath() const {
     return ret;
 }
 
-void Path::writeTo_(fmt::memory_buffer& out) const {
+void Path::appendAttributePath(const Path& other) {
+    for (auto it = other.segments_.rbegin(); it != other.segments_.rend(); ++it) {
+        if (it->type() != PathSegmentType::Attribute) {
+            segments_.extend(it.base(), other.segments_.cend());
+            break;
+        }
+    }
+}
+
+void Path::write_(fmt::memory_buffer& out) const {
     if (segments_.isEmpty()) {
         out.push_back('.');
         return;
@@ -258,7 +267,7 @@ void Path::writeTo_(fmt::memory_buffer& out) const {
     }
     else if (type0 == PathSegmentType::Id) {
         out.push_back('#');
-        out.append(seg0.name().string());
+        out.append(seg0.nameOrId().string());
         skipSlash = false;
         ++i;
     }
@@ -274,11 +283,11 @@ void Path::writeTo_(fmt::memory_buffer& out) const {
             else {
                 out.push_back('/');
             }
-            out.append(seg.name().string());
+            out.append(seg.nameOrId().string());
         }
         else if (type == PathSegmentType::Attribute) {
             out.push_back('.');
-            out.append(seg.name().string());
+            out.append(seg.nameOrId().string());
             if (seg.isIndexed()) {
                 out.push_back('[');
                 // XXX better way ?
@@ -296,5 +305,75 @@ void Path::writeTo_(fmt::memory_buffer& out) const {
         }
     }
 }
+
+namespace detail {
+
+// TODO: With a dependency system all internal paths should always be in sync
+//       outside of dom operations. This would remove the need for this function.
+void preparePathForUpdate(const Path& path, const Node* workingNode) {
+    Document* document = workingNode->document();
+    core::StringId baseId = path.baseId();
+    if (!baseId.isEmpty()) {
+        Element* baseElement = document->elementFromId(baseId);
+        if (baseElement) {
+            path.baseInternalId_ = baseElement->internalId();
+        }
+        else {
+            path.baseInternalId_ = {};
+        }
+    }
+    Element* targetElement = Document::elementFromPath(path, workingNode);
+    if (targetElement) {
+        path.targetInternalId_ = targetElement->internalId();
+    }
+    else {
+        path.targetInternalId_ = {};
+    }
+
+    VGC_DEBUG_TMP(
+        "preparePathForUpdate: {} {}", path.baseInternalId_, path.targetInternalId_);
+}
+
+void updatePath(Path& path, const Node* workingNode, const PathUpdateData& data) {
+    Document* document = workingNode->document();
+    core::Id baseIid = path.baseInternalId_;
+    core::Id targetIid = path.targetInternalId_;
+    const auto& copiedElements = data.copiedElements();
+    bool update = false;
+    if (baseIid) {
+        auto it = copiedElements.find(baseIid);
+        if (it != copiedElements.end()) {
+            baseIid = it->second;
+            update = true;
+        }
+        else if (data.absolutePathChangedElements().contains(baseIid)) {
+            update = true;
+        }
+    }
+    auto it = copiedElements.find(targetIid);
+    if (it != copiedElements.end()) {
+        VGC_DEBUG_TMP("updatePath[{}]: {}->{}", Element::cast(const_cast<Node*>(workingNode))->internalId(), targetIid, it->second);
+        targetIid = it->second;
+        update = true;
+    }
+    else if (data.absolutePathChangedElements().contains(targetIid)) {
+        update = true;
+    }
+    if (update) {
+        // always id based for now
+        // TODO: support relative and absolute paths
+        Element* element = document->elementFromInternalId(targetIid);
+        if (element) {
+            Path newPath = element->getPathFromId();
+            newPath.appendAttributePath(path);
+            path = std::move(newPath);
+        }
+    }
+    else {
+        VGC_DEBUG_TMP("updatePath[{}]: no need", Element::cast(const_cast<Node*>(workingNode))->internalId());
+    }
+}
+
+} // namespace detail
 
 } // namespace vgc::dom

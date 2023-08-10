@@ -55,7 +55,7 @@ void wrap_object(py::module& m) {
         .def("nextSiblingObject", &This::nextSiblingObject)
         .def("childObjects", &This::childObjects)
         .def("numChildObjects", &This::numChildObjects)
-        .def("isDescendantObject", &This::isDescendantObject)
+        .def("isDescendantObjectOf", &This::isDescendantObjectOf)
         .def("dumpObjectTree", &This::dumpObjectTree);
 
     // test objects

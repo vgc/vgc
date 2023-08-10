@@ -81,7 +81,7 @@ WidgetPtr Widget::create() {
 namespace {
 
 bool checkCanReparent_(Widget* parent, Widget* child, bool simulate = false) {
-    if (parent && parent->isDescendantObject(child)) {
+    if (parent && parent->isDescendantObjectOf(child)) {
         if (simulate) {
             return false;
         }

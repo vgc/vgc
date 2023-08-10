@@ -948,14 +948,52 @@ core::Array<core::Id> Workspace::unglue(core::Span<core::Id> elementIds) {
 
     sync();
 
-    sync();
-
     // Close history group
     if (undoGroup) {
         undoGroup->close();
     }
 
     return result;
+}
+
+dom::DocumentPtr Workspace::copy(core::Span<core::Id> elementIds) {
+
+    core::Array<Element*> elements;
+    for (core::Id id : elementIds) {
+        Element* element = find(id);
+        if (!element || elements.contains(element)) {
+            continue;
+        }
+        elements.append(element);
+    }
+
+    // get full dependency chain
+    core::Array<Element*> elementsToCopy;
+    while (!elements.isEmpty()) {
+        Element* element = elements.pop();
+        elementsToCopy.append(element);
+        for (Element* dependency : element->dependencies()) {
+            if (!elements.contains(dependency) && !elementsToCopy.contains(dependency)) {
+                elements.append(dependency);
+            }
+        }
+    }
+
+    core::Array<dom::Node*> domNodesToCopy;
+    domNodesToCopy.reserve(elementsToCopy.length());
+    for (Element* e : elementsToCopy) {
+        dom::Element* domElement = e->domElement();
+        // TODO: what to do if domElement is null?
+        domNodesToCopy.append(domElement);
+    }
+
+    return dom::Document::copy(domNodesToCopy);
+}
+
+void Workspace::paste(dom::DocumentPtr document) {
+    // TODO: use active group element
+    document_->paste(document, document_->rootElement());
+    sync();
 }
 
 std::unordered_map<core::StringId, Workspace::ElementCreator>&

@@ -822,7 +822,7 @@ public:
     /// object. Returns true in the special case where `this == other`. Returns
     /// false if `other` is `nullptr`.
     ///
-    bool isDescendantObject(const Object* other) const;
+    bool isDescendantObjectOf(const Object* other) const;
 
     /// Prints this object tree to the standard output, typically for debugging
     /// purposes.

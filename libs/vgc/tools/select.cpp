@@ -16,15 +16,16 @@
 
 #include <vgc/tools/select.h>
 
+#include <set>
+
 #include <vgc/graphics/detail/shapeutil.h>
 #include <vgc/graphics/strings.h>
+#include <vgc/tools/copypaste.h>
 #include <vgc/tools/topology.h>
 #include <vgc/ui/boolsettingedit.h>
 #include <vgc/ui/column.h>
 #include <vgc/vacomplex/detail/operationsimpl.h>
 #include <vgc/workspace/colors.h>
-
-#include <set>
 
 namespace vgc::tools {
 
@@ -58,6 +59,12 @@ Select::Select(CreateKey key)
 
     ui::Action* unglueAction = createTriggerAction(unglueCommandId());
     unglueAction->triggered().connect(onUnglueSlot_());
+
+    ui::Action* copyAction = createTriggerAction(copyCommandId());
+    copyAction->triggered().connect(onCopySlot_());
+
+    ui::Action* pasteAction = createTriggerAction(pasteCommandId());
+    pasteAction->triggered().connect(onPasteSlot_());
 }
 
 SelectPtr Select::create() {
@@ -913,6 +920,60 @@ void Select::onUnglue_() {
 
     core::Array<core::Id> ungluedIds = workspace->unglue(selection);
     canvas->setSelection(std::move(ungluedIds));
+
+    // Close history group
+    if (undoGroup) {
+        undoGroup->close();
+    }
+}
+
+namespace {
+
+dom::DocumentPtr copyDoc_;
+
+} // namespace
+
+void Select::onCopy_() {
+    canvas::Canvas* canvas = this->canvas();
+    if (!canvas) {
+        return;
+    }
+
+    workspace::Workspace* workspace = canvas->workspace();
+    if (!workspace) {
+        return;
+    }
+
+    core::Array<core::Id> selection = canvas->selection();
+    if (selection.isEmpty()) {
+        return;
+    }
+
+    copyDoc_ = workspace->copy(selection);
+}
+
+void Select::onPaste_() {
+    canvas::Canvas* canvas = this->canvas();
+    if (!canvas) {
+        return;
+    }
+
+    workspace::Workspace* workspace = canvas->workspace();
+    if (!workspace) {
+        return;
+    }
+
+    // Open history group
+    core::UndoGroup* undoGroup = nullptr;
+    core::History* history = workspace->history();
+    if (history) {
+        undoGroup = history->createUndoGroup(pasteCommandId());
+    }
+
+    core::Array<core::Id> selection = canvas->selection();
+    workspace->paste(copyDoc_);
+
+    // TODO: get new selection
 
     // Close history group
     if (undoGroup) {

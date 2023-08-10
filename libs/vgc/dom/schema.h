@@ -41,7 +41,7 @@ class VGC_DOM_API AttributeSpec {
 public:
     /// Creates a built-in attribute.
     ///
-    template<typename T, VGC_REQUIRES(dom::isCompatibleValueType<T>)>
+    template<typename T, VGC_REQUIRES(dom::isValueConstructibleFrom<T>)>
     AttributeSpec(std::string_view name, const T& defaultValue)
         : name_(core::StringId(name))
         , defaultValue_(defaultValue)
