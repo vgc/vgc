@@ -30,6 +30,8 @@ void wrap_stopwatch(py::module& m);
 void wrap_stringid(py::module& m);
 void wrap_xml(py::module& m);
 
+void wrap_arrays_detail(py::module& m);
+
 PYBIND11_MODULE(core, m) {
     wrap_arithmetic(m);
     wrap_arrays(m);
@@ -45,5 +47,6 @@ PYBIND11_MODULE(core, m) {
     wrap_stringid(m);
     wrap_xml(m);
 
-    //py::module dm = m.def_submodule("detail");
+    py::module dm = m.def_submodule("detail");
+    wrap_arrays_detail(dm);
 }
