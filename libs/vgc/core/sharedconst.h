@@ -64,13 +64,13 @@ public:
         : value_(std::make_shared<const T>(std::forward<Args>(args)...)) {
     }
 
-    operator const T&() const& noexcept {
+    operator const T&() const noexcept {
         return *value_;
     }
 
     /// Returns a const reference to the shared value.
     ///
-    const T& get() const& noexcept {
+    const T& get() const noexcept {
         return *value_;
     }
 
