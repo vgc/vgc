@@ -101,7 +101,7 @@ void defineSharedConstCommonMethods(Class<core::SharedConst<ValueType>>& c) {
 
     using T = core::SharedConst<ValueType>;
 
-    detail::wrapSharedConstImplicitCast<ValueType>();
+    //detail::wrapSharedConstImplicitCast<ValueType>();
 
     //py::implicitly_convertible<ValueType, T>();
 
