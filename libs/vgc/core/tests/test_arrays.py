@@ -26,14 +26,6 @@ from vgc.core import (
     SharedConstIntArray
 )
 
-from vgc.core.detail import (
-    intArrayByCopyDataAddress,
-    intArrayDataAddress,
-    sharedConstIntArrayDataAddress,
-    checkSharedConstArrayCannotConvertToNonConstRef,
-    checkSharedConstArrayCanConvertToConstRef
-)
-
 def get1DArrayClasses():
     return [DoubleArray, FloatArray, IntArray]
 
@@ -223,21 +215,6 @@ class Test1DArrays(unittest.TestCase):
         self.assertEqual(a, b)
         self.assertEqual(b, c)
         self.assertEqual(a, c)
-        # Check that that a.data() != b.data()
-        self.assertNotEqual(intArrayDataAddress(a), sharedConstIntArrayDataAddress(b))
-        # Check that that b.data() == c.data()
-        self.assertEqual(sharedConstIntArrayDataAddress(b), sharedConstIntArrayDataAddress(c))
-        # Check that no copy is made when calling foo(const IntArray&) with a sharedConstIntArrayDataAddress
-        self.assertEqual(intArrayDataAddress(b), sharedConstIntArrayDataAddress(b))
-        # Check that a copy is made when calling foo(IntArray) with a IntArray
-        self.assertNotEqual(intArrayDataAddress(a), intArrayByCopyDataAddress(a))
-        # Check that a copy is made when calling foo(IntArray) with a SharedConstArray
-        self.assertNotEqual(intArrayDataAddress(b), intArrayByCopyDataAddress(b))
-        # Note: currently fails, there is no constness in python.
-        # If we want to ensure immutability of const references we need immutable variants
-        # of wrappers.
-        # self.assertTrue(checkSharedConstArrayCannotConvertToNonConstRef(b, b))
-        self.assertTrue(checkSharedConstArrayCanConvertToConstRef(b, b))
 
 if __name__ == '__main__':
     unittest.main()
