@@ -29,12 +29,17 @@ namespace vgc::core::wraps {
 
 namespace detail {
 
+// Note: it currently allows conversion to Array&.
+// If we want to ensure immutability of const references we need immutable variants
+// of wrappers.
+// See https://github.com/pybind/pybind11/issues/717
+//
 template<typename ValueType>
 void wrapSharedConstImplicitCast() {
 
     using SharedConstType = SharedConst<ValueType>;
     using SharedConstTypeCaster = py::detail::make_caster<SharedConstType>;
-    using OutputCaster = py::detail::make_caster<ValueType>;
+    using OutputCaster = py::detail::make_caster<const ValueType>;
 
     struct scopedFlag {
         bool& flag;
