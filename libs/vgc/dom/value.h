@@ -907,7 +907,7 @@ public:
         else if constexpr (std::is_base_of_v<CustomValue, U>) {
             if (a.type() == ValueType::Custom) {
                 // assumes p is never null
-                CustomValue* p = a.getCustomValuePtr();
+                const CustomValue* p = a.getCustomValuePtr();
                 // TODO: what about b == p ?
                 return p->compareEqual(&b);
             }
@@ -1030,7 +1030,8 @@ void write(OStream& out, const detail::CustomValueHolder& v) {
     }
     else {
         std::string tmp;
-        v->write(StreamWriter(tmp));
+        StreamWriter sw(tmp);
+        v->write(sw);
         write(out, tmp);
     }
 }
