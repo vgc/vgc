@@ -247,7 +247,7 @@ public:
     template<typename OStream>
     friend void write(OStream& out, const Path& path) {
         if constexpr (std::is_same_v<OStream, fmt::memory_buffer>) {
-            path->write_(out);
+            path.write_(out);
         }
         else {
             fmt::memory_buffer b;

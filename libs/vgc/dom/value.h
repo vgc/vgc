@@ -905,7 +905,7 @@ public:
             }
         }
         else if constexpr (std::is_base_of_v<CustomValue, U>) {
-            if (type() == ValueType::Custom) {
+            if (a.type() == ValueType::Custom) {
                 // assumes p is never null
                 CustomValue* p = a.getCustomValuePtr();
                 // TODO: what about b == p ?
