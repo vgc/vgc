@@ -22,8 +22,6 @@ from vgc.core import IntArray, SharedConstIntArray
 from vgc.dom import Value
 
 from vgc.core.detail import (
-    intArrayByCopyDataAddress,
-    intArrayDataAddress,
     sharedConstIntArrayDataAddress
 )
 
