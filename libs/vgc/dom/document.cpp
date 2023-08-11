@@ -541,11 +541,13 @@ void Document::onElementIdChanged_(Element* element, core::StringId oldId) {
     // iterating on all elements.
     if (!oldId.isEmpty()) {
         for (const auto& [eId, e] : elementByInternalIdMap_) {
+            std::ignore = eId;
             detail::prepareInternalPathsForUpdate(e);
         }
         PathUpdateData pud;
         pud.addAbsolutePathChangedElement(element->internalId());
         for (const auto& [eId, e] : elementByInternalIdMap_) {
+            std::ignore = eId;
             detail::updateInternalPaths(e, pud);
         }
     }
