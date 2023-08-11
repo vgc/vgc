@@ -21,6 +21,7 @@
 #include <vgc/core/stringid.h>
 #include <vgc/dom/api.h>
 #include <vgc/dom/attribute.h>
+#include <vgc/dom/document.h>
 #include <vgc/dom/node.h>
 #include <vgc/dom/path.h>
 #include <vgc/dom/strings.h>
@@ -144,6 +145,8 @@ private:
     VGC_OBJECT(Element, Node)
 
 protected:
+    struct PrivateKey {};
+
     /// Constructs a parent-less `Element` with the given `tagName`, owned by the
     /// given `document`. This constructor is an implementation detail only
     /// available to derived classes. In order to create an `Element`, please use
@@ -153,27 +156,26 @@ protected:
     /// ElementPtr element = Element::create(parent, tagName);
     /// ```
     ///
-    Element(CreateKey, Document* document, core::StringId tagName);
+    Element(CreateKey, PrivateKey, Document* document, core::StringId tagName);
 
     void onDestroyed() override;
 
 public:
-    /// Creates an `Element` with the given `tagName` as the root element of the
-    /// given `parent` `Document`. Returns a valid non-null `Element`.
+    /// Creates an `Element` with the given `tagName` as the root element of
+    /// the given `parent` `Document`. Returns a valid non-null `Element`.
     ///
     /// A `SecondRootElementError` exception is raised if the given `parent`
     /// `Document` already has a root element.
     ///
-    static Element*
-    create(Document* parent, core::StringId tagName, Element* nextSibling = nullptr);
+    static Element* create(Document* parent, core::StringId tagName);
     /// \overload
-    static Element*
-    create(Document* parent, std::string_view tagName, Element* nextSibling = nullptr) {
-        return create(parent, core::StringId(tagName), nextSibling);
+    static Element* create(Document* parent, std::string_view tagName) {
+        return create(parent, core::StringId(tagName));
     }
 
-    /// Creates an `Element` with the given `tagName` as the last child of the
-    /// given `parent` `Element`. Always returns a valid non-null `Element`.
+    /// Creates an `Element` with the given `tagName` as a child of the
+    /// given `parent` `Element` before `nextSibling` if it is non-null.
+    /// Returns a valid non-null `Element`.
     ///
     static Element*
     create(Element* parent, core::StringId tagName, Element* nextSibling = nullptr);
@@ -182,6 +184,21 @@ public:
     create(Element* parent, std::string_view tagName, Element* nextSibling = nullptr) {
         return create(parent, core::StringId(tagName), nextSibling);
     }
+
+    /// Creates a copy of the given `source` `Element` as the root element of
+    /// the given `parent` `Document`. Returns a valid non-null `Element`.
+    ///
+    /// A `SecondRootElementError` exception is raised if the given `parent`
+    /// `Document` already has a root element.
+    ///
+    static Element* createCopy(Document* parent, const Element* source);
+
+    /// Creates a copy of the given `source` `Element` as a child of the
+    /// given `parent` `Element` before `nextSibling` if it is non-null.
+    /// Returns a valid non-null `Element`.
+    ///
+    static Element*
+    createCopy(Element* parent, const Element* source, Element* nextSibling = nullptr);
 
     /// Casts the given `node` to an `Element`. Returns `nullptr` if `node` is
     /// `nullptr` or if `node->nodeType() != NodeType::Element`.
@@ -288,6 +305,8 @@ public:
     /// Sets the value of the given attribute.
     ///
     void setAttribute(core::StringId name, const Value& value);
+    /// \overload
+    void setAttribute(core::StringId name, Value&& value);
 
     /// Clears the authored value of the given attribute.
     ///
@@ -410,11 +429,27 @@ private:
     // Unique internal Id of this element.
     core::Id internalId_;
 
-    // Helper method for create(). Assumes that a new Element can indeed be
-    // appended to parent.
+    // Helper methods for create().
+    // Assumes that a new Element can indeed be appended to parent.
     //
+    static Element* create_(Node* parent, core::StringId tagName, Element* nextSibling);
+
     static Element*
-    create_(Node* parent, core::StringId tagName, Element* nextSibling = nullptr);
+    createCopy_(Node* parent, const Element* source, Element* nextSibling);
+
+    friend Document;
+
+    static Element* createCopy_(
+        Node* parent,
+        const Element* source,
+        Element* nextSibling,
+        PathUpdateData& pud);
+
+    static Element* createCopyRec_(
+        Node* parent,
+        const Element* source,
+        Element* nextSibling,
+        PathUpdateData& pud);
 
     // Authored attributes of this element. Note: copying AuthoredAttribute
     // instances is expensive, but fortunately there shouldn't be any copy with
@@ -464,6 +499,13 @@ private:
         core::StringId name,
         const Value& oldValue,
         const Value& newValue);
+
+    friend void detail::prepareInternalPathsForUpdate(const Node* workingNode);
+    void prepareInternalPathsForUpdate_() const;
+
+    friend void
+    detail::updateInternalPaths(const Node* workingNode, const PathUpdateData& data);
+    void updateInternalPaths_(const PathUpdateData& data);
 };
 
 inline NamedElementIterator& NamedElementIterator::operator++() {

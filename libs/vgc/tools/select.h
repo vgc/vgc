@@ -144,6 +144,12 @@ private:
 
     void onUnglue_();
     VGC_SLOT(onUnglueSlot_, onUnglue_)
+
+    void onCopy_();
+    VGC_SLOT(onCopySlot_, onCopy_)
+
+    void onPaste_();
+    VGC_SLOT(onPasteSlot_, onPaste_)
 };
 
 } // namespace vgc::tools

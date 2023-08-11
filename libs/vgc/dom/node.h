@@ -19,14 +19,18 @@
 
 #include <vgc/core/format.h>
 #include <vgc/core/object.h>
+#include <vgc/core/span.h>
 #include <vgc/dom/api.h>
 #include <vgc/dom/exceptions.h>
 #include <vgc/dom/value.h>
 
 namespace vgc::dom {
 
-VGC_DECLARE_OBJECT(Element);
+VGC_DECLARE_OBJECT(Node);
+VGC_DECLARE_OBJECT(Document);
+
 class Path;
+class PathUpdateData;
 
 /// \enum vgc::dom::NodeType
 /// \brief Specifies the type of a Node.
@@ -73,11 +77,10 @@ void write(OStream& out, NodeType type) {
     }
 }
 
-VGC_DECLARE_OBJECT(Node);
-VGC_DECLARE_OBJECT(Document);
-
 namespace detail {
+
 void destroyNode(Node* node);
+
 } // namespace detail
 
 /// \class vgc::dom::Node
@@ -297,8 +300,8 @@ public:
     /// Returns whether this node is a descendant of the given \p other node.
     /// Returns true if this node is equal to the \p other node.
     ///
-    bool isDescendant(const Node* other) const {
-        return isDescendantObject(other);
+    bool isDescendantOf(const Node* other) const {
+        return isDescendantObjectOf(other);
     }
 
     /// Returns the `Element` that the given `path` refers to.
@@ -326,16 +329,107 @@ public:
     // XXX Later, consider returning a ValuePtr or ValueRef.
     Value getValueFromPath(const Path& path, core::StringId tagNameFilter = {}) const;
 
+    /// Returns the depth of this node in its tree.
+    ///
+    /// The document is at a depth of 0.
+    ///
+    Int depth() const;
+
+    /// Returns the list of ancestors from root to parent node.
+    ///
+    core::Array<Node*> ancestors() const;
+
+    /// Returns the lowest common ancestor of this node and an `other` node.
+    ///
+    /// This function considers each node to be an ancestor of itself.
+    ///
+    /// Returns nullptr if the nodes are in different documents.
+    ///
+    Node* lowestCommonAncestorWith(Node* other) const;
+
 private:
     // Operations
     friend class RemoveNodeOperation;
     friend class MoveNodeOperation;
+    friend Document;
 
     Document* document_;
     NodeType nodeType_;
+    Int temporaryIndex_;
 
     friend void detail::destroyNode(Node* node);
 };
+
+namespace detail {
+
+void computeNodeAncestors(const Node* node, core::Array<Node*>& out);
+
+/// Returns the number of consecutive matching pairs of elements from
+/// the start of both arrays.
+///
+template<typename T>
+Int countStartMatches(core::Array<T>& a, const core::Array<T>& b) {
+    Int i = 0;
+    Int n = (std::min)(a.length(), b.length());
+    for (; i < n; ++i) {
+        if (a.getUnchecked(i) != b.getUnchecked(i)) {
+            break;
+        }
+    }
+    return i;
+}
+
+} // namespace detail
+
+/// Returns the lowest common ancestor of the given `nodes`.
+///
+/// This function considers each node to be an ancestor of itself.
+///
+/// Returns nullptr if any two nodes are in different documents.
+///
+VGC_DOM_API
+Node* lowestCommonAncestor(core::ConstSpan<Node*> nodes);
+
+class VGC_DOM_API NodeRelatives {
+public:
+    NodeRelatives() = default;
+
+    NodeRelatives(Node* node)
+        : NodeRelatives(node->parent(), node->previousSibling(), node->nextSibling()) {
+    }
+
+    NodeRelatives(Node* parent, Node* previousSibling, Node* nextSibling)
+        : parent_(parent)
+        , previousSibling_(previousSibling)
+        , nextSibling_(nextSibling) {
+    }
+
+    Node* parent() const {
+        return parent_;
+    }
+
+    Node* previousSibling() const {
+        return previousSibling_;
+    }
+
+    Node* nextSibling() const {
+        return nextSibling_;
+    }
+
+private:
+    friend Document;
+
+    Node* parent_ = nullptr;
+    Node* previousSibling_ = nullptr;
+    Node* nextSibling_ = nullptr;
+};
+
+namespace detail {
+
+void prepareInternalPathsForUpdate(const Node* workingNode);
+void updateInternalPaths(const Node* workingNode, const PathUpdateData& data);
+
+} // namespace detail
 
 } // namespace vgc::dom
 

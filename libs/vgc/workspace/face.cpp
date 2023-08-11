@@ -17,6 +17,7 @@
 #include <vgc/workspace/face.h>
 
 #include <vgc/core/span.h>
+#include <vgc/dom/detail/facecycles.h>
 #include <vgc/geometry/triangle2f.h>
 #include <vgc/workspace/colors.h>
 #include <vgc/workspace/edge.h>
@@ -24,72 +25,9 @@
 
 namespace vgc::workspace {
 
-namespace {
-
-struct DomCycleComponent {
-    dom::Path path = {};
-    bool direction = true;
-
-    template<typename OStream>
-    friend void write(OStream& out, const DomCycleComponent& component) {
-        write(out, component.path);
-        if (!component.direction) {
-            write(out, '*');
-        }
-    }
-};
-
-template<typename IStream>
-void readTo(DomCycleComponent& component, IStream& in) {
-    readTo(component.path, in);
-    char c = -1;
-    if (in.get(c)) {
-        if (c == '*') {
-            component.direction = false;
-        }
-        else {
-            in.unget();
-        }
-    }
-}
-
-struct DomCycle {
-    core::Array<DomCycleComponent> components;
-
-    template<typename OStream>
-    friend void write(OStream& out, const DomCycle& cycle) {
-        bool first = true;
-        for (const DomCycleComponent& component : cycle.components) {
-            if (!first) {
-                write(out, ' ');
-            }
-            else {
-                first = false;
-            }
-            write(out, component);
-        }
-    }
-};
-
-template<typename IStream>
-void readTo(DomCycle& cycle, IStream& in) {
-    char c = -1;
-    bool got = false;
-    readTo(cycle.components.emplaceLast(), in);
-    core::skipWhitespaceCharacters(in);
-    got = bool(in.get(c));
-    while (got && dom::isValidPathFirstChar(c)) {
-        in.unget();
-        readTo(cycle.components.emplaceLast(), in);
-        core::skipWhitespaceCharacters(in);
-        got = bool(in.get(c));
-    }
-    if (got) {
-        in.unget();
-    }
-}
-
-} // namespace
+using DomCycleComponent = dom::detail::DomCycleComponent;
+using DomCycle = dom::detail::DomCycle;
+using DomFaceCycles = dom::detail::DomFaceCycles;
 
 bool VacFaceCellFrameData::isSelectableAt(
     const geometry::Vec2d& position,
@@ -305,11 +243,8 @@ ElementStatus VacKeyFace::updateFromDom_(Workspace* workspace) {
 
     // always update dependencies first
 
-    std::string_view cyclesDescription = domElement->getAttribute(ds::cycles).getString();
-
-    core::Array<DomCycle> domCycles;
-    core::StringReader cyclesDescriptionReader(cyclesDescription);
-    readTo(domCycles, cyclesDescriptionReader);
+    const DomFaceCycles& domCycles =
+        domElement->getAttribute(ds::cycles).get<dom::detail::DomFaceCycles>();
 
     bool hasBoundaryChanged = false;
     bool hasUnresolvedDependency = false;
@@ -320,15 +255,14 @@ ElementStatus VacKeyFace::updateFromDom_(Workspace* workspace) {
     core::Array<vacomplex::KeyCycle> cycles = {};
     auto cyclesElementsSequenceIterator = cyclesElementsSequence_.begin();
     core::Array<Element*> newCyclesElementsSequence;
-    for (auto& domCycle : domCycles) {
-        core::Array<DomCycleComponent>& components = domCycle.components;
+    for (const auto& domCycle : domCycles) {
         bool first = true;
         bool isSteiner = false;
         bool isNotHalfedgeCycle = false;
         core::Array<vacomplex::KeyHalfedge> halfedges;
-        for (auto& component : components) {
+        for (auto& component : domCycle) {
             dom::Element* domComponentElement =
-                domElement->getElementFromPath(component.path);
+                domElement->getElementFromPath(component.path());
             Element* componentElement = workspace->find(domComponentElement);
             if (cyclesElementsSequenceIterator == cyclesElementsSequence_.end()) {
                 hasBoundaryChanged = true;
@@ -370,7 +304,7 @@ ElementStatus VacKeyFace::updateFromDom_(Workspace* workspace) {
                 workspace->updateElementFromDom(keElement);
                 vacomplex::KeyEdge* ke = keElement->vacKeyEdgeNode();
                 if (ke && !keElement->hasError()) {
-                    halfedges.emplaceLast(ke, component.direction);
+                    halfedges.emplaceLast(ke, component.direction());
                 }
                 else {
                     hasErrorInDependency = true;
@@ -515,12 +449,11 @@ void VacKeyFace::updateFromVac_(vacomplex::NodeModificationFlags flags) {
 
     bool boundaryChanged = flags.has(NodeModificationFlag::BoundaryChanged);
     if (boundaryChanged) {
-
         // rebuild cycles attribute
         core::Array<DomCycle> domCycles;
         cyclesElementsSequence_.clear();
         for (auto& cycle : kf->cycles()) {
-            DomCycle& domCycle = domCycles.emplaceLast();
+            core::Array<DomCycleComponent> components;
             vacomplex::KeyVertex* steinerVertex = cycle.steinerVertex();
             if (steinerVertex) {
                 // XXX what if a pointer is nullptr here ?
@@ -528,8 +461,7 @@ void VacKeyFace::updateFromVac_(vacomplex::NodeModificationFlags flags) {
                 cyclesElementsSequence_.emplaceLast(componentElement);
                 dom::Element* domComponentElement = componentElement->domElement();
                 // XXX maybe it had a relative path before ?
-                domCycle.components.emplaceLast(
-                    DomCycleComponent{domComponentElement->getPathFromId(), false});
+                components.emplaceLast(domComponentElement->getPathFromId(), false);
             }
             else {
                 for (auto& he : cycle.halfedges()) {
@@ -538,17 +470,16 @@ void VacKeyFace::updateFromVac_(vacomplex::NodeModificationFlags flags) {
                     cyclesElementsSequence_.emplaceLast(componentElement);
                     dom::Element* domComponentElement = componentElement->domElement();
                     // XXX maybe it had a relative path before ?
-                    domCycle.components.emplaceLast(DomCycleComponent{
-                        domComponentElement->getPathFromId(), he.direction()});
+                    components.emplaceLast(
+                        domComponentElement->getPathFromId(), he.direction());
                 }
             }
             // add cycle separator in the form of a null element
             cyclesElementsSequence_.emplaceLast(nullptr);
+            domCycles.emplaceLast(std::move(components));
         }
-        std::string cyclesDescription;
-        core::StringWriter cyclesDescriptionWriter(cyclesDescription);
-        write(cyclesDescriptionWriter, domCycles);
-        domElement->setAttribute(ds::cycles, std::move(cyclesDescription));
+
+        domElement->setAttribute(ds::cycles, DomFaceCycles(std::move(domCycles)));
 
         // Update dependencies_
         core::Array<Element*> newDependencies;

@@ -34,7 +34,12 @@ CreateElementOperation::~CreateElementOperation() {
 }
 
 void CreateElementOperation::do_() {
-    redo_();
+    Document* document = element_->document();
+    setUndoneDocumentVersionId(document->versionId_);
+    // operation implemented in Element create methods.
+    document->onCreateNode_(element_.get());
+    document->versionId_ = doneDocumentVersionId();
+    keepAlive_ = false;
 }
 
 void CreateElementOperation::undo_() {
@@ -109,6 +114,7 @@ void SetAttributeOperation::do_() {
         isNew_ = false;
         oldValue_ = authored->value();
         index_ = std::distance(&element_->authoredAttributes_[0], authored);
+        // TODO: deal with id conflict.
         authored->setValue(newValue_);
     }
     else { // Otherwise, allocate a new AuthoredAttribute
@@ -117,8 +123,8 @@ void SetAttributeOperation::do_() {
         index_ = element_->authoredAttributes_.size();
         element_->authoredAttributes_.emplaceLast(name_, newValue_);
     }
-    document->onChangeAttribute_(element_, name_);
     element_->onAttributeChanged_(name_, oldValue_, newValue_);
+    document->onChangeAttribute_(element_, name_);
     document->versionId_ = doneDocumentVersionId();
 }
 
@@ -130,8 +136,8 @@ void SetAttributeOperation::undo_() {
     else {
         element_->authoredAttributes_[index_].setValue(oldValue_);
     }
-    document->onChangeAttribute_(element_, name_);
     element_->onAttributeChanged_(name_, newValue_, oldValue_);
+    document->onChangeAttribute_(element_, name_);
     document->versionId_ = undoneDocumentVersionId();
 }
 

@@ -48,7 +48,7 @@ public:
     /// Converting constructor from `T`.
     ///
     template<typename U, VGC_REQUIRES(std::is_same_v<U, std::decay_t<T>>)>
-    SharedConst(U&& value)
+    explicit SharedConst(U&& value)
         : value_(std::make_shared<const T>(std::forward<U>(value))) {
     }
 
@@ -76,7 +76,7 @@ public:
 
     /// Returns the underlying shared pointer.
     ///
-    const std::shared_ptr<const T>& getShared() const noexcept {
+    std::shared_ptr<const T> getShared() const noexcept {
         return value_;
     }
 

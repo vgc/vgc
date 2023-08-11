@@ -25,48 +25,133 @@
 
 namespace vgc::dom {
 
-Element::Element(CreateKey key, Document* document, core::StringId tagName)
+Element::Element(CreateKey key, PrivateKey, Document* document, core::StringId tagName)
     : Node(key, ProtectedKey{}, document, NodeType::Element)
     , tagName_(tagName)
     , internalId_(core::genId()) {
+
+    document->elementByInternalIdMap_[internalId_] = this;
 }
 
 void Element::onDestroyed() {
-    Document* doc = document();
-    if (id_ != core::StringId()) {
-        doc->elementByIdMap_.erase(id_);
-        id_ = core::StringId();
-    }
-    doc->elementByInternalIdMap_.erase(internalId_);
+    document()->onElementAboutToBeDestroyed_(this);
+    id_ = core::StringId();
     SuperClass::onDestroyed();
 }
 
 /* static */
 Element* Element::create_(Node* parent, core::StringId tagName, Element* nextSibling) {
     Document* doc = parent->document();
-    ElementPtr e = core::createObject<Element>(doc, tagName);
 
-    if (!doc->elementByInternalIdMap_.try_emplace(e->internalId(), e.get()).second) {
-        throw LogicError("Internal id collision error.");
-    }
-
+    ElementPtr e = core::createObject<Element>(PrivateKey{}, doc, tagName);
+    e->insertObjectToParent_(parent, nextSibling);
     core::History::do_<CreateElementOperation>(
         doc->history(), e.get(), parent, nextSibling);
+
     return e.get();
 }
 
 /* static */
-Element* Element::create(Document* parent, core::StringId tagName, Element* nextSibling) {
+Element* Element::createCopy_(Node* parent, const Element* source, Element* nextSibling) {
+
+    Document* srcDoc = source->document();
+    Document* tgtDoc = parent->document();
+
+    if (parent->isDescendantOf(source)) {
+        return nullptr;
+    }
+
+    srcDoc->preparePathsUpdateRec_(srcDoc);
+
+    PathUpdateData pud = {};
+    Element* result = createCopy_(parent, source, nextSibling, pud);
+
+    tgtDoc->updatePathsRec_(tgtDoc, pud);
+
+    return result;
+}
+
+/* static */
+Element* Element::createCopy_(
+    Node* parent,
+    const Element* source,
+    Element* nextSibling,
+    PathUpdateData& pud) {
+
+    Document* doc = parent->document();
+
+    Element* e = createCopyRec_(parent, source, nextSibling, pud);
+    core::History::do_<CreateElementOperation>(doc->history(), e, parent, nextSibling);
+
+    return e;
+}
+
+/* static */
+Element* Element::createCopyRec_(
+    Node* parent,
+    const Element* source,
+    Element* nextSibling,
+    PathUpdateData& pud) {
+
+    Document* doc = parent->document();
+
+    ElementPtr e = core::createObject<Element>(PrivateKey{}, doc, source->tagName_);
+    e->insertObjectToParent_(parent, nextSibling);
+    e->name_ = source->name_;
+    e->authoredAttributes_ = source->authoredAttributes_;
+
+    pud.addCopiedElement(source->internalId(), e->internalId());
+
+    core::StringId id = source->id_;
+    auto& elementByIdMap = parent->document()->elementByIdMap_;
+    if (elementByIdMap.try_emplace(id, e.get()).second) {
+        // TODO: implement Document::sanitizeNewId(id)
+        e->id_ = id;
+    }
+    else {
+        // resolve id conflict by not copying the id
+        e->authoredAttributes_.removeOneIf(
+            [](const AuthoredAttribute& attr) { return attr.name() == strings::id; });
+    }
+
+    for (Node* child : source->children()) {
+        // TODO: copy other things than Element too.
+        Element* childElement = Element::cast(child);
+        if (childElement) {
+            createCopyRec_(e.get(), childElement, nullptr, pud);
+        }
+    }
+
+    return e.get();
+}
+
+/* static */
+Element* Element::create(Document* parent, core::StringId tagName) {
     if (parent->rootElement()) {
         throw SecondRootElementError(parent);
     }
 
-    return create_(parent, tagName, nextSibling);
+    return create_(parent, tagName, nullptr);
 }
 
 /* static */
 Element* Element::create(Element* parent, core::StringId tagName, Element* nextSibling) {
     return create_(parent, tagName, nextSibling);
+}
+
+/* static */
+Element* Element::createCopy(Document* parent, const Element* source) {
+    if (parent->rootElement()) {
+        throw SecondRootElementError(parent);
+    }
+
+    return createCopy_(parent, source, nullptr);
+}
+
+/* static */
+Element*
+Element::createCopy(Element* parent, const Element* source, Element* nextSibling) {
+    return createCopy_(parent, source, nextSibling);
 }
 
 core::StringId Element::getOrCreateId() const {
@@ -77,10 +162,10 @@ core::StringId Element::getOrCreateId() const {
         if (elementSpec && elementSpec->defaultIdPrefix() != core::StringId()) {
             prefix = elementSpec->defaultIdPrefix();
         }
-        auto& elementByIdMap = document()->elementByIdMap_;
+        Document* doc = document();
         for (Int i = 0; i < core::IntMax; ++i) {
             core::StringId id = core::StringId(core::format("{}{}", prefix, i));
-            if (elementByIdMap.find(id) == elementByIdMap.end()) {
+            if (!doc->elementFromId(id)) {
                 Element* ncThis = const_cast<Element*>(this);
                 // This also registers id to the elementByIdMap.
                 ncThis->setAttribute(strings::id, id);
@@ -168,6 +253,11 @@ void Element::setAttribute(core::StringId name, const Value& value) {
     core::History::do_<SetAttributeOperation>(document()->history(), this, name, value);
 }
 
+void Element::setAttribute(core::StringId name, Value&& value) {
+    core::History::do_<SetAttributeOperation>(
+        document()->history(), this, name, std::move(value));
+}
+
 void Element::clearAttribute(core::StringId name) {
     if (AuthoredAttribute* authored = findAuthoredAttribute_(name)) {
         Int index = std::distance(&authoredAttributes_[0], authored);
@@ -192,19 +282,27 @@ void Element::onAttributeChanged_(
 
     if (name == strings::name) {
         name_ = newValue.hasValue() ? newValue.getStringId() : core::StringId();
+        document()->onElementNameChanged_(this);
     }
     else if (name == strings::id) {
-        auto& elementByIdMap = document()->elementByIdMap_;
-        if (id_ != core::StringId()) {
-            elementByIdMap.erase(id_);
-            id_ = core::StringId();
-        }
-        if (newValue.hasValue()) {
-            id_ = newValue.getStringId();
-            elementByIdMap[id_] = this;
-        }
+        // TODO: deal with conflicts
+        core::StringId oldId = id_;
+        id_ = newValue.hasValue() ? newValue.getStringId() : core::StringId();
+        document()->onElementIdChanged_(this, oldId);
     }
     attributeChanged().emit(name, oldValue, newValue);
+}
+
+void Element::prepareInternalPathsForUpdate_() const {
+    for (const AuthoredAttribute& attr : authoredAttributes_) {
+        attr.value().preparePathsForUpdate_(this);
+    }
+}
+
+void Element::updateInternalPaths_(const PathUpdateData& data) {
+    for (AuthoredAttribute& attr : authoredAttributes_) {
+        const_cast<Value&>(attr.value()).updatePaths_(this, data);
+    }
 }
 
 } // namespace vgc::dom

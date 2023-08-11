@@ -31,49 +31,12 @@
 #include <vgc/core/object.h>
 #include <vgc/core/stringid.h>
 #include <vgc/dom/api.h>
+#include <vgc/dom/document.h>
 #include <vgc/dom/element.h>
 #include <vgc/dom/node.h>
 #include <vgc/dom/value.h>
 
 namespace vgc::dom {
-
-VGC_DECLARE_OBJECT(Document);
-
-class Diff;
-
-class VGC_DOM_API NodeRelatives {
-public:
-    NodeRelatives() = default;
-
-    NodeRelatives(Node* node)
-        : NodeRelatives(node->parent(), node->previousSibling(), node->nextSibling()) {
-    }
-
-    NodeRelatives(Node* parent, Node* previousSibling, Node* nextSibling)
-        : parent_(parent)
-        , previousSibling_(previousSibling)
-        , nextSibling_(nextSibling) {
-    }
-
-    Node* parent() const {
-        return parent_;
-    }
-
-    Node* previousSibling() const {
-        return previousSibling_;
-    }
-
-    Node* nextSibling() const {
-        return nextSibling_;
-    }
-
-private:
-    friend Document;
-
-    Node* parent_ = nullptr;
-    Node* previousSibling_ = nullptr;
-    Node* nextSibling_ = nullptr;
-};
 
 class VGC_DOM_API Operation : public core::Operation {
 protected:
@@ -236,6 +199,10 @@ private:
     Int index_ = -1; // XXX would be difficult to keep this
                      // optimization when coalescing in finalize()..
     bool isNew_ = false;
+
+    // TODO: oldValue_ could be shared with previous setAttribute newValue_
+    //       of the same attribute.
+    //       Or should we store values as string here ?
     Value oldValue_;
     Value newValue_;
 };
@@ -275,67 +242,6 @@ private:
 
 using OperationIndex = UInt32;
 OperationIndex genOperationIndex();
-
-class VGC_DOM_API Diff {
-public:
-    const core::Array<Node*>& createdNodes() const {
-        return createdNodes_;
-    }
-
-    const core::Array<Node*>& removedNodes() const {
-        return removedNodes_;
-    }
-
-    const std::set<Node*>& reparentedNodes() const {
-        return reparentedNodes_;
-    }
-
-    const std::set<Node*>& childrenReorderedNodes() const {
-        return childrenReorderedNodes_;
-    }
-
-    const std::unordered_map<Element*, std::set<core::StringId>>&
-    modifiedElements() const {
-        return modifiedElements_;
-    }
-
-    bool isUndoOrRedo() const {
-        return isUndoOrRedo_;
-    }
-
-private:
-    friend Document;
-
-    // TODO: Use NodePtr to prevent dangling pointers when a reader
-    //       edits the DOM while processing the lists.
-    core::Array<Node*> createdNodes_;
-    core::Array<Node*> removedNodes_;
-    std::set<Node*> reparentedNodes_;
-    std::set<Node*> childrenReorderedNodes_;
-
-    std::unordered_map<Element*, std::set<core::StringId>> modifiedElements_;
-
-    bool isUndoOrRedo_ = false;
-
-    Diff() = default;
-
-    // it does not change isUndoOrRedo_ value.
-    void reset() {
-        createdNodes_.clear();
-        removedNodes_.clear();
-        reparentedNodes_.clear();
-        childrenReorderedNodes_.clear();
-        modifiedElements_.clear();
-    }
-
-    bool isEmpty() const {
-        return createdNodes_.empty()              //
-               && removedNodes_.empty()           //
-               && reparentedNodes_.empty()        //
-               && childrenReorderedNodes_.empty() //
-               && modifiedElements_.empty();
-    }
-};
 
 } // namespace vgc::dom
 

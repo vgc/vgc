@@ -16,6 +16,8 @@
 
 #include <vgc/dom/node.h>
 
+#include <algorithm>
+
 #include <vgc/core/assert.h>
 #include <vgc/core/logging.h>
 #include <vgc/core/object.h>
@@ -88,7 +90,7 @@ bool checkCanReparent_(
         }
     }
 
-    if (parent->isDescendantObject(child)) {
+    if (parent->isDescendantObjectOf(child)) {
         if (simulate) {
             return false;
         }
@@ -180,79 +182,124 @@ void Node::replace(Node* oldNode) {
 }
 
 Element* Node::getElementFromPath(const Path& path, core::StringId tagNameFilter) const {
-    Element* element = nullptr;
-    bool firstAttributeEncountered = false;
-    for (const PathSegment& seg : path.segments()) {
-        switch (seg.type()) {
-        case PathSegmentType::Root:
-            element = document()->rootElement();
-            break;
-        case PathSegmentType::Id:
-            // nullptr if not found, handled out of switch
-            element = document()->elementById(seg.name());
-            break;
-        case PathSegmentType::Element:
-            if (!element) {
-                element = Element::cast(const_cast<Node*>(this));
-            }
-            if (element) {
-                Element* childElement = element->firstChildElement();
-                while (childElement) {
-                    if (childElement->name() == seg.name()) {
-                        break;
-                    }
-                    childElement = childElement->nextSiblingElement();
-                }
-                element = childElement; // nullptr if not found, handled out of switch
-            }
-            break;
-        case PathSegmentType::Attribute:
-            if (!element) {
-                element = Element::cast(const_cast<Node*>(this));
-            }
-            firstAttributeEncountered = true;
-        }
-        // Break out of loop if there is an error or we reached the end of
-        // the "element part" of the path.
-        if (!element /* <- error */ || firstAttributeEncountered) {
-            break;
-        }
-    }
-    if (element && !tagNameFilter.isEmpty() && element->tagName() != tagNameFilter) {
-        VGC_WARNING(
-            LogVgcDom,
-            "Path `{}` resolved to an element `{}` but `{}` was expected.",
-            path,
-            element->tagName(),
-            tagNameFilter);
-        return nullptr;
-    }
-
-    return element;
+    return Document::elementFromPath(path, this, tagNameFilter);
 }
 
 Value Node::getValueFromPath(const Path& path, core::StringId tagNameFilter) const {
-    if (path.isAttributePath()) {
-        Element* element = getElementFromPath(path);
-        if (element) {
-            if (!tagNameFilter.isEmpty() && element->tagName() != tagNameFilter) {
-                VGC_WARNING(
-                    LogVgcDom,
-                    "Path `{}` resolved to an element `{}` but `{}` was expected.",
-                    path,
-                    element->tagName(),
-                    tagNameFilter);
-                return Value();
+    return Document::valueFromPath(path, this, tagNameFilter);
+}
+
+namespace detail {
+
+void computeNodeAncestors(const Node* node, core::Array<Node*>& out) {
+    out.clear();
+    Node* p = node->parent();
+    while (p) {
+        out.append(p);
+        p = p->parent();
+    }
+    std::reverse(out.begin(), out.end());
+}
+
+} // namespace detail
+
+Int Node::depth() const {
+    Int result = 0;
+    Node* p = parent();
+    while (p) {
+        ++result;
+        p = p->parent();
+    }
+    return result;
+}
+
+core::Array<Node*> Node::ancestors() const {
+    core::Array<Node*> result;
+    // Note: we hypothesize that a dom will generally have a depth that is less than 8.
+    // TODO: use small array.
+    result.reserve(8);
+    detail::computeNodeAncestors(this, result);
+    return result;
+}
+
+Node* Node::lowestCommonAncestorWith(Node* other) const {
+    core::Array<Node*> ancestors0 = this->ancestors();
+    ancestors0.append(const_cast<Node*>(this));
+    core::Array<Node*> ancestors1 = other->ancestors();
+    ancestors1.append(other);
+    Int n = detail::countStartMatches(ancestors0, ancestors1);
+    if (n == 0) {
+        return nullptr;
+    }
+    return ancestors0.getUnchecked(n - 1);
+}
+
+// TODO: implement test
+Node* lowestCommonAncestor(core::ConstSpan<Node*> nodes) {
+    if (nodes.length() == 0) {
+        return nullptr;
+    }
+    if (nodes.length() == 1) {
+        return nodes.getUnchecked(0)->parent();
+    }
+
+    const Node* node = nodes.getUnchecked(0);
+    core::Array<Node*> ancestors0 = nodes.getUnchecked(0)->ancestors();
+    ancestors0.append(const_cast<Node*>(node));
+
+    core::Array<Node*> ancestors1;
+    ancestors1.reserve(ancestors0.reservedLength());
+
+    for (Int i = 1; i < nodes.length(); ++i) {
+        node = nodes.getUnchecked(i);
+        detail::computeNodeAncestors(node, ancestors1);
+        ancestors1.append(const_cast<Node*>(node));
+        Int numCommon = detail::countStartMatches(ancestors0, ancestors1);
+        if (numCommon == 0) {
+            // node has different root
+            return nullptr;
+        }
+        ancestors0.resize(numCommon);
+    }
+
+    // at this point, there is at least 1 common ancestor
+    return ancestors0.last();
+}
+
+namespace detail {
+
+void prepareInternalPathsForUpdate(const Node* workingNode) {
+    Element* element = Element::cast(const_cast<Node*>(workingNode));
+    if (element) {
+        element->prepareInternalPathsForUpdate_();
+    }
+    else {
+        Document* doc = Document::cast(const_cast<Node*>(workingNode));
+        if (doc) {
+            element = doc->rootElement();
+            if (element) {
+                element->prepareInternalPathsForUpdate_();
             }
-            const PathSegment& seg = path.segments().last();
-            Value value = element->getAttribute(seg.name());
-            if (value.isValid() && seg.isIndexed()) {
-                value = value.getItemWrapped(seg.arrayIndex());
-            }
-            return value;
         }
     }
-    return Value();
 }
+
+void updateInternalPaths(const Node* workingNode, const PathUpdateData& data) {
+    Element* element = Element::cast(const_cast<Node*>(workingNode));
+    if (element) {
+        element->updateInternalPaths_(data);
+    }
+    else {
+        Document* doc = Document::cast(const_cast<Node*>(workingNode));
+        if (doc) {
+            element = doc->rootElement();
+            if (element) {
+                element->updateInternalPaths_(data);
+            }
+        }
+    }
+}
+
+} // namespace detail
 
 } // namespace vgc::dom

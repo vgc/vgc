@@ -133,7 +133,7 @@ void dumpObjectTree_(const Object* obj, std::string& out, std::string& prefix) {
 
 } // namespace
 
-bool Object::isDescendantObject(const Object* other) const {
+bool Object::isDescendantObjectOf(const Object* other) const {
     // Fast path when other is nullptr
     if (!other) {
         return false;

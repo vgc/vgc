@@ -295,11 +295,10 @@ protected:
 private:
     Workspace* workspace_;
 
-    // uniquely identifies an element
-    // if vacNode_ != nullptr then vacNode_->id() == id_.
+    // Uniquely identifies an element.
     core::Id id_ = -1;
 
-    // this pointer is not safe to use when tree is not synced with dom
+    // This pointer is not safe to use when tree is not synced with dom.
     dom::Element* domElement_ = nullptr;
 
     ElementFlags flags_;

@@ -1,4 +1,4 @@
-// Copyright 2022 The VGC Developers
+// Copyright 2023 The VGC Developers
 // See the COPYRIGHT file at the top-level directory of this distribution
 // and at https://github.com/vgc/vgc/blob/master/COPYRIGHT
 //
@@ -14,21 +14,23 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef VGC_CORE_ID_H
-#define VGC_CORE_ID_H
+#ifndef VGC_TOOLS_COPYPASTE_H
+#define VGC_TOOLS_COPYPASTE_H
 
-#include <vgc/core/api.h>
-#include <vgc/core/arithmetic.h>
+#include <vgc/tools/api.h>
+#include <vgc/ui/command.h>
 
-namespace vgc::core {
+namespace vgc::tools {
 
-using Id = Int64;
+VGC_TOOLS_API
+core::StringId copyCommandId();
 
-/// Returns a new unique id.
-/// This function never returns 0, thus it can be used as invalid id.
-///
-VGC_CORE_API Id genId();
+VGC_TOOLS_API
+core::StringId pasteCommandId();
 
-} // namespace vgc::core
+VGC_TOOLS_API
+core::StringId duplicateCommandId();
 
-#endif // VGC_CORE_ID_H
+} // namespace vgc::tools
+
+#endif // VGC_TOOLS_COPYPASTE_H

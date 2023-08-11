@@ -907,7 +907,10 @@ std::shared_ptr<FreehandEdgeGeometry> FreehandEdgeGeometry::createFromPoints(
         }
     }
     return std::make_shared<FreehandEdgeGeometry>(
-        std::move(positions), std::move(widths), isClosed, false);
+        core::SharedConst<geometry::Vec2dArray>(std::move(positions)),
+        core::SharedConst<core::DoubleArray>(std::move(widths)),
+        isClosed,
+        false);
 }
 
 geometry::Vec2d FreehandEdgeGeometry::sculptGrab(

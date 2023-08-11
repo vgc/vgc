@@ -24,6 +24,7 @@
 #include <vgc/core/xml.h>
 #include <vgc/dom/element.h>
 #include <vgc/dom/io.h>
+#include <vgc/dom/logcategories.h>
 #include <vgc/dom/operation.h>
 #include <vgc/dom/schema.h>
 #include <vgc/dom/strings.h>
@@ -61,10 +62,10 @@ public:
     }
 
 private:
-    Document* document_;
-    Node* currentNode_;
+    Document* document_ = nullptr;
+    Node* currentNode_ = nullptr;
+    const ElementSpec* elementSpec_ = nullptr;
     std::string tagName_;
-    const ElementSpec* elementSpec_;
     std::string attributeName_;
     std::string attributeValue_;
     std::string referenceName_;
@@ -72,8 +73,7 @@ private:
     // Create the parser object
     Parser(std::string_view filePath, Document* document)
         : document_(document)
-        , currentNode_(document)
-        , elementSpec_(nullptr) {
+        , currentNode_(document) {
 
         auto xml_ = core::XmlStreamReader::fromFile(filePath);
         while (xml_.readNext()) {
@@ -170,12 +170,12 @@ private:
     void onAttribute_() {
         core::StringId name(attributeName_);
 
-        ValueType valueType = {};
+        Value value = {};
         if (name == strings::name) {
-            valueType = ValueType::StringId;
+            value = core::StringId();
         }
         else if (name == strings::id) {
-            valueType = ValueType::StringId;
+            value = core::StringId();
         }
         else {
             const AttributeSpec* spec = elementSpec_->findAttributeSpec(name);
@@ -184,11 +184,11 @@ private:
                     "Unknown attribute '" + attributeName_ + "' for element '" + tagName_
                     + "'. Expected an attribute name defined in the VGC schema.");
             }
-            valueType = spec->valueType();
+            value = spec->defaultValue();
         }
 
-        Value value = parseValue(attributeValue_, valueType);
-        Element::cast(currentNode_)->setAttribute(name, value);
+        parseValue(value, attributeValue_);
+        Element::cast(currentNode_)->setAttribute(name, std::move(value));
     }
 };
 
@@ -320,7 +320,117 @@ void Document::save(const std::string& filePath, const XmlFormattingStyle& style
     writeChildren(out, style, 0, this);
 }
 
-Element* Document::elementById(core::StringId id) const {
+/* static */
+DocumentPtr Document::copy(core::ConstSpan<Node*> nodes) {
+
+    static_assert(core::isRange<core::Span<Node*>>);
+
+    struct NodeAndDepth {
+        NodeAndDepth(Node* node)
+            : node(node)
+            , depth(node->depth()) {
+        }
+        Node* node;
+        Int depth;
+    };
+
+    core::Array<NodeAndDepth> copyNodes(nodes);
+
+    // Sort by depth from low (root) to high (leaf).
+    std::sort(
+        copyNodes.begin(),
+        copyNodes.end(),
+        [](const NodeAndDepth& a, const NodeAndDepth& b) { return a.depth < b.depth; });
+
+    // Keep only topmost nodes.
+    // Thanks to the ordering, a node can never be visited before its parent.
+
+    for (auto it1 = copyNodes.begin(); it1 != copyNodes.end(); ++it1) {
+        NodeAndDepth& n1 = *it1;
+        for (auto it2 = copyNodes.begin(); it2 != it1; ++it2) {
+            NodeAndDepth& n2 = *it2;
+            if (n1.node->isDescendantOf(n2.node)) {
+                // n2 will be copied with n1 copy
+                it1 = copyNodes.erase(it1);
+                break;
+            }
+        }
+    }
+
+    if (copyNodes.isEmpty()) {
+        return nullptr;
+    }
+
+    Node* n0 = copyNodes.first().node;
+
+    // Fix order to match original document order
+    Int i = 0;
+    n0->document()->numberNodesDepthFirstRec_(n0->document(), i);
+    std::sort(
+        copyNodes.begin(),
+        copyNodes.end(),
+        [](const NodeAndDepth& a, const NodeAndDepth& b) {
+            return a.node->temporaryIndex_ < b.node->temporaryIndex_;
+        });
+
+    DocumentPtr result = Document::create();
+
+    // Copy in order
+    Document* srcDoc = n0->document();
+    Document* tgtDoc = result.get();
+    PathUpdateData pud = {};
+
+    Node* copyContainer = Element::create(tgtDoc, "copyContainer");
+
+    srcDoc->preparePathsUpdateRec_(srcDoc);
+
+    for (const NodeAndDepth& n1 : copyNodes) {
+        // TODO: copy other node types than Element.
+        Element* element = Element::cast(n1.node);
+        if (element) {
+            Element::createCopy_(copyContainer, element, nullptr, pud);
+        }
+    }
+
+    tgtDoc->updatePathsRec_(copyContainer, pud);
+
+    return result;
+}
+
+/* static */
+void Document::paste(DocumentPtr document, Node* parent) {
+
+    // Copy in order
+    Document* srcDoc = document.get();
+    Document* tgtDoc = parent->document();
+    PathUpdateData pud = {};
+
+    if (!srcDoc || srcDoc == tgtDoc) {
+        return;
+    }
+
+    Node* copyContainer = srcDoc->rootElement();
+    if (!copyContainer) {
+        return;
+    }
+
+    Node* rootElement = tgtDoc->rootElement();
+
+    srcDoc->preparePathsUpdateRec_(copyContainer);
+
+    DocumentPtr result = Document::create();
+    for (Node* n1 : copyContainer->children()) {
+        // TODO: copy other node types than Element.
+        Element* element = Element::cast(n1);
+        if (element) {
+            Element::createCopy_(rootElement, element, nullptr, pud);
+        }
+    }
+
+    tgtDoc->updatePathsRec_(rootElement, pud);
+}
+
+Element* Document::elementFromId(core::StringId id) const {
     auto it = elementByIdMap_.find(id);
     if (it != elementByIdMap_.end()) {
         return it->second;
@@ -328,12 +438,44 @@ Element* Document::elementById(core::StringId id) const {
     return nullptr;
 }
 
-Element* Document::elementByInternalId(core::Id id) const {
+Element* Document::elementFromInternalId(core::Id id) const {
     auto it = elementByInternalIdMap_.find(id);
     if (it != elementByInternalIdMap_.end()) {
         return it->second;
     }
     return nullptr;
+}
+
+// static
+Element* Document::elementFromPath(
+    const Path& path,
+    const Node* workingNode,
+    core::StringId tagNameFilter) {
+
+    const core::Array<PathSegment>& segments = path.segments();
+    auto segIt = segments.begin();
+    auto segEnd = segments.end();
+
+    return resolveElementPartOfPath_(path, segIt, segEnd, workingNode, tagNameFilter);
+}
+
+// static
+Value Document::valueFromPath(
+    const Path& path,
+    const Node* workingNode,
+    core::StringId tagNameFilter) {
+
+    const core::Array<PathSegment>& segments = path.segments();
+    auto segIt = segments.begin();
+    auto segEnd = segments.end();
+
+    Element* element =
+        resolveElementPartOfPath_(path, segIt, segEnd, workingNode, tagNameFilter);
+    if (!element) {
+        return Value();
+    }
+
+    return resolveAttributePartOfPath_(path, segIt, segEnd, element);
 }
 
 core::History* Document::enableHistory(core::StringId entrypointName) {
@@ -384,6 +526,50 @@ bool Document::emitPendingDiff() {
     pendingDiff_.reset();
     pendingDiffKeepAllocPointers_.clear();
     return true;
+}
+
+void Document::onElementIdChanged_(Element* element, core::StringId oldId) {
+    if (!oldId.isEmpty()) {
+        elementByIdMap_.erase(oldId);
+    }
+    core::StringId id = element->id();
+    if (!id.isEmpty()) {
+        // in case of conflict, the current element becomes the one searchable.
+        elementByIdMap_[id] = element;
+    }
+    // TODO: use dependents list to do the path update instead of
+    // iterating on all elements.
+    if (!oldId.isEmpty()) {
+        for (const auto& [eId, e] : elementByInternalIdMap_) {
+            std::ignore = eId;
+            detail::prepareInternalPathsForUpdate(e);
+        }
+        PathUpdateData pud;
+        pud.addAbsolutePathChangedElement(element->internalId());
+        for (const auto& [eId, e] : elementByInternalIdMap_) {
+            std::ignore = eId;
+            detail::updateInternalPaths(e, pud);
+        }
+    }
+}
+
+void Document::onElementNameChanged_(Element* /*element*/) {
+    // TODO: path update when paths use names
+}
+
+void Document::onElementAboutToBeDestroyed_(Element* element) {
+    core::StringId id = element->id();
+    if (!id.isEmpty()) {
+        elementByIdMap_.erase(id);
+    }
+    elementByInternalIdMap_.erase(element->internalId());
+}
+
+void Document::numberNodesDepthFirstRec_(Node* node, Int& i) {
+    node->temporaryIndex_ = i++;
+    for (Node* c : node->children()) {
+        numberNodesDepthFirstRec_(c, i);
+    }
 }
 
 void Document::compressPendingDiff_() {
@@ -453,9 +639,15 @@ void Document::onHistoryRedone_() {
 
 void Document::onCreateNode_(Node* node) {
     pendingDiff_.createdNodes_.emplaceLast(node);
+    for (Node* child : node->children()) {
+        onCreateNode_(child);
+    }
 }
 
 void Document::onRemoveNode_(Node* node) {
+    for (Node* child : node->children()) {
+        onRemoveNode_(child);
+    }
     if (!pendingDiff_.createdNodes_.removeOne(node)) {
         pendingDiff_.removedNodes_.emplaceLast(node);
         pendingDiffKeepAllocPointers_.emplaceLast(node);
@@ -474,6 +666,135 @@ void Document::onMoveNode_(Node* node, const NodeRelatives& savedRelatives) {
 
 void Document::onChangeAttribute_(Element* element, core::StringId name) {
     pendingDiff_.modifiedElements_[element].insert(name);
+}
+
+namespace {
+
+Element* firstChildElementWithName(const Element* element, core::StringId name) {
+    Element* childElement = element->firstChildElement();
+    while (childElement) {
+        if (childElement->name() == name) {
+            break;
+        }
+        childElement = childElement->nextSiblingElement();
+    }
+    return childElement; // nullptr if not found
+}
+
+} // namespace
+
+// static
+Element* Document::resolveElementPartOfPath_(
+    const Path& path,
+    Path::ConstSegmentIterator& segIt,
+    Path::ConstSegmentIterator segEnd,
+    const Node* workingNode,
+    core::StringId tagNameFilter) {
+
+    Document* document = workingNode->document();
+
+    Element* element = nullptr;
+    bool hasError = false;
+    bool firstAttributeEncountered = false;
+    for (; segIt != segEnd; ++segIt) {
+        switch (segIt->type()) {
+        case PathSegmentType::Root:
+            // only first segment can be root
+            element = document->rootElement();
+            break;
+        case PathSegmentType::Id:
+            // only first segment can be root
+            // nullptr if not found, handled out of switch
+            element = document->elementFromId(segIt->nameOrId());
+            break;
+        case PathSegmentType::Element:
+            if (!element) {
+                element = Element::cast(const_cast<Node*>(workingNode));
+            }
+            if (element) {
+                // nullptr if not found, handled out of switch
+                element = firstChildElementWithName(element, segIt->nameOrId());
+            }
+            break;
+        case PathSegmentType::Attribute:
+            if (!element) {
+                element = Element::cast(const_cast<Node*>(workingNode));
+            }
+            firstAttributeEncountered = true;
+            break;
+        }
+        // Break out of loop if there is an error or we reached the end of
+        // the "element part" of the path.
+        if (!element /* <- error */) {
+            hasError = true;
+            break;
+        }
+        else if (firstAttributeEncountered) {
+            break;
+        }
+    }
+    if (hasError) {
+        for (; segIt != segEnd; ++segIt) {
+            if (segIt->type() == PathSegmentType::Attribute) {
+                break;
+            }
+        }
+        return nullptr;
+    }
+
+    if (element && !tagNameFilter.isEmpty() && element->tagName() != tagNameFilter) {
+        VGC_WARNING(
+            LogVgcDom,
+            "Path `{}` resolved to an element `{}` but `{}` was expected.",
+            path,
+            element->tagName(),
+            tagNameFilter);
+        element = nullptr;
+    }
+
+    return element;
+}
+
+// static
+Value Document::resolveAttributePartOfPath_(
+    const Path& /*path*/,
+    Path::ConstSegmentIterator& segIt,
+    Path::ConstSegmentIterator segEnd,
+    const Element* element) {
+
+    Value result = {};
+    for (; segIt != segEnd; ++segIt) {
+        switch (segIt->type()) {
+        case PathSegmentType::Root:
+        case PathSegmentType::Id:
+        case PathSegmentType::Element: {
+            // error, no elements should be in the attribute part
+            return Value();
+        }
+        case PathSegmentType::Attribute: {
+            result = element->getAttribute(segIt->nameOrId());
+            if (result.isValid() && segIt->isIndexed()) {
+                result = result.getItemWrapped(segIt->arrayIndex());
+            }
+            break;
+        }
+        }
+    }
+    return result;
+}
+
+void Document::preparePathsUpdateRec_(const Node* node) {
+    detail::prepareInternalPathsForUpdate(node);
+    for (Node* c : node->children()) {
+        preparePathsUpdateRec_(c);
+    }
+}
+
+void Document::updatePathsRec_(const Node* node, const PathUpdateData& pud) {
+    detail::updateInternalPaths(node, pud);
+    for (Node* c : node->children()) {
+        updatePathsRec_(c, pud);
+    }
 }
 
 } // namespace vgc::dom

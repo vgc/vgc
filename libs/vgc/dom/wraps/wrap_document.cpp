@@ -27,5 +27,12 @@ void wrap_document(py::module& m) {
         .def(py::init([]() { return This::create(); }))
         .def_static("open", &This::open)
         .def_property_readonly("rootElement", &This::rootElement)
-        .def("save", &This::save, "filePath"_a, "style"_a = XmlFormattingStyle());
+        .def("save", &This::save, "filePath"_a, "style"_a = XmlFormattingStyle())
+        .def_static(
+            "copy",
+            [](const vgc::core::Array<vgc::dom::Node*>& nodes) {
+                return This::copy(nodes);
+            },
+            "nodes"_a)
+        .def_static("paste", &This::paste, "document"_a, "parent"_a);
 }

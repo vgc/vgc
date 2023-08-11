@@ -17,6 +17,7 @@
 #include <vgc/dom/document.h>
 #include <vgc/dom/node.h>
 
+#include <vgc/core/wraps/array.h>
 #include <vgc/core/wraps/common.h>
 #include <vgc/core/wraps/object.h>
 
@@ -32,6 +33,7 @@ void wrap_node(py::module& m) {
         .value("Document", NodeType::Document);
 
     vgc::core::wraps::wrapObjectCommon<This>(m, "Node");
+    vgc::core::wraps::wrap_array<This*, false>(m, "Node");
 
     vgc::core::wraps::ObjClass<This>(m, "Node")
         // Note: Node has no public constructor
@@ -48,7 +50,9 @@ void wrap_node(py::module& m) {
         .def("reparent", &This::reparent)
         .def("canReplace", &This::canReplace)
         .def("replace", &This::replace)
-        .def("isDescendant", &This::isDescendant)
+        .def("isDescendantOf", &This::isDescendantOf)
+        .def("ancestors", &This::ancestors)
+        .def("lowestCommonAncestorWith", &This::lowestCommonAncestorWith, "other"_a)
         .def(
             "getElementFromPath",
             &This::getElementFromPath,
@@ -59,4 +63,11 @@ void wrap_node(py::module& m) {
             &This::getValueFromPath,
             "path"_a,
             "tagNameFilter"_a = StringId());
+
+    m.def(
+        "lowestCommonAncestor",
+        [](const vgc::core::Array<vgc::dom::Node*>& nodes) {
+            return vgc::dom::lowestCommonAncestor(nodes);
+        },
+        "nodes"_a);
 }

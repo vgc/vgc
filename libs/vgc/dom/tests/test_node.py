@@ -27,11 +27,13 @@ from vgc.dom import (
     Path,
     Value,
     Node,
+    NodeArray,
     NodeType,
     ReplaceDocumentError,
     SecondRootElementError,
     WrongChildTypeError,
-    WrongDocumentError
+    WrongDocumentError,
+    lowestCommonAncestor
 )
 
 from vgc.geometry import (
@@ -400,49 +402,106 @@ class TestNode(unittest.TestCase):
         n212 = Element(n21, "n212")
         # Test all pairs: 12*12=144 tests
         for n in [doc, root, n1, n2, n3, n4, n21, n22, n23, n31, n211, n212]:
-            self.assertTrue(n.isDescendant(n))
+            self.assertTrue(n.isDescendantOf(n))
         for n in [root, n1, n2, n3, n4, n21, n22, n23, n31, n211, n212]:
-            self.assertTrue(n.isDescendant(doc))
-            self.assertFalse(doc.isDescendant(n))
+            self.assertTrue(n.isDescendantOf(doc))
+            self.assertFalse(doc.isDescendantOf(n))
         for n in [n1, n2, n3, n4, n21, n22, n23, n31, n211, n212]:
-            self.assertTrue(n.isDescendant(root))
-            self.assertFalse(root.isDescendant(n))
+            self.assertTrue(n.isDescendantOf(root))
+            self.assertFalse(root.isDescendantOf(n))
         for n in [n21, n22, n23, n211, n212]:
-            self.assertTrue(n.isDescendant(n2))
-            self.assertFalse(n2.isDescendant(n))
+            self.assertTrue(n.isDescendantOf(n2))
+            self.assertFalse(n2.isDescendantOf(n))
         for n in [n31]:
-            self.assertTrue(n.isDescendant(n3))
-            self.assertFalse(n3.isDescendant(n))
+            self.assertTrue(n.isDescendantOf(n3))
+            self.assertFalse(n3.isDescendantOf(n))
         for n in [n211, n212]:
-            self.assertTrue(n.isDescendant(n21))
-            self.assertFalse(n21.isDescendant(n))
+            self.assertTrue(n.isDescendantOf(n21))
+            self.assertFalse(n21.isDescendantOf(n))
         for n in [n2, n3, n4, n21, n22, n23, n31, n211, n212]:
-            self.assertFalse(n.isDescendant(n1))
-            self.assertFalse(n1.isDescendant(n))
+            self.assertFalse(n.isDescendantOf(n1))
+            self.assertFalse(n1.isDescendantOf(n))
         for n in [n3, n4, n31]:
-            self.assertFalse(n.isDescendant(n2))
-            self.assertFalse(n2.isDescendant(n))
+            self.assertFalse(n.isDescendantOf(n2))
+            self.assertFalse(n2.isDescendantOf(n))
         for n in [n4, n21, n22, n23, n211, n212]:
-            self.assertFalse(n.isDescendant(n3))
-            self.assertFalse(n3.isDescendant(n))
+            self.assertFalse(n.isDescendantOf(n3))
+            self.assertFalse(n3.isDescendantOf(n))
         for n in [n21, n22, n23, n31, n211, n212]:
-            self.assertFalse(n.isDescendant(n4))
-            self.assertFalse(n4.isDescendant(n))
+            self.assertFalse(n.isDescendantOf(n4))
+            self.assertFalse(n4.isDescendantOf(n))
         for n in [n22, n23, n31]:
-            self.assertFalse(n.isDescendant(n21))
-            self.assertFalse(n21.isDescendant(n))
+            self.assertFalse(n.isDescendantOf(n21))
+            self.assertFalse(n21.isDescendantOf(n))
         for n in [n23, n31, n211, n212]:
-            self.assertFalse(n.isDescendant(n22))
-            self.assertFalse(n22.isDescendant(n))
+            self.assertFalse(n.isDescendantOf(n22))
+            self.assertFalse(n22.isDescendantOf(n))
         for n in [n31, n211, n212]:
-            self.assertFalse(n.isDescendant(n23))
-            self.assertFalse(n23.isDescendant(n))
+            self.assertFalse(n.isDescendantOf(n23))
+            self.assertFalse(n23.isDescendantOf(n))
         for n in [n211, n212]:
-            self.assertFalse(n.isDescendant(n31))
-            self.assertFalse(n31.isDescendant(n))
+            self.assertFalse(n.isDescendantOf(n31))
+            self.assertFalse(n31.isDescendantOf(n))
         for n in [n212]:
-            self.assertFalse(n.isDescendant(n211))
-            self.assertFalse(n211.isDescendant(n))
+            self.assertFalse(n.isDescendantOf(n211))
+            self.assertFalse(n211.isDescendantOf(n))
+
+    def testAncestors(self):
+        doc = Document()
+        root = Element(doc, "root")
+        n1 = Element(root, "n1")
+        n2 = Element(root, "n2")
+        n21 = Element(n2, "n21")
+        n22 = Element(n2, "n22")
+        n211 = Element(n21, "n211")
+        res = n211.ancestors()
+        self.assertEqual(res[0], doc)
+        self.assertEqual(len(res), 4)
+        self.assertEqual(res, (doc, root, n2, n21))
+
+    def testLowestCommonAncestorWith(self):
+        doc = Document()
+        root = Element(doc, "root")
+        n1 = Element(root, "n1")
+        n2 = Element(root, "n2")
+        n3 = Element(root, "n3")
+        n4 = Element(root, "n4")
+        n21 = Element(n2, "n21")
+        n22 = Element(n2, "n22")
+        n23 = Element(n2, "n23")
+        n31 = Element(n3, "n31")
+        n211 = Element(n21, "n211")
+        n212 = Element(n21, "n212")
+        docB = Document()
+        rootB = Element(docB, "rootB")
+        def test(a, b, lca):
+            self.assertEqual(a.lowestCommonAncestorWith(b), lca)
+            self.assertEqual(b.lowestCommonAncestorWith(a), lca)
+        test(n211, n212, n21)
+        test(n211, n22, n2)
+        test(n212, n31, root)
+        test(n212, rootB, None)
+
+    def testLowestCommonAncestor(self):
+        doc = Document()
+        root = Element(doc, "root")
+        n1 = Element(root, "n1")
+        n2 = Element(root, "n2")
+        n3 = Element(root, "n3")
+        n4 = Element(root, "n4")
+        n21 = Element(n2, "n21")
+        n22 = Element(n2, "n22")
+        n23 = Element(n2, "n23")
+        n31 = Element(n3, "n31")
+        n211 = Element(n21, "n211")
+        n212 = Element(n21, "n212")
+        docB = Document()
+        rootB = Element(docB, "rootB")
+        self.assertEqual(lowestCommonAncestor((n211, n212)), n21)
+        self.assertEqual(lowestCommonAncestor([n211, n212, n22]), n2)
+        self.assertEqual(lowestCommonAncestor((n211, n22, n212)), n2)
+        self.assertEqual(lowestCommonAncestor((n211, n22, n31)), root)
+        self.assertEqual(lowestCommonAncestor((n211, n22, n31, rootB)), None)
 
     def testPathAccess(self):
         doc = Document()

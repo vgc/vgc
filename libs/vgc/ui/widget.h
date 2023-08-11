@@ -291,8 +291,8 @@ public:
     /// Returns whether this widget is a descendant of the given `other` widget.
     /// Returns true if this widget is equal to the `other` widget.
     ///
-    bool isDescendant(const Widget* other) const {
-        return isDescendantObject(other);
+    bool isDescendantOf(const Widget* other) const {
+        return isDescendantObjectOf(other);
     }
 
     /// Returns the root widget of this widget, that is, the ancestor of this

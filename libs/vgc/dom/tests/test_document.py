@@ -18,7 +18,7 @@
 
 import unittest
 
-from vgc.dom import Document, Element, NodeType
+from vgc.dom import Document, Element, NodeType, NodeArray
 
 class TestDocument(unittest.TestCase):
 
@@ -51,6 +51,25 @@ class TestDocument(unittest.TestCase):
         doc = Document.open(filePath)
         self.assertEqual(doc.rootElement.tagName, "vgc")
         self.assertEqual(doc.rootElement.firstChild.tagName, "path")
+
+    def testCopyPaste(self):
+        doc = Document()
+        root = Element(doc, "root")
+        n1 = Element(root, "n1")
+        n2 = Element(root, "n2")
+        n3 = Element(root, "n3")
+        n4 = Element(root, "n4")
+        n21 = Element(n2, "n21")
+        n22 = Element(n2, "n22")
+        n23 = Element(n2, "n23")
+        n31 = Element(n3, "n31")
+        n211 = Element(n21, "n211")
+        n212 = Element(n21, "n212")
+
+        cpy = doc.copy((n3, n31, n23, n21))
+        self.assertEqual(tuple(c.tagName for c in cpy.rootElement.children), ("n21", "n23", "n3"))
+        doc.paste(cpy, root)
+        self.assertEqual(tuple(c.tagName for c in root.children), ("n1", "n2", "n3", "n4", "n21", "n23", "n3"))
 
 if __name__ == '__main__':
     unittest.main()
