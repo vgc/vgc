@@ -274,7 +274,7 @@ void defineSharedConstArrayCommonMethods(
     c.def(
         "__iter__",
         [](const SharedConstArrayType& a) {
-            return py::make_iterator<rvp::reference_internal, It, It, const T&>(
+            return py::make_iterator<rvp::automatic, It, It, const T&>(
                 a.get().begin(), a.get().end());
         },
         // Keep object alive while iterator exists.
