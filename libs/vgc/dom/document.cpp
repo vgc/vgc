@@ -699,6 +699,7 @@ Element* Document::resolveElementPartOfPath_(
         case PathSegmentType::Root:
             // only first segment can be root
             element = document->rootElement();
+            break;
         case PathSegmentType::Id:
             // only first segment can be root
             // nullptr if not found, handled out of switch
