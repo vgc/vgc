@@ -29,6 +29,11 @@ namespace vgc::core::wraps {
 
 namespace detail {
 
+// Note: it currently allows conversion to Array&.
+// If we want to ensure immutability of const references we need immutable variants
+// of wrappers.
+// See https://github.com/pybind/pybind11/issues/717
+//
 template<typename ValueType>
 void wrapSharedConstImplicitCast() {
 
@@ -40,6 +45,7 @@ void wrapSharedConstImplicitCast() {
         bool& flag;
         explicit scopedFlag(bool& flag_)
             : flag(flag_) {
+
             flag_ = true;
         }
         ~scopedFlag() {
@@ -49,13 +55,16 @@ void wrapSharedConstImplicitCast() {
 
     auto implicitCaster = [](PyObject* obj, PyTypeObject* /*type*/) -> PyObject* {
         static bool currentlyUsed = false;
-        if (currentlyUsed) // non-reentrant
+        if (currentlyUsed) { // non-reentrant
             return nullptr;
+        }
+
         scopedFlag flagLock(currentlyUsed);
 
         SharedConstTypeCaster inputCaster = {};
-        if (!inputCaster.load(obj, false))
+        if (!inputCaster.load(obj, false)) {
             return nullptr;
+        }
 
         SharedConstType* input = reinterpret_cast<SharedConstType*>(inputCaster.value);
 
@@ -69,12 +78,18 @@ void wrapSharedConstImplicitCast() {
         return h.ptr();
     };
 
-    if (auto tinfo = py::detail::get_type_info(typeid(ValueType)))
-        tinfo->implicit_conversions.push_back(implicitCaster);
-    else
+    if (auto tinfo = py::detail::get_type_info(typeid(ValueType))) {
+        // Note: This conversion is better than standard conversions since it
+        //       does not construct a new Array. To make it higher priority we
+        //       push it in front of the conversions list.
+        tinfo->implicit_conversions.insert(
+            tinfo->implicit_conversions.begin(), implicitCaster);
+    }
+    else {
         py::pybind11_fail(
             "wrapSharedConstImplicitCast: Unable to find type "
             + py::type_id<ValueType>());
+    }
 }
 
 } // namespace detail
@@ -88,7 +103,7 @@ void defineSharedConstCommonMethods(Class<core::SharedConst<ValueType>>& c) {
 
     detail::wrapSharedConstImplicitCast<ValueType>();
 
-    py::implicitly_convertible<ValueType, T>();
+    //py::implicitly_convertible<ValueType, T>();
 
     if constexpr (std::is_copy_constructible_v<ValueType>) {
         c.def(py::init<const T&>());

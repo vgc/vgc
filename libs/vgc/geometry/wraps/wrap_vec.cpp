@@ -110,27 +110,35 @@ void wrap_vec2x(py::module& m, const std::string& thisTypeName, T relTol) {
         .def("__repr__", [](const This& v) { return vgc::core::toString(v); });
 }
 
-template<typename This>
-void wrap_2darray(py::module& m, const std::string& valueTypeName) {
-    using T = typename This::value_type; // Example: Vec2d
-    using U = typename T::ScalarType;    // Example: double
-    std::string thisTypeName = valueTypeName + "Array";
-    vgc::core::wraps::Class<This> c(m, thisTypeName.c_str());
+template<typename Vec2x>
+void wrap_vec2xArray(py::module& m, const std::string& valueTypeName) {
+    using ArrayType = vgc::core::Array<Vec2x>;
+    using SharedConstArrayType = vgc::core::SharedConstArray<Vec2x>;
+    using ScalarType = typename Vec2x::ScalarType; // Example: double
+
     std::string moduleFullName = py::cast<std::string>(m.attr("__name__"));
-    vgc::core::wraps::defineArrayCommonMethods(
-        c, vgc::core::format("{}.{}", moduleFullName, thisTypeName));
-    c.def(py::init([valueTypeName](py::sequence s) {
-        This res;
+
+    std::string arrayTypeName = valueTypeName + "Array";
+    vgc::core::wraps::Class<ArrayType> c1(m, arrayTypeName.c_str());
+    vgc::core::wraps::defineArrayCommonMethods<Vec2x, true>(
+        c1, vgc::core::format("{}.{}", moduleFullName, arrayTypeName));
+    c1.def(py::init([valueTypeName](py::sequence s) {
+        ArrayType res;
         for (auto it : s) {
             auto t = py::reinterpret_borrow<py::tuple>(it);
             if (t.size() != 2) {
                 throw py::value_error(
                     "Tuple length must be 2 for conversion to " + valueTypeName);
             }
-            res.append(T(t[0].cast<U>(), t[1].cast<U>()));
+            res.append(Vec2x(t[0].cast<ScalarType>(), t[1].cast<ScalarType>()));
         }
         return res;
     }));
+
+    std::string sharedConstArrayTypeName = std::string("SharedConst") + arrayTypeName;
+    vgc::core::wraps::Class<SharedConstArrayType> c2(m, sharedConstArrayTypeName.c_str());
+    vgc::core::wraps::defineSharedConstArrayCommonMethods<Vec2x, true>(
+        c2, vgc::core::format("{}.{}", moduleFullName, sharedConstArrayTypeName));
 }
 
 } // namespace
@@ -138,6 +146,6 @@ void wrap_2darray(py::module& m, const std::string& valueTypeName) {
 void wrap_vec(py::module& m) {
     wrap_vec2x<vgc::geometry::Vec2d>(m, "Vec2d", 1e-9);
     wrap_vec2x<vgc::geometry::Vec2f>(m, "Vec2f", 1e-5f);
-    wrap_2darray<vgc::geometry::Vec2dArray>(m, "Vec2d");
-    wrap_2darray<vgc::geometry::Vec2fArray>(m, "Vec2f");
+    wrap_vec2xArray<vgc::geometry::Vec2d>(m, "Vec2d");
+    wrap_vec2xArray<vgc::geometry::Vec2f>(m, "Vec2f");
 }

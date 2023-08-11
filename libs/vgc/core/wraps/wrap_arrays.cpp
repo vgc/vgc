@@ -39,11 +39,31 @@ uintptr_t sharedConstIntArrayDataAddress(const SharedConstIntArray& array) {
     return reinterpret_cast<uintptr_t>(array.get().data());
 }
 
+bool checkSharedConstArrayCannotConvertToNonConstRef(
+    const SharedConstIntArray& sca,
+    IntArray& array) {
+
+    return sca.get().data() != array.data();
+}
+
+bool checkSharedConstArrayCanConvertToConstRef(
+    const SharedConstIntArray& sca,
+    const IntArray& array) {
+
+    return sca.get().data() == array.data();
+}
+
 } // namespace vgc::core::wraps::detail
 
 void wrap_arrays_detail(py::module& m) {
     namespace detail = vgc::core::wraps::detail;
     m.def("intArrayByCopyDataAddress", &detail::intArrayByCopyDataAddress);
     m.def("intArrayDataAddress", &detail::intArrayDataAddress);
-    m.def("sharedConstIntArrayDataAddress", detail::sharedConstIntArrayDataAddress);
+    m.def("sharedConstIntArrayDataAddress", &detail::sharedConstIntArrayDataAddress);
+    m.def(
+        "checkSharedConstArrayCannotConvertToNonConstRef",
+        detail::checkSharedConstArrayCannotConvertToNonConstRef);
+    m.def(
+        "checkSharedConstArrayCanConvertToConstRef",
+        &detail::checkSharedConstArrayCanConvertToConstRef);
 }
