@@ -389,7 +389,8 @@ void wrap_array(py::module& m, const std::string& valueTypeName) {
         return res;
     }));
 
-    py::implicitly_convertible<py::sequence, ArrayType>();
+    py::implicitly_convertible<py::tuple, ArrayType>();
+    py::implicitly_convertible<py::list, ArrayType>();
 
     std::string sharedConstArrayTypeName = std::string("SharedConst") + arrayTypeName;
     Class<SharedConstArrayType> c2(m, sharedConstArrayTypeName.c_str());

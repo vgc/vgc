@@ -74,9 +74,9 @@ void wrapSharedConstImplicitCast() {
     };
 
     if (auto tinfo = py::detail::get_type_info(typeid(ValueType))) {
-        // Note: ArrayType is implicitly convertible from py::sequence,
-        //       thus to make the copy-less conversion higher priority we
-        //       push in front of the conversions list.
+        // Note: This conversion is better than standard conversions since it
+        //       does not construct a new Array. To make it higher priority we
+        //       push it in front of the conversions list.
         tinfo->implicit_conversions.insert(
             tinfo->implicit_conversions.begin(), implicitCaster);
     }
