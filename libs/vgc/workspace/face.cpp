@@ -479,11 +479,6 @@ void VacKeyFace::updateFromVac_(vacomplex::NodeModificationFlags flags) {
             domCycles.emplaceLast(std::move(components));
         }
 
-        // TODO: FINISH HERE REPLACEMENT BY DOMFACECYCLES
-
-        std::string cyclesDescription;
-        core::StringWriter cyclesDescriptionWriter(cyclesDescription);
-        write(cyclesDescriptionWriter, domCycles);
         domElement->setAttribute(ds::cycles, DomFaceCycles(std::move(domCycles)));
 
         // Update dependencies_
