@@ -141,7 +141,7 @@ protected:
 private:
     friend detail::TransformDragAction;
 
-    canvas::CanvasToolPtr canvasTool_ = {};
+    canvas::CanvasTool* canvasTool_ = {};
     // we assume that the workspace will not change.
     // if we support that later, we could use a signal/slot.
     workspace::WorkspacePtr workspace_ = {};
