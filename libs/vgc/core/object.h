@@ -1430,14 +1430,13 @@ inline void ObjPtrAccess::decref(const void* obj_, Int64 k) {
         obj->refCount_ -= k;
         bool isRoot = (obj->parentObject_ == nullptr);
         if (isRoot && obj->refCount_ == 0) {
-            if (obj->isAlive()) {
-                // See implementation of destroyObjectImpl_() for details on the
-                // const-cast and other subtleties of the following two lines.
-                Object* root_ = const_cast<Object*>(obj);
-                root_->destroyObjectImpl_();
+            if (obj->hasReachedStage(ObjectStage::AboutToBeDestroyed)) {
+                delete obj;
             }
             else {
-                delete obj;
+                // See note in destroyObjectImpl_() explaining why we need const-cast
+                Object* root_ = const_cast<Object*>(obj);
+                root_->destroyObjectImpl_();
             }
         }
     }

@@ -226,6 +226,10 @@ void Object::insertChildObject_(Object* nextSibling, Object* child) {
     if (!child) {
         throw core::NullError();
     }
+    if (child->hasReachedStage(ObjectStage::AboutToBeDestroyed)) {
+        throw core::LogicError(
+            "Cannot insert child object that is about to be destroyed.");
+    }
 
     // Ensure that nextSibling is either null or a child of `this`
     if (nextSibling && nextSibling->parentObject_ != this) {
@@ -371,31 +375,70 @@ Int Object::branchSize() const {
 
 void Object::destroyObjectImpl_() {
 
-    // Prevent infinite loops and inform others that we're about to be destroyed
+    // Set the stage to `AboutToBeDestroyed`. This has the following purposes:
+    // - Prevent infinite loops
+    // - Prevent deleting the object multiple times
+    // - Prevent inserting a destroyed object as child object, which
+    //   might cause the object to not be deleted at all.
+    // - Inform client code that the object is about to be destroyed
+    //
     if (hasReachedStage(ObjectStage::AboutToBeDestroyed)) {
         return;
     }
     stage_ = ObjectStage::AboutToBeDestroyed;
+
+    // Make the refCount >= 1 for the remainder of this function, ensuring that
+    // the C++ object outlives this function. This is important because due to
+    // callbacks, some external ObjectPtr pointing to `this` could be created
+    // in the middle of this function.
+    //
+    // If such external ObjectPtr is destructed before the end of this
+    // function, then the object would be deleted too early.
+    //
+    // If such external ObjectPtr outlives this function, then we defer the
+    // responsibility of deleting the object to this external ObjectPtr. Note
+    // that because decref() needs to access the Object, it is important not to
+    // delete the object at the end of this function, but do it in a future
+    // call to decref().
+    //
+    ObjectPtr thisPtr = this;
+
+    // Inform that the object is about to be destroyed.
+    //
     aboutToBeDestroyed().emit(this);
 
-    // Recursively destroy children
+    // Recursively destroy children.
+    //
     while (firstChildObject_) {
         firstChildObject_->destroyObjectImpl_();
     }
-    ObjectPtr p = removeObjectFromParent_(); // refCount() becomes >= 1
-    stage_ = ObjectStage::ChildrenDestroyed; // isAlive() becomes false
+    stage_ = ObjectStage::ChildrenDestroyed;
+
+    // Make this object root. This ensures deletion once refCount() == 0.
+    //
+    // Note that it is a LogicError to add an AboutToBeDestroyed object as
+    // child object, which guarantees that the object will stay root, and
+    // therefore be deleted.
+    //
+    removeObjectFromParent_();
 
     // Disconnect slots, then call onDestroyed(), then disconnect signals. This
     // order ensures that the object won't receive signals in the middle of its
     // onDestroyed() call, while allowing it to still emit signals in there.
+    //
     detail::SignalHub::disconnectSlots(this);
     onDestroyed();
     detail::SignalHub::disconnectSignals(this);
     stage_ = ObjectStage::Destroyed;
 
-    // Note 1: at the end of this scope, the ObjectPtr p is destructed, which
-    // causes a call to decref(), calling `delete obj` if the refCount becomes
-    // zero.
+    // Note 1: at the end of this scope, `thisPtr` is destructed, which causes
+    // a call to decref(). If there is no other ObjectPtr pointing to `this`,
+    // then the Object will now be deleted since it is a root Object and its
+    // refCount will become zero. If there are other ObjectPtr pointing to
+    // `this` (there were none when entering this function, but some may have
+    // been created in callbacks in the middle of this function), then the
+    // Object is not deleted now, but only once all such ObjectPtr is
+    // destructed.
 
     // Note 2: in C++, constness is only meant to indicate immutability while
     // the object is alive. For example, destructors are allowed to call
