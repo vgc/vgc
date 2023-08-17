@@ -455,7 +455,7 @@ public:
     detail::TopologyAwareTransformer transformer_;
 
     bool getPointers_(canvas::Canvas*& canvas, workspace::Workspace*& workspace) {
-        if (!box_->canvasTool_->isAlive()) {
+        if (!box_->canvasTool_) {
             return false;
         }
         canvas = box_->canvasTool_->canvas();
@@ -956,7 +956,7 @@ void TransformBox::onMouseHover(ui::MouseHoverEvent* event) {
     }
 
     // Recompute which mouse actions are available.
-    canvas::Canvas* canvas = canvasTool_.isAlive() ? canvasTool_->canvas() : nullptr;
+    canvas::Canvas* canvas = canvasTool_ ? canvasTool_->canvas() : nullptr;
     if (canvas && isHoverDataUpdateRequired_) {
         computeHoverData_(canvas);
     }
@@ -1153,7 +1153,7 @@ void TransformBox::onPaintDraw(graphics::Engine* engine, ui::PaintOptions option
 
     SuperClass::onPaintDraw(engine, options);
 
-    canvas::Canvas* canvas = canvasTool_.isAlive() ? canvasTool_->canvas() : nullptr;
+    canvas::Canvas* canvas = canvasTool_ ? canvasTool_->canvas() : nullptr;
     if (!canvas) {
         return;
     }
@@ -1472,8 +1472,7 @@ void TransformBox::show_() {
 bool TransformBox::updateWorkspacePointer_() {
     workspace::Workspace* oldWorkspace = workspace_.getIfAlive();
 
-    workspace::Workspace* newWorkspace =
-        canvasTool_.isAlive() ? canvasTool_->workspace() : nullptr;
+    workspace::Workspace* newWorkspace = canvasTool_ ? canvasTool_->workspace() : nullptr;
     if (oldWorkspace != newWorkspace) {
         if (oldWorkspace != nullptr) {
             oldWorkspace->disconnect(this);
