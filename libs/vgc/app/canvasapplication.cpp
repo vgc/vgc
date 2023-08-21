@@ -758,9 +758,9 @@ void CanvasApplication::registerTool_(
 
 void CanvasApplication::setCurrentTool_(canvas::CanvasTool* canvasTool) {
     if (canvasTool != currentTool_) {
-        bool wasFocusedWidget = false;
+        bool hadFocusedWidget = false;
         if (currentTool_) {
-            wasFocusedWidget = currentTool_->isFocusedWidget();
+            hadFocusedWidget = currentTool_->hasFocusedWidget();
             currentTool_->clearFocus(ui::FocusReason::Other);
             currentTool_->reparent(nullptr);
             currentTool_->optionsWidget()->reparent(nullptr);
@@ -769,8 +769,11 @@ void CanvasApplication::setCurrentTool_(canvas::CanvasTool* canvasTool) {
         if (currentTool_) {
             canvas_->addChild(canvasTool);
             toolOptionsPanel_->addChild(currentTool_->optionsWidget());
-            if (wasFocusedWidget) {
+            if (hadFocusedWidget) {
                 currentTool_->setFocus(ui::FocusReason::Other);
+                // TODO: it would be even better to remember, for each tool,
+                // which of its descendants was the focused widget and restore
+                // this specific descendant as focused widget.
             }
             toolMapInv_[canvasTool]->setChecked(true);
         }
