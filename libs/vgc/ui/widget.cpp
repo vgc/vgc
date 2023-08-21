@@ -68,7 +68,6 @@ void Widget::onDestroyed() {
     isHoverLocked_ = false;
     pressedButtons_.clear();
     computedVisibility_ = false;
-    focus_ = nullptr;
     keyboardCaptor_ = nullptr;
     // Call parent destructor
     Object::onDestroyed();
@@ -619,11 +618,30 @@ bool Widget::mouseMove(MouseMoveEvent* event) {
     // Otherwise, propagate the mouse move through the hover chain.
     //
     if (!handled) {
-        handled |= updateHoverChain();
+
+        // Update the hover-chain.
+        //
+        // This is the most typical scenario when we want to update
+        // the hover-chain: the mouse juste moved, so we need to update
+        // what's under the mouse, then call the onMouseMove() callbacks.
+        //
+        // Note that if handleMouseMoveActions_() returns true, then
+        // we should not call updateHoverChain() in this
+        // function, since it was already taken care of.
+        //
+        updateHoverChain();
+
+        // Call the preMouseMove() and onMouseMove() callbacks.
+        //
         if (isAlive()) {
             mouseMove_(event);
-            handled |= event->isHandled();
+            handled = event->isHandled();
         }
+
+        // TODO: update the hover-chain again if ForceUnlock was used. For now
+        // we don't do it since none of our current widgets use ForceUnlock,
+        // and it would be quite time-consuming to call updateHoverChain()
+        // twice on each mouse move.
     }
     return handled;
 }
@@ -636,6 +654,7 @@ bool Widget::mousePress(MousePressEvent* event) {
     lastMousePosition_ = event->position();
     lastModifierKeys_ = event->modifierKeys();
     lastTimestamp_ = event->timestamp();
+
     WidgetPtr thisPtr = this;
 
     // We first check whether this MousePress can be handled by a registered action.
@@ -645,12 +664,40 @@ bool Widget::mousePress(MousePressEvent* event) {
     // Otherwise, propagate the mouse press through the hover chain.
     //
     if (!handled) {
+        const bool isFirstPressedButton = pressedButtons_.isEmpty();
+
         mousePress_(event);
-        handled |= event->isHandled();
-        if (isAlive()) {
-            handled |= updateHoverChain();
+        handled = event->isHandled();
+
+        // Update the hover-chain.
+        //
+        // Typically, we do not need/want to update the hover chain on
+        // mousePress(), since a mousePress() is only supposed to perform an
+        // action based on the hover state, not change the hover state itself.
+        //
+        // Also, if a mouse press action modifies the geometry (for example, a
+        // widget moves or is deleted), then updateGeometry() will already take
+        // care of calling updateHoverChain().
+        //
+        // However, the onMousePress() callbacks have the option to ForceUnlock
+        // the hover-chain, which while rare and discouraged means that we do
+        // need to recompute which widget is hovered.
+        //
+        updateHoverChain();
+
+        // Update focus.
+        //
+        if (isFirstPressedButton) {
+            Widget* clickedWidget = this;
+            Widget* child = hoverChainChild();
+            while (child) {
+                clickedWidget = child;
+                child = child->hoverChainChild();
+            }
+            updateFocusOnClick_(clickedWidget);
         }
     }
+
     return handled;
 }
 
@@ -672,10 +719,16 @@ bool Widget::mouseRelease(MouseReleaseEvent* event) {
     //
     if (!handled) {
         mouseRelease_(event);
-        handled |= event->isHandled();
-        if (isAlive()) {
-            handled |= updateHoverChain();
-        }
+        handled = event->isHandled();
+
+        // Update the hover-chain.
+        //
+        // It is important to update the hover-chain after calling
+        // mouseRelease_(), since the default behavior is to unlock the
+        // hover-chain (that was previously locked by mousePress_()), and
+        // therefore we need to update which widget is now hovered.
+        //
+        updateHoverChain();
     }
     return handled;
 }
@@ -691,12 +744,12 @@ bool Widget::mouseScroll(ScrollEvent* event) {
 
     WidgetPtr thisPtr = this;
     mouseScroll_(event);
+    return event->isHandled();
 
-    bool handled = event->isHandled();
-    if (isAlive()) {
-        handled |= updateHoverChain();
-    }
-    return handled;
+    // Note: there is no need to explicitly update the hover-chain in this
+    // function. If the position of widgets changed as a result of the scroll
+    // (which is typical), then the hover-chain will already be indirectly
+    // updated as a result of that change.
 }
 
 void Widget::preMouseMove(MouseMoveEvent* /*event*/) {
@@ -725,6 +778,30 @@ bool Widget::onMouseRelease(MouseReleaseEvent* /*event*/) {
 
 bool Widget::onMouseScroll(ScrollEvent* /*event*/) {
     return false;
+}
+
+void Widget::updateFocusOnClick_(Widget* clickedWidget) {
+
+    // If the clicked widget or any of its ancestors has a Click focus policy,
+    // then we give the focus to the deepmost one.
+    //
+    while (clickedWidget) {
+        if (clickedWidget->focusPolicy().has(FocusPolicy::Click)) {
+            clickedWidget->setFocus(FocusReason::Mouse);
+            return;
+        }
+        clickedWidget = clickedWidget->parent();
+    }
+
+    // If neither the clicked widget nor any or its ancestors has a
+    // Click focus policy, then we should behave as if we clicked on
+    // an empty space, so we clear the focus of the current focused
+    // widget if its focus strength is Low or Medium.
+    //
+    WidgetPtr focusedWidget_ = focusedWidget();
+    if (focusedWidget_ && focusedWidget_->focusStrength() != FocusStrength::High) {
+        focusedWidget_->clearFocus(FocusReason::Mouse);
+    }
 }
 
 void Widget::appendToPendingMouseActionEvents_(MouseEvent* event) {
@@ -795,26 +872,44 @@ void Widget::maybeStartPendingMouseAction_() {
     //
     if (pendingMouseClickAction_ && !pendingMouseDragAction_) {
 
-        // Trigger the MouseClick.
+        // Clear pending state.
         //
         MouseActionEventPtr event = pendingMouseActionEvents_.first();
-        event->setWidget(pendingMouseClickWidget_.get());
-        mapMouseActionPosition_(event.get(), pendingMouseClickWidget_.get());
-        pendingMouseClickAction_->onMouseClick(event.get());
+        WidgetPtr clickedWidget = pendingMouseClickWidget_;
         pendingMouseActionEvents_.clear();
         pendingMouseClickWidget_ = nullptr;
         pendingMouseClickAction_ = nullptr;
+
+        // Trigger the MouseClick.
+        //
+        updateFocusOnClick_(clickedWidget.get());
+        event->setWidget(pendingMouseClickWidget_.get());
+        mapMouseActionPosition_(event.get(), clickedWidget.get());
+        pendingMouseClickAction_->onMouseClick(event.get());
+
+        // XXX Call updateHoverChain() here? Indeed, a previous mouse
+        //     move might have restrainted from updating the hover
+        //     state due to waiting for conflicts to be resolved.
     }
     else if (pendingMouseDragAction_ && !pendingMouseClickAction_) {
 
-        // Start the MouseDrag.
+        // Set pending state as current state.
         //
         currentMouseDragWidget_ = pendingMouseDragWidget_;
         currentMouseDragAction_ = pendingMouseDragAction_;
+
+        // Clear pending state.
+        //
+        core::Array<MouseActionEventPtr> events = std::move(pendingMouseActionEvents_);
+        pendingMouseActionEvents_.clear();
         pendingMouseDragWidget_ = nullptr;
         pendingMouseDragAction_ = nullptr;
+
+        // Start the MouseDrag.
+        //
+        updateFocusOnClick_(currentMouseDragWidget_.get());
         bool isStart = true;
-        for (const MouseActionEventPtr& event : pendingMouseActionEvents_) {
+        for (const MouseActionEventPtr& event : events) {
             event->setWidget(currentMouseDragWidget_.get());
             mapMouseActionPosition_(event.get(), currentMouseDragWidget_.get());
             if (isStart) {
@@ -827,7 +922,6 @@ void Widget::maybeStartPendingMouseAction_() {
                 currentMouseDragAction_->onMouseDragMove(event.get());
             }
         }
-        pendingMouseActionEvents_.clear();
     }
 }
 
@@ -933,7 +1027,7 @@ bool Widget::handleMousePressActions_(MouseEvent* event) {
     }
     else {
         // If there is no pending action, this means that the event is not
-        // handled via regirstered actions, so we need to propagate the
+        // handled via registered actions, so we need to propagate the
         // MousePress through the widget hierarchy for raw handling without
         // actions.
         //
@@ -1108,32 +1202,8 @@ void Widget::mouseMove_(MouseMoveEvent* event) {
     }
 }
 
-namespace {
-
-// Clears focus if:
-// - there is a focused widget in the widget tree of parent, and
-// - the focused widget is not parent nor the given child or any of its descendant, and
-// - the focused widget isn't sticky
-//
-// parent must be non-null, but child can be null.
-//
-void clearNonStickyNonChildFocus_(Widget* parent, Widget* child) {
-    if (parent->root()->hasFocusedWidget()) {
-        bool childHasFocusedWidget = child && child->hasFocusedWidget();
-        if (!parent->isFocusedWidget() && !childHasFocusedWidget) {
-            Widget* focusedWidget = parent->focusedWidget();
-            if (!focusedWidget->focusPolicy().has(FocusPolicy::Sticky)) {
-                parent->clearFocus(FocusReason::Mouse);
-            }
-        }
-    }
-}
-
-} // namespace
-
 void Widget::mousePress_(MousePressEvent* event) {
     const geometry::Vec2f eventPos = event->position();
-    const bool otherWasPressed = !pressedButtons_.isEmpty();
 
     if (!checkAlreadyHovered_()) {
         return;
@@ -1158,26 +1228,6 @@ void Widget::mousePress_(MousePressEvent* event) {
 
     // Set button as pressed.
     pressedButtons_.set(event->button());
-
-    // Apply focus policy.
-    if (!otherWasPressed) {
-        if (focusPolicy().has(FocusPolicy::Click)) {
-            setFocus(FocusReason::Mouse);
-        }
-        else {
-            // XXX Probably buggy, see other call below.
-            //     If a parent has focus, a click on its child will clear it because
-            //     the child itself calls clearNonStickyNonChildFocus_(this, nullptr);
-            //     Shouldn't we do it only based on the chain end ?
-            clearNonStickyNonChildFocus_(this, hcChild);
-        }
-        // Check for deaths.
-        if (!isAlive()) {
-            // Widget got killed. Event can be considered handled.
-            event->handled_ = true;
-            return;
-        }
-    }
 
     // Call hover-chain child's handler.
     if (hcChild) {
@@ -1707,7 +1757,7 @@ bool Widget::updateHoverChain() {
     // We do not want to update the hover-chain if this widget isn't hovered,
     // or if a MouseDrag action is in progress.
     //
-    if (!isHovered() || currentMouseDragAction()) {
+    if (!isAlive() || !isHovered() || currentMouseDragAction()) {
         return false;
     }
 
@@ -1806,20 +1856,53 @@ void Widget::setTextInputReceiver(bool isTextInputReceiver) {
 }
 
 void Widget::setFocus(FocusReason reason) {
-    if (!isFocusedWidget()) {
-        clearFocus(reason);
-        Widget* widget = this;
-        Widget* focus = this;
-        while (widget) {
-            widget->focus_ = focus;
-            focus = widget;
-            widget = widget->parent();
+
+    core::Array<WidgetPtr>& focusStack = root()->focusStack_;
+
+    // Update focus stack and emit FocusIn and FocusOut signals.
+    //
+    WidgetPtr oldFocusedWidget = focusedWidget();
+    WidgetPtr newFocusedWidget = this;
+    if (oldFocusedWidget != newFocusedWidget) {
+
+        // Update focus stack.
+        //
+        switch (focusStrength()) {
+        case FocusStrength::Low:
+            // Remove all widgets that are either not alive or with low strength
+            focusStack.removeIf([](const WidgetPtr& w) {
+                return !w || w->focusStrength() == FocusStrength::Low;
+            });
+            break;
+        case FocusStrength::Medium:
+            // Remove all widgets that are either not alive or with low or medium strength
+            focusStack.removeIf([](const WidgetPtr& w) {
+                return !w || w->focusStrength() != FocusStrength::High;
+            });
+            break;
+        case FocusStrength::High:
+            // Remove all widgets
+            focusStack.clear();
+            break;
         }
+        focusStack.append(this);
+
+        // Emit FocusIn and FocusOut.
+        //
         if (isTreeActive()) {
-            onFocusIn(reason);
+            if (oldFocusedWidget) {
+                oldFocusedWidget->onFocusOut(reason);
+            }
+            if (newFocusedWidget) { // => is still alive after signal handling
+                newFocusedWidget->onFocusIn(reason);
+            }
         }
     }
-    Widget* widget = this;
+
+    // Emit focusSet() signal for this widget and all its ancestor, regardless
+    // of whether the focused widget changed.
+    //
+    WidgetPtr widget = newFocusedWidget;
     while (widget) {
         widget->focusSet().emit(reason);
         widget = widget->parent();
@@ -1827,16 +1910,31 @@ void Widget::setFocus(FocusReason reason) {
 }
 
 void Widget::clearFocus(FocusReason reason) {
-    Widget* oldFocusedWidget = focusedWidget();
-    Widget* ancestor = oldFocusedWidget;
-    while (ancestor) {
-        ancestor->focus_ = nullptr;
-        ancestor = ancestor->parent();
+
+    core::Array<WidgetPtr>& focusStack = root()->focusStack_;
+
+    // Update focus stack.
+    //
+    WidgetPtr oldFocusedWidget = focusedWidget();
+    focusStack.removeIf(
+        [this](const WidgetPtr& w) { return !w || w->isDescendantOf(this); });
+    WidgetPtr newFocusedWidget = focusedWidget();
+
+    // Emit FocusIn and FocusOut signals.
+    //
+    if (oldFocusedWidget != newFocusedWidget && isTreeActive()) {
+        if (oldFocusedWidget) {
+            oldFocusedWidget->onFocusOut(reason);
+        }
+        if (newFocusedWidget) { // => is still alive after signal handling
+            newFocusedWidget->onFocusIn(reason);
+        }
     }
-    if (oldFocusedWidget && isTreeActive()) {
-        oldFocusedWidget->onFocusOut(reason);
-    }
-    Widget* widget = this;
+
+    // Emit focusCleared() signal for this widget and all its ancestor,
+    // regardless of whether the focused widget changed.
+    //
+    WidgetPtr widget = this;
     while (widget) {
         widget->focusCleared().emit(reason);
         widget = widget->parent();
@@ -1848,15 +1946,12 @@ void Widget::clearFocus(FocusReason reason) {
 // 2. w->focus_ points to either w or a child of w
 
 Widget* Widget::focusedWidget() const {
-    Widget* res = root()->focus_;
-    if (res) {                       // If this widget tree has a focused widget,
-        while (res->focus_ != res) { // then while res is not the focused widget,
-            res = res->focus_;       // keep iterating down the tree
-        }
-        return res;
+    const core::Array<WidgetPtr>& focusStack = root()->focusStack_;
+    if (focusStack.isEmpty()) {
+        return nullptr;
     }
     else {
-        return nullptr;
+        return focusStack.last().get();
     }
 }
 
@@ -1868,6 +1963,21 @@ bool Widget::onFocusOut(FocusReason) {
     return false;
 }
 
+namespace {
+
+core::Array<WidgetPtr> getFocusBranch(Widget* root) {
+    core::Array<WidgetPtr> res;
+    Widget* widget = root->focusedWidget();
+    while (widget) {
+        res.append(widget);
+        widget = widget->parent();
+    }
+    std::reverse(res.begin(), res.end());
+    return res;
+}
+
+} // namespace
+
 bool Widget::keyPress(KeyPressEvent* event) {
     if (!isRoot()) {
         VGC_WARNING(LogVgcUi, "keyPress() can only be called on a root widget.");
@@ -1875,7 +1985,11 @@ bool Widget::keyPress(KeyPressEvent* event) {
     }
     WidgetPtr thisPtr = this;
     bool isKeyPress = true;
-    keyEvent_(event, isKeyPress);
+    core::Array<WidgetPtr> focusBranch = getFocusBranch(this);
+    if (!focusBranch.isEmpty()) {
+        Int index = 0;
+        focusBranch[index]->keyEvent_(event, isKeyPress, focusBranch, index);
+    }
     return event->isHandled();
 }
 
@@ -1886,7 +2000,11 @@ bool Widget::keyRelease(KeyReleaseEvent* event) {
     }
     WidgetPtr thisPtr = this;
     bool isKeyPress = false;
-    keyEvent_(event, isKeyPress);
+    core::Array<WidgetPtr> focusBranch = getFocusBranch(this);
+    if (!focusBranch.isEmpty()) {
+        Int index = 0;
+        focusBranch[index]->keyEvent_(event, isKeyPress, focusBranch, index);
+    }
     return event->isHandled();
 }
 
@@ -1922,10 +2040,13 @@ void Widget::clearActions() {
     }
 }
 
-void Widget::keyEvent_(PropagatedKeyEvent* event, bool isKeyPress) {
+void Widget::keyEvent_(
+    PropagatedKeyEvent* event,
+    bool isKeyPress,
+    const core::Array<WidgetPtr>& focusChain,
+    Int index) {
 
     // User-defined capture phase handler.
-    WidgetPtr thisPtr = this;
     if (isKeyPress) {
         preKeyPress(static_cast<KeyPressEvent*>(event));
     }
@@ -1944,16 +2065,19 @@ void Widget::keyEvent_(PropagatedKeyEvent* event, bool isKeyPress) {
     }
 
     // Get focused child
-    Widget* fChild = focusedChild();
+    //
+    ++index;
+    WidgetPtr focusedChild;
+    if (index < focusChain.length()) {
+        focusedChild = focusChain[index];
+    }
 
     // Call focused child's handler.
-    if (fChild) {
-        // Prepare against widget killers.
-        WidgetPtr fChildPtr = fChild;
+    if (focusedChild) {
         // Call handler.
-        fChild->keyEvent_(event, isKeyPress);
+        focusedChild->keyEvent_(event, isKeyPress, focusChain, index);
         // Check for deaths.
-        if (!isAlive() || !fChildPtr.isAlive()) {
+        if (!isAlive() || !focusedChild.isAlive()) {
             // Widget got killed. Event can be considered handled.
             event->handled_ = true;
             return;

@@ -35,6 +35,7 @@
 #include <vgc/ui/action.h>
 #include <vgc/ui/api.h>
 #include <vgc/ui/exceptions.h>
+#include <vgc/ui/focus.h>
 #include <vgc/ui/keyevent.h>
 #include <vgc/ui/logcategories.h>
 #include <vgc/ui/margins.h>
@@ -60,21 +61,6 @@ enum class PaintOption : UInt64 {
     LayoutViz = 0x02,
 };
 VGC_DEFINE_FLAGS(PaintOptions, PaintOption)
-
-/// \enum vgc::ui::FocusPolicy
-/// \brief Specifies how a widget accepts keyboard focus.
-///
-enum class FocusPolicy : UInt8 {
-    Never     = 0x00, ///< Never accept focus.
-    Click     = 0x01, ///< Accept focus by clicking on the widget.
-    Wheel     = 0x02, ///< Accept focus by using the mouse wheel over the widget.
-    Tab       = 0x04, ///< Accept focus by cycling through widgets with the Tab key.
-
-    /// Preserve focus even when clicking on another widget that does not
-    /// accept click focus.
-    Sticky    = 0x80,
-};
-VGC_DEFINE_FLAGS(FocusPolicyFlags, FocusPolicy)
 
 /// \enum vgc::ui::Visibility
 /// \brief Specifies widget visibility.
@@ -102,20 +88,6 @@ enum class Visibility : bool {
 enum class HandledEventPolicy : bool {
     Receive,
     Skip
-};
-
-/// \enum vgc::ui::FocusReason
-/// \brief Specifies why a widget receives or loses keyboard focus.
-///
-enum class FocusReason : UInt8 {
-    Mouse    = 0, ///<  A mouse click or wheel event occurred.
-    Tab      = 1, ///<  The user cycled through widgets with the Tab key.
-    Backtab  = 2, ///<  The user cycled through widgets, in reverse order, with the Tab key (e.g., Shift+Tab).
-    Window   = 3, ///<  The window became active or inactive.
-    Popup    = 4, ///<  A popup grabbed or released the keyboard focus.
-    Shortcut = 5, ///<  A widget gained focus via its label's buddy shortcut
-    Menu     = 6, ///<  A menu bar grabbed or released the keyboard focus.
-    Other    = 7, ///<  Another reason.
 };
 
 // clang-format on
@@ -1075,7 +1047,7 @@ public:
     ///
     void setTreeActive(bool active, FocusReason reason);
 
-    /// Gets the focus policy of this widget.
+    /// Returns the focus policy of this widget.
     ///
     FocusPolicyFlags focusPolicy() const {
         return focusPolicy_;
@@ -1085,6 +1057,18 @@ public:
     ///
     void setFocusPolicy(FocusPolicyFlags policy) {
         focusPolicy_ = policy;
+    }
+
+    /// Returns the focus strength of this widget.
+    ///
+    FocusStrength focusStrength() const {
+        return focusStrength_;
+    }
+
+    /// Sets the focus strength of this widget.
+    ///
+    void setFocusStrength(FocusStrength strength) {
+        focusStrength_ = strength;
     }
 
     /// Returns whether this widget accepts text input.
@@ -1124,7 +1108,7 @@ public:
     VGC_SIGNAL(focusCleared, (FocusReason, reason))
 
     /// Makes this widget the focused widget of this widget tree, and emits the
-    /// focusRequested signal.
+    /// `focusSet()` signal.
     ///
     /// If the tree is active, then this widget will now receive keyboard
     /// events.
@@ -1133,7 +1117,7 @@ public:
     /// widget, then this widget will receive a FocusIn event.
     ///
     /// Note that if this widget was already the focused widget, then typically
-    /// it will not receive a FocusIn event. However, the focusRequested signal
+    /// it will not receive a FocusIn event. However, the `focusSet()` signal
     /// is still emitted, and as a result the tree may switch from inactive to
     /// active, in which case this widget will in fact indirectly receive a
     /// FocusIn event.
@@ -1141,34 +1125,21 @@ public:
     /// After calling this function, all ancestors of this widget become part
     /// of what is called the "focus branch": it is the branch that goes from
     /// the root of the widget tree to the focused widget. For all widgets in
-    /// this branch (including the focused widget), hasFocusWithin() returns
-    /// true, and focusedChild() returns the child in this branch.
+    /// this branch (including the focused widget), `hasFocusedWidget()`
+    /// returns true.
     ///
-    /// \sa isTreeActive(), clearFocus(), focusedWidget()
+    /// \sa `isTreeActive()`, `clearFocus()`.
     ///
     void setFocus(FocusReason reason);
 
-    /// Removes the focus from the focused widget, if any. If the tree is
-    /// active, the focused widget will receive a FocusOut event, and from now
-    /// on will not receive keyboard events.
+    /// Removes this widget or any of its descendants from the focus stack.
     ///
-    /// Does nothing if focusedWidget() is nullptr.
+    /// If this causes the current `focusedWidget()` to lose focus, and if the
+    /// tree is active, then the focused widget will receive a `FocusOut`
+    /// event, and from now on will not receive keyboard events. The new
+    /// `focusedWidget()`, if any, will receive a `FocusIn` event.
     ///
     void clearFocus(FocusReason reason);
-
-    /// Returns which child of this widget is part of the focus branch (see
-    /// setFocus() for details). The returned widget is the only child of this
-    /// widget, if any, such that hasFocusWithin() returns true.
-    ///
-    /// Returns nullptr if none of the descendant of this widget is the focused
-    /// widget. Also returns nullptr if this widget itself is the focused
-    /// widget.
-    ///
-    /// \sa setFocus(), clearFocus(), focusedWidget(), hasFocusWithin()
-    ///
-    Widget* focusedChild() const {
-        return isFocusedWidget() ? nullptr : focus_;
-    }
 
     /// Returns whether the focused widget is this widget or any of its descendants.
     ///
@@ -1176,7 +1147,8 @@ public:
     /// you can call root()->hasFocusedWidget();
     ///
     bool hasFocusedWidget() const {
-        return focus_ != nullptr;
+        Widget* focusedWidget_ = focusedWidget();
+        return focusedWidget_ && focusedWidget_->isDescendantOf(this);
     }
 
     /// Returns the focused widget of this widget tree, if any.
@@ -1186,7 +1158,7 @@ public:
     /// Returns whether this widget is the focused widget.
     ///
     bool isFocusedWidget() const {
-        return focus_ == this;
+        return focusedWidget() == this;
     }
 
     /// Returns whether this widget is the focused widget, and this widget tree
@@ -1200,7 +1172,7 @@ public:
     /// widget, and this widget tree is active.
     ///
     bool hasFocusWithin() const {
-        return focus_ != nullptr && isTreeActive();
+        return hasFocusedWidget() && isTreeActive();
     }
 
     /// Override this function if you wish to handle FocusIn events. You must
@@ -1214,7 +1186,7 @@ public:
     /// Note that this function is only called for the focused widget itself,
     /// not for all its ancestors.
     ///
-    /// \sa onFocusOut(), setFocus(), clearFocus(), isTreeActive()
+    /// \sa `onFocusOut()`, `setFocus()`, `clearFocus()`, `isTreeActive()`.
     ///
     virtual bool onFocusIn(FocusReason reason);
 
@@ -1233,7 +1205,7 @@ public:
     /// Note that this function is only called for the focused widget itself,
     /// not for all its ancestors.
     ///
-    /// \sa onFocusIn(), setFocus(), clearFocus(), isTreeActive()
+    /// \sa `onFocusIn()`, `setFocus()`, `clearFocus()`, `isTreeActive()`.
     ///
     virtual bool onFocusOut(FocusReason reason);
 
@@ -1604,7 +1576,8 @@ private:
     ActionPtr currentMouseDragAction_;
 
     // Mouse
-    Widget* mouseCaptor_ = nullptr; // TODO: move to future class WidgetTree
+    // TODO: Move the whole hover chain and mouse captor to WidgetTree?
+    Widget* mouseCaptor_ = nullptr;
     Widget* hoverChainParent_ = nullptr;
     Widget* hoverChainChild_ = nullptr;
     geometry::Vec2f lastMouseHoverPosition_;
@@ -1616,6 +1589,8 @@ private:
     bool isHoverLocked_ = false;
     bool isChildHoverEnabled_ = true;
     MouseButtons pressedButtons_ = {};
+
+    void updateFocusOnClick_(Widget* clickedWidget);
 
     void appendToPendingMouseActionEvents_(MouseEvent* event);
     void mapMouseActionPosition_(MouseEvent* event, Widget* widget);
@@ -1655,13 +1630,34 @@ private:
     // - this: the focused widget is this widget
     // - child ptr: the focused widget is a descendant of this widget
     //
-    bool isTreeActive_ = false; // TODO: move to future class WidgetTree
+    // Note that the focus_ data member is only about the currently focused
+    // widget. In addition, the widget tree stores a stack of previously
+    // focused widgets. This enables the ability to have widget with "temporary
+    // focus policy" (non-sticky), which are given the focus and pushed to the
+    // stack, then once they lose focus, they are popped from the stack and the
+    // focus is given back to the widget that previously had the focus.
+    //
+    // Possible space optimizations:
+    // - store both policy and strength as a unique UInt8
+    // - Make them virtual method
+    // - Make isTextInputReceiver() a virtual method
+    // - Don't cache the focus_ chain (redundant with focusStack_.last().ancestors())
+    //
+    // Per-widget attributes.
+    Widget* focus_ = nullptr; // Cached chain from root to current focused widget.
     FocusPolicyFlags focusPolicy_ = FocusPolicy::Never;
+    FocusStrength focusStrength_ = FocusStrength::Medium;
     bool isTextInputReceiver_ = false;
-    Widget* focus_ = nullptr;
-    Widget* keyboardCaptor_ = nullptr; // TODO: move to future class WidgetTree
+    // Per-tree attributes
+    bool isTreeActive_ = false;
+    core::Array<WidgetPtr> focusStack_;
+    Widget* keyboardCaptor_ = nullptr;
 
-    void keyEvent_(PropagatedKeyEvent* event, bool isPress);
+    void keyEvent_(
+        PropagatedKeyEvent* event,
+        bool isPress,
+        const core::Array<WidgetPtr>& chain,
+        Int index);
 
     // Engine
     graphics::Engine* lastPaintEngine_ = nullptr;

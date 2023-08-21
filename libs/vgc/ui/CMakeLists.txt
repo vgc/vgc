@@ -25,6 +25,7 @@ vgc_add_library(ui
         dialog.h
         event.h
         exceptions.h
+        focus.h
         flex.h
         grid.h
         iconwidget.h
@@ -82,6 +83,7 @@ vgc_add_library(ui
         dialog.cpp
         event.cpp
         exceptions.cpp
+        focus.cpp
         flex.cpp
         grid.cpp
         iconwidget.cpp
