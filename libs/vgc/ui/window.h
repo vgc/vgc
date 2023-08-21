@@ -327,7 +327,7 @@ private:
     void onMouseCaptureStopped_();
     void onKeyboardCaptureStarted_();
     void onKeyboardCaptureStopped_();
-    void onFocusWidgetChanged_();
+    void onFocusSetOrCleared_();
     void onTextInputReceiverChanged_();
     void onWidgetAddedToTree_(Widget* widget);
     void onWidgetRemovedFromTree_(Widget* widget);
@@ -338,7 +338,7 @@ private:
     VGC_SLOT(onRepaintRequestedSlot_, onRepaintRequested_);
     VGC_SLOT(onMouseCaptureStartedSlot_, onMouseCaptureStarted_);
     VGC_SLOT(onMouseCaptureStoppedSlot_, onMouseCaptureStopped_);
-    VGC_SLOT(onFocusWidgetChangedSlot_, onFocusWidgetChanged_);
+    VGC_SLOT(onFocusSetOrClearedSlot_, onFocusSetOrCleared_);
     VGC_SLOT(onTextInputReceiverChangedSlot_, onTextInputReceiverChanged_);
     VGC_SLOT(onKeyboardCaptureStartedSlot_, onKeyboardCaptureStarted_);
     VGC_SLOT(onKeyboardCaptureStoppedSlot_, onKeyboardCaptureStopped_);

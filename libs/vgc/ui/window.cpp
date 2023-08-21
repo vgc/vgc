@@ -133,13 +133,12 @@ Window::Window(CreateKey key, const WidgetPtr& widget)
 
     //setMouseTracking(true);
     widget_->repaintRequested().connect(onRepaintRequestedSlot_());
-    widget_->focusSet().connect(onFocusWidgetChangedSlot_());
-    widget_->focusCleared().connect(onFocusWidgetChangedSlot_());
+    widget_->focusSet().connect(onFocusSetOrClearedSlot_());
+    widget_->focusCleared().connect(onFocusSetOrClearedSlot_());
     widget_->mouseCaptureStarted().connect(onMouseCaptureStartedSlot_());
     widget_->mouseCaptureStopped().connect(onMouseCaptureStoppedSlot_());
     widget_->keyboardCaptureStarted().connect(onKeyboardCaptureStartedSlot_());
     widget_->keyboardCaptureStopped().connect(onKeyboardCaptureStoppedSlot_());
-    //widget_->focusRequested().connect([this](){ this->onFocusRequested(); });
     widget_->widgetAddedToTree().connect(onWidgetAddedToTreeSlot_());
     widget_->widgetRemovedFromTree().connect(onWidgetRemovedFromTreeSlot_());
     widget_->window_ = this;
@@ -1255,7 +1254,23 @@ void Window::onKeyboardCaptureStopped_() {
     setKeyboardGrabEnabled(false);
 }
 
-void Window::onFocusWidgetChanged_() {
+void Window::onFocusSetOrCleared_() {
+
+    // Fast return if the focused widget hasn't actually changed.
+    //
+    // Note that if there was several widget trees (e.g., mixing QtWidgets and
+    // vgc::ui), then we shoul not fast return, but instead set as active the
+    // tree that emits `focusSet()` (as long as the window itself is
+    // active). Indeed, receiving `focusSet()` from a tree typically means that
+    // the user clicked on a widget in the tree, so this tree should now become
+    // active, regardless if the user clicked on the focused widget or not.
+    //
+    if (focusedWidget_.get() == widget_->focusedWidget()) {
+        return;
+    }
+
+    // Otherwise, update connections and InputMethod handling.
+    //
     if (focusedWidget_) {
         focusedWidget_->textInputReceiverChanged().disconnect(
             onTextInputReceiverChangedSlot_());

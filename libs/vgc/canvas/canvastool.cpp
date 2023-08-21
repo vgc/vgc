@@ -30,10 +30,12 @@ namespace vgc::canvas {
 CanvasTool::CanvasTool(CreateKey key)
     : Widget(key) {
 
-    // Set Click+Sticky focus policy by default, so that:
+    // Set Click focus policy with High focus strength by default, so that:
     // - clicking on the canvas gives the keyboard focus to the tool, and
     // - the tool keeps the keyboard when clicking on widgets that don't
     //   accept focus, such as a button.
+    // - the tool gets the focus back when interacting with widgets that
+    //   accept focus but at lower strength (e.g., line edits, menus).
     //
     // For example, sketching gives the focus to the sketch tool, and clicking
     // on a button keeps the focus on the sketch tool.
@@ -50,7 +52,8 @@ CanvasTool::CanvasTool(CreateKey key)
     // so that they can be trigerred with their shortcut even if the canvas
     // doesn't have the focus.
     //
-    setFocusPolicy(ui::FocusPolicy::Click | ui::FocusPolicy::Sticky);
+    setFocusPolicy(ui::FocusPolicy::Click);
+    setFocusStrength(ui::FocusStrength::High);
 
     // Enable clipping, so that tools don't draw outside the canvas.
     //
