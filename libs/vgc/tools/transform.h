@@ -165,7 +165,6 @@ private:
     bool isTooSmallForBox_ = false;
 
     bool isBoundingBoxDirty_ = true;
-    bool isHoverDataUpdateRequired_ = true;
     void computeHoverData_(canvas::Canvas* canvas);
 
     detail::TransformDragAction* dragAction_ = nullptr;

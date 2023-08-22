@@ -1695,9 +1695,29 @@ void Widget::mouseHover_() {
     ModifierKeys modifierKeys = root->lastModifierKeys_;
     double timestamp = root->lastTimestamp_;
 
-    // Determine if we should send the mouse hover
+    // Determine if we should send the mouse hover.
+    //
+    // One option is to only send the mouse hover if the position of the mouse
+    // or the modifiers have changed. This avoids sending "useless" events, but
+    // unfortunately it does not work in all situations: sometimes, the mouse
+    // position hasn't changed but widgets would still like to receive a mouse
+    // hover because their internal state changed, and therefore something else
+    // is now hovered.
+    //
+    // Therefore, for now, we unconditionally send the mouse hover, but keep
+    // the other implementation in case we need it again later.
+    //
+    // For example, a better approach might be to implement a
+    // `requestHoverUpdate()` method, so that widgets could opt-in receiving a
+    // mouse hover when they need to recompute their hover state. Otherwise, it
+    // would only be sent if the mouse position or modifiers have changed.
+    //
+    constexpr bool unconditionalMouseHover = true;
     bool doMouseHover = false;
-    if (forceNextMouseHover_) {
+    if (unconditionalMouseHover) {
+        doMouseHover = true;
+    }
+    else if (forceNextMouseHover_) {
         doMouseHover = true;
     }
     else if (

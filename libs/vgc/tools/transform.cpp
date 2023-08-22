@@ -392,7 +392,7 @@ public:
 
     void onMouseDragConfirm(ui::MouseEvent* /*event*/) override {
         box_->isTransformActionOngoing_ = false;
-        box_->isHoverDataUpdateRequired_ = true;
+        box_->isBoundingBoxDirty_ = true;
 
         workspace::Workspace* workspace = transformer_.workspace();
         if (draggedOnce_ && workspace) {
@@ -415,7 +415,7 @@ public:
 
     void onMouseDragCancel(ui::MouseEvent* /*event*/) override {
         box_->isTransformActionOngoing_ = false;
-        box_->isHoverDataUpdateRequired_ = true;
+        box_->isBoundingBoxDirty_ = true;
 
         workspace::Workspace* workspace = transformer_.workspace();
         if (draggedOnce_ && workspace) {
@@ -955,9 +955,14 @@ void TransformBox::onMouseHover(ui::MouseHoverEvent* event) {
         return;
     }
 
+    if (isBoundingBoxDirty_ && !isTransformActionOngoing_) {
+        updateFromElements_();
+        isBoundingBoxDirty_ = false;
+    }
+
     // Recompute which mouse actions are available.
     canvas::Canvas* canvas = canvasTool_ ? canvasTool_->canvas() : nullptr;
-    if (canvas && isHoverDataUpdateRequired_) {
+    if (canvas) {
         computeHoverData_(canvas);
     }
 
@@ -1401,8 +1406,6 @@ void TransformBox::computeHoverData_(canvas::Canvas* canvas) {
         cornerNormals_[i] = (t0 - t1).normalized();
         cornerTangents_[i] = (t0 + t1).normalized();
     }
-
-    isHoverDataUpdateRequired_ = false;
 }
 
 void TransformBox::onWorkspaceChanged_() {
@@ -1425,6 +1428,7 @@ void TransformBox::onWorkspaceChanged_() {
 }
 
 void TransformBox::updateFromElements_() {
+
     if (!updateWorkspacePointer_() || elementIds_.isEmpty()) {
         hide_();
     }
@@ -1458,6 +1462,7 @@ void TransformBox::hide_() {
     if (isVisible_) {
         clearDragActions_();
         isVisible_ = false;
+        cursorChanger_.clear();
     }
 }
 
