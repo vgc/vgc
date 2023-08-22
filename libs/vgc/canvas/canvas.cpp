@@ -660,6 +660,7 @@ bool Canvas::onMouseScroll(ui::ScrollEvent* event) {
         geometry::Vec2d p2 = camera_.viewMatrix().transformPointAffine(p1);
         camera_.setCenter(camera_.center() - mousePos + p2);
 
+        requestGeometryUpdate();
         requestRepaint();
     }
 
