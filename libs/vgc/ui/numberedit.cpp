@@ -314,7 +314,7 @@ bool NumberEdit::onKeyPress(KeyPressEvent* event) {
         setTextFromValue_();
         setTextMode_(false);
     }
-    if (event->key() == Key::Enter || event->key() == Key::Return) {
+    else if (event->key() == Key::Enter || event->key() == Key::Return) {
         setValueFromText_(oldValue_);
         setTextFromValue_();
         setTextMode_(false);

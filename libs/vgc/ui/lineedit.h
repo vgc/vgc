@@ -108,6 +108,9 @@ private:
     ui::CursorChanger cursorChanger_;
     ui::MouseButton mouseButton_ = ui::MouseButton::None;
 
+    // Text value before editing starts
+    std::string oldText_;
+
     // Handle double/triple clicks
     core::Stopwatch leftMouseButtonStopwatch_;
     Int numLeftMouseButtonClicks_ = 0;
