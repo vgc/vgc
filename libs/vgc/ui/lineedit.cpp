@@ -261,6 +261,7 @@ void LineEdit::onMouseLeave() {
 }
 
 bool LineEdit::onFocusIn(FocusReason) {
+    oldText_ = text();
     richText_->setSelectionVisible(true);
     richText_->setCursorVisible(true);
     reload_ = true;
@@ -295,10 +296,6 @@ bool LineEdit::onKeyPress(KeyPressEvent* event) {
     bool needsRepaint = true;
     bool isMoveOperation = false;
 
-    if (key == Key::Enter || key == Key::Return) {
-        needsRepaint = true;
-        editingFinished().emit();
-    }
     if (key == Key::Delete || key == Key::Backspace) {
         if (key == Key::Delete) {
             richText_->deleteFromCursor(ctrl ? Op::NextWord : Op::NextCharacter);
@@ -357,8 +354,11 @@ bool LineEdit::onKeyPress(KeyPressEvent* event) {
         richText_->selectAll();
     }
     else if (key == Key::Escape) {
+        setText(oldText_);
         clearFocus(FocusReason::Other);
-        handled = true;
+    }
+    else if (event->key() == Key::Enter || event->key() == Key::Return) {
+        clearFocus(FocusReason::Other);
     }
     else if (key == Key::Tab) {
         handled = false;
