@@ -204,6 +204,12 @@ public:
 
     // ------------------------- Action State ---------------------------------
 
+    /// Returns the widget that owns this action, if any.
+    ///
+    Widget* owningWidget() const {
+        return owningWidget_;
+    }
+
     /// Returns whether this action is enabled or not.
     ///
     bool isEnabled() const {
@@ -383,17 +389,21 @@ public:
     virtual void onMouseDragCancel(MouseEvent* event);
 
 private:
-    friend Menu;
     friend ActionGroup;
+    friend Menu;
+    friend Widget;
 
     const Command* command_;
     std::string text_;
-    ui::ActionGroup* group_ = nullptr;
+    Widget* owningWidget_ = nullptr;
+    ActionGroup* group_ = nullptr;
     bool isEnabled_ = true;
     bool isMenu_ = false;
     CheckMode checkMode_ = CheckMode::Uncheckable;
     CheckState checkState_ = CheckState::Unchecked;
     CheckState lastEmittedCheckState_ = CheckState::Unchecked;
+
+    void setOwningWidget_(Widget* owningWidget);
 
     // Directly sets the new state, ignoring policy and emitting no signals
     void setCheckStateNoEmit_(CheckState newState);
