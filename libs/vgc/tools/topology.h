@@ -20,14 +20,14 @@
 #include <vgc/tools/api.h>
 #include <vgc/ui/command.h>
 
-namespace vgc::tools {
+namespace vgc::tools::commands {
 
 VGC_TOOLS_API
-core::StringId glueCommandId();
+VGC_UI_DECLARE_COMMAND(glue)
 
 VGC_TOOLS_API
-core::StringId unglueCommandId();
+VGC_UI_DECLARE_COMMAND(unglue)
 
-} // namespace vgc::tools
+} // namespace vgc::tools::commands
 
 #endif // VGC_TOOLS_TOPOLOGY_H

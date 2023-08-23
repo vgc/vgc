@@ -494,25 +494,22 @@ struct VGC_UI_API ShortcutAdder {
 ///
 /// ```cpp
 /// VGC_UI_ADD_DEFAULT_SHORTCUT(
-///     save,
+///     save(),
 ///     (vgc::ui::Key::S))
 /// ```
 ///
 /// ```cpp
 /// VGC_UI_ADD_DEFAULT_SHORTCUT(
-///     save,
+///     save(),
 ///     (vgc::ui::ModifierKey::Ctrl, vgc::ui::Key::S))
 /// ```
 ///
-/// This can only be user in .cpp source files, not in header files.
+/// This can only be used in .cpp source files, not in header files.
 ///
-/// Note that due to macro limitations for doing static initialization, the
-/// first argument must be an unqualified variable identifier (that is, with no
-/// explicit namespaces mentionnedprepended) of type `Command` or `const
-/// Command&`. The macro creates a new variable name based on this name.
-///
-#define VGC_UI_ADD_DEFAULT_SHORTCUT(commandVariable, shortcut)                           \
-    static const ::vgc::ui::detail::ShortcutAdder commandVariable##_shortcut_##__LINE__( \
-        ::vgc::ui::defaultShortcuts(), commandVariable, shortcut);
+// clang-format off
+#define VGC_UI_ADD_DEFAULT_SHORTCUT(commandId, shortcut)                                 \
+    static const ::vgc::ui::detail::ShortcutAdder VGC_PP_CAT(shortcutAdder_, __LINE__)   \
+    (::vgc::ui::defaultShortcuts(), commandId, shortcut);
+// clang-format on
 
 #endif // VGC_UI_SHORTCUT_H

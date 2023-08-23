@@ -603,17 +603,17 @@ ui::Action* createAction(ui::Widget* parent, core::StringId commandId, TSlot slo
 
 void CanvasApplication::createActions_(ui::Widget* parent) {
 
-    actionNew_ = createAction(parent, commands::_new, onActionNewSlot_());
-    actionOpen_ = createAction(parent, commands::open, onActionOpenSlot_());
-    actionSave_ = createAction(parent, commands::save, onActionSaveSlot_());
-    actionSaveAs_ = createAction(parent, commands::saveAs, onActionSaveAsSlot_());
-    actionQuit_ = createAction(parent, commands::quit, onActionQuitSlot_());
+    actionNew_ = createAction(parent, commands::_new(), onActionNewSlot_());
+    actionOpen_ = createAction(parent, commands::open(), onActionOpenSlot_());
+    actionSave_ = createAction(parent, commands::save(), onActionSaveSlot_());
+    actionSaveAs_ = createAction(parent, commands::saveAs(), onActionSaveAsSlot_());
+    actionQuit_ = createAction(parent, commands::quit(), onActionQuitSlot_());
 
-    actionUndo_ = createAction(parent, commands::undo, onActionUndoSlot_());
-    actionRedo_ = createAction(parent, commands::redo, onActionRedoSlot_());
+    actionUndo_ = createAction(parent, commands::undo(), onActionUndoSlot_());
+    actionRedo_ = createAction(parent, commands::redo(), onActionRedoSlot_());
 
     actionDebugWidgetSizing_ = createAction(
-        parent, commands::debugWidgetSizing, onActionDebugWidgetSizingSlot_());
+        parent, commands::debugWidgetSizing(), onActionDebugWidgetSizingSlot_());
 
     updateUndoRedoActionState_();
 }
@@ -721,10 +721,10 @@ void CanvasApplication::createTools_(ui::Widget* parent) {
     tools::SketchPtr sketchTool = tools::Sketch::create();
     tools::PaintBucketPtr paintBucketTool = tools::PaintBucket::create();
     tools::SculptPtr sculptTool = tools::Sculpt::create();
-    registerTool_(tools, commands::selectTool, selectTool);
-    registerTool_(tools, commands::sketchTool, sketchTool);
-    registerTool_(tools, commands::paintBucketTool, paintBucketTool);
-    registerTool_(tools, commands::sculptTool, sculptTool);
+    registerTool_(tools, commands::selectTool(), selectTool);
+    registerTool_(tools, commands::sketchTool(), sketchTool);
+    registerTool_(tools, commands::paintBucketTool(), paintBucketTool);
+    registerTool_(tools, commands::sculptTool(), sculptTool);
 
     // Keep pointer to some tools for handling color changes
     sketchTool_ = sketchTool.get();
