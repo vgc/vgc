@@ -70,7 +70,7 @@ Menu::Menu(CreateKey key, std::string_view title)
     : Flex(key, FlexDirection::Column, FlexWrap::NoWrap) {
 
     addStyleClass(strings::Menu);
-    action_ = createTriggerAction(commands::openMenu, title);
+    action_ = createTriggerAction(commands::openMenu(), title);
     action_->isMenu_ = true;
     action_->triggered().connect(onSelfActionTriggeredSlot_());
 }

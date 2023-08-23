@@ -33,6 +33,8 @@
 
 namespace vgc::tools {
 
+namespace {
+
 namespace commands {
 
 using ui::Key;
@@ -117,8 +119,6 @@ VGC_UI_DEFINE_MOUSE_DRAG_COMMAND( //
     Shortcut(MouseButton::Left))
 
 } // namespace commands
-
-namespace {
 
 // Returns the file path of a cursor svg file.
 std::string cursorSvgPath_(const std::string& name) {
@@ -1519,10 +1519,10 @@ void TransformBox::setDragActions_(
         std::array<core::StringId, 2> commands;
         switch (transformType) {
         case detail::TransformDragActionType::Scale:
-            commands = {commands::scaleDrag, commands::scaleDragWithPivot};
+            commands = {commands::scaleDrag(), commands::scaleDragWithPivot()};
             break;
         case detail::TransformDragActionType::Rotate:
-            commands = {commands::rotateDrag, commands::rotateDragWithPivot};
+            commands = {commands::rotateDrag(), commands::rotateDragWithPivot()};
             break;
         }
 
@@ -1546,21 +1546,21 @@ void TransformBox::clearDragActions_() {
 
 void TransformBox::createTranslateStepActions_() {
     createTriggerActionWithSlot(
-        this, commands::translateLeftSmallStep, onTranslateLeftSmallStepSlot_());
+        this, commands::translateLeftSmallStep(), onTranslateLeftSmallStepSlot_());
     createTriggerActionWithSlot(
-        this, commands::translateRightSmallStep, onTranslateRightSmallStepSlot_());
+        this, commands::translateRightSmallStep(), onTranslateRightSmallStepSlot_());
     createTriggerActionWithSlot(
-        this, commands::translateUpSmallStep, onTranslateUpSmallStepSlot_());
+        this, commands::translateUpSmallStep(), onTranslateUpSmallStepSlot_());
     createTriggerActionWithSlot(
-        this, commands::translateDownSmallStep, onTranslateDownSmallStepSlot_());
+        this, commands::translateDownSmallStep(), onTranslateDownSmallStepSlot_());
     createTriggerActionWithSlot(
-        this, commands::translateLeftBigStep, onTranslateLeftBigStepSlot_());
+        this, commands::translateLeftBigStep(), onTranslateLeftBigStepSlot_());
     createTriggerActionWithSlot(
-        this, commands::translateRightBigStep, onTranslateRightBigStepSlot_());
+        this, commands::translateRightBigStep(), onTranslateRightBigStepSlot_());
     createTriggerActionWithSlot(
-        this, commands::translateUpBigStep, onTranslateUpBigStepSlot_());
+        this, commands::translateUpBigStep(), onTranslateUpBigStepSlot_());
     createTriggerActionWithSlot(
-        this, commands::translateDownBigStep, onTranslateDownBigStepSlot_());
+        this, commands::translateDownBigStep(), onTranslateDownBigStepSlot_());
 }
 
 constexpr double smallTranslateStep = 1.0;

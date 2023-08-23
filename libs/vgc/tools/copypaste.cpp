@@ -16,14 +16,18 @@
 
 #include <vgc/tools/copypaste.h>
 
-namespace vgc::tools {
-
-namespace commands {
+namespace vgc::tools::commands {
 
 using ui::Key;
 using ui::Shortcut;
 
 constexpr ui::ModifierKey ctrl = ui::ModifierKey::Ctrl;
+
+VGC_UI_DEFINE_WINDOW_COMMAND( //
+    cut,
+    "tools.copypaste.cut",
+    "Cut",
+    Shortcut(ctrl, Key::X));
 
 VGC_UI_DEFINE_WINDOW_COMMAND( //
     copy,
@@ -43,21 +47,4 @@ VGC_UI_DEFINE_WINDOW_COMMAND( //
     "Duplicate",
     Shortcut(ctrl, Key::D));
 
-} // namespace commands
-
-VGC_TOOLS_API
-core::StringId copyCommandId() {
-    return commands::copy;
-}
-
-VGC_TOOLS_API
-core::StringId pasteCommandId() {
-    return commands::paste;
-}
-
-VGC_TOOLS_API
-core::StringId duplicateCommandId() {
-    return commands::duplicate;
-}
-
-} // namespace vgc::tools
+} // namespace vgc::tools::commands

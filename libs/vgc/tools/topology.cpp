@@ -16,9 +16,7 @@
 
 #include <vgc/tools/topology.h>
 
-namespace vgc::tools {
-
-namespace commands {
+namespace vgc::tools::commands {
 
 using ui::Key;
 using ui::Shortcut;
@@ -41,16 +39,4 @@ VGC_UI_DEFINE_TRIGGER_COMMAND( //
     "Unglue",
     Shortcut(alt, Key::U));
 
-} // namespace commands
-
-VGC_TOOLS_API
-core::StringId glueCommandId() {
-    return commands::glue;
-}
-
-VGC_TOOLS_API
-core::StringId unglueCommandId() {
-    return commands::unglue;
-}
-
-} // namespace vgc::tools
+} // namespace vgc::tools::commands

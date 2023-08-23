@@ -2288,11 +2288,13 @@ void Widget::onWidgetRemoved_(Widget* widget) {
 
 void Widget::onActionAdded_(Action* action, bool wasOnlyReordered) {
     if (!wasOnlyReordered) {
+        action->setOwningWidget_(this);
         actionAdded().emit(action);
     }
 }
 
 void Widget::onActionRemoved_(Action* action) {
+    action->setOwningWidget_(nullptr);
     actionRemoved().emit(action);
 }
 

@@ -86,10 +86,6 @@ VGC_DECLARE_ENUM(CommandType);
 //
 // TODO: Short/Long description (for tooltip, status bar, etc.)
 //
-// TODO: Extract shortcut out of the command definition: the bindings
-//       between key/buttons and commands should be an external map
-//       that can change dynamically.
-//
 // XXX: CheckMode should be in properties too?
 // XXX: How to make name and categories translatable?
 // XXX: Make it an Object and allow it to change while notifying its
@@ -230,21 +226,55 @@ struct CommandRegistrer {
 
 } // namespace vgc::ui
 
-#define VGC_UI_DEFINE_COMMAND_BASE(variableName, id, ...)                                \
-    static const ::vgc::core::StringId variableName(id);                                 \
-    static const ::vgc::ui::detail::CommandRegistrer variableName##_detail(              \
-        ::vgc::ui::Command(id, __VA_ARGS__));
+/// Declares a function of the given `functionName` returning
+/// the `StringId` of a given command.
+///
+/// This is meant to be used in a header file, in conjunction with
+/// one of the `VGC_UI_DEFINE_COMMAND` variants to be used in a
+/// source file
+///
+/// Example:
+///
+/// ```cpp
+/// // Header file (.h)
+/// namespace vgc::app::commands {
+/// VGC_APP_API
+/// VGC_UI_DECLARE_COMMAND(save)
+/// }
+///
+/// // Source file (.cpp)
+/// VGC_UI_DEFINE_COMMAND(
+///     save,
+///     "file.save"
+///     CommandType::Trigger,
+///     ShortcutContext::Window,
+///     "Save",
+///     )
+///
+/// // Usage:
+/// StringId saveCommandId = vgc::app::commands::save();
+/// ```
+///
+#define VGC_UI_DECLARE_COMMAND(functionName) ::vgc::core::StringId functionName();
 
-#define VGC_UI_DEFINE_COMMAND_5(variableName, id, type, shortcutContext, name)           \
-    VGC_UI_DEFINE_COMMAND_BASE(variableName, id, type, shortcutContext, name)
+#define VGC_UI_DEFINE_COMMAND_BASE(functionName, id, ...)                                \
+    ::vgc::core::StringId functionName() {                                               \
+        static ::vgc::core::StringId res(id);                                            \
+        static ::vgc::ui::detail::CommandRegistrer registrer(                            \
+            ::vgc::ui::Command(id, __VA_ARGS__));                                        \
+        return res;                                                                      \
+    }
 
-#define VGC_UI_DEFINE_COMMAND_6(variableName, id, type, shortcutContext, name, shortcut) \
-    VGC_UI_DEFINE_COMMAND_BASE(variableName, id, type, shortcutContext, name)            \
-    VGC_UI_ADD_DEFAULT_SHORTCUT(variableName, shortcut)
+#define VGC_UI_DEFINE_COMMAND_5(fnName, id, type, shortcutContext, name)                 \
+    VGC_UI_DEFINE_COMMAND_BASE(fnName, id, type, shortcutContext, name)
 
-#define VGC_UI_DEFINE_COMMAND_7(vName, id, type, shortcutContext, name, shortcut, icon)  \
-    VGC_UI_DEFINE_COMMAND_BASE(vName, id, type, shortcutContext, name, icon)             \
-    VGC_UI_ADD_DEFAULT_SHORTCUT(vName, shortcut)
+#define VGC_UI_DEFINE_COMMAND_6(fnName, id, type, shortcutContext, name, shortcut)       \
+    VGC_UI_DEFINE_COMMAND_BASE(fnName, id, type, shortcutContext, name)                  \
+    VGC_UI_ADD_DEFAULT_SHORTCUT(fnName(), shortcut)
+
+#define VGC_UI_DEFINE_COMMAND_7(fnName, id, type, shortcutContext, name, shortcut, icon) \
+    VGC_UI_DEFINE_COMMAND_BASE(fnName, id, type, shortcutContext, name, icon)            \
+    VGC_UI_ADD_DEFAULT_SHORTCUT(fnName(), shortcut)
 
 /// Defines a command and adds it to the `CommandRegistry`.
 ///
@@ -285,9 +315,13 @@ struct CommandRegistrer {
 ///     Key::Right)
 /// ```
 ///
-#define VGC_UI_DEFINE_TRIGGER_COMMAND(var, id, ...)                                      \
+#define VGC_UI_DEFINE_TRIGGER_COMMAND(functionName, id, ...)                             \
     VGC_UI_DEFINE_COMMAND(                                                               \
-        var, id, ui::CommandType::Trigger, ui::ShortcutContext::Widget, __VA_ARGS__)
+        functionName,                                                                    \
+        id,                                                                              \
+        ::vgc::ui::CommandType::Trigger,                                                 \
+        ::vgc::ui::ShortcutContext::Widget,                                              \
+        __VA_ARGS__)
 
 /// An overload of `VGC_UI_DEFINE_COMMAND()` that creates a command of type
 /// `MouseDrag` and shortcut context `Widget`.
@@ -300,9 +334,13 @@ struct CommandRegistrer {
 ///     MouseButton::Left)
 /// ```
 ///
-#define VGC_UI_DEFINE_MOUSE_DRAG_COMMAND(var, id, ...)                                   \
+#define VGC_UI_DEFINE_MOUSE_DRAG_COMMAND(functionName, id, ...)                          \
     VGC_UI_DEFINE_COMMAND(                                                               \
-        var, id, ui::CommandType::MouseDrag, ui::ShortcutContext::Widget, __VA_ARGS__)
+        functionName,                                                                    \
+        id,                                                                              \
+        ::vgc::ui::CommandType::MouseDrag,                                               \
+        ::vgc::ui::ShortcutContext::Widget,                                              \
+        __VA_ARGS__)
 
 /// An overload of `VGC_UI_DEFINE_COMMAND()` that creates a command of type
 /// `MouseClick` and shortcut context `Widget`.
@@ -315,9 +353,13 @@ struct CommandRegistrer {
 ///     MouseButton::Left)
 /// ```
 ///
-#define VGC_UI_DEFINE_MOUSE_CLICK_COMMAND(var, id, ...)                                  \
+#define VGC_UI_DEFINE_MOUSE_CLICK_COMMAND(functionName, id, ...)                         \
     VGC_UI_DEFINE_COMMAND(                                                               \
-        var, id, ui::CommandType::MouseClick, ui::ShortcutContext::Widget, __VA_ARGS__)
+        functionName,                                                                    \
+        id,                                                                              \
+        ::vgc::ui::CommandType::MouseClick,                                              \
+        ::vgc::ui::ShortcutContext::Widget,                                              \
+        __VA_ARGS__)
 
 /// An overload of `VGC_UI_DEFINE_COMMAND()` that creates a command of type
 /// `Trigger` and shortcut context `Window`.
@@ -330,19 +372,23 @@ struct CommandRegistrer {
 ///     Shortcut(ModifierKey::Ctrl, Key::Z))
 /// ```
 ///
-#define VGC_UI_DEFINE_WINDOW_COMMAND(var, id, ...)                                       \
+#define VGC_UI_DEFINE_WINDOW_COMMAND(functionName, id, ...)                              \
     VGC_UI_DEFINE_COMMAND(                                                               \
-        var, id, ui::CommandType::Trigger, ui::ShortcutContext::Window, __VA_ARGS__)
+        functionName,                                                                    \
+        id,                                                                              \
+        ::vgc::ui::CommandType::Trigger,                                                 \
+        ::vgc::ui::ShortcutContext::Window,                                              \
+        __VA_ARGS__)
 
 /// An overload of `VGC_UI_DEFINE_COMMAND()` that creates a command of type
 /// `Trigger` and shortcut context `Application`.
 ///
-#define VGC_UI_DEFINE_APPLICATION_COMMAND(var, id, ...)                                  \
+#define VGC_UI_DEFINE_APPLICATION_COMMAND(functionName, id, ...)                         \
     VGC_UI_DEFINE_COMMAND(                                                               \
-        var,                                                                             \
+        functionName,                                                                    \
         id,                                                                              \
-        ui::CommandType::Trigger,                                                        \
-        ui::ShortcutContext::Application,                                                \
+        ::vgc::ui::CommandType::Trigger,                                                 \
+        ::vgc::ui::ShortcutContext::Application,                                         \
         __VA_ARGS__)
 
 #endif // VGC_UI_COMMAND_H

@@ -322,7 +322,7 @@ ScreenColorPickerButton::ScreenColorPickerButton(CreateKey key)
 ScreenColorPickerButtonPtr ScreenColorPickerButton::create() {
     ui::Action* action = nullptr;
     ScreenColorPickerButtonPtr button = core::createObject<ScreenColorPickerButton>();
-    action = button->createTriggerAction(commands::pickScreenColor);
+    action = button->createTriggerAction(commands::pickScreenColor());
     button->setAction(action);
     action->triggered().connect(button->startPickingSlot_());
     return button;
@@ -487,9 +487,9 @@ ColorPalette::ColorPalette(CreateKey key)
     // Continuous vs. Steps
     ui::Row* stepsModeRow = createChild<ui::Row>();
     stepsModeRow->addStyleClass(strings_::field_group);
-    stepsButton_ = createCheckableButton_(stepsModeRow, commands::stepsMode, "Steps");
+    stepsButton_ = createCheckableButton_(stepsModeRow, commands::stepsMode(), "Steps");
     continuousButton_ =
-        createCheckableButton_(stepsModeRow, commands::continuousMode, "Continuous");
+        createCheckableButton_(stepsModeRow, commands::continuousMode(), "Continuous");
     addFirstLastStyleClasses_({stepsButton_, continuousButton_});
     stepsActionGroup_ = ui::ActionGroup::create(ui::CheckPolicy::ExactlyOne);
     stepsActionGroup_->addAction(stepsButton_->action());
@@ -520,10 +520,10 @@ ColorPalette::ColorPalette(CreateKey key)
     // Palette
     ui::Row* paletteButtons = createChild<ui::Row>();
     paletteButtons->addStyleClass(strings_::field_row);
-    ui::Action* addToPaletteAction = createTriggerAction(commands::addToPalette);
+    ui::Action* addToPaletteAction = createTriggerAction(commands::addToPalette());
     paletteButtons->createChild<ui::Button>(addToPaletteAction);
     ui::Action* removeFromPaletteAction =
-        createTriggerAction(commands::removeFromPalette);
+        createTriggerAction(commands::removeFromPalette());
     removeFromPaletteAction->setText("-");
     paletteButtons->createChild<ui::Button>(removeFromPaletteAction);
     colorListView_ = createChild<ColorListView>();

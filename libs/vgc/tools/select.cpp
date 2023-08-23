@@ -54,16 +54,16 @@ Select::Select(CreateKey key)
     options::showTransformBox()->valueChanged().connect(onShowTransformBoxChangedSlot_());
     onShowTransformBoxChanged_();
 
-    ui::Action* glueAction = createTriggerAction(glueCommandId());
+    ui::Action* glueAction = createTriggerAction(commands::glue());
     glueAction->triggered().connect(onGlueSlot_());
 
-    ui::Action* unglueAction = createTriggerAction(unglueCommandId());
+    ui::Action* unglueAction = createTriggerAction(commands::unglue());
     unglueAction->triggered().connect(onUnglueSlot_());
 
-    ui::Action* copyAction = createTriggerAction(copyCommandId());
+    ui::Action* copyAction = createTriggerAction(commands::copy());
     copyAction->triggered().connect(onCopySlot_());
 
-    ui::Action* pasteAction = createTriggerAction(pasteCommandId());
+    ui::Action* pasteAction = createTriggerAction(commands::paste());
     pasteAction->triggered().connect(onPasteSlot_());
 }
 
@@ -880,7 +880,7 @@ void Select::onGlue_() {
     core::UndoGroup* undoGroup = nullptr;
     core::History* history = workspace->history();
     if (history) {
-        undoGroup = history->createUndoGroup(glueCommandId());
+        undoGroup = history->createUndoGroup(commands::glue());
     }
 
     core::Array<core::Id> selection = canvas->selection();
@@ -915,7 +915,7 @@ void Select::onUnglue_() {
     core::UndoGroup* undoGroup = nullptr;
     core::History* history = workspace->history();
     if (history) {
-        undoGroup = history->createUndoGroup(unglueCommandId());
+        undoGroup = history->createUndoGroup(commands::unglue());
     }
 
     core::Array<core::Id> ungluedIds = workspace->unglue(selection);
@@ -967,7 +967,7 @@ void Select::onPaste_() {
     core::UndoGroup* undoGroup = nullptr;
     core::History* history = workspace->history();
     if (history) {
-        undoGroup = history->createUndoGroup(pasteCommandId());
+        undoGroup = history->createUndoGroup(commands::paste());
     }
 
     core::Array<core::Id> selection = canvas->selection();

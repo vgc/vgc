@@ -133,16 +133,17 @@ private:
 
         testMenu_ = menuBar()->createSubMenu("Test");
 
-        Action* actionCreateAction = parent->createTriggerAction(commands::createAction);
+        Action* actionCreateAction =
+            parent->createTriggerAction(commands::createAction());
         actionCreateAction->triggered().connect([this]() {
-            Action* action = this->testMenu_->createTriggerAction(commands::hello);
+            Action* action = this->testMenu_->createTriggerAction(commands::hello());
             this->testMenu_->addItem(action);
         });
 
-        Action* actionCreateMenu = parent->createTriggerAction(commands::createMenu);
+        Action* actionCreateMenu = parent->createTriggerAction(commands::createMenu());
         actionCreateMenu->triggered().connect([this]() {
             Menu* menu = this->menuBar()->createSubMenu("Test 2");
-            Action* action = menu->createTriggerAction(commands::hello);
+            Action* action = menu->createTriggerAction(commands::hello());
             menu->addItem(action);
         });
 
@@ -152,27 +153,27 @@ private:
         Menu* menu2 = testMenu_->createSubMenu("Menu 2");
         Menu* menu3 = testMenu_->createSubMenu("Menu 3");
 
-        menu1->addItem(parent->createTriggerAction(commands::_1_1));
-        menu1->addItem(parent->createTriggerAction(commands::_1_2));
-        menu1->addItem(parent->createTriggerAction(commands::_1_3));
-        menu1->addItem(parent->createTriggerAction(commands::_1_4));
-        menu1->addItem(parent->createTriggerAction(commands::_1_5));
-        menu1->addItem(parent->createTriggerAction(commands::_1_6));
-        menu1->addItem(parent->createTriggerAction(commands::_1_7));
+        menu1->addItem(parent->createTriggerAction(commands::_1_1()));
+        menu1->addItem(parent->createTriggerAction(commands::_1_2()));
+        menu1->addItem(parent->createTriggerAction(commands::_1_3()));
+        menu1->addItem(parent->createTriggerAction(commands::_1_4()));
+        menu1->addItem(parent->createTriggerAction(commands::_1_5()));
+        menu1->addItem(parent->createTriggerAction(commands::_1_6()));
+        menu1->addItem(parent->createTriggerAction(commands::_1_7()));
         Menu* menu1b = menu1->createSubMenu("Menu 1.8");
 
-        menu1b->addItem(parent->createTriggerAction(commands::_1_8_1));
-        menu1b->addItem(parent->createTriggerAction(commands::_1_8_2));
-        menu1b->addItem(parent->createTriggerAction(commands::_1_8_3));
-        menu1b->addItem(parent->createTriggerAction(commands::_1_8_4));
-        menu1b->addItem(parent->createTriggerAction(commands::_1_8_5));
-        menu1b->addItem(parent->createTriggerAction(commands::_1_8_6));
-        menu1b->addItem(parent->createTriggerAction(commands::_1_8_7));
+        menu1b->addItem(parent->createTriggerAction(commands::_1_8_1()));
+        menu1b->addItem(parent->createTriggerAction(commands::_1_8_2()));
+        menu1b->addItem(parent->createTriggerAction(commands::_1_8_3()));
+        menu1b->addItem(parent->createTriggerAction(commands::_1_8_4()));
+        menu1b->addItem(parent->createTriggerAction(commands::_1_8_5()));
+        menu1b->addItem(parent->createTriggerAction(commands::_1_8_6()));
+        menu1b->addItem(parent->createTriggerAction(commands::_1_8_7()));
 
-        menu2->addItem(parent->createTriggerAction(commands::_2_1));
-        menu2->addItem(parent->createTriggerAction(commands::_2_2));
+        menu2->addItem(parent->createTriggerAction(commands::_2_1()));
+        menu2->addItem(parent->createTriggerAction(commands::_2_2()));
 
-        menu3->addItem(parent->createTriggerAction(commands::_3_1));
+        menu3->addItem(parent->createTriggerAction(commands::_3_1()));
     }
 
     void createTestWidgets_() {
@@ -338,7 +339,7 @@ private:
         for (int i = 0; i < 2; ++i) {
             for (int j = 0; j < 4; ++j) {
                 ui::Action* action =
-                    parent->createTriggerAction(commands::openPopup, "click me");
+                    parent->createTriggerAction(commands::openPopup(), "click me");
                 ui::ButtonPtr button = ui::Button::create(action);
                 grid->setWidgetAt(button.get(), i, j);
                 action->triggered().connect([=](ui::Widget* from) {
@@ -355,7 +356,7 @@ private:
 
         ui::Flex* row = parent->createChild<ui::Flex>(ui::FlexDirection::Row);
 
-        ui::Action* action = parent->createTriggerAction(commands::maybeQuit, "Quit?");
+        ui::Action* action = parent->createTriggerAction(commands::maybeQuit(), "Quit?");
         ui::Button* button = row->createChild<ui::Button>(action);
         action->triggered().connect([=]() {
             auto dialog = ui::MessageDialog::create();
@@ -422,7 +423,7 @@ private:
         std::string iconPath = core::resourcePath(iconNames_[iconIndex_]);
         iconWidget_ = parent->createChild<ui::IconWidget>(iconPath);
 
-        ui::Action* action = parent->createTriggerAction(commands::cycleSvgIcon);
+        ui::Action* action = parent->createTriggerAction(commands::cycleSvgIcon());
         action->triggered().connect(cycleSvgIconSlot_());
     }
 };

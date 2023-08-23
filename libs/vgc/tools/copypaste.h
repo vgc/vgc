@@ -20,17 +20,20 @@
 #include <vgc/tools/api.h>
 #include <vgc/ui/command.h>
 
-namespace vgc::tools {
+namespace vgc::tools::commands {
 
 VGC_TOOLS_API
-core::StringId copyCommandId();
+VGC_UI_DECLARE_COMMAND(cut)
 
 VGC_TOOLS_API
-core::StringId pasteCommandId();
+VGC_UI_DECLARE_COMMAND(copy)
 
 VGC_TOOLS_API
-core::StringId duplicateCommandId();
+VGC_UI_DECLARE_COMMAND(paste)
 
-} // namespace vgc::tools
+VGC_TOOLS_API
+VGC_UI_DECLARE_COMMAND(duplicate)
+
+} // namespace vgc::tools::commands
 
 #endif // VGC_TOOLS_COPYPASTE_H

@@ -39,6 +39,8 @@
 
 namespace vgc::canvas {
 
+namespace {
+
 namespace commands {
 
 using ui::Key;
@@ -70,6 +72,8 @@ VGC_UI_DEFINE_WINDOW_COMMAND( //
     Key::D);
 
 } // namespace commands
+
+} // namespace
 
 SelectionListHistory::SelectionListHistory(CreateKey key, PrivateKey)
     : Object(key) {
@@ -111,10 +115,11 @@ Canvas::Canvas(CreateKey key, workspace::Workspace* workspace)
 
     addStyleClass(canvas::strings::Canvas);
 
-    ui::Action* frameContentAction = createTriggerAction(commands::frameContent);
+    ui::Action* frameContentAction = createTriggerAction(commands::frameContent());
     frameContentAction->triggered().connect(onFrameContentSlot_());
 
-    ui::Action* cycleDisplayModeAction = createTriggerAction(commands::cycleDisplayMode);
+    ui::Action* cycleDisplayModeAction =
+        createTriggerAction(commands::cycleDisplayMode());
     cycleDisplayModeAction->triggered().connect(cycleDisplayModeSlot_());
 }
 

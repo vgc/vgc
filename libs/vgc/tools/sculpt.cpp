@@ -82,7 +82,7 @@ protected:
     /// Please use `SculptGrabAction::create()` instead.
     ///
     SculptGrabAction(CreateKey key)
-        : ui::Action(key, commands::grab) {
+        : ui::Action(key, commands::grab()) {
     }
 
 public:
@@ -265,7 +265,7 @@ protected:
     /// Please use `SculptWidthAction::create()` instead.
     ///
     SculptWidthAction(CreateKey key)
-        : ui::Action(key, commands::width) {
+        : ui::Action(key, commands::width()) {
     }
 
 public:
@@ -451,7 +451,7 @@ protected:
     /// Please use `SculptSmoothAction::create()` instead.
     ///
     SculptSmoothAction(CreateKey key)
-        : ui::Action(key, commands::smooth) {
+        : ui::Action(key, commands::smooth()) {
     }
 
 public:
@@ -633,7 +633,7 @@ protected:
     /// Please use `SculptEditRadiusAction::create()` instead.
     ///
     SculptEditRadiusAction(CreateKey key)
-        : ui::Action(key, commands::editRadius) {
+        : ui::Action(key, commands::editRadius()) {
     }
 
 public:

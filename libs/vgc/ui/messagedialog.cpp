@@ -182,7 +182,7 @@ Action* MessageDialog::addButton_(std::string_view text) {
         // How to assign shortcuts? (e.g., Enter key for OK, etc.).
         //
         createButtonsIfNotCreated_();
-        ActionPtr action = Action::create(commands::clickButton, text);
+        ActionPtr action = Action::create(commands::clickButton(), text);
         actions_.append(action);
         buttons_->createChild<Button>(action.get());
         updateSize_();
