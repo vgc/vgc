@@ -1071,42 +1071,6 @@ public:
         focusStrength_ = strength;
     }
 
-    /// Returns whether this widget accepts text input.
-    ///
-    /// \sa `setTextInputReceiver()`.
-    ///
-    bool isTextInputReceiver() const {
-        return isTextInputReceiver_;
-    }
-
-    /// Sets whether this widget accepts text input.
-    ///
-    /// This should be set to `true` for widgets that behave like text editors
-    /// (e.g., `LineEdit`), so that dead keys can be combined with the
-    /// follow-up characters before being transmitted to the widget, and so
-    /// that virtual keyboards can appear in contexts where it makes sense
-    /// (e.g., mobile operating systems, Chinese input, accessibility
-    /// settings).
-    ///
-    /// \sa `isTextInputReceiver()`.
-    ///
-    void setTextInputReceiver(bool isTextInputReceiver);
-
-    /// This signal is emitted whenever the value of `isTextInputReceiver()`
-    /// changes.
-    ///
-    VGC_SIGNAL(textInputReceiverChanged, (bool, newValue))
-
-    /// This signal is emitted whenever this widget, or any of its descendants,
-    /// became the focused widget.
-    ///
-    VGC_SIGNAL(focusSet, (FocusReason, reason))
-
-    /// This signal is emitted whenever this widget, or any of its descendants,
-    /// was the focused widget but isn't anymore.
-    ///
-    VGC_SIGNAL(focusCleared, (FocusReason, reason))
-
     /// Makes this widget the focused widget of this widget tree, and emits the
     /// `focusSet()` signal.
     ///
@@ -1132,6 +1096,11 @@ public:
     ///
     void setFocus(FocusReason reason);
 
+    /// This signal is emitted whenever this widget, or any of its descendants,
+    /// became the focused widget.
+    ///
+    VGC_SIGNAL(focusSet, (FocusReason, reason))
+
     /// Removes this widget or any of its descendants from the focus stack.
     ///
     /// If this causes the current `focusedWidget()` to lose focus, and if the
@@ -1141,6 +1110,27 @@ public:
     ///
     void clearFocus(FocusReason reason);
 
+    /// This signal is emitted whenever this widget, or any of its descendants,
+    /// was the focused widget but isn't anymore.
+    ///
+    VGC_SIGNAL(focusCleared, (FocusReason, reason))
+
+    /// Returns the focus stack of this widget tree.
+    ///
+    core::Array<WidgetPtr> focusStack() const;
+
+    /// Returns the focused widget of this widget tree, if any.
+    ///
+    /// This is the last widget of the `focusStack()`.
+    ///
+    Widget* focusedWidget() const;
+
+    /// Returns whether this widget is the focused widget.
+    ///
+    bool isFocusedWidget() const {
+        return focusedWidget() == this;
+    }
+
     /// Returns whether the focused widget is this widget or any of its descendants.
     ///
     /// If you wish to know whether the whole widget tree has a focused widget,
@@ -1149,16 +1139,6 @@ public:
     bool hasFocusedWidget() const {
         Widget* focusedWidget_ = focusedWidget();
         return focusedWidget_ && focusedWidget_->isDescendantOf(this);
-    }
-
-    /// Returns the focused widget of this widget tree, if any.
-    ///
-    Widget* focusedWidget() const;
-
-    /// Returns whether this widget is the focused widget.
-    ///
-    bool isFocusedWidget() const {
-        return focusedWidget() == this;
     }
 
     /// Returns whether this widget is the focused widget, and this widget tree
@@ -1208,6 +1188,32 @@ public:
     /// \sa `onFocusIn()`, `setFocus()`, `clearFocus()`, `isTreeActive()`.
     ///
     virtual bool onFocusOut(FocusReason reason);
+
+    /// Returns whether this widget accepts text input.
+    ///
+    /// \sa `setTextInputReceiver()`.
+    ///
+    bool isTextInputReceiver() const {
+        return isTextInputReceiver_;
+    }
+
+    /// Sets whether this widget accepts text input.
+    ///
+    /// This should be set to `true` for widgets that behave like text editors
+    /// (e.g., `LineEdit`), so that dead keys can be combined with the
+    /// follow-up characters before being transmitted to the widget, and so
+    /// that virtual keyboards can appear in contexts where it makes sense
+    /// (e.g., mobile operating systems, Chinese input, accessibility
+    /// settings).
+    ///
+    /// \sa `isTextInputReceiver()`.
+    ///
+    void setTextInputReceiver(bool isTextInputReceiver);
+
+    /// This signal is emitted whenever the value of `isTextInputReceiver()`
+    /// changes.
+    ///
+    VGC_SIGNAL(textInputReceiverChanged, (bool, newValue))
 
     /// Propagates a key press event through the widget hierarchy.
     ///
