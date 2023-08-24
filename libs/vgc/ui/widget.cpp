@@ -1868,13 +1868,6 @@ void Widget::setTreeActive(bool active, FocusReason reason) {
     }
 }
 
-void Widget::setTextInputReceiver(bool isTextInputReceiver) {
-    if (isTextInputReceiver != isTextInputReceiver_) {
-        isTextInputReceiver_ = isTextInputReceiver;
-        textInputReceiverChanged().emit(isTextInputReceiver_);
-    }
-}
-
 void Widget::setFocus(FocusReason reason) {
 
     core::Array<WidgetPtr>& focusStack = root()->focusStack_;
@@ -1961,9 +1954,17 @@ void Widget::clearFocus(FocusReason reason) {
     }
 }
 
-// Class invariant: for any widget w, if w->focus_ is non-null then:
-// 1. w->focus_->focus_ is also non-null, and
-// 2. w->focus_ points to either w or a child of w
+core::Array<WidgetPtr> Widget::focusStack() const {
+    core::Array<WidgetPtr> res;
+    const core::Array<WidgetPtr>& stack = root()->focusStack_;
+    res.reserve(stack.length());
+    for (const WidgetPtr& widget : stack) {
+        if (widget) {
+            res.append(widget);
+        }
+    }
+    return res;
+}
 
 Widget* Widget::focusedWidget() const {
     const core::Array<WidgetPtr>& focusStack = root()->focusStack_;
@@ -1981,6 +1982,13 @@ bool Widget::onFocusIn(FocusReason) {
 
 bool Widget::onFocusOut(FocusReason) {
     return false;
+}
+
+void Widget::setTextInputReceiver(bool isTextInputReceiver) {
+    if (isTextInputReceiver != isTextInputReceiver_) {
+        isTextInputReceiver_ = isTextInputReceiver;
+        textInputReceiverChanged().emit(isTextInputReceiver_);
+    }
 }
 
 namespace {
