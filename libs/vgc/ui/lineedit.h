@@ -123,6 +123,21 @@ private:
     graphics::TextBoundaryMarkers mouseSelectionMarkers_ =
         graphics::TextBoundaryMarker::Grapheme;
     std::pair<Int, Int> mouseSelectionInitialPair_;
+
+    void requestRepaint_();
+
+    void onCursorMoved_(bool select);
+    void onTextChanged_();
+    void onTextEdited_();
+
+    void onCut_();
+    VGC_SLOT(onCutSlot_, onCut_)
+
+    void onCopy_();
+    VGC_SLOT(onCopySlot_, onCopy_)
+
+    void onPaste_();
+    VGC_SLOT(onPasteSlot_, onPaste_)
 };
 
 } // namespace vgc::ui
