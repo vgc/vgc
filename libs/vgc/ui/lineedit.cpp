@@ -34,6 +34,30 @@ namespace vgc::ui {
 
 namespace {
 
+namespace commands_ {
+
+constexpr ModifierKey ctrl = ModifierKey::Ctrl;
+
+VGC_UI_DEFINE_TRIGGER_COMMAND( //
+    cut,
+    "ui.lineedit.cut",
+    "Cut",
+    Shortcut(ctrl, Key::X));
+
+VGC_UI_DEFINE_TRIGGER_COMMAND( //
+    copy,
+    "ui.lineedit.copy",
+    "Copy",
+    Shortcut(ctrl, Key::C));
+
+VGC_UI_DEFINE_TRIGGER_COMMAND( //
+    paste,
+    "ui.lineedit.paste",
+    "Paste",
+    Shortcut(ctrl, Key::V));
+
+} // namespace commands_
+
 void copyToClipboard_(
     std::string_view text,
     QClipboard::Mode mode = QClipboard::Clipboard) {
@@ -62,6 +86,20 @@ LineEdit::LineEdit(CreateKey key, std::string_view text)
     addStyleClass(strings::LineEdit);
     appendChildStylableObject(richText_.get());
     setText(text);
+
+    // XXX: Implement a mechanism to share actions between widgets, instead of
+    // having each LineEdit store its own copy of all LineEdit actions?
+    //
+    // Example: `virtual ActionListView Widget::classActions() const;`
+
+    ui::Action* cutAction = createTriggerAction(commands_::cut());
+    cutAction->triggered().connect(onCutSlot_());
+
+    ui::Action* copyAction = createTriggerAction(commands_::copy());
+    copyAction->triggered().connect(onCopySlot_());
+
+    ui::Action* pasteAction = createTriggerAction(commands_::paste());
+    pasteAction->triggered().connect(onPasteSlot_());
 }
 
 LineEditPtr LineEdit::create() {
@@ -75,20 +113,13 @@ LineEditPtr LineEdit::create(std::string_view text) {
 void LineEdit::setText(std::string_view text) {
     if (text != richText_->text()) {
         richText_->setText(text);
-        textChanged().emit();
-        reload_ = true;
-        requestRepaint();
+        onTextChanged_();
     }
 }
 
 void LineEdit::moveCursor(graphics::RichTextMoveOperation operation, bool select) {
     richText_->moveCursor(operation, select);
-    if (select) {
-        copyToX11SelectionClipboard_(richText_.get());
-    }
-    resetSelectionInitialPair_();
-    reload_ = true;
-    requestRepaint();
+    onCursorMoved_(select);
 }
 
 void LineEdit::onResize() {
@@ -158,8 +189,7 @@ bool LineEdit::onMouseMove(MouseMoveEvent* event) {
         geometry::Vec2f mouseOffset = richText_->rect().pMin();
         geometry::Vec2f point = mousePosition - mouseOffset;
         extendSelection_(point);
-        reload_ = true;
-        requestRepaint();
+        requestRepaint_();
     }
     return true;
 }
@@ -233,8 +263,7 @@ bool LineEdit::onMousePress(MousePressEvent* event) {
         }
     }
 
-    reload_ = true;
-    requestRepaint();
+    requestRepaint_();
     return true;
 }
 
@@ -264,8 +293,7 @@ bool LineEdit::onFocusIn(FocusReason) {
     oldText_ = text();
     richText_->setSelectionVisible(true);
     richText_->setCursorVisible(true);
-    reload_ = true;
-    requestRepaint();
+    requestRepaint_();
     return true;
 }
 
@@ -278,8 +306,7 @@ bool LineEdit::onFocusOut(FocusReason reason) {
         richText_->clearSelection();
     }
     richText_->setCursorVisible(false);
-    reload_ = true;
-    requestRepaint();
+    requestRepaint_();
     editingFinished().emit();
     return true;
 }
@@ -293,7 +320,6 @@ bool LineEdit::onKeyPress(KeyPressEvent* event) {
     const bool shift = event->modifierKeys().has(ModifierKey::Shift);
 
     bool handled = true;
-    bool needsRepaint = true;
     bool isMoveOperation = false;
 
     if (key == Key::Delete || key == Key::Backspace) {
@@ -330,26 +356,6 @@ bool LineEdit::onKeyPress(KeyPressEvent* event) {
         }
         isMoveOperation = true;
     }
-    else if (ctrl && key == Key::X) {
-        if (richText_->hasSelection()) {
-            copyToClipboard_(richText_->selectedTextView());
-            richText_->deleteSelectedText();
-        }
-        else {
-            needsRepaint = false;
-        }
-    }
-    else if (ctrl && key == Key::C) {
-        if (richText_->hasSelection()) {
-            copyToClipboard_(richText_->selectedTextView());
-        }
-        needsRepaint = false;
-    }
-    else if (ctrl && key == Key::V) {
-        QClipboard* clipboard = QGuiApplication::clipboard();
-        std::string t = clipboard->text().toStdString();
-        richText_->insertText(t);
-    }
     else if (ctrl && key == Key::A) {
         richText_->selectAll();
     }
@@ -377,20 +383,13 @@ bool LineEdit::onKeyPress(KeyPressEvent* event) {
         handled = false;
     }
 
-    // X11 selection clipboard
-    if (shift && isMoveOperation) {
-        copyToX11SelectionClipboard_(richText_.get());
-    }
-
-    if (handled && needsRepaint) {
-        resetSelectionInitialPair_();
-        reload_ = true;
-        requestRepaint();
-    }
-
-    if (handled && !isMoveOperation) {
-        textChanged().emit();
-        textEdited().emit();
+    if (handled) {
+        if (isMoveOperation) {
+            onCursorMoved_(shift);
+        }
+        else {
+            onTextEdited_();
+        }
     }
 
     return handled;
@@ -401,6 +400,56 @@ geometry::Vec2f LineEdit::computePreferredSize() const {
     calc.add(richText_->preferredSize());
     calc.addPaddingAndBorder();
     return calc.compute();
+}
+
+void LineEdit::requestRepaint_() {
+    reload_ = true;
+    requestRepaint();
+}
+
+// Note: this shouldn't be called for mouse actions, since these implement
+// their own handling of the selection pair and copying to the clipboard.
+//
+void LineEdit::onCursorMoved_(bool select) {
+    if (select) {
+        copyToX11SelectionClipboard_(richText_.get());
+    }
+    resetSelectionInitialPair_();
+    requestRepaint_();
+}
+
+void LineEdit::onTextChanged_() {
+    resetSelectionInitialPair_();
+    requestRepaint_();
+    textChanged().emit();
+}
+
+void LineEdit::onTextEdited_() {
+    onTextChanged_();
+    textEdited().emit();
+}
+
+void LineEdit::onCut_() {
+    if (!richText_->hasSelection()) {
+        return;
+    }
+    copyToClipboard_(richText_->selectedTextView());
+    richText_->deleteSelectedText();
+    onTextEdited_();
+}
+
+void LineEdit::onCopy_() {
+    if (!richText_->hasSelection()) {
+        return;
+    }
+    copyToClipboard_(richText_->selectedTextView());
+}
+
+void LineEdit::onPaste_() {
+    QClipboard* clipboard = QGuiApplication::clipboard();
+    std::string t = clipboard->text().toStdString();
+    richText_->insertText(t);
+    onTextEdited_();
 }
 
 } // namespace vgc::ui
