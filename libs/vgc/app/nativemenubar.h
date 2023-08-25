@@ -83,19 +83,39 @@ private:
 #if VGC_APP_MAY_HAVE_NATIVE_MENU_BAR
     QMenuBar* qMenuBar_ = nullptr;
     std::unordered_map<ui::Menu*, QMenu*> qMenuMap_;
-    std::unordered_map<QMenu*, ui::Menu*> qMenuMapInv_;
+    std::unordered_map<QObject*, ui::Menu*> qMenuMapInv_;
     std::unordered_map<ui::Action*, QAction*> qActionMap_;
-    std::unordered_map<QAction*, ui::Action*> qActionMapInv_;
-    void onMenuChanged_();
-    void onActionChanged_();
-    VGC_SLOT(onMenuChangedSlot_, onMenuChanged_);
-    VGC_SLOT(onActionChangedSlot_, onActionChanged_);
-    void populateNativeMenu_(ui::Menu* menu, QMenu* qMenu);
-    void doPopulateNativeMenu_(ui::Menu* menu, QMenu* qMenu);
-    void updateNativeAction_(ui::Action* action, QAction* qAction);
-    void populateNativeMenuBar_(ui::Menu* menu, QMenuBar* qMenu);
-    void doPopulateNativeMenuBar_(ui::Menu* menu, QMenuBar* qMenu);
+    std::unordered_map<QObject*, ui::Action*> qActionMapInv_;
+
     void convertToNativeMenuBar_();
+
+    void registerMenuBar_(ui::Menu* menu, QMenuBar* qMenu);
+    void registerMenu_(ui::Menu* menu, QMenu* qMenu);
+    void registerAction_(ui::Action* action, QAction* qAction);
+
+    void populateMenuBar_(ui::Menu* menu, QMenuBar* qMenu);
+    void populateMenu_(ui::Menu* menu, QMenu* qMenu);
+    void updateAction_(ui::Action* action, QAction* qAction);
+    void updateShortcuts_(ui::Action* action, QAction* qAction);
+
+    void onMenuDestroyed_(core::Object* obj);
+    VGC_SLOT(onMenuDestroyedSlot_, onMenuDestroyed_);
+
+    void onActionDestroyed_(core::Object* obj);
+    VGC_SLOT(onActionDestroyedSlot_, onActionDestroyed_);
+
+    void onMenuChanged_();
+    VGC_SLOT(onMenuChangedSlot_, onMenuChanged_);
+
+    void onActionChanged_();
+    VGC_SLOT(onActionChangedSlot_, onActionChanged_);
+
+    void onShortcutsChanged_();
+    VGC_SLOT(onShortcutsChangedSlot_, onShortcutsChanged_);
+
+    void onQMenuDestroyed_(QObject* obj);
+    void onQActionDestroyed_(QObject* obj);
+    void onQActionTriggered_(QAction* action);
 #endif
 };
 
