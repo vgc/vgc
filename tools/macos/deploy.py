@@ -473,54 +473,50 @@ def compute_lib_replacement(lib):
         print('\033[33m' + "    Warning: suspicious library path: " + lib + '\033[0m', flush=True)
         return lib
 
+# Finds all executables in the bundle and add them to paths.
+#
+def add_executables(bundle, paths):
+    for x in (bundle / "Contents/MacOS/bin").glob("*"):
+        if not x.name.endswith(".conf"):
+            paths.append(x)
+    for app in bundle.glob("**/*.app"):
+        name = app.stem
+        paths.extend(app.glob("**/" + name))
+
+# Finds all libraries in the bundle and add them to paths.
+#
+def add_libraries(bundle, paths):
+    paths.extend(bundle.glob("**/*.dylib"))
+    paths.extend(bundle.glob("**/*.so"))
+    paths.extend(bundle.glob("**/*.a"))
+    for framework in bundle.glob("**/*.framework"):
+        name = framework.stem
+        paths.extend(framework.glob("**/" + name))
+        # Note: the above also finds "*/Python.framework/*/Python.app/*/Python"
+
+# Returns a sorted version of paths with duplicate removed.
+#
+def remove_duplicates_and_sort(paths):
+    res = set()
+    for path in paths:
+        if not path.is_symlink() and not path.is_dir():
+            res.add(path)
+    return sorted(res)
 
 # Returns all the binaries in the app bundle
 #
 def get_binaries(bundle):
-
-    # Find all libraries
-    tmp = []
-    tmp.extend(bundle.glob("**/*.dylib"))
-    tmp.extend(bundle.glob("**/*.so"))
-    tmp.extend(bundle.glob("**/*.a"))
-    for framework in bundle.glob("**/*.framework"):
-        name = framework.stem
-        tmp.extend(framework.glob("**/" + name))
-        # Note: the above also finds "*/Python.framework/*/Python.app/*/Python"
-
-    # Find all executables
-    tmp.extend((bundle / "Contents/MacOS/bin").glob("vgc*"))
-    for app in bundle.glob("**/*.app"):
-        name = app.stem
-        tmp.extend(app.glob("**/" + name))
-
-    # Remove duplicates and sort
-    res = set()
-    for path in tmp:
-        if not path.is_symlink() and not path.is_dir():
-            res.add(path)
-    return sorted(res)
+    paths = []
+    add_libraries(bundle, paths)
+    add_executables(bundle, paths)
+    return remove_duplicates_and_sort(paths)
 
 # Returns all the executables in the app bundle
 #
 def get_executables(bundle):
-
-    # Find all executables
-    tmp = []
-    for x in (bundle / "Contents/MacOS/bin").glob("vgc*"):
-        if x.name != "vgc.conf":
-            tmp.append(x)
-    for app in bundle.glob("**/*.app"):
-        name = app.stem
-        tmp.extend(app.glob("**/" + name))
-    res = []
-
-    # Remove duplicates and sort
-    res = set()
-    for path in tmp:
-        if not path.is_symlink() and not path.is_dir():
-            res.add(path)
-    return sorted(res)
+    paths = []
+    add_executables(bundle, paths)
+    return remove_duplicates_and_sort(paths)
 
 # Prints the lib ID, rpaths, and lib paths of the given binary.
 #
