@@ -782,8 +782,9 @@ if __name__ == "__main__":
 
         # Copy executable
         appExecutableBasename = "vgc" + appNameLower
+        bundleExecutableBasename = suiteAppName
         executableRelPath = "bin/" + appExecutableBasename
-        bundleExecutableRelPath = executableRelPath
+        bundleExecutableRelPath = "bin/" + bundleExecutableBasename
         executable = buildDir / executableRelPath
         bundleExecutable = bundleMacOSDir / bundleExecutableRelPath
         copy(executable, bundleExecutable, verbose=verbose)
@@ -929,7 +930,7 @@ if __name__ == "__main__":
         # Write Info.plist
         info = {
             "CFBundleDevelopmentRegion": "en-US",
-            "CFBundleDisplayName": bundleDirBasename,
+            "CFBundleDisplayName": suiteAppName,
             "CFBundleDocumentTypes": [
                 {
                     "CFBundleTypeExtensions": [
