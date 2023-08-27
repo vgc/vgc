@@ -157,6 +157,7 @@ void Action::onMouseDragCancel(MouseEvent*) {
 
 void Action::setOwningWidget_(Widget* owningWidget) {
     owningWidget_ = owningWidget;
+    owningWidgetChanged().emit(owningWidget);
 }
 
 void Action::setCheckStateNoEmit_(CheckState newState) {

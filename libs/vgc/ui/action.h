@@ -210,6 +210,10 @@ public:
         return owningWidget_;
     }
 
+    /// This signal is emitted whenever `owningWidget()` changes.
+    ///
+    VGC_SIGNAL(owningWidgetChanged, (Widget*, owningWidget))
+
     /// Returns whether this action is enabled or not.
     ///
     bool isEnabled() const {
