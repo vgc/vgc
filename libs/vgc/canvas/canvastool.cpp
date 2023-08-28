@@ -49,7 +49,7 @@ CanvasTool::CanvasTool(CreateKey key)
     // Canvas shortcuts (e.g., T to show the tessellation) are implemented
     // directly in Canvas::onKeyPress(). Instead, these might be registered
     // Action with ShortcutContext::Window (or ShortcutContext::Application),
-    // so that they can be trigerred with their shortcut even if the canvas
+    // so that they can be triggered with their shortcut even if the canvas
     // doesn't have the focus.
     //
     setFocusPolicy(ui::FocusPolicy::Click);

@@ -57,7 +57,8 @@ public:
     create(Action* action, FlexDirection layoutDirection = FlexDirection::Row);
 
     /// Returns the action associated with this button.
-    /// The is the action that will be trigerred when the button is clicked.
+    ///
+    /// This is the action that will be triggerred when the button is clicked.
     ///
     Action* action() const {
         return action_;
