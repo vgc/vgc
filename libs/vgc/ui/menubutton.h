@@ -126,7 +126,7 @@ public:
     bool closePopupMenu();
 
     VGC_SIGNAL(menuPopupOpened);
-    VGC_SIGNAL(menuPopupClosed, (Action*, triggeredAction));
+    VGC_SIGNAL(menuPopupClosed, (bool, recursive));
 
 protected:
     // Reimplementation of Widget virtual methods.
@@ -147,7 +147,7 @@ private:
     // The menu calls this when it opens as a popup.
     void onMenuPopupOpened_(Menu* menu);
 
-    void onMenuPopupClosed_(Action* triggeredAction);
+    void onMenuPopupClosed_(bool recursive);
     VGC_SLOT(onMenuPopupClosedSlot_, onMenuPopupClosed_);
 };
 

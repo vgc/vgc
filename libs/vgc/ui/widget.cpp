@@ -666,6 +666,7 @@ bool Widget::mousePress(MousePressEvent* event) {
     if (!handled) {
         const bool isFirstPressedButton = pressedButtons_.isEmpty();
 
+        isFocusSetOrCleared_ = false;
         mousePress_(event);
         handled = event->isHandled();
 
@@ -685,9 +686,11 @@ bool Widget::mousePress(MousePressEvent* event) {
         //
         updateHoverChain();
 
-        // Update focus.
+        // Update focus using the FocusPolicy, unless the focus was explicitly
+        // set or cleared during the handling of the event, in which case
+        // such explicit handling takes priority.
         //
-        if (isFirstPressedButton) {
+        if (isFirstPressedButton && !isFocusSetOrCleared_) {
             Widget* clickedWidget = this;
             Widget* child = hoverChainChild();
             while (child) {
@@ -782,11 +785,13 @@ bool Widget::onMouseScroll(ScrollEvent* /*event*/) {
 
 void Widget::updateFocusOnClick_(Widget* clickedWidget) {
 
-    // If the clicked widget or any of its ancestors has a Click focus policy,
-    // then we give the focus to the deepmost one.
+    // If the clicked widget or any of its ancestors is visible and has a Click
+    // focus policy, then we give the focus to the deepmost one.
     //
     while (clickedWidget) {
-        if (clickedWidget->focusPolicy().has(FocusPolicy::Click)) {
+        if (clickedWidget->focusPolicy().has(FocusPolicy::Click)
+            && clickedWidget->isVisible()) {
+
             clickedWidget->setFocus(FocusReason::Mouse);
             return;
         }
@@ -1870,7 +1875,9 @@ void Widget::setTreeActive(bool active, FocusReason reason) {
 
 void Widget::setFocus(FocusReason reason) {
 
-    core::Array<WidgetPtr>& focusStack = root()->focusStack_;
+    Widget* root_ = root();
+    root_->isFocusSetOrCleared_ = true;
+    core::Array<WidgetPtr>& focusStack = root_->focusStack_;
 
     // Update focus stack and emit FocusIn and FocusOut signals.
     //
@@ -1904,7 +1911,22 @@ void Widget::setFocus(FocusReason reason) {
         //
         if (isTreeActive()) {
             if (oldFocusedWidget) {
-                oldFocusedWidget->onFocusOut(reason);
+                if (focusStrength() == FocusStrength::Low) {
+                    // Make it possible for widget of higher focus
+                    // strength to know that they lost focus but only temporarily.
+                    //
+                    // For example, LineEdit uses this to preserve its
+                    // selection, so that users can do Edit > Copy via the
+                    // menu. Otherwise, LineEdits clear their
+                    // selection when they lose focus.
+                    //
+                    // XXX use onFocusStackIn/Out() instead?
+                    //
+                    oldFocusedWidget->onFocusOut(FocusReason::Menu);
+                }
+                else {
+                    oldFocusedWidget->onFocusOut(reason);
+                }
             }
             if (newFocusedWidget) { // => is still alive after signal handling
                 newFocusedWidget->onFocusIn(reason);
@@ -1924,7 +1946,9 @@ void Widget::setFocus(FocusReason reason) {
 
 void Widget::clearFocus(FocusReason reason) {
 
-    core::Array<WidgetPtr>& focusStack = root()->focusStack_;
+    Widget* root_ = root();
+    root_->isFocusSetOrCleared_ = true;
+    core::Array<WidgetPtr>& focusStack = root_->focusStack_;
 
     // Update focus stack.
     //

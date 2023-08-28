@@ -1656,6 +1656,7 @@ private:
     bool isTextInputReceiver_ = false;
     // Per-tree attributes
     bool isTreeActive_ = false;
+    bool isFocusSetOrCleared_ = false;
     core::Array<WidgetPtr> focusStack_;
     Widget* keyboardCaptor_ = nullptr;
 
