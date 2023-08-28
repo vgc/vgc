@@ -1393,19 +1393,42 @@ ObjectConstRawPtr ptr(const ObjPtr<T>& objPtr) {
     return ptr(objPtr.get());
 }
 
+namespace detail {
+
+struct ObjPtrFormatter : fmt::formatter<std::string_view> {
+    // TODO: add formatting options, e.g., "{:a}" to only print the address
+    template<typename FormatContext>
+    auto format(const vgc::core::Object* obj, FormatContext& ctx) {
+        std::string res = "<Null Object>";
+        if (obj) {
+            if (obj->isAlive()) {
+                res = fmt::format("<{} @ {}>", obj->className(), fmt::ptr(obj));
+            }
+            else {
+                res = fmt::format("<NotAlive {} @ {}>", obj->className(), fmt::ptr(obj));
+            }
+        }
+        return fmt::formatter<std::string_view>::format(res, ctx);
+    }
+};
+
+} // namespace detail
+
 } // namespace vgc::core
 
 template<>
-struct fmt::formatter<vgc::core::ObjectConstRawPtr> : fmt::formatter<std::string_view> {
-    // TODO: add formatting options, e.g., "{:a}" to only print the address
+struct fmt::formatter<vgc::core::ObjectConstRawPtr> : vgc::core::detail::ObjPtrFormatter {
     template<typename FormatContext>
-    auto format(vgc::core::ObjectConstRawPtr objPtr, FormatContext& ctx) {
-        std::string res = "<Null Object>";
-        const vgc::core::Object* obj = objPtr.get();
-        if (obj) {
-            res = fmt::format("<{} @ {}>", obj->className(), fmt::ptr(obj));
-        }
-        return fmt::formatter<std::string_view>::format(res, ctx);
+    auto format(vgc::core::ObjectConstRawPtr p, FormatContext& ctx) {
+        return vgc::core::detail::ObjPtrFormatter::format(p.get(), ctx);
+    }
+};
+
+template<typename T>
+struct fmt::formatter<vgc::core::ObjPtr<T>> : vgc::core::detail::ObjPtrFormatter {
+    template<typename FormatContext>
+    auto format(const vgc::core::ObjPtr<T>& p, FormatContext& ctx) {
+        return vgc::core::detail::ObjPtrFormatter::format(p.get(), ctx);
     }
 };
 
