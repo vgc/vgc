@@ -73,14 +73,12 @@ void MenuButton::onMenuPopupOpened_(Menu* menu) {
     menuPopupOpened().emit();
 }
 
-void MenuButton::onMenuPopupClosed_(Action* triggeredAction) {
+void MenuButton::onMenuPopupClosed_(bool recursive) {
     setActive(false);
     popupMenu_->popupClosed().disconnect(onMenuPopupClosedSlot_());
     popupMenu_ = nullptr;
-    menuPopupClosed().emit(triggeredAction);
+    menuPopupClosed().emit(recursive);
 }
-
-// Reimplementation of Widget virtual methods
 
 void MenuButton::onParentWidgetChanged(Widget* newParent) {
     SuperClass::onParentWidgetChanged(newParent);

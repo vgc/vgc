@@ -72,6 +72,8 @@ Menu::Menu(CreateKey key, std::string_view title)
     addStyleClass(strings::Menu);
     action_ = createTriggerAction(commands::openMenu(), title);
     action_->isMenu_ = true;
+    setFocusPolicy(FocusPolicy::Click);
+    setFocusStrength(FocusStrength::Low);
     action_->triggered().connect(onSelfActionTriggeredSlot_());
 }
 
@@ -116,7 +118,7 @@ Menu* Menu::createSubMenu(std::string_view title) {
 }
 
 bool Menu::open(Widget* from) {
-    close_(nullptr);
+    close_();
     if (isPopupEnabled_) {
         Widget* host = parent();
         if (!openAsPopup_(from)) {
@@ -134,7 +136,7 @@ bool Menu::open(Widget* from) {
 }
 
 bool Menu::close() {
-    return close_(nullptr);
+    return close_();
 }
 
 bool Menu::closeSubMenu() {
@@ -149,7 +151,7 @@ void Menu::setPopupEnabled(bool enabled) {
     if (isPopupEnabled_ == enabled) {
         return;
     }
-    close_(nullptr);
+    close_();
     isPopupEnabled_ = enabled;
 }
 
@@ -305,13 +307,6 @@ void Menu::removeItem(Widget* widget) {
     }
 }
 
-void Menu::closeLayer() {
-    if (popupLayer_) {
-        popupLayer_->destroy();
-        popupLayer_ = nullptr;
-    }
-}
-
 void Menu::onItemAdded_(const MenuItem& item) {
     MenuButton* button = item.button();
     if (button) {
@@ -356,12 +351,31 @@ void Menu::setupWidthOverrides_() const {
     }
 }
 
+void Menu::createPopupLayer_(OverlayArea* area, Widget* underlyingWidget) {
+    if (popupLayer_) {
+        destroyPopupLayer_();
+    }
+    PopupLayer* popupLayer = area->createOverlayWidget<PopupLayer>(
+        OverlayResizePolicy::Stretch, underlyingWidget);
+    popupLayer_ = popupLayer;
+    popupLayer->resized().connect(exitSlot_());
+    popupLayer->backgroundPressed().connect(exitSlot_());
+}
+
+void Menu::destroyPopupLayer_() {
+    if (popupLayer_) {
+        popupLayer_->destroy();
+        popupLayer_ = nullptr;
+    }
+}
+
 bool Menu::openAsPopup_(Widget* from) {
 
     MenuButton* button = dynamic_cast<MenuButton*>(from);
     Menu* parentMenu = button ? button->parentMenu() : nullptr;
 
-    // XXX until window popup are implemented we use an OverlayArea.
+    // Find the OverlayArea where to place the popup.
+    //
     OverlayArea* area = nullptr;
     if (parentMenu && parentMenu->isOpenAsPopup()) {
         area = dynamic_cast<OverlayArea*>(parentMenu->parent());
@@ -377,12 +391,14 @@ bool Menu::openAsPopup_(Widget* from) {
         return false;
     }
 
+    // Create a PopupLayer catching all clicks outside of the popup.
+    //
+    // Note that if this menu has a parent menu, then it is the responsibility
+    // of the parent to create the PopupLayer, if there isn't one already. This
+    // is done in `onSubMenuPopupOpened_()`.
+    //
     if (!parentMenu) {
-        // Let's protect everything under the popup.
-        PopupLayer* popupLayer =
-            area->createOverlayWidget<PopupLayer>(OverlayResizePolicy::Stretch, nullptr);
-        popupLayer_ = popupLayer;
-        popupLayer->resized().connect(onLayerCatchSlot_());
+        createPopupLayer_(area);
     }
 
     geometry::Vec2f pos = computePopupPosition(from, area);
@@ -397,7 +413,7 @@ bool Menu::openAsPopup_(Widget* from) {
     return true;
 }
 
-bool Menu::close_(Action* triggeredAction) {
+bool Menu::close_(bool recursive) {
     if (isPopupEnabled_) {
         if (!isOpenAsPopup_) {
             return false;
@@ -408,17 +424,23 @@ bool Menu::close_(Action* triggeredAction) {
         host_ = nullptr;
         isOpenAsPopup_ = false;
         hide();
-        popupClosed().emit(triggeredAction);
+        popupClosed().emit(recursive);
     }
     else if (isVisible()) {
         hide();
     }
+    clearFocus(FocusReason::Menu);
     return true;
 }
 
-void Menu::onLayerCatch_() {
+void Menu::exit_() {
     closeSubMenu();
-    closeLayer();
+    if (isOpenAsPopup()) {
+        bool recursive = true;
+        close_(recursive);
+    }
+    destroyPopupLayer_();
+    clearFocus(FocusReason::Menu);
 }
 
 void Menu::onSelfActionTriggered_(Widget* from) {
@@ -426,7 +448,7 @@ void Menu::onSelfActionTriggered_(Widget* from) {
         open(from);
     }
     else if (isVisible()) {
-        close_(nullptr);
+        close_();
     }
     else {
         open(nullptr);
@@ -434,6 +456,10 @@ void Menu::onSelfActionTriggered_(Widget* from) {
 }
 
 void Menu::onItemActionTriggered_(Widget* from) {
+
+    // Detect whether the triggered action opened a new popup menu
+    // or was any other type of action.
+    //
     Menu* newPopup = nullptr;
     for (const MenuItem& item : items_) {
         MenuButton* button = item.button();
@@ -447,67 +473,70 @@ void Menu::onItemActionTriggered_(Widget* from) {
             button->closePopupMenu();
         }
     }
+
     if (newPopup) {
-        newPopup->popupClosed().connect(onSubMenuPopupClosedSlot_());
-        newPopup->aboutToBeDestroyed().connect(onSubMenuPopupDestroySlot_());
-        subMenuPopup_ = newPopup;
-        subMenuPopupHitRect_ = newPopup->mapTo(this, newPopup->rect());
-
-        // Add margins to popup hit rect when applicable (no overlap with our buttons).
-        geometry::Rect2f itemsRect = contentRect();
-        const float hitMargin = 5.f;
-        Margins hitMargins = {};
-        if (subMenuPopupHitRect_.xMin() >= itemsRect.xMax()
-            || subMenuPopupHitRect_.xMax() <= itemsRect.xMin()) {
-            hitMargins.setTop(hitMargin);
-            hitMargins.setBottom(hitMargin);
-        }
-        if (subMenuPopupHitRect_.yMin() >= itemsRect.yMax()
-            || subMenuPopupHitRect_.yMax() <= itemsRect.yMin()) {
-            hitMargins.setRight(hitMargin);
-            hitMargins.setLeft(hitMargin);
-        }
-        subMenuPopupHitRect_ = subMenuPopupHitRect_ + hitMargins;
-
-        isDeferringOpen_ = false;
-        if (!isOpenAsPopup_) {
-            if (!popupLayer_) {
-                OverlayArea* area = dynamic_cast<OverlayArea*>(newPopup->parent());
-                if (!area) {
-                    area = topmostOverlayArea();
-                }
-                if (area) {
-                    // Let's protect everything under the popup except this.
-                    PopupLayer* popupLayer = area->createOverlayWidget<PopupLayer>(
-                        OverlayResizePolicy::Stretch, this);
-                    popupLayer_ = popupLayer;
-                    popupLayer->resized().connect(onLayerCatchSlot_());
-                    popupLayer->backgroundPressed().connect(onLayerCatchSlot_());
-                    // Move it over our layer
-                    area->addOverlayWidget(newPopup);
-                }
-            }
-        }
+        // If a new popup menu was opened, then we register it as our
+        // subMenuPopup(), and create a PopupLayer if necessary.
+        onSubMenuPopupOpened_(newPopup);
     }
-    else if (isOpenAsPopup_) {
-        close_(static_cast<Action*>(emitter()));
+    else {
+        // Otherwise, this means that an actual action has been perfomed,
+        // so we we can now close this menu and all its parent menus.
+        exit_();
     }
 }
 
-void Menu::onSubMenuPopupClosed_(Action* triggeredAction) {
+void Menu::onSubMenuPopupOpened_(Menu* subMenu) {
+
+    // Register sub-menu.
+    //
+    subMenu->popupClosed().connect(onSubMenuPopupClosedSlot_());
+    subMenu->aboutToBeDestroyed().connect(onSubMenuPopupDestroySlot_());
+    subMenuPopup_ = subMenu;
+    subMenuPopupHitRect_ = subMenu->mapTo(this, subMenu->rect());
+
+    // Add margins to popup hit rect when applicable (no overlap with our buttons).
+    //
+    geometry::Rect2f itemsRect = contentRect();
+    const float hitMargin = 5.f;
+    Margins hitMargins = {};
+    if (subMenuPopupHitRect_.xMin() >= itemsRect.xMax()
+        || subMenuPopupHitRect_.xMax() <= itemsRect.xMin()) {
+        hitMargins.setTop(hitMargin);
+        hitMargins.setBottom(hitMargin);
+    }
+    if (subMenuPopupHitRect_.yMin() >= itemsRect.yMax()
+        || subMenuPopupHitRect_.yMax() <= itemsRect.yMin()) {
+        hitMargins.setRight(hitMargin);
+        hitMargins.setLeft(hitMargin);
+    }
+    subMenuPopupHitRect_ = subMenuPopupHitRect_ + hitMargins;
+
+    // Create a PopupLayer catching all clicks outside the popup or `this`
+    // menu, and move the subMenu above the PopupLayer.
+    //
+    isDeferringOpen_ = false;
+    if (!isOpenAsPopup_) {
+        if (!popupLayer_) {
+            OverlayArea* area = dynamic_cast<OverlayArea*>(subMenu->parent());
+            if (!area) {
+                area = topmostOverlayArea();
+            }
+            if (area) {
+                createPopupLayer_(area, this);
+                area->addOverlayWidget(subMenu);
+            }
+        }
+    }
+}
+
+void Menu::onSubMenuPopupClosed_(bool recursive) {
     if (subMenuPopup_ == emitter()) {
         subMenuPopup_->popupClosed().disconnect(onSubMenuPopupClosedSlot_());
         subMenuPopup_->aboutToBeDestroyed().disconnect(onSubMenuPopupDestroySlot_());
         subMenuPopup_ = nullptr;
-        // Cascaded close.
-        if (triggeredAction) {
-            if (isOpenAsPopup_) {
-                close_(triggeredAction);
-            }
-            else {
-                // Top-level menu removes its protective layer.
-                onLayerCatch_();
-            }
+        if (recursive) {
+            exit_();
         }
     }
 }
@@ -644,7 +673,7 @@ void Menu::preMousePress(MousePressEvent* event) {
     if (!isOpenAsPopup_ && subMenuPopup_) {
         Widget* hcc = hoverChainChild();
         if (!hcc || !hcc->isHoverLocked()) {
-            onLayerCatch_();
+            exit_();
             event->stopPropagation();
         }
     }
@@ -663,13 +692,9 @@ void Menu::onVisible() {
 }
 
 void Menu::onHidden() {
-    // Only this makes sense.
     closeSubMenu();
+    destroyPopupLayer_();
     isDeferringOpen_ = true;
-    if (popupLayer_) {
-        popupLayer_->destroy();
-        popupLayer_ = nullptr;
-    }
 }
 
 geometry::Vec2f Menu::computePreferredSize() const {

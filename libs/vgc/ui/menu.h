@@ -105,7 +105,7 @@ public:
     static MenuPtr create(std::string_view = "");
 
     /// Returns the action corresponding to this menu. This is an action that,
-    /// when trigerred, opens the menu.
+    /// when triggered, opens the menu.
     ///
     Action* menuAction() const {
         return action_;
@@ -244,7 +244,7 @@ public:
 
     VGC_SIGNAL(changed);
     VGC_SIGNAL(popupOpened);
-    VGC_SIGNAL(popupClosed, (Action*, triggeredAction));
+    VGC_SIGNAL(popupClosed, (bool, recursive));
 
 protected:
     // Reimplementation of Widget virtual methods
@@ -271,8 +271,6 @@ protected:
     void notifyChanged(bool geometryChanged);
     void removeItem(Widget* widget);
 
-    void closeLayer();
-
 private:
     Action* action_;
     core::Array<MenuItem> items_;
@@ -290,18 +288,23 @@ private:
 
     // Behavior popin/popup
     Widget* host_ = nullptr;
-    PopupLayerPtr popupLayer_ = nullptr;
     Menu* subMenuPopup_ = nullptr;
     bool isDeferringOpen_ = true;
     geometry::Vec2f lastHoverPos_ = {};
     bool isFirstMoveSinceEnter_ = true;
     geometry::Rect2f subMenuPopupHitRect_ = {};
 
-    bool openAsPopup_(Widget* from);
-    bool close_(Action* triggeredAction);
+    // Handling of PopupLayer
+    PopupLayerPtr popupLayer_ = nullptr;
+    void createPopupLayer_(OverlayArea* area, Widget* underlyingWidget = nullptr);
+    void destroyPopupLayer_();
 
-    void onLayerCatch_();
-    VGC_SLOT(onLayerCatchSlot_, onLayerCatch_);
+    bool openAsPopup_(Widget* from);
+
+    bool close_(bool recursive = false);
+
+    void exit_();
+    VGC_SLOT(exitSlot_, exit_);
 
     void onSelfActionTriggered_(Widget* from);
     VGC_SLOT(onSelfActionTriggeredSlot_, onSelfActionTriggered_);
@@ -309,7 +312,9 @@ private:
     void onItemActionTriggered_(Widget* from);
     VGC_SLOT(onItemActionTriggeredSlot_, onItemActionTriggered_);
 
-    void onSubMenuPopupClosed_(Action* triggeredAction);
+    void onSubMenuPopupOpened_(Menu* subMenu);
+
+    void onSubMenuPopupClosed_(bool recursive);
     VGC_SLOT(onSubMenuPopupClosedSlot_, onSubMenuPopupClosed_);
 
     void onSubMenuPopupDestroy_();
