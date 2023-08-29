@@ -26,6 +26,8 @@
 #include <vgc/tools/paintbucket.h>
 #include <vgc/tools/sculpt.h>
 #include <vgc/tools/select.h>
+#include <vgc/ui/genericaction.h>
+#include <vgc/ui/genericcommands.h>
 #include <vgc/ui/qtutil.h>
 #include <vgc/ui/row.h>
 #include <vgc/ui/shortcut.h>
@@ -603,6 +605,8 @@ ui::Action* createAction(ui::Widget* parent, core::StringId commandId, TSlot slo
 
 void CanvasApplication::createActions_(ui::Widget* parent) {
 
+    namespace generic = ui::commands::generic;
+
     actionNew_ = createAction(parent, commands::_new(), onActionNewSlot_());
     actionOpen_ = createAction(parent, commands::open(), onActionOpenSlot_());
     actionSave_ = createAction(parent, commands::save(), onActionSaveSlot_());
@@ -611,6 +615,9 @@ void CanvasApplication::createActions_(ui::Widget* parent) {
 
     actionUndo_ = createAction(parent, commands::undo(), onActionUndoSlot_());
     actionRedo_ = createAction(parent, commands::redo(), onActionRedoSlot_());
+    actionCut_ = parent->createAction<ui::GenericAction>(generic::cut());
+    actionCopy_ = parent->createAction<ui::GenericAction>(generic::copy());
+    actionPaste_ = parent->createAction<ui::GenericAction>(generic::paste());
 
     actionDebugWidgetSizing_ = createAction(
         parent, commands::debugWidgetSizing(), onActionDebugWidgetSizingSlot_());
@@ -632,6 +639,9 @@ void CanvasApplication::createMenus_() {
     ui::Menu* editMenu = menuBar->createSubMenu("Edit");
     editMenu->addItem(actionUndo_);
     editMenu->addItem(actionRedo_);
+    editMenu->addItem(actionCut_);
+    editMenu->addItem(actionCopy_);
+    editMenu->addItem(actionPaste_);
 }
 
 void CanvasApplication::createWidgets_() {

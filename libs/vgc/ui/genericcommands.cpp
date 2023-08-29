@@ -14,45 +14,28 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <vgc/tools/copypaste.h>
-
 #include <vgc/ui/genericcommands.h>
 
-namespace vgc::tools::commands {
-
-using ui::Key;
-using ui::Shortcut;
+namespace vgc::ui::commands::generic {
 
 constexpr ui::ModifierKey ctrl = ui::ModifierKey::Ctrl;
 
-VGC_UI_DEFINE_TRIGGER_COMMAND( //
+VGC_UI_DEFINE_WINDOW_COMMAND( //
     cut,
-    "tools.copypaste.cut",
+    "generic.cut",
     "Cut",
-    Shortcut(),
-    "",
-    ui::commands::generic::cut());
+    Shortcut(ctrl, Key::X));
 
-VGC_UI_DEFINE_TRIGGER_COMMAND( //
+VGC_UI_DEFINE_WINDOW_COMMAND( //
     copy,
-    "tools.copypaste.copy",
+    "generic.copy",
     "Copy",
-    Shortcut(),
-    "",
-    ui::commands::generic::copy());
+    Shortcut(ctrl, Key::C));
 
-VGC_UI_DEFINE_TRIGGER_COMMAND( //
+VGC_UI_DEFINE_WINDOW_COMMAND( //
     paste,
-    "tools.copypaste.paste",
+    "generic.paste",
     "Paste",
-    Shortcut(),
-    "",
-    ui::commands::generic::paste());
+    Shortcut(ctrl, Key::V));
 
-VGC_UI_DEFINE_TRIGGER_COMMAND( //
-    duplicate,
-    "tools.copypaste.duplicate",
-    "Duplicate",
-    Shortcut(ctrl, Key::D));
-
-} // namespace vgc::tools::commands
+} // namespace vgc::ui::commands::generic
