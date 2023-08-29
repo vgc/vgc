@@ -1878,6 +1878,9 @@ void Widget::setFocus(FocusReason reason) {
     Widget* root_ = root();
     root_->isFocusSetOrCleared_ = true;
     core::Array<WidgetPtr>& focusStack = root_->focusStack_;
+    core::Array<WidgetPtr> oldFocusStack = focusStack;
+
+    core::Array<WidgetPtr> removedWidgets;
 
     // Update focus stack and emit FocusIn and FocusOut signals.
     //
@@ -1907,31 +1910,9 @@ void Widget::setFocus(FocusReason reason) {
         }
         focusStack.append(this);
 
-        // Emit FocusIn and FocusOut.
+        // Emit focus in/out events.
         //
-        if (isTreeActive()) {
-            if (oldFocusedWidget) {
-                if (focusStrength() == FocusStrength::Low) {
-                    // Make it possible for widget of higher focus
-                    // strength to know that they lost focus but only temporarily.
-                    //
-                    // For example, LineEdit uses this to preserve its
-                    // selection, so that users can do Edit > Copy via the
-                    // menu. Otherwise, LineEdits clear their
-                    // selection when they lose focus.
-                    //
-                    // XXX use onFocusStackIn/Out() instead?
-                    //
-                    oldFocusedWidget->onFocusOut(FocusReason::Menu);
-                }
-                else {
-                    oldFocusedWidget->onFocusOut(reason);
-                }
-            }
-            if (newFocusedWidget) { // => is still alive after signal handling
-                newFocusedWidget->onFocusIn(reason);
-            }
-        }
+        emitFocusInOutEvents_(oldFocusStack, focusStack, reason);
     }
 
     // Emit focusSet() signal for this widget and all its ancestor, regardless
@@ -1949,6 +1930,7 @@ void Widget::clearFocus(FocusReason reason) {
     Widget* root_ = root();
     root_->isFocusSetOrCleared_ = true;
     core::Array<WidgetPtr>& focusStack = root_->focusStack_;
+    core::Array<WidgetPtr> oldFocusStack = focusStack;
 
     // Update focus stack.
     //
@@ -1957,16 +1939,9 @@ void Widget::clearFocus(FocusReason reason) {
         [this](const WidgetPtr& w) { return !w || w->isDescendantOf(this); });
     WidgetPtr newFocusedWidget = focusedWidget();
 
-    // Emit FocusIn and FocusOut signals.
+    // Emit focus in/out events.
     //
-    if (oldFocusedWidget != newFocusedWidget && isTreeActive()) {
-        if (oldFocusedWidget) {
-            oldFocusedWidget->onFocusOut(reason);
-        }
-        if (newFocusedWidget) { // => is still alive after signal handling
-            newFocusedWidget->onFocusIn(reason);
-        }
-    }
+    emitFocusInOutEvents_(oldFocusStack, focusStack, reason);
 
     // Emit focusCleared() signal for this widget and all its ancestor,
     // regardless of whether the focused widget changed.
@@ -2000,12 +1975,16 @@ Widget* Widget::focusedWidget() const {
     }
 }
 
-bool Widget::onFocusIn(FocusReason) {
-    return false;
+void Widget::onFocusIn(FocusReason) {
 }
 
-bool Widget::onFocusOut(FocusReason) {
-    return false;
+void Widget::onFocusOut(FocusReason) {
+}
+
+void Widget::onFocusStackIn(FocusReason) {
+}
+
+void Widget::onFocusStackOut(FocusReason) {
 }
 
 void Widget::setTextInputReceiver(bool isTextInputReceiver) {
@@ -2089,6 +2068,62 @@ void Widget::clearActions() {
     while (action) {
         removeAction(action);
         action = actions_->first();
+    }
+}
+
+void Widget::emitFocusInOutEvents_(
+    const core::Array<WidgetPtr>& oldStack,
+    const core::Array<WidgetPtr>& newStack,
+    FocusReason reason) {
+
+    // Compute everything before sending any signal
+    // (in case signal handlers change the state)
+
+    WidgetPtr oldFocusedWidget;
+    WidgetPtr newFocusedWidget;
+    if (isTreeActive()) {
+        if (!oldStack.isEmpty()) {
+            oldFocusedWidget = oldStack.last();
+        }
+        if (!newStack.isEmpty()) {
+            newFocusedWidget = newStack.last();
+        }
+    }
+
+    core::Array<WidgetPtr> removed = oldStack;
+    for (const WidgetPtr& widget : newStack) {
+        removed.removeAll(widget);
+    }
+
+    core::Array<WidgetPtr> added = newStack;
+    for (const WidgetPtr& widget : oldStack) {
+        added.removeAll(widget);
+    }
+
+    // Send all signals
+
+    if (oldFocusedWidget != newFocusedWidget) {
+        if (oldFocusedWidget) {
+            oldFocusedWidget->onFocusOut(reason);
+        }
+    }
+
+    for (const WidgetPtr& widget : removed) {
+        if (widget) {
+            widget->onFocusStackOut(reason);
+        }
+    }
+
+    for (const WidgetPtr& widget : added) {
+        if (widget) {
+            widget->onFocusStackIn(reason);
+        }
+    }
+
+    if (oldFocusedWidget != newFocusedWidget) {
+        if (newFocusedWidget) {
+            newFocusedWidget->onFocusIn(reason);
+        }
     }
 }
 

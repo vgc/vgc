@@ -286,23 +286,13 @@ bool NumberEdit::onMouseRelease(MouseReleaseEvent* event) {
     return true;
 }
 
-bool NumberEdit::onFocusIn(FocusReason reason) {
-    return LineEdit::onFocusIn(reason);
-}
-
-bool NumberEdit::onFocusOut(FocusReason reason) {
-
-    if (reason != FocusReason::Window  //
-        && reason != FocusReason::Menu //
-        && reason != FocusReason::Popup) {
-
-        if (isTextMode_) {
-            setValueFromText_(oldValue_);
-            setTextFromValue_();
-            setTextMode_(false);
-        }
+void NumberEdit::onFocusStackOut(FocusReason reason) {
+    if (isTextMode_) {
+        setValueFromText_(oldValue_);
+        setTextFromValue_();
+        setTextMode_(false);
     }
-    return LineEdit::onFocusOut(reason);
+    LineEdit::onFocusStackOut(reason);
 }
 
 bool NumberEdit::onKeyPress(KeyPressEvent* event) {
