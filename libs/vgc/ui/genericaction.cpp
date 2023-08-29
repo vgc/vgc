@@ -54,11 +54,11 @@ namespace {
 // 2. ancestors of currently focused widget
 // 3. previously focused widgets in focus stack and their ancestors
 //
-Action* findActionInFocusStack(Widget* widget, core::StringId genericCommandId) {
-    if (!widget) {
+Action* findActionInFocusStack(Widget* owningWidget, core::StringId genericCommandId) {
+    if (!owningWidget) {
         return nullptr;
     }
-    core::Array<WidgetPtr> focusStack = widget->focusStack();
+    core::Array<WidgetPtr> focusStack = owningWidget->focusStack();
     for (Int i = focusStack.length() - 1; i >= 0; --i) {
         Widget* widget = focusStack[i].get();
         while (widget) {
