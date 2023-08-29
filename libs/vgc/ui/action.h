@@ -89,6 +89,13 @@ public:
         return command_->icon();
     }
 
+    /// Returns the command ID of the generic command, if any, that the
+    /// `command()` of this action refers to.
+    ///
+    std::string_view genericCommandId() const {
+        return command_->genericCommandId();
+    }
+
     /// Returns the displayed text for this action.
     ///
     /// By default, this is the same as the `name()` of the action, but it can

@@ -27,6 +27,7 @@ vgc_add_library(ui
         exceptions.h
         focus.h
         flex.h
+        genericaction.h
         grid.h
         iconwidget.h
         imagebox.h
@@ -85,6 +86,7 @@ vgc_add_library(ui
         exceptions.cpp
         focus.cpp
         flex.cpp
+        genericaction.cpp
         grid.cpp
         iconwidget.cpp
         imagebox.cpp

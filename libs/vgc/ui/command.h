@@ -107,13 +107,15 @@ public:
         ui::CommandType type,
         ShortcutContext shortcutContext,
         std::string_view name,
-        std::string_view icon = "")
+        std::string_view icon = "",
+        std::string_view genericCommandId = "")
 
         : id_(id)
         , type_(type)
         , shortcutContext_(shortcutContext)
         , name_(name)
-        , icon_(icon) {
+        , icon_(icon)
+        , genericCommandId_(genericCommandId) {
     }
 
     /// Returns the ID of the command, which is a string that uniquely identifies a
@@ -167,12 +169,28 @@ public:
         return icon_;
     }
 
+    /// Returns the ID of the generic command, if any, that this commands
+    /// refers to.
+    ///
+    /// Returns an empty string if this command does not refer to a generic
+    /// command.
+    ///
+    /// For example, if you are defining a "Custom Copy" command, but you wish
+    /// this command to be actionnable from the generic "Edit > Copy" menu
+    /// item, then you can specify `ui::commands::generic::copy()` as the
+    /// `genericCommandId()` property of your custom command.
+    ///
+    core::StringId genericCommandId() const {
+        return genericCommandId_;
+    }
+
 private:
     core::StringId id_;
     ui::CommandType type_;
     ShortcutContext shortcutContext_;
     core::StringId name_;
     core::StringId icon_;
+    core::StringId genericCommandId_;
 };
 
 } // namespace vgc::ui
@@ -275,6 +293,10 @@ struct CommandRegistrer {
 #define VGC_UI_DEFINE_COMMAND_7(fnName, id, type, shortcutContext, name, shortcut, icon) \
     VGC_UI_DEFINE_COMMAND_BASE(fnName, id, type, shortcutContext, name, icon)            \
     VGC_UI_ADD_DEFAULT_SHORTCUT(fnName(), shortcut)
+
+#define VGC_UI_DEFINE_COMMAND_8(fn, id, type, context, name, shortcut, icon, generic)    \
+    VGC_UI_DEFINE_COMMAND_BASE(fn, id, type, context, name, icon, generic)               \
+    VGC_UI_ADD_DEFAULT_SHORTCUT(fn(), shortcut)
 
 /// Defines a command and adds it to the `CommandRegistry`.
 ///
