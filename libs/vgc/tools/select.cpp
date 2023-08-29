@@ -60,6 +60,9 @@ Select::Select(CreateKey key)
     ui::Action* unglueAction = createTriggerAction(commands::unglue());
     unglueAction->triggered().connect(onUnglueSlot_());
 
+    ui::Action* cutAction = createTriggerAction(commands::cut());
+    cutAction->triggered().connect(onCutSlot_());
+
     ui::Action* copyAction = createTriggerAction(commands::copy());
     copyAction->triggered().connect(onCopySlot_());
 
@@ -69,6 +72,16 @@ Select::Select(CreateKey key)
 
 SelectPtr Select::create() {
     return core::createObject<Select>();
+}
+
+core::Array<core::Id> Select::selection() {
+    canvas::Canvas* canvas = this->canvas();
+    if (!canvas) {
+        return {};
+    }
+    else {
+        return canvas->selection();
+    }
 }
 
 ui::WidgetPtr Select::createOptionsWidget() const {
@@ -933,18 +946,41 @@ dom::DocumentPtr copyDoc_;
 
 } // namespace
 
-void Select::onCopy_() {
-    canvas::Canvas* canvas = this->canvas();
-    if (!canvas) {
-        return;
-    }
+void Select::onCut_() {
 
-    workspace::Workspace* workspace = canvas->workspace();
+    workspace::Workspace* workspace = this->workspace();
     if (!workspace) {
         return;
     }
 
-    core::Array<core::Id> selection = canvas->selection();
+    core::Array<core::Id> selection = this->selection();
+    if (selection.isEmpty()) {
+        return;
+    }
+
+    // Open history group
+    core::UndoGroup* undoGroup = nullptr;
+    core::History* history = workspace->history();
+    if (history) {
+        undoGroup = history->createUndoGroup(commands::cut());
+    }
+
+    copyDoc_ = workspace->cut(selection);
+
+    // Close history group
+    if (undoGroup) {
+        undoGroup->close();
+    }
+}
+
+void Select::onCopy_() {
+
+    workspace::Workspace* workspace = this->workspace();
+    if (!workspace) {
+        return;
+    }
+
+    core::Array<core::Id> selection = this->selection();
     if (selection.isEmpty()) {
         return;
     }
@@ -953,12 +989,8 @@ void Select::onCopy_() {
 }
 
 void Select::onPaste_() {
-    canvas::Canvas* canvas = this->canvas();
-    if (!canvas) {
-        return;
-    }
 
-    workspace::Workspace* workspace = canvas->workspace();
+    workspace::Workspace* workspace = this->workspace();
     if (!workspace) {
         return;
     }
@@ -970,7 +1002,6 @@ void Select::onPaste_() {
         undoGroup = history->createUndoGroup(commands::paste());
     }
 
-    core::Array<core::Id> selection = canvas->selection();
     workspace->paste(copyDoc_);
 
     // TODO: get new selection

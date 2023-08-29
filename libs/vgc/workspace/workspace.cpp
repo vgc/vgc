@@ -352,7 +352,7 @@ core::Array<geometry::Vec2d> computeApproximateUniformSamplingPositions(
 
 } // namespace
 
-core::Id Workspace::glue(core::Span<core::Id> elementIds) {
+core::Id Workspace::glue(core::ConstSpan<core::Id> elementIds) {
     core::Id resultId = -1;
 
     // Open history group
@@ -823,7 +823,7 @@ core::Id Workspace::glue(core::Span<core::Id> elementIds) {
     return resultId;
 }
 
-core::Array<core::Id> Workspace::unglue(core::Span<core::Id> elementIds) {
+core::Array<core::Id> Workspace::unglue(core::ConstSpan<core::Id> elementIds) {
     core::Array<core::Id> result;
 
     struct TargetEdge {
@@ -956,7 +956,13 @@ core::Array<core::Id> Workspace::unglue(core::Span<core::Id> elementIds) {
     return result;
 }
 
-dom::DocumentPtr Workspace::copy(core::Span<core::Id> elementIds) {
+dom::DocumentPtr Workspace::cut(core::ConstSpan<core::Id> elementIds) {
+    dom::DocumentPtr res = copy(elementIds);
+    hardDelete(elementIds);
+    return res;
+}
+
+dom::DocumentPtr Workspace::copy(core::ConstSpan<core::Id> elementIds) {
 
     core::Array<Element*> elements;
     for (core::Id id : elementIds) {
@@ -994,6 +1000,39 @@ void Workspace::paste(dom::DocumentPtr document) {
     // TODO: use active group element
     document_->paste(document, document_->rootElement());
     sync();
+}
+
+namespace {
+
+// Note: VAC elements have soft and hard delete, non-VAC elements may have the
+// same, so it would be best to have the delete method virtual in
+// workspace::Element.
+//
+// For now we simply use hard delete since it's the only deletion method
+// implemented. Later, the default for VAC cells should probably be soft
+// delete.
+//
+void deleteElement(workspace::Element* element) {
+    vacomplex::Node* node = element->vacNode();
+    bool deleteIsolatedVertices = true;
+    vacomplex::ops::hardDelete(node, deleteIsolatedVertices);
+}
+
+} // namespace
+
+void Workspace::hardDelete(core::ConstSpan<core::Id> elementIds) {
+
+    // Iterate over all elements to delete.
+    //
+    // For now, deletion is done via the DOM, so we need to sync() before
+    // finding the next selected ID to check whether it still exists.
+    //
+    for (core::Id id : elementIds) {
+        workspace::Element* element = find(id);
+        if (element) {
+            deleteElement(element);
+        }
+    }
 }
 
 std::unordered_map<core::StringId, Workspace::ElementCreator>&
