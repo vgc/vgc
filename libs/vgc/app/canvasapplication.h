@@ -175,6 +175,10 @@ private:
     VGC_SLOT(onActionRedoSlot_, onActionRedo_);
     void onActionRedo_();
 
+    ui::Action* actionCut_ = nullptr;
+    ui::Action* actionCopy_ = nullptr;
+    ui::Action* actionPaste_ = nullptr;
+
     void updateUndoRedoActionState_();
     VGC_SLOT(updateUndoRedoActionStateSlot_, updateUndoRedoActionState_)
 

@@ -28,6 +28,7 @@ vgc_add_library(ui
         focus.h
         flex.h
         genericaction.h
+        genericcommands.h
         grid.h
         iconwidget.h
         imagebox.h
@@ -87,6 +88,7 @@ vgc_add_library(ui
         focus.cpp
         flex.cpp
         genericaction.cpp
+        genericcommands.cpp
         grid.cpp
         iconwidget.cpp
         imagebox.cpp

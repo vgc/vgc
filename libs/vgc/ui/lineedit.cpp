@@ -25,6 +25,7 @@
 #include <vgc/style/strings.h>
 #include <vgc/style/types.h>
 #include <vgc/ui/cursor.h>
+#include <vgc/ui/genericcommands.h>
 #include <vgc/ui/preferredsizecalculator.h>
 #include <vgc/ui/strings.h>
 
@@ -36,25 +37,29 @@ namespace {
 
 namespace commands_ {
 
-constexpr ModifierKey ctrl = ModifierKey::Ctrl;
-
 VGC_UI_DEFINE_TRIGGER_COMMAND( //
     cut,
     "ui.lineedit.cut",
     "Cut",
-    Shortcut(ctrl, Key::X));
+    Shortcut(),
+    "",
+    ui::commands::generic::cut());
 
 VGC_UI_DEFINE_TRIGGER_COMMAND( //
     copy,
     "ui.lineedit.copy",
     "Copy",
-    Shortcut(ctrl, Key::C));
+    Shortcut(),
+    "",
+    ui::commands::generic::copy());
 
 VGC_UI_DEFINE_TRIGGER_COMMAND( //
     paste,
     "ui.lineedit.paste",
     "Paste",
-    Shortcut(ctrl, Key::V));
+    Shortcut(),
+    "",
+    ui::commands::generic::paste());
 
 } // namespace commands_
 
