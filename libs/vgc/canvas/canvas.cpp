@@ -172,25 +172,11 @@ void Canvas::stopLoggingUnder(core::PerformanceLog* parent) {
 
 namespace {
 
-// Note: VAC elements have soft and hard delete, non-VAC elements may have the
-// same, so it would be best to have the delete method virtual in
-// workspace::Element.
-//
-// For now we simply use hard delete since it's the only deletion method
-// implemented. Later, the default for VAC cells should probably be soft
-// delete.
-//
-void deleteElement(workspace::Element* element) {
-    vacomplex::Node* node = element->vacNode();
-    bool deleteIsolatedVertices = true;
-    vacomplex::ops::hardDelete(node, deleteIsolatedVertices);
-}
-
 void deleteElements(
     const core::Array<core::Id>& elementIds,
     workspace::Workspace* workspace) {
 
-    if (elementIds.isEmpty()) {
+    if (!workspace || elementIds.isEmpty()) {
         return;
     }
 
@@ -202,17 +188,8 @@ void deleteElements(
         undoGroup = history->createUndoGroup(Delete_Element);
     }
 
-    // Iterate over all elements to delete.
-    //
-    // For now, deletion is done via the DOM, so we need to sync() before
-    // finding the next selected ID to check whether it still exists.
-    //
-    for (core::Id id : elementIds) {
-        workspace::Element* element = workspace->find(id);
-        if (element) {
-            deleteElement(element);
-        }
-    }
+    // TODO: use softDelete when implemented.
+    workspace->hardDelete(elementIds);
 
     // Close operation
     if (undoGroup) {

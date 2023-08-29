@@ -273,35 +273,63 @@ public:
         const std::function<bool(Element*, Int)>& preOrderFn,
         const std::function<void(Element*, Int)>& postOrderFn);
 
-    /// Performs a glue operation on the elements of ids `elementIds`.
+    /// Performs a glue operation on the given elements.
+    ///
     /// This is both a geometrical and topological operation.
     ///
-    /// If the type of elements are mixed, does nothing.
-    /// Currently supported sets are:
-    /// - 2+ key vertices.
-    /// - 2 key edges.
+    /// Currently, the following sets of elements are supported:
+    /// - Two or more key vertices.
+    /// - Exactly two key edges.
     ///
-    core::Id glue(core::Span<core::Id> elementIds);
+    /// This function does nothing if the given elements are not
+    /// one of the above supported sets of elements.
+    ///
+    core::Id glue(core::ConstSpan<core::Id> elementIds);
 
-    /// Performs an unglue operation on the elements of ids `elementIds`.
+    /// Performs an unglue operation on the given elements.
+    ///
     /// This is both a geometrical and topological operation.
     ///
-    /// Currently supported cell types: keyVertex, keyEdge.
+    /// This function supports ungluing an arbitrary number of key vertices and
+    /// key edges.
     ///
-    core::Array<core::Id> unglue(core::Span<core::Id> elementIds);
+    core::Array<core::Id> unglue(core::ConstSpan<core::Id> elementIds);
 
-    /// Copies the elements of ids `elementIds` in the form
-    /// of a new document. This document can be used as argument
-    /// to paste().
+    /// Makes a copy of the given elements in the form of a new document (see
+    /// `copy()` for details), then deletes the elements and return the new
+    /// document.
     ///
-    /// The resulting document does not follow the schema.
+    /// Currently, this function performs a `hardDelete()` since this is the
+    /// only deletion method implemented, but in the future, we are planning
+    /// for this operation to use `softDelete()` by default.
     ///
-    dom::DocumentPtr copy(core::Span<core::Id> elementIds);
+    /// \sa `copy()`, `paste()`, `hardDelete()`.
+    ///
+    dom::DocumentPtr cut(core::ConstSpan<core::Id> elementIds);
 
-    /// Pastes the elements of the given `document` in this
-    /// workspace's document.
+    /// Returns a copy of the given elements in the form of a new document that
+    /// can be used as argument to `paste()`.
+    ///
+    /// Note that the returned document does not necessarily conform to the
+    /// same schema as `document()` and should typically not be manipulated
+    /// other than for passing it as an argument to `paste()`.
+    ///
+    /// \sa `cut()`, `paste()`.
+    ///
+    dom::DocumentPtr copy(core::ConstSpan<core::Id> elementIds);
+
+    /// Pastes the elements of the given `document` in this workspace's
+    /// document.
+    ///
+    /// \sa `cut()`, `copy()`.
     ///
     void paste(dom::DocumentPtr document);
+
+    /// Deletes the given elements and all incident elements, if any.
+    ///
+    /// \sa `cut()`.
+    ///
+    void hardDelete(core::ConstSpan<core::Id> elementIds);
 
     /// This signal is emitted whenever the workspace changes, either
     /// as a result of the DOM changing, or the topological complex

@@ -47,6 +47,10 @@ public:
     ///
     static SelectPtr create();
 
+    /// Returns the IDs of the selected elements.
+    ///
+    core::Array<core::Id> selection();
+
 protected:
     // Reimplementation of CanvasTool virtual methods
     ui::WidgetPtr createOptionsWidget() const override;
@@ -144,6 +148,9 @@ private:
 
     void onUnglue_();
     VGC_SLOT(onUnglueSlot_, onUnglue_)
+
+    void onCut_();
+    VGC_SLOT(onCutSlot_, onCut_)
 
     void onCopy_();
     VGC_SLOT(onCopySlot_, onCopy_)
