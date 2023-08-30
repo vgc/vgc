@@ -299,20 +299,21 @@ bool NumberEdit::onKeyPress(KeyPressEvent* event) {
     if (!isTextMode_) {
         return false;
     }
-    if (event->key() == Key::Escape) {
+    else if (event->key() == Key::Escape) {
         setValue(oldValue_);
         setTextFromValue_();
         setTextMode_(false);
+        return true;
     }
     else if (event->key() == Key::Enter || event->key() == Key::Return) {
         setValueFromText_(oldValue_);
         setTextFromValue_();
         setTextMode_(false);
+        return true;
     }
     else {
-        LineEdit::onKeyPress(event);
+        return LineEdit::onKeyPress(event);
     }
-    return true;
 }
 
 double NumberEdit::roundedValue_(double v) {
