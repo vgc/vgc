@@ -1880,8 +1880,6 @@ void Widget::setFocus(FocusReason reason) {
     core::Array<WidgetPtr>& focusStack = root_->focusStack_;
     core::Array<WidgetPtr> oldFocusStack = focusStack;
 
-    core::Array<WidgetPtr> removedWidgets;
-
     // Update focus stack and emit FocusIn and FocusOut signals.
     //
     WidgetPtr oldFocusedWidget = focusedWidget();
