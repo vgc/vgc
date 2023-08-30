@@ -632,13 +632,16 @@ void CanvasApplication::createMenus_() {
     ui::Menu* fileMenu = menuBar->createSubMenu("File");
     fileMenu->addItem(actionNew_);
     fileMenu->addItem(actionOpen_);
+    fileMenu->addSeparator();
     fileMenu->addItem(actionSave_);
     fileMenu->addItem(actionSaveAs_);
+    fileMenu->addSeparator();
     fileMenu->addItem(actionQuit_);
 
     ui::Menu* editMenu = menuBar->createSubMenu("Edit");
     editMenu->addItem(actionUndo_);
     editMenu->addItem(actionRedo_);
+    editMenu->addSeparator();
     editMenu->addItem(actionCut_);
     editMenu->addItem(actionCopy_);
     editMenu->addItem(actionPaste_);

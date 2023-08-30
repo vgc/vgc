@@ -105,6 +105,15 @@ const core::StringId disabled("disabled");
 const core::StringId on("on");
 const core::StringId off("off");
 
+// Button
+const core::StringId icon("icon");
+const core::StringId text("text");
+const core::StringId shortcut("shortcut");
+
+// Menu
+const core::StringId button("button");
+const core::StringId separator("separator");
+
 // Dialog
 const core::StringId body("body");
 const core::StringId buttons("buttons");

@@ -191,6 +191,9 @@ void NativeMenuBar::populateMenu_(ui::Menu* menu, QMenu* qMenu) {
             registerAction_(action.get(), qAction);
             updateAction_(action.get(), qAction);
         }
+        else if (item.isSeparator()) {
+            qMenu->addSeparator();
+        }
     }
 }
 

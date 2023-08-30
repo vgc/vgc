@@ -33,11 +33,11 @@ Button::Button(CreateKey key, Action* action, FlexDirection layoutDirection)
     addStyleClass(strings::Button);
 
     iconWidget_ = createChild<IconWidget>();
-    iconWidget_->addStyleClass(core::StringId("Icon"));
+    iconWidget_->addStyleClass(strings::icon);
     textLabel_ = createChild<Label>();
-    textLabel_->addStyleClass(core::StringId("Text"));
+    textLabel_->addStyleClass(strings::text);
     shortcutLabel_ = createChild<Label>();
-    shortcutLabel_->addStyleClass(core::StringId("Shortcut"));
+    shortcutLabel_->addStyleClass(strings::shortcut);
 
     shortcutLabel_->hide();
     iconWidget_->hide();
