@@ -31,52 +31,119 @@
 namespace vgc::ui {
 
 VGC_DECLARE_OBJECT(Menu);
-VGC_DECLARE_OBJECT(MenuButton);
-VGC_DECLARE_OBJECT(MenuLayout);
 
 /// \class vgc::ui::MenuItem
-/// \brief A menu item.
+/// \brief Represents one action or separator in a menu.
+///
+/// A `Menu` contains a list of items, each represented by one instance of
+/// this `MenuItem` class.
+///
+/// The items in a menu can be queried via `Menu::items()`.
+///
+/// Each item can either be:
+///
+/// 1. An action that performs an actual operation (e.g., "Edit > Copy").
+///    In this case, `isAction()` is `true` and `isMenu()` is `false`.
+///
+/// 2. An action whose role is to open a sub-menu of this menu.
+///    In this case, both `isAction()` and `isMenu()` are `true`.
+///
+/// 3. A visual separator between actions. In this case, both `isAction()`
+///    and `isMenu()` are false, and `isSeparator()` is false.
+///
+/// For more information on how to add and remove menu items in a menu,
+/// see the documentation of `Menu`.
 ///
 class MenuItem {
 protected:
     friend Menu;
 
     constexpr MenuItem() noexcept = default;
+    MenuItem(Widget* separator) noexcept;
     MenuItem(Action* action, MenuButton* button) noexcept;
     MenuItem(Action* action, MenuButton* button, Menu* menu) noexcept;
 
 public:
+    /// Returns whether this item has a non-null `action()`, whose role could
+    /// either be to perform an actual operation or simply open a sub-menu.
+    ///
+    /// This is equivalent to `action() != nullptr`.
+    ///
+    /// \sa `isMenu()`, `isSeparator()`, `action()`.
+    ///
     bool isAction() const {
-        return !!action_;
+        return action_ != nullptr;
     }
 
+    /// Returns whether this item has a non-null `menu()`. If
+    /// this is `true`, then `action()` is also non-null.
+    ///
+    /// This is equivalent to `menu() != nullptr`.
+    ///
+    /// \sa `isAction()`, `isSeparator()`, `menu()`.
+    ///
     bool isMenu() const {
-        return menu_;
+        return menu_ != nullptr;
     }
 
+    /// Returns whether this item is a visual separation between actions.
+    ///
+    /// This is equivalent to `action() == nullptr`.
+    ///
+    /// \sa `isAction()`, `isSeparator()`.
+    ///
     bool isSeparator() const {
-        return !action_;
+        return action_ == nullptr;
     }
 
+    /// Returns the action, if any, that is represented by this item. The role
+    /// of the action could either be to perform an actual operation or simply
+    /// open a sub-menu.
+    ///
+    /// \sa `isAction()`.
+    ///
     Action* action() const {
         return action_;
     }
 
+    /// Returns the sub-menu, if any, that is represented by this item.
+    ///
+    /// If the returned `Menu` is non-null, then the function `action()`
+    /// returns a non-null `Action`, whose role is to open the sub-menu.
+    ///
+    /// \sa `isMenu()`.
+    ///
     Menu* menu() const {
         return menu_;
     }
 
+    /// Returns the `MenuButton` widget, if any, that is used to visually show
+    /// this `MenuItem` in the widget tree.
+    ///
+    /// This is typically non-null if `isAction()` is true, but we do not provide
+    /// this guarantee and therefore the return value must always be checked. For example,
+    /// in future version of the library, we could add support for custom menu widgets,
+    /// which a represented differently than a `MenuButton`.
+    ///
     MenuButton* button() const {
-        return button_;
+        if (isAction()) {
+            return static_cast<MenuButton*>(widget_);
+        }
+        else {
+            return nullptr;
+        }
     }
 
+    /// Returns the `Widget`, if any, that is used to visually show
+    /// the `MenuItem` in the widget tree.
+    ///
     Widget* widget() const {
-        return button_;
+        return widget_;
     }
 
 private:
     Action* action_ = nullptr;
-    MenuButton* button_ = nullptr;
+    Widget* widget_ = nullptr;
     Menu* menu_ = nullptr;
 
     // could add custom widget
@@ -258,7 +325,6 @@ protected:
     void onHidden() override;
     geometry::Vec2f computePreferredSize() const override;
     void updateChildrenGeometry() override;
-    //
 
     // Returns a position relative to area.
     // XXX make it virtual and return a global position when possible.

@@ -61,14 +61,18 @@ VGC_UI_DEFINE_TRIGGER_COMMAND( //
 
 } // namespace
 
+MenuItem::MenuItem(Widget* widget) noexcept
+    : widget_(widget) {
+}
+
 MenuItem::MenuItem(Action* action, MenuButton* button) noexcept
     : action_(action)
-    , button_(button) {
+    , widget_(button) {
 }
 
 MenuItem::MenuItem(Action* action, MenuButton* button, Menu* menu) noexcept
     : action_(action)
-    , button_(button)
+    , widget_(button)
     , menu_(menu) {
 }
 
@@ -101,7 +105,9 @@ void Menu::setTitle(std::string_view title) {
 }
 
 void Menu::addSeparator() {
-    items_.emplaceLast(MenuItem()); // XXX todo: separators
+    Widget* separator = createChild<Widget>();
+    separator->addStyleClass(strings::separator);
+    items_.emplaceLast(MenuItem(separator));
     notifyChanged(true);
 }
 

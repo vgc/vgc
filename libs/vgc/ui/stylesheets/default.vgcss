@@ -61,18 +61,29 @@
     padding-left: 5dp;
 }
 
-.MenuButton {
+.Menu > .button {
     padding-top: 0dp;
     padding-right: 10dp;
     padding-bottom: 0dp;
     padding-left: 10dp;
+}
+
+.Menu > .separator {
+    margin-top: 3dp;
+    margin-bottom: 3dp;
+    min-height: 1dp;
+}
+
+.Menu > .button,
+.Menu > .separator {
     horizontal-shrink: 0;
     horizontal-stretch: 1;
     vertical-shrink: 0;
     vertical-stretch: 0;
 }
 
-.Menu.horizontal > .MenuButton {
+.Menu.horizontal > .button,
+.Menu.horizontal > .separator {
     horizontal-stretch: 0;
 }
 
@@ -87,14 +98,14 @@
     text-horizontal-align: center;
 }
 
-.Button > .Label {
+.Button > .text {
     horizontal-shrink: 1;
     horizontal-stretch: 1;
     vertical-shrink: 1;
     vertical-stretch: 1;
 }
 
-.Button > .Icon {
+.Button > .icon {
     preferred-width: 18dp;
     preferred-height: 18dp;
     horizontal-shrink: 1;
@@ -107,7 +118,7 @@
     margin-left: 4dp;
 }
 
-.MenuButton {
+.Menu > .button {
     preferred-height: 24dp;
 }
 
@@ -125,7 +136,7 @@
     border-bottom-left-radius: 3dp;
 }
 
-.MenuButton,
+.Menu > .button,
 .Menu.horizontal {
     border-top-left-radius: 0dp;
     border-top-right-radius: 0dp;
@@ -139,7 +150,7 @@
     font-descent: 3dp;
 }
 
-.MenuButton {
+.Menu > .button {
     column-gap: 20dp;
 }
 
@@ -160,11 +171,11 @@
     border-bottom-right-radius: 0dp;
 }
 
-.MenuButton > .Text {
+.Menu > .button > .text {
     text-horizontal-align: left;
 }
 
-.MenuButton > .Shortcut {
+.Menu > .button > .shortcut {
     text-horizontal-align: left;
 }
 
@@ -293,6 +304,10 @@
     background-color: rgb(49, 51, 53);
 }
 
+.Menu > .separator {
+    background-color: rgb(65, 67, 69);
+}
+
 .LineEdit,
 .Plot2d {
     background-color: rgb(34, 36, 37);
@@ -323,29 +338,29 @@
     background-color: rgb(41, 112, 202);
 }
 
-.MenuButton {
+.Menu > .button {
     background-color: rgba(0, 0, 0, 0);
     /* background-color drawn by .Menu */
 }
 
-.MenuButton.hovered {
+.Menu > .button.hovered {
     background-color: rgb(11, 82, 172);
 }
 
-.MenuButton.active {
+.Menu > .button.active {
     background-color: rgb(11, 82, 172);
 }
 
-.MenuButton > .Shortcut {
+.Menu > .button > .shortcut {
     text-color: rgb(165, 165, 165);
 }
 
-.MenuButton.disabled {
+.Menu > .button.disabled {
     text-color: rgb(125, 125, 125);
     background-color: rgba(0, 0, 0, 0);
 }
 
-.MenuButton.disabled > .Shortcut {
+.Menu > .button.disabled > .shortcut {
     text-color: rgb(105, 105, 105);
 }
 
@@ -443,7 +458,7 @@
     background-color: rgb(41, 112, 202);
 }
 
-.tools .Button > .Icon {
+.tools .Button > .icon {
     margin-top: 8dp;
     margin-right: 8dp;
     margin-bottom: 8dp;

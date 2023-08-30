@@ -97,6 +97,16 @@ VGC_UI_API extern const core::StringId disabled;
 VGC_UI_API extern const core::StringId on;
 VGC_UI_API extern const core::StringId off;
 
+// Button
+VGC_UI_API extern const core::StringId icon;
+VGC_UI_API extern const core::StringId text;
+VGC_UI_API extern const core::StringId shortcut;
+
+// Menu
+VGC_UI_API extern const core::StringId button;
+VGC_UI_API extern const core::StringId separator;
+
+// Dialog
 VGC_UI_API extern const core::StringId body;
 VGC_UI_API extern const core::StringId buttons;
 VGC_UI_API extern const core::StringId centered;
