@@ -196,8 +196,7 @@ protected:
     bool onMouseMove(MouseMoveEvent* event) override;
     bool onMousePress(MousePressEvent* event) override;
     bool onMouseRelease(MouseReleaseEvent* event) override;
-    bool onFocusIn(FocusReason reason) override;
-    bool onFocusOut(FocusReason reason) override;
+    void onFocusStackOut(FocusReason reason) override;
     bool onKeyPress(KeyPressEvent* event) override;
 
 private:

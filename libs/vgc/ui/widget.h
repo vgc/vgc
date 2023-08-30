@@ -1077,6 +1077,9 @@ public:
     /// If the tree is active, then this widget will now receive keyboard
     /// events.
     ///
+    /// If this widget was not already in the `focusStack()`, then it is added
+    /// to the stack and `onFocusStackIn()` is called.
+    ///
     /// If the tree is active and if this widget was not already the focused
     /// widget, then this widget will receive a FocusIn event.
     ///
@@ -1101,12 +1104,17 @@ public:
     ///
     VGC_SIGNAL(focusSet, (FocusReason, reason))
 
-    /// Removes this widget or any of its descendants from the focus stack.
+    /// Removes this widget or any of its descendants from the `focusStack()`.
     ///
-    /// If this causes the current `focusedWidget()` to lose focus, and if the
-    /// tree is active, then the focused widget will receive a `FocusOut`
-    /// event, and from now on will not receive keyboard events. The new
-    /// `focusedWidget()`, if any, will receive a `FocusIn` event.
+    /// If this causes any widget to be removed from the stack, then
+    /// `onFocusStackOut()` will be called on these widgets.
+    ///
+    /// If this causes the current `focusedWidget()` to not be the focused
+    /// widget anymore, and if the tree is active, then the focused widget will
+    /// receive a `FocusOut` event, and from now on will not receive keyboard
+    /// events. The new focused widget, if any, will receive a `FocusIn` event.
+    ///
+    /// \sa `setFocus()`.
     ///
     void clearFocus(FocusReason reason);
 
@@ -1117,6 +1125,7 @@ public:
 
     /// Returns the focus stack of this widget tree.
     ///
+    /// '
     core::Array<WidgetPtr> focusStack() const;
 
     /// Returns the focused widget of this widget tree, if any.
@@ -1155,10 +1164,6 @@ public:
         return hasFocusedWidget() && isTreeActive();
     }
 
-    /// Override this function if you wish to handle FocusIn events. You must
-    /// return true if the event was handled, false otherwise. The default
-    /// implementation returns false.
-    ///
     /// This function is called when:
     /// 1. isTreeActive() is true and the focused widget changed, or
     /// 2. isTreeActive() changed from false to true
@@ -1168,12 +1173,8 @@ public:
     ///
     /// \sa `onFocusOut()`, `setFocus()`, `clearFocus()`, `isTreeActive()`.
     ///
-    virtual bool onFocusIn(FocusReason reason);
+    virtual void onFocusIn(FocusReason reason);
 
-    /// Override this function if you wish to handle FocusOut events. You must
-    /// return true if the event was handled, false otherwise. The default
-    /// implementation returns false.
-    ///
     /// This function is called when:
     /// 1. isTreeActive() is true and the focused widget changed, or
     /// 2. isTreeActive() changed from true to false
@@ -1187,7 +1188,25 @@ public:
     ///
     /// \sa `onFocusIn()`, `setFocus()`, `clearFocus()`, `isTreeActive()`.
     ///
-    virtual bool onFocusOut(FocusReason reason);
+    virtual void onFocusOut(FocusReason reason);
+
+    /// This function is called when a widget is added to the focus stack.
+    ///
+    /// Note that this function is only called for the widget itself, not for
+    /// all its ancestors.
+    ///
+    /// \sa `onFocusStackOut()`, `focusStack()`.
+    ///
+    virtual void onFocusStackIn(FocusReason reason);
+
+    /// This function is called when a widget is removed from the focus stack.
+    ///
+    /// Note that this function is only called for the widget itself, not for
+    /// all its ancestors.
+    ///
+    /// \sa `onFocusStackInt()`, `focusStack()`.
+    ///
+    virtual void onFocusStackOut(FocusReason reason);
 
     /// Returns whether this widget accepts text input.
     ///
@@ -1659,6 +1678,11 @@ private:
     bool isFocusSetOrCleared_ = false;
     core::Array<WidgetPtr> focusStack_;
     Widget* keyboardCaptor_ = nullptr;
+
+    void emitFocusInOutEvents_(
+        const core::Array<WidgetPtr>& oldStack,
+        const core::Array<WidgetPtr>& newStack,
+        FocusReason reason);
 
     void keyEvent_(
         PropagatedKeyEvent* event,

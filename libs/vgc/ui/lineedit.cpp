@@ -294,26 +294,26 @@ void LineEdit::onMouseLeave() {
     cursorChanger_.clear();
 }
 
-bool LineEdit::onFocusIn(FocusReason) {
-    oldText_ = text();
-    richText_->setSelectionVisible(true);
+void LineEdit::onFocusIn(FocusReason) {
     richText_->setCursorVisible(true);
     requestRepaint_();
-    return true;
 }
 
-bool LineEdit::onFocusOut(FocusReason reason) {
-
-    if (reason != FocusReason::Window  //
-        && reason != FocusReason::Menu //
-        && reason != FocusReason::Popup) {
-
-        richText_->clearSelection();
-    }
+void LineEdit::onFocusOut(FocusReason) {
     richText_->setCursorVisible(false);
     requestRepaint_();
+}
+
+void LineEdit::onFocusStackIn(FocusReason) {
+    oldText_ = text();
+    richText_->setSelectionVisible(true);
+}
+
+void LineEdit::onFocusStackOut(FocusReason) {
+    richText_->setSelectionVisible(false);
+    richText_->clearSelection();
+    requestRepaint_();
     editingFinished().emit();
-    return true;
 }
 
 bool LineEdit::onKeyPress(KeyPressEvent* event) {

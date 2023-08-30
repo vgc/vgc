@@ -78,8 +78,10 @@ public:
     bool onMouseRelease(MouseReleaseEvent* event) override;
     void onMouseEnter() override;
     void onMouseLeave() override;
-    bool onFocusIn(FocusReason reason) override;
-    bool onFocusOut(FocusReason reason) override;
+    void onFocusIn(FocusReason reason) override;
+    void onFocusOut(FocusReason reason) override;
+    void onFocusStackIn(FocusReason reason) override;
+    void onFocusStackOut(FocusReason reason) override;
     bool onKeyPress(KeyPressEvent* event) override;
 
     /// This signal is emitted whenever the text in the line edit changed,
