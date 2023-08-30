@@ -47,11 +47,17 @@ FlexDirection orthoDir(FlexDirection dir) {
 namespace commands {
 
 VGC_UI_DEFINE_TRIGGER_COMMAND( //
-    openMenu,
+    open,
     "ui.menu.open",
     "Open Menu")
 
-}
+VGC_UI_DEFINE_TRIGGER_COMMAND( //
+    exit,
+    "ui.menu.exit",
+    "Exit Menu",
+    Shortcut(Key::Escape));
+
+} // namespace commands
 
 } // namespace
 
@@ -70,11 +76,15 @@ Menu::Menu(CreateKey key, std::string_view title)
     : Flex(key, FlexDirection::Column, FlexWrap::NoWrap) {
 
     addStyleClass(strings::Menu);
-    action_ = createTriggerAction(commands::openMenu(), title);
-    action_->isMenu_ = true;
     setFocusPolicy(FocusPolicy::Click);
     setFocusStrength(FocusStrength::Low);
+
+    action_ = createTriggerAction(commands::open(), title);
+    action_->isMenu_ = true;
     action_->triggered().connect(onSelfActionTriggeredSlot_());
+
+    Action* exitAction = createTriggerAction(commands::exit());
+    exitAction->triggered().connect(exitSlot_());
 }
 
 MenuPtr Menu::create() {
