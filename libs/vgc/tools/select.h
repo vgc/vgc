@@ -60,6 +60,8 @@ protected:
     bool onMousePress(ui::MousePressEvent* event) override;
     bool onMouseRelease(ui::MouseReleaseEvent* event) override;
 
+    void onFocusStackIn(ui::FocusReason reason) override;
+
     void onResize() override;
     void onPaintCreate(graphics::Engine* engine) override;
     void onPaintDraw(graphics::Engine* engine, ui::PaintOptions options) override;

@@ -542,6 +542,12 @@ bool Select::onMouseRelease(ui::MouseReleaseEvent* event) {
     return true;
 }
 
+void Select::onFocusStackIn(ui::FocusReason reason) {
+    if (transformBox_) {
+        transformBox_->setFocus(reason);
+    }
+}
+
 void Select::onResize() {
     SuperClass::onResize();
     selectionRectangleGeometry_.reset();
@@ -855,13 +861,20 @@ void Select::onShowTransformBoxChanged_() {
         if (!transformBox_) {
             transformBox_ = createChild<TransformBox>();
             updateTransformBoxElements_();
+            if (focusStack().contains(this)) {
+                transformBox_->setFocus(ui::FocusReason::Other);
+            }
         }
     }
     else {
         if (transformBox_) {
             // Remove from parent and destroy
+            bool wasFocused = focusStack().contains(transformBox_);
             transformBox_->reparent(nullptr);
             transformBox_ = nullptr;
+            if (wasFocused) {
+                this->setFocus(ui::FocusReason::Other);
+            }
         }
     }
 }
