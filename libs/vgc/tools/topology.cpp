@@ -23,10 +23,6 @@ using ui::Shortcut;
 
 constexpr ui::ModifierKey alt = ui::ModifierKey::Alt;
 
-// TODO: Use VGC_UI_DEFINE_TRIGGER_COMMAND
-#undef VGC_UI_DEFINE_TRIGGER_COMMAND
-#define VGC_UI_DEFINE_TRIGGER_COMMAND VGC_UI_DEFINE_WINDOW_COMMAND
-
 VGC_UI_DEFINE_TRIGGER_COMMAND( //
     glue,
     "tools.topology.glue",

@@ -42,10 +42,6 @@ using ui::ModifierKey;
 using ui::MouseButton;
 using ui::Shortcut;
 
-// TODO: Use VGC_UI_DEFINE_TRIGGER_COMMAND
-#undef VGC_UI_DEFINE_TRIGGER_COMMAND
-#define VGC_UI_DEFINE_TRIGGER_COMMAND VGC_UI_DEFINE_WINDOW_COMMAND
-
 VGC_UI_DEFINE_TRIGGER_COMMAND( //
     translateLeftSmallStep,
     "tools.transform.translateLeftSmallStep",
@@ -921,6 +917,9 @@ constexpr float sideLengthThreshold = scaleManipDistance * 2.f;
 
 TransformBox::TransformBox(CreateKey key)
     : ui::Widget(key) {
+
+    setFocusPolicy(ui::FocusPolicy::Click);
+    setFocusStrength(ui::FocusStrength::High);
 
     // Enable clipping, so that the box is not drawn outside the canvas.
     //
