@@ -249,15 +249,29 @@ public:
         setName(core::StringId(name));
     }
 
-    /// Returns the unique identifier of this element if it has one.
-    /// It is only unique document-wise and is not guaranteed to
-    /// remain the same when transferring an element to another
-    /// document.
+    /// Returns the string identifier of this element if it has one.
+    ///
+    /// This corresponds to the `id` attribute, example:
+    ///
+    /// ```xml
+    /// <edge id="e1"/>
+    /// ```
+    ///
+    /// This identifier is only unique in the context of its current
+    /// `document()`, and is not guaranteed to remain the same when
+    /// transferring an element to another document.
     ///
     core::StringId id() const {
         return id_;
     }
 
+    /// Returns the internal integer-base unique identifier of this element.
+    ///
+    /// This identifier is guaranteed to be unique even across documents.
+    ///
+    // XXX: Shouldn't this be implemented in `Node` instead?
+    //      And possibly be renamed "nodeId()"?
+    //
     core::Id internalId() const {
         return internalId_;
     }

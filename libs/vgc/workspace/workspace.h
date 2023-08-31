@@ -321,9 +321,12 @@ public:
     /// Pastes the elements of the given `document` in this workspace's
     /// document.
     ///
+    /// Returns a list with the top-level elements (i.e., not including their
+    /// children) that have been pasted.
+    ///
     /// \sa `cut()`, `copy()`.
     ///
-    void paste(dom::DocumentPtr document);
+    core::Array<core::Id> paste(dom::DocumentPtr document);
 
     /// Deletes the given elements and all incident elements, if any.
     ///

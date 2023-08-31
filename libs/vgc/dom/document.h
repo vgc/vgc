@@ -106,7 +106,7 @@ private:
 ///
 /// Here is an example VGC document:
 ///
-/// \code
+/// ```xml
 /// <vgc>
 ///   <!-- A nice red path shaped like the letter L -->
 ///   <path
@@ -120,7 +120,7 @@ private:
 ///     width = "5"
 ///     color = "rgb(0, 255, 0)" />
 /// </vgc>
-/// \endcode
+/// ```
 ///
 /// Main Concepts
 /// -------------
@@ -132,7 +132,7 @@ private:
 /// In the example provided, the node structure is the
 /// following:
 ///
-/// \verbatim
+/// ```
 /// Document
 ///  |
 ///  * - Element "vgc"
@@ -144,7 +144,7 @@ private:
 ///       * - Comment
 ///       |
 ///       * - Element "path"
-/// \endverbatim
+/// ```
 ///
 /// The root of the Node tree is the Document itself. The Document may have
 /// several children nodes (including comments), but at most one of these
@@ -156,54 +156,13 @@ private:
 /// However, the root element is the root of the subtree of the Node tree
 /// consisting only of Element nodes. We call this subtree the "Element tree":
 ///
-/// \verbatim
+/// ```
 /// Element "vgc"
 ///  |
 ///  * - Element "path"
 ///  |
 ///  * - Element "path"
-/// \endverbatim
-///
-/// XXX Implement the Element tree embedded in the Node tree. It's probably
-/// best to not have dedicated data member such as nextElementSibling_, etc.,
-/// but simply to implement nextElementSibling() in terms of
-/// nextNodeSilbling().
-///
-/// XXX It may make sense to either rename them nextNode/nextElement, or maybe
-/// to only have "nextSibling" but with filters: nextSibling(filter). The same
-/// way, we may either have dedicated iterator class
-/// ElementSiblingsIterator/NodeSiblingsIterator, or just a single
-/// SiblingsIterator with a filter data member. These are not exclusive, we
-/// could have both: childNodes/childElements/children(filter). The advantage
-/// of separate functions and iterator classes is that the Element version can
-/// automatically cast to Element which make it more convenient to use.
-///
-/// XML Declaration
-/// ---------------
-///
-/// By "XML declaration", we mean the following line that may
-/// appear at the beginning of XML files:
-///
-///     <?xml version="1.0" encoding="UTF-8" standalone="no"?>
-///
-/// The XML declaration is optional, and is not considered a
-/// Node of the tree.
-///
-/// Comparison with W3C XML DOM
-/// ---------------------------
-///
-/// The classes in the vgc::dom library follow the same spirit as the W3C XML
-/// DOM specifications, but there are a few differences.
-///
-/// For example, in vgc::dom, element attributes are not considered to be
-/// nodes of the tree. This allows to keep a clear separation between
-/// the node hierarchy and its data, and we believe results in a cleaner
-/// API. For example, in the W3C XML DOM, the API for Node contains
-/// functions which make no sense when the Node is in fact an attribute,
-/// such as 'childNodes' (an attribute has no child nodes). Also, our
-/// nodes are all separately dynamically allocated C++ objects (this allows
-/// observers to track Node changes), and we wouldn't want to dynamically
-/// allocate all attributes, especially default attributes.
+/// ```
 ///
 class VGC_DOM_API Document : public Node {
 private:
@@ -419,29 +378,64 @@ public:
     /// Pastes the node tree of the given `document` in this
     /// document under the given `parent`.
     ///
-    static void paste(DocumentPtr document, Node* parent);
+    /// Returns a list with the top-level nodes (i.e., not including their
+    /// children) that have been pasted.
+    ///
+    static core::Array<dom::Node*> paste(DocumentPtr document, Node* parent);
 
+    /// Returns the `Element` in this document, if any, that has
+    /// the given element `id`.
+    ///
     Element* elementFromId(core::StringId id) const;
 
+    /// Returns the `Element` in this document, if any, that has
+    /// the given internal `id`.
+    ///
     Element* elementFromInternalId(core::Id id) const;
 
+    /// Returns the `Element` in this document, if any, that the given `path`
+    /// resolves to in the context of the given `workingNode`.
+    ///
     static Element* elementFromPath(
         const Path& path,
         const Node* workingNode,
         core::StringId tagNameFilter = {});
 
+    /// Returns the `Value` in this document, if any, that the given `path`
+    /// resolves to in the context of the given `workingNode`.
+    ///
     static Value valueFromPath(
         const Path& path,
         const Node* workingNode,
         core::StringId tagNameFilter = {});
 
+    /// Enables undo/redo history for this document.
+    ///
+    /// \sa `disableHistory()`, `history()`, `versionID()`.
+    ///
     core::History* enableHistory(core::StringId entrypointName);
+
+    /// Disables undo/redo history for this document.
+    ///
+    /// \sa `enableHistory()`, `history()`, `versionID()`.
+    ///
     void disableHistory();
 
+    /// Returns the undo/redo history of this document.
+    ///
+    /// \sa `enableHistory()`, `disableHistory()`, `versionID()`.
+    ///
     core::History* history() const {
         return history_.get();
     }
 
+    /// Returns the current ID of the current undo/redo version.
+    ///
+    /// This ID changes each time an operation is performed on the
+    /// document.
+    ///
+    /// \sa `history(), `enableHistory()`, `disableHistory()`.
+    ///
     core::Id versionId() const {
         return versionId_;
     }
