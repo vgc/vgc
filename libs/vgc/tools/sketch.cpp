@@ -1463,13 +1463,8 @@ void Sketch::finishCurve_(ui::MouseEvent* /*event*/) {
             if (snapKeyVertexElement && keyEdgeElement) {
                 vacomplex::KeyVertex* kv = snapKeyVertexElement->vacKeyVertexNode();
                 vacomplex::KeyEdge* ke = keyEdgeElement->vacKeyEdgeNode();
-                canClose = true;
-                for (vacomplex::Cell* cell : kv->star()) {
-                    if (cell != ke) {
-                        canClose = false;
-                        break;
-                    }
-                }
+                vacomplex::CellRangeView kvStar = kv->star();
+                canClose = (kvStar.length() == 1) && (*kvStar.begin() == ke);
             }
             if (canClose) {
                 endVertex_->remove();
