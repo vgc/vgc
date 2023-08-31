@@ -1015,9 +1015,14 @@ void Select::onPaste_() {
         undoGroup = history->createUndoGroup(commands::paste());
     }
 
-    workspace->paste(copyDoc_);
+    // Perform the paste operation
+    core::Array<core::Id> pasted = workspace->paste(copyDoc_);
 
-    // TODO: get new selection
+    // Set pasted elements as new selection
+    canvas::Canvas* canvas = this->canvas();
+    if (canvas) {
+        canvas->setSelection(pasted);
+    }
 
     // Close history group
     if (undoGroup) {

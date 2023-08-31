@@ -996,10 +996,33 @@ dom::DocumentPtr Workspace::copy(core::ConstSpan<core::Id> elementIds) {
     return dom::Document::copy(domNodesToCopy);
 }
 
-void Workspace::paste(dom::DocumentPtr document) {
-    // TODO: use active group element
-    document_->paste(document, document_->rootElement());
+core::Array<core::Id> Workspace::paste(dom::DocumentPtr document) {
+
+    // Delegate the pasting operation to the DOM.
+    //
+    // TODO: use active group element as parent.
+    //
+    dom::Node* parent = document_->rootElement();
+    core::Array<dom::Node*> nodes = document_->paste(document, parent);
+
+    // Convert the Node* to Workspace IDs.
+    //
+    // Note: DOM IDs and Workspace IDs are the same, so we can
+    // do this before the update from DOM.
+    //
+    core::Array<core::Id> res;
+    res.reserve(nodes.length());
+    for (dom::Node* node : nodes) {
+        if (node->nodeType() == dom::NodeType::Element) {
+            res.append(static_cast<dom::Element*>(node)->internalId());
+        }
+    }
+
+    // Update from DOM.
+    //
     sync();
+
+    return res;
 }
 
 namespace {

@@ -398,36 +398,42 @@ DocumentPtr Document::copy(core::ConstSpan<Node*> nodes) {
 }
 
 /* static */
-void Document::paste(DocumentPtr document, Node* parent) {
+core::Array<Node*> Document::paste(DocumentPtr document, Node* parent) {
+
+    core::Array<Node*> res;
 
     // Copy in order
-    Document* srcDoc = document.get();
-    Document* tgtDoc = parent->document();
-    PathUpdateData pud = {};
+    Document* sourceDoc = document.get();
+    Document* targetDoc = parent->document();
+    PathUpdateData pathUpdateData = {};
 
-    if (!srcDoc || srcDoc == tgtDoc) {
-        return;
+    if (!sourceDoc || sourceDoc == targetDoc) {
+        return res;
     }
 
-    Node* copyContainer = srcDoc->rootElement();
+    Node* copyContainer = sourceDoc->rootElement();
     if (!copyContainer) {
-        return;
+        return res;
     }
 
-    Node* rootElement = tgtDoc->rootElement();
+    Node* rootElement = targetDoc->rootElement();
 
-    srcDoc->preparePathsUpdateRec_(copyContainer);
+    sourceDoc->preparePathsUpdateRec_(copyContainer);
 
     DocumentPtr result = Document::create();
     for (Node* n1 : copyContainer->children()) {
         // TODO: copy other node types than Element.
         Element* element = Element::cast(n1);
         if (element) {
-            Element::createCopy_(rootElement, element, nullptr, pud);
+            Element* pastedElement =
+                Element::createCopy_(rootElement, element, nullptr, pathUpdateData);
+            res.append(pastedElement);
         }
     }
 
-    tgtDoc->updatePathsRec_(rootElement, pud);
+    targetDoc->updatePathsRec_(rootElement, pathUpdateData);
+
+    return res;
 }
 
 Element* Document::elementFromId(core::StringId id) const {
