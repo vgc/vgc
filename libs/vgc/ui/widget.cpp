@@ -1436,36 +1436,33 @@ void Widget::mouseScroll_(ScrollEvent* event) {
     }
 }
 
-Widget* Widget::computeHoverChainChild(MouseEvent* event) const {
+Widget* Widget::computeHoverChainChild(MouseHoverEvent* event) const {
 
     // Return null if child hovering is disabled.
-    if (!isChildHoverEnabled_) {
+    //
+    if (!isChildHoverEnabled()) {
         return nullptr;
     }
 
-    // We iterate over all child widgets in reverse order, so that widgets drawn
-    // last receive the event first. Also note that for now, widget are always
-    // "opaque for mouse events", that is, if a widget A is on top of a sibling
-    // widget B, then the widget B doesn't receive the mouse event.
+    // Iterate over child widgets in reverse order, so that widgets drawn last
+    // receive the event first.
     //
+    geometry::Vec2f pos = event->position();
     for (Widget* child = lastChild(); //
          child != nullptr;            //
          child = child->previousSibling()) {
 
-        if (!child->isVisible()) {
-            continue;
-        }
-
-        // Note: if in the future we allow non-rectangle or rotated widgets, we
-        // could replace `if (child->geometry().contains(event->position()))` by a
-        // more generic approach. For example, a `boundingGeometry()` method
-        // complemented by a virtual `bool isUnderMouse(const Vec2f& p)` method.
-        if (child->geometry().contains(event->position())) {
+        event->setPosition(mapTo(child, pos));
+        if (child->computeIsHovered(event)) {
             return child;
         }
     }
 
     return nullptr;
+}
+
+bool Widget::computeIsHovered(MouseHoverEvent* event) const {
+    return isVisible() && rect().contains(event->position());
 }
 
 bool Widget::setHovered(bool hovered) {

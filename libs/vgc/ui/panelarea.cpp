@@ -482,7 +482,7 @@ void PanelArea::onMouseLeave() {
     setHoveredSplitHandle_(-1);
 }
 
-Widget* PanelArea::computeHoverChainChild(MouseEvent* event) const {
+Widget* PanelArea::computeHoverChainChild(MouseHoverEvent* event) const {
     Int hoveredSplitHandle = computeHoveredSplitHandle_(event->position());
     if (hoveredSplitHandle != -1) {
         return nullptr;

@@ -213,7 +213,7 @@ protected:
     void onWidgetRemoved(Widget* child) override;
     void onMouseEnter() override;
     void onMouseLeave() override;
-    Widget* computeHoverChainChild(MouseEvent* event) const override;
+    Widget* computeHoverChainChild(MouseHoverEvent* event) const override;
     void preMouseMove(MouseMoveEvent* event) override;
     bool onMouseMove(MouseMoveEvent* event) override;
     bool onMousePress(MousePressEvent* event) override;

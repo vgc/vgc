@@ -71,12 +71,12 @@ enum class Visibility : bool {
     /// "not visible" if any widget in its parent chain is `Invisible`.
     /// A root widget with `Inherit` visibility can be considered visible.
     ///
-    Inherit,
+    Inherit = true,
 
     /// An `Invisible` widget is explicitly "not visible" and its children
     /// are by inheritance "not visible" either.
     ///
-    Invisible
+    Invisible = false
 };
 
 /// \enum vgc::ui::HandledEventPolicy
@@ -907,11 +907,43 @@ public:
     ///
     bool setHovered(bool hovered);
 
-    /// Override this function if you wish particular widgets to be hovered based
-    /// on mouse `position`. This method is used by the default implementation
-    /// of `updateHoverChainChild()`.
+    /// Returns which "child" widget (if any), should be considered hovered as
+    /// a result of the given mouse `event`.
     ///
-    virtual Widget* computeHoverChainChild(MouseEvent* event) const;
+    /// The returned widget is typically an actual child widget of this widget,
+    /// but it can also be another related widget that can be semantically
+    /// considered a child for the purpose of mouse hover.
+    ///
+    /// The default implementation returns `nullptr` if `isChildHoverEnabled()`
+    /// is false, otherwise returns the last child widget (that is, painted
+    /// last), such that `computeIsHovered()` is true, after mapping to event
+    /// to the local coordinates of the child.
+    ///
+    /// You can override this method if you wish this widget to have a
+    /// non-standard method of deciding which of its children is hovered. For
+    /// example, `PopupLayer` overrides this method to let mouse events "pass
+    /// through" its underlying widget, and `PanelArea` overrides this method
+    /// to ensure that no subpanels are hovered if the mouse is within
+    /// `handle-size` of a boundary between two subpanels.
+    ///
+    /// This method is called by the default implementation of
+    /// `updateHoverChainChild()`. Therefore, if you wish even more control,
+    /// you can override `updateHoverChainChild()` instead..
+    ///
+    virtual Widget* computeHoverChainChild(MouseHoverEvent* event) const;
+
+    /// Returns whether this widget should be considered hovered as a result
+    /// of the given mouse `event`.
+    ///
+    /// The default implementation returns true if and only if both
+    /// `isVisible()` and `rect().contains(event->position())` are true.
+    ///
+    /// You can override this function if you wish this widget to have a
+    /// non-standard method of deciding whether it is hovered. For example,
+    /// `HintDialog` overrides this method to always return false since it
+    /// desires all mouse events to always pass through itself.
+    ///
+    virtual bool computeIsHovered(MouseHoverEvent* event) const;
 
     /// If `this` is hovered, it makes the given `newHoverChainChild` the
     /// hover-chain child of `this`.
