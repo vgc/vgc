@@ -105,6 +105,11 @@ private:
         geometry::Vec2d position;
     };
     struct KeyEdgeDragData {
+        KeyEdgeDragData(core::Id elementId, bool isUniformTranslation)
+            : elementId(elementId)
+            , isUniformTranslation(isUniformTranslation) {
+        }
+
         core::Id elementId;
         bool isUniformTranslation;
         mutable bool isEditStarted = false;

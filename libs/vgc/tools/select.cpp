@@ -692,13 +692,13 @@ void Select::initializeDragMoveData_(
     for (vacomplex::KeyEdge* ke : edgesToTranslate) {
         workspace::Element* element = workspace->findVacElement(ke->id());
         if (element) {
-            draggedEdges_.append({element->id(), true});
+            draggedEdges_.emplaceLast(element->id(), true);
         }
     }
     for (vacomplex::KeyEdge* ke : affectedEdges) {
         workspace::Element* element = workspace->findVacElement(ke->id());
         if (element) {
-            draggedEdges_.append({element->id(), false});
+            draggedEdges_.emplaceLast(element->id(), false);
         }
     }
 }

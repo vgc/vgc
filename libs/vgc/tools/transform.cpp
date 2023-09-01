@@ -565,13 +565,13 @@ void TopologyAwareTransformer::setElements(
     for (vacomplex::KeyEdge* ke : edges) {
         workspace::Element* element = workspace_->findVacElement(ke->id());
         if (element) {
-            edges_.append({element->id()});
+            edges_.append({element->id(), nullptr});
         }
     }
     for (vacomplex::KeyEdge* ke : edgesToSnap) {
         workspace::Element* element = workspace_->findVacElement(ke->id());
         if (element) {
-            edgesToSnap_.append({element->id()});
+            edgesToSnap_.append({element->id(), nullptr});
         }
     }
 }
