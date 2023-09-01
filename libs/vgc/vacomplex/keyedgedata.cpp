@@ -95,7 +95,6 @@ void KeyEdgeData::snap(
     geometry::CurveSnapTransformationMode mode) {
 
     if (stroke_) {
-        std::array<geometry::Vec2d, 2> oldEndPositions = stroke_->endPositions();
         if (stroke_->snap(snapStartPosition, snapEndPosition, mode)) {
             emitGeometryChanged();
             properties_.onUpdateGeometry(stroke_.get());
