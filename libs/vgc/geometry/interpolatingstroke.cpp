@@ -681,8 +681,9 @@ void AbstractInterpolatingStroke2d::assignFromAverage_(
     }
 
     for (ThickPoint& tp : newPoints) {
-        tp.pos /= nStroke;
-        tp.width /= nStroke;
+        double d = core::narrow_cast<double>(nStroke);
+        tp.pos /= d;
+        tp.width /= d;
     }
 
     double minWidth = core::DoubleMax;
