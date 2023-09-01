@@ -212,7 +212,6 @@ public:
     template<typename TRangePositions, typename TRangeWidths>
     YukselSplineStroke2d(
         bool isClosed,
-        bool hasConstantWidth,
         TRangePositions&& positions,
         TRangeWidths&& widths)
 
