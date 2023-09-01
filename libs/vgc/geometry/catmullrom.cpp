@@ -339,10 +339,14 @@ StrokeBoundaryInfo CatmullRomSplineStroke2d::computeBoundaryInfo_() const {
         WidthData wData1 = computeSegmentEndWidthData(halfwidthBezier1, 1);
 
         result[0] = StrokeEndInfo(
-            pData0.p, pData0.speed != 0 ? (pData0.dp / pData0.speed) : Vec2d(0, 1), wData0.w);
+            pData0.p,
+            pData0.speed != 0 ? (pData0.dp / pData0.speed) : Vec2d(0, 1),
+            wData0.w);
         result[0].setOffsetLineTangents(computeOffsetLineTangents(pData0, wData0));
         result[1] = StrokeEndInfo(
-            pData1.p, pData1.speed != 0 ? (pData1.dp / pData1.speed) : Vec2d(0, 1), wData1.w);
+            pData1.p,
+            pData1.speed != 0 ? (pData1.dp / pData1.speed) : Vec2d(0, 1),
+            wData1.w);
         result[1].setOffsetLineTangents(computeOffsetLineTangents(pData1, wData1));
     }
     else if (this->numKnots() > 0) {

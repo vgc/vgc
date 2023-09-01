@@ -290,8 +290,7 @@ Complex* checkGlueKeyEdges_(core::ConstSpan<KeyEdge*> kes) {
 
 } // namespace
 
-KeyEdge* glueKeyOpenEdges(
-    core::Span<KeyHalfedge> khs) {
+KeyEdge* glueKeyOpenEdges(core::Span<KeyHalfedge> khs) {
 
     constexpr bool isClosed = false;
     Complex* complex = checkGlueKeyEdges_<isClosed>(khs);
@@ -299,8 +298,7 @@ KeyEdge* glueKeyOpenEdges(
     return ops.glueKeyOpenEdges(khs);
 }
 
-KeyEdge* glueKeyOpenEdges(
-    core::Span<KeyEdge*> kes) {
+KeyEdge* glueKeyOpenEdges(core::Span<KeyEdge*> kes) {
 
     constexpr bool isClosed = false;
     Complex* complex = checkGlueKeyEdges_<isClosed>(kes);
@@ -308,16 +306,14 @@ KeyEdge* glueKeyOpenEdges(
     return ops.glueKeyOpenEdges(kes);
 }
 
-KeyEdge*
-glueKeyClosedEdges(core::Span<KeyHalfedge> khs) {
+KeyEdge* glueKeyClosedEdges(core::Span<KeyHalfedge> khs) {
     constexpr bool isClosed = true;
     Complex* complex = checkGlueKeyEdges_<isClosed>(khs);
     detail::Operations ops(complex);
     return ops.glueKeyClosedEdges(khs);
 }
 
-KeyEdge*
-glueKeyClosedEdges(core::Span<KeyEdge*> kes) {
+KeyEdge* glueKeyClosedEdges(core::Span<KeyEdge*> kes) {
     constexpr bool isClosed = true;
     Complex* complex = checkGlueKeyEdges_<isClosed>(kes);
     detail::Operations ops(complex);

@@ -54,8 +54,9 @@ protected:
 
     OpResult onUpdateGeometry_(const geometry::AbstractStroke2d* newStroke) override;
 
-    std::unique_ptr<vacomplex::CellProperty>
-    fromConcatStep_(const vacomplex::KeyHalfedgeData& khd1, const vacomplex::KeyHalfedgeData& khd2) const override;
+    std::unique_ptr<vacomplex::CellProperty> fromConcatStep_(
+        const vacomplex::KeyHalfedgeData& khd1,
+        const vacomplex::KeyHalfedgeData& khd2) const override;
 
     OpResult finalizeConcat_() override;
 

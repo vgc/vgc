@@ -24,8 +24,8 @@
 #include <vgc/core/array.h>
 #include <vgc/core/color.h>
 #include <vgc/dom/element.h>
-#include <vgc/geometry/stroke.h>
 #include <vgc/geometry/rect2d.h>
+#include <vgc/geometry/stroke.h>
 #include <vgc/geometry/vec2f.h>
 #include <vgc/geometry/vec3f.h>
 #include <vgc/geometry/vec4f.h>
@@ -551,14 +551,23 @@ private:
     ElementStatus onDependencyRemoved_(Element* dependency) override;
 
     // returns whether stroke changed
-    static bool updateStrokeFromDom_(vacomplex::KeyEdgeData* data, const dom::Element* domElement);
-    static void writeStrokeToDom_(dom::Element* domElement, const vacomplex::KeyEdgeData* data);
+    static bool
+    updateStrokeFromDom_(vacomplex::KeyEdgeData* data, const dom::Element* domElement);
+    static void
+    writeStrokeToDom_(dom::Element* domElement, const vacomplex::KeyEdgeData* data);
     static void clearStrokeFromDom_(dom::Element* domElement);
 
     // returns whether style changed
-    static bool updatePropertiesFromDom_(vacomplex::KeyEdgeData* data, const dom::Element* domElement);
-    static void writePropertiesToDom_(dom::Element* domElement, const vacomplex::KeyEdgeData* data, core::ConstSpan<core::StringId> propNames);
-    static void writeAllPropertiesToDom_(dom::Element* domElement, const vacomplex::KeyEdgeData* data);
+    static bool updatePropertiesFromDom_(
+        vacomplex::KeyEdgeData* data,
+        const dom::Element* domElement);
+    static void writePropertiesToDom_(
+        dom::Element* domElement,
+        const vacomplex::KeyEdgeData* data,
+        core::ConstSpan<core::StringId> propNames);
+    static void writeAllPropertiesToDom_(
+        dom::Element* domElement,
+        const vacomplex::KeyEdgeData* data);
 
     ElementStatus updateFromDom_(Workspace* workspace) override;
 

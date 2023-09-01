@@ -441,7 +441,8 @@ AbstractStroke2d::computeSampling(const geometry::CurveSamplingParameters& param
     return result;
 }
 
-std::unique_ptr<AbstractStroke2d> AbstractStroke2d::convert_(const AbstractStroke2d* source) const {
+std::unique_ptr<AbstractStroke2d>
+AbstractStroke2d::convert_(const AbstractStroke2d* source) const {
     std::unique_ptr<AbstractStroke2d> result = clone_();
     if (result->convertAssign_(source)) {
         return result;

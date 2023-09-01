@@ -216,8 +216,9 @@ KeyEdgeData::fromGlueOpen(core::ConstSpan<KeyHalfedgeData> khds) {
 }
 
 /* static */
-std::unique_ptr<KeyEdgeData>
-KeyEdgeData::fromGlueClosed(core::ConstSpan<KeyHalfedgeData> khds, core::ConstSpan<double> uOffsets) {
+std::unique_ptr<KeyEdgeData> KeyEdgeData::fromGlueClosed(
+    core::ConstSpan<KeyHalfedgeData> khds,
+    core::ConstSpan<double> uOffsets) {
 
     struct ConvertedStroke {
         std::unique_ptr<geometry::AbstractStroke2d> converted;

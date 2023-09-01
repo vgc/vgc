@@ -389,7 +389,8 @@ protected:
     StrokeBoundaryInfo computeBoundaryInfo_() const override;
 
 protected:
-    void updateCache_(const core::Array<SegmentComputeData>& baseComputeDataArray) const override;
+    void updateCache_(
+        const core::Array<SegmentComputeData>& baseComputeDataArray) const override;
 
 private:
     // These two cannot be computed separately at the moment.

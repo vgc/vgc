@@ -259,7 +259,8 @@ void samplePointsOnCycleUniformly(
     double stepS = totalS / numSamples;
     double nextStepS = stepS / 2;
     for (const KeyHalfedge& khe : cycle) {
-        const geometry::StrokeSample2dArray& samples = khe.edge()->strokeSampling().samples();
+        const geometry::StrokeSample2dArray& samples =
+            khe.edge()->strokeSampling().samples();
         double heS = samples.last().s();
         if (heS == 0) {
             // XXX TODO: handle cases where heS == 0 more appropriately.
@@ -341,8 +342,7 @@ core::Array<KeyCycle> computeKeyFaceCandidateAt(
         KeyEdge* ke = cell->toKeyEdge();
         if (ke && ke->existsAt(t)) {
             const geometry::StrokeSample2dArray& samples = ke->strokeSampling().samples();
-            geometry::DistanceToCurve d =
-                geometry::distanceToCurve(samples, position);
+            geometry::DistanceToCurve d = geometry::distanceToCurve(samples, position);
 
             constexpr double hpi = core::pi / 2;
             double a = d.angleFromTangent();
@@ -663,7 +663,8 @@ bool computeKeyFaceFillTriangles(
                     // EdgeSampling by value. The const ref extend its
                     // lifetime.
                     const geometry::StrokeSampling2d& sampling =
-                        quality ? ke->computeStrokeSampling(*quality) : ke->strokeSampling();
+                        quality ? ke->computeStrokeSampling(*quality)
+                                : ke->strokeSampling();
                     const geometry::StrokeSample2dArray& samples = sampling.samples();
                     if (khe.direction()) {
                         for (const geometry::StrokeSample2d& s : samples) {

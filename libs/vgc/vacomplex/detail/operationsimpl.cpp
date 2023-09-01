@@ -16,8 +16,8 @@
 
 #include <vgc/vacomplex/detail/operationsimpl.h>
 
-#include <unordered_set>
 #include <algorithm> // std::reverse
+#include <unordered_set>
 
 #include <vgc/core/array.h>
 #include <vgc/vacomplex/exceptions.h>
@@ -412,7 +412,8 @@ KeyEdge* Operations::glueKeyOpenEdges(core::ConstSpan<KeyEdge*> kes) {
     core::Array<core::Array<geometry::Vec2d>> sampleArrays;
     sampleArrays.reserve(n);
     for (KeyEdge* ke : kes) {
-        const geometry::StrokeSample2dArray& strokeSamples = ke->strokeSampling().samples();
+        const geometry::StrokeSample2dArray& strokeSamples =
+            ke->strokeSampling().samples();
         sampleArrays.append(
             computeApproximateUniformSamplingPositions(strokeSamples, numSamples));
     }
@@ -486,7 +487,8 @@ KeyEdge* Operations::glueKeyClosedEdges(core::ConstSpan<KeyHalfedge> khs) {
     arclengths.reserve(n);
     for (const KeyHalfedge& kh : khs) {
         KeyEdge* ke = kh.edge();
-        const geometry::StrokeSample2dArray& strokeSamples = ke->strokeSampling().samples();
+        const geometry::StrokeSample2dArray& strokeSamples =
+            ke->strokeSampling().samples();
         sampleArrays.append(
             computeApproximateUniformSamplingPositions(strokeSamples, numSamples + 1));
         core::Array<geometry::Vec2d>& samples = sampleArrays.last();
@@ -563,7 +565,8 @@ KeyEdge* Operations::glueKeyClosedEdges(core::ConstSpan<KeyEdge*> kes) {
     sampleArrays.reserve(n);
     arclengths.reserve(n);
     for (KeyEdge* ke : kes) {
-        const geometry::StrokeSample2dArray& strokeSamples = ke->strokeSampling().samples();
+        const geometry::StrokeSample2dArray& strokeSamples =
+            ke->strokeSampling().samples();
         sampleArrays.append(
             computeApproximateUniformSamplingPositions(strokeSamples, numSamples + 1));
         // since it is closed, first and last are the same

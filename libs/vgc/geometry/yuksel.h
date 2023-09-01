@@ -22,8 +22,8 @@
 #include <vgc/core/span.h>
 #include <vgc/geometry/api.h>
 #include <vgc/geometry/bezier.h>
-#include <vgc/geometry/stroke.h>
 #include <vgc/geometry/interpolatingstroke.h>
+#include <vgc/geometry/stroke.h>
 
 namespace vgc::geometry {
 
@@ -161,10 +161,7 @@ public:
         return parameterBounds_;
     }
 
-    T computeEndPointDerivatives(
-        Int endpointIndex,
-        T& velocity,
-        T& acceleration) const {
+    T computeEndPointDerivatives(Int endpointIndex, T& velocity, T& acceleration) const {
 
         if (endpointIndex == 0) {
             Scalar v = parameterBounds_[0];
@@ -219,7 +216,10 @@ public:
         TRangePositions&& positions,
         TRangeWidths&& widths)
 
-        : AbstractInterpolatingStroke2d(isClosed, std::forward<TRangePositions>(positions), std::forward<TRangeWidths>(widths)) {
+        : AbstractInterpolatingStroke2d(
+            isClosed,
+            std::forward<TRangePositions>(positions),
+            std::forward<TRangeWidths>(widths)) {
     }
 
 protected:
@@ -252,7 +252,8 @@ protected:
     StrokeBoundaryInfo computeBoundaryInfo_() const override;
 
 protected:
-    void updateCache_(const core::Array<SegmentComputeData>& baseComputeDataArray) const override;
+    void updateCache_(
+        const core::Array<SegmentComputeData>& baseComputeDataArray) const override;
 };
 
 } // namespace vgc::geometry

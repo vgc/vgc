@@ -365,7 +365,8 @@ void Sketch::onPaintDraw(graphics::Engine* engine, ui::PaintOptions options) {
             const geometry::StrokeSample2dArray& samples = ke->strokeSampling().samples();
             // one sample is not enough to have a well-defined normal
             if (samples.length() >= 2) {
-                geometry::StrokeSample2d edgeLastSample = ke->strokeSampling().samples().last();
+                geometry::StrokeSample2d edgeLastSample =
+                    ke->strokeSampling().samples().last();
                 geometry::Vec2d tipDir =
                     minimalLatencySnappedCursor_ - edgeLastSample.position();
                 double width = edgeLastSample.halfwidth(0) + edgeLastSample.halfwidth(1);

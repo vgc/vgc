@@ -25,6 +25,6 @@ namespace vgc::workspace::strings {
 VGC_WORKSPACE_API extern const core::StringId color;
 VGC_WORKSPACE_API extern const core::StringId style;
 
-} // namespace vgc::dom::strings
+} // namespace vgc::workspace::strings
 
 #endif // VGC_WORKSPACE_STRINGS_H
