@@ -20,7 +20,7 @@
 #include <vgc/core/span.h>
 #include <vgc/geometry/api.h>
 #include <vgc/geometry/bezier.h>
-#include <vgc/geometry/curve.h>
+#include <vgc/geometry/interpolatingstroke.h>
 #include <vgc/geometry/vec2d.h>
 
 namespace vgc::geometry {
@@ -322,23 +322,16 @@ enum class CatmullRomSplineParameterization : UInt8 {
     Chordal
 };
 
-enum class CurveSegmentType : UInt8 {
-    Simple,
-    Corner,
-    AfterCorner,
-    BeforeCorner,
-    BetweenCorners,
-};
-
 // TODO: immutable version with ConstShared storage
 //       & move these classes in a new set of .h/.cpp
-class VGC_GEOMETRY_API CatmullRomSplineStroke2d : public AbstractStroke2d {
+class VGC_GEOMETRY_API CatmullRomSplineStroke2d final
+    : public AbstractInterpolatingStroke2d {
 public:
     CatmullRomSplineStroke2d(
         CatmullRomSplineParameterization parameterization,
         bool isClosed)
 
-        : AbstractStroke2d(isClosed)
+        : AbstractInterpolatingStroke2d(isClosed)
         , parameterization_(parameterization) {
     }
 
@@ -347,9 +340,7 @@ public:
         bool isClosed,
         double constantWidth)
 
-        : AbstractStroke2d(isClosed)
-        , widths_(1, constantWidth)
-        , isWidthConstant_(true)
+        : AbstractInterpolatingStroke2d(isClosed, constantWidth)
         , parameterization_(parameterization) {
     }
 
@@ -357,69 +348,17 @@ public:
     CatmullRomSplineStroke2d(
         CatmullRomSplineParameterization parameterization,
         bool isClosed,
-        bool isWidthConstant,
         TRangePositions&& positions,
         TRangeWidths&& widths)
 
-        : AbstractStroke2d(isClosed)
-        , positions_(std::forward<TRangePositions>(positions))
-        , widths_(std::forward<TRangeWidths>(widths))
-        , isWidthConstant_(isWidthConstant)
+        : AbstractInterpolatingStroke2d(
+            isClosed,
+            std::forward<TRangePositions>(positions),
+            std::forward<TRangeWidths>(widths))
         , parameterization_(parameterization) {
     }
 
-    const core::Array<Vec2d>& positions() const {
-        return positions_;
-    }
-
-    core::Array<Vec2d>&& movePositions() {
-        return std::move(positions_);
-    }
-
-    template<typename TRange>
-    void setPositions(TRange&& positions) {
-        positions_ = std::forward<TRange>(positions);
-        chordLengths_.clear();
-        segmentTypes_.clear();
-        centerlineControlPoints_.clear();
-        halfwidthsControlPoints_.clear();
-        isCacheDirty_ = true;
-    }
-
-    const core::Array<double>& widths() const {
-        return widths_;
-    }
-
-    // TODO: make data class and startEdit() endEdit()
-    core::Array<double>&& moveWidths() {
-        return std::move(widths_);
-    }
-
-    template<typename TRange>
-    void setWidths(TRange&& widths) {
-        widths_ = std::forward<TRange>(widths);
-        isWidthConstant_ = false;
-        centerlineControlPoints_.clear();
-        halfwidthsControlPoints_.clear();
-        isCacheDirty_ = true;
-    }
-
-    void setConstantWidth(double width) {
-        isWidthConstant_ = true;
-        widths_.resize(1);
-        widths_[0] = width;
-        halfwidthsControlPoints_.clear();
-    }
-
-    bool isWidthConstant() const {
-        return isWidthConstant_;
-    }
-
 protected:
-    Int numKnots_() const override;
-
-    bool isZeroLengthSegment_(Int segmentIndex) const override;
-
     Vec2d evalNonZeroCenterline(Int segmentIndex, double u) const override;
 
     Vec2d evalNonZeroCenterline(Int segmentIndex, double u, Vec2d& dp) const override;
@@ -434,36 +373,31 @@ protected:
 
     StrokeSampleEx2d zeroLengthStrokeSample() const override;
 
-    std::array<Vec2d, 2> computeOffsetLineTangentsAtSegmentEndpoint_(
-        Int segmentIndex,
-        Int endpointIndex) const override;
-
     CubicBezier2d segmentToBezier(Int segmentIndex) const;
     CubicBezier2d segmentToBezier(Int segmentIndex, CubicBezier2d& halfwidths) const;
 
     CubicBezier1d segmentToNormalReparametrization(Int segmentIndex) const;
 
-    double constantWidth() const {
-        return widths_[0];
-    }
+protected:
+    const StrokeModelInfo& modelInfo_() const override;
+
+    std::unique_ptr<AbstractStroke2d> cloneEmpty_() const override;
+    std::unique_ptr<AbstractStroke2d> clone_() const override;
+    bool copyAssign_(const AbstractStroke2d* other) override;
+    bool moveAssign_(AbstractStroke2d* other) override;
+
+    StrokeBoundaryInfo computeBoundaryInfo_() const override;
+
+protected:
+    void updateCache_(const core::Array<SegmentComputeData>& baseComputeDataArray) const override;
 
 private:
-    Vec2dArray positions_;
-    core::DoubleArray widths_;
-    // It has the same number of elements as of positions_.
-    // Last chord is the closure if closed, zero otherwise.
-    mutable core::DoubleArray chordLengths_;
-    mutable core::Array<CurveSegmentType> segmentTypes_;
     // These two cannot be computed separately at the moment.
     mutable Vec2dArray centerlineControlPoints_;
     mutable Vec2dArray halfwidthsControlPoints_;
     mutable Vec2dArray normalReparametrizationControlValues_;
 
-    mutable bool isCacheDirty_ = true;
-    bool isWidthConstant_ = false;
     CatmullRomSplineParameterization parameterization_;
-
-    void computeCache_() const;
 };
 
 } // namespace vgc::geometry

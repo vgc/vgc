@@ -5,15 +5,16 @@ vgc_add_library(vacomplex
     CPP_HEADER_FILES
         api.h
         cell.h
+        celldata.h
+        cellproperty.h
         complex.h
-        dataobject.h
-        edgegeometry.h
         exceptions.h
         inbetweenedge.h
         inbetweenface.h
         inbetweenvertex.h
         keycycle.h
         keyedge.h
+        keyedgedata.h
         keyface.h
         keyhalfedge.h
         keyvertex.h
@@ -25,14 +26,16 @@ vgc_add_library(vacomplex
 
     CPP_SOURCE_FILES
         cell.cpp
+        celldata.cpp
+        cellproperty.cpp
         complex.cpp
-        edgegeometry.cpp
         exceptions.cpp
         inbetweenedge.cpp
         inbetweenface.cpp
         inbetweenvertex.cpp
         keycycle.cpp
         keyedge.cpp
+        keyedgedata.cpp
         keyface.cpp
         keyhalfedge.cpp
         keyvertex.cpp

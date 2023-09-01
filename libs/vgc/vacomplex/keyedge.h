@@ -18,14 +18,14 @@
 #define VGC_VACOMPLEX_KEYEDGE_H
 
 #include <memory>
+#include <utility>
 
 #include <vgc/core/arithmetic.h>
-#include <vgc/geometry/curve.h>
 #include <vgc/geometry/rect2d.h>
-#include <vgc/geometry/vec2d.h>
+#include <vgc/geometry/stroke.h>
 #include <vgc/vacomplex/api.h>
 #include <vgc/vacomplex/cell.h>
-#include <vgc/vacomplex/edgegeometry.h>
+#include <vgc/vacomplex/keyedgedata.h>
 #include <vgc/vacomplex/keyvertex.h>
 
 namespace vgc::vacomplex {
@@ -35,7 +35,7 @@ class KeyHalfedge;
 class VGC_VACOMPLEX_API KeyEdge final : public SpatioTemporalCell<EdgeCell, KeyCell> {
 private:
     friend detail::Operations;
-    friend KeyEdgeGeometry;
+    friend KeyEdgeData;
 
     explicit KeyEdge(core::Id id, core::AnimTime t) noexcept
         : SpatioTemporalCell(id, t)
@@ -55,8 +55,8 @@ public:
         return endVertex_;
     }
 
-    KeyEdgeGeometry* geometry() const {
-        return geometry_.get();
+    KeyEdgeData* data() const {
+        return data_.get();
     }
 
     geometry::CurveSamplingQuality samplingQuality() const {
@@ -65,8 +65,8 @@ public:
 
     bool snapGeometry();
 
-    std::shared_ptr<const EdgeSampling> samplingShared() const;
-    const EdgeSampling& sampling() const;
+    std::shared_ptr<const geometry::StrokeSampling2d> strokeSamplingShared() const;
+    const geometry::StrokeSampling2d& strokeSampling() const;
     const geometry::Rect2d& centerlineBoundingBox() const;
 
     /// Computes and returns a new array of samples for this edge according to the
@@ -74,7 +74,8 @@ public:
     ///
     /// Unlike `sampling()`, this function does not cache the result.
     ///
-    EdgeSampling computeSampling(geometry::CurveSamplingQuality quality) const;
+    geometry::StrokeSampling2d
+    computeStrokeSampling(geometry::CurveSamplingQuality quality) const;
 
     bool isStartVertex(VertexCell* v) const override {
         return v == startVertex_;
@@ -105,14 +106,26 @@ private:
     // position and orientation when not bound to vertices ?
     //detail::Transform2d transform_;
 
-    std::shared_ptr<KeyEdgeGeometry> geometry_ = {};
+    std::unique_ptr<KeyEdgeData> data_ = {};
     //bool isClosed_ = false;
 
-    geometry::CurveSamplingQuality samplingQuality_ = {};
-    mutable std::shared_ptr<const EdgeSampling> sampling_ = {};
+    std::unique_ptr<KeyEdgeData> stealData_() {
+        detail::CellPropertiesPrivateInterface::setOwningCell(
+            &data_->properties(), nullptr);
+        return std::move(data_);
+    }
 
-    EdgeSampling computeSampling_(geometry::CurveSamplingQuality quality) const;
-    void updateSampling_() const;
+    void setData_(std::unique_ptr<KeyEdgeData>&& data) {
+        data_ = std::move(data);
+        detail::CellPropertiesPrivateInterface::setOwningCell(&data_->properties(), this);
+    }
+
+    geometry::CurveSamplingQuality samplingQuality_ = {};
+    mutable std::shared_ptr<const geometry::StrokeSampling2d> sampling_ = {};
+
+    geometry::StrokeSampling2d
+    computeStrokeSampling_(geometry::CurveSamplingQuality quality) const;
+    void updateStrokeSampling_() const;
 
     void dirtyMesh_() override;
     bool updateGeometryFromBoundary_() override;

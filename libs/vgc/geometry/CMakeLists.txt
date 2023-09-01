@@ -18,6 +18,7 @@ vgc_add_library(geometry
         curvecommand.h
         curves2d.h
         fillstyle.h
+        interpolatingstroke.h
         logcategories.h
         mat.h
         mat2d.h
@@ -31,6 +32,7 @@ vgc_add_library(geometry
         rect2d.h
         rect2f.h
         stride.h
+        stroke.h
         strokestyle.h
         tesselator.h
         triangle2d.h
@@ -52,6 +54,7 @@ vgc_add_library(geometry
         curves2d.cpp
         curvecommand.cpp
         fillstyle.cpp
+        interpolatingstroke.cpp
         logcategories.cpp
         mat2d.cpp
         mat2f.cpp
@@ -63,6 +66,7 @@ vgc_add_library(geometry
         range1f.cpp
         rect2d.cpp
         rect2f.cpp
+        stroke.cpp
         strokestyle.cpp
         tesselator.cpp
         triangle2d.cpp

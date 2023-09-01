@@ -1,4 +1,4 @@
-// Copyright 2022 The VGC Developers
+// Copyright 2023 The VGC Developers
 // See the COPYRIGHT file at the top-level directory of this distribution
 // and at https://github.com/vgc/vgc/blob/master/COPYRIGHT
 //
@@ -14,17 +14,19 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#include <vgc/vacomplex/celldata.h>
+
+#include <vgc/vacomplex/complex.h>
 #include <vgc/vacomplex/detail/operationsimpl.h>
-#include <vgc/vacomplex/edgegeometry.h>
-#include <vgc/vacomplex/keyedge.h>
 
 namespace vgc::vacomplex {
 
-void KeyEdgeGeometry::dirtyEdgeSampling() const {
-    if (edge_) {
-        Complex* complex = edge_->complex();
+void CellData::emitGeometryChanged() const {
+    Cell* cell = properties_.cell();
+    if (cell) {
+        Complex* complex = cell->complex();
         detail::Operations ops(complex);
-        ops.onGeometryChanged_(edge_);
+        ops.onGeometryChanged_(cell);
     }
 }
 

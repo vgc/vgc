@@ -27,6 +27,8 @@ namespace vgc::vacomplex {
 
 class VGC_VACOMPLEX_API KeyHalfedge {
 public:
+    KeyHalfedge() noexcept = default;
+
     KeyHalfedge(KeyEdge* edge, bool direction) noexcept
         : edge_(edge)
         , direction_(direction) {
@@ -80,8 +82,8 @@ public:
 private:
     friend detail::Operations;
 
-    KeyEdge* edge_;
-    bool direction_;
+    KeyEdge* edge_ = nullptr;
+    bool direction_ = false;
 };
 
 } // namespace vgc::vacomplex

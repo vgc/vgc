@@ -14,6 +14,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <vgc/workspace/edgegeometry.h>
+#include <vgc/workspace/strings.h>
 
-namespace vgc::workspace {} // namespace vgc::workspace
+namespace vgc::workspace::strings {
+
+const core::StringId color("color");
+const core::StringId style("style");
+
+} // namespace vgc::workspace::strings

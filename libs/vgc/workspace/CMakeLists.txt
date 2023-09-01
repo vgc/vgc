@@ -8,23 +8,23 @@ vgc_add_library(workspace
         api.h
         colors.h
         edge.h
-        edgegeometry.h
         element.h
         face.h
-        freehandedgegeometry.h
         layer.h
         logcategories.h
+        strings.h
+        style.h
         vertex.h
         workspace.h
 
     CPP_SOURCE_FILES
         edge.cpp
-        edgegeometry.cpp
         element.cpp
         face.cpp
-        freehandedgegeometry.cpp
         layer.cpp
         logcategories.cpp
+        strings.cpp
+        style.cpp
         vertex.cpp
         workspace.cpp
 )

@@ -24,9 +24,8 @@
 #include <vgc/core/array.h>
 #include <vgc/core/color.h>
 #include <vgc/dom/element.h>
-#include <vgc/geometry/curve.h>
+#include <vgc/geometry/stroke.h>
 #include <vgc/geometry/rect2d.h>
-#include <vgc/geometry/vec2d.h>
 #include <vgc/geometry/vec2f.h>
 #include <vgc/geometry/vec3f.h>
 #include <vgc/geometry/vec4f.h>
@@ -190,6 +189,7 @@ public:
         clearStrokeGeometry();
         clearJoinGeometry();
         clearSelectionGeometry();
+        isStyleDirty_ = true;
     }
 
     const graphics::GeometryViewPtr& centerlineGeometry() const {
@@ -264,6 +264,19 @@ public:
         selectionGeometry_.reset();
     }
 
+    bool hasStyle() const {
+        return !isStyleDirty_;
+    }
+
+    // currently not an independent graphics object
+    void setStyle() {
+        isStyleDirty_ = false;
+    }
+
+    void clearStyle() {
+        isStyleDirty_ = true;
+    }
+
 private:
     // Centerline
     graphics::GeometryViewPtr centerlineGeometry_;
@@ -277,6 +290,9 @@ private:
 
     // Selection (requires centerline)
     graphics::GeometryViewPtr selectionGeometry_;
+
+    // Style
+    bool isStyleDirty_ = true;
 };
 
 namespace detail {
@@ -389,7 +405,6 @@ public:
 
 private:
     core::AnimTime time_;
-    core::Color color_;
 
     geometry::Rect2d bbox_ = {};
     geometry::Rect2d strokeBbox_ = {};
@@ -400,7 +415,7 @@ private:
     mutable bool selectionTestCacheResult_ = false;
 
     // stage PreJoinGeometry
-    std::shared_ptr<const vacomplex::EdgeSampling> sampling_;
+    std::shared_ptr<const geometry::StrokeSampling2d> sampling_;
     geometry::StrokeSample2dArray defaultSamples_;
 
     // stage PostJoinGeometry
@@ -410,7 +425,10 @@ private:
 
     // stage StrokeMesh
     StuvMesh2d stroke_;
-    bool hasPendingColorChange_ = false;
+
+    // style (independent stage)
+    core::Color color_;
+    bool isStyleDirty_ = true;
 
     // Note: only valid for a single engine at the moment.
     EdgeGraphics graphics_;
@@ -532,7 +550,18 @@ private:
     ElementStatus onDependencyChanged_(Element* dependency, ChangeFlags changes) override;
     ElementStatus onDependencyRemoved_(Element* dependency) override;
 
+    // returns whether stroke changed
+    static bool updateStrokeFromDom_(vacomplex::KeyEdgeData* data, const dom::Element* domElement);
+    static void writeStrokeToDom_(dom::Element* domElement, const vacomplex::KeyEdgeData* data);
+    static void clearStrokeFromDom_(dom::Element* domElement);
+
+    // returns whether style changed
+    static bool updatePropertiesFromDom_(vacomplex::KeyEdgeData* data, const dom::Element* domElement);
+    static void writePropertiesToDom_(dom::Element* domElement, const vacomplex::KeyEdgeData* data, core::ConstSpan<core::StringId> propNames);
+    static void writeAllPropertiesToDom_(dom::Element* domElement, const vacomplex::KeyEdgeData* data);
+
     ElementStatus updateFromDom_(Workspace* workspace) override;
+
     void updateFromVac_(vacomplex::NodeModificationFlags flags) override;
 
     void updateVertices_(const std::array<VacKeyVertex*, 2>& newVertices);
@@ -541,6 +570,10 @@ private:
     ChangeFlags pendingNotifyChanges_ = {};
 
     void notifyChanges_(ChangeFlags changes, bool immediately = true);
+
+    bool computeStrokeStyle_();
+
+    void dirtyStrokeStyle_(bool notifyDependentsImmediately = true);
 
     bool computePreJoinGeometry_();
     bool computePostJoinGeometry_();

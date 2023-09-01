@@ -23,7 +23,7 @@
 #include <vgc/geometry/vec2f.h>
 #include <vgc/tools/api.h>
 #include <vgc/tools/transform.h>
-#include <vgc/vacomplex/edgegeometry.h>
+#include <vgc/vacomplex/keyedgedata.h>
 
 namespace vgc::tools {
 
@@ -108,6 +108,7 @@ private:
         core::Id elementId;
         bool isUniformTranslation;
         mutable bool isEditStarted = false;
+        mutable std::unique_ptr<vacomplex::KeyEdgeData> oldData;
     };
 
     core::Array<KeyVertexDragData> draggedVertices_;

@@ -17,9 +17,11 @@
 #include <vgc/vacomplex/detail/operationsimpl.h>
 
 #include <unordered_set>
+#include <algorithm> // std::reverse
 
-#include <vgc/vacomplex/edgegeometry.h>
+#include <vgc/core/array.h>
 #include <vgc/vacomplex/exceptions.h>
+#include <vgc/vacomplex/keyedgedata.h>
 #include <vgc/vacomplex/logcategories.h>
 
 namespace vgc::vacomplex::detail {
@@ -60,13 +62,12 @@ Operations::~Operations() {
 }
 
 Group* Operations::createRootGroup() {
-    Group* group = createNode_<Group>(NodeSourceOperation(), complex());
+    Group* group = createNode_<Group>(complex());
     return group;
 }
 
 Group* Operations::createGroup(Group* parentGroup, Node* nextSibling) {
-    Group* group =
-        createNodeAt_<Group>(parentGroup, nextSibling, NodeSourceOperation(), complex());
+    Group* group = createNodeAt_<Group>(parentGroup, nextSibling, complex());
     return group;
 }
 
@@ -74,11 +75,9 @@ KeyVertex* Operations::createKeyVertex(
     const geometry::Vec2d& position,
     Group* parentGroup,
     Node* nextSibling,
-    NodeSourceOperation sourceOperation,
     core::AnimTime t) {
 
-    KeyVertex* kv =
-        createNodeAt_<KeyVertex>(parentGroup, nextSibling, std::move(sourceOperation), t);
+    KeyVertex* kv = createNodeAt_<KeyVertex>(parentGroup, nextSibling, t);
 
     // Topological attributes
     // -> None
@@ -89,18 +88,14 @@ KeyVertex* Operations::createKeyVertex(
     return kv;
 }
 
-// TODO: replace points & widths with `std::unique_ptr<EdgeGeometry>&& geometry`.
-
 KeyEdge* Operations::createKeyOpenEdge(
     KeyVertex* startVertex,
     KeyVertex* endVertex,
-    const std::shared_ptr<KeyEdgeGeometry>& geometry,
+    std::unique_ptr<KeyEdgeData>&& data,
     Group* parentGroup,
-    Node* nextSibling,
-    NodeSourceOperation sourceOperation) {
+    Node* nextSibling) {
 
-    KeyEdge* ke = createNodeAt_<KeyEdge>(
-        parentGroup, nextSibling, std::move(sourceOperation), startVertex->time());
+    KeyEdge* ke = createNodeAt_<KeyEdge>(parentGroup, nextSibling, startVertex->time());
 
     // Topological attributes
     ke->startVertex_ = startVertex;
@@ -109,28 +104,24 @@ KeyEdge* Operations::createKeyOpenEdge(
     addToBoundary_(ke, endVertex);
 
     // Geometric attributes
-    ke->geometry_ = geometry;
-    geometry->edge_ = ke;
+    ke->setData_(std::move(data));
 
     return ke;
 }
 
 KeyEdge* Operations::createKeyClosedEdge(
-    const std::shared_ptr<KeyEdgeGeometry>& geometry,
+    std::unique_ptr<KeyEdgeData>&& data,
     Group* parentGroup,
     Node* nextSibling,
-    NodeSourceOperation sourceOperation,
     core::AnimTime t) {
 
-    KeyEdge* ke =
-        createNodeAt_<KeyEdge>(parentGroup, nextSibling, std::move(sourceOperation), t);
+    KeyEdge* ke = createNodeAt_<KeyEdge>(parentGroup, nextSibling, t);
 
     // Topological attributes
     // -> None
 
     // Geometric attributes
-    ke->geometry_ = geometry;
-    geometry->edge_ = ke;
+    ke->setData_(std::move(data));
 
     return ke;
 }
@@ -141,11 +132,9 @@ KeyFace* Operations::createKeyFace(
     core::Array<KeyCycle> cycles,
     Group* parentGroup,
     Node* nextSibling,
-    NodeSourceOperation sourceOperation,
     core::AnimTime t) {
 
-    KeyFace* kf =
-        createNodeAt_<KeyFace>(parentGroup, nextSibling, std::move(sourceOperation), t);
+    KeyFace* kf = createNodeAt_<KeyFace>(parentGroup, nextSibling, t);
 
     // Topological attributes
     kf->cycles_ = std::move(cycles);
@@ -320,8 +309,7 @@ Operations::glueKeyVertices(core::Span<KeyVertex*> kvs, const geometry::Vec2d& p
     Node* nextSibling = topMostVertex->nextSibling();
 
     // TODO: define source operation
-    KeyVertex* newKv = createKeyVertex(
-        position, parentGroup, nextSibling, NodeSourceOperation{}, kv0->time());
+    KeyVertex* newKv = createKeyVertex(position, parentGroup, nextSibling, kv0->time());
 
     std::unordered_set<KeyVertex*> seen;
     for (KeyVertex* kv : kvs) {
@@ -335,97 +323,316 @@ Operations::glueKeyVertices(core::Span<KeyVertex*> kvs, const geometry::Vec2d& p
     return newKv;
 }
 
-KeyEdge* Operations::glueKeyOpenEdges(
-    core::Span<KeyHalfedge> khes,
-    std::shared_ptr<KeyEdgeGeometry> geometry,
-    const geometry::Vec2d& startPosition,
-    const geometry::Vec2d& endPosition) {
+namespace {
 
-    if (khes.isEmpty()) {
-        return nullptr;
+// Assumes `!samples.isEmpty()` and `numSamples >= 1`.
+core::Array<geometry::Vec2d> computeApproximateUniformSamplingPositions(
+    const geometry::StrokeSample2dArray& samples,
+    Int numSamples) {
+
+    core::Array<geometry::Vec2d> result;
+    result.reserve(numSamples);
+    result.append(samples.first().position());
+    double l = samples.last().s();
+    if (l > 0) {
+        double deltaS = l / (numSamples - 1);
+        double targetS = deltaS;
+        const geometry::StrokeSample2d* s0 = &samples[0];
+        for (const geometry::StrokeSample2d& s1 : samples) {
+            double ds = s1.s() - s0->s();
+            if (ds > 0 && targetS <= s1.s()) {
+                double t = (targetS - s0->s()) / ds;
+                result.append(t * s1.position() + (1 - t) * s0->position());
+                targetS += deltaS;
+            }
+            s0 = &s1;
+        }
+    }
+    while (result.length() < numSamples) {
+        result.append(samples.last().position());
     }
 
-    Int n = khes.length();
-
-    core::Array<KeyVertex*> startVertices;
-    startVertices.reserve(n);
-    for (const KeyHalfedge& khe : khes) {
-        startVertices.append(khe.startVertex());
-    }
-    glueKeyVertices(startVertices, startPosition);
-
-    // Note: we can only list end vertices after the glue of
-    // start vertices since it can substitute end vertices.
-    core::Array<KeyVertex*> endVertices;
-    endVertices.reserve(n);
-    for (const KeyHalfedge& khe : khes) {
-        endVertices.append(khe.endVertex());
-    }
-    glueKeyVertices(endVertices, endPosition);
-
-    // Location: top-most input edge
-    core::Array<Node*> edgeNodes(n);
-    for (Int i = 0; i < n; ++i) {
-        edgeNodes[i] = khes[i].edge();
-    }
-    Node* topMostEdge = findTopMost(edgeNodes);
-    Group* parentGroup = topMostEdge->parentGroup();
-    Node* nextSibling = topMostEdge->nextSibling();
-
-    KeyVertex* startKv = khes[0].startVertex();
-    KeyVertex* endKv = khes[0].endVertex();
-
-    // TODO: define source operation
-    KeyEdge* newKe = createKeyOpenEdge(
-        startKv,
-        endKv,
-        std::move(geometry),
-        parentGroup,
-        nextSibling,
-        NodeSourceOperation{});
-
-    KeyHalfedge newKhe(newKe, true);
-    for (const KeyHalfedge& khe : khes) {
-        substitute_(khe, newKhe);
-        // It is important that no 2 halfedges refer to the same edge.
-        hardDelete(khe.edge(), true);
-    }
-
-    newKe->snapGeometry();
-    return newKe;
+    return result;
 }
 
-KeyEdge* Operations::glueKeyClosedEdges( //
-    core::Span<KeyHalfedge> khes,
-    std::shared_ptr<KeyEdgeGeometry> geometry) {
+} // namespace
 
-    if (khes.isEmpty()) {
+KeyEdge* Operations::glueKeyOpenEdges(core::ConstSpan<KeyHalfedge> khs) {
+    return glueKeyOpenEdges_(khs);
+}
+
+KeyEdge* Operations::glueKeyOpenEdges(core::ConstSpan<KeyEdge*> kes) {
+
+    Int n = kes.length();
+
+    if (n == 0) {
         return nullptr;
     }
+    else if (n == 1) {
+        return kes[0];
+    }
 
-    Int n = khes.length();
+    // Detect which edge direction should be used for gluing.
 
-    // Location: top-most input edge
-    core::Array<Node*> edgeNodes(n);
+    // Here, we handle the simple case where there are two edges that
+    // already share at least one vertex.
+    if (n == 2) {
+        vacomplex::KeyEdge* ke0 = kes[0];
+        vacomplex::KeyEdge* ke1 = kes[1];
+        vacomplex::KeyVertex* ke00 = ke0->startVertex();
+        vacomplex::KeyVertex* ke01 = ke0->endVertex();
+        vacomplex::KeyVertex* ke10 = ke1->startVertex();
+        vacomplex::KeyVertex* ke11 = ke1->endVertex();
+        bool isAnyLoop = (ke00 == ke01) || (ke10 == ke11);
+        bool isBestDirectionKnown = false;
+        bool direction1 = true;
+        if (!isAnyLoop) {
+            if ((ke00 == ke10) || (ke01 == ke11)) {
+                // If the two edges have the same start vertex or the same
+                // end vertex, we glue them in their intrinsic direction.
+                direction1 = true;
+                isBestDirectionKnown = true;
+            }
+            else if ((ke00 == ke11) || (ke01 == ke10)) {
+                // If the start (resp. end) vertex of ke0 is equal to the
+                // end (resp. start) vertex of ke1, we want to glue them in reverse.
+                direction1 = false;
+                isBestDirectionKnown = true;
+            }
+        }
+        if (isBestDirectionKnown) {
+            std::array<KeyHalfedge, 2> khs = {
+                KeyHalfedge(ke0, true), KeyHalfedge(ke1, direction1)};
+            return glueKeyOpenEdges_(khs);
+        }
+    }
+
+    constexpr Int numSamples = 10;
+
+    core::Array<core::Array<geometry::Vec2d>> sampleArrays;
+    sampleArrays.reserve(n);
+    for (KeyEdge* ke : kes) {
+        const geometry::StrokeSample2dArray& strokeSamples = ke->strokeSampling().samples();
+        sampleArrays.append(
+            computeApproximateUniformSamplingPositions(strokeSamples, numSamples));
+    }
+
+    core::Array<bool> bestDirections;
+    core::Array<bool> tmpDirections(n);
+    double bestCost = core::DoubleInfinity;
+
     for (Int i = 0; i < n; ++i) {
-        edgeNodes[i] = khes[i].edge();
+        double tmpCost = 0;
+        const core::Array<geometry::Vec2d>& s0 = sampleArrays[i];
+        tmpDirections[i] = true;
+        for (Int j = 0; j < n; ++j) {
+            if (j == i) {
+                continue;
+            }
+            const core::Array<geometry::Vec2d>& s1 = sampleArrays[j];
+
+            // costs per direction of edge j
+            double costEj = 0;
+            double costEjR = 0;
+
+            for (Int iSample = 0; iSample < numSamples; ++iSample) {
+                Int iSampleR = numSamples - 1 - iSample;
+                const geometry::Vec2d& s0i = s0.getUnchecked(iSample);
+                costEj += (s0i - s1.getUnchecked(iSample)).squaredLength();
+                costEjR += (s0i - s1.getUnchecked(iSampleR)).squaredLength();
+            }
+
+            if (costEj <= costEjR) {
+                tmpDirections[j] = true;
+                tmpCost += costEj;
+            }
+            else {
+                tmpDirections[j] = false;
+                tmpCost += costEjR;
+            }
+        }
+        if (tmpCost < bestCost) {
+            bestDirections = tmpDirections;
+            bestCost = tmpCost;
+        }
     }
-    Node* topMostEdge = findTopMost(edgeNodes);
-    Group* parentGroup = topMostEdge->parentGroup();
-    Node* nextSibling = topMostEdge->nextSibling();
 
-    // TODO: define source operation
-    KeyEdge* newKe = createKeyClosedEdge(
-        std::move(geometry), parentGroup, nextSibling, NodeSourceOperation{});
-
-    KeyHalfedge newKhe(newKe, true);
-    for (const KeyHalfedge& khe : khes) {
-        substitute_(khe, newKhe);
-        // It is important that no 2 halfedges refer to the same edge.
-        hardDelete(khe.edge(), true);
+    core::Array<vacomplex::KeyHalfedge> khs;
+    khs.reserve(n);
+    for (Int i = 0; i < n; ++i) {
+        khs.emplaceLast(kes[i], bestDirections[i]);
     }
 
-    return newKe;
+    return glueKeyOpenEdges_(khs);
+}
+
+KeyEdge* Operations::glueKeyClosedEdges(core::ConstSpan<KeyHalfedge> khs) {
+    Int n = khs.length();
+
+    if (n == 0) {
+        return nullptr;
+    }
+    else if (n == 1) {
+        return khs[0].edge();
+    }
+
+    constexpr Int numCostSamples = 10;
+    constexpr Int costSampleStride = 10;
+    constexpr Int numSamples = numCostSamples * costSampleStride;
+
+    core::Array<core::Array<geometry::Vec2d>> sampleArrays;
+    core::Array<double> arclengths;
+    sampleArrays.reserve(n);
+    arclengths.reserve(n);
+    for (const KeyHalfedge& kh : khs) {
+        KeyEdge* ke = kh.edge();
+        const geometry::StrokeSample2dArray& strokeSamples = ke->strokeSampling().samples();
+        sampleArrays.append(
+            computeApproximateUniformSamplingPositions(strokeSamples, numSamples + 1));
+        core::Array<geometry::Vec2d>& samples = sampleArrays.last();
+        if (!kh.direction()) {
+            std::reverse(samples.begin(), samples.end());
+        }
+        // since it is closed, first and last are the same
+        samples.removeLast();
+        arclengths.append(strokeSamples.last().s());
+    }
+
+    core::Array<double> bestUOffsets;
+    core::Array<double> tmpUOffsets(n);
+
+    double bestCost = core::DoubleInfinity;
+    double deltaU = 1. / numSamples;
+
+    for (Int i = 0; i < n; ++i) {
+        double tmpCost = 0;
+        const core::Array<geometry::Vec2d>& s0 = sampleArrays[i];
+        tmpUOffsets[i] = 0.;
+        for (Int j = 0; j < n; ++j) {
+            if (j == i) {
+                continue;
+            }
+            const core::Array<geometry::Vec2d>& s1 = sampleArrays[j];
+
+            // best cost for shifts of halfedge j
+            double bestCostHj = core::DoubleInfinity;
+
+            for (Int k = 0; k < numSamples; ++k) {
+                // cost for halfedge j with shift k
+                double costHjk = 0;
+                for (Int iCostSample = 0; iCostSample < numCostSamples; ++iCostSample) {
+                    // the shift must be reversed for use with AbstractStroke2d
+                    Int iSample = (iCostSample * costSampleStride + k) % numSamples;
+                    const geometry::Vec2d& s0i = s0.getUnchecked(iSample);
+                    const geometry::Vec2d& s1i = s1.getUnchecked(iSample);
+                    costHjk += (s0i - s1i).squaredLength();
+                }
+                if (costHjk < bestCostHj) {
+                    tmpUOffsets[j] = deltaU * k;
+                    bestCostHj = costHjk;
+                }
+            }
+
+            tmpCost += bestCostHj;
+        }
+        if (tmpCost < bestCost) {
+            bestUOffsets = tmpUOffsets;
+            bestCost = tmpCost;
+        }
+    }
+
+    return glueKeyClosedEdges_(khs, bestUOffsets);
+}
+
+KeyEdge* Operations::glueKeyClosedEdges(core::ConstSpan<KeyEdge*> kes) {
+    Int n = kes.length();
+
+    if (n == 0) {
+        return nullptr;
+    }
+    else if (n == 1) {
+        return kes[0];
+    }
+
+    constexpr Int numCostSamples = 10;
+    constexpr Int costSampleStride = 10;
+    constexpr Int numSamples = numCostSamples * costSampleStride;
+
+    core::Array<core::Array<geometry::Vec2d>> sampleArrays;
+    core::Array<double> arclengths;
+    sampleArrays.reserve(n);
+    arclengths.reserve(n);
+    for (KeyEdge* ke : kes) {
+        const geometry::StrokeSample2dArray& strokeSamples = ke->strokeSampling().samples();
+        sampleArrays.append(
+            computeApproximateUniformSamplingPositions(strokeSamples, numSamples + 1));
+        // since it is closed, first and last are the same
+        sampleArrays.last().removeLast();
+        arclengths.append(strokeSamples.last().s());
+    }
+
+    core::Array<bool> bestDirections;
+    core::Array<bool> tmpDirections(n);
+    core::Array<double> bestUOffsets;
+    core::Array<double> tmpUOffsets(n);
+
+    double bestCost = core::DoubleInfinity;
+    double deltaU = 1. / numSamples;
+
+    for (Int i = 0; i < n; ++i) {
+        double tmpCost = 0;
+        const core::Array<geometry::Vec2d>& s0 = sampleArrays[i];
+        tmpDirections[i] = true;
+        tmpUOffsets[i] = 0.;
+        for (Int j = 0; j < n; ++j) {
+            if (j == i) {
+                continue;
+            }
+            const core::Array<geometry::Vec2d>& s1 = sampleArrays[j];
+
+            // best cost for (direction, shift) of edge j
+            double bestCostEj = core::DoubleInfinity;
+
+            for (Int k = 0; k < numSamples; ++k) {
+                // costs per direction of edge j with shift k
+                double costEjk = 0;
+                double costEjRk = 0;
+                for (Int iCostSample = 0; iCostSample < numCostSamples; ++iCostSample) {
+                    // the shift must be reversed for use with AbstractStroke2d
+                    Int iSample = (iCostSample * costSampleStride + k) % numSamples;
+                    Int iSampleR = numSamples - 1 - iSample;
+                    const geometry::Vec2d& s0i = s0.getUnchecked(iSample);
+                    costEjk += (s0i - s1.getUnchecked(iSample)).squaredLength();
+                    costEjRk += (s0i - s1.getUnchecked(iSampleR)).squaredLength();
+                }
+                if (costEjk < bestCostEj) {
+                    tmpUOffsets[j] = deltaU * k;
+                    tmpDirections[j] = true;
+                    bestCostEj = costEjk;
+                }
+                if (costEjRk < bestCostEj) {
+                    tmpUOffsets[j] = deltaU * k;
+                    tmpDirections[j] = false;
+                    bestCostEj = costEjRk;
+                }
+            }
+
+            tmpCost += bestCostEj;
+        }
+        if (tmpCost < bestCost) {
+            bestDirections = tmpDirections;
+            bestUOffsets = tmpUOffsets;
+            bestCost = tmpCost;
+        }
+    }
+
+    core::Array<vacomplex::KeyHalfedge> khs;
+    khs.reserve(n);
+    for (Int i = 0; i < n; ++i) {
+        khs.emplaceLast(kes[i], bestDirections[i]);
+    }
+
+    return glueKeyClosedEdges_(khs, bestUOffsets);
 }
 
 core::Array<KeyEdge*> Operations::unglueKeyEdges(KeyEdge* targetKe) {
@@ -440,24 +647,22 @@ core::Array<KeyEdge*> Operations::unglueKeyEdges(KeyEdge* targetKe) {
     // Helper
     auto duplicateTargetKe = [this, targetKe, &result]() {
         KeyEdge* newKe = nullptr;
-        std::shared_ptr<KeyEdgeGeometry> geomDuplicate = targetKe->geometry()->clone();
+        std::unique_ptr<KeyEdgeData> dataDuplicate = targetKe->data()->clone();
         if (targetKe->isClosed()) {
             // TODO: define source operation
             newKe = createKeyClosedEdge(
-                std::move(geomDuplicate),
+                std::move(dataDuplicate),
                 targetKe->parentGroup(),
-                targetKe->nextSibling(),
-                NodeSourceOperation{});
+                targetKe->nextSibling());
         }
         else {
             // TODO: define source operation
             newKe = createKeyOpenEdge(
                 targetKe->startVertex(),
                 targetKe->endVertex(),
-                std::move(geomDuplicate),
+                std::move(dataDuplicate),
                 targetKe->parentGroup(),
-                targetKe->nextSibling(),
-                NodeSourceOperation{});
+                targetKe->nextSibling());
         }
         result.append(newKe);
         return newKe;
@@ -479,7 +684,7 @@ core::Array<KeyEdge*> Operations::unglueKeyEdges(KeyEdge* targetKe) {
                 if (cycle.steinerVertex_) {
                     continue;
                 }
-                KeyHalfedge first = cycle.halfedges_.first();
+                KeyHalfedge first = cycle.halfedges().first();
                 if (!first.isClosed()) {
                     for (KeyHalfedge& kheRef : cycle.halfedges_) {
                         if (kheRef.edge() == targetKe) {
@@ -547,11 +752,11 @@ core::Array<KeyVertex*> Operations::unglueKeyVertices(
 
     // Helper
     auto duplicateTargetKv = [this, targetKv, &result]() {
+        // TODO: define source operation
         KeyVertex* newKv = createKeyVertex(
             targetKv->position(),
             targetKv->parentGroup(),
             targetKv->nextSibling(),
-            NodeSourceOperation{},
             targetKv->time());
         result.append(newKv);
         return newKv;
@@ -728,18 +933,12 @@ void Operations::setKeyVertexPosition(KeyVertex* kv, const geometry::Vec2d& pos)
     onGeometryChanged_(kv);
 }
 
-void Operations::setKeyEdgeGeometry(
-    KeyEdge* ke,
-    const std::shared_ptr<KeyEdgeGeometry>& geometry) {
+void Operations::setKeyEdgeData(KeyEdge* ke, std::unique_ptr<KeyEdgeData>&& data) {
 
-    KeyEdge* previousKe = geometry->edge_;
-    ke->geometry_ = geometry;
-    geometry->edge_ = ke;
+    KeyEdge* previousKe = data->keyEdge();
+    VGC_ASSERT(!previousKe);
 
-    if (previousKe) {
-        previousKe->geometry_ = nullptr;
-        onGeometryChanged_(previousKe);
-    }
+    ke->setData_(std::move(data));
 
     onGeometryChanged_(ke);
 }
@@ -757,8 +956,8 @@ void Operations::setKeyEdgeSamplingQuality(
     dirtyMesh_(ke);
 }
 
-void Operations::onNodeCreated_(Node* node, NodeSourceOperation sourceOperation) {
-    complex_->opDiff_.onNodeCreated(node, std::move(sourceOperation));
+void Operations::onNodeCreated_(Node* node) {
+    complex_->opDiff_.onNodeCreated(node);
 }
 
 void Operations::onNodeInserted_(
@@ -770,6 +969,10 @@ void Operations::onNodeInserted_(
 
 void Operations::onNodeModified_(Node* node, NodeModificationFlags diffFlags) {
     complex_->opDiff_.onNodeModified(node, diffFlags);
+}
+
+void Operations::onNodePropertyModified_(Node* node, core::StringId name) {
+    complex_->opDiff_.onNodePropertyModified(node, name);
 }
 
 void Operations::insertNodeBeforeSibling_(Node* node, Node* nextSibling) {
@@ -873,6 +1076,10 @@ void Operations::onGeometryChanged_(Cell* cell) {
     dirtyMesh_(cell);
 }
 
+void Operations::onPropertyChanged_(Cell* cell, core::StringId name) {
+    onNodePropertyModified_(cell, name);
+}
+
 void Operations::onBoundaryMeshChanged_(Cell* cell) {
     onNodeModified_(cell, NodeModificationFlag::BoundaryMeshChanged);
     dirtyMesh_(cell);
@@ -930,32 +1137,38 @@ void Operations::addToBoundary_(FaceCell* face, const KeyCycle& cycle) {
 }
 
 void Operations::substitute_(KeyVertex* oldVertex, KeyVertex* newVertex) {
+    bool hasStar = false;
     for (Cell* starCell : oldVertex->star()) {
         *starCell->boundary_.find(oldVertex) = newVertex;
         newVertex->star_.append(starCell);
         starCell->substituteKeyVertex_(oldVertex, newVertex);
         onBoundaryChanged_(starCell);
+        hasStar = true;
     }
-    oldVertex->star_.clear();
-    onNodeModified_(oldVertex, NodeModificationFlag::StarChanged);
-    onNodeModified_(newVertex, NodeModificationFlag::StarChanged);
+    if (hasStar) {
+        oldVertex->star_.clear();
+        onNodeModified_(oldVertex, NodeModificationFlag::StarChanged);
+        onNodeModified_(newVertex, NodeModificationFlag::StarChanged);
+    }
 }
 
-void Operations::substitute_(
-    const KeyHalfedge& oldHalfedge,
-    const KeyHalfedge& newHalfedge) {
+void Operations::substitute_(const KeyHalfedge& oldKhe, const KeyHalfedge& newKhe) {
 
-    KeyEdge* const oldEdge = oldHalfedge.edge();
-    KeyEdge* const newEdge = newHalfedge.edge();
-    for (Cell* starCell : oldEdge->star_) {
-        *starCell->boundary_.find(oldEdge) = newEdge;
-        newEdge->star_.append(starCell);
-        starCell->substituteKeyHalfedge_(oldHalfedge, newHalfedge);
+    KeyEdge* const oldKe = oldKhe.edge();
+    KeyEdge* const newKe = newKhe.edge();
+    bool hasStar = false;
+    for (Cell* starCell : oldKe->star()) {
+        *starCell->boundary_.find(oldKe) = newKe;
+        newKe->star_.append(starCell);
+        starCell->substituteKeyHalfedge_(oldKhe, newKhe);
         onBoundaryChanged_(starCell);
+        hasStar = true;
     }
-    oldEdge->star_.clear();
-    onNodeModified_(oldEdge, NodeModificationFlag::StarChanged);
-    onNodeModified_(newEdge, NodeModificationFlag::StarChanged);
+    if (hasStar) {
+        oldKe->star_.clear();
+        onNodeModified_(oldKe, NodeModificationFlag::StarChanged);
+        onNodeModified_(newKe, NodeModificationFlag::StarChanged);
+    }
 }
 
 void Operations::collectDependentNodes_(
@@ -974,17 +1187,147 @@ void Operations::collectDependentNodes_(
     else {
         // Delete all cells in the star of the cell
         Cell* cell = node->toCellUnchecked();
-        for (Node* starNode : cell->star()) {
-            if (dependentNodes.insert(starNode).second) {
-                collectDependentNodes_(starNode, dependentNodes);
-            }
+        for (Cell* starCell : cell->star()) {
+            // No need for recursion since starCell.star() is a subset
+            // of cell.star().
+            dependentNodes.insert(starCell);
         }
     }
 }
 
+KeyEdge* Operations::glueKeyOpenEdges_(core::ConstSpan<KeyHalfedge> khs) {
+
+    if (khs.isEmpty()) {
+        return nullptr;
+    }
+
+    Int n = khs.length();
+    core::Array<KeyHalfedgeData> khds;
+    khds.reserve(n);
+    for (const KeyHalfedge& kh : khs) {
+        KeyEdgeData* kd = kh.edge()->data();
+        if (!kd) {
+            // missing data
+            return nullptr;
+        }
+        khds.emplaceLast(kd, kh.direction());
+    }
+    std::unique_ptr<KeyEdgeData> newData = KeyEdgeData::fromGlueOpen(khds);
+    VGC_ASSERT(newData && newData->stroke());
+
+    std::array<geometry::Vec2d, 2> endPositions = newData->stroke()->endPositions();
+
+    core::Array<KeyVertex*> startVertices;
+    startVertices.reserve(n);
+    for (const KeyHalfedge& kh : khs) {
+        startVertices.append(kh.startVertex());
+    }
+    KeyVertex* startKv = glueKeyVertices(startVertices, endPositions[0]);
+
+    // Note: we can only list end vertices after the glue of
+    // start vertices since it can substitute end vertices.
+    core::Array<KeyVertex*> endVertices;
+    endVertices.reserve(n);
+    for (const KeyHalfedge& kh : khs) {
+        endVertices.append(kh.endVertex());
+    }
+    geometry::Vec2d endVertexPosition = endPositions[1];
+    if (endVertices.contains(startKv)) {
+        // collapsing start and end to single vertex
+        endVertexPosition = 0.5 * (endPositions[0] + endVertexPosition);
+        newData->snap(endVertexPosition, endVertexPosition);
+        startKv = nullptr;
+    }
+    KeyVertex* endKv = glueKeyVertices(endVertices, endVertexPosition);
+    if (!startKv) {
+        startKv = endKv;
+    }
+
+    // Location: top-most input edge
+    core::Array<Node*> edgeNodes(n);
+    for (Int i = 0; i < n; ++i) {
+        edgeNodes[i] = khs[i].edge();
+    }
+
+    Node* topMostEdge = findTopMost(edgeNodes);
+    Group* parentGroup = topMostEdge->parentGroup();
+    Node* nextSibling = topMostEdge->nextSibling();
+
+    KeyEdge* newKe =
+        createKeyOpenEdge(startKv, endKv, std::move(newData), parentGroup, nextSibling);
+
+    KeyHalfedge newKh(newKe, true);
+    for (const KeyHalfedge& kh : khs) {
+        substitute_(kh, newKh);
+        // It is important that no 2 halfedges refer to the same edge.
+        hardDelete(kh.edge(), true);
+    }
+
+    return newKe;
+}
+
+KeyEdge* Operations::glueKeyClosedEdges_(
+    core::ConstSpan<KeyHalfedge> khs,
+    core::ConstSpan<double> uOffsets) {
+
+    if (khs.isEmpty()) {
+        return nullptr;
+    }
+
+    // Location: top-most input edge
+
+    Int n = khs.length();
+    core::Array<Node*> edgeNodes;
+    edgeNodes.reserve(n);
+    core::Array<KeyHalfedgeData> khds;
+    khds.reserve(n);
+    for (const KeyHalfedge& kh : khs) {
+        edgeNodes.append(kh.edge());
+        KeyEdgeData* kd = kh.edge()->data();
+        if (!kd) {
+            // missing data
+            return nullptr;
+        }
+        khds.emplaceLast(kd, kh.direction());
+    }
+
+    Node* topMostEdge = findTopMost(edgeNodes);
+    Group* parentGroup = topMostEdge->parentGroup();
+    Node* nextSibling = topMostEdge->nextSibling();
+
+    std::unique_ptr<KeyEdgeData> newData = KeyEdgeData::fromGlueClosed(khds, uOffsets);
+    VGC_ASSERT(newData && newData->stroke());
+
+    KeyEdge* newKe = createKeyClosedEdge(std::move(newData), parentGroup, nextSibling);
+
+    KeyHalfedge newKh(newKe, true);
+    for (const KeyHalfedge& kh : khs) {
+        substitute_(kh, newKh);
+        // It is important that no 2 halfedges refer to the same edge.
+        hardDelete(kh.edge(), true);
+    }
+
+    return newKe;
+}
+
+Int Operations::countSteinerUses_(KeyVertex* kv) {
+    Int count = 0;
+    for (Cell* starCell : kv->star()) {
+        KeyFace* kf = starCell->toKeyFace();
+        if (!kf) {
+            continue;
+        }
+        for (const KeyCycle& cycle : kf->cycles()) {
+            if (cycle.steinerVertex() == kv) {
+                ++count;
+            }
+        }
+    }
+    return count;
+}
+
 Int Operations::countUses_(KeyVertex* kv) {
     Int count = 0;
-
     for (Cell* starCell : kv->star()) {
         switch (starCell->cellType()) {
         case CellType::KeyEdge: {
@@ -1027,34 +1370,27 @@ Int Operations::countUses_(KeyVertex* kv) {
             break;
         }
     }
-
     return count;
 }
 
 Int Operations::countUses_(KeyEdge* ke) {
     Int count = 0;
-
     for (Cell* starCell : ke->star()) {
-        switch (starCell->cellType()) {
-        case CellType::KeyFace: {
-            KeyFace* kf = starCell->toKeyFaceUnchecked();
-            for (const KeyCycle& cycle : kf->cycles()) {
-                if (cycle.steinerVertex()) {
-                    continue;
-                }
-                for (const KeyHalfedge& khe : cycle.halfedges()) {
-                    if (khe.edge() == ke) {
-                        ++count;
-                    }
+        KeyFace* kf = starCell->toKeyFace();
+        if (!kf) {
+            continue;
+        }
+        for (const KeyCycle& cycle : kf->cycles()) {
+            if (cycle.steinerVertex()) {
+                continue;
+            }
+            for (const KeyHalfedge& khe : cycle.halfedges()) {
+                if (khe.edge() == ke) {
+                    ++count;
                 }
             }
-            break;
-        }
-        default:
-            break;
         }
     }
-
     return count;
 }
 

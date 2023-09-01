@@ -51,7 +51,7 @@ VGC_VACOMPLEX_API
 KeyEdge* createKeyOpenEdge(
     KeyVertex* startVertex,
     KeyVertex* endVertex,
-    const std::shared_ptr<KeyEdgeGeometry>& geometry,
+    std::unique_ptr<KeyEdgeData>&& geometry,
     Group* parentGroup,
     Node* nextSibling = nullptr,
     core::AnimTime t = {});
@@ -61,7 +61,7 @@ KeyEdge* createKeyOpenEdge(
 ///
 VGC_VACOMPLEX_API
 KeyEdge* createKeyClosedEdge(
-    const std::shared_ptr<KeyEdgeGeometry>& geometry,
+    std::unique_ptr<KeyEdgeData>&& geometry,
     Group* parentGroup,
     Node* nextSibling = nullptr,
     core::AnimTime t = {});
@@ -98,15 +98,20 @@ KeyVertex* glueKeyVertices(core::Span<KeyVertex*> kvs, const geometry::Vec2d& po
 
 VGC_VACOMPLEX_API
 KeyEdge* glueKeyOpenEdges(
-    core::Span<KeyHalfedge> khes,
-    std::shared_ptr<KeyEdgeGeometry> geometry,
-    const geometry::Vec2d& startPosition,
-    const geometry::Vec2d& endPosition);
+    core::Span<KeyHalfedge> khs);
+
+VGC_VACOMPLEX_API
+KeyEdge* glueKeyOpenEdges(
+    core::Span<KeyEdge*> kes);
 
 VGC_VACOMPLEX_API
 KeyEdge* glueKeyClosedEdges(
-    core::Span<KeyHalfedge> khes,
-    std::shared_ptr<KeyEdgeGeometry> geometry);
+    core::Span<KeyHalfedge> khs);
+
+VGC_VACOMPLEX_API
+KeyEdge* glueKeyClosedEdges(
+    core::Span<KeyEdge*> kes);
+
 
 VGC_VACOMPLEX_API
 core::Array<KeyEdge*> unglueKeyEdges(KeyEdge* ke);
@@ -131,7 +136,7 @@ VGC_VACOMPLEX_API
 void setKeyVertexPosition(KeyVertex* vertex, const geometry::Vec2d& pos);
 
 VGC_VACOMPLEX_API
-void setKeyEdgeGeometry(KeyEdge* edge, const std::shared_ptr<KeyEdgeGeometry>& geometry);
+void setKeyEdgeData(KeyEdge* edge, std::unique_ptr<KeyEdgeData>&& geometry);
 
 VGC_VACOMPLEX_API
 void setKeyEdgeSamplingQuality(KeyEdge* edge, geometry::CurveSamplingQuality quality);

@@ -22,6 +22,7 @@
 
 #include <vgc/core/animtime.h>
 #include <vgc/core/id.h>
+#include <vgc/core/object.h>
 #include <vgc/core/templateutil.h>
 #include <vgc/geometry/curve.h>
 #include <vgc/geometry/mat2d.h>
@@ -29,7 +30,7 @@
 #include <vgc/geometry/range1d.h>
 #include <vgc/geometry/vec2d.h>
 #include <vgc/vacomplex/api.h>
-#include <vgc/vacomplex/edgegeometry.h>
+#include <vgc/vacomplex/keyedgedata.h>
 #include <vgc/vacomplex/transform.h>
 
 namespace vgc::vacomplex {
@@ -40,7 +41,7 @@ class Operations;
 
 } // namespace detail
 
-VGC_DECLARE_OBJECT(Complex);
+class Complex;
 
 class Node;
 class Group;
@@ -60,7 +61,7 @@ class InbetweenVertex;
 class InbetweenEdge;
 class InbetweenFace;
 
-class KeyEdgeGeometry;
+class KeyEdgeData;
 class FaceGeometry;
 
 /// \enum vgc::graph::CellSpatialType
@@ -842,6 +843,12 @@ protected:
     virtual void dirtyMesh_();
     virtual bool updateGeometryFromBoundary_();
 
+protected:
+    virtual void substituteKeyVertex_(KeyVertex* oldVertex, KeyVertex* newVertex) = 0;
+    virtual void substituteKeyHalfedge_(
+        const class KeyHalfedge& oldHalfedge,
+        const class KeyHalfedge& newHalfedge) = 0;
+
 private:
     core::Array<Cell*> star_;
     core::Array<Cell*> boundary_;
@@ -851,11 +858,6 @@ private:
     // the new mesh. It should be set to true (either directly
     // or indirectly) in all mesh getters.
     mutable bool hasMeshBeenQueriedSinceLastDirtyEvent_ = false;
-
-    virtual void substituteKeyVertex_(KeyVertex* oldVertex, KeyVertex* newVertex) = 0;
-    virtual void substituteKeyHalfedge_(
-        const class KeyHalfedge& oldHalfedge,
-        const class KeyHalfedge& newHalfedge) = 0;
 };
 
 inline Complex* Node::complex() const {
@@ -910,7 +912,7 @@ public:
     static_assert(std::is_base_of_v<CellProxy<TemporalCell>, TemporalCell>);
 
     template<typename... TemporalCellArgs>
-    SpatioTemporalCell(core::Id id, TemporalCellArgs&&... args)
+    SpatioTemporalCell(core::Id id, TemporalCellArgs&&... args) noexcept
         : TemporalCell(std::forward<TemporalCellArgs>(args)...)
         , SpatialCell(id, TemporalCell::temporalType()) {
     }

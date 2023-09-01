@@ -28,7 +28,7 @@
 #include <vgc/core/stopwatch.h>
 #include <vgc/core/stringid.h>
 #include <vgc/dom/strings.h>
-#include <vgc/geometry/curve.h>
+#include <vgc/geometry/stroke.h>
 #include <vgc/graphics/strings.h>
 #include <vgc/ui/cursor.h>
 #include <vgc/ui/qtutil.h>

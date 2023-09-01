@@ -27,7 +27,7 @@ void ComplexDiff::merge(const ComplexDiff& other) {
     // todo: optimize, keep sorted ?
 
     for (const CreatedNodeInfo& info : other.createdNodes_) {
-        onNodeCreated(info.node(), info.sourceOperation());
+        onNodeCreated(info.node());
     }
     for (const ModifiedNodeInfo& info : other.modifiedNodes_) {
         onNodeModified(info.node(), info.flags());

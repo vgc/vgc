@@ -550,50 +550,42 @@ void VacKeyVertex::computeJoin_() {
                 Vec2d sp1 = joinSample.offsetPoint(1);
                 Vec2d halfwidths = joinSample.halfwidths();
 
-                const vacomplex::EdgeSampling* sampling =
+                const geometry::StrokeSampling2d* sampling =
                     halfedgeData.edgeData_->sampling_.get();
 
                 Vec2d t0 = {};
                 Vec2d t1 = {};
 
-                if (sampling
-                    && sampling->hasDefinedOffsetLineTangentsAtEndpoint(
-                        halfedgeData.isReverse() ? 1 : 0)) {
+                if (sampling) {
+                    const geometry::StrokeBoundaryInfo& boundaryInfo =
+                        sampling->boundaryInfo();
 
                     if (halfedgeData.isReverse()) {
-                        std::array<geometry::Vec2d, 2> tangents =
-                            sampling->offsetLineTangentsAtEndpoint(1);
-                        t0 = tangents[1];
-                        t1 = tangents[0];
+                        t0 = boundaryInfo[1].getOffsetLineTangent<1>();
+                        t1 = boundaryInfo[1].getOffsetLineTangent<0>();
                     }
                     else {
-                        std::array<geometry::Vec2d, 2> tangents =
-                            sampling->offsetLineTangentsAtEndpoint(0);
-                        t0 = -tangents[0];
-                        t1 = -tangents[1];
+                        t0 = -boundaryInfo[0].getOffsetLineTangent<0>();
+                        t1 = -boundaryInfo[0].getOffsetLineTangent<1>();
                     }
+                }
 
-                    // fix tangent orientation in case of cusps
-                    double proj0 = t0.dot(capDir);
-                    if (proj0 < 0) {
+                if (t0 != Vec2d()) {
+                    // fix-up tangent orientation in case of cusp
+                    double proj = t0.dot(capDir);
+                    if (proj < 0) {
                         t0 = -t0;
-                    }
-                    double proj1 = t1.dot(capDir);
-                    if (proj1 < 0) {
-                        t1 = -t1;
                     }
                 }
                 else {
-                    geometry::StrokeSample2d joinSamplePrev =
+                    const geometry::StrokeSample2d& joinSamplePrev =
                         halfedgeData.joinPreviousSample_;
 
-                    bool isT0Valid = false;
-                    bool isT1Valid = false;
-                    t0 = (sp0 - joinSamplePrev.offsetPoint(0)).normalized(&isT0Valid);
-                    t1 = (sp1 - joinSamplePrev.offsetPoint(1)).normalized(&isT1Valid);
+                    bool isValid = false;
+                    t0 = (sp0 - joinSamplePrev.offsetPoint(0)).normalized(&isValid);
 
-                    // fix-up tangents if there is a cusp
-                    if (!isT0Valid) {
+                    // fix-up tangent in case of cusp
+                    if (!isValid) {
                         t0 = capDir;
                     }
                     else {
@@ -603,7 +595,24 @@ void VacKeyVertex::computeJoin_() {
                             t0 = t0 - 2 * proj * capDir;
                         }
                     }
-                    if (!isT1Valid) {
+                }
+
+                if (t1 != Vec2d()) {
+                    // fix-up tangent orientation in case of cusp
+                    double proj = t1.dot(capDir);
+                    if (proj < 0) {
+                        t1 = -t1;
+                    }
+                }
+                else {
+                    const geometry::StrokeSample2d& joinSamplePrev =
+                        halfedgeData.joinPreviousSample_;
+
+                    bool isTValid = false;
+                    t1 = (sp1 - joinSamplePrev.offsetPoint(1)).normalized(&isTValid);
+
+                    // fix-up tangent in case of cusp
+                    if (!isTValid) {
                         t1 = capDir;
                     }
                     else {

@@ -660,7 +660,7 @@ void Document::onRemoveNode_(Node* node) {
     }
     else {
         previousRelativesMap_.erase(node);
-        pendingDiff_.modifiedElements_.erase(static_cast<Element*>(node));
+        pendingDiff_.removeModifiedElementAttributeRecords(static_cast<Element*>(node));
         pendingDiff_.reparentedNodes_.erase(node);
         pendingDiff_.childrenReorderedNodes_.erase(node);
     }
@@ -671,7 +671,7 @@ void Document::onMoveNode_(Node* node, const NodeRelatives& savedRelatives) {
 }
 
 void Document::onChangeAttribute_(Element* element, core::StringId name) {
-    pendingDiff_.modifiedElements_[element].insert(name);
+    pendingDiff_.insertModifiedElementAttributeRecord(element, name);
 }
 
 namespace {

@@ -55,9 +55,20 @@ public:
         return childrenReorderedNodes_;
     }
 
-    const std::unordered_map<Element*, std::set<core::StringId>>&
+    const std::unordered_map<Element*, core::Array<core::StringId>>&
     modifiedElements() const {
         return modifiedElements_;
+    }
+
+    void insertModifiedElementAttributeRecord(Element* element, core::StringId attrName) {
+        core::Array<core::StringId>& attrNames = modifiedElements_[element];
+        if (!attrNames.contains(attrName)) {
+            attrNames.append(attrName);
+        }
+    }
+
+    void removeModifiedElementAttributeRecords(Element* element) {
+        modifiedElements_.erase(element);
     }
 
     bool isUndoOrRedo() const {
@@ -74,7 +85,7 @@ private:
     std::set<Node*> reparentedNodes_;
     std::set<Node*> childrenReorderedNodes_;
 
-    std::unordered_map<Element*, std::set<core::StringId>> modifiedElements_;
+    std::unordered_map<Element*, core::Array<core::StringId>> modifiedElements_;
 
     bool isUndoOrRedo_ = false;
 
