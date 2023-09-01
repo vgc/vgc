@@ -14,8 +14,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef VGC_VACOMPLEX_EDGEGEOMETRY_H
-#define VGC_VACOMPLEX_EDGEGEOMETRY_H
+#ifndef VGC_VACOMPLEX_KEYEDGEDATA_H
+#define VGC_VACOMPLEX_KEYEDGEDATA_H
 
 #include <array>
 #include <memory>
@@ -138,4 +138,4 @@ private:
 
 } // namespace vgc::vacomplex
 
-#endif // VGC_VACOMPLEX_EDGEGEOMETRY_H
+#endif // VGC_VACOMPLEX_KEYEDGEDATA_H
