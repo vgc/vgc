@@ -364,7 +364,7 @@ private:
             dialog->addText("Are you sure you want to quit the application?");
             dialog->addButton("No", [=]() { dialog->destroy(); });
             dialog->addButton("Yes", [=]() { quit(); });
-            dialog->showAt(button);
+            dialog->showAtWindow(button);
         });
     }
 
