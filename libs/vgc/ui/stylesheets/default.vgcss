@@ -196,6 +196,22 @@
     min-width: 300dp;
 }
 
+.Tooltip {
+    margin-top: 8dp;
+    margin-right: 8dp;
+    margin-bottom: 8dp;
+    margin-left: 8dp;
+}
+
+.Tooltip .text {
+    text-horizontal-align: left;
+}
+
+.Tooltip .shortcut {
+    text-horizontal-align: left;
+    padding-left: 10dp;
+}
+
 .MessageDialog > .content {
     row-gap: 10dp;
 }
@@ -351,7 +367,8 @@
     background-color: rgb(11, 82, 172);
 }
 
-.Menu > .button > .shortcut {
+.Menu > .button > .shortcut,
+.Tooltip .shortcut {
     text-color: rgb(165, 165, 165);
 }
 

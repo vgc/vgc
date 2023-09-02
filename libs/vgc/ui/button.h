@@ -30,6 +30,7 @@ namespace vgc::ui {
 
 VGC_DECLARE_OBJECT(IconWidget);
 VGC_DECLARE_OBJECT(Button);
+VGC_DECLARE_OBJECT(Tooltip);
 
 /// \class vgc::ui::Button
 /// \brief A clickable widget that represents an action and triggers it on click/hover.
@@ -128,6 +129,20 @@ public:
     /// Sets whether the shortcut is visible. By default, it is hidden.
     ///
     void setShortcutVisible(bool visible);
+
+    /// Returns whether a tooltip appears when hovering the button.
+    ///
+    /// The default is `true`.
+    ///
+    bool isTooltipEnabled() const {
+        return isTooltipEnabled_;
+    }
+
+    /// Sets whether a tooltip appears when hovering the button.
+    ///
+    void setTooltipEnabled(bool isEnabled) {
+        isTooltipEnabled_ = isEnabled;
+    }
 
     /// Returns the `CheckMode` of the button's action.
     ///
@@ -274,6 +289,10 @@ private:
     core::StringId checkableStyleClass_;
     core::StringId checkModeStyleClass_;
     core::StringId enabledStyleClass_;
+
+    // Tootip
+    bool isTooltipEnabled_ = true;
+    TooltipPtr tooltip_;
 
     // Behavior
     void connectNewAction_();

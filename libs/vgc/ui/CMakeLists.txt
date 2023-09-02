@@ -65,6 +65,7 @@ vgc_add_library(ui
         tabbar.h
         tabbody.h
         toggle.h
+        tooltip.h
         widget.h
         window.h
 
@@ -124,6 +125,7 @@ vgc_add_library(ui
         tabbar.cpp
         tabbody.cpp
         toggle.cpp
+        tooltip.cpp
         widget.cpp
         window.cpp
 
