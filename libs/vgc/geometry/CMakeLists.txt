@@ -28,8 +28,12 @@ vgc_add_library(geometry
         mat4f.h
         range1d.h
         range1f.h
+        rangealign.h
+        rangeanchor.h
         rect2d.h
         rect2f.h
+        rectalign.h
+        rectanchor.h
         stride.h
         strokestyle.h
         tesselator.h
@@ -61,8 +65,12 @@ vgc_add_library(geometry
         mat4f.cpp
         range1d.cpp
         range1f.cpp
+        rangealign.cpp
+        rangeanchor.cpp
         rect2d.cpp
         rect2f.cpp
+        rectalign.cpp
+        rectanchor.cpp
         strokestyle.cpp
         tesselator.cpp
         triangle2d.cpp
