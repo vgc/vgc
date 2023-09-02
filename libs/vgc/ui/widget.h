@@ -940,7 +940,7 @@ public:
     ///
     /// You can override this function if you wish this widget to have a
     /// non-standard method of deciding whether it is hovered. For example,
-    /// `HintDialog` overrides this method to always return false since it
+    /// `Tooltip` overrides this method to always return false since it
     /// desires all mouse events to always pass through itself.
     ///
     virtual bool computeIsHovered(MouseHoverEvent* event) const;

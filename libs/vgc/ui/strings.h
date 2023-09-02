@@ -43,6 +43,7 @@ VGC_UI_API extern const core::StringId SettingEdit;
 VGC_UI_API extern const core::StringId TabBar;
 VGC_UI_API extern const core::StringId TabBody;
 VGC_UI_API extern const core::StringId Toggle;
+VGC_UI_API extern const core::StringId Tooltip;
 VGC_UI_API extern const core::StringId Widget;
 
 VGC_UI_API extern const core::StringId min_width;
@@ -97,7 +98,7 @@ VGC_UI_API extern const core::StringId disabled;
 VGC_UI_API extern const core::StringId on;
 VGC_UI_API extern const core::StringId off;
 
-// Button
+// Button / Tooltip
 VGC_UI_API extern const core::StringId icon;
 VGC_UI_API extern const core::StringId text;
 VGC_UI_API extern const core::StringId shortcut;
