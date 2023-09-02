@@ -73,7 +73,9 @@ template<Int dimension>
 void setPosition(
     geometry::Rect2f& dialogRect,
     Widget* overlayArea,
-    DialogLocation location) {
+    DialogLocation location,
+    float marginMin,
+    float marginMax) {
 
     // Compute the anchor range, in overlayArea coordinates, with which the
     // dialog should be aligned.
@@ -109,16 +111,16 @@ void setPosition(
         dialogPos = anchorPos + 0.5f * (anchorSize - dialogSize);
         break;
     case geometry::RangeAlign::Min:
-        dialogPos = anchorPos;
+        dialogPos = anchorPos + marginMin;
         break;
     case geometry::RangeAlign::Max:
-        dialogPos = anchorPos + anchorSize - dialogSize;
+        dialogPos = anchorPos + anchorSize - dialogSize - marginMax;
         break;
     case geometry::RangeAlign::OutMin:
-        dialogPos = anchorPos - dialogSize;
+        dialogPos = anchorPos - dialogSize - marginMin;
         break;
     case geometry::RangeAlign::OutMax:
-        dialogPos = anchorPos + anchorSize;
+        dialogPos = anchorPos + anchorSize + marginMax;
         break;
     }
 
@@ -152,11 +154,14 @@ void Dialog::showAt(DialogLocation horizontalLocation, DialogLocation verticalLo
     // Add dialog to overlay area
     overlayArea->addOverlayWidget(this);
 
+    // Get margins from style
+    Margins margin = this->margin();
+
     // Compute dialog geometry
-    geometry::Rect2f dialogRect({}, preferredSize());
-    setPosition<0>(dialogRect, overlayArea, horizontalLocation);
-    setPosition<1>(dialogRect, overlayArea, verticalLocation);
-    updateGeometry(dialogRect);
+    geometry::Rect2f rect({}, preferredSize());
+    setPosition<0>(rect, overlayArea, horizontalLocation, margin.left(), margin.right());
+    setPosition<1>(rect, overlayArea, verticalLocation, margin.top(), margin.bottom());
+    updateGeometry(rect);
 }
 
 float Dialog::preferredWidthForHeight(float height) const {
