@@ -1187,7 +1187,7 @@ namespace {
 // cubicEaseInOut(t)
 //       ^
 //     1 |   .-
-//       |_.´
+//       |_.Â´
 //     0 +------> t
 //       0    1
 //
@@ -1221,26 +1221,26 @@ double cubicEaseInOut(double t) {
 // 2D central symmetry of sculpt points at both sides (similar for width):
 // (repeated infinitely many times... or at least until length > 2 * radius):
 //
-//                                                            ,---|···
+//                                                            ,---|Â·Â·Â·
 //                                                    ,------'
 //                              MSP    ,------|------'
 //                             ,-x----'
 //                    ,---|---'
 //            ,------'
-// ···|------'
+// Â·Â·Â·|------'
 //
 //    |-------------------------------------->|-------------------------------------->
 //             repeating pattern
 //
 //
 // Compute weighted average for any sculpt point p:
-//                                                            ,---|···
+//                                                            ,---|Â·Â·Â·
 //                                       p2           ,------'
 //                                     ,-x----|------'
 //                          p  ,------'
 //             p1     ,---|-x-'
 //            ,x-----'
-// ···|------'
+// Â·Â·Â·|------'
 //             <------------|------------>
 //                 radius       radius
 //              \_______________________/
@@ -1304,7 +1304,7 @@ private:
     SculptPoint repeatDelta_;
 
     // Note: We use a templated implementation to avoid making a dynamic
-    // "if(closed)" in the middle of the hot path, called O(n²) times.
+    // "if(closed)" in the middle of the hot path, called O(nÂ²) times.
 
     template<bool isSculptSamplingClosed>
     SculptPoint computeAveraged_(Int i) {
