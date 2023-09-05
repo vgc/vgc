@@ -21,7 +21,9 @@
 #include <vgc/graphics/strings.h>
 #include <vgc/ui/iconwidget.h>
 #include <vgc/ui/logcategories.h>
+#include <vgc/ui/panelarea.h>
 #include <vgc/ui/strings.h>
+#include <vgc/ui/tooltip.h>
 
 #include <vgc/ui/detail/paintutil.h>
 
@@ -180,10 +182,46 @@ bool Button::onMouseRelease(MouseReleaseEvent* event) {
 
 void Button::onMouseEnter() {
     addStyleClass(strings::hovered);
+    if (isTooltipEnabled() && !tooltip_ && action()) {
+
+        // Setup dialog content
+        tooltip_ = Tooltip::create(action()->name());
+        const ShortcutArray& shortcuts = action()->userShortcuts();
+        if (shortcuts.isEmpty()) {
+            tooltip_->setShortcutVisible(false);
+        }
+        else {
+            tooltip_->setShortcut(shortcuts.first());
+        }
+
+        // Detect if widget is part of a PanelArea for better dialog location.
+        PanelArea* area = nullptr;
+        Widget* widget = parent();
+        while (widget) {
+            area = dynamic_cast<PanelArea*>(widget);
+            if (area) {
+                break;
+            }
+            widget = widget->parent();
+        }
+
+        // Show dialog
+        if (area) {
+            // TODO: decide left or right based on where is the area?
+            tooltip_->showAt(area, this, geometry::RectAlign::OutRight);
+        }
+        else {
+            tooltip_->showAt(this, geometry::RectAlign::OutBottomOutRight);
+        }
+    }
 }
 
 void Button::onMouseLeave() {
     removeStyleClass(strings::hovered);
+    if (tooltip_) {
+        tooltip_->destroy();
+        tooltip_ = nullptr;
+    }
 }
 
 void Button::connectNewAction_() {

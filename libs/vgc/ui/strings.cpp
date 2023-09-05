@@ -42,6 +42,7 @@ const core::StringId SettingEdit("SettingEdit");
 const core::StringId TabBar("TabBar");
 const core::StringId TabBody("TabBody");
 const core::StringId Toggle("Toggle");
+const core::StringId Tooltip("Tooltip");
 const core::StringId Widget("Widget");
 
 // Properties

@@ -184,7 +184,8 @@ Action* MessageDialog::addButton_(std::string_view text) {
         createButtonsIfNotCreated_();
         ActionPtr action = Action::create(commands::clickButton(), text);
         actions_.append(action);
-        buttons_->createChild<Button>(action.get());
+        Button* button = buttons_->createChild<Button>(action.get());
+        button->setTooltipEnabled(false);
         updateSize_();
         return action.get();
     }
