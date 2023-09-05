@@ -25,7 +25,6 @@
 #include <vgc/vacomplex/operations.h>
 #include <vgc/workspace/edge.h>
 #include <vgc/workspace/face.h>
-#include <vgc/workspace/freehandedgegeometry.h>
 #include <vgc/workspace/layer.h>
 #include <vgc/workspace/logcategories.h>
 #include <vgc/workspace/vertex.h>
@@ -261,7 +260,7 @@ bool Workspace::updateElementFromDom(Element* element) {
         VGC_ERROR(LogVgcWorkspace, "Cyclic update dependency detected.");
         return false;
     }
-    if (element->hasPendingUpdate_) {
+    if (element->hasPendingUpdateFromDom_) {
         element->isBeingUpdated_ = true;
         const ElementStatus oldStatus = element->status_;
         const ElementStatus newStatus = element->updateFromDom_(this);
@@ -318,40 +317,6 @@ void Workspace::visitDepthFirst(
     workspace::visitDfs<Element>(vgcElement(), preOrderFn, postOrderFn);
 }
 
-namespace {
-
-// Assumes `!samples.isEmpty()` and `numSamples >= 2`.
-core::Array<geometry::Vec2d> computeApproximateUniformSamplingPositions(
-    const geometry::StrokeSample2dArray& samples,
-    Int numSamples) {
-
-    core::Array<geometry::Vec2d> result;
-    result.reserve(numSamples);
-    result.append(samples.first().position());
-    double l = samples.last().s();
-    if (l > 0) {
-        double deltaS = l / (numSamples - 1);
-        double targetS = deltaS;
-        const geometry::StrokeSample2d* s0 = &samples[0];
-        for (const geometry::StrokeSample2d& s1 : samples) {
-            double ds = s1.s() - s0->s();
-            if (ds > 0 && targetS <= s1.s()) {
-                double t = (targetS - s0->s()) / ds;
-                result.append(t * s1.position() + (1 - t) * s0->position());
-                targetS += deltaS;
-            }
-            s0 = &s1;
-        }
-    }
-    while (result.length() < numSamples) {
-        result.append(samples.last().position());
-    }
-
-    return result;
-}
-
-} // namespace
-
 core::Id Workspace::glue(core::ConstSpan<core::Id> elementIds) {
     core::Id resultId = -1;
 
@@ -400,6 +365,8 @@ core::Id Workspace::glue(core::ConstSpan<core::Id> elementIds) {
         }
     }
 
+    vacomplex::Cell* result = nullptr;
+
     if (hasOtherCells || hasNonVacElements) {
         // do not glue
     }
@@ -410,410 +377,26 @@ core::Id Workspace::glue(core::ConstSpan<core::Id> elementIds) {
                 cog += kv->position();
             }
             cog /= core::narrow_cast<double>(kvs.length());
-
-            vacomplex::Cell* result = vacomplex::ops::glueKeyVertices(kvs, cog);
-            Element* e = this->findVacElement(result);
-            if (e) {
-                resultId = e->id();
-            }
+            result = vacomplex::ops::glueKeyVertices(kvs, cog);
         }
     }
     else if (!openKes.isEmpty()) {
-        if (closedKes.isEmpty() && openKes.length() == 2) {
-
-            // sample both edges
-            vacomplex::KeyEdge* ke0 = openKes[0];
-            vacomplex::KeyEdge* ke1 = openKes[1];
-
-            // TODO: use operation source in onVacNodesChanged_ to do the color blend
-            // Note: at least 1 sample is guaranteed.
-            bool isEdge0Longer = ke0->sampling().samples().last().s()
-                                 > ke1->sampling().samples().last().s();
-            VacKeyEdge* colorEdge = dynamic_cast<VacKeyEdge*>(
-                this->findVacElement(isEdge0Longer ? ke0 : ke1));
-            core::Color color =
-                colorEdge
-                    ? colorEdge
-                          ->computeFrameData(VacEdgeComputationStage::PreJoinGeometry)
-                          ->color()
-                    : core::Color{};
-
-            const geometry::StrokeSample2dArray& samples0 = ke0->sampling().samples();
-            geometry::StrokeSample2dArray samples1 = ke1->sampling().samples();
-
-            // Detect which edge direction should be used for gluing.
-            // Here, we handle the simple cases where the two edges already share
-            // at least one vertex.
-            vacomplex::KeyVertex* ke00 = ke0->startVertex();
-            vacomplex::KeyVertex* ke01 = ke0->endVertex();
-            vacomplex::KeyVertex* ke10 = ke1->startVertex();
-            vacomplex::KeyVertex* ke11 = ke1->endVertex();
-            bool isAnyLoop = (ke00 == ke01) || (ke10 == ke11);
-            bool isBestDirectionKnown = false;
-            bool reverse1 = false;
-            if (!isAnyLoop) {
-                if ((ke00 == ke10) || (ke01 == ke11)) {
-                    // If the two edges have the same start vertex or the same
-                    // end vertex, we glue them in their intrinsic direction.
-                    reverse1 = false;
-                    isBestDirectionKnown = true;
-                }
-                else if ((ke00 == ke11) || (ke01 == ke10)) {
-                    // If the start (resp. end) vertex of ke0 is equal to the
-                    // end (resp. start) vertex of ke1, we want to glue them in reverse.
-                    reverse1 = true;
-                    isBestDirectionKnown = true;
-                }
-            }
-
-            core::Array<FreehandEdgePoint> newPoints;
-
-            if (samples0.length() < 2) {
-                Int n = samples1.length();
-                newPoints.resizeNoInit(n);
-                FreehandEdgePoint fep0(samples0.first());
-                for (Int i = 0; i < n; ++i) {
-                    newPoints[i] = fep0.average(samples1[i]);
-                }
-            }
-            else if (samples1.length() < 2) {
-                Int n = samples0.length();
-                newPoints.resizeNoInit(n);
-                FreehandEdgePoint fep1(samples1.first());
-                for (Int i = 0; i < n; ++i) {
-                    newPoints[i] = fep1.average(samples1[i]);
-                }
-            }
-            else {
-                double l0 = samples0.last().s();
-                double l1 = samples1.last().s();
-
-                Int n0 = samples0.length();
-                Int n1 = samples1.length();
-                Int n = std::max<Int>(0, n0 - 2) + std::max<Int>(0, n1 - 2) + 2;
-
-                // If we don't know yet which direction to use for gluing, we
-                // detect the best direction now by choosing the one minimizing
-                // the squared distance between the curves.
-                //
-                if (!isBestDirectionKnown && l0 > 0 && l1 > 0) {
-                    core::Array<geometry::Vec2d> us0 =
-                        computeApproximateUniformSamplingPositions(samples0, 10);
-                    core::Array<geometry::Vec2d> us1 =
-                        computeApproximateUniformSamplingPositions(samples1, 10);
-
-                    // test best halfedge orientation
-                    double costA = 0;
-                    double costB = 0;
-
-                    Int m = us0.length();
-                    for (Int i = 0; i < m; ++i) {
-                        costA += (us0[i] - us1[i]).squaredLength();
-                        costB += (us0[i] - us1[m - 1 - i]).squaredLength();
-                    }
-
-                    // reverse samples1 if necessary
-                    if (costB < costA) {
-                        reverse1 = true;
-                    }
-                }
-
-                // Now, compute an interpolation between the two curve with the given direction.
-
-                if (reverse1) {
-                    geometry::StrokeSample2dArray reversedSamples1(n1, core::noInit);
-                    for (Int i = 0; i < n1; ++i) {
-                        reversedSamples1[i] = samples1[n1 - 1 - i];
-                        reversedSamples1[i].setS(l1 - reversedSamples1[i].s());
-                    }
-                    samples1 = std::move(reversedSamples1);
-                }
-
-                FreehandEdgePoint p0a = samples0.first();
-                FreehandEdgePoint p1a = samples1.first();
-
-                core::Array<FreehandEdgePoint> points0;
-                points0.reserve(n);
-                points0.append(p0a);
-
-                core::Array<FreehandEdgePoint> points1;
-                points1.reserve(n);
-                points1.append(p1a);
-
-                double u0a = 0;
-                Int i0 = std::min<Int>(1, n0);
-                double u1a = 0;
-                Int i1 = std::min<Int>(1, n1);
-
-                for (Int i = 1; i < n - 1; ++i) {
-                    const geometry::StrokeSample2d& currentSample0 = samples0[i0];
-                    const geometry::StrokeSample2d& currentSample1 = samples1[i1];
-                    double u0b = currentSample0.s() / l0;
-                    double u1b = currentSample1.s() / l1;
-                    FreehandEdgePoint p0 = currentSample0;
-                    FreehandEdgePoint p1 = currentSample1;
-                    bool canIterate0 = i0 < n0 - 1;
-                    bool canIterate1 = i1 < n1 - 1;
-                    if (canIterate1 && (u0b > u1b || !canIterate0)) {
-                        double t = (u1b - u0a) / (u0b - u0a);
-                        points0.append(p0a.lerp(p0, t));
-                        points1.append(p1);
-                        u1a = u1b;
-                        p1a = p1;
-                        ++i1;
-                    }
-                    else if (canIterate0) {
-                        double t = (u0b - u1a) / (u1b - u1a);
-                        points0.append(p0);
-                        points1.append(p1a.lerp(p1, t));
-                        u0a = u0b;
-                        p0a = p0;
-                        ++i0;
-                    }
-                    else {
-                        // shouldn't happen if `n` is correct.
-                        break;
-                    }
-                }
-
-                points0.emplaceLast(samples0.last());
-                points1.emplaceLast(samples1.last());
-
-                newPoints.resizeNoInit(n);
-                for (Int i = 0; i < n; ++i) {
-                    newPoints[i] = points0[i].average(points1[i]);
-                }
-            }
-
-            double maxWidth = 0;
-            for (Int i = 0; i < newPoints.length(); ++i) {
-                double w = newPoints[i].width();
-                if (w > maxWidth) {
-                    maxWidth = w;
-                }
-            }
-
-            // tolerance = 5% of max width
-            // TODO: what if maxWidth = 0? Better heuristic for tolerance?
-            std::shared_ptr<vacomplex::KeyEdgeGeometry> newGeometry =
-                FreehandEdgeGeometry::createFromPoints(newPoints, false, maxWidth * 0.05);
-
-            core::Array<vacomplex::KeyHalfedge> halfedges(
-                {{ke0, true}, {ke1, !reverse1}});
-
-            vacomplex::Cell* result = vacomplex::ops::glueKeyOpenEdges(
-                halfedges,
-                std::move(newGeometry),
-                newPoints.first().position(),
-                newPoints.last().position());
-            Element* e = this->findVacElement(result);
-            if (e) {
-                e->domElement()->setAttribute(dom::strings::color, color);
-                resultId = e->id();
-            }
+        if (closedKes.isEmpty()) {
+            result = vacomplex::ops::glueKeyOpenEdges(openKes);
         }
     }
     else if (!closedKes.isEmpty()) {
-        if (closedKes.length() == 2) {
-
-            // sample both edges
-            vacomplex::KeyEdge* ke0 = closedKes[0];
-            vacomplex::KeyEdge* ke1 = closedKes[1];
-
-            // TODO: use operation source in onVacNodesChanged_ to do the color blend
-            bool isEdge0Longer = ke0->sampling().samples().last().s()
-                                 > ke1->sampling().samples().last().s();
-            VacKeyEdge* colorEdge = dynamic_cast<VacKeyEdge*>(
-                this->findVacElement(isEdge0Longer ? ke0 : ke1));
-            core::Color color =
-                colorEdge
-                    ? colorEdge
-                          ->computeFrameData(VacEdgeComputationStage::PreJoinGeometry)
-                          ->color()
-                    : core::Color{};
-
-            const geometry::StrokeSample2dArray& samples0 = ke0->sampling().samples();
-            geometry::StrokeSample2dArray samples1 = ke1->sampling().samples();
-
-            if (samples0.length() >= 2 && samples1.length() >= 2) {
-                double l0 = samples0.last().s();
-                double l1 = samples1.last().s();
-
-                Int n0 = samples0.length();
-                Int n1 = samples1.length();
-                bool reverse1 = false;
-                double offset1 = 0;
-
-                if (l0 > 0 && l1 > 0) {
-                    constexpr Int numSamplesForCost = 10;
-                    constexpr Int factorToNumSamplesForShift = 10;
-                    constexpr Int numSamples =
-                        numSamplesForCost * factorToNumSamplesForShift;
-                    double deltaS1 = l1 / numSamples;
-
-                    core::Array<geometry::Vec2d> us0 =
-                        computeApproximateUniformSamplingPositions(
-                            samples0, numSamples + 1);
-                    core::Array<geometry::Vec2d> us1 =
-                        computeApproximateUniformSamplingPositions(
-                            samples1, numSamples + 1);
-                    // since it is closed, first and last are the same
-                    us0.removeLast();
-                    us1.removeLast();
-
-                    double bestCost = core::DoubleInfinity;
-
-                    Int m = us1.length();
-                    // For every shift of edge 1 uniform sampling
-                    for (Int i = 0; i < numSamples; ++i) {
-                        double costA = 0;
-                        double costB = 0;
-                        // Compute distance using less samples
-                        for (Int j = 0; j < numSamplesForCost; ++j) {
-                            Int k = j * factorToNumSamplesForShift;
-                            costA += (us0[k] - us1[(k + i) % m]).squaredLength();
-                            costB +=
-                                (us0[k] - us1[(m - 1 - k + i + m) % m]).squaredLength();
-                        }
-                        if (costA < bestCost) {
-                            offset1 = deltaS1 * i;
-                            reverse1 = false;
-                            bestCost = costA;
-                        }
-                        if (costB < bestCost) {
-                            offset1 = deltaS1 * i;
-                            reverse1 = true;
-                            bestCost = costB;
-                        }
-                    }
-                }
-
-                FreehandEdgePoint p0a = samples0.first();
-                FreehandEdgePoint p1a = samples1.first();
-
-                // rotate samples1 by offset1
-                if (offset1 > 0) {
-                    Int m = 0;
-                    for (; m < n1; ++m) {
-                        if (samples1[m].s() >= offset1) {
-                            break;
-                        }
-                    }
-                    const geometry::StrokeSample2d& s0 =
-                        samples1[std::max<Int>(0, m - 1)];
-                    const geometry::StrokeSample2d& s1 =
-                        samples1[std::min<Int>(m, n1 - 1)];
-                    double ds = s1.s() - s0.s();
-                    if (ds > 0) {
-                        double t = (offset1 - s0.s()) / ds;
-                        p1a = FreehandEdgePoint(s0).lerp(FreehandEdgePoint(s1), t);
-                    }
-                    else {
-                        p1a = s1;
-                    }
-                    std::rotate(samples1.begin(), samples1.begin() + m, samples1.end());
-                    Int mr = n1 - m;
-                    for (Int i = 0; i < mr; ++i) {
-                        samples1[i].setS(samples1[i].s() - offset1);
-                    }
-                    for (Int i = mr; i < n1; ++i) {
-                        samples1[i].setS(samples1[i].s() - offset1 + l1);
-                    }
-                }
-
-                // reverse samples1 if necessary
-                if (reverse1) {
-                    geometry::StrokeSample2dArray reversedSamples1(n1, core::noInit);
-                    for (Int i = 0; i < n1; ++i) {
-                        reversedSamples1[i] = samples1[n1 - 1 - i];
-                        reversedSamples1[i].setS(l1 - reversedSamples1[i].s());
-                    }
-                    samples1 = std::move(reversedSamples1);
-                }
-
-                Int n = std::max<Int>(0, n0 - 2) + std::max<Int>(0, n1 - 2) + 1;
-
-                core::Array<FreehandEdgePoint> points0;
-                points0.reserve(n);
-                points0.append(p0a);
-
-                core::Array<FreehandEdgePoint> points1;
-                points1.reserve(n);
-                points1.append(p1a);
-
-                double u0a = 0;
-                Int i0 = std::min<Int>(1, n0);
-                double u1a = 0;
-                Int i1 = std::min<Int>(1, n1);
-
-                for (Int i = 1; i < n; ++i) {
-                    const geometry::StrokeSample2d& currentSample0 = samples0[i0];
-                    const geometry::StrokeSample2d& currentSample1 = samples1[i1];
-                    double u0b = currentSample0.s() / l0;
-                    double u1b = currentSample1.s() / l1;
-                    FreehandEdgePoint p0 = currentSample0;
-                    FreehandEdgePoint p1 = currentSample1;
-                    bool canIterate0 = i0 < n0 - 1;
-                    bool canIterate1 = i1 < n1 - 1;
-                    if (canIterate1 && (u0b > u1b || !canIterate0)) {
-                        double t = (u1b - u0a) / (u0b - u0a);
-                        points0.append(p0a.lerp(p0, t));
-                        points1.append(p1);
-                        u1a = u1b;
-                        p1a = p1;
-                        ++i1;
-                    }
-                    else if (canIterate0) {
-                        double t = (u0b - u1a) / (u1b - u1a);
-                        points0.append(p0);
-                        points1.append(p1a.lerp(p1, t));
-                        u0a = u0b;
-                        p0a = p0;
-                        ++i0;
-                    }
-                    else {
-                        // shouldn't happen if `n` is correct.
-                        break;
-                    }
-                }
-
-                core::Array<vacomplex::KeyHalfedge> halfedges(
-                    {{ke0, true}, {ke1, !reverse1}});
-
-                core::Array<FreehandEdgePoint> newPoints(n, core::noInit);
-                for (Int i = 0; i < n; ++i) {
-                    newPoints[i] = points0[i].average(points1[i]);
-                }
-
-                double maxWidth = 0;
-                for (Int i = 0; i < n; ++i) {
-                    double w = newPoints[i].width();
-                    if (w > maxWidth) {
-                        maxWidth = w;
-                    }
-                }
-
-                // tolerance = 5% of max width
-                std::shared_ptr<vacomplex::KeyEdgeGeometry> newGeometry =
-                    FreehandEdgeGeometry::createFromPoints(
-                        newPoints, true, maxWidth * 0.05);
-
-                vacomplex::Cell* result =
-                    vacomplex::ops::glueKeyClosedEdges(halfedges, std::move(newGeometry));
-
-                Element* e = this->findVacElement(result);
-                if (e) {
-                    e->domElement()->setAttribute(dom::strings::color, color);
-                    resultId = e->id();
-                }
-            }
-            else {
-                // TODO: warning ?
-            }
-        }
+        result = vacomplex::ops::glueKeyClosedEdges(closedKes);
     }
 
     sync();
+
+    if (result) {
+        Element* e = this->findVacElement(result);
+        if (e) {
+            resultId = e->id();
+        }
+    }
 
     // Close history group
     if (undoGroup) {
@@ -1140,15 +723,15 @@ void Workspace::clearElements_() {
 }
 
 void Workspace::setPendingUpdateFromDom_(Element* element) {
-    if (!element->hasPendingUpdate_) {
-        element->hasPendingUpdate_ = true;
+    if (!element->hasPendingUpdateFromDom_) {
+        element->hasPendingUpdateFromDom_ = true;
         elementsToUpdateFromDom_.emplaceLast(element);
     }
 }
 
 void Workspace::clearPendingUpdateFromDom_(Element* element) {
-    if (element->hasPendingUpdate_) {
-        element->hasPendingUpdate_ = false;
+    if (element->hasPendingUpdateFromDom_) {
+        element->hasPendingUpdateFromDom_ = false;
         elementsToUpdateFromDom_.removeOne(element);
     }
 }

@@ -19,8 +19,8 @@
 namespace vgc::vacomplex {
 
 KeyEdge::~KeyEdge() {
-    if (geometry_) {
-        geometry_->edge_ = nullptr;
+    if (data_) {
+        detail::CellPropertiesPrivateInterface::setOwningCell(&data_->properties_, this);
     }
 }
 
@@ -37,23 +37,23 @@ bool KeyEdge::snapGeometry() {
         // todo: set snapStartPosition
         snapEndPosition = snapStartPosition;
     }
-    geometry_->snap(snapStartPosition, snapEndPosition);
+    data_->snap(snapStartPosition, snapEndPosition);
     return true;
 }
 
-std::shared_ptr<const EdgeSampling> KeyEdge::samplingShared() const {
-    updateSampling_();
+std::shared_ptr<const geometry::StrokeSampling2d> KeyEdge::strokeSamplingShared() const {
+    updateStrokeSampling_();
     return sampling_;
 }
 
-const EdgeSampling& KeyEdge::sampling() const {
-    updateSampling_();
+const geometry::StrokeSampling2d& KeyEdge::strokeSampling() const {
+    updateStrokeSampling_();
     VGC_ASSERT(sampling_ != nullptr);
     return *sampling_;
 }
 
 const geometry::Rect2d& KeyEdge::centerlineBoundingBox() const {
-    updateSampling_();
+    updateStrokeSampling_();
     return sampling_ ? sampling_->centerlineBoundingBox() : geometry::Rect2d::empty;
 }
 
@@ -63,17 +63,18 @@ const geometry::Rect2d& KeyEdge::centerlineBoundingBox() const {
 /// Unlike `sampling()`, this function does not cache the result unless
 /// `quality == edge->samplingQuality()`.
 ///
-EdgeSampling KeyEdge::computeSampling(geometry::CurveSamplingQuality quality) const {
+geometry::StrokeSampling2d
+KeyEdge::computeStrokeSampling(geometry::CurveSamplingQuality quality) const {
 
     if (samplingQuality_ == quality && sampling_) {
         // return copy of cached sampling
         return *sampling_;
     }
 
-    EdgeSampling sampling = computeSampling_(samplingQuality_);
+    geometry::StrokeSampling2d sampling = computeStrokeSampling_(samplingQuality_);
 
     if (samplingQuality_ == quality) {
-        sampling_ = std::make_shared<const EdgeSampling>(sampling);
+        sampling_ = std::make_shared<const geometry::StrokeSampling2d>(sampling);
         onMeshQueried();
     }
 
@@ -81,7 +82,7 @@ EdgeSampling KeyEdge::computeSampling(geometry::CurveSamplingQuality quality) co
 }
 
 double KeyEdge::startAngle() const {
-    updateSampling_();
+    updateStrokeSampling_();
     // TODO: guarantee at least one sample
     if (!sampling_->samples().isEmpty()) {
         return sampling_->samples().first().tangent().angle();
@@ -90,7 +91,7 @@ double KeyEdge::startAngle() const {
 }
 
 double KeyEdge::endAngle() const {
-    updateSampling_();
+    updateStrokeSampling_();
     // TODO: guarantee at least one sample
     if (!sampling_->samples().isEmpty()) {
         geometry::Vec2d endTangent = sampling_->samples().last().tangent();
@@ -99,26 +100,20 @@ double KeyEdge::endAngle() const {
     return 0;
 }
 
-EdgeSampling KeyEdge::computeSampling_(geometry::CurveSamplingQuality quality) const {
+geometry::StrokeSampling2d
+KeyEdge::computeStrokeSampling_(geometry::CurveSamplingQuality quality) const {
     // TODO: define guarantees.
     // - what about a closed edge without points data ?
     // - what about an open edge without points data and same end points ?
     // - what about an open edge without points data but different end points ?
-
-    if (!isClosed()) {
-        geometry::Vec2d snapStartPosition = startVertex_->position();
-        geometry::Vec2d snapEndPosition = endVertex_->position();
-        return geometry_->computeSampling(quality, snapStartPosition, snapEndPosition);
-    }
-    else {
-        return geometry_->computeSampling(quality);
-    }
+    return data_->stroke()->computeSampling(quality);
 }
 
-void KeyEdge::updateSampling_() const {
+void KeyEdge::updateStrokeSampling_() const {
     if (!sampling_) {
-        EdgeSampling sampling = computeSampling_(samplingQuality_);
-        sampling_ = std::make_shared<const EdgeSampling>(std::move(sampling));
+        geometry::StrokeSampling2d sampling = computeStrokeSampling_(samplingQuality_);
+        sampling_ =
+            std::make_shared<const geometry::StrokeSampling2d>(std::move(sampling));
     }
     onMeshQueried();
 }

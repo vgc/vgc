@@ -692,13 +692,13 @@ void Select::initializeDragMoveData_(
     for (vacomplex::KeyEdge* ke : edgesToTranslate) {
         workspace::Element* element = workspace->findVacElement(ke->id());
         if (element) {
-            draggedEdges_.append({element->id(), true});
+            draggedEdges_.emplaceLast(element->id(), true);
         }
     }
     for (vacomplex::KeyEdge* ke : affectedEdges) {
         workspace::Element* element = workspace->findVacElement(ke->id());
         if (element) {
-            draggedEdges_.append({element->id(), false});
+            draggedEdges_.emplaceLast(element->id(), false);
         }
     }
 }
@@ -753,16 +753,16 @@ void Select::updateDragMovedElements_(
             }
             initOperationOn(ke);
             if (ked.isUniformTranslation) {
-                vacomplex::KeyEdgeGeometry* geometry = ke->geometry();
-                if (geometry) {
+                vacomplex::KeyEdgeData* data = ke->data();
+                if (data) {
                     if (!ked.isEditStarted) {
-                        geometry->startEdit();
+                        ked.oldData = data->clone();
                         ked.isEditStarted = true;
                     }
                     else {
-                        geometry->resetEdit();
+                        *data = *ked.oldData;
                     }
-                    geometry->translate(translationInWorkspace);
+                    data->translate(translationInWorkspace);
                 }
             }
             else {
@@ -797,9 +797,9 @@ void Select::finalizeDragMovedElements_(workspace::Workspace* workspace) {
         if (element && element->vacNode() && element->vacNode()->isCell()) {
             vacomplex::KeyEdge* ke = element->vacNode()->toCellUnchecked()->toKeyEdge();
             if (ke && ked.isEditStarted) {
-                vacomplex::KeyEdgeGeometry* geometry = ke->geometry();
-                if (geometry) {
-                    geometry->finishEdit();
+                vacomplex::KeyEdgeData* data = ke->data();
+                if (data) {
+                    //data->finishEdit();
                 }
             }
         }

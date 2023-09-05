@@ -17,17 +17,9 @@
 #include <vgc/geometry/yuksel.h>
 
 #include <vgc/geometry/bezier.h>
-#include <vgc/geometry/curve.h>
+#include <vgc/geometry/stroke.h>
 
 namespace vgc::geometry {
-
-Int YukselSplineStroke2d::numKnots_() const {
-    return positions_.length();
-}
-
-bool YukselSplineStroke2d::isZeroLengthSegment_(Int segmentIndex) const {
-    return knotsData_[segmentIndex].chordLength == 0;
-}
 
 Vec2d YukselSplineStroke2d::evalNonZeroCenterline(Int segmentIndex, double u) const {
     YukselBezierSegment2d centerlineSegment = segmentEvaluator(segmentIndex);
@@ -42,9 +34,9 @@ Vec2d YukselSplineStroke2d::evalNonZeroCenterline(Int segmentIndex, double u, Ve
 }
 
 StrokeSampleEx2d YukselSplineStroke2d::evalNonZero(Int segmentIndex, double u) const {
-    if (isWidthConstant_) {
+    if (hasConstantWidth()) {
         YukselBezierSegment2d centerlineSegment = segmentEvaluator(segmentIndex);
-        double hw = 0.5 * widths_[0];
+        double hw = 0.5 * constantWidth();
         Vec2d tangent = core::noInit;
         double speed;
         Vec2d p = centerlineSegment.eval(u, tangent, speed);
@@ -70,9 +62,9 @@ void YukselSplineStroke2d::sampleNonZeroSegment(
     const CurveSamplingParameters& params,
     detail::AdaptiveStrokeSampler& sampler) const {
 
-    if (isWidthConstant_) {
+    if (hasConstantWidth()) {
         YukselBezierSegment2d centerlineSegment = segmentEvaluator(segmentIndex);
-        double hw = 0.5 * widths_[0];
+        double hw = 0.5 * constantWidth();
         sampler.sample(
             [&, hw](double u) -> StrokeSampleEx2d {
                 Vec2d tangent = core::noInit;
@@ -225,67 +217,6 @@ std::array<Int, 4> computeKnotIndices_(bool isClosed, Int numKnots, Int segmentI
     return indices;
 }
 
-} // namespace
-
-std::array<Vec2d, 2> YukselSplineStroke2d::computeOffsetLineTangentsAtSegmentEndpoint_(
-    Int segmentIndex,
-    Int endpointIndex) const {
-
-    //return {Vec2d(1, 0), Vec2d(1, 0)};
-
-    CubicBezier2d halfwidthsSegment(core::noInit);
-    YukselBezierSegment2d centerlineSegment =
-        segmentEvaluator(segmentIndex, halfwidthsSegment);
-
-    Vec2d dp = core::noInit;
-    Vec2d ddp = core::noInit;
-    centerlineSegment.computeEndPointDerivatives(endpointIndex, dp, ddp);
-    Vec2d dw = core::noInit;
-    // TODO: can be optimized if necessary.
-    Vec2d w = halfwidthsSegment.eval(endpointIndex == 0 ? 0 : 1, dw);
-
-    if (dp == Vec2d()) {
-        if (dw == Vec2d()) {
-            // TODO: second derivative of offset point function ?
-            Vec2d tangent = core::noInit;
-            if (endpointIndex == 0) {
-                tangent = ddp.normalized();
-            }
-            else {
-                tangent = -ddp.normalized();
-            }
-            return {tangent, tangent};
-        }
-        else {
-            Vec2d tangent = core::noInit;
-            if (ddp == Vec2d()) {
-                const QuadraticBezier2d q = centerlineSegment.quadratics()[endpointIndex];
-                tangent = (q.controlPoints()[2] - q.controlPoints()[0]).normalized();
-            }
-            else if (endpointIndex == 0) {
-                tangent = ddp.normalized();
-            }
-            else {
-                tangent = -ddp.normalized();
-            }
-            Vec2d normal = tangent.orthogonalized();
-            return {normal, -normal};
-        }
-    }
-    else {
-        double dpl = dp.length();
-        Vec2d n = dp.orthogonalized() / dpl;
-        Vec2d dn = dp * (ddp.det(dp)) / (dpl * dpl * dpl);
-
-        Vec2d offset0 = dn * w[0] + n * dw[0];
-        Vec2d offset1 = -(dn * w[1] + n * dw[1]);
-
-        return {(dp + offset0).normalized(), (dp + offset1).normalized()};
-    }
-}
-
-namespace {
-
 enum class SegmentType {
     None = 0,
     Corner = 1,
@@ -297,7 +228,7 @@ enum class SegmentType {
 SegmentType computeSegmentCenterlineYukselSegment_(
     YukselBezierSegment2d& segment,
     core::ConstSpan<Vec2d> knotPositions,
-    core::ConstSpan<detail::YukselKnotData> knotsData,
+    core::ConstSpan<double> chordLengths,
     const std::array<Int, 4>& knotIndices,
     std::array<double, 3>& fixedChordLengths) {
 
@@ -307,14 +238,14 @@ SegmentType computeSegmentCenterlineYukselSegment_(
         knotPositions.getUnchecked(knotIndices[2]),
         knotPositions.getUnchecked(knotIndices[3])};
 
-    const detail::YukselKnotData& kd0 = knotsData.getUnchecked(knotIndices[0]);
-    const detail::YukselKnotData& kd1 = knotsData.getUnchecked(knotIndices[1]);
-    const detail::YukselKnotData& kd2 = knotsData.getUnchecked(knotIndices[2]);
+    double cl0 = chordLengths.getUnchecked(knotIndices[0]);
+    double cl1 = chordLengths.getUnchecked(knotIndices[1]);
+    double cl2 = chordLengths.getUnchecked(knotIndices[2]);
 
     fixedChordLengths = {
-        knotIndices[0] != knotIndices[1] ? kd0.chordLength : 0,
-        kd1.chordLength,
-        knotIndices[2] != knotIndices[3] ? kd2.chordLength : 0};
+        knotIndices[0] != knotIndices[1] ? cl0 : 0,
+        cl1,
+        knotIndices[2] != knotIndices[3] ? cl2 : 0};
 
     // Aliases
     const Vec2d p1p2 = knots[2] - knots[1];
@@ -467,9 +398,9 @@ YukselBezierSegment2d YukselSplineStroke2d::segmentEvaluator(Int segmentIndex) c
     std::array<Int, 4> knotIndices =
         computeKnotIndices_(isClosed(), positions().length(), segmentIndex);
 
-    std::array<double, 3> chordLengths;
+    std::array<double, 3> segChordLengths;
     computeSegmentCenterlineYukselSegment_(
-        centerlineSegment, positions(), knotsData_, knotIndices, chordLengths);
+        centerlineSegment, positions(), chordLengths(), knotIndices, segChordLengths);
 
     return centerlineSegment;
 }
@@ -483,11 +414,11 @@ YukselBezierSegment2d YukselSplineStroke2d::segmentEvaluator(
     std::array<Int, 4> knotIndices =
         computeKnotIndices_(isClosed(), positions().length(), segmentIndex);
 
-    std::array<double, 3> chordLengths;
+    std::array<double, 3> segChordLengths;
     SegmentType segmentType = computeSegmentCenterlineYukselSegment_(
-        centerlineSegment, positions(), knotsData_, knotIndices, chordLengths);
+        centerlineSegment, positions(), chordLengths(), knotIndices, segChordLengths);
 
-    if (isWidthConstant_) {
+    if (hasConstantWidth()) {
         double chw = 0.5 * constantWidth();
         Vec2d cp(chw, chw);
         halfwidths = CubicBezier2d(cp, cp, cp, cp);
@@ -498,26 +429,106 @@ YukselBezierSegment2d YukselSplineStroke2d::segmentEvaluator(
             widths(),
             knotIndices,
             centerlineSegment,
-            chordLengths,
+            segChordLengths,
             segmentType);
     }
 
     return centerlineSegment;
 }
 
-void YukselSplineStroke2d::computeCache_() {
-    const auto& positions = this->positions();
-    const Vec2d* p = positions.data();
-    Int n = positions.length();
-    knotsData_.resizeNoInit(n);
-    detail::YukselKnotData* knotsData = knotsData_.data();
-    if (n > 0) {
-        for (Int i = 0; i < n - 1; ++i) {
-            knotsData[i].chordLength = (p[i + 1] - p[i]).length();
-        }
-        // We compute the closure even if the spline is not closed.
-        knotsData[n - 1].chordLength = (p[n - 1] - p[0]).length();
+const StrokeModelInfo& YukselSplineStroke2d::modelInfo_() const {
+    static StrokeModelInfo info = StrokeModelInfo(core::StringId("YukselSpline"), 500);
+    return info;
+}
+
+std::unique_ptr<AbstractStroke2d> YukselSplineStroke2d::cloneEmpty_() const {
+    return std::make_unique<YukselSplineStroke2d>(isClosed());
+}
+
+std::unique_ptr<AbstractStroke2d> YukselSplineStroke2d::clone_() const {
+    return std::make_unique<YukselSplineStroke2d>(*this);
+}
+
+bool YukselSplineStroke2d::copyAssign_(const AbstractStroke2d* other_) {
+    auto other = dynamic_cast<const YukselSplineStroke2d*>(other_);
+    if (!other) {
+        return false;
     }
+    *this = *other;
+    return true;
+}
+
+bool YukselSplineStroke2d::moveAssign_(AbstractStroke2d* other_) {
+    auto other = dynamic_cast<YukselSplineStroke2d*>(other_);
+    if (!other) {
+        return false;
+    }
+    *this = std::move(*other);
+    return true;
+}
+
+namespace {
+
+StrokeEndInfo computeSegmentEndInfo(
+    const YukselBezierSegment2d& centerlineSegment,
+    const CubicBezier2d& halfwidthsSegment,
+    Int endIndex) {
+
+    Vec2d tangent = core::noInit;
+    double speed;
+    Vec2d ddp = core::noInit;
+    Vec2d p = centerlineSegment.eval(endIndex ? 1. : 0., tangent, speed, ddp);
+    Vec2d dp = tangent * speed;
+    Vec2d dw = core::noInit;
+    // TODO: can be optimized if necessary.
+    Vec2d w = halfwidthsSegment.eval(endIndex == 0 ? 0 : 1, dw);
+
+    StrokeEndInfo result(p, tangent, w);
+
+    if (speed == 0) {
+        if (dw == Vec2d()) {
+            result.setOffsetLineTangents({tangent, tangent});
+        }
+        else {
+            Vec2d normal = tangent.orthogonalized();
+            result.setOffsetLineTangents({normal, -normal});
+        }
+    }
+    else {
+        Vec2d n = tangent.orthogonalized();
+        Vec2d dn = tangent * (ddp.det(dp)) / (speed * speed);
+
+        Vec2d offset0 = dn * w[0] + n * dw[0];
+        Vec2d offset1 = -(dn * w[1] + n * dw[1]);
+
+        result.setOffsetLineTangents(
+            {(dp + offset0).normalized(), (dp + offset1).normalized()});
+    }
+
+    return result;
+}
+
+} // namespace
+
+StrokeBoundaryInfo YukselSplineStroke2d::computeBoundaryInfo_() const {
+
+    Int n = this->numSegments();
+
+    CubicBezier2d halfwidthsSegment0(core::noInit);
+    YukselBezierSegment2d centerlineSegment0 = segmentEvaluator(0, halfwidthsSegment0);
+    CubicBezier2d halfwidthsSegment1(core::noInit);
+    YukselBezierSegment2d centerlineSegment1 =
+        segmentEvaluator(n - 1, halfwidthsSegment1);
+
+    StrokeBoundaryInfo result;
+    result[0] = computeSegmentEndInfo(centerlineSegment0, halfwidthsSegment0, 0);
+    result[1] = computeSegmentEndInfo(centerlineSegment1, halfwidthsSegment1, 1);
+    return result;
+}
+
+void YukselSplineStroke2d::updateCache_(
+    const core::Array<SegmentComputeData>& /*baseComputeDataArray*/) const {
+    // no custom cache data
 }
 
 } // namespace vgc::geometry

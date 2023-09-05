@@ -92,7 +92,7 @@ Int computeWindingContribution(
 
     const KeyEdge* ke = keyHalfedge.edge();
 
-    const EdgeSampling& sampling = ke->sampling();
+    const geometry::StrokeSampling2d& sampling = ke->strokeSampling();
     const geometry::StrokeSample2dArray& samples = sampling.samples();
     const geometry::Rect2d& bbox = sampling.centerlineBoundingBox();
 
@@ -254,12 +254,13 @@ void samplePointsOnCycleUniformly(
 
     double totalS = 0;
     for (const KeyHalfedge& khe : cycle) {
-        totalS += khe.edge()->sampling().samples().last().s();
+        totalS += khe.edge()->strokeSampling().samples().last().s();
     }
     double stepS = totalS / numSamples;
     double nextStepS = stepS / 2;
     for (const KeyHalfedge& khe : cycle) {
-        const geometry::StrokeSample2dArray& samples = khe.edge()->sampling().samples();
+        const geometry::StrokeSample2dArray& samples =
+            khe.edge()->strokeSampling().samples();
         double heS = samples.last().s();
         if (heS == 0) {
             // XXX TODO: handle cases where heS == 0 more appropriately.
@@ -340,7 +341,7 @@ core::Array<KeyCycle> computeKeyFaceCandidateAt(
         }
         KeyEdge* ke = cell->toKeyEdge();
         if (ke && ke->existsAt(t)) {
-            const geometry::StrokeSample2dArray& samples = ke->sampling().samples();
+            const geometry::StrokeSample2dArray& samples = ke->strokeSampling().samples();
             geometry::DistanceToCurve d = geometry::distanceToCurve(samples, position);
 
             constexpr double hpi = core::pi / 2;
@@ -661,8 +662,9 @@ bool computeKeyFaceFillTriangles(
                     // Note: ke->computeSampling(*quality) returns an
                     // EdgeSampling by value. The const ref extend its
                     // lifetime.
-                    const EdgeSampling& sampling =
-                        quality ? ke->computeSampling(*quality) : ke->sampling();
+                    const geometry::StrokeSampling2d& sampling =
+                        quality ? ke->computeStrokeSampling(*quality)
+                                : ke->strokeSampling();
                     const geometry::StrokeSample2dArray& samples = sampling.samples();
                     if (khe.direction()) {
                         for (const geometry::StrokeSample2d& s : samples) {
@@ -724,6 +726,7 @@ void KeyFace::substituteKeyVertex_(KeyVertex* oldVertex, KeyVertex* newVertex) {
 void KeyFace::substituteKeyHalfedge_(
     const class KeyHalfedge& oldHalfedge,
     const class KeyHalfedge& newHalfedge) {
+
     for (KeyCycle& cycle : cycles_) {
         if (cycle.steinerVertex_) {
             continue;

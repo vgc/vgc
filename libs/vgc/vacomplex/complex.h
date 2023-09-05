@@ -24,6 +24,7 @@
 #include <vgc/core/array.h>
 #include <vgc/core/flags.h>
 #include <vgc/core/object.h>
+#include <vgc/core/stringid.h>
 #include <vgc/vacomplex/api.h>
 #include <vgc/vacomplex/cell.h>
 #include <vgc/vacomplex/exceptions.h>
@@ -46,30 +47,22 @@ enum class NodeModificationFlag {
     TransformChanged        = 0x04,
     // edge model, vertex position, ...
     GeometryChanged         = 0x08,
+    PropertyChanged         = 0x10,
     // edge sampling, ...
-    MeshChanged             = 0x10,
-    BoundaryMeshChanged     = 0x20,
-    BoundaryChanged         = 0x40,
-    StarChanged             = 0x80,
-    All                     = 0xFF,
+    MeshChanged             = 0x20,
+    BoundaryMeshChanged     = 0x40,
+    BoundaryChanged         = 0x80,
+    StarChanged             = 0x100,
+    All                     = 0x1FF,
     // clang-format on
 };
 VGC_DEFINE_FLAGS(NodeModificationFlags, NodeModificationFlag)
 
-class VGC_VACOMPLEX_API NodeSourceOperation {
-    // TODO
-    // This is intended to help workspace rebuild styles on different operations.
-    // For instance cutting an edge should not change the final appearance,
-    // and thus also split an eventual color gradient or adjust a pattern
-    // phase parameter.
-};
-
 class VGC_VACOMPLEX_API CreatedNodeInfo {
 public:
-    CreatedNodeInfo(Node* node, NodeSourceOperation sourceOperation)
+    CreatedNodeInfo(Node* node)
         : nodeId_(node->id())
-        , node_(node)
-        , sourceOperation_(std::move(sourceOperation)) {
+        , node_(node) {
     }
 
     core::Id nodeId() const {
@@ -80,14 +73,9 @@ public:
         return node_;
     }
 
-    const NodeSourceOperation& sourceOperation() const {
-        return sourceOperation_;
-    }
-
 private:
     core::Id nodeId_;
     Node* node_;
-    NodeSourceOperation sourceOperation_;
 };
 
 class VGC_VACOMPLEX_API DestroyedNodeInfo {
@@ -106,22 +94,16 @@ private:
 
 class VGC_VACOMPLEX_API TransientNodeInfo {
 public:
-    TransientNodeInfo(core::Id nodeId, NodeSourceOperation sourceOperation)
-        : nodeId_(nodeId)
-        , sourceOperation_(std::move(sourceOperation)) {
+    TransientNodeInfo(core::Id nodeId)
+        : nodeId_(nodeId) {
     }
 
     core::Id nodeId() const {
         return nodeId_;
     }
 
-    const NodeSourceOperation& sourceOperation() const {
-        return sourceOperation_;
-    }
-
 private:
     core::Id nodeId_;
-    NodeSourceOperation sourceOperation_;
 };
 
 class VGC_VACOMPLEX_API ModifiedNodeInfo {
@@ -147,10 +129,22 @@ public:
         flags_ = flags;
     }
 
+    const core::Array<core::StringId>& modifiedProperties() {
+        return modifiedProperties_;
+    }
+
+    void insertModifiedProperty(core::StringId name) {
+        flags_.set(NodeModificationFlag::PropertyChanged);
+        if (!modifiedProperties_.contains(name)) {
+            modifiedProperties_.append(name);
+        }
+    }
+
 private:
-    core::Id nodeId_;
-    Node* node_;
+    core::Id nodeId_ = {};
+    Node* node_ = nullptr;
     NodeModificationFlags flags_ = {};
+    core::Array<core::StringId> modifiedProperties_;
 };
 
 enum class NodeInsertionType {
@@ -250,15 +244,15 @@ private:
 
     // ops helpers
 
-    void onNodeCreated(Node* node, NodeSourceOperation sourceOperation) {
-        createdNodes_.emplaceLast(node, std::move(sourceOperation));
+    void onNodeCreated(Node* node) {
+        createdNodes_.emplaceLast(node);
     }
 
     void onNodeDestroyed(core::Id id) {
         for (Int i = 0; i < createdNodes_.length(); ++i) {
             const CreatedNodeInfo& info = createdNodes_[i];
             if (info.nodeId() == id) {
-                transientNodes_.emplaceLast(id, info.sourceOperation());
+                transientNodes_.emplaceLast(id);
                 createdNodes_.removeAt(i);
                 break;
             }
@@ -287,6 +281,23 @@ private:
         }
         ModifiedNodeInfo& modifiedNodeInfo = modifiedNodes_.emplaceLast(node);
         modifiedNodeInfo.setFlags(modifiedNodeInfo.flags() | diffFlags);
+    }
+
+    void onNodePropertyModified(Node* node, core::StringId name) {
+        for (Int i = 0; i < createdNodes_.length(); ++i) {
+            if (createdNodes_[i].node() == node) {
+                // swallow node diffs when node is new
+                return;
+            }
+        }
+        for (ModifiedNodeInfo& modifiedNodeInfo : modifiedNodes_) {
+            if (modifiedNodeInfo.node() == node) {
+                modifiedNodeInfo.insertModifiedProperty(name);
+                return;
+            }
+        }
+        ModifiedNodeInfo& modifiedNodeInfo = modifiedNodes_.emplaceLast(node);
+        modifiedNodeInfo.insertModifiedProperty(name);
     }
 
     void onNodeInserted(Node* node, Node* oldParent, NodeInsertionType insertionType) {
@@ -358,7 +369,7 @@ public:
 
 private:
     friend detail::Operations;
-    friend class KeyEdgeGeometry;
+    friend class KeyEdgeData;
     using NodePtrMap = std::unordered_map<core::Id, std::unique_ptr<Node>>;
 
     // Container storing and owning all the nodes in the Complex.

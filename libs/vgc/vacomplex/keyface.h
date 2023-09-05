@@ -19,9 +19,8 @@
 
 #include <initializer_list>
 
-#include <vgc/geometry/curve.h>
 #include <vgc/geometry/curves2d.h>
-#include <vgc/geometry/vec2d.h>
+#include <vgc/geometry/stroke.h>
 #include <vgc/vacomplex/api.h>
 #include <vgc/vacomplex/cell.h>
 #include <vgc/vacomplex/keycycle.h>

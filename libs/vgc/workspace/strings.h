@@ -1,4 +1,4 @@
-// Copyright 2022 The VGC Developers
+// Copyright 2023 The VGC Developers
 // See the COPYRIGHT file at the top-level directory of this distribution
 // and at https://github.com/vgc/vgc/blob/master/COPYRIGHT
 //
@@ -14,33 +14,17 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef VGC_VACOMPLEX_DATAOBJECT_H
-#define VGC_VACOMPLEX_DATAOBJECT_H
+#ifndef VGC_WORKSPACE_STRINGS_H
+#define VGC_WORKSPACE_STRINGS_H
 
-#include <vgc/core/id.h>
-#include <vgc/vacomplex/api.h>
+#include <vgc/core/stringid.h>
+#include <vgc/workspace/api.h>
 
-namespace vgc::vacomplex {
+namespace vgc::workspace::strings {
 
-class VGC_VACOMPLEX_API DataObject {
-protected:
-    virtual ~DataObject() = default;
+VGC_WORKSPACE_API extern const core::StringId color;
+VGC_WORKSPACE_API extern const core::StringId style;
 
-    DataObject() = delete;
+} // namespace vgc::workspace::strings
 
-    explicit DataObject(core::Id id) noexcept
-        : id_(id) {
-    }
-
-public:
-    core::Id id() const {
-        return id_;
-    }
-
-private:
-    core::Id id_ = -1;
-};
-
-} // namespace vgc::vacomplex
-
-#endif // VGC_VACOMPLEX_DATAOBJECT_H
+#endif // VGC_WORKSPACE_STRINGS_H

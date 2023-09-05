@@ -136,22 +136,25 @@ public:
         if (element && element->vacNode() && element->vacNode()->isCell()) {
             vacomplex::KeyEdge* ke = element->vacNode()->toCellUnchecked()->toKeyEdge();
             if (ke) {
-                vacomplex::KeyEdgeGeometry* geometry = ke->geometry();
-                if (geometry) {
+                vacomplex::KeyEdgeData* data = ke->data();
+                if (data) {
                     if (started_) {
-                        geometry->resetEdit();
+                        *data = *oldData_;
+                        editStroke_->copyAssign(oldData_->stroke());
                     }
                     else {
-                        geometry->startEdit();
+                        oldData_ = data->clone();
+                        editStroke_ = oldData_->stroke()->clone();
                         started_ = true;
                     }
-                    geometry::Vec2d grabbedPoint = geometry->sculptGrab(
+                    geometry::Vec2d grabbedPoint = editStroke_->sculptGrab(
                         cursorPositionInWorkspaceAtPress,
                         cursorPositionInWorkspace,
                         options::sculptRadius()->value(),
                         1,
                         pixelSize,
                         ke->isClosed());
+                    data->setStroke(editStroke_.get());
                     tool_->setActionCircleCenter(grabbedPoint);
                     tool_->setActionCircleEnabled(true);
                 }
@@ -171,6 +174,7 @@ public:
             return;
         }
 
+        /*
         canvas::Canvas* canvas = tool_->canvas();
         workspace::Workspace* workspace = tool_->workspace();
         if (!canvas || !workspace) {
@@ -188,9 +192,9 @@ public:
         if (element && element->vacNode() && element->vacNode()->isCell()) {
             vacomplex::KeyEdge* ke = element->vacNode()->toCellUnchecked()->toKeyEdge();
             if (ke) {
-                vacomplex::KeyEdgeGeometry* geometry = ke->geometry();
-                if (geometry) {
-                    geometry->finishEdit();
+                vacomplex::KeyEdgeData* data = ke->data();
+                if (data) {
+                    data->finishEdit();
                 }
             }
         }
@@ -201,6 +205,7 @@ public:
                          && undoGroup->parent()->name() == actionName();
             canAmendUndoGroup_ |= undoGroup->close(amend);
         }
+        */
 
         tool_->setActionCircleEnabled(false);
         reset_();
@@ -221,10 +226,10 @@ public:
         if (element && element->vacNode() && element->vacNode()->isCell()) {
             vacomplex::KeyEdge* ke = element->vacNode()->toCellUnchecked()->toKeyEdge();
             if (ke) {
-                vacomplex::KeyEdgeGeometry* geometry = ke->geometry();
-                if (geometry) {
-                    geometry->resetEdit();
-                    geometry->finishEdit();
+                vacomplex::KeyEdgeData* data = ke->data();
+                if (data) {
+                    *data = *oldData_;
+                    //data->finishEdit();
                 }
             }
         }
@@ -244,6 +249,8 @@ public:
     bool canAmendUndoGroup_ = false;
     bool started_ = false;
     core::Id edgeId_ = -1;
+    std::unique_ptr<vacomplex::KeyEdgeData> oldData_;
+    std::unique_ptr<geometry::AbstractStroke2d> editStroke_;
     geometry::Vec2f cursorPositionAtPress_;
     geometry::Vec2f cursorPosition_;
     geometry::Vec2d grabbedPoint_;
@@ -323,21 +330,24 @@ public:
         if (element && element->vacNode() && element->vacNode()->isCell()) {
             vacomplex::KeyEdge* ke = element->vacNode()->toCellUnchecked()->toKeyEdge();
             if (ke) {
-                vacomplex::KeyEdgeGeometry* geometry = ke->geometry();
-                if (geometry) {
+                vacomplex::KeyEdgeData* data = ke->data();
+                if (data) {
                     if (started_) {
-                        geometry->resetEdit();
+                        *data = *oldData_;
+                        editStroke_->copyAssign(oldData_->stroke());
                     }
                     else {
-                        geometry->startEdit();
+                        oldData_ = data->clone();
+                        editStroke_ = oldData_->stroke()->clone();
                         started_ = true;
                     }
-                    geometry::Vec2d closestPoint = geometry->sculptWidth(
+                    geometry::Vec2d closestPoint = editStroke_->sculptWidth(
                         cursorPositionInWorkspaceAtPress,
                         delta,
                         options::sculptRadius()->value(),
                         pixelSize,
                         ke->isClosed());
+                    data->setStroke(editStroke_.get());
                     tool_->setActionCircleCenter(closestPoint);
                     tool_->setActionCircleEnabled(true);
                 }
@@ -357,6 +367,7 @@ public:
             return;
         }
 
+        /*
         canvas::Canvas* canvas = tool_->canvas();
         workspace::Workspace* workspace = tool_->workspace();
         if (!canvas || !workspace) {
@@ -374,7 +385,7 @@ public:
         if (element && element->vacNode() && element->vacNode()->isCell()) {
             vacomplex::KeyEdge* ke = element->vacNode()->toCellUnchecked()->toKeyEdge();
             if (ke) {
-                vacomplex::KeyEdgeGeometry* geometry = ke->geometry();
+                vacomplex::KeyEdgeData* geometry = ke->geometry();
                 if (geometry) {
                     geometry->finishEdit();
                 }
@@ -387,6 +398,7 @@ public:
                          && undoGroup->parent()->name() == actionName();
             canAmendUndoGroup_ |= undoGroup->close(amend);
         }
+        */
 
         tool_->setActionCircleEnabled(false);
         reset_();
@@ -407,10 +419,10 @@ public:
         if (element && element->vacNode() && element->vacNode()->isCell()) {
             vacomplex::KeyEdge* ke = element->vacNode()->toCellUnchecked()->toKeyEdge();
             if (ke) {
-                vacomplex::KeyEdgeGeometry* geometry = ke->geometry();
-                if (geometry) {
-                    geometry->resetEdit();
-                    geometry->finishEdit();
+                vacomplex::KeyEdgeData* data = ke->data();
+                if (data) {
+                    *data = *oldData_;
+                    //data->finishEdit();
                 }
             }
         }
@@ -430,6 +442,8 @@ public:
     bool canAmendUndoGroup_ = false;
     bool started_ = false;
     core::Id edgeId_ = -1;
+    std::unique_ptr<vacomplex::KeyEdgeData> oldData_;
+    std::unique_ptr<geometry::AbstractStroke2d> editStroke_;
     geometry::Vec2f cursorPositionAtPress_;
     geometry::Vec2f cursorPosition_;
     geometry::Vec2d grabbedPoint_;
@@ -505,21 +519,23 @@ public:
         if (element && element->vacNode() && element->vacNode()->isCell()) {
             vacomplex::KeyEdge* ke = element->vacNode()->toCellUnchecked()->toKeyEdge();
             if (ke) {
-                vacomplex::KeyEdgeGeometry* geometry = ke->geometry();
-                if (geometry) {
+                vacomplex::KeyEdgeData* data = ke->data();
+                if (data) {
                     if (!started_) {
-                        geometry->startEdit();
+                        oldData_ = data->clone();
+                        editStroke_ = oldData_->stroke()->clone();
                         started_ = true;
                     }
                     cursorPositionAtLastSmooth_ = cursorPosition_;
                     double radius = options::sculptRadius()->value();
                     double strength = 0.4;
-                    geometry::Vec2d smoothedPoint = geometry->sculptSmooth(
+                    geometry::Vec2d smoothedPoint = editStroke_->sculptSmooth(
                         positionInWorkspace,
                         radius,
                         (std::min)(1.0, disp / radius) * strength,
                         pixelSize,
                         ke->isClosed());
+                    data->setStroke(editStroke_.get());
                     tool_->setActionCircleCenter(smoothedPoint);
                     tool_->setActionCircleEnabled(true);
                 }
@@ -539,6 +555,7 @@ public:
             return;
         }
 
+        /*
         canvas::Canvas* canvas = tool_->canvas();
         workspace::Workspace* workspace = tool_->workspace();
         if (!canvas || !workspace) {
@@ -556,7 +573,7 @@ public:
         if (element && element->vacNode() && element->vacNode()->isCell()) {
             vacomplex::KeyEdge* ke = element->vacNode()->toCellUnchecked()->toKeyEdge();
             if (ke) {
-                vacomplex::KeyEdgeGeometry* geometry = ke->geometry();
+                vacomplex::KeyEdgeData* geometry = ke->geometry();
                 if (geometry) {
                     geometry->finishEdit();
                 }
@@ -569,6 +586,7 @@ public:
                          && undoGroup->parent()->name() == actionName();
             canAmendUndoGroup_ |= undoGroup->close(amend);
         }
+        */
 
         tool_->setActionCircleEnabled(false);
         reset_();
@@ -589,10 +607,10 @@ public:
         if (element && element->vacNode() && element->vacNode()->isCell()) {
             vacomplex::KeyEdge* ke = element->vacNode()->toCellUnchecked()->toKeyEdge();
             if (ke) {
-                vacomplex::KeyEdgeGeometry* geometry = ke->geometry();
-                if (geometry) {
-                    geometry->resetEdit();
-                    geometry->finishEdit();
+                vacomplex::KeyEdgeData* data = ke->data();
+                if (data) {
+                    *data = *oldData_;
+                    //data->finishEdit();
                 }
             }
         }
@@ -612,6 +630,8 @@ public:
     bool canAmendUndoGroup_ = false;
     bool started_ = false;
     core::Id edgeId_ = -1;
+    std::unique_ptr<vacomplex::KeyEdgeData> oldData_;
+    std::unique_ptr<geometry::AbstractStroke2d> editStroke_;
     geometry::Vec2f cursorPositionAtLastSmooth_;
     geometry::Vec2f cursorPosition_;
     geometry::Vec2d grabbedPoint_;
@@ -736,7 +756,7 @@ void Sculpt::onMouseHover(ui::MouseHoverEvent* event) {
                 if (node && node->isCell()) {
                     vacomplex::KeyEdge* ke = node->toCellUnchecked()->toKeyEdge();
                     if (ke) {
-                        const vacomplex::EdgeSampling& sampling = ke->sampling();
+                        const geometry::StrokeSampling2d& sampling = ke->strokeSampling();
                         const geometry::StrokeSample2dArray& samples = sampling.samples();
                         geometry::DistanceToCurve dtc =
                             geometry::distanceToCurve(samples, worldCursor);

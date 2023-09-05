@@ -23,7 +23,7 @@
 #include <vgc/geometry/vec2f.h>
 #include <vgc/tools/api.h>
 #include <vgc/ui/action.h>
-#include <vgc/vacomplex/edgegeometry.h>
+#include <vgc/vacomplex/keyedgedata.h>
 
 namespace vgc::tools {
 
