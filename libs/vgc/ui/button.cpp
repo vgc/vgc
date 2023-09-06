@@ -16,11 +16,14 @@
 
 #include <vgc/ui/button.h>
 
+#include <QTimer>
+
 #include <vgc/core/array.h>
 #include <vgc/core/paths.h>
 #include <vgc/graphics/strings.h>
 #include <vgc/ui/iconwidget.h>
 #include <vgc/ui/logcategories.h>
+#include <vgc/ui/numbersetting.h>
 #include <vgc/ui/panelarea.h>
 #include <vgc/ui/strings.h>
 #include <vgc/ui/tooltip.h>
@@ -180,23 +183,106 @@ bool Button::onMouseRelease(MouseReleaseEvent* event) {
     }
 }
 
-void Button::onMouseEnter() {
-    addStyleClass(strings::hovered);
-    if (isTooltipEnabled() && !tooltip_ && action()) {
+namespace {
+
+namespace options {
+
+ui::NumberSetting* tooltipStartDelay() {
+    double defaultValue = 0.75;
+    double min = 0;
+    double max = 10;
+    static ui::NumberSettingPtr setting = createDecimalNumberSetting(
+        ui::settings::preferences(),
+        "ui.button.tooltipStartDelay",
+        "Button Tooltip Start Delay",
+        defaultValue,
+        min,
+        max);
+    return setting.get();
+}
+
+// The purpose of the stop delay is to keep the tooltip visible long enough for
+// the mouse to travel the gap between adjacent buttons. This way, the next
+// tooltip can be shown immediately without having to wait for the start delay
+// again, and the new tooltip can replaces the old tooltip without blinking
+// effect (and possibly in the future, with an animated transition).
+//
+ui::NumberSetting* tooltipStopDelay() {
+    double defaultValue = 0.2;
+    double min = 0;
+    double max = 10;
+    static ui::NumberSettingPtr setting = createDecimalNumberSetting(
+        ui::settings::preferences(),
+        "ui.button.tooltipStopDelay",
+        "Button Tooltip Stop Delay",
+        defaultValue,
+        min,
+        max);
+    return setting.get();
+}
+
+} // namespace options
+
+ButtonPtr& tooltipButton_() {
+    static ButtonPtr button;
+    return button;
+}
+
+Button* tooltipButton() {
+    return tooltipButton_().getIfAlive();
+}
+
+TooltipPtr& tooltip_() {
+    static TooltipPtr tooltip;
+    return tooltip;
+}
+
+void destroyTooltip() {
+    TooltipPtr& tooltip = tooltip_();
+    if (tooltip) {
+        tooltip->destroy();
+    }
+    tooltip = nullptr;
+    tooltipButton_() = nullptr;
+}
+
+// TODO: reuse existing tooltip if in same window?
+//       animate from old geometry to new geometry?
+//
+TooltipPtr getOrCreateTooltip(Button* button) {
+    TooltipPtr& tooltip = tooltip_();
+    if (tooltip) {
+        tooltip->destroy();
+    }
+    tooltip = Tooltip::create();
+    tooltipButton_() = button;
+    return tooltip;
+}
+
+void showTooltip() {
+
+    Button* button = tooltipButton();
+    if (!button) {
+        return;
+    }
+
+    Action* action = button->action();
+    if (button->isTooltipEnabled() && action) {
 
         // Setup dialog content
-        tooltip_ = Tooltip::create(action()->name());
-        const ShortcutArray& shortcuts = action()->userShortcuts();
+        TooltipPtr tooltip = getOrCreateTooltip(button);
+        tooltip->setText(action->name());
+        const ShortcutArray& shortcuts = action->userShortcuts();
         if (shortcuts.isEmpty()) {
-            tooltip_->setShortcutVisible(false);
+            tooltip->setShortcutVisible(false);
         }
         else {
-            tooltip_->setShortcut(shortcuts.first());
+            tooltip->setShortcut(shortcuts.first());
         }
 
         // Detect if widget is part of a PanelArea for better dialog location.
         PanelArea* area = nullptr;
-        Widget* widget = parent();
+        Widget* widget = button->parent();
         while (widget) {
             area = dynamic_cast<PanelArea*>(widget);
             if (area) {
@@ -208,20 +294,81 @@ void Button::onMouseEnter() {
         // Show dialog
         if (area) {
             // TODO: decide left or right based on where is the area?
-            tooltip_->showAt(area, this, geometry::RectAlign::OutRight);
+            tooltip->showAt(area, button, geometry::RectAlign::OutRight);
         }
         else {
-            tooltip_->showAt(this, geometry::RectAlign::OutBottomOutRight);
+            tooltip->showAt(button, geometry::RectAlign::OutBottomOutRight);
         }
     }
 }
 
+QTimer& createTooltipStartTimer_() {
+    static QTimer timer;
+    timer.setSingleShot(true);
+    timer.callOnTimeout([] { showTooltip(); });
+    return timer;
+}
+
+QTimer& tooltipStartTimer_() {
+    static QTimer& timer = createTooltipStartTimer_();
+    return timer;
+}
+
+QTimer& createTooltipStopTimer_() {
+    static QTimer timer;
+    timer.setSingleShot(true);
+    timer.callOnTimeout([] { destroyTooltip(); });
+    return timer;
+}
+
+QTimer& tooltipStopTimer_() {
+    static QTimer& timer = createTooltipStopTimer_();
+    return timer;
+}
+
+void setTimerInterval(QTimer& timer, ui::NumberSetting* setting) {
+    double seconds = setting->value();
+    int milliseconds = core::narrow_cast<int>(seconds * 1000);
+    timer.setInterval(milliseconds);
+}
+
+void startTooltipStartTimer() {
+    setTimerInterval(tooltipStartTimer_(), options::tooltipStartDelay());
+    tooltipStopTimer_().stop();
+    tooltipStartTimer_().start();
+}
+
+void startTooltipStopTimer() {
+    setTimerInterval(tooltipStopTimer_(), options::tooltipStopDelay());
+    tooltipStartTimer_().stop();
+    tooltipStopTimer_().start();
+}
+
+void onTooltipEnter(Button* button) {
+    tooltipButton_() = button;
+    if (tooltip_()) {
+        tooltipStopTimer_().stop();
+        showTooltip();
+    }
+    else {
+        startTooltipStartTimer();
+    }
+}
+
+void onTooltipLeave(Button*) {
+    startTooltipStopTimer();
+}
+
+} // namespace
+
+void Button::onMouseEnter() {
+    addStyleClass(strings::hovered);
+    onTooltipEnter(this);
+}
+
 void Button::onMouseLeave() {
     removeStyleClass(strings::hovered);
-    if (tooltip_) {
-        tooltip_->destroy();
-        tooltip_ = nullptr;
-    }
+    onTooltipLeave(this);
 }
 
 void Button::connectNewAction_() {
