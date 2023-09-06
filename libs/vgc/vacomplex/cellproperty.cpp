@@ -18,6 +18,8 @@
 
 #include <vgc/vacomplex/complex.h>
 #include <vgc/vacomplex/detail/operationsimpl.h>
+#include <vgc/vacomplex/keyedgedata.h>
+#include <vgc/vacomplex/keyfacedata.h>
 
 namespace vgc::vacomplex {
 
@@ -39,6 +41,13 @@ CellProperty::onUpdateGeometry_(const geometry::AbstractStroke2d* /*newStroke*/)
 std::unique_ptr<CellProperty> CellProperty::fromConcatStep_(
     const KeyHalfedgeData& /*khd1*/,
     const KeyHalfedgeData& /*khd2*/) const {
+
+    return nullptr;
+}
+
+std::unique_ptr<CellProperty> CellProperty::fromConcatStep_(
+    const KeyFaceData& /*kfd1*/,
+    const KeyFaceData& /*kfd2*/) const {
 
     return nullptr;
 }
@@ -163,6 +172,34 @@ void CellProperties::assignFromConcatStep(
 
     for (const PropertyTemplate& p : templates) {
         std::unique_ptr<CellProperty> newProp = p.prop->fromConcatStep_(khd1, khd2);
+        if (newProp) {
+            insert(std::move(newProp));
+        }
+    }
+}
+
+void CellProperties::assignFromConcatStep(
+    const KeyFaceData& kfd1,
+    const KeyFaceData& kfd2) {
+
+    clear();
+
+    core::Array<PropertyTemplate> templates;
+    for (const auto& p : kfd2.properties()) {
+        core::StringId id = p.first;
+        if (!templates.search([id](const PropertyTemplate& p) { return p.id == id; })) {
+            templates.append(PropertyTemplate{ id, p.second.get() });
+        }
+    }
+    for (const auto& p : kfd2.properties()) {
+        core::StringId id = p.first;
+        if (!templates.search([id](const PropertyTemplate& p) { return p.id == id; })) {
+            templates.append(PropertyTemplate{ id, p.second.get() });
+        }
+    }
+
+    for (const PropertyTemplate& p : templates) {
+        std::unique_ptr<CellProperty> newProp = p.prop->fromConcatStep_(kfd1, kfd2);
         if (newProp) {
             insert(std::move(newProp));
         }

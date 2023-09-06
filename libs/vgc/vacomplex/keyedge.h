@@ -110,14 +110,15 @@ private:
     //bool isClosed_ = false;
 
     std::unique_ptr<KeyEdgeData> stealData_() {
-        detail::CellPropertiesPrivateInterface::setOwningCell(
-            &data_->properties(), nullptr);
-        return std::move(data_);
+        return std::make_unique<KeyEdgeData>(std::move(*data_));
     }
 
     void setData_(std::unique_ptr<KeyEdgeData>&& data) {
-        data_ = std::move(data);
-        detail::CellPropertiesPrivateInterface::setOwningCell(&data_->properties(), this);
+        if (!data_) {
+            data_ = std::make_unique<KeyEdgeData>(this, detail::KeyEdgePrivateKey{});
+        }
+        *data_ = std::move(*data);
+        data.reset();
     }
 
     geometry::CurveSamplingQuality samplingQuality_ = {};

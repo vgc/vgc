@@ -29,6 +29,7 @@ namespace vgc::vacomplex {
 class Cell;
 class CellProperties;
 class CellProperty;
+class CellData;
 class KeyEdgeData;
 class KeyFaceData;
 
@@ -104,6 +105,10 @@ protected:
     virtual std::unique_ptr<CellProperty>
     fromConcatStep_(const KeyHalfedgeData& khd1, const KeyHalfedgeData& khd2) const;
 
+    // Returns a null pointer by default.
+    virtual std::unique_ptr<CellProperty>
+    fromConcatStep_(const KeyFaceData& kfd1, const KeyFaceData& kfd2) const;
+
     // Returns OpResult::Unchanged by default.
     virtual OpResult finalizeConcat_();
 
@@ -117,17 +122,6 @@ private:
 
     friend CellProperties;
 };
-
-namespace detail {
-
-struct CellPropertiesPrivateInterface {
-    friend Cell;
-    friend detail::Operations;
-
-    static void setOwningCell(const CellProperties* properties, Cell* cell);
-};
-
-} // namespace detail
 
 /// \class vgc::vacomplex::CellProperties
 /// \brief Abstract authored properties of a cell (e.g.: style).
@@ -169,8 +163,8 @@ public:
     void onTransformGeometry(const geometry::Mat3d& transformation);
     void onUpdateGeometry(const geometry::AbstractStroke2d* newStroke);
 
-    // Returns a null pointer by default.
     void assignFromConcatStep(const KeyHalfedgeData& khd1, const KeyHalfedgeData& khd2);
+    void assignFromConcatStep(const KeyFaceData& kfd1, const KeyFaceData& kfd2);
 
     void finalizeConcat();
 
@@ -182,7 +176,8 @@ public:
 private:
     std::map<core::StringId, std::unique_ptr<CellProperty>> map_;
 
-    friend detail::CellPropertiesPrivateInterface;
+    friend Cell;
+    friend CellData;
     Cell* cell_ = nullptr;
 
     template<typename Op>
@@ -211,14 +206,6 @@ private:
 
     void emitPropertyChanged_(core::StringId name);
 };
-
-/* static */
-inline void detail::CellPropertiesPrivateInterface::setOwningCell(
-    const CellProperties* properties,
-    Cell* cell) {
-
-    const_cast<CellProperties*>(properties)->cell_ = cell;
-}
 
 } // namespace vgc::vacomplex
 

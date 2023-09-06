@@ -385,6 +385,7 @@ private:
     // Guard against recursion when calling clear() / resetRoot()
     bool isBeingCleared_ = false;
     Int numOperationsInProgress_ = 0;
+    core::Array<Cell*> temporaryCellSet_;
     ComplexDiff opDiff_ = {};
 };
 

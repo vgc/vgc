@@ -19,9 +19,6 @@
 namespace vgc::vacomplex {
 
 KeyEdge::~KeyEdge() {
-    if (data_) {
-        detail::CellPropertiesPrivateInterface::setOwningCell(&data_->properties_, this);
-    }
 }
 
 // TODO: make it an operation, otherwise it won't get saved in dom.

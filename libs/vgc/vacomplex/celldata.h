@@ -29,19 +29,24 @@ namespace vgc::vacomplex {
 
 class Cell;
 class CellData;
-using CellDataPtr = std::shared_ptr<CellData>;
-
-// Either have Cell* in CellProperties to emit changes
-// or return the list of changed properties for each operation
 
 /// \class vgc::vacomplex::CellData
-/// \brief Abstract authored data of a cell (geometry and properties).
+/// \brief Base authored data of a cell (geometry and properties).
 ///
 class VGC_VACOMPLEX_API CellData {
 protected:
     CellData() noexcept = default;
+    ~CellData() = default; // not virtual
 
-    virtual ~CellData() = default;
+    CellData(Cell* owner) noexcept {
+        properties_.cell_ = owner;
+    }
+
+    // protected to prevent partial copy/move
+    CellData(const CellData& other) = default;
+    CellData(CellData&& other) noexcept = default;
+    CellData& operator=(const CellData& other) = default;
+    CellData& operator=(CellData&& other) noexcept = default;
 
 public:
     const CellProperties& properties() const {

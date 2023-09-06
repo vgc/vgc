@@ -58,6 +58,10 @@ protected:
         const vacomplex::KeyHalfedgeData& khd1,
         const vacomplex::KeyHalfedgeData& khd2) const override;
 
+    std::unique_ptr<CellProperty> fromConcatStep_(
+        const vacomplex::KeyFaceData& kfd1,
+        const vacomplex::KeyFaceData& kfd2) const override;
+
     OpResult finalizeConcat_() override;
 
     std::unique_ptr<vacomplex::CellProperty> fromGlue_(

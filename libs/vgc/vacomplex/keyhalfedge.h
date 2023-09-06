@@ -38,8 +38,16 @@ public:
         return edge_;
     }
 
+    void setEdge(KeyEdge* edge) {
+        edge_ = edge;
+    }
+
     bool direction() const {
         return direction_;
+    }
+
+    void setDirection(bool direction) {
+        direction_ = direction;
     }
 
     KeyVertex* startVertex() const {

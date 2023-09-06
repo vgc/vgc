@@ -32,6 +32,7 @@
 #include <vgc/vacomplex/api.h>
 #include <vgc/vacomplex/keyedgedata.h>
 #include <vgc/vacomplex/transform.h>
+#include <vgc/vacomplex/cellproperty.h>
 
 namespace vgc::vacomplex {
 
@@ -464,6 +465,7 @@ private:
     const UInt8 cellType_;
     // used during hard/soft delete operations
     bool isBeingDeleted_ = false;
+    bool canBeAtomicallyUncut_ = false;
 
     virtual void debugPrint_(core::StringWriter& out) = 0;
 };
@@ -763,6 +765,14 @@ public:
         return container_.length();
     }
 
+    bool isEmpty() const {
+        return container_.isEmpty();
+    }
+
+    core::Array<Cell*> copy() const {
+        return container_;
+    }
+
 private:
     const Container& container_;
 };
@@ -839,6 +849,9 @@ protected:
     void onMeshQueried() const {
         hasMeshBeenQueriedSinceLastDirtyEvent_ = true;
     }
+
+    void bindCellProperties(CellProperties* properties);
+    void unbindCellProperties(CellProperties* properties);
 
     virtual void dirtyMesh_();
     virtual bool updateGeometryFromBoundary_();

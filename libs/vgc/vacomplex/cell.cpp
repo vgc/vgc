@@ -58,6 +58,14 @@ Complex* Cell::complex() const {
     return p ? p->complex() : nullptr;
 }
 
+void Cell::bindCellProperties(CellProperties* properties) {
+    properties->cell_ = this;
+}
+
+void Cell::unbindCellProperties(CellProperties* properties) {
+    properties->cell_ = nullptr;
+}
+
 void Cell::dirtyMesh_() {
 }
 

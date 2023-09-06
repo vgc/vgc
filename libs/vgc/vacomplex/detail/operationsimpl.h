@@ -19,11 +19,28 @@
 
 #include <unordered_set>
 
+#include <vgc/core/arithmetic.h>
 #include <vgc/vacomplex/celldata.h>
 #include <vgc/vacomplex/complex.h>
 #include <vgc/vacomplex/keyedgedata.h>
 
-namespace vgc::vacomplex::detail {
+namespace vgc::vacomplex {
+
+namespace detail {
+
+struct UncutAtKeyVertexResult {
+    core::Id removedKeId1 = 0;
+    core::Id removedKeId2 = 0;
+    KeyEdge* resultKe = nullptr;
+    bool success = false;
+};
+
+struct UncutAtKeyEdgeResult {
+    core::Id removedKfId1 = 0;
+    core::Id removedKfId2 = 0;
+    KeyFace* resultKf = nullptr;
+    bool success = false;
+};
 
 class VGC_VACOMPLEX_API Operations {
 private:
@@ -89,8 +106,12 @@ public:
         Node* nextSibling = nullptr,
         core::AnimTime t = {});
 
-    void hardDelete(Node* node, bool deleteIsolatedVertices);
-    void softDelete(Node* node, bool deleteIsolatedVertices);
+    void hardDelete(Node* node, bool deleteIsolatedVertices = false);
+
+    void softDelete(core::ConstSpan<Node*> nodes, bool deleteIsolatedVertices = false);
+
+    core::Array<KeyCell*>
+    simplify(core::Span<KeyVertex*> kvs, core::Span<KeyEdge*> kes, bool smoothJoins);
 
     KeyVertex*
     glueKeyVertices(core::Span<KeyVertex*> kvs, const geometry::Vec2d& position);
@@ -116,6 +137,10 @@ public:
     core::Array<KeyVertex*> unglueKeyVertices(
         KeyVertex* kv,
         core::Array<std::pair<core::Id, core::Array<KeyEdge*>>>& ungluedKeyEdges);
+
+    UncutAtKeyVertexResult uncutAtKeyVertex(KeyVertex* kv, bool smoothJoin);
+
+    UncutAtKeyEdgeResult uncutAtKeyEdge(KeyEdge* ke);
 
     void moveToGroup(Node* node, Group* parentGroup, Node* nextSibling = nullptr);
     void moveBelowBoundary(Node* node);
@@ -168,19 +193,19 @@ private:
     void insertNodeAsFirstChild_(Node* node, Group* parent);
     void insertNodeAsLastChild_(Node* node, Group* parent);
 
-    static Node* findTopMost(core::Span<Node*> nodes);
+    static Node* findTopMost(core::ConstSpan<Node*> nodes);
+    static Node* findBottomMost(core::ConstSpan<Node*> nodes);
 
     // Assumes node has no children.
-    void destroyNode_(Node* node);
+    void destroyChildlessNode_(Node* node);
 
     // Assumes that all descendants of all `nodes` are also in `nodes`.
-    void destroyNodes_(const std::unordered_set<Node*>& nodes);
+    void destroyNodes_(core::ConstSpan<Node*> nodes);
 
     friend vacomplex::CellProperties;
     friend vacomplex::CellData;
     friend vacomplex::KeyEdgeData;
 
-    void onBoundaryChanged_(Cell* cell);
     void onGeometryChanged_(Cell* cell);
     void onPropertyChanged_(Cell* cell, core::StringId name);
     void onBoundaryMeshChanged_(Cell* cell);
@@ -199,6 +224,8 @@ private:
     //
     void addToBoundary_(FaceCell* face, const KeyCycle& cycle);
 
+    void removeFromBoundary_(Cell* boundedCell, Cell* boundingCell);
+
     void substitute_(KeyVertex* oldVertex, KeyVertex* newVertex);
 
     // Substitutes open with open or closed with closed.
@@ -214,12 +241,39 @@ private:
         core::ConstSpan<KeyHalfedge> khes,
         core::ConstSpan<double> uOffsets);
 
+    static KeyPath subPath(const KeyCycle& cycle, Int first, Int last);
+    static KeyPath concatPath(const KeyPath& p1, const KeyPath& p2);
+
+    struct UncutAtKeyVertexInfo_ {
+        KeyFace* kf = nullptr;
+        Int cycleIndex = 0;
+        KeyHalfedge khe1 = {};
+        KeyHalfedge khe2 = {};
+        bool isValid = false;
+    };
+
+    UncutAtKeyVertexInfo_ prepareUncutAtKeyVertex_(KeyVertex* kv);
+
+    struct UncutAtKeyEdgeInfo_ {
+        KeyFace* kf1 = nullptr;
+        Int cycleIndex1 = 0;
+        Int componentIndex1 = 0;
+        KeyFace* kf2 = nullptr;
+        Int cycleIndex2 = 0;
+        Int componentIndex2 = 0;
+        bool isValid = false;
+    };
+
+    UncutAtKeyEdgeInfo_ prepareUncutAtKeyEdge_(KeyEdge* ke);
+
     Int countSteinerUses_(KeyVertex* kv);
 
     Int countUses_(KeyVertex* kv);
     Int countUses_(KeyEdge* ke);
 };
 
-} // namespace vgc::vacomplex::detail
+} // namespace detail
+
+} // namespace vgc::vacomplex
 
 #endif // VGC_VACOMPLEX_DETAIL_OPERATIONS_H

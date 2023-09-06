@@ -60,6 +60,9 @@ Select::Select(CreateKey key)
     ui::Action* unglueAction = createTriggerAction(commands::unglue());
     unglueAction->triggered().connect(onUnglueSlot_());
 
+    ui::Action* simplifyAction = createTriggerAction(commands::simplify());
+    simplifyAction->triggered().connect(onSimplifySlot_());
+
     ui::Action* cutAction = createTriggerAction(commands::cut());
     cutAction->triggered().connect(onCutSlot_());
 
@@ -946,6 +949,39 @@ void Select::onUnglue_() {
 
     core::Array<core::Id> ungluedIds = workspace->unglue(selection);
     canvas->setSelection(std::move(ungluedIds));
+
+    // Close history group
+    if (undoGroup) {
+        undoGroup->close();
+    }
+}
+
+void Select::onSimplify_() {
+    canvas::Canvas* canvas = this->canvas();
+    if (!canvas) {
+        return;
+    }
+
+    workspace::Workspace* workspace = canvas->workspace();
+    if (!workspace) {
+        return;
+    }
+
+    core::Array<core::Id> selection = canvas->selection();
+    if (selection.isEmpty()) {
+        return;
+    }
+
+    // Open history group
+    core::UndoGroup* undoGroup = nullptr;
+    core::History* history = workspace->history();
+    if (history) {
+        undoGroup = history->createUndoGroup(commands::simplify());
+    }
+
+    bool smoothJoins = true;
+    core::Array<core::Id> uncutIds = workspace->simplify(selection, smoothJoins);
+    canvas->setSelection(std::move(uncutIds));
 
     // Close history group
     if (undoGroup) {

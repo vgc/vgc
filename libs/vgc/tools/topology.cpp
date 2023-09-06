@@ -35,4 +35,10 @@ VGC_UI_DEFINE_TRIGGER_COMMAND( //
     "Unglue",
     Shortcut(alt, Key::U));
 
+VGC_UI_DEFINE_TRIGGER_COMMAND( //
+    simplify,
+    "tools.topology.simplify",
+    "Simplify",
+    Shortcut(alt, Key::S));
+
 } // namespace vgc::tools::commands
