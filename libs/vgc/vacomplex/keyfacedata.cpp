@@ -61,8 +61,10 @@ void KeyFaceData::transform(const geometry::Mat3d& transformation) {
 }
 
 /* static */
-void
-KeyFaceData::assignFromConcatStep(KeyFaceData& result, const KeyFaceData& kfd1, const KeyFaceData& kfd2) {
+void KeyFaceData::assignFromConcatStep(
+    KeyFaceData& result,
+    const KeyFaceData& kfd1,
+    const KeyFaceData& kfd2) {
     result.properties_.assignFromConcatStep(kfd1, kfd2);
 }
 

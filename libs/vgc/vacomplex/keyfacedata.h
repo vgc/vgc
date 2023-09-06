@@ -68,7 +68,10 @@ public:
     ///
     void transform(const geometry::Mat3d& transformation);
 
-    static void assignFromConcatStep(KeyFaceData& result, const KeyFaceData& kfd1, const KeyFaceData& kfd2);
+    static void assignFromConcatStep(
+        KeyFaceData& result,
+        const KeyFaceData& kfd1,
+        const KeyFaceData& kfd2);
 
     void finalizeConcat();
 

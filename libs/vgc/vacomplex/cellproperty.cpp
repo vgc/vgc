@@ -188,13 +188,13 @@ void CellProperties::assignFromConcatStep(
     for (const auto& p : kfd2.properties()) {
         core::StringId id = p.first;
         if (!templates.search([id](const PropertyTemplate& p) { return p.id == id; })) {
-            templates.append(PropertyTemplate{ id, p.second.get() });
+            templates.append(PropertyTemplate{id, p.second.get()});
         }
     }
     for (const auto& p : kfd2.properties()) {
         core::StringId id = p.first;
         if (!templates.search([id](const PropertyTemplate& p) { return p.id == id; })) {
-            templates.append(PropertyTemplate{ id, p.second.get() });
+            templates.append(PropertyTemplate{id, p.second.get()});
         }
     }
 

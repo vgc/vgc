@@ -123,7 +123,8 @@ void fixStrokeClosedness(geometry::AbstractStroke2d* stroke, bool isEdgeClosed) 
             strokeType = "a closed stroke";
             edgeType = "an open edge";
         }
-        VGC_WARNING(LogVgcVacomplex, "Assigning {} to {} caused implicit closedness conversion.");
+        VGC_WARNING(
+            LogVgcVacomplex, "Assigning {} to {} caused implicit closedness conversion.");
     }
 }
 

@@ -30,9 +30,9 @@
 #include <vgc/geometry/range1d.h>
 #include <vgc/geometry/vec2d.h>
 #include <vgc/vacomplex/api.h>
+#include <vgc/vacomplex/cellproperty.h>
 #include <vgc/vacomplex/keyedgedata.h>
 #include <vgc/vacomplex/transform.h>
-#include <vgc/vacomplex/cellproperty.h>
 
 namespace vgc::vacomplex {
 
