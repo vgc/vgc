@@ -292,7 +292,6 @@ private:
 
     // Tootip
     bool isTooltipEnabled_ = true;
-    TooltipPtr tooltip_;
 
     // Behavior
     void connectNewAction_();
