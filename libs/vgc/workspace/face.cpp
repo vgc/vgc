@@ -481,15 +481,6 @@ ElementStatus VacKeyFace::updateFromDom_(Workspace* workspace) {
         setVacNode(kf);
     }
 
-    bool colorChanged = false;
-
-    const auto& color = domElement->getAttribute(ds::color).getColor();
-    if (frameData_.color_ != color) {
-        frameData_.color_ = color;
-        colorChanged = true;
-        changeFlags.set(ChangeFlag::Style);
-    }
-
     // dirty cached data
     if (hasBoundaryChanged) {
         changeFlags.set(ChangeFlag::FaceFillMesh);
