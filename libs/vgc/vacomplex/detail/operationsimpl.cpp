@@ -607,11 +607,9 @@ void Operations::softDelete(
             bool wasUncut = false;
             if constexpr (std::is_same_v<CellType, KeyVertex>) {
                 wasUncut = uncutAtKeyVertex(cell, smoothJoins).success;
-                VGC_DEBUG_TMP("uncutAtKeyVertex->{}", wasUncut);
             }
             if constexpr (std::is_same_v<CellType, KeyEdge>) {
                 wasUncut = uncutAtKeyEdge(cell).success;
-                VGC_DEBUG_TMP("uncutAtKeyEdge->{}", wasUncut);
             }
             if (wasUncut) {
                 cell = nullptr;
