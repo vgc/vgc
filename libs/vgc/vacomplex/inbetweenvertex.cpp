@@ -27,7 +27,7 @@ void InbetweenVertex::substituteKeyVertex_(KeyVertex*, KeyVertex*) {
     // TODO
 }
 
-void InbetweenVertex::substituteKeyHalfedge_(const KeyHalfedge&, const KeyHalfedge&) {
+void InbetweenVertex::substituteKeyEdge_(const KeyHalfedge&, const KeyHalfedge&) {
     // no-op
 }
 

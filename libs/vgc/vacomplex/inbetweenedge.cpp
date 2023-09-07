@@ -37,7 +37,7 @@ void InbetweenEdge::substituteKeyVertex_(KeyVertex*, KeyVertex*) {
     // TODO
 }
 
-void InbetweenEdge::substituteKeyHalfedge_(const KeyHalfedge&, const KeyHalfedge&) {
+void InbetweenEdge::substituteKeyEdge_(const KeyHalfedge&, const KeyHalfedge&) {
     // TODO
 }
 

@@ -22,7 +22,7 @@ void KeyVertex::substituteKeyVertex_(KeyVertex*, KeyVertex*) {
     // no-op
 }
 
-void KeyVertex::substituteKeyHalfedge_(const KeyHalfedge&, const KeyHalfedge&) {
+void KeyVertex::substituteKeyEdge_(const KeyHalfedge&, const KeyHalfedge&) {
     // no-op
 }
 

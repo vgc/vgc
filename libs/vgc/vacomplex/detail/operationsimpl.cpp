@@ -795,7 +795,7 @@ Operations::glueKeyVertices(core::Span<KeyVertex*> kvs, const geometry::Vec2d& p
     for (KeyVertex* kv : kvs) {
         bool inserted = seen.insert(kv).second;
         if (inserted) {
-            substitute_(kv, newKv);
+            substituteVertex_(kv, newKv);
             hardDelete(kv);
         }
     }
@@ -1370,7 +1370,7 @@ Operations::uncutAtKeyVertex(KeyVertex* targetKv, bool smoothJoin) {
 
         KeyHalfedge oldKhe(oldKe, true);
         KeyHalfedge newKhe(newKe, true);
-        substitute_(oldKhe, newKhe);
+        substituteEdge_(oldKhe, newKhe);
 
         // Since substitute expects end vertices to be the same,
         // it didn't remove our targetKv from its star. So
@@ -1930,29 +1930,28 @@ void Operations::removeFromBoundary_(Cell* boundedCell, Cell* boundingCell) {
     }
 }
 
-void Operations::substitute_(KeyVertex* oldVertex, KeyVertex* newVertex) {
-    if (newVertex != oldVertex) {
-        for (Cell* starCell : oldVertex->star().copy()) {
-            starCell->substituteKeyVertex_(oldVertex, newVertex);
-            removeFromBoundary_(starCell, oldVertex);
-            addToBoundary_(starCell, newVertex);
-        }
+void Operations::substituteVertex_(KeyVertex* oldVertex, KeyVertex* newVertex) {
+    if (newVertex == oldVertex) {
+        return;
+    }
+    for (Cell* starCell : oldVertex->star().copy()) {
+        starCell->substituteKeyVertex_(oldVertex, newVertex);
+        removeFromBoundary_(starCell, oldVertex);
+        addToBoundary_(starCell, newVertex);
     }
 }
 
-// it assumes end vertices are the same!
-void Operations::substitute_(const KeyHalfedge& oldKhe, const KeyHalfedge& newKhe) {
+// It assumes end vertices are the same!
+void Operations::substituteEdge_(const KeyHalfedge& oldKhe, const KeyHalfedge& newKhe) {
+    if (oldKhe == newKhe) {
+        return;
+    }
     KeyEdge* const oldKe = oldKhe.edge();
     KeyEdge* const newKe = newKhe.edge();
-    auto star = oldKe->star().copy();
-    for (Cell* starCell : star) {
-        starCell->substituteKeyHalfedge_(oldKhe, newKhe);
-    }
-    if (newKe != oldKe) {
-        for (Cell* starCell : star) {
-            removeFromBoundary_(starCell, oldKe);
-            addToBoundary_(starCell, newKe);
-        }
+    for (Cell* starCell : oldKe->star().copy()) {
+        starCell->substituteKeyEdge_(oldKhe, newKhe);
+        removeFromBoundary_(starCell, oldKe);
+        addToBoundary_(starCell, newKe);
     }
 }
 
@@ -2043,7 +2042,7 @@ KeyEdge* Operations::glueKeyOpenEdges_(core::ConstSpan<KeyHalfedge> khs) {
 
     KeyHalfedge newKh(newKe, true);
     for (const KeyHalfedge& kh : khs) {
-        substitute_(kh, newKh);
+        substituteEdge_(kh, newKh);
         // It is important that no 2 halfedges refer to the same edge.
         hardDelete(kh.edge(), true);
     }
@@ -2087,7 +2086,7 @@ KeyEdge* Operations::glueKeyClosedEdges_(
 
     KeyHalfedge newKh(newKe, true);
     for (const KeyHalfedge& kh : khs) {
-        substitute_(kh, newKh);
+        substituteEdge_(kh, newKh);
         // It is important that no 2 halfedges refer to the same edge.
         hardDelete(kh.edge(), true);
     }

@@ -22,7 +22,7 @@ void InbetweenFace::substituteKeyVertex_(KeyVertex*, KeyVertex*) {
     // TODO
 }
 
-void InbetweenFace::substituteKeyHalfedge_(const KeyHalfedge&, const KeyHalfedge&) {
+void InbetweenFace::substituteKeyEdge_(const KeyHalfedge&, const KeyHalfedge&) {
     // TODO
 }
 

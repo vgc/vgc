@@ -857,8 +857,14 @@ protected:
     virtual bool updateGeometryFromBoundary_();
 
 protected:
+    // Assumes `oldVertex` is in boundary.
+    //
     virtual void substituteKeyVertex_(KeyVertex* oldVertex, KeyVertex* newVertex) = 0;
-    virtual void substituteKeyHalfedge_(
+
+    // Assumes old edge is in boundary, `oldHalfedge != newHalfedge`,
+    // and end vertices match.
+    //
+    virtual void substituteKeyEdge_(
         const class KeyHalfedge& oldHalfedge,
         const class KeyHalfedge& newHalfedge) = 0;
 

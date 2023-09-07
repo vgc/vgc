@@ -226,11 +226,11 @@ private:
 
     void removeFromBoundary_(Cell* boundedCell, Cell* boundingCell);
 
-    void substitute_(KeyVertex* oldVertex, KeyVertex* newVertex);
+    void substituteVertex_(KeyVertex* oldVertex, KeyVertex* newVertex);
 
     // Substitutes open with open or closed with closed.
     //
-    void substitute_(const KeyHalfedge& oldHalfedge, const KeyHalfedge& newHalfedge);
+    void substituteEdge_(const KeyHalfedge& oldHalfedge, const KeyHalfedge& newHalfedge);
 
     // Other helper methods
     void collectDependentNodes_(Node* node, std::unordered_set<Node*>& dependentNodes);

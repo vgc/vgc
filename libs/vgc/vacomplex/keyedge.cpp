@@ -135,7 +135,7 @@ void KeyEdge::substituteKeyVertex_(KeyVertex* oldVertex, KeyVertex* newVertex) {
     }
 }
 
-void KeyEdge::substituteKeyHalfedge_(
+void KeyEdge::substituteKeyEdge_(
     const class KeyHalfedge& /*oldHalfedge*/,
     const class KeyHalfedge& /*newHalfedge*/) {
     // no-op
