@@ -64,18 +64,37 @@ bool areOffsetLinesAnglesUnderTolerance(
     const StrokeSampleEx2d& s2,
     double cosMaxAngle) {
 
+    // Cusp tolerance (halfwidth to maximal offset delta)
+    // Prevents adding cusp samples which are usually not
+    // visible without zooming in or simply hidden by self-overlap.
+    constexpr double ct = 0.001;
+    constexpr double cta = ct / 3.; // halfwidth averaging factor included
+
     // Test angle between offset line segments of s0s1 and s1s2 on both sides.
+    // Side 1 (left with x-right y-down)
     Vec2d l01 = s1.offsetPoint(1) - s0.offsetPoint(1);
     Vec2d l12 = s2.offsetPoint(1) - s1.offsetPoint(1);
-    double ll = l01.length() * l12.length();
-    if (l01.dot(l12) < cosMaxAngle * ll) {
-        return false;
+
+    double l01l = l01.length();
+    double l12l = l12.length();
+    if (l01.dot(l12) < cosMaxAngle * l01l * l12l) {
+        // Test if sample is really useful in aspect (cusp point).
+        double ltol = (s0.halfwidth(1) + s1.halfwidth(1) + s2.halfwidth(1)) * cta;
+        if (ltol > core::epsilon && l01l > ltol && l12l > ltol) {
+            return false;
+        }
     }
+    // Side 0
     Vec2d r01 = s1.offsetPoint(0) - s0.offsetPoint(0);
     Vec2d r12 = s2.offsetPoint(0) - s1.offsetPoint(0);
-    double rl = r01.length() * r12.length();
-    if (r01.dot(r12) < cosMaxAngle * rl) {
-        return false;
+    double r01l = r01.length();
+    double r12l = r12.length();
+    if (r01.dot(r12) < cosMaxAngle * r01l * r12l) {
+        // Test if sample is really useful in aspect (cusp point).
+        double rtol = (s0.halfwidth(0) + s1.halfwidth(0) + s2.halfwidth(0)) * cta;
+        if (rtol > core::epsilon && r01l > rtol && r12l > rtol) {
+            return false;
+        }
     }
     return true;
 }
