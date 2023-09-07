@@ -79,8 +79,9 @@ bool areOffsetLinesAnglesUnderTolerance(
     double l12l = l12.length();
     if (l01.dot(l12) < cosMaxAngle * l01l * l12l) {
         // Test if sample is really useful in aspect (cusp point).
-        double ltol = (s0.halfwidth(1) + s1.halfwidth(1) + s2.halfwidth(1)) * cta;
-        if (ltol > core::epsilon && l01l > ltol && l12l > ltol) {
+        double averageHalfwidth = s0.halfwidth(1) + s1.halfwidth(1) + s2.halfwidth(1);
+        double ltol = std::abs(averageHalfwidth) * cta;
+        if (l01l > ltol && l12l > ltol) {
             return false;
         }
     }
@@ -91,8 +92,9 @@ bool areOffsetLinesAnglesUnderTolerance(
     double r12l = r12.length();
     if (r01.dot(r12) < cosMaxAngle * r01l * r12l) {
         // Test if sample is really useful in aspect (cusp point).
-        double rtol = (s0.halfwidth(0) + s1.halfwidth(0) + s2.halfwidth(0)) * cta;
-        if (rtol > core::epsilon && r01l > rtol && r12l > rtol) {
+        double averageHalfwidth = s0.halfwidth(0) + s1.halfwidth(0) + s2.halfwidth(0);
+        double rtol = std::abs(averageHalfwidth) * cta;
+        if (r01l > rtol && r12l > rtol) {
             return false;
         }
     }
