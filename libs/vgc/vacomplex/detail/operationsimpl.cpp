@@ -602,11 +602,12 @@ KeyEdge* Operations::glueKeyClosedEdges(core::ConstSpan<KeyEdge*> kes) {
                 double costEjRk = 0;
                 for (Int iCostSample = 0; iCostSample < numCostSamples; ++iCostSample) {
                     // the shift must be reversed for use with AbstractStroke2d
-                    Int iSample = (iCostSample * costSampleStride + k) % numSamples;
-                    Int iSampleR = numSamples - 1 - iSample;
+                    Int iSample = iCostSample * costSampleStride;
+                    Int jSample = (iSample + k) % numSamples;
+                    Int jSampleR = numSamples - 1 - jSample;
                     const geometry::Vec2d& s0i = s0.getUnchecked(iSample);
-                    costEjk += (s0i - s1.getUnchecked(iSample)).squaredLength();
-                    costEjRk += (s0i - s1.getUnchecked(iSampleR)).squaredLength();
+                    costEjk += (s0i - s1.getUnchecked(jSample)).squaredLength();
+                    costEjRk += (s0i - s1.getUnchecked(jSampleR)).squaredLength();
                 }
                 if (costEjk < bestCostEj) {
                     tmpUOffsets[j] = deltaU * k;

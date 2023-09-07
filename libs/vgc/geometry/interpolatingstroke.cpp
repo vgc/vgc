@@ -633,7 +633,7 @@ void AbstractInterpolatingStroke2d::assignFromAverage_(
             // Compute an interpolation between the two curve with the given direction.
 
             ThickPoint p0a = newPoints.first();
-            ThickPoint p1a = ThickPoint(samples.first(), arclength);
+            ThickPoint p1a(samples.first(), arclength);
 
             ThickPoint p01a = p0a;
             p01a.pos += p1a.pos;
@@ -647,7 +647,7 @@ void AbstractInterpolatingStroke2d::assignFromAverage_(
 
             for (Int i = 1; i < n - 1; ++i) {
                 const ThickPoint& p0b = newPoints[i0];
-                ThickPoint p1b = ThickPoint(samples[i1], arclength);
+                ThickPoint p1b(samples[i1], arclength);
                 bool canIterate0 = i0 < n0 - 1;
                 bool canIterate1 = i1 < n1 - 1;
                 if (canIterate1 && (p0b.u > p1b.u || !canIterate0)) {
@@ -674,7 +674,18 @@ void AbstractInterpolatingStroke2d::assignFromAverage_(
                 }
             }
 
-            newPoints.append(newPoints.first());
+            if (areClosed) {
+                tmp.append(tmp.first());
+            }
+            else {
+                const ThickPoint& tp0 = newPoints.last();
+                ThickPoint tp(samples.last(), arclength);
+                tp.pos += tp0.pos;
+                tp.width += tp0.width;
+                tp.u = 1.;
+                tmp.append(tp);
+            }
+
             newPoints.swap(tmp);
             tmp.clear();
         }
