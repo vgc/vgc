@@ -387,13 +387,17 @@ KeyEdge* Operations::glueKeyOpenEdges(core::ConstSpan<KeyEdge*> kes) {
         bool isBestDirectionKnown = false;
         bool direction1 = true;
         if (!isAnyLoop) {
-            if ((ke00 == ke10) || (ke01 == ke11)) {
+            bool shared00 = ke00 == ke10;
+            bool shared11 = ke01 == ke11;
+            bool shared01 = ke00 == ke11;
+            bool shared10 = ke01 == ke10;
+            if (shared00 != shared11) {
                 // If the two edges have the same start vertex or the same
                 // end vertex, we glue them in their intrinsic direction.
                 direction1 = true;
                 isBestDirectionKnown = true;
             }
-            else if ((ke00 == ke11) || (ke01 == ke10)) {
+            else if (shared01 != shared10) {
                 // If the start (resp. end) vertex of ke0 is equal to the
                 // end (resp. start) vertex of ke1, we want to glue them in reverse.
                 direction1 = false;
