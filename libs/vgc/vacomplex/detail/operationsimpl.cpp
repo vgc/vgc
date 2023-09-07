@@ -1501,6 +1501,15 @@ UncutAtKeyEdgeResult Operations::uncutAtKeyEdge(KeyEdge* targetKe) {
                 }
             }
 
+            for (KeyCycle& cycle : info.kf2->cycles_) {
+                if (cycle.steinerVertex()) {
+                    newCycles.append(cycle);
+                }
+                else if (cycle.halfedges_.first().edge() != targetKe) {
+                    newCycles.append(cycle);
+                }
+            }
+
             std::array<Node*, 2> kfs = {info.kf1, info.kf2};
             Node* bottomMostFace = findBottomMost(kfs);
             Group* parentGroup = bottomMostFace->parentGroup();
