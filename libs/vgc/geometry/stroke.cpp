@@ -58,32 +58,100 @@ bool isCenterlineSegmentUnderTolerance(
     return true;
 }
 
+namespace {
+
+// Prevents over-sampling in the presence of cusps. These samples would
+// typically only be visible when aggressively zooming in, or would not visible
+// at all due to self-overlap.
+//
+// Note: currently, the cusp detection gives a "yes/no" answer. If the ratio
+// passes the threshold, it's considered a cusp and we stop sampling, otherwise
+// we keep sampling as normal. Instead, in the future, we may want to try to
+// use the ratio as a "cuspness" factor, and multiply/incorporate it in the
+// angle threshold:
+//
+// Current pseudo-code:
+//   if angle > angleThreshold and cuspness < cuspThreshold:
+//       keepSampling()
+//
+// Some idea to try:
+//   if angle > angleThreshold * (1 + cuspness):
+//       keepSampling()
+//
+// In other words, the higher the cuspness, the higher the angleThreshold.
+//
+enum class CuspDetectionMethod {
+    None,
+    WidthRatio,
+    CenterlineRatio
+};
+
+// This constant is used with CuspDetectionMethod::WidthRatio.
+//
+// It represents the smallest allowed ratio ds / hw, where:
+// - ds = distance between the offset line samples
+// - hw = halfwidth of the stroke at this sample
+//
+// The "prep" version is a pre-prepared value taking into
+// account the averaging factor (hw0 + hw1 + hw2) / 3.
+//
+constexpr double cuspWidthRatio = 0.01;
+constexpr double cuspWidthRatioPrep = cuspWidthRatio / 3.;
+
+// This constant is used with CuspDetectionMethod::CenterlineRatio.
+//
+// It represents the smallest allowed ratio dso / dsc, where:
+// - dso = distance between the offset line samples
+// - dsc = distance between the centerline samples
+//
+constexpr double cuspCenterlineRatio = 0.5;
+
+} // namespace
+
 bool areOffsetLinesAnglesUnderTolerance(
     const StrokeSampleEx2d& s0,
     const StrokeSampleEx2d& s1,
     const StrokeSampleEx2d& s2,
     double cosMaxAngle) {
 
-    // Cusp tolerance (halfwidth to maximal offset delta)
-    // Prevents adding cusp samples which are usually not
-    // visible without zooming in or simply hidden by self-overlap.
-    constexpr double ct = 0.001;
-    constexpr double cta = ct / 3.; // halfwidth averaging factor included
+    // Choose method for cusp detection
+    using Cdm = CuspDetectionMethod;
+    constexpr Cdm cuspDetectionMethod = Cdm::WidthRatio;
+
+    // Precompute data needed for cusp detection
+    [[maybe_unused]] double c01l; // no init
+    [[maybe_unused]] double c12l; // no init
+    if constexpr (cuspDetectionMethod == Cdm::CenterlineRatio) {
+        Vec2d c01 = s1.position() - s0.position();
+        Vec2d c12 = s2.position() - s1.position();
+        c01l = c01.length();
+        c12l = c12.length();
+    }
 
     // Test angle between offset line segments of s0s1 and s1s2 on both sides.
     // Side 1 (left with x-right y-down)
     Vec2d l01 = s1.offsetPoint(1) - s0.offsetPoint(1);
     Vec2d l12 = s2.offsetPoint(1) - s1.offsetPoint(1);
-
     double l01l = l01.length();
     double l12l = l12.length();
     if (l01.dot(l12) < cosMaxAngle * l01l * l12l) {
-        // Test if sample is really useful in aspect (cusp point).
-        double averageHalfwidth = s0.halfwidth(1) + s1.halfwidth(1) + s2.halfwidth(1);
-        double ltol = std::abs(averageHalfwidth) * cta;
-        if (l01l > ltol && l12l > ltol) {
+        if constexpr (cuspDetectionMethod == Cdm::WidthRatio) {
+            double averageHalfwidth = s0.halfwidth(1) + s1.halfwidth(1) + s2.halfwidth(1);
+            double ltol = std::abs(averageHalfwidth) * cuspWidthRatioPrep;
+            if (l01l > ltol && l12l > ltol) {
+                return false;
+            }
+        }
+        else if constexpr (cuspDetectionMethod == Cdm::CenterlineRatio) {
+            if ((l01l > (c01l * cuspCenterlineRatio))
+                && (l12l > (c12l * cuspCenterlineRatio))) {
+                return false;
+            }
+        }
+        else { // None
             return false;
         }
+        // Test if sample is really useful in aspect (cusp point).
     }
     // Side 0
     Vec2d r01 = s1.offsetPoint(0) - s0.offsetPoint(0);
@@ -91,10 +159,20 @@ bool areOffsetLinesAnglesUnderTolerance(
     double r01l = r01.length();
     double r12l = r12.length();
     if (r01.dot(r12) < cosMaxAngle * r01l * r12l) {
-        // Test if sample is really useful in aspect (cusp point).
-        double averageHalfwidth = s0.halfwidth(0) + s1.halfwidth(0) + s2.halfwidth(0);
-        double rtol = std::abs(averageHalfwidth) * cta;
-        if (r01l > rtol && r12l > rtol) {
+        if constexpr (cuspDetectionMethod == Cdm::WidthRatio) {
+            double averageHalfwidth = s0.halfwidth(0) + s1.halfwidth(0) + s2.halfwidth(0);
+            double rtol = std::abs(averageHalfwidth) * cuspWidthRatioPrep;
+            if (r01l > rtol && r12l > rtol) {
+                return false;
+            }
+        }
+        else if constexpr (cuspDetectionMethod == Cdm::CenterlineRatio) {
+            if ((r01l > (c01l * cuspCenterlineRatio))
+                && (r12l > (c12l * cuspCenterlineRatio))) {
+                return false;
+            }
+        }
+        else { // None
             return false;
         }
     }
