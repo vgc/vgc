@@ -342,7 +342,7 @@ public:
     ///
     void hardDelete(core::ConstSpan<core::Id> elementIds);
 
-    /// Uncuts or Deletes the given elements and all incident elements, if any.
+    /// Uncuts or deletes the given elements and all incident elements, if any.
     ///
     /// \sa `cut()`.
     ///
