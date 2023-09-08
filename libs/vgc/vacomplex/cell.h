@@ -850,9 +850,6 @@ protected:
         hasMeshBeenQueriedSinceLastDirtyEvent_ = true;
     }
 
-    void bindCellProperties(CellProperties* properties);
-    void unbindCellProperties(CellProperties* properties);
-
     virtual void dirtyMesh_();
     virtual bool updateGeometryFromBoundary_();
 
