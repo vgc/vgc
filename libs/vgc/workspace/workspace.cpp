@@ -536,9 +536,9 @@ Workspace::simplify(core::ConstSpan<core::Id> elementIds, bool smoothJoins) {
     };
 
     for (vacomplex::KeyEdge* ke : kes) {
-        vacomplex::KeyFace* uncutFace = vacomplex::ops::uncutAtKeyEdge(ke);
-        if (uncutFace) {
-            appendToResult(uncutFace);
+        vacomplex::Cell* cell = vacomplex::ops::uncutAtKeyEdge(ke);
+        if (cell) {
+            appendToResult(cell);
         }
         else {
             // uncut failed, return the edge id
@@ -547,9 +547,9 @@ Workspace::simplify(core::ConstSpan<core::Id> elementIds, bool smoothJoins) {
     }
 
     for (vacomplex::KeyVertex* kv : kvs) {
-        vacomplex::KeyEdge* uncutEdge = vacomplex::ops::uncutAtKeyVertex(kv, smoothJoins);
-        if (uncutEdge) {
-            appendToResult(uncutEdge);
+        vacomplex::Cell* cell = vacomplex::ops::uncutAtKeyVertex(kv, smoothJoins);
+        if (cell) {
+            appendToResult(cell);
         }
         else {
             // uncut failed, return the vertex id

@@ -402,20 +402,39 @@ core::Array<KeyVertex*> unglueKeyVertices(
     return ops.unglueKeyVertices(kv, ungluedKeyEdges);
 }
 
-KeyEdge* uncutAtKeyVertex(KeyVertex* kv, bool smoothJoin) {
+Cell* uncutAtKeyVertex(KeyVertex* kv, bool smoothJoin) {
     if (!kv) {
         throw LogicError("uncutAtKeyVertex: kv is nullptr.");
     }
     detail::Operations ops(kv->complex());
-    return ops.uncutAtKeyVertex(kv, smoothJoin).resultKe;
+    detail::UncutAtKeyVertexResult res = ops.uncutAtKeyVertex(kv, smoothJoin);
+    if (res.success) {
+        VGC_ASSERT(res.resultKe || res.resultKf);
+        if (res.resultKe) {
+            return res.resultKe;
+        }
+        else {
+            return res.resultKf;
+        }
+    }
+    else {
+        return nullptr;
+    }
 }
 
-KeyFace* uncutAtKeyEdge(KeyEdge* ke) {
+Cell* uncutAtKeyEdge(KeyEdge* ke) {
     if (!ke) {
         throw LogicError("uncutAtKeyEdge: ke is nullptr.");
     }
     detail::Operations ops(ke->complex());
-    return ops.uncutAtKeyEdge(ke).resultKf;
+    detail::UncutAtKeyEdgeResult res = ops.uncutAtKeyEdge(ke);
+    if (res.success) {
+        VGC_ASSERT(res.resultKf);
+        return res.resultKf;
+    }
+    else {
+        return nullptr;
+    }
 }
 
 void moveToGroup(Node* node, Group* parentGroup, Node* nextSibling) {

@@ -696,30 +696,42 @@ core::Array<KeyCell*> Operations::simplify(
     std::unordered_set<core::Id> resultFaceIds;
 
     for (KeyEdge* ke : kes) {
-        UncutAtKeyEdgeResult uncutFace = uncutAtKeyEdge(ke);
-        if (uncutFace.success) {
-            resultFaceIds.erase(uncutFace.removedKfId1);
-            resultFaceIds.erase(uncutFace.removedKfId2);
-            if (uncutFace.resultKf) {
-                resultFaceIds.insert(uncutFace.resultKf->id());
+        UncutAtKeyEdgeResult res = uncutAtKeyEdge(ke);
+        if (res.success) {
+            if (res.removedKfId1) {
+                resultFaceIds.erase(res.removedKfId1);
+            }
+            if (res.removedKfId2) {
+                resultFaceIds.erase(res.removedKfId2);
+            }
+            if (res.resultKf) {
+                resultFaceIds.insert(res.resultKf->id());
             }
         }
-        else { // uncut failed
+        else {
+            // cannot uncut at edge: add it to the list of returned cells
             resultEdgeIds.insert(ke->id());
         }
     }
 
     for (KeyVertex* kv : kvs) {
-        UncutAtKeyVertexResult uncutEdge = uncutAtKeyVertex(kv, smoothJoins);
-        if (uncutEdge.success) {
-            resultEdgeIds.erase(uncutEdge.removedKeId1);
-            resultEdgeIds.erase(uncutEdge.removedKeId2);
-            if (uncutEdge.resultKe) {
-                resultEdgeIds.insert(uncutEdge.resultKe->id());
+        UncutAtKeyVertexResult res = uncutAtKeyVertex(kv, smoothJoins);
+        if (res.success) {
+            if (res.removedKeId1) {
+                resultEdgeIds.erase(res.removedKeId1);
+            }
+            if (res.removedKeId2) {
+                resultEdgeIds.erase(res.removedKeId2);
+            }
+            if (res.resultKe) {
+                resultEdgeIds.insert(res.resultKe->id());
+            }
+            if (res.resultKf) {
+                resultFaceIds.insert(res.resultKe->id());
             }
         }
         else {
-            // uncut failed, return the vertex
+            // cannot uncut at vertex: add it to the list of returned cells
             result.append(kv);
         }
     }
@@ -1333,6 +1345,7 @@ Operations::uncutAtKeyVertex(KeyVertex* targetKv, bool smoothJoin) {
         info.kf->cycles_.removeAt(info.cycleIndex);
         removeFromBoundary_(info.kf, targetKv);
 
+        result.resultKf = info.kf;
         result.success = true;
     }
     else if (info.khe1.edge() == info.khe2.edge()) {
@@ -1358,7 +1371,7 @@ Operations::uncutAtKeyVertex(KeyVertex* targetKv, bool smoothJoin) {
             removeFromBoundary_(cell, targetKv);
         }
 
-        // Delete oldKe and targetKv
+        // Delete oldKe
         result.removedKeId1 = oldKe->id();
         hardDelete(oldKe);
 
@@ -1425,7 +1438,7 @@ Operations::uncutAtKeyVertex(KeyVertex* targetKv, bool smoothJoin) {
             addToBoundary_(kf, newKe);
         }
 
-        // Delete khe1, khe2 and targetKv
+        // Delete khe1, khe2
         result.removedKeId1 = info.khe1.edge()->id();
         result.removedKeId2 = info.khe2.edge()->id();
 

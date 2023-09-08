@@ -28,18 +28,25 @@ namespace vgc::vacomplex {
 
 namespace detail {
 
+// Note: this struct cannot be publicized as is, as we first need to generalize
+// it in the presence of inbetween vertices.
+//
 struct UncutAtKeyVertexResult {
     core::Id removedKeId1 = 0;
     core::Id removedKeId2 = 0;
     KeyEdge* resultKe = nullptr;
-    bool success = false;
+    KeyFace* resultKf = nullptr;
+    bool success = false; // whether an uncut actually happened
 };
 
+// Note: this struct cannot be publicized as is, as we first need to generalize
+// it in the presence of inbetween edges.
+//
 struct UncutAtKeyEdgeResult {
     core::Id removedKfId1 = 0;
     core::Id removedKfId2 = 0;
     KeyFace* resultKf = nullptr;
-    bool success = false;
+    bool success = false; // whether an uncut actually happened
 };
 
 class VGC_VACOMPLEX_API Operations {
