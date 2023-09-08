@@ -385,8 +385,16 @@ private:
     // Guard against recursion when calling clear() / resetRoot()
     bool isBeingCleared_ = false;
     Int numOperationsInProgress_ = 0;
-    core::Array<Cell*> temporaryCellSet_;
+
+    // Stores the diff of operations that have taken place
+    // and not yet emitted.
     ComplexDiff opDiff_ = {};
+
+    // This set is used in the implementation of some operations to check later
+    // whether a given cell is still alive. Any cell added to this set will
+    // be automatically removed from the set when the cell is deleted.
+    //
+    core::Array<Cell*> temporaryCellSet_;
 };
 
 } // namespace vgc::vacomplex
