@@ -337,27 +337,6 @@ void Operations::hardDelete(Node* node, bool deleteIsolatedVertices) {
     destroyNodes_(nodesToDestroyArray);
 }
 
-/*
-
-softDeleteRec<Dim, MaxDim>(Array<Cell<Dim>> cells)
-
-    for (Int i = Dim + 1; i < MaxDim && result; ++i) {
-        Array<Cell<Dim>> notuncut;
-        for (c : cells) {
-            if (canUncut(c)) {
-                uncut(c);
-            }
-            else {
-                notuncut.append(c);
-            }
-        }
-        Array<Cell<Dim+1>> directStar = directStar(notuncut);
-        softDeleteRec<Dim, i>(directStar);
-    }
-}
-
-*/
-
 namespace {
 
 class ClassifiedCells {
