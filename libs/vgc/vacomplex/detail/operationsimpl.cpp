@@ -1382,12 +1382,12 @@ Operations::uncutAtKeyVertex(KeyVertex* targetKv, bool smoothJoin) {
         newData->isClosed_ = true;
         newData->stroke_->close(smoothJoin);
 
-        // Create new edge e'
+        // Create new edge
         newKe = createKeyClosedEdge(
             std::move(newData), oldKe->parentGroup(), oldKe->nextSibling());
         result.resultKe = newKe;
 
-        // Substitute all usages of (e1, e2) by e in incident faces.
+        // Substitute all usages of old edge by new edge
         KeyHalfedge oldKhe(oldKe, true);
         KeyHalfedge newKhe(newKe, true);
         substituteEdge_(oldKhe, newKhe);
