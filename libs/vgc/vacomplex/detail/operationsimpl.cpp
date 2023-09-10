@@ -1619,9 +1619,9 @@ UncutAtKeyEdgeResult Operations::uncutAtKeyEdge(KeyEdge* targetKe) {
                 // hole, starting from a torus with two holes that share a
                 // common edge.
                 //
-                //    _____________          ___________          ___________
-                //   /             \        /           \        /           \
-                //  /      ___  f   \      /     ___  f  \      /     ___  f  \
+                //    ____________           ___________          ___________
+                //   /            `.        /           `.       /           `.
+                //  /      ___  f   \      /     ___  f  |      /     ___  f  |
                 //  |     (   )     | ---> |    (   )    | ---> |    (   )    |
                 //  \  o---o o---o  /      \  o---o---o  /      \  o---o---o  /
                 //   \ | e1| |e2 | /        \ |   |e  | /        \ |       | /
