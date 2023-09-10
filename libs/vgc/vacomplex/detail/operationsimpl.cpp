@@ -1619,13 +1619,13 @@ UncutAtKeyEdgeResult Operations::uncutAtKeyEdge(KeyEdge* targetKe) {
                 // hole, starting from a torus with two holes that share a
                 // common edge.
                 //
-                //    ____________           ___________          ___________
-                //   /            `.        /           `.       /           `.
-                //  /      ___  f   \      /     ___  f  |      /     ___  f  |
-                //  |     (   )     | ---> |    (   )    | ---> |    (   )    |
-                //  \  o---o o---o  /      \  o---o---o  /      \  o---o---o  /
-                //   \ | e1| |e2 | /        \ |   |e  | /        \ |       | /
-                //    'o---o o---o'   glue   'o---o---o'   uncut  'o---o---o'
+                //    _____________          ___________          ___________
+                //   ╱             ╲        ╱           ╲        ╱           ╲
+                //  ╱      ___  f   ╲      ╱     ___  f  ╲      ╱     ___  f  ╲
+                // (      (   )      ) -> (     (   )     ) -> (     (   )     )
+                //  ╲  o---o o---o  ╱      ╲  o---o---o  ╱      ╲  o---o---o  ╱
+                //   ╲ | e1| |e2 | ╱        ╲ |   |e  | ╱        ╲ |       | ╱
+                //     o---o o---o    glue    o---o---o    uncut   o---o---o
                 //                  (e1, e2)                (e)
                 //
                 //    Cylinder with       Torus with 2 holes       Torus with
