@@ -295,6 +295,16 @@ public:
     ///
     core::Array<core::Id> unglue(core::ConstSpan<core::Id> elementIds);
 
+    /// Performs uncut operations on the given elements.
+    ///
+    /// This is both a geometrical and topological operation.
+    ///
+    /// This function supports uncutting an arbitrary number of key vertices
+    /// or key edges.
+    ///
+    core::Array<core::Id>
+    simplify(core::ConstSpan<core::Id> elementIds, bool smoothJoins);
+
     /// Makes a copy of the given elements in the form of a new document (see
     /// `copy()` for details), then deletes the elements and return the new
     /// document.
@@ -330,9 +340,13 @@ public:
 
     /// Deletes the given elements and all incident elements, if any.
     ///
+    void hardDelete(core::ConstSpan<core::Id> elementIds);
+
+    /// Uncuts or deletes the given elements and all incident elements, if any.
+    ///
     /// \sa `cut()`.
     ///
-    void hardDelete(core::ConstSpan<core::Id> elementIds);
+    void softDelete(core::ConstSpan<core::Id> elementIds);
 
     /// This signal is emitted whenever the workspace changes, either
     /// as a result of the DOM changing, or the topological complex

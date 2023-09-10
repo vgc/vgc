@@ -24,6 +24,7 @@
 #include <vgc/vacomplex/api.h>
 #include <vgc/vacomplex/cell.h>
 #include <vgc/vacomplex/keycycle.h>
+#include <vgc/vacomplex/keyfacedata.h>
 
 namespace vgc::vacomplex {
 
@@ -57,7 +58,8 @@ private:
     friend detail::Operations;
 
     explicit KeyFace(core::Id id, core::AnimTime t) noexcept
-        : SpatioTemporalCell(id, t) {
+        : SpatioTemporalCell(id, t)
+        , data_(this, detail::KeyFacePrivateKey{}) {
     }
 
 public:
@@ -67,12 +69,21 @@ public:
         return cycles_;
     }
 
+    KeyFaceData& data() {
+        return data_;
+    }
+
+    const KeyFaceData& data() const {
+        return data_;
+    }
+
 private:
     core::Array<KeyCycle> cycles_;
+    KeyFaceData data_;
 
     void substituteKeyVertex_(KeyVertex* oldVertex, KeyVertex* newVertex) override;
 
-    void substituteKeyHalfedge_(
+    void substituteKeyEdge_(
         const class KeyHalfedge& oldHalfedge,
         const class KeyHalfedge& newHalfedge) override;
 

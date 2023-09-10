@@ -49,8 +49,24 @@ public:
         fillGeometry_.reset();
     }
 
+    bool hasStyle() const {
+        return !isStyleDirty_;
+    }
+
+    // currently not an independent graphics object
+    void setStyle() {
+        isStyleDirty_ = false;
+    }
+
+    void clearStyle() {
+        isStyleDirty_ = true;
+    }
+
 private:
     graphics::GeometryViewPtr fillGeometry_;
+
+    // Style
+    bool isStyleDirty_ = true;
 };
 
 class VGC_WORKSPACE_API VacFaceCellFrameData {
@@ -74,6 +90,10 @@ public:
         return time_;
     }
 
+    const core::Color& color() const {
+        return color_;
+    }
+
     const FaceGraphics& graphics() const {
         return graphics_;
     }
@@ -86,13 +106,19 @@ public:
 
 private:
     core::AnimTime time_;
+    geometry::Rect2d bbox_ = {};
+
     // At the time of definition Curves2d only returns an array of triangle list vertices.
     // TODO: use indexed geometry.
     core::FloatArray triangulation_;
-    geometry::Rect2d bbox_ = {};
-    FaceGraphics graphics_;
+
+    // style (independent stage)
     core::Color color_;
-    bool hasPendingColorChange_ = false;
+    bool isStyleDirty_ = true;
+
+    // Note: only valid for a single engine at the moment.
+    FaceGraphics graphics_;
+
     bool isFillMeshComputed_ = false;
     bool isComputing_ = false;
 };
@@ -178,10 +204,27 @@ private:
     ElementStatus onDependencyChanged_(Element* dependency, ChangeFlags changes) override;
     ElementStatus onDependencyRemoved_(Element* dependency) override;
 
+    // returns whether style changed
+    static bool updatePropertiesFromDom_(
+        vacomplex::KeyFaceData* data,
+        const dom::Element* domElement);
+    static void writePropertiesToDom_(
+        dom::Element* domElement,
+        const vacomplex::KeyFaceData* data,
+        core::ConstSpan<core::StringId> propNames);
+    static void writeAllPropertiesToDom_(
+        dom::Element* domElement,
+        const vacomplex::KeyFaceData* data);
+
     ElementStatus updateFromDom_(Workspace* workspace) override;
+
     void updateFromVac_(vacomplex::NodeModificationFlags flags) override;
 
     void updateDependencies_(core::Array<Element*> sortedNewDependencies);
+
+    bool computeStrokeStyle_();
+
+    void dirtyStrokeStyle_(bool notifyDependentsImmediately = true);
 
     bool computeFillMesh_();
 

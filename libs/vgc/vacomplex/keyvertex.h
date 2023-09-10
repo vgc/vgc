@@ -55,7 +55,7 @@ private:
 
     void substituteKeyVertex_(KeyVertex* oldVertex, KeyVertex* newVertex) override;
 
-    void substituteKeyHalfedge_(
+    void substituteKeyEdge_(
         const KeyHalfedge& oldHalfedge,
         const KeyHalfedge& newHalfedge) override;
 

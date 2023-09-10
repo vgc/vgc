@@ -147,12 +147,75 @@ void hardDelete(Node* node, bool deleteIsolatedVertices) {
     ops.hardDelete(node, deleteIsolatedVertices);
 }
 
-void softDelete(Node* node, bool deleteIsolatedVertices) {
-    if (!node) {
-        throw LogicError("softDelete: node is nullptr.");
+void softDelete(core::ConstSpan<Node*> nodes, bool deleteIsolatedVertices) {
+    if (nodes.isEmpty()) {
+        return;
     }
-    detail::Operations ops(node->complex());
-    ops.softDelete(node, deleteIsolatedVertices);
+    Complex* complex0 = nodes.first()->complex();
+
+    for (Node* node : nodes) {
+        if (!node) {
+            throw LogicError("softDelete: a node is nullptr.");
+        }
+        if (node->complex() != complex0) {
+            throw LogicError(
+                "softDelete: a node is from a different complex than the others.");
+        }
+    }
+
+    detail::Operations ops(complex0);
+    ops.softDelete(nodes, deleteIsolatedVertices);
+}
+
+core::Array<KeyCell*>
+simplify(core::Span<KeyVertex*> kvs, core::Span<KeyEdge*> kes, bool smoothJoins) {
+
+    Complex* complex = nullptr;
+    core::AnimTime t0 = {};
+    if (kvs.isEmpty()) {
+        if (kes.isEmpty()) {
+            return {};
+        }
+        complex = kes[0]->complex();
+        t0 = kes[0]->time();
+    }
+    else {
+        complex = kvs[0]->complex();
+        t0 = kvs[0]->time();
+    }
+
+    for (auto it = kvs.begin() + 1; it != kvs.end(); ++it) {
+        KeyVertex* kv = *it;
+        if (std::find(kvs.begin(), it, kv) != it) {
+            throw LogicError("simplify: duplicate vertex in list.");
+        }
+        if (kv->complex() != complex) {
+            throw LogicError("simplify: a key vertex is from a different complex than "
+                             "the others or edges.");
+        }
+        if (kv->time() != t0) {
+            throw LogicError("simplify: a key vertex is from a different time than the "
+                             "others or edges.");
+        }
+    }
+
+    for (auto it = kes.begin() + 1; it != kes.end(); ++it) {
+        KeyEdge* ke = *it;
+        if (std::find(kes.begin(), it, ke) != it) {
+            throw LogicError("simplify: duplicate edge in list.");
+        }
+        if (ke->complex() != complex) {
+            throw LogicError("simplify: a key edge is from a different complex than "
+                             "the others or vertices.");
+        }
+        if (ke->time() != t0) {
+            throw LogicError("simplify: a key edge is from a different time than the "
+                             "others or vertices.");
+        }
+    }
+
+    detail::Operations ops(complex);
+    return ops.simplify(kvs, kes, smoothJoins);
 }
 
 KeyVertex*
@@ -337,6 +400,41 @@ core::Array<KeyVertex*> unglueKeyVertices(
     }
     detail::Operations ops(kv->complex());
     return ops.unglueKeyVertices(kv, ungluedKeyEdges);
+}
+
+Cell* uncutAtKeyVertex(KeyVertex* kv, bool smoothJoin) {
+    if (!kv) {
+        throw LogicError("uncutAtKeyVertex: kv is nullptr.");
+    }
+    detail::Operations ops(kv->complex());
+    detail::UncutAtKeyVertexResult res = ops.uncutAtKeyVertex(kv, smoothJoin);
+    if (res.success) {
+        VGC_ASSERT(res.resultKe || res.resultKf);
+        if (res.resultKe) {
+            return res.resultKe;
+        }
+        else {
+            return res.resultKf;
+        }
+    }
+    else {
+        return nullptr;
+    }
+}
+
+Cell* uncutAtKeyEdge(KeyEdge* ke) {
+    if (!ke) {
+        throw LogicError("uncutAtKeyEdge: ke is nullptr.");
+    }
+    detail::Operations ops(ke->complex());
+    detail::UncutAtKeyEdgeResult res = ops.uncutAtKeyEdge(ke);
+    if (res.success) {
+        VGC_ASSERT(res.resultKf);
+        return res.resultKf;
+    }
+    else {
+        return nullptr;
+    }
 }
 
 void moveToGroup(Node* node, Group* parentGroup, Node* nextSibling) {

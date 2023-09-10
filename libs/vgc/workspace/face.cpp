@@ -21,6 +21,8 @@
 #include <vgc/geometry/triangle2f.h>
 #include <vgc/workspace/colors.h>
 #include <vgc/workspace/edge.h>
+#include <vgc/workspace/strings.h>
+#include <vgc/workspace/style.h>
 #include <vgc/workspace/workspace.h>
 
 namespace vgc::workspace {
@@ -145,6 +147,7 @@ const VacFaceCellFrameData* VacKeyFace::computeFrameDataAt(core::AnimTime t) {
 void VacKeyFace::onPaintPrepare(core::AnimTime /*t*/, PaintOptions /*flags*/) {
     // todo, use paint options to not compute everything or with lower quality
     computeFillMesh_();
+    computeStrokeStyle_();
 }
 
 void VacKeyFace::onPaintDraw(
@@ -160,6 +163,7 @@ void VacKeyFace::onPaintDraw(
 
     // if not already done (should we leave preparePaint_ optional?)
     const_cast<VacKeyFace*>(this)->computeFillMesh_();
+    const_cast<VacKeyFace*>(this)->computeStrokeStyle_();
 
     using namespace graphics;
     namespace ds = dom::strings;
@@ -169,8 +173,10 @@ void VacKeyFace::onPaintDraw(
     constexpr PaintOptions fillOptions = {PaintOption::Selected, PaintOption::Draft};
 
     // XXX todo: reuse geometry objects, create buffers separately (attributes waiting in FaceGraphics).
-    FaceGraphics& graphics = frameData_.graphics_;
-    core::Color color = frameData_.color_;
+    FaceGraphics& graphics = data.graphics_;
+
+    bool hasPendingColorUpdate = !graphics.hasStyle();
+    core::Color color = data.color();
 
     bool hasNewFillGraphics = false;
     if ((flags.hasAny(fillOptions) || !flags.has(PaintOption::Outline))
@@ -185,13 +191,13 @@ void VacKeyFace::onPaintDraw(
             graphics.fillGeometry()->vertexBuffer(0), //
             frameData_.triangulation_);
     }
-    if (graphics.fillGeometry() && (data.hasPendingColorChange_ || hasNewFillGraphics)) {
+    if (graphics.fillGeometry() && (hasPendingColorUpdate || hasNewFillGraphics)) {
         engine->updateBufferData(
             graphics.fillGeometry()->vertexBuffer(1), //
             core::Array<float>({color.r(), color.g(), color.b(), color.a()}));
     }
 
-    data.hasPendingColorChange_ = false;
+    graphics.setStyle();
 
     if (flags.has(PaintOption::Selected)) {
         const core::Color& c = colors::selection;
@@ -200,9 +206,9 @@ void VacKeyFace::onPaintDraw(
         engine->updateBufferData(buffer, std::move(bufferData));
         engine->setProgram(graphics::BuiltinProgram::SimplePreview);
         engine->draw(graphics.fillGeometry());
-        data.hasPendingColorChange_ = true;
+        graphics.clearStyle();
         // For now we share the same GeometryView for PaintOption::Selected and
-        // PaintOption::None, so we set hasPendingColorChange_ to true so that
+        // PaintOption::None, so we reset the graphics style so that
         // in the next onPaintDraw(PaintOption::None), we go again in the code
         // path updating the face color.
     }
@@ -231,6 +237,79 @@ ElementStatus VacKeyFace::onDependencyRemoved_(Element* /*dependency*/) {
         status = ElementStatus::UnresolvedDependency;
     }
     return status;
+}
+
+bool VacKeyFace::updatePropertiesFromDom_(
+    vacomplex::KeyFaceData* data,
+    const dom::Element* domElement) {
+
+    bool styleChanged = false;
+
+    // Hard-coded props
+    { // Style
+        const dom::Value& value = domElement->getAttribute(strings::color);
+        if (value.isValid()) {
+            const CellStyle* oldStyle =
+                static_cast<const CellStyle*>(data->findProperty(strings::style));
+            auto newStyle = std::make_unique<CellStyle>();
+            const auto& color = value.getColor();
+            if (!oldStyle || oldStyle->color() != color) {
+                newStyle->setColor(color);
+                data->insertProperty(std::move(newStyle));
+                styleChanged = true;
+            }
+        }
+        else {
+            data->removeProperty(strings::style);
+        }
+    }
+
+    // TODO: custom props support (registry)
+
+    return styleChanged;
+}
+
+void VacKeyFace::writePropertiesToDom_(
+    dom::Element* domElement,
+    const vacomplex::KeyFaceData* data,
+    core::ConstSpan<core::StringId> propNames) {
+
+    for (core::StringId propName : propNames) {
+        const vacomplex::CellProperty* prop = data->findProperty(propName);
+        // Hard-coded props
+        if (propName == strings::style) {
+            if (!prop) {
+                domElement->clearAttribute(strings::color);
+            }
+            else {
+                auto style = static_cast<const CellStyle*>(prop);
+                domElement->setAttribute(strings::color, style->color());
+            }
+        }
+
+        if (!prop) {
+            // TODO: clear property's attributes
+            continue;
+        }
+
+        // TODO: custom props support (registry)
+    }
+}
+
+void VacKeyFace::writeAllPropertiesToDom_(
+    dom::Element* domElement,
+    const vacomplex::KeyFaceData* data) {
+
+    for (const auto& it : data->properties()) {
+        core::StringId propName = it.first;
+        const vacomplex::CellProperty* prop = it.second.get();
+        // Hard-coded props
+        if (propName == strings::style) {
+            auto style = static_cast<const CellStyle*>(prop);
+            domElement->setAttribute(strings::color, style->color());
+        }
+        // TODO: custom props support (registry)
+    }
 }
 
 ElementStatus VacKeyFace::updateFromDom_(Workspace* workspace) {
@@ -402,22 +481,16 @@ ElementStatus VacKeyFace::updateFromDom_(Workspace* workspace) {
         setVacNode(kf);
     }
 
-    bool colorChanged = false;
-
-    const auto& color = domElement->getAttribute(ds::color).getColor();
-    if (frameData_.color_ != color) {
-        frameData_.color_ = color;
-        colorChanged = true;
-        changeFlags.set(ChangeFlag::Style);
-    }
-
     // dirty cached data
     if (hasBoundaryChanged) {
         changeFlags.set(ChangeFlag::FaceFillMesh);
         dirtyFillMesh_();
     }
-    else if (colorChanged) {
-        frameData_.hasPendingColorChange_ = true;
+
+    vacomplex::KeyFaceData& data = kf->data();
+    bool styleChanged = updatePropertiesFromDom_(&data, domElement);
+    if (styleChanged) {
+        dirtyStrokeStyle_(false);
     }
 
     if (changeFlags) {
@@ -497,6 +570,25 @@ void VacKeyFace::updateFromVac_(vacomplex::NodeModificationFlags flags) {
     if (boundaryChanged || flags.has(NodeModificationFlag::BoundaryMeshChanged)) {
         dirtyFillMesh_();
     }
+
+    vacomplex::KeyFaceData& data = kf->data();
+
+    if (flags.has(vacomplex::NodeModificationFlag::PropertyChanged)) {
+        // TODO: forward changed property names, and do all only if element
+        //       was just created.
+        //       maybe workspace could create the list of all properties in the latter case.
+        bool isNew = true;
+        if (isNew) {
+            writeAllPropertiesToDom_(domElement, &data);
+        }
+        else {
+            //writePropertiesToDom_(domElement, data, propNames);
+        }
+        bool hasStyleChanged = true;
+        if (hasStyleChanged) {
+            dirtyStrokeStyle_(false);
+        }
+    }
 }
 
 void VacKeyFace::updateDependencies_(core::Array<Element*> sortedNewDependencies) {
@@ -521,6 +613,39 @@ void VacKeyFace::updateDependencies_(core::Array<Element*> sortedNewDependencies
                 addDependency(newDependency);
             }
         }
+    }
+}
+
+bool VacKeyFace::computeStrokeStyle_() {
+    VacKeyFaceFrameData& frameData = frameData_;
+    if (!frameData.isStyleDirty_) {
+        return true;
+    }
+
+    vacomplex::KeyFace* kf = vacKeyFaceNode();
+    if (!kf) {
+        return false;
+    }
+
+    vacomplex::KeyFaceData& data = kf->data();
+    const vacomplex::CellProperty* styleProp = data.findProperty(strings::style);
+    const CellStyle* style = dynamic_cast<const CellStyle*>(styleProp);
+
+    // XXX: default style instead of core::Color()
+    frameData.color_ = style ? style->color() : core::Color();
+
+    //alreadyNotifiedChanges_.unset(ChangeFlag::EdgePreJoinGeometry);
+    frameData.isStyleDirty_ = false;
+    return true;
+}
+
+void VacKeyFace::dirtyStrokeStyle_(bool /*notifyDependentsImmediately*/) {
+    VacKeyFaceFrameData& frameData = frameData_;
+    if (!frameData.isStyleDirty_) {
+        frameData.isStyleDirty_ = true;
+        frameData.graphics_.clearStyle();
+        notifyChangesToDependents(ChangeFlag::Style);
+        //notifyChanges_({ ChangeFlag::Style }, notifyDependentsImmediately);
     }
 }
 

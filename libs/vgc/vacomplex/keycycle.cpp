@@ -18,6 +18,23 @@
 
 namespace vgc::vacomplex {
 
+void KeyPath::reverse() {
+    std::reverse(halfedges_.begin(), halfedges_.end());
+    for (KeyHalfedge& kh : halfedges_) {
+        kh.setDirection(!kh.direction());
+    }
+}
+
+KeyCycle::KeyCycle(const KeyPath& path)
+    : steinerVertex_(path.singleVertex_)
+    , halfedges_(path.halfedges_) {
+}
+
+KeyCycle::KeyCycle(KeyPath&& path)
+    : steinerVertex_(path.singleVertex_)
+    , halfedges_(std::move(path.halfedges_)) {
+}
+
 KeyCycle::KeyCycle(core::Span<const KeyHalfedge> halfedges) noexcept
     : halfedges_(halfedges) {
 

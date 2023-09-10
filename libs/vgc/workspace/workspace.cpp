@@ -409,13 +409,8 @@ core::Id Workspace::glue(core::ConstSpan<core::Id> elementIds) {
 core::Array<core::Id> Workspace::unglue(core::ConstSpan<core::Id> elementIds) {
     core::Array<core::Id> result;
 
-    struct TargetEdge {
-        vacomplex::KeyEdge* ke;
-        core::Color color;
-    };
-
     core::Array<vacomplex::KeyVertex*> kvs;
-    core::Array<TargetEdge> edges;
+    core::Array<vacomplex::KeyEdge*> kes;
     for (core::Id id : elementIds) {
         workspace::Element* element = find(id);
         if (!element) {
@@ -433,15 +428,7 @@ core::Array<core::Id> Workspace::unglue(core::ConstSpan<core::Id> elementIds) {
         }
         case vacomplex::CellType::KeyEdge: {
             vacomplex::KeyEdge* ke = cell->toKeyEdgeUnchecked();
-            core::Color color(1, 0, 0);
-            dom::Element* sourceDomElement = element->domElement();
-            if (sourceDomElement) {
-                color = sourceDomElement->getAttribute(dom::strings::color).getColor();
-            }
-            else {
-                // TODO: warn ?
-            }
-            edges.append(TargetEdge{ke, color});
+            kes.append(ke);
             break;
         }
         default:
@@ -449,7 +436,7 @@ core::Array<core::Id> Workspace::unglue(core::ConstSpan<core::Id> elementIds) {
         }
     }
 
-    if (kvs.isEmpty() && edges.isEmpty()) {
+    if (kvs.isEmpty() && kes.isEmpty()) {
         return result;
     }
 
@@ -461,9 +448,8 @@ core::Array<core::Id> Workspace::unglue(core::ConstSpan<core::Id> elementIds) {
         undoGroup = history->createUndoGroup(commandId);
     }
 
-    for (const TargetEdge& targetEdge : edges) {
-        // TODO: use operation source in onVacNodesChanged_ to do the color copy
-        vacomplex::KeyEdge* targetKe = targetEdge.ke;
+    for (vacomplex::KeyEdge* targetKe : kes) {
+
         core::Array<vacomplex::KeyEdge*> ungluedKeyEdges =
             vacomplex::ops::unglueKeyEdges(targetKe);
 
@@ -471,56 +457,17 @@ core::Array<core::Id> Workspace::unglue(core::ConstSpan<core::Id> elementIds) {
             Element* e = this->findVacElement(ke);
             if (e) {
                 result.append(e->id());
-                dom::Element* domElement = e->domElement();
-                if (domElement) {
-                    domElement->setAttribute(dom::strings::color, targetEdge.color);
-                }
-                else {
-                    // TODO: warn ?
-                }
             }
         }
     }
 
     for (vacomplex::KeyVertex* targetKv : kvs) {
-        std::unordered_map<core::Id, core::Color> starEdgeColors;
-        for (vacomplex::Cell* cell : targetKv->star()) {
-            vacomplex::KeyEdge* ke = cell->toKeyEdge();
-            if (ke) {
-                VacKeyEdge* e = dynamic_cast<VacKeyEdge*>(findVacElement(ke->id()));
-                if (e && e->domElement()) {
-                    starEdgeColors[ke->id()] =
-                        e->domElement()->getAttribute(dom::strings::color).getColor();
-                }
-            }
-        }
 
         core::Array<std::pair<core::Id, core::Array<vacomplex::KeyEdge*>>>
             ungluedKeyEdges;
         core::Array<vacomplex::KeyVertex*> ungluedKeyVertices =
             vacomplex::ops::unglueKeyVertices(targetKv, ungluedKeyEdges);
 
-        // TODO: use operation source in onVacNodesChanged_ to do the color copy
-        for (const auto& entry : ungluedKeyEdges) {
-            core::Id id = entry.first;
-            const core::Array<vacomplex::KeyEdge*>& kes = entry.second;
-            auto it = starEdgeColors.find(id);
-            core::Color color =
-                it != starEdgeColors.end() ? it->second : core::Color(1, 0, 0);
-            for (vacomplex::KeyEdge* ke : kes) {
-                Element* e = this->findVacElement(ke);
-                if (e) {
-                    //result.append(e->id());
-                    dom::Element* domElement = e->domElement();
-                    if (domElement) {
-                        domElement->setAttribute(dom::strings::color, color);
-                    }
-                    else {
-                        // TODO: warn ?
-                    }
-                }
-            }
-        }
         for (vacomplex::KeyVertex* kv : ungluedKeyVertices) {
             Element* e = this->findVacElement(kv);
             if (e) {
@@ -539,9 +486,92 @@ core::Array<core::Id> Workspace::unglue(core::ConstSpan<core::Id> elementIds) {
     return result;
 }
 
+core::Array<core::Id>
+Workspace::simplify(core::ConstSpan<core::Id> elementIds, bool smoothJoins) {
+    core::Array<core::Id> result;
+
+    core::Array<vacomplex::KeyVertex*> kvs;
+    core::Array<vacomplex::KeyEdge*> kes;
+    for (core::Id id : elementIds) {
+        workspace::Element* element = find(id);
+        if (!element) {
+            continue;
+        }
+        vacomplex::Node* node = element->vacNode();
+        if (!node || !node->isCell()) {
+            continue;
+        }
+        vacomplex::Cell* cell = node->toCellUnchecked();
+        switch (cell->cellType()) {
+        case vacomplex::CellType::KeyVertex: {
+            kvs.append(cell->toKeyVertexUnchecked());
+            break;
+        }
+        case vacomplex::CellType::KeyEdge: {
+            kes.append(cell->toKeyEdgeUnchecked());
+            break;
+        }
+        default:
+            break;
+        }
+    }
+
+    if (kvs.isEmpty() && kes.isEmpty()) {
+        return result;
+    }
+
+    // Open history group
+    static core::StringId commandId = core::StringId("workspace.simplify");
+    core::UndoGroup* undoGroup = nullptr;
+    core::History* history = this->history();
+    if (history) {
+        undoGroup = history->createUndoGroup(commandId);
+    }
+
+    auto appendToResult = [&](vacomplex::Node* node) {
+        Element* e = this->findVacElement(node);
+        if (e) {
+            result.append(e->id());
+        }
+    };
+
+    for (vacomplex::KeyEdge* ke : kes) {
+        vacomplex::Cell* cell = vacomplex::ops::uncutAtKeyEdge(ke);
+        if (cell) {
+            appendToResult(cell);
+        }
+        else {
+            // uncut failed, return the edge id
+            appendToResult(ke);
+        }
+    }
+
+    for (vacomplex::KeyVertex* kv : kvs) {
+        vacomplex::Cell* cell = vacomplex::ops::uncutAtKeyVertex(kv, smoothJoins);
+        if (cell) {
+            appendToResult(cell);
+        }
+        else {
+            // uncut failed, return the vertex id
+            appendToResult(kv);
+        }
+    }
+
+    // TODO: filter out resulting ids that are no longer alive (lost in concatenation)
+
+    sync();
+
+    // Close history group
+    if (undoGroup) {
+        undoGroup->close();
+    }
+
+    return result;
+}
+
 dom::DocumentPtr Workspace::cut(core::ConstSpan<core::Id> elementIds) {
     dom::DocumentPtr res = copy(elementIds);
-    hardDelete(elementIds);
+    softDelete(elementIds);
     return res;
 }
 
@@ -614,11 +644,9 @@ namespace {
 // same, so it would be best to have the delete method virtual in
 // workspace::Element.
 //
-// For now we simply use hard delete since it's the only deletion method
-// implemented. Later, the default for VAC cells should probably be soft
-// delete.
+// Later, the default for VAC cells should probably be soft delete.
 //
-void deleteElement(workspace::Element* element) {
+void hardDeleteElement(workspace::Element* element) {
     vacomplex::Node* node = element->vacNode();
     bool deleteIsolatedVertices = true;
     vacomplex::ops::hardDelete(node, deleteIsolatedVertices);
@@ -627,7 +655,6 @@ void deleteElement(workspace::Element* element) {
 } // namespace
 
 void Workspace::hardDelete(core::ConstSpan<core::Id> elementIds) {
-
     // Iterate over all elements to delete.
     //
     // For now, deletion is done via the DOM, so we need to sync() before
@@ -636,9 +663,24 @@ void Workspace::hardDelete(core::ConstSpan<core::Id> elementIds) {
     for (core::Id id : elementIds) {
         workspace::Element* element = find(id);
         if (element) {
-            deleteElement(element);
+            hardDeleteElement(element);
         }
     }
+}
+
+void Workspace::softDelete(core::ConstSpan<core::Id> elementIds) {
+    core::Array<vacomplex::Node*> nodes;
+    for (core::Id id : elementIds) {
+        workspace::Element* element = find(id);
+        if (element) {
+            vacomplex::Node* node = element->vacNode();
+            if (node && !nodes.contains(node)) {
+                nodes.append(node);
+            }
+        }
+    }
+    bool deleteIsolatedVertices = true;
+    vacomplex::ops::softDelete(nodes, deleteIsolatedVertices);
 }
 
 std::unordered_map<core::StringId, Workspace::ElementCreator>&

@@ -723,7 +723,7 @@ void KeyFace::substituteKeyVertex_(KeyVertex* oldVertex, KeyVertex* newVertex) {
     }
 }
 
-void KeyFace::substituteKeyHalfedge_(
+void KeyFace::substituteKeyEdge_(
     const class KeyHalfedge& oldHalfedge,
     const class KeyHalfedge& newHalfedge) {
 

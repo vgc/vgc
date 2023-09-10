@@ -19,9 +19,6 @@
 namespace vgc::vacomplex {
 
 KeyEdge::~KeyEdge() {
-    if (data_) {
-        detail::CellPropertiesPrivateInterface::setOwningCell(&data_->properties_, this);
-    }
 }
 
 // TODO: make it an operation, otherwise it won't get saved in dom.
@@ -138,7 +135,7 @@ void KeyEdge::substituteKeyVertex_(KeyVertex* oldVertex, KeyVertex* newVertex) {
     }
 }
 
-void KeyEdge::substituteKeyHalfedge_(
+void KeyEdge::substituteKeyEdge_(
     const class KeyHalfedge& /*oldHalfedge*/,
     const class KeyHalfedge& /*newHalfedge*/) {
     // no-op

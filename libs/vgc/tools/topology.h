@@ -28,6 +28,9 @@ VGC_UI_DECLARE_COMMAND(glue)
 VGC_TOOLS_API
 VGC_UI_DECLARE_COMMAND(unglue)
 
+VGC_TOOLS_API
+VGC_UI_DECLARE_COMMAND(simplify)
+
 } // namespace vgc::tools::commands
 
 #endif // VGC_TOOLS_TOPOLOGY_H

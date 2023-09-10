@@ -464,6 +464,7 @@ private:
     const UInt8 cellType_;
     // used during hard/soft delete operations
     bool isBeingDeleted_ = false;
+    bool canBeAtomicallyUncut_ = false;
 
     virtual void debugPrint_(core::StringWriter& out) = 0;
 };
@@ -763,6 +764,14 @@ public:
         return container_.length();
     }
 
+    bool isEmpty() const {
+        return container_.isEmpty();
+    }
+
+    core::Array<Cell*> copy() const {
+        return container_;
+    }
+
 private:
     const Container& container_;
 };
@@ -844,8 +853,14 @@ protected:
     virtual bool updateGeometryFromBoundary_();
 
 protected:
+    // Assumes `oldVertex` is in boundary.
+    //
     virtual void substituteKeyVertex_(KeyVertex* oldVertex, KeyVertex* newVertex) = 0;
-    virtual void substituteKeyHalfedge_(
+
+    // Assumes old edge is in boundary, `oldHalfedge != newHalfedge`,
+    // and end vertices match.
+    //
+    virtual void substituteKeyEdge_(
         const class KeyHalfedge& oldHalfedge,
         const class KeyHalfedge& newHalfedge) = 0;
 

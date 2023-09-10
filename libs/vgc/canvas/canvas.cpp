@@ -188,8 +188,7 @@ void deleteElements(
         undoGroup = history->createUndoGroup(Delete_Element);
     }
 
-    // TODO: use softDelete when implemented.
-    workspace->hardDelete(elementIds);
+    workspace->softDelete(elementIds);
 
     // Close operation
     if (undoGroup) {

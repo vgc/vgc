@@ -915,6 +915,20 @@ public:
         transform_(transformation);
     }
 
+    void close(bool smoothJoin) {
+        if (!isClosed_) {
+            close_(smoothJoin);
+            isClosed_ = true;
+        }
+    }
+
+    void open(bool keepJoinAsBestAsPossible) {
+        if (isClosed_) {
+            open_(keepJoinAsBestAsPossible);
+            isClosed_ = false;
+        }
+    }
+
     void reverse() {
         reverse_();
     }
@@ -1075,6 +1089,10 @@ protected:
     virtual void translate_(const Vec2d& delta) = 0;
 
     virtual void transform_(const Mat3d& transformation) = 0;
+
+    virtual void close_(bool smoothJoin) = 0;
+
+    virtual void open_(bool keepJoinAsBestAsPossible) = 0;
 
     virtual void reverse_() = 0;
 

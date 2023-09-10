@@ -40,7 +40,7 @@ public:
 private:
     void substituteKeyVertex_(KeyVertex* oldVertex, KeyVertex* newVertex) override;
 
-    void substituteKeyHalfedge_(
+    void substituteKeyEdge_(
         const class KeyHalfedge& oldHalfedge,
         const class KeyHalfedge& newHalfedge) override;
 

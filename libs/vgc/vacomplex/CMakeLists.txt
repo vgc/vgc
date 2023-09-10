@@ -16,6 +16,7 @@ vgc_add_library(vacomplex
         keyedge.h
         keyedgedata.h
         keyface.h
+        keyfacedata.h
         keyhalfedge.h
         keyvertex.h
         logcategories.h
@@ -37,6 +38,7 @@ vgc_add_library(vacomplex
         keyedge.cpp
         keyedgedata.cpp
         keyface.cpp
+        keyfacedata.cpp
         keyhalfedge.cpp
         keyvertex.cpp
         logcategories.cpp

@@ -25,10 +25,55 @@
 
 namespace vgc::vacomplex {
 
+class KeyCycle;
+
+class VGC_VACOMPLEX_API KeyPath {
+public:
+    KeyPath() noexcept = default;
+
+    explicit KeyPath(core::Span<const KeyHalfedge> halfedges) noexcept;
+
+    explicit KeyPath(std::initializer_list<KeyHalfedge> halfedges) noexcept
+        : halfedges_(halfedges) {
+    }
+
+    explicit KeyPath(core::Array<KeyHalfedge>&& halfedges) noexcept
+        : halfedges_(std::move(halfedges)) {
+    }
+
+    explicit KeyPath(KeyVertex* singleVertex) noexcept
+        : singleVertex_(singleVertex) {
+    }
+
+    KeyVertex* singleVertex() const {
+        return singleVertex_;
+    }
+
+    const core::Array<KeyHalfedge>& halfedges() const {
+        return halfedges_;
+    }
+
+    void debugPrint(core::StringWriter& out) const;
+
+    void reverse();
+
+private:
+    friend detail::Operations;
+    friend KeyCycle;
+
+    KeyVertex* singleVertex_ = nullptr;
+    core::Array<KeyHalfedge> halfedges_;
+};
+
 class VGC_VACOMPLEX_API KeyCycle {
 public:
     KeyCycle() noexcept = default;
 
+private:
+    explicit KeyCycle(const KeyPath& path);
+    explicit KeyCycle(KeyPath&& path);
+
+public:
     explicit KeyCycle(core::Span<const KeyHalfedge> halfedges) noexcept;
 
     explicit KeyCycle(std::initializer_list<KeyHalfedge> halfedges) noexcept
