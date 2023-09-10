@@ -154,7 +154,7 @@ public:
 
     void setKeyVertexPosition(KeyVertex* kv, const geometry::Vec2d& pos);
 
-    void setKeyEdgeData(KeyEdge* ke, std::unique_ptr<KeyEdgeData>&& geometry);
+    void setKeyEdgeData(KeyEdge* ke, std::unique_ptr<KeyEdgeData>&& data);
 
     void setKeyEdgeSamplingQuality(KeyEdge* ke, geometry::CurveSamplingQuality quality);
 

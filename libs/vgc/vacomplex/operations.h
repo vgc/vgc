@@ -137,12 +137,12 @@ core::Array<KeyVertex*> unglueKeyVertices(
 ///
 /// - The vertex has no incident edges, and exactly one incident face, using
 ///   the vertex exactly once as a Steiner vertex. In this case, the
-///   simplification consists in removing the Steiner cycle is removed.
+///   simplification consists in removing the Steiner cycle.
 ///
 /// In all three above cases, the given `KeyVertex` is then deleted.
 ///
-/// If an atomic simplification isn't possible then nothing happens (the vertex
-/// is not deleted), and this function returns `nullptr`.
+/// If an atomic simplification is not possible then nothing happens (the
+/// vertex is not deleted), and this function returns `nullptr`.
 ///
 // TODO: what about when there are inbetween cells incident to the key vertex?
 //
@@ -162,7 +162,8 @@ Cell* uncutAtKeyVertex(KeyVertex* kv, bool smoothJoin);
 /// - The edge has exactly one incident face, using the edge exactly
 ///   twice, from two different cycles. In this case, the simplification
 ///   consists in splicing the two cycles together into a single cycle.
-///   Topologically, this corresponds to creating a torus.
+///   Topologically, this corresponds to creating a torus (or surface of
+///   higher genus).
 ///
 /// - The edge has exactly one incident face, using the edge exactly twice,
 ///   within the same cycle and in opposite directions. In this case, the
@@ -172,16 +173,25 @@ Cell* uncutAtKeyVertex(KeyVertex* kv, bool smoothJoin);
 ///   within the same cycle and in the same direction. In this case, the
 ///   simplification consists in splicing the cycle to itself into a new
 ///   single cycle. Topologically, this corresponds to creating a Möbius
-///   strip.
+///   strip (or surface of higher genus).
 ///
 /// If the edge is a closed edge, such atomic simplification is possible in the
 /// following cases:
 ///
-/// TODO: same as above but for closed edge
+/// - The edge has exactly two incident faces, each of them using the
+///   edge exactly once. In this case, the simplification consists in
+///   concatenating the two faces into a single face, removing the
+///   usages of the closed edge.
+///
+/// - The edge has exactly one incident face, using the edge exactly
+///   twice (either from the same cycle or two different cycles).
+///   In this case, the simplification consists in removing the
+///   usages of the closed edge. Topologically, this corresponds to
+///   creating a torus or a Möbius strip (or surface of higher genus).
 ///
 /// In all cases above, the given `KeyEdge` is then deleted.
 ///
-/// If an atomic simplification isn't possible then nothing happens (the edge
+/// If an atomic simplification is not possible then nothing happens (the edge
 /// is not deleted), and this function returns `nullptr`.
 ///
 // TODO: what about when there are inbetween cells incident to the key edge?
@@ -201,7 +211,7 @@ VGC_VACOMPLEX_API
 void setKeyVertexPosition(KeyVertex* vertex, const geometry::Vec2d& pos);
 
 VGC_VACOMPLEX_API
-void setKeyEdgeData(KeyEdge* edge, std::unique_ptr<KeyEdgeData>&& geometry);
+void setKeyEdgeData(KeyEdge* edge, std::unique_ptr<KeyEdgeData>&& data);
 
 VGC_VACOMPLEX_API
 void setKeyEdgeSamplingQuality(KeyEdge* edge, geometry::CurveSamplingQuality quality);

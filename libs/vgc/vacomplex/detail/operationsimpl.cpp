@@ -779,7 +779,6 @@ Operations::glueKeyVertices(core::Span<KeyVertex*> kvs, const geometry::Vec2d& p
     Group* parentGroup = topMostVertex->parentGroup();
     Node* nextSibling = topMostVertex->nextSibling();
 
-    // TODO: define source operation
     KeyVertex* newKv = createKeyVertex(position, parentGroup, nextSibling, kv0->time());
 
     std::unordered_set<KeyVertex*> seen;
@@ -1128,14 +1127,12 @@ core::Array<KeyEdge*> Operations::unglueKeyEdges(KeyEdge* targetKe) {
         KeyEdge* newKe = nullptr;
         std::unique_ptr<KeyEdgeData> dataDuplicate = targetKe->data()->clone();
         if (targetKe->isClosed()) {
-            // TODO: define source operation
             newKe = createKeyClosedEdge(
                 std::move(dataDuplicate),
                 targetKe->parentGroup(),
                 targetKe->nextSibling());
         }
         else {
-            // TODO: define source operation
             newKe = createKeyOpenEdge(
                 targetKe->startVertex(),
                 targetKe->endVertex(),
@@ -1224,7 +1221,6 @@ core::Array<KeyVertex*> Operations::unglueKeyVertices(
 
     // Helper
     auto duplicateTargetKv = [this, targetKv, &result]() {
-        // TODO: define source operation
         KeyVertex* newKv = createKeyVertex(
             targetKv->position(),
             targetKv->parentGroup(),
@@ -1342,24 +1338,56 @@ Operations::uncutAtKeyVertex(KeyVertex* targetKv, bool smoothJoin) {
     KeyEdge* newKe = nullptr;
 
     if (info.kf) {
+        // Remove Steiner vertex from face.
+        //
+        //       o-----------o                     o-----------o
+        //       |      v    |     uncutAt(v)      |           |
+        //       |     o     |    ------------>    |           |
+        //       |  f        |                     |  f        |
+        //       o-----------o                     o-----------o
+        //
         info.kf->cycles_.removeAt(info.cycleIndex);
         removeFromBoundary_(info.kf, targetKv);
-
         result.resultKf = info.kf;
-        result.success = true;
     }
     else if (info.khe1.edge() == info.khe2.edge()) {
+
         // Transform open edge into closed edge.
+        //
+        //             v
+        //       .-----o-----.                     .-----------.
+        //       |           |     uncutAt(v)      |           |
+        //       |e          |    ------------>    |e'         |
+        //       |           |                     |           |
+        //       '-----------'                     '-----------'
+        //
+        //        open edge e                      closed edge e'
+        // (startVertex == endVertex)
+        //
+        // XXX Do not create a new edge, but instead modify it in-place?
+        //     This would be similar to uncut at edge that splits one cycle
+        //     into two cycles in a face, without creating a new face:
+        //
+        //     o------o------o                     o------o------o
+        //     |      |e     |                     |             |
+        //     |   o--o--o   |     uncutAt(e)      |   o--o--o   |
+        //     |   |     | f |    ------------>    |   |     | f |
+        //     |   o-----o   |                     |   o-----o   |
+        //     |             |                     |             |
+        //     o-------------o                     o-------------o
+        //
         KeyEdge* oldKe = info.khe1.edge();
 
         std::unique_ptr<KeyEdgeData> newData = oldKe->stealData_();
         newData->isClosed_ = true;
         newData->stroke_->close(smoothJoin);
 
+        // Create new edge e'
         newKe = createKeyClosedEdge(
             std::move(newData), oldKe->parentGroup(), oldKe->nextSibling());
         result.resultKe = newKe;
 
+        // Substitute all usages of (e1, e2) by e in incident faces.
         KeyHalfedge oldKhe(oldKe, true);
         KeyHalfedge newKhe(newKe, true);
         substituteEdge_(oldKhe, newKhe);
@@ -1371,46 +1399,48 @@ Operations::uncutAtKeyVertex(KeyVertex* targetKv, bool smoothJoin) {
             removeFromBoundary_(cell, targetKv);
         }
 
-        // Delete oldKe
+        // Delete old edge
         result.removedKeId1 = oldKe->id();
         hardDelete(oldKe);
-
-        result.success = true;
     }
     else {
+        // Compute new edge data as concatenation of old edges
         KeyEdgeData* ked1 = info.khe1.edge()->data();
         KeyEdgeData* ked2 = info.khe2.edge()->data();
         KeyVertex* kv1 = info.khe1.startVertex();
         KeyVertex* kv2 = info.khe2.endVertex();
         bool dir1 = info.khe1.direction();
         bool dir2 = info.khe2.direction();
-        if (!ked1 || !ked2) {
-            // missing geometry
-            return result;
+        std::unique_ptr<KeyEdgeData> concatData;
+        if (ked1 && ked2) {
+            KeyHalfedgeData khd1(ked1, dir1);
+            KeyHalfedgeData khd2(ked2, dir2);
+            concatData = ked1->fromConcatStep(khd1, khd2, smoothJoin);
         }
-        KeyHalfedgeData khd1(ked1, dir1);
-        KeyHalfedgeData khd2(ked2, dir2);
-        std::unique_ptr<KeyEdgeData> concatData =
-            ked1->fromConcatStep(khd1, khd2, smoothJoin);
 
+        // Determine where to insert new edge
         std::array<Node*, 2> kes = {info.khe1.edge(), info.khe2.edge()};
         Node* bottomMostEdge = findBottomMost(kes);
         Group* parentGroup = bottomMostEdge->parentGroup();
         Node* nextSibling = bottomMostEdge;
 
+        // Create new edge e
         newKe =
             createKeyOpenEdge(kv1, kv2, std::move(concatData), parentGroup, nextSibling);
         result.resultKe = newKe;
 
+        // Substitute all usages of (e1, e2) by e in incident faces.
+        //
+        // Note that we already know that the uncut is possible, which mean
+        // that the face cycles never uses e1 or e2 independently, but always
+        // both consecutively. In particular, we do not need to iterate on both
+        // the star of e1 and e2, since they have the same star.
+        //
         for (Cell* starCell : info.khe1.edge()->star().copy()) {
             KeyFace* kf = starCell->toKeyFace();
             if (!kf) {
                 continue;
             }
-
-            // Substitute.
-            // we know that face cycles never uses khe1 or khe2 independently,
-            // but always both consecutively.
             for (KeyCycle& cycle : kf->cycles_) {
                 if (cycle.steinerVertex()) {
                     continue;
@@ -1438,21 +1468,17 @@ Operations::uncutAtKeyVertex(KeyVertex* targetKv, bool smoothJoin) {
             addToBoundary_(kf, newKe);
         }
 
-        // Delete khe1, khe2
+        // Delete old edges
         result.removedKeId1 = info.khe1.edge()->id();
         result.removedKeId2 = info.khe2.edge()->id();
-
         hardDelete(info.khe1.edge());
         hardDelete(info.khe2.edge());
-
-        result.success = true;
     }
 
-    if (result.success) {
-        VGC_ASSERT(targetKv->star().isEmpty());
-        hardDelete(targetKv);
-    }
+    VGC_ASSERT(targetKv->star().isEmpty());
+    hardDelete(targetKv);
 
+    result.success = true;
     return result;
 }
 
@@ -1467,23 +1493,41 @@ UncutAtKeyEdgeResult Operations::uncutAtKeyEdge(KeyEdge* targetKe) {
 
     if (targetKe->isClosed()) {
         if (info.kf1 == info.kf2) {
-            KeyFace* kf = info.kf1;
+            // This case corresponds to removing a closed edge used twice by
+            // the same face, e.g., in a cut-torus, cut-Klein bottle or
+            // cut-Möbius strip.
+            //
+            // This doesn't make much sense in the context of vector graphics,
+            // but it makes sense topologically so we support it anyway.
 
+            KeyFace* kf = info.kf1;
+            result.resultKf = kf;
+
+            // Remove all the cycles using the closed edge. This removes:
+            // - Two cycles in the case of a torus or Klein bottle,
+            // - One cycle (using the edge twice) in the case of a Möbius strip.
+            //
             kf->cycles_.removeIf([targetKe](const KeyCycle& cycle) {
                 return !cycle.steinerVertex()
                        && cycle.halfedges().first().edge() == targetKe;
             });
             removeFromBoundary_(kf, targetKe);
-
-            hardDelete(targetKe);
-
-            result.resultKf = kf;
-            result.success = true;
         }
         else {
-            // make new face from 2 input faces
-            core::Array<KeyCycle> newCycles = {};
+            // This case corresponds to removing a closed edge used once by
+            // two different faces, e.g.:
+            //
+            //     o-------------o                     o-------------o
+            //     |     e       |                     |             |
+            //     |   .----.    |     uncutAt(e)      |             |
+            //     |   | f1 | f2 |    ------------>    |      f      |
+            //     |   '----'    |                     |             |
+            //     |             |                     |             |
+            //     o-------------o                     o-------------o
 
+            // Compute cycles of new face. These are the same as all
+            // the cycles from f1 and f2, except the input closed edge.
+            core::Array<KeyCycle> newCycles = {};
             for (KeyCycle& cycle : info.kf1->cycles_) {
                 if (cycle.steinerVertex()) {
                     newCycles.append(cycle);
@@ -1492,7 +1536,6 @@ UncutAtKeyEdgeResult Operations::uncutAtKeyEdge(KeyEdge* targetKe) {
                     newCycles.append(cycle);
                 }
             }
-
             for (KeyCycle& cycle : info.kf2->cycles_) {
                 if (cycle.steinerVertex()) {
                     newCycles.append(cycle);
@@ -1502,29 +1545,32 @@ UncutAtKeyEdgeResult Operations::uncutAtKeyEdge(KeyEdge* targetKe) {
                 }
             }
 
+            // Determine where to insert new face
             std::array<Node*, 2> kfs = {info.kf1, info.kf2};
             Node* bottomMostFace = findBottomMost(kfs);
             Group* parentGroup = bottomMostFace->parentGroup();
             Node* nextSibling = bottomMostFace;
 
+            // Create new face
             KeyFace* newKf =
                 createKeyFace(std::move(newCycles), parentGroup, nextSibling);
+            result.resultKf = newKf;
 
+            // Set data of the new face as concatenation of old faces
             KeyFaceData::assignFromConcatStep(
                 newKf->data(), info.kf1->data(), info.kf2->data());
 
+            // Delete old faces
             result.removedKfId1 = info.kf1->id();
             result.removedKfId2 = info.kf2->id();
             hardDelete(info.kf1);
             hardDelete(info.kf2);
-
-            result.resultKf = newKf;
-            result.success = true;
         }
     }
     else { // key open edge
         if (info.kf1 == info.kf2) {
             KeyFace* kf = info.kf1;
+            result.resultKf = kf;
 
             if (info.cycleIndex1 == info.cycleIndex2) {
                 KeyCycle& cycle = kf->cycles_[info.cycleIndex1];
@@ -1534,11 +1580,32 @@ UncutAtKeyEdgeResult Operations::uncutAtKeyEdge(KeyEdge* targetKe) {
                 KeyPath p2 = subPath(cycle, i2 + 1, i1);
                 bool d1 = cycle.halfedges_[i1].direction();
                 bool d2 = cycle.halfedges_[i2].direction();
+
                 if (d1 == d2) {
+                    // Splice cycle into another cycle (Möbius strip):
+                    //
+                    //     o-----o---o                      o-----o---o
+                    //     |     |e  |                      |         |
+                    //     |   o-o-------o     uncutAt(e)   |   o-o-------o
+                    //     |   |     | f |    ------------> |   |     | f |
+                    //     |   o-----o   |                  |   o-----o   |
+                    //     |             |                  |             |
+                    //     o-------------o                  o-------------o
+                    //
                     p2.reverse();
                     kf->cycles_.append(KeyCycle(concatPath(p1, p2)));
                 }
                 else {
+                    // Split cycle into two cycles:
+                    //
+                    //     o-----o-----o                     o-----o-----o
+                    //     |     |e    |                     |           |
+                    //     |   o-o-o   |     uncutAt(e)      |   o-o-o   |
+                    //     |   |   | f |    ------------>    |   |   | f |
+                    //     |   o---o   |                     |   o---o   |
+                    //     |           |                     |           |
+                    //     o-----------o                     o-----------o
+                    //
                     kf->cycles_.append(KeyCycle(std::move(p1)));
                     kf->cycles_.append(KeyCycle(std::move(p2)));
                 }
@@ -1546,6 +1613,25 @@ UncutAtKeyEdgeResult Operations::uncutAtKeyEdge(KeyEdge* targetKe) {
                 removeFromBoundary_(kf, targetKe);
             }
             else {
+                // Splice two cycles of the same face into one cycle.
+                //
+                // Topologically, this corresponds to creating a torus with one
+                // hole, starting from a torus with two holes that share a
+                // common edge.
+                //
+                //    _____________          ___________          ___________
+                //   /             \        /           \        /           \
+                //  /      ___  f   \      /     ___  f  \      /     ___  f  \
+                //  |     (   )     | ---> |    (   )    | ---> |    (   )    |
+                //  \  o---o o---o  /      \  o---o---o  /      \  o---o---o  /
+                //   \ | e1| |e2 | /        \ |   |e  | /        \ |       | /
+                //    'o---o o---o'   glue   'o---o---o'   uncut  'o---o---o'
+                //                  (e1, e2)                (e)
+                //
+                //    Cylinder with       Torus with 2 holes       Torus with
+                //   2 distinct holes    sharing common edge e      one hole
+
+                // Compute new spliced cycle
                 KeyCycle& cycle1 = kf->cycles_[info.cycleIndex1];
                 KeyCycle& cycle2 = kf->cycles_[info.cycleIndex2];
                 Int i1 = info.componentIndex1;
@@ -1557,18 +1643,30 @@ UncutAtKeyEdgeResult Operations::uncutAtKeyEdge(KeyEdge* targetKe) {
                 if (d1 == d2) {
                     p2.reverse();
                 }
+                KeyCycle newCycle(concatPath(p1, p2));
 
-                kf->cycles_.append(KeyCycle(concatPath(p1, p2)));
+                // Add the new cycle
+                kf->cycles_.append(std::move(newCycle));
+
+                // Remove the old cycles
                 auto indices = std::minmax(info.cycleIndex1, info.cycleIndex2);
                 kf->cycles_.removeAt(indices.second);
                 kf->cycles_.removeAt(indices.first);
                 removeFromBoundary_(kf, targetKe);
             }
-
-            result.resultKf = kf;
-            result.success = true;
         }
-        else {
+        else { // f1 != f2
+
+            // Splice two cycles of different faces into one cycle, merging the
+            // two faces f1 and f2 into one new face.
+            //
+            // o--------o--------o                 o--------o--------o
+            // |        |        |   uncutAt(e)    |                 |
+            // |   f1   |e  f2   |  ------------>  |        f        |
+            // |        |        |                 |                 |
+            // o--------o--------o                 o--------o--------o
+
+            // Compute new spliced cycle
             KeyFace* kf1 = info.kf1;
             KeyFace* kf2 = info.kf2;
             KeyCycle& cycle1 = kf1->cycles_[info.cycleIndex1];
@@ -1582,12 +1680,13 @@ UncutAtKeyEdgeResult Operations::uncutAtKeyEdge(KeyEdge* targetKe) {
             if (d1 == d2) {
                 p2.reverse();
             }
-
-            core::Array<KeyCycle> newCycles;
-
             KeyCycle newCycle(concatPath(p1, p2));
-            newCycles.append(std::move(newCycle));
 
+            // Compute cycles of new face. These are the same as all the cycles
+            // from f1 and f2, except that we remove the two old cycles that
+            // were using e, and add the new spliced cycle and
+            //
+            core::Array<KeyCycle> newCycles;
             for (Int j = 0; j < kf1->cycles_.length(); ++j) {
                 if (j != info.cycleIndex1) {
                     newCycles.append(kf1->cycles_[j]);
@@ -1598,29 +1697,35 @@ UncutAtKeyEdgeResult Operations::uncutAtKeyEdge(KeyEdge* targetKe) {
                     newCycles.append(kf2->cycles_[j]);
                 }
             }
+            newCycles.append(std::move(newCycle));
 
+            // Determine where to insert new face
             std::array<Node*, 2> kfs = {info.kf1, info.kf2};
             Node* bottomMostFace = findBottomMost(kfs);
             Group* parentGroup = bottomMostFace->parentGroup();
             Node* nextSibling = bottomMostFace;
 
+            // Create new face
             KeyFace* newKf =
                 createKeyFace(std::move(newCycles), parentGroup, nextSibling);
+            result.resultKf = newKf;
 
+            // Set data of the new face as concatenation of old faces
             KeyFaceData::assignFromConcatStep(
                 newKf->data(), info.kf1->data(), info.kf2->data());
 
+            // Delete old faces
             result.removedKfId1 = info.kf1->id();
             result.removedKfId2 = info.kf2->id();
             hardDelete(info.kf1);
             hardDelete(info.kf2);
-
-            result.resultKf = newKf;
-            result.success = true;
         }
     }
 
+    VGC_ASSERT(targetKe->star().isEmpty());
     hardDelete(targetKe);
+
+    result.success = true;
     return result;
 }
 
@@ -2239,7 +2344,7 @@ Operations::UncutAtKeyVertexInfo_ Operations::prepareUncutAtKeyVertex_(KeyVertex
             else {
                 // (inverse op: cut closed edge)
                 // the only incident edge is a loop, and we don't
-                // kv to be used as a u-turn in any cycle.
+                // want kv to be used as a u-turn in any cycle.
                 for (Cell* starCell : kv->star()) {
                     KeyFace* kf = starCell->toKeyFace();
                     if (!kf) {

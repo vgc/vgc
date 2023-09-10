@@ -106,6 +106,7 @@ private:
     // position and orientation when not bound to vertices ?
     //detail::Transform2d transform_;
 
+    // XXX Store directly as data member without the unique_ptr, like KeyFaceData?
     std::unique_ptr<KeyEdgeData> data_ = {};
     //bool isClosed_ = false;
 
