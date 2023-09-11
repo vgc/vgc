@@ -581,7 +581,7 @@ void raise(core::ConstSpan<Node*> targets, core::AnimTime t) {
     // the target nodes.
     //
     // Once such overlapping node is found, compute the destination node (i.e.,
-    // where to move the collected node):
+    // where to move the collected nodes):
     // - If the overlapping node is a group, the destination node is the group.
     // - If the overlapping node is a cell, the destination node is the
     //   top-most node in the closure of the overlapping node, excluding the
@@ -675,7 +675,7 @@ void lower(core::ConstSpan<Node*> targets, core::AnimTime t) {
     // the target nodes.
     //
     // Once such overlapping node is found, compute the destination node (i.e.,
-    // where to move the collected node):
+    // where to move the collected nodes):
     // - If the overlapping node is a group, the destination node is the group.
     // - If the overlapping node is a cell, the destination node is the
     //   bottom-most node in the opening of the overlapping node, excluding the
