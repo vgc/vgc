@@ -21,6 +21,7 @@ namespace vgc::tools::commands {
 using ui::Key;
 using ui::Shortcut;
 
+constexpr ui::ModifierKey ctrl = ui::ModifierKey::Ctrl;
 constexpr ui::ModifierKey alt = ui::ModifierKey::Alt;
 
 VGC_UI_DEFINE_TRIGGER_COMMAND( //
@@ -45,13 +46,13 @@ VGC_UI_DEFINE_TRIGGER_COMMAND( //
     raise,
     "tools.zOrder.raise",
     "Raise",
-    Shortcut(Key::RightSquareBracket));
+    Shortcut(ctrl, Key::RightSquareBracket));
 
 VGC_UI_DEFINE_TRIGGER_COMMAND( //
     lower,
     "tools.zOrder.lower",
     "Lower",
-    Shortcut(Key::LeftSquareBracket));
+    Shortcut(ctrl, Key::LeftSquareBracket));
 
 namespace {
 
