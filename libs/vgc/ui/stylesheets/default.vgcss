@@ -488,7 +488,7 @@
 
 .tool-options {
     vertical-stretch: 0;
-    min-height: 140dp;
+    min-height: 160dp;
 }
 
 .tool-options .Panel > .Flex {
