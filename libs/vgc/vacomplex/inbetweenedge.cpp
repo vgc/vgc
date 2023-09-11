@@ -18,7 +18,6 @@
 
 namespace vgc::vacomplex {
 
-
 bool InbetweenEdge::isStartVertex(VertexCell* /*v*/) const {
     // TODO: check whether v is one of the start vertices of this inbetween edge.
     return false;

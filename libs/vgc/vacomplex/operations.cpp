@@ -487,11 +487,11 @@ void raiseNodes(core::ConstSpan<Node*> targets, core::AnimTime t) {
     for (Node* node : targets.subspan(1)) {
         if (node->complex() != complex0) {
             throw LogicError("raiseNodes: a node is from a different complex "
-                "than the others.");
+                             "than the others.");
         }
         if (node->parentGroup() != group0) {
             throw LogicError("raiseNodes: a node is from a different group "
-                "than the others.");
+                             "than the others.");
         }
     }
 
@@ -594,11 +594,11 @@ void lowerNodes(core::ConstSpan<Node*> targets, core::AnimTime t) {
     for (Node* node : targets.subspan(1)) {
         if (node->complex() != complex0) {
             throw LogicError("lowerNodes: a node is from a different complex "
-                "than the others.");
+                             "than the others.");
         }
         if (node->parentGroup() != group0) {
             throw LogicError("lowerNodes: a node is from a different group "
-                "than the others.");
+                             "than the others.");
         }
     }
 

@@ -28,8 +28,8 @@
 #include <vgc/geometry/mat2d.h>
 #include <vgc/geometry/mat3d.h>
 #include <vgc/geometry/range1d.h>
-#include <vgc/geometry/vec2d.h>
 #include <vgc/geometry/rect2d.h>
+#include <vgc/geometry/vec2d.h>
 #include <vgc/vacomplex/api.h>
 #include <vgc/vacomplex/keyedgedata.h>
 #include <vgc/vacomplex/transform.h>

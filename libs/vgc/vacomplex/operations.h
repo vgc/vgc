@@ -17,9 +17,9 @@
 #ifndef VGC_VACOMPLEX_OPERATIONS_H
 #define VGC_VACOMPLEX_OPERATIONS_H
 
+#include <vgc/core/animtime.h>
 #include <vgc/core/id.h>
 #include <vgc/core/span.h>
-#include <vgc/core/animtime.h>
 #include <vgc/vacomplex/api.h>
 #include <vgc/vacomplex/complex.h>
 #include <vgc/vacomplex/exceptions.h>
