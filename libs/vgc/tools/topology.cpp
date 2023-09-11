@@ -43,14 +43,23 @@ VGC_UI_DEFINE_TRIGGER_COMMAND( //
 
 VGC_UI_DEFINE_TRIGGER_COMMAND( //
     raise,
-    "tools.topology.raise",
-    "Raise with boundary",
-    Shortcut(alt, Key::PageUp));
+    "tools.zOrder.raise",
+    "Raise",
+    Shortcut(Key::RightSquareBracket));
 
 VGC_UI_DEFINE_TRIGGER_COMMAND( //
     lower,
-    "tools.topology.lower",
-    "Lower with star",
-    Shortcut(alt, Key::PageDown));
+    "tools.zOrder.lower",
+    "Lower",
+    Shortcut(Key::LeftSquareBracket));
+
+namespace {
+
+// Secondary shortcuts for raise/lower
+//
+VGC_UI_ADD_DEFAULT_SHORTCUT(raise(), Shortcut(Key::PageUp))
+VGC_UI_ADD_DEFAULT_SHORTCUT(lower(), Shortcut(Key::PageDown))
+
+} // namespace
 
 } // namespace vgc::tools::commands
