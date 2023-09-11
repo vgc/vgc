@@ -888,8 +888,6 @@ protected:
     virtual bool updateGeometryFromBoundary();
 
 private:
-    virtual geometry::Rect2d boundingBoxAt_(const core::AnimTime& t) const = 0;
-
     // Assumes `oldVertex` is in boundary.
     //
     virtual void substituteKeyVertex_(KeyVertex* oldVertex, KeyVertex* newVertex) = 0;
