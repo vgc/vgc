@@ -1079,9 +1079,9 @@ protected:
     /// allows `Foo` children may define:
     ///
     /// ```cpp
-    /// void Foo::insertChildBefore(Foo* child, Foo* nextSibling)
+    /// void Foo::insertChildBefore(Foo* nextSibling, Foo* child)
     /// {
-    ///     Object::insertChildObject_(child, nextSibling);
+    ///     Object::insertChildObject_(nextSibling, child);
     /// }
     /// ```
     ///
