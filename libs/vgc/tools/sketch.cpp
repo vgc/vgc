@@ -34,6 +34,7 @@
 #include <vgc/ui/settings.h>
 #include <vgc/ui/window.h>
 #include <vgc/workspace/edge.h>
+#include <vgc/workspace/strings.h>
 
 namespace vgc::tools {
 
@@ -75,6 +76,12 @@ ui::NumberSetting* snapFalloff() {
     return setting.get();
 }
 
+ui::BoolSetting* autoFill() {
+    static ui::BoolSettingPtr setting = ui::BoolSetting::create(
+        ui::settings::session(), "tools.sketch.autoFill", "Auto-Fill", false);
+    return setting.get();
+}
+
 } // namespace options
 
 geometry::Vec2d getSnapPosition(workspace::Element* snapVertex) {
@@ -106,6 +113,10 @@ geometry::Vec2d applySnapFalloff(
     double t = s / snapFalloff;
     double x = 1 - t;
     return position + delta * x * x * x;
+}
+
+bool isAutoFillEnabled() {
+    return options::autoFill()->value();
 }
 
 } // namespace
@@ -140,6 +151,7 @@ ui::WidgetPtr Sketch::createOptionsWidget() const {
     res->createChild<ui::BoolSettingEdit>(options::snapping());
     res->createChild<ui::NumberSettingEdit>(options::snapDistance());
     res->createChild<ui::NumberSettingEdit>(options::snapFalloff());
+    res->createChild<ui::BoolSettingEdit>(options::autoFill());
     return res;
 }
 
@@ -1417,6 +1429,30 @@ void Sketch::continueCurve_(ui::MouseEvent* event) {
     workspace->sync();
 }
 
+namespace {
+
+void autoFill(vacomplex::Node* keNode) {
+    vacomplex::Cell* keCell = keNode->toCell();
+    if (!keCell) {
+        return;
+    }
+    vacomplex::KeyEdge* ke = keCell->toKeyEdge();
+    if (!ke) {
+        return;
+    }
+    // Note: test works if closed too.
+    if (ke->startVertex() == ke->endVertex()) {
+        vacomplex::KeyCycle cycle({vacomplex::KeyHalfedge(ke, true)});
+        vacomplex::KeyFace* kf = vacomplex::ops::createKeyFace(
+            std::move(cycle), ke->parentGroup(), ke, ke->time());
+        const vacomplex::CellProperty* styleProp =
+            ke->data()->findProperty(workspace::strings::style);
+        kf->data().insertProperty(styleProp->clone());
+    }
+}
+
+} // namespace
+
 void Sketch::finishCurve_(ui::MouseEvent* /*event*/) {
 
     namespace ds = dom::strings;
@@ -1486,9 +1522,12 @@ void Sketch::finishCurve_(ui::MouseEvent* /*event*/) {
             workspace->sync();
 
             if (keyEdgeElement) {
-                auto ke = keyEdgeElement->vacNode();
-                if (ke) {
-                    vacomplex::ops::moveBelowBoundary(ke);
+                auto keNode = keyEdgeElement->vacNode();
+                if (keNode) {
+                    vacomplex::ops::moveBelowBoundary(keNode);
+                    if (isAutoFillEnabled()) {
+                        autoFill(keNode);
+                    }
                 }
             }
         }
