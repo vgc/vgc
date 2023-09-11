@@ -180,7 +180,7 @@ Node* topMostInGroupAbove(Node* node_, core::ConstSpan<Node*> nodes) {
     return nullptr;
 }
 
-Node* bottomMostInGroupUnder(Node* node_, core::ConstSpan<Node*> nodes) {
+Node* bottomMostInGroupBelow(Node* node_, core::ConstSpan<Node*> nodes) {
     Node* node = node_->parentGroup()->firstChild();
     while (node) {
         if (node == node_) {

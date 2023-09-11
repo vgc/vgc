@@ -657,7 +657,7 @@ void lowerNodes(core::ConstSpan<Node*> targets, core::AnimTime t) {
                     for (Node* nodeInOpening : collectedOpening) {
                         cellOpening.removeOne(nodeInOpening);
                     }
-                    Node* bottomMost = bottomMostInGroupUnder(node, cellOpening);
+                    Node* bottomMost = bottomMostInGroupBelow(node, cellOpening);
                     if (bottomMost) {
                         destinationNode = bottomMost;
                     }
