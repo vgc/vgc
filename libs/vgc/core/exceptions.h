@@ -117,8 +117,10 @@
 ///
 #if defined(VGC_CORE_COMPILER_CLANG)
 #    define VGC_CORE_EXCEPTIONS_DECLARE_ANCHOR virtual void anchor();
-#    define VGC_CORE_EXCEPTIONS_DEFINE_ANCHOR(T)                                         \
-        void T::anchor() {}
+// clang-format off
+// clang format bug: `void T::anchor() {}` bin-packed since Clang 15.0
+#    define VGC_CORE_EXCEPTIONS_DEFINE_ANCHOR(T) void T::anchor() {}
+// clang-format on
 #else
 #    define VGC_CORE_EXCEPTIONS_DECLARE_ANCHOR
 #    define VGC_CORE_EXCEPTIONS_DEFINE_ANCHOR(T)
