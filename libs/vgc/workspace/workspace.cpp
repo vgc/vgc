@@ -352,11 +352,7 @@ void Workspace::raise(core::ConstSpan<core::Id> elementIds, core::AnimTime t) {
         vacomplex::ops::raiseNodes(layerNodes, t);
     }
 
-    VGC_DEBUG(LogVgcWorkspace, "post-raise");
-    debugPrintWorkspaceTree_();
-    VGC_DEBUG(LogVgcWorkspace, "sync");
     sync();
-    debugPrintWorkspaceTree_();
 }
 
 void Workspace::lower(core::ConstSpan<core::Id> elementIds, core::AnimTime t) {
@@ -394,11 +390,7 @@ void Workspace::lower(core::ConstSpan<core::Id> elementIds, core::AnimTime t) {
         vacomplex::ops::lowerNodes(layerNodes, t);
     }
 
-    VGC_DEBUG(LogVgcWorkspace, "post-lower");
-    debugPrintWorkspaceTree_();
-    VGC_DEBUG(LogVgcWorkspace, "sync");
     sync();
-    debugPrintWorkspaceTree_();
 }
 
 core::Id Workspace::glue(core::ConstSpan<core::Id> elementIds) {
