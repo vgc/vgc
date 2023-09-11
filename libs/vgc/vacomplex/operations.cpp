@@ -468,17 +468,21 @@ void arrayUniteWith(core::Array<T>& dst, const Range& src) {
     }
 }
 
-} // namespace
+template<typename T, typename Range>
+void arrayDifferenceWith(core::Array<T>& dst, const Range& src) {
+    for (const auto& srcNode : src) {
+        dst.removeOne(srcNode);
+    }
+}
 
-// Assumes same group
-void raiseNodes(core::ConstSpan<Node*> targets, core::AnimTime t) {
+Group* checkRaiseLowerPreConditions(core::ConstSpan<Node*> targets) {
 
     if (targets.isEmpty()) {
-        return;
+        return nullptr;
     }
 
     if (targets.contains(nullptr)) {
-        throw LogicError("raiseNodes: a node in targets is nullptr.");
+        throw LogicError("Cannot raise/lower nodes: one of nodes is null.");
     }
 
     Node* node0 = targets.first();
@@ -486,70 +490,114 @@ void raiseNodes(core::ConstSpan<Node*> targets, core::AnimTime t) {
     Complex* complex0 = node0->complex();
     for (Node* node : targets.subspan(1)) {
         if (node->complex() != complex0) {
-            throw LogicError("raiseNodes: a node is from a different complex "
-                             "than the others.");
+            throw LogicError("Cannot raise/lower nodes: One of the nodes is "
+                             "from a different complex than the others.");
         }
         if (node->parentGroup() != group0) {
-            throw LogicError("raiseNodes: a node is from a different group "
-                             "than the others.");
+            throw LogicError("Cannot raise/lower nodes: One of the nodes is "
+                             "from a different group than the others.");
         }
     }
 
-    core::Array<Node*> visibleTargets;
-    core::Array<geometry::Rect2d> targetBboxes;
-    for (Node* node : targets) {
+    return group0;
+}
+
+core::Array<geometry::Rect2d> computeBoundingBoxes(
+    core::ConstSpan<Node*> nodes,
+    core::Array<Node*>& visibleNodes,
+    core::AnimTime t) {
+
+    core::Array<geometry::Rect2d> res;
+    for (Node* node : nodes) {
         geometry::Rect2d bbox = node->boundingBoxAt(t);
         if (!bbox.isEmpty()) {
-            visibleTargets.append(node);
-            targetBboxes.append(bbox);
+            visibleNodes.append(node);
+            res.append(bbox);
         }
     }
+    return res;
+}
 
+bool overlapsWith(
+    const core::Array<geometry::Rect2d>& bboxes,
+    Node* node,
+    core::AnimTime t) {
+
+    geometry::Rect2d nodeBbox = node->boundingBoxAt(t);
+    for (const geometry::Rect2d& bbox : bboxes) {
+        if (nodeBbox.intersects(bbox)) {
+            return true;
+        }
+    }
+    return false;
+}
+
+} // namespace
+
+// Assumes same group
+void raise(core::ConstSpan<Node*> targets, core::AnimTime t) {
+
+    // Check pre-condition and get group that contains all target nodes.
+    //
+    Group* group = checkRaiseLowerPreConditions(targets);
+    if (!group) {
+        return;
+    }
+
+    // Compute bounding boxes of target nodes.
+    //
+    core::Array<Node*> visibleTargets;
+    core::Array<geometry::Rect2d> targetBboxes =
+        computeBoundingBoxes(targets, visibleTargets, t);
+
+    // Iterate from bottom to collect all target nodes and their boundary until
+    // we found all n targets.
+    //
+    // Note that we do not compute the boundary of targets in advance, since we
+    // only want to start collecting the boundary of a given target node once
+    // that target node is itself collected.
+    //
     core::Array<Node*> collected;
-    core::Array<Node*> collectedClosure(visibleTargets);
-
+    core::Array<Node*> collectedBoundary;
     Int n = visibleTargets.length();
     Int i = 0;
-
-    Node* destinationNode = nullptr;
-
-    // iterate from bottom
-    Node* node = group0->firstChild();
+    Node* node = group->firstChild();
     while (node && i < n) {
         if (visibleTargets.contains(node)) {
             ++i;
             collected.append(node);
             if (Cell* cell = node->toCell()) {
-                arrayUniteWith(collectedClosure, cell->boundary());
+                arrayUniteWith(collectedBoundary, cell->boundary());
             }
         }
-        else if (collectedClosure.contains(node)) {
+        else if (collectedBoundary.contains(node)) {
             collected.append(node);
         }
         node = node->nextSibling();
     }
+
+    // Continue iterating and collecting the boundary of target nodes until we
+    // find a node which is not in this boundary and that overlaps with one of
+    // the target nodes.
+    //
+    // Once such overlapping node is found, compute the destination node (i.e.,
+    // where to move the collected node):
+    // - If the overlapping node is a group, the destination node is the group.
+    // - If the overlapping node is a cell, the destination node is the
+    //   top-most node in the closure of the overlapping node, excluding the
+    //   collected boundary.
+    //
+    Node* destinationNode = nullptr;
     while (node) {
-        if (collectedClosure.contains(node)) {
+        if (collectedBoundary.contains(node)) {
             collected.append(node);
         }
         else {
-            // check if node is overlapping targets
-            bool overlaps = false;
-            geometry::Rect2d nodeBbox = node->boundingBoxAt(t);
-            for (const geometry::Rect2d& bbox : targetBboxes) {
-                if (nodeBbox.intersects(bbox)) {
-                    overlaps = true;
-                    break;
-                }
-            }
-            if (overlaps) {
+            if (overlapsWith(targetBboxes, node, t)) {
                 destinationNode = node;
                 if (Cell* cell = node->toCell()) {
                     core::Array<Node*> cellBoundary(cell->boundary());
-                    // exclude our closure from target closure.
-                    for (Node* nodeInClosure : collectedClosure) {
-                        cellBoundary.removeOne(nodeInClosure);
-                    }
+                    arrayDifferenceWith(cellBoundary, collectedBoundary);
                     Node* topMost = topMostInGroupAbove(node, cellBoundary);
                     if (topMost) {
                         destinationNode = topMost;
@@ -560,104 +608,91 @@ void raiseNodes(core::ConstSpan<Node*> targets, core::AnimTime t) {
         }
         node = node->nextSibling();
     }
+
+    // Continue iterating and collecting the boundary of target nodes until we
+    // reach the destination node. If there is no destination node (i.e., there
+    // was no overlapping node above the targets), then we move the collected
+    // nodes to the top of the group.
+    //
     while (node && node != destinationNode) {
-        if (collectedClosure.contains(node)) {
+        if (collectedBoundary.contains(node)) {
             collected.append(node);
         }
         node = node->nextSibling();
     }
-
     if (!node || !destinationNode) {
-        destinationNode = group0->lastChild();
+        destinationNode = group->lastChild();
     }
 
-    detail::Operations ops(group0->complex());
+    // Move the collected nodes.
+    //
+    detail::Operations ops(group->complex());
     for (Node* cn : collected) {
-        ops.moveToGroup(cn, group0, destinationNode->nextSibling());
+        ops.moveToGroup(cn, group, destinationNode->nextSibling());
         destinationNode = cn;
     }
 }
 
-void lowerNodes(core::ConstSpan<Node*> targets, core::AnimTime t) {
+void lower(core::ConstSpan<Node*> targets, core::AnimTime t) {
 
-    if (targets.isEmpty()) {
+    // Check pre-condition and get group that contains all target nodes.
+    //
+    Group* group = checkRaiseLowerPreConditions(targets);
+    if (!group) {
         return;
     }
 
-    if (targets.contains(nullptr)) {
-        throw LogicError("lowerNodes: a node in targets is nullptr.");
-    }
-
-    Node* node0 = targets.first();
-    Group* group0 = node0->parentGroup();
-    Complex* complex0 = node0->complex();
-    for (Node* node : targets.subspan(1)) {
-        if (node->complex() != complex0) {
-            throw LogicError("lowerNodes: a node is from a different complex "
-                             "than the others.");
-        }
-        if (node->parentGroup() != group0) {
-            throw LogicError("lowerNodes: a node is from a different group "
-                             "than the others.");
-        }
-    }
-
+    // Compute bounding boxes of target nodes.
+    //
     core::Array<Node*> visibleTargets;
-    core::Array<geometry::Rect2d> targetBboxes;
-    for (Node* node : targets) {
-        geometry::Rect2d bbox = node->boundingBoxAt(t);
-        if (!bbox.isEmpty()) {
-            visibleTargets.append(node);
-            targetBboxes.append(bbox);
-        }
-    }
+    core::Array<geometry::Rect2d> targetBboxes =
+        computeBoundingBoxes(targets, visibleTargets, t);
 
+    // Iterate from top to collect all target nodes and their star until we
+    // found all n targets.
+    //
     core::Array<Node*> collected;
-    core::Array<Node*> collectedOpening(visibleTargets);
-
+    core::Array<Node*> collectedStar;
     Int n = visibleTargets.length();
     Int i = 0;
-
-    Node* destinationNode = nullptr;
-
-    // iterate from top
-    Node* node = group0->lastChild();
+    Node* node = group->lastChild();
     while (node && i < n) {
         if (visibleTargets.contains(node)) {
             ++i;
             collected.append(node);
             if (Cell* cell = node->toCell()) {
-                arrayUniteWith(collectedOpening, cell->star());
+                arrayUniteWith(collectedStar, cell->star());
             }
         }
-        else if (collectedOpening.contains(node)) {
+        else if (collectedStar.contains(node)) {
             collected.append(node);
         }
         node = node->previousSibling();
     }
+
+    // Continue iterating and collecting the star of target nodes until we
+    // find a node which is not in this star and that overlaps with one of
+    // the target nodes.
+    //
+    // Once such overlapping node is found, compute the destination node (i.e.,
+    // where to move the collected node):
+    // - If the overlapping node is a group, the destination node is the group.
+    // - If the overlapping node is a cell, the destination node is the
+    //   bottom-most node in the opening of the overlapping node, excluding the
+    //   collected star.
+    //
+    Node* destinationNode = nullptr;
     while (node) {
-        if (collectedOpening.contains(node)) {
+        if (collectedStar.contains(node)) {
             collected.append(node);
         }
         else {
-            // check if node is overlapping targets
-            bool overlaps = false;
-            geometry::Rect2d nodeBbox = node->boundingBoxAt(t);
-            for (const geometry::Rect2d& bbox : targetBboxes) {
-                if (nodeBbox.intersects(bbox)) {
-                    overlaps = true;
-                    break;
-                }
-            }
-            if (overlaps) {
+            if (overlapsWith(targetBboxes, node, t)) {
                 destinationNode = node;
                 if (Cell* cell = node->toCell()) {
-                    core::Array<Node*> cellOpening(cell->star());
-                    // exclude our opening from target opening.
-                    for (Node* nodeInOpening : collectedOpening) {
-                        cellOpening.removeOne(nodeInOpening);
-                    }
-                    Node* bottomMost = bottomMostInGroupBelow(node, cellOpening);
+                    core::Array<Node*> cellStar(cell->star());
+                    arrayDifferenceWith(cellStar, collectedStar);
+                    Node* bottomMost = bottomMostInGroupBelow(node, cellStar);
                     if (bottomMost) {
                         destinationNode = bottomMost;
                     }
@@ -667,20 +702,27 @@ void lowerNodes(core::ConstSpan<Node*> targets, core::AnimTime t) {
         }
         node = node->previousSibling();
     }
+
+    // Continue iterating and collecting the star of target nodes until we
+    // reach the destination node. If there is no destination node (i.e., there
+    // was no overlapping node above the targets), then we move the collected
+    // nodes to the bottom of the group.
+    //
     while (node && node != destinationNode) {
-        if (collectedOpening.contains(node)) {
+        if (collectedStar.contains(node)) {
             collected.append(node);
         }
         node = node->previousSibling();
     }
-
     if (!node || !destinationNode) {
-        destinationNode = group0->firstChild();
+        destinationNode = group->firstChild();
     }
 
-    detail::Operations ops(group0->complex());
+    // Move the collected nodes.
+    //
+    detail::Operations ops(group->complex());
     for (Node* cn : collected) {
-        ops.moveToGroup(cn, group0, destinationNode);
+        ops.moveToGroup(cn, group, destinationNode);
         destinationNode = cn;
     }
 }

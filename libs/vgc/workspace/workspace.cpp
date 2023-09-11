@@ -349,7 +349,7 @@ void Workspace::raise(core::ConstSpan<core::Id> elementIds, core::AnimTime t) {
                 }
             }
         }
-        vacomplex::ops::raiseNodes(layerNodes, t);
+        vacomplex::ops::raise(layerNodes, t);
     }
 
     sync();
@@ -387,7 +387,7 @@ void Workspace::lower(core::ConstSpan<core::Id> elementIds, core::AnimTime t) {
                 }
             }
         }
-        vacomplex::ops::lowerNodes(layerNodes, t);
+        vacomplex::ops::lower(layerNodes, t);
     }
 
     sync();
