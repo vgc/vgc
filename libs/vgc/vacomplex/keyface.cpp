@@ -715,6 +715,22 @@ bool computeKeyFaceFillTriangles(
 
 } // namespace detail
 
+geometry::Rect2d KeyFace::boundingBox() const {
+    // TODO: cache ? it would require dirtying on boundary/cycle updates.
+    geometry::Rect2d result = geometry::Rect2d::empty;
+    for (const KeyCycle& cycle : cycles()) {
+        if (KeyVertex* kv = cycle.steinerVertex()) {
+            result.uniteWith(kv->boundingBox());
+        }
+        else {
+            for (const KeyHalfedge& kh : cycle.halfedges()) {
+                result.uniteWith(kh.edge()->boundingBox());
+            }
+        }
+    }
+    return result;
+}
+
 void KeyFace::substituteKeyVertex_(KeyVertex* oldVertex, KeyVertex* newVertex) {
     for (KeyCycle& cycle : cycles_) {
         if (cycle.steinerVertex_ == oldVertex) {

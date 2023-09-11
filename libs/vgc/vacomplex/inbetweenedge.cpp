@@ -33,6 +33,11 @@ bool InbetweenEdge::isClosed() const {
     return false;
 }
 
+geometry::Rect2d InbetweenEdge::boundingBoxAt(core::AnimTime /*t*/) const {
+    // TODO
+    return geometry::Rect2d::empty;
+}
+
 void InbetweenEdge::substituteKeyVertex_(KeyVertex*, KeyVertex*) {
     // TODO
 }

@@ -41,6 +41,8 @@ public:
     bool isEndVertex(VertexCell* v) const override;
     bool isClosed() const override;
 
+    geometry::Rect2d boundingBoxAt(core::AnimTime /*t*/) const override;
+
 private:
     void substituteKeyVertex_(KeyVertex* oldVertex, KeyVertex* newVertex) override;
 

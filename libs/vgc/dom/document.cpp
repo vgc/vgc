@@ -504,7 +504,7 @@ void Document::disableHistory() {
 }
 
 bool Document::hasPendingDiff() {
-    return !pendingDiff_.isEmpty();
+    return !pendingDiff_.isEmpty() || !previousRelativesMap_.empty();
 }
 
 bool Document::emitPendingDiff() {

@@ -28,6 +28,7 @@
 #include <vgc/geometry/mat2d.h>
 #include <vgc/geometry/mat3d.h>
 #include <vgc/geometry/range1d.h>
+#include <vgc/geometry/rect2d.h>
 #include <vgc/geometry/vec2d.h>
 #include <vgc/vacomplex/api.h>
 #include <vgc/vacomplex/keyedgedata.h>
@@ -450,6 +451,8 @@ public:
         return const_cast<Node*>(this)->toGroupUnchecked();
     }
 
+    virtual geometry::Rect2d boundingBoxAt(core::AnimTime t) const = 0;
+
     void debugPrint(core::StringWriter& out);
 
 protected:
@@ -513,6 +516,14 @@ public:
 
     Iterator end() const {
         return TreeParentBase::end();
+    }
+
+    geometry::Rect2d boundingBoxAt(core::AnimTime t) const override {
+        geometry::Rect2d result = geometry::Rect2d::empty;
+        for (Node* node : *this) {
+            result.uniteWith(node->boundingBoxAt(t));
+        }
+        return result;
     }
 
     const Transform& transform() const {
@@ -800,6 +811,28 @@ public:
 
     Complex* complex() const;
 
+    Cell* previousSiblingCell() const {
+        Node* node = previousSibling();
+        while (node) {
+            if (node->isCell()) {
+                return node->toCellUnchecked();
+            }
+            node = node->previousSibling();
+        }
+        return nullptr;
+    }
+
+    Cell* nextSiblingCell() const {
+        Node* node = nextSibling();
+        while (node) {
+            if (node->isCell()) {
+                return node->toCellUnchecked();
+            }
+            node = node->nextSibling();
+        }
+        return nullptr;
+    }
+
     /// Returns the cell type of this `Cell`.
     ///
     CellType cellType() const {
@@ -823,6 +856,8 @@ public:
     }
 
     virtual bool existsAt(core::AnimTime t) const = 0;
+
+    geometry::Rect2d boundingBoxAt(core::AnimTime t) const override = 0;
 
     CellRangeView star() const {
         return CellRangeView(star_);
@@ -849,10 +884,10 @@ protected:
         hasMeshBeenQueriedSinceLastDirtyEvent_ = true;
     }
 
-    virtual void dirtyMesh_();
-    virtual bool updateGeometryFromBoundary_();
+    virtual void dirtyMesh();
+    virtual bool updateGeometryFromBoundary();
 
-protected:
+private:
     // Assumes `oldVertex` is in boundary.
     //
     virtual void substituteKeyVertex_(KeyVertex* oldVertex, KeyVertex* newVertex) = 0;
@@ -937,13 +972,15 @@ public:
     using SpatialCell::spatialType;
     using TemporalCell::temporalType;
 
+    static constexpr CellType cellType() {
+        return detail::vacCellTypeCombine(spatialType(), temporalType());
+    }
+
     bool existsAt(core::AnimTime t) const final {
         return TemporalCell::existsAt(t);
     }
 
-    static constexpr CellType cellType() {
-        return detail::vacCellTypeCombine(spatialType(), temporalType());
-    }
+    virtual geometry::Rect2d boundingBoxAt(core::AnimTime t) const = 0;
 };
 
 class VGC_VACOMPLEX_API KeyCell : public CellProxy<KeyCell> {
@@ -967,6 +1004,15 @@ public:
 
     bool existsAt(core::AnimTime t) const {
         return t == time_;
+    }
+
+    virtual geometry::Rect2d boundingBox() const = 0;
+
+    geometry::Rect2d boundingBoxAt(core::AnimTime t) const {
+        if (existsAt(t)) {
+            return boundingBox();
+        }
+        return geometry::Rect2d::empty;
     }
 
     VGC_VACOMPLEX_DEFINE_TEMPORAL_CELL_CAST_METHODS(Key)
@@ -994,6 +1040,8 @@ public:
     bool existsAt(core::AnimTime t) const {
         return timeRange_.contains(t);
     }
+
+    virtual geometry::Rect2d boundingBoxAt(core::AnimTime t) const = 0;
 
     VGC_VACOMPLEX_DEFINE_TEMPORAL_CELL_CAST_METHODS(Inbetween)
 

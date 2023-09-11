@@ -21,6 +21,7 @@ namespace vgc::tools::commands {
 using ui::Key;
 using ui::Shortcut;
 
+constexpr ui::ModifierKey ctrl = ui::ModifierKey::Ctrl;
 constexpr ui::ModifierKey alt = ui::ModifierKey::Alt;
 
 VGC_UI_DEFINE_TRIGGER_COMMAND( //
@@ -40,5 +41,26 @@ VGC_UI_DEFINE_TRIGGER_COMMAND( //
     "tools.topology.simplify",
     "Simplify",
     Shortcut(alt, Key::S));
+
+VGC_UI_DEFINE_TRIGGER_COMMAND( //
+    raise,
+    "tools.zOrder.raise",
+    "Raise",
+    Shortcut(ctrl, Key::RightSquareBracket));
+
+VGC_UI_DEFINE_TRIGGER_COMMAND( //
+    lower,
+    "tools.zOrder.lower",
+    "Lower",
+    Shortcut(ctrl, Key::LeftSquareBracket));
+
+namespace {
+
+// Secondary shortcuts for raise/lower
+//
+VGC_UI_ADD_DEFAULT_SHORTCUT(raise(), Shortcut(Key::PageUp))
+VGC_UI_ADD_DEFAULT_SHORTCUT(lower(), Shortcut(Key::PageDown))
+
+} // namespace
 
 } // namespace vgc::tools::commands

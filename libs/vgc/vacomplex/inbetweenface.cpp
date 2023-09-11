@@ -18,6 +18,11 @@
 
 namespace vgc::vacomplex {
 
+geometry::Rect2d InbetweenFace::boundingBoxAt(core::AnimTime /*t*/) const {
+    // TODO
+    return geometry::Rect2d::empty;
+}
+
 void InbetweenFace::substituteKeyVertex_(KeyVertex*, KeyVertex*) {
     // TODO
 }

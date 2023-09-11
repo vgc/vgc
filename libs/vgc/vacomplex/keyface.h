@@ -69,6 +69,15 @@ public:
         return cycles_;
     }
 
+    geometry::Rect2d boundingBox() const override;
+
+    geometry::Rect2d boundingBoxAt(core::AnimTime t) const override {
+        if (existsAt(t)) {
+            return boundingBox();
+        }
+        return geometry::Rect2d::empty;
+    }
+
     KeyFaceData& data() {
         return data_;
     }

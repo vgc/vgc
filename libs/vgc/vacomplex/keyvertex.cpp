@@ -18,6 +18,10 @@
 
 namespace vgc::vacomplex {
 
+geometry::Rect2d KeyVertex::boundingBox() const {
+    return geometry::Rect2d(position_, position_);
+}
+
 void KeyVertex::substituteKeyVertex_(KeyVertex*, KeyVertex*) {
     // no-op
 }

@@ -18,6 +18,11 @@
 
 namespace vgc::vacomplex {
 
+geometry::Rect2d InbetweenVertex::boundingBoxAt(core::AnimTime /*t*/) const {
+    // TODO
+    return geometry::Rect2d::empty;
+}
+
 geometry::Vec2d InbetweenVertex::position(core::AnimTime) const {
     // XXX todo interp
     return geometry::Vec2d();

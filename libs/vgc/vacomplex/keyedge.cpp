@@ -63,19 +63,13 @@ const geometry::Rect2d& KeyEdge::centerlineBoundingBox() const {
 geometry::StrokeSampling2d
 KeyEdge::computeStrokeSampling(geometry::CurveSamplingQuality quality) const {
 
-    if (samplingQuality_ == quality && sampling_) {
+    if (samplingQuality_ == quality) {
+        updateStrokeSampling_();
         // return copy of cached sampling
         return *sampling_;
     }
 
-    geometry::StrokeSampling2d sampling = computeStrokeSampling_(samplingQuality_);
-
-    if (samplingQuality_ == quality) {
-        sampling_ = std::make_shared<const geometry::StrokeSampling2d>(sampling);
-        onMeshQueried();
-    }
-
-    return sampling;
+    return computeStrokeSampling_(samplingQuality_);
 }
 
 double KeyEdge::startAngle() const {
@@ -97,13 +91,32 @@ double KeyEdge::endAngle() const {
     return 0;
 }
 
+geometry::Rect2d KeyEdge::boundingBox() const {
+    if (!bbox_.has_value()) {
+        updateStrokeSampling_();
+        bbox_ = sampling_->centerlineBoundingBox();
+    }
+    return bbox_.value();
+}
+
+void KeyEdge::dirtyMesh() {
+    sampling_.reset();
+    bbox_ = std::nullopt;
+}
+
+bool KeyEdge::updateGeometryFromBoundary() {
+    return snapGeometry();
+}
+
 geometry::StrokeSampling2d
 KeyEdge::computeStrokeSampling_(geometry::CurveSamplingQuality quality) const {
     // TODO: define guarantees.
     // - what about a closed edge without points data ?
     // - what about an open edge without points data and same end points ?
     // - what about an open edge without points data but different end points ?
-    return data_->stroke()->computeSampling(quality);
+    geometry::StrokeSampling2d sampling = data_->stroke()->computeSampling(quality);
+    onMeshQueried();
+    return sampling;
 }
 
 void KeyEdge::updateStrokeSampling_() const {
@@ -112,15 +125,6 @@ void KeyEdge::updateStrokeSampling_() const {
         sampling_ =
             std::make_shared<const geometry::StrokeSampling2d>(std::move(sampling));
     }
-    onMeshQueried();
-}
-
-void KeyEdge::dirtyMesh_() {
-    sampling_.reset();
-}
-
-bool KeyEdge::updateGeometryFromBoundary_() {
-    return snapGeometry();
 }
 
 // Assumes `oldVertex != nullptr`.

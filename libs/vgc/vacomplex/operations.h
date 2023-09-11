@@ -17,6 +17,7 @@
 #ifndef VGC_VACOMPLEX_OPERATIONS_H
 #define VGC_VACOMPLEX_OPERATIONS_H
 
+#include <vgc/core/animtime.h>
 #include <vgc/core/id.h>
 #include <vgc/core/span.h>
 #include <vgc/vacomplex/api.h>
@@ -206,6 +207,22 @@ void moveToGroup(Node* node, Group* parentGroup, Node* nextSibling = nullptr);
 
 VGC_VACOMPLEX_API
 void moveBelowBoundary(Node* node);
+
+/// Raises the given `nodes` (and their boundary) above the bottom-most node
+/// (and its boundary) that is above all `nodes` and overlaps the `nodes`.
+///
+/// The nodes must belong to the same group, otherwise `LogicError()` is thrown.
+///
+VGC_VACOMPLEX_API
+void raise(core::ConstSpan<Node*> nodes, core::AnimTime t);
+
+/// Lowers the given `nodes` (and their star) below the top-most node (and its
+/// star) that is below all `nodes` and overlaps at least one of the `nodes`.
+///
+/// The nodes must belong to the same group, otherwise `LogicError()` is thrown.
+///
+VGC_VACOMPLEX_API
+void lower(core::ConstSpan<Node*> nodes, core::AnimTime t);
 
 VGC_VACOMPLEX_API
 void setKeyVertexPosition(KeyVertex* vertex, const geometry::Vec2d& pos);

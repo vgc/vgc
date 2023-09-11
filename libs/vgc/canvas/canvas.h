@@ -172,6 +172,10 @@ public:
         return camera_;
     }
 
+    core::AnimTime currentTime() const {
+        return {};
+    }
+
     //----------------------- Manage selection --------------------------------
     //
     // For now, we keep this in Canvas, but we may want to move this to a

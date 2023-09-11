@@ -24,6 +24,7 @@
 #include <vgc/core/array.h>
 #include <vgc/core/flags.h>
 #include <vgc/core/object.h>
+#include <vgc/core/span.h>
 #include <vgc/core/stringid.h>
 #include <vgc/vacomplex/api.h>
 #include <vgc/vacomplex/cell.h>
@@ -396,6 +397,62 @@ private:
     //
     core::Array<Cell*> temporaryCellSet_;
 };
+
+/// Returns which node among the given `nodes`, if any, is the top-most among
+/// the children of `group`. Top-most means that it appears last in the list of
+/// children, and is therefore drawn last, potentially occluding previous
+/// siblings.
+///
+/// Returns `nullptr` if the `group` does not contain any of the nodes in
+/// `nodes`.
+///
+/// \sa `bottomMostInGroup()`,
+///     `topMostInGroupAbove()`, `bottomMostInGroupBelow()`.
+///
+VGC_VACOMPLEX_API
+Node* topMostInGroup(Group* group, core::ConstSpan<Node*> nodes);
+
+/// Returns which node among the given `nodes`, if any, is the bottom-most
+/// among the children of `group`. Bottom-most means that it appears first in
+/// the list of children, and is therefore drawn first, potentially occluded
+/// by next siblings.
+///
+/// Returns `nullptr` if the `group` does not contain any of the nodes in
+/// `nodes`.
+///
+/// \sa `topMostInGroup()`,
+///     `topMostInGroupAbove()`, `bottomMostInGroupBelow()`.
+///
+VGC_VACOMPLEX_API
+Node* bottomMostInGroup(Group* group, core::ConstSpan<Node*> nodes);
+
+/// Returns which node among the given `nodes`, if any, is the top-most among
+/// the next siblings of `node`. Top-most means that it appears last in the
+/// list of children, and is therefore drawn last, potentially occluding
+/// previous siblings.
+///
+/// Returns `nullptr` if the next siblings of `node` do not contain any of the
+/// nodes in `nodes`.
+///
+/// \sa `topMostInGroup()`, `bottomMostInGroup()`,
+///     `bottomMostInGroupBelow()`.
+///
+VGC_VACOMPLEX_API
+Node* topMostInGroupAbove(Node* node, core::ConstSpan<Node*> nodes);
+
+/// Returns which node among the given `nodes`, if any, is the bottom-most
+/// among the previous siblings of `node`. Bottom-most means that it appears
+/// first in the list of children, and is therefore drawn first, potentially
+/// occluded by next siblings.
+///
+/// Returns `nullptr` if the previous siblings of `node` do not contain any of
+/// the nodes in `nodes`.
+///
+/// \sa `topMostInGroup()`, `bottomMostInGroup()`,
+///     `topMostInGroupAbove()`.
+///
+VGC_VACOMPLEX_API
+Node* bottomMostInGroupBelow(Node* node, core::ConstSpan<Node*> nodes);
 
 } // namespace vgc::vacomplex
 
