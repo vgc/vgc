@@ -24,6 +24,7 @@
 #include <vgc/core/array.h>
 #include <vgc/core/flags.h>
 #include <vgc/core/object.h>
+#include <vgc/core/span.h>
 #include <vgc/core/stringid.h>
 #include <vgc/vacomplex/api.h>
 #include <vgc/vacomplex/cell.h>
@@ -396,6 +397,18 @@ private:
     //
     core::Array<Cell*> temporaryCellSet_;
 };
+
+VGC_VACOMPLEX_API
+Node* topMostInGroup(Group* group, core::ConstSpan<Node*> nodes);
+
+VGC_VACOMPLEX_API
+Node* bottomMostInGroup(Group* group, core::ConstSpan<Node*> nodes);
+
+VGC_VACOMPLEX_API
+Node* topMostInGroupAbove(Node* node, core::ConstSpan<Node*> nodes);
+
+VGC_VACOMPLEX_API
+Node* bottomMostInGroupUnder(Node* node, core::ConstSpan<Node*> nodes);
 
 } // namespace vgc::vacomplex
 

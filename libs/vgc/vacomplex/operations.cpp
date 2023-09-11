@@ -457,6 +457,234 @@ void moveBelowBoundary(Node* node) {
     ops.moveBelowBoundary(node);
 }
 
+namespace {
+
+template<typename T, typename Range>
+void arrayUniteWith(core::Array<T>& dst, const Range& src) {
+    for (const auto& srcNode : src) {
+        if (!dst.contains(srcNode)) {
+            dst.append(srcNode);
+        }
+    }
+}
+
+} // namespace
+
+// Assumes same group
+void raiseNodes(core::ConstSpan<Node*> targets, core::AnimTime t) {
+
+    if (targets.isEmpty()) {
+        return;
+    }
+
+    if (targets.contains(nullptr)) {
+        throw LogicError("raiseNodes: a node in targets is nullptr.");
+    }
+
+    Node* node0 = targets.first();
+    Group* group0 = node0->parentGroup();
+    Complex* complex0 = node0->complex();
+    for (Node* node : targets.subspan(1)) {
+        if (node->complex() != complex0) {
+            throw LogicError("raiseNodes: a node is from a different complex "
+                "than the others.");
+        }
+        if (node->parentGroup() != group0) {
+            throw LogicError("raiseNodes: a node is from a different group "
+                "than the others.");
+        }
+    }
+
+    core::Array<Node*> visibleTargets;
+    core::Array<geometry::Rect2d> targetBboxes;
+    for (Node* node : targets) {
+        geometry::Rect2d bbox = node->boundingBoxAt(t);
+        if (!bbox.isEmpty()) {
+            visibleTargets.append(node);
+            targetBboxes.append(bbox);
+        }
+    }
+
+    core::Array<Node*> collected;
+    core::Array<Node*> collectedClosure(visibleTargets);
+
+    Int n = visibleTargets.length();
+    Int i = 0;
+
+    Node* destinationNode = nullptr;
+
+    // iterate from bottom
+    Node* node = group0->firstChild();
+    while (node && i < n) {
+        if (visibleTargets.contains(node)) {
+            ++i;
+            collected.append(node);
+            if (Cell* cell = node->toCell()) {
+                arrayUniteWith(collectedClosure, cell->boundary());
+            }
+        }
+        else if (collectedClosure.contains(node)) {
+            collected.append(node);
+        }
+        node = node->nextSibling();
+    }
+    while (node) {
+        if (collectedClosure.contains(node)) {
+            collected.append(node);
+        }
+        else {
+            // check if node is overlapping targets
+            bool overlaps = false;
+            geometry::Rect2d nodeBbox = node->boundingBoxAt(t);
+            for (const geometry::Rect2d& bbox : targetBboxes) {
+                if (nodeBbox.intersects(bbox)) {
+                    overlaps = true;
+                    break;
+                }
+            }
+            if (overlaps) {
+                destinationNode = node;
+                if (Cell* cell = node->toCell()) {
+                    core::Array<Node*> cellBoundary(cell->boundary());
+                    // exclude our closure from target closure.
+                    for (Node* nodeInClosure : collectedClosure) {
+                        cellBoundary.removeOne(nodeInClosure);
+                    }
+                    Node* topMost = topMostInGroupAbove(node, cellBoundary);
+                    if (topMost) {
+                        destinationNode = topMost;
+                    }
+                }
+                break;
+            }
+        }
+        node = node->nextSibling();
+    }
+    while (node && node != destinationNode) {
+        if (collectedClosure.contains(node)) {
+            collected.append(node);
+        }
+        node = node->nextSibling();
+    }
+
+    if (!node || !destinationNode) {
+        destinationNode = group0->lastChild();
+    }
+
+    detail::Operations ops(group0->complex());
+    for (Node* cn : collected) {
+        ops.moveToGroup(cn, group0, destinationNode->nextSibling());
+        destinationNode = cn;
+    }
+}
+
+void lowerNodes(core::ConstSpan<Node*> targets, core::AnimTime t) {
+
+    if (targets.isEmpty()) {
+        return;
+    }
+
+    if (targets.contains(nullptr)) {
+        throw LogicError("lowerNodes: a node in targets is nullptr.");
+    }
+
+    Node* node0 = targets.first();
+    Group* group0 = node0->parentGroup();
+    Complex* complex0 = node0->complex();
+    for (Node* node : targets.subspan(1)) {
+        if (node->complex() != complex0) {
+            throw LogicError("lowerNodes: a node is from a different complex "
+                "than the others.");
+        }
+        if (node->parentGroup() != group0) {
+            throw LogicError("lowerNodes: a node is from a different group "
+                "than the others.");
+        }
+    }
+
+    core::Array<Node*> visibleTargets;
+    core::Array<geometry::Rect2d> targetBboxes;
+    for (Node* node : targets) {
+        geometry::Rect2d bbox = node->boundingBoxAt(t);
+        if (!bbox.isEmpty()) {
+            visibleTargets.append(node);
+            targetBboxes.append(bbox);
+        }
+    }
+
+    core::Array<Node*> collected;
+    core::Array<Node*> collectedOpening(visibleTargets);
+
+    Int n = visibleTargets.length();
+    Int i = 0;
+
+    Node* destinationNode = nullptr;
+
+    // iterate from top
+    Node* node = group0->lastChild();
+    while (node && i < n) {
+        if (visibleTargets.contains(node)) {
+            ++i;
+            collected.append(node);
+            if (Cell* cell = node->toCell()) {
+                arrayUniteWith(collectedOpening, cell->star());
+            }
+        }
+        else if (collectedOpening.contains(node)) {
+            collected.append(node);
+        }
+        node = node->previousSibling();
+    }
+    while (node) {
+        if (collectedOpening.contains(node)) {
+            collected.append(node);
+        }
+        else {
+            // check if node is overlapping targets
+            bool overlaps = false;
+            geometry::Rect2d nodeBbox = node->boundingBoxAt(t);
+            for (const geometry::Rect2d& bbox : targetBboxes) {
+                if (nodeBbox.intersects(bbox)) {
+                    overlaps = true;
+                    break;
+                }
+            }
+            if (overlaps) {
+                destinationNode = node;
+                if (Cell* cell = node->toCell()) {
+                    core::Array<Node*> cellOpening(cell->star());
+                    // exclude our opening from target opening.
+                    for (Node* nodeInOpening : collectedOpening) {
+                        cellOpening.removeOne(nodeInOpening);
+                    }
+                    Node* bottomMost = bottomMostInGroupUnder(node, cellOpening);
+                    if (bottomMost) {
+                        destinationNode = bottomMost;
+                    }
+                }
+                break;
+            }
+        }
+        node = node->previousSibling();
+    }
+    while (node && node != destinationNode) {
+        if (collectedOpening.contains(node)) {
+            collected.append(node);
+        }
+        node = node->previousSibling();
+    }
+
+    if (!node || !destinationNode) {
+        destinationNode = group0->firstChild();
+    }
+
+    detail::Operations ops(group0->complex());
+    for (Node* cn : collected) {
+        ops.moveToGroup(cn, group0, destinationNode);
+        destinationNode = cn;
+    }
+}
+
 void setKeyVertexPosition(KeyVertex* vertex, const geometry::Vec2d& pos) {
     if (!vertex) {
         throw LogicError("setKeyVertexPosition: vertex is nullptr.");

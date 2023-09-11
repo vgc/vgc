@@ -39,6 +39,39 @@ namespace detail {
 
 struct VacElementLists;
 
+class ScopedUndoGroup {
+private:
+    friend Workspace;
+    core::UndoGroup* undoGroup_;
+
+    explicit ScopedUndoGroup(core::UndoGroup* undoGroup)
+        : undoGroup_(undoGroup) {
+    }
+
+    // non-copyable
+    ScopedUndoGroup(const ScopedUndoGroup&) = delete;
+    ScopedUndoGroup& operator=(const ScopedUndoGroup&) = delete;
+
+    // movable
+    ScopedUndoGroup(ScopedUndoGroup&& other) {
+        undoGroup_ = other.undoGroup_;
+        other.undoGroup_ = nullptr;
+    }
+    ScopedUndoGroup& operator=(ScopedUndoGroup&& other) {
+        if (this != &other) {
+            undoGroup_ = other.undoGroup_;
+            other.undoGroup_ = nullptr;
+        }
+        return *this;
+    }
+
+    ~ScopedUndoGroup() {
+        if (undoGroup_) {
+            undoGroup_->close();
+        }
+    }
+};
+
 } // namespace detail
 
 /// \class vgc::workspace::Workspace
@@ -273,6 +306,14 @@ public:
         const std::function<bool(Element*, Int)>& preOrderFn,
         const std::function<void(Element*, Int)>& postOrderFn);
 
+    /// Performs a move above operation.
+    ///
+    void raise(core::ConstSpan<core::Id> elementIds, core::AnimTime t);
+
+    /// Performs a move under operation.
+    ///
+    void lower(core::ConstSpan<core::Id> elementIds, core::AnimTime t);
+
     /// Performs a glue operation on the given elements.
     ///
     /// This is both a geometrical and topological operation.
@@ -389,6 +430,8 @@ private:
 
     dom::DocumentPtr document_;
     vacomplex::ComplexPtr vac_;
+
+    detail::ScopedUndoGroup createScopedUndoGroup(core::StringId name);
 
     void debugPrintWorkspaceTree_();
 

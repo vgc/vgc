@@ -41,4 +41,16 @@ VGC_UI_DEFINE_TRIGGER_COMMAND( //
     "Simplify",
     Shortcut(alt, Key::S));
 
+VGC_UI_DEFINE_TRIGGER_COMMAND( //
+    raise,
+    "tools.topology.raise",
+    "Raise with boundary",
+    Shortcut(alt, Key::PageUp));
+
+VGC_UI_DEFINE_TRIGGER_COMMAND( //
+    lower,
+    "tools.topology.lower",
+    "Lower with star",
+    Shortcut(alt, Key::PageDown));
+
 } // namespace vgc::tools::commands

@@ -99,6 +99,19 @@ public:
     ///
     double endAngle() const;
 
+    geometry::Rect2d boundingBox() const override;
+
+    geometry::Rect2d boundingBoxAt(core::AnimTime t) const override {
+        if (existsAt(t)) {
+            return boundingBox();
+        }
+        return geometry::Rect2d::empty;
+    }
+
+protected:
+    void dirtyMesh() override;
+    bool updateGeometryFromBoundary() override;
+
 private:
     KeyVertex* startVertex_ = nullptr;
     KeyVertex* endVertex_ = nullptr;
@@ -124,13 +137,11 @@ private:
 
     geometry::CurveSamplingQuality samplingQuality_ = {};
     mutable std::shared_ptr<const geometry::StrokeSampling2d> sampling_ = {};
+    mutable std::optional<geometry::Rect2d> bbox_;
 
     geometry::StrokeSampling2d
     computeStrokeSampling_(geometry::CurveSamplingQuality quality) const;
     void updateStrokeSampling_() const;
-
-    void dirtyMesh_() override;
-    bool updateGeometryFromBoundary_() override;
 
     void substituteKeyVertex_(KeyVertex* oldVertex, KeyVertex* newVertex) override;
 
@@ -139,9 +150,6 @@ private:
         const KeyHalfedge& newHalfedge) override;
 
     void debugPrint_(core::StringWriter& out) override;
-
-    geometry::StrokeSample2dArray
-    computeInputSamples_(const geometry::CurveSamplingParameters& parameters) const;
 };
 
 } // namespace vgc::vacomplex

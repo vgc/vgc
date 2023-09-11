@@ -144,4 +144,54 @@ void Complex::debugPrint() {
 //    return false;
 //}
 
+Node* topMostInGroup(Group* group, core::ConstSpan<Node*> nodes) {
+    Node* node = group->lastChild();
+    while (node) {
+        if (nodes.contains(node)) {
+            return node;
+        }
+        node = node->previousSibling();
+    }
+    return nullptr;
+}
+
+Node* bottomMostInGroup(Group* group, core::ConstSpan<Node*> nodes) {
+    Node* node = group->firstChild();
+    while (node) {
+        if (nodes.contains(node)) {
+            return node;
+        }
+        node = node->nextSibling();
+    }
+    return nullptr;
+}
+
+Node* topMostInGroupAbove(Node* node_, core::ConstSpan<Node*> nodes) {
+    Node* node = node_->parentGroup()->lastChild();
+    while (node) {
+        if (node == node_) {
+            return nullptr;
+        }
+        if (nodes.contains(node)) {
+            return node;
+        }
+        node = node->previousSibling();
+    }
+    return nullptr;
+}
+
+Node* bottomMostInGroupUnder(Node* node_, core::ConstSpan<Node*> nodes) {
+    Node* node = node_->parentGroup()->firstChild();
+    while (node) {
+        if (node == node_) {
+            return nullptr;
+        }
+        if (nodes.contains(node)) {
+            return node;
+        }
+        node = node->nextSibling();
+    }
+    return nullptr;
+}
+
 } // namespace vgc::vacomplex

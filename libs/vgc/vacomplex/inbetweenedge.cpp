@@ -18,6 +18,7 @@
 
 namespace vgc::vacomplex {
 
+
 bool InbetweenEdge::isStartVertex(VertexCell* /*v*/) const {
     // TODO: check whether v is one of the start vertices of this inbetween edge.
     return false;
@@ -31,6 +32,11 @@ bool InbetweenEdge::isEndVertex(VertexCell* /*v*/) const {
 bool InbetweenEdge::isClosed() const {
     // TODO: return whether this inbetween edge is open or closed.
     return false;
+}
+
+geometry::Rect2d InbetweenEdge::boundingBoxAt(core::AnimTime /*t*/) const {
+    // TODO
+    return geometry::Rect2d::empty;
 }
 
 void InbetweenEdge::substituteKeyVertex_(KeyVertex*, KeyVertex*) {

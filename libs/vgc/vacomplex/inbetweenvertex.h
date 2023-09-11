@@ -39,6 +39,8 @@ public:
 
     geometry::Vec2d position(core::AnimTime t) const override;
 
+    geometry::Rect2d boundingBoxAt(core::AnimTime /*t*/) const override;
+
 private:
     void substituteKeyVertex_(KeyVertex* oldVertex, KeyVertex* newVertex) override;
 

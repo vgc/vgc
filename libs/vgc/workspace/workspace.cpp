@@ -317,6 +317,90 @@ void Workspace::visitDepthFirst(
     workspace::visitDfs<Element>(vgcElement(), preOrderFn, postOrderFn);
 }
 
+void Workspace::raise(core::ConstSpan<core::Id> elementIds, core::AnimTime t) {
+
+    std::map<Layer*, core::Array<Element*>> byLayer;
+
+    for (core::Id id : elementIds) {
+        Element* item = find(id);
+        if (!item) {
+            continue;
+        }
+        Element* parent = item->parent();
+        Layer* layer = dynamic_cast<Layer*>(parent);
+        core::Array<Element*>& layerItems = byLayer[layer];
+        if (!layerItems.contains(item)) {
+            layerItems.append(item);
+        }
+    }
+
+    // Open history group
+    static core::StringId opName("workspace.raise");
+    detail::ScopedUndoGroup undoGroup = createScopedUndoGroup(opName);
+
+    for (const auto& it : byLayer) {
+        const core::Array<Element*>& layerItems = it.second;
+        core::Array<vacomplex::Node*> layerNodes;
+        for (Element* item : layerItems) {
+            if (VacElement* vacItem = item->toVacElement()) {
+                vacomplex::Node* node = vacItem->vacNode();
+                if (node && !layerNodes.contains(node)) {
+                    layerNodes.append(node);
+                }
+            }
+        }
+        vacomplex::ops::raiseNodes(layerNodes, t);
+    }
+
+    VGC_DEBUG(LogVgcWorkspace, "post-raise");
+    debugPrintWorkspaceTree_();
+    VGC_DEBUG(LogVgcWorkspace, "sync");
+    sync();
+    debugPrintWorkspaceTree_();
+}
+
+void Workspace::lower(core::ConstSpan<core::Id> elementIds, core::AnimTime t) {
+
+    std::map<Layer*, core::Array<Element*>> byLayer;
+
+    for (core::Id id : elementIds) {
+        Element* item = find(id);
+        if (!item) {
+            continue;
+        }
+        Element* parent = item->parent();
+        Layer* layer = dynamic_cast<Layer*>(parent);
+        core::Array<Element*>& layerItems = byLayer[layer];
+        if (!layerItems.contains(item)) {
+            layerItems.append(item);
+        }
+    }
+
+    // Open history group
+    static core::StringId opName("workspace.lower");
+    detail::ScopedUndoGroup undoGroup = createScopedUndoGroup(opName);
+
+    for (const auto& it : byLayer) {
+        const core::Array<Element*>& layerItems = it.second;
+        core::Array<vacomplex::Node*> layerNodes;
+        for (Element* item : layerItems) {
+            if (VacElement* vacItem = item->toVacElement()) {
+                vacomplex::Node* node = vacItem->vacNode();
+                if (node && !layerNodes.contains(node)) {
+                    layerNodes.append(node);
+                }
+            }
+        }
+        vacomplex::ops::lowerNodes(layerNodes, t);
+    }
+
+    VGC_DEBUG(LogVgcWorkspace, "post-lower");
+    debugPrintWorkspaceTree_();
+    VGC_DEBUG(LogVgcWorkspace, "sync");
+    sync();
+    debugPrintWorkspaceTree_();
+}
+
 core::Id Workspace::glue(core::ConstSpan<core::Id> elementIds) {
     core::Id resultId = -1;
 
@@ -806,16 +890,58 @@ void Workspace::fillVacElementListsUsingTagName_(
     }
 }
 
+detail::ScopedUndoGroup Workspace::createScopedUndoGroup(core::StringId name) {
+    core::UndoGroup* undoGroup = nullptr;
+    core::History* history = this->history();
+    if (history) {
+        undoGroup = history->createUndoGroup(name);
+    }
+    return detail::ScopedUndoGroup(undoGroup);
+}
+
+namespace {
+
+void debugVacRec(vacomplex::Node* node, Int depth) {
+    std::string s;
+    core::StringWriter sw(s);
+    node->debugPrint(sw);
+    VGC_DEBUG(LogVgcWorkspace, "{:>{}}{}", "", depth * 2, s);
+    if (vacomplex::Group* group = node->toGroup()) {
+        for (vacomplex::Node* child : *group) {
+            debugVacRec(child, depth + 1);
+        }
+    }
+}
+
+} // namespace
+
 void Workspace::debugPrintWorkspaceTree_() {
     visitDepthFirstPreOrder([](Element* e, Int depth) {
-        VGC_DEBUG(
-            LogVgcWorkspace,
-            "{:>{}}<{} id=\"{}\">",
-            "",
-            depth * 2,
-            e->tagName(),
-            e->id());
+        VacElement* vacElement = e->toVacElement();
+        if (vacElement) {
+            vacomplex::Node* node = vacElement->vacNode();
+            VGC_DEBUG(
+                LogVgcWorkspace,
+                "{:>{}}<{} id=\"{}\">(vacid: \"{}\")",
+                "",
+                depth * 2,
+                e->tagName(),
+                e->id(),
+                (node ? node->id() : -1));
+        }
+        else {
+            VGC_DEBUG(
+                LogVgcWorkspace,
+                "{:>{}}<{} id=\"{}\">",
+                "",
+                depth * 2,
+                e->tagName(),
+                e->id());
+        }
     });
+    if (rootVacElement_) {
+        debugVacRec(rootVacElement_->vacNode(), 0);
+    }
 }
 
 void Workspace::preUpdateDomFromVac_() {

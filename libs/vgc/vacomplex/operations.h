@@ -19,6 +19,7 @@
 
 #include <vgc/core/id.h>
 #include <vgc/core/span.h>
+#include <vgc/core/animtime.h>
 #include <vgc/vacomplex/api.h>
 #include <vgc/vacomplex/complex.h>
 #include <vgc/vacomplex/exceptions.h>
@@ -206,6 +207,12 @@ void moveToGroup(Node* node, Group* parentGroup, Node* nextSibling = nullptr);
 
 VGC_VACOMPLEX_API
 void moveBelowBoundary(Node* node);
+
+VGC_VACOMPLEX_API
+void raiseNodes(core::ConstSpan<Node*> targets, core::AnimTime t);
+
+VGC_VACOMPLEX_API
+void lowerNodes(core::ConstSpan<Node*> targets, core::AnimTime t);
 
 VGC_VACOMPLEX_API
 void setKeyVertexPosition(KeyVertex* vertex, const geometry::Vec2d& pos);

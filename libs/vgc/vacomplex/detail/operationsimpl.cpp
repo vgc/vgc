@@ -89,7 +89,7 @@ Operations::~Operations() {
                 //
                 // Let the cell snap to its boundary..
                 Cell* cell = info.node()->toCell();
-                if (cell && cell->updateGeometryFromBoundary_()) {
+                if (cell && cell->updateGeometryFromBoundary()) {
                     onNodeModified_(cell, NodeModificationFlag::GeometryChanged);
                 }
             }
@@ -1965,7 +1965,7 @@ void Operations::onPropertyChanged_(Cell* cell, core::StringId name) {
 void Operations::dirtyMesh_(Cell* cell) {
     if (cell->hasMeshBeenQueriedSinceLastDirtyEvent_) {
         cell->hasMeshBeenQueriedSinceLastDirtyEvent_ = false;
-        cell->dirtyMesh_();
+        cell->dirtyMesh();
         onNodeModified_(cell, NodeModificationFlag::MeshChanged);
         for (Cell* starCell : cell->star()) {
             // No need for recursion since starCell.star() is a subset
@@ -1973,7 +1973,7 @@ void Operations::dirtyMesh_(Cell* cell) {
             onNodeModified_(starCell, NodeModificationFlag::BoundaryMeshChanged);
             if (starCell->hasMeshBeenQueriedSinceLastDirtyEvent_) {
                 starCell->hasMeshBeenQueriedSinceLastDirtyEvent_ = false;
-                starCell->dirtyMesh_();
+                starCell->dirtyMesh();
                 onNodeModified_(starCell, NodeModificationFlag::MeshChanged);
             }
         }

@@ -31,6 +31,12 @@ VGC_UI_DECLARE_COMMAND(unglue)
 VGC_TOOLS_API
 VGC_UI_DECLARE_COMMAND(simplify)
 
+VGC_TOOLS_API
+VGC_UI_DECLARE_COMMAND(raise)
+
+VGC_TOOLS_API
+VGC_UI_DECLARE_COMMAND(lower)
+
 } // namespace vgc::tools::commands
 
 #endif // VGC_TOOLS_TOPOLOGY_H

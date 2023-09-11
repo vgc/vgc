@@ -58,10 +58,10 @@ Complex* Cell::complex() const {
     return p ? p->complex() : nullptr;
 }
 
-void Cell::dirtyMesh_() {
+void Cell::dirtyMesh() {
 }
 
-bool Cell::updateGeometryFromBoundary_() {
+bool Cell::updateGeometryFromBoundary() {
     return false;
 }
 

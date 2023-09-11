@@ -50,6 +50,15 @@ public:
         return position_;
     }
 
+    geometry::Rect2d boundingBox() const override;
+
+    geometry::Rect2d boundingBoxAt(core::AnimTime t) const override {
+        if (existsAt(t)) {
+            return boundingBox();
+        }
+        return geometry::Rect2d::empty;
+    }
+
 private:
     geometry::Vec2d position_;
 
