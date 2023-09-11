@@ -118,8 +118,7 @@
 #if defined(VGC_CORE_COMPILER_CLANG)
 #    define VGC_CORE_EXCEPTIONS_DECLARE_ANCHOR virtual void anchor();
 #    define VGC_CORE_EXCEPTIONS_DEFINE_ANCHOR(T)                                         \
-        void T::anchor() {                                                               \
-        }
+        void T::anchor() {}
 #else
 #    define VGC_CORE_EXCEPTIONS_DECLARE_ANCHOR
 #    define VGC_CORE_EXCEPTIONS_DEFINE_ANCHOR(T)
@@ -485,7 +484,7 @@ public:
 ///
 /// This exception is raised when a given Object is expected to be a child of
 /// another Object, but isn't. For example, it is raised when the `nextSibling`
-/// argument of `obj->insertChildObject(node, nextSibling)` is non-null and
+/// argument of `obj->insertChildObject(nextSibling, node)` is non-null and
 /// isn't a child of `obj`.
 ///
 /// \sa Object::insertChildObject().
