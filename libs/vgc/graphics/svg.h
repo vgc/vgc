@@ -200,8 +200,9 @@ class SvgParser;
 /// The `transform()` method returns the cumulated transform of this path and
 /// its ancestors.
 ///
-/// The `fill()`, `stroke()`, and `strokeWidth` methods returns the resolved
-/// style taking into account ancestor's style if any.
+/// The `fill()`, `fillStyle()`, `stroke()`, `strokeStyle()`, and
+/// `strokeWidth()` methods returns the resolved style taking into account
+/// ancestor's style if any.
 ///
 class VGC_GRAPHICS_API SvgSimplePath {
 public:
