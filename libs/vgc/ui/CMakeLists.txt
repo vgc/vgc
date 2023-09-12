@@ -19,6 +19,7 @@ vgc_add_library(ui
         boolsetting.h
         boolsettingedit.h
         button.h
+        checkenums.h
         column.h
         command.h
         cursor.h
@@ -80,6 +81,7 @@ vgc_add_library(ui
         boolsetting.cpp
         boolsettingedit.cpp
         button.cpp
+        checkenums.cpp
         column.cpp
         command.cpp
         cursor.cpp

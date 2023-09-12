@@ -24,7 +24,7 @@ namespace vgc::ui {
 VGC_DECLARE_OBJECT(Toggle);
 
 /// \class vgc::ui::Toggle
-/// \brief Widget to switch bettwen ON/OFF state.
+/// \brief Widget to switch between ON/OFF state.
 ///
 class VGC_UI_API Toggle : public Widget {
 private:
@@ -67,8 +67,8 @@ public:
     ///
     /// This will cause the clicked signal to be emitted.
     ///
-    /// Returns true if the click was effective, that is, if the toggle was
-    /// enabled.
+    /// Returns true if the click was effective, that is, if the toggle
+    /// state changed as a result of the click.
     ///
     /// \sa `clicked()`
     ///
@@ -77,14 +77,14 @@ public:
 
     /// This signal is emitted when:
     ///
-    /// - the button is clicked by the user (i.e., a mouse press
+    /// - the toggle is clicked by the user (i.e., a mouse press
     ///   was followed by a mouse release within the button), or
     ///
-    /// - the click() method is called.
+    /// - the `click()` method is called.
     ///
-    /// \sa pressed(), released()
+    /// \sa `pressed()`, `released()`.
     ///
-    VGC_SIGNAL(clicked, (Toggle*, toggle), (const geometry::Vec2f&, pos));
+    VGC_SIGNAL(clicked, (Toggle*, toggle), (const geometry::Vec2f&, pos))
 
     /// This signal is emitted when the toggle state changes.
     ///
@@ -101,13 +101,13 @@ public:
     ///
     /// \sa `released()`, `toggled()`.
     ///
-    VGC_SIGNAL(pressed, (Toggle*, toggle), (const geometry::Vec2f&, pos));
+    VGC_SIGNAL(pressed, (Toggle*, toggle), (const geometry::Vec2f&, pos))
 
     /// This signal is emitted when the button is released.
     ///
     /// \sa `pressed()`, `toggled()`.
     ///
-    VGC_SIGNAL(released, (Toggle*, toggle), (const geometry::Vec2f&, pos));
+    VGC_SIGNAL(released, (Toggle*, toggle), (const geometry::Vec2f&, pos))
 
 protected:
     bool onMouseMove(MouseMoveEvent* event) override;
