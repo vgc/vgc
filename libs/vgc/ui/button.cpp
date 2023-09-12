@@ -24,7 +24,6 @@
 #include <vgc/ui/iconwidget.h>
 #include <vgc/ui/logcategories.h>
 #include <vgc/ui/numbersetting.h>
-#include <vgc/ui/panelarea.h>
 #include <vgc/ui/strings.h>
 #include <vgc/ui/tooltip.h>
 
@@ -269,7 +268,7 @@ void showTooltip() {
     Action* action = button->action();
     if (button->isTooltipEnabled() && action) {
 
-        // Setup dialog content
+        // Setup tooltip content
         TooltipPtr tooltip = getOrCreateTooltip(button);
         tooltip->setText(action->name());
         const ShortcutArray& shortcuts = action->userShortcuts();
@@ -280,25 +279,8 @@ void showTooltip() {
             tooltip->setShortcut(shortcuts.first());
         }
 
-        // Detect if widget is part of a PanelArea for better dialog location.
-        PanelArea* area = nullptr;
-        Widget* widget = button->parent();
-        while (widget) {
-            area = dynamic_cast<PanelArea*>(widget);
-            if (area) {
-                break;
-            }
-            widget = widget->parent();
-        }
-
-        // Show dialog
-        if (area) {
-            // TODO: decide left or right based on where is the area?
-            tooltip->showAt(area, button, geometry::RectAlign::OutRight);
-        }
-        else {
-            tooltip->showAt(button, geometry::RectAlign::OutBottomOutRight);
-        }
+        // Show tooltip
+        tooltip->showOutsidePanelArea(button);
     }
 }
 

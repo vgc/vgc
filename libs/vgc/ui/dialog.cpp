@@ -20,6 +20,7 @@
 #include <vgc/style/strings.h>
 #include <vgc/ui/cursor.h>
 #include <vgc/ui/overlayarea.h>
+#include <vgc/ui/panelarea.h>
 #include <vgc/ui/preferredsizecalculator.h>
 #include <vgc/ui/strings.h>
 #include <vgc/ui/window.h>
@@ -162,6 +163,31 @@ void Dialog::showAt(DialogLocation horizontalLocation, DialogLocation verticalLo
     setPosition<0>(rect, overlayArea, horizontalLocation, margin.left(), margin.right());
     setPosition<1>(rect, overlayArea, verticalLocation, margin.top(), margin.bottom());
     updateGeometry(rect);
+}
+
+bool Dialog::showOutsidePanelArea(Widget* widget) {
+
+    // Detect if widget is part of a PanelArea for better dialog location.
+    PanelArea* area = nullptr;
+    Widget* ancestor = widget->parent();
+    while (ancestor) {
+        area = dynamic_cast<PanelArea*>(ancestor);
+        if (area) {
+            break;
+        }
+        ancestor = ancestor->parent();
+    }
+
+    // Show dialog
+    if (area) {
+        // TODO: decide left, right, top, or bottom based on where is the area.
+        showAt(area, widget, geometry::RectAlign::OutRight);
+        return true;
+    }
+    else {
+        showAt(widget, geometry::RectAlign::OutBottomOutRight);
+        return false;
+    }
 }
 
 float Dialog::preferredWidthForHeight(float height) const {
