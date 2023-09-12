@@ -255,7 +255,9 @@ public:
     ///
     /// \sa `checkState()`, `checkMode()`.
     ///
-    bool supportsCheckState(CheckState checkState) const;
+    bool supportsCheckState(CheckState checkState) const {
+        return ui::supportsCheckState(checkMode(), checkState);
+    }
 
     /// Sets the `CheckState` of the action.
     ///
@@ -270,9 +272,9 @@ public:
 
     /// This signal is emitted when the action check state changed.
     ///
-    /// \sa setCheckState(), checkState().
+    /// \sa `setCheckState()`, `checkState()`.
     ///
-    VGC_SIGNAL(checkStateChanged, (Action*, action), (CheckState, checkState));
+    VGC_SIGNAL(checkStateChanged, (Action*, action), (CheckState, checkState))
 
     /// Returns whether the action's `CheckState` is `Checked`.
     ///

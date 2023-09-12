@@ -96,18 +96,6 @@ void Action::setEnabled(bool enabled) {
     this->enabledChanged().emit(enabled);
 }
 
-bool Action::supportsCheckState(CheckState checkState) const {
-    if (checkMode_ == CheckMode::Uncheckable) {
-        return checkState == CheckState::Unchecked;
-    }
-    else if (checkMode_ == CheckMode::Bistate) {
-        return checkState != CheckState::Indeterminate;
-    }
-    else {
-        return true;
-    }
-}
-
 void Action::setCheckState(CheckState newState) {
     if (checkState_ != newState) {
         if (!supportsCheckState(newState)) {
