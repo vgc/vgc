@@ -235,11 +235,11 @@ public:
 
     // TODO: isModal, isDismissable, title, basic signals, etc.
 
-    /// Show the dialog at the given `horizontal` and `vertical` location.
+    /// Shows the dialog at the given `horizontal` and `vertical` location.
     ///
     void showAt(DialogLocation horizontal, DialogLocation vertical);
 
-    /// Show the dialog on a location defined by the given `type` and `widget`,
+    /// Shows the dialog on a location defined by the given `type` and `widget`,
     /// with the given alignment.
     ///
     void showAt(DialogLocationType type, Widget* widget, geometry::RectAlign align) {
@@ -248,13 +248,13 @@ public:
             DialogLocation(type, widget, verticalAlign(align)));
     }
 
-    /// Show the dialog at the given `widget` with the given alignment.
+    /// Shows the dialog at the given `widget` with the given alignment.
     ///
     void showAt(Widget* widget, geometry::RectAlign align) {
         showAt(DialogLocationType::Widget, widget, align);
     }
 
-    /// Show the dialog relative to the given `hWidget` for the horizontal
+    /// Shows the dialog relative to the given `hWidget` for the horizontal
     /// direction, and `vWidget`.
     ///
     /// Example:
@@ -282,7 +282,7 @@ public:
             DialogLocation(type, vWidget, verticalAlign(align)));
     }
 
-    /// Show the dialog relative to the given `hWidget` for the horizontal
+    /// Shows the dialog relative to the given `hWidget` for the horizontal
     /// direction, and `vWidget` for the vertical direction.
     ///
     void showAt(
@@ -296,7 +296,7 @@ public:
             DialogLocation(type, hWidget, hAlign), DialogLocation(type, vWidget, vAlign));
     }
 
-    /// Show the dialog aligned with the edges of the window of the given
+    /// Shows the dialog aligned with the edges of the window of the given
     /// `widget`.
     ///
     void showAtWindow(
@@ -306,7 +306,7 @@ public:
         showAt(DialogLocationType::Window, widget, toRectAlign(anchor));
     }
 
-    /// Show the dialog aligned with the current cursor, shown on the
+    /// Shows the dialog aligned with the current cursor, shown on the
     /// window of the given `widget`.
     ///
     /// Note that for convenience, in this function, `TopRight` is interpreted to mean
@@ -320,6 +320,17 @@ public:
 
         showAt(DialogLocationType::Cursor, widget, toRectAlign(reverse(anchor)));
     }
+
+    /// Shows the dialog on the side of the inner-most `PanelArea`, if any,
+    /// that contains the given `widget`.
+    ///
+    /// If there is no such `PanelArea` then this function returns false, and
+    /// as fallback the dialog is shown outside the bottom-right corner of the
+    /// widget. If such fallback does not suit your needs, you can then call
+    /// another `showAt()` overload just after to move the dialog in a more
+    /// appropriate location.
+    ///
+    bool showOutsidePanelArea(Widget* widget);
 
     // reimpl
     float preferredWidthForHeight(float height) const override;
