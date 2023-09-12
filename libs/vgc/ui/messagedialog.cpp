@@ -140,11 +140,11 @@ void MessageDialog::createBodyIfNotCreated_() {
         body_->addStyleClass(strings::body);
         if (title_) {
             // move just after title
-            content_->insertChild(title_->nextSibling(), title_.get());
+            content_->insertChild(title_->nextSibling(), body_.get());
         }
         else {
             // Move as first child
-            content_->insertChild(content_->firstChild(), title_.get());
+            content_->insertChild(content_->firstChild(), body_.get());
         }
     }
 }
