@@ -1221,7 +1221,6 @@ private:
     SvgPaint stroke_ = {}; // none
     double fillOpacity_ = 1.0;
     double strokeOpacity_ = 1.0;
-    double strokeWidth_ = 1.0;
 
     // Opacity. This is not inherited but composed as a post-processing step.
     // See comment in the implementation of applyChildStyle(), and:
@@ -1342,10 +1341,10 @@ void SvgPresentationAttributes::applyChildStyle(const core::XmlStreamReader& xml
         if (*x < 0) {
             VGC_WARNING(
                 LogVgcGraphicsSvg, "Negative stroke-width ({}): falling back to 0.", *x);
-            strokeWidth_ = 0;
+            strokeWidth = 0;
         }
         else {
-            strokeWidth_ = *x;
+            strokeWidth = *x;
         }
     }
 
@@ -1462,9 +1461,6 @@ void SvgPresentationAttributes::update_() {
     // using an offscreen buffer.
     fill = applyOpacity(fill_, fillOpacity_, opacity_);
     stroke = applyOpacity(stroke_, strokeOpacity_, opacity_);
-
-    // Set strokeWidth to zero if stroke = none
-    strokeWidth = stroke.paintType() == SvgPaintType::None ? 0.0 : strokeWidth_;
 }
 
 // Converts path data to Curves2d.
