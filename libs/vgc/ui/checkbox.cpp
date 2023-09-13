@@ -16,15 +16,10 @@
 
 #include <vgc/ui/checkbox.h>
 
-#include <vgc/core/array.h>
 #include <vgc/core/paths.h>
-#include <vgc/style/strings.h>
-#include <vgc/style/types.h>
 #include <vgc/ui/iconwidget.h>
 #include <vgc/ui/preferredsizecalculator.h>
 #include <vgc/ui/strings.h>
-
-#include <vgc/ui/detail/paintutil.h>
 
 namespace vgc::ui {
 
