@@ -22,6 +22,7 @@
 #include <vgc/core/enum.h>
 #include <vgc/core/span.h>
 #include <vgc/geometry/api.h>
+#include <vgc/geometry/detail/internalkey.h>
 #include <vgc/geometry/vec2d.h>
 
 namespace vgc::geometry {
@@ -306,6 +307,187 @@ private:
     Int minIntraSegmentSamples_ = 0;
     Int maxIntraSegmentSamples_ = 63;
     //bool isScreenspace_ = false;
+};
+
+/// \class vgc::geometry::CurveParameter
+/// \brief Generic parameter of a parametric curve.
+///
+/// It is made of two values: an integer `segmentIndex` and a real `u`.
+///
+class VGC_GEOMETRY_API CurveParameter {
+public:
+    constexpr CurveParameter() noexcept
+        : segmentIndex_(-1)
+        , u_(-1.0) {
+    }
+
+    VGC_WARNING_PUSH
+    VGC_WARNING_MSVC_DISABLE(26495) // member variable uninitialized
+    CurveParameter(core::NoInit) noexcept {
+    }
+    VGC_WARNING_POP
+
+    explicit CurveParameter(Int segmentIndex, double u = 0) noexcept
+        : segmentIndex_(segmentIndex)
+        , u_(u) {
+    }
+
+    constexpr Int segmentIndex() const {
+        return segmentIndex_;
+    }
+
+    void setSegmentIndex(Int segmentIndex) {
+        segmentIndex_ = segmentIndex;
+    }
+
+    constexpr double u() const {
+        return u_;
+    }
+
+    void setU(double u) {
+        u_ = u;
+    }
+
+    friend bool operator==(const CurveParameter& lhs, const CurveParameter& rhs) {
+        return lhs.segmentIndex_ == rhs.segmentIndex_ && lhs.u_ == rhs.u_;
+    }
+
+    friend bool operator!=(const CurveParameter& lhs, const CurveParameter& rhs) {
+        return !(lhs == rhs);
+    }
+
+    friend bool operator<(const CurveParameter& lhs, const CurveParameter& rhs) {
+        if (lhs.segmentIndex_ != rhs.segmentIndex_) {
+            return lhs.segmentIndex_ < rhs.segmentIndex_;
+        }
+        return lhs.u_ < rhs.u_;
+    }
+
+private:
+    Int segmentIndex_;
+    double u_; // parameter in stroke segment.
+};
+
+/// \class vgc::geometry::SampledCurveLocation
+/// \brief The implicit parametric location of a point between two samples.
+///
+class VGC_GEOMETRY_API SampledCurveLocation {
+public:
+    constexpr SampledCurveLocation() noexcept
+        : segmentIndex_(0)
+        , u1_(0.)
+        , u2_(0.)
+        , lerpParameter_(0.) {
+    }
+
+    VGC_WARNING_PUSH
+    VGC_WARNING_MSVC_DISABLE(26495) // member variable uninitialized
+    SampledCurveLocation(core::NoInit) noexcept {
+    }
+    VGC_WARNING_POP
+
+    explicit SampledCurveLocation(const CurveParameter& sampleParameter1) noexcept
+        : segmentIndex_(sampleParameter1.segmentIndex())
+        , u1_(sampleParameter1.u())
+        , u2_(sampleParameter1.u())
+        , lerpParameter_(0.) {
+    }
+
+    SampledCurveLocation(
+        Int segmentIndex,
+        double u1,
+        double u2,
+        double lerpParameter) noexcept
+
+        : segmentIndex_(segmentIndex)
+        , u1_(u1)
+        , u2_(u2)
+        , lerpParameter_(lerpParameter) {
+    }
+
+    SampledCurveLocation(
+        const CurveParameter& sampleParameter1,
+        double u2,
+        double lerpParameter) noexcept
+
+        : segmentIndex_(sampleParameter1.segmentIndex())
+        , u1_(sampleParameter1.u())
+        , u2_(u2)
+        , lerpParameter_(lerpParameter) {
+    }
+
+    Int segmentIndex() const {
+        return segmentIndex_;
+    }
+
+    void setSegmentIndex(Int segmentIndex) {
+        segmentIndex_ = segmentIndex;
+    }
+
+    double u1() const {
+        return u1_;
+    }
+
+    void setU1(double u1) {
+        u1_ = u1;
+    }
+
+    double u2() const {
+        return u2_;
+    }
+
+    void setU2(double u2) {
+        u2_ = u2;
+    }
+
+    double lerpParameter() const {
+        return lerpParameter_;
+    }
+
+    void setLerpParameter(double lerpParameter) {
+        lerpParameter_ = lerpParameter;
+    }
+
+    bool isLerped() const {
+        return u1_ != u2_;
+    }
+
+    CurveParameter sampleParameter1() const {
+        return CurveParameter(segmentIndex_, u1_);
+    }
+
+    CurveParameter sampleParameter2() const {
+        return CurveParameter(segmentIndex_, u2_);
+    }
+
+    friend bool
+    operator==(const SampledCurveLocation& lhs, const SampledCurveLocation& rhs) {
+        return lhs.segmentIndex_ == rhs.segmentIndex_ && lhs.u1_ == rhs.u1_
+               && lhs.u2_ == rhs.u2_ && lhs.lerpParameter_ == rhs.lerpParameter_;
+    }
+
+    friend bool
+    operator!=(const SampledCurveLocation& lhs, const SampledCurveLocation& rhs) {
+        return !(lhs == rhs);
+    }
+
+    friend bool
+    operator<(const SampledCurveLocation& lhs, const SampledCurveLocation& rhs) {
+        if (lhs.segmentIndex_ != rhs.segmentIndex_) {
+            return lhs.segmentIndex_ < rhs.segmentIndex_;
+        }
+        return lhs.approxU_() < rhs.approxU_();
+    }
+
+private:
+    Int segmentIndex_;
+    double u1_;
+    double u2_;
+    double lerpParameter_;
+
+    double approxU_() const {
+        return core::fastLerp(u1_, u2_, lerpParameter_);
+    }
 };
 
 namespace detail {

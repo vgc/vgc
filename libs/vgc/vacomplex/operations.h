@@ -24,7 +24,49 @@
 #include <vgc/vacomplex/complex.h>
 #include <vgc/vacomplex/exceptions.h>
 
-namespace vgc::vacomplex::ops {
+namespace vgc::vacomplex {
+
+class VGC_VACOMPLEX_API VertexCutEdgeResult {
+public:
+    constexpr VertexCutEdgeResult() noexcept = default;
+
+    VertexCutEdgeResult(KeyEdge* edge1, KeyVertex* vertex, KeyEdge* edge2) noexcept
+        : vertex_(vertex)
+        , edge1_(edge1)
+        , edge2_(edge2) {
+    }
+
+    KeyVertex* vertex() const {
+        return vertex_;
+    }
+
+    void setVertex(KeyVertex* vertex) {
+        vertex_ = vertex;
+    }
+
+    KeyEdge* edge1() const {
+        return edge1_;
+    }
+
+    void setEdge1(KeyEdge* edge1) {
+        edge1_ = edge1;
+    }
+
+    KeyEdge* edge2() const {
+        return edge2_;
+    }
+
+    void setEdge2(KeyEdge* edge2) {
+        edge2_ = edge2;
+    }
+
+private:
+    KeyVertex* vertex_ = nullptr;
+    KeyEdge* edge1_ = nullptr;
+    KeyEdge* edge2_ = nullptr;
+};
+
+namespace ops {
 
 // TODO: impl the exceptions mentioned in comments, verify preconditions checks and throws.
 // Indeed functions in detail::Operations do not throw and are unchecked.
@@ -123,6 +165,9 @@ VGC_VACOMPLEX_API
 core::Array<KeyVertex*> unglueKeyVertices(
     KeyVertex* kv,
     core::Array<std::pair<core::Id, core::Array<KeyEdge*>>>& ungluedKeyEdges);
+
+VGC_VACOMPLEX_API
+VertexCutEdgeResult vertexCutEdge(KeyEdge* ke, const geometry::CurveParameter& parameter);
 
 /// Performs an atomic simplification at the given `KeyVertex`, if possible.
 ///
@@ -233,6 +278,7 @@ void setKeyEdgeData(KeyEdge* edge, std::unique_ptr<KeyEdgeData>&& data);
 VGC_VACOMPLEX_API
 void setKeyEdgeSamplingQuality(KeyEdge* edge, geometry::CurveSamplingQuality quality);
 
-} // namespace vgc::vacomplex::ops
+} // namespace ops
+} // namespace vgc::vacomplex
 
 #endif // VGC_VACOMPLEX_OPERATIONS_H

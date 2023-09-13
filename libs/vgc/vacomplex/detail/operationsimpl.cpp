@@ -1328,6 +1328,101 @@ core::Array<KeyVertex*> Operations::unglueKeyVertices(
     return result;
 }
 
+VertexCutEdgeResult
+Operations::vertexCutEdge(KeyEdge* ke, const geometry::CurveParameter& parameter) {
+
+    const geometry::AbstractStroke2d* oldStroke = ke->data()->stroke();
+
+    if (ke->isClosed()) {
+        std::unique_ptr<KeyEdgeData> newKeData =
+            KeyEdgeData::fromSlice(ke->data(), parameter, parameter, 1);
+
+        geometry::Vec2d vertexPos = newKeData->stroke()->endPositions()[0];
+
+        KeyVertex* newKv =
+            createKeyVertex(vertexPos, ke->parentGroup(), ke->nextSibling(), ke->time());
+
+        KeyEdge* newKe =
+            createKeyOpenEdge(newKv, newKv, std::move(newKeData), ke->parentGroup(), ke);
+
+        // Substitute all usages of old edge by new edge
+        KeyHalfedge oldKhe(ke, true);
+        KeyHalfedge newKhe(newKe, true);
+        substituteEdge_(oldKhe, newKhe);
+
+        // Since substitute expects end vertices to be the same,
+        // it didn't add our targetKv to its star's boundary.
+        // So we do it manually here.
+        for (Cell* cell : newKe->star()) {
+            addToBoundary_(cell, newKv);
+        }
+
+        // Delete old edge
+        hardDelete(ke);
+
+        return VertexCutEdgeResult(newKe, newKv, newKe);
+    }
+    else {
+        std::unique_ptr<KeyEdgeData> newKeData1 = KeyEdgeData::fromSlice(
+            ke->data(), geometry::CurveParameter(0, 0), parameter, 0);
+
+        std::unique_ptr<KeyEdgeData> newKeData2 = KeyEdgeData::fromSlice(
+            ke->data(),
+            parameter,
+            geometry::CurveParameter(oldStroke->numSegments() - 1, 1),
+            0);
+
+        geometry::Vec2d vertexPos = newKeData2->stroke()->endPositions()[0];
+
+        KeyVertex* newKv =
+            createKeyVertex(vertexPos, ke->parentGroup(), ke->nextSibling(), ke->time());
+
+        KeyEdge* newKe1 = createKeyOpenEdge(
+            ke->startVertex(), newKv, std::move(newKeData1), ke->parentGroup(), ke);
+        KeyEdge* newKe2 = createKeyOpenEdge(
+            newKv, ke->endVertex(), std::move(newKeData2), ke->parentGroup(), ke);
+
+        // Substitute all usages of ke by (newKe1, newKe2) in incident faces.
+        //
+        for (Cell* starCell : ke->star().copy()) {
+            KeyFace* kf = starCell->toKeyFace();
+            if (!kf) {
+                continue;
+            }
+            for (KeyCycle& cycle : kf->cycles_) {
+                if (cycle.steinerVertex()) {
+                    continue;
+                }
+                core::Array<KeyHalfedge>& cycleKhes = cycle.halfedges_;
+                for (auto it = cycleKhes.begin(); it != cycleKhes.end(); ++it) {
+                    KeyHalfedge& khe = *it;
+                    if (khe.edge() == ke) {
+                        if (khe.direction()) {
+                            khe.setEdge(newKe1);
+                            it = cycleKhes.emplace(it + 1, newKe2, true);
+                        }
+                        else {
+                            khe.setEdge(newKe2);
+                            it = cycleKhes.emplace(it + 1, newKe1, false);
+                        }
+                    }
+                }
+                VGC_ASSERT(cycle.isValid());
+            }
+
+            removeFromBoundary_(kf, ke);
+            addToBoundary_(kf, newKe1);
+            addToBoundary_(kf, newKe2);
+            addToBoundary_(kf, newKv);
+        }
+
+        // Delete old edge
+        hardDelete(ke);
+
+        return VertexCutEdgeResult(newKe1, newKv, newKe2);
+    }
+}
+
 UncutAtKeyVertexResult
 Operations::uncutAtKeyVertex(KeyVertex* targetKv, bool smoothJoin) {
 
@@ -1753,11 +1848,11 @@ void Operations::moveBelowBoundary(Node* node) {
         return;
     }
     // currently keeping the same parent
-    Node* oldParentNode = cell->parent();
+    Node* oldParentNode = cell->parentGroup();
     Node* newParentNode = oldParentNode;
     if (!newParentNode) {
         // `boundary.length() > 0` previously checked.
-        newParentNode = (*boundary.begin())->parent();
+        newParentNode = (*boundary.begin())->parentGroup();
     }
     if (!newParentNode) {
         return;

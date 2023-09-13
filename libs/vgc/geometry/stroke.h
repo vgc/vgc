@@ -160,6 +160,10 @@ public:
         std::swap(halfwidths_[0], halfwidths_[1]);
     }
 
+    double width() const {
+        return halfwidths_[0] + halfwidths_[1];
+    }
+
     // ┌─── x
     // │  ↑ offsetPoints[1]
     // │ ─segment─→
@@ -258,16 +262,14 @@ using SharedConstStrokeSample2dArray = core::SharedConstArray<StrokeSample2d>;
 class VGC_GEOMETRY_API StrokeSampleEx2d {
 public:
     constexpr StrokeSampleEx2d() noexcept
-        : sample_()
-        , speed_(0)
-        , segmentIndex_(-1)
-        , u_(-1) {
+        : speed_(0) {
     }
 
     VGC_WARNING_PUSH
     VGC_WARNING_MSVC_DISABLE(26495) // member variable uninitialized
     StrokeSampleEx2d(core::NoInit) noexcept
-        : sample_(core::noInit) {
+        : sample_(core::noInit)
+        , parameter_(core::noInit) {
     }
     VGC_WARNING_POP
 
@@ -282,8 +284,7 @@ public:
 
         : sample_(position, tangent, normal, halfwidths)
         , speed_(speed)
-        , segmentIndex_(segmentIndex)
-        , u_(u) {
+        , parameter_(segmentIndex, u) {
 
         updateOffsetPoints_();
     }
@@ -462,28 +463,35 @@ public:
         sample_.setCornerStart(isCornerStart);
     }
 
+    const CurveParameter& parameter() const {
+        return parameter_;
+    }
+
+    void setParameter(const CurveParameter& parameter) {
+        parameter_ = parameter;
+    }
+
     Int segmentIndex() const {
-        return segmentIndex_;
+        return parameter_.segmentIndex();
     }
 
     void setSegmentIndex(Int segmentIndex) {
-        segmentIndex_ = segmentIndex;
+        parameter_.setSegmentIndex(segmentIndex);
     }
 
     double u() const {
-        return u_;
+        return parameter_.u();
     }
 
     void setU(double u) {
-        u_ = u;
+        parameter_.setU(u);
     }
 
 private:
     StrokeSample2d sample_;
     std::array<Vec2d, 2> offsetPoints_;
     double speed_;
-    Int segmentIndex_;
-    double u_; // parameter in stroke segment.
+    CurveParameter parameter_;
 
     void updateOffsetPoints_() {
         offsetPoints_ = sample_.offsetPoints();
@@ -613,6 +621,58 @@ public:
 
 private:
     StrokeSample2dArray samples_ = {};
+    StrokeBoundaryInfo boundaryInfo_;
+    Rect2d centerlineBoundingBox_ = Rect2d::empty;
+
+    void computeCenterlineBoundingBox() {
+        centerlineBoundingBox_ = Rect2d::empty;
+        for (const StrokeSample2d& cs : samples_) {
+            centerlineBoundingBox_.uniteWith(cs.position());
+        }
+    }
+};
+
+/// \class vgc::geometry::StrokeSampling2d
+/// \brief Sampling of a 2d stroke.
+///
+class VGC_GEOMETRY_API StrokeSamplingEx2d {
+public:
+    StrokeSamplingEx2d() noexcept = default;
+
+    explicit StrokeSamplingEx2d(const StrokeSampleEx2dArray& samples)
+        : samples_(samples) {
+
+        computeCenterlineBoundingBox();
+    }
+
+    explicit StrokeSamplingEx2d(StrokeSampleEx2dArray&& samples)
+        : samples_(std::move(samples)) {
+
+        computeCenterlineBoundingBox();
+    }
+
+    const StrokeSampleEx2dArray& samples() const {
+        return samples_;
+    }
+
+    StrokeSampleEx2dArray stealSamples() {
+        return std::move(samples_);
+    }
+
+    const Rect2d& centerlineBoundingBox() const {
+        return centerlineBoundingBox_;
+    }
+
+    const StrokeBoundaryInfo& boundaryInfo() const {
+        return boundaryInfo_;
+    }
+
+    void setBoundaryInfo(const StrokeBoundaryInfo& boundaryInfo) {
+        boundaryInfo_ = boundaryInfo;
+    }
+
+private:
+    StrokeSampleEx2dArray samples_ = {};
     StrokeBoundaryInfo boundaryInfo_;
     Rect2d centerlineBoundingBox_ = Rect2d::empty;
 
@@ -784,6 +844,11 @@ public:
     ///
     Vec2d evalCenterline(Int segmentIndex, double u) const;
 
+    /// \overload
+    Vec2d evalCenterline(const CurveParameter& parameter) const {
+        return evalCenterline(parameter.segmentIndex(), parameter.u());
+    }
+
     /// Returns the position of the centerline point from segment `segmentIndex` at
     /// parameter `u`. It additionally sets the value of `velocity` as the
     /// position derivative at `u` with respect to the parameter u.
@@ -793,6 +858,11 @@ public:
     ///
     Vec2d evalCenterline(Int segmentIndex, double u, Vec2d& velocity) const;
 
+    /// \overload
+    Vec2d evalCenterline(const CurveParameter& parameter, Vec2d& velocity) const {
+        return evalCenterline(parameter.segmentIndex(), parameter.u(), velocity);
+    }
+
     /// Returns a `StrokeSample` from the segment `segmentIndex` at
     /// parameter `u`. The attribute `s` of the sample is left to 0.
     ///
@@ -800,6 +870,11 @@ public:
     /// `[0, numSegments() - 1]`.
     ///
     StrokeSampleEx2d eval(Int segmentIndex, double u) const;
+
+    /// \overload
+    StrokeSampleEx2d eval(const CurveParameter& parameter) const {
+        return eval(parameter.segmentIndex(), parameter.u());
+    }
 
     // TODO: add variants of sampleSegment() and sampleRange() for CurveSample2d ?
 
@@ -899,9 +974,11 @@ public:
     // - the common ancestor group space for best morphing.
     // - the canvas space for best rendering.
 
-    /// Expects positions in object space.
-    ///
     StrokeSampling2d computeSampling(const CurveSamplingParameters& params) const;
+
+    StrokeSamplingEx2d computeSamplingEx(const CurveSamplingParameters& params) const;
+
+    CurveParameter resolveSampledLocation(const SampledCurveLocation& location) const;
 
     /// Expects delta in object space.
     ///
@@ -928,6 +1005,11 @@ public:
             isClosed_ = false;
         }
     }
+
+    std::unique_ptr<AbstractStroke2d> subStroke(
+        const CurveParameter& from,
+        const CurveParameter& to,
+        Int numWraps = 0) const;
 
     void reverse() {
         reverse_();
@@ -1086,6 +1168,10 @@ protected:
 
     virtual StrokeBoundaryInfo computeBoundaryInfo_() const = 0;
 
+    // Assumes location is lerp'd.
+    virtual CurveParameter
+    resolveSampledLocation_(const SampledCurveLocation& location) const = 0;
+
     virtual void translate_(const Vec2d& delta) = 0;
 
     virtual void transform_(const Mat3d& transformation) = 0;
@@ -1093,6 +1179,12 @@ protected:
     virtual void close_(bool smoothJoin) = 0;
 
     virtual void open_(bool keepJoinAsBestAsPossible) = 0;
+
+    // Assumes l1 and l2 are sanitized and numWraps == 0 for open strokes.
+    virtual std::unique_ptr<AbstractStroke2d> subStroke_(
+        const CurveParameter& l1,
+        const CurveParameter& l2,
+        Int numWraps) const = 0;
 
     virtual void reverse_() = 0;
 
@@ -1143,6 +1235,58 @@ private:
 
     bool fixEvalLocation_(Int& segmentIndex, double& u) const;
 };
+
+// WIP
+
+class VGC_GEOMETRY_API SampledCurveClosestLocationResult {
+public:
+    constexpr SampledCurveClosestLocationResult(detail::InternalKey) noexcept
+        : location_()
+        , position_() {
+    }
+
+    VGC_WARNING_PUSH
+    VGC_WARNING_MSVC_DISABLE(26495) // member variable uninitialized
+    SampledCurveClosestLocationResult(detail::InternalKey, core::NoInit) noexcept
+        : location_(core::noInit)
+        , position_(core::noInit) {
+    }
+    VGC_WARNING_POP
+
+    SampledCurveClosestLocationResult(
+        detail::InternalKey,
+        const SampledCurveLocation& location,
+        const Vec2d& position) noexcept
+
+        : location_(location)
+        , position_(position) {
+    }
+
+    const SampledCurveLocation& location() const {
+        return location_;
+    }
+
+    void setLocation(const SampledCurveLocation& location) {
+        location_ = location;
+    }
+
+    const Vec2d& position() const {
+        return position_;
+    }
+
+    void setPosition(const Vec2d& position) {
+        position_ = position;
+    }
+
+private:
+    SampledCurveLocation location_;
+    geometry::Vec2d position_;
+};
+
+VGC_GEOMETRY_API
+SampledCurveClosestLocationResult closestCenterlineLocation(
+    const StrokeSampleEx2dArray& sampleExArray,
+    const Vec2d& position);
 
 } // namespace vgc::geometry
 

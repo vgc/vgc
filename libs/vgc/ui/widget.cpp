@@ -881,6 +881,7 @@ void Widget::maybeStartPendingMouseAction_() {
         //
         MouseActionEventPtr event = pendingMouseActionEvents_.first();
         WidgetPtr clickedWidget = pendingMouseClickWidget_;
+        ActionPtr clickedAction = pendingMouseClickAction_;
         pendingMouseActionEvents_.clear();
         pendingMouseClickWidget_ = nullptr;
         pendingMouseClickAction_ = nullptr;
@@ -890,7 +891,7 @@ void Widget::maybeStartPendingMouseAction_() {
         updateFocusOnClick_(clickedWidget.get());
         event->setWidget(pendingMouseClickWidget_.get());
         mapMouseActionPosition_(event.get(), clickedWidget.get());
-        pendingMouseClickAction_->onMouseClick(event.get());
+        clickedAction->onMouseClick(event.get());
 
         // XXX Call updateHoverChain() here? Indeed, a previous mouse
         //     move might have restrainted from updating the hover

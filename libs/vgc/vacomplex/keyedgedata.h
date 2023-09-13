@@ -130,6 +130,12 @@ public:
         core::ConstSpan<KeyHalfedgeData> khds,
         std::unique_ptr<geometry::AbstractStroke2d>&& gluedStroke);
 
+    static std::unique_ptr<KeyEdgeData> fromSlice(
+        const KeyEdgeData* ked,
+        const geometry::CurveParameter& start,
+        const geometry::CurveParameter& end,
+        Int numWraps);
+
 private:
     std::unique_ptr<geometry::AbstractStroke2d> stroke_;
     // In case stroke_ == nullptr.

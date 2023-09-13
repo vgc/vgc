@@ -23,6 +23,7 @@
 #include <vgc/vacomplex/celldata.h>
 #include <vgc/vacomplex/complex.h>
 #include <vgc/vacomplex/keyedgedata.h>
+#include <vgc/vacomplex/operations.h>
 
 namespace vgc::vacomplex {
 
@@ -141,9 +142,13 @@ public:
     KeyEdge* glueKeyClosedEdges(core::ConstSpan<KeyEdge*> kes);
 
     core::Array<KeyEdge*> unglueKeyEdges(KeyEdge* ke);
+
     core::Array<KeyVertex*> unglueKeyVertices(
         KeyVertex* kv,
         core::Array<std::pair<core::Id, core::Array<KeyEdge*>>>& ungluedKeyEdges);
+
+    VertexCutEdgeResult
+    vertexCutEdge(KeyEdge* ke, const geometry::CurveParameter& parameter);
 
     UncutAtKeyVertexResult uncutAtKeyVertex(KeyVertex* kv, bool smoothJoin);
 

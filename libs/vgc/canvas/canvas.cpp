@@ -202,7 +202,7 @@ core::Array<core::Id> Canvas::selection() const {
     return selectedElementIds_;
 }
 
-void Canvas::setSelection(const core::Array<core::Id>& elementIds) {
+void Canvas::setSelection(const core::ConstSpan<core::Id>& elementIds) {
     selectedElementIds_.clear();
     for (core::Id id : elementIds) {
         if (!selectedElementIds_.contains(id)) {
