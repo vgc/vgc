@@ -71,9 +71,7 @@ void BoolSettingEdit::setStyle(BoolSettingStyle style) {
             toggle_->destroy();
         }
         if (!checkbox_) {
-            //checkbox_ = createChildBefore<Checkbox>(firstChild());
-            checkbox_ = createChild<Checkbox>();
-            insertChild(firstChild(), checkbox_.get());
+            checkbox_ = createChildBefore<Checkbox>(firstChild());
             checkbox_->setChecked(boolSetting_->value());
             checkbox_->checkStateChanged().connect(onCheckboxCheckStateChangedSlot_());
         }
