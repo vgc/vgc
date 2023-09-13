@@ -402,7 +402,8 @@ core::Array<KeyVertex*> unglueKeyVertices(
     return ops.unglueKeyVertices(kv, ungluedKeyEdges);
 }
 
-VertexCutEdgeResult vertexCutEdge(KeyEdge* ke, const geometry::CurveParameter& parameter) {
+VertexCutEdgeResult
+vertexCutEdge(KeyEdge* ke, const geometry::CurveParameter& parameter) {
     if (!ke) {
         throw LogicError("vertexCutEdge: ke is nullptr.");
     }

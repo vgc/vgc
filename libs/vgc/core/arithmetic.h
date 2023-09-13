@@ -1466,8 +1466,7 @@ template<
     typename ValueType,
     typename FloatType,
     VGC_REQUIRES(std::is_floating_point_v<FloatType> && !std::is_arithmetic_v<ValueType>)>
-ValueType
-fastLerp(const ValueType& a, const ValueType& b, FloatType t) {
+ValueType fastLerp(const ValueType& a, const ValueType& b, FloatType t) {
     return (1 - t) * a + t * b;
 }
 

@@ -1363,11 +1363,14 @@ Operations::vertexCutEdge(KeyEdge* ke, const geometry::CurveParameter& parameter
         return VertexCutEdgeResult(newKe, newKv, newKe);
     }
     else {
-        std::unique_ptr<KeyEdgeData> newKeData1 =
-            KeyEdgeData::fromSlice(ke->data(), geometry::CurveParameter(0, 0), parameter, 0);
+        std::unique_ptr<KeyEdgeData> newKeData1 = KeyEdgeData::fromSlice(
+            ke->data(), geometry::CurveParameter(0, 0), parameter, 0);
 
-        std::unique_ptr<KeyEdgeData> newKeData2 =
-            KeyEdgeData::fromSlice(ke->data(), parameter, geometry::CurveParameter(oldStroke->numSegments() - 1, 1), 0);
+        std::unique_ptr<KeyEdgeData> newKeData2 = KeyEdgeData::fromSlice(
+            ke->data(),
+            parameter,
+            geometry::CurveParameter(oldStroke->numSegments() - 1, 1),
+            0);
 
         geometry::Vec2d vertexPos = newKeData2->stroke()->endPositions()[0];
 

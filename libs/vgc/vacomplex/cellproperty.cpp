@@ -257,7 +257,8 @@ void CellProperties::assignFromSlice(
 
     for (const auto& p : ked->properties()) {
         const CellProperty* prop = p.second.get();
-        std::unique_ptr<CellProperty> newProp = prop->fromSlice_(ked, start, end, numWraps, subStroke);
+        std::unique_ptr<CellProperty> newProp =
+            prop->fromSlice_(ked, start, end, numWraps, subStroke);
         if (newProp) {
             insert(std::move(newProp));
         }
