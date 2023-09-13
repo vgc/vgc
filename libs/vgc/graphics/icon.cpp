@@ -337,11 +337,11 @@ void Icon::onPaintDraw_(graphics::Engine* engine) {
                 break;
             case ColorType::Foreground:
                 c = foregroundColor;
-                c.setA(batch.colorSpec.color.a());
+                c.setA(c.a() * batch.colorSpec.color.a());
                 break;
             case ColorType::Accent:
                 c = accentColor;
-                c.setA(batch.colorSpec.color.a());
+                c.setA(c.a() * batch.colorSpec.color.a());
                 break;
             }
             core::FloatArray instanceData({c.r(), c.g(), c.b(), c.a()});
