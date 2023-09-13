@@ -97,7 +97,20 @@ public:
     }
 
     bool isValid() const {
-        return steinerVertex_ || !halfedges_.isEmpty();
+        if (steinerVertex_) {
+            return halfedges_.isEmpty();
+        }
+        else if (!halfedges_.isEmpty()) {
+            KeyVertex* kv = halfedges_.last().endVertex();
+            for (const KeyHalfedge& khe : halfedges_) {
+                if (kv != khe.startVertex()) {
+                    return false;
+                }
+                kv = khe.endVertex();
+            }
+            return true;
+        }
+        return false;
     }
 
     void debugPrint(core::StringWriter& out) const;
