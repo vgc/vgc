@@ -1163,6 +1163,7 @@ core::Array<KeyEdge*> Operations::unglueKeyEdges(KeyEdge* targetKe) {
                             addToBoundary_(kf, newKe);
                         }
                     }
+                    VGC_ASSERT(cycle.isValid());
                 }
                 else if (first.edge() == targetKe) {
                     KeyEdge* newKe = duplicateTargetKe();
@@ -1173,6 +1174,7 @@ core::Array<KeyEdge*> Operations::unglueKeyEdges(KeyEdge* targetKe) {
                     // TODO: instead of having a copy of the edge used N times
                     // use a single edge with its geometry looped N times.
                     // See Boris Dalstein's thesis page 187.
+                    VGC_ASSERT(cycle.isValid());
                 }
             }
             removeFromBoundary_(kf, targetKe);
@@ -1309,6 +1311,7 @@ core::Array<KeyVertex*> Operations::unglueKeyVertices(
                         addToBoundary_(kf, newKv);
                     }
                 }
+                VGC_ASSERT(cycle.isValid());
             }
             removeFromBoundary_(kf, targetKv);
             break;
@@ -1393,8 +1396,8 @@ Operations::uncutAtKeyVertex(KeyVertex* targetKv, bool smoothJoin) {
         substituteEdge_(oldKhe, newKhe);
 
         // Since substitute expects end vertices to be the same,
-        // it didn't remove our targetKv from its star. So
-        // we do it manually here.
+        // it didn't remove our targetKv from its star's boundary.
+        // So we do it manually here.
         for (Cell* cell : targetKv->star().copy()) {
             removeFromBoundary_(cell, targetKv);
         }
@@ -1448,18 +1451,19 @@ Operations::uncutAtKeyVertex(KeyVertex* targetKv, bool smoothJoin) {
                 auto it = cycle.halfedges_.begin();
                 while (it != cycle.halfedges_.end()) {
                     KeyHalfedge& khe = *it;
-                    if (khe.endVertex() == targetKv) {
+                    if (khe.edge() == info.khe1.edge()) {
                         bool dir = khe.direction() == info.khe1.direction();
                         khe = KeyHalfedge(newKe, dir);
                         ++it;
                     }
-                    else if (khe.startVertex() == targetKv) {
+                    else if (khe.edge() == info.khe2.edge()) {
                         it = cycle.halfedges_.erase(it);
                     }
                     else {
                         ++it;
                     }
                 }
+                VGC_ASSERT(cycle.isValid());
             }
 
             removeFromBoundary_(kf, info.khe1.edge());
@@ -2359,7 +2363,7 @@ Operations::UncutAtKeyVertexInfo_ Operations::prepareUncutAtKeyVertex_(KeyVertex
                         }
                         // All edges in this cycle are equal to result.khe1.edge().
                         // We require them to be in the same direction (no u-turn).
-                        bool direction = cycle.halfedges().first().edge();
+                        bool direction = cycle.halfedges().first().direction();
                         for (const KeyHalfedge& khe : cycle.halfedges()) {
                             if (khe.direction() != direction) {
                                 // Cannot uncut if kv is used as a u-turn in cycle.
