@@ -510,13 +510,15 @@ void AbstractStroke2d::sampleRange(
     }
 }
 
-StrokeSampling2d
-AbstractStroke2d::computeSampling(const geometry::CurveSamplingParameters& params) const {
+namespace {
 
-    geometry::StrokeSampleEx2dArray samplesEx;
-    StrokeBoundaryInfo boundaryInfo;
+void computeSampling_(
+    const AbstractStroke2d& stroke,
+    const geometry::CurveSamplingParameters& params,
+    StrokeSampleEx2dArray& samplesEx,
+    StrokeBoundaryInfo& boundaryInfo) {
 
-    Int n = numKnots();
+    Int n = stroke.numKnots();
     if (n == 0) {
         // fallback to segment
         Vec2d tangent(0, 1);
@@ -528,43 +530,35 @@ AbstractStroke2d::computeSampling(const geometry::CurveSamplingParameters& param
         boundaryInfo[1] = boundaryInfo[0];
     }
     else {
-        sampleRange(samplesEx, params);
-        boundaryInfo = computeBoundaryInfo();
+        stroke.sampleRange(samplesEx, params);
+        boundaryInfo = stroke.computeBoundaryInfo();
     }
-
     VGC_ASSERT(samplesEx.length() > 0);
+}
+
+} // namespace
+
+StrokeSampling2d
+AbstractStroke2d::computeSampling(const geometry::CurveSamplingParameters& params) const {
+
+    StrokeSampleEx2dArray samplesEx;
+    StrokeBoundaryInfo boundaryInfo;
+    computeSampling_(*this, params, samplesEx, boundaryInfo);
+
     StrokeSampling2d result{geometry::StrokeSample2dArray(samplesEx)};
     result.setBoundaryInfo(boundaryInfo);
-
     return result;
 }
 
 StrokeSamplingEx2d AbstractStroke2d::computeSamplingEx(
     const geometry::CurveSamplingParameters& params) const {
 
-    geometry::StrokeSampleEx2dArray samplesEx;
+    StrokeSampleEx2dArray samplesEx;
     StrokeBoundaryInfo boundaryInfo;
+    computeSampling_(*this, params, samplesEx, boundaryInfo);
 
-    Int n = numKnots();
-    if (n == 0) {
-        // fallback to segment
-        Vec2d tangent(0, 1);
-        Vec2d normal = tangent.orthogonalized();
-        Vec2d halfwidths(1.0, 1.0);
-        samplesEx.emplaceLast(Vec2d(), tangent, normal, halfwidths, 0.0);
-        boundaryInfo[0] = StrokeEndInfo(Vec2d(), tangent, halfwidths);
-        boundaryInfo[0].setOffsetLineTangents({tangent, tangent});
-        boundaryInfo[1] = boundaryInfo[0];
-    }
-    else {
-        sampleRange(samplesEx, params);
-        boundaryInfo = computeBoundaryInfo();
-    }
-
-    VGC_ASSERT(samplesEx.length() > 0);
     StrokeSamplingEx2d result{std::move(samplesEx)};
     result.setBoundaryInfo(boundaryInfo);
-
     return result;
 }
 
