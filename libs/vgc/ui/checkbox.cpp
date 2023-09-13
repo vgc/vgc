@@ -46,8 +46,6 @@ Checkbox::Checkbox(CreateKey key)
     back_->addStyleClass(strings_::back);
     front_->addStyleClass(strings_::front);
     updateStyleClasses_();
-
-    requestGeometryUpdate();
 }
 
 CheckboxPtr Checkbox::create() {
