@@ -98,7 +98,7 @@ public:
 
     bool isValid() const {
         if (steinerVertex_) {
-            return !halfedges_.isEmpty();
+            return halfedges_.isEmpty();
         }
         else if (!halfedges_.isEmpty()) {
             KeyVertex* kv = halfedges_.last().endVertex();
