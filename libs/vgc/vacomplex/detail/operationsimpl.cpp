@@ -1399,14 +1399,16 @@ Operations::vertexCutEdge(KeyEdge* ke, const geometry::CurveParameter& parameter
                 while (it != cycleKhes.end()) {
                     KeyHalfedge& khe = *it;
                     if (khe.edge() == ke) {
+                        ++it;
                         if (khe.direction()) {
                             khe.setEdge(newKe1);
-                            it = cycleKhes.emplace(++it, newKe2, true) + 1;
+                            it = cycleKhes.emplace(it, newKe2, true);
                         }
                         else {
                             khe.setEdge(newKe2);
-                            it = cycleKhes.emplace(++it, newKe1, false) + 1;
+                            it = cycleKhes.emplace(it, newKe1, false);
                         }
+                        ++it;
                         substituted = true;
                     }
                     else {
