@@ -1395,24 +1395,18 @@ Operations::vertexCutEdge(KeyEdge* ke, const geometry::CurveParameter& parameter
                     continue;
                 }
                 core::Array<KeyHalfedge>& cycleKhes = cycle.halfedges_;
-                auto it = cycleKhes.begin();
-                while (it != cycleKhes.end()) {
+                for (auto it = cycleKhes.begin(); it != cycleKhes.end(); ++it) {
                     KeyHalfedge& khe = *it;
                     if (khe.edge() == ke) {
-                        ++it;
                         if (khe.direction()) {
                             khe.setEdge(newKe1);
-                            it = cycleKhes.emplace(it, newKe2, true);
+                            it = cycleKhes.emplace(it + 1, newKe2, true);
                         }
                         else {
                             khe.setEdge(newKe2);
-                            it = cycleKhes.emplace(it, newKe1, false);
+                            it = cycleKhes.emplace(it + 1, newKe1, false);
                         }
-                        ++it;
                         substituted = true;
-                    }
-                    else {
-                        ++it;
                     }
                 }
                 VGC_ASSERT(cycle.isValid());
