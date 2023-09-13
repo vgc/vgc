@@ -19,10 +19,22 @@
 
 #include <vgc/ui/boolsetting.h>
 #include <vgc/ui/button.h>
+#include <vgc/ui/checkbox.h>
 #include <vgc/ui/settingedit.h>
 #include <vgc/ui/toggle.h>
 
 namespace vgc::ui {
+
+/// \enum BoolSettingStyle
+/// \brief Specifies whether to edit a `BoolSetting` via a `Toggle` or `Checkbox`.
+///
+enum class BoolSettingStyle {
+    Toggle,
+    Checkbox
+};
+
+VGC_UI_API
+VGC_DECLARE_ENUM(BoolSettingStyle)
 
 VGC_DECLARE_OBJECT(BoolSettingEdit);
 
@@ -34,12 +46,13 @@ private:
     VGC_OBJECT(BoolSettingEdit, SettingEdit)
 
 protected:
-    BoolSettingEdit(CreateKey, BoolSettingPtr setting);
+    BoolSettingEdit(CreateKey, BoolSettingPtr setting, BoolSettingStyle style);
 
 public:
     /// Creates a `BoolSettingEdit`.
     ///
-    static BoolSettingEditPtr create(BoolSettingPtr setting);
+    static BoolSettingEditPtr
+    create(BoolSettingPtr setting, BoolSettingStyle style = BoolSettingStyle::Toggle);
 
     /// Returns the current value of this `BoolSettingEdit`.
     ///
@@ -47,12 +60,30 @@ public:
         return boolSetting_->value();
     }
 
+    // XXX use stylesheets to determine BoolSettingStyle?
+
+    /// Returns whether this setting is displayed as a `Toggle` or `Checkbox`.
+    ///
+    /// \sa `setStyle()`.
+    ///
+    BoolSettingStyle style();
+
+    /// Sets whether this setting is displayed as a `Toggle` or `Checkbox`.
+    ///
+    /// \sa `style()`.
+    ///
+    void setStyle(BoolSettingStyle style);
+
 private:
     BoolSettingPtr boolSetting_;
     TogglePtr toggle_;
+    CheckboxPtr checkbox_;
 
     void onToggleToggled_(bool state);
     VGC_SLOT(onToggleToggledSlot_, onToggleToggled_)
+
+    void onCheckboxCheckStateChanged_(Checkbox* checkbox, CheckState state);
+    VGC_SLOT(onCheckboxCheckStateChangedSlot_, onCheckboxCheckStateChanged_)
 
     void onBoolSettingValueChanged_(bool value);
     VGC_SLOT(onBoolSettingValueChangedSlot_, onBoolSettingValueChanged_);
