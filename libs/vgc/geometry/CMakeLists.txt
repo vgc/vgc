@@ -51,6 +51,8 @@ vgc_add_library(geometry
         windingrule.h
         yuksel.h
 
+        detail/internalkey.h
+
     CPP_SOURCE_FILES
         camera2d.cpp
         catmullrom.cpp

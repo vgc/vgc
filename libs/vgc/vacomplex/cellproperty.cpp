@@ -63,6 +63,16 @@ std::unique_ptr<CellProperty> CellProperty::fromGlue_(
     return nullptr;
 }
 
+std::unique_ptr<CellProperty> CellProperty::fromSlice_(
+    const KeyEdgeData* /*ked*/,
+    const geometry::CurveParameter& /*start*/,
+    const geometry::CurveParameter& /*end*/,
+    Int /*numWraps*/,
+    const geometry::AbstractStroke2d* /*subStroke*/) const {
+
+    return nullptr;
+}
+
 CellProperties::CellProperties(const CellProperties& other) {
     if (&other != this) {
         for (const auto& [name, prop] : other.map_) {
@@ -230,6 +240,24 @@ void CellProperties::glue(
 
     for (const PropertyTemplate& p : templates) {
         std::unique_ptr<CellProperty> newProp = p.prop->fromGlue_(khds, gluedStroke);
+        if (newProp) {
+            insert(std::move(newProp));
+        }
+    }
+}
+
+void CellProperties::assignFromSlice(
+    const KeyEdgeData* ked,
+    const geometry::CurveParameter& start,
+    const geometry::CurveParameter& end,
+    Int numWraps,
+    const geometry::AbstractStroke2d* subStroke) {
+
+    clear();
+
+    for (const auto& p : ked->properties()) {
+        const CellProperty* prop = p.second.get();
+        std::unique_ptr<CellProperty> newProp = prop->fromSlice_(ked, start, end, numWraps, subStroke);
         if (newProp) {
             insert(std::move(newProp));
         }

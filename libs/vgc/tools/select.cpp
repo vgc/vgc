@@ -43,6 +43,94 @@ ui::BoolSetting* showTransformBox() {
 
 } // namespace options
 
+VGC_DECLARE_OBJECT(VertexCutEdgeAction);
+
+class VertexCutEdgeAction : public ui::Action {
+private:
+    VGC_OBJECT(VertexCutEdgeAction, ui::Action)
+
+protected:
+    /// This is an implementation details.
+    /// Please use `VertexCutEdgeAction::create()` instead.
+    ///
+    VertexCutEdgeAction(CreateKey key)
+        : ui::Action(key, commands::vertexCutEdge()) {
+    }
+
+public:
+    /// Creates a `VertexCutEdgeAction`.
+    ///
+    static VertexCutEdgeActionPtr create() {
+        return core::createObject<VertexCutEdgeAction>();
+    }
+
+public:
+    void onMouseClick(ui::MouseEvent* event) override {
+
+        canvas::Canvas* canvas = tool_->canvas();
+        workspace::Workspace* workspace = tool_->workspace();
+        if (!canvas || !workspace) {
+            return;
+        }
+
+        // Open history group
+        core::UndoGroup* undoGroup = nullptr;
+        core::History* history = workspace->history();
+        if (history) {
+            undoGroup = history->createUndoGroup(actionName());
+        }
+
+        geometry::Mat4d inverseViewMatrix = canvas->camera().viewMatrix().inverted();
+        geometry::Vec2d cursorPositionInWorkspace =
+            inverseViewMatrix.transformPointAffine(geometry::Vec2d(event->position()));
+
+        core::Array<canvas::SelectionCandidate> candidates =
+            canvas->computeSelectionCandidates(event->position());
+
+        for (const auto& candidate : candidates) {
+            workspace::Element* item = workspace->find(candidate.id());
+            auto keItem = dynamic_cast<workspace::VacKeyEdge*>(item);
+            if (keItem) {
+                if (vacomplex::KeyEdge* ke = keItem->vacKeyEdgeNode()) {
+                    const geometry::AbstractStroke2d* stroke = ke->data()->stroke();
+                    auto samplingEx = stroke->computeSamplingEx(
+                        geometry::CurveSamplingQuality::AdaptiveHigh);
+                    // find closest location on curve
+                    geometry::SampledCurveLocation closestLoc =
+                        geometry::closestCenterlineLocation(
+                            samplingEx.samples(), cursorPositionInWorkspace)
+                            .location();
+                    // convert to curve parameter
+                    geometry::CurveParameter param =
+                        stroke->resolveSampledLocation(closestLoc);
+                    // do the cut
+                    auto result = vacomplex::ops::vertexCutEdge(ke, param);
+                    // select resulting vertex
+                    workspace::Element* vertexItem =
+                        workspace->findVacElement(result.vertex());
+                    if (vertexItem) {
+                        canvas->setSelection(std::array{vertexItem->id()});
+                    }
+                    break;
+                }
+            }
+        }
+
+        // Close operation
+        if (undoGroup) {
+            undoGroup->close();
+        }
+    }
+
+public:
+    Select* tool_ = nullptr;
+
+    core::StringId actionName() const {
+        static core::StringId actionName_("Vertex-Cut Edge");
+        return actionName_;
+    }
+};
+
 } // namespace
 
 Select::Select(CreateKey key)
@@ -65,6 +153,9 @@ Select::Select(CreateKey key)
 
     ui::Action* unglueAction = createTriggerAction(commands::unglue());
     unglueAction->triggered().connect(onUnglueSlot_());
+
+    VertexCutEdgeAction* vertexCutEdgeAction = createAction<VertexCutEdgeAction>();
+    vertexCutEdgeAction->tool_ = this;
 
     ui::Action* simplifyAction = createTriggerAction(commands::simplify());
     simplifyAction->triggered().connect(onSimplifySlot_());
@@ -975,7 +1066,7 @@ void Select::onGlue_() {
     core::Array<core::Id> selection = canvas->selection();
     core::Id gluedId = workspace->glue(selection);
     if (gluedId >= 0) {
-        canvas->setSelection({gluedId});
+        canvas->setSelection(std::array{gluedId});
     }
 
     // Close history group

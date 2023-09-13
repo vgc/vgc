@@ -103,23 +103,23 @@ protected:
     }
 
 public:
-    const core::Array<Vec2d>& positions() const {
+    const Vec2dArray& positions() const {
         return positions_;
     }
 
     template<typename TRange>
     void setPositions(TRange&& positions) {
-        positions_ = std::forward<TRange>(positions);
+        positions_ = Vec2dArray(std::forward<TRange>(positions));
         onPositionsChanged_();
     }
 
-    const core::Array<double>& widths() const {
+    const core::DoubleArray& widths() const {
         return widths_;
     }
 
     template<typename TRange>
     void setWidths(TRange&& widths) {
-        widths_ = std::forward<TRange>(widths);
+        widths_ = core::DoubleArray(std::forward<TRange>(widths));
         hasConstantWidth_ = false;
         onWidthsChanged_();
     }
@@ -179,6 +179,9 @@ protected:
 
     StrokeBoundaryInfo computeBoundaryInfo_() const override = 0;
 
+    CurveParameter
+    resolveSampledLocation_(const SampledCurveLocation& location) const override;
+
     void translate_(const geometry::Vec2d& delta) override;
 
     void transform_(const geometry::Mat3d& transformation) override;
@@ -186,6 +189,11 @@ protected:
     void close_(bool smoothJoin) override;
 
     void open_(bool keepJoinAsBestAsPossible) override;
+
+    std::unique_ptr<AbstractStroke2d> subStroke_(
+        const CurveParameter& p1,
+        const CurveParameter& p2,
+        Int numWraps) const override;
 
     void reverse_() override;
 

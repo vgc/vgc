@@ -68,6 +68,13 @@ protected:
         core::ConstSpan<vacomplex::KeyHalfedgeData> khds,
         const geometry::AbstractStroke2d* gluedStroke) const override;
 
+    std::unique_ptr<vacomplex::CellProperty> fromSlice_(
+        const vacomplex::KeyEdgeData* ked,
+        const geometry::CurveParameter& start,
+        const geometry::CurveParameter& end,
+        Int numWraps,
+        const geometry::AbstractStroke2d* subStroke) const override;
+
 private:
     struct Style {
         core::Color color;

@@ -190,7 +190,7 @@ public:
 
     /// Sets the current selected elements.
     ///
-    void setSelection(const core::Array<core::Id>& elementIds);
+    void setSelection(const core::ConstSpan<core::Id>& elementIds);
 
     /// Deselects all selected elements.
     ///

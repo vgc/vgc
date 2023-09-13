@@ -117,6 +117,14 @@ protected:
         core::ConstSpan<KeyHalfedgeData> khds,
         const geometry::AbstractStroke2d* gluedStroke) const;
 
+    // Returns a null pointer by default.
+    virtual std::unique_ptr<CellProperty> fromSlice_(
+        const KeyEdgeData* ked,
+        const geometry::CurveParameter& start,
+        const geometry::CurveParameter& end,
+        Int numWraps,
+        const geometry::AbstractStroke2d* subStroke) const;
+
 private:
     core::StringId name_;
 
@@ -172,6 +180,13 @@ public:
     void glue(
         core::ConstSpan<KeyHalfedgeData> khds,
         const geometry::AbstractStroke2d* gluedStroke);
+
+    void assignFromSlice(
+        const KeyEdgeData* ked,
+        const geometry::CurveParameter& start,
+        const geometry::CurveParameter& end,
+        Int numWraps,
+        const geometry::AbstractStroke2d* subStroke);
 
 private:
     std::map<core::StringId, std::unique_ptr<CellProperty>> map_;

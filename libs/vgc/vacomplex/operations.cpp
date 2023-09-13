@@ -402,6 +402,14 @@ core::Array<KeyVertex*> unglueKeyVertices(
     return ops.unglueKeyVertices(kv, ungluedKeyEdges);
 }
 
+VertexCutEdgeResult vertexCutEdge(KeyEdge* ke, const geometry::CurveParameter& parameter) {
+    if (!ke) {
+        throw LogicError("vertexCutEdge: ke is nullptr.");
+    }
+    detail::Operations ops(ke->complex());
+    return ops.vertexCutEdge(ke, parameter);
+}
+
 Cell* uncutAtKeyVertex(KeyVertex* kv, bool smoothJoin) {
     if (!kv) {
         throw LogicError("uncutAtKeyVertex: kv is nullptr.");

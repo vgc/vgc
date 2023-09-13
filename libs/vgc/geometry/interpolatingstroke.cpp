@@ -215,6 +215,16 @@ std::array<Vec2d, 2> AbstractInterpolatingStroke2d::endPositions_() const {
     }
 }
 
+CurveParameter AbstractInterpolatingStroke2d::resolveSampledLocation_(
+    const SampledCurveLocation& location) const {
+
+    // Currently does a coarse approximation, as if speed were constant between samples.
+    // TODO: later, resolve according to given tolerance/precision.
+    return CurveParameter(
+        location.segmentIndex(),
+        core::fastLerp(location.u1(), location.u2(), location.lerpParameter()));
+}
+
 void AbstractInterpolatingStroke2d::translate_(const Vec2d& delta) {
     for (Vec2d& p : positions_) {
         p += delta;
@@ -251,6 +261,140 @@ void AbstractInterpolatingStroke2d::open_(bool /*keepJoinAsBestAsPossible*/) {
         }
         onPositionsChanged_();
     }
+}
+
+std::unique_ptr<AbstractStroke2d> AbstractInterpolatingStroke2d::subStroke_(
+    const CurveParameter& p1,
+    const CurveParameter& p2,
+    Int numWraps) const {
+
+    std::unique_ptr<AbstractStroke2d> result = cloneEmpty();
+    AbstractInterpolatingStroke2d* newStroke =
+        static_cast<AbstractInterpolatingStroke2d*>(result.get());
+
+    StrokeSample2d s1 = eval(p1);
+
+    bool isStrictlyPositiveRange = p1 < p2;
+    bool isPositiveRange = !(p2 < p1);
+
+    if (!isStrictlyPositiveRange && (numWraps == 0)) {
+        std::array<Vec2d, 1> points = {s1.position()};
+        newStroke->setPositions(points);
+        newStroke->setConstantWidth(s1.width());
+        return result;
+    }
+
+    StrokeSample2d s2 = eval(p2);
+
+    const Int numKnots = positions_.length();
+    const Int numSegments = this->numSegments();
+    Int i1 = p1.segmentIndex(); // i1 is also the start knot index of the start segment
+    Int i2 = p2.segmentIndex(); // i2 is also the start knot index of the end segment
+
+    Int n = i2 - i1;
+    // n <= numSegments - 1
+
+    Int reserveLength = 2 + numWraps * numKnots;
+    if (isPositiveRange) {
+        reserveLength += (i2 - i1);
+    }
+    else {
+        // Here, numWraps > 0.
+        reserveLength += numSegments - (i1 - i2);
+    }
+
+    Vec2dArray positions;
+    core::DoubleArray widths;
+    positions.reserve(n + 2);
+    if (!hasConstantWidth()) {
+        widths.reserve(n + 2);
+    }
+
+    // Compute index of first knot
+    Int iFirst = i1 + 1; // segment end knot
+    if (p1.u() == 1) {
+        // XXX: test if point is close from existing instead of equal ?
+        iFirst += 1; // next segment end knot
+    }
+    // We have: iFirst <= numSegments - 1 + 2
+    //                 <= numKnots + 1
+    if (iFirst > numKnots) {
+        iFirst = numKnots;
+    }
+
+    // Compute index of last knot (excluded)
+    Int iLast = i2 + 1; // segment end knot
+    if (p2.u() == 0) {
+        // XXX: test if point is close from existing instead of equal ?
+        iLast -= 1; // segment start knot
+    }
+    // We have: iLast <= numSegments - 1 + 1
+    //                <= numKnots
+
+    Int iEnd = numKnots;
+
+    const bool hasWidths = !hasConstantWidth();
+    auto extend = [&, hasWidths](Int first, Int last) {
+        positions.extend(positions_.begin() + first, positions_.begin() + last);
+        if (hasWidths) {
+            widths.extend(widths_.begin() + first, widths_.begin() + last);
+        }
+    };
+
+    positions.append(s1.position());
+    if (hasWidths) {
+        widths.append(s1.width());
+    }
+
+    if (isPositiveRange) {
+        if (numWraps > 0) {
+            // e.g.: closed  P0 -[- P1 --- P2 -]-(P0)
+            // ->                [- P1 --- P2 ---(P0)
+            //               P0 --- P1 --- P2 ---(P0) *(numWraps - 1)
+            //               P0 --- P1 --- P2 -]
+            //
+            extend(iFirst, iEnd);
+            for (Int j = 1; j < numWraps; ++j) {
+                extend(0, iEnd);
+            }
+            extend(0, iLast);
+        }
+        else {
+            // e.g.: closed  P0 -[- P1 --- P2 -]-(P0)
+            // ->                [- P1 --- P2 -]
+            // e.g.: open    P0 -[- P1 --- P2 -]- P3
+            // ->                [- P1 --- P2 -]
+            //
+            extend(iFirst, iLast);
+        }
+    }
+    else {
+        // e.g.: closed P0 -]- P1 --- P2 -[-(P0)
+        // ->                             [-(P0)
+        //              P0 --- P1 --- P2 ---(P0) *(numWraps)
+        //              P0 -]
+        //
+        extend(iFirst, iEnd);
+        for (Int j = 0; j < numWraps; ++j) {
+            extend(0, iEnd);
+        }
+        extend(0, iLast);
+    }
+
+    positions.append(s2.position());
+    if (hasWidths) {
+        widths.append(s2.width());
+    }
+
+    newStroke->setPositions(positions);
+    if (!hasConstantWidth()) {
+        newStroke->setWidths(widths);
+    }
+    else {
+        newStroke->setConstantWidth(constantWidth());
+    }
+
+    return result;
 }
 
 void AbstractInterpolatingStroke2d::reverse_() {

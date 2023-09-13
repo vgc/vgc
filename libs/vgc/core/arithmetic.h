@@ -1450,6 +1450,27 @@ FloatType round(FloatType x, Precision precision) {
     return x;
 }
 
+/// Linearly interpolates floating point values using the following
+/// formula: `(1 - t) * a + t * b`.
+///
+template<typename FloatType, VGC_REQUIRES(std::is_floating_point_v<FloatType>)>
+FloatType
+fastLerp(core::TypeIdentity<FloatType> a, core::TypeIdentity<FloatType> b, FloatType t) {
+    return (1 - t) * a + t * b;
+}
+
+/// Linearly interpolates custom type values using the following
+/// formula: `(1 - t) * a + t * b`, for types that support these operations.
+///
+template<
+    typename ValueType,
+    typename FloatType,
+    VGC_REQUIRES(std::is_floating_point_v<FloatType> && !std::is_arithmetic_v<ValueType>)>
+ValueType
+fastLerp(const ValueType& a, const ValueType& b, FloatType t) {
+    return (1 - t) * a + t * b;
+}
+
 /// \struct vgc::core::NoInit
 /// \brief Tag to select a function overload that doesn't perform initialization.
 ///

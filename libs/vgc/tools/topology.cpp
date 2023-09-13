@@ -19,6 +19,7 @@
 namespace vgc::tools::commands {
 
 using ui::Key;
+using ui::MouseButton;
 using ui::Shortcut;
 
 constexpr ui::ModifierKey ctrl = ui::ModifierKey::Ctrl;
@@ -35,6 +36,12 @@ VGC_UI_DEFINE_TRIGGER_COMMAND( //
     "tools.topology.unglue",
     "Unglue",
     Shortcut(alt, Key::U));
+
+VGC_UI_DEFINE_MOUSE_CLICK_COMMAND( //
+    vertexCutEdge,
+    "tools.topology.vertexCutEdge",
+    "Vertex-Cut Edge",
+    Shortcut(ctrl, MouseButton::Right));
 
 VGC_UI_DEFINE_TRIGGER_COMMAND( //
     simplify,

@@ -14,32 +14,14 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef VGC_TOOLS_TOPOLOGY_H
-#define VGC_TOOLS_TOPOLOGY_H
+#ifndef VGC_GEOMETRY_DETAIL_INTERNALKEY_H
+#define VGC_GEOMETRY_DETAIL_INTERNALKEY_H
 
-#include <vgc/tools/api.h>
-#include <vgc/ui/command.h>
+namespace vgc::geometry::detail {
 
-namespace vgc::tools::commands {
+struct InternalKey {};
+inline constexpr InternalKey internalKey = {};
 
-VGC_TOOLS_API
-VGC_UI_DECLARE_COMMAND(glue)
+} // namespace vgc::geometry::detail
 
-VGC_TOOLS_API
-VGC_UI_DECLARE_COMMAND(unglue)
-
-VGC_TOOLS_API
-VGC_UI_DECLARE_COMMAND(vertexCutEdge)
-
-VGC_TOOLS_API
-VGC_UI_DECLARE_COMMAND(simplify)
-
-VGC_TOOLS_API
-VGC_UI_DECLARE_COMMAND(raise)
-
-VGC_TOOLS_API
-VGC_UI_DECLARE_COMMAND(lower)
-
-} // namespace vgc::tools::commands
-
-#endif // VGC_TOOLS_TOPOLOGY_H
+#endif // VGC_GEOMETRY_DETAIL_INTERNALKEY_H

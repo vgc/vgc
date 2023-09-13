@@ -296,4 +296,19 @@ std::unique_ptr<KeyEdgeData> KeyEdgeData::fromGlue(
     return result;
 }
 
+std::unique_ptr<KeyEdgeData> KeyEdgeData::fromSlice(
+    const KeyEdgeData* ked,
+    const geometry::CurveParameter& start,
+    const geometry::CurveParameter& end,
+    Int numWraps) {
+
+    auto result = std::make_unique<KeyEdgeData>(false);
+    std::unique_ptr<geometry::AbstractStroke2d> newStroke_ =
+        ked->stroke()->subStroke(start, end, numWraps);
+    geometry::AbstractStroke2d* newStroke = newStroke_.get();
+    result->setStroke(std::move(newStroke_));
+    result->properties_.assignFromSlice(ked, start, end, numWraps, newStroke);
+    return result;
+}
+
 } // namespace vgc::vacomplex
