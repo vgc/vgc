@@ -209,6 +209,20 @@ public:
         return child.get();
     }
 
+    /// Creates a new widget of type `WidgetClass` constructed with the given
+    /// arguments `args`, and insert it as a child of this widget before
+    /// `nextSibling`.
+    ///
+    /// Returns a pointer to the created widget.
+    ///
+    template<typename WidgetClass, typename... Args>
+    WidgetClass* createChildBefore(Widget* nextSibling, Args&&... args) {
+        core::ObjPtr<WidgetClass> child =
+            WidgetClass::create(std::forward<Args>(args)...);
+        insertChild(nextSibling, child.get());
+        return child.get();
+    }
+
     /// Returns the number of child widgets of this widget.
     ///
     Int numChildren() const {
