@@ -189,18 +189,18 @@
     border-top-right-radius: 8dp;
     border-bottom-right-radius: 8dp;
     border-bottom-left-radius: 8dp;
+
     padding-right: 14dp;
     padding-left: 14dp;
     padding-top: 14dp;
     padding-bottom: 14dp;
-    min-width: 300dp;
-}
 
-.Tooltip {
     margin-top: 8dp;
     margin-right: 8dp;
     margin-bottom: 8dp;
     margin-left: 8dp;
+
+    min-width: 300dp;
 }
 
 .Tooltip .text {
@@ -250,13 +250,13 @@
     padding-right: 20dp;
 }
 
-.Toggle {
+.Toggle,
+.Checkbox {
     horizontal-stretch: 0;
     vertical-stretch: 0;
 }
 
 .Toggle > .back {
-    background-color: rgb(255, 0, 0);
     preferred-width: 26dp;
     preferred-height: 15dp;
     border-top-left-radius: 7.5dp;
@@ -266,7 +266,6 @@
 }
 
 .Toggle > .front {
-    background-color: rgb(0, 0, 0);
     preferred-width: 11dp;
     preferred-height: 11dp;
     border-top-left-radius: 5.5dp;
@@ -275,6 +274,20 @@
     border-bottom-left-radius: 5.5dp;
     margin-left: 2dp;
     margin-right: 2dp;
+}
+
+.Checkbox > .back {
+    preferred-width: 12dp;
+    preferred-height: 12dp;
+    border-top-left-radius: 2dp;
+    border-top-right-radius: 2dp;
+    border-bottom-right-radius: 2dp;
+    border-bottom-left-radius: 2dp;
+}
+
+.Checkbox > .front {
+    preferred-width: 12dp;
+    preferred-height: 12dp;
 }
 
 /* ----------------------------------------------------------------------------
@@ -385,31 +398,44 @@
     background-color: rgb(241, 241, 241);
 }
 
-.Toggle.off > .back {
-    background-color: rgb(90, 94, 98);
-    text-color: rgb(245, 245, 245);
+.Checkbox > .front {
+    icon-foreground-color: rgb(241, 241, 241);
 }
 
-.Toggle.off.hovered > .back {
+.Checkbox.unchecked > .front {
+    icon-foreground-color: rgba(0, 0, 0, 0);
+}
+
+.Toggle.off > .back,
+.Checkbox.unchecked > .back
+ {
+    background-color: rgb(90, 94, 98);
+}
+
+.Toggle.off.hovered > .back,
+.Checkbox.unchecked.hovered > .back {
     background-color: rgb(110, 114, 118);
 }
 
-.Toggle.off.pressed > .back {
+.Toggle.off.pressed > .back,
+.Checkbox.unchecked.pressed > .back {
     background-color: rgb(120, 124, 128);
 }
 
-.Toggle.on > .back {
+.Toggle.on > .back,
+.Checkbox.checked > .back {
     background-color: rgb(11, 82, 172);
 }
 
-.Toggle.on.hovered  > .back {
+.Toggle.on.hovered  > .back,
+.Checkbox.checked.hovered  > .back {
     background-color: rgb(31, 102, 192);
 }
 
-.Toggle.on.pressed  > .back {
+.Toggle.on.pressed  > .back,
+.Checkbox.checked.pressed  > .back {
     background-color: rgb(41, 112, 202);
 }
-
 
 /* ----------------------------------------------------------------------------
  *                                 TOOLS PANEL

@@ -19,6 +19,7 @@ vgc_add_library(ui
         boolsetting.h
         boolsettingedit.h
         button.h
+        checkbox.h
         checkenums.h
         column.h
         command.h
@@ -81,6 +82,7 @@ vgc_add_library(ui
         boolsetting.cpp
         boolsettingedit.cpp
         button.cpp
+        checkbox.cpp
         checkenums.cpp
         column.cpp
         command.cpp
@@ -138,6 +140,7 @@ vgc_add_library(ui
         macospermissions.mm
 
     RESOURCE_FILES
+        icons/checkmark.svg
         stylesheets/default.vgcss
 )
 
