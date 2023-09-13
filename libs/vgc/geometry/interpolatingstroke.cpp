@@ -953,9 +953,30 @@ bool AbstractInterpolatingStroke2d::snap_(
     const Vec2d& snapEndPosition,
     CurveSnapTransformationMode mode) {
 
-    if (positions_.isEmpty()
-        || (positions_.first() == snapStartPosition
-            && positions_.last() == snapEndPosition)) {
+    // insert second knot when zero-length curve becomes non-zero-length.
+    if (positions_.length() < 2) {
+        double width0 = widths_.isEmpty() ? 0 : widths_.first();
+        positions_.clear();
+        widths_.clear();
+        // first
+        {
+            positions_.append(snapStartPosition);
+            if (!hasConstantWidth()) {
+                widths_.append(width0);
+            }
+        }
+        // second
+        if (snapStartPosition != snapEndPosition) {
+            positions_.append(snapEndPosition);
+            if (!hasConstantWidth()) {
+                widths_.append(width0);
+            }
+        }
+        onPositionsChanged_();
+        return true;
+    }
+
+    if (positions_.first() == snapStartPosition && positions_.last() == snapEndPosition) {
         // already snapped
         return false;
     }
