@@ -1389,7 +1389,6 @@ Operations::vertexCutEdge(KeyEdge* ke, const geometry::CurveParameter& parameter
             if (!kf) {
                 continue;
             }
-            bool substituted = false;
             for (KeyCycle& cycle : kf->cycles_) {
                 if (cycle.steinerVertex()) {
                     continue;
@@ -1406,17 +1405,15 @@ Operations::vertexCutEdge(KeyEdge* ke, const geometry::CurveParameter& parameter
                             khe.setEdge(newKe2);
                             it = cycleKhes.emplace(it + 1, newKe1, false);
                         }
-                        substituted = true;
                     }
                 }
                 VGC_ASSERT(cycle.isValid());
             }
-            if (substituted) {
-                removeFromBoundary_(kf, ke);
-                addToBoundary_(kf, newKe1);
-                addToBoundary_(kf, newKe2);
-                addToBoundary_(kf, newKv);
-            }
+
+            removeFromBoundary_(kf, ke);
+            addToBoundary_(kf, newKe1);
+            addToBoundary_(kf, newKe2);
+            addToBoundary_(kf, newKv);
         }
 
         // Delete old edge
