@@ -20,31 +20,81 @@
 
 namespace vgc::ui {
 
-BoolSettingEdit::BoolSettingEdit(CreateKey key, BoolSettingPtr setting)
+VGC_DEFINE_ENUM( //
+    BoolSettingStyle,
+    (Toggle, "Toggle"),
+    (Checkbox, "Checkbox"))
+
+BoolSettingEdit::BoolSettingEdit(
+    CreateKey key,
+    BoolSettingPtr setting,
+    BoolSettingStyle style)
 
     : SettingEdit(key, setting)
     , boolSetting_(setting) {
 
     addStyleClass(strings::BoolSettingEdit);
 
-    toggle_ = createChild<Toggle>();
-    toggle_->setState(setting->value());
-    toggle_->toggled().connect(onToggleToggledSlot_());
+    setStyle(style);
 
     boolSetting_->valueChanged().connect(onBoolSettingValueChangedSlot_());
 }
 
-BoolSettingEditPtr BoolSettingEdit::create(BoolSettingPtr setting) {
+BoolSettingEditPtr
+BoolSettingEdit::create(BoolSettingPtr setting, BoolSettingStyle style) {
+    return core::createObject<BoolSettingEdit>(setting, style);
+}
 
-    return core::createObject<BoolSettingEdit>(setting);
+BoolSettingStyle BoolSettingEdit::style() {
+    if (checkbox_) {
+        return BoolSettingStyle::Checkbox;
+    }
+    else {
+        return BoolSettingStyle::Toggle;
+    }
+}
+
+void BoolSettingEdit::setStyle(BoolSettingStyle style) {
+    switch (style) {
+    case BoolSettingStyle::Toggle:
+        if (checkbox_) {
+            checkbox_->destroy();
+        }
+        if (!toggle_) {
+            toggle_ = createChild<Toggle>();
+            toggle_->setState(boolSetting_->value());
+            toggle_->toggled().connect(onToggleToggledSlot_());
+        }
+        break;
+    case BoolSettingStyle::Checkbox:
+        if (toggle_) {
+            toggle_->destroy();
+        }
+        if (!checkbox_) {
+            checkbox_ = createChildBefore<Checkbox>(firstChild());
+            checkbox_->setChecked(boolSetting_->value());
+            checkbox_->checkStateChanged().connect(onCheckboxCheckStateChangedSlot_());
+        }
+        break;
+    }
 }
 
 void BoolSettingEdit::onToggleToggled_(bool state) {
     boolSetting_->setValue(state);
 }
 
+void BoolSettingEdit::onCheckboxCheckStateChanged_(Checkbox*, CheckState state) {
+    bool value = (state == CheckState::Checked) ? true : false;
+    boolSetting_->setValue(value);
+}
+
 void BoolSettingEdit::onBoolSettingValueChanged_(bool value) {
-    toggle_->setState(value);
+    if (toggle_) {
+        toggle_->setState(value);
+    }
+    if (checkbox_) {
+        checkbox_->setChecked(value);
+    }
 }
 
 } // namespace vgc::ui
