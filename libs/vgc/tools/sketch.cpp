@@ -1446,8 +1446,10 @@ void autoFill(vacomplex::Node* keNode) {
         vacomplex::KeyFace* kf = vacomplex::ops::createKeyFace(
             std::move(cycle), ke->parentGroup(), ke, ke->time());
         const vacomplex::CellProperty* styleProp =
-            ke->data()->findProperty(workspace::strings::style);
-        kf->data().insertProperty(styleProp->clone());
+            ke->data().findProperty(workspace::strings::style);
+        if (styleProp) {
+            kf->data().insertProperty(styleProp->clone());
+        }
     }
 }
 

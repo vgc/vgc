@@ -93,14 +93,14 @@ public:
     KeyEdge* createKeyOpenEdge(
         KeyVertex* startVertex,
         KeyVertex* endVertex,
-        std::unique_ptr<KeyEdgeData>&& geometry,
+        KeyEdgeData&& geometry,
         Group* parentGroup,
         Node* nextSibling = nullptr);
 
     // Assumes `nextSibling` is either `nullptr` or a child of `parentGroup`.
     //
     KeyEdge* createKeyClosedEdge(
-        std::unique_ptr<KeyEdgeData>&& geometry,
+        KeyEdgeData&& geometry,
         Group* parentGroup,
         Node* nextSibling = nullptr,
         core::AnimTime t = {});
@@ -158,8 +158,6 @@ public:
     void moveBelowBoundary(Node* node);
 
     void setKeyVertexPosition(KeyVertex* kv, const geometry::Vec2d& pos);
-
-    void setKeyEdgeData(KeyEdge* ke, std::unique_ptr<KeyEdgeData>&& data);
 
     void setKeyEdgeSamplingQuality(KeyEdge* ke, geometry::CurveSamplingQuality quality);
 

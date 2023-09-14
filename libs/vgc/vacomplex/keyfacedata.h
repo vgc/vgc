@@ -51,7 +51,7 @@ public:
     KeyFaceData() noexcept = default;
     ~KeyFaceData() = default;
 
-    KeyFaceData(KeyFace* owner, detail::KeyFacePrivateKey) noexcept;
+    KeyFaceData(detail::KeyFacePrivateKey, KeyFace* owner) noexcept;
 
     KeyFaceData(const KeyFaceData& other);
     KeyFaceData(KeyFaceData&& other) noexcept;

@@ -671,7 +671,7 @@ ElementStatus VacKeyEdge::onDependencyRemoved_(Element* dependency) {
 
 /* static */
 bool VacKeyEdge::updateStrokeFromDom_(
-    vacomplex::KeyEdgeData* data,
+    vacomplex::KeyEdgeData& data,
     const dom::Element* domElement) {
 
     // XXX: We can forward the changed attribute names up to here. Should we do it ?
@@ -683,7 +683,7 @@ bool VacKeyEdge::updateStrokeFromDom_(
     const auto& domWidths = domElement->getAttribute(ds::widths).getDoubleArray();
 
     auto oldStroke =
-        dynamic_cast<const geometry::CatmullRomSplineStroke2d*>(data->stroke());
+        dynamic_cast<const geometry::CatmullRomSplineStroke2d*>(data.stroke());
 
     if (oldStroke) {
         if (oldStroke->positions() == domPositions && oldStroke->widths() == domWidths) {
@@ -694,11 +694,11 @@ bool VacKeyEdge::updateStrokeFromDom_(
 
     auto stroke = std::make_unique<geometry::CatmullRomSplineStroke2d>(
         geometry::CatmullRomSplineParameterization::Centripetal,
-        data->isClosed(),
+        data.isClosed(),
         domPositions,
         domWidths);
 
-    data->setStroke(std::move(stroke));
+    data.setStroke(std::move(stroke));
 
     return true;
 }
@@ -706,10 +706,10 @@ bool VacKeyEdge::updateStrokeFromDom_(
 /* static */
 void VacKeyEdge::writeStrokeToDom_(
     dom::Element* domElement,
-    const vacomplex::KeyEdgeData* data) {
+    const vacomplex::KeyEdgeData& data) {
     namespace ds = dom::strings;
 
-    auto stroke = dynamic_cast<const geometry::CatmullRomSplineStroke2d*>(data->stroke());
+    auto stroke = dynamic_cast<const geometry::CatmullRomSplineStroke2d*>(data.stroke());
 
     if (stroke) {
         domElement->setAttribute(ds::positions, stroke->positions());
@@ -730,7 +730,7 @@ void VacKeyEdge::clearStrokeFromDom_(dom::Element* domElement) {
 }
 
 bool VacKeyEdge::updatePropertiesFromDom_(
-    vacomplex::KeyEdgeData* data,
+    vacomplex::KeyEdgeData& data,
     const dom::Element* domElement) {
 
     bool styleChanged = false;
@@ -740,17 +740,17 @@ bool VacKeyEdge::updatePropertiesFromDom_(
         const dom::Value& value = domElement->getAttribute(strings::color);
         if (value.isValid()) {
             const CellStyle* oldStyle =
-                static_cast<const CellStyle*>(data->findProperty(strings::style));
+                static_cast<const CellStyle*>(data.findProperty(strings::style));
             auto newStyle = std::make_unique<CellStyle>();
             const auto& color = value.getColor();
             if (!oldStyle || oldStyle->color() != color) {
                 newStyle->setColor(color);
-                data->insertProperty(std::move(newStyle));
+                data.insertProperty(std::move(newStyle));
                 styleChanged = true;
             }
         }
         else {
-            data->removeProperty(strings::style);
+            data.removeProperty(strings::style);
         }
     }
 
@@ -761,11 +761,11 @@ bool VacKeyEdge::updatePropertiesFromDom_(
 
 void VacKeyEdge::writePropertiesToDom_(
     dom::Element* domElement,
-    const vacomplex::KeyEdgeData* data,
+    const vacomplex::KeyEdgeData& data,
     core::ConstSpan<core::StringId> propNames) {
 
     for (core::StringId propName : propNames) {
-        const vacomplex::CellProperty* prop = data->findProperty(propName);
+        const vacomplex::CellProperty* prop = data.findProperty(propName);
         // Hard-coded props
         if (propName == strings::style) {
             if (!prop) {
@@ -788,9 +788,9 @@ void VacKeyEdge::writePropertiesToDom_(
 
 void VacKeyEdge::writeAllPropertiesToDom_(
     dom::Element* domElement,
-    const vacomplex::KeyEdgeData* data) {
+    const vacomplex::KeyEdgeData& data) {
 
-    for (const auto& it : data->properties()) {
+    for (const auto& it : data.properties()) {
         core::StringId propName = it.first;
         const vacomplex::CellProperty* prop = it.second.get();
         // Hard-coded props
@@ -900,8 +900,8 @@ ElementStatus VacKeyEdge::updateFromDom_(Workspace* workspace) {
 
     // create/rebuild/update VAC node
     if (!ke) {
-        auto data = std::make_unique<vacomplex::KeyEdgeData>(isClosed);
-        updateStrokeFromDom_(data.get(), domElement);
+        vacomplex::KeyEdgeData data;
+        updateStrokeFromDom_(data, domElement);
         if (isClosed) {
             ke = vacomplex::ops::createKeyClosedEdge(std::move(data), parentGroup);
         }
@@ -917,13 +917,13 @@ ElementStatus VacKeyEdge::updateFromDom_(Workspace* workspace) {
         setVacNode(ke);
     }
     else {
-        vacomplex::KeyEdgeData* data = ke->data();
-        if (!data || !updateStrokeFromDom_(data, domElement)) {
+        vacomplex::KeyEdgeData& data = ke->data();
+        if (!updateStrokeFromDom_(data, domElement)) {
             hasGeometryChanged = false;
         }
         else if (!isClosed) {
             // Auto-snap data when read from DOM.
-            data->snap(kvs[0]->position(), kvs[1]->position());
+            data.snap(kvs[0]->position(), kvs[1]->position());
         }
     }
 
@@ -935,15 +935,10 @@ ElementStatus VacKeyEdge::updateFromDom_(Workspace* workspace) {
         dirtyPostJoinGeometry_(false);
     }
 
-    vacomplex::KeyEdgeData* data = ke->data();
-    if (data) {
-        bool styleChanged = updatePropertiesFromDom_(data, domElement);
-        if (styleChanged) {
-            dirtyStrokeStyle_(false);
-        }
-    }
-    else {
-        // missing data
+    vacomplex::KeyEdgeData& data = ke->data();
+    bool styleChanged = updatePropertiesFromDom_(data, domElement);
+    if (styleChanged) {
+        dirtyStrokeStyle_(false);
     }
 
     notifyChanges_({}, true);
@@ -968,19 +963,15 @@ void VacKeyEdge::updateFromVac_(vacomplex::NodeModificationFlags flags) {
         return;
     }
 
-    vacomplex::KeyEdgeData* data = ke->data();
+    const vacomplex::KeyEdgeData& data = ke->data();
 
     if (flags.has(vacomplex::NodeModificationFlag::GeometryChanged)) {
-        if (data) {
-            // todo: if geometry type changed, remove previous geometry's attributes.
-            //geometry->writeToDomEdge_(domElement);
-            writeStrokeToDom_(domElement, data); // TODO: only write what's necessary
-            // todo: dirty only if really changed ?
-            dirtyPreJoinGeometry_(false);
-        }
-        else {
-            clearStrokeFromDom_(domElement);
-        }
+        //clearStrokeFromDom_(domElement);
+        // todo: if geometry type changed, remove previous geometry's attributes.
+        //geometry->writeToDomEdge_(domElement);
+        writeStrokeToDom_(domElement, data); // TODO: only write what's necessary
+        // todo: dirty only if really changed ?
+        dirtyPreJoinGeometry_(false);
     }
     else if (flags.has(vacomplex::NodeModificationFlag::MeshChanged)) {
         dirtyPreJoinGeometry_(false);
@@ -990,18 +981,16 @@ void VacKeyEdge::updateFromVac_(vacomplex::NodeModificationFlags flags) {
         // TODO: forward changed property names, and do all only if element
         //       was just created.
         //       maybe workspace could create the list of all properties in the latter case.
-        if (data) {
-            bool isNew = true;
-            if (isNew) {
-                writeAllPropertiesToDom_(domElement, data);
-            }
-            else {
-                //writePropertiesToDom_(domElement, data, propNames);
-            }
-            bool hasStyleChanged = true;
-            if (hasStyleChanged) {
-                dirtyStrokeStyle_(false);
-            }
+        bool isNew = true;
+        if (isNew) {
+            writeAllPropertiesToDom_(domElement, data);
+        }
+        else {
+            //writePropertiesToDom_(domElement, data, propNames);
+        }
+        bool hasStyleChanged = true;
+        if (hasStyleChanged) {
+            dirtyStrokeStyle_(false);
         }
     }
 
@@ -1091,12 +1080,10 @@ bool VacKeyEdge::computeStrokeStyle_() {
     if (!ke) {
         return false;
     }
-    vacomplex::KeyEdgeData* kd = ke->data();
-    if (!kd) {
-        return false;
-    }
 
-    const vacomplex::CellProperty* styleProp = kd->findProperty(strings::style);
+    const vacomplex::KeyEdgeData& keData = ke->data();
+
+    const vacomplex::CellProperty* styleProp = keData.findProperty(strings::style);
     const CellStyle* style = dynamic_cast<const CellStyle*>(styleProp);
 
     // XXX: default style instead of core::Color()
@@ -1127,13 +1114,11 @@ bool VacKeyEdge::computePreJoinGeometry_() {
     if (!ke) {
         return false;
     }
-    vacomplex::KeyEdgeData* kd = ke->data();
-    if (!kd) {
-        return false;
-    }
+
+    const vacomplex::KeyEdgeData& keData = ke->data();
 
     auto interpStroke =
-        dynamic_cast<const geometry::AbstractInterpolatingStroke2d*>(kd->stroke());
+        dynamic_cast<const geometry::AbstractInterpolatingStroke2d*>(keData.stroke());
 
     data.isComputing_ = true;
 

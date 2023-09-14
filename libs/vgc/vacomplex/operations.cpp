@@ -54,7 +54,7 @@ KeyVertex* createKeyVertex(
 }
 
 KeyEdge* createKeyClosedEdge(
-    std::unique_ptr<KeyEdgeData>&& data,
+    KeyEdgeData&& data,
     Group* parentGroup,
     Node* nextSibling,
     core::AnimTime t) {
@@ -70,7 +70,7 @@ KeyEdge* createKeyClosedEdge(
 KeyEdge* createKeyOpenEdge(
     KeyVertex* startVertex,
     KeyVertex* endVertex,
-    std::unique_ptr<KeyEdgeData>&& data,
+    KeyEdgeData&& data,
     Group* parentGroup,
     Node* nextSibling,
     core::AnimTime t) {
@@ -742,14 +742,6 @@ void setKeyVertexPosition(KeyVertex* vertex, const geometry::Vec2d& pos) {
     }
     detail::Operations ops(vertex->complex());
     return ops.setKeyVertexPosition(vertex, pos);
-}
-
-void setKeyEdgeData(KeyEdge* edge, std::unique_ptr<KeyEdgeData>&& data) {
-    if (!edge) {
-        throw LogicError("setKeyEdgeData: edge is nullptr.");
-    }
-    detail::Operations ops(edge->complex());
-    return ops.setKeyEdgeData(edge, std::move(data));
 }
 
 void setKeyEdgeSamplingQuality(KeyEdge* edge, geometry::CurveSamplingQuality quality) {

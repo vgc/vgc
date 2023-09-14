@@ -92,7 +92,7 @@ public:
             auto keItem = dynamic_cast<workspace::VacKeyEdge*>(item);
             if (keItem) {
                 if (vacomplex::KeyEdge* ke = keItem->vacKeyEdgeNode()) {
-                    const geometry::AbstractStroke2d* stroke = ke->data()->stroke();
+                    const geometry::AbstractStroke2d* stroke = ke->data().stroke();
                     auto samplingEx = stroke->computeSamplingEx(
                         geometry::CurveSamplingQuality::AdaptiveHigh);
                     // find closest location on curve
@@ -853,17 +853,15 @@ void Select::updateDragMovedElements_(
             }
             initOperationOn(ke);
             if (ked.isUniformTranslation) {
-                vacomplex::KeyEdgeData* data = ke->data();
-                if (data) {
-                    if (!ked.isEditStarted) {
-                        ked.oldData = data->clone();
-                        ked.isEditStarted = true;
-                    }
-                    else {
-                        *data = *ked.oldData;
-                    }
-                    data->translate(translationInWorkspace);
+                vacomplex::KeyEdgeData& data = ke->data();
+                if (!ked.isEditStarted) {
+                    ked.oldData = data;
+                    ked.isEditStarted = true;
                 }
+                else {
+                    data = ked.oldData;
+                }
+                data.translate(translationInWorkspace);
             }
             else {
                 // Vertices are already translated here.
@@ -897,10 +895,9 @@ void Select::finalizeDragMovedElements_(workspace::Workspace* workspace) {
         if (element && element->vacNode() && element->vacNode()->isCell()) {
             vacomplex::KeyEdge* ke = element->vacNode()->toCellUnchecked()->toKeyEdge();
             if (ke && ked.isEditStarted) {
-                vacomplex::KeyEdgeData* data = ke->data();
-                if (data) {
-                    //data->finishEdit();
-                }
+                const vacomplex::KeyEdgeData& data = ke->data();
+                std::ignore = data;
+                //data.finishEdit();
             }
         }
     }

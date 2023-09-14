@@ -565,13 +565,13 @@ void TopologyAwareTransformer::setElements(
     for (vacomplex::KeyEdge* ke : edges) {
         workspace::Element* element = workspace_->findVacElement(ke->id());
         if (element) {
-            edges_.append({element->id(), nullptr});
+            edges_.append({element->id()});
         }
     }
     for (vacomplex::KeyEdge* ke : edgesToSnap) {
         workspace::Element* element = workspace_->findVacElement(ke->id());
         if (element) {
-            edgesToSnap_.append({element->id(), nullptr});
+            edgesToSnap_.append({element->id()});
         }
     }
 }
@@ -639,11 +639,9 @@ void TopologyAwareTransformer::transform(const geometry::Mat3d& transform) {
         vacomplex::KeyEdge* ke = findKeyEdge_(td.elementId);
         if (ke) {
             mainOp.addComplex(ke->complex());
-            vacomplex::KeyEdgeData* data = ke->data();
-            if (data) {
-                // TODO: take layer transformations into account.
-                data->transform(transform);
-            }
+            vacomplex::KeyEdgeData& data = ke->data();
+            // TODO: take layer transformations into account.
+            data.transform(transform);
         }
     }
 
@@ -681,11 +679,9 @@ void TopologyAwareTransformer::transform(const geometry::Vec2d& translation) {
         vacomplex::KeyEdge* ke = findKeyEdge_(td.elementId);
         if (ke) {
             mainOp.addComplex(ke->complex());
-            vacomplex::KeyEdgeData* data = ke->data();
-            if (data) {
-                // TODO: take layer transformations into account.
-                data->translate(translation);
-            }
+            vacomplex::KeyEdgeData& data = ke->data();
+            // TODO: take layer transformations into account.
+            data.translate(translation);
         }
     }
 
@@ -717,10 +713,8 @@ void TopologyAwareTransformer::startDragTransform() {
     for (KeyEdgeTransformData& td : edges_) {
         vacomplex::KeyEdge* ke = findKeyEdge_(td.elementId);
         if (ke) {
-            vacomplex::KeyEdgeData* data = ke->data();
-            if (data) {
-                td.oldData = data->clone();
-            }
+            const vacomplex::KeyEdgeData& data = ke->data();
+            td.oldData = data;
         }
     }
 
@@ -728,10 +722,8 @@ void TopologyAwareTransformer::startDragTransform() {
     for (KeyEdgeTransformData& td : edgesToSnap_) {
         vacomplex::KeyEdge* ke = findKeyEdge_(td.elementId);
         if (ke) {
-            vacomplex::KeyEdgeData* data = ke->data();
-            if (data) {
-                td.oldData = data->clone();
-            }
+            const vacomplex::KeyEdgeData& data = ke->data();
+            td.oldData = data;
         }
     }
 }
@@ -760,11 +752,9 @@ void TopologyAwareTransformer::updateDragTransform(const geometry::Mat3d& transf
         vacomplex::KeyEdge* ke = findKeyEdge_(td.elementId);
         if (ke) {
             mainOp.addComplex(ke->complex());
-            vacomplex::KeyEdgeData* data = ke->data();
-            if (data) {
-                *data = *td.oldData;
-                data->transform(transform);
-            }
+            vacomplex::KeyEdgeData& data = ke->data();
+            data = td.oldData;
+            data.transform(transform);
         }
     }
 
@@ -773,11 +763,9 @@ void TopologyAwareTransformer::updateDragTransform(const geometry::Mat3d& transf
         vacomplex::KeyEdge* ke = findKeyEdge_(td.elementId);
         if (ke) {
             mainOp.addComplex(ke->complex());
-            vacomplex::KeyEdgeData* data = ke->data();
-            if (data) {
-                *data = *td.oldData;
-                ke->snapGeometry();
-            }
+            vacomplex::KeyEdgeData& data = ke->data();
+            data = td.oldData;
+            ke->snapGeometry();
         }
     }
 }
@@ -805,11 +793,9 @@ void TopologyAwareTransformer::updateDragTransform(const geometry::Vec2d& transl
         vacomplex::KeyEdge* ke = findKeyEdge_(td.elementId);
         if (ke) {
             mainOp.addComplex(ke->complex());
-            vacomplex::KeyEdgeData* data = ke->data();
-            if (data) {
-                *data = *td.oldData;
-                data->translate(translation);
-            }
+            vacomplex::KeyEdgeData& data = ke->data();
+            data = td.oldData;
+            data.translate(translation);
         }
     }
 
@@ -818,11 +804,9 @@ void TopologyAwareTransformer::updateDragTransform(const geometry::Vec2d& transl
         vacomplex::KeyEdge* ke = findKeyEdge_(td.elementId);
         if (ke) {
             mainOp.addComplex(ke->complex());
-            vacomplex::KeyEdgeData* data = ke->data();
-            if (data) {
-                *data = *td.oldData;
-                ke->snapGeometry();
-            }
+            vacomplex::KeyEdgeData& data = ke->data();
+            data = td.oldData;
+            ke->snapGeometry();
         }
     }
 }
@@ -836,10 +820,9 @@ void TopologyAwareTransformer::finalizeDragTransform() {
     for (const KeyEdgeTransformData& td : edges_) {
         vacomplex::KeyEdge* ke = findKeyEdge_(td.elementId);
         if (ke) {
-            vacomplex::KeyEdgeData* data = ke->data();
-            if (data) {
-                //data->finishEdit();
-            }
+            const vacomplex::KeyEdgeData& data = ke->data();
+            std::ignore = data;
+            //data->finishEdit();
         }
     }
 
@@ -847,10 +830,9 @@ void TopologyAwareTransformer::finalizeDragTransform() {
     for (const KeyEdgeTransformData& td : edgesToSnap_) {
         vacomplex::KeyEdge* ke = findKeyEdge_(td.elementId);
         if (ke) {
-            vacomplex::KeyEdgeData* data = ke->data();
-            if (data) {
-                //data->finishEdit();
-            }
+            const vacomplex::KeyEdgeData& data = ke->data();
+            std::ignore = data;
+            //data->finishEdit();
         }
     }
 
@@ -876,10 +858,8 @@ void TopologyAwareTransformer::cancelDragTransform() {
     for (const KeyEdgeTransformData& td : edges_) {
         vacomplex::KeyEdge* ke = findKeyEdge_(td.elementId);
         if (ke) {
-            vacomplex::KeyEdgeData* data = ke->data();
-            if (data) {
-                *data = *td.oldData;
-            }
+            vacomplex::KeyEdgeData& data = ke->data();
+            data = td.oldData;
         }
     }
 

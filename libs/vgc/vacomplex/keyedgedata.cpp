@@ -22,13 +22,12 @@
 
 namespace vgc::vacomplex {
 
-KeyEdgeData::KeyEdgeData(KeyEdge* owner, detail::KeyEdgePrivateKey) noexcept
+KeyEdgeData::KeyEdgeData(detail::KeyEdgePrivateKey, KeyEdge* owner) noexcept
     : CellData(owner) {
 }
 
 KeyEdgeData::KeyEdgeData(const KeyEdgeData& other)
-    : CellData(other)
-    , isClosed_(other.isClosed_) {
+    : CellData(other) {
 
     if (other.stroke_) {
         stroke_ = other.stroke_->clone();
@@ -36,8 +35,7 @@ KeyEdgeData::KeyEdgeData(const KeyEdgeData& other)
 }
 
 KeyEdgeData::KeyEdgeData(KeyEdgeData&& other) noexcept
-    : CellData(std::move(other))
-    , isClosed_(other.isClosed_) {
+    : CellData(std::move(other)) {
 
     stroke_ = std::move(other.stroke_);
 }
@@ -45,13 +43,7 @@ KeyEdgeData::KeyEdgeData(KeyEdgeData&& other) noexcept
 KeyEdgeData& KeyEdgeData::operator=(const KeyEdgeData& other) {
     if (&other != this) {
         CellData::operator=(other);
-        isClosed_ = other.isClosed_;
-        if (!other.stroke_) {
-            stroke_.reset();
-        }
-        else if (!stroke_ || !stroke_->copyAssign(other.stroke_.get())) {
-            stroke_ = other.stroke_->clone();
-        }
+        setStroke(other.stroke_.get());
     }
     return *this;
 }
@@ -59,19 +51,24 @@ KeyEdgeData& KeyEdgeData::operator=(const KeyEdgeData& other) {
 KeyEdgeData& KeyEdgeData::operator=(KeyEdgeData&& other) noexcept {
     if (&other != this) {
         CellData::operator=(std::move(other));
-        isClosed_ = other.isClosed_;
-        stroke_ = std::move(other.stroke_);
+        setStroke(std::move(other.stroke_));
     }
     return *this;
-}
-
-std::unique_ptr<KeyEdgeData> KeyEdgeData::clone() const {
-    return std::make_unique<KeyEdgeData>(*this);
 }
 
 KeyEdge* KeyEdgeData::keyEdge() const {
     Cell* cell = properties_.cell();
     return cell ? cell->toKeyEdge() : nullptr;
+}
+
+bool KeyEdgeData::isClosed() const {
+    if (stroke_) {
+        return stroke_->isClosed();
+    }
+    if (KeyEdge* ke = keyEdge()) {
+        return ke->isClosed();
+    }
+    return false;
 }
 
 void KeyEdgeData::translate(const geometry::Vec2d& delta) {
@@ -95,11 +92,9 @@ void KeyEdgeData::snap(
     const geometry::Vec2d& snapEndPosition,
     geometry::CurveSnapTransformationMode mode) {
 
-    if (stroke_) {
-        if (stroke_->snap(snapStartPosition, snapEndPosition, mode)) {
-            emitGeometryChanged();
-            properties_.onUpdateGeometry(stroke_.get());
-        }
+    if (stroke_ && stroke_->snap(snapStartPosition, snapEndPosition, mode)) {
+        emitGeometryChanged();
+        properties_.onUpdateGeometry(stroke_.get());
     }
 }
 
@@ -140,15 +135,34 @@ void KeyEdgeData::setStroke(const geometry::AbstractStroke2d* newStroke) {
     else if (!stroke_ || !stroke_->copyAssign(newStroke)) {
         stroke_ = newStroke->clone();
     }
-    fixStrokeClosedness(stroke_.get(), isClosed());
+    if (KeyEdge* ke = keyEdge()) {
+        fixStrokeClosedness(stroke_.get(), ke->isClosed());
+    }
     emitGeometryChanged();
     properties_.onUpdateGeometry(stroke_.get());
 }
 
 void KeyEdgeData::setStroke(std::unique_ptr<geometry::AbstractStroke2d>&& newStroke) {
     stroke_ = std::move(newStroke);
-    fixStrokeClosedness(stroke_.get(), isClosed());
+    if (KeyEdge* ke = keyEdge()) {
+        fixStrokeClosedness(stroke_.get(), ke->isClosed());
+    }
     emitGeometryChanged();
+    properties_.onUpdateGeometry(stroke_.get());
+}
+
+void KeyEdgeData::closeStroke(bool smoothJoin) {
+    if (KeyEdge* ke = keyEdge()) {
+        if (!ke->isClosed()) {
+            VGC_ERROR(
+                LogVgcVacomplex,
+                "closeStroke: KeyEdgeData is bound to an open KeyEdge, "
+                "cannot close its stroke.");
+        }
+        return;
+    }
+    stroke_->close(smoothJoin);
+    // XXX: Or add onCloseStroke, or do not notify the properties at all?
     properties_.onUpdateGeometry(stroke_.get());
 }
 
@@ -157,7 +171,7 @@ void KeyEdgeData::setStroke(std::unique_ptr<geometry::AbstractStroke2d>&& newStr
 //       then match cell properties by pairs (use null if not present)
 
 /* static */
-std::unique_ptr<KeyEdgeData> KeyEdgeData::fromConcatStep(
+KeyEdgeData KeyEdgeData::fromConcatStep(
     const KeyHalfedgeData& khd1,
     const KeyHalfedgeData& khd2,
     bool smoothJoin) {
@@ -186,9 +200,9 @@ std::unique_ptr<KeyEdgeData> KeyEdgeData::fromConcatStep(
     concatStroke->assignFromConcat(
         st1, khd1.direction(), st2, khd2.direction(), smoothJoin);
 
-    auto result = std::make_unique<KeyEdgeData>(ked1->isClosed());
-    result->setStroke(std::move(concatStroke));
-    result->properties_.assignFromConcatStep(khd1, khd2);
+    KeyEdgeData result;
+    result.setStroke(std::move(concatStroke));
+    result.properties_.assignFromConcatStep(khd1, khd2);
     return result;
 }
 
@@ -197,8 +211,7 @@ void KeyEdgeData::finalizeConcat() {
 }
 
 /* static */
-std::unique_ptr<KeyEdgeData>
-KeyEdgeData::fromGlueOpen(core::ConstSpan<KeyHalfedgeData> khds) {
+KeyEdgeData KeyEdgeData::fromGlueOpen(core::ConstSpan<KeyHalfedgeData> khds) {
 
     struct ConvertedStroke {
         std::unique_ptr<geometry::AbstractStroke2d> converted;
@@ -241,7 +254,7 @@ KeyEdgeData::fromGlueOpen(core::ConstSpan<KeyHalfedgeData> khds) {
 }
 
 /* static */
-std::unique_ptr<KeyEdgeData> KeyEdgeData::fromGlueClosed(
+KeyEdgeData KeyEdgeData::fromGlueClosed(
     core::ConstSpan<KeyHalfedgeData> khds,
     core::ConstSpan<double> uOffsets) {
 
@@ -286,28 +299,28 @@ std::unique_ptr<KeyEdgeData> KeyEdgeData::fromGlueClosed(
 }
 
 /* static */
-std::unique_ptr<KeyEdgeData> KeyEdgeData::fromGlue(
+KeyEdgeData KeyEdgeData::fromGlue(
     core::ConstSpan<KeyHalfedgeData> khds,
     std::unique_ptr<geometry::AbstractStroke2d>&& gluedStroke) {
 
-    auto result = std::make_unique<KeyEdgeData>(gluedStroke->isClosed());
-    result->setStroke(std::move(gluedStroke));
-    result->properties_.glue(khds, result->stroke());
+    KeyEdgeData result;
+    result.setStroke(std::move(gluedStroke));
+    result.properties_.glue(khds, result.stroke());
     return result;
 }
 
-std::unique_ptr<KeyEdgeData> KeyEdgeData::fromSlice(
-    const KeyEdgeData* ked,
+KeyEdgeData KeyEdgeData::fromSlice(
+    const KeyEdgeData& ked,
     const geometry::CurveParameter& start,
     const geometry::CurveParameter& end,
     Int numWraps) {
 
-    auto result = std::make_unique<KeyEdgeData>(false);
+    KeyEdgeData result;
     std::unique_ptr<geometry::AbstractStroke2d> newStroke_ =
-        ked->stroke()->subStroke(start, end, numWraps);
+        ked.stroke()->subStroke(start, end, numWraps);
     geometry::AbstractStroke2d* newStroke = newStroke_.get();
-    result->setStroke(std::move(newStroke_));
-    result->properties_.assignFromSlice(ked, start, end, numWraps, newStroke);
+    result.setStroke(std::move(newStroke_));
+    result.properties_.assignFromSlice(ked, start, end, numWraps, newStroke);
     return result;
 }
 
