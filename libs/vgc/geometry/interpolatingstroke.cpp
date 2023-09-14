@@ -537,7 +537,7 @@ template<typename TPoint, typename PositionGetter, typename WidthGetter>
                 Vec2d p = positionGetter(points[j], j);
                 Vec2d ap = p - a;
                 double t = ap.dot(dir) / abLen;
-                double w = (1 - t) * wA + t * wB;
+                double w = core::fastLerp(wA, wB, t);
                 double dist = (std::abs)(w - widthGetter(points[j], j));
                 double maxOffsetDiff = w * 0.05;
                 if (dist > maxOffsetDiff) {
@@ -2800,9 +2800,10 @@ Vec2d AbstractInterpolatingStroke2d::sculptWidth_(
                         const StrokeSampleEx2d& sample0 = samples[j - 1];
                         // (targetS >= s0 + minD) => sample1.s() != sample0.s()
                         double t = (targetS - sample0.s()) / (sample1.s() - sample0.s());
-                        Vec2d p = (1 - t) * sample0.position() + t * sample1.position();
+                        Vec2d p =
+                            core::fastLerp(sample0.position(), sample1.position(), t);
                         Vec2d hws =
-                            (1 - t) * sample0.halfwidths() + t * sample1.halfwidths();
+                            core::fastLerp(sample0.halfwidths(), sample1.halfwidths(), t);
                         double w = hws[0] * 2;
                         double d = (std::min)(
                             std::abs(targetS - sMiddle),

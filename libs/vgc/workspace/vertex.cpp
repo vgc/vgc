@@ -731,9 +731,8 @@ void VacKeyVertex::computeJoin_() {
                             }
                             const CrossSection& cs2 = crossSections[i2];
                             double t = (crossSections[i].s - cs1.s) / (cs2.s - cs1.s);
-                            double ot = 1 - t;
-                            crossSections[i].pos1 = ot * cs1.pos0 + t * cs2.pos0;
-                            crossSections[i].t1 = ot * cs1.t0 + t * cs2.t0;
+                            crossSections[i].pos1 = core::fastLerp(cs1.pos0, cs2.pos0, t);
+                            crossSections[i].t1 = core::fastLerp(cs1.t0, cs2.t0, t);
                         }
                         crossSections[minSIndex].pos1 = crossSections[minSIndex].pos0;
                         crossSections[minSIndex].t1 = crossSections[minSIndex].t0;
@@ -747,9 +746,8 @@ void VacKeyVertex::computeJoin_() {
                             crossSections[i].t1 = crossSections[i].t0;
                             const CrossSection& cs2 = crossSections[i2];
                             double t = (crossSections[i].s - cs1.s) / (cs2.s - cs1.s);
-                            double ot = 1 - t;
-                            crossSections[i].pos0 = ot * cs1.pos0 + t * cs2.pos0;
-                            crossSections[i].t0 = ot * cs1.t0 + t * cs2.t0;
+                            crossSections[i].pos0 = core::fastLerp(cs1.pos0, cs2.pos0, t);
+                            crossSections[i].t0 = core::fastLerp(cs1.t0, cs2.t0, t);
                         }
                     }
 
@@ -1157,12 +1155,12 @@ void VacKeyVertex::computeJoin_() {
                         double previousS = previousIt->s();
                         double d = (sFilletMax / sMax) * halfedgeData.patchLength_;
                         const double t = (sFilletMax - previousS) / (s - previousS);
-                        const double ot = 1 - t;
                         geometry::StrokeSample2d newSample(
                             centerBorder.pointAt(d),
                             -centerBorderNormal.orthogonalized(),
                             centerBorderNormal,
-                            previousIt->halfwidths() * ot + it->halfwidths() * t);
+                            core::fastLerp(
+                                previousIt->halfwidths(), it->halfwidths(), t));
                         newSample.setS(sFilletMax);
                         it = workingSamples.emplace(it, newSample);
                         previousIt = it++;
@@ -1186,11 +1184,10 @@ void VacKeyVertex::computeJoin_() {
                         double s = it->s();
                         double d = (s / sMax) * halfedgeData.patchLength_;
                         const double t = (s - sFilletMax) / sInterp;
-                        const double ot = 1 - t;
                         Vec2d rayPoint = centerBorder.pointAt(d);
-                        it->setPosition(rayPoint * ot + it->position() * t);
-                        Vec2d normal =
-                            (centerBorderNormal * ot + it->normal() * t).normalized();
+                        it->setPosition(core::fastLerp(rayPoint, it->position(), t));
+                        Vec2d normal = core::fastLerp(centerBorderNormal, it->normal(), t)
+                                           .normalized();
                         it->setTangent(-normal.orthogonalized());
                         it->setNormal(normal);
                     }
@@ -1264,10 +1261,10 @@ void VacKeyVertex::computeJoin_() {
                             newS += (pos - previousIt->position()).length();
                             float newSf = static_cast<float>(newS);
                             const double t = s / sFillet;
-                            const double ot = 1 - t;
                             auto& p = patchSamples.emplaceLast();
                             p.centerPoint = pos;
-                            double hw = sidePatchData.joinHalfwidth * ot + halfwidth * t;
+                            double hw =
+                                core::fastLerp(sidePatchData.joinHalfwidth, halfwidth, t);
                             float hwf = static_cast<float>(hw);
                             p.sidePoint = p.centerPoint
                                           + normalMultiplier * hw * centerBorderNormal;
@@ -1289,7 +1286,6 @@ void VacKeyVertex::computeJoin_() {
                         float newSf = static_cast<float>(newS);
                         //const double d = (s / sMax) * halfedgeData.patchLength_;
                         const double t = (s - sFillet) / sInterp2;
-                        const double ot = 1 - t;
                         // temporary fix
                         //if (s == sFillet2 && sFillet2 > 0 && sFillet2 != sFillet) {
                         //    fixIndex = patchSamples.size();
@@ -1300,7 +1296,7 @@ void VacKeyVertex::computeJoin_() {
                         //}
                         auto& p = patchSamples.emplaceLast();
                         p.centerPoint = pos;
-                        double hw = halfwidth * ot + it->halfwidth(i) * t;
+                        double hw = core::fastLerp(halfwidth, it->halfwidth(i), t);
                         float hwf = static_cast<float>(hw);
                         p.sidePoint =
                             p.centerPoint + normalMultiplier * hw * it->normal();
@@ -1318,7 +1314,6 @@ void VacKeyVertex::computeJoin_() {
                         newS += (pos - previousIt->position()).length();
                         float newSf = static_cast<float>(newS);
                         const double t = s / sMax;
-                        const double ot = 1 - t;
                         // temporary fix
                         //if (s == sFillet2 && sFillet2 > 0 && sFillet2 != sFillet) {
                         //    fixIndex = patchSamples.size();
@@ -1328,16 +1323,14 @@ void VacKeyVertex::computeJoin_() {
                         //}
                         auto& p = patchSamples.emplaceLast();
                         p.centerPoint = pos;
-                        double hw = halfwidth * ot + it->halfwidth(i) * t;
+                        double hw = core::fastLerp(halfwidth, it->halfwidth(i), t);
                         if (sFillet > 0 && s < sFillet) {
                             // this works but looks like magic written this way
                             const double t1 = sFillet / sMax;
-                            const double ot1 = 1 - t1;
-                            double mhw = halfwidth * ot1 + it->halfwidth(i) * t1;
+                            double mhw = core::fastLerp(halfwidth, it->halfwidth(i), t1);
 
                             const double t2 = s / sFillet;
-                            const double ot2 = 1 - t2;
-                            hw = sidePatchData.joinHalfwidth * ot2 + mhw * t2;
+                            hw = core::fastLerp(sidePatchData.joinHalfwidth, mhw, t2);
                         }
                         float hwf = static_cast<float>(hw);
                         p.sidePoint =
