@@ -746,7 +746,6 @@ void VacKeyVertex::computeJoin_() {
                             crossSections[i].t1 = crossSections[i].t0;
                             const CrossSection& cs2 = crossSections[i2];
                             double t = (crossSections[i].s - cs1.s) / (cs2.s - cs1.s);
-                            double ot = 1 - t;
                             crossSections[i].pos0 = core::fastLerp(cs1.pos0, cs2.pos0, t);
                             crossSections[i].t0 = core::fastLerp(cs1.t0, cs2.t0, t);
                         }
