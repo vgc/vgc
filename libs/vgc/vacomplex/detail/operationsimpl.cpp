@@ -812,7 +812,7 @@ core::Array<geometry::Vec2d> computeApproximateUniformSamplingPositions(
             double ds = s1.s() - s0->s();
             if (ds > 0 && targetS <= s1.s()) {
                 double t = (targetS - s0->s()) / ds;
-                result.append(t * s1.position() + (1 - t) * s0->position());
+                result.append(core::fastLerp(s0->position(), s1.position(), t));
                 targetS += deltaS;
             }
             s0 = &s1;

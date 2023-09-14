@@ -277,8 +277,7 @@ void samplePointsOnCycleUniformly(
                 double nextS = it->s();
                 while (nextS >= nextStepS) {
                     double t = (nextStepS - previousS) / (nextS - previousS);
-                    double ot = (1 - t);
-                    previousP = ot * previousP + t * p;
+                    previousP = core::fastLerp(previousP, p, t);
                     previousS = nextStepS;
                     nextStepS += stepS;
                     outPoints.emplaceLast(previousP);
@@ -297,8 +296,7 @@ void samplePointsOnCycleUniformly(
                 double nextS = heS - rit->s();
                 while (nextS >= nextStepS) {
                     double t = (nextStepS - previousS) / (nextS - previousS);
-                    double ot = (1 - t);
-                    previousP = ot * previousP + t * p;
+                    previousP = core::fastLerp(previousP, p, t);
                     previousS = nextStepS;
                     nextStepS += stepS;
                     outPoints.emplaceLast(previousP);

@@ -226,13 +226,12 @@ private:
 /// no longer be of length 1. Use `nlerp()` if you want it re-normalized.
 ///
 inline StrokeSample2d lerp(const StrokeSample2d& a, const StrokeSample2d& b, double t) {
-    const double ot = (1 - t);
     StrokeSample2d result(
-        a.position() * ot + b.position() * t,
-        a.tangent() * ot + b.tangent() * t,
-        a.normal() * ot + b.normal() * t,
-        a.halfwidths() * ot + b.halfwidths() * t,
-        a.s() * ot + b.s() * t);
+        core::fastLerp(a.position(), b.position(), t),
+        core::fastLerp(a.tangent(), b.tangent(), t),
+        core::fastLerp(a.normal(), b.normal(), t),
+        core::fastLerp(a.halfwidths(), b.halfwidths(), t),
+        core::fastLerp(a.s(), b.s(), t));
     return result;
 }
 
