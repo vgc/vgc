@@ -115,8 +115,7 @@ public:
 
     void finalizeConcat();
 
-    static KeyEdgeData
-    fromGlueOpen(core::ConstSpan<KeyHalfedgeData> khds);
+    static KeyEdgeData fromGlueOpen(core::ConstSpan<KeyHalfedgeData> khds);
 
     static KeyEdgeData fromGlueClosed(
         core::ConstSpan<KeyHalfedgeData> khds,
