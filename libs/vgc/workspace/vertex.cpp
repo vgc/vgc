@@ -1264,7 +1264,8 @@ void VacKeyVertex::computeJoin_() {
                             const double t = s / sFillet;
                             auto& p = patchSamples.emplaceLast();
                             p.centerPoint = pos;
-                            double hw = core::fastLerp(sidePatchData.joinHalfwidth, halfwidth, t);
+                            double hw =
+                                core::fastLerp(sidePatchData.joinHalfwidth, halfwidth, t);
                             float hwf = static_cast<float>(hw);
                             p.sidePoint = p.centerPoint
                                           + normalMultiplier * hw * centerBorderNormal;

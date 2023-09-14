@@ -2800,8 +2800,10 @@ Vec2d AbstractInterpolatingStroke2d::sculptWidth_(
                         const StrokeSampleEx2d& sample0 = samples[j - 1];
                         // (targetS >= s0 + minD) => sample1.s() != sample0.s()
                         double t = (targetS - sample0.s()) / (sample1.s() - sample0.s());
-                        Vec2d p = core::fastLerp(sample0.position(), sample1.position(), t);
-                        Vec2d hws = core::fastLerp(sample0.halfwidths(), sample1.halfwidths(), t);
+                        Vec2d p =
+                            core::fastLerp(sample0.position(), sample1.position(), t);
+                        Vec2d hws =
+                            core::fastLerp(sample0.halfwidths(), sample1.halfwidths(), t);
                         double w = hws[0] * 2;
                         double d = (std::min)(
                             std::abs(targetS - sMiddle),
