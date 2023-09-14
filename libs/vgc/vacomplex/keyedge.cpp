@@ -34,7 +34,7 @@ bool KeyEdge::snapGeometry() {
         // todo: set snapStartPosition
         snapEndPosition = snapStartPosition;
     }
-    data_->snap(snapStartPosition, snapEndPosition);
+    data_.snap(snapStartPosition, snapEndPosition);
     return true;
 }
 
@@ -114,7 +114,7 @@ KeyEdge::computeStrokeSampling_(geometry::CurveSamplingQuality quality) const {
     // - what about a closed edge without points data ?
     // - what about an open edge without points data and same end points ?
     // - what about an open edge without points data but different end points ?
-    geometry::StrokeSampling2d sampling = data_->stroke()->computeSampling(quality);
+    geometry::StrokeSampling2d sampling = data_.stroke()->computeSampling(quality);
     onMeshQueried();
     return sampling;
 }

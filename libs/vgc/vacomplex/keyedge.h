@@ -39,6 +39,7 @@ private:
 
     explicit KeyEdge(core::Id id, core::AnimTime t) noexcept
         : SpatioTemporalCell(id, t)
+        , data_(detail::KeyEdgePrivateKey{}, this)
         , samplingQuality_(geometry::CurveSamplingQuality::AdaptiveLow) {
     }
 
@@ -55,8 +56,12 @@ public:
         return endVertex_;
     }
 
-    KeyEdgeData* data() const {
-        return data_.get();
+    KeyEdgeData& data() {
+        return data_;
+    }
+
+    const KeyEdgeData& data() const {
+        return data_;
     }
 
     geometry::CurveSamplingQuality samplingQuality() const {
@@ -119,24 +124,10 @@ private:
     // position and orientation when not bound to vertices ?
     //detail::Transform2d transform_;
 
-    // XXX Store directly as data member without the unique_ptr, like KeyFaceData?
-    std::unique_ptr<KeyEdgeData> data_ = {};
-    //bool isClosed_ = false;
-
-    std::unique_ptr<KeyEdgeData> stealData_() {
-        return std::make_unique<KeyEdgeData>(std::move(*data_));
-    }
-
-    void setData_(std::unique_ptr<KeyEdgeData>&& data) {
-        if (!data_) {
-            data_ = std::make_unique<KeyEdgeData>(this, detail::KeyEdgePrivateKey{});
-        }
-        *data_ = std::move(*data);
-        data.reset();
-    }
+    KeyEdgeData data_;
 
     geometry::CurveSamplingQuality samplingQuality_ = {};
-    mutable std::shared_ptr<const geometry::StrokeSampling2d> sampling_ = {};
+    mutable std::shared_ptr<const geometry::StrokeSampling2d> sampling_;
     mutable std::optional<geometry::Rect2d> bbox_;
 
     geometry::StrokeSampling2d

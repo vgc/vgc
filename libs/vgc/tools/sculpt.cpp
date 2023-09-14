@@ -136,28 +136,26 @@ public:
         if (element && element->vacNode() && element->vacNode()->isCell()) {
             vacomplex::KeyEdge* ke = element->vacNode()->toCellUnchecked()->toKeyEdge();
             if (ke) {
-                vacomplex::KeyEdgeData* data = ke->data();
-                if (data) {
-                    if (started_) {
-                        *data = *oldData_;
-                        editStroke_->copyAssign(oldData_->stroke());
-                    }
-                    else {
-                        oldData_ = data->clone();
-                        editStroke_ = oldData_->stroke()->clone();
-                        started_ = true;
-                    }
-                    geometry::Vec2d grabbedPoint = editStroke_->sculptGrab(
-                        cursorPositionInWorkspaceAtPress,
-                        cursorPositionInWorkspace,
-                        options::sculptRadius()->value(),
-                        1,
-                        pixelSize,
-                        ke->isClosed());
-                    data->setStroke(editStroke_.get());
-                    tool_->setActionCircleCenter(grabbedPoint);
-                    tool_->setActionCircleEnabled(true);
+                vacomplex::KeyEdgeData& data = ke->data();
+                if (started_) {
+                    data = oldData_;
+                    editStroke_->copyAssign(oldData_.stroke());
                 }
+                else {
+                    oldData_ = data;
+                    editStroke_ = oldData_.stroke()->clone();
+                    started_ = true;
+                }
+                geometry::Vec2d grabbedPoint = editStroke_->sculptGrab(
+                    cursorPositionInWorkspaceAtPress,
+                    cursorPositionInWorkspace,
+                    options::sculptRadius()->value(),
+                    1,
+                    pixelSize,
+                    ke->isClosed());
+                data.setStroke(editStroke_.get());
+                tool_->setActionCircleCenter(grabbedPoint);
+                tool_->setActionCircleEnabled(true);
             }
         }
 
@@ -173,39 +171,6 @@ public:
         if (edgeId_ == -1) {
             return;
         }
-
-        /*
-        canvas::Canvas* canvas = tool_->canvas();
-        workspace::Workspace* workspace = tool_->workspace();
-        if (!canvas || !workspace) {
-            return;
-        }
-
-        // Open history group
-        core::UndoGroup* undoGroup = nullptr;
-        core::History* history = workspace->history();
-        if (history) {
-            undoGroup = history->createUndoGroup(actionName());
-        }
-
-        workspace::Element* element = workspace->find(edgeId_);
-        if (element && element->vacNode() && element->vacNode()->isCell()) {
-            vacomplex::KeyEdge* ke = element->vacNode()->toCellUnchecked()->toKeyEdge();
-            if (ke) {
-                vacomplex::KeyEdgeData* data = ke->data();
-                if (data) {
-                    data->finishEdit();
-                }
-            }
-        }
-
-        // Close operation
-        if (undoGroup) {
-            bool amend = canAmendUndoGroup_ && undoGroup->parent()
-                         && undoGroup->parent()->name() == actionName();
-            canAmendUndoGroup_ |= undoGroup->close(amend);
-        }
-        */
 
         tool_->setActionCircleEnabled(false);
         reset_();
@@ -226,11 +191,7 @@ public:
         if (element && element->vacNode() && element->vacNode()->isCell()) {
             vacomplex::KeyEdge* ke = element->vacNode()->toCellUnchecked()->toKeyEdge();
             if (ke) {
-                vacomplex::KeyEdgeData* data = ke->data();
-                if (data) {
-                    *data = *oldData_;
-                    //data->finishEdit();
-                }
+                ke->data() = oldData_;
             }
         }
 
@@ -249,7 +210,7 @@ public:
     bool canAmendUndoGroup_ = false;
     bool started_ = false;
     core::Id edgeId_ = -1;
-    std::unique_ptr<vacomplex::KeyEdgeData> oldData_;
+    vacomplex::KeyEdgeData oldData_;
     std::unique_ptr<geometry::AbstractStroke2d> editStroke_;
     geometry::Vec2f cursorPositionAtPress_;
     geometry::Vec2f cursorPosition_;
@@ -330,27 +291,25 @@ public:
         if (element && element->vacNode() && element->vacNode()->isCell()) {
             vacomplex::KeyEdge* ke = element->vacNode()->toCellUnchecked()->toKeyEdge();
             if (ke) {
-                vacomplex::KeyEdgeData* data = ke->data();
-                if (data) {
-                    if (started_) {
-                        *data = *oldData_;
-                        editStroke_->copyAssign(oldData_->stroke());
-                    }
-                    else {
-                        oldData_ = data->clone();
-                        editStroke_ = oldData_->stroke()->clone();
-                        started_ = true;
-                    }
-                    geometry::Vec2d closestPoint = editStroke_->sculptWidth(
-                        cursorPositionInWorkspaceAtPress,
-                        delta,
-                        options::sculptRadius()->value(),
-                        pixelSize,
-                        ke->isClosed());
-                    data->setStroke(editStroke_.get());
-                    tool_->setActionCircleCenter(closestPoint);
-                    tool_->setActionCircleEnabled(true);
+                vacomplex::KeyEdgeData& data = ke->data();
+                if (started_) {
+                    data = oldData_;
+                    editStroke_->copyAssign(oldData_.stroke());
                 }
+                else {
+                    oldData_ = data;
+                    editStroke_ = oldData_.stroke()->clone();
+                    started_ = true;
+                }
+                geometry::Vec2d closestPoint = editStroke_->sculptWidth(
+                    cursorPositionInWorkspaceAtPress,
+                    delta,
+                    options::sculptRadius()->value(),
+                    pixelSize,
+                    ke->isClosed());
+                data.setStroke(editStroke_.get());
+                tool_->setActionCircleCenter(closestPoint);
+                tool_->setActionCircleEnabled(true);
             }
         }
 
@@ -366,39 +325,6 @@ public:
         if (edgeId_ == -1) {
             return;
         }
-
-        /*
-        canvas::Canvas* canvas = tool_->canvas();
-        workspace::Workspace* workspace = tool_->workspace();
-        if (!canvas || !workspace) {
-            return;
-        }
-
-        // Open history group
-        core::UndoGroup* undoGroup = nullptr;
-        core::History* history = workspace->history();
-        if (history) {
-            undoGroup = history->createUndoGroup(actionName());
-        }
-
-        workspace::Element* element = workspace->find(edgeId_);
-        if (element && element->vacNode() && element->vacNode()->isCell()) {
-            vacomplex::KeyEdge* ke = element->vacNode()->toCellUnchecked()->toKeyEdge();
-            if (ke) {
-                vacomplex::KeyEdgeData* geometry = ke->geometry();
-                if (geometry) {
-                    geometry->finishEdit();
-                }
-            }
-        }
-
-        // Close operation
-        if (undoGroup) {
-            bool amend = canAmendUndoGroup_ && undoGroup->parent()
-                         && undoGroup->parent()->name() == actionName();
-            canAmendUndoGroup_ |= undoGroup->close(amend);
-        }
-        */
 
         tool_->setActionCircleEnabled(false);
         reset_();
@@ -419,11 +345,7 @@ public:
         if (element && element->vacNode() && element->vacNode()->isCell()) {
             vacomplex::KeyEdge* ke = element->vacNode()->toCellUnchecked()->toKeyEdge();
             if (ke) {
-                vacomplex::KeyEdgeData* data = ke->data();
-                if (data) {
-                    *data = *oldData_;
-                    //data->finishEdit();
-                }
+                ke->data() = oldData_;
             }
         }
 
@@ -442,7 +364,7 @@ public:
     bool canAmendUndoGroup_ = false;
     bool started_ = false;
     core::Id edgeId_ = -1;
-    std::unique_ptr<vacomplex::KeyEdgeData> oldData_;
+    vacomplex::KeyEdgeData oldData_;
     std::unique_ptr<geometry::AbstractStroke2d> editStroke_;
     geometry::Vec2f cursorPositionAtPress_;
     geometry::Vec2f cursorPosition_;
@@ -519,26 +441,24 @@ public:
         if (element && element->vacNode() && element->vacNode()->isCell()) {
             vacomplex::KeyEdge* ke = element->vacNode()->toCellUnchecked()->toKeyEdge();
             if (ke) {
-                vacomplex::KeyEdgeData* data = ke->data();
-                if (data) {
-                    if (!started_) {
-                        oldData_ = data->clone();
-                        editStroke_ = oldData_->stroke()->clone();
-                        started_ = true;
-                    }
-                    cursorPositionAtLastSmooth_ = cursorPosition_;
-                    double radius = options::sculptRadius()->value();
-                    double strength = 0.4;
-                    geometry::Vec2d smoothedPoint = editStroke_->sculptSmooth(
-                        positionInWorkspace,
-                        radius,
-                        (std::min)(1.0, disp / radius) * strength,
-                        pixelSize,
-                        ke->isClosed());
-                    data->setStroke(editStroke_.get());
-                    tool_->setActionCircleCenter(smoothedPoint);
-                    tool_->setActionCircleEnabled(true);
+                vacomplex::KeyEdgeData& data = ke->data();
+                if (!started_) {
+                    oldData_ = data;
+                    editStroke_ = oldData_.stroke()->clone();
+                    started_ = true;
                 }
+                cursorPositionAtLastSmooth_ = cursorPosition_;
+                double radius = options::sculptRadius()->value();
+                double strength = 0.4;
+                geometry::Vec2d smoothedPoint = editStroke_->sculptSmooth(
+                    positionInWorkspace,
+                    radius,
+                    (std::min)(1.0, disp / radius) * strength,
+                    pixelSize,
+                    ke->isClosed());
+                data.setStroke(editStroke_.get());
+                tool_->setActionCircleCenter(smoothedPoint);
+                tool_->setActionCircleEnabled(true);
             }
         }
 
@@ -554,39 +474,6 @@ public:
         if (edgeId_ == -1) {
             return;
         }
-
-        /*
-        canvas::Canvas* canvas = tool_->canvas();
-        workspace::Workspace* workspace = tool_->workspace();
-        if (!canvas || !workspace) {
-            return;
-        }
-
-        // Open history group
-        core::UndoGroup* undoGroup = nullptr;
-        core::History* history = workspace->history();
-        if (history) {
-            undoGroup = history->createUndoGroup(actionName());
-        }
-
-        workspace::Element* element = workspace->find(edgeId_);
-        if (element && element->vacNode() && element->vacNode()->isCell()) {
-            vacomplex::KeyEdge* ke = element->vacNode()->toCellUnchecked()->toKeyEdge();
-            if (ke) {
-                vacomplex::KeyEdgeData* geometry = ke->geometry();
-                if (geometry) {
-                    geometry->finishEdit();
-                }
-            }
-        }
-
-        // Close operation
-        if (undoGroup) {
-            bool amend = canAmendUndoGroup_ && undoGroup->parent()
-                         && undoGroup->parent()->name() == actionName();
-            canAmendUndoGroup_ |= undoGroup->close(amend);
-        }
-        */
 
         tool_->setActionCircleEnabled(false);
         reset_();
@@ -607,11 +494,7 @@ public:
         if (element && element->vacNode() && element->vacNode()->isCell()) {
             vacomplex::KeyEdge* ke = element->vacNode()->toCellUnchecked()->toKeyEdge();
             if (ke) {
-                vacomplex::KeyEdgeData* data = ke->data();
-                if (data) {
-                    *data = *oldData_;
-                    //data->finishEdit();
-                }
+                ke->data() = oldData_;
             }
         }
 
@@ -630,7 +513,7 @@ public:
     bool canAmendUndoGroup_ = false;
     bool started_ = false;
     core::Id edgeId_ = -1;
-    std::unique_ptr<vacomplex::KeyEdgeData> oldData_;
+    vacomplex::KeyEdgeData oldData_;
     std::unique_ptr<geometry::AbstractStroke2d> editStroke_;
     geometry::Vec2f cursorPositionAtLastSmooth_;
     geometry::Vec2f cursorPosition_;

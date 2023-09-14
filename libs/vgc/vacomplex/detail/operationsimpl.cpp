@@ -100,9 +100,7 @@ Operations::~Operations() {
                 switch (cell->cellType()) {
                 case CellType::KeyEdge: {
                     KeyEdge* ke = cell->toKeyEdgeUnchecked();
-                    if (ke->data()) {
-                        ke->data()->finalizeConcat();
-                    }
+                    ke->data().finalizeConcat();
                     break;
                 }
                 case CellType::KeyFace: {
@@ -151,7 +149,7 @@ KeyVertex* Operations::createKeyVertex(
 KeyEdge* Operations::createKeyOpenEdge(
     KeyVertex* startVertex,
     KeyVertex* endVertex,
-    std::unique_ptr<KeyEdgeData>&& data,
+    KeyEdgeData&& data,
     Group* parentGroup,
     Node* nextSibling) {
 
@@ -164,13 +162,13 @@ KeyEdge* Operations::createKeyOpenEdge(
     addToBoundary_(ke, endVertex);
 
     // Geometric attributes
-    ke->setData_(std::move(data));
+    ke->data() = std::move(data);
 
     return ke;
 }
 
 KeyEdge* Operations::createKeyClosedEdge(
-    std::unique_ptr<KeyEdgeData>&& data,
+    KeyEdgeData&& data,
     Group* parentGroup,
     Node* nextSibling,
     core::AnimTime t) {
@@ -181,7 +179,7 @@ KeyEdge* Operations::createKeyClosedEdge(
     // -> None
 
     // Geometric attributes
-    ke->setData_(std::move(data));
+    ke->data() = std::move(data);
 
     return ke;
 }
@@ -1125,7 +1123,7 @@ core::Array<KeyEdge*> Operations::unglueKeyEdges(KeyEdge* targetKe) {
     // Helper
     auto duplicateTargetKe = [this, targetKe, &result]() {
         KeyEdge* newKe = nullptr;
-        std::unique_ptr<KeyEdgeData> dataDuplicate = targetKe->data()->clone();
+        KeyEdgeData dataDuplicate = targetKe->data();
         if (targetKe->isClosed()) {
             newKe = createKeyClosedEdge(
                 std::move(dataDuplicate),
@@ -1331,13 +1329,13 @@ core::Array<KeyVertex*> Operations::unglueKeyVertices(
 VertexCutEdgeResult
 Operations::vertexCutEdge(KeyEdge* ke, const geometry::CurveParameter& parameter) {
 
-    const geometry::AbstractStroke2d* oldStroke = ke->data()->stroke();
+    const geometry::AbstractStroke2d* oldStroke = ke->data().stroke();
 
     if (ke->isClosed()) {
-        std::unique_ptr<KeyEdgeData> newKeData =
+        KeyEdgeData newKeData =
             KeyEdgeData::fromSlice(ke->data(), parameter, parameter, 1);
 
-        geometry::Vec2d vertexPos = newKeData->stroke()->endPositions()[0];
+        geometry::Vec2d vertexPos = newKeData.stroke()->endPositions()[0];
 
         KeyVertex* newKv =
             createKeyVertex(vertexPos, ke->parentGroup(), ke->nextSibling(), ke->time());
@@ -1363,16 +1361,16 @@ Operations::vertexCutEdge(KeyEdge* ke, const geometry::CurveParameter& parameter
         return VertexCutEdgeResult(newKe, newKv, newKe);
     }
     else {
-        std::unique_ptr<KeyEdgeData> newKeData1 = KeyEdgeData::fromSlice(
+        KeyEdgeData newKeData1 = KeyEdgeData::fromSlice(
             ke->data(), geometry::CurveParameter(0, 0), parameter, 0);
 
-        std::unique_ptr<KeyEdgeData> newKeData2 = KeyEdgeData::fromSlice(
+        KeyEdgeData newKeData2 = KeyEdgeData::fromSlice(
             ke->data(),
             parameter,
             geometry::CurveParameter(oldStroke->numSegments() - 1, 1),
             0);
 
-        geometry::Vec2d vertexPos = newKeData2->stroke()->endPositions()[0];
+        geometry::Vec2d vertexPos = newKeData2.stroke()->endPositions()[0];
 
         KeyVertex* newKv =
             createKeyVertex(vertexPos, ke->parentGroup(), ke->nextSibling(), ke->time());
@@ -1476,9 +1474,8 @@ Operations::uncutAtKeyVertex(KeyVertex* targetKv, bool smoothJoin) {
         //
         KeyEdge* oldKe = info.khe1.edge();
 
-        std::unique_ptr<KeyEdgeData> newData = oldKe->stealData_();
-        newData->isClosed_ = true;
-        newData->stroke_->close(smoothJoin);
+        KeyEdgeData newData = oldKe->data();
+        newData.closeStroke(smoothJoin);
 
         // Create new edge
         newKe = createKeyClosedEdge(
@@ -1503,18 +1500,16 @@ Operations::uncutAtKeyVertex(KeyVertex* targetKv, bool smoothJoin) {
     }
     else {
         // Compute new edge data as concatenation of old edges
-        KeyEdgeData* ked1 = info.khe1.edge()->data();
-        KeyEdgeData* ked2 = info.khe2.edge()->data();
+        KeyEdgeData& ked1 = info.khe1.edge()->data();
+        KeyEdgeData& ked2 = info.khe2.edge()->data();
         KeyVertex* kv1 = info.khe1.startVertex();
         KeyVertex* kv2 = info.khe2.endVertex();
         bool dir1 = info.khe1.direction();
         bool dir2 = info.khe2.direction();
-        std::unique_ptr<KeyEdgeData> concatData;
-        if (ked1 && ked2) {
-            KeyHalfedgeData khd1(ked1, dir1);
-            KeyHalfedgeData khd2(ked2, dir2);
-            concatData = ked1->fromConcatStep(khd1, khd2, smoothJoin);
-        }
+        KeyEdgeData concatData;
+        KeyHalfedgeData khd1(&ked1, dir1);
+        KeyHalfedgeData khd2(&ked2, dir2);
+        concatData = ked1.fromConcatStep(khd1, khd2, smoothJoin);
 
         // Determine where to insert new edge
         std::array<Node*, 2> kes = {info.khe1.edge(), info.khe2.edge()};
@@ -1895,16 +1890,6 @@ void Operations::setKeyVertexPosition(KeyVertex* kv, const geometry::Vec2d& pos)
     onGeometryChanged_(kv);
 }
 
-void Operations::setKeyEdgeData(KeyEdge* ke, std::unique_ptr<KeyEdgeData>&& data) {
-
-    KeyEdge* previousKe = data->keyEdge();
-    VGC_ASSERT(!previousKe);
-
-    ke->setData_(std::move(data));
-
-    onGeometryChanged_(ke);
-}
-
 void Operations::setKeyEdgeSamplingQuality(
     KeyEdge* ke,
     geometry::CurveSamplingQuality quality) {
@@ -2194,17 +2179,13 @@ KeyEdge* Operations::glueKeyOpenEdges_(core::ConstSpan<KeyHalfedge> khs) {
     core::Array<KeyHalfedgeData> khds;
     khds.reserve(n);
     for (const KeyHalfedge& kh : khs) {
-        KeyEdgeData* kd = kh.edge()->data();
-        if (!kd) {
-            // missing data
-            return nullptr;
-        }
-        khds.emplaceLast(kd, kh.direction());
+        KeyEdgeData& kd = kh.edge()->data();
+        khds.emplaceLast(&kd, kh.direction());
     }
-    std::unique_ptr<KeyEdgeData> newData = KeyEdgeData::fromGlueOpen(khds);
-    VGC_ASSERT(newData && newData->stroke());
+    KeyEdgeData newData = KeyEdgeData::fromGlueOpen(khds);
+    VGC_ASSERT(newData.stroke());
 
-    std::array<geometry::Vec2d, 2> endPositions = newData->stroke()->endPositions();
+    std::array<geometry::Vec2d, 2> endPositions = newData.stroke()->endPositions();
 
     core::Array<KeyVertex*> startVertices;
     startVertices.reserve(n);
@@ -2224,7 +2205,7 @@ KeyEdge* Operations::glueKeyOpenEdges_(core::ConstSpan<KeyHalfedge> khs) {
     if (endVertices.contains(startKv)) {
         // collapsing start and end to single vertex
         endVertexPosition = 0.5 * (endPositions[0] + endVertexPosition);
-        newData->snap(endVertexPosition, endVertexPosition);
+        newData.snap(endVertexPosition, endVertexPosition);
         startKv = nullptr;
     }
     KeyVertex* endKv = glueKeyVertices(endVertices, endVertexPosition);
@@ -2272,20 +2253,16 @@ KeyEdge* Operations::glueKeyClosedEdges_(
     khds.reserve(n);
     for (const KeyHalfedge& kh : khs) {
         edgeNodes.append(kh.edge());
-        KeyEdgeData* kd = kh.edge()->data();
-        if (!kd) {
-            // missing data
-            return nullptr;
-        }
-        khds.emplaceLast(kd, kh.direction());
+        KeyEdgeData& kd = kh.edge()->data();
+        khds.emplaceLast(&kd, kh.direction());
     }
 
     Node* topMostEdge = findTopMost(edgeNodes);
     Group* parentGroup = topMostEdge->parentGroup();
     Node* nextSibling = topMostEdge->nextSibling();
 
-    std::unique_ptr<KeyEdgeData> newData = KeyEdgeData::fromGlueClosed(khds, uOffsets);
-    VGC_ASSERT(newData && newData->stroke());
+    KeyEdgeData newData = KeyEdgeData::fromGlueClosed(khds, uOffsets);
+    VGC_ASSERT(newData.stroke());
 
     KeyEdge* newKe = createKeyClosedEdge(std::move(newData), parentGroup, nextSibling);
 

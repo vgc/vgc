@@ -71,30 +71,26 @@ private:
     friend KeyEdge;
 
 public:
-    KeyEdgeData(bool isClosed) noexcept
-        : isClosed_(isClosed) {
-    }
+    KeyEdgeData() noexcept = default;
     ~KeyEdgeData() = default;
 
-    KeyEdgeData(KeyEdge* owner, detail::KeyEdgePrivateKey) noexcept;
+    KeyEdgeData(detail::KeyEdgePrivateKey, KeyEdge* owner) noexcept;
 
     KeyEdgeData(const KeyEdgeData& other);
     KeyEdgeData(KeyEdgeData&& other) noexcept;
     KeyEdgeData& operator=(const KeyEdgeData& other);
     KeyEdgeData& operator=(KeyEdgeData&& other) noexcept;
 
-    std::unique_ptr<KeyEdgeData> clone() const;
-
     KeyEdge* keyEdge() const;
 
-    bool isClosed() const {
-        return isClosed_;
-    }
+    bool isClosed() const;
 
     const geometry::AbstractStroke2d* stroke() const;
 
     void setStroke(const geometry::AbstractStroke2d* stroke);
     void setStroke(std::unique_ptr<geometry::AbstractStroke2d>&& stroke);
+
+    void closeStroke(bool smoothJoin);
 
     /// Expects positions in object space.
     ///
@@ -112,34 +108,31 @@ public:
     ///
     void transform(const geometry::Mat3d& transformation);
 
-    static std::unique_ptr<KeyEdgeData> fromConcatStep(
+    static KeyEdgeData fromConcatStep(
         const KeyHalfedgeData& khd1,
         const KeyHalfedgeData& khd2,
         bool smoothJoin);
 
     void finalizeConcat();
 
-    static std::unique_ptr<KeyEdgeData>
-    fromGlueOpen(core::ConstSpan<KeyHalfedgeData> khds);
+    static KeyEdgeData fromGlueOpen(core::ConstSpan<KeyHalfedgeData> khds);
 
-    static std::unique_ptr<KeyEdgeData> fromGlueClosed(
+    static KeyEdgeData fromGlueClosed(
         core::ConstSpan<KeyHalfedgeData> khds,
         core::ConstSpan<double> uOffsets);
 
-    static std::unique_ptr<KeyEdgeData> fromGlue(
+    static KeyEdgeData fromGlue(
         core::ConstSpan<KeyHalfedgeData> khds,
         std::unique_ptr<geometry::AbstractStroke2d>&& gluedStroke);
 
-    static std::unique_ptr<KeyEdgeData> fromSlice(
-        const KeyEdgeData* ked,
+    static KeyEdgeData fromSlice(
+        const KeyEdgeData& ked,
         const geometry::CurveParameter& start,
         const geometry::CurveParameter& end,
         Int numWraps);
 
 private:
     std::unique_ptr<geometry::AbstractStroke2d> stroke_;
-    // In case stroke_ == nullptr.
-    bool isClosed_;
 };
 
 //std::shared_ptr<const EdgeSampling> snappedSampling_;

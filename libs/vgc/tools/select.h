@@ -113,7 +113,7 @@ private:
         core::Id elementId;
         bool isUniformTranslation;
         mutable bool isEditStarted = false;
-        mutable std::unique_ptr<vacomplex::KeyEdgeData> oldData;
+        mutable vacomplex::KeyEdgeData oldData;
     };
 
     core::Array<KeyVertexDragData> draggedVertices_;

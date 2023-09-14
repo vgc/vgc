@@ -64,7 +64,7 @@ std::unique_ptr<CellProperty> CellProperty::fromGlue_(
 }
 
 std::unique_ptr<CellProperty> CellProperty::fromSlice_(
-    const KeyEdgeData* /*ked*/,
+    const KeyEdgeData& /*ked*/,
     const geometry::CurveParameter& /*start*/,
     const geometry::CurveParameter& /*end*/,
     Int /*numWraps*/,
@@ -247,7 +247,7 @@ void CellProperties::glue(
 }
 
 void CellProperties::assignFromSlice(
-    const KeyEdgeData* ked,
+    const KeyEdgeData& ked,
     const geometry::CurveParameter& start,
     const geometry::CurveParameter& end,
     Int numWraps,
@@ -255,7 +255,7 @@ void CellProperties::assignFromSlice(
 
     clear();
 
-    for (const auto& p : ked->properties()) {
+    for (const auto& p : ked.properties()) {
         const CellProperty* prop = p.second.get();
         std::unique_ptr<CellProperty> newProp =
             prop->fromSlice_(ked, start, end, numWraps, subStroke);

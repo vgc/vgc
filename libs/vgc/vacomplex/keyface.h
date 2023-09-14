@@ -59,7 +59,7 @@ private:
 
     explicit KeyFace(core::Id id, core::AnimTime t) noexcept
         : SpatioTemporalCell(id, t)
-        , data_(this, detail::KeyFacePrivateKey{}) {
+        , data_(detail::KeyFacePrivateKey{}, this) {
     }
 
 public:

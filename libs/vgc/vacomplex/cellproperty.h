@@ -119,7 +119,7 @@ protected:
 
     // Returns a null pointer by default.
     virtual std::unique_ptr<CellProperty> fromSlice_(
-        const KeyEdgeData* ked,
+        const KeyEdgeData& ked,
         const geometry::CurveParameter& start,
         const geometry::CurveParameter& end,
         Int numWraps,
@@ -182,7 +182,7 @@ public:
         const geometry::AbstractStroke2d* gluedStroke);
 
     void assignFromSlice(
-        const KeyEdgeData* ked,
+        const KeyEdgeData& ked,
         const geometry::CurveParameter& start,
         const geometry::CurveParameter& end,
         Int numWraps,

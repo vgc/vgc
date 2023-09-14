@@ -94,7 +94,7 @@ VGC_VACOMPLEX_API
 KeyEdge* createKeyOpenEdge(
     KeyVertex* startVertex,
     KeyVertex* endVertex,
-    std::unique_ptr<KeyEdgeData>&& geometry,
+    KeyEdgeData&& geometry,
     Group* parentGroup,
     Node* nextSibling = nullptr,
     core::AnimTime t = {});
@@ -104,7 +104,7 @@ KeyEdge* createKeyOpenEdge(
 ///
 VGC_VACOMPLEX_API
 KeyEdge* createKeyClosedEdge(
-    std::unique_ptr<KeyEdgeData>&& geometry,
+    KeyEdgeData&& geometry,
     Group* parentGroup,
     Node* nextSibling = nullptr,
     core::AnimTime t = {});
@@ -271,9 +271,6 @@ void lower(core::ConstSpan<Node*> nodes, core::AnimTime t);
 
 VGC_VACOMPLEX_API
 void setKeyVertexPosition(KeyVertex* vertex, const geometry::Vec2d& pos);
-
-VGC_VACOMPLEX_API
-void setKeyEdgeData(KeyEdge* edge, std::unique_ptr<KeyEdgeData>&& data);
 
 VGC_VACOMPLEX_API
 void setKeyEdgeSamplingQuality(KeyEdge* edge, geometry::CurveSamplingQuality quality);

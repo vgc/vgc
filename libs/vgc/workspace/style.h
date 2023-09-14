@@ -69,7 +69,7 @@ protected:
         const geometry::AbstractStroke2d* gluedStroke) const override;
 
     std::unique_ptr<vacomplex::CellProperty> fromSlice_(
-        const vacomplex::KeyEdgeData* ked,
+        const vacomplex::KeyEdgeData& ked,
         const geometry::CurveParameter& start,
         const geometry::CurveParameter& end,
         Int numWraps,

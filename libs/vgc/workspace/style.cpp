@@ -255,13 +255,13 @@ std::unique_ptr<vacomplex::CellProperty> CellStyle::fromGlue_(
 }
 
 std::unique_ptr<vacomplex::CellProperty> CellStyle::fromSlice_(
-    const vacomplex::KeyEdgeData* ked,
+    const vacomplex::KeyEdgeData& ked,
     const geometry::CurveParameter& /*start*/,
     const geometry::CurveParameter& /*end*/,
     Int /*numWraps*/,
     const geometry::AbstractStroke2d* /*subStroke*/) const {
 
-    auto styleProp = static_cast<const CellStyle*>(ked->findProperty(strings::style));
+    auto styleProp = static_cast<const CellStyle*>(ked.findProperty(strings::style));
     if (styleProp) {
         return styleProp->clone();
     }
