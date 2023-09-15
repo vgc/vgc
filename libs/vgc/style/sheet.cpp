@@ -39,9 +39,12 @@ public:
     // https://www.w3.org/TR/css-syntax-3/#parse-stylesheet
     static SheetPtr parseSheet(std::string_view styleString) {
 
+        // Create Sheet and decode text data
+        SheetPtr styleSheet = Sheet::create();
+        styleSheet->text_ = decodeStyleString(styleString);
+
         // Tokenize
-        std::string decoded = decodeStyleString(styleString);
-        TokenArray tokens = tokenizeStyleString(decoded.data());
+        TokenArray tokens = tokenizeStyleString(styleSheet->text_.data());
 
         // Parse
         bool topLevel = true;
@@ -50,7 +53,6 @@ public:
         core::Array<RuleSetPtr> rules = parser.consumeRuleList_(it, tokens.end());
 
         // Create Sheet
-        SheetPtr styleSheet = Sheet::create();
         for (const RuleSetPtr& rule : rules) {
             styleSheet->appendChildObject_(rule.get());
             styleSheet->ruleSets_.append(rule.get());
@@ -157,12 +159,12 @@ private:
                 return RuleSetPtr();
             }
             else if (it->type() == TokenType::LeftCurlyBracket) {
-                TokenIterator preludeEnd = it;
-                ++it;
 
                 // Parse the prelude as a selector group
+                TokenIterator preludeEnd = it;
+                it = preludeBegin;
                 core::Array<SelectorPtr> selectors =
-                    consumeSelectorGroup_(preludeBegin, preludeEnd);
+                    consumeSelectorGroup_(it, preludeEnd);
                 if (selectors.isEmpty()) {
                     // Parse error
                     return RuleSetPtr();
@@ -173,8 +175,10 @@ private:
                         rule->selectors_.append(selector.get());
                     }
                 }
+                it = preludeEnd;
 
                 // Consume list of declarations
+                ++it;
                 bool expectRightCurlyBracket = true;
                 core::Array<DeclarationPtr> declarations =
                     consumeDeclarationList_(it, end, expectRightCurlyBracket);
@@ -182,6 +186,10 @@ private:
                     rule->appendChildObject_(declaration.get());
                     rule->declarations_.append(declaration.get());
                 }
+
+                const char* ruleBegin = preludeBegin->begin();
+                const char* ruleEnd = (it - 1)->end();
+                rule->text_ = std::string_view(ruleBegin, ruleEnd - ruleBegin);
                 break;
 
                 // Note: for a qualifed rule which is not a style rule, we

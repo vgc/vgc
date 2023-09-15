@@ -149,14 +149,22 @@ void StylableObject::removeChildStylableObject(StylableObject* child) {
 void StylableObject::onStyleChanged() {
 }
 
-void StylableObject::populateStyleSpecTable(SpecTable*) {
-    // nothing
-}
-
 void StylableObject::setStyleMetrics(const Metrics& metrics) {
     styleMetrics_ = metrics;
     updateStyle_();
 };
+
+void StylableObject::populateStyleSpecTable(SpecTable*) {
+    // nothing
+}
+
+void StylableObject::debugPrintStyle(core::StringWriter& out) {
+    for (auto [ruleSet, specificity] : styleCache_.ruleSetArray) {
+        std::ignore = specificity;
+        write(out, ruleSet->text());
+        write(out, "\n\n");
+    }
+}
 
 void StylableObject::updateStyle_() {
     // In this function, we precompute which rule sets match this node and
