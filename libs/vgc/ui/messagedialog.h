@@ -72,6 +72,18 @@ public:
     ///
     void addCenteredText(std::string_view text);
 
+    /// Adds a "don't ask again" checkbox using the given `BoolSettings`.
+    ///
+    /// \sa `shouldAskAgain()`.
+    ///
+    void addDontAskAgainCheckbox(std::string_view key);
+
+    /// Returns whether this dialog should be shown again.
+    ///
+    /// \sa `addDontAskAgainCheckbox()`.
+    ///
+    static bool shouldAskAgain(std::string_view key);
+
     /// Adds a button to this dialog, calling the given function on click.
     ///
     template<typename Function>

@@ -114,6 +114,7 @@ VGC_UI_API extern const core::StringId buttons;
 VGC_UI_API extern const core::StringId centered;
 VGC_UI_API extern const core::StringId content;
 VGC_UI_API extern const core::StringId title;
+VGC_UI_API extern const core::StringId dont_ask_again;
 
 } // namespace vgc::ui::strings
 

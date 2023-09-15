@@ -16,6 +16,7 @@
 
 #include <vgc/ui/messagedialog.h>
 
+#include <vgc/ui/boolsettingedit.h>
 #include <vgc/ui/button.h>
 #include <vgc/ui/strings.h>
 
@@ -85,10 +86,8 @@ void MessageDialog::setTitle(std::string_view text) {
 void MessageDialog::addText(std::string_view text) {
     if (content_) {
         createBodyIfNotCreated_();
-        if (body_) {
-            body_->createChild<Label>(text);
-            updateSize_();
-        }
+        body_->createChild<Label>(text);
+        updateSize_();
     }
 }
 
@@ -99,6 +98,38 @@ void MessageDialog::addCenteredText(std::string_view text) {
         label->addStyleClass(strings::centered);
         updateSize_();
     }
+}
+
+namespace {
+
+// Note: we choose to store the "don't ask again" settings as `session()`
+// settings, but perhaps `preferences()` would make sense too, or even its own
+// settings "dontAskAgain.json"
+
+Settings* dontAskAgainSettings() {
+    return settings::session();
+}
+
+} // namespace
+
+void MessageDialog::addDontAskAgainCheckbox(std::string_view key) {
+    if (content_) {
+        Settings* settings = dontAskAgainSettings();
+        std::string_view label = "Don't ask again";
+        bool defaultValue = false;
+        BoolSettingStyle style = BoolSettingStyle::Checkbox;
+
+        createBodyIfNotCreated_();
+        BoolSettingPtr setting = BoolSetting::create(settings, key, label, defaultValue);
+        BoolSettingEdit* edit = body_->createChild<ui::BoolSettingEdit>(setting, style);
+        edit->addStyleClass(strings::dont_ask_again);
+        updateSize_();
+    }
+}
+
+bool MessageDialog::shouldAskAgain(std::string_view key) {
+    bool fallback = false;
+    return !dontAskAgainSettings()->getBoolValue(key, fallback);
 }
 
 namespace {

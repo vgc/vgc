@@ -122,5 +122,6 @@ const core::StringId buttons("buttons");
 const core::StringId centered("centered");
 const core::StringId content("content");
 const core::StringId title("title");
+const core::StringId dont_ask_again("dont-ask-again");
 
 } // namespace vgc::ui::strings
