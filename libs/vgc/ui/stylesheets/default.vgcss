@@ -250,6 +250,16 @@
     padding-right: 20dp;
 }
 
+.MessageDialog .dont-ask-again {
+    margin-top: 12dp;
+    margin-bottom: 0dp;
+}
+
+.MessageDialog .dont-ask-again .Label {
+    text-horizontal-align: left;
+    padding-left: 8dp;
+}
+
 .Toggle,
 .Checkbox {
     horizontal-stretch: 0;
