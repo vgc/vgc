@@ -32,8 +32,20 @@ namespace vgc::ui {
 ///
 /// This function is only available on macOS.
 ///
+/// \sa `openAccessibilityPermissions()`.
+///
 VGC_UI_API
 bool hasAccessibilityPermissions();
+
+/// Opens the macOS "Accessibity Permissions" preference window, so that
+/// users can grant permissions to your application.
+///
+/// This function is only available on macOS.
+///
+/// \sa `hasAccessibilityPermissions()`.
+///
+VGC_UI_API
+void openAccessibilityPermissions();
 
 } // namespace vgc::ui
 

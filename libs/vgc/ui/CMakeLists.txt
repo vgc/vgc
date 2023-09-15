@@ -10,6 +10,7 @@ vgc_add_library(ui
 
     MACOS_DEPENDENCIES
         "-framework ApplicationServices"
+        "-framework AppKit"
 
     CPP_HEADER_FILES
         action.h
