@@ -587,9 +587,9 @@ VGC_UI_DEFINE_WINDOW_COMMAND( //
     Shortcut(ctrl | shift, Key::Z))
 
 VGC_UI_DEFINE_WINDOW_COMMAND(
-    debugWidgetSizing,
-    "debug.widgetSizing",
-    "Debug Widget Sizing",
+    debugWidgetStyle,
+    "debug.widgetStyle",
+    "Debug Widget Style",
     Shortcut(ctrl | shift, Key::W))
 
 } // namespace commands
@@ -619,8 +619,8 @@ void CanvasApplication::createActions_(ui::Widget* parent) {
     actionCopy_ = parent->createAction<ui::GenericAction>(generic::copy());
     actionPaste_ = parent->createAction<ui::GenericAction>(generic::paste());
 
-    actionDebugWidgetSizing_ = createAction(
-        parent, commands::debugWidgetSizing(), onActionDebugWidgetSizingSlot_());
+    actionDebugWidgetStyle_ = createAction(
+        parent, commands::debugWidgetStyle(), onActionDebugWidgetStyleSlot_());
 
     updateUndoRedoActionState_();
 }
@@ -824,41 +824,49 @@ void CanvasApplication::onColorChanged_() {
 
 namespace {
 
-std::string widgetSizingInfo(ui::Widget* w, ui::Widget* root) {
+void widgetSizingInfo(std::string& out, ui::Widget* widget, ui::Widget* root) {
 
-    // TODO: have our class formatters support string format syntax (e.g.,
-    // {:<12}) so that we don't need the intermediate calls to core::format().
-    //
-    return core::format(
-        "{:<24} "
-        "position = {:<12} "
-        "size = {:<12} "
-        "preferredSize = {:<12} "
-        "margin = {:<16} "
-        "padding = {:<16} "
-        "border = {:<16}\n",
-        w->className(),
-        core::format("{}", w->mapTo(root, geometry::Vec2f(0, 0))),
-        core::format("{}", w->size()),
-        core::format("{}", w->preferredSize()),
-        core::format("{}", w->margin()),
-        core::format("{}", w->padding()),
-        core::format("{}", w->border()));
+    auto outB = std::back_inserter(out);
+    out += widget->className();
+
+    out += "\nStyle =";
+    for (core::StringId styleClass : widget->styleClasses()) {
+        out += " ";
+        out += styleClass;
+    }
+    out += "\n";
+    core::formatTo(
+        outB, "\nPosition       = {}", widget->mapTo(root, geometry::Vec2f(0, 0)));
+    core::formatTo(outB, "\nSize           = {}", widget->size());
+    core::formatTo(outB, "\nPreferred Size = {}", widget->preferredSize());
+    core::formatTo(outB, "\nMargin         = {}", widget->margin());
+    core::formatTo(outB, "\nPadding        = {}", widget->padding());
+    core::formatTo(outB, "\nBorder         = {}", widget->border());
+
+    out += "\n\nMatching style rules:\n\n";
+    core::StringWriter outS(out);
+    widget->debugPrintStyle(outS);
 }
 
 } // namespace
 
-void CanvasApplication::onActionDebugWidgetSizing_() {
+void CanvasApplication::onActionDebugWidgetStyle_() {
 
     if (!mainWindow() || !mainWidget()) {
         return;
     }
 
-    std::string out = "Position and size information about hovered widgets:\n";
+    std::string out;
+
+    using core::write;
+    out.append(80, '=');
+    out += "\nPosition and size information about hovered widgets:\n";
     ui::Widget* root = mainWidget();
     ui::Widget* widget = root;
     while (widget) {
-        out += widgetSizingInfo(widget, root);
+        out.append(80, '-');
+        out += "\n";
+        widgetSizingInfo(out, widget, root);
         widget = widget->hoverChainChild();
     }
     VGC_DEBUG(LogVgcApp, out);

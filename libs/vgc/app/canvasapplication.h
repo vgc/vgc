@@ -228,9 +228,9 @@ private:
     // ------------------------------------------------------------------------
     //                       Misc
 
-    ui::Action* actionDebugWidgetSizing_ = nullptr;
-    VGC_SLOT(onActionDebugWidgetSizingSlot_, onActionDebugWidgetSizing_);
-    void onActionDebugWidgetSizing_();
+    ui::Action* actionDebugWidgetStyle_ = nullptr;
+    VGC_SLOT(onActionDebugWidgetStyleSlot_, onActionDebugWidgetStyle_);
+    void onActionDebugWidgetStyle_();
 };
 
 } // namespace vgc::app

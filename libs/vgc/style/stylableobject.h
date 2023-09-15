@@ -161,6 +161,9 @@ class VGC_STYLE_API StylableObject : public core::Object {
 private:
     VGC_OBJECT(StylableObject, core::Object)
 
+protected:
+    StylableObject(CreateKey);
+
 public:
     /// Creates a root StylableObject.
     ///
@@ -311,9 +314,13 @@ public:
         populateStyleSpecTable(table);
     }
 
-protected:
-    StylableObject(CreateKey);
+    /// Prints the text of all `RuleSet` that match this `StylableObject`, by
+    /// increasing order of precedence and specificity (the last declaration
+    /// for a given style property win).
+    ///
+    void debugPrintStyle(core::StringWriter& out);
 
+protected:
     /// Adds a `StylableObject` child to this `StylableObject`.
     ///
     void appendChildStylableObject(StylableObject* child);

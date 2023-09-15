@@ -61,6 +61,7 @@ public:
     }
 
 private:
+    std::string text_;
     RuleSetArray ruleSets_;
 
     friend class detail::Parser;
@@ -77,15 +78,26 @@ private:
     VGC_PRIVATIZE_OBJECT_TREE_MUTATORS
 
 public:
+    /// Returns the content of the `RuleSet` as text.
+    ///
+    std::string_view text() const {
+        return text_;
+    }
+
+    /// Returns the parsed selectors of the `RuleSet`.
+    ///
     const SelectorArray& selectors() const {
         return selectors_;
     }
 
+    /// Returns the parsed declarations in the `RuleSet`.
+    ///
     const DeclarationArray& declarations() const {
         return declarations_;
     }
 
 private:
+    std::string_view text_; // substring of sheet.text_
     SelectorArray selectors_;
     DeclarationArray declarations_;
 
