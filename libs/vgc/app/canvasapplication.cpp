@@ -824,20 +824,6 @@ void CanvasApplication::onColorChanged_() {
 
 namespace {
 
-template<typename T, typename U, typename V>
-void forEachWithSeparator(T range, U f, V g) {
-    bool isFirst = true;
-    for (auto& x : range) {
-        if (isFirst) {
-            isFirst = false;
-        }
-        else {
-            g();
-        }
-        f(x);
-    }
-}
-
 void widgetSizingInfo(std::string& out, ui::Widget* widget, ui::Widget* root) {
 
     auto outB = std::back_inserter(out);
