@@ -23,6 +23,13 @@
 #include <vgc/ui/cursor.h>
 #include <vgc/ui/window.h>
 
+// for requesting to capture mouse in macos
+#ifdef VGC_CORE_OS_MACOS
+#    include <QTimer>
+#    include <vgc/ui/macospermissions.h>
+#    include <vgc/ui/messagedialog.h>
+#endif
+
 namespace vgc::ui {
 
 NumberEdit::NumberEdit(CreateKey key)
@@ -260,6 +267,106 @@ bool NumberEdit::onMousePress(MousePressEvent* event) {
     return true;
 }
 
+#ifdef VGC_CORE_OS_MACOS
+
+namespace {
+
+// Prevent opening two or more "enable infinite drag?" dialogs at the same time.
+//
+std::atomic<Int> numInfiniteDragDialogs = 0;
+
+using QTimerSharedPtr = std::shared_ptr<QTimer>;
+using QTimerWeakPtr = std::weak_ptr<QTimer>;
+
+void createEnableInfiniteDragDialogAndTimer(
+    MessageDialogPtr& dialog,
+    QTimerSharedPtr& timer) {
+
+    Int i = numInfiniteDragDialogs.fetch_add(1);
+    if (i > 0) {
+        // There is already a dialog opened (or about to be opened).
+        // Let's decrease back the count and do nothing.
+        //
+        --numInfiniteDragDialogs;
+    }
+    else {
+        // There is not yet any dialog.
+        // Let's create a new one, decreasing the count on destruction.
+        //
+        dialog = MessageDialog::create();
+        timer = std::make_shared<QTimer>();
+        dialog->aboutToBeDestroyed().connect(
+            [keepAlive = timer]() { --numInfiniteDragDialogs; });
+    }
+}
+
+void macosEnableInfiniteDrag(
+    bool couldHaveBeenInfinite,
+    bool wasInfinite,
+    Widget* widget) {
+
+    std::string_view key = "ui.numberEdit.macOsInfiniteDragPermission.dontAskAgain";
+    bool shouldAskAgain = MessageDialog::shouldAskAgain(key);
+    if (couldHaveBeenInfinite && !wasInfinite && shouldAskAgain) {
+
+        // Create dialog and timer. We use ObjectPtr to capture it safely in the lambda.
+        //
+        MessageDialogPtr dialog;
+        QTimerSharedPtr timer;
+        createEnableInfiniteDragDialogAndTimer(dialog, timer);
+        if (!dialog || !timer) {
+            return;
+        }
+        dialog->setTitle("Enable infinite drag?");
+        dialog->addText("This allows you to drag-edit the value of number fields");
+        dialog->addText("without your mouse getting stuck at the edge of the screen.");
+        dialog->addText("");
+        dialog->addText("This requires your permission to capture the mouse cursor.");
+        dialog->addDontAskAgainCheckbox(key);
+
+        // Periodically check permissions.
+        // We use a weak_ptr here to prevent the timer from keeping itself alive.
+        //
+        QTimerWeakPtr timerWeakPtr = timer;
+        timer->setInterval(1000);
+        timer->callOnTimeout([=]() {
+            if (hasAccessibilityPermissions()) {
+                if (auto timerSharedPtr = timerWeakPtr.lock()) {
+                    timerSharedPtr->stop();
+                }
+                dialog->clear();
+                dialog->addCenteredText("You're all set!");
+                dialog->addButton("OK", [=]() { dialog->destroy(); });
+            }
+        });
+
+        // Dialog buttons
+        dialog->addButton("No", [=]() { dialog->destroy(); });
+        dialog->addButton("Yes", [=]() {
+            openAccessibilityPermissions();
+            if (auto timer = timerWeakPtr.lock()) {
+                timer->start();
+            }
+            dialog->clear();
+            dialog->setTitle("Turn on accessibility");
+            dialog->addText(
+                "To enable infinite drag, select the VGC Illustration checkbox");
+            dialog->addText("in Security & Privacy > Accessibility.");
+            dialog->addButton("Cancel", [=]() { dialog->destroy(); });
+            dialog->addButton("Turn On Accessibility", [=]() { //
+                openAccessibilityPermissions();
+            });
+        });
+
+        // Init
+        dialog->showOutsidePanelArea(widget);
+    }
+}
+
+} // namespace
+
+#endif // VGC_CORE_OS_MACOS
+
 bool NumberEdit::onMouseRelease(MouseReleaseEvent* event) {
 
     // Delegate to LineEdit in case of text mode
@@ -272,11 +379,18 @@ bool NumberEdit::onMouseRelease(MouseReleaseEvent* event) {
         return false;
     }
 
-    // Switch to text mode on click or drag < epsilon.
-    //
+    // Switch to text mode on click or drag < epsilon
     if (isDragInitiated_ && !isDragEpsilonReached_) {
         setTextMode_(true);
     }
+
+    // Conditionally ask for permission to enable infinite drag on macOS
+#ifdef VGC_CORE_OS_MACOS
+    bool wasDrag = isDragInitiated_ && isDragEpsilonReached_;
+    bool wasInfinite = isDragInfiniteMode_;
+    bool couldHaveBeenInfinite = wasDrag && !event->hasPressure();
+    macosEnableInfiniteDrag(couldHaveBeenInfinite, wasInfinite, this);
+#endif
 
     // Clear cursors and other values
     isDragInitiated_ = false;

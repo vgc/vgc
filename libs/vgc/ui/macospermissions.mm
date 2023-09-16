@@ -16,12 +16,19 @@
 
 #include <vgc/ui/macospermissions.h>
 
+#import <AppKit/AppKit.h>
 #import <ApplicationServices/ApplicationServices.h>
 
 namespace vgc::ui {
 
 bool hasAccessibilityPermissions() {
     return AXIsProcessTrusted();
+}
+
+void openAccessibilityPermissions() {
+    NSString* prefPage =
+        @"x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility";
+    [[NSWorkspace sharedWorkspace] openURL:[NSURL URLWithString:prefPage]];
 }
 
 } // namespace vgc::ui
