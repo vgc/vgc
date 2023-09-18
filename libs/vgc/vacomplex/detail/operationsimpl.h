@@ -150,6 +150,10 @@ public:
     VertexCutEdgeResult
     vertexCutEdge(KeyEdge* ke, const geometry::CurveParameter& parameter);
 
+    void cutGlueFaceWithVertex(KeyFace* kf, KeyVertex* kv);
+
+    KeyVertex* cutFaceWithVertex(KeyFace* kf, const geometry::Vec2d& position);
+
     UncutAtKeyVertexResult uncutAtKeyVertex(KeyVertex* kv, bool smoothJoin);
 
     UncutAtKeyEdgeResult uncutAtKeyEdge(KeyEdge* ke);

@@ -169,6 +169,12 @@ core::Array<KeyVertex*> unglueKeyVertices(
 VGC_VACOMPLEX_API
 VertexCutEdgeResult vertexCutEdge(KeyEdge* ke, const geometry::CurveParameter& parameter);
 
+VGC_VACOMPLEX_API
+void cutGlueFaceWithVertex(KeyFace* kf, KeyVertex* kv);
+
+VGC_VACOMPLEX_API
+KeyVertex* cutFaceWithVertex(KeyFace* kf, const geometry::Vec2d& position);
+
 /// Performs an atomic simplification at the given `KeyVertex`, if possible.
 ///
 /// Such atomic simplification is possible in the following cases:

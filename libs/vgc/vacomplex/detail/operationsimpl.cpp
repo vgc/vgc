@@ -1421,6 +1421,18 @@ Operations::vertexCutEdge(KeyEdge* ke, const geometry::CurveParameter& parameter
     }
 }
 
+void Operations::cutGlueFaceWithVertex(KeyFace* kf, KeyVertex* kv) {
+    kf->cycles_.append(KeyCycle(kv));
+    addToBoundary_(kf, kv);
+}
+
+KeyVertex* Operations::cutFaceWithVertex(KeyFace* kf, const geometry::Vec2d& position) {
+    KeyVertex* newKv =
+        createKeyVertex(position, kf->parentGroup(), kf->nextSibling(), kf->time());
+    cutGlueFaceWithVertex(kf, newKv);
+    return newKv;
+}
+
 UncutAtKeyVertexResult
 Operations::uncutAtKeyVertex(KeyVertex* targetKv, bool smoothJoin) {
 
