@@ -306,7 +306,7 @@ core::Array<core::Id> Canvas::computeRectangleSelectionCandidates(
 
     bool isOutlineOverlay = (displayMode_ == DisplayMode::OutlineOverlay);
     bool isMeshEnabled = isOutlineOverlay || (displayMode_ == DisplayMode::Normal);
-    bool isOutlineEnabled = isOutlineOverlay || (displayMode_ == DisplayMode::Outline);
+    //bool isOutlineEnabled = isOutlineOverlay || (displayMode_ == DisplayMode::Outline);
 
     if (workspace_) {
         geometry::Mat4d invView = camera().viewMatrix().inverted();
