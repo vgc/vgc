@@ -411,6 +411,32 @@ vertexCutEdge(KeyEdge* ke, const geometry::CurveParameter& parameter) {
     return ops.vertexCutEdge(ke, parameter);
 }
 
+void cutGlueFaceWithVertex(KeyFace* kf, KeyVertex* kv) {
+    if (!kf) {
+        throw LogicError("cutGlueFaceWithVertex: kf is nullptr.");
+    }
+    if (!kv) {
+        throw LogicError("cutGlueFaceWithVertex: kv is nullptr.");
+    }
+    if (kf->complex() != kv->complex()) {
+        throw LogicError(
+            "cutGlueFaceWithVertex: kf and kv are from different complexes.");
+    }
+    if (kf->time() != kv->time()) {
+        throw LogicError("cutGlueFaceWithVertex: kf and kv are from different times.");
+    }
+    detail::Operations ops(kf->complex());
+    ops.cutGlueFaceWithVertex(kf, kv);
+}
+
+KeyVertex* cutFaceWithVertex(KeyFace* kf, const geometry::Vec2d& position) {
+    if (!kf) {
+        throw LogicError("cutFaceWithVertex: kf is nullptr.");
+    }
+    detail::Operations ops(kf->complex());
+    return ops.cutFaceWithVertex(kf, position);
+}
+
 Cell* uncutAtKeyVertex(KeyVertex* kv, bool smoothJoin) {
     if (!kv) {
         throw LogicError("uncutAtKeyVertex: kv is nullptr.");

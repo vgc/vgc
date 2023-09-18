@@ -26,6 +26,7 @@
 #include <vgc/ui/column.h>
 #include <vgc/vacomplex/detail/operationsimpl.h>
 #include <vgc/workspace/colors.h>
+#include <vgc/workspace/face.h>
 
 namespace vgc::tools {
 
@@ -110,6 +111,20 @@ public:
                         workspace->findVacElement(result.vertex());
                     if (vertexItem) {
                         canvas->setSelection(std::array{vertexItem->id()});
+                    }
+                    break;
+                }
+            }
+            auto kfItem = dynamic_cast<workspace::VacKeyFace*>(item);
+            if (kfItem) {
+                if (vacomplex::KeyFace* kf = kfItem->vacKeyFaceNode()) {
+                    // do the cut
+                    auto result =
+                        vacomplex::ops::cutFaceWithVertex(kf, cursorPositionInWorkspace);
+                    // select resulting vertex
+                    workspace::Element* vertexItem = workspace->findVacElement(result);
+                    if (vertexItem) {
+                        canvas->setSelection(std::array{ vertexItem->id() });
                     }
                     break;
                 }
