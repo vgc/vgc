@@ -304,6 +304,10 @@ core::Array<core::Id> Canvas::computeRectangleSelectionCandidates(
 
     core::Array<core::Id> result;
 
+    bool isOutlineOverlay = (displayMode_ == DisplayMode::OutlineOverlay);
+    bool isMeshEnabled = isOutlineOverlay || (displayMode_ == DisplayMode::Normal);
+    bool isOutlineEnabled = isOutlineOverlay || (displayMode_ == DisplayMode::Outline);
+
     if (workspace_) {
         geometry::Mat4d invView = camera().viewMatrix().inverted();
         geometry::Rect2d rect = geometry::Rect2d::empty;
@@ -312,8 +316,20 @@ core::Array<core::Id> Canvas::computeRectangleSelectionCandidates(
 
         workspace_->visitDepthFirst(
             [](workspace::Element*, Int) { return true; },
-            [&, rect](workspace::Element* e, Int /*depth*/) {
+            [&, rect, isMeshEnabled](workspace::Element* e, Int /*depth*/) {
                 if (!e) {
+                    return;
+                }
+                vacomplex::Cell* cell = nullptr;
+                if (e->isVacElement()) {
+                    vacomplex::Node* node = e->toVacElement()->vacNode();
+                    if (node && node->isCell()) {
+                        cell = node->toCellUnchecked();
+                    }
+                }
+                if (!isMeshEnabled && cell
+                    && cell->cellType() == vacomplex::CellType::KeyFace) {
+                    // don't select face when mesh display is disabled.
                     return;
                 }
                 if (e->isSelectableInRect(rect)) {
