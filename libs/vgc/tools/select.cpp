@@ -124,7 +124,7 @@ public:
                     // select resulting vertex
                     workspace::Element* vertexItem = workspace->findVacElement(result);
                     if (vertexItem) {
-                        canvas->setSelection(std::array{ vertexItem->id() });
+                        canvas->setSelection(std::array{vertexItem->id()});
                     }
                     break;
                 }
