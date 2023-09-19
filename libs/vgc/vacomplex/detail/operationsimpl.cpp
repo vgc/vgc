@@ -2338,7 +2338,7 @@ void Operations::deleteWithDependents_(
             KeyVertex* sv = kc.steinerVertex();
             if (sv) {
                 if (!sv->isBeingDeleted_) {
-                    repairedCycles.append({kc, i});
+                    repairedCycles.append({kc, i, true});
                 }
                 continue;
             }
