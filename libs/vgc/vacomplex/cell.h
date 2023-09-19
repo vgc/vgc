@@ -423,6 +423,8 @@ public:
         return !isCell();
     }
 
+    core::Array<Node*> descendants() const;
+
     Cell* toCell() {
         return isCell() ? toCellUnchecked() : nullptr;
     }

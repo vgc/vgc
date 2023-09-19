@@ -454,6 +454,9 @@ Node* topMostInGroupAbove(Node* node, core::ConstSpan<Node*> nodes);
 VGC_VACOMPLEX_API
 Node* bottomMostInGroupBelow(Node* node, core::ConstSpan<Node*> nodes);
 
+VGC_VACOMPLEX_API
+core::Array<Node*> descendants(Node* node);
+
 } // namespace vgc::vacomplex
 
 #endif // VGC_VACOMPLEX_VAC_H

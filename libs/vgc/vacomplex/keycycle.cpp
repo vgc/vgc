@@ -162,17 +162,25 @@ Int KeyCycle::computeWindingNumberAt(const geometry::Vec2d& position) const {
 }
 
 double KeyCycle::interiorContainedRatio(
-    const KeyCycle& other,
-    geometry::WindingRule windingRule,
-    Int numSamples) {
-    core::Array<geometry::Vec2d> samples = other.sampleUniformly(numSamples);
+    core::ConstSpan<geometry::Vec2d> positions,
+    geometry::WindingRule windingRule) const {
+
     Int count = 0;
-    for (const auto& pos : samples) {
+    for (const auto& pos : positions) {
         if (interiorContains(pos, windingRule)) {
             ++count;
         }
     }
-    return core::narrow_cast<double>(count) / core::narrow_cast<double>(numSamples);
+    return core::narrow_cast<double>(count) / core::narrow_cast<double>(positions.length());
+}
+
+double KeyCycle::interiorContainedRatio(
+    const KeyCycle& other,
+    geometry::WindingRule windingRule,
+    Int numSamples) const {
+
+    core::Array<geometry::Vec2d> samples = other.sampleUniformly(numSamples);
+    return interiorContainedRatio(samples, windingRule);
 }
 
 // TODO: implement KeyCycleType to make the switch below more readable/convenient
