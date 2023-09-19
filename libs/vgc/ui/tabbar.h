@@ -17,6 +17,7 @@
 #ifndef VGC_UI_TABBAR_H
 #define VGC_UI_TABBAR_H
 
+#include <vgc/ui/flex.h>
 #include <vgc/ui/label.h>
 #include <vgc/ui/widget.h>
 
@@ -28,9 +29,9 @@ VGC_DECLARE_OBJECT(TabBody);
 /// \class vgc::ui::TabBar
 /// \brief A bar showing different tabs.
 ///
-class VGC_UI_API TabBar : public Label { // Inheriting from Label temporarily
+class VGC_UI_API TabBar : public Flex {
 private:
-    VGC_OBJECT(TabBar, Label)
+    VGC_OBJECT(TabBar, Flex)
 
 protected:
     TabBar(CreateKey);
@@ -39,6 +40,17 @@ public:
     /// Creates a `TabBar`.
     ///
     static TabBarPtr create();
+
+    /// Adds a new tab to this TabBar with the given label.
+    ///
+    void addTab(std::string_view label);
+
+protected:
+    geometry::Vec2f computePreferredSize() const override;
+    void updateChildrenGeometry() override;
+
+    WidgetPtr tabs_;
+    WidgetPtr close_;
 };
 
 } // namespace vgc::ui

@@ -116,6 +116,10 @@ VGC_UI_API extern const core::StringId content;
 VGC_UI_API extern const core::StringId title;
 VGC_UI_API extern const core::StringId dont_ask_again;
 
+// Panel
+VGC_UI_API extern const core::StringId tabs;
+VGC_UI_API extern const core::StringId close;
+
 } // namespace vgc::ui::strings
 
 #endif // VGC_UI_STRINGS_H

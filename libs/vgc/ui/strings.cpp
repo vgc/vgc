@@ -124,4 +124,8 @@ const core::StringId content("content");
 const core::StringId title("title");
 const core::StringId dont_ask_again("dont-ask-again");
 
+// Panel
+const core::StringId tabs("tabs");
+const core::StringId close("close");
+
 } // namespace vgc::ui::strings

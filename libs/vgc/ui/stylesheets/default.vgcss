@@ -41,6 +41,12 @@
     preferred-height: 20dp;
 }
 
+.PanelArea > .Flex > .TabBar .close {
+    preferred-width: 10dp;
+    preferred-height: 10dp;
+    margin-right: 8dp;
+}
+
 .Menu {
     padding-top: 5dp;
     padding-right: 0dp;

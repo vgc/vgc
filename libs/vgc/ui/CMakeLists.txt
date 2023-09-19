@@ -142,6 +142,7 @@ vgc_add_library(ui
 
     RESOURCE_FILES
         icons/checkmark.svg
+        icons/close.svg
         stylesheets/default.vgcss
 )
 

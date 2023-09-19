@@ -110,8 +110,8 @@ Panel* PanelArea::createPanel(std::string_view panelTitle) {
         return nullptr;
     }
     updateTabs_();
-    tabBar()->setText(panelTitle); // TODO: actually use tabs instead of a single Label
-    TabBody* parent = tabBody();   // guaranteed non-null by updateTabs_()
+    tabBar()->addTab(panelTitle);
+    TabBody* parent = tabBody(); // guaranteed non-null by updateTabs_()
     return parent->createChild<Panel>(panelTitle);
 }
 
