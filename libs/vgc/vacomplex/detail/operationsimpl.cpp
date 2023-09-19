@@ -217,16 +217,12 @@ void Operations::addCycleToFace(KeyFace* kf, KeyCycle cycle) {
     // -> None
 }
 
-void Operations::hardDelete(
-    core::ConstSpan<Node*> nodes,
-    bool deleteIsolatedVertices) {
+void Operations::hardDelete(core::ConstSpan<Node*> nodes, bool deleteIsolatedVertices) {
 
     deleteWithDependents_(nodes, deleteIsolatedVertices, false);
 }
 
-void Operations::hardDelete(
-    Node* node,
-    bool deleteIsolatedVertices) {
+void Operations::hardDelete(Node* node, bool deleteIsolatedVertices) {
 
     deleteWithDependents_(std::array{node}, deleteIsolatedVertices, false);
 }
@@ -2342,7 +2338,7 @@ void Operations::deleteWithDependents_(
             KeyVertex* sv = kc.steinerVertex();
             if (sv) {
                 if (!sv->isBeingDeleted_) {
-                    repairedCycles.append({ kc, i });
+                    repairedCycles.append({kc, i});
                 }
                 continue;
             }
@@ -2351,7 +2347,7 @@ void Operations::deleteWithDependents_(
                 [](const KeyHalfedge& he) { return he.edge()->isBeingDeleted_; });
             bool isUnchanged = numRemoved == 0;
             if (isUnchanged || tmpCycle.isValid()) {
-                repairedCycles.append({ tmpCycle, i, isUnchanged });
+                repairedCycles.append({tmpCycle, i, isUnchanged});
             }
         }
 
@@ -2449,7 +2445,7 @@ void Operations::deleteWithDependents_(
             }
         }
         return isStarEmpty;
-        };
+    };
 
     // Update star of cells in the boundary of deleted cells.
     //

@@ -171,7 +171,8 @@ double KeyCycle::interiorContainedRatio(
             ++count;
         }
     }
-    return core::narrow_cast<double>(count) / core::narrow_cast<double>(positions.length());
+    return core::narrow_cast<double>(count)
+           / core::narrow_cast<double>(positions.length());
 }
 
 double KeyCycle::interiorContainedRatio(

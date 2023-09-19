@@ -119,13 +119,9 @@ public:
     //
     void addCycleToFace(KeyFace* kf, KeyCycle cycle);
 
-    void hardDelete(
-        core::ConstSpan<Node*> nodes,
-        bool deleteIsolatedVertices = false);
+    void hardDelete(core::ConstSpan<Node*> nodes, bool deleteIsolatedVertices = false);
 
-    void hardDelete(
-        Node* node,
-        bool deleteIsolatedVertices = false);
+    void hardDelete(Node* node, bool deleteIsolatedVertices = false);
 
     void softDelete(core::ConstSpan<Node*> nodes, bool deleteIsolatedVertices = false);
 
