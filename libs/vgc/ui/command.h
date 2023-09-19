@@ -369,9 +369,9 @@ struct CommandRegistrer {
 ///
 /// ```cpp
 /// VGC_UI_DEFINE_MOUSE_CLICK_COMMAND(
-///     cutEdge,
-///     "tools.topology.cutEdgeAtNewVertex",
-///     "Cut Edge at New Vertex",
+///     cutWithVertex,
+///     "tools.topology.cutWithVertex",
+///     "Cut with New Vertex",
 ///     MouseButton::Left)
 /// ```
 ///

@@ -80,171 +80,12 @@ struct KeyHalfedgeCandidateCompare {
     }
 };
 
-/// Returns the contribution to the winding number at the given `point` of
-/// the given `keyHalfedge`.
-///
-/// The sum of the results of this function for all halfedges of a cycle is
-/// the winding number.
-///
-Int computeWindingContribution(
-    const KeyHalfedge& keyHalfedge,
-    const geometry::Vec2d& point) {
-
-    const KeyEdge* ke = keyHalfedge.edge();
-
-    const geometry::StrokeSampling2d& sampling = ke->strokeSampling();
-    const geometry::StrokeSample2dArray& samples = sampling.samples();
-    const geometry::Rect2d& bbox = sampling.centerlineBoundingBox();
-
-    // The winding number of a closed curve C (cycle) at point P = (Px, Py)
-    // is the total number of times C travels positively around P.
-    //
-    // If Y points down and X points right, positive means clockwise.
-    //
-    // Example: the winding number of the trigonometric circle defined as
-    // C(t) = (cos(t), sin(t)), for t from 0 to 1, is 1 for any point inside,
-    // and 0 for points outside.
-    //
-    // It can be computed by looking for all intersections of C with a
-    // half line L starting at P. When C crosses L positively as seen from P
-    // we count +1, when it crosses L the other way we count -1.
-    //
-    // We use an axis-aligned half-line that simplifies the computation of
-    // intersections.
-    //
-    // In particular, for a vertical half-line L defined as
-    // {(x, y): x = Px, y >= Py}:
-    //
-    // - If the bounding box of a halfedge H is strictly on one side of P in X,
-    // or below P (box.maxY() <= Py), then it cannot cross the half-line and
-    // does not participate in the winding number (apart from being part of the
-    // cycle) whatever the shape of the halfedge H inside that box.
-    //
-    // - If the bounding box of a halfedge H is above P (box.minY() >= Py),
-    // then we know that the winding number would remain the same whatever the
-    // shape of the interior of the curve inside that box. We can thus use
-    // the straight line between its endpoints to compute the crossing with L.
-    // In fact, only the X component of its endpoints is relevant.
-    //
-    // - Otherwise, we have to intersect the halfedge curve with the half-line
-    // the usual way.
-    //
-    // To not miss a crossing nor count one twice, care must be taken about
-    // samples exactly on H. To deal with this problem we consider Hx to be
-    // between Px's floating point value and the next (core::nextafter(Px)).
-    //
-    // As future optimization, curves could implement an acceleration structure
-    // for intersections in the form of a tree of sub-spans and bounding boxes
-    // that we could benefit from. Such sub-spans would follow the same rules
-    // as halfedges (listed above).
-
-    double px = point.x();
-    double py = point.y();
-
-    if (bbox.xMax() + core::epsilon < px) {
-        return 0;
-    }
-
-    if (bbox.xMin() - core::epsilon > px) {
-        return 0;
-    }
-
-    if (bbox.yMax() < py) {
-        return 0;
-    }
-
-    // from here, bbox overlaps the half-line
-
-    Int contribution = 0;
-
-    if (bbox.yMin() > py) {
-        // bbox overlaps the half-line but does not contain P.
-        // => only X component of end points matters.
-
-        // Note: We assume first and last sample positions to exactly match the
-        // positions of start and end vertices.
-        geometry::Vec2d p1 = samples.first().position();
-        geometry::Vec2d p2 = samples.last().position();
-        double x1 = p1.x();
-        double x2 = p2.x();
-
-        // winding contribution:
-        // x1 <= px && x2 > px: -1
-        // x2 <= px && x1 > px: +1
-        // otherwise: 0
-        bool x1Side = x1 <= px;
-        bool x2Side = x2 <= px;
-        if (x1Side == x2Side) {
-            return 0;
-        }
-        else {
-            //       P┌────────→ x
-            //  true  │  false
-            //  Side  H  Side
-            //        │
-            //        │    winding
-            //        │    contribution:
-            //      ──│─→    -1
-            //      ←─│──    +1
-            //        │
-            //        y
-            //
-            contribution = 1 - 2 * x1Side;
-        }
-    }
-    else {
-        // bbox contains P.
-        // => compute intersections with curve.
-
-        // Note: We assume first and last sample positions to exactly match the
-        // positions of start and end vertices.
-        auto it = samples.begin();
-        geometry::Vec2d p1 = it->position();
-        geometry::Vec2d p2 = {};
-        bool x1Side = (p1.x() <= px);
-        bool x2Side = {};
-        for (++it; it != samples.end(); ++it) {
-            p2 = it->position();
-            x2Side = (p2.x() <= px);
-            if (x1Side != x2Side) {
-                bool y1Side = p1.y() < py;
-                bool y2Side = p2.y() < py;
-                if (y1Side == y2Side) {
-                    if (!y1Side) {
-                        contribution += (1 - 2 * x1Side);
-                    }
-                }
-                else {
-                    geometry::Vec2d p1p2 = p2 - p1;
-                    geometry::Vec2d pp1 = p1 - point;
-                    double t = pp1.det(p1p2);
-                    bool xDir = std::signbit(p1p2.x());
-                    bool tSign = std::signbit(t);
-                    // If p lies exactly on p1p2, the result does not matter,
-                    // thus we do not test for (t == 0).
-                    if (tSign != xDir) {
-                        contribution += (1 - 2 * x1Side);
-                    }
-                }
-            }
-            p1 = p2;
-            x1Side = x2Side;
-        }
-    }
-
-    return keyHalfedge.direction() ? contribution : -contribution;
-}
-
 Int computeWindingNumber(
     const core::Array<KeyHalfedge>& cycle,
-    const geometry::Vec2d& point) {
+    const geometry::Vec2d& position) {
 
-    Int result = 0;
-    for (const KeyHalfedge& keyHalfedge : cycle) {
-        Int contribution = computeWindingContribution(keyHalfedge, point);
-        result += contribution;
-    }
-    return result;
+    KeyCycle kc(cycle);
+    return kc.computeWindingNumberAt(position);
 }
 
 void samplePointsOnCycleUniformly(
@@ -252,61 +93,8 @@ void samplePointsOnCycleUniformly(
     Int numSamples,
     core::Array<geometry::Vec2d>& outPoints) {
 
-    double totalS = 0;
-    for (const KeyHalfedge& khe : cycle) {
-        totalS += khe.edge()->strokeSampling().samples().last().s();
-    }
-    double stepS = totalS / numSamples;
-    double nextStepS = stepS / 2;
-    for (const KeyHalfedge& khe : cycle) {
-        const geometry::StrokeSample2dArray& samples =
-            khe.edge()->strokeSampling().samples();
-        double heS = samples.last().s();
-        if (heS == 0) {
-            // XXX TODO: handle cases where heS == 0 more appropriately.
-            // For example, ensure that this function still returns at least one sample.
-            continue;
-        }
-        if (khe.direction()) {
-            auto it = samples.begin();
-            geometry::Vec2d previousP = it->position();
-            double previousS = 0;
-            ++it;
-            for (auto end = samples.end(); it != end; ++it) {
-                geometry::Vec2d p = it->position();
-                double nextS = it->s();
-                while (nextS >= nextStepS) {
-                    double t = (nextStepS - previousS) / (nextS - previousS);
-                    previousP = core::fastLerp(previousP, p, t);
-                    previousS = nextStepS;
-                    nextStepS += stepS;
-                    outPoints.emplaceLast(previousP);
-                }
-                previousP = p;
-                previousS = nextS;
-            }
-        }
-        else {
-            auto rit = samples.rbegin();
-            geometry::Vec2d previousP = rit->position();
-            double previousS = heS - rit->s();
-            ++rit;
-            for (auto rend = samples.rend(); rit != rend; ++rit) {
-                geometry::Vec2d p = rit->position();
-                double nextS = heS - rit->s();
-                while (nextS >= nextStepS) {
-                    double t = (nextStepS - previousS) / (nextS - previousS);
-                    previousP = core::fastLerp(previousP, p, t);
-                    previousS = nextStepS;
-                    nextStepS += stepS;
-                    outPoints.emplaceLast(previousP);
-                }
-                previousP = p;
-                previousS = nextS;
-            }
-        }
-        nextStepS -= heS;
-    }
+    KeyCycle kc(cycle);
+    outPoints = kc.sampleUniformly(numSamples);
 }
 
 } // namespace
@@ -712,6 +500,87 @@ bool computeKeyFaceFillTriangles(
 }
 
 } // namespace detail
+
+namespace {
+
+enum class ThrowPolicy {
+    Throw,
+    NoThrow
+};
+
+template<ThrowPolicy policy, typename... Args>
+std::nullptr_t indexError_(
+    [[maybe_unused]] const KeyFaceVertexUsageIndex& usageIndex,
+    [[maybe_unused]] fmt::format_string<Args...> fmt,
+    [[maybe_unused]] Args&&... args) {
+
+    if constexpr (policy == ThrowPolicy::NoThrow) {
+        return nullptr;
+    }
+    else {
+        throw core::IndexError(
+            core::format(
+                "KeyFace vertex-usage index (cycleIndex={}, componentIndex={}) ",
+                usageIndex.cycleIndex(),
+                usageIndex.componentIndex())
+            + core::format(fmt, std::forward<Args>(args)...));
+    }
+}
+
+template<ThrowPolicy throwPolicy>
+KeyVertex*
+vertexFromUsageIndex_(const KeyFace* kf, const KeyFaceVertexUsageIndex& usageIndex) {
+
+    Int i = usageIndex.cycleIndex();
+    Int j = usageIndex.componentIndex();
+
+    const auto& cycles = kf->cycles();
+    if (i < 0 || i >= cycles.length()) {
+        return indexError_<throwPolicy>(
+            usageIndex, "is out of cycle indices range [0, {}).", cycles.length());
+    }
+
+    const KeyCycle& cycle = cycles.getUnchecked(i);
+    if (cycle.steinerVertex()) {
+        if (j != 0) {
+            return indexError_<throwPolicy>(
+                usageIndex,
+                "is invalid (cycleIndex refers to a Steiner cycle and "
+                "componentIndex must be 0).");
+        }
+
+        return cycle.steinerVertex();
+    }
+    else {
+        const auto& halfedges = cycle.halfedges();
+        if (j < 0 || j >= halfedges.length()) {
+            return indexError_<throwPolicy>(
+                usageIndex,
+                "is out of component indices range [0, {}).",
+                halfedges.length());
+        }
+
+        const KeyHalfedge& khe = halfedges.getUnchecked(j);
+        if (!khe.startVertex()) {
+            return indexError_<throwPolicy>(
+                usageIndex,
+                "is invalid (cycleIndex refers to a cycle that has no "
+                "vertices).");
+        }
+
+        return khe.startVertex();
+    }
+}
+
+} // namespace
+
+KeyVertex* KeyFace::vertex(const KeyFaceVertexUsageIndex& usageIndex) const {
+    return vertexFromUsageIndex_<ThrowPolicy::Throw>(this, usageIndex);
+}
+
+KeyVertex* KeyFace::vertexIfValid(const KeyFaceVertexUsageIndex& usageIndex) const {
+    return vertexFromUsageIndex_<ThrowPolicy::NoThrow>(this, usageIndex);
+}
 
 geometry::Rect2d KeyFace::boundingBox() const {
     // TODO: cache ? it would require dirtying on boundary/cycle updates.

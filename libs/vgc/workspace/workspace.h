@@ -336,6 +336,12 @@ public:
     ///
     core::Array<core::Id> unglue(core::ConstSpan<core::Id> elementIds);
 
+    /// Performs cut-glue face operation on the given elements (1 face, 1 edge).
+    ///
+    /// This is both a geometrical and topological operation.
+    ///
+    bool cutGlueFace(core::ConstSpan<core::Id> elementIds);
+
     /// Performs uncut operations on the given elements.
     ///
     /// This is both a geometrical and topological operation.

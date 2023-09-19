@@ -38,10 +38,16 @@ VGC_UI_DEFINE_TRIGGER_COMMAND( //
     Shortcut(alt, Key::U));
 
 VGC_UI_DEFINE_MOUSE_CLICK_COMMAND( //
-    vertexCutEdge,
-    "tools.topology.vertexCutEdge",
-    "Vertex-Cut Edge",
+    cutWithVertex,
+    "tools.topology.cutWithVertex",
+    "Cut with Vertex",
     Shortcut(ctrl, MouseButton::Right));
+
+VGC_UI_DEFINE_TRIGGER_COMMAND( //
+    cutGlueFace,
+    "tools.topology.cutGlueFace",
+    "Cut-Glue Face",
+    Shortcut(alt, Key::K));
 
 VGC_UI_DEFINE_TRIGGER_COMMAND( //
     simplify,

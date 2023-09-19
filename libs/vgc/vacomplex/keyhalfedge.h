@@ -50,6 +50,10 @@ public:
         direction_ = direction;
     }
 
+    void setOppositeDirection() {
+        direction_ = !direction_;
+    }
+
     KeyVertex* startVertex() const {
         return direction_ ? edge_->startVertex() : edge_->endVertex();
     }
@@ -78,6 +82,14 @@ public:
     KeyHalfedge opposite() const {
         return KeyHalfedge(edge_, !direction_);
     }
+
+    /// Returns the contribution of this halfedge to the winding number at
+    /// the given `position` in edge space.
+    ///
+    /// The sum of the results of this function for all halfedges of a cycle is
+    /// the winding number of the cycle at `position`.
+    ///
+    Int computeWindingContributionAt(const geometry::Vec2d& position) const;
 
     friend bool operator==(const KeyHalfedge& h1, const KeyHalfedge& h2) {
         return h1.edge_ == h2.edge_ && h1.direction_ == h2.direction_;
