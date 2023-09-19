@@ -93,14 +93,14 @@ public:
     KeyEdge* createKeyOpenEdge(
         KeyVertex* startVertex,
         KeyVertex* endVertex,
-        KeyEdgeData&& geometry,
+        KeyEdgeData&& data,
         Group* parentGroup,
         Node* nextSibling = nullptr);
 
     // Assumes `nextSibling` is either `nullptr` or a child of `parentGroup`.
     //
     KeyEdge* createKeyClosedEdge(
-        KeyEdgeData&& geometry,
+        KeyEdgeData&& data,
         Group* parentGroup,
         Node* nextSibling = nullptr,
         core::AnimTime t = {});
@@ -113,6 +113,11 @@ public:
         Group* parentGroup,
         Node* nextSibling = nullptr,
         core::AnimTime t = {});
+
+    // Assumes `kf` is not null.
+    // Assumes `cycle` is valid and matches kf's complex and time.
+    //
+    void addCycleToFace(KeyFace* kf, KeyCycle cycle);
 
     void hardDelete(Node* node, bool deleteIsolatedVertices = false);
 
@@ -147,8 +152,42 @@ public:
         KeyVertex* kv,
         core::Array<std::pair<core::Id, core::Array<KeyEdge*>>>& ungluedKeyEdges);
 
-    VertexCutEdgeResult
-    vertexCutEdge(KeyEdge* ke, const geometry::CurveParameter& parameter);
+    CutEdgeResult cutEdge(KeyEdge* ke, const geometry::CurveParameter& parameter);
+
+    CutFaceResult cutGlueFace(
+        KeyFace* kf,
+        const KeyEdge* ke,
+        OneCycleCutPolicy oneCycleCutPolicy = OneCycleCutPolicy::Auto,
+        TwoCycleCutPolicy twoCycleCutPolicy = TwoCycleCutPolicy::Auto);
+
+    CutFaceResult cutGlueFace(
+        KeyFace* kf,
+        const KeyHalfedge& khe,
+        KeyFaceVertexUsageIndex startIndex,
+        KeyFaceVertexUsageIndex endIndex,
+        OneCycleCutPolicy oneCycleCutPolicy = OneCycleCutPolicy::Auto,
+        TwoCycleCutPolicy twoCycleCutPolicy = TwoCycleCutPolicy::Auto);
+
+    CutFaceResult cutFaceWithClosedEdge(
+        KeyFace* kf,
+        KeyEdgeData&& geometry,
+        OneCycleCutPolicy oneCycleCutPolicy = OneCycleCutPolicy::Auto);
+
+    CutFaceResult cutFaceWithOpenEdge(
+        KeyFace* kf,
+        KeyEdgeData&& geometry,
+        KeyFaceVertexUsageIndex startIndex,
+        KeyFaceVertexUsageIndex endIndex,
+        OneCycleCutPolicy oneCycleCutPolicy = OneCycleCutPolicy::Auto,
+        TwoCycleCutPolicy twoCycleCutPolicy = TwoCycleCutPolicy::Auto);
+
+    CutFaceResult cutFaceWithOpenEdge(
+        KeyFace* kf,
+        KeyEdgeData&& geometry,
+        KeyVertex* startVertex,
+        KeyVertex* endVertex,
+        OneCycleCutPolicy oneCycleCutPolicy = OneCycleCutPolicy::Auto,
+        TwoCycleCutPolicy twoCycleCutPolicy = TwoCycleCutPolicy::Auto);
 
     void cutGlueFaceWithVertex(KeyFace* kf, KeyVertex* kv);
 
@@ -255,8 +294,8 @@ private:
         core::ConstSpan<KeyHalfedge> khes,
         core::ConstSpan<double> uOffsets);
 
-    static KeyPath subPath(const KeyCycle& cycle, Int first, Int last);
-    static KeyPath concatPath(const KeyPath& p1, const KeyPath& p2);
+    static KeyPath
+    subPath_(const KeyCycle& cycle, Int first, Int last, bool loopIfEmptyRange = false);
 
     struct UncutAtKeyVertexInfo_ {
         KeyFace* kf = nullptr;

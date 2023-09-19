@@ -44,25 +44,25 @@ ui::BoolSetting* showTransformBox() {
 
 } // namespace options
 
-VGC_DECLARE_OBJECT(VertexCutEdgeAction);
+VGC_DECLARE_OBJECT(CutWithVertexAction);
 
-class VertexCutEdgeAction : public ui::Action {
+class CutWithVertexAction : public ui::Action {
 private:
-    VGC_OBJECT(VertexCutEdgeAction, ui::Action)
+    VGC_OBJECT(CutWithVertexAction, ui::Action)
 
 protected:
     /// This is an implementation details.
-    /// Please use `VertexCutEdgeAction::create()` instead.
+    /// Please use `CutWithVertexAction::create()` instead.
     ///
-    VertexCutEdgeAction(CreateKey key)
-        : ui::Action(key, commands::vertexCutEdge()) {
+    CutWithVertexAction(CreateKey key)
+        : ui::Action(key, commands::cutWithVertex()) {
     }
 
 public:
-    /// Creates a `VertexCutEdgeAction`.
+    /// Creates a `CutWithVertexAction`.
     ///
-    static VertexCutEdgeActionPtr create() {
-        return core::createObject<VertexCutEdgeAction>();
+    static CutWithVertexActionPtr create() {
+        return core::createObject<CutWithVertexAction>();
     }
 
 public:
@@ -105,7 +105,7 @@ public:
                     geometry::CurveParameter param =
                         stroke->resolveSampledLocation(closestLoc);
                     // do the cut
-                    auto result = vacomplex::ops::vertexCutEdge(ke, param);
+                    auto result = vacomplex::ops::cutEdge(ke, param);
                     // select resulting vertex
                     workspace::Element* vertexItem =
                         workspace->findVacElement(result.vertex());
@@ -169,8 +169,11 @@ Select::Select(CreateKey key)
     ui::Action* unglueAction = createTriggerAction(commands::unglue());
     unglueAction->triggered().connect(onUnglueSlot_());
 
-    VertexCutEdgeAction* vertexCutEdgeAction = createAction<VertexCutEdgeAction>();
-    vertexCutEdgeAction->tool_ = this;
+    CutWithVertexAction* cutWithVertexAction = createAction<CutWithVertexAction>();
+    cutWithVertexAction->tool_ = this;
+
+    ui::Action* cutGlueFaceAction = createTriggerAction(commands::cutGlueFace());
+    cutGlueFaceAction->triggered().connect(onCutGlueFaceSlot_());
 
     ui::Action* simplifyAction = createTriggerAction(commands::simplify());
     simplifyAction->triggered().connect(onSimplifySlot_());
@@ -1112,6 +1115,40 @@ void Select::onUnglue_() {
 
     core::Array<core::Id> ungluedIds = workspace->unglue(selection);
     canvas->setSelection(std::move(ungluedIds));
+
+    // Close history group
+    if (undoGroup) {
+        undoGroup->close();
+    }
+}
+
+void Select::onCutGlueFace_() {
+    canvas::Canvas* canvas = this->canvas();
+    if (!canvas) {
+        return;
+    }
+
+    workspace::Workspace* workspace = canvas->workspace();
+    if (!workspace) {
+        return;
+    }
+
+    core::Array<core::Id> selection = canvas->selection();
+    if (selection.isEmpty()) {
+        return;
+    }
+
+    // Open history group
+    core::UndoGroup* undoGroup = nullptr;
+    core::History* history = workspace->history();
+    if (history) {
+        undoGroup = history->createUndoGroup(commands::cutGlueFace());
+    }
+
+    bool success = workspace->cutGlueFace(selection);
+    if (success) {
+        canvas->clearSelection();
+    }
 
     // Close history group
     if (undoGroup) {

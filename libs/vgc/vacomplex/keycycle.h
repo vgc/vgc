@@ -20,6 +20,7 @@
 #include <initializer_list>
 
 #include <vgc/core/span.h>
+#include <vgc/geometry/windingrule.h>
 #include <vgc/vacomplex/api.h>
 #include <vgc/vacomplex/keyhalfedge.h>
 
@@ -33,7 +34,7 @@ public:
 
     explicit KeyPath(core::Span<const KeyHalfedge> halfedges) noexcept;
 
-    explicit KeyPath(std::initializer_list<KeyHalfedge> halfedges) noexcept
+    explicit KeyPath(std::initializer_list<KeyHalfedge> halfedges)
         : halfedges_(halfedges) {
     }
 
@@ -53,9 +54,29 @@ public:
         return halfedges_;
     }
 
-    void debugPrint(core::StringWriter& out) const;
-
     void reverse();
+
+    void append(const KeyHalfedge& khe) {
+        halfedges_.append(khe);
+        singleVertex_ = nullptr;
+    }
+
+    void extend(const KeyPath& other) {
+        halfedges_.extend(other.halfedges_);
+        if (halfedges_.length()) {
+            singleVertex_ = nullptr;
+        }
+    }
+
+    void extendReversed(const KeyPath& other) {
+        halfedges_.reserve(halfedges_.length() + other.halfedges_.length());
+        for (auto it = other.halfedges_.rbegin(); it != other.halfedges_.rend(); ++it) {
+            halfedges_.append(it->opposite());
+        }
+        if (halfedges_.length()) {
+            singleVertex_ = nullptr;
+        }
+    }
 
 private:
     friend detail::Operations;
@@ -76,7 +97,7 @@ private:
 public:
     explicit KeyCycle(core::Span<const KeyHalfedge> halfedges) noexcept;
 
-    explicit KeyCycle(std::initializer_list<KeyHalfedge> halfedges) noexcept
+    explicit KeyCycle(std::initializer_list<KeyHalfedge> halfedges)
         : halfedges_(halfedges) {
     }
 
@@ -95,6 +116,26 @@ public:
     const core::Array<KeyHalfedge>& halfedges() const {
         return halfedges_;
     }
+
+    void reverse();
+
+    KeyCycle reversed() const;
+
+    core::Array<geometry::Vec2d> sampleUniformly(Int numSamples) const;
+
+    Int computeWindingNumberAt(const geometry::Vec2d& point) const;
+
+    bool interiorContains(
+        const geometry::Vec2d& position,
+        geometry::WindingRule windingRule) const {
+        Int windingNumber = computeWindingNumberAt(position);
+        return geometry::isWindingNumberSatisfyingRule(windingNumber, windingRule);
+    }
+
+    double interiorContainedRatio(
+        const KeyCycle& other,
+        geometry::WindingRule windingRule,
+        Int numSamples);
 
     bool isValid() const {
         if (steinerVertex_) {

@@ -783,6 +783,10 @@ public:
         return container_;
     }
 
+    bool contains(Cell* cell) const {
+        return container_.contains(cell);
+    }
+
 private:
     const Container& container_;
 };

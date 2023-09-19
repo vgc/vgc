@@ -104,6 +104,11 @@ public:
     ///
     double endAngle() const;
 
+    /// Returns the contribution of this edge to the winding number at
+    /// the given `position` in edge space.
+    ///
+    Int computeWindingContributionAt(const geometry::Vec2d& point) const;
+
     geometry::Rect2d boundingBox() const override;
 
     geometry::Rect2d boundingBoxAt(core::AnimTime t) const override {

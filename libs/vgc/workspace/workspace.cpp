@@ -397,12 +397,8 @@ core::Id Workspace::glue(core::ConstSpan<core::Id> elementIds) {
     core::Id resultId = -1;
 
     // Open history group
-    static core::StringId commandId = core::StringId("workspace.glue");
-    core::UndoGroup* undoGroup = nullptr;
-    core::History* history = this->history();
-    if (history) {
-        undoGroup = history->createUndoGroup(commandId);
-    }
+    static core::StringId opName("workspace.glue");
+    detail::ScopedUndoGroup undoGroup = createScopedUndoGroup(opName);
 
     core::Array<vacomplex::KeyVertex*> kvs;
     core::Array<vacomplex::KeyEdge*> openKes;
@@ -474,11 +470,6 @@ core::Id Workspace::glue(core::ConstSpan<core::Id> elementIds) {
         }
     }
 
-    // Close history group
-    if (undoGroup) {
-        undoGroup->close();
-    }
-
     return resultId;
 }
 
@@ -517,12 +508,8 @@ core::Array<core::Id> Workspace::unglue(core::ConstSpan<core::Id> elementIds) {
     }
 
     // Open history group
-    static core::StringId commandId = core::StringId("workspace.unglue");
-    core::UndoGroup* undoGroup = nullptr;
-    core::History* history = this->history();
-    if (history) {
-        undoGroup = history->createUndoGroup(commandId);
-    }
+    static core::StringId opName("workspace.unglue");
+    detail::ScopedUndoGroup undoGroup = createScopedUndoGroup(opName);
 
     for (vacomplex::KeyEdge* targetKe : kes) {
 
@@ -554,12 +541,69 @@ core::Array<core::Id> Workspace::unglue(core::ConstSpan<core::Id> elementIds) {
 
     sync();
 
-    // Close history group
-    if (undoGroup) {
-        undoGroup->close();
+    return result;
+}
+
+bool Workspace::cutGlueFace(core::ConstSpan<core::Id> elementIds) {
+
+    vacomplex::KeyFace* targetKf = nullptr;
+    vacomplex::KeyEdge* targetKe = nullptr;
+
+    for (core::Id id : elementIds) {
+        workspace::Element* element = find(id);
+        if (!element) {
+            continue;
+        }
+        vacomplex::Node* node = element->vacNode();
+        if (!node || !node->isCell()) {
+            continue;
+        }
+        vacomplex::Cell* cell = node->toCellUnchecked();
+        switch (cell->cellType()) {
+        case vacomplex::CellType::KeyFace: {
+            vacomplex::KeyFace* kf = cell->toKeyFaceUnchecked();
+            if (targetKf) {
+                return false;
+            }
+            targetKf = kf;
+            break;
+        }
+        case vacomplex::CellType::KeyEdge: {
+            vacomplex::KeyEdge* ke = cell->toKeyEdgeUnchecked();
+            if (targetKe) {
+                return false;
+            }
+            targetKe = ke;
+            break;
+        }
+        default:
+            return false;
+        }
     }
 
-    return result;
+    if (!targetKf || !targetKe) {
+        return false;
+    }
+
+    if (!targetKe->isClosed()) {
+        if (!targetKf->boundary().contains(targetKe->startVertex())) {
+            return false;
+        }
+        if (!targetKf->boundary().contains(targetKe->endVertex())) {
+            return false;
+        }
+    }
+
+    // Open history group
+    static core::StringId opName("workspace.cutGlueFace");
+    detail::ScopedUndoGroup undoGroup = createScopedUndoGroup(opName);
+
+    auto result = vacomplex::ops::cutGlueFace(targetKf, targetKe);
+    bool success = result.edge() != nullptr;
+
+    sync();
+
+    return success;
 }
 
 core::Array<core::Id>
@@ -597,12 +641,8 @@ Workspace::simplify(core::ConstSpan<core::Id> elementIds, bool smoothJoins) {
     }
 
     // Open history group
-    static core::StringId commandId = core::StringId("workspace.simplify");
-    core::UndoGroup* undoGroup = nullptr;
-    core::History* history = this->history();
-    if (history) {
-        undoGroup = history->createUndoGroup(commandId);
-    }
+    static core::StringId opName("workspace.simplify");
+    detail::ScopedUndoGroup undoGroup = createScopedUndoGroup(opName);
 
     auto appendToResult = [&](vacomplex::Node* node) {
         Element* e = this->findVacElement(node);
@@ -636,11 +676,6 @@ Workspace::simplify(core::ConstSpan<core::Id> elementIds, bool smoothJoins) {
     // TODO: filter out resulting ids that are no longer alive (lost in concatenation)
 
     sync();
-
-    // Close history group
-    if (undoGroup) {
-        undoGroup->close();
-    }
 
     return result;
 }

@@ -206,6 +206,17 @@ KeyFace* Operations::createKeyFace(
     return kf;
 }
 
+// Assumes `kf` is not null.
+// Assumes `cycle` is valid and matches kf's complex and time.
+//
+void Operations::addCycleToFace(KeyFace* kf, KeyCycle cycle) {
+    // Topological attributes
+    kf->cycles_.append(std::move(cycle));
+    addToBoundary_(kf, kf->cycles_.last());
+    // Geometric attributes
+    // -> None
+}
+
 void Operations::hardDelete(Node* node, bool deleteIsolatedVertices) {
 
     // First collect all dependents
@@ -1326,8 +1337,8 @@ core::Array<KeyVertex*> Operations::unglueKeyVertices(
     return result;
 }
 
-VertexCutEdgeResult
-Operations::vertexCutEdge(KeyEdge* ke, const geometry::CurveParameter& parameter) {
+CutEdgeResult
+Operations::cutEdge(KeyEdge* ke, const geometry::CurveParameter& parameter) {
 
     const geometry::AbstractStroke2d* oldStroke = ke->data().stroke();
 
@@ -1358,7 +1369,7 @@ Operations::vertexCutEdge(KeyEdge* ke, const geometry::CurveParameter& parameter
         // Delete old edge
         hardDelete(ke);
 
-        return VertexCutEdgeResult(newKe, newKv, newKe);
+        return CutEdgeResult(newKe, newKv, newKe);
     }
     else {
         KeyEdgeData newKeData1 = KeyEdgeData::fromSlice(
@@ -1417,7 +1428,7 @@ Operations::vertexCutEdge(KeyEdge* ke, const geometry::CurveParameter& parameter
         // Delete old edge
         hardDelete(ke);
 
-        return VertexCutEdgeResult(newKe1, newKv, newKe2);
+        return CutEdgeResult(newKe1, newKv, newKe2);
     }
 }
 
@@ -1431,6 +1442,357 @@ KeyVertex* Operations::cutFaceWithVertex(KeyFace* kf, const geometry::Vec2d& pos
         createKeyVertex(position, kf->parentGroup(), kf->nextSibling(), kf->time());
     cutGlueFaceWithVertex(kf, newKv);
     return newKv;
+}
+
+CutFaceResult Operations::cutGlueFace(
+    KeyFace* kf,
+    const KeyEdge* ke,
+    OneCycleCutPolicy oneCycleCutPolicy,
+    TwoCycleCutPolicy twoCycleCutPolicy) {
+
+    if (!ke->isClosed()) {
+        KeyVertex* startVertex = ke->startVertex();
+        KeyVertex* endVertex = ke->endVertex();
+
+        core::Array<KeyFaceVertexUsageIndex> startIndexCandidates;
+        core::Array<KeyFaceVertexUsageIndex> endIndexCandidates;
+
+        Int i = 0;
+        for (const auto& cycle : kf->cycles()) {
+            KeyVertex* sv = cycle.steinerVertex();
+            if (sv) {
+                if (sv == startVertex) {
+                    startIndexCandidates.emplaceLast(i, 0);
+                }
+                if (sv == endVertex) {
+                    endIndexCandidates.emplaceLast(i, 0);
+                }
+            }
+            else {
+                Int j = 0;
+                for (const auto& h : cycle.halfedges()) {
+                    KeyVertex* kv = h.startVertex();
+                    if (kv == startVertex) {
+                        startIndexCandidates.emplaceLast(i, j);
+                    }
+                    if (kv == endVertex) {
+                        endIndexCandidates.emplaceLast(i, j);
+                    }
+                    ++j;
+                }
+            }
+            ++i;
+        }
+
+        // TODO: find best usages
+        // XXX: based on policies ?
+        KeyFaceVertexUsageIndex startIndex = startIndexCandidates.first();
+        KeyFaceVertexUsageIndex endIndex = endIndexCandidates.first();
+
+        KeyHalfedge khe(const_cast<KeyEdge*>(ke), true);
+
+        if (startVertex == endVertex) {
+            // TODO: choose halfedge direction based on twoCycleCutPolicy.
+        }
+
+        return cutGlueFace(
+            kf, khe, startIndex, endIndex, oneCycleCutPolicy, twoCycleCutPolicy);
+    }
+    else {
+        KeyHalfedge khe(const_cast<KeyEdge*>(ke), true);
+
+        // Do cut-glue with closed edge.
+
+        if (oneCycleCutPolicy == OneCycleCutPolicy::Auto) {
+            // TODO: find best policy.
+            oneCycleCutPolicy = OneCycleCutPolicy::Disk;
+        }
+
+        switch (oneCycleCutPolicy) {
+        case OneCycleCutPolicy::Auto:
+        case OneCycleCutPolicy::Disk: {
+            // Let's assume our edge is in the interior of the face.
+            core::Array<KeyCycle> cycles1;
+            core::Array<KeyCycle> cycles2;
+
+            KeyCycle newCycle({khe});
+
+            // TODO: use KeyFace winding rule.
+            geometry::WindingRule windingRule = geometry::WindingRule::Odd;
+            constexpr Int numSamplesPerContenanceTest = 20;
+            constexpr double ratioThreshold = 0.5;
+
+            cycles1.append(newCycle);
+            cycles2.append(newCycle.reversed());
+
+            for (const auto& cycle : kf->cycles()) {
+                if (newCycle.interiorContainedRatio(
+                        cycle, windingRule, numSamplesPerContenanceTest)
+                    > ratioThreshold) {
+                    cycles1.append(cycle);
+                }
+                else {
+                    cycles2.append(cycle);
+                }
+            }
+
+            // Create the faces
+            KeyFace* kf1 =
+                createKeyFace(std::move(cycles1), kf->parentGroup(), kf, kf->time());
+            kf1->data().setProperties(kf->data().properties());
+            KeyFace* kf2 =
+                createKeyFace(std::move(cycles2), kf->parentGroup(), kf, kf->time());
+            kf2->data().setProperties(kf->data().properties());
+
+            // TODO: substitute in inbetween faces.
+
+            // Delete original face.
+            hardDelete(kf);
+
+            return CutFaceResult(kf1, khe.edge(), kf2);
+        }
+        case OneCycleCutPolicy::Mobius: {
+            KeyCycle newCycle({khe, khe});
+            addCycleToFace(kf, std::move(newCycle));
+            return CutFaceResult(kf, khe.edge(), kf);
+        }
+        case OneCycleCutPolicy::Torus: {
+            KeyCycle newCycle({khe});
+            addCycleToFace(kf, newCycle);
+            addCycleToFace(kf, newCycle.reversed());
+            return CutFaceResult(kf, khe.edge(), kf);
+        }
+        }
+
+        throw LogicError("cutGlueFace: invalid oneCycleCutPolicy.");
+    }
+}
+
+namespace {
+
+KeyPath rotatedCycleHalfedges_(const KeyCycle& cycle, Int newStart) {
+    core::Array<KeyHalfedge> result;
+    const auto& khes = cycle.halfedges();
+    result.reserve(khes.length());
+    result.extend(khes.begin() + newStart, khes.end());
+    result.extend(khes.begin(), khes.begin() + newStart);
+    return KeyPath(std::move(result));
+};
+
+} // namespace
+
+CutFaceResult Operations::cutGlueFace(
+    KeyFace* kf,
+    const KeyHalfedge& khe,
+    KeyFaceVertexUsageIndex startIndex,
+    KeyFaceVertexUsageIndex endIndex,
+    OneCycleCutPolicy oneCycleCutPolicy,
+    TwoCycleCutPolicy twoCycleCutPolicy) {
+
+    // TODO: find best policy based on geometric heuristic.
+
+    Int cycleIndex1 = startIndex.cycleIndex();
+    Int cycleIndex2 = endIndex.cycleIndex();
+
+    if (cycleIndex1 == cycleIndex2) {
+        // One-cycle cut case
+
+        KeyCycle& cycle = kf->cycles_[cycleIndex1];
+
+        // If one path must be empty, it will be path2.
+        KeyPath path1 =
+            subPath_(cycle, endIndex.componentIndex(), startIndex.componentIndex(), true);
+        KeyPath path2 =
+            subPath_(cycle, startIndex.componentIndex(), endIndex.componentIndex());
+
+        if (oneCycleCutPolicy == OneCycleCutPolicy::Auto) {
+            // TODO: find best policy.
+            oneCycleCutPolicy = OneCycleCutPolicy::Disk;
+        }
+
+        switch (oneCycleCutPolicy) {
+        case OneCycleCutPolicy::Auto: {
+            // TODO
+            break;
+        }
+        case OneCycleCutPolicy::Disk: {
+            core::Array<KeyCycle> cycles1;
+            core::Array<KeyCycle> cycles2;
+
+            KeyCycle newCycle1;
+            {
+                KeyPath path = path1;
+                path.append(khe);
+                newCycle1 = KeyCycle(std::move(path));
+            }
+            VGC_ASSERT(newCycle1.isValid());
+
+            KeyCycle newCycle2;
+            {
+                KeyPath path = path2;
+                path.append(khe.opposite());
+                newCycle2 = KeyCycle(std::move(path));
+            }
+            VGC_ASSERT(newCycle2.isValid());
+
+            cycles1.append(newCycle1);
+            cycles2.append(newCycle2);
+
+            // TODO: use KeyFace winding rule.
+            geometry::WindingRule windingRule = geometry::WindingRule::Odd;
+            constexpr Int numSamplesPerContenanceTest = 20;
+
+            Int cycleIndex = -1;
+            for (const auto& otherCycle : kf->cycles()) {
+                ++cycleIndex;
+                if (cycleIndex == cycleIndex1) {
+                    continue;
+                }
+                double r1 = newCycle1.interiorContainedRatio(
+                    otherCycle, windingRule, numSamplesPerContenanceTest);
+                double r2 = newCycle2.interiorContainedRatio(
+                    otherCycle, windingRule, numSamplesPerContenanceTest);
+                if (r1 >= r2) {
+                    cycles1.append(otherCycle);
+                }
+                else {
+                    cycles2.append(otherCycle);
+                }
+            }
+
+            // Create the faces
+            KeyFace* kf1 =
+                createKeyFace(std::move(cycles1), kf->parentGroup(), kf, kf->time());
+            kf1->data().setProperties(kf->data().properties());
+            KeyFace* kf2 =
+                createKeyFace(std::move(cycles2), kf->parentGroup(), kf, kf->time());
+            kf2->data().setProperties(kf->data().properties());
+
+            // TODO: substitute in inbetween faces.
+
+            // Delete original face.
+            hardDelete(kf);
+
+            return CutFaceResult(kf1, khe.edge(), kf2);
+        }
+        case OneCycleCutPolicy::Mobius: {
+            KeyCycle newCycle;
+            {
+                KeyPath path = path1;
+                path.append(khe);
+                path.extendReversed(path2);
+                path.append(khe);
+                newCycle = KeyCycle(std::move(path));
+            }
+            VGC_ASSERT(newCycle.isValid());
+
+            kf->cycles_[cycleIndex1] = std::move(newCycle);
+            addToBoundary_(kf, khe.edge());
+
+            return CutFaceResult(kf, khe.edge(), kf);
+        }
+        case OneCycleCutPolicy::Torus: {
+            KeyCycle newCycle1;
+            {
+                KeyPath path = path1;
+                path.append(khe);
+                newCycle1 = KeyCycle(std::move(path));
+            }
+            VGC_ASSERT(newCycle1.isValid());
+
+            KeyCycle newCycle2;
+            {
+                KeyPath path = path2;
+                path.append(khe.opposite());
+                newCycle2 = KeyCycle(std::move(path));
+            }
+            VGC_ASSERT(newCycle2.isValid());
+
+            kf->cycles_[cycleIndex1] = std::move(newCycle1);
+            kf->cycles_.append(std::move(newCycle2));
+            addToBoundary_(kf, khe.edge());
+
+            return CutFaceResult(kf, khe.edge(), kf);
+        }
+        }
+
+        throw LogicError("cutGlueFace: invalid oneCycleCutPolicy.");
+    }
+    else {
+        // Two-cycle cut case
+
+        KeyPath path1 =
+            rotatedCycleHalfedges_(kf->cycles_[cycleIndex1], startIndex.componentIndex());
+        KeyPath path2 =
+            rotatedCycleHalfedges_(kf->cycles_[cycleIndex2], endIndex.componentIndex());
+
+        switch (twoCycleCutPolicy) {
+        case TwoCycleCutPolicy::Auto: {
+            // TODO
+            break;
+        }
+        case TwoCycleCutPolicy::ReverseNone: {
+            break;
+        }
+        case TwoCycleCutPolicy::ReverseOne: {
+            path1.reverse();
+            break;
+        }
+        }
+
+        path1.append(khe);
+        path1.extend(path2);
+        path1.append(khe.opposite());
+
+        KeyCycle newCycle(std::move(path1));
+        VGC_ASSERT(newCycle.isValid());
+
+        kf->cycles_[cycleIndex1] = std::move(newCycle);
+        kf->cycles_.removeAt(cycleIndex2);
+        addToBoundary_(kf, khe.edge());
+
+        return CutFaceResult(kf, khe.edge(), kf);
+    }
+}
+
+CutFaceResult Operations::cutFaceWithClosedEdge(
+    KeyFace* kf,
+    KeyEdgeData&& data,
+    OneCycleCutPolicy oneCycleCutPolicy) {
+
+    KeyEdge* ke = createKeyClosedEdge(
+        std::move(data), kf->parentGroup(), kf->nextSibling(), kf->time());
+    return cutGlueFace(kf, ke, oneCycleCutPolicy);
+}
+
+CutFaceResult Operations::cutFaceWithOpenEdge(
+    KeyFace* kf,
+    KeyEdgeData&& data,
+    KeyFaceVertexUsageIndex startIndex,
+    KeyFaceVertexUsageIndex endIndex,
+    OneCycleCutPolicy oneCycleCutPolicy,
+    TwoCycleCutPolicy twoCycleCutPolicy) {
+
+    KeyVertex* kv1 = kf->vertex(startIndex);
+    KeyVertex* kv2 = kf->vertex(endIndex);
+    KeyEdge* ke = createKeyOpenEdge(
+        kv1, kv2, std::move(data), kf->parentGroup(), kf->nextSibling());
+    KeyHalfedge khe(ke, true);
+    return cutGlueFace(
+        kf, khe, startIndex, endIndex, oneCycleCutPolicy, twoCycleCutPolicy);
+}
+
+CutFaceResult Operations::cutFaceWithOpenEdge(
+    KeyFace* kf,
+    KeyEdgeData&& data,
+    KeyVertex* startVertex,
+    KeyVertex* endVertex,
+    OneCycleCutPolicy oneCycleCutPolicy,
+    TwoCycleCutPolicy twoCycleCutPolicy) {
+
+    KeyEdge* ke = createKeyOpenEdge(
+        startVertex, endVertex, std::move(data), kf->parentGroup(), kf->nextSibling());
+    return cutGlueFace(kf, ke, oneCycleCutPolicy, twoCycleCutPolicy);
 }
 
 UncutAtKeyVertexResult
@@ -1682,8 +2044,8 @@ UncutAtKeyEdgeResult Operations::uncutAtKeyEdge(KeyEdge* targetKe) {
                 KeyCycle& cycle = kf->cycles_[info.cycleIndex1];
                 Int i1 = info.componentIndex1;
                 Int i2 = info.componentIndex2;
-                KeyPath p1 = subPath(cycle, i1 + 1, i2);
-                KeyPath p2 = subPath(cycle, i2 + 1, i1);
+                KeyPath p1 = subPath_(cycle, i1 + 1, i2);
+                KeyPath p2 = subPath_(cycle, i2 + 1, i1);
                 bool d1 = cycle.halfedges_[i1].direction();
                 bool d2 = cycle.halfedges_[i2].direction();
 
@@ -1698,8 +2060,8 @@ UncutAtKeyEdgeResult Operations::uncutAtKeyEdge(KeyEdge* targetKe) {
                     //     |             |                  |             |
                     //     o-------------o                  o-------------o
                     //
-                    p2.reverse();
-                    kf->cycles_.append(KeyCycle(concatPath(p1, p2)));
+                    p1.extendReversed(p2);
+                    kf->cycles_.append(KeyCycle(std::move(p1)));
                 }
                 else {
                     // Split cycle into two cycles:
@@ -1742,14 +2104,17 @@ UncutAtKeyEdgeResult Operations::uncutAtKeyEdge(KeyEdge* targetKe) {
                 KeyCycle& cycle2 = kf->cycles_[info.cycleIndex2];
                 Int i1 = info.componentIndex1;
                 Int i2 = info.componentIndex2;
-                KeyPath p1 = subPath(cycle1, i1 + 1, i1);
-                KeyPath p2 = subPath(cycle2, i2 + 1, i2);
+                KeyPath p1 = subPath_(cycle1, i1 + 1, i1);
+                KeyPath p2 = subPath_(cycle2, i2 + 1, i2);
                 bool d1 = cycle1.halfedges_[i1].direction();
                 bool d2 = cycle2.halfedges_[i2].direction();
                 if (d1 == d2) {
-                    p2.reverse();
+                    p1.extendReversed(p2);
                 }
-                KeyCycle newCycle(concatPath(p1, p2));
+                else {
+                    p1.extend(p2);
+                }
+                KeyCycle newCycle(std::move(p1));
 
                 // Add the new cycle
                 kf->cycles_.append(std::move(newCycle));
@@ -1779,14 +2144,17 @@ UncutAtKeyEdgeResult Operations::uncutAtKeyEdge(KeyEdge* targetKe) {
             KeyCycle& cycle2 = kf2->cycles_[info.cycleIndex2];
             Int i1 = info.componentIndex1;
             Int i2 = info.componentIndex2;
-            KeyPath p1 = subPath(cycle1, i1 + 1, i1);
-            KeyPath p2 = subPath(cycle2, i2 + 1, i2);
+            KeyPath p1 = subPath_(cycle1, i1 + 1, i1);
+            KeyPath p2 = subPath_(cycle2, i2 + 1, i2);
             bool d1 = cycle1.halfedges_[i1].direction();
             bool d2 = cycle2.halfedges_[i2].direction();
             if (d1 == d2) {
-                p2.reverse();
+                p1.extendReversed(p2);
             }
-            KeyCycle newCycle(concatPath(p1, p2));
+            else {
+                p1.extend(p2);
+            }
+            KeyCycle newCycle(std::move(p1));
 
             // Compute cycles of new face. These are the same as all the cycles
             // from f1 and f2, except that we remove the two old cycles that
@@ -2288,38 +2656,28 @@ KeyEdge* Operations::glueKeyClosedEdges_(
     return newKe;
 }
 
-KeyPath Operations::subPath(const KeyCycle& cycle, Int first, Int last) {
+KeyPath
+Operations::subPath_(const KeyCycle& cycle, Int first, Int last, bool loopIfEmptyRange) {
     if (cycle.steinerVertex()) {
         return KeyPath(cycle.steinerVertex());
     }
     if (first == last) {
-        KeyVertex* singleVertex = cycle.halfedges_[first].startVertex();
-        return KeyPath(singleVertex);
+        if (loopIfEmptyRange) {
+            return rotatedCycleHalfedges_(cycle, first);
+        }
+        else {
+            KeyVertex* singleVertex = cycle.halfedges_[first].startVertex();
+            return KeyPath(singleVertex);
+        }
     }
     else {
         Int n = cycle.halfedges_.length();
         first = ((first % n) + n) % n;
         last = ((last % n) + n) % n;
-        core::Array<KeyHalfedge> halfedges = {};
+        core::Array<KeyHalfedge> halfedges;
         for (Int i = first; i != last; i = (i + 1) % n) {
             halfedges.append(cycle.halfedges_[i]);
         }
-        return KeyPath(std::move(halfedges));
-    }
-}
-
-KeyPath Operations::concatPath(const KeyPath& p1, const KeyPath& p2) {
-    if (p1.singleVertex()) {
-        return p2;
-    }
-    else if (p2.singleVertex()) {
-        return p1;
-    }
-    else {
-        core::Array<KeyHalfedge> halfedges = {};
-        halfedges.reserve(p1.halfedges_.length());
-        halfedges.extend(p1.halfedges_);
-        halfedges.extend(p2.halfedges_);
         return KeyPath(std::move(halfedges));
     }
 }

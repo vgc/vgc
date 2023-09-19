@@ -163,6 +163,9 @@ private:
     void onUnglue_();
     VGC_SLOT(onUnglueSlot_, onUnglue_)
 
+    void onCutGlueFace_();
+    VGC_SLOT(onCutGlueFaceSlot_, onCutGlueFace_)
+
     void onSimplify_();
     VGC_SLOT(onSimplifySlot_, onSimplify_)
 

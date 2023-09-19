@@ -38,12 +38,12 @@ KeyCycle::KeyCycle(KeyPath&& path)
 KeyCycle::KeyCycle(core::Span<const KeyHalfedge> halfedges) noexcept
     : halfedges_(halfedges) {
 
-    if (halfedges_.isEmpty()) {
+    if (halfedges.isEmpty()) {
         // invalid cycle
     }
-    else if (halfedges_.first().isClosed()) {
-        KeyHalfedge h0 = halfedges_.first();
-        for (const KeyHalfedge& h : halfedges_) {
+    else if (halfedges.first().isClosed()) {
+        KeyHalfedge h0 = halfedges.first();
+        for (const KeyHalfedge& h : halfedges) {
             if (h0 != h) {
                 // invalid cycle
                 halfedges_.clear();
@@ -55,10 +55,10 @@ KeyCycle::KeyCycle(core::Span<const KeyHalfedge> halfedges) noexcept
         // Note: there is no need to check that all halfedges
         // have the same key time since each consecutive pair
         // of halfedges share a vertex, and its time.
-        auto it = halfedges_.begin();
+        auto it = halfedges.begin();
         KeyVertex* firstStartVertex = it->startVertex();
         KeyVertex* previousEndVertex = it->endVertex();
-        for (++it; it != halfedges_.end(); ++it) {
+        for (++it; it != halfedges.end(); ++it) {
             if (previousEndVertex != it->startVertex()) {
                 // invalid cycle
                 halfedges_.clear();
@@ -73,6 +73,108 @@ KeyCycle::KeyCycle(core::Span<const KeyHalfedge> halfedges) noexcept
     }
 }
 
+void KeyCycle::reverse() {
+    for (KeyHalfedge& khe : halfedges_) {
+        khe.setOppositeDirection();
+    }
+}
+
+KeyCycle KeyCycle::reversed() const {
+    KeyCycle result = *this;
+    result.reverse();
+    return result;
+}
+
+core::Array<geometry::Vec2d> KeyCycle::sampleUniformly(Int numSamples) const {
+
+    core::Array<geometry::Vec2d> result;
+    result.reserve(numSamples);
+
+    // TODO: handle transforms.
+
+    double totalS = 0;
+    for (const KeyHalfedge& khe : halfedges()) {
+        totalS += khe.edge()->strokeSampling().samples().last().s();
+    }
+    double stepS = totalS / numSamples;
+    double nextStepS = stepS / 2;
+    for (const KeyHalfedge& khe : halfedges()) {
+        const geometry::StrokeSample2dArray& samples =
+            khe.edge()->strokeSampling().samples();
+        double heS = samples.last().s();
+        if (heS == 0) {
+            // XXX TODO: handle cases where heS == 0 more appropriately.
+            // For example, ensure that this function still returns at least one sample.
+            continue;
+        }
+        if (khe.direction()) {
+            auto it = samples.begin();
+            geometry::Vec2d previousP = it->position();
+            double previousS = 0;
+            ++it;
+            for (auto end = samples.end(); it != end; ++it) {
+                geometry::Vec2d p = it->position();
+                double nextS = it->s();
+                while (nextS >= nextStepS) {
+                    double t = (nextStepS - previousS) / (nextS - previousS);
+                    previousP = core::fastLerp(previousP, p, t);
+                    previousS = nextStepS;
+                    nextStepS += stepS;
+                    result.emplaceLast(previousP);
+                }
+                previousP = p;
+                previousS = nextS;
+            }
+        }
+        else {
+            auto rit = samples.rbegin();
+            geometry::Vec2d previousP = rit->position();
+            double previousS = heS - rit->s();
+            ++rit;
+            for (auto rend = samples.rend(); rit != rend; ++rit) {
+                geometry::Vec2d p = rit->position();
+                double nextS = heS - rit->s();
+                while (nextS >= nextStepS) {
+                    double t = (nextStepS - previousS) / (nextS - previousS);
+                    previousP = core::fastLerp(previousP, p, t);
+                    previousS = nextStepS;
+                    nextStepS += stepS;
+                    result.emplaceLast(previousP);
+                }
+                previousP = p;
+                previousS = nextS;
+            }
+        }
+        nextStepS -= heS;
+    }
+
+    return result;
+}
+
+Int KeyCycle::computeWindingNumberAt(const geometry::Vec2d& position) const {
+    Int result = 0;
+    for (const KeyHalfedge& keyHalfedge : halfedges()) {
+        // TODO: handle transforms.
+        Int contribution = keyHalfedge.computeWindingContributionAt(position);
+        result += contribution;
+    }
+    return result;
+}
+
+double KeyCycle::interiorContainedRatio(
+    const KeyCycle& other,
+    geometry::WindingRule windingRule,
+    Int numSamples) {
+    core::Array<geometry::Vec2d> samples = other.sampleUniformly(numSamples);
+    Int count = 0;
+    for (const auto& pos : samples) {
+        if (interiorContains(pos, windingRule)) {
+            ++count;
+        }
+    }
+    return core::narrow_cast<double>(count) / core::narrow_cast<double>(numSamples);
+}
+
 // TODO: implement KeyCycleType to make the switch below more readable/convenient
 
 void KeyCycle::debugPrint(core::StringWriter& out) const {
@@ -83,7 +185,7 @@ void KeyCycle::debugPrint(core::StringWriter& out) const {
     else if (!halfedges().isEmpty()) {
         // Simple or Non-simple cycle
         bool isFirst = true;
-        for (const KeyHalfedge& h : halfedges_) {
+        for (const KeyHalfedge& h : halfedges()) {
             if (isFirst) {
                 isFirst = false;
             }

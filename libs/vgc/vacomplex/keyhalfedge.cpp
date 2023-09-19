@@ -77,4 +77,10 @@ KeyHalfedge KeyHalfedge::next() const {
     return candidates[i].khe;
 }
 
+Int KeyHalfedge::computeWindingContributionAt(const geometry::Vec2d& position) const {
+    const KeyEdge* ke = edge();
+    Int contribution = ke->computeWindingContributionAt(position);
+    return direction() ? contribution : -contribution;
+}
+
 } // namespace vgc::vacomplex
