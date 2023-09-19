@@ -202,7 +202,7 @@ const StrokeModelInfo& CatmullRomSplineStroke2d::modelInfo_() const {
 }
 
 std::unique_ptr<AbstractStroke2d> CatmullRomSplineStroke2d::cloneEmpty_() const {
-    return std::make_unique<CatmullRomSplineStroke2d>(parameterization_, isClosed());
+    return std::make_unique<CatmullRomSplineStroke2d>(parameterization_, false);
 }
 
 std::unique_ptr<AbstractStroke2d> CatmullRomSplineStroke2d::clone_() const {

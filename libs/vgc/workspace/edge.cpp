@@ -687,7 +687,7 @@ bool VacKeyEdge::updateStrokeFromDom_(
 
     if (oldStroke) {
         if (oldStroke->positions() == domPositions && oldStroke->widths() == domWidths) {
-            // geoemtry did not change
+            // geometry did not change
             return false;
         }
     }
@@ -903,6 +903,7 @@ ElementStatus VacKeyEdge::updateFromDom_(Workspace* workspace) {
         vacomplex::KeyEdgeData data;
         updateStrokeFromDom_(data, domElement);
         if (isClosed) {
+            data.closeStroke(true);
             ke = vacomplex::ops::createKeyClosedEdge(std::move(data), parentGroup);
         }
         else {

@@ -770,7 +770,9 @@ public:
     }
 
     std::unique_ptr<AbstractStroke2d> cloneEmpty() const {
-        return cloneEmpty_();
+        std::unique_ptr<AbstractStroke2d> result = cloneEmpty_();
+        result->open(false);
+        return result;
     }
 
     std::unique_ptr<AbstractStroke2d> clone() const {
@@ -1005,6 +1007,12 @@ public:
         }
     }
 
+    /// Returns an open stroke that is the geometric path along `this` stroke
+    /// starting at `from` and ending at `to` after `numWraps` revolutions.
+    ///
+    /// If `from` equals `to` and `numWraps` is zero, the returned stroke
+    /// represents a single point.
+    ///
     std::unique_ptr<AbstractStroke2d> subStroke(
         const CurveParameter& from,
         const CurveParameter& to,
