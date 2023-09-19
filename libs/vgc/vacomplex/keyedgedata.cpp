@@ -119,7 +119,10 @@ void fixStrokeClosedness(geometry::AbstractStroke2d* stroke, bool isEdgeClosed) 
             edgeType = "an open edge";
         }
         VGC_WARNING(
-            LogVgcVacomplex, "Assigning {} to {} caused implicit closedness conversion.");
+            LogVgcVacomplex,
+            "Assigning {} to {} caused implicit closedness conversion.",
+            strokeType,
+            edgeType);
     }
 }
 
@@ -316,6 +319,7 @@ KeyEdgeData KeyEdgeData::fromSlice(
     Int numWraps) {
 
     KeyEdgeData result;
+    // subStroke returns an open stroke.
     std::unique_ptr<geometry::AbstractStroke2d> newStroke_ =
         ked.stroke()->subStroke(start, end, numWraps);
     geometry::AbstractStroke2d* newStroke = newStroke_.get();

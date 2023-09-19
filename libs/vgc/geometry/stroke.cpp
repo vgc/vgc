@@ -619,7 +619,13 @@ std::unique_ptr<AbstractStroke2d> AbstractStroke2d::subStroke(
     const Int numSegments = this->numSegments();
     CurveParameter p1_ = sanitizeCurveParameter(p1, numSegments);
     CurveParameter p2_ = sanitizeCurveParameter(p2, numSegments);
-    return subStroke_(p1_, p2_, numWraps);
+
+    std::unique_ptr<AbstractStroke2d> result = subStroke_(p1_, p2_, numWraps);
+    if (!result->isClosed()) {
+        result->open(false);
+    }
+
+    return result;
 }
 
 std::unique_ptr<AbstractStroke2d>

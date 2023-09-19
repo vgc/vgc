@@ -271,6 +271,7 @@ std::unique_ptr<AbstractStroke2d> AbstractInterpolatingStroke2d::subStroke_(
     std::unique_ptr<AbstractStroke2d> result = cloneEmpty();
     AbstractInterpolatingStroke2d* newStroke =
         static_cast<AbstractInterpolatingStroke2d*>(result.get());
+    newStroke->open(false);
 
     StrokeSample2d s1 = eval(p1);
 

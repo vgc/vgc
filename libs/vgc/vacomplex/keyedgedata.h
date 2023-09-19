@@ -125,6 +125,8 @@ public:
         core::ConstSpan<KeyHalfedgeData> khds,
         std::unique_ptr<geometry::AbstractStroke2d>&& gluedStroke);
 
+    /// The stroke of the returned data is always an open stroke.
+    ///
     static KeyEdgeData fromSlice(
         const KeyEdgeData& ked,
         const geometry::CurveParameter& start,

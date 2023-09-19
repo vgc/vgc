@@ -442,7 +442,7 @@ const StrokeModelInfo& YukselSplineStroke2d::modelInfo_() const {
 }
 
 std::unique_ptr<AbstractStroke2d> YukselSplineStroke2d::cloneEmpty_() const {
-    return std::make_unique<YukselSplineStroke2d>(isClosed());
+    return std::make_unique<YukselSplineStroke2d>(false);
 }
 
 std::unique_ptr<AbstractStroke2d> YukselSplineStroke2d::clone_() const {
