@@ -133,9 +133,13 @@ public:
     }
 
     double interiorContainedRatio(
+        core::ConstSpan<geometry::Vec2d> positions,
+        geometry::WindingRule windingRule) const;
+
+    double interiorContainedRatio(
         const KeyCycle& other,
         geometry::WindingRule windingRule,
-        Int numSamples);
+        Int numSamples) const;
 
     bool isValid() const {
         if (steinerVertex_) {

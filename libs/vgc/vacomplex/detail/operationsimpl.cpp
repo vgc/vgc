@@ -217,133 +217,14 @@ void Operations::addCycleToFace(KeyFace* kf, KeyCycle cycle) {
     // -> None
 }
 
+void Operations::hardDelete(core::ConstSpan<Node*> nodes, bool deleteIsolatedVertices) {
+
+    deleteWithDependents_(nodes, deleteIsolatedVertices, false);
+}
+
 void Operations::hardDelete(Node* node, bool deleteIsolatedVertices) {
 
-    // First collect all dependents
-
-    std::unordered_set<Node*> nodesToDestroy;
-
-    // When hard-deleting the root, we delete all nodes below the root, but
-    // preserve the root itself since we have the invariant that there is
-    // always a root.
-    //
-    const bool isRoot = (complex()->rootGroup() == node);
-    if (!isRoot) {
-        nodesToDestroy.insert(node);
-    }
-
-    // Recursively collect all dependent nodes:
-    // - children of groups
-    // - star cells of cells
-    //
-    collectDependentNodes_(node, nodesToDestroy);
-
-    // Flag all cells that are about to be deleted.
-    //
-    for (Node* nodeToDestroy : nodesToDestroy) {
-        nodeToDestroy->isBeingDeleted_ = true;
-    }
-
-    // Helper function that tests if the star of a cell will become empty after
-    // deleting all cells flagged for deletion.
-    //
-    auto hasEmptyStar = [](Cell* cell) {
-        bool isStarEmpty = true;
-        for (Cell* starCell : cell->star()) {
-            if (!starCell->isBeingDeleted_) {
-                isStarEmpty = false;
-                break;
-            }
-        }
-        return isStarEmpty;
-    };
-
-    // Update star of cells in the boundary of deleted cells.
-    //
-    // For example, if we delete an edge, we should remove the edge
-    // for the star of its end vertices.
-    //
-    // In this step, we also detect vertices which are about to become
-    // isolated, and delete these if deleteIsolatedVertices is true. Note that
-    // there is no need to collectDependentNodes_(isolatedVertex), since being
-    // isolated means having an empty star, which means that the vertex has no
-    // dependent nodes.
-    //
-    // Note: we store the isolated vertices as set<Node*> instead of set<Cell*>
-    // so that we can later merge with nodesToDelete.
-    //
-    std::unordered_set<Node*> isolatedKeyVertices;
-    std::unordered_set<Node*> isolatedInbetweenVertices;
-    for (Node* nodeToDestroy : nodesToDestroy) {
-        if (nodeToDestroy->isCell()) {
-            Cell* cell = nodeToDestroy->toCellUnchecked();
-            for (Cell* boundaryCell : cell->boundary().copy()) {
-                if (boundaryCell->isBeingDeleted_) {
-                    continue;
-                }
-                if (deleteIsolatedVertices
-                    && boundaryCell->spatialType() == CellSpatialType::Vertex
-                    && hasEmptyStar(boundaryCell)) {
-
-                    switch (boundaryCell->cellType()) {
-                    case CellType::KeyVertex:
-                        isolatedKeyVertices.insert(boundaryCell);
-                        break;
-                    case CellType::InbetweenVertex:
-                        isolatedInbetweenVertices.insert(boundaryCell);
-                        break;
-                    default:
-                        break;
-                    }
-                    boundaryCell->isBeingDeleted_ = true;
-                }
-                if (!boundaryCell->isBeingDeleted_) {
-                    boundaryCell->star_.removeOne(cell);
-                    onNodeModified_(boundaryCell, NodeModificationFlag::StarChanged);
-                }
-            }
-            cell->star_.clear();
-        }
-    }
-
-    // Deleting isolated inbetween vertices might indirectly cause key vertices
-    // to become isolated, so we detect these in a second pass.
-    //
-    //       ke1
-    // kv1 -------- kv2          Scenario: user hard deletes ie1
-    //  |            |
-    //  |iv1         | iv2        -> This directly makes iv1, iv2, and iv3 isolated
-    //  |            |               (but does not directly make kv5 isolated, since
-    //  |    ie1     kv5              the star of kv5 still contained iv2 and iv3)
-    //  |            |
-    //  |            | iv3
-    //  |            |
-    // kv3 ------- kv4
-    //       ke2
-    //
-    if (deleteIsolatedVertices) {
-        for (Node* inbetweenVertexNode : isolatedInbetweenVertices) {
-            Cell* inbetweenVertex = inbetweenVertexNode->toCellUnchecked();
-            for (Cell* keyVertex : inbetweenVertex->boundary()) {
-                if (keyVertex->isBeingDeleted_) {
-                    continue;
-                }
-                if (hasEmptyStar(keyVertex)) {
-                    isolatedKeyVertices.insert(keyVertex);
-                    keyVertex->isBeingDeleted_ = true;
-                }
-                else {
-                    keyVertex->star_.removeOne(inbetweenVertex);
-                    onNodeModified_(keyVertex, NodeModificationFlag::StarChanged);
-                }
-            }
-        }
-        nodesToDestroy.merge(isolatedKeyVertices);
-        nodesToDestroy.merge(isolatedInbetweenVertices);
-    }
-
-    core::Array<Node*> nodesToDestroyArray(nodesToDestroy);
-    destroyNodes_(nodesToDestroyArray);
+    deleteWithDependents_(std::array{node}, deleteIsolatedVertices, false);
 }
 
 namespace {
@@ -606,12 +487,11 @@ void Operations::softDelete(
         cells.removeAll(nullptr);
     };
 
-    auto hardDeleteCells = [=](auto& cells) {
-        for (const auto& cell : cells) {
-            // Note: deleteIsolatedVertices could remove cells that are
-            // in `cells` and it would cause a crash.
-            hardDelete(cell, false);
-        }
+    auto deleteCells = [=](auto&& cells) {
+        // Note: deleteIsolatedVertices could remove cells that are
+        // in `cells` and it would cause a crash.
+        core::Array<Node*> nodes(cells);
+        deleteWithDependents_(nodes, false, true);
         cells.clear();
     };
 
@@ -628,7 +508,7 @@ void Operations::softDelete(
         if (!kfs.isEmpty()) {
             uncutCells(kfs);
         }
-        hardDeleteCells(kfs);
+        deleteCells(kfs);
     }
 
     // Edges
@@ -643,7 +523,7 @@ void Operations::softDelete(
             uncutCells(kfs);
             uncutCells(kes);
         }
-        hardDeleteCells(kes);
+        deleteCells(kes);
     }
 
     // Vertices
@@ -666,7 +546,7 @@ void Operations::softDelete(
             uncutCells(kes);
             uncutCells(kvs);
         }
-        hardDeleteCells(kvs);
+        deleteCells(kvs);
     }
 
     // Groups
@@ -2372,6 +2252,289 @@ Node* Operations::findBottomMost(core::ConstSpan<Node*> nodes) {
     return bottomMostNode;
 }
 
+void Operations::deleteWithDependents_(
+    core::ConstSpan<Node*> nodes,
+    bool deleteIsolatedVertices,
+    bool tryRepairingStarCells) {
+
+    Group* rootGroup = complex()->rootGroup();
+    std::unordered_set<Node*> nodesToDestroy;
+
+    // First collect all descendants
+    std::unordered_set<Node*> descendants;
+
+    for (Node* node : nodes) {
+        for (Node* descendant : node->descendants()) {
+            descendants.insert(descendant);
+        }
+        // When hard-deleting the root, we delete all nodes below the root, but
+        // preserve the root itself since we have the invariant that there is
+        // always a root.
+        //
+        if (node != rootGroup) {
+            descendants.insert(node);
+        }
+    }
+
+    // Flag all descendants as about to be deleted.
+    //
+    for (Node* descendant : descendants) {
+        descendant->isBeingDeleted_ = true;
+        nodesToDestroy.insert(descendant);
+    }
+
+    // Delete star of nodes.
+    core::Array<KeyFace*> starFaces;
+    for (Node* descendant : descendants) {
+        Cell* cell = descendant->toCell();
+        if (!cell) {
+            continue;
+        }
+        for (Cell* starCell : cell->star()) {
+            switch (starCell->cellType()) {
+            case CellType::KeyFace: {
+                KeyFace* kf = starCell->toKeyFaceUnchecked();
+                if (!starFaces.contains(kf)) {
+                    starFaces.append(kf);
+                }
+                break;
+            }
+            default: {
+                if (!starCell->isBeingDeleted_) {
+                    starCell->isBeingDeleted_ = true;
+                    nodesToDestroy.insert(starCell);
+                }
+                break;
+            }
+            }
+        }
+    }
+
+    // TODO: use KeyFace winding rule.
+    geometry::WindingRule windingRule = geometry::WindingRule::Odd;
+    constexpr Int numSamplesPerContainTest = 20;
+    constexpr double ratioThreshold = 0.5;
+
+    KeyCycle tmpCycle;
+    for (KeyFace* kf : starFaces) {
+        if (kf->isBeingDeleted_) {
+            continue;
+        }
+        if (!tryRepairingStarCells) {
+            kf->isBeingDeleted_ = true;
+            nodesToDestroy.insert(kf);
+            continue;
+        }
+
+        struct RepairedCycle {
+            KeyCycle cycle;
+            Int originalIndex;
+            bool isUnchanged;
+        };
+        core::Array<RepairedCycle> repairedCycles;
+
+        for (Int i = 0; i != kf->cycles_.length(); ++i) {
+            const KeyCycle& kc = kf->cycles_[i];
+            KeyVertex* sv = kc.steinerVertex();
+            if (sv) {
+                if (!sv->isBeingDeleted_) {
+                    repairedCycles.append({kc, i, true});
+                }
+                continue;
+            }
+            tmpCycle = kc;
+            Int numRemoved = tmpCycle.halfedges_.removeIf(
+                [](const KeyHalfedge& he) { return he.edge()->isBeingDeleted_; });
+            bool isUnchanged = numRemoved == 0;
+            if (isUnchanged || tmpCycle.isValid()) {
+                repairedCycles.append({tmpCycle, i, isUnchanged});
+            }
+        }
+
+        // If a repaired cycle is contained in a deleted one, delete it.
+        for (auto it = repairedCycles.begin(); it != repairedCycles.end();) {
+            const KeyCycle& repairedCycle = it->cycle;
+            KeyVertex* steinerVertex = repairedCycle.steinerVertex();
+            if (steinerVertex) {
+                bool keep = true;
+                geometry::Vec2d pos = steinerVertex->position();
+                for (Int i = 0; i != kf->cycles_.length(); ++i) {
+                    const KeyCycle& originalCycle = kf->cycles_[i];
+                    RepairedCycle* rc = repairedCycles.search(
+                        [i](const RepairedCycle& rc) { return rc.originalIndex == i; });
+                    if (rc && rc->isUnchanged) {
+                        continue;
+                    }
+                    if (originalCycle.interiorContains(pos, windingRule)) {
+                        if (!rc || !rc->cycle.interiorContains(pos, windingRule)) {
+                            keep = false;
+                            break;
+                        }
+                    }
+                }
+                if (!keep) {
+                    it = repairedCycles.erase(it);
+                }
+                else {
+                    ++it;
+                }
+            }
+            else {
+                bool keep = true;
+                core::Array<geometry::Vec2d> samples =
+                    repairedCycle.sampleUniformly(numSamplesPerContainTest);
+                for (Int i = 0; i != kf->cycles_.length(); ++i) {
+                    const KeyCycle& originalCycle = kf->cycles_[i];
+                    RepairedCycle* rc = repairedCycles.search(
+                        [=](const RepairedCycle& rc) { return rc.originalIndex == i; });
+                    if (rc && rc->isUnchanged) {
+                        continue;
+                    }
+                    double ratio =
+                        originalCycle.interiorContainedRatio(samples, windingRule);
+                    if (ratio > ratioThreshold) {
+                        if (!rc) {
+                            keep = false;
+                            break;
+                        }
+                        double ratio2 =
+                            rc->cycle.interiorContainedRatio(samples, windingRule);
+                        if (ratio2 <= ratioThreshold) {
+                            keep = false;
+                            break;
+                        }
+                    }
+                }
+                if (!keep) {
+                    repairedCycles.erase(it);
+                    // restart tests since previous cycles could have been
+                    // contained and thus saved by the current one.
+                    it = repairedCycles.begin();
+                }
+                else {
+                    ++it;
+                }
+            }
+        }
+
+        if (repairedCycles.isEmpty()) {
+            kf->isBeingDeleted_ = true;
+            nodesToDestroy.insert(kf);
+        }
+        else {
+            for (Cell* boundaryCell : kf->boundary().copy()) {
+                removeFromBoundary_(kf, boundaryCell);
+            }
+            kf->cycles_.clear();
+            for (RepairedCycle& repairedCycle : repairedCycles) {
+                addToBoundary_(kf, repairedCycle.cycle);
+                kf->cycles_.append(std::move(repairedCycle.cycle));
+            }
+        }
+    }
+
+    // Helper function that tests if the star of a cell will become empty after
+    // deleting all cells flagged for deletion.
+    //
+    auto hasEmptyStar = [](Cell* cell) {
+        bool isStarEmpty = true;
+        for (Cell* starCell : cell->star()) {
+            if (!starCell->isBeingDeleted_) {
+                isStarEmpty = false;
+                break;
+            }
+        }
+        return isStarEmpty;
+    };
+
+    // Update star of cells in the boundary of deleted cells.
+    //
+    // For example, if we delete an edge, we should remove the edge
+    // for the star of its end vertices.
+    //
+    // In this step, we also detect vertices which are about to become
+    // isolated, and delete these if deleteIsolatedVertices is true. Note that
+    // there is no need to collectDependentNodes_(isolatedVertex), since being
+    // isolated means having an empty star, which means that the vertex has no
+    // dependent nodes.
+    //
+    // Note: we store the isolated vertices as set<Node*> instead of set<Cell*>
+    // so that we can later merge with nodesToDelete.
+    //
+    std::unordered_set<Node*> isolatedKeyVertices;
+    std::unordered_set<Node*> isolatedInbetweenVertices;
+    for (Node* nodeToDestroy : nodesToDestroy) {
+        if (nodeToDestroy->isCell()) {
+            Cell* cell = nodeToDestroy->toCellUnchecked();
+            for (Cell* boundaryCell : cell->boundary().copy()) {
+                if (boundaryCell->isBeingDeleted_) {
+                    continue;
+                }
+                if (deleteIsolatedVertices
+                    && boundaryCell->spatialType() == CellSpatialType::Vertex
+                    && hasEmptyStar(boundaryCell)) {
+
+                    switch (boundaryCell->cellType()) {
+                    case CellType::KeyVertex:
+                        isolatedKeyVertices.insert(boundaryCell);
+                        break;
+                    case CellType::InbetweenVertex:
+                        isolatedInbetweenVertices.insert(boundaryCell);
+                        break;
+                    default:
+                        break;
+                    }
+                    boundaryCell->isBeingDeleted_ = true;
+                }
+                if (!boundaryCell->isBeingDeleted_) {
+                    boundaryCell->star_.removeOne(cell);
+                    onNodeModified_(boundaryCell, NodeModificationFlag::StarChanged);
+                }
+            }
+            cell->star_.clear();
+        }
+    }
+
+    // Deleting isolated inbetween vertices might indirectly cause key vertices
+    // to become isolated, so we detect these in a second pass.
+    //
+    //       ke1
+    // kv1 -------- kv2          Scenario: user hard deletes ie1
+    //  |            |
+    //  |iv1         | iv2        -> This directly makes iv1, iv2, and iv3 isolated
+    //  |            |               (but does not directly make kv5 isolated, since
+    //  |    ie1     kv5              the star of kv5 still contained iv2 and iv3)
+    //  |            |
+    //  |            | iv3
+    //  |            |
+    // kv3 ------- kv4
+    //       ke2
+    //
+    if (deleteIsolatedVertices) {
+        for (Node* inbetweenVertexNode : isolatedInbetweenVertices) {
+            Cell* inbetweenVertex = inbetweenVertexNode->toCellUnchecked();
+            for (Cell* keyVertex : inbetweenVertex->boundary()) {
+                if (keyVertex->isBeingDeleted_) {
+                    continue;
+                }
+                if (hasEmptyStar(keyVertex)) {
+                    isolatedKeyVertices.insert(keyVertex);
+                    keyVertex->isBeingDeleted_ = true;
+                }
+                else {
+                    keyVertex->star_.removeOne(inbetweenVertex);
+                    onNodeModified_(keyVertex, NodeModificationFlag::StarChanged);
+                }
+            }
+        }
+        nodesToDestroy.merge(isolatedKeyVertices);
+        nodesToDestroy.merge(isolatedInbetweenVertices);
+    }
+
+    core::Array<Node*> nodesToDestroyArray(nodesToDestroy);
+    destroyNodes_(nodesToDestroyArray);
+}
+
 // Assumes node has no children.
 // maybe we should also handle star/boundary changes here
 void Operations::destroyChildlessNode_(Node* node) {
@@ -2522,30 +2685,6 @@ void Operations::substituteEdge_(const KeyHalfedge& oldKhe, const KeyHalfedge& n
         starCell->substituteKeyEdge_(oldKhe, newKhe);
         removeFromBoundary_(starCell, oldKe);
         addToBoundary_(starCell, newKe);
-    }
-}
-
-void Operations::collectDependentNodes_(
-    Node* node,
-    std::unordered_set<Node*>& dependentNodes) {
-
-    if (node->isGroup()) {
-        // Delete all children of the group
-        Group* group = node->toGroupUnchecked();
-        for (Node* child : *group) {
-            if (dependentNodes.insert(child).second) {
-                collectDependentNodes_(child, dependentNodes);
-            }
-        }
-    }
-    else {
-        // Delete all cells in the star of the cell
-        Cell* cell = node->toCellUnchecked();
-        for (Cell* starCell : cell->star()) {
-            // No need for recursion since starCell.star() is a subset
-            // of cell.star().
-            dependentNodes.insert(starCell);
-        }
     }
 }
 

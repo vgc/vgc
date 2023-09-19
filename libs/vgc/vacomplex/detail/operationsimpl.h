@@ -119,6 +119,8 @@ public:
     //
     void addCycleToFace(KeyFace* kf, KeyCycle cycle);
 
+    void hardDelete(core::ConstSpan<Node*> nodes, bool deleteIsolatedVertices = false);
+
     void hardDelete(Node* node, bool deleteIsolatedVertices = false);
 
     void softDelete(core::ConstSpan<Node*> nodes, bool deleteIsolatedVertices = false);
@@ -249,6 +251,11 @@ private:
     static Node* findTopMost(core::ConstSpan<Node*> nodes);
     static Node* findBottomMost(core::ConstSpan<Node*> nodes);
 
+    void deleteWithDependents_(
+        core::ConstSpan<Node*> nodes,
+        bool deleteIsolatedVertices = false,
+        bool tryRepairingStarCells = true);
+
     // Assumes node has no children.
     void destroyChildlessNode_(Node* node);
 
@@ -284,9 +291,6 @@ private:
     // Substitutes open with open or closed with closed.
     //
     void substituteEdge_(const KeyHalfedge& oldHalfedge, const KeyHalfedge& newHalfedge);
-
-    // Other helper methods
-    void collectDependentNodes_(Node* node, std::unordered_set<Node*>& dependentNodes);
 
     KeyEdge* glueKeyOpenEdges_(core::ConstSpan<KeyHalfedge> khes);
 

@@ -31,6 +31,26 @@ Node::Node(core::Id id, CellType cellType) noexcept
 Node::~Node() {
 }
 
+namespace {
+
+void descendantsRec_(const Node* node, core::Array<Node*>& array) {
+    if (node->isGroup()) {
+        const Group* group = node->toGroupUnchecked();
+        for (Node* child : *group) {
+            array.append(child);
+            descendantsRec_(child, array);
+        }
+    }
+}
+
+} // namespace
+
+core::Array<Node*> Node::descendants() const {
+    core::Array<Node*> result;
+    descendantsRec_(this, result);
+    return result;
+}
+
 void Node::debugPrint(core::StringWriter& out) {
     std::string idString = core::format("[{}]", id());
     out << core::format("{:<6}", idString);
