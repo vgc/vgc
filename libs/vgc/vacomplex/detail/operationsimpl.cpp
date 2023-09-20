@@ -1647,7 +1647,7 @@ CutFaceResult Operations::cutGlueFace(
                     double angle = (angle1 + angle2) * 0.5;
 
                     geometry::Rect2d kfBbox = kf->boundingBox();
-                    double delta = std::max(kfBbox.width(), kfBbox.height());
+                    double delta = (std::max)(kfBbox.width(), kfBbox.height());
                     delta *= core::epsilon;
 
                     return p + geometry::Vec2d(std::cos(angle), std::sin(angle)) * delta;
