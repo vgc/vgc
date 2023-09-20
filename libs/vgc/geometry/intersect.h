@@ -22,7 +22,12 @@
 
 namespace vgc::geometry {
 
-inline bool fastIntersects(
+/// Returns whether the segments `(a1, a2)` and `(b1, b2)` intersect.
+///
+/// It is a fast variant that considers collinear overlaps as non
+/// intersecting.
+///
+inline bool fastSegmentIntersects(
     const geometry::Vec2d& a1,
     const geometry::Vec2d& a2,
     const geometry::Vec2d& b1,
@@ -30,10 +35,6 @@ inline bool fastIntersects(
 
     geometry::Vec2d d1 = (a2 - a1);
     geometry::Vec2d d2 = (b2 - b1);
-    double d1l = d1.length();
-    double d2l = d2.length();
-    d1 /= d1l;
-    d2 /= d2l;
 
     // Solve 2x2 system using Cramer's rule.
     double delta = d1.det(d2);
@@ -42,7 +43,37 @@ inline bool fastIntersects(
         double inv_delta = 1 / delta;
         double t1 = a1b1.det(d2) * inv_delta;
         double t2 = a1b1.det(d1) * inv_delta;
-        if (t1 >= 0. && t1 < d1l && t2 >= 0. && t2 < d2l) {
+        if (t1 >= 0. && t1 <= 1. && t2 >= 0. && t2 <= 1.) {
+            return true;
+        }
+    }
+
+    return false;
+}
+
+/// Returns whether the segments `(a1, a2)` and `(b1, b2)` intersect
+/// excluding `a2` and `b2`.
+///
+/// It is a fast variant that considers collinear overlaps as non
+/// intersecting.
+///
+inline bool fastSemiOpenSegmentIntersects(
+    const geometry::Vec2d& a1,
+    const geometry::Vec2d& a2,
+    const geometry::Vec2d& b1,
+    const geometry::Vec2d& b2) {
+
+    geometry::Vec2d d1 = (a2 - a1);
+    geometry::Vec2d d2 = (b2 - b1);
+
+    // Solve 2x2 system using Cramer's rule.
+    double delta = d1.det(d2);
+    if (std::abs(delta) > core::epsilon) {
+        geometry::Vec2d a1b1 = b1 - a1;
+        double inv_delta = 1 / delta;
+        double t1 = a1b1.det(d2) * inv_delta;
+        double t2 = a1b1.det(d1) * inv_delta;
+        if (t1 >= 0. && t1 < 1. && t2 >= 0. && t2 < 1.) {
             return true;
         }
     }

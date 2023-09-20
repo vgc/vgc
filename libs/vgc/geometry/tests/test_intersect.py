@@ -18,11 +18,11 @@
 
 import unittest
 
-from vgc.geometry import Vec2d, fastIntersects
+from vgc.geometry import Vec2d, fastSegmentIntersects, fastSemiOpenSegmentIntersects
 
 class TestVec2(unittest.TestCase):
 
-    def testFastIntersects(self):
+    def testFastSegmentIntersects(self):
         a = Vec2d(-0.3, -0.2)
         b = Vec2d(1.7, 1.4)
         c = Vec2d(0.2, 1.6)
@@ -33,21 +33,47 @@ class TestVec2(unittest.TestCase):
         g = Vec2d(0.5, 0.6)
         h = Vec2d(1.1, 0.4)
 
-        self.assertTrue(fastIntersects(a, b, c, d))
-        self.assertTrue(fastIntersects(a, b, d, c))
-        self.assertTrue(fastIntersects(b, a, c, d))
-        self.assertTrue(fastIntersects(b, a, d, c))
-        # colinearity is not considered as intersection.
-        self.assertFalse(fastIntersects(a, c, a, c))
-        self.assertFalse(fastIntersects(c, a, c, a))
-        # intersecting at start point counts.
-        self.assertTrue(fastIntersects(a, c, a, d))
-        self.assertTrue(fastIntersects(e, g, f, h))
-        self.assertTrue(fastIntersects(f, h, e, g))
+        self.assertTrue(fastSegmentIntersects(a, b, c, d))
+        self.assertTrue(fastSegmentIntersects(a, b, d, c))
+        self.assertTrue(fastSegmentIntersects(b, a, c, d))
+        self.assertTrue(fastSegmentIntersects(b, a, d, c))
+        # collinearity is not considered as intersection.
+        self.assertFalse(fastSegmentIntersects(a, c, a, c))
+        self.assertFalse(fastSegmentIntersects(c, a, c, a))
+        # intersecting at end points does count.
+        self.assertTrue(fastSegmentIntersects(a, c, a, d))
+        self.assertTrue(fastSegmentIntersects(e, g, f, h))
+        self.assertTrue(fastSegmentIntersects(f, h, e, g))
+        self.assertTrue(fastSegmentIntersects(c, a, d, a))
+        self.assertTrue(fastSegmentIntersects(e, g, h, f))
+        self.assertTrue(fastSegmentIntersects(h, f, e, g))
+
+    def fastSemiOpenSegmentIntersects(self):
+        a = Vec2d(-0.3, -0.2)
+        b = Vec2d(1.7, 1.4)
+        c = Vec2d(0.2, 1.6)
+        d = Vec2d(1.2, -0.4)
+
+        e = Vec2d(0.5, 0.2)
+        f = Vec2d(0.5, 0.4)
+        g = Vec2d(0.5, 0.6)
+        h = Vec2d(1.1, 0.4)
+
+        self.assertTrue(fastSemiOpenSegmentIntersects(a, b, c, d))
+        self.assertTrue(fastSemiOpenSegmentIntersects(a, b, d, c))
+        self.assertTrue(fastSemiOpenSegmentIntersects(b, a, c, d))
+        self.assertTrue(fastSemiOpenSegmentIntersects(b, a, d, c))
+        # collinearity is not considered as intersection.
+        self.assertFalse(fastSemiOpenSegmentIntersects(a, c, a, c))
+        self.assertFalse(fastSemiOpenSegmentIntersects(c, a, c, a))
+        # intersecting at start point does count.
+        self.assertTrue(fastSemiOpenSegmentIntersects(a, c, a, d))
+        self.assertTrue(fastSemiOpenSegmentIntersects(e, g, f, h))
+        self.assertTrue(fastSemiOpenSegmentIntersects(f, h, e, g))
         # intersecting at end point does not count.
-        self.assertFalse(fastIntersects(c, a, d, a))
-        self.assertFalse(fastIntersects(e, g, h, f))
-        self.assertFalse(fastIntersects(h, f, e, g))
+        self.assertFalse(fastSemiOpenSegmentIntersects(c, a, d, a))
+        self.assertFalse(fastSemiOpenSegmentIntersects(e, g, h, f))
+        self.assertFalse(fastSemiOpenSegmentIntersects(h, f, e, g))
 
 if __name__ == '__main__':
     unittest.main()

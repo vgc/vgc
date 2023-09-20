@@ -23,5 +23,18 @@
 void wrap_intersect(py::module& m) {
 
     m.def(
-        "fastIntersects", &vgc::geometry::fastIntersects, "a1"_a, "a2"_a, "b1"_a, "b2"_a);
+        "fastSegmentIntersects",
+        &vgc::geometry::fastSegmentIntersects,
+        "a1"_a,
+        "a2"_a,
+        "b1"_a,
+        "b2"_a);
+
+    m.def(
+        "fastSemiOpenSegmentIntersects",
+        &vgc::geometry::fastSemiOpenSegmentIntersects,
+        "a1"_a,
+        "a2"_a,
+        "b1"_a,
+        "b2"_a);
 }
