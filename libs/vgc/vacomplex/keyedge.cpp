@@ -49,6 +49,10 @@ const geometry::StrokeSampling2d& KeyEdge::strokeSampling() const {
     return *sampling_;
 }
 
+const geometry::StrokeSample2dArray& KeyEdge::strokeSamples() const {
+    return strokeSampling().samples();
+}
+
 const geometry::Rect2d& KeyEdge::centerlineBoundingBox() const {
     updateStrokeSampling_();
     return sampling_ ? sampling_->centerlineBoundingBox() : geometry::Rect2d::empty;
@@ -131,7 +135,7 @@ Int KeyEdge::computeWindingContributionAt(const geometry::Vec2d& position) const
     // the usual way.
     //
     // To not miss a crossing nor count one twice, care must be taken about
-    // samples exactly on H. To deal with this problem we consider Hx to be
+    // samples exactly on L. To deal with this problem we consider Lx to be
     // between Px's floating point value and the next (core::nextafter(Px)).
     //
     // As future optimization, curves could implement an acceleration structure

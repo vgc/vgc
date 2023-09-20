@@ -25,6 +25,58 @@ void KeyPath::reverse() {
     }
 }
 
+namespace {
+
+geometry::Vec2dArray sampleCenterline_(const core::Array<KeyHalfedge>& halfedges) {
+    if (halfedges.isEmpty()) {
+        return {};
+    }
+    geometry::Vec2dArray result;
+    Int sampleCount = 0;
+    for (const KeyHalfedge& he : halfedges) {
+        const geometry::StrokeSample2dArray& samples =
+            he.edge()->strokeSampling().samples();
+        sampleCount += samples.length();
+    }
+    result.reserve(sampleCount);
+    KeyHalfedge he0 = halfedges.first();
+    const geometry::StrokeSample2dArray& samples0 =
+        he0.edge()->strokeSampling().samples();
+    if (he0.direction()) {
+        result.append(samples0.first().position());
+    }
+    else {
+        result.append(samples0.last().position());
+    }
+    for (const KeyHalfedge& he : halfedges) {
+        const geometry::StrokeSample2dArray& samples =
+            he.edge()->strokeSampling().samples();
+        if (he.direction()) {
+            for (auto it = samples.begin(); it != samples.end(); ++it) {
+                geometry::Vec2d p = it->position();
+                if (result.last() != p) {
+                    result.append(p);
+                }
+            }
+        }
+        else {
+            for (auto it = samples.rbegin(); it != samples.rend(); ++it) {
+                geometry::Vec2d p = it->position();
+                if (result.last() != p) {
+                    result.append(p);
+                }
+            }
+        }
+    }
+    return result;
+}
+
+} // namespace
+
+geometry::Vec2dArray KeyPath::sampleCenterline() const {
+    return sampleCenterline_(halfedges_);
+}
+
 KeyCycle::KeyCycle(const KeyPath& path)
     : steinerVertex_(path.singleVertex_)
     , halfedges_(path.halfedges_) {
@@ -82,6 +134,14 @@ void KeyCycle::reverse() {
 KeyCycle KeyCycle::reversed() const {
     KeyCycle result = *this;
     result.reverse();
+    return result;
+}
+
+geometry::Vec2dArray KeyCycle::sampleCenterline() const {
+    geometry::Vec2dArray result = sampleCenterline_(halfedges_);
+    if (result.length() > 1) {
+        result.pop();
+    }
     return result;
 }
 

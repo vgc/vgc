@@ -20,6 +20,7 @@
 #include <initializer_list>
 
 #include <vgc/core/span.h>
+#include <vgc/geometry/vec2d.h>
 #include <vgc/geometry/windingrule.h>
 #include <vgc/vacomplex/api.h>
 #include <vgc/vacomplex/keyhalfedge.h>
@@ -78,6 +79,8 @@ public:
         }
     }
 
+    geometry::Vec2dArray sampleCenterline() const;
+
 private:
     friend detail::Operations;
     friend KeyCycle;
@@ -120,6 +123,8 @@ public:
     void reverse();
 
     KeyCycle reversed() const;
+
+    geometry::Vec2dArray sampleCenterline() const;
 
     core::Array<geometry::Vec2d> sampleUniformly(Int numSamples) const;
 
