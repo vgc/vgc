@@ -20,8 +20,8 @@
 #include <initializer_list>
 
 #include <vgc/core/span.h>
-#include <vgc/geometry/windingrule.h>
 #include <vgc/geometry/vec2d.h>
+#include <vgc/geometry/windingrule.h>
 #include <vgc/vacomplex/api.h>
 #include <vgc/vacomplex/keyhalfedge.h>
 
