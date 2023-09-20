@@ -1633,7 +1633,7 @@ CutFaceResult Operations::cutGlueFace(
                 using Segment = std::array<geometry::Vec2d, 2>;
                 // assumes h2 = h1.previous().opposite()
                 auto toSectorPoint =
-                    [](const geometry::Vec2d& p,
+                    [kf](const geometry::Vec2d& p,
                        const RingKeyHalfedge& rh1,
                        const RingKeyHalfedge& rh2) -> std::optional<geometry::Vec2d> {
                     double angle1 = rh1.angle();
@@ -1646,11 +1646,9 @@ CutFaceResult Operations::cutGlueFace(
                     }
                     double angle = (angle1 + angle2) * 0.5;
 
-                    Segment seg1 = rh1.halfedge().centerlineSamplingStartSegment();
-                    Segment seg2 = rh2.halfedge().centerlineSamplingStartSegment();
-                    double l1 = (seg1[1] - seg1[0]).length();
-                    double l2 = (seg2[1] - seg2[0]).length();
-                    double delta = (std::min)(l1, l2);
+                    geometry::Rect2d kfBbox = kf->boundingBox();
+                    double delta = std::max(kfBbox.width(), kfBbox.height());
+                    delta *= core::epsilon;
 
                     return p + geometry::Vec2d(std::cos(angle), std::sin(angle)) * delta;
                 };
