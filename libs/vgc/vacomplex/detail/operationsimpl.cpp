@@ -1644,7 +1644,7 @@ CutFaceResult Operations::cutGlueFace(
                     else if (angle2 == angle1) {
                         return std::nullopt;
                     }
-                    double angle = (angle1 + angle1) * 0.5;
+                    double angle = (angle1 + angle2) * 0.5;
 
                     Segment seg1 = rh1.halfedge().centerlineSamplingStartSegment();
                     Segment seg2 = rh2.halfedge().centerlineSamplingStartSegment();
