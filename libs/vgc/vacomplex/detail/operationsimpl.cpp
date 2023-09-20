@@ -1699,7 +1699,8 @@ CutFaceResult Operations::cutGlueFace(
 
                 switch (windingRule) {
                 case geometry::WindingRule::Odd: {
-                    // All combinaisons keep the appearance, but we prefer lower numbers.
+                    // All combinaisons keep the appearance,
+                    // but we prefer lower numbers and zeros.
                     using Sums = std::array<Int, 3>;
                     Sums zeroSums = {0, 0, 0};
                     std::array<Sums, 4> sumsPerPolicy = {
