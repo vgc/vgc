@@ -45,6 +45,10 @@ public:
     ///
     void addTab(std::string_view label);
 
+    /// Returns the number of tabs in this tab bar.
+    ///
+    Int numTabs() const;
+
     /// This signal is emitted whenever a tab is closed.
     ///
     VGC_SIGNAL(tabClosed, (Int, tabIndex))

@@ -71,6 +71,15 @@ void TabBar::addTab(std::string_view label) {
     }
 }
 
+Int TabBar::numTabs() const {
+    if (tabs_) {
+        return tabs_->numChildren();
+    }
+    else {
+        return 0;
+    }
+}
+
 geometry::Vec2f TabBar::computePreferredSize() const {
     // The preferred size is determined entirely by the preferred
     // size of the tabs (that is, we ignore the close icon).

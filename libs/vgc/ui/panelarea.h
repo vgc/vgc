@@ -172,6 +172,10 @@ public:
         return isSplit_(type_);
     }
 
+    /// Returns the parent `PanelArea` of this `ParentArea`, if any.
+    ///
+    PanelArea* parentArea() const;
+
     /// Adds a `Panel` to this `PanelArea`. A warning is emitted if this
     /// `PanelArea` is not of type `Tabs`.
     ///

@@ -103,6 +103,10 @@ void PanelArea::setType(PanelAreaType newType) {
     requestRepaint();
 }
 
+PanelArea* PanelArea::parentArea() const {
+    return dynamic_cast<PanelArea*>(parent());
+}
+
 Panel* PanelArea::createPanel(std::string_view panelTitle) {
     if (type() != PanelAreaType::Tabs) {
         VGC_WARNING(
@@ -883,9 +887,27 @@ void PanelArea::updateTabs_() {
     }
 }
 
+namespace {
+
+void destroyAreaAndToBeEmptyAncestorAreas(PanelArea* area) {
+    PanelArea* parent = area->parentArea();
+    if (parent && parent->numPanels() == 1) {
+        destroyAreaAndToBeEmptyAncestorAreas(parent);
+    }
+    else {
+        area->destroy();
+    }
+}
+
+} // namespace
+
 void PanelArea::onTabClosed_(Int tabIndex) {
     std::ignore = tabIndex;
-    destroy();
+    TabBar* tabBar = this->tabBar();
+    Int numRemainingTabs = tabBar ? tabBar->numTabs() : 0;
+    if (numRemainingTabs == 0) {
+        destroyAreaAndToBeEmptyAncestorAreas(this);
+    }
 }
 
 } // namespace vgc::ui
