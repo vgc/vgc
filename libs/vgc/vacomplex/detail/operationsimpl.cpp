@@ -1630,7 +1630,6 @@ CutFaceResult Operations::cutGlueFace(
                     otherCycles.append(&otherCycle);
                 }
 
-                using Segment = std::array<geometry::Vec2d, 2>;
                 // assumes h2 = h1.previous().opposite()
                 auto toSectorPoint =
                     [kf](
