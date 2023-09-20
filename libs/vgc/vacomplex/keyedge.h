@@ -72,6 +72,7 @@ public:
 
     std::shared_ptr<const geometry::StrokeSampling2d> strokeSamplingShared() const;
     const geometry::StrokeSampling2d& strokeSampling() const;
+    const geometry::StrokeSample2dArray& strokeSamples() const;
     const geometry::Rect2d& centerlineBoundingBox() const;
 
     /// Computes and returns a new array of samples for this edge according to the
@@ -106,6 +107,9 @@ public:
 
     /// Returns the contribution of this edge to the winding number at
     /// the given `position` in edge space.
+    ///
+    /// The `direction` is used to prevent the end vertex from contributing.
+    /// It is used to not count endpoint contributions twice in cycles.
     ///
     Int computeWindingContributionAt(const geometry::Vec2d& point) const;
 

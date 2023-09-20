@@ -20,6 +20,7 @@
 #include <unordered_set>
 
 #include <vgc/core/array.h>
+#include <vgc/geometry/intersect.h>
 #include <vgc/vacomplex/exceptions.h>
 #include <vgc/vacomplex/keyedgedata.h>
 #include <vgc/vacomplex/logcategories.h>
@@ -1469,8 +1470,6 @@ CutFaceResult Operations::cutGlueFace(
     OneCycleCutPolicy oneCycleCutPolicy,
     TwoCycleCutPolicy twoCycleCutPolicy) {
 
-    // TODO: find best policy based on geometric heuristic.
-
     Int cycleIndex1 = startIndex.cycleIndex();
     Int cycleIndex2 = endIndex.cycleIndex();
 
@@ -1486,15 +1485,36 @@ CutFaceResult Operations::cutGlueFace(
             subPath_(cycle, startIndex.componentIndex(), endIndex.componentIndex());
 
         if (oneCycleCutPolicy == OneCycleCutPolicy::Auto) {
-            // TODO: find best policy.
+
+            // Default fallback policy.
             oneCycleCutPolicy = OneCycleCutPolicy::Disk;
+
+            // XXX: improve method of identifying best policy.
+            //      identify punctured torus case ?
+            if (!path1.halfedges().isEmpty() && !path2.halfedges().isEmpty()) {
+                geometry::Vec2dArray poly1 = path1.sampleCenterline();
+                geometry::Vec2dArray poly2 = path2.sampleCenterline();
+
+                Int count = 0;
+                for (Int i = 1; i + 2 < poly1.length(); ++i) {
+                    for (Int j = 1; j + 2 < poly2.length(); ++j) {
+                        if (geometry::fastIntersects(
+                                poly1[i], poly1[i + 1], poly2[j], poly2[j + 1])) {
+                            ++count;
+                        }
+                    }
+                }
+
+                if (count % 2 == 1) {
+                    oneCycleCutPolicy = OneCycleCutPolicy::Mobius;
+                }
+            }
         }
 
+        VGC_ASSERT(oneCycleCutPolicy != OneCycleCutPolicy::Auto);
+
         switch (oneCycleCutPolicy) {
-        case OneCycleCutPolicy::Auto: {
-            // TODO
-            break;
-        }
+        case OneCycleCutPolicy::Auto:
         case OneCycleCutPolicy::Disk: {
             core::Array<KeyCycle> cycles1;
             core::Array<KeyCycle> cycles2;
