@@ -1498,7 +1498,7 @@ CutFaceResult Operations::cutGlueFace(
                 Int count = 0;
                 for (Int i = 1; i + 2 < poly1.length(); ++i) {
                     for (Int j = 1; j + 2 < poly2.length(); ++j) {
-                        if (geometry::fastIntersects(
+                        if (geometry::fastSemiOpenSegmentIntersects(
                                 poly1[i], poly1[i + 1], poly2[j], poly2[j + 1])) {
                             ++count;
                         }
