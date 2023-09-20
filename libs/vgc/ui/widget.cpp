@@ -475,7 +475,9 @@ void Widget::requestRepaint() {
         if (!parent) {
             widget->repaintRequested().emit();
         }
-        // don't forward to parent if child is not visible
+        // Don't forward to parent if child is not visible.
+        // Note: if `widget` has no parent and is not visible, it is
+        // important to still emit `repaintRequested()` as done above.
         widget = widget->computedVisibility_ ? parent : nullptr;
 
     } while (widget && !widget->isRepaintRequested_);
@@ -1669,11 +1671,28 @@ void Widget::setVisibility(Visibility visibility) {
     if (visibility == visibility_) {
         return;
     }
+    bool oldComputedVisibility = computedVisibility_;
     visibility_ = visibility;
     updateComputedVisibility_();
-    Widget* p = parent();
-    if (p) {
+    bool newcomputedVisibility = computedVisibility_;
+    Widget* parent = this->parent();
+    if (parent) {
         requestGeometryUpdate();
+    }
+    if (newcomputedVisibility != oldComputedVisibility) {
+        if (parent) {
+            // Inform the parent that it should be redrawn, with the
+            // now-visible (or now-invisible) child. Note that it's not enough
+            // to call requestGeometryUpdate(), since the visibility of a child
+            // might have no influence on the geometry of its parent/siblings.
+            parent->requestRepaint();
+        }
+        else {
+            // If there is no parent, we directly emit `repaintRequested()` so
+            // that the window can handle the case where its top-level widget
+            // changes visibility.
+            requestRepaint();
+        }
     }
 }
 
