@@ -55,6 +55,7 @@ TabBar::TabBar(CreateKey key)
     closeTabButton->setIconVisible(true);
 
     close_ = closeTabButton;
+    close_->hide();
 
     addStyleClass(strings::TabBar);
     tabs_->addStyleClass(strings::tabs);
@@ -77,6 +78,18 @@ Int TabBar::numTabs() const {
     }
     else {
         return 0;
+    }
+}
+
+void TabBar::onMouseEnter() {
+    if (close_) {
+        close_->show();
+    }
+}
+
+void TabBar::onMouseLeave() {
+    if (close_) {
+        close_->hide();
     }
 }
 

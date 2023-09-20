@@ -54,6 +54,8 @@ public:
     VGC_SIGNAL(tabClosed, (Int, tabIndex))
 
 protected:
+    void onMouseEnter() override;
+    void onMouseLeave() override;
     geometry::Vec2f computePreferredSize() const override;
     void updateChildrenGeometry() override;
 
