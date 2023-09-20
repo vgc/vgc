@@ -1683,9 +1683,9 @@ CutFaceResult Operations::cutGlueFace(
                             WindingSample& sample = windingSamples.emplaceLast();
                             sample.position = spPos;
                             sample.numbers[0] = number0 + number1 + number2;
-                            sample.numbers[1] = number0 + -number1 + number2;
+                            sample.numbers[1] = number0 - number1 + number2;
                             sample.numbers[2] = number0 + number1 - number2;
-                            sample.numbers[3] = number0 + -number1 - number2;
+                            sample.numbers[3] = number0 - number1 - number2;
                         }
                     }
                 };
