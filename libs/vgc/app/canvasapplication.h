@@ -205,7 +205,7 @@ private:
     canvas::CanvasTool* currentTool_ = nullptr;
     tools::Sketch* sketchTool_ = nullptr;
     tools::PaintBucket* paintBucketTool_ = nullptr;
-    ui::Panel* toolOptionsPanel_ = nullptr;
+    ui::PanelPtr toolOptionsPanel_;
 
     void createTools_(ui::Widget* parent);
     void registerTool_( //

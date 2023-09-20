@@ -781,7 +781,9 @@ void CanvasApplication::setCurrentTool_(canvas::CanvasTool* canvasTool) {
         currentTool_ = canvasTool;
         if (currentTool_) {
             canvas_->addChild(canvasTool);
-            toolOptionsPanel_->addChild(currentTool_->optionsWidget());
+            if (toolOptionsPanel_) {
+                toolOptionsPanel_->addChild(currentTool_->optionsWidget());
+            }
             if (hadFocusedWidget) {
                 currentTool_->setFocus(ui::FocusReason::Other);
                 // TODO: it would be even better to remember, for each tool,
