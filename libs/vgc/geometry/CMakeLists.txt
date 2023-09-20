@@ -19,6 +19,7 @@ vgc_add_library(geometry
         curves2d.h
         fillstyle.h
         interpolatingstroke.h
+        intersect.h
         logcategories.h
         mat.h
         mat2d.h

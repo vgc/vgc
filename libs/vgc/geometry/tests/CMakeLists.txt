@@ -3,6 +3,7 @@ vgc_test_library(geometry
         test_arrays.cpp
 
     PYTHON_TESTS
+        test_intersect.py
         test_mat.py
         test_range.py
         test_rect.py
