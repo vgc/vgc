@@ -1633,9 +1633,10 @@ CutFaceResult Operations::cutGlueFace(
                 using Segment = std::array<geometry::Vec2d, 2>;
                 // assumes h2 = h1.previous().opposite()
                 auto toSectorPoint =
-                    [kf](const geometry::Vec2d& p,
-                       const RingKeyHalfedge& rh1,
-                       const RingKeyHalfedge& rh2) -> std::optional<geometry::Vec2d> {
+                    [kf](
+                        const geometry::Vec2d& p,
+                        const RingKeyHalfedge& rh1,
+                        const RingKeyHalfedge& rh2) -> std::optional<geometry::Vec2d> {
                     double angle1 = rh1.angle();
                     double angle2 = rh2.angle();
                     if (rh2 < rh1) {
