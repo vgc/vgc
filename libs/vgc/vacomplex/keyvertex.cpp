@@ -14,12 +14,34 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#include <vgc/vacomplex/keyedge.h>
+#include <vgc/vacomplex/keyhalfedge.h>
 #include <vgc/vacomplex/keyvertex.h>
 
 namespace vgc::vacomplex {
 
 geometry::Rect2d KeyVertex::boundingBox() const {
     return geometry::Rect2d(position_, position_);
+}
+
+core::Array<RingKeyHalfedge> KeyVertex::computeRingHalfedges() const {
+
+    core::Array<RingKeyHalfedge> result;
+
+    for (Cell* cell : star()) {
+        KeyEdge* ke = cell->toKeyEdge();
+        if (ke) {
+            if (ke->isStartVertex(this)) {
+                result.emplaceLast(ke, true);
+            }
+            if (ke->isEndVertex(this)) {
+                result.emplaceLast(ke, false);
+            }
+        }
+    }
+    std::sort(result.begin(), result.end());
+
+    return result;
 }
 
 void KeyVertex::substituteKeyVertex_(KeyVertex*, KeyVertex*) {

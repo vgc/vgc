@@ -17,6 +17,7 @@
 #ifndef VGC_VACOMPLEX_KEYHALFEDGE_H
 #define VGC_VACOMPLEX_KEYHALFEDGE_H
 
+#include <array>
 #include <functional>
 #include <initializer_list>
 
@@ -64,12 +65,12 @@ public:
 
     /// Returns the angle between the x-axis and the start tangent.
     double startAngle() const {
-        return direction_ ? edge_->startAngle() : edge_->endAngle();
+        return direction_ ? edge_->startAngle() : edge_->endOppositeAngle();
     }
 
     /// Returns the angle between the x-axis and the reversed end tangent.
-    double endAngle() const {
-        return direction_ ? edge_->endAngle() : edge_->startAngle();
+    double endOppositeAngle() const {
+        return direction_ ? edge_->endOppositeAngle() : edge_->startAngle();
     }
 
     bool isClosed() const {
@@ -77,10 +78,29 @@ public:
     }
 
     KeyHalfedge next() const;
-    //KeyHalfedge previous() const;
+    KeyHalfedge previous() const;
 
     KeyHalfedge opposite() const {
         return KeyHalfedge(edge_, !direction_);
+    }
+
+    Int numSamples() const {
+        return edge_->strokeSampling().samples().length();
+    }
+
+    std::array<geometry::Vec2d, 2> centerlineSamplingStartSegment() const {
+        const auto& samples = edge_->strokeSampling().samples();
+        Int n = samples.length();
+        Int i0, i1;
+        if (direction_) {
+            i0 = 0;
+            i1 = std::min<Int>(n, 1);
+        }
+        else {
+            i0 = n - 1;
+            i1 = std::max<Int>(0, n - 2);
+        }
+        return {samples[i0].position(), samples[i1].position()};
     }
 
     /// Returns the contribution of this halfedge to the winding number at

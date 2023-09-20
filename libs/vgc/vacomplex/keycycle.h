@@ -46,6 +46,10 @@ public:
         : singleVertex_(singleVertex) {
     }
 
+    bool isSingleVertex() const {
+        return singleVertex_ != nullptr;
+    }
+
     KeyVertex* singleVertex() const {
         return singleVertex_;
     }

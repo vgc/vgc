@@ -15,6 +15,7 @@
 // limitations under the License.
 
 #include <vgc/vacomplex/keycycle.h>
+#include <vgc/vacomplex/keyvertex.h>
 
 namespace vgc::vacomplex {
 

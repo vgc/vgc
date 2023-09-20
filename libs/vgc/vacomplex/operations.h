@@ -120,7 +120,9 @@ VGC_DECLARE_ENUM(OneCycleCutPolicy)
 enum class TwoCycleCutPolicy {
     Auto,
     ReverseNone,
-    ReverseOne
+    ReverseStart,
+    ReverseEnd,
+    ReverseBoth
 };
 
 VGC_VACOMPLEX_API

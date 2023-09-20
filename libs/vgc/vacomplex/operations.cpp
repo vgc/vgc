@@ -31,7 +31,9 @@ VGC_DEFINE_ENUM( //
     TwoCycleCutPolicy,
     (Auto, "Auto"),
     (ReverseNone, "ReverseNone"),
-    (ReverseOne, "ReverseOne"))
+    (ReverseStart, "ReverseStart"),
+    (ReverseEnd, "ReverseEnd"),
+    (ReverseBoth, "ReverseBoth"))
 
 namespace ops {
 
