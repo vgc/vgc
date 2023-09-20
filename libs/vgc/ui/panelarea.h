@@ -263,6 +263,8 @@ private:
 
     // Creates / Updates PanelTabs widget when necessary (i.e., when type = Tabs).
     void updateTabs_();
+    void onTabClosed_(Int tabIndex);
+    VGC_SLOT(onTabClosedSlot_, onTabClosed_)
 };
 
 } // namespace vgc::ui

@@ -45,12 +45,20 @@ public:
     ///
     void addTab(std::string_view label);
 
+    /// This signal is emitted whenever a tab is closed.
+    ///
+    VGC_SIGNAL(tabClosed, (Int, tabIndex))
+
 protected:
     geometry::Vec2f computePreferredSize() const override;
     void updateChildrenGeometry() override;
 
+private:
     WidgetPtr tabs_;
     WidgetPtr close_;
+
+    void onCloseTabTriggered_();
+    VGC_SLOT(onCloseTabTriggeredSlot_, onCloseTabTriggered_)
 };
 
 } // namespace vgc::ui

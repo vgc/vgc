@@ -42,9 +42,19 @@
 }
 
 .PanelArea > .Flex > .TabBar .close {
+    preferred-width: 14dp;
+    preferred-height: 14dp;
+    margin-right: 3dp; /* = 0.5 * (tabbar height (20) - button height (14)) */
+}
+
+.PanelArea > .Flex > .TabBar .close .icon {
     preferred-width: 10dp;
     preferred-height: 10dp;
-    margin-right: 8dp;
+
+    margin-top: 0dp;
+    margin-right: 0dp;
+    margin-bottom: 0dp;
+    margin-left: 0dp;
 }
 
 .Menu {
@@ -340,6 +350,19 @@
     background-color: rgb(55, 57, 59);
 }
 
+.PanelArea > .Flex > .TabBar .close {
+    background-color: rgba(0, 0, 0, 0.0);
+    icon-foreground-color: rgb(150, 150, 150);
+}
+
+.PanelArea > .Flex > .TabBar .close.hovered {
+    icon-foreground-color: rgb(220, 220, 220);
+}
+
+.PanelArea > .Flex > .TabBar .close.pressed {
+    icon-foreground-color: rgb(255, 255, 255);
+}
+
 .Menu,
 .Dialog {
     background-color: rgb(45, 47, 48);
@@ -484,7 +507,7 @@
     column-gap: 2dp;
 }
 
-.tools .Button {
+.tools .Panel .Button {
     preferred-height: 32dp;
     preferred-width: 32dp;
     horizontal-stretch: 0;
@@ -493,31 +516,31 @@
     vertical-shrink: 0;
 }
 
-.tools .Button {
+.tools .Panel .Button {
     background-color: rgba(0, 0, 0, 0);
 }
 
-.tools .Button.hovered {
+.tools .Panel .Button.hovered {
     background-color: rgb(110, 114, 118);
 }
 
-.tools .Button.pressed {
+.tools .Panel .Button.pressed {
     background-color: rgb(120, 124, 128);
 }
 
-.tools .Button.checked {
+.tools .Panel .Button.checked {
     background-color: rgb(11, 82, 172);
 }
 
-.tools .Button.checked.hovered {
+.tools .Panel .Button.checked.hovered {
     background-color: rgb(31, 102, 192);
 }
 
-.tools .Button.checked.pressed {
+.tools .Panel .Button.checked.pressed {
     background-color: rgb(41, 112, 202);
 }
 
-.tools .Button > .icon {
+.tools .Panel .Button > .icon {
     margin-top: 8dp;
     margin-right: 8dp;
     margin-bottom: 8dp;

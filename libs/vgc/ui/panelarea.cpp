@@ -872,13 +872,20 @@ void PanelArea::updateTabs_() {
             // TODO: handle other cases where we should re-build
             //       Column + TabBar + TabBody
             Widget* column = createChild<Column>();
-            column->createChild<TabBar>();
+            TabBar* tabBar = column->createChild<TabBar>();
             column->createChild<TabBody>();
+
+            tabBar->tabClosed().connect(onTabClosedSlot_());
         }
     }
     else {
         // TODO
     }
+}
+
+void PanelArea::onTabClosed_(Int tabIndex) {
+    std::ignore = tabIndex;
+    destroy();
 }
 
 } // namespace vgc::ui

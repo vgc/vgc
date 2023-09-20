@@ -18,6 +18,7 @@
 
 #include <vgc/core/paths.h>
 #include <vgc/style/strings.h>
+#include <vgc/ui/button.h>
 #include <vgc/ui/detail/paintutil.h>
 #include <vgc/ui/iconwidget.h>
 #include <vgc/ui/label.h>
@@ -25,19 +26,39 @@
 
 namespace vgc::ui {
 
+namespace {
+
+namespace commands {
+
+VGC_UI_DEFINE_TRIGGER_COMMAND( //
+    closeTab,
+    "ui.tabBar.closeTab",
+    "Close Tab",
+    Key::None,
+    "ui/icons/close.svg")
+
+} // namespace commands
+
+} // namespace
+
 TabBar::TabBar(CreateKey key)
     : Flex(key, FlexDirection::Row) {
 
-    std::string iconPath = core::resourcePath("ui/icons/close.svg");
+    Action* closeTabAction = createTriggerAction(commands::closeTab());
+    closeTabAction->triggered().connect(onCloseTabTriggeredSlot_());
 
     tabs_ = createChild<Flex>();
-    close_ = createChild<IconWidget>(iconPath);
+
+    ButtonPtr closeTabButton = createChild<Button>(closeTabAction);
+    closeTabButton->setTextVisible(false);
+    closeTabButton->setTooltipEnabled(false);
+    closeTabButton->setIconVisible(true);
+
+    close_ = closeTabButton;
 
     addStyleClass(strings::TabBar);
     tabs_->addStyleClass(strings::tabs);
     close_->addStyleClass(strings::close);
-
-    // TODO: style classes for subwidgets
 }
 
 TabBarPtr TabBar::create() {
@@ -87,6 +108,20 @@ void TabBar::updateChildrenGeometry() {
         // Center vertically
         position[1] = rect.yMin() + 0.5f * (rect.height() - size[1]);
         close_->updateGeometry(position, size);
+    }
+}
+
+void TabBar::onCloseTabTriggered_() {
+    Widget* activeTab = nullptr;
+    Int tabIndex = 0;
+    if (tabs_) {
+        // For now we support only one tab.
+        activeTab = tabs_->firstChild();
+        tabIndex = 0;
+    }
+    if (activeTab) {
+        activeTab->destroy();
+        tabClosed().emit(tabIndex);
     }
 }
 
