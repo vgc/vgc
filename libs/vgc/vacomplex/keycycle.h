@@ -79,49 +79,7 @@ public:
         }
     }
 
-    geometry::Vec2dArray sampleCenterline() const {
-        if (halfedges_.isEmpty()) {
-            return {};
-        }
-        geometry::Vec2dArray result;
-        Int sampleCount = 0;
-        for (const KeyHalfedge& he : halfedges_) {
-            const geometry::StrokeSample2dArray& samples =
-                he.edge()->strokeSampling().samples();
-            sampleCount += samples.length();
-        }
-        result.reserve(sampleCount);
-        KeyHalfedge he0 = halfedges_.first();
-        const geometry::StrokeSample2dArray& samples0 =
-            he0.edge()->strokeSampling().samples();
-        if (he0.direction()) {
-            result.append(samples0.first().position());
-        }
-        else {
-            result.append(samples0.last().position());
-        }
-        for (const KeyHalfedge& he : halfedges_) {
-            const geometry::StrokeSample2dArray& samples =
-                he.edge()->strokeSampling().samples();
-            if (he.direction()) {
-                for (auto it = samples.begin(); it != samples.end(); ++it) {
-                    geometry::Vec2d p = it->position();
-                    if (result.last() != p) {
-                        result.append(p);
-                    }
-                }
-            }
-            else {
-                for (auto it = samples.rbegin(); it != samples.rend(); ++it) {
-                    geometry::Vec2d p = it->position();
-                    if (result.last() != p) {
-                        result.append(p);
-                    }
-                }
-            }
-        }
-        return result;
-    }
+    geometry::Vec2dArray sampleCenterline() const;
 
 private:
     friend detail::Operations;
@@ -165,6 +123,8 @@ public:
     void reverse();
 
     KeyCycle reversed() const;
+
+    geometry::Vec2dArray sampleCenterline() const;
 
     core::Array<geometry::Vec2d> sampleUniformly(Int numSamples) const;
 
