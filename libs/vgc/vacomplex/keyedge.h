@@ -39,8 +39,7 @@ private:
 
     explicit KeyEdge(core::Id id, core::AnimTime t) noexcept
         : SpatioTemporalCell(id, t)
-        , data_(detail::KeyEdgePrivateKey{}, this)
-        , samplingQuality_(geometry::CurveSamplingQuality::AdaptiveLow) {
+        , data_(detail::KeyEdgePrivateKey{}, this) {
     }
 
 public:
@@ -64,24 +63,37 @@ public:
         return data_;
     }
 
-    geometry::CurveSamplingQuality samplingQuality() const {
-        return samplingQuality_;
-    }
-
     bool snapGeometry();
 
-    std::shared_ptr<const geometry::StrokeSampling2d> strokeSamplingShared() const;
-    const geometry::StrokeSampling2d& strokeSampling() const;
-    const geometry::StrokeSample2dArray& strokeSamples() const;
-    const geometry::Rect2d& centerlineBoundingBox() const;
+    geometry::CurveSamplingQuality strokeSamplingQuality() const {
+        return data_.strokeSamplingQuality();
+    }
+
+    std::shared_ptr<const geometry::StrokeSampling2d> strokeSamplingShared() const {
+        return data_.strokeSamplingShared();
+    }
+
+    const geometry::StrokeSampling2d& strokeSampling() const {
+        return data_.strokeSampling();
+    }
+
+    const geometry::StrokeSample2dArray& strokeSamples() const {
+        return data_.strokeSamples();
+    }
+
+    const geometry::Rect2d& centerlineBoundingBox() const {
+        return data_.centerlineBoundingBox();
+    }
 
     /// Computes and returns a new array of samples for this edge according to the
     /// given `parameters`.
     ///
-    /// Unlike `sampling()`, this function does not cache the result.
+    /// Unlike `strokeSampling()`, this function does not cache the result.
     ///
     geometry::StrokeSampling2d
-    computeStrokeSampling(geometry::CurveSamplingQuality quality) const;
+    computeStrokeSampling(geometry::CurveSamplingQuality quality) const {
+        return data_.computeStrokeSampling(quality);
+    }
 
     bool isStartVertex(const VertexCell* v) const override;
 
@@ -109,7 +121,9 @@ public:
     ///
     Int computeWindingContributionAt(const geometry::Vec2d& point) const;
 
-    geometry::Rect2d boundingBox() const override;
+    geometry::Rect2d boundingBox() const override {
+        return data_.centerlineBoundingBox();
+    }
 
     geometry::Rect2d boundingBoxAt(core::AnimTime t) const override {
         if (existsAt(t)) {
@@ -119,25 +133,16 @@ public:
     }
 
 protected:
-    void dirtyMesh() override;
     bool updateGeometryFromBoundary() override;
 
 private:
     KeyVertex* startVertex_ = nullptr;
     KeyVertex* endVertex_ = nullptr;
 
-    // position and orientation when not bound to vertices ?
-    //detail::Transform2d transform_;
+    // position and orientation when not bound to vertices?
+    // detail::Transform2d transform_;
 
     KeyEdgeData data_;
-
-    geometry::CurveSamplingQuality samplingQuality_ = {};
-    mutable std::shared_ptr<const geometry::StrokeSampling2d> sampling_;
-    mutable std::optional<geometry::Rect2d> bbox_;
-
-    geometry::StrokeSampling2d
-    computeStrokeSampling_(geometry::CurveSamplingQuality quality) const;
-    void updateStrokeSampling_() const;
 
     void substituteKeyVertex_(KeyVertex* oldVertex, KeyVertex* newVertex) override;
 

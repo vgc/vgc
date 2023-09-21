@@ -19,10 +19,12 @@
 
 #include <array>
 #include <memory>
+#include <optional>
 
 #include <vgc/core/arithmetic.h>
+#include <vgc/core/assert.h>
 #include <vgc/geometry/mat3d.h>
-#include <vgc/geometry/stroke.h> // AbstractStroke2d
+#include <vgc/geometry/stroke.h>
 #include <vgc/vacomplex/api.h>
 #include <vgc/vacomplex/celldata.h>
 
@@ -90,11 +92,54 @@ public:
     void setStroke(const geometry::AbstractStroke2d* stroke);
     void setStroke(std::unique_ptr<geometry::AbstractStroke2d>&& stroke);
 
+    geometry::CurveSamplingQuality strokeSamplingQuality() const {
+        return strokeSamplingQuality_;
+    }
+
+    void setStrokeSamplingQuality(geometry::CurveSamplingQuality strokeSamplingQuality);
+
+    std::shared_ptr<const geometry::StrokeSampling2d> strokeSamplingShared() const {
+        updateStrokeSampling_();
+        return strokeSampling_;
+    }
+
+    const geometry::StrokeSampling2d& strokeSampling() const {
+        updateStrokeSampling_();
+        VGC_ASSERT(strokeSampling_ != nullptr);
+        return *strokeSampling_;
+    }
+
+    const geometry::StrokeSample2dArray& strokeSamples() const {
+        return strokeSampling().samples();
+    }
+
+    /// Computes and returns a new array of samples for the stroke according
+    /// to the given `quality`.
+    ///
+    /// Unlike `strokeSampling()`, this function does not cache the result.
+    ///
+    geometry::StrokeSampling2d
+    computeStrokeSampling(geometry::CurveSamplingQuality quality) const {
+        if (strokeSamplingQuality_ == quality) {
+            // return copy of cached sampling
+            return strokeSampling();
+        }
+        return computeStrokeSampling_(strokeSamplingQuality_);
+    }
+
+    const geometry::Rect2d& centerlineBoundingBox() const {
+        if (!centerlineBBox_.has_value()) {
+            updateStrokeSampling_();
+            centerlineBBox_ = strokeSampling_->centerlineBoundingBox();
+        }
+        return centerlineBBox_.value();
+    }
+
     void closeStroke(bool smoothJoin);
 
     /// Expects positions in object space.
     ///
-    void snap(
+    void snapGeometry(
         const geometry::Vec2d& snapStartPosition,
         const geometry::Vec2d& snapEndPosition,
         geometry::CurveSnapTransformationMode mode =
@@ -135,6 +180,21 @@ public:
 
 private:
     std::unique_ptr<geometry::AbstractStroke2d> stroke_;
+
+    geometry::CurveSamplingQuality strokeSamplingQuality_ =
+        geometry::CurveSamplingQuality::AdaptiveLow;
+
+    mutable std::shared_ptr<const geometry::StrokeSampling2d> strokeSampling_;
+    mutable std::optional<geometry::Rect2d> centerlineBBox_;
+
+    void updateStrokeSampling_() const;
+    void dirtyStrokeSampling_() const {
+        strokeSampling_.reset();
+        centerlineBBox_.reset();
+    }
+
+    geometry::StrokeSampling2d
+    computeStrokeSampling_(geometry::CurveSamplingQuality quality) const;
 };
 
 //std::shared_ptr<const EdgeSampling> snappedSampling_;

@@ -387,7 +387,9 @@ VGC_VACOMPLEX_API
 void setKeyVertexPosition(KeyVertex* vertex, const geometry::Vec2d& pos);
 
 VGC_VACOMPLEX_API
-void setKeyEdgeSamplingQuality(KeyEdge* edge, geometry::CurveSamplingQuality quality);
+void setKeyEdgeStrokeSamplingQuality(
+    KeyEdge* edge,
+    geometry::CurveSamplingQuality quality);
 
 } // namespace ops
 } // namespace vgc::vacomplex

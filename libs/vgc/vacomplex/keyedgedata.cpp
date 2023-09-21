@@ -74,6 +74,7 @@ bool KeyEdgeData::isClosed() const {
 void KeyEdgeData::translate(const geometry::Vec2d& delta) {
     if (stroke_) {
         stroke_->translate(delta);
+        dirtyStrokeSampling_();
         emitGeometryChanged();
     }
     properties_.onTranslateGeometry(delta);
@@ -82,17 +83,19 @@ void KeyEdgeData::translate(const geometry::Vec2d& delta) {
 void KeyEdgeData::transform(const geometry::Mat3d& transformation) {
     if (stroke_) {
         stroke_->transform(transformation);
+        dirtyStrokeSampling_();
         emitGeometryChanged();
     }
     properties_.onTransformGeometry(transformation);
 }
 
-void KeyEdgeData::snap(
+void KeyEdgeData::snapGeometry(
     const geometry::Vec2d& snapStartPosition,
     const geometry::Vec2d& snapEndPosition,
     geometry::CurveSnapTransformationMode mode) {
 
     if (stroke_ && stroke_->snap(snapStartPosition, snapEndPosition, mode)) {
+        dirtyStrokeSampling_();
         emitGeometryChanged();
         properties_.onUpdateGeometry(stroke_.get());
     }
@@ -141,6 +144,7 @@ void KeyEdgeData::setStroke(const geometry::AbstractStroke2d* newStroke) {
     if (KeyEdge* ke = keyEdge()) {
         fixStrokeClosedness(stroke_.get(), ke->isClosed());
     }
+    dirtyStrokeSampling_();
     emitGeometryChanged();
     properties_.onUpdateGeometry(stroke_.get());
 }
@@ -150,8 +154,18 @@ void KeyEdgeData::setStroke(std::unique_ptr<geometry::AbstractStroke2d>&& newStr
     if (KeyEdge* ke = keyEdge()) {
         fixStrokeClosedness(stroke_.get(), ke->isClosed());
     }
+    dirtyStrokeSampling_();
     emitGeometryChanged();
     properties_.onUpdateGeometry(stroke_.get());
+}
+
+void KeyEdgeData::setStrokeSamplingQuality(
+    geometry::CurveSamplingQuality strokeSamplingQuality) {
+    if (strokeSamplingQuality_ != strokeSamplingQuality) {
+        strokeSamplingQuality_ = strokeSamplingQuality;
+        dirtyStrokeSampling_();
+        emitGeometryChanged();
+    }
 }
 
 void KeyEdgeData::closeStroke(bool smoothJoin) {
@@ -165,7 +179,8 @@ void KeyEdgeData::closeStroke(bool smoothJoin) {
         return;
     }
     stroke_->close(smoothJoin);
-    // XXX: Or add onCloseStroke, or do not notify the properties at all?
+    dirtyStrokeSampling_();
+    emitGeometryChanged();
     properties_.onUpdateGeometry(stroke_.get());
 }
 
@@ -326,6 +341,32 @@ KeyEdgeData KeyEdgeData::fromSlice(
     result.setStroke(std::move(newStroke_));
     result.properties_.assignFromSlice(ked, start, end, numWraps, newStroke);
     return result;
+}
+
+void KeyEdgeData::updateStrokeSampling_() const {
+    if (!strokeSampling_) {
+        geometry::StrokeSampling2d sampling =
+            computeStrokeSampling_(strokeSamplingQuality_);
+        strokeSampling_ =
+            std::make_shared<const geometry::StrokeSampling2d>(std::move(sampling));
+    }
+}
+
+geometry::StrokeSampling2d
+KeyEdgeData::computeStrokeSampling_(geometry::CurveSamplingQuality quality) const {
+    // TODO: define guarantees.
+    // - what about a closed edge without points data ?
+    // - what about an open edge without points data and same end points ?
+    // - what about an open edge without points data but different end points ?
+    if (!stroke_) {
+        geometry::StrokeSample2dArray fakeSamples = {geometry::StrokeSample2d()};
+        return geometry::StrokeSampling2d(fakeSamples);
+    }
+    geometry::StrokeSampling2d sampling = stroke_->computeSampling(quality);
+    if (KeyEdge* ke = keyEdge()) {
+        ke->onMeshQueried();
+    }
+    return sampling;
 }
 
 } // namespace vgc::vacomplex

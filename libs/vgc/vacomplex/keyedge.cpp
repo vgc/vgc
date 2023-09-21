@@ -35,46 +35,8 @@ bool KeyEdge::snapGeometry() {
         // todo: set snapStartPosition
         snapEndPosition = snapStartPosition;
     }
-    data_.snap(snapStartPosition, snapEndPosition);
+    data_.snapGeometry(snapStartPosition, snapEndPosition);
     return true;
-}
-
-std::shared_ptr<const geometry::StrokeSampling2d> KeyEdge::strokeSamplingShared() const {
-    updateStrokeSampling_();
-    return sampling_;
-}
-
-const geometry::StrokeSampling2d& KeyEdge::strokeSampling() const {
-    updateStrokeSampling_();
-    VGC_ASSERT(sampling_ != nullptr);
-    return *sampling_;
-}
-
-const geometry::StrokeSample2dArray& KeyEdge::strokeSamples() const {
-    return strokeSampling().samples();
-}
-
-const geometry::Rect2d& KeyEdge::centerlineBoundingBox() const {
-    updateStrokeSampling_();
-    return sampling_ ? sampling_->centerlineBoundingBox() : geometry::Rect2d::empty;
-}
-
-/// Computes and returns a new array of samples for this edge according to the
-/// given `parameters`.
-///
-/// Unlike `sampling()`, this function does not cache the result unless
-/// `quality == edge->samplingQuality()`.
-///
-geometry::StrokeSampling2d
-KeyEdge::computeStrokeSampling(geometry::CurveSamplingQuality quality) const {
-
-    if (samplingQuality_ == quality) {
-        updateStrokeSampling_();
-        // return copy of cached sampling
-        return *sampling_;
-    }
-
-    return computeStrokeSampling_(samplingQuality_);
 }
 
 bool KeyEdge::isStartVertex(const VertexCell* v) const {
@@ -86,19 +48,19 @@ bool KeyEdge::isEndVertex(const VertexCell* v) const {
 }
 
 double KeyEdge::startAngle() const {
-    updateStrokeSampling_();
     // TODO: guarantee at least one sample
-    if (!sampling_->samples().isEmpty()) {
-        return sampling_->samples().first().tangent().angle();
+    const auto& samples = strokeSamples();
+    if (!samples.isEmpty()) {
+        return samples.first().tangent().angle();
     }
     return 0;
 }
 
 double KeyEdge::endOppositeAngle() const {
-    updateStrokeSampling_();
     // TODO: guarantee at least one sample
-    if (!sampling_->samples().isEmpty()) {
-        geometry::Vec2d endTangent = sampling_->samples().last().tangent();
+    const auto& samples = strokeSamples();
+    if (!samples.isEmpty()) {
+        geometry::Vec2d endTangent = samples.last().tangent();
         return (-endTangent).angle();
     }
     return 0;
@@ -249,40 +211,8 @@ Int KeyEdge::computeWindingContributionAt(const geometry::Vec2d& position) const
     return contribution;
 }
 
-geometry::Rect2d KeyEdge::boundingBox() const {
-    if (!bbox_.has_value()) {
-        updateStrokeSampling_();
-        bbox_ = sampling_->centerlineBoundingBox();
-    }
-    return bbox_.value();
-}
-
-void KeyEdge::dirtyMesh() {
-    sampling_.reset();
-    bbox_ = std::nullopt;
-}
-
 bool KeyEdge::updateGeometryFromBoundary() {
     return snapGeometry();
-}
-
-geometry::StrokeSampling2d
-KeyEdge::computeStrokeSampling_(geometry::CurveSamplingQuality quality) const {
-    // TODO: define guarantees.
-    // - what about a closed edge without points data ?
-    // - what about an open edge without points data and same end points ?
-    // - what about an open edge without points data but different end points ?
-    geometry::StrokeSampling2d sampling = data_.stroke()->computeSampling(quality);
-    onMeshQueried();
-    return sampling;
-}
-
-void KeyEdge::updateStrokeSampling_() const {
-    if (!sampling_) {
-        geometry::StrokeSampling2d sampling = computeStrokeSampling_(samplingQuality_);
-        sampling_ =
-            std::make_shared<const geometry::StrokeSampling2d>(std::move(sampling));
-    }
 }
 
 // Assumes `oldVertex != nullptr`.
