@@ -25,7 +25,7 @@ KeyHalfedge KeyHalfedge::next() const {
         return *this;
     }
 
-    core::Array<RingKeyHalfedge> ring = endVertex()->computeRingHalfedges();
+    core::Array<RingKeyHalfedge> ring = endVertex()->ringHalfedges();
 
     KeyHalfedge opposite = this->opposite();
 
@@ -49,7 +49,7 @@ KeyHalfedge KeyHalfedge::previous() const {
         return *this;
     }
 
-    core::Array<RingKeyHalfedge> ring = startVertex()->computeRingHalfedges();
+    core::Array<RingKeyHalfedge> ring = startVertex()->ringHalfedges();
 
     Int i = 0;
     Int n = ring.length();

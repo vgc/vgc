@@ -117,10 +117,23 @@ public:
         return geometry::Rect2d::empty;
     }
 
-    /// Computes the ring of outgoing halfedges sorted so that iterating
-    /// over it is equivalent to doing `halfedge = halfedge.previous().opposite()`.
+    /// Computes and returns the ring of outgoing halfedges at this vertex,
+    /// sorted by increasing `KeyHalfedge::startAngle()` (or increasing
+    /// `KeyEdge::id()` if angles are equal).
     ///
-    core::Array<RingKeyHalfedge> computeRingHalfedges() const;
+    /// Forward iteration over the ring is equivalent to:
+    ///
+    /// ```cpp
+    /// halfedge = halfedge.previous().opposite()
+    /// ```
+    ///
+    /// and backward iteration over the ring is equivalent to:
+    ///
+    /// ```cpp
+    /// halfedge = halfedge.().opposite().next()
+    /// ```
+    ///
+    core::Array<RingKeyHalfedge> ringHalfedges() const;
 
 private:
     geometry::Vec2d position_;

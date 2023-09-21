@@ -1666,7 +1666,7 @@ CutFaceResult Operations::cutGlueFace(
                 auto processRing = [&](KeyVertex* kv) {
                     geometry::Vec2d p = kv->position();
                     core::Array<RingKeyHalfedge> ring =
-                        khe.startVertex()->computeRingHalfedges();
+                        khe.startVertex()->ringHalfedges();
 
                     auto prevIt = ring.end() - 1;
                     for (auto it = ring.begin(); it != ring.end(); prevIt = it, ++it) {

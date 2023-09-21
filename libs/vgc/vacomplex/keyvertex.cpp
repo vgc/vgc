@@ -24,7 +24,7 @@ geometry::Rect2d KeyVertex::boundingBox() const {
     return geometry::Rect2d(position_, position_);
 }
 
-core::Array<RingKeyHalfedge> KeyVertex::computeRingHalfedges() const {
+core::Array<RingKeyHalfedge> KeyVertex::ringHalfedges() const {
 
     core::Array<RingKeyHalfedge> result;
 
