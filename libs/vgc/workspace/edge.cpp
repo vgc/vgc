@@ -247,7 +247,7 @@ void VacKeyEdge::setTesselationMode(geometry::CurveSamplingQuality mode) {
         edgeTesselationMode_ = mode;
         vacomplex::KeyEdge* ke = vacKeyEdgeNode();
         if (ke) {
-            vacomplex::ops::setKeyEdgeSamplingQuality(ke, edgeTesselationMode_);
+            vacomplex::ops::setKeyEdgeStrokeSamplingQuality(ke, edgeTesselationMode_);
         }
         dirtyPreJoinGeometry_();
     }
@@ -914,7 +914,7 @@ ElementStatus VacKeyEdge::updateFromDom_(Workspace* workspace) {
             onUpdateError_();
             return ElementStatus::InvalidAttribute;
         }
-        vacomplex::ops::setKeyEdgeSamplingQuality(ke, edgeTesselationMode_);
+        vacomplex::ops::setKeyEdgeStrokeSamplingQuality(ke, edgeTesselationMode_);
         setVacNode(ke);
     }
     else {
@@ -924,7 +924,7 @@ ElementStatus VacKeyEdge::updateFromDom_(Workspace* workspace) {
         }
         else if (!isClosed) {
             // Auto-snap data when read from DOM.
-            data.snap(kvs[0]->position(), kvs[1]->position());
+            data.snapGeometry(kvs[0]->position(), kvs[1]->position());
         }
     }
 

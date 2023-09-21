@@ -204,7 +204,8 @@ public:
 
     void setKeyVertexPosition(KeyVertex* kv, const geometry::Vec2d& pos);
 
-    void setKeyEdgeSamplingQuality(KeyEdge* ke, geometry::CurveSamplingQuality quality);
+    void
+    setKeyEdgeStrokeSamplingQuality(KeyEdge* ke, geometry::CurveSamplingQuality quality);
 
 private:
     Complex* complex_ = nullptr;

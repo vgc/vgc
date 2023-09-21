@@ -976,12 +976,14 @@ void setKeyVertexPosition(KeyVertex* vertex, const geometry::Vec2d& pos) {
     return ops.setKeyVertexPosition(vertex, pos);
 }
 
-void setKeyEdgeSamplingQuality(KeyEdge* edge, geometry::CurveSamplingQuality quality) {
+void setKeyEdgeStrokeSamplingQuality(
+    KeyEdge* edge,
+    geometry::CurveSamplingQuality quality) {
     if (!edge) {
-        throw LogicError("setKeyEdgeSamplingQuality: edge is nullptr.");
+        throw LogicError("setKeyEdgeStrokeSamplingQuality: edge is nullptr.");
     }
     detail::Operations ops(edge->complex());
-    return ops.setKeyEdgeSamplingQuality(edge, quality);
+    return ops.setKeyEdgeStrokeSamplingQuality(edge, quality);
 }
 
 } // namespace ops

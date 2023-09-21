@@ -2333,17 +2333,11 @@ void Operations::setKeyVertexPosition(KeyVertex* kv, const geometry::Vec2d& pos)
     onGeometryChanged_(kv);
 }
 
-void Operations::setKeyEdgeSamplingQuality(
+void Operations::setKeyEdgeStrokeSamplingQuality(
     KeyEdge* ke,
     geometry::CurveSamplingQuality quality) {
 
-    if (quality == ke->samplingQuality_) {
-        // same data
-        return;
-    }
-
-    ke->samplingQuality_ = quality;
-    dirtyMesh_(ke);
+    ke->data_.setStrokeSamplingQuality(quality);
 }
 
 void Operations::onNodeCreated_(Node* node) {
@@ -2907,7 +2901,7 @@ KeyEdge* Operations::glueKeyOpenEdges_(core::ConstSpan<KeyHalfedge> khs) {
     if (endVertices.contains(startKv)) {
         // collapsing start and end to single vertex
         endVertexPosition = 0.5 * (endPositions[0] + endVertexPosition);
-        newData.snap(endVertexPosition, endVertexPosition);
+        newData.snapGeometry(endVertexPosition, endVertexPosition);
         startKv = nullptr;
     }
     KeyVertex* endKv = glueKeyVertices(endVertices, endVertexPosition);
