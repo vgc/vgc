@@ -1621,21 +1621,184 @@ CutFaceResult Operations::cutGlueFace(
     else {
         // Two-cycle cut case
 
-        KeyPath path1 =
-            rotatedCycleHalfedges_(kf->cycles_[cycleIndex1], startIndex.componentIndex());
-        KeyPath path2 =
-            rotatedCycleHalfedges_(kf->cycles_[cycleIndex2], endIndex.componentIndex());
+        const KeyCycle& cycle1 = kf->cycles_[cycleIndex1];
+        const KeyCycle& cycle2 = kf->cycles_[cycleIndex2];
+
+        KeyPath path1 = rotatedCycleHalfedges_(cycle1, startIndex.componentIndex());
+        KeyPath path2 = rotatedCycleHalfedges_(cycle2, endIndex.componentIndex());
+
+        if (twoCycleCutPolicy == TwoCycleCutPolicy::Auto) {
+
+            // Default fallback policy.
+            twoCycleCutPolicy = TwoCycleCutPolicy::ReverseNone;
+
+            if (!path1.isSingleVertex() && !path2.isSingleVertex()) {
+                // Around each end vertex, the plane can be seen as divided into sectors by
+                // the incident halfedges. In each of these sectors we want the winding to
+                // remain unchanged if possible.
+
+                core::Array<const KeyCycle*> otherCycles;
+                Int cycleIndex = -1;
+                for (const auto& otherCycle : kf->cycles()) {
+                    ++cycleIndex;
+                    if (cycleIndex == cycleIndex1 || cycleIndex == cycleIndex2) {
+                        continue;
+                    }
+                    if (otherCycle.steinerVertex()) {
+                        continue;
+                    }
+                    otherCycles.append(&otherCycle);
+                }
+
+                // assumes h2 = h1.previous().opposite()
+                auto toSectorPoint =
+                    [kf](
+                        const geometry::Vec2d& p,
+                        const RingKeyHalfedge& rh1,
+                        const RingKeyHalfedge& rh2) -> std::optional<geometry::Vec2d> {
+                    double angle1 = rh1.angle();
+                    double angle2 = rh2.angle();
+                    if (rh2 < rh1) {
+                        angle2 += 2 * core::pi;
+                    }
+                    else if (angle2 == angle1) {
+                        return std::nullopt;
+                    }
+                    double angle = (angle1 + angle2) * 0.5;
+
+                    geometry::Rect2d kfBbox = kf->boundingBox();
+                    double delta = (std::max)(kfBbox.width(), kfBbox.height());
+                    delta *= core::epsilon;
+
+                    return p + geometry::Vec2d(std::cos(angle), std::sin(angle)) * delta;
+                };
+
+                struct WindingSample {
+                    geometry::Vec2d position;
+                    std::array<Int, 4> numbers;
+                };
+
+                core::Array<WindingSample> windingSamples;
+
+                // TODO: use KeyFace winding rule.
+                geometry::WindingRule windingRule = geometry::WindingRule::Odd;
+
+                auto processRing = [&](KeyVertex* kv) {
+                    geometry::Vec2d p = kv->position();
+                    core::Array<RingKeyHalfedge> ring =
+                        khe.startVertex()->ringHalfedges();
+
+                    auto prevIt = ring.end() - 1;
+                    for (auto it = ring.begin(); it != ring.end(); prevIt = it, ++it) {
+                        if (std::optional<geometry::Vec2d> sp =
+                                toSectorPoint(p, *prevIt, *it)) {
+
+                            geometry::Vec2d spPos = sp.value();
+                            Int number0 = 0;
+                            for (const auto* otherCycle : otherCycles) {
+                                number0 += otherCycle->computeWindingNumberAt(spPos);
+                            }
+                            Int number1 = cycle1.computeWindingNumberAt(spPos);
+                            Int number2 = cycle2.computeWindingNumberAt(spPos);
+                            WindingSample& sample = windingSamples.emplaceLast();
+                            sample.position = spPos;
+                            sample.numbers[0] = number0 + number1 + number2;
+                            sample.numbers[1] = number0 - number1 + number2;
+                            sample.numbers[2] = number0 + number1 - number2;
+                            sample.numbers[3] = number0 - number1 - number2;
+                        }
+                    }
+                };
+
+                processRing(khe.startVertex());
+                if (khe.endVertex() != khe.startVertex()) {
+                    processRing(khe.endVertex());
+                }
+
+                switch (windingRule) {
+                case geometry::WindingRule::Odd: {
+                    // All combinaisons keep the appearance,
+                    // but we prefer lower numbers and zeros.
+                    using Sums = std::array<Int, 3>;
+                    Sums zeroSums = {0, 0, 0};
+                    std::array<Sums, 4> sumsPerPolicy = {
+                        zeroSums, zeroSums, zeroSums, zeroSums};
+                    for (const WindingSample& sample : windingSamples) {
+                        Int number0 = sample.numbers[0];
+                        for (Int i = 0; i < 4; ++i) {
+                            Int number = sample.numbers[i];
+                            Int absNumber = std::abs(number);
+                            if (absNumber % 2 == 0) {
+                                sumsPerPolicy[i][0] += std::abs(number);
+                            }
+                            else {
+                                sumsPerPolicy[i][1] += std::abs(number);
+                            }
+                            if (number != 0) {
+                                if (number0 == 0) {
+                                    sumsPerPolicy[i][2] += 1;
+                                }
+                                else if (number * number0 < 0) {
+                                    sumsPerPolicy[i][2] += 1;
+                                }
+                            }
+                        }
+                    }
+                    Int minIndex = std::distance(
+                        sumsPerPolicy.begin(),
+                        std::min_element(sumsPerPolicy.begin(), sumsPerPolicy.end()));
+                    switch (minIndex) {
+                    case 0:
+                        twoCycleCutPolicy = TwoCycleCutPolicy::ReverseNone;
+                        break;
+                    case 1:
+                        twoCycleCutPolicy = TwoCycleCutPolicy::ReverseStart;
+                        break;
+                    case 2:
+                        twoCycleCutPolicy = TwoCycleCutPolicy::ReverseEnd;
+                        break;
+                    case 3:
+                        twoCycleCutPolicy = TwoCycleCutPolicy::ReverseBoth;
+                        break;
+                    }
+                }
+                case geometry::WindingRule::NonZero:
+                case geometry::WindingRule::Positive:
+                case geometry::WindingRule::Negative:
+                    // TODO
+                    break;
+                }
+
+                // geometry::isWindingNumberSatisfyingRule
+
+                /*if (khe.startVertex() != khe.endVertex()) {
+                    geometry::Vec2d p2 = khe.endVertex()->position();
+                    core::Array<RingKeyHalfedge> ring2 =
+                        khe.endVertex()->computeRingHalfedges();
+                }*/
+
+                // TODO
+            }
+        }
+
+        VGC_ASSERT(twoCycleCutPolicy != TwoCycleCutPolicy::Auto);
 
         switch (twoCycleCutPolicy) {
-        case TwoCycleCutPolicy::Auto: {
-            // TODO
-            break;
-        }
+        case TwoCycleCutPolicy::Auto:
         case TwoCycleCutPolicy::ReverseNone: {
             break;
         }
-        case TwoCycleCutPolicy::ReverseOne: {
+        case TwoCycleCutPolicy::ReverseStart: {
             path1.reverse();
+            break;
+        }
+        case TwoCycleCutPolicy::ReverseEnd: {
+            path2.reverse();
+            break;
+        }
+        case TwoCycleCutPolicy::ReverseBoth: {
+            path1.reverse();
+            path2.reverse();
             break;
         }
         }

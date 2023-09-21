@@ -15,58 +15,24 @@
 // limitations under the License.
 
 #include <vgc/vacomplex/keyhalfedge.h>
+#include <vgc/vacomplex/keyvertex.h>
 
 namespace vgc::vacomplex {
 
 KeyHalfedge KeyHalfedge::next() const {
 
-    struct Candidate {
-        Candidate(KeyEdge* ke, bool direction, double angle)
-            : khe(ke, direction)
-            , angle(angle)
-            , id(ke->id()) {
-        }
-
-        KeyHalfedge khe;
-        double angle;
-        Int id;
-    };
-
-    KeyVertex* kv = this->endVertex();
-    core::Array<Candidate> candidates;
-
-    for (Cell* cell : kv->star()) {
-        KeyEdge* ke = cell->toKeyEdge();
-        if (ke) {
-            if (ke->isStartVertex(kv)) {
-                candidates.emplaceLast(ke, true, ke->startAngle());
-            }
-            if (ke->isEndVertex(kv)) {
-                candidates.emplaceLast(ke, false, ke->endAngle());
-            }
-        }
+    if (!endVertex()) {
+        return *this;
     }
 
-    std::sort(
-        candidates.begin(),
-        candidates.end(),
-        [=](const Candidate& a, const Candidate& b) {
-            if (a.angle != b.angle) {
-                return a.angle < b.angle;
-            }
-            if (a.id != b.id) {
-                return a.id < b.id;
-            }
-            // assumes `a.khe.direction() != b.khe.direction()`
-            return a.khe.direction();
-        });
+    core::Array<RingKeyHalfedge> ring = endVertex()->ringHalfedges();
 
     KeyHalfedge opposite = this->opposite();
 
     Int i = 0;
-    Int n = candidates.length();
+    Int n = ring.length();
     for (; i < n; ++i) {
-        if (candidates[i].khe == opposite) {
+        if (ring[i] == opposite) {
             break;
         }
     }
@@ -74,7 +40,29 @@ KeyHalfedge KeyHalfedge::next() const {
     // first smaller angle is next halfedge
     i = (i - 1 + n) % n;
 
-    return candidates[i].khe;
+    return ring[i];
+}
+
+KeyHalfedge KeyHalfedge::previous() const {
+
+    if (!startVertex()) {
+        return *this;
+    }
+
+    core::Array<RingKeyHalfedge> ring = startVertex()->ringHalfedges();
+
+    Int i = 0;
+    Int n = ring.length();
+    for (; i < n; ++i) {
+        if (ring[i] == *this) {
+            break;
+        }
+    }
+
+    // first bigger angle is opposite of previous halfedge
+    i = (i + 1) % n;
+
+    return ring[i].halfedge().opposite();
 }
 
 Int KeyHalfedge::computeWindingContributionAt(const geometry::Vec2d& position) const {

@@ -37,8 +37,8 @@ private:
 public:
     VGC_VACOMPLEX_DEFINE_SPATIOTEMPORAL_CELL_CAST_METHODS(Inbetween, Edge)
 
-    bool isStartVertex(VertexCell* v) const override;
-    bool isEndVertex(VertexCell* v) const override;
+    bool isStartVertex(const VertexCell* v) const override;
+    bool isEndVertex(const VertexCell* v) const override;
     bool isClosed() const override;
 
     geometry::Rect2d boundingBoxAt(core::AnimTime /*t*/) const override;

@@ -20,10 +20,68 @@
 #include <vgc/geometry/vec2d.h>
 #include <vgc/vacomplex/api.h>
 #include <vgc/vacomplex/cell.h>
+#include <vgc/vacomplex/keyhalfedge.h>
 
 namespace vgc::vacomplex {
 
-class KeyHalfedge;
+class VGC_VACOMPLEX_API RingKeyHalfedge {
+public:
+    RingKeyHalfedge(KeyEdge* ke, bool direction) noexcept
+        : halfedge_(ke, direction) {
+
+        angle_ = halfedge_.startAngle();
+    }
+
+    operator const KeyHalfedge&() const {
+        return halfedge_;
+    }
+
+    const KeyHalfedge& halfedge() const {
+        return halfedge_;
+    }
+
+    KeyEdge* edge() const {
+        return halfedge_.edge();
+    }
+
+    bool direction() const {
+        return halfedge_.direction();
+    }
+
+    KeyVertex* endVertex() const {
+        return halfedge_.endVertex();
+    }
+
+    /// Returns the angle between the x-axis and the start tangent.
+    double angle() const {
+        return angle_;
+    }
+
+    friend bool operator<(const RingKeyHalfedge& lhs, const RingKeyHalfedge& rhs) {
+        if (lhs.angle_ != rhs.angle_) {
+            return lhs.angle_ < rhs.angle_;
+        }
+        Int id1 = lhs.halfedge_.edge()->id();
+        Int id2 = rhs.halfedge_.edge()->id();
+        if (id1 != id2) {
+            return id1 < id2;
+        }
+        // assumes `lhs.khe.direction() != rhs.khe.direction()`
+        return lhs.halfedge_.direction();
+    }
+
+    friend bool operator==(const RingKeyHalfedge& rh1, const RingKeyHalfedge& rh2) {
+        return rh1.halfedge_ == rh2.halfedge_;
+    }
+
+    friend bool operator!=(const RingKeyHalfedge& rh1, const RingKeyHalfedge& rh2) {
+        return !(rh1 == rh2);
+    }
+
+private:
+    KeyHalfedge halfedge_;
+    double angle_;
+};
 
 // dev note: position could be a variant<vec2d, func, provider>
 //           provider could have a dirty flag to not update data, especially important for
@@ -58,6 +116,24 @@ public:
         }
         return geometry::Rect2d::empty;
     }
+
+    /// Computes and returns the ring of outgoing halfedges at this vertex,
+    /// sorted by increasing `KeyHalfedge::startAngle()` (or increasing
+    /// `KeyEdge::id()` if angles are equal).
+    ///
+    /// Forward iteration over the ring is equivalent to:
+    ///
+    /// ```cpp
+    /// halfedge = halfedge.previous().opposite()
+    /// ```
+    ///
+    /// and backward iteration over the ring is equivalent to:
+    ///
+    /// ```cpp
+    /// halfedge = halfedge.().opposite().next()
+    /// ```
+    ///
+    core::Array<RingKeyHalfedge> ringHalfedges() const;
 
 private:
     geometry::Vec2d position_;

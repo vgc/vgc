@@ -15,6 +15,7 @@
 // limitations under the License.
 
 #include <vgc/vacomplex/keyedge.h>
+#include <vgc/vacomplex/keyvertex.h>
 
 namespace vgc::vacomplex {
 
@@ -76,6 +77,14 @@ KeyEdge::computeStrokeSampling(geometry::CurveSamplingQuality quality) const {
     return computeStrokeSampling_(samplingQuality_);
 }
 
+bool KeyEdge::isStartVertex(const VertexCell* v) const {
+    return v == startVertex_;
+}
+
+bool KeyEdge::isEndVertex(const VertexCell* v) const {
+    return v == endVertex_;
+}
+
 double KeyEdge::startAngle() const {
     updateStrokeSampling_();
     // TODO: guarantee at least one sample
@@ -85,7 +94,7 @@ double KeyEdge::startAngle() const {
     return 0;
 }
 
-double KeyEdge::endAngle() const {
+double KeyEdge::endOppositeAngle() const {
     updateStrokeSampling_();
     // TODO: guarantee at least one sample
     if (!sampling_->samples().isEmpty()) {

@@ -26,10 +26,10 @@
 #include <vgc/vacomplex/api.h>
 #include <vgc/vacomplex/cell.h>
 #include <vgc/vacomplex/keyedgedata.h>
-#include <vgc/vacomplex/keyvertex.h>
 
 namespace vgc::vacomplex {
 
+class KeyVertex;
 class KeyHalfedge;
 
 class VGC_VACOMPLEX_API KeyEdge final : public SpatioTemporalCell<EdgeCell, KeyCell> {
@@ -83,13 +83,9 @@ public:
     geometry::StrokeSampling2d
     computeStrokeSampling(geometry::CurveSamplingQuality quality) const;
 
-    bool isStartVertex(VertexCell* v) const override {
-        return v == startVertex_;
-    }
+    bool isStartVertex(const VertexCell* v) const override;
 
-    bool isEndVertex(VertexCell* v) const override {
-        return v == endVertex_;
-    }
+    bool isEndVertex(const VertexCell* v) const override;
 
     bool isClosed() const override {
         return !startVertex_;
@@ -103,7 +99,7 @@ public:
     /// Returns the angle, in radians and in the interval (-π, π],
     /// between the X axis and the reversed end tangent.
     ///
-    double endAngle() const;
+    double endOppositeAngle() const;
 
     /// Returns the contribution of this edge to the winding number at
     /// the given `position` in edge space.

@@ -18,12 +18,12 @@
 
 namespace vgc::vacomplex {
 
-bool InbetweenEdge::isStartVertex(VertexCell* /*v*/) const {
+bool InbetweenEdge::isStartVertex(const VertexCell* /*v*/) const {
     // TODO: check whether v is one of the start vertices of this inbetween edge.
     return false;
 }
 
-bool InbetweenEdge::isEndVertex(VertexCell* /*v*/) const {
+bool InbetweenEdge::isEndVertex(const VertexCell* /*v*/) const {
     // TODO: check whether v is one of the end vertices of this inbetween edge.
     return false;
 }
