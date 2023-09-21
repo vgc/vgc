@@ -26,6 +26,14 @@ namespace vgc::ui {
 VGC_DECLARE_OBJECT(TabBar);
 VGC_DECLARE_OBJECT(TabBody);
 
+namespace detail {
+
+struct TabSpec {
+    bool isClosable = false;
+};
+
+} // namespace detail
+
 /// \class vgc::ui::TabBar
 /// \brief A bar showing different tabs.
 ///
@@ -41,9 +49,14 @@ public:
     ///
     static TabBarPtr create();
 
-    /// Adds a new tab to this TabBar with the given label.
+    /// Adds a new tab to this tab bar with the given `label`.
     ///
-    void addTab(std::string_view label);
+    /// If `isClosable` is true, then a close icon is added to allow users to
+    /// close the tab, that is, remove it from this tab bar.
+    ///
+    /// \sa `tabClosed()`.
+    ///
+    void addTab(std::string_view label, bool isClosable = false);
 
     /// Returns the number of tabs in this tab bar.
     ///
@@ -60,6 +73,8 @@ protected:
     void updateChildrenGeometry() override;
 
 private:
+    core::Array<detail::TabSpec> tabSpecs_;
+
     WidgetPtr tabs_;
     WidgetPtr close_;
 

@@ -66,7 +66,8 @@ TabBarPtr TabBar::create() {
     return core::createObject<TabBar>();
 }
 
-void TabBar::addTab(std::string_view label) {
+void TabBar::addTab(std::string_view label, bool isClosable) {
+    tabSpecs_.append({isClosable});
     if (tabs_) {
         tabs_->createChild<Label>(label);
     }
@@ -82,7 +83,14 @@ Int TabBar::numTabs() const {
 }
 
 void TabBar::onMouseEnter() {
-    if (close_) {
+    // TODO: actually handle having several tabs.
+    // TODO: one close icon per tab (or not, to save space?).
+    bool isActiveTabClosable = false;
+    Int activeTab = tabSpecs_.isEmpty() ? -1 : 0;
+    if (activeTab != -1) {
+        isActiveTabClosable = tabSpecs_[activeTab].isClosable;
+    }
+    if (isActiveTabClosable && close_) {
         close_->show();
     }
 }
