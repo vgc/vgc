@@ -327,7 +327,7 @@ public:
     }
     VGC_WARNING_POP
 
-    explicit CurveParameter(Int segmentIndex, double u = 0) noexcept
+    constexpr explicit CurveParameter(Int segmentIndex, double u = 0) noexcept
         : segmentIndex_(segmentIndex)
         , u_(u) {
     }
@@ -490,6 +490,55 @@ private:
     }
 };
 
+/// \class vgc::geometry::SampledCurvesIntersectionRecord
+/// \brief Record of a curve intersection with an other curve,
+///        done with the polylines of samples.
+///
+/// \sa intersectStrokeCenterlines
+///
+class VGC_GEOMETRY_API SampledCurvesIntersectionRecord {
+public:
+    explicit constexpr SampledCurvesIntersectionRecord(detail::InternalKey) noexcept {
+    }
+
+    VGC_WARNING_PUSH
+    VGC_WARNING_MSVC_DISABLE(26495) // member variable uninitialized
+    SampledCurvesIntersectionRecord(detail::InternalKey, core::NoInit) noexcept
+        : locationOnCurve1_(core::noInit)
+        , locationOnCurve2_(core::noInit) {
+    }
+    VGC_WARNING_POP
+
+    SampledCurvesIntersectionRecord(
+        detail::InternalKey,
+        const SampledCurveLocation& locationOnCurve1,
+        const SampledCurveLocation& locationOnCurve2) noexcept
+
+        : locationOnCurve1_(locationOnCurve1)
+        , locationOnCurve2_(locationOnCurve2) {
+    }
+
+    const SampledCurveLocation& locationOnCurve1() const {
+        return locationOnCurve1_;
+    }
+
+    void setLocationOnCurve1(const SampledCurveLocation& locationOnCurve1) {
+        locationOnCurve1_ = locationOnCurve1;
+    }
+
+    const SampledCurveLocation& locationOnCurve2() const {
+        return locationOnCurve2_;
+    }
+
+    void setLocationOnCurve2(const SampledCurveLocation& locationOnCurve2) {
+        locationOnCurve2_ = locationOnCurve2;
+    }
+
+private:
+    SampledCurveLocation locationOnCurve1_;
+    SampledCurveLocation locationOnCurve2_;
+};
+
 namespace detail {
 
 // TODO: We may want to have a lean version of AbstractStroke2d dedicated to
@@ -558,7 +607,6 @@ public:
     // `minSamples` and `maxSamples` are respectively the minimum and maximum number of samples
     // that this function should produce, including the first and last sample.
     //
-
     template<typename USample, typename Evaluator, typename KeepPredicate>
     void sample(
         Evaluator&& evaluator,

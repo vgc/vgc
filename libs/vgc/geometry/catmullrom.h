@@ -363,15 +363,15 @@ protected:
 
     Vec2d evalNonZeroCenterline(Int segmentIndex, double u, Vec2d& dp) const override;
 
-    StrokeSampleEx2d evalNonZero(Int segmentIndex, double u) const override;
+    StrokeSample2d evalNonZero(Int segmentIndex, double u, double& speed) const override;
 
     void sampleNonZeroSegment(
-        StrokeSampleEx2dArray& out,
+        StrokeSample2dArray& out,
         Int segmentIndex,
         const CurveSamplingParameters& params,
-        detail::AdaptiveStrokeSampler& sampler) const override;
+        AdaptiveStrokeSampler& sampler) const override;
 
-    StrokeSampleEx2d zeroLengthStrokeSample() const override;
+    StrokeSample2d zeroLengthStrokeSample() const override;
 
     CubicBezier2d segmentToBezier(Int segmentIndex) const;
     CubicBezier2d segmentToBezier(Int segmentIndex, CubicBezier2d& halfwidths) const;
