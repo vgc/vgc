@@ -29,9 +29,9 @@ VGC_DECLARE_OBJECT(TabBody);
 /// \class vgc::ui::TabBar
 /// \brief A bar showing different tabs.
 ///
-class VGC_UI_API TabBar : public Flex {
+class VGC_UI_API TabBar : public Widget {
 private:
-    VGC_OBJECT(TabBar, Flex)
+    VGC_OBJECT(TabBar, Widget)
 
 protected:
     TabBar(CreateKey);

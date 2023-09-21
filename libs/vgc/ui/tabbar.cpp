@@ -42,12 +42,12 @@ VGC_UI_DEFINE_TRIGGER_COMMAND( //
 } // namespace
 
 TabBar::TabBar(CreateKey key)
-    : Flex(key, FlexDirection::Row) {
+    : Widget(key) {
 
     Action* closeTabAction = createTriggerAction(commands::closeTab());
     closeTabAction->triggered().connect(onCloseTabTriggeredSlot_());
 
-    tabs_ = createChild<Flex>();
+    tabs_ = createChild<Flex>(FlexDirection::Row);
 
     ButtonPtr closeTabButton = createChild<Button>(closeTabAction);
     closeTabButton->setTextVisible(false);
