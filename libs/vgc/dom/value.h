@@ -139,7 +139,7 @@ public:
     using Base::Base;
 
     template<typename U = T>
-    explicit constexpr NoneOr(U&& value)
+    constexpr explicit NoneOr(U&& value)
         : Base(std::forward<U>(value)) {
     }
 
@@ -931,7 +931,7 @@ public:
     }
 
 private:
-    explicit constexpr Value(InvalidValue x)
+    constexpr explicit Value(InvalidValue x)
         : var_(x) {
     }
 

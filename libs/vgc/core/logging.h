@@ -176,20 +176,20 @@ private:
     class VGC_PP_EXPAND(API) ClassName VGC_DECLARE_LOG_CATEGORY_IMPL_(                   \
         ClassName, compileTimeEnabledLevels)
 
+// clang-format off
+// clang format bug: `name) {}` and `{ return instance_; }` bin-packed since Clang 15.0
 #define VGC_DECLARE_LOG_CATEGORY_IMPL_(ClassName, compileTimeEnabledLevels)              \
     : public ::vgc::core::LogCategory<::vgc::core::LogLevel::compileTimeEnabledLevels> { \
         friend class ::vgc::core::LogCategoryRegistry;                                   \
         static ClassName* instance_;                                                     \
         ClassName(::vgc::core::StringId name)                                            \
             : ::vgc::core::LogCategory<::vgc::core::LogLevel::compileTimeEnabledLevels>( \
-                name) {                                                                  \
-        }                                                                                \
+                name) {}                                                                 \
                                                                                          \
     public:                                                                              \
-        static ClassName* instance() {                                                   \
-            return instance_;                                                            \
-        }                                                                                \
+        static ClassName* instance() { return instance_; }                               \
     };
+// clang-format on
 
 /// Declares a log category of type `ClassName` whose enabled levels can be can
 /// be controlled at compile-time. For example, if we give `Warning` to the

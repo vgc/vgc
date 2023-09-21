@@ -138,7 +138,7 @@ public:
         typename IntType,
         Int e_ = extent,
         VGC_REQUIRES(e_ != dynamicExtent && std::is_arithmetic_v<IntType>)>
-    explicit constexpr Span(T* first, IntType length)
+    constexpr explicit Span(T* first, IntType length)
         : pair_(first, int_cast<Int>(length)) {
 
         checkLengthForInit_(length);
@@ -163,7 +163,7 @@ public:
     }
     /// \overload
     template<Int e_ = extent, VGC_REQUIRES(e_ != dynamicExtent)>
-    explicit constexpr Span(T* first, T* last)
+    constexpr explicit Span(T* first, T* last)
         : pair_(first, int_cast<Int>(std::distance(first, last))) {
 
         checkLengthForInit_(std::distance(first, last));

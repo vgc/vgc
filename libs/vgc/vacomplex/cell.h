@@ -994,7 +994,7 @@ private:
     friend detail::Operations;
 
 protected:
-    explicit constexpr KeyCell(const core::AnimTime& time) noexcept
+    constexpr explicit KeyCell(const core::AnimTime& time) noexcept
         : CellProxy<KeyCell>()
         , time_(time) {
     }
@@ -1032,7 +1032,7 @@ private:
     friend detail::Operations;
 
 protected:
-    explicit constexpr InbetweenCell() noexcept
+    constexpr explicit InbetweenCell() noexcept
         : CellProxy<InbetweenCell>() {
     }
 

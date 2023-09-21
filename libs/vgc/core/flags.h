@@ -47,7 +47,7 @@ public:
         return ::vgc::core::toUnderlying(v_);
     }
 
-    explicit constexpr operator bool() const noexcept {
+    constexpr explicit operator bool() const noexcept {
         return toUnderlying() != 0;
     }
 

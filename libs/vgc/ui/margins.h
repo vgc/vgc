@@ -69,7 +69,7 @@ public:
     /// Constructs a `Margins` with top, right, bottom, and left respectively
     /// set to x, y, z, and w of `v`.
     ///
-    explicit constexpr Margins(const geometry::Vec4f& v)
+    constexpr explicit Margins(const geometry::Vec4f& v)
         : v_(v) {
     }
 

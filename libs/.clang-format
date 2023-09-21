@@ -50,6 +50,10 @@ ForEachMacros:
 IndentPPDirectives: AfterHash
 IndentWidth: 4
 PointerAlignment: Left
+QualifierAlignment: Custom
+QualifierOrder: ['static', 'inline', 'volatile', 'restrict', 'constexpr', 'const', 'type']
+# Note: the above are the only qualifiers supported in clang-format 14.
+# 'friend' is added to v16. As of v18, no other qualifiers are added.
 ReflowComments:  false
 SpaceAfterTemplateKeyword: false
 StatementAttributeLikeMacros:

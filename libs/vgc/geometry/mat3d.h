@@ -84,7 +84,7 @@ public:
     /// value. As specific cases, the null matrix is Mat3d(0), and the identity
     /// matrix is Mat3d(1).
     ///
-    explicit constexpr Mat3d(double d) noexcept
+    constexpr explicit Mat3d(double d) noexcept
         : data_{{d, 0, 0},
                 {0, d, 0},
                 {0, 0, d}} {
@@ -98,7 +98,7 @@ public:
             isMat<TMat3>
          && TMat3::dimension == 3
          && !std::is_same_v<TMat3, Mat3d>)>
-    explicit constexpr Mat3d(const TMat3& other) noexcept
+    constexpr explicit Mat3d(const TMat3& other) noexcept
         : data_{{static_cast<double>(other(0, 0)),
                  static_cast<double>(other(1, 0)),
                  static_cast<double>(other(2, 0))},
