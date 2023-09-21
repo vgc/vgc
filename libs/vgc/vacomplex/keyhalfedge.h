@@ -88,21 +88,6 @@ public:
         return edge_->strokeSampling().samples().length();
     }
 
-    std::array<geometry::Vec2d, 2> centerlineSamplingStartSegment() const {
-        const auto& samples = edge_->strokeSampling().samples();
-        Int n = samples.length();
-        Int i0, i1;
-        if (direction_) {
-            i0 = 0;
-            i1 = std::min<Int>(n, 1);
-        }
-        else {
-            i0 = n - 1;
-            i1 = std::max<Int>(0, n - 2);
-        }
-        return {samples[i0].position(), samples[i1].position()};
-    }
-
     /// Returns the contribution of this halfedge to the winding number at
     /// the given `position` in edge space.
     ///
