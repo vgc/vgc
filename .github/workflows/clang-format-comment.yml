@@ -47,7 +47,7 @@ jobs:
                      + "This is an automated message to let you know that there are a few formatting changes "
                      + "that should be made in order to adhere to our [C++ Style Guide](https://github.com/vgc/vgc/blob/master/cppstyleguide.md).\n\n"
                      + "You can either:\n\n"
-                     + "1. call `clang-format -i somefile.cpp` on each of the `*.cpp` and `*.h` files that you changed, or\n"
+                     + "1. manually modify and/or call `clang-format -i somefile.cpp` on the files with non-conforming style, or\n"
                      + "2. copy-paste the patch below in a text file (make sure that it ends with a newline), save it and call `git apply clangformat.patch`\n\n"
                      + "Then make a new commit that contains the formatting changes, and push again.\n\n"
                      + "If clang-format makes your code ugly, it can usually be solved with minimal refactoring, such as using temporary variables or helper functions to make lines of code shorter. "
