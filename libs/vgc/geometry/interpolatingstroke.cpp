@@ -734,6 +734,8 @@ void AbstractInterpolatingStroke2d::assignFromAverage_(
                     Vec2d(),
                     Vec2d(),
                     tpAtOffset.width * 0.5,
+                    -1,
+                    0,
                     sOffset);
             }
 
@@ -752,7 +754,7 @@ void AbstractInterpolatingStroke2d::assignFromAverage_(
             // rebuild last
             ThickPoint tpFirst(samples.first(), arclength);
             samples.emplaceLast(
-                tpFirst.pos, Vec2d(), Vec2d(), tpFirst.width * 0.5, arclength);
+                tpFirst.pos, Vec2d(), Vec2d(), tpFirst.width * 0.5, -1, 0, arclength);
         }
     }
 
@@ -1052,7 +1054,7 @@ struct SculptSampling {
 //
 void computeSculptSampling(
     SculptSampling& outSampling,
-    StrokeSampleEx2dArray& samples,
+    StrokeSample2dArray& samples,
     double sMiddle,
     double radius,
     double maxDs,
@@ -1227,9 +1229,9 @@ void computeSculptSampling(
             // Iterate over sample segments
             // Loop invariant: `nextSculptPointS >= sa1->s()` (as long as `sa2->s() >= sa1->s()`)
             //
-            const StrokeSampleEx2d* sa1 = &samples[0];
+            const StrokeSample2d* sa1 = &samples[0];
             for (Int iSample2 = 1; iSample2 < numSamples && !isDone; ++iSample2) {
-                const StrokeSampleEx2d* sa2 = &samples[iSample2];
+                const StrokeSample2d* sa2 = &samples[iSample2];
                 const double d = sa2->s() - sa1->s();
                 // Skip the segment if it is degenerate.
                 if (d > 0) {
@@ -2330,7 +2332,7 @@ private:
     bool hasWidths_ = false;
 
     // Computed sampling
-    StrokeSampleEx2dArray samples_;
+    StrokeSample2dArray samples_;
     core::Array<double> knotsS_;
     double totalS_ = 0;
 
@@ -2383,7 +2385,7 @@ Vec2d AbstractInterpolatingStroke2d::sculptGrab_(
     // Note: We sample with widths even though we only need widths for samples in radius.
     // We could benefit from a two step sampling (sample centerline points, then sample
     // cross sections on an sub-interval).
-    StrokeSampleEx2dArray samples;
+    StrokeSample2dArray samples;
     CurveSamplingParameters samplingParams(CurveSamplingQuality::AdaptiveLow);
     //samplingParams.setMaxDs(0.5 * maxDs);
     //samplingParams.setMaxIntraSegmentSamples(2047);
@@ -2665,7 +2667,7 @@ Vec2d AbstractInterpolatingStroke2d::sculptWidth_(
     // Note: We sample with widths even though we only need widths for samples in radius.
     // We could benefit from a two step sampling (sample centerline points, then sample
     // cross sections on an sub-interval).
-    StrokeSampleEx2dArray samples;
+    StrokeSample2dArray samples;
     CurveSamplingParameters samplingParams(CurveSamplingQuality::AdaptiveLow);
 
     core::Array<Int> knotToSampleIndex(numKnots, core::noInit);
@@ -2698,7 +2700,7 @@ Vec2d AbstractInterpolatingStroke2d::sculptWidth_(
 
     // First pass: update widths of original knots.
     for (Int i = 0; i < numKnots; ++i) {
-        StrokeSampleEx2d& sample = samples[knotToSampleIndex[i]];
+        StrokeSample2d& sample = samples[knotToSampleIndex[i]];
         double s = sample.s();
         double d = std::abs(s - sMiddle);
         if (isClosed) {
@@ -2783,7 +2785,7 @@ Vec2d AbstractInterpolatingStroke2d::sculptWidth_(
     core::Array<double> tmpWidths;
     for (; iKnot >= 0 && iTarget >= 0; --iKnot) {
         Int j0 = knotToSampleIndex[iKnot];
-        const StrokeSampleEx2d& sample = samples[j0];
+        const StrokeSample2d& sample = samples[j0];
         double s0 = sample.s();
         tmpPositions.clear();
         tmpWidths.clear();
@@ -2795,10 +2797,10 @@ Vec2d AbstractInterpolatingStroke2d::sculptWidth_(
             if ((targetS >= s0 + minD) && (targetS <= s1 - minD)) {
                 // new knot -> find the sampled segment it belongs too.
                 for (Int j = j0 + 1; j <= j1; ++j) {
-                    const StrokeSampleEx2d& sample1 = samples[j];
+                    const StrokeSample2d& sample1 = samples[j];
                     if (targetS < sample1.s()) {
                         // compute and add new knot
-                        const StrokeSampleEx2d& sample0 = samples[j - 1];
+                        const StrokeSample2d& sample0 = samples[j - 1];
                         // (targetS >= s0 + minD) => sample1.s() != sample0.s()
                         double t = (targetS - sample0.s()) / (sample1.s() - sample0.s());
                         Vec2d p =
@@ -2891,7 +2893,7 @@ void AbstractInterpolatingStroke2d::computePositionsS_(
     }
 
     positionsS[0] = 0;
-    StrokeSampleEx2dArray sampling;
+    StrokeSample2dArray sampling;
     CurveSamplingParameters sParams(CurveSamplingQuality::AdaptiveLow);
     double s = 0;
     for (Int i = 1; i < numPositions; ++i) {

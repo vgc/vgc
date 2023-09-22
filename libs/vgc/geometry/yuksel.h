@@ -143,7 +143,7 @@ public:
         }
 
         double l = velocity.length();
-        tangent = velocity / l;
+        tangent = (l != 0) ? (velocity / l) : Vec2d(0, 1);
         speed = l;
         return position;
     }
@@ -226,15 +226,15 @@ protected:
 
     Vec2d evalNonZeroCenterline(Int segmentIndex, double u, Vec2d& dp) const override;
 
-    StrokeSampleEx2d evalNonZero(Int segmentIndex, double u) const override;
+    StrokeSample2d evalNonZero(Int segmentIndex, double u, double& speed) const override;
 
     void sampleNonZeroSegment(
-        StrokeSampleEx2dArray& out,
+        StrokeSample2dArray& out,
         Int segmentIndex,
         const CurveSamplingParameters& params,
-        detail::AdaptiveStrokeSampler& sampler) const override;
+        AdaptiveStrokeSampler& sampler) const override;
 
-    StrokeSampleEx2d zeroLengthStrokeSample() const override;
+    StrokeSample2d zeroLengthStrokeSample() const override;
 
     YukselBezierSegment2d segmentEvaluator(Int segmentIndex) const;
     YukselBezierSegment2d

@@ -34,7 +34,8 @@ Vec2d CatmullRomSplineStroke2d::evalNonZeroCenterline(
     return bezier.eval(u, dp);
 }
 
-StrokeSampleEx2d CatmullRomSplineStroke2d::evalNonZero(Int segmentIndex, double u) const {
+StrokeSample2d
+CatmullRomSplineStroke2d::evalNonZero(Int segmentIndex, double u, double& speed) const {
     if (hasConstantWidth()) {
         CubicBezier2d centerlineBezier = segmentToBezier(segmentIndex);
         CubicBezier1d tu = segmentToNormalReparametrization(segmentIndex);
@@ -43,9 +44,10 @@ StrokeSampleEx2d CatmullRomSplineStroke2d::evalNonZero(Int segmentIndex, double 
         Vec2d p = centerlineBezier.eval(u, dp);
         double t = tu.eval(u);
         Vec2d dp2 = centerlineBezier.evalDerivative(t);
-        double speed = dp.length();
-        return StrokeSampleEx2d(
-            p, dp / speed, dp2.normalized().orthogonalized(), hw, speed, segmentIndex, u);
+        speed = dp.length();
+        Vec2d tangent = (speed != 0) ? (dp / speed) : Vec2d(0, 1);
+        return StrokeSample2d(
+            p, tangent, dp2.normalized().orthogonalized(), hw, segmentIndex, u);
     }
     else {
         CubicBezier2d halfwidthsBezier(core::noInit);
@@ -55,38 +57,34 @@ StrokeSampleEx2d CatmullRomSplineStroke2d::evalNonZero(Int segmentIndex, double 
         Vec2d p = centerlineBezier.eval(u, dp);
         double t = tu.eval(u);
         Vec2d dp2 = centerlineBezier.evalDerivative(t);
-        double speed = dp.length();
+        speed = dp.length();
+        Vec2d tangent = (speed != 0) ? (dp / speed) : Vec2d(0, 1);
         Vec2d hw = halfwidthsBezier.eval(u);
-        return StrokeSampleEx2d(
-            p, dp / speed, dp2.normalized().orthogonalized(), hw, speed, segmentIndex, u);
+        return StrokeSample2d(
+            p, tangent, dp2.normalized().orthogonalized(), hw, segmentIndex, u);
     }
 }
 
 void CatmullRomSplineStroke2d::sampleNonZeroSegment(
-    StrokeSampleEx2dArray& out,
+    StrokeSample2dArray& out,
     Int segmentIndex,
     const CurveSamplingParameters& params,
-    detail::AdaptiveStrokeSampler& sampler) const {
+    AdaptiveStrokeSampler& sampler) const {
 
     if (hasConstantWidth()) {
         CubicBezier2d centerlineBezier = segmentToBezier(segmentIndex);
         CubicBezier1d tu = segmentToNormalReparametrization(segmentIndex);
         double hw = 0.5 * constantWidth();
         sampler.sample(
-            [&, hw](double u) -> StrokeSampleEx2d {
+            [&, hw](double u, double& speed) -> StrokeSample2d {
                 Vec2d dp(core::noInit);
                 Vec2d p = centerlineBezier.eval(u, dp);
                 double t = tu.eval(u);
                 Vec2d dp2 = centerlineBezier.evalDerivative(t);
-                double speed = dp.length();
-                return StrokeSampleEx2d(
-                    p,
-                    dp / speed,
-                    dp2.normalized().orthogonalized(),
-                    hw,
-                    speed,
-                    segmentIndex,
-                    u);
+                speed = dp.length();
+                Vec2d tangent = (speed != 0) ? (dp / speed) : Vec2d(0, 1);
+                return StrokeSample2d(
+                    p, tangent, dp2.normalized().orthogonalized(), hw, segmentIndex, u);
             },
             params,
             out);
@@ -96,30 +94,25 @@ void CatmullRomSplineStroke2d::sampleNonZeroSegment(
         CubicBezier2d centerlineBezier = segmentToBezier(segmentIndex, halfwidthsBezier);
         CubicBezier1d tu = segmentToNormalReparametrization(segmentIndex);
         sampler.sample(
-            [&](double u) -> StrokeSampleEx2d {
+            [&](double u, double& speed) -> StrokeSample2d {
                 Vec2d dp(core::noInit);
                 Vec2d p = centerlineBezier.eval(u, dp);
                 double t = tu.eval(u);
                 Vec2d dp2 = centerlineBezier.evalDerivative(t);
-                double speed = dp.length();
+                speed = dp.length();
+                Vec2d tangent = (speed != 0) ? (dp / speed) : Vec2d(0, 1);
                 Vec2d hw = halfwidthsBezier.eval(u);
-                return StrokeSampleEx2d(
-                    p,
-                    dp / speed,
-                    dp2.normalized().orthogonalized(),
-                    hw,
-                    speed,
-                    segmentIndex,
-                    u);
+                return StrokeSample2d(
+                    p, tangent, dp2.normalized().orthogonalized(), hw, segmentIndex, u);
             },
             params,
             out);
     }
 }
 
-StrokeSampleEx2d CatmullRomSplineStroke2d::zeroLengthStrokeSample() const {
-    return StrokeSampleEx2d(
-        positions().first(), Vec2d(0, 1), Vec2d(-1, 0), 0.5 /*constantHalfwidth_*/, 0, 0);
+StrokeSample2d CatmullRomSplineStroke2d::zeroLengthStrokeSample() const {
+    return StrokeSample2d(
+        positions().first(), Vec2d(0, 1), Vec2d(-1, 0), 0.5 /*constantHalfwidth_*/, 0);
 }
 
 CubicBezier2d CatmullRomSplineStroke2d::segmentToBezier(Int segmentIndex) const {

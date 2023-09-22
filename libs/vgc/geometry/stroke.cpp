@@ -34,11 +34,6 @@ distanceToCurve(const StrokeSample2dArray& samples, const Vec2d& position) {
     return detail::distanceToCurve<StrokeSample2d>(samples, position);
 }
 
-DistanceToCurve
-distanceToCurve(const StrokeSampleEx2dArray& samples, const Vec2d& position) {
-    return detail::distanceToCurve<StrokeSampleEx2d>(samples, position);
-}
-
 namespace detail {
 
 bool isCenterlineSegmentUnderTolerance(
@@ -47,13 +42,13 @@ bool isCenterlineSegmentUnderTolerance(
     double cosMaxAngle) {
 
     // Test angle between curve normals and center segment normal.
-    Vec2d t = s1.position() - s0.position();
+    Vec2d t = s1.sample.position() - s0.sample.position();
     double tl = t.length();
     double maxDot = cosMaxAngle * tl;
-    if (t.dot(s0.tangent()) < maxDot) {
+    if (t.dot(s0.sample.tangent()) < maxDot) {
         return false;
     }
-    if (t.dot(s1.tangent()) < maxDot) {
+    if (t.dot(s1.sample.tangent()) < maxDot) {
         return false;
     }
     return true;
@@ -123,21 +118,22 @@ bool areOffsetLinesAnglesUnderTolerance(
     [[maybe_unused]] double c01l; // no init
     [[maybe_unused]] double c12l; // no init
     if constexpr (cuspDetectionMethod == Cdm::CenterlineRatio) {
-        Vec2d c01 = s1.position() - s0.position();
-        Vec2d c12 = s2.position() - s1.position();
+        Vec2d c01 = s1.sample.position() - s0.sample.position();
+        Vec2d c12 = s2.sample.position() - s1.sample.position();
         c01l = c01.length();
         c12l = c12.length();
     }
 
     // Test angle between offset line segments of s0s1 and s1s2 on both sides.
     // Side 1 (left with x-right y-down)
-    Vec2d l01 = s1.offsetPoint(1) - s0.offsetPoint(1);
-    Vec2d l12 = s2.offsetPoint(1) - s1.offsetPoint(1);
+    Vec2d l01 = s1.offsetPoints[1] - s0.offsetPoints[1];
+    Vec2d l12 = s2.offsetPoints[1] - s1.offsetPoints[1];
     double l01l = l01.length();
     double l12l = l12.length();
     if (l01.dot(l12) < cosMaxAngle * l01l * l12l) {
         if constexpr (cuspDetectionMethod == Cdm::WidthRatio) {
-            double averageHalfwidth = s0.halfwidth(1) + s1.halfwidth(1) + s2.halfwidth(1);
+            double averageHalfwidth =
+                s0.sample.halfwidth(1) + s1.sample.halfwidth(1) + s2.sample.halfwidth(1);
             double ltol = std::abs(averageHalfwidth) * cuspWidthRatioPrep;
             if (l01l > ltol && l12l > ltol) {
                 return false;
@@ -155,13 +151,14 @@ bool areOffsetLinesAnglesUnderTolerance(
         // Test if sample is really useful in aspect (cusp point).
     }
     // Side 0
-    Vec2d r01 = s1.offsetPoint(0) - s0.offsetPoint(0);
-    Vec2d r12 = s2.offsetPoint(0) - s1.offsetPoint(0);
+    Vec2d r01 = s1.offsetPoints[0] - s0.offsetPoints[0];
+    Vec2d r12 = s2.offsetPoints[0] - s1.offsetPoints[0];
     double r01l = r01.length();
     double r12l = r12.length();
     if (r01.dot(r12) < cosMaxAngle * r01l * r12l) {
         if constexpr (cuspDetectionMethod == Cdm::WidthRatio) {
-            double averageHalfwidth = s0.halfwidth(0) + s1.halfwidth(0) + s2.halfwidth(0);
+            double averageHalfwidth =
+                s0.sample.halfwidth(0) + s1.sample.halfwidth(0) + s2.sample.halfwidth(0);
             double rtol = std::abs(averageHalfwidth) * cuspWidthRatioPrep;
             if (r01l > rtol && r12l > rtol) {
                 return false;
@@ -304,15 +301,15 @@ Vec2d AbstractStroke2d::evalCenterline(Int segmentIndex, double u, Vec2d& deriva
         return evalNonZeroCenterline(segmentIndex, u, derivative);
     }
     else {
-        StrokeSampleEx2d sample = zeroLengthStrokeSample();
-        derivative = sample.velocity();
+        StrokeSample2d sample = zeroLengthStrokeSample();
+        derivative = Vec2d();
         return sample.position();
     }
 }
 
-StrokeSampleEx2d AbstractStroke2d::eval(Int segmentIndex, double u) const {
+StrokeSample2d AbstractStroke2d::eval(Int segmentIndex, double u, double& speed) const {
     if (fixEvalLocation_(segmentIndex, u)) {
-        return evalNonZero(segmentIndex, u);
+        return evalNonZero(segmentIndex, u, speed);
     }
     else {
         return zeroLengthStrokeSample();
@@ -320,20 +317,21 @@ StrokeSampleEx2d AbstractStroke2d::eval(Int segmentIndex, double u) const {
 }
 
 void AbstractStroke2d::sampleSegment(
-    StrokeSampleEx2dArray& out,
+    StrokeSample2dArray& out,
     Int segmentIndex,
     const CurveSamplingParameters& params) const {
 
-    detail::AdaptiveStrokeSampler sampler = {};
+    AdaptiveStrokeSampler sampler = {};
     sampleSegment(out, segmentIndex, params, sampler);
 }
 
 void AbstractStroke2d::sampleSegment(
-    StrokeSampleEx2dArray& out,
+    StrokeSample2dArray& out,
     Int segmentIndex,
     const CurveSamplingParameters& params,
-    detail::AdaptiveStrokeSampler& sampler) const {
+    AdaptiveStrokeSampler& sampler) const {
 
+    double speed;
     if (isZeroLengthSegment(segmentIndex)) {
         Int numSegments = this->numSegments();
         Int startKnot = segmentIndex;
@@ -368,15 +366,15 @@ void AbstractStroke2d::sampleSegment(
                 // implement this complexity at vertices, not at handle this
                 // complexity at vertices.
                 //
-                out.append(evalNonZero(*nonZeroJustBefore, 1));
+                out.append(evalNonZero(*nonZeroJustBefore, 1, speed));
                 out.last().setCornerStart(true);
-                out.append(evalNonZero(*nonZeroAfter, 0));
+                out.append(evalNonZero(*nonZeroAfter, 0, speed));
             }
             else {
                 // This is the end of an open curve: no join to compute, just use
                 // the last sample of the previous segment.
                 //
-                out.append(evalNonZero(*nonZeroJustBefore, 1));
+                out.append(evalNonZero(*nonZeroJustBefore, 1, speed));
             }
         }
         else if (nonZeroAfter) {
@@ -384,7 +382,7 @@ void AbstractStroke2d::sampleSegment(
             // this segment. Any potential join is already handled by a zero-length
             // segment before this one.
             //
-            out.append(evalNonZero(*nonZeroAfter, 0));
+            out.append(evalNonZero(*nonZeroAfter, 0, speed));
         }
         else {
             // This is the end of an open curve: no join to compute, just use
@@ -395,7 +393,7 @@ void AbstractStroke2d::sampleSegment(
                 indexOfFirstNonZeroLengthSegmentBeforeKnot_(this, startKnot);
 
             if (nonZeroBefore) {
-                out.append(evalNonZero(*nonZeroBefore, 1));
+                out.append(evalNonZero(*nonZeroBefore, 1, speed));
             }
             else {
                 // Segment at segmentIndex is zero-length, and there is no non-zero-length
@@ -411,7 +409,7 @@ void AbstractStroke2d::sampleSegment(
 }
 
 void AbstractStroke2d::sampleRange(
-    StrokeSampleEx2dArray& out,
+    StrokeSample2dArray& out,
     const CurveSamplingParameters& params,
     Int startKnotIndex,
     Int numSegments,
@@ -493,8 +491,8 @@ void AbstractStroke2d::sampleRange(
         double s = 0;
         auto it = out.begin() + oldLength;
         if (oldLength > 0) {
-            StrokeSampleEx2d& firstNewSample = *it;
-            StrokeSampleEx2d& lastOldSample = *(it - 1);
+            StrokeSample2d& firstNewSample = *it;
+            StrokeSample2d& lastOldSample = *(it - 1);
             s = lastOldSample.s()
                 + (firstNewSample.position() - lastOldSample.position()).length();
         }
@@ -515,7 +513,7 @@ namespace {
 void computeSampling_(
     const AbstractStroke2d& stroke,
     const geometry::CurveSamplingParameters& params,
-    StrokeSampleEx2dArray& samplesEx,
+    StrokeSample2dArray& samples,
     StrokeBoundaryInfo& boundaryInfo) {
 
     Int n = stroke.numKnots();
@@ -524,16 +522,16 @@ void computeSampling_(
         Vec2d tangent(0, 1);
         Vec2d normal = tangent.orthogonalized();
         Vec2d halfwidths(1.0, 1.0);
-        samplesEx.emplaceLast(Vec2d(), tangent, normal, halfwidths, 0.0);
+        samples.emplaceLast(Vec2d(), tangent, normal, halfwidths, 0);
         boundaryInfo[0] = StrokeEndInfo(Vec2d(), tangent, halfwidths);
         boundaryInfo[0].setOffsetLineTangents({tangent, tangent});
         boundaryInfo[1] = boundaryInfo[0];
     }
     else {
-        stroke.sampleRange(samplesEx, params);
+        stroke.sampleRange(samples, params);
         boundaryInfo = stroke.computeBoundaryInfo();
     }
-    VGC_ASSERT(samplesEx.length() > 0);
+    VGC_ASSERT(samples.length() > 0);
 }
 
 } // namespace
@@ -541,23 +539,11 @@ void computeSampling_(
 StrokeSampling2d
 AbstractStroke2d::computeSampling(const geometry::CurveSamplingParameters& params) const {
 
-    StrokeSampleEx2dArray samplesEx;
+    StrokeSample2dArray samples;
     StrokeBoundaryInfo boundaryInfo;
-    computeSampling_(*this, params, samplesEx, boundaryInfo);
+    computeSampling_(*this, params, samples, boundaryInfo);
 
-    StrokeSampling2d result{geometry::StrokeSample2dArray(samplesEx)};
-    result.setBoundaryInfo(boundaryInfo);
-    return result;
-}
-
-StrokeSamplingEx2d AbstractStroke2d::computeSamplingEx(
-    const geometry::CurveSamplingParameters& params) const {
-
-    StrokeSampleEx2dArray samplesEx;
-    StrokeBoundaryInfo boundaryInfo;
-    computeSampling_(*this, params, samplesEx, boundaryInfo);
-
-    StrokeSamplingEx2d result{std::move(samplesEx)};
+    StrokeSampling2d result{std::move(samples)};
     result.setBoundaryInfo(boundaryInfo);
     return result;
 }
@@ -637,16 +623,18 @@ AbstractStroke2d::convert_(const AbstractStroke2d* source) const {
     return nullptr;
 }
 
-StrokeSampleEx2d AbstractStroke2d::sampleKnot_(Int index) const {
+StrokeSample2d AbstractStroke2d::sampleKnot_(Int index) const {
 
     // Use the first non-zero-length segment after the knot if it exists.
     if (OptionalInt i = indexOfFirstNonZeroLengthSegmentAfterKnot_(this, index)) {
-        return evalNonZero(*i, 0);
+        double speed;
+        return evalNonZero(*i, 0, speed);
     }
 
     // Otherwise, use the first non-zero-length segment before the knot if it exists.
     if (OptionalInt i = indexOfFirstNonZeroLengthSegmentBeforeKnot_(this, index)) {
-        return evalNonZero(*i, 1);
+        double speed;
+        return evalNonZero(*i, 1, speed);
     }
 
     // Otherwise, this means that all segments are zero-length segments.
@@ -693,7 +681,7 @@ bool AbstractStroke2d::fixEvalLocation_(Int& segmentIndex, double& u) const {
 }
 
 SampledCurveClosestLocationResult
-closestCenterlineLocation(const StrokeSampleEx2dArray& samples, const Vec2d& position) {
+closestCenterlineLocation(const StrokeSample2dArray& samples, const Vec2d& position) {
 
     SampledCurveClosestLocationResult result(detail::internalKey);
 
@@ -770,7 +758,7 @@ closestCenterlineLocation(const StrokeSampleEx2dArray& samples, const Vec2d& pos
     }
 
     // Test last sample as point.
-    const StrokeSampleEx2d& lastSample = samples.last();
+    const StrokeSample2d& lastSample = samples.last();
     Vec2d q = lastSample.position();
     Vec2d qp = position - q;
     double d = qp.length();

@@ -327,7 +327,7 @@ public:
     }
     VGC_WARNING_POP
 
-    explicit CurveParameter(Int segmentIndex, double u = 0) noexcept
+    constexpr explicit CurveParameter(Int segmentIndex, double u = 0) noexcept
         : segmentIndex_(segmentIndex)
         , u_(u) {
     }
@@ -558,7 +558,6 @@ public:
     // `minSamples` and `maxSamples` are respectively the minimum and maximum number of samples
     // that this function should produce, including the first and last sample.
     //
-
     template<typename USample, typename Evaluator, typename KeepPredicate>
     void sample(
         Evaluator&& evaluator,

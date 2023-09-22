@@ -94,12 +94,12 @@ public:
             if (keItem) {
                 if (vacomplex::KeyEdge* ke = keItem->vacKeyEdgeNode()) {
                     const geometry::AbstractStroke2d* stroke = ke->data().stroke();
-                    auto samplingEx = stroke->computeSamplingEx(
+                    auto sampling = stroke->computeSampling(
                         geometry::CurveSamplingQuality::AdaptiveHigh);
                     // find closest location on curve
                     geometry::SampledCurveLocation closestLoc =
                         geometry::closestCenterlineLocation(
-                            samplingEx.samples(), cursorPositionInWorkspace)
+                            sampling.samples(), cursorPositionInWorkspace)
                             .location();
                     // convert to curve parameter
                     geometry::CurveParameter param =
