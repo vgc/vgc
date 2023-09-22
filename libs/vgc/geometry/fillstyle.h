@@ -53,7 +53,7 @@ public:
 
     /// Creates a `FillStyle` with the given winding rule.
     ///
-    constexpr explicit FillStyle(WindingRule windingRule) noexcept
+    explicit constexpr FillStyle(WindingRule windingRule) noexcept
         : windingRule_(windingRule) {
     }
 
