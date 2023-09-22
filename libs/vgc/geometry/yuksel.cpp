@@ -33,7 +33,8 @@ Vec2d YukselSplineStroke2d::evalNonZeroCenterline(Int segmentIndex, double u, Ve
     return centerlineSegment.eval(u, dp);
 }
 
-StrokeSample2d YukselSplineStroke2d::evalNonZero(Int segmentIndex, double u, double& speed) const {
+StrokeSample2d
+YukselSplineStroke2d::evalNonZero(Int segmentIndex, double u, double& speed) const {
     if (hasConstantWidth()) {
         YukselBezierSegment2d centerlineSegment = segmentEvaluator(segmentIndex);
         double hw = 0.5 * constantWidth();
@@ -92,11 +93,7 @@ void YukselSplineStroke2d::sampleNonZeroSegment(
 
 StrokeSample2d YukselSplineStroke2d::zeroLengthStrokeSample() const {
     return StrokeSample2d(
-        positions().first(),
-        Vec2d(0, 1),
-        Vec2d(-1, 0),
-        0.5 /*constantHalfwidth_*/,
-        0);
+        positions().first(), Vec2d(0, 1), Vec2d(-1, 0), 0.5 /*constantHalfwidth_*/, 0);
 }
 
 namespace {

@@ -734,7 +734,8 @@ void AbstractInterpolatingStroke2d::assignFromAverage_(
                     Vec2d(),
                     Vec2d(),
                     tpAtOffset.width * 0.5,
-                    -1, 0,
+                    -1,
+                    0,
                     sOffset);
             }
 
