@@ -89,7 +89,7 @@ public:
     /// value. As specific cases, the null matrix is Mat4f(0), and the identity
     /// matrix is Mat4f(1).
     ///
-    explicit constexpr Mat4f(float d) noexcept
+    constexpr explicit Mat4f(float d) noexcept
         : data_{{d, 0, 0, 0},
                 {0, d, 0, 0},
                 {0, 0, d, 0},
@@ -104,7 +104,7 @@ public:
             isMat<TMat4>
          && TMat4::dimension == 4
          && !std::is_same_v<TMat4, Mat4f>)>
-    explicit constexpr Mat4f(const TMat4& other) noexcept
+    constexpr explicit Mat4f(const TMat4& other) noexcept
         : data_{{static_cast<float>(other(0, 0)),
                  static_cast<float>(other(1, 0)),
                  static_cast<float>(other(2, 0)),

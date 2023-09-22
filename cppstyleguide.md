@@ -440,60 +440,35 @@ T int_cast(U value) {
 }
 ```
 
-## Keyword Order
+## Ordering of Type Qualifiers and Specifiers
 
-Follow this [keyword order convention](https://quuxplusone.github.io/blog/2021/04/03/static-constexpr-whittling-knife/):
+There is no concensus in the C++ community regarding the best order to use for type qualifiers and specifiers.
 
-```
-attributes-friendness-storage-constness-virtualness-explicitness-signedness-length-type
-```
+Some opinions with rationale are given below:
+- [Arthur O’Dwyer' article](https://quuxplusone.github.io/blog/2021/04/03/static-constexpr-whittling-knife/)
+- [Reddit thread 1](https://www.reddit.com/r/cpp/comments/ml73y3/arthur_odwyer_static_constexpr_unsigned_long_is/)
+- [Reddit thread 2](https://www.reddit.com/r/cpp/comments/12w0k42/is_there_an_accepted_way_to_order_qualifiers/)
 
+Our order is the following (from left to right, including within categories):
+
+Specifiers:
 - attributes: `[[maybe_unused]]`, `[[nodiscard]]`, etc.
 - friendness: `friend`
-- storage: `extern`, `static`, `inline`, `thread_local`, `mutable`
-- constness: `const`, `constexpr`, `consteval`, `constinit`
-- virtualness: `virtual`
-- explicitness: `explicit`
+- storage: `extern`, `static`, `inline`, `thread_local`
+- constexprness: `constexpr`, `consteval`, `constinit`
+- class member specifiers: `virtual`, `explicit`, `mutable`
+
+Type qualifiers:
+- cv-qualifiers: `const`, `volatile`
 - signedness: `signed`, `unsigned`
 - length: `short`, `long`, `long long`
 - type: `int`, etc.
 
-The idea is that the "most important" qualifiers must be placed closer to the variable/function name.
-
-Examples:
-
-```cpp
-template<int dimension>
-class Foo {
-public:
-    static constexpr dimension = 1;
-    static constexpr createFoo();
-    constexpr explicit Foo(const Bar& bar);
-};
-
-void foo() {
-    static constexpr unsigned long int x = 10;
-}
-```
-
-Note that the keyword `static` has [three meanings](https://en.cppreference.com/w/cpp/keyword/static):
-
-- For namespace members: specifies static storage duration and internal linkage
-- For block-scope variables: specifies static storage duration and initialized once
-- For class members: specifies that it is not bound to a specific instance
-
-Only the first two meanings are about storage, so it would make sense, when
-used for the third meaning, to place the keywork `static` at the same level
-as "virtualness". Inded, for class methods, both `virtual` and `static` have
-the same level of importance and are definitely more important than `constexpr`
-since they affect the API.
-
-However, since the order `static constexpr` is in practice heavilly preferred
-by the community in template metaprogramming, and since it would be harder
-both for humans and machines (e.g., a Python script) to enforce consistent
-keyword order if it was context-dependent, our policy is to always use the
-order `static constexpr` even in situations where the opposite order would
-make more sense.
+The general idea is that we prefer "more important" specifiers/qualifiers to
+be placed closer to the identifier name, except when there is already a
+widespread convention. For example example, `static constexpr` is idiomatic
+in template metaprogramming, even though `static` is arguably more important
+than `constexpr`.
 
 ## Polymorphic Classes
 

@@ -50,6 +50,15 @@ ForEachMacros:
 IndentPPDirectives: AfterHash
 IndentWidth: 4
 PointerAlignment: Left
+
+# Order of qualifiers/specifiers. Notes:
+# - The qualifiers/specifiers used below are the only ones supported in clang-format 14.
+# - 'friend' is added to clang-format 16. No others added as of clang-format 18.
+# - 'restrict' is a C keyword, not standard in C++.
+#
+QualifierAlignment: Custom
+QualifierOrder: ['static', 'inline', 'constexpr', 'const', 'volatile', 'type', 'restrict']
+
 ReflowComments:  false
 SpaceAfterTemplateKeyword: false
 StatementAttributeLikeMacros:

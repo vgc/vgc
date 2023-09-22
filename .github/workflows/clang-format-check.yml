@@ -15,8 +15,10 @@ jobs:
           clang-format --version
           cd libs
           find . -iname '*.h' -o -iname '*.cpp' | xargs clang-format -i
+          find . -iname '*.h' -o -iname '*.cpp' | xargs sed -i 's/explicit\ constexpr/constexpr\ explicit/g'
           cd ../apps
           find . -iname '*.h' -o -iname '*.cpp' | xargs clang-format -i
+          find . -iname '*.h' -o -iname '*.cpp' | xargs sed -i 's/explicit\ constexpr/constexpr\ explicit/g'
           cd ..
 
       - name: Compute and save diff

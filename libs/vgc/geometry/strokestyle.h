@@ -89,13 +89,13 @@ public:
 
     /// Creates `StrokeStyle` with the given cap style.
     ///
-    explicit constexpr StrokeStyle(StrokeCap cap) noexcept
+    constexpr explicit StrokeStyle(StrokeCap cap) noexcept
         : cap_(cap) {
     }
 
     /// Creates `StrokeStyle` with the given join style.
     ///
-    explicit constexpr StrokeStyle(StrokeJoin join, double miterLimit = 4.0) noexcept
+    constexpr explicit StrokeStyle(StrokeJoin join, double miterLimit = 4.0) noexcept
         : miterLimit_(miterLimit)
         , join_(join) {
     }

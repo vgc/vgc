@@ -76,7 +76,7 @@ public:
     /// value. As specific cases, the null matrix is Mat2x(0), and the identity
     /// matrix is Mat2x(1).
     ///
-    explicit constexpr Mat2x(float d) noexcept
+    constexpr explicit Mat2x(float d) noexcept
         : data_{{d, 0},
                 {0, d}} {
     }
@@ -89,7 +89,7 @@ public:
             isMat<TMat2>
          && TMat2::dimension == 2
          && !std::is_same_v<TMat2, Mat2x>)>
-    explicit constexpr Mat2x(const TMat2& other) noexcept
+    constexpr explicit Mat2x(const TMat2& other) noexcept
         : data_{{static_cast<float>(other(0, 0)),
                  static_cast<float>(other(1, 0))},
                 {static_cast<float>(other(0, 1)),

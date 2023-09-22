@@ -82,7 +82,7 @@ public:
             isVec<TVec4>
          && TVec4::dimension == 4
          && !std::is_same_v<TVec4, Vec4d>)>
-    explicit constexpr Vec4d(const TVec4& other) noexcept
+    constexpr explicit Vec4d(const TVec4& other) noexcept
         : data_{static_cast<double>(other[0]),
                 static_cast<double>(other[1]),
                 static_cast<double>(other[2]),
