@@ -392,97 +392,55 @@ def replace_all(text, replacements):
     return pattern.sub(lambda m: replacements[re.escape(m.group(0))], text)
 
 
-# A class to perform code signing. We encapsulate the class in a resource
-# manager to ensure that the certificate file is properly deleted when the
-# script exits or an exception is raised. See the following link for a
-# description of this pattern: https://stackoverflow.com/a/865272
+# A class to perform code signing.
+#
+class CodeSigner:
+    def __init__(self):
+        self.keyVaultUri = os.getenv("AZURE_EV_KEY_VAULT_URI")
+        self.shouldSign = self.keyVaultUri is not None and self.keyVaultUri != ""
+        if not self.shouldSign:
+            return
+        self.clientId = os.getenv("AZURE_EV_CLIENT_ID")
+        self.tenantId = os.getenv("AZURE_EV_TENANT_ID")
+        self.clientSecret = os.getenv("AZURE_EV_CLIENT_SECRET")
+        self.certName = os.getenv("AZURE_EV_CERT_NAME")
+        self.timestampServer = "http://timestamp.digicert.com"
+
+    def sign(self, file):
+        if self.shouldSign:
+            print(f"Signing file {file}...", flush=True)
+            args = [
+                "AzureSignTool", "sign",
+                "-kvu", self.keyVaultUri,
+                "-kvi", self.clientId,
+                "-kvt", self.tenantId,
+                "-kvs", self.clientSecret,
+                "-kvc", self.certName,
+                "-tr", self.timestampServer,
+                "-v", str(file)]
+            subprocess.run(args)
+            print("Done.", flush=True)
+        else:
+            print("Skipping signature step (no certificate provided)", flush=True)
+
+    # In a previous version of this class, this was deleting sensitive files.
+    # With the current code signing method, there is nothing to delete, but
+    # we keep this approach in case it becomes relevant again in the future.
+    #
+    def cleanup(self):
+        pass
+
+
+# Encapsulate a `CodeSigner` as a resource to ensure proper cleanup.
 #
 class CodeSignerResource:
     def __init__(self, buildDir):
+        # Note: we do not use buildDir anymore, but it was previously used
+        # to specify where to write temporary files.
         self.buildDir = buildDir
 
     def __enter__(self):
-        class CodeSigner:
-            def __init__(self, buildDir, codeSignUrl, codeSignUrlKey):
-                self.certificate = None
-                self.password = None
-                self.lastSignTime = None
-                self.delayBetweenSigns = 5  # Delay in seconds to avoid surcharching server
-                self.dualSign = False
-                if codeSignUrl is not None and codeSignUrl != "":
-                    print("Obtaining code signing certificate... ", end='')
-                    try:
-                        data = json.load(urlopen(codeSignUrl + "?key=" + codeSignUrlKey))
-                        certbytes = base64.b64decode(data['certificate'])
-                        self.certificate = buildDir / "codesign.pfx"
-                        self.certificate.write_bytes(certbytes)
-                        self.password = data['password']
-                        print("OK.", flush=True)
-                    except Exception:
-                        self.cleanup()
-                        print("FAIL.", flush=True)
-
-            def cleanup(self):
-                # Delete certificate file if any
-                if self.certificate and self.certificate.exists():
-                    self.certificate.unlink()
-                self.certificate = None
-                self.password = None
-
-            def sign_(self, file, fd="sha256", dualSign=True, verbose=False):
-                if (self.certificate):
-                    args = ["signtool.exe", "sign", "/f", str(self.certificate), "/p", self.password]
-                    if fd == "sha256":
-                        args += ["/fd", fd, "/tr", "http://timestamp.comodoca.com/?td=" + fd, "/td", fd]
-                    else:
-                        args += ["/t", "http://timestamp.comodoca.com"]
-                    if dualSign:
-                        args.append("/as")
-                    if verbose:
-                        args.append("/v")
-                    args.append(str(file))
-                    if self.lastSignTime is not None:
-                        elapsed = int(time.time()) - self.lastSignTime
-                        if elapsed < self.delayBetweenSigns:
-                            s = self.delayBetweenSigns - elapsed
-                            t = datetime.datetime.utcnow().isoformat()
-                            print(f"{t}: Waiting {s} seconds to avoid surcharging timestamp server...", flush=True)
-                            time.sleep(s)
-                    t = datetime.datetime.utcnow().isoformat()
-                    print(f"{t}: Signing with an {fd} timestamp...", flush=True)
-                    subprocess.run(args)
-                    self.lastSignTime = int(time.time())
-
-            # Signs the given file. If dualSign = True and the file is an EXE or
-            # a DLL, then we dual-sign it with both SHA-1 and SHA-256 for
-            # compatibility with Windows Vista. If it is an MSI file, we only
-            # sign it with the newer SHA-256 since MSI files do not support
-            # dual-signing.
-            #
-            # Note: https://support.ksoftware.net/support/solutions/articles/17133-what-is-a-timestamp-
-            #
-            #  As of May 30th 2020, SHA1 timestamping is effectively deprecated
-            #  as the SHA1 roots have expired. Use only the SHA256 timestamp
-            #  server from now on.
-            #
-            def sign(self, file):
-                if (self.certificate):
-                    if not self.dualSign or file.suffix == ".msi":
-                        self.sign_(file, fd="sha256", dualSign=False)
-                    else:
-                        self.sign_(file, fd="sha1", dualSign=False)
-                        self.sign_(file, fd="sha256", dualSign=True)
-                else:
-                    print("Skipping signature step (no certificate provided)", flush=True)
-
-        codeSignUrl = os.getenv("VGC_CODESIGN_URL")
-        codeSignUrlKey = None
-        for key_name in ["VGC_GITHUB_KEY", "VGC_APPVEYOR_KEY"]:
-            key = os.getenv(key_name)
-            if key:
-                codeSignUrlKey = key
-                break
-        self.codeSigner = CodeSigner(self.buildDir, codeSignUrl, codeSignUrlKey)
+        self.codeSigner = CodeSigner()
         return self.codeSigner
 
     def __exit__(self, exc_type, exc_value, traceback):

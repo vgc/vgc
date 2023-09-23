@@ -185,6 +185,11 @@ jobs:
       working-directory: ${{github.workspace}}/build
       env:
         VGC_GITHUB_KEY: ${{secrets.VGC_GITHUB_KEY}}
-        VGC_CODESIGN_URL: ${{secrets.VGC_CODESIGN_URL}}
-      run: cmake --build . --target deploy
-
+        AZURE_EV_KEY_VAULT_URI: ${{secrets.AZURE_EV_KEY_VAULT_URI}}
+        AZURE_EV_CLIENT_ID: ${{secrets.AZURE_EV_CLIENT_ID}}
+        AZURE_EV_TENANT_ID: ${{secrets.AZURE_EV_TENANT_ID}}
+        AZURE_EV_CLIENT_SECRET: ${{secrets.AZURE_EV_CLIENT_SECRET}}
+        AZURE_EV_CERT_NAME: ${{secrets.AZURE_EV_CERT_NAME}}
+      run: |
+        [ ! -z "$AZURE_EV_KEY_VAULT_URI" ] && dotnet tool install --global AzureSignTool
+        cmake --build . --target deploy
