@@ -540,7 +540,7 @@ ColorPalette::ColorPalette(CreateKey key)
     sStepsEdit_->valueChanged().connect(onStepsValueChangedSlot_());
     lStepsEdit_->valueChanged().connect(onStepsValueChangedSlot_());
     // Selector
-    selector_->colorSelected().connect(onSelectorSelectedColorSlot_());
+    selector_->colorSelected().connect(onSelectorColorSelectedSlot_());
     // RGB
     rEdit_->valueChanged().connect(onRgbValueChangedSlot_());
     gEdit_->valueChanged().connect(onRgbValueChangedSlot_());
@@ -559,8 +559,7 @@ ColorPalette::ColorPalette(CreateKey key)
     pickScreenButton->pickingCancelled().connect(onPickScreenCancelledSlot_());
     pickScreenButton->colorHovered().connect(onPickScreenColorHoveredSlot_());
     // ColorListView
-    colorListView_->selectedColorChanged().connect(
-        onColorListViewSelectedColorChangedSlot_());
+    colorListView_->colorSelected().connect(onColorListViewColorSelectedSlot_());
     colorListView_->colorsChanged().connect(onColorListViewColorsChangedSlot_());
 
     // Style class
@@ -579,11 +578,18 @@ void ColorPalette::setSelectedColor(const core::Color& color) {
     }
 }
 
-void ColorPalette::onSelectorSelectedColor_() {
+void ColorPalette::setColors(const core::Array<core::Color>& colors) {
+    if (colorListView_) {
+        colorListView_->setColors(colors);
+        colorListView_->setSelectedColor(selectedColor());
+    }
+}
+
+void ColorPalette::onSelectorColorSelected_() {
     selectColor_(selector_->selectedColor());
 }
 
-void ColorPalette::onColorListViewSelectedColorChanged_() {
+void ColorPalette::onColorListViewColorSelected_() {
     if (colorListView_->hasSelectedColor()) {
         selectColor_(colorListView_->selectedColor());
     }
@@ -2536,18 +2542,15 @@ const core::Color& ColorListView::selectedColor() const {
     }
 }
 
+Int ColorListView::findColor(const core::Color& color) {
+    return colors_.index(color);
+}
+
 void ColorListView::setSelectedColor(const core::Color& color) {
     if (hasSelectedColor() && selectedColor() == color) {
         return;
     }
-    for (Int i = 0; i < numColors(); ++i) {
-        const core::Color& color_ = colors_.getUnchecked(i);
-        if (color_ == color) {
-            setSelectedColorIndex(i);
-            return;
-        }
-    }
-    setSelectedColorIndex(-1);
+    setSelectedColorIndex(findColor(color));
 }
 
 void ColorListView::setColorAt(Int index, const core::Color& color) {
@@ -2565,20 +2568,41 @@ void ColorListView::setColorAt(Int index, const core::Color& color) {
 
 void ColorListView::appendColor(const core::Color& color) {
     colors_.append(color);
-    reload_ = true;
     colorsChanged().emit();
+    reload_ = true;
     requestGeometryUpdate();
+    requestRepaint();
 }
 
 void ColorListView::removeColorAt(Int index) {
+
+    // Remember old selected color and index
     core::Color oldSelectedColor = selectedColor();
     Int oldSelectedColorIndex = selectedColorIndex();
+    bool oldHasSelectedColor = hasSelectedColor();
+
+    // Perform the operation
     colors_.removeAt(index);
-    if (oldSelectedColorIndex >= numColors()) {
-        selectedColorIndex_ = numColors() - 1;
+
+    // Update selected color index
+    selectedColorIndex_ = -1;
+    if (oldSelectedColorIndex != -1) {
+        if (index < oldSelectedColorIndex) {
+            selectedColorIndex_ = oldSelectedColorIndex - 1;
+        }
+        else if (index == oldSelectedColorIndex) {
+            selectedColorIndex_ = findColor(oldSelectedColor);
+        }
+        else {
+            selectedColorIndex_ = oldSelectedColorIndex;
+        }
     }
-    bool hasSelectedColorIndexChanged = (oldSelectedColorIndex != selectedColorIndex_);
-    bool hasSelectedColorChanged = (oldSelectedColor != selectedColor());
+    bool hasSelectedColorIndexChanged = //
+        oldSelectedColorIndex != selectedColorIndex();
+    bool hasSelectedColorChanged = //
+        oldHasSelectedColor != hasSelectedColor();
+
+    // Emit
     colorsChanged().emit();
     if (hasSelectedColorIndexChanged) {
         selectedColorIndexChanged().emit();
@@ -2597,35 +2621,42 @@ void ColorListView::setColors(const core::Array<core::Color>& colors) {
         return;
     }
 
-    // Update selected color index
-    bool hasSelectedColorChanged = false;
-    Int oldSelectedColorIndex = selectedColorIndex_;
-    if (oldSelectedColorIndex >= 0) {
-        if (oldSelectedColorIndex >= colors.length()) {
-            hasSelectedColorChanged = true;
-            selectedColorIndex_ = -1;
-        }
-        else if (colors[selectedColorIndex_] == colors_[selectedColorIndex_]) {
-            hasSelectedColorChanged = false;
-        }
-        else {
-            hasSelectedColorChanged = true;
-        }
-    }
+    // Remember old selected color and index
+    core::Color oldSelectedColor = selectedColor();
+    Int oldSelectedColorIndex = selectedColorIndex();
+    bool oldHasSelectedColor = hasSelectedColor();
 
-    // Update colors
+    // Perform the operation
     colors_ = colors;
 
-    // Emit signals
-    reload_ = true;
+    // Update selected color index
+    selectedColorIndex_ = -1;
+    if (oldSelectedColorIndex != -1) {
+        if (oldSelectedColorIndex < numColors()
+            && colorAt(oldSelectedColorIndex) == oldSelectedColor) {
+
+            selectedColorIndex_ = oldSelectedColorIndex;
+        }
+        else {
+            selectedColorIndex_ = findColor(oldSelectedColor);
+        }
+    }
+    bool hasSelectedColorIndexChanged = //
+        oldSelectedColorIndex != selectedColorIndex();
+    bool hasSelectedColorChanged = //
+        oldHasSelectedColor != hasSelectedColor();
+
+    // Emit
     colorsChanged().emit();
+    if (hasSelectedColorIndexChanged) {
+        selectedColorIndexChanged().emit();
+    }
     if (hasSelectedColorChanged) {
         selectedColorChanged().emit();
     }
-    if (selectedColorIndex_ != oldSelectedColorIndex) {
-        selectedColorIndexChanged().emit();
-    }
+    reload_ = true;
     requestGeometryUpdate();
+    requestRepaint();
 }
 
 void ColorListView::onResize() {

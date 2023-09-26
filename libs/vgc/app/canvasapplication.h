@@ -23,6 +23,7 @@
 #include <vgc/app/mainwindow.h>
 #include <vgc/app/qtwidgetsapplication.h>
 #include <vgc/canvas/canvas.h>
+#include <vgc/core/colors.h>
 #include <vgc/dom/document.h>
 #include <vgc/tools/colorpalette.h>
 #include <vgc/tools/paintbucket.h>
@@ -119,6 +120,18 @@ public:
     ///
     void quit();
 
+    /// Returns the current color.
+    ///
+    const core::Color& currentColor() const {
+        return currentColor_;
+    }
+
+    /// Returns the list of document colors.
+    ///
+    const core::Array<core::Color>& documentColorPalette() const {
+        return documentColorPalette_;
+    }
+
 protected:
     // Reimplementation
     void onUnhandledException(std::string_view errorMessage) override;
@@ -195,10 +208,11 @@ private:
     //                       Panels
 
     ui::PanelManagerPtr panelManager_;
+    ui::PanelAreaPtr leftPanelArea_;
 
     void registerPanelTypes_();
-
     void createDefaultPanels_();
+    void onActionOpenPanel_(ui::PanelTypeId id);
 
     // Canvas
     canvas::Canvas* canvas_ = nullptr;
@@ -225,18 +239,16 @@ private:
     void onToolCheckStateChanged_(ui::Action* toolAction, ui::CheckState checkState);
     VGC_SLOT(onToolCheckStateChangedSlot_, onToolCheckStateChanged_);
 
-    // Palette
-    core::Color currentColor_;
-    core::Array<core::Color> documentColorPalette_;
-    //tools::ColorPalettePtr palette_ = nullptr;
-
+    // Colors
+    core::Color currentColor_ = core::colors::black;
+    void setCurrentColor_(const core::Color& color);
+    VGC_SLOT(setCurrentColor_)
     VGC_SIGNAL(currentColorChanged_, (const core::Color&, color))
 
-    //void createColorPalette_(ui::Widget* parent);
-    void onColorSelected_(const core::Color& color);
-    void onColorsChanged_(const core::Array<core::Color>& colors);
-    VGC_SLOT(onColorsChangedSlot_, onColorsChanged_)
-    VGC_SLOT(onColorSelectedSlot_, onColorSelected_)
+    core::Array<core::Color> documentColorPalette_;
+    void setDocumentColorPalette_(const core::Array<core::Color>& colors);
+    VGC_SLOT(setDocumentColorPalette_)
+    VGC_SIGNAL(documentColorPaletteChanged_, (const core::Array<core::Color>&, colors))
 
     // ------------------------------------------------------------------------
     //                       Misc

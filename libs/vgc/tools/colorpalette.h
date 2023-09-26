@@ -124,6 +124,11 @@ public:
         return colorListView_;
     }
 
+    /// Sets the list of colors.
+    ///
+    void setColors(const core::Array<core::Color>& colors);
+    VGC_SLOT(setColors)
+
     /// This signal is emitted whenever the selected color changed as a result
     /// of user interaction with the color palette. The signal isn't emitted
     /// when the selected color is set programatically via setSelectedColor().
@@ -172,13 +177,11 @@ private:
     };
     ColorChangeOrigin colorChangeOrigin_ = ColorChangeOrigin::None;
 
-    void onSelectorSelectedColor_();
-    VGC_SLOT(onSelectorSelectedColorSlot_, onSelectorSelectedColor_)
+    void onSelectorColorSelected_();
+    VGC_SLOT(onSelectorColorSelectedSlot_, onSelectorColorSelected_)
 
-    void onColorListViewSelectedColorChanged_();
-    VGC_SLOT(
-        onColorListViewSelectedColorChangedSlot_,
-        onColorListViewSelectedColorChanged_)
+    void onColorListViewColorSelected_();
+    VGC_SLOT(onColorListViewColorSelectedSlot_, onColorListViewColorSelected_)
 
     void onColorListViewColorsChanged_();
     VGC_SLOT(onColorListViewColorsChangedSlot_, onColorListViewColorsChanged_)
@@ -468,6 +471,12 @@ public:
     ///
     const core::Color& selectedColor() const;
 
+    /// Returns the color index that matches the given `color`.
+    ///
+    /// Returns -1 if no such color is found.
+    ///
+    Int findColor(const core::Color& color);
+
     /// Attempts to find an index that matches the current color, and set it as selected
     /// index if found. Otherwise, unselects the current selected color index if any.
     ///
@@ -479,15 +488,24 @@ public:
         return colors_.length();
     }
 
-    /// Returns the color at the given index. Throws `IndexError` if the given index is not
-    /// between `0` and `numColors() - 1`.
+    /// Returns the color at the given index.
+    ///
+    /// Throws `IndexError` if the given index is not between `0` and
+    /// `numColors() - 1`.
     ///
     const core::Color& colorAt(Int index) const {
         return colors_[index];
     }
 
-    /// Sets the color at the given index. Throws `IndexError` if the given
-    /// index is not between `0` and `numColors() - 1`.
+    /// Sets the color at the given index.
+    ///
+    /// If `index == selectedColorIndex()` and `color != selectedColor()`, then
+    /// `selectedColorIndex()` becomes `-1`, unless another color matches the
+    /// old `selectedColor()`, in which case `selectedColorIndex()` becomes the
+    /// index of that color.
+    ///
+    /// Throws `IndexError` if the given index is not between `0` and
+    /// `numColors() - 1`.
     ///
     void setColorAt(Int index, const core::Color& color);
 
@@ -495,12 +513,26 @@ public:
     ///
     void appendColor(const core::Color& color);
 
-    /// Removes the color at the given index. Throws `IndexError` if the given
-    /// index is not between `0` and `numColors() - 1`.
+    /// Removes the color at the given index.
+    ///
+    /// If `index == selectedColorIndex()`, then `selectedColorIndex()` becomes
+    /// `-1`, unless another color matches the old `selectedColor()`, in which
+    /// case `selectedColorIndex()` becomes the index of that color.
+    ///
+    /// If `index < selectedColorIndex()`, then the `selectedColorIndex()`
+    /// is decreased by `1`.
+    ///
+    /// Throws `IndexError` if the given index is not between `0` and
+    /// `numColors() - 1`.
     ///
     void removeColorAt(Int index);
 
-    /// Sets all the colors.
+    /// Changes all the colors in this `ColorListView`.
+    ///
+    /// This attempts to preserve `selectedColor()` by updating the
+    /// `selectedColorIndex()`. If none of the color in `colors` is equal to
+    /// the old `selectedColor()`, then the `selectedColorIndex()` becomes
+    /// `-1`.
     ///
     void setColors(const core::Array<core::Color>& colors);
 
@@ -510,10 +542,13 @@ public:
     ///
     VGC_SIGNAL(selectedColorIndexChanged)
 
-    /// This signal is emitted when the selected color changed, either as a
-    /// result of user interaction, or because `setSelectedColorIndex()` was
-    /// called, or because `setColorAt()` changed the color value of the
-    /// selected color index.
+    /// This signal is emitted when the selected color changed. This can happen
+    /// in the following situations:
+    ///
+    /// - The `selectedColorIndex()` changed, either due to user interaction or
+    /// calling `setSelectedColorIndex()`.
+    ///
+    /// - The `colors()` changed.
     ///
     VGC_SIGNAL(selectedColorChanged)
 
