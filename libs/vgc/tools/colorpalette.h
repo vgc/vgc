@@ -116,6 +116,7 @@ public:
     /// Sets the selected color.
     ///
     void setSelectedColor(const core::Color& color);
+    VGC_SLOT(setSelectedColor)
 
     /// Returns the color list view
     ///
@@ -127,7 +128,12 @@ public:
     /// of user interaction with the color palette. The signal isn't emitted
     /// when the selected color is set programatically via setSelectedColor().
     ///
-    VGC_SIGNAL(colorSelected)
+    VGC_SIGNAL(colorSelected, (const core::Color&, color))
+
+    /// This signal is emitted whenever the palette colors changed as a result
+    /// of user interaction or if they were set programatically via colorListView->setColors().
+    ///
+    VGC_SIGNAL(colorsChanged, (const core::Array<core::Color>&, colors))
 
 private:
     core::Color selectedColor_;
@@ -169,8 +175,13 @@ private:
     void onSelectorSelectedColor_();
     VGC_SLOT(onSelectorSelectedColorSlot_, onSelectorSelectedColor_)
 
-    void onColorListViewSelectedColor_();
-    VGC_SLOT(onColorListViewSelectedColorSlot_, onColorListViewSelectedColor_)
+    void onColorListViewSelectedColorChanged_();
+    VGC_SLOT(
+        onColorListViewSelectedColorChangedSlot_,
+        onColorListViewSelectedColorChanged_)
+
+    void onColorListViewColorsChanged_();
+    VGC_SLOT(onColorListViewColorsChangedSlot_, onColorListViewColorsChanged_)
 
     void onContinuousChanged_();
     VGC_SLOT(onContinuousChangedSlot_, onContinuousChanged_)

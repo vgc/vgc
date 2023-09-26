@@ -25,6 +25,7 @@ namespace vgc::ui {
 
 VGC_DECLARE_OBJECT(Panel);
 VGC_DECLARE_OBJECT(PanelArea);
+VGC_DECLARE_OBJECT(PanelManager);
 
 /// A `PanelFactory` implementation should create a new `Panel`
 /// as a child of the given `PanelArea` and return it.
@@ -34,79 +35,121 @@ VGC_DECLARE_OBJECT(PanelArea);
 /// ```cpp
 /// auto colorsPanelFactory = [app](PanelArea* parent) {
 ///     Panel* panel = createPanelWithPadding(parent, "Colors");
-///     palette = parent->createChild<tools::ColorPalette>();
-///     palette_->colorSelected().connect(app->onColorChangedSlot_());
+///     tools::ColorPalette* palette = panel->createChild<tools::ColorPalette>();
+///     palette->colorSelected().connect(app->onColorChangedSlot_());
+///     return panel;
 /// };
 /// ```
 ///
 using PanelFactory = std::function<Panel*(PanelArea* /* parent */)>;
 
-using PanelId = core::Id;
-
-/// \class RegisteredPanel
-/// \brief Stores information about a panel type registered in a `PanelManager`.
+/// Uniquely identifies a panel type registered in a `PanelManager`.
 ///
-class RegisteredPanel {
-public:
-    /// Creates a `RegisteredPanel`.
-    ///
-    RegisteredPanel(std::string_view label, PanelFactory&& factory)
-        : id_(core::genId())
-        , label_(label)
+/// This is a string that is provided by the developer of the panel, for
+/// example `vgc.common.colorPalette`
+///
+using PanelTypeId = core::StringId;
+
+namespace detail {
+
+struct PanelTypeInfo {
+    PanelTypeInfo(std::string_view label, PanelFactory&& factory)
+        : label_(label)
         , factory_(std::move(factory)) {
     }
 
-    /// Creates an instance of this registered panel by
-    /// as a child of the given `parent` PanelArea by calling the `factory()` function.
-    ///
-    Panel* create(PanelArea* parent) {
-        return factory_(parent);
-    }
-
-    /// Returns the ID of this registered panel.
-    ///
-    PanelId id() const {
-        return id_;
-    }
-
-    /// Returns the label of this registered panel.
-    ///
-    std::string_view label() const {
-        return label_;
-    }
-
-    /// Returns the factory function of this registered panel.
-    ///
-    const PanelFactory& factory() const {
-        return factory_;
-    }
-
-private:
-    PanelId id_;
     std::string label_;
     PanelFactory factory_;
+
+    core::Array<Panel*> instances_;
 };
+
+using PanelTypeInfoMap = std::unordered_map<PanelTypeId, detail::PanelTypeInfo>;
+
+} // namespace detail
 
 /// \class vgc::ui::PanelManager
 /// \brief Keeps track of information about existing of future panels
 ///
 /// A `PanelManager` has the following responsibilities:
-/// - Store a list of panel specifications for opening new panels.
+///
+/// - Store a list of panel types that can be used for opening new panels.
+///
 /// - Keep track of which panels are already opened.
+///
 /// - Remember the last location of closed panels to re-open them in a similar
 ///   location.
 ///
-class VGC_UI_API PanelManager {
-public:
-    PanelManager();
+class VGC_UI_API PanelManager : public core::Object {
+private:
+    VGC_OBJECT(PanelManager, core::Object)
+    VGC_PRIVATIZE_OBJECT_TREE_MUTATORS
 
-    /// Registers a given panel type, and returns a unique identifier for this
-    /// panel type.
+    PanelManager(CreateKey);
+
+public:
+    /// Creates a `PanelManager()`.
     ///
-    PanelId registerPanel(std::string_view label, PanelFactory&& factory);
+    static PanelManagerPtr create();
+
+    /// Registers a panel type and returns its type ID as a `PanelTypeId`.
+    ///
+    /// If a panel type with the same `id` already exists, then it is
+    /// replaced and a warning is emitted.
+    ///
+    PanelTypeId registerPanelType(
+        std::string_view id,
+        std::string_view label,
+        PanelFactory&& factory);
+
+    /// Returns the list of all registered panel type IDs.
+    ///
+    core::Array<PanelTypeId> registeredPanelTypeIds() const;
+
+    /// Returns whether a panel type, given by its `id`, is registered in this
+    /// manager.
+    ///
+    bool isRegistered(PanelTypeId id) const;
+
+    /// Returns the label of a registered panel type.
+    ///
+    /// Throws `IndexError` if there is no registered panel type with the given
+    /// `id`.
+    ///
+    std::string_view label(PanelTypeId id) const;
+
+    /// Creates an instance of a registered panel type as a child of the given
+    /// `parent` panel area.
+    ///
+    /// Throws `IndexError` if there is no registered panel type with the given
+    /// `id`.
+    ///
+    Panel* createPanelInstance(PanelTypeId id, PanelArea* parent);
+
+    /// Returns all existing instances of a registered panel type.
+    ///
+    /// Throws `IndexError` if there is no registered panel type with the given
+    /// `id`.
+    ///
+    core::Array<Panel*> instances(PanelTypeId id) const;
+
+    /// Returns whether a registered panel type has at least one existing
+    /// instance.
+    ///
+    /// Throws `IndexError` if there is no registered panel type with the given
+    /// `id`.
+    ///
+    bool hasInstance(PanelTypeId id) const {
+        return !instances(id).isEmpty();
+    }
 
 private:
-    core::Array<RegisteredPanel> registeredPanels_;
+    detail::PanelTypeInfoMap infos_;
+
+    void onPanelInstanceAboutToBeDestroyed_(Object* object);
+    VGC_SLOT(onPanelInstanceAboutToBeDestroyed_)
+
+    std::unordered_map<Object*, PanelTypeId> instanceToId_;
 };
 
 } // namespace vgc::ui

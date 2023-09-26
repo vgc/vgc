@@ -534,24 +534,34 @@ ColorPalette::ColorPalette(CreateKey key)
     setSelectedColorNoCheckNoEmit_(initialColor.rounded8b());
 
     // Connections
+    // Continuous vs Step
     continuousButton_->action()->checkStateChanged().connect(onContinuousChangedSlot_());
     hStepsEdit_->valueChanged().connect(onStepsValueChangedSlot_());
     sStepsEdit_->valueChanged().connect(onStepsValueChangedSlot_());
     lStepsEdit_->valueChanged().connect(onStepsValueChangedSlot_());
+    // Selector
     selector_->colorSelected().connect(onSelectorSelectedColorSlot_());
+    // RGB
     rEdit_->valueChanged().connect(onRgbValueChangedSlot_());
     gEdit_->valueChanged().connect(onRgbValueChangedSlot_());
     bEdit_->valueChanged().connect(onRgbValueChangedSlot_());
+    // HSL
     hEdit_->valueChanged().connect(onHslValueChangedSlot_());
     sEdit_->valueChanged().connect(onHslValueChangedSlot_());
     lEdit_->valueChanged().connect(onHslValueChangedSlot_());
+    // Hex
     hexEdit_->editingFinished().connect(onHexEditedSlot_());
+    // Add/Remove to palette
     addToPaletteAction->triggered().connect(onAddToPaletteSlot_());
     removeFromPaletteAction->triggered().connect(onRemoveFromPaletteSlot_());
+    // Pick from Screen
     pickScreenButton->pickingStarted().connect(onPickScreenStartedSlot_());
     pickScreenButton->pickingCancelled().connect(onPickScreenCancelledSlot_());
     pickScreenButton->colorHovered().connect(onPickScreenColorHoveredSlot_());
-    colorListView_->selectedColorChanged().connect(onColorListViewSelectedColorSlot_());
+    // ColorListView
+    colorListView_->selectedColorChanged().connect(
+        onColorListViewSelectedColorChangedSlot_());
+    colorListView_->colorsChanged().connect(onColorListViewColorsChangedSlot_());
 
     // Style class
     addStyleClass(strings::ColorPalette);
@@ -573,10 +583,23 @@ void ColorPalette::onSelectorSelectedColor_() {
     selectColor_(selector_->selectedColor());
 }
 
-void ColorPalette::onColorListViewSelectedColor_() {
+void ColorPalette::onColorListViewSelectedColorChanged_() {
     if (colorListView_->hasSelectedColor()) {
         selectColor_(colorListView_->selectedColor());
     }
+}
+
+void ColorPalette::onColorListViewColorsChanged_() {
+    if (!colorListView_) {
+        return;
+    }
+    Int numColors = colorListView_->numColors();
+    core::Array<core::Color> colors;
+    colors.reserve(numColors);
+    for (Int i = 0; i < numColors; ++i) {
+        colors.append(colorListView_->colorAt(i));
+    }
+    colorsChanged().emit(colors);
 }
 
 namespace {
@@ -651,7 +674,7 @@ void ColorPalette::onRgbValueChanged_() {
     // Emit the signal only if the color actually changed.
     //
     if (selectedColor_ != oldColor) {
-        colorSelected().emit();
+        colorSelected().emit(selectedColor_);
     }
 }
 
@@ -691,7 +714,7 @@ void ColorPalette::onHslValueChanged_() {
     // Emit the signal only if the color actually changed.
     //
     if (selectedColor_ != oldColor) {
-        colorSelected().emit();
+        colorSelected().emit(selectedColor_);
     }
 }
 
@@ -718,7 +741,7 @@ void ColorPalette::onHexEdited_() {
     colorChangeOrigin_ = ColorChangeOrigin::None;
 
     if (selectedColor_ != oldColor) {
-        colorSelected().emit();
+        colorSelected().emit(selectedColor_);
     }
 }
 
@@ -762,7 +785,7 @@ void ColorPalette::selectColor_(const core::Color& color) {
         }
         setSelectedColorNoCheckNoEmit_(color);
         colorChangeOrigin_ = ColorChangeOrigin::None;
-        colorSelected().emit();
+        colorSelected().emit(selectedColor_);
     }
 }
 
@@ -2569,6 +2592,10 @@ void ColorListView::removeColorAt(Int index) {
 }
 
 void ColorListView::setColors(const core::Array<core::Color>& colors) {
+
+    if (colors == colors_) {
+        return;
+    }
 
     // Update selected color index
     bool hasSelectedColorChanged = false;

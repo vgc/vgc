@@ -32,6 +32,7 @@
 #include <vgc/ui/menu.h>
 #include <vgc/ui/panel.h>
 #include <vgc/ui/panelarea.h>
+#include <vgc/ui/panelmanager.h>
 #include <vgc/workspace/workspace.h>
 
 namespace vgc::app {
@@ -188,10 +189,16 @@ private:
     void createActions_(ui::Widget* parent);
     void createMenus_();
 
-    // ------------------------------------------------------------------------
-    //                       Canvas and tools
+    ui::Menu* panelsMenu_;
 
-    void createWidgets_();
+    // ------------------------------------------------------------------------
+    //                       Panels
+
+    ui::PanelManagerPtr panelManager_;
+
+    void registerPanelTypes_();
+
+    void createDefaultPanels_();
 
     // Canvas
     canvas::Canvas* canvas_ = nullptr;
@@ -219,11 +226,17 @@ private:
     VGC_SLOT(onToolCheckStateChangedSlot_, onToolCheckStateChanged_);
 
     // Palette
-    tools::ColorPalette* palette_ = nullptr;
+    core::Color currentColor_;
+    core::Array<core::Color> documentColorPalette_;
+    //tools::ColorPalettePtr palette_ = nullptr;
 
-    void createColorPalette_(ui::Widget* parent);
-    void onColorChanged_();
-    VGC_SLOT(onColorChangedSlot_, onColorChanged_)
+    VGC_SIGNAL(currentColorChanged_, (const core::Color&, color))
+
+    //void createColorPalette_(ui::Widget* parent);
+    void onColorSelected_(const core::Color& color);
+    void onColorsChanged_(const core::Array<core::Color>& colors);
+    VGC_SLOT(onColorsChangedSlot_, onColorsChanged_)
+    VGC_SLOT(onColorSelectedSlot_, onColorSelected_)
 
     // ------------------------------------------------------------------------
     //                       Misc
