@@ -35,6 +35,13 @@ VGC_DEFINE_ENUM( //
     (ReverseEnd, "ReverseEnd"),
     (ReverseBoth, "ReverseBoth"))
 
+ScopedOperationsGroup::ScopedOperationsGroup(Complex* complex)
+    : group_(std::make_unique<detail::Operations>(complex)) {
+}
+
+ScopedOperationsGroup::~ScopedOperationsGroup() {
+}
+
 namespace ops {
 
 namespace {

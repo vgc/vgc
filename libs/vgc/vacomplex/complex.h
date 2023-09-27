@@ -362,6 +362,12 @@ public:
         return version_;
     }
 
+    /// Returns whether someone is currently modifying this complex.
+    ///
+    bool isOperationInProgress() const {
+        return numOperationsInProgress_ > 0;
+    }
+
     /// Prints the tree of nodes of the Complex for debug purposes.
     ///
     void debugPrint();

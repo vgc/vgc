@@ -128,6 +128,33 @@ enum class TwoCycleCutPolicy {
 VGC_VACOMPLEX_API
 VGC_DECLARE_ENUM(TwoCycleCutPolicy)
 
+/// \class vgc::vacomplex::ScopedOperationsGroup
+/// \brief Encloses multiple operations as one group for performance.
+///
+/// Whenever operations are performed on a `Complex`, the complex is in charge
+/// of ensuring that geometric constraints are satisfied, for example by
+/// snapping the geometry of an edge to its end vertices.
+///
+/// By instanciating a `ScopedOperationsGroup`, you can indicate that a
+/// sequence of multiple operations is incoming, and that such constraint
+/// enforcements must be delayed until the `ScopedOperationsGroup` is
+/// destructed.
+///
+// TODO: In fact, some operations require to access edge geometry, such as
+// `cutFaceWithEdge`, in order to compute heuristics on which cut to perform.
+// This means that we should also in fact enforce the constraints whenever the
+// edge geometry is accessed, or the ScopedOperationsGroup is destructed,
+// whichever happens first.
+//
+class VGC_VACOMPLEX_API ScopedOperationsGroup {
+public:
+    ScopedOperationsGroup(Complex* complex);
+    ~ScopedOperationsGroup();
+
+private:
+    std::unique_ptr<detail::Operations> group_;
+};
+
 namespace ops {
 
 // TODO: impl the exceptions mentioned in comments, verify preconditions checks and throws.

@@ -1561,6 +1561,16 @@ void Workspace::updateVacChildrenOrder_() {
 void Workspace::updateVacFromDom_(const dom::Diff& diff) {
 
     VGC_ASSERT(document_);
+    VGC_ASSERT(vac_);
+
+    if (vac()->isOperationInProgress()) {
+        throw core::LogicError("VAC and DOM have been concurrently modified (forgot to "
+                               "call workspace.sync() after modifying the DOM?).");
+
+        // Alternatively, instead of a LogicError, maybe we could destroy the
+        // current vac() and reconstruct it from scratch from the DOM (that is,
+        // consider the DOM to be our primary source of trust).
+    }
 
     core::BoolGuard bgVac(isUpdatingVacFromDom_);
 
@@ -1581,22 +1591,49 @@ void Workspace::updateVacFromDom_(const dom::Diff& diff) {
     // - which may destroy other VAC nodes,
     // - which will invoke onVacNodeDestroyed(otherNodeId).
     //
-    for (dom::Node* node : diff.removedNodes()) {
-        dom::Element* domElement = dom::Element::cast(node);
-        if (!domElement) {
-            continue;
-        }
-        Element* element = find(domElement);
-        if (element) {
-            Element* parent = element->parent();
-            VGC_ASSERT(parent);
-            // reparent children to element's parent
-            for (Element* child : *element) {
-                parent->appendChild(child);
+    {
+        vacomplex::ScopedOperationsGroup operationsGroup(vac());
+
+        for (dom::Node* node : diff.removedNodes()) {
+            dom::Element* domElement = dom::Element::cast(node);
+            if (!domElement) {
+                continue;
             }
-            removeElement_(element);
+            Element* element = find(domElement);
+            if (element) {
+                Element* parent = element->parent();
+                VGC_ASSERT(parent);
+                // reparent children to element's parent
+                for (Element* child : *element) {
+                    parent->appendChild(child);
+                }
+                removeElement_(element);
+            }
         }
     }
+
+    // Creates a group of operations, so that post-operation computations are
+    // done only once at the end of this function. For example, if we update
+    // both an edge geometry and a vertex position, we do not want to perform
+    // snapping between the update of the edge and the update of the vertex.
+    //
+    // Note: we want this to be a separate group than the group used to delete
+    // nodes (see code above), because we do want to receive the VAC diff for
+    // removals before proceeding, so that we can invalidate pointers that have
+    // been deleted.
+    //
+    // Example scenario: using the DOM editor, a user deletes a vertex and
+    // modifies (but not delete) its incident edge (for example, making it a
+    // closed edge). As part of the operations group above, a call to
+    // ops::hardDelete(vertex) will be made, deleting both the vertex and the
+    // edge. At the end of the operation group, the workspace will be made
+    // aware of the deletion of the edge (see onVacNodesChanged_()), setting to
+    // nullptr a now-dangling pointers in the corresponding VacKeyEdge. This
+    // ensures that we can safely proceed, in the operations group below, to
+    // call methods such updateElementFromDom(edge) (which will recreate the
+    // edge if possible).
+    //
+    vacomplex::ScopedOperationsGroup operationsGroup(vac());
 
     // Create new elements, but for now uninitialized and in a potentially
     // incorrect child ordering.
