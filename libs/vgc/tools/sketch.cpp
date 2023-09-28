@@ -1071,7 +1071,7 @@ Sketch::computeSnapVertex_(const geometry::Vec2d& position, core::Id tmpVertexIt
         Int infoIdx;
         double dist;
 
-        bool operator<(const SnapCandidate& rhs) {
+        bool operator<(const SnapCandidate& rhs) const {
             return dist < rhs.dist;
         }
     };
