@@ -88,7 +88,7 @@ KeyCycle::KeyCycle(KeyPath&& path)
     , halfedges_(std::move(path.halfedges_)) {
 }
 
-KeyCycle::KeyCycle(core::Span<const KeyHalfedge> halfedges) noexcept
+KeyCycle::KeyCycle(core::Span<const KeyHalfedge> halfedges)
     : halfedges_(halfedges) {
 
     if (halfedges.isEmpty()) {

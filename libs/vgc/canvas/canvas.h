@@ -43,6 +43,11 @@ enum class DisplayMode {
     // Draft, Preview, Pixel, Print..
 };
 
+enum class CoordinateSpace {
+    Widget,
+    Workspace
+};
+
 VGC_DECLARE_OBJECT(SelectionListHistory);
 VGC_DECLARE_OBJECT(Canvas);
 
@@ -207,8 +212,16 @@ public:
     /// farthest from `position` and from foreground to background for
     /// candidates at equal distances from `position`.
     ///
-    core::Array<SelectionCandidate>
-    computeSelectionCandidates(const geometry::Vec2f& position) const;
+    core::Array<SelectionCandidate> computeSelectionCandidates(
+        const geometry::Vec2d& positionInWidgetSpace,
+        style::Length toleranceInWidgetSpace =
+            style::Length(7.0, style::LengthUnit::Dp)) const;
+
+    core::Array<SelectionCandidate> computeSelectionCandidatesAboveOrAt(
+        core::Id itemId,
+        const geometry::Vec2d& position,
+        double tolerance = 0,
+        CoordinateSpace coordinateSpace = CoordinateSpace::Widget) const;
 
     /// Computes candidate elements for selection in the axis-aligned
     /// rectangle with opposite corners `a` and `b`.
@@ -217,8 +230,9 @@ public:
     /// to background.
     ///
     core::Array<core::Id> computeRectangleSelectionCandidates(
-        const geometry::Vec2f& a,
-        const geometry::Vec2f& b) const;
+        const geometry::Vec2d& a,
+        const geometry::Vec2d& b,
+        CoordinateSpace coordinateSpace = CoordinateSpace::Widget) const;
 
 protected:
     // Reimplementation of Widget virtual methods

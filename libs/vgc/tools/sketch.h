@@ -31,6 +31,292 @@ namespace vgc::tools {
 
 VGC_DECLARE_OBJECT(Sketch);
 
+class VGC_TOOLS_API SketchPoint {
+public:
+    constexpr SketchPoint() noexcept
+        : position_()
+        , pressure_(0)
+        , timestamp_(0)
+        , width_(0)
+        , s_(0) {
+    }
+
+    VGC_WARNING_PUSH
+    VGC_WARNING_MSVC_DISABLE(26495) // member variable uninitialized
+    SketchPoint(core::NoInit) noexcept
+        : position_(core::noInit) {
+    }
+    VGC_WARNING_POP
+
+    SketchPoint(
+        const geometry::Vec2d& position,
+        double pressure,
+        double timestamp,
+        double width,
+        double s = 0) noexcept
+
+        : position_(position)
+        , pressure_(pressure)
+        , timestamp_(timestamp)
+        , width_(width)
+        , s_(s) {
+    }
+
+    const geometry::Vec2d& position() const {
+        return position_;
+    }
+
+    void setPosition(const geometry::Vec2d& position) {
+        position_ = position;
+    }
+
+    double pressure() const {
+        return pressure_;
+    }
+
+    void setPressure(double pressure) {
+        pressure_ = pressure;
+    }
+
+    double timestamp() const {
+        return timestamp_;
+    }
+
+    void setTimestamp(double timestamp) {
+        timestamp_ = timestamp;
+    }
+
+    bool hasTimestamp() const {
+        return timestamp_ != 0;
+    }
+
+    double width() const {
+        return width_;
+    }
+
+    void setWidth(double width) {
+        width_ = width;
+    }
+
+    /// Returns the cumulative chordal distance from the first point to this point.
+    double s() const {
+        return s_;
+    }
+
+    void setS(double s) {
+        s_ = s;
+    }
+
+    void offsetS(double offset) {
+        s_ += offset;
+    }
+
+private:
+    geometry::Vec2d position_;
+    double pressure_;
+    double timestamp_;
+    double width_;
+    double s_;
+};
+
+using SketchPointArray = core::Array<SketchPoint>;
+
+class VGC_TOOLS_API SketchPointBuffer {
+public:
+    SketchPointBuffer() noexcept = default;
+
+    const SketchPoint& operator[](Int i) const {
+        return points_[i];
+    }
+
+    SketchPoint& getRef(Int i) {
+        if (i < numStablePoints_) {
+            throw core::LogicError(
+                "getRef(): cannot get a non-const reference to a stable point.");
+        }
+        return points_[i];
+    }
+
+    core::Span<SketchPoint> unstableSpan() {
+        return core::Span<SketchPoint>(points_.begin() + numStablePoints_, points_.end());
+    }
+
+    const SketchPointArray& data() const {
+        return points_;
+    }
+
+    Int length() const {
+        return points_.length();
+    }
+
+    void reserve(Int count) {
+        return points_.reserve(count);
+    }
+
+    void resize(Int count) {
+        if (count < numStablePoints_) {
+            throw core::LogicError("resize(): cannot decrease number of stable points.");
+        }
+        return points_.resize(count);
+    }
+
+    void clear() {
+        points_.clear();
+        numStablePoints_ = 0;
+    }
+
+    Int numStablePoints() const {
+        return numStablePoints_;
+    }
+
+    void setNumStablePoints(Int numStablePoints) {
+        if (numStablePoints < numStablePoints_) {
+            throw core::LogicError(
+                "setNumStablePoints(): cannot decrease number of stable points.");
+        }
+        else if (numStablePoints > points_.length()) {
+            throw core::LogicError("setNumStablePoints(): number of stable points cannot "
+                                   "be greater than number of points.");
+        }
+        numStablePoints_ = numStablePoints;
+    }
+
+    SketchPoint& append(const SketchPoint& point) {
+        points_.append(point);
+        return points_.last();
+    }
+
+    SketchPoint& emplaceLast(
+        const geometry::Vec2d& position,
+        double pressure,
+        double timestamp,
+        double width,
+        double s = 0) {
+
+        return points_.emplaceLast(position, pressure, timestamp, width, s);
+    }
+
+    template<typename InputIt, VGC_REQUIRES(core::isInputIterator<InputIt>)>
+    void extend(InputIt first, InputIt last) {
+        points_.extend(first, last);
+    }
+
+private:
+    SketchPointArray points_;
+    Int numStablePoints_ = 0;
+};
+
+class VGC_TOOLS_API SketchPointsProcessingPass {
+protected:
+    SketchPointsProcessingPass() noexcept = default;
+
+public:
+    void updateResultFrom(const SketchPointBuffer& input) {
+        Int numStablePoints = update_(input, lastNumStableInputPoints_);
+        buffer_.setNumStablePoints(numStablePoints);
+        lastNumStableInputPoints_ = input.numStablePoints();
+    }
+
+    void reset() {
+        buffer_.clear();
+        lastNumStableInputPoints_ = 0;
+        reset_();
+    }
+
+    const SketchPointBuffer& buffer() const {
+        return buffer_;
+    }
+
+protected:
+    const SketchPoint& getPoint(Int i) {
+        return buffer_[i];
+    }
+
+    SketchPoint& getPointRef(Int i) {
+        return buffer_.getRef(i);
+    }
+
+    core::Span<SketchPoint> unstablePointSpan() {
+        return buffer_.unstableSpan();
+    }
+
+    const SketchPointArray& points() const {
+        return buffer_.data();
+    }
+
+    Int numPoints() const {
+        return buffer_.length();
+    }
+
+    void reservePoints(Int count) {
+        return buffer_.reserve(count);
+    }
+
+    void resizePoints(Int count) {
+        return buffer_.resize(count);
+    }
+
+    Int numStablePoints() const {
+        return buffer_.numStablePoints();
+    }
+
+    void appendPoint(const SketchPoint& point) {
+        buffer_.append(point);
+    }
+
+    void emplacePointLast(
+        const geometry::Vec2d& position,
+        double pressure,
+        double timestamp,
+        double width,
+        double s = 0) {
+
+        buffer_.emplaceLast(position, pressure, timestamp, width, s);
+    }
+
+    template<typename InputIt, VGC_REQUIRES(core::isInputIterator<InputIt>)>
+    void extendPoints(InputIt first, InputIt last) {
+        buffer_.extend(first, last);
+    }
+
+    void updateCumulativeChordalDistances();
+
+protected:
+    // Must return the new number of stable result points.
+    // This number must not be less than its previous value.
+    virtual Int update_(const SketchPointBuffer& input, Int lastNumStableInputPoints) = 0;
+
+    virtual void reset_() = 0;
+
+private:
+    SketchPointBuffer buffer_;
+    Int lastNumStableInputPoints_ = 0;
+};
+
+namespace detail {
+
+class VGC_TOOLS_API EmptyPass : public SketchPointsProcessingPass {
+public:
+    EmptyPass() noexcept = default;
+
+protected:
+    Int update_(const SketchPointBuffer& input, Int lastNumStableInputPoints) override;
+
+    void reset_() override;
+};
+
+class VGC_TOOLS_API SmoothingPass : public SketchPointsProcessingPass {
+public:
+    SmoothingPass() noexcept = default;
+
+protected:
+    Int update_(const SketchPointBuffer& input, Int lastNumStableInputPoints) override;
+
+    void reset_() override;
+};
+
+} // namespace detail
+
 /// \class vgc::tools::SketchTool
 /// \brief A CanvasTool that implements sketching strokes.
 ///
@@ -111,8 +397,10 @@ protected:
     bool hasPressure_ = false;
     core::UndoGroup* drawCurveUndoGroup_ = nullptr;
     core::ConnectionHandle drawCurveUndoGroupConnectionHandle_ = {};
-    dom::Element* endVertex_ = nullptr;
-    dom::Element* edge_ = nullptr;
+
+    double startTime_ = 0;
+    core::Id tmpEndVertexItemId_ = 0;
+    core::Id edgeItemId_ = 0;
 
     // Raw input in widget space (pixels).
     //
@@ -122,45 +410,7 @@ protected:
     // - for now, we do not smooth widths.
     // - we assume the view matrix does not change during the operation.
     //
-    geometry::Vec2fArray inputPoints_;
-    core::DoubleArray inputWidths_;
-    core::DoubleArray inputTimestamps_;
-    geometry::Mat4d canvasToWorkspaceMatrix_;
-    bool isQuantizationStatusIdentified_ = false;
-    bool isInputPointsQuantized_ = false;
-    bool isInputWidthsQuantized_ = false;
-    bool isInputTimestampsQuantized_ = false;
-
-    // Dequantization.
-    //
-    // This step removes the "staircase effect" that happens when input points
-    // come from a source only providing integer coordinates (e.g. a mouse).
-    //
-    // The general idea is to discard and/or slighly adjust the position of the
-    // samples to reconstruct what the mouse positions actually were if there
-    // had been no rounding to integer (= "quantization") in the first place.
-    //
-    // This step is fundamently different from smoothing, because the staircase
-    // patterns caused by quantization are not equivalent to random noise:
-    // during quantization, the perturbations applied to consecutive samples
-    // are correlated, while with random noise they are not.
-    //
-    // Therefore, while in smoothing we generally want to mimize some
-    // least-square distance to samples, in dequantization we want instead to
-    // minimize some other objective (e.g., curve length, curvature, or change
-    // of curvature) subject to the non-linear constraint "pass through each
-    // input pixel". As long as the dequantized curve passes through the input
-    // pixel, we do not want to value more "being closer to the center of the
-    // pixel".
-    //
-    // Invariant: all arrays have the same length.
-    //
-    geometry::Vec2fArray dequantizerBuffer_;
-    Int dequantizerBufferStartIndex = 0;
-    geometry::Vec2fArray unquantizedPoints_;
-    core::DoubleArray unquantizedWidths_;
-    core::DoubleArray unquantizedTimestamps_;
-    void updateUnquantizedData_(bool isFinalPass);
+    SketchPointBuffer inputPoints_;
 
     // Pre-transform processing.
     //
@@ -170,10 +420,11 @@ protected:
     //
     // Invariant: all arrays have the same length.
     //
-    geometry::Vec2fArray preTransformedPoints_;
-    core::DoubleArray preTransformedWidths_;
-    core::DoubleArray preTransformedTimestamps_;
-    void updatePreTransformedData_(bool isFinalPass);
+    detail::EmptyPass dummyPreTransformPass_;
+
+    void updatePreTransformPassesResult_();
+    void clearPreTransformPasses_();
+    const SketchPointBuffer& preTransformPassesResult_();
 
     // Transformation.
     //
@@ -185,18 +436,19 @@ protected:
     //
     // Invariant: all arrays have the same length.
     //
-    geometry::Vec2dArray transformedPoints_;
-    core::DoubleArray transformedWidths_;
-    core::DoubleArray transformedTimestamps_;
-    void updateTransformedData_(bool isFinalPass);
+    geometry::Mat4d canvasToWorkspaceMatrix_;
+    SketchPointBuffer transformedPoints_;
+    void updateTransformedPoints_();
 
     // Smoothing.
     //
     // Invariant: all arrays have the same length.
     //
-    geometry::Vec2dArray smoothedPoints_;
-    core::DoubleArray smoothedWidths_;
-    void updateSmoothedData_(bool isFinalPass);
+    detail::SmoothingPass smoothingPass_;
+
+    void updatePostTransformPassesResult_();
+    void clearPostTransformPasses_();
+    const SketchPointBuffer& postTransformPassesResult_();
 
     // Snapping
     //
@@ -205,12 +457,42 @@ protected:
     // Note: keep in mind that isSnappingEnabled() may change between
     // startCurve() and finishCurve().
     //
-    bool hasStartSnap_ = false;
-    geometry::Vec2d startSnapPosition_;
-    geometry::Vec2dArray snappedPoints_;
-    core::DoubleArray snappedWidths_;
-    void updateSnappedData_(bool isFinalPass);
-    void updateEndSnappedData_(const geometry::Vec2d& endSnapPosition);
+    Int pendingEdgeStartPointIndex_ = 0;
+    std::optional<geometry::Vec2d> startSnapPosition_;
+    geometry::Vec2dArray startSnappedPositions_;
+    Int numStartSnappedStablePoints_ = 0;
+    core::Id endSnapVertexItemId_ = 0;
+    geometry::Vec2d endSnapPosition_;
+    core::DoubleArray pendingEdgeWidths_;
+    geometry::Vec2dArray pendingEdgePositions_;
+    void updateStartSnappedPoints_();
+    void updateEndSnappedPositions_();
+    void clearSnappingData_();
+
+    // The length of curve that snapping is allowed to deform
+    double snapFalloff_() const;
+
+    struct VertexInfo {
+        // fast access to position to do snap tests
+        geometry::Vec2d position;
+        core::Id itemId;
+        std::optional<bool> isSelectable;
+    };
+    core::Array<VertexInfo> vertexInfos_;
+
+    struct EdgeInfo {
+        // fast access to geometry to do cut tests
+        std::shared_ptr<const geometry::StrokeSampling2d> sampling;
+        core::Id itemId;
+    };
+    core::Array<EdgeInfo> edgeInfos_;
+
+    void initCellInfoArrays_();
+
+    void appendVertexInfo_(const geometry::Vec2d& position, core::Id itemId);
+
+    workspace::Element*
+    computeSnapVertex_(const geometry::Vec2d& position, core::Id tmpVertexItemId);
 
     // Draw additional points at the stroke tip, based on global cursor
     // position, to reduce perceived input lag.
@@ -233,12 +515,6 @@ protected:
     void continueCurve_(ui::MouseEvent* event);
     void finishCurve_(ui::MouseEvent* event);
     void resetData_();
-
-    // The length of curve that snapping is allowed to deform
-    double snapFalloff() const;
-
-    workspace::Element*
-    computeSnapVertex_(const geometry::Vec2d& position, dom::Element* excludedElement_);
 };
 
 } // namespace vgc::tools

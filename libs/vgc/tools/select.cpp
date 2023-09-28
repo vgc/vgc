@@ -81,12 +81,14 @@ public:
             undoGroup = history->createUndoGroup(actionName());
         }
 
+        geometry::Vec2d position(event->position());
+
         geometry::Mat4d inverseViewMatrix = canvas->camera().viewMatrix().inverted();
         geometry::Vec2d cursorPositionInWorkspace =
-            inverseViewMatrix.transformPointAffine(geometry::Vec2d(event->position()));
+            inverseViewMatrix.transformPointAffine(position);
 
         core::Array<canvas::SelectionCandidate> candidates =
-            canvas->computeSelectionCandidates(event->position());
+            canvas->computeSelectionCandidates(position);
 
         for (const auto& candidate : candidates) {
             workspace::Element* item = workspace->find(candidate.id());
@@ -269,16 +271,18 @@ bool Select::onMouseMove(ui::MouseMoveEvent* event) {
     if (isDragging_) {
         geometry::Mat4d inverseViewMatrix = canvas->camera().viewMatrix().inverted();
 
+        geometry::Vec2d cursorPosition(cursorPosition_);
+        geometry::Vec2d cursorPositionAtPress(cursorPositionAtPress_);
+
         geometry::Vec2d cursorPositionInWorkspace =
-            inverseViewMatrix.transformPointAffine(geometry::Vec2d(cursorPosition_));
+            inverseViewMatrix.transformPointAffine(cursorPosition);
         geometry::Vec2d cursorPositionInWorkspaceAtPress =
-            inverseViewMatrix.transformPointAffine(
-                geometry::Vec2d(cursorPositionAtPress_));
+            inverseViewMatrix.transformPointAffine(cursorPositionAtPress);
 
         switch (dragAction_) {
         case DragAction::Select: {
             rectCandidates_ = canvas->computeRectangleSelectionCandidates(
-                cursorPositionAtPress_, cursorPosition_);
+                cursorPositionAtPress, cursorPosition);
             selectionRectangleGeometry_.reset();
             requestRepaint();
             break;
@@ -321,7 +325,8 @@ bool Select::onMousePress(ui::MousePressEvent* event) {
 
     if (!keys.hasAny(unsupportedKeys)) {
         isInAction_ = true;
-        candidates_ = canvas->computeSelectionCandidates(event->position());
+        geometry::Vec2d position(event->position());
+        candidates_ = canvas->computeSelectionCandidates(position);
         selectionAtPress_ = canvas->selection();
         cursorPositionAtPress_ = event->position();
         timeAtPress_ = event->timestamp();

@@ -102,7 +102,7 @@ private:
     explicit KeyCycle(KeyPath&& path);
 
 public:
-    explicit KeyCycle(core::Span<const KeyHalfedge> halfedges) noexcept;
+    explicit KeyCycle(core::Span<const KeyHalfedge> halfedges);
 
     explicit KeyCycle(std::initializer_list<KeyHalfedge> halfedges)
         : halfedges_(halfedges) {

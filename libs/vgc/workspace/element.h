@@ -360,6 +360,14 @@ public:
         return vacNode_;
     }
 
+    vacomplex::Group* vacGroup() const {
+        return vacNode_ ? vacNode_->toGroup() : nullptr;
+    }
+
+    vacomplex::Cell* vacCell() const {
+        return vacNode_ ? vacNode_->toCell() : nullptr;
+    }
+
 protected:
     vacomplex::Cell* vacCellUnchecked() const {
         return vacNode_ ? vacNode_->toCellUnchecked() : nullptr;

@@ -107,6 +107,90 @@ bool Complex::containsNode(core::Id id) const {
     return find(id) != nullptr;
 }
 
+Complex::VertexRange Complex::vertices() const {
+    core::Array<VertexCell*> result;
+    for (const auto& it : nodes_) {
+        Node* node = it.second.get();
+        if (Cell* cell = node->toCell()) {
+            if (VertexCell* vc = cell->toVertexCell()) {
+                result.append(vc);
+            }
+        }
+    }
+    return result;
+}
+
+Complex::EdgeRange Complex::edges() const {
+    core::Array<EdgeCell*> result;
+    for (const auto& it : nodes_) {
+        Node* node = it.second.get();
+        if (Cell* cell = node->toCell()) {
+            if (EdgeCell* ec = cell->toEdgeCell()) {
+                result.append(ec);
+            }
+        }
+    }
+    return result;
+}
+
+Complex::FaceRange Complex::faces() const {
+    core::Array<FaceCell*> result;
+    for (const auto& it : nodes_) {
+        Node* node = it.second.get();
+        if (Cell* cell = node->toCell()) {
+            if (FaceCell* fc = cell->toFaceCell()) {
+                result.append(fc);
+            }
+        }
+    }
+    return result;
+}
+
+Complex::VertexRange Complex::vertices(core::AnimTime t) const {
+    core::Array<VertexCell*> result;
+    for (const auto& it : nodes_) {
+        Node* node = it.second.get();
+        if (Cell* cell = node->toCell()) {
+            if (VertexCell* vc = cell->toVertexCell()) {
+                if (vc->existsAt(t)) {
+                    result.append(vc);
+                }
+            }
+        }
+    }
+    return result;
+}
+
+Complex::EdgeRange Complex::edges(core::AnimTime t) const {
+    core::Array<EdgeCell*> result;
+    for (const auto& it : nodes_) {
+        Node* node = it.second.get();
+        if (Cell* cell = node->toCell()) {
+            if (EdgeCell* ec = cell->toEdgeCell()) {
+                if (ec->existsAt(t)) {
+                    result.append(ec);
+                }
+            }
+        }
+    }
+    return result;
+}
+
+Complex::FaceRange Complex::faces(core::AnimTime t) const {
+    core::Array<FaceCell*> result;
+    for (const auto& it : nodes_) {
+        Node* node = it.second.get();
+        if (Cell* cell = node->toCell()) {
+            if (FaceCell* fc = cell->toFaceCell()) {
+                if (fc->existsAt(t)) {
+                    result.append(fc);
+                }
+            }
+        }
+    }
+    return result;
+}
+
 namespace {
 
 void debugPrintRec(core::StringWriter& out, Node* node, Int indent) {

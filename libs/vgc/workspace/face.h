@@ -98,11 +98,7 @@ public:
         return graphics_;
     }
 
-    bool isSelectableAt(
-        const geometry::Vec2d& position,
-        bool outlineOnly,
-        double tol,
-        double* outDistance) const;
+    bool triangulationContains(const geometry::Vec2d& position) const;
 
 private:
     core::AnimTime time_;
