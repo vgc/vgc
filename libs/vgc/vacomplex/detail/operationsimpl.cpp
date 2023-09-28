@@ -488,12 +488,10 @@ void Operations::softDelete(
         cells.removeAll(nullptr);
     };
 
-    auto deleteCells = [=](auto&& cells) {
+    auto deleteCells = [this](auto&& cells) {
         // Note: deleteIsolatedVertices could remove cells that are
         // in `cells` and it would cause a crash.
-        core::Array<Node*> nodes(cells);
-        deleteWithDependents_(nodes, false, true);
-        cells.clear();
+        deleteWithDependents_(cells, false, true);
     };
 
     // Resolve selection
@@ -2429,13 +2427,13 @@ Node* Operations::findBottomMost(core::ConstSpan<Node*> nodes) {
     return bottomMostNode;
 }
 
+template<typename TNodeRange>
 void Operations::deleteWithDependents_(
-    core::ConstSpan<Node*> nodes,
+    TNodeRange nodes,
     bool deleteIsolatedVertices,
     bool tryRepairingStarCells) {
 
     Group* rootGroup = complex()->rootGroup();
-    std::unordered_set<Node*> nodesToDestroy;
 
     // First collect all descendants
     std::unordered_set<Node*> descendants;
@@ -2452,6 +2450,16 @@ void Operations::deleteWithDependents_(
             descendants.insert(node);
         }
     }
+
+    delete_(descendants, deleteIsolatedVertices, tryRepairingStarCells);
+}
+
+void Operations::delete_(
+    std::unordered_set<Node*> descendants,
+    bool deleteIsolatedVertices,
+    bool tryRepairingStarCells) {
+
+    std::unordered_set<Node*> nodesToDestroy;
 
     // Flag all descendants as about to be deleted.
     //
