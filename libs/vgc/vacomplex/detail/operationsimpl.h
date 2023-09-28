@@ -252,8 +252,14 @@ private:
     static Node* findTopMost(core::ConstSpan<Node*> nodes);
     static Node* findBottomMost(core::ConstSpan<Node*> nodes);
 
+    template<typename TNodeRange>
     void deleteWithDependents_(
-        core::ConstSpan<Node*> nodes,
+        TNodeRange nodes,
+        bool deleteIsolatedVertices = false,
+        bool tryRepairingStarCells = true);
+
+    void delete_(
+        std::unordered_set<Node*> descendants,
         bool deleteIsolatedVertices = false,
         bool tryRepairingStarCells = true);
 
