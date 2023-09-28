@@ -1025,56 +1025,65 @@ void Workspace::rebuildDomFromWorkspaceTree_() {
 
 void Workspace::onVacNodesChanged_(const vacomplex::ComplexDiff& diff) {
 
+    // Process destroyed VAC nodes.
+    //
+    // Corresponding workspace elements are kept until the end of this function
+    // but their vacNode_ pointer must be set to null.
+    //
+    // Note: we want to process deletions even if isUpdatingFromDom is true.
+    // Indeed, if a VAC node has been destroyed as a side-effect of updating
+    // the VAC from the DOM, it can mean that some Workspace elements should
+    // now be mark as corrupted.
+    //
+    // Example scenario:
+    //
+    // 1. User deletes a <vertex> element in the DOM Editor, despite
+    //    an existing <edge> element using it as end vertex.
+    //
+    // 2. This modifies the dom::Document, calls doc->emitPendingDiff(),
+    //    which in turn calls Workspace::onDocumentDiff().
+    //
+    // 3. The Workspace retrieves the corresponding vertexElement Workspace element
+    //    and vertexNode VAC Node.
+    //
+    // 4. The Workspace destroys and unregisters the vertexElement.
+    //
+    // 5. The Workspace calls ops::hardDelete(vertexNode)
+    //
+    // 6. The VAC diff contains destroyed node ids:
+    //    - vertexNodeId  -> destroyed explicitly:     OK
+    //    - edgeNodeId    -> destroyed as side-effect: now corrupted
+    //
     if (isUpdatingVacFromDom_) {
-        // If a VAC node has been destroyed as a side-effect of updating the VAC
-        // from the DOM, it can mean that some Workspace elements should now
-        // be mark as corrupted.
-        //
-        // Example scenario:
-        //
-        // 1. User deletes a <vertex> element in the DOM Editor, despite
-        //    an existing <edge> element using it as end vertex.
-        //
-        // 2. This modifies the dom::Document, calls doc->emitPendingDiff(),
-        //    which in turn calls Workspace::onDocumentDiff().
-        //
-        // 3. The Workspace retrieves the corresponding vertexElement Workspace element
-        //    and vertexNode VAC Node.
-        //
-        // 4. The Workspace destroys and unregisters the vertexElement.
-        //
-        // 5. The Workspace calls ops::hardDelete(vertexNode)
-        //
-        // 6. The VAC diff contains destroyed node ids:
-        //    - vertexNodeId  -> destroyed explicitly:     OK
-        //    - edgeNodeId    -> destroyed as side-effect: now corrupted
-        //
         for (const auto& info : diff.destroyedNodes()) {
             VacElement* vacElement = findVacElement(info.nodeId());
-            if (vacElement && vacElement->vacNode_) {
-                // If we find the element despite being updating VAC from DOM,
-                // this means the element is now corrupted, so mark it as such.
-                //
-                elementByVacInternalId_.erase(vacElement->vacNode_->id());
-                vacElement->vacNode_ = nullptr;
+            if (vacElement) {
+                vacElement->unsetVacNode(info.nodeId());
                 setPendingUpdateFromDom_(vacElement);
-
-                // TODO: only clear graphics and actually append to corrupt list
             }
         }
         return;
     }
-
-    // Process destroyed vac nodes.
-    // Corresponding workspace element are kept until the end of this function but
-    // their vacNode_ pointer must be set to null.
-    //
+    std::unordered_map<core::Id, VacElement*> workspaceItemsToDestroy;
     for (const auto& info : diff.destroyedNodes()) {
         VacElement* vacElement = findVacElement(info.nodeId());
         if (vacElement) {
-            vacElement->vacNode_ = nullptr;
+            vacElement->unsetVacNode(info.nodeId());
+            workspaceItemsToDestroy.emplace(info.nodeId(), vacElement);
         }
     }
+
+    auto findWorkspaceItemFromVacNodeId = //
+        [this, &workspaceItemsToDestroy](core::Id vacNodeId) {
+            VacElement* element = this->findVacElement(vacNodeId);
+            if (!element) {
+                auto it = workspaceItemsToDestroy.find(vacNodeId);
+                if (it != workspaceItemsToDestroy.end()) {
+                    element = it->second;
+                }
+            }
+            return element;
+        };
 
     preUpdateDomFromVac_();
 
@@ -1175,24 +1184,24 @@ void Workspace::onVacNodesChanged_(const vacomplex::ComplexDiff& diff) {
             dom::Element::create(document_->rootElement(), "transient", nullptr);
         const core::Id id = domElement->internalId();
 
+        // Keep alive this transient node until the end of onVacNodesChanged_().
         const auto& p = elements_.emplace(id, std::move(u));
-        if (!p.second) {
+        bool wasEmplaced = p.second;
+        if (!wasEmplaced) {
+            // ID conflict => the transient element was destroyed
             // TODO: throw ?
             continue;
         }
+        workspaceItemsToDestroy.emplace(nodeId, element);
 
         element->domElement_ = domElement.get();
         element->id_ = id;
         element->status_ = ElementStatus::Ok;
-
-        // Note: One must not forget to remove it manually when destroying
-        //       the transient element before leaving this function.
-        elementByVacInternalId_.emplace(nodeId, element);
     }
 
     // Process insertions
     for (const auto& info : diff.insertions()) {
-        VacElement* vacElement = findVacElement(info.nodeId());
+        VacElement* vacElement = findWorkspaceItemFromVacNodeId(info.nodeId());
         if (!vacElement) {
             VGC_ERROR(
                 LogVgcWorkspace,
@@ -1202,7 +1211,7 @@ void Workspace::onVacNodesChanged_(const vacomplex::ComplexDiff& diff) {
         }
         dom::Element* domElement = vacElement->domElement();
 
-        VacElement* vacParentElement = findVacElement(info.newParentId());
+        VacElement* vacParentElement = findWorkspaceItemFromVacNodeId(info.newParentId());
         if (!vacParentElement) {
             VGC_ERROR(
                 LogVgcWorkspace,
@@ -1214,7 +1223,8 @@ void Workspace::onVacNodesChanged_(const vacomplex::ComplexDiff& diff) {
 
         switch (info.type()) {
         case vacomplex::NodeInsertionType::BeforeSibling: {
-            VacElement* vacSiblingElement = findVacElement(info.newSiblingId());
+            VacElement* vacSiblingElement =
+                findWorkspaceItemFromVacNodeId(info.newSiblingId());
             if (!vacSiblingElement) {
                 VGC_ERROR(
                     LogVgcWorkspace,
@@ -1228,7 +1238,8 @@ void Workspace::onVacNodesChanged_(const vacomplex::ComplexDiff& diff) {
             break;
         }
         case vacomplex::NodeInsertionType::AfterSibling: {
-            VacElement* vacSiblingElement = findVacElement(info.newSiblingId());
+            VacElement* vacSiblingElement =
+                findWorkspaceItemFromVacNodeId(info.newSiblingId());
             if (!vacSiblingElement) {
                 VGC_ERROR(
                     LogVgcWorkspace,
@@ -1265,7 +1276,7 @@ void Workspace::onVacNodesChanged_(const vacomplex::ComplexDiff& diff) {
     // Process modified vac nodes
     //
     for (const auto& info : diff.modifiedNodes()) {
-        VacElement* vacElement = findVacElement(info.nodeId());
+        VacElement* vacElement = findWorkspaceItemFromVacNodeId(info.nodeId());
         if (!vacElement) {
             VGC_ERROR(LogVgcWorkspace, "Unexpected vacomplex::Node");
             // TODO: recover from error by creating the Cell in workspace and DOM ?
@@ -1290,24 +1301,19 @@ void Workspace::onVacNodesChanged_(const vacomplex::ComplexDiff& diff) {
     //
     // Note: transient vac nodes are included.
     //
-    for (const auto& info : diff.destroyedNodes()) {
-        VacElement* vacElement = findVacElement(info.nodeId());
-        if (vacElement) {
-            // Delete the corresponding DOM element if any.
-            //
-            dom::Element* domElement = vacElement->domElement();
-            if (domElement) {
-                domElement->remove();
-            }
+    for (auto [id, vacElement] : workspaceItemsToDestroy) {
+        std::ignore = id;
 
-            // Delete the Workspace element. We need to set its vacNode_ to
-            // nullptr before removal since the destructor of the VacElement
-            // will hardDelete() its vacNode_ if any.
-            //
-            elementByVacInternalId_.erase(info.nodeId());
-            vacElement->vacNode_ = nullptr;
-            removeElement_(vacElement);
+        // Delete the corresponding DOM element if any.
+        //
+        dom::Element* domElement = vacElement->domElement();
+        if (domElement) {
+            domElement->remove();
         }
+
+        // Delete the Workspace element.
+        //
+        removeElement_(vacElement);
     }
 
     postUpdateDomFromVac_();
@@ -1591,24 +1597,36 @@ void Workspace::updateVacFromDom_(const dom::Diff& diff) {
     // - which may destroy other VAC nodes,
     // - which will invoke onVacNodeDestroyed(otherNodeId).
     //
-    {
-        vacomplex::ScopedOperationsGroup operationsGroup(vac());
-
-        for (dom::Node* node : diff.removedNodes()) {
-            dom::Element* domElement = dom::Element::cast(node);
-            if (!domElement) {
-                continue;
+    // Note: it is important not to have an operations group around
+    // this code block, since we want to receive the vacomplex diff
+    // after each individual deletion, since it may have deleted more
+    // cells.
+    //
+    // Example scenario: using the DOM editor, a user deletes a vertex and
+    // modifies (but not delete) its incident edge (for example, making it a
+    // closed edge). As part of the code block below, a call to
+    // ops::hardDelete(vertex) will be made, deleting both the vertex and the
+    // edge. At the end of the deletion of the vertex, the workspace will be
+    // made aware of the deletion of the edge (see onVacNodesChanged_()),
+    // setting to nullptr a now-dangling pointer in the corresponding
+    // VacKeyEdge. This ensures that we can safely proceed, in the operations
+    // group below, to call methods such updateElementFromDom(edge) (which will
+    // recreate the edge if possible).
+    //
+    for (dom::Node* node : diff.removedNodes()) {
+        dom::Element* domElement = dom::Element::cast(node);
+        if (!domElement) {
+            continue;
+        }
+        Element* element = find(domElement);
+        if (element) {
+            Element* parent = element->parent();
+            VGC_ASSERT(parent);
+            // reparent children to element's parent
+            for (Element* child : *element) {
+                parent->appendChild(child);
             }
-            Element* element = find(domElement);
-            if (element) {
-                Element* parent = element->parent();
-                VGC_ASSERT(parent);
-                // reparent children to element's parent
-                for (Element* child : *element) {
-                    parent->appendChild(child);
-                }
-                removeElement_(element);
-            }
+            removeElement_(element);
         }
     }
 
@@ -1616,22 +1634,6 @@ void Workspace::updateVacFromDom_(const dom::Diff& diff) {
     // done only once at the end of this function. For example, if we update
     // both an edge geometry and a vertex position, we do not want to perform
     // snapping between the update of the edge and the update of the vertex.
-    //
-    // Note: we want this to be a separate group than the group used to delete
-    // nodes (see code above), because we do want to receive the VAC diff for
-    // removals before proceeding, so that we can invalidate pointers that have
-    // been deleted.
-    //
-    // Example scenario: using the DOM editor, a user deletes a vertex and
-    // modifies (but not delete) its incident edge (for example, making it a
-    // closed edge). As part of the operations group above, a call to
-    // ops::hardDelete(vertex) will be made, deleting both the vertex and the
-    // edge. At the end of the operation group, the workspace will be made
-    // aware of the deletion of the edge (see onVacNodesChanged_()), setting to
-    // nullptr a now-dangling pointers in the corresponding VacKeyEdge. This
-    // ensures that we can safely proceed, in the operations group below, to
-    // call methods such updateElementFromDom(edge) (which will recreate the
-    // edge if possible).
     //
     vacomplex::ScopedOperationsGroup operationsGroup(vac());
 

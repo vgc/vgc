@@ -1374,7 +1374,7 @@ void VacKeyVertex::dirtyJoin_() {
 }
 
 void VacKeyVertex::onUpdateError_() {
-    removeVacNode();
+    hardDeleteVacNode();
     dirtyPosition_();
 }
 

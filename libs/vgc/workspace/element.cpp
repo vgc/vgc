@@ -18,6 +18,7 @@
 
 #include <vgc/dom/document.h>
 #include <vgc/dom/element.h>
+#include <vgc/workspace/logcategories.h>
 #include <vgc/workspace/workspace.h>
 
 namespace vgc::workspace {
@@ -146,30 +147,70 @@ void Element::onDependentElementAdded_(Element* /*dependent*/) {
 }
 
 VacElement::~VacElement() {
-    // safe ?
-    removeVacNode();
+    hardDeleteVacNode();
 }
 
-void VacElement::removeVacNode() {
-    if (vacNode_) {
-        // We set vacNode_ to null before calling hardDelete because
-        // the workspace would otherwise consider it as an external event
-        // and schedule this element for update.
-        vacomplex::Node* tmp = vacNode_;
-        vacNode_ = nullptr;
+void VacElement::hardDeleteVacNode() {
+    if (vacNode()) {
+
+        // We first disconnect the link between the workspace item and the VAC node,
+        // otherwise hard-deleting the VAC node would recursively cause the workspace
+        // item to be deleted.
+        //
+        vacomplex::Node* vacNode = this->vacNode();
+        unsetVacNode();
+
         bool deleteIsolatedVertices = false;
-        vacomplex::ops::hardDelete(tmp, deleteIsolatedVertices);
-        const_cast<Workspace*>(workspace())->elementByVacInternalId_.erase(tmp->id());
+        vacomplex::ops::hardDelete(vacNode, deleteIsolatedVertices);
     }
 }
 
-void VacElement::setVacNode(vacomplex::Node* vacNode) {
-    removeVacNode();
-    if (vacNode) {
-        const_cast<Workspace*>(workspace())
-            ->elementByVacInternalId_.emplace(vacNode->id(), this);
+void VacElement::unsetVacNode() {
+    if (vacNode_) {
+        unsetVacNode(vacNode_->id());
     }
-    //workspace()->elementByVacInternalId_
+}
+
+// This version must be used whenever the vacNode_ is already destroyed, and
+// therefore we cannot call vacNode_->id().
+//
+void VacElement::unsetVacNode(core::Id vacNodeId) {
+    if (vacNode_) {
+        workspace()->elementByVacInternalId_.erase(vacNodeId);
+        vacNode_ = nullptr;
+    }
+}
+
+// Invariants that we need to enforce in setVacNode() and unsetVacNode():
+// - findVacElement(workspaceItem->vacNode()->id()) == workspaceItem;
+// - findVacElement(vacNode->id())->vacNode() == vacNode;
+//
+void VacElement::setVacNode(vacomplex::Node* vacNode) {
+
+    // Nothing to do if already set to the same VAC node.
+    //
+    if (this->vacNode() == vacNode) {
+        return;
+    }
+
+    // Unset and delete any already previously set VAC node: we do not want to
+    // keep alive VAC nodes which are not tracked by Workspace.
+    //
+    hardDeleteVacNode();
+
+    // Enforce invariant: no two workspace items should point to the same VAC node.
+    //
+    if (workspace()->findVacElement(vacNode)) {
+        VGC_WARNING(
+            LogVgcWorkspace,
+            "Cannot set a VAC node to a workspace item when this VAC node is already set "
+            "to another workspace item.");
+        return;
+    }
+
+    if (vacNode) {
+        workspace()->elementByVacInternalId_.emplace(vacNode->id(), this);
+    }
     vacNode_ = vacNode;
 }
 

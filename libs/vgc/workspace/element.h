@@ -365,7 +365,11 @@ protected:
         return vacNode_ ? vacNode_->toCellUnchecked() : nullptr;
     }
 
-    void removeVacNode();
+    void hardDeleteVacNode();
+
+    void unsetVacNode();
+    void unsetVacNode(core::Id vacNodeId);
+
     void setVacNode(vacomplex::Node* vacNode);
 
 private:
