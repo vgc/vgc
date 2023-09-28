@@ -1101,7 +1101,10 @@ Sketch::computeSnapVertex_(const geometry::Vec2d& position, core::Id tmpVertexIt
         if (!info.isSelectable.has_value()) {
             core::Array<canvas::SelectionCandidate> occluders =
                 canvas->computeSelectionCandidatesAboveOrAt(
-                    info.itemId, position, 0.0, canvas::CoordinateSpace::Workspace);
+                    info.itemId,
+                    info.position,
+                    snapDistance * core::epsilon,
+                    canvas::CoordinateSpace::Workspace);
             bool isSelectable = false;
             for (const canvas::SelectionCandidate& occluder : occluders) {
                 if (occluder.id() == info.itemId) {
