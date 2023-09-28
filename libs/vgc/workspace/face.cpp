@@ -467,7 +467,7 @@ ElementStatus VacKeyFace::updateFromDom_(Workspace* workspace) {
 
     if (kf && hasBoundaryChanged) {
         // must rebuild
-        removeVacNode();
+        hardDeleteVacNode();
         kf = nullptr;
     }
 
@@ -695,7 +695,7 @@ void VacKeyFace::dirtyFillMesh_() {
 }
 
 void VacKeyFace::onUpdateError_() {
-    removeVacNode();
+    hardDeleteVacNode();
 }
 
 } // namespace vgc::workspace

@@ -893,7 +893,7 @@ ElementStatus VacKeyEdge::updateFromDom_(Workspace* workspace) {
         }
         else {
             // must rebuild
-            removeVacNode();
+            hardDeleteVacNode();
             ke = nullptr;
         }
     }
@@ -1757,7 +1757,7 @@ void VacKeyEdge::dirtyJoinDataAtVertex_(const VacVertexCell* vertexCell) {
 }
 
 void VacKeyEdge::onUpdateError_() {
-    removeVacNode();
+    hardDeleteVacNode();
     dirtyPreJoinGeometry_();
 }
 

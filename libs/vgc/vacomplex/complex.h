@@ -209,18 +209,31 @@ public:
                && destroyedNodes_.isEmpty();
     }
 
+    /// Does not contain transient nodes.
+    ///
     const core::Array<CreatedNodeInfo>& createdNodes() const {
         return createdNodes_;
     }
 
+    /// Contains both transient nodes and previously existing nodes that
+    /// have been destroyed.
+    ///
     const core::Array<DestroyedNodeInfo>& destroyedNodes() const {
         return destroyedNodes_;
     }
 
+    /// Nodes that have been both created and destroyed during
+    /// the operation. Knowing about these nodes is useful since
+    /// their ID can be referred in `NodeInsertionInfo`, to know
+    /// that some node has been moved next to a transient node.
+    ///
     const core::Array<TransientNodeInfo>& transientNodes() const {
         return transientNodes_;
     }
 
+    /// Does not contain transient nodes or destroyed nodes. May contain
+    /// created nodes.
+    ///
     const core::Array<ModifiedNodeInfo>& modifiedNodes() const {
         return modifiedNodes_;
     }
