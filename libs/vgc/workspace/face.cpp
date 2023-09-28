@@ -93,7 +93,6 @@ bool VacKeyFace::isSelectableAt(
         else {
             isContained = frameData_.triangulationContains(position);
         }
-        
 
         if (isContained) {
             if (outDistance) {

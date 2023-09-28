@@ -918,60 +918,6 @@ const SketchPointBuffer& Sketch::postTransformPassesResult_() {
     return smoothingPass_.buffer();
 }
 
-namespace {
-
-void snapBeginning(
-    geometry::Vec2dArray& positions,
-    geometry::Vec2d snapPos,
-    double snapFalloff) {
-
-    if (positions.isEmpty()) {
-        return;
-    }
-
-    geometry::Vec2d p0 = positions.first();
-    geometry::Vec2d delta = snapPos - p0;
-    double s = 0;
-    geometry::Vec2d p1 = p0;
-    for (geometry::Vec2d& p2 : positions) {
-        s += (p2 - p1).length();
-        if (s < snapFalloff) {
-            p2 = applySnapFalloff(p2, delta, s, snapFalloff);
-        }
-        else {
-            break;
-        }
-        p1 = p2;
-    }
-}
-
-void snapEnding(
-    geometry::Vec2dArray& positions,
-    geometry::Vec2d snapPos,
-    double snapFalloff) {
-
-    if (positions.isEmpty()) {
-        return;
-    }
-
-    geometry::Vec2d p0 = positions.first();
-    geometry::Vec2d delta = snapPos - p0;
-    double s = 0;
-    geometry::Vec2d p1 = p0;
-    for (geometry::Vec2d& p2 : positions) {
-        s += (p2 - p1).length();
-        if (s < snapFalloff) {
-            p2 = applySnapFalloff(p2, delta, s, snapFalloff);
-        }
-        else {
-            break;
-        }
-        p1 = p2;
-    }
-}
-
-} // namespace
-
 // Assumes postTransformPassesResult_() points have computed arclengths.
 void Sketch::updateStartSnappedPoints_() {
 
@@ -1164,15 +1110,12 @@ Sketch::computeSnapVertex_(const geometry::Vec2d& position, core::Id tmpVertexIt
                 if (workspace::Element* occluderItem = workspace->find(occluder.id())) {
                     if (workspace::VacElement* occluderVacItem =
                             occluderItem->toVacElement()) {
-                        if (vacomplex::Node* occluderNode = occluderVacItem->vacNode()) {
-                            if (vacomplex::Cell* occluderCell =
-                                    occluderVacItem->vacCell()) {
-                                if (occluderCell->spatialType()
-                                    == vacomplex::CellSpatialType::Face) {
-                                    // face are occluders
-                                    occluded = true;
-                                    break;
-                                }
+                        if (vacomplex::Cell* occluderCell = occluderVacItem->vacCell()) {
+                            if (occluderCell->spatialType()
+                                == vacomplex::CellSpatialType::Face) {
+                                // face are occluders
+                                occluded = true;
+                                break;
                             }
                         }
                     }
