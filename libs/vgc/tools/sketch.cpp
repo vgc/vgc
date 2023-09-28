@@ -1102,10 +1102,11 @@ Sketch::computeSnapVertex_(const geometry::Vec2d& position, core::Id tmpVertexIt
             core::Array<canvas::SelectionCandidate> occluders =
                 canvas->computeSelectionCandidatesAboveOrAt(
                     info.itemId, position, 0.0, canvas::CoordinateSpace::Workspace);
-            bool occluded = false;
+            bool isSelectable = false;
             for (const canvas::SelectionCandidate& occluder : occluders) {
                 if (occluder.id() == info.itemId) {
-                    continue;
+                    isSelectable = true;
+                    break;
                 }
                 if (workspace::Element* occluderItem = workspace->find(occluder.id())) {
                     if (workspace::VacElement* occluderVacItem =
@@ -1114,19 +1115,17 @@ Sketch::computeSnapVertex_(const geometry::Vec2d& position, core::Id tmpVertexIt
                             if (occluderCell->spatialType()
                                 == vacomplex::CellSpatialType::Face) {
                                 // face are occluders
-                                occluded = true;
                                 break;
                             }
                         }
                     }
                     else {
                         // not a vac element, let's consider it prevents snapping.
-                        occluded = true;
                         break;
                     }
                 }
             }
-            info.isSelectable = !occluded;
+            info.isSelectable = isSelectable;
         }
         if (info.isSelectable.value()) {
             return vertexItem;
