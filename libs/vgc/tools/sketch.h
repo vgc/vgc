@@ -137,12 +137,20 @@ public:
         return points_[i];
     }
 
-    core::Span<SketchPoint> unstableSpan() {
+    core::Span<SketchPoint> unstablePoints() {
         return core::Span<SketchPoint>(points_.begin() + numStablePoints_, points_.end());
     }
 
     const SketchPointArray& data() const {
         return points_;
+    }
+
+    SketchPointArray::const_iterator begin() const {
+        return points_.begin();
+    }
+
+    SketchPointArray::const_iterator end() const {
+        return points_.end();
     }
 
     Int length() const {
@@ -237,8 +245,8 @@ protected:
         return buffer_.getRef(i);
     }
 
-    core::Span<SketchPoint> unstablePointSpan() {
-        return buffer_.unstableSpan();
+    core::Span<SketchPoint> unstablePoints() {
+        return buffer_.unstablePoints();
     }
 
     const SketchPointArray& points() const {
@@ -265,7 +273,7 @@ protected:
         buffer_.append(point);
     }
 
-    void emplacePointLast(
+    void emplaceLastPoint(
         const geometry::Vec2d& position,
         double pressure,
         double timestamp,
@@ -458,16 +466,17 @@ protected:
     // Note: keep in mind that isSnappingEnabled() may change between
     // startCurve() and finishCurve().
     //
-    Int pendingEdgeStartPointIndex_ = 0;
-    std::optional<geometry::Vec2d> startSnapPosition_;
-    geometry::Vec2dArray startSnappedPositions_;
-    Int numStartSnappedStablePoints_ = 0;
-    core::Id endSnapVertexItemId_ = 0;
-    geometry::Vec2d endSnapPosition_;
-    core::DoubleArray pendingEdgeWidths_;
-    geometry::Vec2dArray pendingEdgePositions_;
-    void updateStartSnappedPoints_();
-    void updateEndSnappedPositions_();
+    Int pendingPointsStartIndex_ = 0;
+    core::DoubleArray pendingWidths_;
+    std::optional<geometry::Vec2d> snapStartPosition__;
+    geometry::Vec2dArray startSnappedPendingPositions_;
+    Int numStableStartSnappedPendingPositions_ = 0;
+    core::Id snapEndVertexItemId_ = 0;
+    geometry::Vec2d snapEndPosition_;
+    geometry::Vec2dArray snappedPendingPositions_;
+    void updatePendingWidths_();
+    void updateStartSnappedPendingPositions_();
+    void updateSnappedPendingPositions_();
     void clearSnappingData_();
 
     // The length of curve that snapping is allowed to deform
