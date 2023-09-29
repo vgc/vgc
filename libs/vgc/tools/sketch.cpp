@@ -177,7 +177,7 @@ constexpr std::array<Int, n + 1> binomialCoefficients() {
 // you then pull a little without moving lateraly, then it doesn't remove what
 // was previously already painted.
 //
-// Algorithm pseudo-code:
+// Algorithm pseudo-code when applied to a global list of points:
 //
 // 1. Sort samples by width in a list
 // 2. While the list isn't empty:
@@ -185,18 +185,20 @@ constexpr std::array<Int, n + 1> binomialCoefficients() {
 //    b. Modify the width of its two siblings to enforce |dw/ds| <= k
 //    c. Update the location of the two siblings in the sorted list to keep it sorted
 //
-// In theory, using a priority queue might be the best data structure for this.
-// In practice, we use a dynamic array for data locality, and taking advantage
-// of the fact that siblings of the samples with largest width have also
-// probably a large width.
+// Unfortunately, the above algorithm have global effect: adding one point with
+// very large width might increase the width of all previous points. This is
+// undesirable for performance and user-predictibility, as we want to keep the
+// "unstable points" part of the sketched curve as small as possible.
+// Therefore, in the implementation below, we only allow for a given point to
+// affect `windowSize` points before itself.
 //
 void applyWidthRoughnessLimitor(
     double k,
     Int windowSize,
-    const SketchPoint& lastStableWidthPoint,
-    core::Span<SketchPoint> points) {
+    const SketchPoint& lastStablePoint,
+    core::Span<SketchPoint> unstablePoints) {
 
-    if (points.isEmpty()) {
+    if (unstablePoints.isEmpty()) {
         return;
     }
 
@@ -231,21 +233,37 @@ void applyWidthRoughnessLimitor(
         return false;
     };
 
-    clampMinMax(points[0], lastStableWidthPoint, lastStableWidthPoint);
-    const SketchPoint* maxLimitor = &lastStableWidthPoint;
-    for (Int i = 1; i < points.length(); ++i) {
-        Int jStop = 0;
-        if (i > windowSize) {
-            jStop = i - windowSize - 1;
-            maxLimitor = &points[jStop];
+    clampMinMax(unstablePoints[0], lastStablePoint, lastStablePoint);
+    const SketchPoint* maxLimitor = &lastStablePoint;
+    for (Int i = 1; i < unstablePoints.length(); ++i) {
+
+        //                   window size = 3    (each point influences up to
+        //                <------------------|    3 points before itself)
+        //
+        //          p[windowStart]   p[i-1] p[i]
+        // x-----x--------x--------x----x----x
+        //   maxLimitor
+        //
+        Int windowStart = i - windowSize;
+        if (windowStart > 0) {
+            maxLimitor = &unstablePoints[windowStart - 1];
         }
-        SketchPoint& p = points[i];
-        bool clampedMin = clampMinMax(p, *maxLimitor, points[i - 1]);
-        if (!clampedMin) {
-            // p was not too small nor it is too big.
-            // so we widen window points if necessary.
-            for (Int j = i - 1; j > jStop; --j) {
-                if (!widenPrevious(points[j], p)) {
+        else {
+            windowStart = 0;
+            // maxLimitor == &lastStableWidthPoint
+        }
+        SketchPoint& p = unstablePoints[i];
+
+        // Widen current point p[i] based on p[windowStart]
+        // Shorten current point p[i] based on p[i - 1]
+        bool widened = clampMinMax(p, *maxLimitor, unstablePoints[i - 1]);
+
+        // Widen previous points within window if necessary.
+        // Note: whenever a point is not itself widened, we know that previous
+        // points will not be widened either, so we can skip computation.
+        if (!widened) {
+            for (Int j = i - 1; j >= windowStart; --j) {
+                if (!widenPrevious(unstablePoints[j], p)) {
                     break;
                 }
             }
@@ -345,15 +363,12 @@ Int SmoothingPass::update_(
     // compute chordal lengths
     updateCumulativeChordalDistances();
 
-    SketchPoint lastStableWidthPoint = getPoint(unstableIndexStart);
+    SketchPoint lastStablePoint = getPoint(std::max<Int>(unstableIndexStart - 1, 0));
 
     constexpr double widthRoughness = 0.8;
     constexpr Int roughnessLimitorWindowSize = 3;
     applyWidthRoughnessLimitor(
-        widthRoughness,
-        roughnessLimitorWindowSize,
-        lastStableWidthPoint,
-        unstablePoints());
+        widthRoughness, roughnessLimitorWindowSize, lastStablePoint, unstablePoints());
     instabilityDelta += roughnessLimitorWindowSize;
 
     return std::max<Int>(0, input.numStablePoints() - instabilityDelta);
