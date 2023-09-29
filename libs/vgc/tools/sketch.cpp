@@ -626,7 +626,7 @@ void Sketch::onPaintDraw(graphics::Engine* engine, ui::PaintOptions options) {
             cursorMoved = true;
             geometry::Vec2d pos2d(pos);
             minimalLatencySnappedCursor_ = pos2d;
-            if (snapStartPosition__.has_value()) {
+            if (snapStartPosition_.has_value()) {
                 const SketchPointBuffer& pointBuffer = postTransformPassesResult_();
                 if (pointBuffer.length() > 0) {
                     const SketchPoint& lastp = pointBuffer.data().last();
@@ -634,7 +634,7 @@ void Sketch::onPaintDraw(graphics::Engine* engine, ui::PaintOptions options) {
                     double falloff = snapFalloff_();
                     if (s < falloff) {
                         geometry::Vec2d delta =
-                            snapStartPosition__.value()
+                            snapStartPosition_.value()
                             - pointBuffer[pendingPointsStartIndex_].position();
                         minimalLatencySnappedCursor_ =
                             applySnapFalloff(pos2d, delta, s, falloff);
@@ -953,8 +953,8 @@ void Sketch::updateStartSnappedPendingPositions_() {
         startSnappedPendingPositions_.append(p.position());
     }
 
-    if (snapStartPosition__.has_value()) {
-        geometry::Vec2d ssp = snapStartPosition__.value();
+    if (snapStartPosition_.has_value()) {
+        geometry::Vec2d ssp = snapStartPosition_.value();
         double falloff = snapFalloff_();
         const SketchPoint& preSnapPoint0 = cleanInputPoints[pendingPointsStartIndex_];
         double startS = preSnapPoint0.s();
@@ -1009,7 +1009,7 @@ void Sketch::updateSnappedPendingPositions_() {
 void Sketch::clearSnappingData_() {
     pendingPointsStartIndex_ = 0;
     pendingWidths_.clear();
-    snapStartPosition__.reset();
+    snapStartPosition_.reset();
     startSnappedPendingPositions_.clear();
     numStableStartSnappedPendingPositions_ = 0;
     snapEndVertexItemId_ = 0;
@@ -1209,7 +1209,7 @@ void Sketch::startCurve_(ui::MouseEvent* event) {
         snapVertex = computeSnapVertex_(startPosition, 0);
         if (snapVertex) {
             startPosition = getSnapPosition(snapVertex);
-            snapStartPosition__ = startPosition;
+            snapStartPosition_ = startPosition;
         }
     }
 
@@ -1236,7 +1236,7 @@ void Sketch::startCurve_(ui::MouseEvent* event) {
     // Create end vertex
     dom::Element* domEndVertex = dom::Element::create(parentDomElement, ds::vertex);
     domEndVertex->setAttribute(ds::position, startPosition);
-    tmpEndVertexItemId_ = domEndVertex->internalId();
+    endVertexItemId_ = domEndVertex->internalId();
 
     // Create edge
     dom::Element* domEdge = dom::Element::create(parentDomElement, ds::edge);
@@ -1279,9 +1279,9 @@ void Sketch::continueCurve_(ui::MouseEvent* event) {
     }
 
     dom::Document* dom = workspace->document();
-    dom::Element* domTmpEndVertex = dom->elementFromInternalId(tmpEndVertexItemId_);
+    dom::Element* domEndVertex = dom->elementFromInternalId(endVertexItemId_);
     dom::Element* domEdge = dom->elementFromInternalId(edgeItemId_);
-    if (!domTmpEndVertex || !domEdge) {
+    if (!domEndVertex || !domEdge) {
         return;
     }
 
@@ -1309,7 +1309,7 @@ void Sketch::continueCurve_(ui::MouseEvent* event) {
 
     // Update DOM and workspace
     namespace ds = dom::strings;
-    domTmpEndVertex->setAttribute(ds::position, snappedPendingPositions_.last());
+    domEndVertex->setAttribute(ds::position, snappedPendingPositions_.last());
     domEdge->setAttribute(ds::positions, snappedPendingPositions_);
     domEdge->setAttribute(ds::widths, pendingWidths_);
     workspace->sync();
@@ -1352,9 +1352,9 @@ void Sketch::finishCurve_(ui::MouseEvent* /*event*/) {
     }
 
     dom::Document* dom = workspace->document();
-    dom::Element* domTmpEndVertex = dom->elementFromInternalId(tmpEndVertexItemId_);
+    dom::Element* domEndVertex = dom->elementFromInternalId(endVertexItemId_);
     dom::Element* domEdge = dom->elementFromInternalId(edgeItemId_);
-    if (!domTmpEndVertex || !domEdge) {
+    if (!domEndVertex || !domEdge) {
         return;
     }
 
@@ -1371,23 +1371,23 @@ void Sketch::finishCurve_(ui::MouseEvent* /*event*/) {
 
         // Compute end vertex to snap to
         geometry::Vec2d endPosition = startSnappedPendingPositions_.last();
-        workspace::Element* snapVertexItem =
-            computeSnapVertex_(endPosition, tmpEndVertexItemId_);
+        workspace::Element* snapEndVertexItem =
+            computeSnapVertex_(endPosition, endVertexItemId_);
 
         // If found, do the snapping
-        if (snapVertexItem) {
+        if (snapEndVertexItem) {
 
             // Compute end-snapped positions
-            snapEndVertexItemId_ = snapVertexItem->id();
-            snapEndPosition_ = getSnapPosition(snapVertexItem);
+            snapEndVertexItemId_ = snapEndVertexItem->id();
+            snapEndPosition_ = getSnapPosition(snapEndVertexItem);
             updateSnappedPendingPositions_();
 
             // Update DOM and workspace
-            domTmpEndVertex->remove();
-            domTmpEndVertex = snapVertexItem->domElement();
+            domEndVertex->remove();
+            domEndVertex = snapEndVertexItem->domElement();
 
             bool canClose = false;
-            auto snapKvItem = dynamic_cast<workspace::VacKeyVertex*>(snapVertexItem);
+            auto snapKvItem = dynamic_cast<workspace::VacKeyVertex*>(snapEndVertexItem);
             if (snapKvItem && keItem) {
                 vacomplex::KeyVertex* kv = snapKvItem->vacKeyVertexNode();
                 vacomplex::KeyEdge* ke = keItem->vacKeyEdgeNode();
@@ -1395,8 +1395,8 @@ void Sketch::finishCurve_(ui::MouseEvent* /*event*/) {
                 canClose = (kvStar.length() == 1) && (*kvStar.begin() == ke);
             }
             if (canClose) {
-                domTmpEndVertex->remove();
-                domTmpEndVertex = nullptr;
+                domEndVertex->remove();
+                domEndVertex = nullptr;
                 domEdge->clearAttribute(ds::startvertex);
                 domEdge->clearAttribute(ds::endvertex);
                 if (snappedPendingPositions_.length() > 1) {
@@ -1405,7 +1405,7 @@ void Sketch::finishCurve_(ui::MouseEvent* /*event*/) {
                 }
             }
             else {
-                domEdge->setAttribute(ds::endvertex, domTmpEndVertex->getPathFromId());
+                domEdge->setAttribute(ds::endvertex, domEndVertex->getPathFromId());
             }
             domEdge->setAttribute(ds::positions, std::move(snappedPendingPositions_));
             domEdge->setAttribute(ds::widths, std::move(pendingWidths_));
@@ -1435,7 +1435,7 @@ void Sketch::resetData_() {
         drawCurveUndoGroup_ = nullptr;
     }
 
-    tmpEndVertexItemId_ = 0;
+    endVertexItemId_ = 0;
     edgeItemId_ = 0;
 
     // inputs are kept until next curve starts

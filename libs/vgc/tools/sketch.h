@@ -408,7 +408,7 @@ protected:
     core::ConnectionHandle drawCurveUndoGroupConnectionHandle_ = {};
 
     double startTime_ = 0;
-    core::Id tmpEndVertexItemId_ = 0;
+    core::Id endVertexItemId_ = 0;
     core::Id edgeItemId_ = 0;
 
     // Raw input in widget space (pixels).
@@ -468,7 +468,7 @@ protected:
     //
     Int pendingPointsStartIndex_ = 0;
     core::DoubleArray pendingWidths_;
-    std::optional<geometry::Vec2d> snapStartPosition__;
+    std::optional<geometry::Vec2d> snapStartPosition_;
     geometry::Vec2dArray startSnappedPendingPositions_;
     Int numStableStartSnappedPendingPositions_ = 0;
     core::Id snapEndVertexItemId_ = 0;
