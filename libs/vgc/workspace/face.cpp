@@ -31,51 +31,21 @@ using DomCycleComponent = dom::detail::DomCycleComponent;
 using DomCycle = dom::detail::DomCycle;
 using DomFaceCycles = dom::detail::DomFaceCycles;
 
-bool VacFaceCellFrameData::isSelectableAt(
-    const geometry::Vec2d& position,
-    bool outlineOnly,
-    double tol,
-    double* outDistance) const {
-
-    if (outlineOnly) {
+bool VacFaceCellFrameData::triangulationContains(const geometry::Vec2d& position) const {
+    if (!bbox_.contains(position)) {
         return false;
     }
-
-    using Vec2f = geometry::Vec2f;
-    using Vec2d = geometry::Vec2d;
-
-    if (bbox_.isEmpty()) {
-        return false;
-    }
-
-    geometry::Rect2d inflatedBbox = bbox_;
-    inflatedBbox.setPMin(inflatedBbox.pMin() - Vec2d(tol, tol));
-    inflatedBbox.setPMax(inflatedBbox.pMax() + Vec2d(tol, tol));
-    if (!inflatedBbox.contains(position)) {
-        return false;
-    }
-
-    bool isContained = false;
-
-    Vec2f positionF(position);
+    geometry::Vec2f positionF(position);
     geometry::Triangle2f triangle;
     for (Int i = 0; i < triangulation_.length() - 5; i += 6) {
         triangle.setA(triangulation_[i + 0], triangulation_[i + 1]);
         triangle.setB(triangulation_[i + 2], triangulation_[i + 3]);
         triangle.setC(triangulation_[i + 4], triangulation_[i + 5]);
         if (triangle.contains(positionF)) {
-            isContained = true;
+            return true;
             break;
         }
     }
-
-    if (isContained) {
-        if (outDistance) {
-            *outDistance = 0;
-        }
-        return true;
-    }
-
     return false;
 }
 
@@ -97,12 +67,39 @@ geometry::Rect2d VacKeyFace::boundingBox(core::AnimTime t) const {
 bool VacKeyFace::isSelectableAt(
     const geometry::Vec2d& position,
     bool outlineOnly,
-    double tol,
+    double /*tol*/,
     double* outDistance,
     core::AnimTime t) const {
 
     if (frameData_.time() == t) {
-        return frameData_.isSelectableAt(position, outlineOnly, tol, outDistance);
+        if (outlineOnly) {
+            return false;
+        }
+
+        if (frameData_.bbox_.isEmpty()) {
+            return false;
+        }
+
+        constexpr bool useWinding = true;
+        constexpr bool isFaceUsingCenterlinesAsBoundary = true;
+        bool isContained = false;
+
+        vacomplex::KeyFace* kf = vacKeyFaceNode();
+        if (kf && useWinding && isFaceUsingCenterlinesAsBoundary) {
+            if (frameData_.bbox_.contains(position)) {
+                isContained = kf->interiorContains(position);
+            }
+        }
+        else {
+            isContained = frameData_.triangulationContains(position);
+        }
+
+        if (isContained) {
+            if (outDistance) {
+                *outDistance = 0;
+            }
+            return true;
+        }
     }
     return false;
 }

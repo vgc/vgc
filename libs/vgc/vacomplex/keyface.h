@@ -155,6 +155,8 @@ public:
         return data_;
     }
 
+    bool interiorContains(const geometry::Vec2d& position) const;
+
 private:
     core::Array<KeyCycle> cycles_;
     KeyFaceData data_;

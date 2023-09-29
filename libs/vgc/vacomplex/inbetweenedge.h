@@ -41,6 +41,11 @@ public:
     bool isEndVertex(const VertexCell* v) const override;
     bool isClosed() const override;
 
+    std::shared_ptr<const geometry::StrokeSampling2d>
+    strokeSamplingShared(core::AnimTime /*t*/) const override {
+        return nullptr;
+    }
+
     geometry::Rect2d boundingBoxAt(core::AnimTime /*t*/) const override;
 
 private:

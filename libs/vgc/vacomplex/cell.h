@@ -1096,6 +1096,9 @@ public:
     virtual bool isEndVertex(const VertexCell* v) const = 0;
     virtual bool isClosed() const = 0;
 
+    virtual std::shared_ptr<const geometry::StrokeSampling2d>
+    strokeSamplingShared(core::AnimTime t) const = 0;
+
     // note: Looks best to return an object so that we can change its impl
     //       if we want to share the data. The straight forward implementation
     //       is to not cache this result in the cell, otherwise we'd have to manage

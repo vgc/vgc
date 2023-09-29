@@ -598,6 +598,16 @@ geometry::Rect2d KeyFace::boundingBox() const {
     return result;
 }
 
+bool KeyFace::interiorContains(const geometry::Vec2d& position) const {
+    // TODO: use  winding rule attribute (in KeyData property ?).
+    geometry::WindingRule windingRule = geometry::WindingRule::Odd;
+    Int windingNumber = 0;
+    for (const KeyCycle& kc : cycles_) {
+        windingNumber += kc.computeWindingNumberAt(position);
+    }
+    return geometry::isWindingNumberSatisfyingRule(windingNumber, windingRule);
+}
+
 void KeyFace::substituteKeyVertex_(KeyVertex* oldVertex, KeyVertex* newVertex) {
     for (KeyCycle& cycle : cycles_) {
         if (cycle.steinerVertex_ == oldVertex) {

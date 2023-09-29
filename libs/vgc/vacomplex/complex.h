@@ -369,6 +369,23 @@ public:
 
     bool containsNode(core::Id id) const;
 
+    /// Actual type is implementation detail. Only assume forward range.
+    using VertexRange = core::Array<VertexCell*>;
+
+    /// Actual type is implementation detail. Only assume forward range.
+    using EdgeRange = core::Array<EdgeCell*>;
+
+    /// Actual type is implementation detail. Only assume forward range.
+    using FaceRange = core::Array<FaceCell*>;
+
+    VertexRange vertices() const;
+    EdgeRange edges() const;
+    FaceRange faces() const;
+
+    VertexRange vertices(core::AnimTime t) const;
+    EdgeRange edges(core::AnimTime t) const;
+    FaceRange faces(core::AnimTime t) const;
+
     // An increasing version seems enough, we don't need it to match document version.
 
     Int64 version() const {

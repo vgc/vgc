@@ -96,11 +96,11 @@ public:
     ///
     Int computeWindingContributionAt(const geometry::Vec2d& position) const;
 
-    friend bool operator==(const KeyHalfedge& h1, const KeyHalfedge& h2) {
+    friend bool operator==(const KeyHalfedge& h1, const KeyHalfedge& h2) noexcept {
         return h1.edge_ == h2.edge_ && h1.direction_ == h2.direction_;
     }
 
-    friend bool operator!=(const KeyHalfedge& h1, const KeyHalfedge& h2) {
+    friend bool operator!=(const KeyHalfedge& h1, const KeyHalfedge& h2) noexcept {
         return !(h1 == h2);
     }
 

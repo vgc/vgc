@@ -217,30 +217,44 @@ void Canvas::clearSelection() {
     setSelection({});
 }
 
-core::Array<SelectionCandidate>
-Canvas::computeSelectionCandidates(const geometry::Vec2f& position) const {
+core::Array<SelectionCandidate> Canvas::computeSelectionCandidates(
+    const geometry::Vec2d& positionInWidgetSpace,
+    style::Length toleranceInWidgetSpace) const {
+
+    double tol = toleranceInWidgetSpace.toPx(styleMetrics());
+    return computeSelectionCandidatesAboveOrAt(0, positionInWidgetSpace, tol);
+}
+
+core::Array<SelectionCandidate> Canvas::computeSelectionCandidatesAboveOrAt(
+    core::Id itemId,
+    const geometry::Vec2d& position,
+    double tolerance,
+    CoordinateSpace coordinateSpace) const {
 
     core::Array<SelectionCandidate> result;
 
-    geometry::Vec2d viewCoords(position);
-    geometry::Vec2d worldCoords =
-        camera_.viewMatrix().inverted().transformPointAffine(viewCoords);
+    geometry::Vec2d worldCoords = position;
+    double worldTol = tolerance;
 
-    using namespace style::literals;
-    style::Length dpTol = 7.0_dp;
-    double tol = dpTol.toPx(styleMetrics()) / camera_.zoom();
+    if (coordinateSpace == CoordinateSpace::Widget) {
+        worldCoords = camera_.viewMatrix().inverted().transformPointAffine(worldCoords);
+        worldTol /= camera_.zoom();
+    }
 
     bool isOutlineOverlay = (displayMode_ == DisplayMode::OutlineOverlay);
     bool isMeshEnabled = isOutlineOverlay || (displayMode_ == DisplayMode::Normal);
     bool isOutlineEnabled = isOutlineOverlay || (displayMode_ == DisplayMode::Outline);
 
     if (workspace_) {
+        bool skip = itemId > 0;
         workspace_->visitDepthFirst(
             [](workspace::Element*, Int) { return true; },
-            [&, tol, worldCoords](workspace::Element* e, Int /*depth*/) {
-                if (!e) {
+            [=, &result, &skip](workspace::Element* e, Int /*depth*/) {
+                if (!e || (skip && e->id() != itemId)) {
                     return;
                 }
+                skip = false;
+
                 vacomplex::Cell* cell = nullptr;
                 if (e->isVacElement()) {
                     vacomplex::Node* node = e->toVacElement()->vacNode();
@@ -248,7 +262,6 @@ Canvas::computeSelectionCandidates(const geometry::Vec2f& position) const {
                         cell = node->toCellUnchecked();
                     }
                 }
-                double tolerance = tol;
                 double dist = 0;
                 bool outlineOnly = isOutlineEnabled;
                 if (isMeshEnabled) {
@@ -257,7 +270,7 @@ Canvas::computeSelectionCandidates(const geometry::Vec2f& position) const {
                         outlineOnly = false;
                     }
                 }
-                if (e->isSelectableAt(worldCoords, outlineOnly, tolerance, &dist)) {
+                if (e->isSelectableAt(worldCoords, outlineOnly, worldTol, &dist)) {
                     Int priority = 1000;
                     if (isOutlineEnabled && cell) {
                         switch (cell->cellType()) {
@@ -296,11 +309,22 @@ Canvas::computeSelectionCandidates(const geometry::Vec2f& position) const {
     return result;
 }
 
+// XXX: add softSnappingCandidates() for alignment, nearest edge..
+
 core::Array<core::Id> Canvas::computeRectangleSelectionCandidates(
-    const geometry::Vec2f& a,
-    const geometry::Vec2f& b) const {
+    const geometry::Vec2d& a_,
+    const geometry::Vec2d& b_,
+    CoordinateSpace coordinateSpace) const {
 
     using geometry::Vec2d;
+
+    geometry::Vec2d a = a_;
+    geometry::Vec2d b = b_;
+    if (coordinateSpace == CoordinateSpace::Widget) {
+        geometry::Mat4d invView = camera().viewMatrix().inverted();
+        a = invView.transformPointAffine(a);
+        b = invView.transformPointAffine(b);
+    }
 
     core::Array<core::Id> result;
 
@@ -309,10 +333,10 @@ core::Array<core::Id> Canvas::computeRectangleSelectionCandidates(
     //bool isOutlineEnabled = isOutlineOverlay || (displayMode_ == DisplayMode::Outline);
 
     if (workspace_) {
-        geometry::Mat4d invView = camera().viewMatrix().inverted();
+
         geometry::Rect2d rect = geometry::Rect2d::empty;
-        rect.uniteWith(invView.transformPointAffine(Vec2d(a)));
-        rect.uniteWith(invView.transformPointAffine(Vec2d(b)));
+        rect.uniteWith(a);
+        rect.uniteWith(b);
 
         workspace_->visitDepthFirst(
             [](workspace::Element*, Int) { return true; },

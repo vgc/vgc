@@ -157,6 +157,8 @@ public:
     inline const VacElement* toVacElement() const;
 
     inline vacomplex::Node* vacNode() const;
+    inline vacomplex::Cell* vacCell() const;
+    inline vacomplex::Group* vacGroup() const;
 
     core::StringId tagName() const {
         return domElement_->tagName();
@@ -355,9 +357,16 @@ public:
     }
 
 public:
-    // the returned pointer can be dangling if the workspace is not synced with its VAC
     vacomplex::Node* vacNode() const {
         return vacNode_;
+    }
+
+    vacomplex::Group* vacGroup() const {
+        return vacGroup_();
+    }
+
+    vacomplex::Cell* vacCell() const {
+        return vacCell_();
     }
 
 protected:
@@ -373,8 +382,20 @@ protected:
     void setVacNode(vacomplex::Node* vacNode);
 
 private:
+    friend Element;
+
     // this pointer is not safe to use when tree is not synced with VAC
     vacomplex::Node* vacNode_ = nullptr;
+
+    // the returned pointer can be dangling if the workspace is not synced with its VAC
+    vacomplex::Group* vacGroup_() const {
+        return vacNode_ ? vacNode_->toGroup() : nullptr;
+    }
+
+    // the returned pointer can be dangling if the workspace is not synced with its VAC
+    vacomplex::Cell* vacCell_() const {
+        return vacNode_ ? vacNode_->toCell() : nullptr;
+    }
 
     virtual void updateFromVac_(vacomplex::NodeModificationFlags flags) = 0;
 };
@@ -397,7 +418,15 @@ private:
 };
 
 vacomplex::Node* Element::vacNode() const {
-    return isVacElement() ? static_cast<const VacElement*>(this)->vacNode() : nullptr;
+    return isVacElement() ? static_cast<const VacElement*>(this)->vacNode_ : nullptr;
+}
+
+vacomplex::Cell* Element::vacCell() const {
+    return isVacElement() ? static_cast<const VacElement*>(this)->vacCell_() : nullptr;
+}
+
+vacomplex::Group* Element::vacGroup() const {
+    return isVacElement() ? static_cast<const VacElement*>(this)->vacGroup_() : nullptr;
 }
 
 VacElement* Element::parentVacElement() const {

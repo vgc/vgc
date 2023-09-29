@@ -73,6 +73,11 @@ public:
         return data_.strokeSamplingShared();
     }
 
+    std::shared_ptr<const geometry::StrokeSampling2d>
+    strokeSamplingShared(core::AnimTime /*t*/) const override {
+        return data_.strokeSamplingShared();
+    }
+
     const geometry::StrokeSampling2d& strokeSampling() const {
         return data_.strokeSampling();
     }
