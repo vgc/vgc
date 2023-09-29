@@ -209,6 +209,7 @@ private:
 class VGC_TOOLS_API SketchPointsProcessingPass {
 protected:
     SketchPointsProcessingPass() noexcept = default;
+    virtual ~SketchPointsProcessingPass() = default;
 
 public:
     void updateResultFrom(const SketchPointBuffer& input) {
