@@ -136,10 +136,9 @@ namespace {
 //  C(3, k) =    1 3 3 1
 //  C(4, k) =   1 4 6 4 1
 //
-// TODO: constexpr variant
 template<size_t n>
-std::array<Int, n + 1> binomialCoefficients() {
-    std::array<Int, n + 1> res;
+constexpr std::array<Int, n + 1> binomialCoefficients() {
+    std::array<Int, n + 1> res{}; // Value-initialization required for constexprness.
     res[0] = 1;
     for (size_t m = 1; m <= n; ++m) {
         // Compute C(m, k) coefficients from C(m-1, k) coefficients
@@ -320,10 +319,13 @@ Int SmoothingPass::update_(
     //
     constexpr size_t widthSmoothingLevel = 2;
     if constexpr (widthSmoothingLevel != 0) {
+
         // Get binomial coefficients
         constexpr Int l = widthSmoothingLevel;
         constexpr Int m = 2 * widthSmoothingLevel + 1;
-        std::array<Int, m> coeffs = binomialCoefficients<2 * widthSmoothingLevel>();
+        constexpr std::array<Int, m> coeffs =
+            binomialCoefficients<2 * widthSmoothingLevel>();
+
         // Apply convolution with coefficients
         for (Int i = unstableIndexStart; i < numPoints; ++i) {
             double value = {};
