@@ -157,6 +157,8 @@ public:
     inline const VacElement* toVacElement() const;
 
     inline vacomplex::Node* vacNode() const;
+    inline vacomplex::Cell* vacCell() const;
+    inline vacomplex::Group* vacGroup() const;
 
     core::StringId tagName() const {
         return domElement_->tagName();
@@ -406,6 +408,14 @@ private:
 
 vacomplex::Node* Element::vacNode() const {
     return isVacElement() ? static_cast<const VacElement*>(this)->vacNode() : nullptr;
+}
+
+vacomplex::Cell* Element::vacCell() const {
+    return isVacElement() ? static_cast<const VacElement*>(this)->vacCell() : nullptr;
+}
+
+vacomplex::Group* Element::vacGroup() const {
+    return isVacElement() ? static_cast<const VacElement*>(this)->vacGroup() : nullptr;
 }
 
 VacElement* Element::parentVacElement() const {

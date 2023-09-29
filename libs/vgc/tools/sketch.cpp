@@ -383,14 +383,10 @@ void SmoothingPass::reset_() {
 namespace {
 
 geometry::Vec2d getSnapPosition(workspace::Element* snapVertex) {
-    vacomplex::Node* node = snapVertex->vacNode();
-    if (node) {
-        vacomplex::Cell* cell = node->toCell();
-        if (cell) {
-            vacomplex::KeyVertex* keyVertex = cell->toKeyVertex();
-            if (keyVertex) {
-                return keyVertex->position();
-            }
+    if (vacomplex::Cell* cell = snapVertex->vacCell()) {
+        vacomplex::KeyVertex* keyVertex = cell->toKeyVertex();
+        if (keyVertex) {
+            return keyVertex->position();
         }
     }
     VGC_WARNING(
@@ -644,15 +640,18 @@ void Sketch::onPaintDraw(graphics::Engine* engine, ui::PaintOptions options) {
             geometry::Vec2d pos2d(pos);
             minimalLatencySnappedCursor_ = pos2d;
             if (snapStartPosition_.has_value()) {
-                const SketchPointBuffer& pointBuffer = postTransformPassesResult_();
-                if (pointBuffer.length() > 0) {
-                    const SketchPoint& lastp = pointBuffer.data().last();
-                    double s = lastp.s() + (pos2d - lastp.position()).length();
+                core::ConstSpan<SketchPoint> cleanInputPoints = cleanInputPoints_();
+                if (cleanInputPoints.length() > 0) {
+                    SketchPoint firstCleanInputPoint =
+                        cleanInputStartPointOverride_.value_or(cleanInputPoints[0]);
+                    const SketchPoint& lastCleanInputPoint = cleanInputPoints.last();
+                    double startS = firstCleanInputPoint.s();
+                    double s = lastCleanInputPoint.s() - startS;
+                    s += (pos2d - lastCleanInputPoint.position()).length();
                     double falloff = snapFalloff_();
                     if (s < falloff) {
                         geometry::Vec2d delta =
-                            snapStartPosition_.value()
-                            - pointBuffer[pendingPointsStartIndex_].position();
+                            snapStartPosition_.value() - firstCleanInputPoint.position();
                         minimalLatencySnappedCursor_ =
                             applySnapFalloff(pos2d, delta, s, falloff);
                     }
@@ -897,10 +896,6 @@ namespace {
 
 } // namespace
 
-void Sketch::clearPreTransformPasses_() {
-    dummyPreTransformPass_.reset();
-}
-
 void Sketch::updatePreTransformPassesResult_() {
     dummyPreTransformPass_.updateResultFrom(inputPoints_);
 }
@@ -927,62 +922,62 @@ void Sketch::updatePostTransformPassesResult_() {
     smoothingPass_.updateResultFrom(transformedPoints_);
 }
 
-void Sketch::clearPostTransformPasses_() {
-    smoothingPass_.reset();
-}
-
-const SketchPointBuffer& Sketch::postTransformPassesResult_() {
+const SketchPointBuffer& Sketch::postTransformPassesResult_() const {
     return smoothingPass_.buffer();
 }
 
-void Sketch::updatePendingWidths_() {
+core::ConstSpan<SketchPoint> Sketch::cleanInputPoints_() const {
+    const SketchPointBuffer& allCleanInputPoints = postTransformPassesResult_();
+    return core::ConstSpan<SketchPoint>(
+        allCleanInputPoints.begin() + cleanInputStartIndex_, allCleanInputPoints.end());
+}
 
-    const SketchPointBuffer& cleanInputBuffer = postTransformPassesResult_();
-    const SketchPointArray& cleanInputPoints = cleanInputBuffer.data();
-    if (cleanInputPoints.isEmpty()) {
-        return;
-    }
-
-    Int newNumPendingPoints = cleanInputPoints.length() - pendingPointsStartIndex_;
-
-    pendingWidths_.reserve(newNumPendingPoints);
-    for (Int i = pendingWidths_.length(); i < newNumPendingPoints; ++i) {
-        const SketchPoint& p = cleanInputPoints[i];
-        pendingWidths_.append(p.width());
-    }
+Int Sketch::numStableCleanInputPoints_() const {
+    const SketchPointBuffer& allCleanInputPoints = postTransformPassesResult_();
+    return allCleanInputPoints.numStablePoints() - cleanInputStartIndex_;
 }
 
 // Assumes postTransformPassesResult_() points have computed arclengths.
-void Sketch::updateStartSnappedPendingPositions_() {
+void Sketch::updateStartSnappedCleanInputPositions_() {
 
-    const SketchPointBuffer& cleanInputBuffer = postTransformPassesResult_();
-    const SketchPointArray& cleanInputPoints = cleanInputBuffer.data();
+    core::ConstSpan<SketchPoint> cleanInputPoints = cleanInputPoints_();
     if (cleanInputPoints.isEmpty()) {
         return;
     }
 
-    Int newNumPendingPoints = cleanInputPoints.length() - pendingPointsStartIndex_;
+    Int numStableCleanInputPoints = numStableCleanInputPoints_();
+    Int newNumPendingPoints = cleanInputPoints.length();
+    Int updateStartIndex = numStableStartSnappedCleanInputPositions_;
 
-    startSnappedPendingPositions_.resize(numStableStartSnappedPendingPositions_);
-    startSnappedPendingPositions_.reserve(newNumPendingPoints);
-    for (Int i = numStableStartSnappedPendingPositions_; i < newNumPendingPoints; ++i) {
+    SketchPoint firstCleanInputPoint =
+        cleanInputStartPointOverride_.value_or(cleanInputPoints[0]);
+
+    geometry::Vec2dArray& result = startSnappedCleanInputPositions_;
+    result.resize(updateStartIndex);
+    result.reserve(newNumPendingPoints);
+
+    if (updateStartIndex == 0) {
+        geometry::Vec2d position0 =
+            snapStartPosition_.value_or(firstCleanInputPoint.position());
+        result.append(position0);
+        updateStartIndex = 1;
+    }
+
+    for (Int i = updateStartIndex; i < newNumPendingPoints; ++i) {
         const SketchPoint& p = cleanInputPoints[i];
-        startSnappedPendingPositions_.append(p.position());
+        result.append(p.position());
     }
 
     if (snapStartPosition_.has_value()) {
         geometry::Vec2d ssp = snapStartPosition_.value();
         double falloff = snapFalloff_();
-        const SketchPoint& preSnapPoint0 = cleanInputPoints[pendingPointsStartIndex_];
-        double startS = preSnapPoint0.s();
-        geometry::Vec2d delta = ssp - preSnapPoint0.position();
-        Int start = numStableStartSnappedPendingPositions_;
-        for (Int i = start; i < newNumPendingPoints; ++i) {
+        double startS = firstCleanInputPoint.s();
+        geometry::Vec2d delta = ssp - firstCleanInputPoint.position();
+        for (Int i = updateStartIndex; i < newNumPendingPoints; ++i) {
             const SketchPoint& p = cleanInputPoints[i];
             double s = p.s() - startS;
             if (s < falloff) {
-                startSnappedPendingPositions_[i] =
-                    applySnapFalloff(startSnappedPendingPositions_[i], delta, s, falloff);
+                result[i] = applySnapFalloff(result[i], delta, s, falloff);
             }
             else {
                 break;
@@ -990,94 +985,51 @@ void Sketch::updateStartSnappedPendingPositions_() {
         }
     }
 
-    numStableStartSnappedPendingPositions_ =
-        cleanInputBuffer.numStablePoints() - pendingPointsStartIndex_;
+    numStableStartSnappedCleanInputPositions_ = numStableCleanInputPoints;
 }
 
-void Sketch::updateSnappedPendingPositions_() {
+void Sketch::endSnapStartSnappedCleanInputPositions_(geometry::Vec2dArray& result) {
 
-    snappedPendingPositions_.assign(startSnappedPendingPositions_);
+    updateStartSnappedCleanInputPositions_();
 
-    if (snapEndVertexItemId_ == 0 || snappedPendingPositions_.length() < 2) {
+    result.assign(startSnappedCleanInputPositions_);
+    if (snapEndVertexItemId_ == 0 || result.length() < 2) {
         return;
     }
 
-    const SketchPointBuffer& preSnapPointBuffer = postTransformPassesResult_();
-    const SketchPointArray& preSnapPoints = preSnapPointBuffer.data();
-
-    const SketchPoint& preSnapPointN = preSnapPoints.last();
-    double maxS = preSnapPointN.s();
-    double falloff = (std::min)(snapFalloff_(), maxS);
-    geometry::Vec2d delta = snapEndPosition_ - preSnapPointN.position();
-
-    snappedPendingPositions_.last() = snapEndPosition_;
-    for (Int i = snappedPendingPositions_.length() - 2; i >= 0; --i) {
-        const SketchPoint& preSnapPoint = preSnapPoints[i - pendingPointsStartIndex_];
-        double reversedS = maxS - preSnapPoint.s();
-        if (reversedS < falloff) {
-            snappedPendingPositions_[i] =
-                applySnapFalloff(snappedPendingPositions_[i], delta, reversedS, falloff);
-        }
-        else {
-            break;
-        }
-    }
-}
-
-void Sketch::clearSnappingData_() {
-    pendingPointsStartIndex_ = 0;
-    pendingWidths_.clear();
-    snapStartPosition_.reset();
-    startSnappedPendingPositions_.clear();
-    numStableStartSnappedPendingPositions_ = 0;
-    snapEndVertexItemId_ = 0;
-    snapEndPosition_ = {};
-    snappedPendingPositions_.clear();
-}
-
-double Sketch::snapFalloff_() const {
-
-    float snapFalloffFloat = static_cast<float>(options_::snapFalloff()->value());
-    style::Length snapFalloffLength(snapFalloffFloat, style::LengthUnit::Dp);
-
-    canvas::Canvas* canvas = this->canvas();
-    double zoom = canvas ? canvas->camera().zoom() : 1.0;
-
-    return snapFalloffLength.toPx(styleMetrics()) / zoom;
-}
-
-void Sketch::initCellInfoArrays_() {
     workspace::Workspace* workspace = this->workspace();
     if (!workspace) {
         return;
     }
 
-    canvas::Canvas* canvas = this->canvas();
-    vacomplex::Complex* vac = workspace->vac();
-    core::AnimTime t = canvas->currentTime();
-
-    vertexInfos_.clear();
-    for (vacomplex::VertexCell* vc : vac->vertices(t)) {
-        VertexInfo& vi = vertexInfos_.emplaceLast();
-        vi.position = vc->position(t);
-        vi.itemId = workspace->findVacElement(vc->id())->id();
+    workspace::Element* snapEndVertexItem = workspace->find(snapEndVertexItemId_);
+    if (!snapEndVertexItem) {
+        return;
     }
 
-    edgeInfos_.clear();
-    for (vacomplex::EdgeCell* ec : vac->edges(t)) {
-        auto sampling = ec->strokeSamplingShared(t);
-        if (sampling) {
-            EdgeInfo& ei = edgeInfos_.emplaceLast();
-            ei.sampling = ec->strokeSamplingShared(t);
-            ei.itemId = workspace->findVacElement(ec->id())->id();
+    geometry::Vec2d snapEndPosition = getSnapPosition(snapEndVertexItem);
+    result.last() = snapEndPosition;
+
+    core::ConstSpan<SketchPoint> cleanInputPoints = cleanInputPoints_();
+    VGC_ASSERT(cleanInputPoints.length() == startSnappedCleanInputPositions_.length());
+
+    SketchPoint firstCleanInputPoint =
+        cleanInputStartPointOverride_.value_or(cleanInputPoints[0]);
+    const SketchPoint& lastCleanInputPoint = cleanInputPoints.last();
+    double maxS = lastCleanInputPoint.s();
+    double totalS = maxS - firstCleanInputPoint.s();
+    double falloff = (std::min)(snapFalloff_(), totalS);
+    geometry::Vec2d delta = snapEndPosition - lastCleanInputPoint.position();
+    for (Int i = result.length() - 2; i >= 0; --i) {
+        const SketchPoint& p = cleanInputPoints[i];
+        double reversedS = maxS - p.s();
+        if (reversedS < falloff) {
+            result[i] = applySnapFalloff(result[i], delta, reversedS, falloff);
+        }
+        else {
+            break;
         }
     }
-}
-
-void Sketch::appendVertexInfo_(const geometry::Vec2d& position, core::Id itemId) {
-    VertexInfo& vi = vertexInfos_.emplaceLast();
-    vi.position = position;
-    vi.itemId = itemId;
 }
 
 // Note: in the future we may want to have the snapping candidates implemented
@@ -1169,6 +1121,106 @@ Sketch::computeSnapVertex_(const geometry::Vec2d& position, core::Id tmpVertexIt
     return nullptr;
 }
 
+double Sketch::snapFalloff_() const {
+
+    float snapFalloffFloat = static_cast<float>(options_::snapFalloff()->value());
+    style::Length snapFalloffLength(snapFalloffFloat, style::LengthUnit::Dp);
+
+    canvas::Canvas* canvas = this->canvas();
+    double zoom = canvas ? canvas->camera().zoom() : 1.0;
+
+    return snapFalloffLength.toPx(styleMetrics()) / zoom;
+}
+
+void Sketch::updatePendingPositions_() {
+    endSnapStartSnappedCleanInputPositions_(pendingPositions_);
+}
+
+void Sketch::updatePendingWidths_() {
+
+    const SketchPointBuffer& cleanInputBuffer = postTransformPassesResult_();
+    const SketchPointArray& cleanInputPoints = cleanInputBuffer.data();
+    if (cleanInputPoints.isEmpty()) {
+        return;
+    }
+
+    Int numStableCleanInputPoints = numStableCleanInputPoints_();
+    Int newNumPendingPoints = cleanInputPoints.length();
+    Int updateStartIndex = numStablePendingWidths_;
+
+    SketchPoint firstCleanInputPoint =
+        cleanInputStartPointOverride_.value_or(cleanInputPoints[0]);
+
+    core::DoubleArray& result = pendingWidths_;
+    result.resize(updateStartIndex);
+    result.reserve(newNumPendingPoints);
+
+    if (updateStartIndex == 0) {
+        double width0 = firstCleanInputPoint.width();
+        result.append(width0);
+        updateStartIndex = 1;
+    }
+
+    for (Int i = updateStartIndex; i < newNumPendingPoints; ++i) {
+        const SketchPoint& p = cleanInputPoints[i];
+        result.append(p.width());
+    }
+
+    numStablePendingWidths_ = numStableCleanInputPoints;
+}
+
+void Sketch::initCellInfoArrays_() {
+    workspace::Workspace* workspace = this->workspace();
+    if (!workspace) {
+        return;
+    }
+
+    canvas::Canvas* canvas = this->canvas();
+    vacomplex::Complex* vac = workspace->vac();
+    core::AnimTime t = canvas->currentTime();
+
+    vertexInfos_.clear();
+    for (vacomplex::VertexCell* vc : vac->vertices(t)) {
+        VertexInfo& vi = vertexInfos_.emplaceLast();
+        vi.position = vc->position(t);
+        vi.itemId = workspace->findVacElement(vc->id())->id();
+    }
+
+    edgeInfos_.clear();
+    for (vacomplex::EdgeCell* ec : vac->edges(t)) {
+        auto sampling = ec->strokeSamplingShared(t);
+        if (sampling) {
+            EdgeInfo& ei = edgeInfos_.emplaceLast();
+            ei.sampling = ec->strokeSamplingShared(t);
+            ei.itemId = workspace->findVacElement(ec->id())->id();
+        }
+    }
+}
+
+Sketch::VertexInfo* Sketch::searchVertexInfo_(core::Id itemId) {
+    for (Sketch::VertexInfo& vi : vertexInfos_) {
+        if (vi.itemId == itemId) {
+            return &vi;
+        }
+    }
+    return nullptr;
+}
+
+void Sketch::appendVertexInfo_(const geometry::Vec2d& position, core::Id itemId) {
+    VertexInfo& vi = vertexInfos_.emplaceLast();
+    vi.position = position;
+    vi.itemId = itemId;
+}
+
+Sketch::EdgeInfo* Sketch::searchEdgeInfo_(core::Id itemId) {
+    for (Sketch::EdgeInfo& ei : edgeInfos_) {
+        if (ei.itemId == itemId) {
+            return &ei;
+        }
+    }
+    return nullptr;
+}
+
 void Sketch::startCurve_(ui::MouseEvent* event) {
 
     // Clear the points now. We don't to it on finishCurve_() for
@@ -1249,7 +1301,7 @@ void Sketch::startCurve_(ui::MouseEvent* event) {
         domStartVertex = dom::Element::create(parentDomElement, ds::vertex);
         domStartVertex->setAttribute(ds::position, startPosition);
     }
-    Int startVertexId = domStartVertex->internalId();
+    startVertexItemId_ = domStartVertex->internalId();
 
     // Create end vertex
     dom::Element* domEndVertex = dom::Element::create(parentDomElement, ds::vertex);
@@ -1270,7 +1322,7 @@ void Sketch::startCurve_(ui::MouseEvent* event) {
     workspace->sync();
 
     // Append start vertex to snap/cut info
-    appendVertexInfo_(startPosition, startVertexId);
+    appendVertexInfo_(startPosition, startVertexItemId_);
 
     // Set curve to fast tesselation to minimize lag. We do this after
     // continueCurve_() to rely on workspace->sync() called there.
@@ -1319,16 +1371,15 @@ void Sketch::continueCurve_(ui::MouseEvent* event) {
     updatePreTransformPassesResult_();
     updateTransformedPoints_();
     updatePostTransformPassesResult_();
+    updatePendingPositions_();
     updatePendingWidths_();
-    updateStartSnappedPendingPositions_();
-    updateSnappedPendingPositions_();
 
     // TODO: auto cut algorithm
 
     // Update DOM and workspace
     namespace ds = dom::strings;
-    domEndVertex->setAttribute(ds::position, snappedPendingPositions_.last());
-    domEdge->setAttribute(ds::positions, snappedPendingPositions_);
+    domEndVertex->setAttribute(ds::position, pendingPositions_.last());
+    domEdge->setAttribute(ds::positions, pendingPositions_);
     domEdge->setAttribute(ds::widths, pendingWidths_);
     workspace->sync();
 }
@@ -1384,11 +1435,11 @@ void Sketch::finishCurve_(ui::MouseEvent* /*event*/) {
     }
 
     // Compute end vertex snapping
-    if (isSnappingEnabled() && startSnappedPendingPositions_.length() > 1
+    if (isSnappingEnabled() && startSnappedCleanInputPositions_.length() > 1
         && snapEndVertexItemId_ == 0) {
 
         // Compute end vertex to snap to
-        geometry::Vec2d endPosition = startSnappedPendingPositions_.last();
+        geometry::Vec2d endPosition = startSnappedCleanInputPositions_.last();
         workspace::Element* snapEndVertexItem =
             computeSnapVertex_(endPosition, endVertexItemId_);
 
@@ -1397,8 +1448,7 @@ void Sketch::finishCurve_(ui::MouseEvent* /*event*/) {
 
             // Compute end-snapped positions
             snapEndVertexItemId_ = snapEndVertexItem->id();
-            snapEndPosition_ = getSnapPosition(snapEndVertexItem);
-            updateSnappedPendingPositions_();
+            updatePendingPositions_();
 
             // Update DOM and workspace
             domEndVertex->remove();
@@ -1417,15 +1467,16 @@ void Sketch::finishCurve_(ui::MouseEvent* /*event*/) {
                 domEndVertex = nullptr;
                 domEdge->clearAttribute(ds::startvertex);
                 domEdge->clearAttribute(ds::endvertex);
-                if (snappedPendingPositions_.length() > 1) {
-                    snappedPendingPositions_.removeLast();
+                if (pendingPositions_.length() > 1) {
+                    pendingPositions_.removeLast();
                     pendingWidths_.removeLast();
+                    --numStablePendingWidths_;
                 }
             }
             else {
                 domEdge->setAttribute(ds::endvertex, domEndVertex->getPathFromId());
             }
-            domEdge->setAttribute(ds::positions, std::move(snappedPendingPositions_));
+            domEdge->setAttribute(ds::positions, std::move(pendingPositions_));
             domEdge->setAttribute(ds::widths, std::move(pendingWidths_));
 
             workspace->sync();
@@ -1453,24 +1504,40 @@ void Sketch::resetData_() {
         drawCurveUndoGroup_ = nullptr;
     }
 
-    endVertexItemId_ = 0;
-    edgeItemId_ = 0;
-
     // inputs are kept until next curve starts
     // for debugging purposes.
     //inputPoints_.clear();
 
     // pre-transform passes
-    clearPreTransformPasses_();
+    dummyPreTransformPass_.reset();
 
     // transform (fixed pass)
     transformedPoints_.clear();
 
     // post-transform passes
-    clearPostTransformPasses_();
+    smoothingPass_.reset();
 
-    // snap
-    clearSnappingData_();
+    // pending clean input
+    cleanInputStartIndex_ = 0;
+    cleanInputStartPointOverride_ = std::nullopt;
+
+    // snapping
+    snapStartPosition_ = std::nullopt;
+    startSnappedCleanInputPositions_.clear();
+    numStableStartSnappedCleanInputPositions_ = 0;
+    snapEndVertexItemId_ = 0;
+
+    // pending edge
+    startVertexItemId_ = 0;
+    endVertexItemId_ = 0;
+    edgeItemId_ = 0;
+    pendingPositions_.clear();
+    pendingWidths_.clear();
+    numStablePendingWidths_ = 0;
+
+    // snap/cut cache
+    vertexInfos_.clear();
+    edgeInfos_.clear();
 }
 
 } // namespace vgc::tools

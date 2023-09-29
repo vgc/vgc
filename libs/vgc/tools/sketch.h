@@ -408,8 +408,6 @@ protected:
     core::ConnectionHandle drawCurveUndoGroupConnectionHandle_ = {};
 
     double startTime_ = 0;
-    core::Id endVertexItemId_ = 0;
-    core::Id edgeItemId_ = 0;
 
     // Raw input in widget space (pixels).
     //
@@ -432,7 +430,6 @@ protected:
     detail::EmptyPass dummyPreTransformPass_;
 
     void updatePreTransformPassesResult_();
-    void clearPreTransformPasses_();
     const SketchPointBuffer& preTransformPassesResult_();
 
     // Transformation.
@@ -456,31 +453,47 @@ protected:
     detail::SmoothingPass smoothingPass_;
 
     void updatePostTransformPassesResult_();
-    void clearPostTransformPasses_();
-    const SketchPointBuffer& postTransformPassesResult_();
+    const SketchPointBuffer& postTransformPassesResult_() const;
+
+    // Pending Clean Input
+    Int cleanInputStartIndex_ = 0;
+    std::optional<SketchPoint> cleanInputStartPointOverride_;
+
+    core::ConstSpan<SketchPoint> cleanInputPoints_() const;
+    Int numStableCleanInputPoints_() const;
 
     // Snapping
-    //
-    // Invariant: all arrays have the same length.
     //
     // Note: keep in mind that isSnappingEnabled() may change between
     // startCurve() and finishCurve().
     //
-    Int pendingPointsStartIndex_ = 0;
-    core::DoubleArray pendingWidths_;
     std::optional<geometry::Vec2d> snapStartPosition_;
-    geometry::Vec2dArray startSnappedPendingPositions_;
-    Int numStableStartSnappedPendingPositions_ = 0;
+    geometry::Vec2dArray startSnappedCleanInputPositions_;
+    Int numStableStartSnappedCleanInputPositions_ = 0;
     core::Id snapEndVertexItemId_ = 0;
-    geometry::Vec2d snapEndPosition_;
-    geometry::Vec2dArray snappedPendingPositions_;
-    void updatePendingWidths_();
-    void updateStartSnappedPendingPositions_();
-    void updateSnappedPendingPositions_();
-    void clearSnappingData_();
+
+    void updateStartSnappedCleanInputPositions_();
+    void endSnapStartSnappedCleanInputPositions_(geometry::Vec2dArray& result);
+
+    workspace::Element*
+    computeSnapVertex_(const geometry::Vec2d& position, core::Id tmpVertexItemId);
 
     // The length of curve that snapping is allowed to deform
     double snapFalloff_() const;
+
+    // Pending Edge
+    //core::Id firstStartVertexItemId_ = 0;
+    core::Id startVertexItemId_ = 0;
+    core::Id endVertexItemId_ = 0;
+    core::Id edgeItemId_ = 0;
+    geometry::Vec2dArray pendingPositions_;
+    core::DoubleArray pendingWidths_;
+    Int numStablePendingWidths_ = 0;
+
+    void updatePendingPositions_();
+    void updatePendingWidths_();
+
+    // Snapping/Cutting Cache
 
     struct VertexInfo {
         // fast access to position to do snap tests
@@ -499,10 +512,13 @@ protected:
 
     void initCellInfoArrays_();
 
+    VertexInfo* searchVertexInfo_(core::Id itemId);
     void appendVertexInfo_(const geometry::Vec2d& position, core::Id itemId);
 
-    workspace::Element*
-    computeSnapVertex_(const geometry::Vec2d& position, core::Id tmpVertexItemId);
+    EdgeInfo* searchEdgeInfo_(core::Id itemId);
+    // void appendEdgeInfo_(); when adding a vertex on cut.
+    // void removeEdgeInfo_(); when adding a vertex on cut.
+    // void invalidateVertexSelectability_(); // after face cut winding can change.
 
     // Draw additional points at the stroke tip, based on global cursor
     // position, to reduce perceived input lag.
