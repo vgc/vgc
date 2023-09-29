@@ -356,6 +356,19 @@ public:
         isVacElement_ = true;
     }
 
+public:
+    vacomplex::Node* vacNode() const {
+        return vacNode_;
+    }
+
+    vacomplex::Group* vacGroup() const {
+        return vacGroup_();
+    }
+
+    vacomplex::Cell* vacCell() const {
+        return vacCell_();
+    }
+
 protected:
     vacomplex::Cell* vacCellUnchecked() const {
         return vacNode_ ? vacNode_->toCellUnchecked() : nullptr;
