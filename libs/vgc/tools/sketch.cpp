@@ -959,7 +959,8 @@ void Sketch::updateStartSnappedPendingPositions_() {
         const SketchPoint& preSnapPoint0 = cleanInputPoints[pendingPointsStartIndex_];
         double startS = preSnapPoint0.s();
         geometry::Vec2d delta = ssp - preSnapPoint0.position();
-        for (Int i = numStableStartSnappedPendingPositions_; i < newNumPendingPoints; ++i) {
+        Int start = numStableStartSnappedPendingPositions_;
+        for (Int i = start; i < newNumPendingPoints; ++i) {
             const SketchPoint& p = cleanInputPoints[i];
             double s = p.s() - startS;
             if (s < falloff) {
