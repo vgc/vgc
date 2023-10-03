@@ -270,7 +270,7 @@ void CellProperties::emitPropertyChanged_(core::StringId name) {
     if (cell_) {
         Complex* complex = cell_->complex();
         detail::Operations ops(complex);
-        ops.onPropertyChanged_(cell_, name);
+        ops.onNodePropertyModified_(cell_, name);
     }
 }
 

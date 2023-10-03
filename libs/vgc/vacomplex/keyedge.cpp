@@ -23,6 +23,10 @@ KeyEdge::~KeyEdge() {
 }
 
 // TODO: make it an operation, otherwise it won't get saved in dom.
+//       However, note note this function is indirectly called by ~Operations()
+//       in the code path `if (--numOperationsInProgress == 0)`. So we need to
+//       be careful if we create an operation here.
+//
 bool KeyEdge::snapGeometry() {
     geometry::Vec2d snapStartPosition = {};
     geometry::Vec2d snapEndPosition = {};
