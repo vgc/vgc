@@ -274,11 +274,11 @@ private:
     friend vacomplex::KeyEdgeData;
 
     void onGeometryChanged_(Cell* cell);
-    void onPropertyChanged_(Cell* cell, core::StringId name);
     void onBoundaryMeshChanged_(Cell* cell);
     void dirtyMesh_(Cell* cell);
+    void doDirtyMesh_(Cell* cell);
 
-    // Adds the `boundingCell` to the boundary of the `boundedCell`.
+    // Adds or remove the `boundingCell` to the boundary of the `boundedCell`.
     //
     // This updates both boundingCell->star_ and boundedCell->boundary_ and
     // sets the appropriate ModifiedNode flags.
@@ -286,12 +286,13 @@ private:
     // Throw a LogicError if either `boundingCell` or `boundedCell` is null.
     //
     void addToBoundary_(Cell* boundedCell, Cell* boundingCell);
+    void removeFromBoundary_(Cell* boundedCell, Cell* boundingCell);
+    void onBoundaryChanged_(Cell* boundedCell, Cell* boundingCell);
 
-    // Adds all the cells in the given `cycle` to the boundary of the `face`.
+    // Convenient helper that calls addToBoundary_(face, cell)
+    // for all the cells in the given `cycle`.
     //
     void addToBoundary_(FaceCell* face, const KeyCycle& cycle);
-
-    void removeFromBoundary_(Cell* boundedCell, Cell* boundingCell);
 
     void substituteVertex_(KeyVertex* oldVertex, KeyVertex* newVertex);
 

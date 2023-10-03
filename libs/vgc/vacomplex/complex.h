@@ -41,21 +41,130 @@ namespace vgc::vacomplex {
 
 VGC_DECLARE_OBJECT(Complex);
 
-enum class NodeModificationFlag {
-    // clang-format off
-    Reparented              = 0x01,
-    ChildrenChanged         = 0x02,
-    TransformChanged        = 0x04,
-    // edge model, vertex position, ...
-    GeometryChanged         = 0x08,
-    PropertyChanged         = 0x10,
-    // edge sampling, ...
-    MeshChanged             = 0x20,
-    BoundaryMeshChanged     = 0x40,
-    BoundaryChanged         = 0x80,
-    StarChanged             = 0x100,
-    All                     = 0x1FF,
-    // clang-format on
+/// \enum vgc::vacomplex::NodeModificationFlag
+/// \brief Specifies the nature of a node modification.
+///
+enum class NodeModificationFlag : UInt32 {
+
+    /// This flag is set whenever the node's parent has changed.
+    ///
+    Reparented = 0x01,
+
+    /// This flag is set whenever the node's children has changed, that is, a
+    /// child has been added, removed, or its position in the list of children
+    /// has changed.
+    ///
+    ChildrenChanged = 0x02,
+
+    /// This flag is set whenever the topological boundary of the cell is
+    /// changed, that is, whenever a cell has been added or removed to the
+    /// `Cell::boundary()`.
+    ///
+    BoundaryChanged = 0x04,
+
+    /// This flag is set whenever the topological star of the cell is changed,
+    /// that is, whenever a cell has been added or removed to the
+    /// `Cell::star()`.
+    ///
+    StarChanged = 0x08,
+
+    /// This flag is set whenever the node's "authored geometry" has changed.
+    ///
+    /// For a KeyVertex, this means when its `position()` has changed.
+    ///
+    /// For a KeyEdge, this means when its `stroke()` or
+    /// `strokeSamplingQuality()` has changed.
+    ///
+    /// For a KeyFace, this is currently never set since its geometry is fully
+    /// implicitly defined by the geometry of its boundary. In the future, if
+    /// we add a `WindingRule` attribute to faces, or ways to explicitly define
+    /// the geometry of faces, then this flag would be set when changing it.
+    ///
+    GeometryChanged = 0x10,
+
+    /// This flag is set whenever:
+    ///
+    /// 1. The "mesh" of a node has changed, and
+    ///
+    /// 2. The "mesh" of a node had been queried since the last time
+    ///    this flag was set for this node.
+    ///
+    /// By "mesh", we mean the position of a vertex, the sampling of an edge,
+    /// or the triangulation of a face.
+    ///
+    /// Note that it is possible that the `GeometryChanged` flag is set, while
+    /// the `MeshChanged` flag is not set. This happens when the geometry of
+    /// the node changed (and therefore, its mesh also changed), but had not b
+    ///
+    /// However, if the `MeshChanged` flag is set, then the `GeometryChanged`
+    /// flag is not necessarily set, for example the triangulation of a face
+    /// changes when the geometry of the boundary of the face changes, while
+    /// the geometry of the face itself hasn't necessarily changed.
+    ///
+    // TODO: rename `CachedGeometryChanged`? This would more explicitly conveys
+    // the idea that whether the flag is set or not depends on whether getter
+    // functions where called (there is a mutable state / cache mechanism
+    // involved).
+    //
+    // XXX: Do we actually still need this at all? It would make the API less
+    // confusing and/or error prone with just GeometryChanged (and
+    // BoundaryGeometryChanged). This flag was initially implemented before the
+    // flag BoundaryGeometryChanged existed, and a lot of the architecture has
+    // changed since. In particular, note that the virtual function
+    // `Cell::dirtyMesh()`, always called just before setting this flag,
+    // currently does nothing at all.
+    //
+    // However, we should keep in mind that this flag may still be useful for
+    // the following reasons:
+    //
+    // 1. The mechanism `hasMeshBeenQueriedSinceLastDirtyEvent_` may avoid
+    // recomputing data several times between repaints. But such optimization
+    // should also be achievable (arguable more cleanly) by using dirty flags
+    // in Workspace when receiving GeometryChanged.
+    //
+    // 2. In theory, it prevents writing attributes to the DOM when the
+    // "authored geometry" hasn't changed. But currently, this has no practical
+    // use. Indeed, when the boundary of a face changes, the fact that the face
+    // does not receive GeometryChanged isn't very useful, since nothing would
+    // be written to the DOM anyway (a face has no geometry).
+    //
+    // Note that currently, changing the `strokeSamplingQuality()` is
+    // considered a change of the geometry. If this was considered as a change
+    // of the mesh only, then maybe there would be more benefits to keep the
+    // distinction between geometry change and mesh change.
+    //
+    // In conclusion, I think it would be worth investigating in more details
+    // and try to remove this with benchmarks and see if there is any benefits
+    // in keeping this. There is cleary a huge maintainance benefit in removing
+    // it: the simpler the better.
+    //
+    MeshChanged = 0x20,
+
+    /// This flag is set whenever at least one of the node's properties
+    /// has changed, that is, its `cell->data().properties()`
+    ///
+    /// \sa `CellData`, `CellProperties`.
+    ///
+    PropertyChanged = 0x40,
+
+    // This flag is set whenever the `transform` attribute of the node has
+    // changed. This is not implemented yet.
+    //
+    //TransformChanged        = 0x80,
+
+    /// This flag is set whenever `GeometryChanged` is set on at least one cell in
+    /// the boundary of the cell.
+    ///
+    BoundaryGeometryChanged = 0x100,
+
+    /// This flag is set whenever `MeshChanged` is set on at least one cell in
+    /// the boundary of the cell.
+    ///
+    BoundaryMeshChanged = 0x200,
+
+    /// Convenient enum value with all flags set.
+    ///
+    All = 0xFFFFFFFF,
 };
 VGC_DEFINE_FLAGS(NodeModificationFlags, NodeModificationFlag)
 

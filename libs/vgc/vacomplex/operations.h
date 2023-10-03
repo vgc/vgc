@@ -410,9 +410,15 @@ void raise(core::ConstSpan<Node*> nodes, core::AnimTime t);
 VGC_VACOMPLEX_API
 void lower(core::ConstSpan<Node*> nodes, core::AnimTime t);
 
+// TODO: move to `keyVertex->data().setPosition()`, similarly to
+// `keyEdge->data().setStroke()`.
+//
 VGC_VACOMPLEX_API
 void setKeyVertexPosition(KeyVertex* vertex, const geometry::Vec2d& pos);
 
+// TODO: Remove. Clients should use `keyEdge->data().setStrokeSamplingQuality()`
+// instead.
+//
 VGC_VACOMPLEX_API
 void setKeyEdgeStrokeSamplingQuality(
     KeyEdge* edge,

@@ -19,6 +19,7 @@
 #include <algorithm> // std::reverse
 #include <unordered_set>
 
+#include <vgc/core/algorithm.h> // sort
 #include <vgc/core/array.h>
 #include <vgc/geometry/intersect.h>
 #include <vgc/vacomplex/exceptions.h>
@@ -81,20 +82,36 @@ Operations::Operations(Complex* complex)
 
 Operations::~Operations() {
     Complex* complex = this->complex();
-    // TODO: try/catch
+
+    // TODO: try/catch?
+
     if (--complex->numOperationsInProgress_ == 0) {
-        // Do geometric updates
+
+        // Update geometry from boundary (for example, ensure that edges are
+        // snapped to their end vertices). By iterating on cells by increasing
+        // dimension, we avoid having to do this recursively.
+        //
+        core::Array<Cell*> cellsToUpdateGeometryFromBoundary;
         for (const ModifiedNodeInfo& info : complex->opDiff_.modifiedNodes_) {
-            if (info.flags().has(NodeModificationFlag::BoundaryMeshChanged)
-                && !info.flags().has(NodeModificationFlag::GeometryChanged)) {
-                //
-                // Let the cell snap to its boundary..
+            if (info.flags().has(NodeModificationFlag::BoundaryGeometryChanged)) {
                 Cell* cell = info.node()->toCell();
-                if (cell && cell->updateGeometryFromBoundary()) {
-                    onNodeModified_(cell, NodeModificationFlag::GeometryChanged);
+                if (cell) {
+                    cellsToUpdateGeometryFromBoundary.append(cell);
                 }
             }
         }
+        core::sort(cellsToUpdateGeometryFromBoundary, [](Cell* c1, Cell* c2) {
+            return c1->cellType() < c2->cellType();
+        });
+        for (Cell* cell : cellsToUpdateGeometryFromBoundary) {
+            if (cell->updateGeometryFromBoundary()) {
+                onNodeModified_(cell, NodeModificationFlag::GeometryChanged);
+            }
+        }
+
+        // Call finalizeConcat() for all new cells that may have been created
+        // via a concatenation operation.
+        //
         for (const CreatedNodeInfo& info : complex->opDiff_.createdNodes_) {
             Cell* cell = info.node()->toCell();
             if (cell) {
@@ -114,7 +131,13 @@ Operations::~Operations() {
                 }
             }
         }
+
+        // Notify the outside world of the change.
+        //
         complex->nodesChanged().emit(complex->opDiff_);
+
+        // Clear diff data.
+        //
         complex->opDiff_.clear();
         complex->temporaryCellSet_.clear();
     }
@@ -2765,50 +2788,73 @@ void Operations::destroyNodes_(core::ConstSpan<Node*> nodes) {
     }
 }
 
+// [1] No need for recursion in the `cell->star()` loops below,
+//     since starCell->star() is a subset of cell->star().
+
 void Operations::onGeometryChanged_(Cell* cell) {
     onNodeModified_(cell, NodeModificationFlag::GeometryChanged);
+    for (Cell* starCell : cell->star()) { // See [1]
+        onNodeModified_(starCell, NodeModificationFlag::BoundaryGeometryChanged);
+    }
     dirtyMesh_(cell);
-}
-
-void Operations::onPropertyChanged_(Cell* cell, core::StringId name) {
-    onNodePropertyModified_(cell, name);
 }
 
 void Operations::dirtyMesh_(Cell* cell) {
     if (cell->hasMeshBeenQueriedSinceLastDirtyEvent_) {
-        cell->hasMeshBeenQueriedSinceLastDirtyEvent_ = false;
-        cell->dirtyMesh();
-        onNodeModified_(cell, NodeModificationFlag::MeshChanged);
-        for (Cell* starCell : cell->star()) {
-            // No need for recursion since starCell.star() is a subset
-            // of cell.star().
+        doDirtyMesh_(cell);
+        for (Cell* starCell : cell->star()) { // See [1]
             onNodeModified_(starCell, NodeModificationFlag::BoundaryMeshChanged);
             if (starCell->hasMeshBeenQueriedSinceLastDirtyEvent_) {
-                starCell->hasMeshBeenQueriedSinceLastDirtyEvent_ = false;
-                starCell->dirtyMesh();
-                onNodeModified_(starCell, NodeModificationFlag::MeshChanged);
+                doDirtyMesh_(starCell);
             }
         }
     }
 }
 
-void Operations::addToBoundary_(Cell* boundedCell, Cell* boundingCell) {
+void Operations::doDirtyMesh_(Cell* cell) {
+    cell->hasMeshBeenQueriedSinceLastDirtyEvent_ = false;
+    cell->dirtyMesh();
+    onNodeModified_(cell, NodeModificationFlag::MeshChanged);
+}
+
+namespace {
+
+void checkAddToBoundaryArgs_(Cell* boundedCell, Cell* boundingCell) {
     if (!boundingCell) {
-        throw core::LogicError("Cannot add null cell to boundary.");
+        throw core::LogicError("Cannot add or remove null cell to boundary.");
     }
-    else if (!boundedCell) {
+    if (!boundedCell) {
         throw core::LogicError("Cannot modify the boundary of a null cell.");
     }
-    else if (!boundedCell->boundary_.contains(boundingCell)) {
+}
+
+} // namespace
+
+void Operations::addToBoundary_(Cell* boundedCell, Cell* boundingCell) {
+    checkAddToBoundaryArgs_(boundedCell, boundingCell);
+    if (!boundedCell->boundary_.contains(boundingCell)) {
         boundedCell->boundary_.append(boundingCell);
         boundingCell->star_.append(boundedCell);
-        onNodeModified_(
-            boundedCell,
-            {NodeModificationFlag::BoundaryChanged,
-             NodeModificationFlag::BoundaryMeshChanged});
-        onNodeModified_(boundingCell, NodeModificationFlag::StarChanged);
-        dirtyMesh_(boundedCell);
+        onBoundaryChanged_(boundedCell, boundingCell);
     }
+}
+
+void Operations::removeFromBoundary_(Cell* boundedCell, Cell* boundingCell) {
+    checkAddToBoundaryArgs_(boundedCell, boundingCell);
+    if (boundedCell->boundary_.contains(boundingCell)) {
+        boundedCell->boundary_.removeOne(boundingCell);
+        boundingCell->star_.removeOne(boundedCell);
+        onBoundaryChanged_(boundedCell, boundingCell);
+    }
+}
+
+void Operations::onBoundaryChanged_(Cell* boundedCell, Cell* boundingCell) {
+    onNodeModified_(
+        boundedCell,
+        {NodeModificationFlag::BoundaryChanged,
+         NodeModificationFlag::BoundaryMeshChanged});
+    onNodeModified_(boundingCell, NodeModificationFlag::StarChanged);
+    dirtyMesh_(boundedCell);
 }
 
 void Operations::addToBoundary_(FaceCell* face, const KeyCycle& cycle) {
@@ -2826,25 +2872,6 @@ void Operations::addToBoundary_(FaceCell* face, const KeyCycle& cycle) {
             addToBoundary_(face, halfedge.edge());
             addToBoundary_(face, halfedge.endVertex());
         }
-    }
-}
-
-void Operations::removeFromBoundary_(Cell* boundedCell, Cell* boundingCell) {
-    if (!boundingCell) {
-        throw core::LogicError("Cannot remove null cell from boundary.");
-    }
-    else if (!boundedCell) {
-        throw core::LogicError("Cannot modify the boundary of a null cell.");
-    }
-    else if (boundedCell->boundary_.contains(boundingCell)) {
-        boundedCell->boundary_.removeOne(boundingCell);
-        boundingCell->star_.removeOne(boundedCell);
-        onNodeModified_(
-            boundedCell,
-            {NodeModificationFlag::BoundaryChanged,
-             NodeModificationFlag::BoundaryMeshChanged});
-        onNodeModified_(boundingCell, NodeModificationFlag::StarChanged);
-        dirtyMesh_(boundedCell);
     }
 }
 
