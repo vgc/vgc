@@ -793,6 +793,9 @@ private:
     const Container& container_;
 };
 
+/// \class vgc::vacomplex::Cell
+/// \brief Represents a cell (vertex, edge, or face) of a topological complex.
+///
 class VGC_VACOMPLEX_API Cell : public Node {
 private:
     friend detail::Operations;
@@ -815,8 +818,59 @@ protected:
 public:
     ~Cell() override = default;
 
+    /// Returns the type of this cell.
+    ///
+    CellType cellType() const {
+        return cellTypeUnchecked();
+    }
+
+    /// Returns the spatial type of this cell.
+    ///
+    CellSpatialType spatialType() const {
+        return detail::cellTypeToSpatialType(cellType());
+    }
+
+    /// Returns the spatial dimension of the cell.
+    ///
+    /// This is equal to 0 for vertices, 1 for edges, and 2 for faces.
+    ///
+    UInt8 spatialDimension() const {
+        return core::toUnderlying(spatialType());
+    }
+
+    /// Returns the temporal type of this cell.
+    ///
+    CellTemporalType temporalType() const {
+        return detail::cellTypeToTemporalType(cellType());
+    }
+
+    /// Returns the temporal dimension of this cell.
+    ///
+    /// This is equal to 0 for key cells and 1 for inbetween cells.
+    ///
+    UInt8 temporalDimension() const {
+        return core::toUnderlying(temporalType());
+    }
+
+    /// Returns whether this cell is a key cell.
+    ///
+    bool isKeyCell() const {
+        return detail::cellTypeToTemporalType(cellType()) == CellTemporalType::Key;
+    }
+
+    /// Returns whether this cell is an inbetween cell.
+    ///
+    bool isInbetweenCell() const {
+        return detail::cellTypeToTemporalType(cellType()) == CellTemporalType::Inbetween;
+    }
+
+    /// Returns the topological `Complex` that this cell belongs to.
+    ///
     Complex* complex() const;
 
+    /// Returns the cell just before this cell in the list of children of its
+    /// parent.
+    ///
     Cell* previousSiblingCell() const {
         Node* node = previousSibling();
         while (node) {
@@ -828,6 +882,9 @@ public:
         return nullptr;
     }
 
+    /// Returns the cell just after this cell in the list of children of its
+    /// parent.
+    ///
     Cell* nextSiblingCell() const {
         Node* node = nextSibling();
         while (node) {
@@ -839,39 +896,59 @@ public:
         return nullptr;
     }
 
-    /// Returns the cell type of this `Cell`.
+    /// Returns the (recursive) topological boundary of this cell.
     ///
-    CellType cellType() const {
-        return cellTypeUnchecked();
+    /// For a KeyVertex, this is empty.
+    ///
+    /// For a KeyEdge, this means its end vertices, if any.
+    ///
+    /// For a KeyFace, this means all the key edges and key vertices in its
+    /// boundary (including the end vertices of the edges in its boundary).
+    ///
+    /// Any cell `c2` in `c1->boundary()` is guaranteed to have a dimension less
+    /// than `c1`. More specifically the following three assertions are true:
+    ///
+    /// 1. `c2->spatialDimension() <= c1->spatialDimension()`
+    /// 2. `c2->temporalDimension() <= c1->temporalDimension()`
+    /// 3. `c2->spatialDimension() < c1->spatialDimension()` or
+    ///    `c2->temporalDimension() < c1->temporalDimension()` or both
+    ///
+    /// \sa `star()`.
+    ///
+    CellRangeView boundary() const {
+        return CellRangeView(boundary_);
     }
 
-    CellSpatialType spatialType() const {
-        return detail::cellTypeToSpatialType(cellType());
-    }
-
-    CellTemporalType temporalType() const {
-        return detail::cellTypeToTemporalType(cellType());
-    }
-
-    bool isKeyCell() const {
-        return detail::cellTypeToTemporalType(cellType()) == CellTemporalType::Key;
-    }
-
-    bool isInbetweenCell() const {
-        return detail::cellTypeToTemporalType(cellType()) == CellTemporalType::Inbetween;
-    }
-
-    virtual bool existsAt(core::AnimTime t) const = 0;
-
-    geometry::Rect2d boundingBoxAt(core::AnimTime t) const override = 0;
-
+    /// Returns the (recursive) topological star of this cell.
+    ///
+    /// This is the opposite of `boundary()`: by definition, a cell `c2` is in
+    /// the star of a cell `c1` if and only if `c1` is in the boundary of `c2`.
+    ///
+    /// Any cell `c2` in `c1->star()` is guaranteed to have a dimension greater
+    /// than `c1`. More specifically the following three assertions are true:
+    ///
+    /// 1. `c2->spatialDimension() >= c1->spatialDimension()`
+    /// 2. `c2->temporalDimension() >= c1->temporalDimension()`
+    /// 3. `c2->spatialDimension() > c1->spatialDimension()` or
+    ///    `c2->temporalDimension() > c1->temporalDimension()` or both
+    ///
     CellRangeView star() const {
         return CellRangeView(star_);
     }
 
-    CellRangeView boundary() const {
-        return CellRangeView(boundary_);
-    }
+    /// Returns whether this cell exists at the given time `t`.
+    ///
+    /// For key cell this returns true if and only if `t` is exactly equal to
+    /// the `KeyCell::time()`.
+    ///
+    /// For inbetween cell, this returns true if and only if `t` is contains in
+    /// its time range, excluding bounds.
+    ///
+    virtual bool existsAt(core::AnimTime t) const = 0;
+
+    /// Returns the bounding box of this cell at the given time `t`.
+    ///
+    geometry::Rect2d boundingBoxAt(core::AnimTime t) const override = 0;
 
     VGC_VACOMPLEX_DEFINE_CELL_CAST_METHOD(VertexCell)
     VGC_VACOMPLEX_DEFINE_CELL_CAST_METHOD(EdgeCell)
@@ -1044,7 +1121,9 @@ public:
     // virtual api
 
     bool existsAt(core::AnimTime t) const {
-        return timeRange_.contains(t);
+        // Currently, AnimTimeRange cannot represent open ranges, so we cannot
+        // call `timeRange_.contains(t)`: we need to use strict inequalities.
+        return timeRange_.tMin() < t && t < timeRange_.tMax();
     }
 
     virtual geometry::Rect2d boundingBoxAt(core::AnimTime t) const = 0;
