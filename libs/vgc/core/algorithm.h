@@ -61,6 +61,24 @@ typename ContainerType::value_type average(const ContainerType& v) {
     }
 }
 
+/// Sorts the given container `c`.
+///
+/// This is equivalent to `std::sort(c.begin(), c.end())`.
+///
+template<typename Container>
+void sort(Container& c) {
+    std::sort(c.begin(), c.end());
+}
+
+/// Sorts the given container `c`.
+///
+/// This is equivalent to `std::sort(c.begin(), c.end(), comp)`.
+///
+template<typename Container, typename Compare>
+void sort(Container& c, Compare comp) {
+    std::sort(c.begin(), c.end(), comp);
+}
+
 /// Returns the vector index corresponding to the given vector iterator \p it,
 /// or -1 if pos == v.end();
 ///
