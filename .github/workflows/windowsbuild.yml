@@ -77,25 +77,6 @@ jobs:
         echo "COMMIT_MESSAGE:       $COMMIT_MESSAGE"
         echo "WIX:                  $WIX"
 
-    - name: Setup Python
-      uses: actions/setup-python@v2
-      with:
-        python-version: ${{env.PYTHON_VERSION}}
-        architecture: 'x64'
-
-    - name: Install Qt
-      working-directory: ${{github.workspace}}/..
-      shell: pwsh
-      run: |
-        $url = "https://vgcci.blob.core.windows.net/vgc-ci"
-        $dirname = "qt-${env:QT_VERSION}-msvc${env:MSVC_VERSION}_64"
-        $filename = "$dirname.zip"
-        C:/msys64/usr/bin/wget.exe --progress=dot:giga "$url/$filename"
-        echo "Unzipping..."
-        unzip -q $filename -d .
-        echo "Done."
-        echo "Qt5Location=$pwd/$dirname" >> ${env:GITHUB_ENV}
-
     - name: Configure vckpg
       working-directory: ${{github.workspace}}
       run: |
@@ -118,30 +99,65 @@ jobs:
       working-directory: ${{env.VCPKG_ROOT_PARENT}}
       run: |
         # Delete manifest file, otherwise, we cannot manually install packages
+        pwd
+        ls -al "${{github.workspace}}"
         rm "${{github.workspace}}/vcpkg.json"
 
         # Download vcpkg
+        echo "Dowloading vcpkg..."
         git clone --depth=1 --branch "$VCPKG_VERSION" https://github.com/microsoft/vcpkg.git
+        echo "Done."
 
         # Bootstrap
+        echo "Bootstrapping..."
+        ls -al
         cd vcpkg
+        ls -al
         cmd.exe /c bootstrap-vcpkg.bat
+        ls -al
+        echo "Done."
 
         # Create custom triplet that only compile binaries with the given VCPKG_BUILD_TYPE
+        echo "Creating custom triplets..."
         mkdir "$VCPKG_OVERLAY_TRIPLETS"
         TRIPLET_FILE="$VCPKG_OVERLAY_TRIPLETS/$VCPKG_DEFAULT_TRIPLET.cmake"
         cp triplets/x64-windows.cmake "$TRIPLET_FILE"
         echo "set(VCPKG_BUILD_TYPE $VCPKG_BUILD_TYPE)" >> "$TRIPLET_FILE"
+        cat "$TRIPLET_FILE"
+        echo "Done."
 
         # Install packages
         # Note: "IFS" = Input Field Separators. Makes it possible to interpret ';' as argument separator.
         #       We surround the command by parentheses so that IFS is only redefined in a subshell.
+        echo "Installing packages..."
+        pwd
+        ls -al
         (IFS=';'; ./vcpkg.exe \
           --vcpkg-root="$VCPKG_ROOT" \
           --overlay-triplets="$VCPKG_OVERLAY_TRIPLETS" \
           --triplet="$VCPKG_DEFAULT_TRIPLET" \
           $VCPKG_INSTALL_OPTIONS \
           install $VCPKG_PACKAGES)
+        echo "Done."
+
+    - name: Setup Python
+      uses: actions/setup-python@v2
+      with:
+        python-version: ${{env.PYTHON_VERSION}}
+        architecture: 'x64'
+
+    - name: Install Qt
+      working-directory: ${{github.workspace}}/..
+      shell: pwsh
+      run: |
+        $url = "https://vgcci.blob.core.windows.net/vgc-ci"
+        $dirname = "qt-${env:QT_VERSION}-msvc${env:MSVC_VERSION}_64"
+        $filename = "$dirname.zip"
+        C:/msys64/usr/bin/wget.exe --progress=dot:giga "$url/$filename"
+        echo "Unzipping..."
+        unzip -q $filename -d .
+        echo "Done."
+        echo "Qt5Location=$pwd/$dirname" >> ${env:GITHUB_ENV}
 
     - name: Setup Developer Command Prompt for VS
       uses: ilammy/msvc-dev-cmd@v1
