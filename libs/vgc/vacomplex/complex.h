@@ -152,8 +152,10 @@ enum class NodeModificationFlag : UInt32 {
     //
     //TransformChanged        = 0x80,
 
-    /// This flag is set whenever `GeometryChanged` is set on at least one cell in
-    /// the boundary of the cell.
+    /// This flag is set whenever:
+    /// - `BoundaryChanged` is set on this cell, or
+    /// - `GeometryChanged` is set on at least one cell in the boundary of the
+    ///    cell.
     ///
     BoundaryGeometryChanged = 0x100,
 
