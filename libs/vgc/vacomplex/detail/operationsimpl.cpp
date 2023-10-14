@@ -2852,6 +2852,7 @@ void Operations::onBoundaryChanged_(Cell* boundedCell, Cell* boundingCell) {
     onNodeModified_(
         boundedCell,
         {NodeModificationFlag::BoundaryChanged,
+         NodeModificationFlag::BoundaryGeometryChanged,
          NodeModificationFlag::BoundaryMeshChanged});
     onNodeModified_(boundingCell, NodeModificationFlag::StarChanged);
     dirtyMesh_(boundedCell);
