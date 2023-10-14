@@ -77,16 +77,6 @@ jobs:
         echo "COMMIT_MESSAGE:       $COMMIT_MESSAGE"
         echo "WIX:                  $WIX"
 
-    - name: Configure vckpg
-      working-directory: ${{github.workspace}}
-      run: |
-        PARENT="${{github.workspace}}"
-        echo "VCPKG_ROOT_PARENT=$PARENT" >> $GITHUB_ENV
-        echo "VCPKG_ROOT=$PARENT/vcpkg" >> $GITHUB_ENV
-        echo "VCPKG_TOOLCHAIN_FILE=$PARENT/vcpkg/scripts/buildsystems/vcpkg.cmake" >> $GITHUB_ENV
-        echo "VCPKG_OVERLAY_TRIPLETS=$PARENT/vcpkg/custom-triplets" >> $GITHUB_ENV
-        echo "VCPKG_DEFAULT_TRIPLET=x64-windows-rel" >> $GITHUB_ENV
-
     - name: Setup Python
       uses: actions/setup-python@v2
       with:
@@ -105,6 +95,16 @@ jobs:
         unzip -q $filename -d .
         echo "Done."
         echo "Qt5Location=$pwd/$dirname" >> ${env:GITHUB_ENV}
+
+    - name: Configure vckpg
+      working-directory: ${{github.workspace}}
+      run: |
+        PARENT="${{github.workspace}}"
+        echo "VCPKG_ROOT_PARENT=$PARENT" >> $GITHUB_ENV
+        echo "VCPKG_ROOT=$PARENT/vcpkg" >> $GITHUB_ENV
+        echo "VCPKG_TOOLCHAIN_FILE=$PARENT/vcpkg/scripts/buildsystems/vcpkg.cmake" >> $GITHUB_ENV
+        echo "VCPKG_OVERLAY_TRIPLETS=$PARENT/vcpkg/custom-triplets" >> $GITHUB_ENV
+        echo "VCPKG_DEFAULT_TRIPLET=x64-windows-rel" >> $GITHUB_ENV
 
     - name: Cache vcpkg
       id: cache-vcpkg
