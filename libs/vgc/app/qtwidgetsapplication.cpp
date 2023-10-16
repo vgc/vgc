@@ -166,7 +166,21 @@ PreInitializer::PreInitializer() {
         setAttribute(Qt::AA_ShareOpenGLContexts);
     }
     setAttribute(Qt::AA_SynthesizeMouseForUnhandledTabletEvents, false);
+
+    // High-DPI scaling.
+    //
+    // Our initial choice was to explicitly disable it so that we can do it
+    // manually ourself based on raw pixel values given by Qt. Unfortunately,
+    // the `AA_DisableHighDpiScaling` attribute is now deprecated in Qt6 and
+    // has no longer any effect: High_DPI scaling is always enabled. So for now
+    // we just disable the warning by not setting the attribute, but we
+    // probably need to do more testing to ensure that High-DPI scaling works
+    // as we expect: perhaps we need to add some logical px to physical pixel
+    // conversions in the mouse events, resize events and paint events.
+    //
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
     setAttribute(Qt::AA_DisableHighDpiScaling, true);
+#endif
 }
 
 QApplicationImpl::QApplicationImpl(int& argc, char** argv, QtWidgetsApplication* app)
