@@ -21,6 +21,7 @@
 
 #if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
 #    include <QOpenGLVersionFunctionsFactory>
+#    include <QColorSpace>
 #endif
 #include <QWindow>
 
@@ -830,12 +831,18 @@ QglEngine::QglEngine(
         format_.setSamples(createInfo.windowSwapChainFormat().numSamples());
         format_.setSwapInterval(0);
         PixelFormat pixelFormat = createInfo.windowSwapChainFormat().pixelFormat();
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
+        QSurfaceFormat::ColorSpace qColorSpace = QSurfaceFormat::DefaultColorSpace;
         if (pixelFormat == PixelFormat::RGBA_8_UNORM_SRGB) {
-            format_.setColorSpace(QSurfaceFormat::sRGBColorSpace);
+            qColorSpace = QSurfaceFormat::sRGBColorSpace;
         }
-        else {
-            format_.setColorSpace(QSurfaceFormat::DefaultColorSpace);
+#else
+        QColorSpace qColorSpace = QColorSpace::SRgbLinear;
+        if (pixelFormat == PixelFormat::RGBA_8_UNORM_SRGB) {
+            qColorSpace = QColorSpace::SRgb;
         }
+#endif
+        format_.setColorSpace(qColorSpace);
 
         // XXX use buffer count
         format_.setSwapBehavior(QSurfaceFormat::DoubleBuffer);
