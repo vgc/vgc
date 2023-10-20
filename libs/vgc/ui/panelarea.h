@@ -176,10 +176,19 @@ public:
     ///
     PanelArea* parentArea() const;
 
-    /// Adds a `Panel` to this `PanelArea`. A warning is emitted if this
-    /// `PanelArea` is not of type `Tabs`.
+    /// Adds a `Panel` of type `PanelType` to this `PanelArea`. A warning is
+    /// emitted if this `PanelArea` is not of type `Tabs`.
     ///
-    Panel* createPanel(std::string_view panelTitle = "Untitled");
+    template<typename PanelClass, typename... Args>
+    PanelClass* createPanel(Args&&... args) {
+        ui::Widget* parent = preCreatePanel_();
+        if (!parent) {
+            return nullptr;
+        }
+        PanelClass* panel = parent->createChild<PanelClass>(std::forward<Args>(args)...);
+        postCreatePanel_(panel);
+        return panel;
+    }
 
     /// Returns the number of panels in this `PanelArea`.
     ///
@@ -264,6 +273,10 @@ private:
     void startDragging_(const geometry::Vec2f& position);
     void continueDragging_(const geometry::Vec2f& position);
     void stopDragging_(const geometry::Vec2f& position);
+
+    // Performs non-templated steps during the creation of a Panel.
+    Widget* preCreatePanel_(); // Return Panel's parent, or null if cannot create Panel
+    void postCreatePanel_(Panel* panel);
 
     // Creates / Updates PanelTabs widget when necessary (i.e., when type = Tabs).
     void updateTabs_();

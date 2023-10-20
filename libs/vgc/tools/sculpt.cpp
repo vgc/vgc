@@ -598,7 +598,7 @@ SculptPtr Sculpt::create() {
     return core::createObject<Sculpt>();
 }
 
-ui::WidgetPtr Sculpt::createOptionsWidget() const {
+ui::WidgetPtr Sculpt::doCreateOptionsWidget() const {
     ui::WidgetPtr res = ui::Column::create();
     res->createChild<ui::NumberSettingEdit>(options::sculptRadius());
     return res;

@@ -39,13 +39,22 @@ void Panel::setTitle(std::string_view title) {
     titleChanged().emit();
 }
 
+Widget* Panel::body() const {
+    return firstChild();
+}
+
 void Panel::setBody(Widget* newBody) {
     Widget* oldBody = body();
     if (oldBody == newBody) {
         return;
     }
     if (oldBody) {
-        newBody->replace(oldBody);
+        if (newBody) {
+            newBody->replace(oldBody);
+        }
+        else {
+            oldBody->destroy();
+        }
     }
     else {
         insertChild(firstChild(), newBody);

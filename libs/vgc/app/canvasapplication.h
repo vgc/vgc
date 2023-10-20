@@ -23,6 +23,7 @@
 #include <vgc/app/mainwindow.h>
 #include <vgc/app/qtwidgetsapplication.h>
 #include <vgc/canvas/canvas.h>
+#include <vgc/canvas/toolmanager.h>
 #include <vgc/core/colors.h>
 #include <vgc/dom/document.h>
 #include <vgc/tools/colorpalette.h>
@@ -110,12 +111,6 @@ public:
         return document_;
     }
 
-    /// Returns the current `CanvasTool`.
-    ///
-    canvas::CanvasTool* currentTool() const {
-        return currentTool_;
-    }
-
     /// Quits the application.
     ///
     void quit();
@@ -149,6 +144,8 @@ private:
 
     // ------------------------------------------------------------------------
     //                       Document management
+
+    // TODO: Implement DocumentManager encapsulating everything below
 
     dom::Document* document_;
     core::Id lastSavedDocumentVersionId = {};
@@ -216,30 +213,19 @@ private:
 
     // Canvas
     canvas::Canvas* canvas_ = nullptr;
-
     void createCanvas_(ui::Widget* parent, workspace::Workspace* workspace);
 
-    // Canvas Tools
-    ui::ActionGroupPtr toolsActionGroup_;
-    std::map<ui::Action*, canvas::CanvasToolPtr> toolMap_;
-    std::map<canvas::CanvasTool*, ui::Action*> toolMapInv_;
-    canvas::CanvasTool* currentTool_ = nullptr;
-    tools::Sketch* sketchTool_ = nullptr;
-    tools::PaintBucket* paintBucketTool_ = nullptr;
-    ui::PanelPtr toolOptionsPanel_;
+    // Tools
+    canvas::ToolManagerPtr toolManager_;
+    tools::Sketch* sketchTool_;
+    tools::PaintBucket* paintBucketTool_;
+    void createTools_();
 
-    void createTools_(ui::Widget* parent);
-    void registerTool_( //
-        ui::Widget* parent,
-        core::StringId commandId,
-        canvas::CanvasToolPtr tool);
+    // Colors.
+    //
+    // TODO: Implement ColorManager encapsulating everything below.
+    //
 
-    void setCurrentTool_(canvas::CanvasTool* canvasTool);
-
-    void onToolCheckStateChanged_(ui::Action* toolAction, ui::CheckState checkState);
-    VGC_SLOT(onToolCheckStateChangedSlot_, onToolCheckStateChanged_);
-
-    // Colors
     core::Color currentColor_ = core::colors::black;
     void setCurrentColor_(const core::Color& color);
     VGC_SLOT(setCurrentColor_)

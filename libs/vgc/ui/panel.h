@@ -57,9 +57,7 @@ public:
 
     /// Returns the body widget of the `Panel`.
     ///
-    Widget* body() const {
-        return firstChild();
-    }
+    Widget* body() const;
 
     /// Sets the body of the `Panel`.
     ///

@@ -9,10 +9,14 @@ vgc_add_library(canvas
         canvastool.h
         logcategories.h
         strings.h
+        toolmanager.h
+        tooloptionspanel.h
 
     CPP_SOURCE_FILES
         canvas.cpp
         canvastool.cpp
         logcategories.cpp
         strings.cpp
+        toolmanager.cpp
+        tooloptionspanel.cpp
 )

@@ -56,7 +56,7 @@ public:
     ///
     /// \sa `tabClosed()`.
     ///
-    void addTab(std::string_view label, bool isClosable = false);
+    void addTab(std::string_view label, bool isClosable = true);
 
     /// Returns the number of tabs in this tab bar.
     ///

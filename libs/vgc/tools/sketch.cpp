@@ -473,7 +473,7 @@ void Sketch::setSnappingEnabled(bool enabled) {
     options_::snapping()->setValue(enabled);
 }
 
-ui::WidgetPtr Sketch::createOptionsWidget() const {
+ui::WidgetPtr Sketch::doCreateOptionsWidget() const {
     ui::WidgetPtr res = ui::Column::create();
     res->createChild<ui::NumberSettingEdit>(options_::penWidth());
     res->createChild<ui::BoolSettingEdit>(options_::snapping());
