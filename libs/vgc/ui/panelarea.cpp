@@ -119,6 +119,39 @@ Int PanelArea::numPanels() const {
     }
 }
 
+float PanelArea::splitSize() const {
+
+    PanelArea* parent = parentArea();
+    if (parent && parent->isSplit()) {
+        for (const SplitData& data : parent->splitData_) {
+            if (data.childArea == this) {
+                return data.preferredSizeInDp;
+            }
+        }
+    }
+
+    float scaleFactor = styleMetrics().scaleFactor();
+    return width() * scaleFactor;
+}
+
+void PanelArea::setSplitSize(float size) {
+
+    PanelArea* parent = parentArea();
+    if (!parent || !parent->isSplit()) {
+        return;
+    }
+
+    for (SplitData& data : parent->splitData_) {
+        if (data.childArea == this) {
+            data.preferredSizeInDp = size;
+            break;
+        }
+    }
+
+    requestGeometryUpdate();
+    requestRepaint();
+}
+
 TabBar* PanelArea::tabBar() const {
     if (type() == PanelAreaType::Tabs) {
         return static_cast<TabBar*>(firstChild()->firstChild());

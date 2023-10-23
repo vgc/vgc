@@ -199,6 +199,31 @@ public:
     ///
     Int numPanels() const;
 
+    /// Returns the current desired `size`, in dp, for this `PanelArea` in the
+    /// split-direction of its parent `PanelArea`.
+    ///
+    /// This function returns the `width()` of this widget, in dp, if
+    /// `parentArea()` is null or is not of type `HorizontalSplit` or
+    /// `VerticalSplit`.
+    ///
+    float splitSize() const;
+
+    /// Sets a desired `size`, in dp, for this `PanelArea` in the
+    /// split-direction of its parent `PanelArea`.
+    ///
+    /// This function has no effect if `parentArea()` is null or is not of
+    /// type `HorizontalSplit` or `VerticalSplit`.
+    ///
+    /// Note that due to min/max sizes provided via style sheets and stretch
+    /// policies, the actual `Widget::size()` resulting from calling this
+    /// function may not be equal to the given `size`.
+    ///
+    /// Calling this function typically also modifies the size of the sibling
+    /// after this panel area, but does not modify the size of the sibling before
+    /// this panel area.
+    ///
+    void setSplitSize(float size);
+
     /// Returns the `TabBar` of this `PanelArea`. Return `nullptr` if this
     /// area is not of type `Tabs`.
     ///

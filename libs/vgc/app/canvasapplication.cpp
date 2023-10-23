@@ -741,6 +741,11 @@ ui::PanelArea* CanvasApplication::getOrCreateLeftPanelArea_() {
 
         // Move it as first child (i.e., at the left) of the main panel area
         mainPanelArea_->insertChild(mainPanelArea_->firstChild(), leftPanelArea_.get());
+
+        // Set an appropriate size.
+        // Note: This given size will be automatically increased to satisfy min-size.
+        // TODO: Use a system to remember the last-used size.
+        leftPanelArea_->setSplitSize(100);
     }
     return leftPanelArea_.get();
 }
