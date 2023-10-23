@@ -205,10 +205,12 @@ private:
     //                       Panels
 
     ui::PanelManagerPtr panelManager_;
+    ui::PanelAreaPtr mainPanelArea_;
     ui::PanelAreaPtr leftPanelArea_;
 
     void registerPanelTypes_();
     void createDefaultPanels_();
+    ui::PanelArea* getOrCreateLeftPanelArea_();
     void onActionOpenPanel_(ui::PanelTypeId id);
 
     // Canvas

@@ -702,17 +702,15 @@ void CanvasApplication::createDefaultPanels_() {
 
     using detail::createPanelWithPadding;
 
-    // Create panel areas
-    ui::PanelArea* mainArea = window_->mainWidget()->panelArea();
-    mainArea->setType(ui::PanelAreaType::HorizontalSplit);
-    leftPanelArea_ = ui::PanelArea::createVerticalSplit(mainArea);
-    leftPanelArea_->addStyleClass(s_left_sidebar);
-    ui::PanelArea* middleArea = ui::PanelArea::createTabs(mainArea);
+    // Create main panel area
+    mainPanelArea_ = window_->mainWidget()->panelArea();
+    mainPanelArea_->setType(ui::PanelAreaType::HorizontalSplit);
 
-    // Create Canvas
-    ui::Panel* middlePanel = middleArea->createPanel<ui::Panel>("Canvas");
-    middleArea->tabBar()->hide();
-    createCanvas_(middlePanel, workspace_.get());
+    // Create Canvas (both the panel and the canvas itself)
+    ui::PanelArea* canvasArea = ui::PanelArea::createTabs(mainPanelArea_.get());
+    ui::Panel* canvasPanel = canvasArea->createPanel<ui::Panel>("Canvas");
+    canvasArea->tabBar()->hide();
+    createCanvas_(canvasPanel, workspace_.get());
 
     // Create and populate the ToolManager.
     //
@@ -729,17 +727,36 @@ void CanvasApplication::createDefaultPanels_() {
     onActionOpenPanel_(paneltypes_::colorPalette);
 }
 
+ui::PanelArea* CanvasApplication::getOrCreateLeftPanelArea_() {
+
+    if (!mainPanelArea_) {
+        return nullptr;
+    }
+
+    if (!leftPanelArea_) {
+
+        // Create panel
+        leftPanelArea_ = ui::PanelArea::createVerticalSplit(mainPanelArea_.get());
+        leftPanelArea_->addStyleClass(s_left_sidebar);
+
+        // Move it as first child (i.e., at the left) of the main panel area
+        mainPanelArea_->insertChild(mainPanelArea_->firstChild(), leftPanelArea_.get());
+    }
+    return leftPanelArea_.get();
+}
+
 void CanvasApplication::onActionOpenPanel_(ui::PanelTypeId id) {
 
     if (!panelManager_ || !panelManager_->isRegistered(id)) {
         return;
     }
 
-    if (!leftPanelArea_) {
+    ui::PanelArea* leftPanelArea = getOrCreateLeftPanelArea_();
+    if (!leftPanelArea) {
         return;
     }
 
-    ui::PanelArea* tabs = ui::PanelArea::createTabs(leftPanelArea_.get());
+    ui::PanelArea* tabs = ui::PanelArea::createTabs(leftPanelArea);
     panelManager_->createPanelInstance(id, tabs);
 }
 
