@@ -752,7 +752,23 @@ ui::PanelArea* CanvasApplication::getOrCreateLeftPanelArea_() {
 
 void CanvasApplication::onActionOpenPanel_(ui::PanelTypeId id) {
 
+    // No possible action to do if there is no panel manager or the panel type is unknown.
+    //
     if (!panelManager_ || !panelManager_->isRegistered(id)) {
+        return;
+    }
+
+    // Prevent creating several instances of the same panel type when using the
+    // Panels menu. This is not a technical limitation but a UX decision: the
+    // panels are in fact implemented in a way that supports multiple instances
+    // of the same panel type, and in the future we want to allow users to
+    // create such multiple instances via a "+" menu in a panel area.
+    //
+    // For testing that multiple panels do indeed work, set the variable to
+    // true.
+    //
+    constexpr bool allowMultipleInstances = false;
+    if (!allowMultipleInstances && panelManager_->hasInstance(id)) {
         return;
     }
 
