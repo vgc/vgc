@@ -447,7 +447,7 @@ public:
 
     /// Returns whether there is a selected color.
     ///
-    Int hasSelectedColor() const {
+    bool hasSelectedColor() const {
         return selectedColorIndex_ != -1;
     }
 
