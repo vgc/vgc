@@ -27,8 +27,20 @@ namespace vgc::ui {
 /// \brief The type of a PanelArea
 ///
 enum class PanelAreaType : UInt8 {
+
+    /// Splits the horizontal direction into several `PanelArea` (side by side
+    /// areas). This is similar to a `Row` flex layout.
+    ///
     HorizontalSplit = 0,
+
+    /// Splits the vertical direction into several `PanelArea` (vertically
+    /// stacked areas). This is similar to a `Column` flex layout.
+    ///
     VerticalSplit = 1,
+
+    /// Switches between `Panel` instances sharing the same `PanelArea` via
+    /// tabs.
+    ///
     Tabs = 2
 };
 
@@ -257,6 +269,9 @@ protected:
     bool onMousePress(MousePressEvent* event) override;
     bool onMouseRelease(MouseReleaseEvent* event) override;
     void onResize() override;
+    float preferredWidthForHeight(float height) const override;
+    float preferredHeightForWidth(float width) const override;
+    geometry::Vec2f computePreferredSize() const override;
     void updateChildrenGeometry() override;
     void onPaintCreate(graphics::Engine* engine) override;
     void onPaintDraw(graphics::Engine* engine, PaintOptions options) override;

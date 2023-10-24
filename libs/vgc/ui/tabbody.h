@@ -49,6 +49,7 @@ public:
 
 protected:
     // Reimplementation of Widget protected virtual methods
+    geometry::Vec2f computePreferredSize() const override;
     void updateChildrenGeometry() override;
     void onWidgetAdded(Widget* child, bool wasOnlyReordered) override;
 };

@@ -38,6 +38,7 @@
 
 .PanelArea > .Flex > .TabBar {
     vertical-stretch: 0;
+    vertical-shrink: 0;
     preferred-height: 20dp;
 }
 
@@ -480,21 +481,30 @@
  *                                 TOOLS PANEL
 */
 
-/* XXX Hard-coded min-height for now.
- * TODO: Implement non-stretchable vs stretchable Panels.
- *       The Tools Panel should probably be non-stretchable, so that its size
- *       is automatically computed from the number of tool buttons inside it.
+/* For now, `.tools` and `.tools-options` refers to the PanelArea, since we do
+ * not have enough machinery implemented to get the desired result by only
+ * styling the Panel.
  *
- * For now, .tools-options refers to the PanelArea, since we want to set a
- * min/max height for the PanelArea. However, in case of other sibling tabs to
- * the Tool Options panel, it doesn't make sense. So in the future, we'll have
- * .tool-options be a style class applied to the Panel, and the PanelArea
- * should be smart enough to infer appropriate min/max/preferred sizes based on
- * the min/max/preferred sizes of its tabs.
+ * In the future, we'll want these to be style classes applied to the Panel
+ * itself rather than the PanelArea, and the PanelArea should be smart enough
+ * to infer appropriate min/max/preferred sizes based on the min/max/preferred
+ * sizes of its child Panels.
+ *
+ * However, this is not completely trivial: how to specify whether Panels are
+ * stretchable or not, and how the ancestor PanelAreas should react to change
+ * in preferred size of their contained Panels? For example, when switching
+ * tools, should the parent PanelArea of the 'Tool Options' Panel be
+ * automatically increased if the preferred size of the Panel increases? What
+ * if the preferred size of the Panel decreases: should we decrease the size of
+ * its parent PanelArea to give more space to other PanelAreas? Or keep the
+ * size unchanged to anticipate switching tools again and avoid having
+ * PanelAreas move too much? Should this depend on whether sibling PanelAreas
+ * already have extra space allocated to them?
  */
+
+/* Give all the extra space to 'Tool Options' and 'Colors' rather than 'Tools' */
 .tools {
     vertical-stretch: 0;
-    min-height: 70dp;
 }
 
 .tools .Panel > .Flex {
@@ -549,11 +559,6 @@
     horizontal-shrink: 1;
     vertical-stretch: 1;
     vertical-shrink: 1;
-}
-
-.tool-options {
-    vertical-stretch: 0;
-    min-height: 160dp;
 }
 
 .tool-options .Panel > .Flex {

@@ -17,6 +17,7 @@
 #include <vgc/ui/panelmanager.h>
 
 #include <vgc/ui/panel.h>
+#include <vgc/ui/panelarea.h>
 
 namespace vgc::ui {
 
@@ -87,6 +88,17 @@ std::string_view PanelManager::label(PanelTypeId id) const {
 Panel* PanelManager::createPanelInstance(PanelTypeId id, PanelArea* parent) {
     detail::PanelTypeInfo& info = getInfo_(infos_, id);
     Panel* panel = info.factory_(parent);
+    if (parent) {
+        // Preferred size for the PanelArea containing the panel, including
+        // both the TabBar and the TabBody.
+        // TODO: use preferredWidthForHeight() and vice-versa?
+        PanelArea* grandParent = parent->parentArea();
+        if (grandParent && grandParent->isSplit()) {
+            Int mainDir = grandParent->type() == PanelAreaType::HorizontalSplit ? 0 : 1;
+            geometry::Vec2f preferredSize = parent->preferredSize();
+            parent->setSplitSize(preferredSize[mainDir]);
+        }
+    }
     info.instances_.append(panel);
     panel->aboutToBeDestroyed().connect(onPanelInstanceAboutToBeDestroyed_Slot());
     instanceToId_[panel] = id;

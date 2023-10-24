@@ -21,6 +21,7 @@
 #include <vgc/style/parse.h>
 #include <vgc/ui/column.h>
 #include <vgc/ui/cursor.h>
+#include <vgc/ui/flex.h>
 #include <vgc/ui/logcategories.h>
 #include <vgc/ui/strings.h>
 #include <vgc/ui/tabbar.h>
@@ -557,6 +558,24 @@ bool PanelArea::onMouseRelease(MouseReleaseEvent* event) {
 void PanelArea::onResize() {
     SuperClass::onResize();
 }
+
+// Note: when type() == Tabs, it doesn't matter if `isRow` is true or false
+// since there is only one child widget so it would return the same value.
+
+float PanelArea::preferredWidthForHeight(float height) const {
+    bool isRow = (type() != PanelAreaType::VerticalSplit);
+    return detail::computeFlexPreferredWidthForHeight(this, isRow, height);
+}
+
+float PanelArea::preferredHeightForWidth(float width) const {
+    bool isRow = (type() != PanelAreaType::VerticalSplit);
+    return detail::computeFlexPreferredHeightForWidth(this, isRow, width);
+}
+
+geometry::Vec2f PanelArea::computePreferredSize() const {
+    bool isRow = (type() != PanelAreaType::VerticalSplit);
+    return detail::computeFlexPreferredSize(this, isRow);
+};
 
 void PanelArea::updateChildrenGeometry() {
 

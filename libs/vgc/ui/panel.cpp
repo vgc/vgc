@@ -16,6 +16,7 @@
 
 #include <vgc/ui/panel.h>
 
+#include <vgc/ui/preferredsizecalculator.h>
 #include <vgc/ui/strings.h>
 
 namespace vgc::ui {
@@ -99,13 +100,13 @@ void Panel::onWidgetRemoved(Widget*) {
 }
 
 geometry::Vec2f Panel::computePreferredSize() const {
-    Widget* body_ = body();
-    if (body_) {
-        return body_->preferredSize();
+    PreferredSizeCalculator calc(this);
+    Widget* body = this->body();
+    if (body) {
+        calc.add(body->preferredSize());
     }
-    else {
-        return geometry::Vec2f();
-    }
+    calc.addPaddingAndBorder();
+    return calc.compute();
 }
 
 void Panel::updateChildrenGeometry() {

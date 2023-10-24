@@ -371,6 +371,21 @@ private:
     core::Array<detail::FlexChildSlack> childSlacks_; // visible children only
 };
 
+namespace detail {
+
+// Helper methods for flex-like widgets.
+
+VGC_UI_API
+float computeFlexPreferredWidthForHeight(const Widget* widget, bool isRow, float height);
+
+VGC_UI_API
+float computeFlexPreferredHeightForWidth(const Widget* widget, bool isRow, float width);
+
+VGC_UI_API
+geometry::Vec2f computeFlexPreferredSize(const Widget* widget, bool isRow);
+
+} // namespace detail
+
 } // namespace vgc::ui
 
 #endif // VGC_UI_FLEX_H

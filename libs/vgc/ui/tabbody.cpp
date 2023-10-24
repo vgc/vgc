@@ -16,6 +16,8 @@
 
 #include <vgc/ui/tabbody.h>
 
+#include <vgc/ui/preferredsizecalculator.h>
+
 namespace vgc::ui {
 
 TabBody::TabBody(CreateKey key)
@@ -28,10 +30,28 @@ TabBodyPtr TabBody::create() {
     return core::createObject<TabBody>();
 }
 
+geometry::Vec2f TabBody::computePreferredSize() const {
+
+    // For now, we use the preferredSize() of the active widget. It is unclear
+    // whether using the max preferredSize() of all tabs is a better choice: on
+    // the one hand, it would make sense since it anticipates switching tabs
+    // without affecting the layout; on the other hand, it would be wasteful
+    // for the TabBody to be excessively large just because one rarely-used tab
+    // is large.
+    //
+    PreferredSizeCalculator calc(this);
+    Widget* activeWidget = this->activeWidget();
+    if (activeWidget) {
+        calc.add(activeWidget->preferredSize());
+    }
+    calc.addPaddingAndBorder();
+    return calc.compute();
+}
+
 void TabBody::updateChildrenGeometry() {
-    Widget* activeWidget_ = activeWidget();
-    if (activeWidget_) {
-        activeWidget_->updateGeometry(contentRect());
+    Widget* activeWidget = this->activeWidget();
+    if (activeWidget) {
+        activeWidget->updateGeometry(contentRect());
     }
 }
 
