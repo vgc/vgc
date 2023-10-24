@@ -21,6 +21,7 @@
 #include <QStandardPaths>
 
 #include <vgc/app/logcategories.h>
+#include <vgc/canvas/tooloptionspanel.h>
 #include <vgc/core/datetime.h>
 #include <vgc/dom/strings.h>
 #include <vgc/tools/paintbucket.h>
@@ -37,6 +38,16 @@ namespace vgc::app {
 
 namespace {
 
+const core::Color initialColor(0.416f, 0.416f, 0.918f);
+
+namespace paneltypes_ {
+
+ui::PanelTypeId tools("vgc.common.tools");
+ui::PanelTypeId toolOptions("vgc.common.toolOptions");
+ui::PanelTypeId colorPalette("vgc.common.colorPalette");
+
+} // namespace paneltypes_
+
 core::StringId s_left_sidebar("left-sidebar");
 core::StringId s_with_padding("with-padding");
 core::StringId s_user("user");
@@ -45,20 +56,6 @@ core::StringId s_colorpaletteitem("colorpaletteitem");
 core::StringId s_color("color");
 core::StringId s_tools("tools");
 core::StringId s_tool_options("tool-options");
-
-void loadColorPalette_(
-    tools::ColorPalette* palette,
-    const core::Array<core::Color>& colors) {
-
-    if (!palette) {
-        return;
-    }
-    tools::ColorListView* listView = palette->colorListView();
-    if (!listView) {
-        return;
-    }
-    listView->setColors(colors);
-}
 
 core::Array<core::Color> getColorPalette_(dom::Document* doc) {
 
@@ -90,18 +87,9 @@ public:
     ColorPaletteSaver(const ColorPaletteSaver&) = delete;
     ColorPaletteSaver& operator=(const ColorPaletteSaver&) = delete;
 
-    ColorPaletteSaver(tools::ColorPalette* palette, dom::Document* doc)
+    ColorPaletteSaver(const core::Array<core::Color>& colors, dom::Document* doc)
         : isUndoOpened_(false)
         , doc_(doc) {
-
-        if (!palette) {
-            return;
-        }
-
-        tools::ColorListView* listView = palette->colorListView();
-        if (!listView) {
-            return;
-        }
 
         // The current implementation adds the colors to the DOM now, save, then
         // abort the "add color" operation so that it doesn't appear as an undo.
@@ -123,8 +111,7 @@ public:
         dom::Element* root = doc->rootElement();
         dom::Element* user = dom::Element::create(root, s_user);
         dom::Element* colorpalette = dom::Element::create(user, s_colorpalette);
-        for (Int i = 0; i < listView->numColors(); ++i) {
-            const core::Color& color = listView->colorAt(i);
+        for (const core::Color& color : colors) {
             dom::Element* item = dom::Element::create(colorpalette, s_colorpaletteitem);
             item->setAttribute(s_color, color);
         }
@@ -149,7 +136,7 @@ private:
 namespace detail {
 
 ui::Panel* createPanelWithPadding(ui::PanelArea* panelArea, std::string_view panelTitle) {
-    ui::Panel* panel = panelArea->createPanel(panelTitle);
+    ui::Panel* panel = panelArea->createPanel<ui::Panel>(panelTitle);
     panel->addStyleClass(s_with_padding);
     return panel;
 }
@@ -167,10 +154,14 @@ CanvasApplication::CanvasApplication(
     setApplicationName(applicationName);
     window_ = app::MainWindow::create(applicationName);
     window_->setBackgroundPainted(false);
+
     openDocument_("");
     createActions_(window_->mainWidget());
     createMenus_();
-    createWidgets_();
+    registerPanelTypes_();
+    createDefaultPanels_();
+
+    setCurrentColor_(initialColor);
 }
 
 CanvasApplicationPtr
@@ -338,8 +329,8 @@ void CanvasApplication::openDocument_(QString filename) {
             QMessageBox::critical(nullptr, "Error Opening File", e.what());
         }
     }
+    setDocumentColorPalette_(colors);
 
-    loadColorPalette_(palette_, colors);
     workspace_ = workspace::Workspace::create(newDocument);
     document_ = newDocument.get();
     filename_ = filename;
@@ -494,7 +485,7 @@ void CanvasApplication::doSaveAs_() {
 
 void CanvasApplication::doSave_() {
     try {
-        ColorPaletteSaver saver(palette_, document_);
+        ColorPaletteSaver saver(documentColorPalette(), document_);
         document_->save(ui::fromQt(filename_));
     }
     catch (const dom::FileError& e) {
@@ -592,6 +583,13 @@ VGC_UI_DEFINE_WINDOW_COMMAND(
     "Debug Widget Style",
     Shortcut(ctrl | shift, Key::W))
 
+// TODO: one command per panel with specific shortcut?
+VGC_UI_DEFINE_WINDOW_COMMAND( //
+    openPanel,
+    "panels.openPanel",
+    "Open Panel",
+    Shortcut())
+
 } // namespace commands
 
 template<typename TSlot>
@@ -645,35 +643,142 @@ void CanvasApplication::createMenus_() {
     editMenu->addItem(actionCut_);
     editMenu->addItem(actionCopy_);
     editMenu->addItem(actionPaste_);
+
+    panelsMenu_ = menuBar->createSubMenu("Panels");
 }
 
-void CanvasApplication::createWidgets_() {
+void CanvasApplication::registerPanelTypes_() {
+
+    panelManager_ = ui::PanelManager::create();
+
+    // Tools
+    std::string_view toolsLabel = "Tools";
+    panelManager_->registerPanelType(
+        paneltypes_::tools, toolsLabel, [=](ui::PanelArea* parent) {
+            ui::Panel* panel = this->toolManager_->createToolsPanel(parent);
+            panel->addStyleClass(s_with_padding);
+            parent->addStyleClass(s_tools); // XXX Why not on the panel itself?
+            return panel;
+        });
+
+    // Tool Options
+    panelManager_->registerPanelType(
+        paneltypes_::toolOptions,
+        canvas::ToolOptionsPanel::label,
+        [=](ui::PanelArea* parent) {
+            canvas::ToolOptionsPanel* panel =
+                parent->createPanel<canvas::ToolOptionsPanel>(this->toolManager_.get());
+            panel->addStyleClass(s_with_padding);
+            parent->addStyleClass(s_tool_options); // XXX Why not on the panel itself?
+            return panel;
+        });
+
+    // Colors
+    std::string_view colorPaletteLabel = "Colors";
+    panelManager_->registerPanelType(
+        paneltypes_::colorPalette, colorPaletteLabel, [=](ui::PanelArea* parent) {
+            ui::Panel* panel = detail::createPanelWithPadding(parent, colorPaletteLabel);
+            tools::ColorPalette* palette = panel->createChild<tools::ColorPalette>();
+            palette->setSelectedColor(this->currentColor());
+            palette->setColors(this->documentColorPalette());
+            palette->colorSelected().connect(this->setCurrentColor_Slot());
+            palette->colorsChanged().connect(this->setDocumentColorPalette_Slot());
+            this->currentColorChanged_().connect(palette->setSelectedColorSlot());
+            this->documentColorPaletteChanged_().connect(palette->setColorsSlot());
+            return panel;
+        });
+
+    // Populate Panels menu
+    ui::Widget* actionParent = window_->mainWidget();
+    for (ui::PanelTypeId id : panelManager_->registeredPanelTypeIds()) {
+        ui::Action* action = actionParent->createTriggerAction(commands::openPanel());
+        action->triggered().connect([=]() { this->onActionOpenPanel_(id); });
+        action->setText(panelManager_->label(id));
+        panelsMenu_->addItem(action);
+    }
+}
+
+void CanvasApplication::createDefaultPanels_() {
 
     using detail::createPanelWithPadding;
 
-    // Create panel areas
-    ui::PanelArea* mainArea = window_->mainWidget()->panelArea();
-    mainArea->setType(ui::PanelAreaType::HorizontalSplit);
-    ui::PanelArea* leftArea = ui::PanelArea::createVerticalSplit(mainArea);
-    ui::PanelArea* leftArea1 = ui::PanelArea::createTabs(leftArea);
-    ui::PanelArea* leftArea2 = ui::PanelArea::createTabs(leftArea);
-    ui::PanelArea* leftArea3 = ui::PanelArea::createTabs(leftArea);
-    leftArea->addStyleClass(s_left_sidebar);
-    leftArea1->addStyleClass(s_tools);
-    leftArea2->addStyleClass(s_tool_options);
-    ui::PanelArea* middleArea = ui::PanelArea::createTabs(mainArea);
+    // Create main panel area
+    mainPanelArea_ = window_->mainWidget()->panelArea();
+    mainPanelArea_->setType(ui::PanelAreaType::HorizontalSplit);
 
-    // Create panels
-    ui::Panel* leftPanel1 = createPanelWithPadding(leftArea1, "Tools");
-    toolOptionsPanel_ = createPanelWithPadding(leftArea2, "Tool Options");
-    ui::Panel* leftPanel3 = createPanelWithPadding(leftArea3, "Colors");
-    ui::Panel* middlePanel = middleArea->createPanel("Canvas");
-    middleArea->tabBar()->hide();
+    // Create Canvas (both the panel and the canvas itself)
+    ui::PanelArea* canvasArea = ui::PanelArea::createTabs(mainPanelArea_.get());
+    ui::Panel* canvasPanel = canvasArea->createPanel<ui::Panel>("Canvas");
+    canvasArea->tabBar()->hide();
+    createCanvas_(canvasPanel, workspace_.get());
 
-    // Create widgets inside panels
-    createCanvas_(middlePanel, workspace_.get());
-    createTools_(leftPanel1);
-    createColorPalette_(leftPanel3);
+    // Create and populate the ToolManager.
+    //
+    // Note: for now, this requires the `canvas_` to already be created. See comment in
+    // ToolManager for better design (not have ToolManager depend on a Canvas instance).
+    // Once the better design is implemented, this function would be better called before
+    // createDefaultPanels_().
+    //
+    createTools_();
+
+    // Create other panels
+    onActionOpenPanel_(paneltypes_::tools);
+    onActionOpenPanel_(paneltypes_::toolOptions);
+    onActionOpenPanel_(paneltypes_::colorPalette);
+}
+
+ui::PanelArea* CanvasApplication::getOrCreateLeftPanelArea_() {
+
+    if (!mainPanelArea_) {
+        return nullptr;
+    }
+
+    if (!leftPanelArea_) {
+
+        // Create panel
+        leftPanelArea_ = ui::PanelArea::createVerticalSplit(mainPanelArea_.get());
+        leftPanelArea_->addStyleClass(s_left_sidebar);
+
+        // Move it as first child (i.e., at the left) of the main panel area
+        mainPanelArea_->insertChild(mainPanelArea_->firstChild(), leftPanelArea_.get());
+
+        // Set an appropriate size.
+        // Note: This given size will be automatically increased to satisfy min-size.
+        // TODO: Use a system to remember the last-used size.
+        leftPanelArea_->setSplitSize(100);
+    }
+    return leftPanelArea_.get();
+}
+
+void CanvasApplication::onActionOpenPanel_(ui::PanelTypeId id) {
+
+    // No possible action to do if there is no panel manager or the panel type is unknown.
+    //
+    if (!panelManager_ || !panelManager_->isRegistered(id)) {
+        return;
+    }
+
+    // Prevent creating several instances of the same panel type when using the
+    // Panels menu. This is not a technical limitation but a UX decision: the
+    // panels are in fact implemented in a way that supports multiple instances
+    // of the same panel type, and in the future we want to allow users to
+    // create such multiple instances via a "+" menu in a panel area.
+    //
+    // For testing that multiple panels do indeed work, set the variable to
+    // true.
+    //
+    constexpr bool allowMultipleInstances = false;
+    if (!allowMultipleInstances && panelManager_->hasInstance(id)) {
+        return;
+    }
+
+    ui::PanelArea* leftPanelArea = getOrCreateLeftPanelArea_();
+    if (!leftPanelArea) {
+        return;
+    }
+
+    ui::PanelArea* tabs = ui::PanelArea::createTabs(leftPanelArea);
+    panelManager_->createPanelInstance(id, tabs);
 }
 
 void CanvasApplication::createCanvas_(
@@ -723,105 +828,59 @@ VGC_UI_DEFINE_WINDOW_COMMAND( //
 
 } // namespace
 
-void CanvasApplication::createTools_(ui::Widget* parent) {
+void CanvasApplication::createTools_() {
 
-    // Create action group ensuring only one tool is active at a time
-    toolsActionGroup_ = ui::ActionGroup::create(ui::CheckPolicy::ExactlyOne);
+    // Create the tool manager
+    ui::Widget* actionOwner = mainWidget();
+    toolManager_ = canvas::ToolManager::create(canvas_, actionOwner);
 
     // Create and register all tools
-    ui::Row* tools = parent->createChild<ui::Row>();
+    // TODO: add CanvasTool::command() and use a createAndRegisterTool() helper
+    //       to only have half the number of lines here.
     tools::SelectPtr selectTool = tools::Select::create();
     tools::SketchPtr sketchTool = tools::Sketch::create();
     tools::PaintBucketPtr paintBucketTool = tools::PaintBucket::create();
     tools::SculptPtr sculptTool = tools::Sculpt::create();
-    registerTool_(tools, commands::selectTool(), selectTool);
-    registerTool_(tools, commands::sketchTool(), sketchTool);
-    registerTool_(tools, commands::paintBucketTool(), paintBucketTool);
-    registerTool_(tools, commands::sculptTool(), sculptTool);
+    toolManager_->registerTool(commands::selectTool(), selectTool);
+    toolManager_->registerTool(commands::sketchTool(), sketchTool);
+    toolManager_->registerTool(commands::paintBucketTool(), paintBucketTool);
+    toolManager_->registerTool(commands::sculptTool(), sculptTool);
 
     // Keep pointer to some tools for handling color changes
     sketchTool_ = sketchTool.get();
     paintBucketTool_ = paintBucketTool.get();
-
-    // Set the sketch tool as default tool
-    setCurrentTool_(sketchTool_);
 }
 
-void CanvasApplication::registerTool_(
-    ui::Widget* parent,
-    core::StringId commandId,
-    canvas::CanvasToolPtr tool) {
+void CanvasApplication::setCurrentColor_(const core::Color& color) {
 
-    // Create tool action and add it to the action group
-    ui::Action* action = parent->createTriggerAction(commandId);
-    action->setCheckable(true);
-    action->checkStateChanged().connect(onToolCheckStateChangedSlot_());
-    toolsActionGroup_->addAction(action);
-
-    // Keeps the CanvasTool alive by storing it as an ObjPtr and
-    // remembers which CanvasTool corresponds to which tool action.
-    toolMap_[action] = tool;
-    toolMapInv_[tool.get()] = action;
-
-    // Create corresponding button in the Tools panel
-    auto button = parent->createChild<ui::Button>(action);
-    button->setIconVisible(true);
-    button->setTextVisible(false);
-}
-
-void CanvasApplication::setCurrentTool_(canvas::CanvasTool* canvasTool) {
-    if (canvasTool != currentTool_) {
-        bool hadFocusedWidget = false;
-        if (currentTool_) {
-            hadFocusedWidget = currentTool_->hasFocusedWidget();
-            currentTool_->clearFocus(ui::FocusReason::Other);
-            currentTool_->reparent(nullptr);
-            currentTool_->optionsWidget()->reparent(nullptr);
-        }
-        currentTool_ = canvasTool;
-        if (currentTool_) {
-            canvas_->addChild(canvasTool);
-            if (toolOptionsPanel_) {
-                toolOptionsPanel_->addChild(currentTool_->optionsWidget());
-            }
-            if (hadFocusedWidget) {
-                currentTool_->setFocus(ui::FocusReason::Other);
-                // TODO: it would be even better to remember, for each tool,
-                // which of its descendants was the focused widget and restore
-                // this specific descendant as focused widget.
-            }
-            toolMapInv_[canvasTool]->setChecked(true);
-        }
+    // Set data member
+    if (currentColor() == color) {
+        return;
     }
-}
+    currentColor_ = color;
 
-void CanvasApplication::onToolCheckStateChanged_(
-    ui::Action* toolAction,
-    ui::CheckState checkState) {
-
-    if (checkState == ui::CheckState::Checked) {
-        canvas::CanvasTool* canvasTool = toolMap_[toolAction].get();
-        setCurrentTool_(canvasTool);
+    // Update colors of other widgets / tools
+    if (sketchTool_) {
+        sketchTool_->setPenColor(currentColor());
     }
-}
-
-void CanvasApplication::createColorPalette_(ui::Widget* parent) {
-    palette_ = parent->createChild<tools::ColorPalette>();
-    palette_->colorSelected().connect(onColorChangedSlot_());
-    onColorChanged_();
-}
-
-void CanvasApplication::onColorChanged_() {
-    // TODO: system for all tools to share a global "current tool color".
-    if (palette_) {
-        core::Color color = palette_->selectedColor();
-        if (sketchTool_) {
-            sketchTool_->setPenColor(color);
-        }
-        if (paintBucketTool_) {
-            paintBucketTool_->setColor(color);
-        }
+    if (paintBucketTool_) {
+        paintBucketTool_->setColor(currentColor());
     }
+
+    // Emit
+    currentColorChanged_().emit(currentColor());
+}
+
+void CanvasApplication::setDocumentColorPalette_(const core::Array<core::Color>& colors) {
+
+    // Set data member
+    if (documentColorPalette_ == colors) {
+        return;
+    }
+    documentColorPalette_ = colors;
+
+    // Emit
+    documentColorPaletteChanged_().emit(documentColorPalette());
 }
 
 namespace {

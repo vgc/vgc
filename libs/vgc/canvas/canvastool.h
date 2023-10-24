@@ -63,20 +63,16 @@ public:
     ///
     VGC_SIGNAL(canvasChanged)
 
-    /// Returns the widget that control options for this tool.
+    /// Creates a widget that control options for this tool.
     ///
-    /// \sa createOptionsWidget().
+    /// \sa `doCreateOptionsWidget()`.
     ///
-    ui::Widget* optionsWidget() const;
+    ui::WidgetPtr createOptionsWidget() const;
 
 protected:
-    /// Creates the widget that control options for this tool.
+    /// Virtual implementation for `createOptionsWidget()`.
     ///
-    /// This will be called automatically.
-    ///
-    /// \sa `optionsWidget()`.
-    ///
-    virtual ui::WidgetPtr createOptionsWidget() const;
+    virtual ui::WidgetPtr doCreateOptionsWidget() const;
 
     // Reimplementation of Widget virtual methods
     void onParentWidgetChanged(ui::Widget* newParent) override;
@@ -87,8 +83,6 @@ protected:
 
 private:
     Canvas* canvas_ = nullptr;
-
-    mutable ui::WidgetPtr optionsWidget_;
 
     // Make sure to disallow concurrent usage of the mouse and the tablet to
     // avoid conflicts. This also acts as a work around the following Qt bugs:

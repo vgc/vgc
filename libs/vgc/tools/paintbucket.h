@@ -59,7 +59,7 @@ public:
 
 protected:
     // Reimplementation of CanvasTool virtual methods
-    ui::WidgetPtr createOptionsWidget() const override;
+    ui::WidgetPtr doCreateOptionsWidget() const override;
 
     // Reimplementation of Widget virtual methods
     void onMouseHover(ui::MouseHoverEvent* event) override;

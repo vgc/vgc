@@ -23,6 +23,8 @@
 #include <vgc/app/mainwindow.h>
 #include <vgc/app/qtwidgetsapplication.h>
 #include <vgc/canvas/canvas.h>
+#include <vgc/canvas/toolmanager.h>
+#include <vgc/core/colors.h>
 #include <vgc/dom/document.h>
 #include <vgc/tools/colorpalette.h>
 #include <vgc/tools/paintbucket.h>
@@ -32,6 +34,7 @@
 #include <vgc/ui/menu.h>
 #include <vgc/ui/panel.h>
 #include <vgc/ui/panelarea.h>
+#include <vgc/ui/panelmanager.h>
 #include <vgc/workspace/workspace.h>
 
 namespace vgc::app {
@@ -108,15 +111,21 @@ public:
         return document_;
     }
 
-    /// Returns the current `CanvasTool`.
-    ///
-    canvas::CanvasTool* currentTool() const {
-        return currentTool_;
-    }
-
     /// Quits the application.
     ///
     void quit();
+
+    /// Returns the current color.
+    ///
+    const core::Color& currentColor() const {
+        return currentColor_;
+    }
+
+    /// Returns the list of document colors.
+    ///
+    const core::Array<core::Color>& documentColorPalette() const {
+        return documentColorPalette_;
+    }
 
 protected:
     // Reimplementation
@@ -135,6 +144,8 @@ private:
 
     // ------------------------------------------------------------------------
     //                       Document management
+
+    // TODO: Implement DocumentManager encapsulating everything below
 
     dom::Document* document_;
     core::Id lastSavedDocumentVersionId = {};
@@ -188,42 +199,44 @@ private:
     void createActions_(ui::Widget* parent);
     void createMenus_();
 
-    // ------------------------------------------------------------------------
-    //                       Canvas and tools
+    ui::Menu* panelsMenu_;
 
-    void createWidgets_();
+    // ------------------------------------------------------------------------
+    //                       Panels
+
+    ui::PanelManagerPtr panelManager_;
+    ui::PanelAreaPtr mainPanelArea_;
+    ui::PanelAreaPtr leftPanelArea_;
+
+    void registerPanelTypes_();
+    void createDefaultPanels_();
+    ui::PanelArea* getOrCreateLeftPanelArea_();
+    void onActionOpenPanel_(ui::PanelTypeId id);
 
     // Canvas
     canvas::Canvas* canvas_ = nullptr;
-
     void createCanvas_(ui::Widget* parent, workspace::Workspace* workspace);
 
-    // Canvas Tools
-    ui::ActionGroupPtr toolsActionGroup_;
-    std::map<ui::Action*, canvas::CanvasToolPtr> toolMap_;
-    std::map<canvas::CanvasTool*, ui::Action*> toolMapInv_;
-    canvas::CanvasTool* currentTool_ = nullptr;
-    tools::Sketch* sketchTool_ = nullptr;
-    tools::PaintBucket* paintBucketTool_ = nullptr;
-    ui::PanelPtr toolOptionsPanel_;
+    // Tools
+    canvas::ToolManagerPtr toolManager_;
+    tools::Sketch* sketchTool_;
+    tools::PaintBucket* paintBucketTool_;
+    void createTools_();
 
-    void createTools_(ui::Widget* parent);
-    void registerTool_( //
-        ui::Widget* parent,
-        core::StringId commandId,
-        canvas::CanvasToolPtr tool);
+    // Colors.
+    //
+    // TODO: Implement ColorManager encapsulating everything below.
+    //
 
-    void setCurrentTool_(canvas::CanvasTool* canvasTool);
+    core::Color currentColor_ = core::colors::black;
+    void setCurrentColor_(const core::Color& color);
+    VGC_SLOT(setCurrentColor_)
+    VGC_SIGNAL(currentColorChanged_, (const core::Color&, color))
 
-    void onToolCheckStateChanged_(ui::Action* toolAction, ui::CheckState checkState);
-    VGC_SLOT(onToolCheckStateChangedSlot_, onToolCheckStateChanged_);
-
-    // Palette
-    tools::ColorPalette* palette_ = nullptr;
-
-    void createColorPalette_(ui::Widget* parent);
-    void onColorChanged_();
-    VGC_SLOT(onColorChangedSlot_, onColorChanged_)
+    core::Array<core::Color> documentColorPalette_;
+    void setDocumentColorPalette_(const core::Array<core::Color>& colors);
+    VGC_SLOT(setDocumentColorPalette_)
+    VGC_SIGNAL(documentColorPaletteChanged_, (const core::Array<core::Color>&, colors))
 
     // ------------------------------------------------------------------------
     //                       Misc

@@ -27,8 +27,20 @@ namespace vgc::ui {
 /// \brief The type of a PanelArea
 ///
 enum class PanelAreaType : UInt8 {
+
+    /// Splits the horizontal direction into several `PanelArea` (side by side
+    /// areas). This is similar to a `Row` flex layout.
+    ///
     HorizontalSplit = 0,
+
+    /// Splits the vertical direction into several `PanelArea` (vertically
+    /// stacked areas). This is similar to a `Column` flex layout.
+    ///
     VerticalSplit = 1,
+
+    /// Switches between `Panel` instances sharing the same `PanelArea` via
+    /// tabs.
+    ///
     Tabs = 2
 };
 
@@ -172,10 +184,23 @@ public:
         return isSplit_(type_);
     }
 
-    /// Adds a `Panel` to this `PanelArea`. A warning is emitted if this
-    /// `PanelArea` is not of type `Tabs`.
+    /// Returns the parent `PanelArea` of this `ParentArea`, if any.
     ///
-    Panel* createPanel(std::string_view panelTitle = "Untitled");
+    PanelArea* parentArea() const;
+
+    /// Adds a `Panel` of type `PanelType` to this `PanelArea`. A warning is
+    /// emitted if this `PanelArea` is not of type `Tabs`.
+    ///
+    template<typename PanelClass, typename... Args>
+    PanelClass* createPanel(Args&&... args) {
+        ui::Widget* parent = preCreatePanel_();
+        if (!parent) {
+            return nullptr;
+        }
+        PanelClass* panel = parent->createChild<PanelClass>(std::forward<Args>(args)...);
+        postCreatePanel_(panel);
+        return panel;
+    }
 
     /// Returns the number of panels in this `PanelArea`.
     ///
@@ -185,6 +210,31 @@ public:
     /// this `PanelArea`.
     ///
     Int numPanels() const;
+
+    /// Returns the current desired `size`, in dp, for this `PanelArea` in the
+    /// split-direction of its parent `PanelArea`.
+    ///
+    /// This function returns the `width()` of this widget, in dp, if
+    /// `parentArea()` is null or is not of type `HorizontalSplit` or
+    /// `VerticalSplit`.
+    ///
+    float splitSize() const;
+
+    /// Sets a desired `size`, in dp, for this `PanelArea` in the
+    /// split-direction of its parent `PanelArea`.
+    ///
+    /// This function has no effect if `parentArea()` is null or is not of
+    /// type `HorizontalSplit` or `VerticalSplit`.
+    ///
+    /// Note that due to min/max sizes provided via style sheets and stretch
+    /// policies, the actual `Widget::size()` resulting from calling this
+    /// function may not be equal to the given `size`.
+    ///
+    /// Calling this function typically also modifies the size of the sibling
+    /// after this panel area, but does not modify the size of the sibling before
+    /// this panel area.
+    ///
+    void setSplitSize(float size);
 
     /// Returns the `TabBar` of this `PanelArea`. Return `nullptr` if this
     /// area is not of type `Tabs`.
@@ -219,6 +269,9 @@ protected:
     bool onMousePress(MousePressEvent* event) override;
     bool onMouseRelease(MouseReleaseEvent* event) override;
     void onResize() override;
+    float preferredWidthForHeight(float height) const override;
+    float preferredHeightForWidth(float width) const override;
+    geometry::Vec2f computePreferredSize() const override;
     void updateChildrenGeometry() override;
     void onPaintCreate(graphics::Engine* engine) override;
     void onPaintDraw(graphics::Engine* engine, PaintOptions options) override;
@@ -261,8 +314,14 @@ private:
     void continueDragging_(const geometry::Vec2f& position);
     void stopDragging_(const geometry::Vec2f& position);
 
+    // Performs non-templated steps during the creation of a Panel.
+    Widget* preCreatePanel_(); // Return Panel's parent, or null if cannot create Panel
+    void postCreatePanel_(Panel* panel);
+
     // Creates / Updates PanelTabs widget when necessary (i.e., when type = Tabs).
     void updateTabs_();
+    void onTabClosed_(Int tabIndex);
+    VGC_SLOT(onTabClosedSlot_, onTabClosed_)
 };
 
 } // namespace vgc::ui

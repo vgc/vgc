@@ -62,22 +62,17 @@ CanvasTool::CanvasTool(CreateKey key)
 
 CanvasToolPtr CanvasTool::create() {
     CanvasToolPtr res = core::createObject<CanvasTool>();
-    res->optionsWidget_ = res->createOptionsWidget();
     return res;
 }
 
-ui::Widget* CanvasTool::optionsWidget() const {
-    if (!optionsWidget_) {
-        // Create options widget if not already created.
-        // Note that we cannot do this in the constructor, since the
-        // virtual method would not call the derived implementation,
-        // which is why we defer creating the options widget until here.
-        optionsWidget_ = createOptionsWidget();
-    }
-    return optionsWidget_.get();
+// This non-virtual method can be useful if we later want to keep a registry of
+// created options widget, we could implement it here.
+//
+ui::WidgetPtr CanvasTool::createOptionsWidget() const {
+    return doCreateOptionsWidget();
 }
 
-ui::WidgetPtr CanvasTool::createOptionsWidget() const {
+ui::WidgetPtr CanvasTool::doCreateOptionsWidget() const {
     return ui::Widget::create();
 }
 

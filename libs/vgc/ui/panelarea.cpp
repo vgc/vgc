@@ -21,6 +21,7 @@
 #include <vgc/style/parse.h>
 #include <vgc/ui/column.h>
 #include <vgc/ui/cursor.h>
+#include <vgc/ui/flex.h>
 #include <vgc/ui/logcategories.h>
 #include <vgc/ui/strings.h>
 #include <vgc/ui/tabbar.h>
@@ -103,16 +104,8 @@ void PanelArea::setType(PanelAreaType newType) {
     requestRepaint();
 }
 
-Panel* PanelArea::createPanel(std::string_view panelTitle) {
-    if (type() != PanelAreaType::Tabs) {
-        VGC_WARNING(
-            LogVgcUi, "Cannot create a Panel in a PanelArea which is not of type Tabs.");
-        return nullptr;
-    }
-    updateTabs_();
-    tabBar()->setText(panelTitle); // TODO: actually use tabs instead of a single Label
-    TabBody* parent = tabBody();   // guaranteed non-null by updateTabs_()
-    return parent->createChild<Panel>(panelTitle);
+PanelArea* PanelArea::parentArea() const {
+    return dynamic_cast<PanelArea*>(parent());
 }
 
 Int PanelArea::numPanels() const {
@@ -125,6 +118,39 @@ Int PanelArea::numPanels() const {
         // Case HorizontalSplit or VerticalSplit
         return numChildren();
     }
+}
+
+float PanelArea::splitSize() const {
+
+    PanelArea* parent = parentArea();
+    if (parent && parent->isSplit()) {
+        for (const SplitData& data : parent->splitData_) {
+            if (data.childArea == this) {
+                return data.preferredSizeInDp;
+            }
+        }
+    }
+
+    float scaleFactor = styleMetrics().scaleFactor();
+    return width() * scaleFactor;
+}
+
+void PanelArea::setSplitSize(float size) {
+
+    PanelArea* parent = parentArea();
+    if (!parent || !parent->isSplit()) {
+        return;
+    }
+
+    for (SplitData& data : parent->splitData_) {
+        if (data.childArea == this) {
+            data.preferredSizeInDp = size;
+            break;
+        }
+    }
+
+    requestGeometryUpdate();
+    requestRepaint();
 }
 
 TabBar* PanelArea::tabBar() const {
@@ -533,6 +559,24 @@ void PanelArea::onResize() {
     SuperClass::onResize();
 }
 
+// Note: when type() == Tabs, it doesn't matter if `isRow` is true or false
+// since there is only one child widget so it would return the same value.
+
+float PanelArea::preferredWidthForHeight(float height) const {
+    bool isRow = (type() != PanelAreaType::VerticalSplit);
+    return detail::computeFlexPreferredWidthForHeight(this, isRow, height);
+}
+
+float PanelArea::preferredHeightForWidth(float width) const {
+    bool isRow = (type() != PanelAreaType::VerticalSplit);
+    return detail::computeFlexPreferredHeightForWidth(this, isRow, width);
+}
+
+geometry::Vec2f PanelArea::computePreferredSize() const {
+    bool isRow = (type() != PanelAreaType::VerticalSplit);
+    return detail::computeFlexPreferredSize(this, isRow);
+};
+
 void PanelArea::updateChildrenGeometry() {
 
     // TODO: supports isVisible, isCollapsed, and padding/gap/border
@@ -863,6 +907,21 @@ void PanelArea::stopDragging_(const geometry::Vec2f& position) {
     updateHoveredSplitHandle_(position);
 }
 
+Widget* PanelArea::preCreatePanel_() {
+    if (type() != PanelAreaType::Tabs) {
+        VGC_WARNING(
+            LogVgcUi, "Cannot create a Panel in a PanelArea which is not of type Tabs.");
+        return nullptr;
+    }
+    TabBody* parent = tabBody(); // guaranteed non-null by updateTabs_()
+    return parent;
+}
+
+void PanelArea::postCreatePanel_(Panel* panel) {
+    updateTabs_();
+    tabBar()->addTab(panel->title());
+}
+
 // post-condition: if type is `Tabs`, the first child exists and is of type "Column",
 // which has at least one child, and the first child is of type "PanelTabs".
 //
@@ -872,12 +931,37 @@ void PanelArea::updateTabs_() {
             // TODO: handle other cases where we should re-build
             //       Column + TabBar + TabBody
             Widget* column = createChild<Column>();
-            column->createChild<TabBar>();
+            TabBar* tabBar = column->createChild<TabBar>();
             column->createChild<TabBody>();
+
+            tabBar->tabClosed().connect(onTabClosedSlot_());
         }
     }
     else {
         // TODO
+    }
+}
+
+namespace {
+
+void destroyAreaAndToBeEmptyAncestorAreas(PanelArea* area) {
+    PanelArea* parent = area->parentArea();
+    if (parent && parent->numPanels() == 1) {
+        destroyAreaAndToBeEmptyAncestorAreas(parent);
+    }
+    else {
+        area->destroy();
+    }
+}
+
+} // namespace
+
+void PanelArea::onTabClosed_(Int tabIndex) {
+    std::ignore = tabIndex;
+    TabBar* tabBar = this->tabBar();
+    Int numRemainingTabs = tabBar ? tabBar->numTabs() : 0;
+    if (numRemainingTabs == 0) {
+        destroyAreaAndToBeEmptyAncestorAreas(this);
     }
 }
 

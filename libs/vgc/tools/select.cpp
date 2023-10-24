@@ -204,7 +204,7 @@ core::Array<core::Id> Select::selection() {
     }
 }
 
-ui::WidgetPtr Select::createOptionsWidget() const {
+ui::WidgetPtr Select::doCreateOptionsWidget() const {
     ui::WidgetPtr res = ui::Column::create();
     res->createChild<ui::BoolSettingEdit>(options::showTransformBox());
     return res;

@@ -376,7 +376,7 @@ public:
 
 protected:
     // Reimplementation of CanvasTool virtual methods
-    ui::WidgetPtr createOptionsWidget() const override;
+    ui::WidgetPtr doCreateOptionsWidget() const override;
 
     // Reimplementation of Widget virtual methods
     bool onKeyPress(ui::KeyPressEvent* event) override;

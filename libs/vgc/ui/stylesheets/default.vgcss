@@ -38,7 +38,24 @@
 
 .PanelArea > .Flex > .TabBar {
     vertical-stretch: 0;
+    vertical-shrink: 0;
     preferred-height: 20dp;
+}
+
+.PanelArea > .Flex > .TabBar .close {
+    preferred-width: 14dp;
+    preferred-height: 14dp;
+    margin-right: 3dp; /* = 0.5 * (tabbar height (20) - button height (14)) */
+}
+
+.PanelArea > .Flex > .TabBar .close .icon {
+    preferred-width: 10dp;
+    preferred-height: 10dp;
+
+    margin-top: 0dp;
+    margin-right: 0dp;
+    margin-bottom: 0dp;
+    margin-left: 0dp;
 }
 
 .Menu {
@@ -334,6 +351,19 @@
     background-color: rgb(55, 57, 59);
 }
 
+.PanelArea > .Flex > .TabBar .close {
+    background-color: rgba(0, 0, 0, 0.0);
+    icon-foreground-color: rgb(150, 150, 150);
+}
+
+.PanelArea > .Flex > .TabBar .close.hovered {
+    icon-foreground-color: rgb(220, 220, 220);
+}
+
+.PanelArea > .Flex > .TabBar .close.pressed {
+    icon-foreground-color: rgb(255, 255, 255);
+}
+
 .Menu,
 .Dialog {
     background-color: rgb(45, 47, 48);
@@ -451,21 +481,30 @@
  *                                 TOOLS PANEL
 */
 
-/* XXX Hard-coded min-height for now.
- * TODO: Implement non-stretchable vs stretchable Panels.
- *       The Tools Panel should probably be non-stretchable, so that its size
- *       is automatically computed from the number of tool buttons inside it.
+/* For now, `.tools` and `.tools-options` refers to the PanelArea, since we do
+ * not have enough machinery implemented to get the desired result by only
+ * styling the Panel.
  *
- * For now, .tools-options refers to the PanelArea, since we want to set a
- * min/max height for the PanelArea. However, in case of other sibling tabs to
- * the Tool Options panel, it doesn't make sense. So in the future, we'll have
- * .tool-options be a style class applied to the Panel, and the PanelArea
- * should be smart enough to infer appropriate min/max/preferred sizes based on
- * the min/max/preferred sizes of its tabs.
+ * In the future, we'll want these to be style classes applied to the Panel
+ * itself rather than the PanelArea, and the PanelArea should be smart enough
+ * to infer appropriate min/max/preferred sizes based on the min/max/preferred
+ * sizes of its child Panels.
+ *
+ * However, this is not completely trivial: how to specify whether Panels are
+ * stretchable or not, and how the ancestor PanelAreas should react to change
+ * in preferred size of their contained Panels? For example, when switching
+ * tools, should the parent PanelArea of the 'Tool Options' Panel be
+ * automatically increased if the preferred size of the Panel increases? What
+ * if the preferred size of the Panel decreases: should we decrease the size of
+ * its parent PanelArea to give more space to other PanelAreas? Or keep the
+ * size unchanged to anticipate switching tools again and avoid having
+ * PanelAreas move too much? Should this depend on whether sibling PanelAreas
+ * already have extra space allocated to them?
  */
+
+/* Give all the extra space to 'Tool Options' and 'Colors' rather than 'Tools' */
 .tools {
     vertical-stretch: 0;
-    min-height: 70dp;
 }
 
 .tools .Panel > .Flex {
@@ -478,7 +517,7 @@
     column-gap: 2dp;
 }
 
-.tools .Button {
+.tools .Panel .Button {
     preferred-height: 32dp;
     preferred-width: 32dp;
     horizontal-stretch: 0;
@@ -487,31 +526,31 @@
     vertical-shrink: 0;
 }
 
-.tools .Button {
+.tools .Panel .Button {
     background-color: rgba(0, 0, 0, 0);
 }
 
-.tools .Button.hovered {
+.tools .Panel .Button.hovered {
     background-color: rgb(110, 114, 118);
 }
 
-.tools .Button.pressed {
+.tools .Panel .Button.pressed {
     background-color: rgb(120, 124, 128);
 }
 
-.tools .Button.checked {
+.tools .Panel .Button.checked {
     background-color: rgb(11, 82, 172);
 }
 
-.tools .Button.checked.hovered {
+.tools .Panel .Button.checked.hovered {
     background-color: rgb(31, 102, 192);
 }
 
-.tools .Button.checked.pressed {
+.tools .Panel .Button.checked.pressed {
     background-color: rgb(41, 112, 202);
 }
 
-.tools .Button > .icon {
+.tools .Panel .Button > .icon {
     margin-top: 8dp;
     margin-right: 8dp;
     margin-bottom: 8dp;
@@ -520,11 +559,6 @@
     horizontal-shrink: 1;
     vertical-stretch: 1;
     vertical-shrink: 1;
-}
-
-.tool-options {
-    vertical-stretch: 0;
-    min-height: 160dp;
 }
 
 .tool-options .Panel > .Flex {

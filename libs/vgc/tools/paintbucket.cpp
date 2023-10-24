@@ -41,7 +41,7 @@ void PaintBucket::setColor(const core::Color& color) {
     }
 }
 
-ui::WidgetPtr PaintBucket::createOptionsWidget() const {
+ui::WidgetPtr PaintBucket::doCreateOptionsWidget() const {
     ui::WidgetPtr res = ui::Column::create();
     return res;
 }

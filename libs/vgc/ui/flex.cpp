@@ -261,16 +261,17 @@ float getGap(bool isRow, const Widget* widget, bool hinting) {
 
 } // namespace
 
-float Flex::preferredWidthForHeight(float height) const {
-    style::LengthOrPercentageOrAuto w = preferredWidth();
+namespace detail {
+
+float computeFlexPreferredWidthForHeight(const Widget* widget, bool isRow, float height) {
+    style::LengthOrPercentageOrAuto w = widget->preferredWidth();
     float width = 0.0f;
     if (w.isAuto()) {
-        bool isRow_ = isRow();
-        if (isRow_) {
-            float flexTopBottomPadding = getTopBottomPadding(this);
+        if (isRow) {
+            float flexTopBottomPadding = getTopBottomPadding(widget);
             float flexPaddedHeight = height - flexTopBottomPadding;
             Int numVisibleChildren = 0;
-            for (Widget* child : children()) {
+            for (Widget* child : widget->children()) {
                 if (child->visibility() == Visibility::Invisible) {
                     continue;
                 }
@@ -284,13 +285,13 @@ float Flex::preferredWidthForHeight(float height) const {
             }
             if (numVisibleChildren > 0) {
                 namespace gs = graphics::strings;
-                bool hinting = (style(gs::pixel_hinting) == gs::normal);
-                float gap = getGap(isRow_, this, hinting);
+                bool hinting = (widget->style(gs::pixel_hinting) == gs::normal);
+                float gap = getGap(isRow, widget, hinting);
                 width += (numVisibleChildren - 1) * gap;
             }
         }
         else {
-            for (Widget* child : children()) {
+            for (Widget* child : widget->children()) {
                 if (child->visibility() == Visibility::Invisible) {
                     continue;
                 }
@@ -299,25 +300,24 @@ float Flex::preferredWidthForHeight(float height) const {
                 width = (std::max)(width, childPreferredWidth + childLeftRightMargins);
             }
         }
-        width += getLeftRightPadding(this);
+        width += getLeftRightPadding(widget);
     }
     else {
         // fixed width
         // TODO: support percentages
         float refLength = 0.0f;
         float valueIfAuto = 0.0f;
-        width = w.toPx(styleMetrics(), refLength, valueIfAuto);
+        width = w.toPx(widget->styleMetrics(), refLength, valueIfAuto);
     }
     return width;
 }
 
-float Flex::preferredHeightForWidth(float width) const {
-    style::LengthOrPercentageOrAuto h = preferredHeight();
+float computeFlexPreferredHeightForWidth(const Widget* widget, bool isRow, float width) {
+    style::LengthOrPercentageOrAuto h = widget->preferredHeight();
     float height = 0.0f;
     if (h.isAuto()) {
-        bool isRow_ = isRow();
-        if (isRow_) {
-            for (Widget* child : children()) {
+        if (isRow) {
+            for (Widget* child : widget->children()) {
                 if (child->visibility() == Visibility::Invisible) {
                     continue;
                 }
@@ -327,10 +327,10 @@ float Flex::preferredHeightForWidth(float width) const {
             }
         }
         else {
-            float flexLeftRightPadding = getLeftRightPadding(this);
+            float flexLeftRightPadding = getLeftRightPadding(widget);
             float flexPaddedWidth = width - flexLeftRightPadding;
             Int numVisibleChildren = 0;
-            for (Widget* child : children()) {
+            for (Widget* child : widget->children()) {
                 if (child->visibility() == Visibility::Invisible) {
                     continue;
                 }
@@ -344,34 +344,35 @@ float Flex::preferredHeightForWidth(float width) const {
             }
             if (numVisibleChildren > 0) {
                 namespace gs = graphics::strings;
-                bool hinting = (style(gs::pixel_hinting) == gs::normal);
-                float gap = getGap(isRow_, this, hinting);
+                bool hinting = (widget->style(gs::pixel_hinting) == gs::normal);
+                float gap = getGap(isRow, widget, hinting);
                 height += (numVisibleChildren - 1) * gap;
             }
         }
-        height += getTopBottomPadding(this);
+        height += getTopBottomPadding(widget);
     }
     else {
         // fixed height
         // TODO: support percentages
         float refLength = 0.0f;
         float valueIfAuto = 0.0f;
-        height = h.toPx(styleMetrics(), refLength, valueIfAuto);
+        height = h.toPx(widget->styleMetrics(), refLength, valueIfAuto);
     }
     return height;
 }
 
-geometry::Vec2f Flex::computePreferredSize() const {
-    style::LengthOrPercentageOrAuto w = preferredWidth();
-    style::LengthOrPercentageOrAuto h = preferredHeight();
+geometry::Vec2f computeFlexPreferredSize(const Widget* widget, bool isRow) {
+    style::LengthOrPercentageOrAuto w = widget->preferredWidth();
+    style::LengthOrPercentageOrAuto h = widget->preferredHeight();
     geometry::Vec2f res;
+    bool isColumn = !isRow;
     if (w.isAuto()) {
         if (h.isAuto()) {
 
             // Compute preferred height not knowing any width
             float height = 0;
-            if (isColumn()) {
-                for (Widget* child : children()) {
+            if (isColumn) {
+                for (Widget* child : widget->children()) {
                     if (child->visibility() == Visibility::Invisible) {
                         continue;
                     }
@@ -379,7 +380,7 @@ geometry::Vec2f Flex::computePreferredSize() const {
                 }
             }
             else {
-                for (Widget* child : children()) {
+                for (Widget* child : widget->children()) {
                     if (child->visibility() == Visibility::Invisible) {
                         continue;
                     }
@@ -387,12 +388,12 @@ geometry::Vec2f Flex::computePreferredSize() const {
                         height, child->preferredSize().y() + getTopBottomMargins(child));
                 }
             }
-            height += getTopBottomPadding(this);
+            height += getTopBottomPadding(widget);
 
             // Compute preferred width not knowing any height
             float width = 0;
-            if (isRow()) {
-                for (Widget* child : children()) {
+            if (isRow) {
+                for (Widget* child : widget->children()) {
                     if (child->visibility() == Visibility::Invisible) {
                         continue;
                     }
@@ -400,7 +401,7 @@ geometry::Vec2f Flex::computePreferredSize() const {
                 }
             }
             else {
-                for (Widget* child : children()) {
+                for (Widget* child : widget->children()) {
                     if (child->visibility() == Visibility::Invisible) {
                         continue;
                     }
@@ -408,21 +409,21 @@ geometry::Vec2f Flex::computePreferredSize() const {
                         width, child->preferredSize().x() + getLeftRightMargins(child));
                 }
             }
-            width += getLeftRightPadding(this);
+            width += getLeftRightPadding(widget);
 
             // Add gap
             Int numVisibleChildren = 0;
-            for (Widget* child : children()) {
+            for (Widget* child : widget->children()) {
                 if (child->visibility() != Visibility::Invisible) {
                     ++numVisibleChildren;
                 }
             }
             if (numVisibleChildren > 0) {
                 namespace gs = graphics::strings;
-                bool hinting = (style(gs::pixel_hinting) == gs::normal);
-                float gap = getGap(isRow(), this, hinting);
+                bool hinting = (widget->style(gs::pixel_hinting) == gs::normal);
+                float gap = getGap(isRow, widget, hinting);
                 float totalGap = (numVisibleChildren - 1) * gap;
-                if (isRow()) {
+                if (isRow) {
                     width += totalGap;
                 }
                 else {
@@ -437,8 +438,8 @@ geometry::Vec2f Flex::computePreferredSize() const {
             // TODO: support percentages
             float refLength = 0.0f;
             float valueIfAuto = 0.0f;
-            float height = h.toPx(styleMetrics(), refLength, valueIfAuto);
-            float width = preferredWidthForHeight(height);
+            float height = h.toPx(widget->styleMetrics(), refLength, valueIfAuto);
+            float width = widget->preferredWidthForHeight(height);
             res = {width, height};
         }
     }
@@ -448,8 +449,8 @@ geometry::Vec2f Flex::computePreferredSize() const {
             // TODO: support percentages
             float refLength = 0.0f;
             float valueIfAuto = 0.0f;
-            float width = w.toPx(styleMetrics(), refLength, valueIfAuto);
-            float height = preferredHeightForWidth(width);
+            float width = w.toPx(widget->styleMetrics(), refLength, valueIfAuto);
+            float height = widget->preferredHeightForWidth(width);
             res = {width, height};
         }
         else {
@@ -457,12 +458,26 @@ geometry::Vec2f Flex::computePreferredSize() const {
             // TODO: support percentages
             float refLength = 0.0f;
             float valueIfAuto = 0.0f;
-            float width = w.toPx(styleMetrics(), refLength, valueIfAuto);
-            float height = h.toPx(styleMetrics(), refLength, valueIfAuto);
+            float width = w.toPx(widget->styleMetrics(), refLength, valueIfAuto);
+            float height = h.toPx(widget->styleMetrics(), refLength, valueIfAuto);
             res = {width, height};
         }
     }
     return res;
+}
+
+} // namespace detail
+
+float Flex::preferredWidthForHeight(float height) const {
+    return detail::computeFlexPreferredWidthForHeight(this, isRow(), height);
+}
+
+float Flex::preferredHeightForWidth(float width) const {
+    return detail::computeFlexPreferredHeightForWidth(this, isRow(), width);
+}
+
+geometry::Vec2f Flex::computePreferredSize() const {
+    return detail::computeFlexPreferredSize(this, isRow());
 }
 
 namespace {
