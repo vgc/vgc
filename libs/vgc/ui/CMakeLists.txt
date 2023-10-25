@@ -46,6 +46,7 @@ vgc_add_library(ui
         menubutton.h
         messagedialog.h
         modifierkey.h
+        modulemanager.h
         mousebutton.h
         mouseevent.h
         numberedit.h
@@ -109,6 +110,7 @@ vgc_add_library(ui
         menubutton.cpp
         messagedialog.cpp
         modifierkey.cpp
+        modulemanager.cpp
         mousebutton.cpp
         mouseevent.cpp
         numberedit.cpp
