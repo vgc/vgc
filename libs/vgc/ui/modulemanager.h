@@ -18,6 +18,7 @@
 #define VGC_UI_MODULEMANAGER_H
 
 #include <vgc/core/object.h>
+#include <vgc/core/typeid.h>
 #include <vgc/ui/api.h>
 
 namespace vgc::ui {
@@ -25,94 +26,26 @@ namespace vgc::ui {
 VGC_DECLARE_OBJECT(ModuleManager);
 
 /// \class vgc::ui::ModuleManager
-/// \brief Organize application functionality into modules
+/// \brief Organize application functionality into modules.
 ///
-/// This class helps organize application functionality by separating them into
-/// modules that can then be dynamically created and queried at runtime.
+/// This class makes it possible to dynamically create and retrieve `Module`
+/// instances, ensuring that at most one `Module` of each `ModuleId` is
+/// instanciated by the manager.
 ///
-/// In essence, a module is similar to a singleton, but the difference its that
-/// it is tied to a `ModuleManager`: each module manager ensures that it
-/// contains at most one instance of any module. In most use cases, there is
-/// only one `ModuleManager` instance (owned by the `Application`), so the
-/// modules are effectively singletons. But in other cases, for example
-/// unit-testing, it can be useful to have different `ModuleManager` instances,
-/// and therefore there can be several instances of the same module, each
-/// belonging to a different manager.
+/// Therefore, the concept of module is similar to the concept of
+/// [singleton](https://en.wikipedia.org/wiki/Singleton_pattern), except that
+/// instead of having a unique instance for the whole program, there is a
+/// unique instance per `ModuleManager`.
 ///
-/// Related concept: [Dependency injection](https://en.wikipedia.org/wiki/Dependency_injection).
+/// In most use cases, there is only one `ModuleManager` instance, which is
+/// owned by the `Application`, so each module is effectively a singleton.
 ///
-/// Example:
+/// However, in some cases, for example for unit-testing, it can be useful to
+/// have multiple `ModuleManager` instances, and therefore there can be
+/// multiple instances of the same module, each instance belonging to a
+/// different `ModuleManager`.
 ///
-/// Let's assume that we want to implement a `ColorPanel`, which requires to
-/// make signal-slot connections between the widgets of the panel and the
-/// "current color" backend of the application, such as
-/// `MyApplication::currentColor()`.
-///
-/// Without using modules, who should be responsible to make these connections?
-///
-/// - If `MyApplication` makes the connections, then this would typically mean
-/// that `myapplication.cpp` should include `colorpanel.h`. This unfortunately
-/// does not scale as the program grows, and wouldn't work for plugins.
-///
-/// - If `ColorPanel` makes the connections, then this would typically mean that
-/// `colorpanel.cpp` should include `myapplication.h`. But what if we want to
-/// use the same implementation of `ColorPanel` across different applications?
-///
-/// Basically, we do not want `MyApplication` and `ColorPanel` to know about
-/// each other.
-///
-/// Using a `Module` is a solution to this problem. We can create a
-/// `CurrentColorModule` that encapsulates the concept of "current color",
-/// independently from any application:
-///
-/// ```cpp
-/// class CurrentColorModule : public Module {
-/// private:
-///     VGC_OBJECT(CurrentColorModule, Module)
-///
-///     CurrentColorModule(CreateKey key);
-///
-/// public:
-///     CurrentColorModulePtr create();
-///
-///     Color color() const;
-///     void setColor(const Color& color);
-///     VGC_SLOT(setColor)
-///     VGC_SIGNAL(colorChanged)
-///
-///     // ...
-/// };
-/// ```
-///
-/// Then, we can implement the signal-slot connections within a constructor of `ColorPanel`,
-/// by querying the module from the `PanelContext` (which internally stores a pointer to
-/// the application's `ModuleManager`):
-///
-///
-/// ```cpp
-/// class ColorPanel : public Panel {
-/// private:
-///     VGC_OBJECT(ColorPanel, Panel)
-///
-///     ColorPanel(CreateKey key, const PanelContext& context)
-///         : Panel(key) {
-///
-///         CurrentColorModulePtr module = context.getOrCreateModule<CurrentColorModule>();
-///         module->colorChanged().connect(this->setColorSlot());
-///         this->colorChanged().connect(module->setColorSlot());
-///     }
-///
-/// public:
-///     ColorPanelPtr create(const PanelContext& context);
-///
-///     Color color() const;
-///     void setColor(const Color& color);
-///     VGC_SLOT(setColor)
-///     VGC_SIGNAL(colorChanged)
-///
-///     // ...
-/// };
-/// ```
+/// See the documentation of `Module` for more information.
 ///
 class VGC_UI_API ModuleManager : public core::Object {
 private:
@@ -127,6 +60,9 @@ public:
     static ModuleManagerPtr create();
 
     // TODO
+
+private:
+    using ModuleId = core::TypeId;
 };
 
 } // namespace vgc::ui
