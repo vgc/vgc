@@ -459,7 +459,7 @@ float computeAveragePositiveSizes(
 
 void PanelArea::populateStyleSpecTable(style::SpecTable* table) {
 
-    if (!table->setRegistered(staticClassName())) {
+    if (!table->setRegistered<ThisClass>()) {
         return;
     }
 

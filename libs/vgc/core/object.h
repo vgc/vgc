@@ -24,6 +24,7 @@
 #include <vgc/core/arithmetic.h>
 #include <vgc/core/exceptions.h>
 #include <vgc/core/format.h>
+#include <vgc/core/objecttype.h>
 #include <vgc/core/stringid.h>
 
 #include <vgc/core/detail/signal.h>
@@ -139,6 +140,13 @@ public:
         obj->refCount_ -= 1;                              // decref without destroying
         obj->stage_ = ObjectStage::Constructed;           // set as Constructed
         return ObjPtr<T>(obj);                            // re-incref
+    }
+
+    // Creates the `ObjectType` corresponding to the given `T` object subclass.
+    //
+    template<typename T>
+    static ObjectType createObjectType(std::string_view unqualifiedName) {
+        return ObjectType(typeId<T>(), unqualifiedName);
     }
 };
 
@@ -455,13 +463,14 @@ public:                                                                         
         ::vgc::core::isObject<SuperClass>,                                               \
         "Superclass must inherit from Object and use VGC_OBJECT(...).");                 \
                                                                                          \
-    static ::vgc::core::StringId staticClassName() {                                     \
-        static ::vgc::core::StringId res(#T);                                            \
+    static ::vgc::core::ObjectType staticObjectType() {                                  \
+        static ::vgc::core::ObjectType res =                                             \
+            ::vgc::core::detail::ObjPtrAccess::createObjectType<ThisClass>(#T);          \
         return res;                                                                      \
     }                                                                                    \
                                                                                          \
-    ::vgc::core::StringId className() const override {                                   \
-        return ThisClass::staticClassName();                                             \
+    ::vgc::core::ObjectType objectType() const override {                                \
+        return ThisClass::staticObjectType();                                            \
     }                                                                                    \
                                                                                          \
 protected:                                                                               \
@@ -680,13 +689,32 @@ private:
     Object& operator=(Object&&) = delete;
 
 public:
-    static StringId staticClassName() {
-        static StringId res("Object");
+    /// Returns the `ObjectType` of an `Object` subclass via a static method
+    /// call, that is, not requiring an instance of the subclass.
+    ///
+    /// ```cpp
+    /// ObjectType objType = MyObject::staticObjectType();
+    /// ```
+    ///
+    /// \sa `objectType()`.
+    ///
+    static ObjectType staticObjectType() {
+        static ObjectType res = detail::ObjPtrAccess::createObjectType<Object>("Object");
         return res;
     }
 
-    virtual StringId className() const {
-        return ThisClass::staticClassName();
+    /// Returns the `ObjectType` of this `Object` instance, providing
+    /// meta-information about this object, such as its class name.
+    ///
+    /// ```cpp
+    /// ObjectType objType = myObject->objectType();
+    /// print(objType.unqualifiedName());
+    /// ```
+    ///
+    /// \sa `staticObjectType()`.
+    ///
+    virtual ObjectType objectType() const {
+        return ThisClass::staticObjectType();
     }
 
     /// Returns how many `ObjPtr` are currently referencing this `Object`.
@@ -1401,11 +1429,12 @@ struct ObjPtrFormatter : fmt::formatter<std::string_view> {
     auto format(const vgc::core::Object* obj, FormatContext& ctx) {
         std::string res = "<Null Object>";
         if (obj) {
+            std::string_view name = obj->objectType().unqualifiedName();
             if (obj->isAlive()) {
-                res = fmt::format("<{} @ {}>", obj->className(), fmt::ptr(obj));
+                res = fmt::format("<{} @ {}>", name, fmt::ptr(obj));
             }
             else {
-                res = fmt::format("<NotAlive {} @ {}>", obj->className(), fmt::ptr(obj));
+                res = fmt::format("<NotAlive {} @ {}>", name, fmt::ptr(obj));
             }
         }
         return fmt::formatter<std::string_view>::format(res, ctx);

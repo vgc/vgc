@@ -69,7 +69,7 @@ parseTextVerticalAlign(style::TokenIterator begin, style::TokenIterator end) {
 
 void RichTextSpan::populateStyleSpecTable(style::SpecTable* table) {
 
-    if (!table->setRegistered(staticClassName())) {
+    if (!table->setRegistered<ThisClass>()) {
         return;
     }
 

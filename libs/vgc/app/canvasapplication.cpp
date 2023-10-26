@@ -888,7 +888,7 @@ namespace {
 void widgetSizingInfo(std::string& out, ui::Widget* widget, ui::Widget* root) {
 
     auto outB = std::back_inserter(out);
-    out += widget->className();
+    out += widget->objectType().unqualifiedName();
 
     out += "\nStyle =";
     for (core::StringId styleClass : widget->styleClasses()) {

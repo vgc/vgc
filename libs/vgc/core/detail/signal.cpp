@@ -145,8 +145,8 @@ void SignalHub::debugInboundConnections(const Object* receiver) {
             "{}/{} connections of {} are to {}",
             count,
             shub.connections_.length(),
-            sender->className(),
-            receiver->className());
+            sender->objectType().unqualifiedName(),
+            receiver->objectType().unqualifiedName());
         VGC_ASSERT(count == info.numInboundConnections);
     }
 }

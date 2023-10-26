@@ -2261,7 +2261,7 @@ style::Value parseStyleNumber(style::TokenIterator begin, style::TokenIterator e
 
 void Widget::populateStyleSpecTable(style::SpecTable* table) {
 
-    if (!table->setRegistered(staticClassName())) {
+    if (!table->setRegistered<ThisClass>()) {
         return;
     }
 

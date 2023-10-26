@@ -268,7 +268,7 @@ void Icon::draw(graphics::Engine* engine) {
 }
 
 void Icon::populateStyleSpecTable(style::SpecTable* table) {
-    if (!table->setRegistered(staticClassName())) {
+    if (!table->setRegistered<ThisClass>()) {
         return;
     }
     auto black = style::Value::custom(core::colors::black);

@@ -519,29 +519,6 @@ private:
 
 } // namespace detail
 
-void SpecTable::insert(
-    core::StringId attributeName,
-    const Value& initialValue,
-    bool isInherited,
-    PropertyParser parser) {
-
-    if (get(attributeName)) {
-        VGC_WARNING(
-            LogVgcStyle,
-            "Attempting to insert a property spec for the attribute '{}', which is "
-            "already registered. Aborted.",
-            attributeName);
-        return;
-    }
-    PropertySpec spec(attributeName, initialValue, isInherited, parser);
-    map_.insert({attributeName, spec});
-}
-
-bool SpecTable::setRegistered(core::StringId className) {
-    auto res = registeredClassNames_.insert(className);
-    return res.second;
-}
-
 Sheet::Sheet(CreateKey key)
     : Object(key) {
 }

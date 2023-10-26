@@ -22,21 +22,23 @@ using vgc::core::ObjectPtr;
 using vgc::core::detail::ConstructibleTestObject;
 using vgc::core::detail::ConstructibleTestObjectPtr;
 
-TEST(TestObject, StaticClassName) {
-    ASSERT_EQ(Object::staticClassName(), "Object");
-    ASSERT_EQ(ConstructibleTestObject::staticClassName(), "ConstructibleTestObject");
+TEST(TestObject, StaticUnqualifiedName) {
+    ASSERT_EQ(Object::staticObjectType().unqualifiedName(), "Object");
+    ASSERT_EQ(
+        ConstructibleTestObject::staticObjectType().unqualifiedName(),
+        "ConstructibleTestObject");
 
     ConstructibleTestObjectPtr derived = ConstructibleTestObject::create();
     ObjectPtr base = vgc::core::static_pointer_cast<Object>(derived);
-    ASSERT_EQ(base->staticClassName(), "Object");
-    ASSERT_EQ(derived->staticClassName(), "ConstructibleTestObject");
+    ASSERT_EQ(base->staticObjectType().unqualifiedName(), "Object");
+    ASSERT_EQ(derived->staticObjectType().unqualifiedName(), "ConstructibleTestObject");
 }
 
-TEST(TestObject, ClassName) {
+TEST(TestObject, UnqualifiedName) {
     ConstructibleTestObjectPtr derived = ConstructibleTestObject::create();
     ObjectPtr base = vgc::core::static_pointer_cast<Object>(derived);
-    ASSERT_EQ(base->className(), "ConstructibleTestObject");
-    ASSERT_EQ(derived->className(), "ConstructibleTestObject");
+    ASSERT_EQ(base->objectType().unqualifiedName(), "ConstructibleTestObject");
+    ASSERT_EQ(derived->objectType().unqualifiedName(), "ConstructibleTestObject");
 }
 
 TEST(TestObject, Format) {
