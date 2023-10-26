@@ -21,6 +21,7 @@
 #include <unordered_map>
 #include <unordered_set>
 
+#include <vgc/core/objecttype.h>
 #include <vgc/core/stringid.h>
 
 #include <vgc/style/api.h>
@@ -166,21 +167,31 @@ public:
         }
     }
 
-    /// Returns whether the style properties relative to the `StylableObject`
-    /// with the given `className` are already registered.
+    /// Returns whether the given `objectType` is in the set of types already
+    /// registered in this `SpecTable`.
     ///
-    bool isRegistered(core::StringId className) const {
-        return registeredClassNames_.find(className) != registeredClassNames_.end();
+    bool isRegistered(const core::ObjectType& objectType) const {
+        return registeredObjectTypes_.find(objectType) != registeredObjectTypes_.end();
+    }
+    /// \overload
+    template<typename T>
+    bool isRegistered() const {
+        return isRegistered(T::staticObjectType());
     }
 
-    /// Attempts to insert the given `className` in the set of registered class
-    /// names. Returns true if the name was actually inserted, that is, if the
-    /// name wasn't already registered.
+    /// Attempts to insert the given `objectType` in the set of types
+    /// registered in this `SpecTable`. Returns true if the type was actually
+    /// inserted, that is, if the type wasn't already registered.
     ///
-    bool setRegistered(core::StringId className);
+    bool setRegistered(const core::ObjectType& objectType);
+    /// \overload
+    template<typename T>
+    bool setRegistered() {
+        return setRegistered(T::staticObjectType());
+    }
 
 private:
-    std::unordered_set<core::StringId> registeredClassNames_;
+    std::unordered_set<core::ObjectType> registeredObjectTypes_;
     std::unordered_map<core::StringId, PropertySpec> map_;
 };
 

@@ -30,6 +30,7 @@ vgc_add_library(core
         logcategories.h
         logging.h
         object.h
+        objecttype.h
         os.h
         parse.h
         paths.h

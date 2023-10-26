@@ -297,7 +297,7 @@ public:
     /// };
     ///
     /// void FancyStylableObject::populateStyleSpecTable(SpecTable* table) {
-    ///     if (!table->setRegistered(staticClassName())) {
+    ///     if (!table->setRegistered<ThisClass>()) {
     ///         return;
     ///     }
     ///     auto fortyTwo = Value::custom(Length(12.0_dp));

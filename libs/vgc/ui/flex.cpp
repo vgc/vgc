@@ -185,7 +185,7 @@ style::Value parseCrossAlignment(style::TokenIterator begin, style::TokenIterato
 } // namespace
 
 void Flex::populateStyleSpecTable(style::SpecTable* table) {
-    if (!table->setRegistered(staticClassName())) {
+    if (!table->setRegistered<ThisClass>()) {
         return;
     }
     using namespace strings;

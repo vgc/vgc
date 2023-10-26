@@ -60,7 +60,7 @@ private:
 
 } // namespace detail
 
-/// \class vgc::core::TypeIndex
+/// \class vgc::core::TypeId
 /// \brief Similar to std::type_index but works across shared library boundaries.
 ///
 /// This is the return type of the function `vgc::core::typeId<T>()`. This type
@@ -83,23 +83,23 @@ class VGC_CORE_API TypeId {
 public:
     /// Returns the name of the type (possibly mangled).
     ///
-    std::string_view name() {
+    std::string_view name() const {
         return info_->name();
     }
 
-    /// Returns whether this `TypeIndex` is equal to `other`.
+    /// Returns whether this `TypeId` is equal to `other`.
     ///
     bool operator==(const TypeId& other) const {
         return *info_ == *other.info_;
     }
 
-    /// Returns whether this `TypeIndex` is different from `other`.
+    /// Returns whether this `TypeId` is different from `other`.
     ///
     bool operator!=(const TypeId& other) const {
         return *info_ != *other.info_;
     }
 
-    /// Returns whether this `TypeIndex` is less than `other`.
+    /// Returns whether this `TypeId` is less than `other`.
     ///
     bool operator<(const TypeId& other) const {
         return *info_ < *other.info_;
@@ -158,7 +158,7 @@ TypeId typeIdInt();
 
 namespace std {
 
-// Implement hash function to make TypeIndex compatible with std::unordered_map
+// Specializes std::hash for TypeId
 template<>
 struct hash<vgc::core::TypeId> {
     std::size_t operator()(const vgc::core::TypeId& t) const {
@@ -168,6 +168,7 @@ struct hash<vgc::core::TypeId> {
 
 } // namespace std
 
+// Specializes fmt::formatter for TypeId
 template<>
 struct fmt::formatter<vgc::core::TypeId> : fmt::formatter<std::string_view> {
     template<typename FormatContext>

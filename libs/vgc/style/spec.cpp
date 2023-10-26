@@ -47,4 +47,27 @@ Value parseStyleDefault(TokenIterator begin, TokenIterator end) {
     return Value::invalid();
 }
 
+void SpecTable::insert(
+    core::StringId attributeName,
+    const Value& initialValue,
+    bool isInherited,
+    PropertyParser parser) {
+
+    if (get(attributeName)) {
+        VGC_WARNING(
+            LogVgcStyle,
+            "Attempting to insert a property spec for the attribute '{}', which is "
+            "already registered. Aborted.",
+            attributeName);
+        return;
+    }
+    PropertySpec spec(attributeName, initialValue, isInherited, parser);
+    map_.insert({attributeName, spec});
+}
+
+bool SpecTable::setRegistered(const core::ObjectType& objectType) {
+    auto res = registeredObjectTypes_.insert(objectType);
+    return res.second;
+}
+
 } // namespace vgc::style
