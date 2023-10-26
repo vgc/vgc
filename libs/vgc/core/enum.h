@@ -29,10 +29,21 @@ namespace detail {
 // from the platform-dependent VGC_PRETTY_FUNCTION output of enumData_, e.g.:
 //
 // `const class vgc::core::detail::EnumData &__cdecl vgc::ui::enumData_(enum vgc::ui::Key)`
+// `const ::vgc::core::detail::EnumData &vgc::ui::enumData_(Key)`
 //
-inline std::string_view fullEnumClassName(std::string_view enumDataPrettyFunction) {
+inline std::string fullEnumClassName(std::string_view enumDataPrettyFunction) {
 
     const auto& s = enumDataPrettyFunction;
+
+    std::string res;
+
+    // `&__cdecl vgc::ui::enumData_(enum vgc::ui::Key)`
+    //           ^        ^                       ^  ^
+    //           k        l                       i  j
+    //
+    // `&vgc::ui::enumData_(Key)`
+    //   ^        ^         ^  ^
+    //   k        l         i  j
 
     // Find closing parenthesis
     size_t j = s.size();
@@ -44,27 +55,54 @@ inline std::string_view fullEnumClassName(std::string_view enumDataPrettyFunctio
         --j;
     }
 
-    // Find opening parenthesis or whitespace
+    // Find opening parenthesis or whitespace or colon
     size_t i = j;
-    while (i > 0 && s[i] != '(' && s[i] != ' ') {
+    while (i > 0 && s[i] != '(' && s[i] != ' ' && s[i] != ':') {
         --i;
     }
+
+    // Set i to be the character just after found parenthese/whitespace/colon
     ++i;
 
-    // Return substring if there is a match, otherwise return the empty string
-    if (j > i) {
-        return s.substr(i, j - i);
+    // Find opening parenthesis
+    size_t l = i;
+    while (l > 0 && s[l] != '(') {
+        --l;
+    }
+
+    // Skip "enumData_"
+    size_t enumDataSize = 9;
+    if (l >= enumDataSize) {
+        l -= enumDataSize;
     }
     else {
-        return "";
+        l = 0;
     }
+
+    // Find whitespace or ampersand
+    size_t k = l;
+    while (k > 0 && s[k] != ' ' && s[k] != '&') {
+        --k;
+    }
+
+    // Set k to be the character just after found whitespace/ampersand
+    ++k;
+
+    // Concatenate namespace and class name
+    if (l > k) {
+        res += s.substr(k, l - k);
+    }
+    if (j > i) {
+        res += s.substr(i, j - i);
+    }
+    return res;
 }
 
 // Stores strings related to an enum item
 class EnumData {
 public:
     EnumData(
-        std::string_view fullEnumClassName,    // "vgc::ui::Key"
+        std::string fullEnumClassName,         // "vgc::ui::Key"
         std::string_view shortEnumItemName,    // "Digit0"
         std::string_view enumItemPrettyName) { // "0"
 
@@ -206,7 +244,7 @@ struct fmt::formatter<
         using S = ::vgc::core::detail::EnumData;                                         \
         using Map = std::unordered_map<E, S>;                                            \
         std::string pf = VGC_PRETTY_FUNCTION;                                            \
-        static const std::string_view fecn = ::vgc::core::detail::fullEnumClassName(pf); \
+        static const std::string fecn = ::vgc::core::detail::fullEnumClassName(pf);      \
         static const S unknown =                                                         \
             S(fecn, "Unknown_" #Enum, "Unknown " #Enum);                                 \
         static auto createMap = []() {                                                   \
