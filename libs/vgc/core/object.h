@@ -707,7 +707,7 @@ public:
     /// meta-information about this object, such as its class name.
     ///
     /// ```cpp
-    /// ObjectType objType = MyObject::staticObjectType();
+    /// ObjectType objType = myObject->objectType();
     /// print(objType.unqualifiedName());
     /// ```
     ///
