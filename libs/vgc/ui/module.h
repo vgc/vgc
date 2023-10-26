@@ -18,12 +18,9 @@
 #define VGC_UI_MODULE_H
 
 #include <vgc/core/object.h>
-#include <vgc/core/typeid.h>
 #include <vgc/ui/api.h>
 
 namespace vgc::ui {
-
-using ModuleId = core::TypeId;
 
 VGC_DECLARE_OBJECT(Module);
 
@@ -39,6 +36,10 @@ VGC_DECLARE_OBJECT(Module);
 /// The class `ModuleManager` is responsible for owning the created modules,
 /// and ensuring that it creates at most one `Module` instance of a given
 /// module type.
+///
+/// Each `Module` subclass must have a `Module::create()` static function with
+/// no arguments. Indeed, the modules are supposed to be instantiable
+/// indenpendently by separate parts of the programs.
 ///
 /// Example:
 ///
@@ -165,21 +166,6 @@ struct IsModule<T, core::Requires<std::is_base_of_v<Module, T>>> : std::true_typ
 ///
 template<typename T>
 inline constexpr bool isModule = IsModule<T>::value;
-
-/// Creates a `Module`. This function is meant to be used in the implementation
-/// of `MyModule::create()` static methods
-///
-template<typename T, typename... Args>
-core::ObjPtr<T> createModule(Args&&... args) {
-    static_assert(
-        isModule<T>,
-        "Cannot call createModule<T>(...) because T does not inherit from "
-        "vgc::ui::Module.");
-    return core::createObject<T>(std::forward<Args>(args)...);
-
-    // Note: wouldn't it be a good idea if this was implemented directly in `Object`?
-    // The TypeId passed to the Object constructor could even be part of the CreateKey.
-}
 
 } // namespace vgc::ui
 

@@ -17,9 +17,12 @@
 #ifndef VGC_UI_MODULEMANAGER_H
 #define VGC_UI_MODULEMANAGER_H
 
+#include <mutex>
+#include <unordered_map>
+
 #include <vgc/core/object.h>
-#include <vgc/core/typeid.h>
 #include <vgc/ui/api.h>
+#include <vgc/ui/module.h>
 
 namespace vgc::ui {
 
@@ -29,7 +32,7 @@ VGC_DECLARE_OBJECT(ModuleManager);
 /// \brief Organize application functionality into modules.
 ///
 /// This class makes it possible to dynamically create and retrieve `Module`
-/// instances, ensuring that at most one `Module` of each `ModuleId` is
+/// instances, ensuring that at most one `Module` of each module type is
 /// instanciated by the manager.
 ///
 /// Therefore, the concept of module is similar to the concept of
@@ -59,10 +62,36 @@ public:
     ///
     static ModuleManagerPtr create();
 
-    // TODO
+    /// Retrieves the given `TModule` module, or creates it if there is no such
+    /// module yet.
+    ///
+    template<typename TModule>
+    core::ObjPtr<TModule> getOrCreateModule() {
+
+        using TModulePtr = core::ObjPtr<TModule>;
+        checkIsModule_<TModule>();
+
+        std::lock_guard<std::mutex> lock(mutex_);
+
+        auto [it, inserted] = modules_.try_emplace(TModule::objectType());
+        if (inserted) {
+            TModulePtr res = TModule::create();
+            *it = res;
+            return res;
+        }
+        else {
+            return core::static_pointer_cast<TModulePtr>(*it);
+        }
+    }
 
 private:
-    using ModuleId = core::TypeId;
+    std::mutex mutex_;
+    std::unordered_map<core::ObjectType, ModulePtr> modules_;
+
+    template<typename TModule>
+    void checkIsModule_() {
+        static_assert(isModule<TModule>, "TModule must inherit from vgc::ui::Module");
+    }
 };
 
 } // namespace vgc::ui
