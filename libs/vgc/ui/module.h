@@ -74,18 +74,18 @@ VGC_DECLARE_OBJECT(Module);
 /// module is essentially defining an additional interface to `Application`,
 /// but without having to change the `Application` class itself.
 ///
-/// In the case of this example, we can create a `CurrentColorModule` that
+/// In the case of this example, we can create a `CurrentColor` module that
 /// extends any application with the concept of "current color":
 ///
 /// ```cpp
-/// class CurrentColorModule : public Module {
+/// class CurrentColor : public Module {
 /// private:
-///     VGC_OBJECT(CurrentColorModule, Module)
+///     VGC_OBJECT(CurrentColor, Module)
 ///
-///     CurrentColorModule(CreateKey key);
+///     CurrentColor(CreateKey key);
 ///
 /// public:
-///     CurrentColorModulePtr create();
+///     CurrentColorPtr create();
 ///
 ///     Color color() const;
 ///     void setColor(const Color& color);
@@ -108,7 +108,7 @@ VGC_DECLARE_OBJECT(Module);
 ///     ColorPanel(CreateKey key, const PanelContext& context)
 ///         : Panel(key) {
 ///
-///         CurrentColorModulePtr module = context.getOrCreateModule<CurrentColorModule>();
+///         CurrentColorPtr module = context.getOrCreateModule<CurrentColor>();
 ///         module->colorChanged().connect(this->setColorSlot());
 ///         this->colorChanged().connect(module->setColorSlot());
 ///     }
@@ -125,18 +125,19 @@ VGC_DECLARE_OBJECT(Module);
 /// };
 /// ```
 ///
-/// We can this that by using such module, `ColorPanel` and `MyApplication` do not statically depend
-/// on each other anymore, the only static dependencies are the following:
+/// We can see that by using such module, `ColorPanel` and `MyApplication` do
+/// not statically depend on each other anymore, the only static dependencies
+/// are the following:
 ///
-/// - `MyApplication` depends on: `Application`, `CurrentColorModule`.
-/// - `ColorPanel` depends on: `Application`, `Panel`, `CurrentColorModule`.
+/// - `MyApplication` depends on: `Application`, `CurrentColor`.
+/// - `ColorPanel` depends on: `Application`, `Panel`, `CurrentColor`.
 ///
-/// In fact, `MyApplication` doesn't even have to depend on
-/// `CurrentColorModule`. Such dependency is only required if we want to
-/// provide a convenient method such as `MyApplication::currentColor()`, but in
-/// practice such function isn't needed: any panel or module that requires the
-/// current color can instead query the `CurrentColorModule` directly, further
-/// reducing coupling.
+/// In fact, `MyApplication` doesn't even have to depend on `CurrentColor`.
+/// Such dependency is only required if we want to provide a convenient method
+/// such as `MyApplication::currentColor()`, but in practice such function
+/// isn't needed: any panel or module that requires the current color can
+/// instead query the `CurrentColor` module directly, further reducing
+/// coupling.
 ///
 class VGC_UI_API Module : public core::Object {
 private:
