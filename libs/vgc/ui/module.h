@@ -143,6 +143,7 @@ private:
     VGC_OBJECT(Module, core::Object)
     VGC_PRIVATIZE_OBJECT_TREE_MUTATORS
 
+protected:
     Module(CreateKey);
 
 public:

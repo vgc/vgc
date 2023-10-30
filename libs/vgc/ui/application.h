@@ -19,6 +19,7 @@
 
 #include <vgc/core/object.h>
 #include <vgc/ui/api.h>
+#include <vgc/ui/modulemanager.h>
 
 namespace vgc::ui {
 
@@ -143,10 +144,25 @@ public:
     ///
     void setWindowIconFromResource(std::string_view rpath);
 
+    /// Returns the module manager of the application.
+    ///
+    ModuleManager* moduleManager() {
+        return moduleManager_.get();
+    }
+
+    /// Retrieves the given `TModule` module, or creates it if there is no such
+    /// module yet.
+    ///
+    template<typename TModule>
+    core::ObjPtr<TModule> getOrCreateModule() {
+        return moduleManager()->getOrCreateModule<TModule>();
+    }
+
 private:
     std::string applicationName_;
     std::string organizationName_;
     std::string organizationDomain_;
+    ModuleManagerPtr moduleManager_;
 };
 
 } // namespace vgc::ui

@@ -73,14 +73,15 @@ public:
 
         std::lock_guard<std::mutex> lock(mutex_);
 
-        auto [it, inserted] = modules_.try_emplace(TModule::objectType());
+        auto [it, inserted] = modules_.try_emplace(TModule::staticObjectType());
+        ModulePtr& storedValue = it->second;
         if (inserted) {
             TModulePtr res = TModule::create();
-            *it = res;
+            storedValue = res;
             return res;
         }
         else {
-            return core::static_pointer_cast<TModulePtr>(*it);
+            return core::static_pointer_cast<TModule>(storedValue);
         }
     }
 

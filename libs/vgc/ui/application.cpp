@@ -72,6 +72,8 @@ Application* application() {
 Application::Application(CreateKey key, int /*argc*/, char* /*argv*/[])
     : Object(key) {
 
+    moduleManager_ = ModuleManager::create();
+
     if (globalApplication_) {
         throw core::LogicError(
             "Cannot create vgc::ui::Application: one has already been created.");
