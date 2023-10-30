@@ -90,7 +90,7 @@ private:
     std::unordered_map<core::ObjectType, ModulePtr> modules_;
 
     template<typename TModule>
-    void checkIsModule_() {
+    static void checkIsModule_() {
         static_assert(isModule<TModule>, "TModule must inherit from vgc::ui::Module");
     }
 };
