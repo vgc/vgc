@@ -24,6 +24,7 @@
 #include <vgc/canvas/tooloptionspanel.h>
 #include <vgc/core/datetime.h>
 #include <vgc/dom/strings.h>
+#include <vgc/tools/currentcolor.h>
 #include <vgc/tools/paintbucket.h>
 #include <vgc/tools/sculpt.h>
 #include <vgc/tools/select.h>
@@ -155,13 +156,16 @@ CanvasApplication::CanvasApplication(
     window_ = app::MainWindow::create(applicationName);
     window_->setBackgroundPainted(false);
 
+    currentColor_ = getOrCreateModule<tools::CurrentColor>();
+
     openDocument_("");
     createActions_(window_->mainWidget());
     createMenus_();
     registerPanelTypes_();
     createDefaultPanels_();
 
-    setCurrentColor_(initialColor);
+    currentColor_->colorChanged().connect(onCurrentColorChanged_Slot());
+    currentColor_->setColor(initialColor);
 }
 
 CanvasApplicationPtr
@@ -679,11 +683,11 @@ void CanvasApplication::registerPanelTypes_() {
         paneltypes_::colorPalette, colorPaletteLabel, [=](ui::PanelArea* parent) {
             ui::Panel* panel = detail::createPanelWithPadding(parent, colorPaletteLabel);
             tools::ColorPalette* palette = panel->createChild<tools::ColorPalette>();
-            palette->setSelectedColor(this->currentColor());
+            palette->setSelectedColor(currentColor_->color());
             palette->setColors(this->documentColorPalette());
-            palette->colorSelected().connect(this->setCurrentColor_Slot());
+            palette->colorSelected().connect(currentColor_->setColorSlot());
             palette->colorsChanged().connect(this->setDocumentColorPalette_Slot());
-            this->currentColorChanged_().connect(palette->setSelectedColorSlot());
+            currentColor_->colorChanged().connect(palette->setSelectedColorSlot());
             this->documentColorPaletteChanged_().connect(palette->setColorsSlot());
             return panel;
         });
@@ -851,24 +855,18 @@ void CanvasApplication::createTools_() {
     paintBucketTool_ = paintBucketTool.get();
 }
 
-void CanvasApplication::setCurrentColor_(const core::Color& color) {
-
-    // Set data member
-    if (currentColor() == color) {
-        return;
-    }
-    currentColor_ = color;
+void CanvasApplication::onCurrentColorChanged_(const core::Color& color) {
 
     // Update colors of other widgets / tools
+    //
+    // TODO: Delegate this to the tools themselves by providing the CurrentColor object.
+    //
     if (sketchTool_) {
-        sketchTool_->setPenColor(currentColor());
+        sketchTool_->setPenColor(color);
     }
     if (paintBucketTool_) {
-        paintBucketTool_->setColor(currentColor());
+        paintBucketTool_->setColor(color);
     }
-
-    // Emit
-    currentColorChanged_().emit(currentColor());
 }
 
 void CanvasApplication::setDocumentColorPalette_(const core::Array<core::Color>& colors) {
