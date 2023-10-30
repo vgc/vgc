@@ -40,6 +40,7 @@
 namespace vgc::tools {
 
 VGC_DECLARE_OBJECT(CurrentColor);
+VGC_DECLARE_OBJECT(DocumentColorPalette);
 
 } // namespace vgc::tools
 
@@ -120,12 +121,6 @@ public:
     /// Quits the application.
     ///
     void quit();
-
-    /// Returns the list of document colors.
-    ///
-    const core::Array<core::Color>& documentColorPalette() const {
-        return documentColorPalette_;
-    }
 
 protected:
     // Reimplementation
@@ -223,19 +218,11 @@ private:
     tools::PaintBucket* paintBucketTool_;
     void createTools_();
 
-    // Colors.
-    //
-    // TODO: Implement ColorManager encapsulating everything below.
-    //
-
+    // Colors
     tools::CurrentColorPtr currentColor_;
+    tools::DocumentColorPalettePtr documentColorPalette_;
     void onCurrentColorChanged_(const core::Color& color);
     VGC_SLOT(onCurrentColorChanged_)
-
-    core::Array<core::Color> documentColorPalette_;
-    void setDocumentColorPalette_(const core::Array<core::Color>& colors);
-    VGC_SLOT(setDocumentColorPalette_)
-    VGC_SIGNAL(documentColorPaletteChanged_, (const core::Array<core::Color>&, colors))
 
     // ------------------------------------------------------------------------
     //                       Misc
