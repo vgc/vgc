@@ -37,6 +37,12 @@
 #include <vgc/ui/panelmanager.h>
 #include <vgc/workspace/workspace.h>
 
+namespace vgc::tools {
+
+VGC_DECLARE_OBJECT(CurrentColor);
+
+} // namespace vgc::tools
+
 namespace vgc::app {
 
 namespace detail {
@@ -114,12 +120,6 @@ public:
     /// Quits the application.
     ///
     void quit();
-
-    /// Returns the current color.
-    ///
-    const core::Color& currentColor() const {
-        return currentColor_;
-    }
 
     /// Returns the list of document colors.
     ///
@@ -228,10 +228,9 @@ private:
     // TODO: Implement ColorManager encapsulating everything below.
     //
 
-    core::Color currentColor_ = core::colors::black;
-    void setCurrentColor_(const core::Color& color);
-    VGC_SLOT(setCurrentColor_)
-    VGC_SIGNAL(currentColorChanged_, (const core::Color&, color))
+    tools::CurrentColorPtr currentColor_;
+    void onCurrentColorChanged_(const core::Color& color);
+    VGC_SLOT(onCurrentColorChanged_)
 
     core::Array<core::Color> documentColorPalette_;
     void setDocumentColorPalette_(const core::Array<core::Color>& colors);
