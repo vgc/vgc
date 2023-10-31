@@ -52,86 +52,8 @@ ui::PanelTypeId colorPalette("vgc.common.colorPalette");
 
 core::StringId s_left_sidebar("left-sidebar");
 core::StringId s_with_padding("with-padding");
-core::StringId s_user("user");
-core::StringId s_colorpalette("colorpalette");
-core::StringId s_colorpaletteitem("colorpaletteitem");
-core::StringId s_color("color");
 core::StringId s_tools("tools");
 core::StringId s_tool_options("tool-options");
-
-core::Array<core::Color> getColorPalette_(dom::Document* doc) {
-
-    // Get colors
-    core::Array<core::Color> colors;
-    dom::Element* root = doc->rootElement();
-    for (dom::Element* user : root->childElements(s_user)) {
-        for (dom::Element* colorpalette : user->childElements(s_colorpalette)) {
-            for (dom::Element* item : colorpalette->childElements(s_colorpaletteitem)) {
-                core::Color color = item->getAttribute(s_color).getColor();
-                colors.append(color);
-            }
-        }
-    }
-
-    // Delete <user> element
-    dom::Element* user = root->firstChildElement(s_user);
-    while (user) {
-        dom::Element* nextUser = user->nextSiblingElement(s_user);
-        user->remove();
-        user = nextUser;
-    }
-
-    return colors;
-}
-
-class ColorPaletteSaver {
-public:
-    ColorPaletteSaver(const ColorPaletteSaver&) = delete;
-    ColorPaletteSaver& operator=(const ColorPaletteSaver&) = delete;
-
-    ColorPaletteSaver(const core::Array<core::Color>& colors, dom::Document* doc)
-        : isUndoOpened_(false)
-        , doc_(doc) {
-
-        // The current implementation adds the colors to the DOM now, save, then
-        // abort the "add color" operation so that it doesn't appear as an undo.
-        //
-        // Ideally, we should instead add the color to the DOM directly when the
-        // user clicks the "add to palette" button (so it would be an undoable
-        // action), and the color list view should listen to DOM changes to update
-        // the color list. This way, even plugins could populate the color palette
-        // by modifying the DOM.
-        //
-        static core::StringId Add_to_Palette("Add to Palette");
-        core::History* history = doc->history();
-        if (history) {
-            history->createUndoGroup(Add_to_Palette);
-            isUndoOpened_ = true;
-        }
-
-        // TODO: reuse existing colorpalette element instead of creating new one.
-        dom::Element* root = doc->rootElement();
-        dom::Element* user = dom::Element::create(root, s_user);
-        dom::Element* colorpalette = dom::Element::create(user, s_colorpalette);
-        for (const core::Color& color : colors) {
-            dom::Element* item = dom::Element::create(colorpalette, s_colorpaletteitem);
-            item->setAttribute(s_color, color);
-        }
-    }
-
-    ~ColorPaletteSaver() {
-        if (isUndoOpened_) {
-            core::History* history = doc_->history();
-            if (history) {
-                history->abort();
-            }
-        }
-    }
-
-private:
-    bool isUndoOpened_;
-    dom::Document* doc_;
-};
 
 } // namespace
 
@@ -329,14 +251,13 @@ void CanvasApplication::openDocument_(QString filename) {
     else {
         try {
             newDocument = dom::Document::open(ui::fromQt(filename));
-            colors = getColorPalette_(newDocument.get());
         }
         catch (const dom::FileError& e) {
             // TODO: have our own message box instead of using QtWidgets
             QMessageBox::critical(nullptr, "Error Opening File", e.what());
         }
     }
-    documentColorPalette_->setColors(colors);
+    documentColorPalette_->setDocument(newDocument.get());
 
     workspace_ = workspace::Workspace::create(newDocument);
     document_ = newDocument.get();
@@ -492,7 +413,7 @@ void CanvasApplication::doSaveAs_() {
 
 void CanvasApplication::doSave_() {
     try {
-        ColorPaletteSaver saver(documentColorPalette_->colors(), document_);
+        auto saver = documentColorPalette_->saver();
         document_->save(ui::fromQt(filename_));
     }
     catch (const dom::FileError& e) {
