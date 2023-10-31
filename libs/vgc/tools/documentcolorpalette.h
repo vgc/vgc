@@ -22,9 +22,38 @@
 #include <vgc/tools/api.h>
 #include <vgc/ui/module.h>
 
+namespace vgc::dom {
+
+VGC_DECLARE_OBJECT(Document);
+
+} // namespace vgc::dom
+
 namespace vgc::tools {
 
 VGC_DECLARE_OBJECT(DocumentColorPalette);
+
+/// \class vgc::tools::DocumentColorPaletteSaver
+/// \brief A module to save the color palette of a document.
+///
+/// This class is a temporary workaround before we implement a better system
+/// for managing document color palettes. Assume that it will be deleted in the
+/// near future.
+///
+class VGC_TOOLS_API DocumentColorPaletteSaver {
+private:
+    DocumentColorPaletteSaver(const core::Array<core::Color>& colors, dom::Document* doc);
+
+public:
+    ~DocumentColorPaletteSaver();
+    DocumentColorPaletteSaver(const DocumentColorPaletteSaver&) = delete;
+    DocumentColorPaletteSaver& operator=(const DocumentColorPaletteSaver&) = delete;
+
+private:
+    friend DocumentColorPalette;
+
+    bool isUndoOpened_ = false;
+    dom::Document* doc_ = nullptr;
+};
 
 /// \class vgc::tools::DocumentColorPalette
 /// \brief A module to access the color palette of the active document.
@@ -40,6 +69,19 @@ public:
     /// Creates the `DocumentColorPalette` module.
     ///
     static DocumentColorPalettePtr create();
+
+    /// Returns the document that this document color palette is operating on.
+    ///
+    dom::Document* document() const {
+        return document_.getIfAlive();
+    }
+
+    /// Sets the document that this document color palette is operating on.
+    ///
+    // TODO: have this module depend on an `ActiveDocument` module, and
+    // automatically switch documents when the active document changes?
+    //
+    void setDocument(dom::Document* document);
 
     /// Returns the colors of the document's color palette.
     ///
@@ -57,8 +99,27 @@ public:
     ///
     VGC_SIGNAL(colorsChanged, (const core::Array<core::Color>&, colors))
 
+    /// Saves the current document color palette via the temporary
+    /// `DocumentColorPaletteSaver` RAII class.
+    ///
+    /// ```
+    /// {
+    ///     auto saver = documentColorPalette->saver();
+    ///     document->save();
+    /// }
+    /// ```
+    ///
+    DocumentColorPaletteSaver saver() {
+        return DocumentColorPaletteSaver(colors(), document());
+        // Note: the above uses C++17 guaranteed copy-elision since
+        // DocumentColorPaletteSaver has no copy constructor
+    }
+
 private:
+    dom::DocumentPtr document_;
     core::Array<core::Color> colors_;
+
+    void onDocumentChanged_();
 };
 
 } // namespace vgc::tools
