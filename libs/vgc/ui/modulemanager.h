@@ -17,6 +17,7 @@
 #ifndef VGC_UI_MODULEMANAGER_H
 #define VGC_UI_MODULEMANAGER_H
 
+#include <memory> // unique_ptr
 #include <mutex>
 #include <unordered_map>
 
@@ -27,6 +28,29 @@
 namespace vgc::ui {
 
 VGC_DECLARE_OBJECT(ModuleManager);
+
+class ModuleContext;
+
+namespace detail {
+
+// Work around cyclic dependencies between ModuleManager and ModuleContext
+
+struct ModuleContextDeleter {
+    void operator()(ModuleContext* p);
+};
+
+using ModuleContextPtr = std::unique_ptr<ModuleContext, ModuleContextDeleter>;
+
+struct VGC_UI_API ModuleContextAccess {
+    static ModuleContextPtr createContext(ModuleManager* moduleManager);
+    static void destroyContext(ModuleContext* p);
+};
+
+inline void ModuleContextDeleter::operator()(ModuleContext* p) {
+    ModuleContextAccess::destroyContext(p);
+}
+
+} // namespace detail
 
 /// \class vgc::ui::ModuleManager
 /// \brief Organize application functionality into modules.
@@ -76,7 +100,8 @@ public:
         auto [it, inserted] = modules_.try_emplace(TModule::staticObjectType());
         ModulePtr& storedValue = it->second;
         if (inserted) {
-            TModulePtr res = TModule::create();
+            auto contextPtr = detail::ModuleContextAccess::createContext(this);
+            TModulePtr res = TModule::create(*contextPtr);
             storedValue = res;
             return res;
         }

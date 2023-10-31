@@ -63,12 +63,12 @@ private:
     VGC_OBJECT(DocumentColorPalette, ui::Module)
 
 protected:
-    DocumentColorPalette(CreateKey);
+    DocumentColorPalette(CreateKey, const ui::ModuleContext& context);
 
 public:
     /// Creates the `DocumentColorPalette` module.
     ///
-    static DocumentColorPalettePtr create();
+    static DocumentColorPalettePtr create(const ui::ModuleContext& context);
 
     /// Returns the document that this document color palette is operating on.
     ///

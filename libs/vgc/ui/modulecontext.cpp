@@ -14,25 +14,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <vgc/tools/currentcolor.h>
+#include <vgc/ui/modulecontext.h>
 
-namespace vgc::tools {
+namespace vgc::ui {
 
-CurrentColor::CurrentColor(CreateKey key, const ui::ModuleContext& context)
-    : Module(key, context) {
+ModuleContext::ModuleContext(ModuleManager* moduleManager)
+    : moduleManager_(moduleManager) {
 }
 
-CurrentColorPtr CurrentColor::create(const ui::ModuleContext& context) {
-    return core::createObject<CurrentColor>(context);
-}
-
-void CurrentColor::setColor(const core::Color& color) {
-    if (color_ == color) {
-        return;
-    }
-    color_ = color;
-    core::Color copy = color;
-    colorChanged().emit(copy);
-}
-
-} // namespace vgc::tools
+} // namespace vgc::ui

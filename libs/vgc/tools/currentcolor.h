@@ -34,12 +34,12 @@ private:
     VGC_OBJECT(CurrentColor, ui::Module)
 
 protected:
-    CurrentColor(CreateKey);
+    CurrentColor(CreateKey, const ui::ModuleContext& context);
 
 public:
     /// Creates the `CurrentColor` module.
     ///
-    static CurrentColorPtr create();
+    static CurrentColorPtr create(const ui::ModuleContext& context);
 
     /// Returns the current color.
     ///

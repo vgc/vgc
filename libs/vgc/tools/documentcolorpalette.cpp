@@ -103,12 +103,16 @@ DocumentColorPaletteSaver::~DocumentColorPaletteSaver() {
         }
     }
 }
-DocumentColorPalette::DocumentColorPalette(CreateKey key)
-    : Module(key) {
+
+DocumentColorPalette::DocumentColorPalette(
+    CreateKey key,
+    const ui::ModuleContext& context)
+
+    : Module(key, context) {
 }
 
-DocumentColorPalettePtr DocumentColorPalette::create() {
-    return core::createObject<DocumentColorPalette>();
+DocumentColorPalettePtr DocumentColorPalette::create(const ui::ModuleContext& context) {
+    return core::createObject<DocumentColorPalette>(context);
 }
 
 void DocumentColorPalette::setDocument(dom::Document* document) {
