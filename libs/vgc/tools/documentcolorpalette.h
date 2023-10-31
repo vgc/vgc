@@ -33,7 +33,7 @@ namespace vgc::tools {
 VGC_DECLARE_OBJECT(DocumentColorPalette);
 
 /// \class vgc::tools::DocumentColorPaletteSaver
-/// \brief A module to save the color palette of a document.
+/// \brief Saves the color palette of a document.
 ///
 /// This class is a temporary workaround before we implement a better system
 /// for managing document color palettes. Assume that it will be deleted in the
