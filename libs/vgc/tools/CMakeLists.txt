@@ -10,6 +10,7 @@ vgc_add_library(tools
         colorpalette.h
         copypaste.h
         currentcolor.h
+        documentcolorpalette.h
         logcategories.h
         paintbucket.h
         sculpt.h
@@ -23,6 +24,7 @@ vgc_add_library(tools
         colorpalette.cpp
         copypaste.cpp
         currentcolor.cpp
+        documentcolorpalette.cpp
         logcategories.cpp
         paintbucket.cpp
         sculpt.cpp

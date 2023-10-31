@@ -25,6 +25,7 @@
 #include <vgc/core/datetime.h>
 #include <vgc/dom/strings.h>
 #include <vgc/tools/currentcolor.h>
+#include <vgc/tools/documentcolorpalette.h>
 #include <vgc/tools/paintbucket.h>
 #include <vgc/tools/sculpt.h>
 #include <vgc/tools/select.h>
@@ -157,6 +158,9 @@ CanvasApplication::CanvasApplication(
     window_->setBackgroundPainted(false);
 
     currentColor_ = getOrCreateModule<tools::CurrentColor>();
+    currentColor_->colorChanged().connect(onCurrentColorChanged_Slot());
+
+    documentColorPalette_ = getOrCreateModule<tools::DocumentColorPalette>();
 
     openDocument_("");
     createActions_(window_->mainWidget());
@@ -164,7 +168,6 @@ CanvasApplication::CanvasApplication(
     registerPanelTypes_();
     createDefaultPanels_();
 
-    currentColor_->colorChanged().connect(onCurrentColorChanged_Slot());
     currentColor_->setColor(initialColor);
 }
 
@@ -333,7 +336,7 @@ void CanvasApplication::openDocument_(QString filename) {
             QMessageBox::critical(nullptr, "Error Opening File", e.what());
         }
     }
-    setDocumentColorPalette_(colors);
+    documentColorPalette_->setColors(colors);
 
     workspace_ = workspace::Workspace::create(newDocument);
     document_ = newDocument.get();
@@ -489,7 +492,7 @@ void CanvasApplication::doSaveAs_() {
 
 void CanvasApplication::doSave_() {
     try {
-        ColorPaletteSaver saver(documentColorPalette(), document_);
+        ColorPaletteSaver saver(documentColorPalette_->colors(), document_);
         document_->save(ui::fromQt(filename_));
     }
     catch (const dom::FileError& e) {
@@ -684,11 +687,11 @@ void CanvasApplication::registerPanelTypes_() {
             ui::Panel* panel = detail::createPanelWithPadding(parent, colorPaletteLabel);
             tools::ColorPalette* palette = panel->createChild<tools::ColorPalette>();
             palette->setSelectedColor(currentColor_->color());
-            palette->setColors(this->documentColorPalette());
+            palette->setColors(documentColorPalette_->colors());
             palette->colorSelected().connect(currentColor_->setColorSlot());
-            palette->colorsChanged().connect(this->setDocumentColorPalette_Slot());
+            palette->colorsChanged().connect(documentColorPalette_->setColorsSlot());
             currentColor_->colorChanged().connect(palette->setSelectedColorSlot());
-            this->documentColorPaletteChanged_().connect(palette->setColorsSlot());
+            documentColorPalette_->colorsChanged().connect(palette->setColorsSlot());
             return panel;
         });
 
@@ -867,18 +870,6 @@ void CanvasApplication::onCurrentColorChanged_(const core::Color& color) {
     if (paintBucketTool_) {
         paintBucketTool_->setColor(color);
     }
-}
-
-void CanvasApplication::setDocumentColorPalette_(const core::Array<core::Color>& colors) {
-
-    // Set data member
-    if (documentColorPalette_ == colors) {
-        return;
-    }
-    documentColorPalette_ = colors;
-
-    // Emit
-    documentColorPaletteChanged_().emit(documentColorPalette());
 }
 
 namespace {
