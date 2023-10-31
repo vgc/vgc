@@ -18,12 +18,12 @@
 
 namespace vgc::ui {
 
-Module::Module(CreateKey key)
+Module::Module(CreateKey key, const ModuleContext& /*context*/)
     : Object(key) {
 }
 
-ModulePtr Module::create() {
-    return core::createObject<Module>();
+ModulePtr Module::create(const ModuleContext& context) {
+    return core::createObject<Module>(context);
 }
 
 } // namespace vgc::ui

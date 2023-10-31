@@ -22,6 +22,8 @@
 
 namespace vgc::ui {
 
+class ModuleContext;
+
 VGC_DECLARE_OBJECT(Module);
 
 /// \class vgc::ui::Module
@@ -37,9 +39,9 @@ VGC_DECLARE_OBJECT(Module);
 /// and ensuring that it creates at most one `Module` instance of a given
 /// module type.
 ///
-/// Each `Module` subclass must have a `Module::create()` static function with
-/// no arguments. Indeed, the modules are supposed to be instantiable
-/// indenpendently by separate parts of the programs.
+/// Each `Module` subclass must have a `Module::create(const ModuleContext&
+/// context)` static function. This function is called by the `ModuleManager`
+/// whenever the module should be instantiated.
 ///
 /// Example:
 ///
@@ -145,12 +147,12 @@ private:
     VGC_PRIVATIZE_OBJECT_TREE_MUTATORS
 
 protected:
-    Module(CreateKey);
+    Module(CreateKey, const ModuleContext& context);
 
 public:
     /// Creates a `Module()`.
     ///
-    static ModulePtr create();
+    static ModulePtr create(const ModuleContext& context);
 };
 
 /// Type trait for isModule<T>.

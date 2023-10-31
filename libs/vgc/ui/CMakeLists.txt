@@ -47,6 +47,7 @@ vgc_add_library(ui
         messagedialog.h
         modifierkey.h
         module.h
+        modulecontext.h
         modulemanager.h
         mousebutton.h
         mouseevent.h
@@ -112,6 +113,7 @@ vgc_add_library(ui
         messagedialog.cpp
         modifierkey.cpp
         module.cpp
+        modulecontext.cpp
         modulemanager.cpp
         mousebutton.cpp
         mouseevent.cpp

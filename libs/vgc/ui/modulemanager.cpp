@@ -16,7 +16,26 @@
 
 #include <vgc/ui/modulemanager.h>
 
+#include <vgc/ui/modulecontext.h>
+
 namespace vgc::ui {
+
+namespace detail {
+
+// Note: make_unique doesn't have a Deleter template argument, so we do the
+// `new` explicitly. This is symmetric with doing the `delete` explicitly.
+//
+// See: https://stackoverflow.com/questions/21788066/using-stdmake-unique-with-a-custom-deleter
+//
+ModuleContextPtr ModuleContextAccess::createContext(ModuleManager* moduleManager) {
+    return ModuleContextPtr(new ModuleContext(moduleManager));
+}
+
+void ModuleContextAccess::destroyContext(ModuleContext* p) {
+    delete p;
+}
+
+} // namespace detail
 
 ModuleManager::ModuleManager(CreateKey key)
     : Object(key) {
