@@ -57,6 +57,7 @@ vgc_add_library(ui
         overlayarea.h
         panel.h
         panelarea.h
+        panelcontext.h
         panelmanager.h
         plot2d.h
         popuplayer.h
@@ -123,6 +124,7 @@ vgc_add_library(ui
         overlayarea.cpp
         panel.cpp
         panelarea.cpp
+        panelcontext.cpp
         panelmanager.cpp
         plot2d.cpp
         popuplayer.cpp

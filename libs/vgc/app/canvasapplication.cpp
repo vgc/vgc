@@ -59,8 +59,13 @@ core::StringId s_tool_options("tool-options");
 
 namespace detail {
 
-ui::Panel* createPanelWithPadding(ui::PanelArea* panelArea, std::string_view panelTitle) {
-    ui::Panel* panel = panelArea->createPanel<ui::Panel>(panelTitle);
+ui::Panel* createPanelWithPadding(
+    ui::PanelManager* panelManager,
+    ui::PanelArea* panelArea,
+    std::string_view panelTitle) {
+
+    ui::Panel* panel =
+        panelManager->createPanelInstance_<ui::Panel>(panelArea, panelTitle);
     panel->addStyleClass(s_with_padding);
     return panel;
 }
@@ -577,13 +582,17 @@ void CanvasApplication::createMenus_() {
 
 void CanvasApplication::registerPanelTypes_() {
 
-    panelManager_ = ui::PanelManager::create();
+    panelManager_ = ui::PanelManager::create(moduleManager());
+
+    ui::PanelManager* panelManager = panelManager_.get();
 
     // Tools
     std::string_view toolsLabel = "Tools";
     panelManager_->registerPanelType(
         paneltypes_::tools, toolsLabel, [=](ui::PanelArea* parent) {
-            ui::Panel* panel = this->toolManager_->createToolsPanel(parent);
+            ui::PanelManager* panelManager = this->panelManager_.get();
+            canvas::ToolManager* toolManager = this->toolManager_.get();
+            ui::Panel* panel = toolManager->createToolsPanel(panelManager, parent);
             panel->addStyleClass(s_with_padding);
             parent->addStyleClass(s_tools); // XXX Why not on the panel itself?
             return panel;
@@ -594,8 +603,11 @@ void CanvasApplication::registerPanelTypes_() {
         paneltypes_::toolOptions,
         canvas::ToolOptionsPanel::label,
         [=](ui::PanelArea* parent) {
+            ui::PanelManager* panelManager = this->panelManager_.get();
+            canvas::ToolManager* toolManager = this->toolManager_.get();
             canvas::ToolOptionsPanel* panel =
-                parent->createPanel<canvas::ToolOptionsPanel>(this->toolManager_.get());
+                panelManager->createPanelInstance_<canvas::ToolOptionsPanel>(
+                    parent, toolManager);
             panel->addStyleClass(s_with_padding);
             parent->addStyleClass(s_tool_options); // XXX Why not on the panel itself?
             return panel;
@@ -605,7 +617,9 @@ void CanvasApplication::registerPanelTypes_() {
     std::string_view colorPaletteLabel = "Colors";
     panelManager_->registerPanelType(
         paneltypes_::colorPalette, colorPaletteLabel, [=](ui::PanelArea* parent) {
-            ui::Panel* panel = detail::createPanelWithPadding(parent, colorPaletteLabel);
+            ui::PanelManager* panelManager = this->panelManager_.get();
+            ui::Panel* panel =
+                detail::createPanelWithPadding(panelManager, parent, colorPaletteLabel);
             tools::ColorPalette* palette = panel->createChild<tools::ColorPalette>();
             palette->setSelectedColor(currentColor_->color());
             palette->setColors(documentColorPalette_->colors());
@@ -635,8 +649,12 @@ void CanvasApplication::createDefaultPanels_() {
     mainPanelArea_->setType(ui::PanelAreaType::HorizontalSplit);
 
     // Create Canvas (both the panel and the canvas itself)
+    //
+    // XXX This panel type is currently not registered with the PanelManager. Should it?
+    //
     ui::PanelArea* canvasArea = ui::PanelArea::createTabs(mainPanelArea_.get());
-    ui::Panel* canvasPanel = canvasArea->createPanel<ui::Panel>("Canvas");
+    ui::Panel* canvasPanel =
+        panelManager_->createPanelInstance_<ui::Panel>(canvasArea, "Canvas");
     canvasArea->tabBar()->hide();
     createCanvas_(canvasPanel, workspace_.get());
 

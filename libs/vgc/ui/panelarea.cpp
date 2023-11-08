@@ -907,21 +907,6 @@ void PanelArea::stopDragging_(const geometry::Vec2f& position) {
     updateHoveredSplitHandle_(position);
 }
 
-Widget* PanelArea::preCreatePanel_() {
-    if (type() != PanelAreaType::Tabs) {
-        VGC_WARNING(
-            LogVgcUi, "Cannot create a Panel in a PanelArea which is not of type Tabs.");
-        return nullptr;
-    }
-    TabBody* parent = tabBody(); // guaranteed non-null by updateTabs_()
-    return parent;
-}
-
-void PanelArea::postCreatePanel_(Panel* panel) {
-    updateTabs_();
-    tabBar()->addTab(panel->title());
-}
-
 // post-condition: if type is `Tabs`, the first child exists and is of type "Column",
 // which has at least one child, and the first child is of type "PanelTabs".
 //

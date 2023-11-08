@@ -24,6 +24,8 @@ namespace vgc::ui {
 VGC_DECLARE_OBJECT(Panel);
 VGC_DECLARE_OBJECT(PanelArea);
 
+class PanelContext;
+
 /// \class vgc::ui::Panel
 /// \brief A widget that can be placed in a PanelArea
 ///
@@ -34,12 +36,13 @@ private:
     VGC_OBJECT(Panel, Widget)
 
 protected:
-    Panel(CreateKey, std::string_view title);
+    Panel(CreateKey, const PanelContext& context, std::string_view title);
 
 public:
     /// Creates a `Panel`.
     ///
-    static PanelPtr create(std::string_view title = "Untitled Panel");
+    static PanelPtr
+    create(const PanelContext& context, std::string_view title = "Untitled Panel");
 
     /// Returns the title of the `Panel`.
     ///

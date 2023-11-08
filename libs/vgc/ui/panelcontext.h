@@ -14,24 +14,26 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef VGC_UI_MODULECONTEXT_H
-#define VGC_UI_MODULECONTEXT_H
+#ifndef VGC_UI_PANELCONTEXT_H
+#define VGC_UI_PANELCONTEXT_H
 
 #include <vgc/ui/api.h>
 #include <vgc/ui/modulemanager.h>
 
 namespace vgc::ui {
 
-/// \class vgc::ui::ModuleContext
-/// \brief Provides access to various application objects that modules may need.
+class PanelManager;
+
+/// \class vgc::ui::PanelContext
+/// \brief Provides access to various application objects that panels may need.
 ///
-class VGC_UI_API ModuleContext {
+class VGC_UI_API PanelContext {
 private:
-    ModuleContext(ModuleManager* moduleManager);
+    PanelContext(ModuleManager* moduleManager);
 
 public:
-    ModuleContext(const ModuleContext&) = delete;
-    ModuleContext& operator=(const ModuleContext&) = delete;
+    PanelContext(const PanelContext&) = delete;
+    PanelContext& operator=(const PanelContext&) = delete;
 
     /// Returns the module manager of the application.
     ///
@@ -48,10 +50,10 @@ public:
     }
 
 private:
-    friend detail::ModuleContextAccess;      // For accessing the constructor
-    ModuleManager* moduleManager_ = nullptr; // ModuleManager outlives ModuleContext
+    friend PanelManager;
+    ModuleManager* moduleManager_ = nullptr; // PanelContext outlives ModuleManager
 };
 
 } // namespace vgc::ui
 
-#endif // VGC_UI_MODULECONTEXT_H
+#endif // VGC_UI_PANELCONTEXT_H

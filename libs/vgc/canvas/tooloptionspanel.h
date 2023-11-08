@@ -34,7 +34,10 @@ private:
     VGC_OBJECT(ToolOptionsPanel, ui::Panel)
 
 protected:
-    ToolOptionsPanel(CreateKey key, ToolManager* toolManager);
+    ToolOptionsPanel(
+        CreateKey key,
+        const ui::PanelContext& context,
+        ToolManager* toolManager);
 
 public:
     // TODO: A cleaner way to do this, also supporting translations.
@@ -42,7 +45,8 @@ public:
 
     /// Creates a `CanvasToolOptionsPanel`.
     ///
-    static ToolOptionsPanelPtr create(ToolManager* toolManager);
+    static ToolOptionsPanelPtr
+    create(const ui::PanelContext& context, ToolManager* toolManager);
 
 private:
     void onCurrentToolChanged_(CanvasTool* tool);
