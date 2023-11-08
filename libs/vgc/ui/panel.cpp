@@ -21,7 +21,7 @@
 
 namespace vgc::ui {
 
-Panel::Panel(CreateKey key, const PanelContext& context, std::string_view title)
+Panel::Panel(CreateKey key, const PanelContext&, std::string_view title)
     : Widget(key)
     , title_(title) {
 

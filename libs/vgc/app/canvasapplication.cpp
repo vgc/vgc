@@ -584,8 +584,6 @@ void CanvasApplication::registerPanelTypes_() {
 
     panelManager_ = ui::PanelManager::create(moduleManager());
 
-    ui::PanelManager* panelManager = panelManager_.get();
-
     // Tools
     std::string_view toolsLabel = "Tools";
     panelManager_->registerPanelType(
