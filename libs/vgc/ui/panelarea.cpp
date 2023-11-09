@@ -740,7 +740,6 @@ void PanelArea::onChildrenChanged_() {
     // childAreas as in children() up to the current loop iteration.
     //
     auto nextSplitData = splitData_.begin();
-    Int numAreas = 0;
     for (Widget* child : children()) {
         PanelArea* childArea = dynamic_cast<PanelArea*>(child);
         if (!childArea) {
@@ -751,7 +750,6 @@ void PanelArea::onChildrenChanged_() {
             toRemove.append(child);
             continue;
         }
-        ++numAreas;
 
         // Find SplitData `it` such that `it->childArea == childArea`.
         auto end = splitData_.end();
