@@ -20,12 +20,16 @@
 #include <vgc/core/id.h>
 #include <vgc/core/object.h>
 #include <vgc/ui/api.h>
+#include <vgc/ui/panelcontext.h>
+#include <vgc/ui/widget.h>
 
 namespace vgc::ui {
 
+VGC_DECLARE_OBJECT(ModuleManager);
 VGC_DECLARE_OBJECT(Panel);
 VGC_DECLARE_OBJECT(PanelArea);
 VGC_DECLARE_OBJECT(PanelManager);
+VGC_DECLARE_OBJECT(Widget);
 
 /// A `PanelFactory` implementation should create a new `Panel`
 /// as a child of the given `PanelArea` and return it.
@@ -69,7 +73,7 @@ using PanelTypeInfoMap = std::unordered_map<PanelTypeId, detail::PanelTypeInfo>;
 } // namespace detail
 
 /// \class vgc::ui::PanelManager
-/// \brief Keeps track of information about existing of future panels
+/// \brief Keeps track of information about existing or future panels
 ///
 /// A `PanelManager` has the following responsibilities:
 ///
@@ -85,12 +89,14 @@ private:
     VGC_OBJECT(PanelManager, core::Object)
     VGC_PRIVATIZE_OBJECT_TREE_MUTATORS
 
-    PanelManager(CreateKey);
+    PanelManager(CreateKey, ModuleManager* moduleManager);
 
 public:
     /// Creates a `PanelManager()`.
     ///
-    static PanelManagerPtr create();
+    /// The given `moduleManager` must be non-null and must outlive this `PanelManager`.
+    ///
+    static PanelManagerPtr create(ModuleManager* moduleManager);
 
     /// Registers a panel type and returns its type ID as a `PanelTypeId`.
     ///
@@ -126,6 +132,27 @@ public:
     ///
     Panel* createPanelInstance(PanelTypeId id, PanelArea* parent);
 
+    /// Creates an instance of a panel.
+    ///
+    // XXX make this private, automatically called by the factory lambda
+    // created by the manager?
+    //
+    // XXX do not accept extra arguments to enforce all panels can be created
+    // from a menu?
+    //
+    template<typename TPanel, typename... Args>
+    TPanel* createPanelInstance_(PanelArea* parentArea, Args&&... args) {
+        ui::Widget* parentWidget = preCreatePanel_(parentArea);
+        if (!parentWidget) {
+            return nullptr;
+        }
+        PanelContext context(moduleManager_);
+        TPanel* panel =
+            parentWidget->createChild<TPanel>(context, std::forward<Args>(args)...);
+        postCreatePanel_(parentArea, panel);
+        return panel;
+    }
+
     /// Returns all existing instances of a registered panel type.
     ///
     /// Throws `IndexError` if there is no registered panel type with the given
@@ -144,12 +171,16 @@ public:
     }
 
 private:
+    ModuleManager* moduleManager_; // ModuleManager outlives PanelManager
     detail::PanelTypeInfoMap infos_;
 
     void onPanelInstanceAboutToBeDestroyed_(Object* object);
     VGC_SLOT(onPanelInstanceAboutToBeDestroyed_)
 
     std::unordered_map<Object*, PanelTypeId> instanceToId_;
+
+    Widget* preCreatePanel_(PanelArea* parentArea);
+    void postCreatePanel_(PanelArea* parentArea, Panel* panel);
 };
 
 } // namespace vgc::ui

@@ -18,15 +18,20 @@
 
 namespace vgc::canvas {
 
-ToolOptionsPanel::ToolOptionsPanel(CreateKey key, ToolManager* toolManager)
-    : Panel(key, label) {
+ToolOptionsPanel::ToolOptionsPanel(
+    CreateKey key,
+    const ui::PanelContext& context,
+    ToolManager* toolManager)
+
+    : Panel(key, context, label) {
 
     toolManager->currentToolChanged().connect(onCurrentToolChanged_Slot());
     onCurrentToolChanged_(toolManager->currentTool());
 }
 
-ToolOptionsPanelPtr ToolOptionsPanel::create(ToolManager* toolManager) {
-    return core::createObject<ToolOptionsPanel>(toolManager);
+ToolOptionsPanelPtr
+ToolOptionsPanel::create(const ui::PanelContext& context, ToolManager* toolManager) {
+    return core::createObject<ToolOptionsPanel>(context, toolManager);
 }
 
 void ToolOptionsPanel::onCurrentToolChanged_(CanvasTool* tool) {

@@ -18,15 +18,18 @@
 
 #include <vgc/ui/panel.h>
 #include <vgc/ui/panelarea.h>
+#include <vgc/ui/tabbar.h>
+#include <vgc/ui/tabbody.h>
 
 namespace vgc::ui {
 
-PanelManager::PanelManager(CreateKey key)
-    : Object(key) {
+PanelManager::PanelManager(CreateKey key, ModuleManager* moduleManager)
+    : Object(key)
+    , moduleManager_(moduleManager) {
 }
 
-PanelManagerPtr PanelManager::create() {
-    return core::createObject<PanelManager>();
+PanelManagerPtr PanelManager::create(ModuleManager* moduleManager) {
+    return core::createObject<PanelManager>(moduleManager);
 }
 
 PanelTypeId PanelManager::registerPanelType(
@@ -119,6 +122,20 @@ void PanelManager::onPanelInstanceAboutToBeDestroyed_(Object* object) {
     PanelTypeId id = it->second;
     detail::PanelTypeInfo& info = getInfo_(infos_, id);
     info.instances_.removeAll(static_cast<Panel*>(object));
+}
+
+Widget* PanelManager::preCreatePanel_(PanelArea* parentArea) {
+    if (parentArea->type() != PanelAreaType::Tabs) {
+        VGC_WARNING(
+            LogVgcUi, "Cannot create a Panel in a PanelArea which is not of type Tabs.");
+        return nullptr;
+    }
+    TabBody* parentWidget = parentArea->tabBody();
+    return parentWidget;
+}
+
+void PanelManager::postCreatePanel_(PanelArea* parentArea, Panel* panel) {
+    parentArea->tabBar()->addTab(panel->title());
 }
 
 } // namespace vgc::ui

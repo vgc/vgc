@@ -180,6 +180,8 @@ private:
 
         using app::detail::createPanelWithPadding;
 
+        ui::PanelManager* panelManager = this->panelManager();
+
         // Create panel areas
         ui::PanelArea* mainArea = panelArea();
         ui::PanelArea* rightArea = ui::PanelArea::createVerticalSplit(mainArea);
@@ -188,11 +190,12 @@ private:
         ui::PanelArea* rightBottomArea = ui::PanelArea::createTabs(rightArea);
 
         // Create panels
-        ui::Panel* rightTopPanel = createPanelWithPadding(rightTopArea, "Plot 2D");
+        ui::Panel* rightTopPanel =
+            createPanelWithPadding(panelManager, rightTopArea, "Plot 2D");
         ui::Panel* rightMiddlePanel =
-            createPanelWithPadding(rightMiddleArea, "Misc Tests");
+            createPanelWithPadding(panelManager, rightMiddleArea, "Misc Tests");
         ui::Panel* rightBottomPanel =
-            createPanelWithPadding(rightBottomArea, "Images and icons");
+            createPanelWithPadding(panelManager, rightBottomArea, "Images and icons");
         ui::Column* rightTopContent = rightTopPanel->createChild<ui::Column>();
         ui::Column* rightMiddleContent = rightMiddlePanel->createChild<ui::Column>();
         ui::Row* rightBottomContent = rightBottomPanel->createChild<ui::Row>();

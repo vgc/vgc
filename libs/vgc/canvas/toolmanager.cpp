@@ -18,6 +18,7 @@
 
 #include <vgc/ui/button.h>
 #include <vgc/ui/panelarea.h>
+#include <vgc/ui/panelmanager.h>
 #include <vgc/ui/row.h>
 
 namespace vgc::canvas {
@@ -78,8 +79,9 @@ void ToolManager::setCurrentTool(canvas::CanvasTool* canvasTool) {
     }
 }
 
-ui::Panel* ToolManager::createToolsPanel(ui::PanelArea* panelArea) {
-    ui::Panel* panel = panelArea->createPanel<ui::Panel>("Tools");
+ui::Panel*
+ToolManager::createToolsPanel(ui::PanelManager* panelManager, ui::PanelArea* panelArea) {
+    ui::Panel* panel = panelManager->createPanelInstance_<ui::Panel>(panelArea, "Tools");
     ui::Row* row = panel->createChild<ui::Row>();
     for (const auto& pair : toolMap_) {
         ui::Action* action = pair.first;

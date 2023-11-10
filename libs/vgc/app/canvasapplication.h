@@ -50,6 +50,7 @@ namespace detail {
 
 VGC_APP_API
 ui::Panel* createPanelWithPadding(
+    ui::PanelManager* panelManager,
     ui::PanelArea* panelArea,
     std::string_view panelTitle = "Untitled");
 
@@ -110,6 +111,12 @@ public:
     ///
     ui::PanelArea* panelArea() const {
         return mainWidget()->panelArea();
+    }
+
+    /// Returns the `PanelManager` of this application.
+    ///
+    ui::PanelManager* panelManager() const {
+        return panelManager_.get();
     }
 
     /// Returns the active document.

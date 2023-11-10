@@ -25,6 +25,12 @@
 #include <vgc/ui/actiongroup.h>
 #include <vgc/ui/panel.h>
 
+namespace vgc::ui {
+
+VGC_DECLARE_OBJECT(PanelManager);
+
+} // namespace vgc::ui
+
 namespace vgc::canvas {
 
 VGC_DECLARE_OBJECT(ToolManager);
@@ -77,7 +83,7 @@ public:
     /// Creates a new `Panel`, as child of the given `panelArea`,
     /// that can be used for switching between tools.
     ///
-    ui::Panel* createToolsPanel(ui::PanelArea* panelArea);
+    ui::Panel* createToolsPanel(ui::PanelManager* panelManager, ui::PanelArea* panelArea);
 
 private:
     Canvas* canvas_ = nullptr;
