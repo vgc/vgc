@@ -292,23 +292,20 @@ std::unique_ptr<AbstractStroke2d> AbstractInterpolatingStroke2d::subStroke_(
     Int i1 = p1.segmentIndex(); // i1 is also the start knot index of the start segment
     Int i2 = p2.segmentIndex(); // i2 is also the start knot index of the end segment
 
-    Int n = i2 - i1;
-    // n <= numSegments - 1
-
-    Int reserveLength = 2 + numWraps * numKnots;
+    Int reservedLength = 2 + numWraps * numKnots;
     if (isPositiveRange) {
-        reserveLength += (i2 - i1);
+        reservedLength += (i2 - i1);
     }
     else {
         // Here, numWraps > 0.
-        reserveLength += numSegments - (i1 - i2);
+        reservedLength += numSegments - (i1 - i2);
     }
 
     Vec2dArray positions;
     core::DoubleArray widths;
-    positions.reserve(n + 2);
+    positions.reserve(reservedLength);
     if (!hasConstantWidth()) {
-        widths.reserve(n + 2);
+        widths.reserve(reservedLength);
     }
 
     // Compute index of first knot
