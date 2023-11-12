@@ -1781,7 +1781,7 @@ inline Int Object::numChildObjects() const {
     using T##ConstPtr = ::vgc::core::ObjPtr<const T>;                                    \
     using T##List = ::vgc::core::ObjList<T>;                                             \
     using T##ListIterator = ::vgc::core::ObjListIterator<T>;                             \
-    using T##ListView = ::vgc::core::ObjListView<T>;
+    using T##ListView = ::vgc::core::ObjListView<T>
 
 namespace vgc::core {
 
