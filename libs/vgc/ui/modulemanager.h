@@ -17,8 +17,10 @@
 #ifndef VGC_UI_MODULEMANAGER_H
 #define VGC_UI_MODULEMANAGER_H
 
-#include <memory> // unique_ptr
+#include <functional> // function
+#include <memory>     // unique_ptr
 #include <mutex>
+#include <thread>
 #include <unordered_map>
 
 #include <vgc/core/object.h>
@@ -30,27 +32,6 @@ namespace vgc::ui {
 VGC_DECLARE_OBJECT(ModuleManager);
 
 class ModuleContext;
-
-namespace detail {
-
-// Work around cyclic dependencies between ModuleManager and ModuleContext
-
-struct ModuleContextDeleter {
-    void operator()(ModuleContext* p);
-};
-
-using ModuleContextPtr = std::unique_ptr<ModuleContext, ModuleContextDeleter>;
-
-struct VGC_UI_API ModuleContextAccess {
-    static ModuleContextPtr createContext(ModuleManager* moduleManager);
-    static void destroyContext(ModuleContext* p);
-};
-
-inline void ModuleContextDeleter::operator()(ModuleContext* p) {
-    ModuleContextAccess::destroyContext(p);
-}
-
-} // namespace detail
 
 /// \class vgc::ui::ModuleManager
 /// \brief Organize application functionality into modules.
@@ -89,35 +70,61 @@ public:
     /// Retrieves the given `TModule` module, or creates it if there is no such
     /// module yet.
     ///
+    /// Note: it is not allowed to have cyclic dependencies between modules'
+    /// contructor, such as:
+    ///
+    /// - Module1's constructor calling getOrCreateModule<Module2>(), and
+    /// - Module2's constructor calling getOrCreateModule<Module1>()
+    ///
+    /// Indeed, modules are essentially global objects, and it makes no sense
+    /// for global objects to have their construction mutually depend
+    /// on each other.
+    ///
+    /// A workaround can be to defer calling `getOrCreateModule()` until after
+    /// a given module is constructed, via a 2-step initialization or
+    /// lazy-initialization approach.
+    ///
     template<typename TModule>
     core::ObjPtr<TModule> getOrCreateModule() {
-
-        using TModulePtr = core::ObjPtr<TModule>;
         checkIsModule_<TModule>();
-
-        std::lock_guard<std::mutex> lock(mutex_);
-
-        auto [it, inserted] = modules_.try_emplace(TModule::staticObjectType());
-        ModulePtr& storedValue = it->second;
-        if (inserted) {
-            auto contextPtr = detail::ModuleContextAccess::createContext(this);
-            TModulePtr res = TModule::create(*contextPtr);
-            storedValue = res;
-            return res;
-        }
-        else {
-            return core::static_pointer_cast<TModule>(storedValue);
-        }
+        core::ObjectType key = TModule::staticObjectType();
+        auto factory = [](const ModuleContext& context) -> ModulePtr {
+            return TModule::create(context);
+        };
+        ModulePtr module = getOrCreateModule_(key, factory);
+        return core::static_pointer_cast<TModule>(module);
     }
 
 private:
-    std::mutex mutex_;
-    std::unordered_map<core::ObjectType, ModulePtr> modules_;
+    struct Value_ {
+        ModulePtr module;
+
+        // Enable having two threads concurrently asking for the same module,
+        // while detecting cyclic dependencies between module construction
+        std::thread::id creationThread;
+        std::mutex creationMutex;
+
+        Value_()
+            : creationThread(std::this_thread::get_id()) {
+        }
+    };
+    std::mutex mapMutex_; // Prevent inserting concurrently in the map
+    std::unordered_map<core::ObjectType, Value_> modules_;
+
+    struct GetOrInsertInfo_ {
+        Value_& value;
+        bool inserted;
+    };
+    GetOrInsertInfo_ getOrInsert_(core::ObjectType objectType);
 
     template<typename TModule>
     static void checkIsModule_() {
         static_assert(isModule<TModule>, "TModule must inherit from vgc::ui::Module");
     }
+
+    // non-templated version to avoid bloating the .h
+    using ModuleFactory = std::function<ModulePtr(const ModuleContext& context)>;
+    ModulePtr getOrCreateModule_(core::ObjectType key, ModuleFactory factory);
 };
 
 } // namespace vgc::ui

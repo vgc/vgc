@@ -48,7 +48,7 @@ public:
     }
 
 private:
-    friend detail::ModuleContextAccess;      // For accessing the constructor
+    friend ModuleManager;                    // For accessing the constructor
     ModuleManager* moduleManager_ = nullptr; // ModuleManager outlives ModuleContext
 };
 
