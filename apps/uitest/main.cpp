@@ -29,10 +29,13 @@
 #include <vgc/ui/row.h>
 #include <vgc/workspace/vertex.h>
 
+#include "resetcurrentcolor.h"
+
 namespace app = vgc::app;
 namespace core = vgc::core;
 namespace geometry = vgc::geometry;
 namespace ui = vgc::ui;
+namespace uitest = vgc::apps::uitest;
 
 using vgc::Int;
 using vgc::UInt32;
@@ -111,6 +114,8 @@ protected:
         setWindowIconFromResource("apps/illustration/icons/512.png");
         createTestActionsAndMenus_();
         createTestWidgets_();
+
+        getOrCreateModule<uitest::ResetCurrentColor>();
     }
 
 private:

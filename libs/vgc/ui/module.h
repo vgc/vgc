@@ -18,11 +18,14 @@
 #define VGC_UI_MODULE_H
 
 #include <vgc/core/object.h>
+#include <vgc/core/objectarray.h>
+#include <vgc/ui/action.h>
 #include <vgc/ui/api.h>
 
 namespace vgc::ui {
 
 class ModuleContext;
+using ActionPtrArrayView = core::ObjPtrArrayView<Action>;
 
 VGC_DECLARE_OBJECT(Module);
 
@@ -153,6 +156,73 @@ public:
     /// Creates a `Module()`.
     ///
     static ModulePtr create(const ModuleContext& context);
+
+    /// Returns the list of actions of this module.
+    ///
+    ActionPtrArrayView actions() const {
+        return actions_;
+    }
+
+    /// Creates an action of type `TAction`, adds it to this module, and
+    /// returns the action.
+    ///
+    template<typename TAction, typename... Args>
+    TAction* createAction(Args&&... args) {
+        core::ObjPtr<TAction> action = TAction::create(std::forward<Args>(args)...);
+        TAction* action_ = action.get();
+        addAction(action_);
+        return action_;
+    }
+
+    /// Adds the given `action` to the list of actions of this module.
+    ///
+    /// The module takes ownership of the action.
+    ///
+    /// If the action previously had a parent object, it is first removed
+    /// from this parent.
+    ///
+    void addAction(Action* action);
+
+    /// Removes the given `action` from the list of actions of this widget.
+    ///
+    void removeAction(Action* action);
+
+    /// Clears the list of actions of this widget.
+    ///
+    void clearActions();
+
+    /// Creates an action of type `ActionType::Trigger`, adds it to this
+    /// widget, and returns the action.
+    ///
+    template<typename... Args>
+    Action* createTriggerAction(Args&&... args) {
+        return createAction<Action>(std::forward<Args>(args)...);
+    }
+
+    /// This signal is emitted whenever an action is added to this widget.
+    ///
+    VGC_SIGNAL(actionAdded, (Action*, addedAction))
+
+    /// This signal is emitted whenever an action is removed from this widget.
+    ///
+    VGC_SIGNAL(actionRemoved, (Action*, removedAction))
+
+private:
+    // Note: in the Widget class, actions were implemented as child objects of
+    // the widget (technically, grand-child objects, since there is the
+    // intermediate ActionList object). This was done to guarantee that they
+    // only had one owner, and enabled our smart pointer system to keep-alive
+    // the owner as long as we have a pointer to the child (but this is not
+    // done anymore, as it was a performance problem).
+    //
+    // Therefore, we now consider that it is in general more flexible and works
+    // better with Python to simply use shared ownership and keep them
+    // independent root objects that do not assume that they have a parent.
+    // Therefore, this is what we do in the Module class (which was implemented
+    // after the Widget class). We store actions as independent root objects.
+    // In the future, we'll update Widget to do the same.
+    //
+    core::Array<ActionPtr> actions_;
 };
 
 /// Type trait for isModule<T>.
