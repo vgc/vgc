@@ -41,6 +41,7 @@ constexpr float baseLogicalDpi = 96.0f;
 
 } // namespace detail
 
+VGC_DECLARE_OBJECT(Module);
 VGC_DECLARE_OBJECT(Window);
 
 /// \class vgc::ui::Window
@@ -334,6 +335,7 @@ private:
     void onActionAdded_(Action* action);
     void onActionRemoved_(Action* action);
     void onActionAboutToBeDestroyed_(Object* object);
+    void onModuleCreated_(Module* module);
 
     VGC_SLOT(onRepaintRequestedSlot_, onRepaintRequested_);
     VGC_SLOT(onMouseCaptureStartedSlot_, onMouseCaptureStarted_);
@@ -347,6 +349,7 @@ private:
     VGC_SLOT(onActionAddedSlot_, onActionAdded_);
     VGC_SLOT(onActionRemovedSlot_, onActionRemoved_);
     VGC_SLOT(onActionAboutToBeDestroyedSlot_, onActionAboutToBeDestroyed_);
+    VGC_SLOT(onModuleCreatedSlot_, onModuleCreated_);
 
     Int debugIndent_ = 0;
     core::Stopwatch debugStopwatch_;

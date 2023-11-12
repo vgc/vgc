@@ -29,8 +29,10 @@
 #include <vgc/geometry/camera2d.h>
 #include <vgc/graphics/d3d11/d3d11engine.h>
 #include <vgc/graphics/text.h>
+#include <vgc/ui/application.h>
 #include <vgc/ui/cursor.h>
 #include <vgc/ui/logcategories.h>
+#include <vgc/ui/module.h>
 #include <vgc/ui/qtutil.h>
 
 #include <vgc/ui/detail/qopenglengine.h>
@@ -141,6 +143,8 @@ Window::Window(CreateKey key, const WidgetPtr& widget)
     widget_->keyboardCaptureStopped().connect(onKeyboardCaptureStoppedSlot_());
     widget_->widgetAddedToTree().connect(onWidgetAddedToTreeSlot_());
     widget_->widgetRemovedFromTree().connect(onWidgetRemovedFromTreeSlot_());
+    application()->moduleCreated().connect(onModuleCreatedSlot_());
+
     widget_->window_ = this;
 
     initEngine_();
@@ -1308,6 +1312,14 @@ void Window::onActionRemoved_(Action* action) {
 void Window::onActionAboutToBeDestroyed_(Object* obj) {
     Action* action = static_cast<Action*>(obj);
     removeShortcut_(action);
+}
+
+void Window::onModuleCreated_(Module* module) {
+    module->actionAdded().connect(onActionAddedSlot_());
+    module->actionRemoved().connect(onActionRemovedSlot_());
+    for (Action& action : module->actions()) {
+        addShortcut_(&action);
+    }
 }
 
 } // namespace vgc::ui

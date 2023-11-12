@@ -2,8 +2,12 @@ vgc_add_app(uitest
     VGC_DEPENDENCIES
         app
 
+    CPP_HEADER_FILES
+        resetcurrentcolor.h
+
     CPP_SOURCE_FILES
         main.cpp
+        resetcurrentcolor.cpp
 
     RESOURCE_FILES
         icons/512.png
