@@ -183,27 +183,27 @@ public:
     ///
     void addAction(Action* action);
 
-    /// Removes the given `action` from the list of actions of this widget.
+    /// Removes the given `action` from the list of actions of this module.
     ///
     void removeAction(Action* action);
 
-    /// Clears the list of actions of this widget.
+    /// Clears the list of actions of this module.
     ///
     void clearActions();
 
     /// Creates an action of type `ActionType::Trigger`, adds it to this
-    /// widget, and returns the action.
+    /// module, and returns the action.
     ///
     template<typename... Args>
     Action* createTriggerAction(Args&&... args) {
         return createAction<Action>(std::forward<Args>(args)...);
     }
 
-    /// This signal is emitted whenever an action is added to this widget.
+    /// This signal is emitted whenever an action is added to this module.
     ///
     VGC_SIGNAL(actionAdded, (Action*, addedAction))
 
-    /// This signal is emitted whenever an action is removed from this widget.
+    /// This signal is emitted whenever an action is removed from this module.
     ///
     VGC_SIGNAL(actionRemoved, (Action*, removedAction))
 
