@@ -158,6 +158,10 @@ public:
         return moduleManager()->getOrCreateModule<TModule>();
     }
 
+    /// This signal is emitted when a module is created.
+    ///
+    VGC_SIGNAL(moduleCreated, (Module*, module))
+
 private:
     std::string applicationName_;
     std::string organizationName_;

@@ -75,8 +75,9 @@ ModulePtr ModuleManager::getOrCreateModule_(core::ObjectType key, ModuleFactory 
         //
         info.value.module = res;
 
-        // Return created module.
+        // Inform the world of the creation of the module and return it.
         //
+        moduleCreated().emit(res.get());
         return res;
     }
     else {
