@@ -469,11 +469,24 @@ function(vgc_add_app APP_NAME)
 
     set(options "")
     set(oneValueArgs "")
-    set(multiValueArgs THIRD_DEPENDENCIES VGC_DEPENDENCIES CPP_SOURCE_FILES COMPILE_DEFINITIONS RESOURCE_FILES)
+    set(multiValueArgs
+            THIRD_DEPENDENCIES
+            VGC_DEPENDENCIES
+            MACOS_DEPENDENCIES
+            CPP_HEADER_FILES
+            CPP_SOURCE_FILES
+            OBJCPP_HEADER_FILES
+            OBJCPP_SOURCE_FILES
+            COMPILE_DEFINITIONS
+            RESOURCE_FILES
+            NATVIS_FILES)
     cmake_parse_arguments(ARG "${options}" "${oneValueArgs}" "${multiValueArgs}" ${ARGN})
     
     # Add executable
-    add_executable(${APP_TARGET} WIN32 ${ARG_CPP_SOURCE_FILES})
+    add_executable(${APP_TARGET} WIN32 ${ARG_CPP_HEADER_FILES} ${ARG_CPP_SOURCE_FILES} ${NATVIS_FILES})
+    if(APPLE)
+        target_sources(${APP_TARGET} PRIVATE ${ARG_OBJCPP_HEADER_FILES} ${ARG_OBJCPP_SOURCE_FILES})
+    endif()
 
     # VGC dependencies. We need to:
     # - link to all dependent libs
@@ -485,6 +498,11 @@ function(vgc_add_app APP_NAME)
 
     # Third-party dependencies
     target_link_libraries(${APP_TARGET} PRIVATE ${ARG_THIRD_DEPENDENCIES})
+
+    # Add macOS dependencies
+    if(APPLE)
+        target_link_libraries(${APP_TARGET} PRIVATE ${ARG_MACOS_DEPENDENCIES})
+    endif()
 
     # Compile definitions, that is, values given to preprocessor variables
     target_compile_definitions(${APP_TARGET} PRIVATE ${ARG_COMPILE_DEFINITIONS})
