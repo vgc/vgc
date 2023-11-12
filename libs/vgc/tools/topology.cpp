@@ -21,9 +21,8 @@ namespace vgc::tools::commands {
 using ui::Key;
 using ui::MouseButton;
 using ui::Shortcut;
-
-constexpr ui::ModifierKey ctrl = ui::ModifierKey::Ctrl;
-constexpr ui::ModifierKey alt = ui::ModifierKey::Alt;
+using ui::modifierkeys::alt;
+using ui::modifierkeys::ctrl;
 
 VGC_UI_DEFINE_TRIGGER_COMMAND( //
     glue,

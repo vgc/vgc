@@ -462,11 +462,10 @@ namespace {
 
 namespace commands {
 
-using Shortcut = ui::Shortcut;
-using Key = ui::Key;
-
-constexpr ui::ModifierKey ctrl = ui::ModifierKey::Ctrl;
-constexpr ui::ModifierKey shift = ui::ModifierKey::Shift;
+using ui::Key;
+using ui::Shortcut;
+using ui::modifierkeys::ctrl;
+using ui::modifierkeys::shift;
 
 VGC_UI_DEFINE_WINDOW_COMMAND( //
     _new,

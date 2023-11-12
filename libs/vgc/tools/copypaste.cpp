@@ -22,8 +22,7 @@ namespace vgc::tools::commands {
 
 using ui::Key;
 using ui::Shortcut;
-
-constexpr ui::ModifierKey ctrl = ui::ModifierKey::Ctrl;
+using ui::modifierkeys::ctrl;
 
 VGC_UI_DEFINE_TRIGGER_COMMAND( //
     cut,
