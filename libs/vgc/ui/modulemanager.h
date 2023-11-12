@@ -95,6 +95,10 @@ public:
         return core::static_pointer_cast<TModule>(module);
     }
 
+    /// This signal is emitted when a module is created.
+    ///
+    VGC_SIGNAL(moduleCreated, (Module*, module))
+
 private:
     struct Value_ {
         ModulePtr module;
