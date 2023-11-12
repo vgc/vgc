@@ -29,13 +29,28 @@ namespace vgc::ui {
 /// \enum vgc::ui::ModifierKey
 /// \brief Represents Shift, Ctrl, Alt, or Meta.
 ///
-/// Note that on macOS, ModifierKey::Ctrl corresponds to the Cmd key, and
-/// ModifierKey::Meta modifier corresponds to the Ctrl key. This makes
+/// Note that on macOS, `ModifierKey::Ctrl` corresponds to the Cmd key, and
+/// `ModifierKey::Meta` modifier corresponds to the Ctrl key. This makes
 /// cross-platform development easier, since users on macOS typically expect
 /// shortcuts such as Cmd+A, while Windows and Linux users expect shortcuts
 /// such as Ctrl+A.
 ///
-/// On Windows, ModifierKey::Meta corresponds to the Windows key.
+/// On Windows, `ModifierKey::Meta` corresponds to the Windows key.
+///
+/// For convenience, the following modifier keys and combinations of modifier
+/// keys are also defined in the namespace `vgc::ui::modifierkeys`, so you can
+/// use them unqualified via `using vgc::ui::modifierkeys::ctrl` or `using
+/// namespace vgc::ui::modifierkeys;`. This is not recommended in a header file
+/// at global or namespace scope, but it can help make code more
+/// concise/readable in a *.cpp file or at function scope.
+///
+/// alias | value
+/// ----- | -------------------
+/// shift | ModifierKey::Shift
+/// ctrl  | ModifierKey::Ctrl
+/// alt   | ModifierKey::Alt
+/// meta  | ModifierKey::Meta
+/// mod   | `ctrl | alt | shift`
 ///
 /// \sa ModifierKeys
 ///
@@ -52,6 +67,23 @@ VGC_UI_API
 VGC_DECLARE_ENUM(ModifierKey)
 
 // clang-format on
+
+namespace modifierkeys {
+
+constexpr ui::ModifierKey shift = ModifierKey::Shift;
+constexpr ui::ModifierKey ctrl = ModifierKey::Ctrl;
+constexpr ui::ModifierKey alt = ModifierKey::Alt;
+constexpr ui::ModifierKey meta = ModifierKey::Meta;
+
+constexpr ui::ModifierKeys mod = alt | ctrl | shift;
+
+// TODO: Make the enum not depend on the platform (i.e., even on macOS, make
+// ModifierKey::Ctrl be the macOS Control key), but define
+// "primary"/"secondary/tertiary" (or mod1/mod2/mod3?) in the modifierkeys
+// namespace, respectively mapping to ctrl/alt/meta in Windows/Linux, and
+// cmd/alt/ctrl on macOS.
+
+} // namespace modifierkeys
 
 } // namespace vgc::ui
 

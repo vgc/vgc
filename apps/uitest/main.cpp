@@ -43,15 +43,9 @@ namespace {
 
 namespace commands {
 
-using Shortcut = ui::Shortcut;
-using Key = ui::Key;
-
-constexpr ui::ModifierKey ctrl = ui::ModifierKey::Ctrl;
-constexpr ui::ModifierKey alt = ui::ModifierKey::Alt;
-constexpr ui::ModifierKey shift = ui::ModifierKey::Shift;
-
-// Make the test shortcut unlikely to conflict with other shortcuts
-constexpr ui::ModifierKeys mod = ctrl | alt | shift;
+using ui::Key;
+using ui::Shortcut;
+using ui::modifierkeys::mod;
 
 VGC_UI_DEFINE_WINDOW_COMMAND(
     createAction,

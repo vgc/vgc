@@ -18,7 +18,7 @@
 
 namespace vgc::ui::commands::generic {
 
-constexpr ui::ModifierKey ctrl = ui::ModifierKey::Ctrl;
+using ui::modifierkeys::ctrl;
 
 VGC_UI_DEFINE_WINDOW_COMMAND( //
     cut,
