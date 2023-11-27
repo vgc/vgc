@@ -12,6 +12,7 @@ env:
   VCPKG_BUILD_TYPE: release
   VCPKG_PACKAGES: freetype;harfbuzz
 
+
 defaults:
   run:
     shell: bash
