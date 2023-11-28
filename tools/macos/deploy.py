@@ -43,6 +43,7 @@ import re
 import shutil
 import subprocess
 import sys
+import time
 import urllib.parse
 import urllib.request
 import uuid
@@ -610,9 +611,11 @@ def post_json(url, data):
     request = urllib.request.Request(url)
     request.method = 'POST'
     request.add_header('Content-Type', 'application/json; charset=utf-8')
+    request.add_header("Connection", "close")
     response = urllib.request.urlopen(request, databytes)
-    encoding = response.info().get_param('charset') or 'utf-8'
-    return json.loads(response.read().decode(encoding))
+    with urllib.request.urlopen(request, databytes) as response:
+        encoding = response.info().get_param("charset") or "utf-8"
+        return json.loads(response.read().decode(encoding))
 
 # Makes a multipart POST request to the given URL with the given
 # fields and files. The JSON response is decoded
@@ -662,9 +665,10 @@ def post_multipart(url, fields, files):
     request.method = 'POST'
     request.add_header('Content-Type', 'multipart/form-data; boundary=' + boundary)
     request.add_header('Content-Length', len(databytes))
-    response = urllib.request.urlopen(request, databytes)
-    encoding = response.info().get_param('charset') or 'utf-8'
-    return json.loads(response.read().decode(encoding))
+    request.add_header("Connection", "close")
+    with urllib.request.urlopen(request, databytes) as response:
+        encoding = response.info().get_param("charset") or "utf-8"
+        return json.loads(response.read().decode(encoding))
 
 # Contructs a URL by concatenating the given base url with
 # the given query parameters.
@@ -1126,9 +1130,9 @@ if __name__ == "__main__":
         }
         print("Creating image " + dmgFilename + "...", flush=True)
         dmgbuild.build_dmg(dmgFilename, dmgVolumeName, settings=dmgSettings)
-        print("Done.", flush=True)
+        print(" Done.", flush=True)
         filesToUpload.append(dmgFile)
-        print("File size: " + str(dmgFile.stat().st_size) + "B", flush=True)
+        print(" File size: " + str(dmgFile.stat().st_size) + "B", flush=True)
 
 
 
@@ -1168,7 +1172,7 @@ if __name__ == "__main__":
         else:
             upload = False
     if upload:
-        print_("Uploading commit metadata...", end="")
+        print_("Uploading commit metadata...")
         response = post_json(
             urlencode(url, {
                 "key": key,
@@ -1188,14 +1192,35 @@ if __name__ == "__main__":
         })
         print_(" Done.")
         releaseId = response["releaseId"]
+        allFilesUploaded = True
         for file in filesToUpload:
-            print_(f"Uploading {file}...", end="")
-            response = post_multipart(
-                urlencode(url, {
-                    "key": key,
-                    "pr": pr,
-                    "releaseId": releaseId
-                }), {}, {
-                "file": file
-            })
-            print_(" Done.")
+            numAttempts = 5
+            for attempt in range(1, numAttempts + 1):
+                try:
+                    if attempt == 1:
+                        print_(f"Uploading {file}...")
+                        time.sleep(3) # helps the server by waiting a bit between files
+                    else:
+                        print_(f"Attempt {attempt}/{numAttempts}...")
+                    response = post_multipart(
+                        urlencode(url, {
+                            "key": key,
+                            "pr": pr,
+                            "releaseId": releaseId
+                        }), {}, {
+                            "file": file
+                        })
+                except Exception as error:
+                    print_(f"Failed: {type(error)}: {error}")
+                    if attempt < numAttempts:
+                        waitTime = 5 * (2 ** attempt)
+                        print_(f"Waiting for {waitTime} seconds before re-attempting.")
+                        time.sleep(waitTime)
+                    else:
+                        print_(f"All attempts failed: the file was not uploaded.")
+                        allFilesUploaded = False
+                else:
+                    print_(" Done.")
+                    break
+        if not allFilesUploaded:
+            raise Exception("Some files were not uploaded due to errors.")

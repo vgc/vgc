@@ -658,6 +658,7 @@ if(WIN32)
             "${CMAKE_CURRENT_BINARY_DIR}"
             "$<CONFIG>"
             "${WiX}"
+        USES_TERMINAL # prints output to terminal in real-time
     )
 elseif(APPLE)
     add_custom_target(deploy
@@ -669,6 +670,7 @@ elseif(APPLE)
             "${CMAKE_CURRENT_BINARY_DIR}"
             "$<CONFIG>"
             "${VGC_QT_ROOT}"
+        USES_TERMINAL # prints output to terminal in real-time
     )
 else()
     add_custom_target(deploy
@@ -680,6 +682,7 @@ else()
             "${CMAKE_CURRENT_BINARY_DIR}"
             "$<CONFIG>"
             "${VGC_QT_ROOT}"
+        USES_TERMINAL # prints output to terminal in real-time
     )
 endif()
 set_target_properties(deploy PROPERTIES FOLDER misc)
