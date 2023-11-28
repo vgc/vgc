@@ -1775,10 +1775,103 @@ inline Int Object::numChildObjects() const {
 /// }
 /// ```
 ///
+/// Future work:
+///
+/// With hindsight, we now believe it might be better to use a more "standard"
+/// ownership model using shared and weak pointers. The current ownership model
+/// historically had some advantages:
+///
+/// 1. A pointer to a child object would keep alive the root.
+/// 2. The fact that we only have one pointer type (ObjPtr) rather than two
+///   (ObjSharedPtr and ObjWeakPtr) simplified the Python bindings, and
+///   also the C++ API a little.
+///
+/// However, we have already removed the first advantage due to performance
+/// concerns, and regarding the second advantage, not being able to have
+/// explicit weak pointers made it sometimes more tricky to avoid memory leaks
+/// or dangling pointers when referencing a root object: indeed, one had to
+/// choose between using an (owning) ObjPtr risking memory leaks in case of
+/// cyclic dependencies, or using a raw pointer risking having a dangling
+/// pointer.
+///
+/// Also, we made more tests with exposing explicit weak and shared pointers
+/// to Python, and this seems doable with a reasonable Python interface, see:
+///
+/// https://github.com/vgc/cpp-py-smart-pointers-research
+///
+/// Therefore, the remaining advantages of the current ownership model do not
+/// seem to be enough compared to the advantages of using more traditional
+/// shared and weak pointers:
+///
+/// - Documenting intent more clearly: do we want to own or observe?
+/// - Enforce memory safety via temporary ownership (`weakPtr.lock()`).
+/// - Reduce the risk of memory leaks by storing weak pointers rather than ObjPtrs.
+///
+/// As a preliminary step, we already define the `FooSharedPtr` and
+/// `FooWeakPtr` variants, which for now are simply aliases to `FooPtr`, but
+/// expresses which type of ownership is meant. In the future, the idea would
+/// be to replace all usage of `FooPtr` with either the `Shared` or `Weak`
+/// variant, and actually make them different types with different behavior.
+///
+/// Also, we may want to follow more strictly this guideline: before
+/// dereferencing a non-scope-local shared ptr (e.g., a member variable), we
+/// must create a local copy of the shared ptr. Otherwise, the shared ptr might
+/// be indirectly destroyed while using it. We have been bitten several times
+/// by this problem and these cause undefined behavior or segmentation faults
+/// which are non-deterministic and are hard to debug. See this excellent talk
+/// for an explanation of the problem:
+///
+/// https://www.youtube.com/watch?v=xnqTKD8uD64&t=1380s
+///
+/// Typically, the guideline will be to always do this:
+///
+/// ```
+/// auto pin = pinNonNullOrThrow(sharedPtr);
+/// pin->foo();
+/// ```
+///
+/// or this:
+///
+/// ```
+/// if (auto pin = sharedPtr) {
+///     pin->foo();
+/// }
+/// ```
+///
+/// or this:
+///
+/// ```
+/// if (auto pin = weakPtr.lock()) {
+///     pin->foo();
+/// }
+/// ```
+///
+/// And encourage passing raw references as function arguments, so that the
+/// above lock() or copy is only done at the top of the stack, as little as
+/// possible.
+///
+/// Note that pinning could even be enforced with a custom shared pointer
+/// implementation that doesn't have `*` and `->` operators, and requires to
+/// call `lock()` or `lockNonNullOrThrow()` to return a `LockPtr` that does
+/// have the dereference operators, but would be forbidden by documentation to
+/// store in non-local scope (possibly enforced via clang-tidy).
+///
+/// For convenience, we could also have a NonNullSharedPtr type (or more simply
+/// `Ref`) that doesn't allow constructing or assigning from a null ptr, in
+/// which case there wouldn't be the need to pin these. However, one would
+/// still have to be careful, for example we should still not use a
+/// non-scope-local vector<WidgetRef> without pinning or copying the vector,
+/// otherwise the vector might be cleared in the middle of a
+/// `widgets[i]->foo()` call.
+///
 #define VGC_DECLARE_OBJECT(T)                                                            \
     class T;                                                                             \
     using T##Ptr = ::vgc::core::ObjPtr<T>;                                               \
     using T##ConstPtr = ::vgc::core::ObjPtr<const T>;                                    \
+    using T##WeakPtr = ::vgc::core::ObjPtr<T>;                                           \
+    using T##WeakConstPtr = ::vgc::core::ObjPtr<const T>;                                \
+    using T##SharedPtr = ::vgc::core::ObjPtr<T>;                                         \
+    using T##SharedConstPtr = ::vgc::core::ObjPtr<const T>;                              \
     using T##List = ::vgc::core::ObjList<T>;                                             \
     using T##ListIterator = ::vgc::core::ObjListIterator<T>;                             \
     using T##ListView = ::vgc::core::ObjListView<T>
