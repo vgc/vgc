@@ -670,7 +670,7 @@ elseif(APPLE)
             "${CMAKE_CURRENT_BINARY_DIR}"
             "$<CONFIG>"
             "${VGC_QT_ROOT}"
-            USES_TERMINAL # prints output to terminal in real-time
+        USES_TERMINAL # prints output to terminal in real-time
     )
 else()
     add_custom_target(deploy
