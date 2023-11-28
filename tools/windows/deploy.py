@@ -1032,9 +1032,11 @@ def post_json(url, data):
     request = urllib.request.Request(url)
     request.method = "POST"
     request.add_header("Content-Type", "application/json; charset=utf-8")
+    request.add_header("Connection", "close")
     response = urllib.request.urlopen(request, databytes)
-    encoding = response.info().get_param("charset") or "utf-8"
-    return json.loads(response.read().decode(encoding))
+    with urllib.request.urlopen(request, databytes) as response:
+        encoding = response.info().get_param("charset") or "utf-8"
+        return json.loads(response.read().decode(encoding))
 
 
 # Makes a multipart POST request to the given URL with the given
@@ -1085,9 +1087,10 @@ def post_multipart(url, fields, files):
     request.method = "POST"
     request.add_header("Content-Type", f"multipart/form-data; boundary={boundary}")
     request.add_header("Content-Length", len(databytes))
-    response = urllib.request.urlopen(request, databytes)
-    encoding = response.info().get_param("charset") or "utf-8"
-    return json.loads(response.read().decode(encoding))
+    request.add_header("Connection", "close")
+    with urllib.request.urlopen(request, databytes) as response:
+        encoding = response.info().get_param("charset") or "utf-8"
+        return json.loads(response.read().decode(encoding))
 
 
 # Contructs a URL by concatenating the given base url with
