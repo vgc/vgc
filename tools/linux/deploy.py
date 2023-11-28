@@ -586,7 +586,7 @@ if __name__ == "__main__":
         else:
             upload = False
     if upload:
-        print_("Uploading commit metadata...", end="")
+        print_("Uploading commit metadata...")
         response = post_json(
             urlencode(url, {
                 "key": key,
@@ -608,7 +608,7 @@ if __name__ == "__main__":
         releaseId = response["releaseId"]
         allFilesUploaded = True
         for file in filesToUpload:
-            numAttempts = 3
+            numAttempts = 5
             for attempt in range(1, numAttempts + 1):
                 try:
                     if attempt == 1:
@@ -627,7 +627,7 @@ if __name__ == "__main__":
                 except Exception as error:
                     print_(f"Failed: {type(error)}: {error}")
                     if attempt < numAttempts:
-                        waitTime = 10 * attempt
+                        waitTime = 5 * (2 ** attempt)
                         print_(f"Waiting for {waitTime} seconds before re-attempting.")
                         time.sleep(waitTime)
                     else:
@@ -635,5 +635,6 @@ if __name__ == "__main__":
                         allFilesUploaded = False
                 else:
                     print_(" Done.")
+                    break
         if not allFilesUploaded:
             raise Exception("Some files were not uploaded due to errors.")
