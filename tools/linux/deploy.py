@@ -40,6 +40,7 @@ import shlex
 import shutil
 import subprocess
 import sys
+import time
 import urllib.parse
 import urllib.request
 import uuid
@@ -605,14 +606,34 @@ if __name__ == "__main__":
         })
         print_(" Done.")
         releaseId = response["releaseId"]
+        allFilesUploaded = True
         for file in filesToUpload:
-            print_(f"Uploading {file}...", end="")
-            response = post_multipart(
-                urlencode(url, {
-                    "key": key,
-                    "pr": pr,
-                    "releaseId": releaseId
-                }), {}, {
-                "file": file
-            })
-            print_(" Done.")
+            numAttempts = 3
+            for attempt in range(1, numAttempts + 1):
+                try:
+                    if attempt == 1:
+                        print_(f"Uploading {file}...")
+                        time.sleep(3) # helps the server by waiting a bit between files
+                    else:
+                        print_(f"Attempt {attempt}/{numAttempts}...")
+                    response = post_multipart(
+                        urlencode(url, {
+                            "key": key,
+                            "pr": pr,
+                            "releaseId": releaseId
+                        }), {}, {
+                            "file": file
+                        })
+                except Exception as error:
+                    print_(f"Failed: {type(error)}: {error}")
+                    if attempt < numAttempts:
+                        waitTime = 10 * attempt
+                        print_(f"Waiting for {waitTime} seconds before re-attempting.")
+                        time.sleep(waitTime)
+                    else:
+                        print_(f"All attempts failed: the file was not uploaded.")
+                        allFilesUploaded = False
+                else:
+                    print_(" Done.")
+        if not allFilesUploaded:
+            raise Exception("Some files were not uploaded due to errors.")

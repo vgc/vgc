@@ -1234,7 +1234,7 @@ if __name__ == "__main__":
                 try:
                     if attempt == 1:
                         print_(f"Uploading {file}...", end="")
-                        sleep(3) # helps the server by waiting a bit between files
+                        time.sleep(3) # helps the server by waiting a bit between files
                     else:
                         print_(f"Attempt {attempt}/{numAttempts}...", end="")
                     response = post_multipart(
@@ -1250,7 +1250,7 @@ if __name__ == "__main__":
                     if attempt < numAttempts:
                         waitTime = 10 * attempt
                         print_(f"Waiting for {waitTime} seconds before re-attempting.")
-                        sleep(waitTime)
+                        time.sleep(waitTime)
                     else:
                         print_(f"All attempts failed: the file was not uploaded.")
                         allFilesUploaded = False
