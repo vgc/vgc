@@ -1233,10 +1233,10 @@ if __name__ == "__main__":
             for attempt in range(1, numAttempts + 1):
                 try:
                     if attempt == 1:
-                        print_(f"Uploading {file}...", end="")
+                        print_(f"Uploading {file}...")
                         time.sleep(3) # helps the server by waiting a bit between files
                     else:
-                        print_(f"Attempt {attempt}/{numAttempts}...", end="")
+                        print_(f"Attempt {attempt}/{numAttempts}...")
                     response = post_multipart(
                         urlencode(url, {
                             "key": key,
