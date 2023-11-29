@@ -366,6 +366,22 @@ public:
         return obj_ ? obj_->refCount() : -1;
     }
 
+    /// Converts the `ObjPtr` to a `LockPtr`. It is recommended to use this
+    /// method to `pin` both weak and shared pointers before dereferencing
+    /// them, see:
+    ///
+    /// https://www.youtube.com/watch?v=xnqTKD8uD64&t=1380s
+    ///
+    /// For now, both `ObjPtr` and `LockPtr` are the same type and this just
+    /// returns a copy. But in the future, we may switch to a more memory-safe
+    /// smart pointer implementation that would actually require to use this.
+    /// Therefore, it is recommended to use this whenever possible to
+    /// facilitate the transition.
+    ///
+    ObjPtr<T> lock() const noexcept {
+        return *this;
+    }
+
 private:
     T* obj_;
 
@@ -1872,6 +1888,8 @@ inline Int Object::numChildObjects() const {
     using T##WeakConstPtr = ::vgc::core::ObjPtr<const T>;                                \
     using T##SharedPtr = ::vgc::core::ObjPtr<T>;                                         \
     using T##SharedConstPtr = ::vgc::core::ObjPtr<const T>;                              \
+    using T##LockPtr = ::vgc::core::ObjPtr<T>;                                           \
+    using T##LockConstPtr = ::vgc::core::ObjPtr<const T>;                                \
     using T##List = ::vgc::core::ObjList<T>;                                             \
     using T##ListIterator = ::vgc::core::ObjListIterator<T>;                             \
     using T##ListView = ::vgc::core::ObjListView<T>
