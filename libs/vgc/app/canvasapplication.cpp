@@ -34,6 +34,7 @@
 #include <vgc/ui/qtutil.h>
 #include <vgc/ui/row.h>
 #include <vgc/ui/shortcut.h>
+#include <vgc/ui/standardmenus.h>
 #include <vgc/ui/tabbar.h>
 
 namespace vgc::app {
@@ -556,27 +557,32 @@ void CanvasApplication::createActions_(ui::Widget* parent) {
 }
 
 void CanvasApplication::createMenus_() {
+    if (auto standardMenus = getOrCreateModule<ui::StandardMenus>().lock()) {
+        ui::Menu* menuBar = window_->mainWidget()->menuBar();
+        standardMenus->setMenuBar(menuBar);
+        standardMenus->createFileMenu();
+        standardMenus->createEditMenu();
 
-    ui::Menu* menuBar = window_->mainWidget()->menuBar();
-
-    ui::Menu* fileMenu = menuBar->createSubMenu("File");
-    fileMenu->addItem(actionNew_);
-    fileMenu->addItem(actionOpen_);
-    fileMenu->addSeparator();
-    fileMenu->addItem(actionSave_);
-    fileMenu->addItem(actionSaveAs_);
-    fileMenu->addSeparator();
-    fileMenu->addItem(actionQuit_);
-
-    ui::Menu* editMenu = menuBar->createSubMenu("Edit");
-    editMenu->addItem(actionUndo_);
-    editMenu->addItem(actionRedo_);
-    editMenu->addSeparator();
-    editMenu->addItem(actionCut_);
-    editMenu->addItem(actionCopy_);
-    editMenu->addItem(actionPaste_);
-
-    panelsMenu_ = menuBar->createSubMenu("Panels");
+        // TODO: move code below to separate modules
+        if (auto fileMenu = standardMenus->fileMenu().lock()) {
+            fileMenu->addItem(actionNew_);
+            fileMenu->addItem(actionOpen_);
+            fileMenu->addSeparator();
+            fileMenu->addItem(actionSave_);
+            fileMenu->addItem(actionSaveAs_);
+            fileMenu->addSeparator();
+            fileMenu->addItem(actionQuit_);
+        }
+        if (auto editMenu = standardMenus->editMenu().lock()) {
+            editMenu->addItem(actionUndo_);
+            editMenu->addItem(actionRedo_);
+            editMenu->addSeparator();
+            editMenu->addItem(actionCut_);
+            editMenu->addItem(actionCopy_);
+            editMenu->addItem(actionPaste_);
+        }
+        panelsMenu_ = menuBar->createSubMenu("Panels");
+    }
 }
 
 void CanvasApplication::registerPanelTypes_() {
