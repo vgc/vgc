@@ -69,6 +69,7 @@ vgc_add_library(ui
         setting.h
         settings.h
         shortcut.h
+        standardmenus.h
         strings.h
         tabbar.h
         tabbody.h
@@ -136,6 +137,7 @@ vgc_add_library(ui
         setting.cpp
         settings.cpp
         shortcut.cpp
+        standardmenus.cpp
         strings.cpp
         tabbar.cpp
         tabbody.cpp
