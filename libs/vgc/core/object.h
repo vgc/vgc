@@ -1756,6 +1756,26 @@ inline Int Object::numChildObjects() const {
 
 } // namespace vgc::core
 
+#define VGC_DECLARE_OBJECT_1(T)                                                          \
+    class T;                                                                             \
+    using T##Ptr = ::vgc::core::ObjPtr<T>;                                               \
+    using T##ConstPtr = ::vgc::core::ObjPtr<const T>;                                    \
+    using T##WeakPtr = ::vgc::core::ObjPtr<T>;                                           \
+    using T##WeakConstPtr = ::vgc::core::ObjPtr<const T>;                                \
+    using T##SharedPtr = ::vgc::core::ObjPtr<T>;                                         \
+    using T##SharedConstPtr = ::vgc::core::ObjPtr<const T>;                              \
+    using T##LockPtr = ::vgc::core::ObjPtr<T>;                                           \
+    using T##LockConstPtr = ::vgc::core::ObjPtr<const T>;                                \
+    using T##List = ::vgc::core::ObjList<T>;                                             \
+    using T##ListIterator = ::vgc::core::ObjListIterator<T>;                             \
+    using T##ListView = ::vgc::core::ObjListView<T>
+
+#define VGC_DECLARE_OBJECT_2(ns, T)                                                      \
+    namespace ns {                                                                       \
+    VGC_DECLARE_OBJECT_1(T);                                                             \
+    }                                                                                    \
+    static_assert(true, "semicolon required")
+
 /// Forward-declares the given object subclass, and define convenient name
 /// aliases for its related smart pointers and list classes. More specifically,
 /// the following code:
@@ -1780,15 +1800,20 @@ inline Int Object::numChildObjects() const {
 /// use the `Foo` and/or `FooPtr` types but cannot include "foo.h" due to cylic
 /// dependencies.
 ///
-/// Like when using traditional forward-declarations, you should call this
-/// macro in the same namespace as Foo, for example:
+/// If you need to forward-declare an object class in a nested namespace, you
+/// can either open the namespace explicitly:
 ///
 /// ```cpp
-/// namespace vgc {
-/// namespace ui {
+/// namespace vgc::ui {
 /// VGC_DECLARE_OBJECT(Widget);
 /// }
-/// }
+/// ```
+///
+/// Or use the following convenient overload of `VGC_DECLARE_OBJECT`, which
+/// expands to the same code as above:
+///
+/// ```cpp
+/// VGC_DECLARE_OBJECT(vgc::ui, Widget);
 /// ```
 ///
 /// Future work:
@@ -1880,25 +1905,10 @@ inline Int Object::numChildObjects() const {
 /// otherwise the vector might be cleared in the middle of a
 /// `widgets[i]->foo()` call.
 ///
-#define VGC_DECLARE_OBJECT(T)                                                            \
-    class T;                                                                             \
-    using T##Ptr = ::vgc::core::ObjPtr<T>;                                               \
-    using T##ConstPtr = ::vgc::core::ObjPtr<const T>;                                    \
-    using T##WeakPtr = ::vgc::core::ObjPtr<T>;                                           \
-    using T##WeakConstPtr = ::vgc::core::ObjPtr<const T>;                                \
-    using T##SharedPtr = ::vgc::core::ObjPtr<T>;                                         \
-    using T##SharedConstPtr = ::vgc::core::ObjPtr<const T>;                              \
-    using T##LockPtr = ::vgc::core::ObjPtr<T>;                                           \
-    using T##LockConstPtr = ::vgc::core::ObjPtr<const T>;                                \
-    using T##List = ::vgc::core::ObjList<T>;                                             \
-    using T##ListIterator = ::vgc::core::ObjListIterator<T>;                             \
-    using T##ListView = ::vgc::core::ObjListView<T>
+#define VGC_DECLARE_OBJECT(...)                                                          \
+    VGC_PP_EXPAND(VGC_PP_OVERLOAD(VGC_DECLARE_OBJECT_, __VA_ARGS__)(__VA_ARGS__))
 
-namespace vgc::core {
-
-VGC_DECLARE_OBJECT(Object);
-
-} // namespace vgc::core
+VGC_DECLARE_OBJECT(vgc::core, Object);
 
 namespace vgc::core::detail {
 
