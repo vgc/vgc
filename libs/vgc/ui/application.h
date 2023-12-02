@@ -146,7 +146,7 @@ public:
 
     /// Returns the module manager of the application.
     ///
-    ModuleManager* moduleManager() {
+    ModuleManager* moduleManager() const {
         return moduleManager_.get();
     }
 
@@ -154,7 +154,7 @@ public:
     /// module yet.
     ///
     template<typename TModule>
-    core::ObjPtr<TModule> getOrCreateModule() {
+    core::ObjPtr<TModule> getOrCreateModule() const {
         return moduleManager()->getOrCreateModule<TModule>();
     }
 

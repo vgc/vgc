@@ -132,6 +132,8 @@ void GenericAction::onWidgetRootChanged_(Widget* widgetRoot) {
 
 void GenericAction::onOwningWidgetChanged_(Widget* owningWidget) {
 
+    // XXX: owning widget doesn't work if the action is owned by a module!
+
     onWidgetRootChanged_(owningWidget ? owningWidget->root() : nullptr);
 
     // TODO: make the above implementation simpler by adding Widget::rootChanged()
