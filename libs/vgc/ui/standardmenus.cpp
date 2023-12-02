@@ -71,7 +71,7 @@ MenuWeakPtr StandardMenus::getOrCreateFileMenu() {
 }
 
 void StandardMenus::createEditMenu() {
-    createMenu(fileMenu_, menuBar_, "Edit");
+    createMenu(editMenu_, menuBar_, "Edit");
 }
 
 MenuWeakPtr StandardMenus::getOrCreateEditMenu() {
