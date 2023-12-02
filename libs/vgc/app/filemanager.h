@@ -70,8 +70,6 @@ public:
     }
 
 private:
-    friend FileManager;
-
     bool wasSaved_ = false;
     QString filename_;
 };
