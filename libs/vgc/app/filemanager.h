@@ -56,7 +56,8 @@ public:
     static RecoverySaveInfo savedTo(QString filename) {
         return RecoverySaveInfo(true, filename);
     }
-    /// Returns whether a recovery saved was successfuly done.
+
+    /// Returns whether a recovery save was successfuly done.
     ///
     bool wasSaved() const {
         return wasSaved_;
