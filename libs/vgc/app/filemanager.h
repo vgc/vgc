@@ -57,7 +57,7 @@ public:
         return RecoverySaveInfo(true, filename);
     }
 
-    /// Returns whether a recovery save was successfuly done.
+    /// Returns whether a recovery save was successfully done.
     ///
     bool wasSaved() const {
         return wasSaved_;
