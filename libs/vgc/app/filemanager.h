@@ -91,28 +91,36 @@ protected:
     FileManager(CreateKey, const ui::ModuleContext& context);
 
 public:
-    /// Creates the `CurrentColor` module.
+    /// Creates the `FileManager` module.
     ///
     static FileManagerPtr create(const ui::ModuleContext& context);
 
-    /// Performs a recovery save, that is, attempt to save the current document
-    /// after a crash with a new name in a standard location, so that it can
-    /// later be re-opened and potentially repaired, minimizing user data loss.
+    /// Performs a recovery save, that is, attempts to save the current
+    /// document after a crash with a new name in a standard location, so that
+    /// it can later be re-opened and potentially repaired, minimizing user
+    /// data loss.
     ///
     RecoverySaveInfo recoverySave();
 
-    /// The quit action was triggered
+    /// This signal is emitted when the quit action was triggered.
     ///
-    // XXX Move this to StandardMenus? Better design allowing listeners to
-    // cancel the quit?
+    /// If you receive this signal, this means that the user has already been
+    /// prompted whether to save the file, the save operation was done, and the
+    /// operation was not cancelled.
+    ///
+    // TODO: Actually implement the "Do you want to save?" prompt.
+    //
+    // XXX Move this to StandardMenus, together with a better design allowing
+    // any listeners to cancel the quit?
     //
     VGC_SIGNAL(quitTriggered)
 
 private:
     canvas::DocumentManagerWeakPtr documentManager_;
 
-    // For now we need this. TODO: Have documentColorPalette_
-    // listen to changes of documentManager itself
+    // For now we need this.
+    // TODO: Replace this horrible temporary design with proper
+    // per-document color palette management.
     tools::DocumentColorPaletteWeakPtr documentColorPalette_;
 
     core::Id lastSavedDocumentVersionId = {};
