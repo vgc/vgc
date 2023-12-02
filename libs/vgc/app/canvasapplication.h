@@ -25,7 +25,6 @@
 #include <vgc/canvas/canvas.h>
 #include <vgc/canvas/toolmanager.h>
 #include <vgc/core/colors.h>
-#include <vgc/dom/document.h>
 #include <vgc/tools/colorpalette.h>
 #include <vgc/tools/paintbucket.h>
 #include <vgc/tools/sketch.h>
@@ -35,7 +34,6 @@
 #include <vgc/ui/panel.h>
 #include <vgc/ui/panelarea.h>
 #include <vgc/ui/panelmanager.h>
-#include <vgc/workspace/workspace.h>
 
 namespace vgc::tools {
 
@@ -119,15 +117,10 @@ public:
         return panelManager_.get();
     }
 
-    /// Returns the active document.
-    ///
-    dom::Document* activeDocument() const {
-        return document_;
-    }
-
     /// Quits the application.
     ///
     void quit();
+    VGC_SLOT(quit)
 
 protected:
     // Reimplementation
@@ -140,68 +133,12 @@ private:
     // ------------------------------------------------------------------------
     //                       Crash recovery
 
-    bool recoverySave_();
-    void showCrashPopup_(std::string_view errorMessage, bool wasRecoverySaved);
     void crashHandler_(std::string_view errorMessage);
-
-    // ------------------------------------------------------------------------
-    //                       Document management
-
-    // TODO: Implement DocumentManager encapsulating everything below
-
-    dom::Document* document_;
-    core::Id lastSavedDocumentVersionId = {};
-    QString filename_;
-    workspace::WorkspacePtr workspace_;
-    core::ConnectionHandle documentHistoryHeadChangedConnectionHandle_;
-
-    void openDocument_(QString filename);
-
-    ui::Action* actionNew_ = nullptr;
-    VGC_SLOT(onActionNewSlot_, onActionNew_)
-    void onActionNew_();
-
-    ui::Action* actionOpen_ = nullptr;
-    VGC_SLOT(onActionOpenSlot_, onActionOpen_)
-    void onActionOpen_();
-    void doOpen_();
-
-    ui::Action* actionSave_ = nullptr;
-    VGC_SLOT(onActionSaveSlot_, onActionSave_)
-    void onActionSave_();
-
-    ui::Action* actionSaveAs_ = nullptr;
-    VGC_SLOT(onActionSaveAsSlot_, onActionSaveAs_)
-    void onActionSaveAs_();
-    void doSaveAs_();
-    void doSave_();
-
-    ui::Action* actionQuit_ = nullptr;
-    VGC_SLOT(onActionQuitSlot_, onActionQuit_);
-    void onActionQuit_();
-
-    ui::Action* actionUndo_ = nullptr;
-    VGC_SLOT(onActionUndoSlot_, onActionUndo_);
-    void onActionUndo_();
-
-    ui::Action* actionRedo_ = nullptr;
-    VGC_SLOT(onActionRedoSlot_, onActionRedo_);
-    void onActionRedo_();
-
-    ui::Action* actionCut_ = nullptr;
-    ui::Action* actionCopy_ = nullptr;
-    ui::Action* actionPaste_ = nullptr;
-
-    void updateUndoRedoActionState_();
-    VGC_SLOT(updateUndoRedoActionStateSlot_, updateUndoRedoActionState_)
 
     // ------------------------------------------------------------------------
     //                       Menu
 
     void createActions_(ui::Widget* parent);
-    void createMenus_();
-
-    ui::Menu* panelsMenu_;
 
     // ------------------------------------------------------------------------
     //                       Panels
@@ -215,15 +152,11 @@ private:
     ui::PanelArea* getOrCreateLeftPanelArea_();
     void onActionOpenPanel_(ui::PanelTypeId id);
 
-    // Canvas
-    canvas::Canvas* canvas_ = nullptr;
-    void createCanvas_(ui::Widget* parent, workspace::Workspace* workspace);
-
     // Tools
     canvas::ToolManagerPtr toolManager_;
-    tools::Sketch* sketchTool_;
-    tools::PaintBucket* paintBucketTool_;
-    void createTools_();
+    tools::Sketch* sketchTool_ = nullptr;
+    tools::PaintBucket* paintBucketTool_ = nullptr;
+    void createTools_(canvas::Canvas* canvas);
 
     // Colors
     tools::CurrentColorPtr currentColor_;
@@ -231,9 +164,7 @@ private:
     void onCurrentColorChanged_(const core::Color& color);
     VGC_SLOT(onCurrentColorChanged_)
 
-    // ------------------------------------------------------------------------
-    //                       Misc
-
+    // Debug Widget Style
     ui::Action* actionDebugWidgetStyle_ = nullptr;
     VGC_SLOT(onActionDebugWidgetStyleSlot_, onActionDebugWidgetStyle_);
     void onActionDebugWidgetStyle_();

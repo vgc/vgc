@@ -58,6 +58,10 @@ private:
 /// \class vgc::tools::DocumentColorPalette
 /// \brief A module to access the color palette of the active document.
 ///
+/// This class is a temporary workaround before we implement a better system
+/// for managing document color palettes. Assume that it will be deleted in the
+/// near future.
+///
 class VGC_TOOLS_API DocumentColorPalette : public ui::Module {
 private:
     VGC_OBJECT(DocumentColorPalette, ui::Module)
@@ -78,9 +82,6 @@ public:
 
     /// Sets the document that this document color palette is operating on.
     ///
-    // TODO: have this module depend on an `ActiveDocument` module, and
-    // automatically switch documents when the active document changes?
-    //
     void setDocument(dom::Document* document);
 
     /// Returns the colors of the document's color palette.

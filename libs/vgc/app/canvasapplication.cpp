@@ -16,13 +16,14 @@
 
 #include <vgc/app/canvasapplication.h>
 
-#include <QFileDialog>
+#include <QDir>
 #include <QMessageBox>
-#include <QStandardPaths>
 
+#include <vgc/app/filemanager.h>
 #include <vgc/app/logcategories.h>
+#include <vgc/canvas/canvasmanager.h>
+#include <vgc/canvas/documentmanager.h>
 #include <vgc/canvas/tooloptionspanel.h>
-#include <vgc/core/datetime.h>
 #include <vgc/dom/strings.h>
 #include <vgc/tools/currentcolor.h>
 #include <vgc/tools/documentcolorpalette.h>
@@ -85,18 +86,37 @@ CanvasApplication::CanvasApplication(
     window_ = app::MainWindow::create(applicationName);
     window_->setBackgroundPainted(false);
 
-    currentColor_ = getOrCreateModule<tools::CurrentColor>();
-    currentColor_->colorChanged().connect(onCurrentColorChanged_Slot());
+    // Sets the window's menu bar as being the standard menu bar. This must be
+    // done before creating other modules so that they can add their actions to
+    // the menu bar.
+    //
+    if (auto standardMenus = getOrCreateModule<ui::StandardMenus>().lock()) {
+        standardMenus->setMenuBar(window_->mainWidget()->menuBar());
+        standardMenus->createFileMenu();
+        standardMenus->createEditMenu();
+    }
 
+    // CurrentColor module
+    if (auto currentColor = getOrCreateModule<tools::CurrentColor>().lock()) {
+        currentColor_ = currentColor;
+        currentColor->colorChanged().connect(onCurrentColorChanged_Slot());
+        currentColor->setColor(initialColor);
+    }
+
+    // DocumentColorPalette module
     documentColorPalette_ = getOrCreateModule<tools::DocumentColorPalette>();
 
-    openDocument_("");
+    // FileManager module
+    if (auto fileManager = getOrCreateModule<FileManager>().lock()) {
+        fileManager->quitTriggered().connect(quitSlot());
+    }
+
+    // Other actions (TODO: refactor these out of CanvasApplication)
     createActions_(window_->mainWidget());
-    createMenus_();
+
+    // Panels
     registerPanelTypes_();
     createDefaultPanels_();
-
-    currentColor_->setColor(initialColor);
 }
 
 CanvasApplicationPtr
@@ -120,63 +140,12 @@ void CanvasApplication::onSystemSignalReceived(std::string_view errorMessage, in
     SuperClass::onSystemSignalReceived(errorMessage, sig);
 }
 
-bool CanvasApplication::recoverySave_() {
+namespace {
 
-    // Nothing to save if no document.
-    //
-    if (!document_) {
-        return false;
-    }
-
-    // It is risky to try to undo or abort the history since
-    // it could cause another exception.
-    // Thus we simply disable the history for the color palette
-    // save operation.
-    //
-    core::History* history = document_->history();
-    if (history) {
-        document_->disableHistory();
-    }
-
-    // Determine where to save the recovery file.
-    //
-    QDir dir;         // "/home/user/Documents/MyPictures"
-    QString basename; // "cat"
-    QString suffix;   // ".vgci"
-    if (filename_.isEmpty()) {
-        dir = QDir(QStandardPaths::writableLocation(QStandardPaths::HomeLocation));
-        core::DateTime now = core::DateTime::now().toLocalTime();
-        basename = ui::toQt(core::format("vgc-recovered-file-{:%Y-%m-%d}", now));
-        suffix = ".vgci";
-    }
-    else {
-        QFileInfo info(filename_);
-        dir = info.dir();
-        basename = info.baseName();
-        suffix = "." + info.completeSuffix();
-    }
-
-    // Try to append ~1, ~2, 3, etc. to the filename until we find a filename
-    // that doesn't exist yet, and save the recovery file there.
-    //
-    int maxRecoverVersion = 10000;
-    for (int i = 1; i <= maxRecoverVersion; ++i) {
-        QString name = basename + "~" + QString::number(i) + suffix;
-        if (!dir.exists(name)) {
-            filename_ = dir.absoluteFilePath(name);
-            doSave_();
-            return true;
-        }
-    }
-
-    // Failed to save.
-    //
-    return false;
-}
-
-void CanvasApplication::showCrashPopup_(
+#ifndef VGC_DEBUG_BUILD
+void showCrashPopup_(
     std::string_view errorMessage,
-    bool wasRecoverySaved) {
+    const RecoverySaveInfo& recoverySaveInfo) {
 
     // Construct error message to show to the user.
     //
@@ -184,10 +153,10 @@ void CanvasApplication::showCrashPopup_(
     QString msg;
     msg += "<p>We're very sorry, a bug occured and the application will now be closed."
            " It's totally our fault, not yours.</p>";
-    if (wasRecoverySaved) {
+    if (recoverySaveInfo.wasSaved()) {
         msg += "<p>Good news, we saved your work here:</p>";
         msg += "<p><b>";
-        msg += QDir::toNativeSeparators(filename_).toHtmlEscaped();
+        msg += QDir::toNativeSeparators(recoverySaveInfo.filename()).toHtmlEscaped();
         msg += "</b></p>";
     }
     msg += "<p>We would love to fix this bug. "
@@ -207,256 +176,26 @@ void CanvasApplication::showCrashPopup_(
     messageBox.setText(msg);
     messageBox.exec();
 }
+#endif
+
+} // namespace
 
 // In debug builds, we silently show the location of the saved file instead of
 // using a popup, since having to close the popup each time when debugging is a
 // bit annoying.
 //
 void CanvasApplication::crashHandler_([[maybe_unused]] std::string_view errorMessage) {
-    bool wasRecoverySaved = recoverySave_();
+    auto info = RecoverySaveInfo::notSaved();
+    if (auto fileManager = getOrCreateModule<FileManager>().lock()) {
+        info = fileManager->recoverySave();
+    }
 #ifdef VGC_DEBUG_BUILD
-    if (wasRecoverySaved) {
-        VGC_INFO(LogVgcApp, "Recovery file saved to: {}.", ui::fromQt(filename_));
+    if (info.wasSaved()) {
+        VGC_INFO(LogVgcApp, "Recovery file saved to: {}.", ui::fromQt(info.filename()));
     }
 #else
-    showCrashPopup_(errorMessage, wasRecoverySaved);
+    showCrashPopup_(errorMessage, info);
 #endif
-}
-
-void CanvasApplication::openDocument_(QString filename) {
-
-    // clear previous workspace
-    if (workspace_) {
-        workspace_->sync();
-        if (document_->versionId() != lastSavedDocumentVersionId) {
-            // XXX "do you wanna save ?"
-        }
-        core::History* history = workspace_->history();
-        if (history) {
-            history->disconnect(this);
-        }
-        canvas_->setWorkspace(nullptr);
-    }
-
-    // clear document info
-    filename_.clear();
-    document_ = nullptr;
-
-    core::Array<core::Color> colors = {};
-    dom::DocumentPtr newDocument = {};
-    if (filename.isEmpty()) {
-        try {
-            newDocument = dom::Document::create();
-            dom::Element::create(newDocument.get(), "vgc");
-        }
-        catch (const dom::FileError& e) {
-            // TODO: have our own message box instead of using QtWidgets
-            QMessageBox::critical(nullptr, "Error Creating New File", e.what());
-        }
-    }
-    else {
-        try {
-            newDocument = dom::Document::open(ui::fromQt(filename));
-        }
-        catch (const dom::FileError& e) {
-            // TODO: have our own message box instead of using QtWidgets
-            QMessageBox::critical(nullptr, "Error Opening File", e.what());
-        }
-    }
-    documentColorPalette_->setDocument(newDocument.get());
-
-    workspace_ = workspace::Workspace::create(newDocument);
-    document_ = newDocument.get();
-    filename_ = filename;
-
-    if (canvas_) {
-        canvas_->setWorkspace(workspace_.get());
-    }
-
-    core::History* history = document_->enableHistory(dom::strings::New_Document);
-    history->headChanged().connect(updateUndoRedoActionStateSlot_());
-    updateUndoRedoActionState_();
-}
-
-void CanvasApplication::onActionNew_() {
-    openDocument_("");
-}
-
-void CanvasApplication::onActionOpen_() {
-    doOpen_();
-}
-
-void CanvasApplication::doOpen_() {
-    // Get which directory the dialog should display first
-    QString dir = filename_.isEmpty()
-                      ? QStandardPaths::writableLocation(QStandardPaths::HomeLocation)
-                      : QFileInfo(filename_).dir().path();
-
-    // Set which existing files to show in the dialog
-    QString filters = "VGC Illustration Files (*.vgci)";
-
-    // Create the dialog.
-    //
-    // TODO: manually set position of dialog in screen (since we can't give
-    // it a QWidget* parent). Same for all QMessageBox.
-    //
-    QWidget* parent = nullptr;
-    QFileDialog dialog(parent, QString("Open..."), dir, filters);
-
-    // Allow to select existing files only
-    dialog.setFileMode(QFileDialog::ExistingFile);
-
-    // Set acceptMode to "Open" (as opposed to "Save")
-    dialog.setAcceptMode(QFileDialog::AcceptOpen);
-
-    // Exec the dialog as modal
-    int result = dialog.exec();
-
-    // Actually open the file
-    if (result == QDialog::Accepted) {
-        QStringList selectedFiles = dialog.selectedFiles();
-        if (selectedFiles.size() == 0) {
-            VGC_WARNING(LogVgcApp, "No file selected; file not opened.");
-        }
-        if (selectedFiles.size() == 1) {
-            QString selectedFile = selectedFiles.first();
-            if (!selectedFile.isEmpty()) {
-                // Open
-                openDocument_(selectedFile);
-            }
-            else {
-                VGC_WARNING(LogVgcApp, "Empty file path selected; file not opened.");
-            }
-        }
-        else {
-            VGC_WARNING(LogVgcApp, "More than one file selected; file not opened.");
-        }
-    }
-    else {
-        // User willfully cancelled the operation
-        // => nothing to do, not even a warning.
-    }
-}
-
-void CanvasApplication::onActionSave_() {
-    if (filename_.isEmpty()) {
-        doSaveAs_();
-    }
-    else {
-        doSave_();
-    }
-}
-
-void CanvasApplication::onActionSaveAs_() {
-    doSaveAs_();
-}
-
-void CanvasApplication::doSaveAs_() {
-
-    // Get which directory the dialog should display first
-    QString dir = filename_.isEmpty()
-                      ? QStandardPaths::writableLocation(QStandardPaths::HomeLocation)
-                      : QFileInfo(filename_).dir().path();
-
-    // Set which existing files to show in the dialog
-    QString extension = ".vgci";
-    QString filters = QString("VGC Illustration Files (*") + extension + ")";
-
-    // Create the dialog
-    QFileDialog dialog(nullptr, "Save As...", dir, filters);
-
-    // Allow to select non-existing files
-    dialog.setFileMode(QFileDialog::AnyFile);
-
-    // Set acceptMode to "Save" (as opposed to "Open")
-    dialog.setAcceptMode(QFileDialog::AcceptSave);
-
-    // Exec the dialog as modal
-    int result = dialog.exec();
-
-    // Actually save the file
-    if (result == QDialog::Accepted) {
-        QStringList selectedFiles = dialog.selectedFiles();
-        if (selectedFiles.size() == 0) {
-            VGC_WARNING(LogVgcApp, "No file selected; file not saved.");
-        }
-        if (selectedFiles.size() == 1) {
-            QString selectedFile = selectedFiles.first();
-            if (!selectedFile.isEmpty()) {
-                // Append file extension if missing. Examples:
-                //   drawing.vgci -> drawing.vgci
-                //   drawing      -> drawing.vgci
-                //   drawing.     -> drawing..vgci
-                //   drawing.vgc  -> drawing.vgc.vgci
-                //   drawingvgci  -> drawingvgci.vgci
-                //   .vgci        -> .vgci
-                if (!selectedFile.endsWith(extension)) {
-                    selectedFile.append(extension);
-                }
-
-                // Save
-                filename_ = selectedFile;
-                doSave_();
-            }
-            else {
-                VGC_WARNING(LogVgcApp, "Empty file path selected; file not saved.");
-            }
-        }
-        else {
-            VGC_WARNING(LogVgcApp, "More than one file selected; file not saved.");
-        }
-    }
-    else {
-        // User willfully cancelled the operation
-        // => nothing to do, not even a warning.
-    }
-
-    // Note: On some window managers, modal dialogs such as this Save As dialog
-    // causes "QXcbConnection: XCB error: 3 (BadWindow)" errors. See:
-    //   https://github.com/vgc/vgc/issues/6
-    //   https://bugreports.qt.io/browse/QTBUG-56893
-}
-
-void CanvasApplication::doSave_() {
-    try {
-        auto saver = documentColorPalette_->saver();
-        document_->save(ui::fromQt(filename_));
-    }
-    catch (const dom::FileError& e) {
-        QMessageBox::critical(nullptr, "Error Saving File", e.what());
-    }
-}
-
-void CanvasApplication::onActionQuit_() {
-    quit();
-}
-
-void CanvasApplication::onActionUndo_() {
-    if (workspace_) {
-        core::History* history = workspace_->history();
-        if (history) {
-            history->undo();
-        }
-    }
-}
-
-void CanvasApplication::onActionRedo_() {
-    if (workspace_) {
-        core::History* history = workspace_->history();
-        if (history) {
-            history->redo();
-        }
-    }
-}
-
-void CanvasApplication::updateUndoRedoActionState_() {
-    core::History* history = workspace_ ? workspace_->history() : nullptr;
-    if (actionUndo_) {
-        actionUndo_->setEnabled(history ? history->canUndo() : false);
-    }
-    if (actionRedo_) {
-        actionRedo_->setEnabled(history ? history->canRedo() : false);
-    }
 }
 
 namespace {
@@ -467,48 +206,6 @@ using ui::Key;
 using ui::Shortcut;
 using ui::modifierkeys::ctrl;
 using ui::modifierkeys::shift;
-
-VGC_UI_DEFINE_WINDOW_COMMAND( //
-    _new,
-    "file.new",
-    "New",
-    Shortcut(ctrl, Key::N))
-
-VGC_UI_DEFINE_WINDOW_COMMAND(
-    open, //
-    "file.open",
-    "Open",
-    Shortcut(ctrl, Key::O))
-
-VGC_UI_DEFINE_WINDOW_COMMAND( //
-    save,
-    "file.save",
-    "Save",
-    Shortcut(ctrl, Key::S))
-
-VGC_UI_DEFINE_WINDOW_COMMAND( //
-    saveAs,
-    "file.saveAs",
-    "Save As...",
-    Shortcut(ctrl | shift, Key::S))
-
-VGC_UI_DEFINE_WINDOW_COMMAND( //
-    quit,
-    "file.quit",
-    "Quit",
-    Shortcut(ctrl, Key::Q))
-
-VGC_UI_DEFINE_WINDOW_COMMAND( //
-    undo,
-    "edit.undo",
-    "Undo",
-    Shortcut(ctrl, Key::Z))
-
-VGC_UI_DEFINE_WINDOW_COMMAND( //
-    redo,
-    "edit.redo",
-    "Redo",
-    Shortcut(ctrl | shift, Key::Z))
 
 VGC_UI_DEFINE_WINDOW_COMMAND(
     debugWidgetStyle,
@@ -532,57 +229,35 @@ ui::Action* createAction(ui::Widget* parent, core::StringId commandId, TSlot slo
     return action;
 }
 
+void createGenericAction_(ui::Widget* parent, ui::Menu& menu, core::StringId commandId) {
+    ui::Action* action = parent->createAction<ui::GenericAction>(commandId);
+    menu.addItem(action);
+}
+
 } // namespace
 
 void CanvasApplication::createActions_(ui::Widget* parent) {
 
-    namespace generic = ui::commands::generic;
-
-    actionNew_ = createAction(parent, commands::_new(), onActionNewSlot_());
-    actionOpen_ = createAction(parent, commands::open(), onActionOpenSlot_());
-    actionSave_ = createAction(parent, commands::save(), onActionSaveSlot_());
-    actionSaveAs_ = createAction(parent, commands::saveAs(), onActionSaveAsSlot_());
-    actionQuit_ = createAction(parent, commands::quit(), onActionQuitSlot_());
-
-    actionUndo_ = createAction(parent, commands::undo(), onActionUndoSlot_());
-    actionRedo_ = createAction(parent, commands::redo(), onActionRedoSlot_());
-    actionCut_ = parent->createAction<ui::GenericAction>(generic::cut());
-    actionCopy_ = parent->createAction<ui::GenericAction>(generic::copy());
-    actionPaste_ = parent->createAction<ui::GenericAction>(generic::paste());
+    // For now, generic actions don't work if they are owned by a module, since
+    // GenericAction works by using its `owningWidget`. Thus we define
+    // cut-copy-paste actions here since we need a parent widget.
+    //
+    // TODO:
+    // - make generic actions work in a module
+    // - Implement something like StandardMenus::createGenericCutCopyPaste()
+    //
+    if (auto standardMenus = getOrCreateModule<ui::StandardMenus>().lock()) {
+        if (auto editMenu = standardMenus->getOrCreateEditMenu().lock()) {
+            namespace generic = ui::commands::generic;
+            editMenu->addSeparator();
+            createGenericAction_(parent, *editMenu, generic::cut());
+            createGenericAction_(parent, *editMenu, generic::copy());
+            createGenericAction_(parent, *editMenu, generic::paste());
+        }
+    }
 
     actionDebugWidgetStyle_ = createAction(
         parent, commands::debugWidgetStyle(), onActionDebugWidgetStyleSlot_());
-
-    updateUndoRedoActionState_();
-}
-
-void CanvasApplication::createMenus_() {
-    if (auto standardMenus = getOrCreateModule<ui::StandardMenus>().lock()) {
-        ui::Menu* menuBar = window_->mainWidget()->menuBar();
-        standardMenus->setMenuBar(menuBar);
-        standardMenus->createFileMenu();
-        standardMenus->createEditMenu();
-
-        // TODO: move code below to separate modules
-        if (auto fileMenu = standardMenus->fileMenu().lock()) {
-            fileMenu->addItem(actionNew_);
-            fileMenu->addItem(actionOpen_);
-            fileMenu->addSeparator();
-            fileMenu->addItem(actionSave_);
-            fileMenu->addItem(actionSaveAs_);
-            fileMenu->addSeparator();
-            fileMenu->addItem(actionQuit_);
-        }
-        if (auto editMenu = standardMenus->editMenu().lock()) {
-            editMenu->addItem(actionUndo_);
-            editMenu->addItem(actionRedo_);
-            editMenu->addSeparator();
-            editMenu->addItem(actionCut_);
-            editMenu->addItem(actionCopy_);
-            editMenu->addItem(actionPaste_);
-        }
-        panelsMenu_ = menuBar->createSubMenu("Panels");
-    }
 }
 
 void CanvasApplication::registerPanelTypes_() {
@@ -633,13 +308,23 @@ void CanvasApplication::registerPanelTypes_() {
             return panel;
         });
 
+    // Create Panels menu
+    ui::Menu* panelsMenu = nullptr;
+    if (auto standardMenus = getOrCreateModule<ui::StandardMenus>().lock()) {
+        if (auto menuBar = standardMenus->menuBar().lock()) {
+            panelsMenu = menuBar->createSubMenu("Panels");
+        }
+    }
+
     // Populate Panels menu
-    ui::Widget* actionParent = window_->mainWidget();
-    for (ui::PanelTypeId id : panelManager_->registeredPanelTypeIds()) {
-        ui::Action* action = actionParent->createTriggerAction(commands::openPanel());
-        action->triggered().connect([=]() { this->onActionOpenPanel_(id); });
-        action->setText(panelManager_->label(id));
-        panelsMenu_->addItem(action);
+    if (panelsMenu) {
+        ui::Widget* actionParent = window_->mainWidget();
+        for (ui::PanelTypeId id : panelManager_->registeredPanelTypeIds()) {
+            ui::Action* action = actionParent->createTriggerAction(commands::openPanel());
+            action->triggered().connect([=]() { this->onActionOpenPanel_(id); });
+            action->setText(panelManager_->label(id));
+            panelsMenu->addItem(action);
+        }
     }
 }
 
@@ -659,16 +344,23 @@ void CanvasApplication::createDefaultPanels_() {
     ui::Panel* canvasPanel =
         panelManager_->createPanelInstance_<ui::Panel>(canvasArea, "Canvas");
     canvasArea->tabBar()->hide();
-    createCanvas_(canvasPanel, workspace_.get());
+    canvas::Canvas* canvas = canvasPanel->createChild<canvas::Canvas>(nullptr);
+    if (auto canvasManager = getOrCreateModule<canvas::CanvasManager>().lock()) {
+        // Set the canvas as being the active canvas. This ensures that
+        // canvas->setWorkspace() is called whenever the current workspace
+        // changes, e.g., when opening a new file.
+        canvasManager->setActiveCanvas(canvas);
+    }
 
     // Create and populate the ToolManager.
     //
-    // Note: for now, this requires the `canvas_` to already be created. See comment in
-    // ToolManager for better design (not have ToolManager depend on a Canvas instance).
-    // Once the better design is implemented, this function would be better called before
-    // createDefaultPanels_().
+    // Note: for now, this requires the canvas to already be created and
+    // outlive the tool manager. See comment in ToolManager for better design:
+    // instead of having ToolManager depend on a Canvas, we should have each
+    // Canvas listen to the/a (global? module?) ToolManager. Or having
+    // CanvasManager make the link between the two.
     //
-    createTools_();
+    createTools_(canvas);
 
     // Create other panels
     onActionOpenPanel_(paneltypes_::tools);
@@ -730,13 +422,6 @@ void CanvasApplication::onActionOpenPanel_(ui::PanelTypeId id) {
     panelManager_->createPanelInstance(id, tabs);
 }
 
-void CanvasApplication::createCanvas_(
-    ui::Widget* parent,
-    workspace::Workspace* workspace) {
-
-    canvas_ = parent->createChild<canvas::Canvas>(workspace);
-}
-
 namespace {
 
 namespace commands {
@@ -777,11 +462,11 @@ VGC_UI_DEFINE_WINDOW_COMMAND( //
 
 } // namespace
 
-void CanvasApplication::createTools_() {
+void CanvasApplication::createTools_(canvas::Canvas* canvas) {
 
     // Create the tool manager
     ui::Widget* actionOwner = mainWidget();
-    toolManager_ = canvas::ToolManager::create(canvas_, actionOwner);
+    toolManager_ = canvas::ToolManager::create(canvas, actionOwner);
 
     // Create and register all tools
     // TODO: add CanvasTool::command() and use a createAndRegisterTool() helper
@@ -796,8 +481,12 @@ void CanvasApplication::createTools_() {
     toolManager_->registerTool(commands::sculptTool(), sculptTool);
 
     // Keep pointer to some tools for handling color changes
+    // TODO: Delegate this to the tools themselves by providing the CurrentColor object.
     sketchTool_ = sketchTool.get();
     paintBucketTool_ = paintBucketTool.get();
+    if (auto currentColor = currentColor_.lock()) {
+        onCurrentColorChanged_(currentColor->color());
+    }
 }
 
 void CanvasApplication::onCurrentColorChanged_(const core::Color& color) {
