@@ -32,7 +32,7 @@ namespace vgc::app {
 VGC_DECLARE_OBJECT(FileManager);
 
 /// \class vgc::app::RecoverySaveInfo
-/// \brief Information about a recovery save performed and where.
+/// \brief Informs whether a recovery save was done, and at what location.
 ///
 /// This is the return type of `FileManager::recoverySave()`.
 ///
