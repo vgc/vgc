@@ -953,42 +953,52 @@ bool AbstractInterpolatingStroke2d::snap_(
     const Vec2d& snapEndPosition,
     CurveSnapTransformationMode mode) {
 
-    // insert second knot when zero-length curve becomes non-zero-length.
+    // Nothing to do if the stroke is already snapped.
+    //
+    if (positions_.length() > 0                    //
+        && positions_.first() == snapStartPosition //
+        && positions_.last() == snapEndPosition) {
+
+        return false;
+    }
+
     if (positions_.length() < 2) {
+
+        // When the stroke currently has zero or one knot, we explicitly set
+        // its new knots. In particular, this handles the case when a 1-knot
+        // zero-length stroke becomes a 2-knot non-zero-length.
+        //
         double width0 = widths_.isEmpty() ? 0 : widths_.first();
         positions_.clear();
         widths_.clear();
-        // first
+        // first knot
         {
             positions_.append(snapStartPosition);
             if (!hasConstantWidth()) {
                 widths_.append(width0);
             }
         }
-        // second
+        // second knot (only necessary for non-zero-length strokes)
         if (snapStartPosition != snapEndPosition) {
             positions_.append(snapEndPosition);
             if (!hasConstantWidth()) {
                 widths_.append(width0);
             }
         }
-        onPositionsChanged_();
-        return true;
     }
-
-    if (positions_.first() == snapStartPosition && positions_.last() == snapEndPosition) {
-        // already snapped
-        return false;
-    }
-
-    switch (mode) {
-    case CurveSnapTransformationMode::LinearInArclength: {
-        // XXX: should this be cached too somehow ?
-        core::DoubleArray positionsS;
-        computePositionsS_(positionsS);
-        snapLinearS_(positions_, positionsS, snapStartPosition, snapEndPosition);
-        break;
-    }
+    else {
+        // Otherwise, if the stroke already has at least two knots, we perform
+        // the linear transformation.
+        //
+        switch (mode) {
+        case CurveSnapTransformationMode::LinearInArclength: {
+            // XXX: should this be cached too somehow ?
+            core::DoubleArray positionsS;
+            computePositionsS_(positionsS);
+            snapLinearS_(positions_, positionsS, snapStartPosition, snapEndPosition);
+            break;
+        }
+        }
     }
 
     onPositionsChanged_();
