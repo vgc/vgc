@@ -33,6 +33,7 @@ vgc_add_library(ui
         grid.h
         iconwidget.h
         imagebox.h
+        inspector.h
         key.h
         keyevent.h
         label.h
@@ -102,6 +103,7 @@ vgc_add_library(ui
         grid.cpp
         iconwidget.cpp
         imagebox.cpp
+        inspector.cpp
         key.cpp
         keyevent.cpp
         label.cpp
