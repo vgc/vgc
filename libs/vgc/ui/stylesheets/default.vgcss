@@ -481,29 +481,17 @@
  *                                 TOOLS PANEL
 */
 
-/* For now, `.tools` and `.tools-options` refers to the PanelArea, since we do
- * not have enough machinery implemented to get the desired result by only
- * styling the Panel.
+/* Currently, `.tools` and `.tools-options` refers to the PanelArea rather than
+ * the Panel itself. This is for historical reasons: we didn't have enough
+ * features to be able to specify size behavior by only styling the Panel (e.g.,
+ * "inheriting" stretchability.
  *
- * In the future, we'll want these to be style classes applied to the Panel
- * itself rather than the PanelArea, and the PanelArea should be smart enough
- * to infer appropriate min/max/preferred sizes based on the min/max/preferred
- * sizes of its child Panels.
- *
- * However, this is not completely trivial: how to specify whether Panels are
- * stretchable or not, and how the ancestor PanelAreas should react to change
- * in preferred size of their contained Panels? For example, when switching
- * tools, should the parent PanelArea of the 'Tool Options' Panel be
- * automatically increased if the preferred size of the Panel increases? What
- * if the preferred size of the Panel decreases: should we decrease the size of
- * its parent PanelArea to give more space to other PanelAreas? Or keep the
- * size unchanged to anticipate switching tools again and avoid having
- * PanelAreas move too much? Should this depend on whether sibling PanelAreas
- * already have extra space allocated to them?
+ * TODO: Now that we have these features, change the style class to directly target
+ * the Panel.
  */
 
-/* Give all the extra space to 'Tool Options' and 'Colors' rather than 'Tools' */
-.tools {
+.tools .Panel {
+    /* Give all the extra space to other panels */
     vertical-stretch: 0;
 }
 

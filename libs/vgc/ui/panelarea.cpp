@@ -206,6 +206,70 @@ void updateMinMaxSizes(
     }
 }
 
+// If the child PanelArea is of type Tabs, then:
+// - If it only has one Panel (= one tab), it "inherits" the stretch factor of
+//   the Panel,
+// - Otherwise, it uses its own stretch factor, set on the PanelArea itself.
+//
+// Such "inheriting" makes it possible for non-stretchable Panels to ensure
+// that the PanelArea they belong to isn't stretched either, otherwise setting
+// a stretch factor on the Panel would be useless.
+//
+// The alternative would be to set the stretch factor directly on the PanelArea
+// rather than the Panel, but this would require to add a specific style class
+// to the panel areas (e.g., `.tools-panel-area`). This is impractical because
+// the PanelAreas are created dynamically, and Panels can be dragged from one
+// PanelArea to another. Semantically, "stretchability" really is a a property
+// of the panel (e.g.., the "Layers" panel is stretchable, while the "Tools"
+// panel is not), like "preferred size", and it's up to the panel area to
+// respect this stretchability or not based on its own constraints.
+//
+// What if there are multiple tabs?
+//
+// In the case of multiple tabs, an alternative policy could be to "inherit"
+// the stretch factor of the current tab. However, this would cause the layout
+// to change when switching tabs, which can either be useful or harmful:
+//
+// - Useful: It allows stretchable sibling areas to reclaim space when
+// switching to a mostly-empty tab.
+//
+// - Harmful: Having things move around can be really annoying for users,
+// negatively impacting muscle-memory, predictability, etc. In particular, the
+// tab bar itself may change location when clicking on one of its tabs...
+//
+// This is why for now, in the case of multiple tabs, we simply ignore the
+// stretchability of the Panel tabs, and use the default PanelArea stetch factor,
+// which is 1.
+//
+// In the future, we might want to allow users to dynamically specify an
+// "auto-stretch" policy for a given PanelArea (or all PanelAreas):
+//
+// enum PanelAreaAutoStretch {
+//   NoAutoStretch,
+//   BasedOnCurrentTab,
+//   BasedOnSingleTab
+// }
+//
+// This could also be useful for properties other that stretch, e.g.: min/max
+// sizes.
+//
+// This would be somewhat similar to preferred-height and preferred-width which
+// can be set to `auto`. In fact, perhaps all min/max/stretch/shrink should
+// support "auto". Also there are performance and API considerations to take
+// into account if we decide to do this.
+//
+float getChildAreaStretch(PanelArea* childArea, core::StringId stretchClass) {
+    Widget* widget = childArea;
+    if (childArea->type() == PanelAreaType::Tabs && childArea->numPanels() == 1) {
+        if (TabBody* body = childArea->tabBody()) {
+            if (Widget* activeWidget = body->activeWidget()) {
+                widget = activeWidget;
+            }
+        }
+    }
+    return std::abs(widget->style(stretchClass).toFloat());
+}
+
 void updateStretch(detail::PanelAreaSplitDataArray& splitData, Int mainDir) {
 
     core::StringId stretchClass = strings::horizontal_stretch;
@@ -217,7 +281,7 @@ void updateStretch(detail::PanelAreaSplitDataArray& splitData, Int mainDir) {
     //
     float totalStretch = 0;
     for (detail::PanelAreaSplitData& data : splitData) {
-        data.stretch = std::abs(data.childArea->style(stretchClass).toFloat());
+        data.stretch = getChildAreaStretch(data.childArea, stretchClass);
         totalStretch += data.stretch;
     }
 
