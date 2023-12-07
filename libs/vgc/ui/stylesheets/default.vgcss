@@ -481,31 +481,22 @@
  *                                 TOOLS PANEL
 */
 
-/* Currently, `.tools` and `.tools-options` refers to the PanelArea rather than
- * the Panel itself. This is for historical reasons: we didn't have enough
- * features to be able to specify size behavior by only styling the Panel (e.g.,
- * "inheriting" stretchability.
- *
- * TODO: Now that we have these features, change the style class to directly target
- * the Panel.
- */
-
-.tools .Panel {
+.tools {
     /* Give all the extra space to other panels */
     vertical-stretch: 0;
 }
 
-.tools .Panel > .Flex {
+.tools > .Flex {
     cross-alignment: start;
     main-alignment: start;
     main-spacing: packed;
 }
 
-.tools .Panel > .Flex {
+.tools > .Flex {
     column-gap: 2dp;
 }
 
-.tools .Panel .Button {
+.tools .Button {
     preferred-height: 32dp;
     preferred-width: 32dp;
     horizontal-stretch: 0;
@@ -514,31 +505,31 @@
     vertical-shrink: 0;
 }
 
-.tools .Panel .Button {
+.tools .Button {
     background-color: rgba(0, 0, 0, 0);
 }
 
-.tools .Panel .Button.hovered {
+.tools .Button.hovered {
     background-color: rgb(110, 114, 118);
 }
 
-.tools .Panel .Button.pressed {
+.tools .Button.pressed {
     background-color: rgb(120, 124, 128);
 }
 
-.tools .Panel .Button.checked {
+.tools .Button.checked {
     background-color: rgb(11, 82, 172);
 }
 
-.tools .Panel .Button.checked.hovered {
+.tools .Button.checked.hovered {
     background-color: rgb(31, 102, 192);
 }
 
-.tools .Panel .Button.checked.pressed {
+.tools .Button.checked.pressed {
     background-color: rgb(41, 112, 202);
 }
 
-.tools .Panel .Button > .icon {
+.tools .Button > .icon {
     margin-top: 8dp;
     margin-right: 8dp;
     margin-bottom: 8dp;
@@ -549,26 +540,26 @@
     vertical-shrink: 1;
 }
 
-.tool-options .Panel > .Flex {
+.tool-options > .Flex {
     vertical-stretch: 0;
     main-alignment: start;
     main-spacing: packed;
 }
 
-.tool-options .Panel .SettingEdit {
+.tool-options .SettingEdit {
     vertical-shrink: 0;
     vertical-stretch: 0;
     main-alignment: start;
     main-spacing: packed;
 }
 
-.tool-options .Panel .SettingEdit > .Label {
+.tool-options .SettingEdit > .Label {
     horizontal-stretch: 1;
     preferred-width: 80dp;
     text-horizontal-align: left;
 }
 
-.tool-options .Panel .NumberSettingEdit > .NumberEdit {
+.tool-options .NumberSettingEdit > .NumberEdit {
     horizontal-stretch: 1;
     min-width: 10dp;
     preferred-width: 40dp;

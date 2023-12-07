@@ -272,7 +272,7 @@ void CanvasApplication::registerPanelTypes_() {
             canvas::ToolManager* toolManager = this->toolManager_.get();
             ui::Panel* panel = toolManager->createToolsPanel(panelManager, parent);
             panel->addStyleClass(s_with_padding);
-            parent->addStyleClass(s_tools); // XXX Why not on the panel itself?
+            panel->addStyleClass(s_tools);
             return panel;
         });
 
@@ -287,7 +287,7 @@ void CanvasApplication::registerPanelTypes_() {
                 panelManager->createPanelInstance_<canvas::ToolOptionsPanel>(
                     parent, toolManager);
             panel->addStyleClass(s_with_padding);
-            parent->addStyleClass(s_tool_options); // XXX Why not on the panel itself?
+            panel->addStyleClass(s_tool_options);
             return panel;
         });
 
