@@ -14,9 +14,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef VGC_STANDARDMENUS_H
-#define VGC_STANDARDMENUS_H
+#ifndef VGC_UI_STANDARDMENUS_H
+#define VGC_UI_STANDARDMENUS_H
 
+#include <vgc/ui/api.h>
 #include <vgc/ui/module.h>
 
 namespace vgc::ui {
@@ -111,4 +112,4 @@ private:
 
 } // namespace vgc::ui
 
-#endif // VGC_STANDARDMENUS_H
+#endif // VGC_UI_STANDARDMENUS_H
