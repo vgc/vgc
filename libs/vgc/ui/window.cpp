@@ -169,6 +169,19 @@ WindowPtr Window::create(const WidgetPtr& widget) {
     return core::createObject<Window>(widget);
 }
 
+namespace {
+
+WindowWeakPtr& activeWindowRef() {
+    static WindowWeakPtr singleton;
+    return singleton;
+};
+
+} // namespace
+
+WindowWeakPtr Window::activeWindow() {
+    return activeWindowRef();
+}
+
 float Window::globalToWindowScale() const {
     return static_cast<float>(this->QWindow::devicePixelRatio());
 }
@@ -1234,6 +1247,7 @@ void Window::removeShortcut_(Action* action) {
 void Window::onActiveChanged_() {
     bool active = isActive();
     widget_->setTreeActive(active, FocusReason::Window);
+    activeWindowRef() = active ? this : nullptr;
 }
 
 void Window::onRepaintRequested_() {

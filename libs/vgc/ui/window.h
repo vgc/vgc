@@ -68,6 +68,10 @@ public:
     ///
     static WindowPtr create(const WidgetPtr& widget);
 
+    /// Returns the window that currently has focus, if any.
+    ///
+    static WindowWeakPtr activeWindow();
+
     /// Returns the contained `Widget`
     ///
     Widget* widget() {
