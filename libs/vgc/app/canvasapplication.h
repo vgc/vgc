@@ -163,11 +163,6 @@ private:
     tools::DocumentColorPalettePtr documentColorPalette_;
     void onCurrentColorChanged_(const core::Color& color);
     VGC_SLOT(onCurrentColorChanged_)
-
-    // Debug Widget Style
-    ui::Action* actionDebugWidgetStyle_ = nullptr;
-    VGC_SLOT(onActionDebugWidgetStyleSlot_, onActionDebugWidgetStyle_);
-    void onActionDebugWidgetStyle_();
 };
 
 } // namespace vgc::app

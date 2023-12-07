@@ -32,6 +32,7 @@
 #include <vgc/tools/select.h>
 #include <vgc/ui/genericaction.h>
 #include <vgc/ui/genericcommands.h>
+#include <vgc/ui/inspector.h>
 #include <vgc/ui/qtutil.h>
 #include <vgc/ui/row.h>
 #include <vgc/ui/shortcut.h>
@@ -117,6 +118,9 @@ CanvasApplication::CanvasApplication(
     // Panels
     registerPanelTypes_();
     createDefaultPanels_();
+
+    // Widget Inspector
+    getOrCreateModule<ui::Inspector>();
 }
 
 CanvasApplicationPtr
@@ -207,12 +211,6 @@ using ui::Shortcut;
 using ui::modifierkeys::ctrl;
 using ui::modifierkeys::shift;
 
-VGC_UI_DEFINE_WINDOW_COMMAND(
-    debugWidgetStyle,
-    "debug.widgetStyle",
-    "Debug Widget Style",
-    Shortcut(ctrl | shift, Key::W))
-
 // TODO: one command per panel with specific shortcut?
 VGC_UI_DEFINE_WINDOW_COMMAND( //
     openPanel,
@@ -255,9 +253,6 @@ void CanvasApplication::createActions_(ui::Widget* parent) {
             createGenericAction_(parent, *editMenu, generic::paste());
         }
     }
-
-    actionDebugWidgetStyle_ = createAction(
-        parent, commands::debugWidgetStyle(), onActionDebugWidgetStyleSlot_());
 }
 
 void CanvasApplication::registerPanelTypes_() {
@@ -501,56 +496,6 @@ void CanvasApplication::onCurrentColorChanged_(const core::Color& color) {
     if (paintBucketTool_) {
         paintBucketTool_->setColor(color);
     }
-}
-
-namespace {
-
-void widgetSizingInfo(std::string& out, ui::Widget* widget, ui::Widget* root) {
-
-    auto outB = std::back_inserter(out);
-    out += widget->objectType().unqualifiedName();
-
-    out += "\nStyle =";
-    for (core::StringId styleClass : widget->styleClasses()) {
-        out += " ";
-        out += styleClass;
-    }
-    out += "\n";
-    core::formatTo(
-        outB, "\nPosition       = {}", widget->mapTo(root, geometry::Vec2f(0, 0)));
-    core::formatTo(outB, "\nSize           = {}", widget->size());
-    core::formatTo(outB, "\nPreferred Size = {}", widget->preferredSize());
-    core::formatTo(outB, "\nMargin         = {}", widget->margin());
-    core::formatTo(outB, "\nPadding        = {}", widget->padding());
-    core::formatTo(outB, "\nBorder         = {}", widget->border());
-
-    out += "\n\nMatching style rules:\n\n";
-    core::StringWriter outS(out);
-    widget->debugPrintStyle(outS);
-}
-
-} // namespace
-
-void CanvasApplication::onActionDebugWidgetStyle_() {
-
-    if (!mainWindow() || !mainWidget()) {
-        return;
-    }
-
-    std::string out;
-
-    using core::write;
-    out.append(80, '=');
-    out += "\nPosition and size information about hovered widgets:\n";
-    ui::Widget* root = mainWidget();
-    ui::Widget* widget = root;
-    while (widget) {
-        out.append(80, '-');
-        out += "\n";
-        widgetSizingInfo(out, widget, root);
-        widget = widget->hoverChainChild();
-    }
-    VGC_DEBUG(LogVgcApp, out);
 }
 
 } // namespace vgc::app
