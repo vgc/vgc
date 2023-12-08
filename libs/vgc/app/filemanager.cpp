@@ -110,12 +110,12 @@ createAction_(ui::Module& self, ui::Menu* menu, core::StringId commandId, TSlot 
 FileManager::FileManager(CreateKey key, const ui::ModuleContext& context)
     : Module(key, context) {
 
-    documentManager_ = context.getOrCreateModule<canvas::DocumentManager>();
-    documentColorPalette_ = context.getOrCreateModule<tools::DocumentColorPalette>();
+    documentManager_ = context.importModule<canvas::DocumentManager>();
+    documentColorPalette_ = context.importModule<tools::DocumentColorPalette>();
 
     ui::MenuLockPtr lFileMenu;
     ui::MenuLockPtr lEditMenu;
-    if (auto standardMenus = context.getOrCreateModule<ui::StandardMenus>().lock()) {
+    if (auto standardMenus = context.importModule<ui::StandardMenus>().lock()) {
         lFileMenu = standardMenus->getOrCreateFileMenu().lock();
         lEditMenu = standardMenus->getOrCreateEditMenu().lock();
     }

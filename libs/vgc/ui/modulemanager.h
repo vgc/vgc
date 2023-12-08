@@ -73,25 +73,25 @@ public:
     /// Note: it is not allowed to have cyclic dependencies between modules'
     /// contructor, such as:
     ///
-    /// - Module1's constructor calling getOrCreateModule<Module2>(), and
-    /// - Module2's constructor calling getOrCreateModule<Module1>()
+    /// - Module1's constructor calling importModule<Module2>(), and
+    /// - Module2's constructor calling importModule<Module1>()
     ///
     /// Indeed, modules are essentially global objects, and it makes no sense
     /// for global objects to have their construction mutually depend
     /// on each other.
     ///
-    /// A workaround can be to defer calling `getOrCreateModule()` until after
+    /// A workaround can be to defer calling `importModule()` until after
     /// a given module is constructed, via a 2-step initialization or
     /// lazy-initialization approach.
     ///
     template<typename TModule>
-    core::ObjPtr<TModule> getOrCreateModule() {
+    core::ObjPtr<TModule> importModule() {
         checkIsModule_<TModule>();
         core::ObjectType key = TModule::staticObjectType();
         auto factory = [](const ModuleContext& context) -> ModulePtr {
             return TModule::create(context);
         };
-        ModulePtr module = getOrCreateModule_(key, factory);
+        ModulePtr module = importModule_(key, factory);
         return core::static_pointer_cast<TModule>(module);
     }
 
@@ -128,7 +128,7 @@ private:
 
     // non-templated version to avoid bloating the .h
     using ModuleFactory = std::function<ModulePtr(const ModuleContext& context)>;
-    ModulePtr getOrCreateModule_(core::ObjectType key, ModuleFactory factory);
+    ModulePtr importModule_(core::ObjectType key, ModuleFactory factory);
 };
 
 } // namespace vgc::ui

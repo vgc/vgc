@@ -42,7 +42,7 @@ VGC_UI_DEFINE_WINDOW_COMMAND(
 
 ResetCurrentColor::ResetCurrentColor(CreateKey key, const ui::ModuleContext& context)
     : Module(key, context)
-    , currentColor_(context.getOrCreateModule<tools::CurrentColor>()) {
+    , currentColor_(context.importModule<tools::CurrentColor>()) {
 
     ui::Action* action = createTriggerAction(commands::resetCurrentColor());
     action->triggered().connect(onActionTriggered_Slot());

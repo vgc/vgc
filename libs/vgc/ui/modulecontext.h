@@ -43,8 +43,8 @@ public:
     /// module yet.
     ///
     template<typename TModule>
-    core::ObjPtr<TModule> getOrCreateModule() const {
-        return moduleManager()->getOrCreateModule<TModule>();
+    core::ObjPtr<TModule> importModule() const {
+        return moduleManager()->importModule<TModule>();
     }
 
 private:

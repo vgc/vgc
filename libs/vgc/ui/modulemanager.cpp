@@ -33,7 +33,7 @@ ModuleManagerPtr ModuleManager::create() {
 //
 // Note that it's important to release this map mutex before calling
 // TModule::create(), otherwise there would be a deadlock when calling
-// getOrCreateModule() within the constructor of another module.
+// importModule() within the constructor of another module.
 //
 // This is why we use a mutex for insertion into the map, and then a separate
 // mutex for each module to be created.
@@ -44,7 +44,7 @@ ModuleManager::GetOrInsertInfo_ ModuleManager::getOrInsert_(core::ObjectType obj
     return {it->second, inserted};
 }
 
-ModulePtr ModuleManager::getOrCreateModule_(core::ObjectType key, ModuleFactory factory) {
+ModulePtr ModuleManager::importModule_(core::ObjectType key, ModuleFactory factory) {
 
     // Retrieves an existing value from the map, or insert a default-constructed value
     //
@@ -64,7 +64,7 @@ ModulePtr ModuleManager::getOrCreateModule_(core::ObjectType key, ModuleFactory 
 
         // Construct the module by calling TModule::create().
         //
-        // If this recursively calls getOrCreateModule() for the same module,
+        // If this recursively calls importModule() for the same module,
         // this means there is a cyclic dependency (handled below).
         //
         ModuleContext context(this);
@@ -93,7 +93,7 @@ ModulePtr ModuleManager::getOrCreateModule_(core::ObjectType key, ModuleFactory 
                 // creating the module (see above), but value.module is still a
                 // null pointer, this means the module is still under
                 // construction, which means this is a recursive call to
-                // getOrCreateModule_() in the same call stack, for the same
+                // importModule_() in the same call stack, for the same
                 // module, which means there is a cyclic dependency.
                 //
                 throw core::LogicError(core::format(
