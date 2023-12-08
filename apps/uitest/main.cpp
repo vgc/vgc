@@ -115,7 +115,7 @@ protected:
         createTestActionsAndMenus_();
         createTestWidgets_();
 
-        getOrCreateModule<uitest::ResetCurrentColor>();
+        importModule<uitest::ResetCurrentColor>();
     }
 
 private:

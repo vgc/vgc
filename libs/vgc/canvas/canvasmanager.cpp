@@ -25,7 +25,7 @@ namespace vgc::canvas {
 CanvasManager::CanvasManager(CreateKey key, const ui::ModuleContext& context)
     : Module(key, context) {
 
-    documentManager_ = context.getOrCreateModule<DocumentManager>();
+    documentManager_ = context.importModule<DocumentManager>();
     if (auto documentManager = documentManager_.lock()) {
         documentManager->currentWorkspaceChanged().connect(
             onCurrentWorkspaceChanged_Slot());

@@ -91,24 +91,24 @@ CanvasApplication::CanvasApplication(
     // done before creating other modules so that they can add their actions to
     // the menu bar.
     //
-    if (auto standardMenus = getOrCreateModule<ui::StandardMenus>().lock()) {
+    if (auto standardMenus = importModule<ui::StandardMenus>().lock()) {
         standardMenus->setMenuBar(window_->mainWidget()->menuBar());
         standardMenus->createFileMenu();
         standardMenus->createEditMenu();
     }
 
     // CurrentColor module
-    if (auto currentColor = getOrCreateModule<tools::CurrentColor>().lock()) {
+    if (auto currentColor = importModule<tools::CurrentColor>().lock()) {
         currentColor_ = currentColor;
         currentColor->colorChanged().connect(onCurrentColorChanged_Slot());
         currentColor->setColor(initialColor);
     }
 
     // DocumentColorPalette module
-    documentColorPalette_ = getOrCreateModule<tools::DocumentColorPalette>();
+    documentColorPalette_ = importModule<tools::DocumentColorPalette>();
 
     // FileManager module
-    if (auto fileManager = getOrCreateModule<FileManager>().lock()) {
+    if (auto fileManager = importModule<FileManager>().lock()) {
         fileManager->quitTriggered().connect(quitSlot());
     }
 
@@ -120,7 +120,7 @@ CanvasApplication::CanvasApplication(
     createDefaultPanels_();
 
     // Widget Inspector
-    getOrCreateModule<ui::Inspector>();
+    importModule<ui::Inspector>();
 }
 
 CanvasApplicationPtr
@@ -190,7 +190,7 @@ void showCrashPopup_(
 //
 void CanvasApplication::crashHandler_([[maybe_unused]] std::string_view errorMessage) {
     auto info = RecoverySaveInfo::notSaved();
-    if (auto fileManager = getOrCreateModule<FileManager>().lock()) {
+    if (auto fileManager = importModule<FileManager>().lock()) {
         info = fileManager->recoverySave();
     }
 #ifdef VGC_DEBUG_BUILD
@@ -244,7 +244,7 @@ void CanvasApplication::createActions_(ui::Widget* parent) {
     // - make generic actions work in a module
     // - Implement something like StandardMenus::createGenericCutCopyPaste()
     //
-    if (auto standardMenus = getOrCreateModule<ui::StandardMenus>().lock()) {
+    if (auto standardMenus = importModule<ui::StandardMenus>().lock()) {
         if (auto editMenu = standardMenus->getOrCreateEditMenu().lock()) {
             namespace generic = ui::commands::generic;
             editMenu->addSeparator();
@@ -305,7 +305,7 @@ void CanvasApplication::registerPanelTypes_() {
 
     // Create Panels menu
     ui::Menu* panelsMenu = nullptr;
-    if (auto standardMenus = getOrCreateModule<ui::StandardMenus>().lock()) {
+    if (auto standardMenus = importModule<ui::StandardMenus>().lock()) {
         if (auto menuBar = standardMenus->menuBar().lock()) {
             panelsMenu = menuBar->createSubMenu("Panels");
         }
@@ -340,7 +340,7 @@ void CanvasApplication::createDefaultPanels_() {
         panelManager_->createPanelInstance_<ui::Panel>(canvasArea, "Canvas");
     canvasArea->tabBar()->hide();
     canvas::Canvas* canvas = canvasPanel->createChild<canvas::Canvas>(nullptr);
-    if (auto canvasManager = getOrCreateModule<canvas::CanvasManager>().lock()) {
+    if (auto canvasManager = importModule<canvas::CanvasManager>().lock()) {
         // Set the canvas as being the active canvas. This ensures that
         // canvas->setWorkspace() is called whenever the current workspace
         // changes, e.g., when opening a new file.

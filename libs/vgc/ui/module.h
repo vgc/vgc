@@ -113,7 +113,7 @@ VGC_DECLARE_OBJECT(Module);
 ///     ColorPanel(CreateKey key, const PanelContext& context)
 ///         : Panel(key) {
 ///
-///         CurrentColorPtr module = context.getOrCreateModule<CurrentColor>();
+///         CurrentColorPtr module = context.importModule<CurrentColor>();
 ///         module->colorChanged().connect(this->setColorSlot());
 ///         this->colorChanged().connect(module->setColorSlot());
 ///     }
