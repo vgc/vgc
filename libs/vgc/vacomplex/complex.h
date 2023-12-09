@@ -324,17 +324,18 @@ private:
     NodeModificationFlags flags_ = {};
     core::Array<core::StringId> modifiedProperties_;
 
-    explicit ModifiedNodeInfo(Node* node)
+    explicit ModifiedNodeInfo(Node* node, NodeModificationFlags flags = {})
         : nodeId_(node->id())
-        , node_(node) {
+        , node_(node)
+        , flags_(flags) {
     }
 
-    void setFlags(NodeModificationFlags flags) {
-        flags_ = flags;
+    void addFlags(NodeModificationFlags flags) {
+        flags_.set(flags);
     }
 
-    void insertModifiedProperty(core::StringId name) {
-        flags_.set(NodeModificationFlag::PropertyChanged);
+    void addModifiedProperty(core::StringId name) {
+        addFlags(NodeModificationFlag::PropertyChanged);
         if (!modifiedProperties_.contains(name)) {
             modifiedProperties_.append(name);
         }
@@ -570,14 +571,14 @@ private:
     // ops helpers
 
     void onNodeCreated(Node* node) {
-        createdNodes_.emplaceLast(node);
+        createdNodes_.append(CreatedNodeInfo(node));
     }
 
     void onNodeDestroyed(core::Id id) {
         for (Int i = 0; i < createdNodes_.length(); ++i) {
             const CreatedNodeInfo& info = createdNodes_[i];
             if (info.nodeId() == id) {
-                transientNodes_.emplaceLast(id);
+                transientNodes_.append(TransientNodeInfo(id));
                 createdNodes_.removeAt(i);
                 break;
             }
@@ -588,10 +589,10 @@ private:
                 break;
             }
         }
-        destroyedNodes_.emplaceLast(id);
+        destroyedNodes_.append(DestroyedNodeInfo(id));
     }
 
-    void onNodeModified(Node* node, NodeModificationFlags diffFlags) {
+    void onNodeModified(Node* node, NodeModificationFlags flags) {
         for (Int i = 0; i < createdNodes_.length(); ++i) {
             if (createdNodes_[i].node() == node) {
                 // swallow node diffs when node is new
@@ -600,12 +601,11 @@ private:
         }
         for (ModifiedNodeInfo& modifiedNodeInfo : modifiedNodes_) {
             if (modifiedNodeInfo.node() == node) {
-                modifiedNodeInfo.setFlags(modifiedNodeInfo.flags() | diffFlags);
+                modifiedNodeInfo.addFlags(flags);
                 return;
             }
         }
-        ModifiedNodeInfo& modifiedNodeInfo = modifiedNodes_.emplaceLast(node);
-        modifiedNodeInfo.setFlags(modifiedNodeInfo.flags() | diffFlags);
+        modifiedNodes_.append(ModifiedNodeInfo(node, flags));
     }
 
     void onNodePropertyModified(Node* node, core::StringId name) {
@@ -617,12 +617,13 @@ private:
         }
         for (ModifiedNodeInfo& modifiedNodeInfo : modifiedNodes_) {
             if (modifiedNodeInfo.node() == node) {
-                modifiedNodeInfo.insertModifiedProperty(name);
+                modifiedNodeInfo.addModifiedProperty(name);
                 return;
             }
         }
-        ModifiedNodeInfo& modifiedNodeInfo = modifiedNodes_.emplaceLast(node);
-        modifiedNodeInfo.insertModifiedProperty(name);
+        ModifiedNodeInfo modifiedNodeInfo(node);
+        modifiedNodeInfo.addModifiedProperty(name);
+        modifiedNodes_.append(std::move(modifiedNodeInfo));
     }
 
     // Preconditions:
@@ -644,11 +645,11 @@ private:
             newSibling = node->previousSibling();
         }
 
-        insertions_.emplaceLast(
+        insertions_.append(NodeInsertionInfo(
             node->id(),
             parent->id(),
             newSibling ? newSibling->id() : core::Id(),
-            insertionType);
+            insertionType));
 
         onNodeModified(parent, NodeModificationFlag::ChildrenChanged);
         if (oldParent != parent) {
