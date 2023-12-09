@@ -41,8 +41,22 @@ namespace vgc::vacomplex {
 
 VGC_DECLARE_OBJECT(Complex);
 
+class ComplexDiff;
+
+namespace detail {
+
+class Operations;
+
+} // namespace detail
+
 /// \enum vgc::vacomplex::NodeModificationFlag
 /// \brief Specifies the nature of a node modification.
+///
+/// This is used as part of `ComplexDiff`, the mechanism used to notify about
+/// changes of a `Complex`.
+///
+/// \sa `Complex::nodesChanged`, `ComplexDiff::modifiedNodes()`,
+///     `ModifiedNodeInfo::flags()`.
 ///
 enum class NodeModificationFlag : UInt32 {
 
@@ -170,104 +184,291 @@ enum class NodeModificationFlag : UInt32 {
 };
 VGC_DEFINE_FLAGS(NodeModificationFlags, NodeModificationFlag)
 
+/// \class vgc::vacomplex::CreatedNodeInfo
+/// \brief Provides information about nodes that have been created.
+///
+/// This is used as part of `ComplexDiff`, the mechanism used to notify about
+/// changes of a `Complex`.
+///
+/// \sa `Complex::nodesChanged`, `ComplexDiff::createdNodes()`.
+///
 class VGC_VACOMPLEX_API CreatedNodeInfo {
 public:
+    /// Returns the ID of the created node.
+    ///
+    core::Id nodeId() const {
+        return nodeId_;
+    }
+
+    /// Returns the created node.
+    ///
+    /// This may be a dangling pointer if the node has been destroyed since the
+    /// `ComplexDiff` was emitted.
+    ///
+    // XXX NodeWeakPtr?
+    //
+    Node* node() const {
+        return node_;
+    }
+
+private:
+    friend ComplexDiff;
+
+    core::Id nodeId_;
+    Node* node_;
+
     CreatedNodeInfo(Node* node)
         : nodeId_(node->id())
         , node_(node) {
     }
+};
 
+/// \class vgc::vacomplex::DestroyedNodeInfo
+/// \brief Provides information about nodes that have been destroyed.
+///
+/// This is used as part of `ComplexDiff`, the mechanism used to notify about
+/// changes of a `Complex`.
+///
+/// \sa `Complex::nodesChanged`, `ComplexDiff::destroyedNodes()`.
+///
+class VGC_VACOMPLEX_API DestroyedNodeInfo {
+public:
+    /// Returns the ID of the destroyed node.
+    ///
     core::Id nodeId() const {
         return nodeId_;
     }
 
-    Node* node() const {
-        return node_;
-    }
-
 private:
-    core::Id nodeId_;
-    Node* node_;
-};
+    friend ComplexDiff;
 
-class VGC_VACOMPLEX_API DestroyedNodeInfo {
-public:
+    core::Id nodeId_;
+
     explicit DestroyedNodeInfo(core::Id id)
         : nodeId_(id) {
     }
-
-    core::Id nodeId() const {
-        return nodeId_;
-    }
-
-private:
-    core::Id nodeId_;
 };
 
+/// \class vgc::vacomplex::TransientNodeInfo
+/// \brief Provides information about nodes that have been created then destroyed.
+///
+/// This is used as part of `ComplexDiff`, the mechanism used to notify about
+/// changes of a `Complex`.
+///
+/// \sa `Complex::nodesChanged`, `ComplexDiff::transientNodes()`.
+///
 class VGC_VACOMPLEX_API TransientNodeInfo {
 public:
-    TransientNodeInfo(core::Id nodeId)
-        : nodeId_(nodeId) {
-    }
-
+    /// Returns the ID of the transient node.
+    ///
     core::Id nodeId() const {
         return nodeId_;
     }
 
 private:
+    friend ComplexDiff;
+
     core::Id nodeId_;
+
+    explicit TransientNodeInfo(core::Id nodeId)
+        : nodeId_(nodeId) {
+    }
 };
 
+/// \class vgc::vacomplex::ModifiedNodeInfo
+/// \brief Provides information about nodes that have been modified.
+///
+/// This is used as part of `ComplexDiff`, the mechanism used to notify about
+/// changes of a `Complex`.
+///
+/// \sa `Complex::nodesChanged`, `ComplexDiff::modifiedNodes()`.
+///
 class VGC_VACOMPLEX_API ModifiedNodeInfo {
 public:
-    explicit ModifiedNodeInfo(Node* node)
-        : nodeId_(node->id())
-        , node_(node) {
-    }
-
+    /// Returns the ID of the modified node.
+    ///
     core::Id nodeId() const {
         return nodeId_;
     }
 
+    /// Returns the modified node.
+    ///
+    /// This may be a dangling pointer if the node has been destroyed since the
+    /// `ComplexDiff` was emitted.
+    ///
+    // XXX NodeWeakPtr?
+    //
     Node* node() const {
         return node_;
     }
 
+    /// Returns which types of modification have occured on the node.
+    ///
     NodeModificationFlags flags() const {
         return flags_;
     }
 
-    void setFlags(NodeModificationFlags flags) {
-        flags_ = flags;
-    }
-
-    const core::Array<core::StringId>& modifiedProperties() {
+    /// Returns which node properties have been modified, if any.
+    ///
+    /// \sa `NodeModificationFlag::PropertyChanged`.
+    ///
+    const core::Array<core::StringId>& modifiedProperties() const {
         return modifiedProperties_;
     }
 
-    void insertModifiedProperty(core::StringId name) {
-        flags_.set(NodeModificationFlag::PropertyChanged);
-        if (!modifiedProperties_.contains(name)) {
-            modifiedProperties_.append(name);
-        }
-    }
-
 private:
+    friend ComplexDiff;
+
     core::Id nodeId_ = {};
     Node* node_ = nullptr;
     NodeModificationFlags flags_ = {};
     core::Array<core::StringId> modifiedProperties_;
+
+    explicit ModifiedNodeInfo(Node* node, NodeModificationFlags flags = {})
+        : nodeId_(node->id())
+        , node_(node)
+        , flags_(flags) {
+    }
+
+    void addFlags(NodeModificationFlags flags) {
+        flags_.set(flags);
+    }
+
+    void addModifiedProperty(core::StringId name) {
+        addFlags(NodeModificationFlag::PropertyChanged);
+        if (!modifiedProperties_.contains(name)) {
+            modifiedProperties_.append(name);
+        }
+    }
 };
 
+/// \enum vgc::vacomplex::NodeInsertionType
+/// \brief Specifies the nature of a node insertion.
+///
+/// This is used as part of `ComplexDiff`, the mechanism used to notify about
+/// changes of a `Complex`.
+///
+/// \sa `Complex::nodesChanged`, `ComplexDiff::insertions()`,
+///     `NodeInsertionInfo::type()`.
+///
 enum class NodeInsertionType {
-    BeforeSibling,
-    AfterSibling,
-    FirstChild,
-    LastChild,
+    BeforeSibling, ///< The node has been inserted just before a sibling node.
+    AfterSibling,  ///< The node has been inserted just after a sibling node.
+    FirstChild,    ///< The node has been inserted as first child of its parent node.
+    LastChild,     ///< The node has been inserted as last child of its parent node.
 };
 
+/// \class vgc::vacomplex::NodeInsertionInfo
+/// \brief Provides information about a node insertion.
+///
+/// This is used as part of `ComplexDiff`, the mechanism used to notify about
+/// changes of a `Complex`.
+///
+/// \sa `Complex::nodesChanged`, `ComplexDiff::insertions()`.
+///
 class VGC_VACOMPLEX_API NodeInsertionInfo {
 public:
+    /// Returns the ID of the inserted node.
+    ///
+    core::Id nodeId() const {
+        return nodeId_;
+    }
+
+    /// Returns the ID of the parent of the node just after the insertion
+    /// happened.
+    ///
+    /// Note that this can be used regardless of the insertion `type()`, that
+    /// is, it always returns the ID of the parent, even when the insertion
+    /// type is `BeforeSibling` or `AfterSibling`.
+    ///
+    core::Id newParentId() const {
+        return newParentId_;
+    }
+
+    /// If `type() == BeforeSibling`, returns the ID of the sibling before
+    /// which the node has been inserted.
+    ///
+    /// If `type() == AfterSibling`, returns the ID of the sibling after
+    /// which the node has been inserted.
+    ///
+    /// Otherwise, returns 0.
+    ///
+    core::Id newSiblingId() const {
+        return newSiblingId_;
+    }
+
+    /// Returns the nature of the insertion, that is, whether the node has been
+    /// inserted as first/last child of its parent node, or whether it has been
+    /// inserted just before/after a sibling node.
+    ///
+    /// Note that as far as the `Complex` is concerned, inserting a node as
+    /// `FirstChild` (resp. `LastChild`) can be equivalently expressed as
+    /// inserting it as `BeforeSibling` (resp. `AfterSibling`), as long as the
+    /// node is not an only child.
+    ///
+    /// However, there is a difference in intent that can be useful for
+    /// synchronization purposes. For example, consider the following DOM:
+    ///
+    /// ```
+    /// <group>
+    ///   <vertex id="v1"/>
+    ///   <text/>
+    /// </group>
+    /// ```
+    ///
+    /// which is kept in sync with a `Complex`:
+    ///
+    /// ```
+    /// group
+    ///   └ v1
+    /// ```
+    ///
+    /// Note how the `text` element is only part of the DOM, but is not part
+    /// of the complex.
+    ///
+    /// If you insert a new vertex v2 to the complex "as last child of the
+    /// group", you get the same complex as if you insert it "just after v1":
+    ///
+    /// ```
+    /// group
+    ///   ├ v1
+    ///   └ v2
+    /// ```
+    ///
+    /// However, in the first case, you want the DOM to be updated to:
+    ///
+    /// ```
+    /// <group>
+    ///   <vertex id="v1"/>
+    ///   <text/>
+    ///   <vertex id="v2"/>
+    /// </group>
+    /// ```
+    ///
+    /// While in the second case, you want the DOM to be updated to:
+    ///
+    /// ```
+    /// <group>
+    ///   <vertex id="v1"/>
+    ///   <vertex id="v2"/>
+    ///   <text/>
+    /// </group>
+    /// ```
+    ///
+    /// This is why preserving this semantic difference is useful.
+    ///
+    NodeInsertionType type() const {
+        return type_;
+    }
+
+private:
+    friend ComplexDiff;
+
+    core::Id nodeId_;
+    core::Id newParentId_;
+    core::Id newSiblingId_;
+    NodeInsertionType type_;
+
     NodeInsertionInfo(
         core::Id nodeId,
         core::Id newParentId,
@@ -279,32 +480,84 @@ public:
         , newSiblingId_(newSiblingId)
         , type_(type) {
     }
+};
 
-    core::Id nodeId() const {
-        return nodeId_;
+/// \class vgc::vacomplex::ComplexDiff
+/// \brief Stores information about what changed in a `Complex`.
+///
+/// This is provided as argument to the signal `Complex::nodesChanged()`, so
+/// that observers can be made aware of what has changed in the complex, and
+/// update themselves accordingly.
+///
+class VGC_VACOMPLEX_API ComplexDiff {
+public:
+    /// Returns all the nodes that have been created during the operation and
+    /// that are still alive at the end of the operation.
+    ///
+    /// This does not include `transientNodes()`.
+    ///
+    const core::Array<CreatedNodeInfo>& createdNodes() const {
+        return createdNodes_;
     }
 
-    core::Id newParentId() const {
-        return newParentId_;
+    /// Returns all the nodes that have been destroyed during the operation.
+    ///
+    /// This includes both `transientNodes()` and previously existing nodes that
+    /// have been destroyed.
+    ///
+    const core::Array<DestroyedNodeInfo>& destroyedNodes() const {
+        return destroyedNodes_;
     }
 
-    core::Id newSiblingId() const {
-        return newSiblingId_;
+    /// Returns all the nodes that have been both created and destroyed during
+    /// the operation.
+    ///
+    /// Information about these nodes is useful since their ID can be referred
+    /// in `NodeInsertionInfo`, for example when a node has been moved next to
+    /// a transient node.
+    ///
+    const core::Array<TransientNodeInfo>& transientNodes() const {
+        return transientNodes_;
     }
 
-    NodeInsertionType type() const {
-        return type_;
+    /// Returns all the nodes that have been modified during the operation and
+    /// that are still alive at the end of the operation.
+    ///
+    /// This does not include `transientNodes()` or `destroyedNodes()`, but may
+    /// include `createdNodes()`.
+    ///
+    const core::Array<ModifiedNodeInfo>& modifiedNodes() const {
+        return modifiedNodes_;
+    }
+
+    /// Returns the history of all node insertions that happened during the
+    /// operation, in chronological order.
+    ///
+    /// A node insertion occurs either when a node is created, or when an
+    /// existing node is moved to a different location in the node hierarchy.
+    ///
+    /// Unlike most other functions in `ComplexDiff` (e.g., `createdNode()`),
+    /// the same node may appear several times in the returned array, that is,
+    /// the history is not "compressed". Having access to this uncompressed
+    /// history is important for code that requires to synchronize the
+    /// `Complex` node tree with a parallel tree containing more objects than
+    /// the `Complex` is aware of, so that they can reliably move them to an
+    /// appropriate location, including in the presence of `transientNodes()`.
+    ///
+    const core::Array<NodeInsertionInfo>& insertions() const {
+        return insertions_;
     }
 
 private:
-    core::Id nodeId_;
-    core::Id newParentId_;
-    core::Id newSiblingId_;
-    NodeInsertionType type_;
-};
+    friend detail::Operations;
+    friend Complex;
 
-class VGC_VACOMPLEX_API ComplexDiff {
-public:
+    core::Array<CreatedNodeInfo> createdNodes_;
+    core::Array<DestroyedNodeInfo> destroyedNodes_;
+    core::Array<TransientNodeInfo> transientNodes_;
+    core::Array<ModifiedNodeInfo> modifiedNodes_;
+    core::Array<NodeInsertionInfo> insertions_;
+
     ComplexDiff() = default;
 
     void clear() {
@@ -315,69 +568,17 @@ public:
         insertions_.clear();
     }
 
-    bool isEmpty() const {
-        return createdNodes_.isEmpty() && modifiedNodes_.isEmpty()
-               && destroyedNodes_.isEmpty();
-    }
-
-    /// Does not contain transient nodes.
-    ///
-    const core::Array<CreatedNodeInfo>& createdNodes() const {
-        return createdNodes_;
-    }
-
-    /// Contains both transient nodes and previously existing nodes that
-    /// have been destroyed.
-    ///
-    const core::Array<DestroyedNodeInfo>& destroyedNodes() const {
-        return destroyedNodes_;
-    }
-
-    /// Nodes that have been both created and destroyed during
-    /// the operation. Knowing about these nodes is useful since
-    /// their ID can be referred in `NodeInsertionInfo`, to know
-    /// that some node has been moved next to a transient node.
-    ///
-    const core::Array<TransientNodeInfo>& transientNodes() const {
-        return transientNodes_;
-    }
-
-    /// Does not contain transient nodes or destroyed nodes. May contain
-    /// created nodes.
-    ///
-    const core::Array<ModifiedNodeInfo>& modifiedNodes() const {
-        return modifiedNodes_;
-    }
-
-    /// History of node insertions. Cannot be compressed.
-    ///
-    const core::Array<NodeInsertionInfo>& insertions() const {
-        return insertions_;
-    }
-
-    void merge(const ComplexDiff& other);
-
-private:
-    friend class detail::Operations;
-    friend class Complex;
-
-    core::Array<CreatedNodeInfo> createdNodes_;
-    core::Array<DestroyedNodeInfo> destroyedNodes_;
-    core::Array<TransientNodeInfo> transientNodes_;
-    core::Array<ModifiedNodeInfo> modifiedNodes_;
-    core::Array<NodeInsertionInfo> insertions_;
-
     // ops helpers
 
     void onNodeCreated(Node* node) {
-        createdNodes_.emplaceLast(node);
+        createdNodes_.append(CreatedNodeInfo(node));
     }
 
     void onNodeDestroyed(core::Id id) {
         for (Int i = 0; i < createdNodes_.length(); ++i) {
             const CreatedNodeInfo& info = createdNodes_[i];
             if (info.nodeId() == id) {
-                transientNodes_.emplaceLast(id);
+                transientNodes_.append(TransientNodeInfo(id));
                 createdNodes_.removeAt(i);
                 break;
             }
@@ -388,10 +589,10 @@ private:
                 break;
             }
         }
-        destroyedNodes_.emplaceLast(id);
+        destroyedNodes_.append(DestroyedNodeInfo(id));
     }
 
-    void onNodeModified(Node* node, NodeModificationFlags diffFlags) {
+    void onNodeModified(Node* node, NodeModificationFlags flags) {
         for (Int i = 0; i < createdNodes_.length(); ++i) {
             if (createdNodes_[i].node() == node) {
                 // swallow node diffs when node is new
@@ -400,12 +601,11 @@ private:
         }
         for (ModifiedNodeInfo& modifiedNodeInfo : modifiedNodes_) {
             if (modifiedNodeInfo.node() == node) {
-                modifiedNodeInfo.setFlags(modifiedNodeInfo.flags() | diffFlags);
+                modifiedNodeInfo.addFlags(flags);
                 return;
             }
         }
-        ModifiedNodeInfo& modifiedNodeInfo = modifiedNodes_.emplaceLast(node);
-        modifiedNodeInfo.setFlags(modifiedNodeInfo.flags() | diffFlags);
+        modifiedNodes_.append(ModifiedNodeInfo(node, flags));
     }
 
     void onNodePropertyModified(Node* node, core::StringId name) {
@@ -417,16 +617,26 @@ private:
         }
         for (ModifiedNodeInfo& modifiedNodeInfo : modifiedNodes_) {
             if (modifiedNodeInfo.node() == node) {
-                modifiedNodeInfo.insertModifiedProperty(name);
+                modifiedNodeInfo.addModifiedProperty(name);
                 return;
             }
         }
-        ModifiedNodeInfo& modifiedNodeInfo = modifiedNodes_.emplaceLast(node);
-        modifiedNodeInfo.insertModifiedProperty(name);
+        ModifiedNodeInfo modifiedNodeInfo(node);
+        modifiedNodeInfo.addModifiedProperty(name);
+        modifiedNodes_.append(std::move(modifiedNodeInfo));
     }
 
+    // Preconditions:
+    // - node is non-null
+    // - oldParent may be null
+    // - node->parentGroup() is non-null, that is,
+    //   onNodeInserted() shouldn't be called for the root group
+    //
     void onNodeInserted(Node* node, Node* oldParent, NodeInsertionType insertionType) {
+
         Node* parent = node->parentGroup();
+        VGC_ASSERT(parent);
+
         Node* newSibling = nullptr;
         if (insertionType == NodeInsertionType::BeforeSibling) {
             newSibling = node->nextSibling();
@@ -434,11 +644,13 @@ private:
         else if (insertionType == NodeInsertionType::AfterSibling) {
             newSibling = node->previousSibling();
         }
-        insertions_.emplaceLast(
+
+        insertions_.append(NodeInsertionInfo(
             node->id(),
             parent->id(),
             newSibling ? newSibling->id() : core::Id(),
-            insertionType);
+            insertionType));
+
         onNodeModified(parent, NodeModificationFlag::ChildrenChanged);
         if (oldParent != parent) {
             if (oldParent) {
