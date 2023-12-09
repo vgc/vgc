@@ -49,9 +49,9 @@ namespace vgc::core {
 /// ```cpp
 /// enum class Button : int {
 ///     NoButton = 0x0,
-///     Left = 0x1,
-///     Middle = 0x2,
-///     Right = 0x3
+///     Left     = 0x1,
+///     Right    = 0x2,
+///     Middle   = 0x4
 /// };
 /// VGC_DEFINE_FLAGS(Buttons, Button)
 ///
@@ -374,9 +374,9 @@ struct std::hash<vgc::core::Flags<Enum>> {
 /// ```cpp
 /// enum class Button : int {
 ///     NoButton = 0x0,
-///     Left = 0x1,
-///     Middle = 0x2,
-///     Right = 0x3
+///     Left     = 0x1,
+///     Right    = 0x2,
+///     Middle   = 0x4
 /// };
 /// VGC_DEFINE_FLAGS(Buttons, Button)
 ///
