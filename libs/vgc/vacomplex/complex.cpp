@@ -22,21 +22,6 @@
 
 namespace vgc::vacomplex {
 
-void ComplexDiff::merge(const ComplexDiff& other) {
-
-    // todo: optimize, keep sorted ?
-
-    for (const CreatedNodeInfo& info : other.createdNodes_) {
-        onNodeCreated(info.node());
-    }
-    for (const ModifiedNodeInfo& info : other.modifiedNodes_) {
-        onNodeModified(info.node(), info.flags());
-    }
-    for (const DestroyedNodeInfo& info : other.destroyedNodes_) {
-        onNodeDestroyed(info.nodeId());
-    }
-}
-
 Complex::Complex(CreateKey key)
     : Object(key) {
 
