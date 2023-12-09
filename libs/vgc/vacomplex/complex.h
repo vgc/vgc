@@ -538,11 +538,11 @@ public:
     ///
     /// Unlike most other functions in `ComplexDiff` (e.g., `createdNode()`),
     /// the same node may appear several times in the returned array, that is,
-    /// the history is not "compressed". Having access to this uncompressed history is important
-    /// for code that requires to synchronize the `Complex` node tree with
-    /// a parallel tree containing more objects than the `Complex` is aware of,
-    /// so that they can reliably move them to an appropriate location, including
-    /// in the presence of `transientNodes()`.
+    /// the history is not "compressed". Having access to this uncompressed
+    /// history is important for code that requires to synchronize the
+    /// `Complex` node tree with a parallel tree containing more objects than
+    /// the `Complex` is aware of, so that they can reliably move them to an
+    /// appropriate location, including in the presence of `transientNodes()`.
     ///
     const core::Array<NodeInsertionInfo>& insertions() const {
         return insertions_;
