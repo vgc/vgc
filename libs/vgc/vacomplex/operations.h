@@ -24,6 +24,10 @@
 #include <vgc/vacomplex/api.h>
 #include <vgc/vacomplex/complex.h>
 #include <vgc/vacomplex/exceptions.h>
+#include <vgc/vacomplex/keycycle.h>
+#include <vgc/vacomplex/keyedge.h>
+#include <vgc/vacomplex/keyface.h>
+#include <vgc/vacomplex/keyvertex.h>
 
 namespace vgc::vacomplex {
 

@@ -23,6 +23,9 @@
 #include <vgc/core/array.h>
 #include <vgc/geometry/intersect.h>
 #include <vgc/vacomplex/exceptions.h>
+#include <vgc/vacomplex/inbetweenedge.h>
+#include <vgc/vacomplex/inbetweenface.h>
+#include <vgc/vacomplex/inbetweenvertex.h>
 #include <vgc/vacomplex/keyedgedata.h>
 #include <vgc/vacomplex/logcategories.h>
 
@@ -2362,22 +2365,27 @@ void Operations::setKeyEdgeStrokeSamplingQuality(
 }
 
 void Operations::onNodeCreated_(Node* node) {
-    complex_->opDiff_.onNodeCreated(node);
+    complex_->opDiff_.onNodeCreated_(node);
+}
+
+void Operations::onNodeDestroyed_(core::Id nodeId) {
+    complex_->opDiff_.onNodeDestroyed_(nodeId);
 }
 
 void Operations::onNodeInserted_(
     Node* node,
     Node* oldParent,
     NodeInsertionType insertionType) {
-    complex_->opDiff_.onNodeInserted(node, oldParent, insertionType);
+
+    complex_->opDiff_.onNodeInserted_(node, oldParent, insertionType);
 }
 
 void Operations::onNodeModified_(Node* node, NodeModificationFlags diffFlags) {
-    complex_->opDiff_.onNodeModified(node, diffFlags);
+    complex_->opDiff_.onNodeModified_(node, diffFlags);
 }
 
 void Operations::onNodePropertyModified_(Node* node, core::StringId name) {
-    complex_->opDiff_.onNodePropertyModified(node, name);
+    complex_->opDiff_.onNodePropertyModified_(node, name);
 }
 
 void Operations::insertNodeBeforeSibling_(Node* node, Node* nextSibling) {
@@ -2753,13 +2761,12 @@ void Operations::destroyChildlessNode_(Node* node) {
     Group* parentGroup = node->parentGroup();
     if (parentGroup) {
         node->unparent();
-        complex_->opDiff_.onNodeModified(
-            parentGroup, NodeModificationFlag::ChildrenChanged);
+        onNodeModified_(parentGroup, NodeModificationFlag::ChildrenChanged);
     }
     if (node->isCell()) {
         complex_->temporaryCellSet_.removeOne(node->toCellUnchecked());
     }
-    complex_->opDiff_.onNodeDestroyed(node->id());
+    onNodeDestroyed_(node->id());
     complex_->nodes_.erase(node->id());
 }
 
@@ -2778,12 +2785,11 @@ void Operations::destroyNodes_(core::ConstSpan<Node*> nodes) {
         Group* parentGroup = node->parentGroup();
         if (parentGroup) {
             node->unparent();
-            complex_->opDiff_.onNodeModified(
-                parentGroup, NodeModificationFlag::ChildrenChanged);
+            onNodeModified_(parentGroup, NodeModificationFlag::ChildrenChanged);
         }
     }
     for (Node* node : nodes) {
-        complex_->opDiff_.onNodeDestroyed(node->id());
+        onNodeDestroyed_(node->id());
         complex_->nodes_.erase(node->id());
     }
 }

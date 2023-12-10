@@ -42,11 +42,6 @@ void Complex::clear() {
 
     isBeingCleared_ = true;
 
-    // Notify removal of all the nodes
-    //for (const auto& node : nodes_) {
-    //    nodeDestroyed().emit(node.first);
-    //}
-
     // Remove all the nodes
     NodePtrMap nodesCopy = std::move(nodes_);
     nodes_ = NodePtrMap();
@@ -54,7 +49,7 @@ void Complex::clear() {
     // Add the removal of all the nodes to the diff
     ComplexDiff diff;
     for (const auto& node : nodesCopy) {
-        diff.onNodeDestroyed(node.first);
+        diff.onNodeDestroyed_(node.first);
     }
     nodesChanged().emit(diff);
 
@@ -203,15 +198,6 @@ void Complex::debugPrint() {
     }
     VGC_DEBUG(LogVgcVacomplex, out_);
 }
-
-//bool Complex::emitPendingDiff() {
-//    if (!diff_.isEmpty()) {
-//        changed().emit(diff_);
-//        diff_.clear();
-//        return true;
-//    }
-//    return false;
-//}
 
 Node* topMostInGroup(Group* group, core::ConstSpan<Node*> nodes) {
     Node* node = group->lastChild();

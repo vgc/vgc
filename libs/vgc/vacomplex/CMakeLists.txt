@@ -8,6 +8,7 @@ vgc_add_library(vacomplex
         celldata.h
         cellproperty.h
         complex.h
+        complexdiff.h
         exceptions.h
         inbetweenedge.h
         inbetweenface.h
@@ -30,6 +31,7 @@ vgc_add_library(vacomplex
         celldata.cpp
         cellproperty.cpp
         complex.cpp
+        complexdiff.cpp
         exceptions.cpp
         inbetweenedge.cpp
         inbetweenface.cpp
