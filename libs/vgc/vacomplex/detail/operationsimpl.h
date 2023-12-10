@@ -211,6 +211,7 @@ private:
     Complex* complex_ = nullptr;
 
     void onNodeCreated_(Node* node);
+    void onNodeDestroyed_(core::Id nodeId);
     void onNodeInserted_(Node* node, Node* oldParent, NodeInsertionType insertionType);
     void onNodeModified_(Node* node, NodeModificationFlags diffFlags);
     void onNodePropertyModified_(Node* node, core::StringId name);
