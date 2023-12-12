@@ -229,14 +229,14 @@ public:
     /// \sa `setDefaultCurveSamplingQuality()`.
     ///
     geometry::CurveSamplingQuality defaultCurveSamplingQuality() const {
-        return defaultCurveSamplingQuality_;
+        return defaultStrokeSamplingQuality_;
     }
 
     /// Specifies the default quality that should be used for sampling curves.
     ///
     /// \sa `defaultCurveSamplingQuality()`.
     ///
-    void setDefaultCurveSamplingQuality(geometry::CurveSamplingQuality quality);
+    void setDefaultStrokeSamplingQuality(geometry::CurveSamplingQuality quality);
 
     /// Explicitly synchronizes the DOM, workspace tree, and topological complex
     /// together.
@@ -456,7 +456,7 @@ private:
     void debugPrintWorkspaceTree_();
 
     // Sampling settings
-    geometry::CurveSamplingQuality defaultCurveSamplingQuality_;
+    geometry::CurveSamplingQuality defaultStrokeSamplingQuality_;
 
     // ---------------
     // VAC -> DOM Sync

@@ -495,7 +495,7 @@ public:
         return cell ? cell->toKeyEdgeUnchecked() : nullptr;
     }
 
-    void setTesselationMode(geometry::CurveSamplingQuality mode);
+    void setStrokeSamplingQuality(geometry::CurveSamplingQuality quality);
 
     std::optional<core::StringId> domTagName() const override;
 
@@ -544,7 +544,7 @@ private:
     mutable graphics::GeometryViewPtr controlPointsGeometry_;
     mutable bool isLastDrawOfControlPointsSelected_ = false;
 
-    geometry::CurveSamplingQuality edgeTesselationMode_ =
+    mutable geometry::CurveSamplingQuality strokeSamplingQuality_ =
         geometry::CurveSamplingQuality::AdaptiveHigh;
 
     ElementStatus onDependencyChanged_(Element* dependency, ChangeFlags changes) override;

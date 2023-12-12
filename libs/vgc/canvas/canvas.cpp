@@ -382,30 +382,30 @@ bool Canvas::onKeyPress(ui::KeyPressEvent* event) {
         requestRepaint();
         break;
     case ui::Key::I:
-        switch (requestedCurveSamplingQuality_) {
+        switch (strokeSamplingQuality_) {
         case CurveSamplingQuality::Disabled:
-            requestedCurveSamplingQuality_ = CurveSamplingQuality::UniformVeryLow;
+            strokeSamplingQuality_ = CurveSamplingQuality::UniformVeryLow;
             break;
         case CurveSamplingQuality::UniformVeryLow:
-            requestedCurveSamplingQuality_ = CurveSamplingQuality::AdaptiveLow;
+            strokeSamplingQuality_ = CurveSamplingQuality::AdaptiveLow;
             break;
         case CurveSamplingQuality::AdaptiveLow:
-            requestedCurveSamplingQuality_ = CurveSamplingQuality::UniformHigh;
+            strokeSamplingQuality_ = CurveSamplingQuality::UniformHigh;
             break;
         case CurveSamplingQuality::UniformHigh:
-            requestedCurveSamplingQuality_ = CurveSamplingQuality::AdaptiveHigh;
+            strokeSamplingQuality_ = CurveSamplingQuality::AdaptiveHigh;
             break;
         case CurveSamplingQuality::AdaptiveHigh:
-            requestedCurveSamplingQuality_ = CurveSamplingQuality::UniformVeryHigh;
+            strokeSamplingQuality_ = CurveSamplingQuality::UniformVeryHigh;
             break;
         case CurveSamplingQuality::UniformVeryHigh:
-            requestedCurveSamplingQuality_ = CurveSamplingQuality::Disabled;
+            strokeSamplingQuality_ = CurveSamplingQuality::Disabled;
             break;
         }
         VGC_INFO(
             LogVgcCanvas,
             "Switched edge subdivision quality to: {}",
-            core::Enum::prettyName(requestedCurveSamplingQuality_));
+            core::Enum::prettyName(strokeSamplingQuality_));
         reTesselate = true;
         requestRepaint();
         break;
@@ -780,7 +780,7 @@ void Canvas::onPaintDraw(graphics::Engine* engine, ui::PaintOptions options) {
         workspace_->sync();
         //VGC_PROFILE_SCOPE("Canvas:WorkspaceVisit");
         if (reTesselate) {
-            workspace_->setDefaultCurveSamplingQuality(requestedCurveSamplingQuality_);
+            workspace_->setDefaultStrokeSamplingQuality(strokeSamplingQuality_);
         }
 
         // Draw Normal
