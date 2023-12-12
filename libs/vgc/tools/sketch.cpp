@@ -1367,7 +1367,8 @@ void Sketch::startCurve_(ui::MouseEvent* event) {
     workspace::Element* edgeItem = workspace->find(edgeItemId_);
     auto keyEdgeItem = dynamic_cast<workspace::VacKeyEdge*>(edgeItem);
     if (keyEdgeItem) {
-        keyEdgeItem->setTesselationMode(geometry::CurveSamplingQuality::AdaptiveLow);
+        keyEdgeItem->setStrokeSamplingQuality(
+            geometry::CurveSamplingQuality::AdaptiveLow);
         auto ke = keyEdgeItem->vacNode();
         if (ke) {
             vacomplex::ops::moveBelowBoundary(ke);
@@ -1469,7 +1470,7 @@ void Sketch::finishCurve_(ui::MouseEvent* /*event*/) {
     workspace::Element* edgeItem = workspace->find(edgeItemId_);
     auto keItem = dynamic_cast<workspace::VacKeyEdge*>(edgeItem);
     if (keItem && canvas()) {
-        keItem->setTesselationMode(canvas()->requestedTesselationMode());
+        keItem->setStrokeSamplingQuality(canvas()->strokeSamplingQuality());
     }
 
     // Compute end vertex snapping

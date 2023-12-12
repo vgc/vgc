@@ -167,8 +167,8 @@ public:
 
     /// Returns the current requested tesselation mode.
     ///
-    geometry::CurveSamplingQuality requestedTesselationMode() const {
-        return requestedCurveSamplingQuality_;
+    geometry::CurveSamplingQuality strokeSamplingQuality() const {
+        return strokeSamplingQuality_;
     }
 
     /// Returns the camera used to view the workspace.
@@ -329,10 +329,10 @@ private:
     // render modes. A more engineered method will come later.
     bool showControlPoints_ = false;
 
-    // Chosen CurveSamplingQuality. This is selected with the i key.
+    // Chosen CurveSamplingQuality for the Canvas. This is selected with the i key.
     // XXX This is a temporary quick method to switch between
     // tesselation modes. A more engineered method will come later.
-    geometry::CurveSamplingQuality requestedCurveSamplingQuality_ =
+    geometry::CurveSamplingQuality strokeSamplingQuality_ =
         geometry::CurveSamplingQuality::AdaptiveHigh;
     bool reTesselate = false;
 

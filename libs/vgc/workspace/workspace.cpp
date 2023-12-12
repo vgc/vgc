@@ -241,12 +241,12 @@ void Workspace::registerElementClass_(
     elementCreators_()[tagName] = elementCreator;
 }
 
-void Workspace::setDefaultCurveSamplingQuality(geometry::CurveSamplingQuality quality) {
+void Workspace::setDefaultStrokeSamplingQuality(geometry::CurveSamplingQuality quality) {
 
-    defaultCurveSamplingQuality_ = quality;
+    defaultStrokeSamplingQuality_ = quality;
 
     visitDepthFirstPreOrder( //
-        [=](Element* e, Int /*depth*/) {
+        [=](Element* e, Int) {
             if (!e) {
                 return;
             }
@@ -256,7 +256,7 @@ void Workspace::setDefaultCurveSamplingQuality(geometry::CurveSamplingQuality qu
                 auto edge = dynamic_cast<VacKeyEdge*>(e);
                 if (edge) {
                     //profileName = "Canvas:WorkspaceDrawEdgeElement";
-                    edge->setTesselationMode(quality);
+                    edge->setStrokeSamplingQuality(quality);
                 }
             }
         });

@@ -242,14 +242,17 @@ VacKeyEdge::~VacKeyEdge() {
     }
 }
 
-void VacKeyEdge::setTesselationMode(geometry::CurveSamplingQuality mode) {
-    if (edgeTesselationMode_ != mode) {
-        edgeTesselationMode_ = mode;
-        vacomplex::KeyEdge* ke = vacKeyEdgeNode();
-        if (ke) {
-            vacomplex::ops::setKeyEdgeStrokeSamplingQuality(ke, edgeTesselationMode_);
+void VacKeyEdge::setStrokeSamplingQuality(geometry::CurveSamplingQuality quality) {
+    if (strokeSamplingQuality_ != quality) {
+        strokeSamplingQuality_ = quality;
+        if (vacomplex::KeyEdge* ke = vacKeyEdgeNode()) {
+            vacomplex::ops::setKeyEdgeStrokeSamplingQuality(ke, quality);
         }
         dirtyPreJoinGeometry_();
+
+        // XXX: Is it possible to defer the call to dirtyPreJoinGeometry_()?
+        // For example, what if the quality is changed from High to Low to High
+        // again, without a draw call (or any geometric query) between them?
     }
 }
 
@@ -914,7 +917,7 @@ ElementStatus VacKeyEdge::updateFromDom_(Workspace* workspace) {
             onUpdateError_();
             return ElementStatus::InvalidAttribute;
         }
-        vacomplex::ops::setKeyEdgeStrokeSamplingQuality(ke, edgeTesselationMode_);
+        vacomplex::ops::setKeyEdgeStrokeSamplingQuality(ke, strokeSamplingQuality_);
         setVacNode(ke);
     }
     else {
