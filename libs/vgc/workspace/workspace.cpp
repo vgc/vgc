@@ -241,6 +241,27 @@ void Workspace::registerElementClass_(
     elementCreators_()[tagName] = elementCreator;
 }
 
+void Workspace::setDefaultCurveSamplingQuality(geometry::CurveSamplingQuality quality) {
+
+    defaultCurveSamplingQuality_ = quality;
+
+    visitDepthFirstPreOrder( //
+        [=](Element* e, Int /*depth*/) {
+            if (!e) {
+                return;
+            }
+            if (e->isVacElement()) {
+                // todo: should we use an enum to avoid dynamic_cast ?
+                // if an error happens with the Element creation we cannot rely on vac node type.
+                auto edge = dynamic_cast<VacKeyEdge*>(e);
+                if (edge) {
+                    //profileName = "Canvas:WorkspaceDrawEdgeElement";
+                    edge->setTesselationMode(quality);
+                }
+            }
+        });
+}
+
 void Workspace::sync() {
     document_->emitPendingDiff();
 }

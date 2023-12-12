@@ -382,30 +382,30 @@ bool Canvas::onKeyPress(ui::KeyPressEvent* event) {
         requestRepaint();
         break;
     case ui::Key::I:
-        switch (requestedTesselationMode_) {
+        switch (requestedCurveSamplingQuality_) {
         case CurveSamplingQuality::Disabled:
-            requestedTesselationMode_ = CurveSamplingQuality::UniformVeryLow;
+            requestedCurveSamplingQuality_ = CurveSamplingQuality::UniformVeryLow;
             break;
         case CurveSamplingQuality::UniformVeryLow:
-            requestedTesselationMode_ = CurveSamplingQuality::AdaptiveLow;
+            requestedCurveSamplingQuality_ = CurveSamplingQuality::AdaptiveLow;
             break;
         case CurveSamplingQuality::AdaptiveLow:
-            requestedTesselationMode_ = CurveSamplingQuality::UniformHigh;
+            requestedCurveSamplingQuality_ = CurveSamplingQuality::UniformHigh;
             break;
         case CurveSamplingQuality::UniformHigh:
-            requestedTesselationMode_ = CurveSamplingQuality::AdaptiveHigh;
+            requestedCurveSamplingQuality_ = CurveSamplingQuality::AdaptiveHigh;
             break;
         case CurveSamplingQuality::AdaptiveHigh:
-            requestedTesselationMode_ = CurveSamplingQuality::UniformVeryHigh;
+            requestedCurveSamplingQuality_ = CurveSamplingQuality::UniformVeryHigh;
             break;
         case CurveSamplingQuality::UniformVeryHigh:
-            requestedTesselationMode_ = CurveSamplingQuality::Disabled;
+            requestedCurveSamplingQuality_ = CurveSamplingQuality::Disabled;
             break;
         }
         VGC_INFO(
             LogVgcCanvas,
             "Switched edge subdivision quality to: {}",
-            core::Enum::prettyName(requestedTesselationMode_));
+            core::Enum::prettyName(requestedCurveSamplingQuality_));
         reTesselate = true;
         requestRepaint();
         break;
@@ -780,21 +780,7 @@ void Canvas::onPaintDraw(graphics::Engine* engine, ui::PaintOptions options) {
         workspace_->sync();
         //VGC_PROFILE_SCOPE("Canvas:WorkspaceVisit");
         if (reTesselate) {
-            workspace_->visitDepthFirstPreOrder( //
-                [=](workspace::Element* e, Int /*depth*/) {
-                    if (!e) {
-                        return;
-                    }
-                    if (e->isVacElement()) {
-                        // todo: should we use an enum to avoid dynamic_cast ?
-                        // if an error happens with the Element creation we cannot rely on vac node type.
-                        auto edge = dynamic_cast<workspace::VacKeyEdge*>(e);
-                        if (edge) {
-                            //profileName = "Canvas:WorkspaceDrawEdgeElement";
-                            edge->setTesselationMode(requestedTesselationMode_);
-                        }
-                    }
-                });
+            workspace_->setDefaultCurveSamplingQuality(requestedCurveSamplingQuality_);
         }
 
         // Draw Normal

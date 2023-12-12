@@ -224,6 +224,20 @@ public:
         return node ? findVacElement(node->id()) : nullptr;
     }
 
+    /// Returns the default quality that is used for sampling curves.
+    ///
+    /// \sa `setDefaultCurveSamplingQuality()`.
+    ///
+    geometry::CurveSamplingQuality defaultCurveSamplingQuality() const {
+        return defaultCurveSamplingQuality_;
+    }
+
+    /// Specifies the default quality that should be used for sampling curves.
+    ///
+    /// \sa `defaultCurveSamplingQuality()`.
+    ///
+    void setDefaultCurveSamplingQuality(geometry::CurveSamplingQuality quality);
+
     /// Explicitly synchronizes the DOM, workspace tree, and topological complex
     /// together.
     ///
@@ -440,6 +454,9 @@ private:
     detail::ScopedUndoGroup createScopedUndoGroup(core::StringId name);
 
     void debugPrintWorkspaceTree_();
+
+    // Sampling settings
+    geometry::CurveSamplingQuality defaultCurveSamplingQuality_;
 
     // ---------------
     // VAC -> DOM Sync
