@@ -74,8 +74,7 @@ enum class NodeModificationFlag : UInt32 {
     ///
     /// For a KeyVertex, this means when its `position()` has changed.
     ///
-    /// For a KeyEdge, this means when its `stroke()` or
-    /// `strokeSamplingQuality()` has changed.
+    /// For a KeyEdge, this means when its `stroke()` has changed.
     ///
     /// For a KeyFace, this is currently never set since its geometry is fully
     /// implicitly defined by the geometry of its boundary. In the future, if
@@ -131,9 +130,10 @@ enum class NodeModificationFlag : UInt32 {
     // be written to the DOM anyway (a face has no geometry).
     //
     // Note that currently, changing the `strokeSamplingQuality()` is
-    // considered a change of the geometry. If this was considered as a change
-    // of the mesh only, then maybe there would be more benefits to keep the
-    // distinction between geometry change and mesh change.
+    // considered neither a change of the geometry or a change of the mesh. If
+    // this was considered as a change of the mesh, then maybe there would be
+    // more benefits to keep the distinction between geometry change and mesh
+    // change.
     //
     // In conclusion, I think it would be worth investigating in more details
     // and try to remove this with benchmarks and see if there is any benefits

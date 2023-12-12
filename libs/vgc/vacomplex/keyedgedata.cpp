@@ -164,7 +164,6 @@ void KeyEdgeData::setStrokeSamplingQuality(
     if (strokeSamplingQuality_ != strokeSamplingQuality) {
         strokeSamplingQuality_ = strokeSamplingQuality;
         dirtyStrokeSampling_();
-        emitGeometryChanged();
     }
 }
 

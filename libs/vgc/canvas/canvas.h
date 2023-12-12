@@ -334,7 +334,6 @@ private:
     // tesselation modes. A more engineered method will come later.
     geometry::CurveSamplingQuality strokeSamplingQuality_ =
         geometry::CurveSamplingQuality::AdaptiveHigh;
-    bool reTesselate = false;
 
     // Performance logging
     core::PerformanceLogTask renderTask_;

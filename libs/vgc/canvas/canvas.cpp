@@ -406,7 +406,7 @@ bool Canvas::onKeyPress(ui::KeyPressEvent* event) {
             LogVgcCanvas,
             "Switched edge subdivision quality to: {}",
             core::Enum::prettyName(strokeSamplingQuality_));
-        reTesselate = true;
+        workspace_->setDefaultStrokeSamplingQuality(strokeSamplingQuality_);
         requestRepaint();
         break;
     case ui::Key::P:
@@ -779,9 +779,6 @@ void Canvas::onPaintDraw(graphics::Engine* engine, ui::PaintOptions options) {
     if (workspace_) {
         workspace_->sync();
         //VGC_PROFILE_SCOPE("Canvas:WorkspaceVisit");
-        if (reTesselate) {
-            workspace_->setDefaultStrokeSamplingQuality(strokeSamplingQuality_);
-        }
 
         // Draw Normal
         if (displayMode_ == DisplayMode::Normal
@@ -855,8 +852,6 @@ void Canvas::onPaintDraw(graphics::Engine* engine, ui::PaintOptions options) {
                     }
                 });
         }
-
-        reTesselate = false;
     }
 
     engine->popViewMatrix();
