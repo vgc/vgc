@@ -963,11 +963,6 @@ public:
     VGC_VACOMPLEX_DEFINE_CELL_CAST_METHOD(InbetweenFace)
 
 protected:
-    void onMeshQueried() const {
-        hasMeshBeenQueriedSinceLastDirtyEvent_ = true;
-    }
-
-    virtual void dirtyMesh();
     virtual bool updateGeometryFromBoundary();
 
 private:
@@ -985,12 +980,6 @@ private:
 private:
     core::Array<Cell*> star_;
     core::Array<Cell*> boundary_;
-
-    // This flag is used to not signal NodeModificationFlag::MeshChanged
-    // multiple times if no dependent nodes nor the user has queried
-    // the new mesh. It should be set to true (either directly
-    // or indirectly) in all mesh getters.
-    mutable bool hasMeshBeenQueriedSinceLastDirtyEvent_ = false;
 };
 
 inline Complex* Node::complex() const {

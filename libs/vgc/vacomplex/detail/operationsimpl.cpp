@@ -2794,33 +2794,13 @@ void Operations::destroyNodes_(core::ConstSpan<Node*> nodes) {
     }
 }
 
-// [1] No need for recursion in the `cell->star()` loops below,
-//     since starCell->star() is a subset of cell->star().
-
 void Operations::onGeometryChanged_(Cell* cell) {
     onNodeModified_(cell, NodeModificationFlag::GeometryChanged);
     for (Cell* starCell : cell->star()) { // See [1]
         onNodeModified_(starCell, NodeModificationFlag::BoundaryGeometryChanged);
     }
-    dirtyMesh_(cell);
-}
-
-void Operations::dirtyMesh_(Cell* cell) {
-    if (cell->hasMeshBeenQueriedSinceLastDirtyEvent_) {
-        doDirtyMesh_(cell);
-        for (Cell* starCell : cell->star()) { // See [1]
-            onNodeModified_(starCell, NodeModificationFlag::BoundaryMeshChanged);
-            if (starCell->hasMeshBeenQueriedSinceLastDirtyEvent_) {
-                doDirtyMesh_(starCell);
-            }
-        }
-    }
-}
-
-void Operations::doDirtyMesh_(Cell* cell) {
-    cell->hasMeshBeenQueriedSinceLastDirtyEvent_ = false;
-    cell->dirtyMesh();
-    onNodeModified_(cell, NodeModificationFlag::MeshChanged);
+    // Note: no need for recursion in the `cell->star()` loops below, since
+    // starCell->star() is a subset of cell->star().
 }
 
 namespace {
@@ -2858,10 +2838,8 @@ void Operations::onBoundaryChanged_(Cell* boundedCell, Cell* boundingCell) {
     onNodeModified_(
         boundedCell,
         {NodeModificationFlag::BoundaryChanged,
-         NodeModificationFlag::BoundaryGeometryChanged,
-         NodeModificationFlag::BoundaryMeshChanged});
+         NodeModificationFlag::BoundaryGeometryChanged});
     onNodeModified_(boundingCell, NodeModificationFlag::StarChanged);
-    dirtyMesh_(boundedCell);
 }
 
 void Operations::addToBoundary_(FaceCell* face, const KeyCycle& cycle) {

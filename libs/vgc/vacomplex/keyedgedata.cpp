@@ -362,9 +362,6 @@ KeyEdgeData::computeStrokeSampling_(geometry::CurveSamplingQuality quality) cons
         return geometry::StrokeSampling2d(fakeSamples);
     }
     geometry::StrokeSampling2d sampling = stroke_->computeSampling(quality);
-    if (KeyEdge* ke = keyEdge()) {
-        ke->onMeshQueried();
-    }
     return sampling;
 }
 

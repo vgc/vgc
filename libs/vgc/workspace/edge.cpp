@@ -977,9 +977,6 @@ void VacKeyEdge::updateFromVac_(vacomplex::NodeModificationFlags flags) {
         // todo: dirty only if really changed ?
         dirtyPreJoinGeometry_(false);
     }
-    else if (flags.has(vacomplex::NodeModificationFlag::MeshChanged)) {
-        dirtyPreJoinGeometry_(false);
-    }
 
     if (flags.has(vacomplex::NodeModificationFlag::PropertyChanged)) {
         // TODO: forward changed property names, and do all only if element

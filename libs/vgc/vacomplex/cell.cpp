@@ -78,9 +78,6 @@ Complex* Cell::complex() const {
     return p ? p->complex() : nullptr;
 }
 
-void Cell::dirtyMesh() {
-}
-
 bool Cell::updateGeometryFromBoundary() {
     return false;
 }
