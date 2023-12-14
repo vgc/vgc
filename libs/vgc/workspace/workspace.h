@@ -224,20 +224,6 @@ public:
         return node ? findVacElement(node->id()) : nullptr;
     }
 
-    /// Returns the default quality that is used for sampling curves.
-    ///
-    /// \sa `setDefaultCurveSamplingQuality()`.
-    ///
-    geometry::CurveSamplingQuality defaultCurveSamplingQuality() const {
-        return defaultStrokeSamplingQuality_;
-    }
-
-    /// Specifies the default quality that should be used for sampling curves.
-    ///
-    /// \sa `defaultCurveSamplingQuality()`.
-    ///
-    void setDefaultStrokeSamplingQuality(geometry::CurveSamplingQuality quality);
-
     /// Explicitly synchronizes the DOM, workspace tree, and topological complex
     /// together.
     ///
@@ -455,9 +441,6 @@ private:
 
     void debugPrintWorkspaceTree_();
 
-    // Sampling settings
-    geometry::CurveSamplingQuality defaultStrokeSamplingQuality_;
-
     // ---------------
     // VAC -> DOM Sync
 
@@ -465,6 +448,9 @@ private:
     // each VAC operation.
 
     // Signal-slot connections
+
+    void onVacCellSamplingQualityChanged_(const vacomplex::Cell* cell);
+    VGC_SLOT(onVacCellSamplingQualityChanged_);
 
     void onVacNodesChanged_(const vacomplex::ComplexDiff& diff);
     VGC_SLOT(onVacNodesChanged, onVacNodesChanged_);

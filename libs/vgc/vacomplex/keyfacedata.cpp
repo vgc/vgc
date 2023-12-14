@@ -48,7 +48,7 @@ KeyFaceData& KeyFaceData::operator=(KeyFaceData&& other) noexcept {
 }
 
 KeyFace* KeyFaceData::keyFace() const {
-    Cell* cell = properties_.cell();
+    Cell* cell = this->cell();
     return cell ? cell->toKeyFace() : nullptr;
 }
 

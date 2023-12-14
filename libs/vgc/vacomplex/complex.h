@@ -85,6 +85,26 @@ public:
         return version_;
     }
 
+    /// Returns the quality at which the geometry is sampled.
+    ///
+    /// \sa `setSamplingQuality()`.
+    ///
+    geometry::CurveSamplingQuality samplingQuality() const {
+        return samplingQuality_;
+    }
+
+    /// Sets the quality at which the geometry is sampled.
+    ///
+    /// This can be overriden for individual edges via
+    /// `KeyEdgeData::setSamplingQualityOverride()` and
+    /// `KeyEdgeData::clearSamplingQualityOverride()`.
+    ///
+    void setSamplingQuality(geometry::CurveSamplingQuality quality);
+
+    /// This signal is emitted when the sampling quality of a Cell changes.
+    ///
+    VGC_SIGNAL(cellSamplingQualityChanged, (const Cell*, cell))
+
     /// Returns whether someone is currently modifying this complex.
     ///
     bool isOperationInProgress() const {
@@ -95,6 +115,9 @@ public:
     ///
     void debugPrint();
 
+    /// This signal is emitted at the end of an operation (or group of
+    /// operations) that changes this `Complex`.
+    ///
     VGC_SIGNAL(nodesChanged, (const ComplexDiff&, diff))
 
 private:
@@ -110,6 +133,10 @@ private:
 
     // Version control
     Int64 version_ = 0;
+
+    // Sampling quality
+    geometry::CurveSamplingQuality samplingQuality_ =
+        geometry::CurveSamplingQuality::AdaptiveHigh;
 
     // Guard against recursion when calling clear() / resetRoot()
     bool isBeingCleared_ = false;

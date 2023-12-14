@@ -242,20 +242,6 @@ VacKeyEdge::~VacKeyEdge() {
     }
 }
 
-void VacKeyEdge::setStrokeSamplingQuality(geometry::CurveSamplingQuality quality) {
-    if (strokeSamplingQuality_ != quality) {
-        strokeSamplingQuality_ = quality;
-        if (vacomplex::KeyEdge* ke = vacKeyEdgeNode()) {
-            vacomplex::ops::setKeyEdgeStrokeSamplingQuality(ke, quality);
-        }
-        dirtyPreJoinGeometry_();
-
-        // XXX: Is it possible to defer the call to dirtyPreJoinGeometry_()?
-        // For example, what if the quality is changed from High to Low to High
-        // again, without a draw call (or any geometric query) between them?
-    }
-}
-
 std::optional<core::StringId> VacKeyEdge::domTagName() const {
     return dom::strings::edge;
 }
@@ -917,7 +903,6 @@ ElementStatus VacKeyEdge::updateFromDom_(Workspace* workspace) {
             onUpdateError_();
             return ElementStatus::InvalidAttribute;
         }
-        vacomplex::ops::setKeyEdgeStrokeSamplingQuality(ke, strokeSamplingQuality_);
         setVacNode(ke);
     }
     else {

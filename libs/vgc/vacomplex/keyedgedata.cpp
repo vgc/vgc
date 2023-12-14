@@ -22,8 +22,21 @@
 
 namespace vgc::vacomplex {
 
+void KeyEdgeData::moveInit_(KeyEdgeData&& other) noexcept {
+    CellData::moveInit_(std::move(other));
+    moveInitDerivedOnly_(std::move(other));
+}
+
+void KeyEdgeData::moveInitDerivedOnly_(KeyEdgeData&& other) noexcept {
+    stroke_ = std::move(other.stroke_);
+    initSamplingQuality_(other);
+}
+
 KeyEdgeData::KeyEdgeData(detail::KeyEdgePrivateKey, KeyEdge* owner) noexcept
     : CellData(owner) {
+
+    // Note: here, owner->complex() is typically still nullptr because the cell
+    // has not yet been added to its parent group.
 }
 
 KeyEdgeData::KeyEdgeData(const KeyEdgeData& other)
@@ -32,32 +45,35 @@ KeyEdgeData::KeyEdgeData(const KeyEdgeData& other)
     if (other.stroke_) {
         stroke_ = other.stroke_->clone();
     }
+    copySamplingQuality_(other);
 }
 
 KeyEdgeData::KeyEdgeData(KeyEdgeData&& other) noexcept
     : CellData(std::move(other)) {
 
-    stroke_ = std::move(other.stroke_);
+    moveInitDerivedOnly_(std::move(other));
 }
 
 KeyEdgeData& KeyEdgeData::operator=(const KeyEdgeData& other) {
     if (&other != this) {
         CellData::operator=(other);
         setStroke(other.stroke_.get());
+        copySamplingQuality_(other);
     }
     return *this;
 }
 
-KeyEdgeData& KeyEdgeData::operator=(KeyEdgeData&& other) noexcept {
+KeyEdgeData& KeyEdgeData::operator=(KeyEdgeData&& other) {
     if (&other != this) {
         CellData::operator=(std::move(other));
         setStroke(std::move(other.stroke_));
+        copySamplingQuality_(other);
     }
     return *this;
 }
 
 KeyEdge* KeyEdgeData::keyEdge() const {
-    Cell* cell = properties_.cell();
+    Cell* cell = this->cell();
     return cell ? cell->toKeyEdge() : nullptr;
 }
 
@@ -159,11 +175,17 @@ void KeyEdgeData::setStroke(std::unique_ptr<geometry::AbstractStroke2d>&& newStr
     properties_.onUpdateGeometry(stroke_.get());
 }
 
-void KeyEdgeData::setStrokeSamplingQuality(
-    geometry::CurveSamplingQuality strokeSamplingQuality) {
-    if (strokeSamplingQuality_ != strokeSamplingQuality) {
-        strokeSamplingQuality_ = strokeSamplingQuality;
-        dirtyStrokeSampling_();
+void KeyEdgeData::setSamplingQualityOverride(geometry::CurveSamplingQuality quality) {
+    hasSamplingQualityOverride_ = true;
+    setSamplingQuality_(quality);
+}
+
+void KeyEdgeData::clearSamplingQualityOverride() {
+    hasSamplingQualityOverride_ = false;
+    if (KeyEdge* ke = keyEdge()) {
+        if (Complex* complex = ke->complex()) {
+            setSamplingQuality_(complex->samplingQuality());
+        }
     }
 }
 
@@ -342,10 +364,51 @@ KeyEdgeData KeyEdgeData::fromSlice(
     return result;
 }
 
+void KeyEdgeData::setSamplingQuality_(geometry::CurveSamplingQuality quality) {
+    if (samplingQuality_ != quality) {
+        samplingQuality_ = quality;
+        dirtyStrokeSampling_();
+        if (Cell* cell = this->cell()) {
+            if (Complex* complex = cell->complex()) {
+                complex->cellSamplingQualityChanged().emit(cell);
+            }
+        }
+    }
+}
+
+// Note 1: there is no point calling this in the following constructors:
+// - KeyEdgeData()
+// - KeyEdgeData(detail::KeyEdgePrivateKey, KeyEdge* owner)
+// because complex() is nullptr there.
+//
+// Note 2: we do not want to emit cellSamplingQualityChanged() here,
+// since it's an initialization, hence nothing has "changed".
+//
+void KeyEdgeData::initSamplingQuality_(const KeyEdgeData& other) {
+    hasSamplingQualityOverride_ = other.hasSamplingQualityOverride_;
+    if (hasSamplingQualityOverride_) {
+        samplingQuality_ = other.samplingQuality_;
+    }
+    else {
+        if (Cell* cell = this->cell()) {
+            if (Complex* complex = cell->complex()) {
+                samplingQuality_ = cell->complex()->samplingQuality();
+            }
+        }
+    }
+}
+
+void KeyEdgeData::copySamplingQuality_(const KeyEdgeData& other) {
+    hasSamplingQualityOverride_ = other.hasSamplingQualityOverride_;
+    if (hasSamplingQualityOverride_) {
+        setSamplingQuality_(other.samplingQuality_);
+    }
+}
+
 void KeyEdgeData::updateStrokeSampling_() const {
     if (!strokeSampling_) {
         geometry::StrokeSampling2d sampling =
-            computeStrokeSampling_(strokeSamplingQuality_);
+            computeStrokeSampling_(samplingQuality_);
         strokeSampling_ =
             std::make_shared<const geometry::StrokeSampling2d>(std::move(sampling));
     }

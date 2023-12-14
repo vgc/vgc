@@ -171,6 +171,21 @@ Complex::FaceRange Complex::faces(core::AnimTime t) const {
     return result;
 }
 
+void Complex::setSamplingQuality(geometry::CurveSamplingQuality quality) {
+    if (quality != samplingQuality_) {
+        samplingQuality_ = quality;
+        for (const auto& it : nodes_) {
+            Node* node = it.second.get();
+            if (Cell* cell = node->toCell()) {
+                if (KeyEdge* ke = cell->toKeyEdge()) {
+                    detail::DefaultSamplingQualitySetter::set(ke->data(), quality);
+                }
+            }
+        }
+    }
+    // TODO: emit something?
+}
+
 namespace {
 
 void debugPrintRec(core::StringWriter& out, Node* node, Int indent) {

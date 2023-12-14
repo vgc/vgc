@@ -176,6 +176,7 @@ Workspace::Workspace(CreateKey key, dom::DocumentPtr document)
     document->changed().connect(onDocumentDiff());
 
     vac_ = vacomplex::Complex::create();
+    vac_->cellSamplingQualityChanged().connect(onVacCellSamplingQualityChanged_Slot());
     vac_->nodesChanged().connect(onVacNodesChanged());
 
     rebuildFromDom();
@@ -239,27 +240,6 @@ void Workspace::registerElementClass_(
     ElementCreator elementCreator) {
 
     elementCreators_()[tagName] = elementCreator;
-}
-
-void Workspace::setDefaultStrokeSamplingQuality(geometry::CurveSamplingQuality quality) {
-
-    defaultStrokeSamplingQuality_ = quality;
-
-    visitDepthFirstPreOrder( //
-        [=](Element* e, Int) {
-            if (!e) {
-                return;
-            }
-            if (e->isVacElement()) {
-                // todo: should we use an enum to avoid dynamic_cast ?
-                // if an error happens with the Element creation we cannot rely on vac node type.
-                auto edge = dynamic_cast<VacKeyEdge*>(e);
-                if (edge) {
-                    //profileName = "Canvas:WorkspaceDrawEdgeElement";
-                    edge->setStrokeSamplingQuality(quality);
-                }
-            }
-        });
 }
 
 void Workspace::sync() {
@@ -1042,6 +1022,13 @@ void Workspace::updateElementFromVac_(
 void Workspace::rebuildDomFromWorkspaceTree_() {
     // todo later
     throw core::RuntimeError("not implemented");
+}
+
+void Workspace::onVacCellSamplingQualityChanged_(const vacomplex::Cell* cell) {
+    VacElement* item = findVacElement(cell);
+    if (VacKeyEdge* vacKeyEdge = dynamic_cast<VacKeyEdge*>(item)) {
+        vacKeyEdge->dirtyPreJoinGeometry_();
+    }
 }
 
 void Workspace::onVacNodesChanged_(const vacomplex::ComplexDiff& diff) {

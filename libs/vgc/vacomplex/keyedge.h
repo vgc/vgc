@@ -66,7 +66,7 @@ public:
     bool snapGeometry();
 
     geometry::CurveSamplingQuality strokeSamplingQuality() const {
-        return data_.strokeSamplingQuality();
+        return data_.samplingQuality();
     }
 
     std::shared_ptr<const geometry::StrokeSampling2d> strokeSamplingShared() const {

@@ -38,8 +38,8 @@ protected:
     CellData() noexcept = default;
     ~CellData() = default; // not virtual
 
-    CellData(Cell* owner) noexcept {
-        properties_.cell_ = owner;
+    CellData(Cell* owner) noexcept
+        : properties_(owner) {
     }
 
     // protected to prevent partial copy/move
@@ -48,7 +48,22 @@ protected:
     CellData& operator=(const CellData& other) = default;
     CellData& operator=(CellData&& other) noexcept = default;
 
+    // This function is assumed to be called by Operations just after a Cell is
+    // created and added as child of its parent group (at which point
+    // cell()->complex() returns a non-null pointer).
+    //
+    // It essentially has the same semantics as the move-assign operator,
+    // except that it doesn't notify of changes.
+    //
+    void moveInit_(CellData&& other) noexcept {
+        properties_.moveInit_(std::move(other.properties_));
+    }
+
 public:
+    Cell* cell() const {
+        return properties_.cell_;
+    }
+
     const CellProperties& properties() const {
         return properties_;
     }

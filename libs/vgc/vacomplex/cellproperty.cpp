@@ -109,6 +109,12 @@ CellProperties& CellProperties::operator=(CellProperties&& other) noexcept {
     return *this;
 }
 
+void CellProperties::moveInit_(CellProperties&& other) noexcept {
+    map_ = std::move(other.map_);
+    // cell_ != nullptr but considered "just created":
+    // no need to call emitPropertyChanged_()
+}
+
 const CellProperty* CellProperties::find(core::StringId name) const {
     auto it = map_.find(name);
     return it != map_.end() ? it->second.get() : nullptr;

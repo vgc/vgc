@@ -983,15 +983,5 @@ void setKeyVertexPosition(KeyVertex* vertex, const geometry::Vec2d& pos) {
     return ops.setKeyVertexPosition(vertex, pos);
 }
 
-void setKeyEdgeStrokeSamplingQuality(
-    KeyEdge* edge,
-    geometry::CurveSamplingQuality quality) {
-    if (!edge) {
-        throw LogicError("setKeyEdgeStrokeSamplingQuality: edge is nullptr.");
-    }
-    detail::Operations ops(edge->complex());
-    return ops.setKeyEdgeStrokeSamplingQuality(edge, quality);
-}
-
 } // namespace ops
 } // namespace vgc::vacomplex

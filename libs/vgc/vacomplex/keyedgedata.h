@@ -35,12 +35,14 @@
 
 namespace vgc::vacomplex {
 
+class Complex;
 class KeyEdge;
 class KeyEdgeData;
 
 namespace detail {
 
 class Operations;
+struct DefaultSamplingQualitySetter;
 
 struct KeyEdgePrivateKey {
 private:
@@ -70,7 +72,11 @@ private:
 class VGC_VACOMPLEX_API KeyEdgeData final : public CellData {
 private:
     friend detail::Operations;
+    friend detail::DefaultSamplingQualitySetter;
     friend KeyEdge;
+
+    void moveInit_(KeyEdgeData&& other) noexcept;
+    void moveInitDerivedOnly_(KeyEdgeData&& other) noexcept;
 
 public:
     KeyEdgeData() noexcept = default;
@@ -81,7 +87,10 @@ public:
     KeyEdgeData(const KeyEdgeData& other);
     KeyEdgeData(KeyEdgeData&& other) noexcept;
     KeyEdgeData& operator=(const KeyEdgeData& other);
-    KeyEdgeData& operator=(KeyEdgeData&& other) noexcept;
+    KeyEdgeData& operator=(KeyEdgeData&& other);
+
+    // Note: the move-constructor is not noexcept since it calls setStroke()
+    // which can do allocations and emissions of signals.
 
     KeyEdge* keyEdge() const;
 
@@ -92,11 +101,48 @@ public:
     void setStroke(const geometry::AbstractStroke2d* stroke);
     void setStroke(std::unique_ptr<geometry::AbstractStroke2d>&& stroke);
 
-    geometry::CurveSamplingQuality strokeSamplingQuality() const {
-        return strokeSamplingQuality_;
+    /// Returns the sampling quality currently used to sample this stroke.
+    ///
+    /// If no override is set, then this is equal to
+    /// `Complex::samplingQuality()`, otherwise this is equal to the override
+    /// set.
+    ///
+    /// \sa `hasSamplingQualityOverride()`,
+    ///     `setSamplingQualityOverride()`,
+    ///     `clearSamplingQualityOverride()`.
+    ///
+    geometry::CurveSamplingQuality samplingQuality() const {
+        return samplingQuality_;
     }
 
-    void setStrokeSamplingQuality(geometry::CurveSamplingQuality strokeSamplingQuality);
+    /// Returns whether there is currently an explicit override
+    /// of sampling quality for this edge.
+    ///
+    /// This is true if and only if `setSamplingQualityOverride()` has been
+    /// called without a subsequent call to `clearSamplingQualityOverride()`
+    /// yet.
+    ///
+    /// \sa `Complex::samplingQuality()`.
+    ///
+    bool hasSamplingQualityOverride() const {
+        return hasSamplingQualityOverride_;
+    }
+
+    /// Overrides the default sampling quality with the given `quality`.
+    ///
+    /// \sa `samplingQuality()`,
+    ///     `hasSamplingQualityOverride()`,
+    ///     `clearSamplingQualityOverride()`.
+    ///
+    void setSamplingQualityOverride(geometry::CurveSamplingQuality quality);
+
+    /// Removes the sampling quality override for this edge.
+    ///
+    /// \sa `samplingQuality()`,
+    ///     `hasSamplingQualityOverride()`,
+    ///     `clearSamplingQualityOverride()`.
+    ///
+    void clearSamplingQualityOverride();
 
     std::shared_ptr<const geometry::StrokeSampling2d> strokeSamplingShared() const {
         updateStrokeSampling_();
@@ -120,11 +166,11 @@ public:
     ///
     geometry::StrokeSampling2d
     computeStrokeSampling(geometry::CurveSamplingQuality quality) const {
-        if (strokeSamplingQuality_ == quality) {
+        if (samplingQuality_ == quality) {
             // return copy of cached sampling
             return strokeSampling();
         }
-        return computeStrokeSampling_(strokeSamplingQuality_);
+        return computeStrokeSampling_(samplingQuality_);
     }
 
     const geometry::Rect2d& centerlineBoundingBox() const {
@@ -181,8 +227,19 @@ public:
 private:
     std::unique_ptr<geometry::AbstractStroke2d> stroke_;
 
-    geometry::CurveSamplingQuality strokeSamplingQuality_ =
+    // Whether there is a sampling quality override
+    bool hasSamplingQualityOverride_ = false;
+
+    // The current sampling quality (either from Complex or from the override)
+    geometry::CurveSamplingQuality samplingQuality_ =
         geometry::CurveSamplingQuality::AdaptiveLow;
+
+    // Helpers to change the current sampling quality
+    void setSamplingQuality_(geometry::CurveSamplingQuality quality);
+    void updateSamplingQuality_(geometry::CurveSamplingQuality quality);
+    void updateSamplingQuality_();
+    void initSamplingQuality_(const KeyEdgeData& other);
+    void copySamplingQuality_(const KeyEdgeData& other);
 
     mutable std::shared_ptr<const geometry::StrokeSampling2d> strokeSampling_;
     mutable std::optional<geometry::Rect2d> centerlineBBox_;
@@ -196,6 +253,21 @@ private:
     geometry::StrokeSampling2d
     computeStrokeSampling_(geometry::CurveSamplingQuality quality) const;
 };
+
+namespace detail {
+
+struct DefaultSamplingQualitySetter {
+private:
+    friend Complex;
+    friend detail::Operations;
+    static void set(KeyEdgeData& data, geometry::CurveSamplingQuality quality) {
+        if (!data.hasSamplingQualityOverride()) {
+            data.setSamplingQuality_(quality);
+        }
+    }
+};
+
+} // namespace detail
 
 //std::shared_ptr<const EdgeSampling> snappedSampling_;
 //virtual EdgeSampling computeSampling() = 0;
