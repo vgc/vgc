@@ -407,8 +407,7 @@ void KeyEdgeData::copySamplingQuality_(const KeyEdgeData& other) {
 
 void KeyEdgeData::updateStrokeSampling_() const {
     if (!strokeSampling_) {
-        geometry::StrokeSampling2d sampling =
-            computeStrokeSampling_(samplingQuality_);
+        geometry::StrokeSampling2d sampling = computeStrokeSampling_(samplingQuality_);
         strokeSampling_ =
             std::make_shared<const geometry::StrokeSampling2d>(std::move(sampling));
     }
