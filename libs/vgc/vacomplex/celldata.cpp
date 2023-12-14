@@ -22,7 +22,7 @@
 namespace vgc::vacomplex {
 
 void CellData::emitGeometryChanged() const {
-    Cell* cell = properties_.cell();
+    Cell* cell = this->cell();
     if (cell) {
         Complex* complex = cell->complex();
         detail::Operations ops(complex);

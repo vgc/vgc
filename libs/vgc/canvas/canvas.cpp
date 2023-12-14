@@ -374,41 +374,43 @@ core::Array<core::Id> Canvas::computeRectangleSelectionCandidates(
 //
 bool Canvas::onKeyPress(ui::KeyPressEvent* event) {
 
-    using geometry::CurveSamplingQuality;
-
     switch (event->key()) {
     case ui::Key::T:
         isWireframeMode_ = !isWireframeMode_;
         requestRepaint();
         break;
-    case ui::Key::I:
-        switch (strokeSamplingQuality_) {
+    case ui::Key::I: {
+        using geometry::CurveSamplingQuality;
+        vacomplex::Complex* complex = workspace_->vac();
+        CurveSamplingQuality quality = complex->samplingQuality();
+        switch (quality) {
         case CurveSamplingQuality::Disabled:
-            strokeSamplingQuality_ = CurveSamplingQuality::UniformVeryLow;
+            quality = CurveSamplingQuality::UniformVeryLow;
             break;
         case CurveSamplingQuality::UniformVeryLow:
-            strokeSamplingQuality_ = CurveSamplingQuality::AdaptiveLow;
+            quality = CurveSamplingQuality::AdaptiveLow;
             break;
         case CurveSamplingQuality::AdaptiveLow:
-            strokeSamplingQuality_ = CurveSamplingQuality::UniformHigh;
+            quality = CurveSamplingQuality::UniformHigh;
             break;
         case CurveSamplingQuality::UniformHigh:
-            strokeSamplingQuality_ = CurveSamplingQuality::AdaptiveHigh;
+            quality = CurveSamplingQuality::AdaptiveHigh;
             break;
         case CurveSamplingQuality::AdaptiveHigh:
-            strokeSamplingQuality_ = CurveSamplingQuality::UniformVeryHigh;
+            quality = CurveSamplingQuality::UniformVeryHigh;
             break;
         case CurveSamplingQuality::UniformVeryHigh:
-            strokeSamplingQuality_ = CurveSamplingQuality::Disabled;
+            quality = CurveSamplingQuality::Disabled;
             break;
         }
         VGC_INFO(
             LogVgcCanvas,
             "Switched edge subdivision quality to: {}",
-            core::Enum::prettyName(strokeSamplingQuality_));
-        workspace_->setDefaultStrokeSamplingQuality(strokeSamplingQuality_);
+            core::Enum::prettyName(quality));
+        complex->setSamplingQuality(quality);
         requestRepaint();
         break;
+    }
     case ui::Key::P:
         showControlPoints_ = !showControlPoints_;
         requestRepaint();

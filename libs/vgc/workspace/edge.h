@@ -495,8 +495,6 @@ public:
         return cell ? cell->toKeyEdgeUnchecked() : nullptr;
     }
 
-    void setStrokeSamplingQuality(geometry::CurveSamplingQuality quality);
-
     std::optional<core::StringId> domTagName() const override;
 
     geometry::Rect2d boundingBox(core::AnimTime t) const override;

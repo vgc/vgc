@@ -165,12 +165,6 @@ public:
     ///
     void stopLoggingUnder(core::PerformanceLog* parent);
 
-    /// Returns the current requested tesselation mode.
-    ///
-    geometry::CurveSamplingQuality strokeSamplingQuality() const {
-        return strokeSamplingQuality_;
-    }
-
     /// Returns the camera used to view the workspace.
     ///
     const geometry::Camera2d& camera() const {
@@ -328,12 +322,6 @@ private:
     // XXX This is a temporary quick method to switch between
     // render modes. A more engineered method will come later.
     bool showControlPoints_ = false;
-
-    // Chosen CurveSamplingQuality for the Canvas. This is selected with the i key.
-    // XXX This is a temporary quick method to switch between
-    // tesselation modes. A more engineered method will come later.
-    geometry::CurveSamplingQuality strokeSamplingQuality_ =
-        geometry::CurveSamplingQuality::AdaptiveHigh;
 
     // Performance logging
     core::PerformanceLogTask renderTask_;

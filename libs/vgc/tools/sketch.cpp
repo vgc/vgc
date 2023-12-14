@@ -1259,6 +1259,32 @@ Sketch::EdgeInfo* Sketch::searchEdgeInfo_(core::Id itemId) {
     return nullptr;
 }
 
+namespace {
+
+workspace::VacKeyEdge* toKeyEdgeItem(workspace::Workspace* workspace, core::Id itemId) {
+    if (workspace) {
+        if (workspace::Element* item = workspace->find(itemId)) {
+            return dynamic_cast<workspace::VacKeyEdge*>(item);
+        }
+    }
+    return nullptr;
+}
+
+vacomplex::KeyEdge* toKeyEdge(workspace::VacKeyEdge* keyEdgeItem) {
+    if (keyEdgeItem) {
+        if (vacomplex::Cell* cell = keyEdgeItem->vacCell()) {
+            return cell->toKeyEdge();
+        }
+    }
+    return nullptr;
+}
+
+vacomplex::KeyEdge* toKeyEdge(workspace::Workspace* workspace, core::Id itemId) {
+    return toKeyEdge(toKeyEdgeItem(workspace, itemId));
+}
+
+} // namespace
+
 void Sketch::startCurve_(ui::MouseEvent* event) {
 
     // Clear the points now. We don't to it on finishCurve_() for
@@ -1357,22 +1383,19 @@ void Sketch::startCurve_(ui::MouseEvent* event) {
 
     // Append start point to geometry
     continueCurve_(event);
-    workspace->sync();
+    workspace->sync(); // required for toKeyEdge() below
 
     // Append start vertex to snap/cut info
     appendVertexInfo_(startPosition, startVertexItemId_);
 
-    // Set curve to fast tesselation to minimize lag. We do this after
-    // continueCurve_() to rely on workspace->sync() called there.
-    workspace::Element* edgeItem = workspace->find(edgeItemId_);
-    auto keyEdgeItem = dynamic_cast<workspace::VacKeyEdge*>(edgeItem);
-    if (keyEdgeItem) {
-        keyEdgeItem->setStrokeSamplingQuality(
+    if (vacomplex::KeyEdge* keyEdge = toKeyEdge(workspace, edgeItemId_)) {
+
+        // Use low sampling quality override to minimize lag.
+        keyEdge->data().setSamplingQualityOverride(
             geometry::CurveSamplingQuality::AdaptiveLow);
-        auto ke = keyEdgeItem->vacNode();
-        if (ke) {
-            vacomplex::ops::moveBelowBoundary(ke);
-        }
+
+        // Move edge to proper depth location.
+        vacomplex::ops::moveBelowBoundary(keyEdge);
     }
 
     // Update stroke tip
@@ -1466,11 +1489,9 @@ void Sketch::finishCurve_(ui::MouseEvent* /*event*/) {
         return;
     }
 
-    // Set curve to final requested tesselation mode
-    workspace::Element* edgeItem = workspace->find(edgeItemId_);
-    auto keItem = dynamic_cast<workspace::VacKeyEdge*>(edgeItem);
-    if (keItem && canvas()) {
-        keItem->setStrokeSamplingQuality(canvas()->strokeSamplingQuality());
+    // Clear sampling quality override to use default sampling
+    if (vacomplex::KeyEdge* keyEdge = toKeyEdge(workspace, edgeItemId_)) {
+        keyEdge->data().clearSamplingQualityOverride();
     }
 
     // Compute end vertex snapping
@@ -1495,6 +1516,7 @@ void Sketch::finishCurve_(ui::MouseEvent* /*event*/) {
 
             bool canClose = false;
             auto snapKvItem = dynamic_cast<workspace::VacKeyVertex*>(snapEndVertexItem);
+            workspace::VacKeyEdge* keItem = toKeyEdgeItem(workspace, edgeItemId_);
             if (snapKvItem && keItem) {
                 vacomplex::KeyVertex* kv = snapKvItem->vacKeyVertexNode();
                 vacomplex::KeyEdge* ke = keItem->vacKeyEdgeNode();

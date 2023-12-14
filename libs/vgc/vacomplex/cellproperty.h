@@ -138,14 +138,46 @@ class VGC_VACOMPLEX_API CellProperties {
 public:
     using PropertyMap = std::map<core::StringId, std::unique_ptr<CellProperty>>;
 
-    CellProperties() noexcept = default;
+    // Notes:
+    // - cell_ stays unchanged for the lifetime of the CellProperties.
+    //   we rely on this invariant for KeyEdgeData::samplingQuality, which
+    //   depends on the underlying complex default samplingQuality.
+    // - default constructor sets cell_ as nullptr
+    // - copy-construct sets cell_ as nullptr
+    // - copy-assign does not modify cell_, and emits "PropertyChanged"
+    //   on the cell, if any.
+    //
+    // XXX:
+    // - Do we really need to have cell_ in CellProperties?
+    //   It is currently only used by emitPropertyChanged_(), but this could
+    //   be implemented in CellData or via helpers in `detail`.
+    //
+    // - Do we really want to keep the constructors/copy-constructors/etc
+    //   public with such non-standard behavior?
+    //
+    // For now, semantically, CellProperties is basically a "view" onto the
+    // properties of a cell (which makes sense for code organization and
+    // convenient: allow range-based loops), with a back-pointer to the Cell.
+    // But since it doesn't have the typical copy-semantics of a view object,
+    // it may be a bit too unusual, and perhaps we should only keep the
+    // range-based iteration.
+    //
+    // It's also a bit dangerous to keep public access to methods such as
+    // assignFromConcatStep(), etc..
+    //
+    CellProperties(Cell* cell = nullptr) noexcept
+        : cell_(cell) {
+    }
     ~CellProperties() = default;
-
     CellProperties(const CellProperties& other);
     CellProperties(CellProperties&& other) noexcept;
     CellProperties& operator=(const CellProperties& rhs);
     CellProperties& operator=(CellProperties&& rhs) noexcept;
 
+private:
+    void moveInit_(CellProperties&& other) noexcept;
+
+public:
     const PropertyMap& map() const {
         return map_;
     }
@@ -156,10 +188,6 @@ public:
 
     PropertyMap::const_iterator end() const {
         return map_.cend();
-    }
-
-    Cell* cell() const {
-        return cell_;
     }
 
     const CellProperty* find(core::StringId name) const;

@@ -189,7 +189,7 @@ KeyEdge* Operations::createKeyOpenEdge(
     addToBoundary_(ke, endVertex);
 
     // Geometric attributes
-    ke->data() = std::move(data);
+    ke->data().moveInit_(std::move(data));
 
     return ke;
 }
@@ -206,7 +206,7 @@ KeyEdge* Operations::createKeyClosedEdge(
     // -> None
 
     // Geometric attributes
-    ke->data() = std::move(data);
+    ke->data().moveInit_(std::move(data));
 
     return ke;
 }
@@ -2355,13 +2355,6 @@ void Operations::setKeyVertexPosition(KeyVertex* kv, const geometry::Vec2d& pos)
     kv->position_ = pos;
 
     onGeometryChanged_(kv);
-}
-
-void Operations::setKeyEdgeStrokeSamplingQuality(
-    KeyEdge* ke,
-    geometry::CurveSamplingQuality quality) {
-
-    ke->data_.setStrokeSamplingQuality(quality);
 }
 
 void Operations::onNodeCreated_(Node* node) {
