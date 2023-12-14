@@ -320,7 +320,7 @@ private:
     // Polygon mode. This is selected with the n/t/f keys.
     // XXX This is a temporary quick method to switch between
     // render modes. A more engineered method will come later.
-    int polygonMode_ = 0; // 0: fill; 1: lines (i.e., not exactly like OpenGL)
+    bool isWireframeMode_ = false;
     graphics::RasterizerStatePtr fillRS_;
     graphics::RasterizerStatePtr wireframeRS_;
 

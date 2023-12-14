@@ -378,7 +378,7 @@ bool Canvas::onKeyPress(ui::KeyPressEvent* event) {
 
     switch (event->key()) {
     case ui::Key::T:
-        polygonMode_ = polygonMode_ ? 0 : 1;
+        isWireframeMode_ = !isWireframeMode_;
         requestRepaint();
         break;
     case ui::Key::I:
@@ -758,7 +758,7 @@ void Canvas::onPaintDraw(graphics::Engine* engine, ui::PaintOptions options) {
     }
     engine->draw(bgGeometry_);
 
-    engine->setRasterizerState((polygonMode_ == 1) ? wireframeRS_ : fillRS_);
+    engine->setRasterizerState(isWireframeMode_ ? wireframeRS_ : fillRS_);
 
     geometry::Mat4f vm = engine->viewMatrix();
     geometry::Mat4f cameraViewf(camera_.viewMatrix());
@@ -815,6 +815,11 @@ void Canvas::onPaintDraw(graphics::Engine* engine, ui::PaintOptions options) {
         }
 
         // Draw Selection
+        //
+        // This should never be drawn in wireframe mode, otherwise we cannot
+        // see which face is selected.
+        //
+        engine->setRasterizerState(fillRS_);
         if (!selectedElements.isEmpty()) {
             workspace::PaintOptions paintOptions = commonPaintOptions;
             paintOptions.set(workspace::PaintOption::Selected);
