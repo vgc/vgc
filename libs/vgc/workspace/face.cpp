@@ -564,7 +564,7 @@ void VacKeyFace::updateFromVac_(vacomplex::NodeModificationFlags flags) {
         updateDependencies_(newDependencies);
     }
 
-    if (boundaryChanged || flags.has(NodeModificationFlag::BoundaryMeshChanged)) {
+    if (boundaryChanged || flags.has(NodeModificationFlag::BoundaryGeometryChanged)) {
         dirtyFillMesh_();
     }
 

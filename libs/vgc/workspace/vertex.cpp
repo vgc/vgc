@@ -191,6 +191,8 @@ void VacKeyVertex::onPaintDraw(
                 posF,
                 selectionDiskRadius,
                 colors::selection);
+            // XXX Set data.isSelectionGeometryDirty_ to false?
+            //     This data member is always true at the moment...
         }
 
         core::Array<graphics::detail::ScreenSpaceInstanceData> pointInstData(2);
@@ -271,8 +273,6 @@ void VacKeyVertex::updateFromVac_(vacomplex::NodeModificationFlags flags) {
             domElement->setAttribute(ds::position, kv->position());
             dirtyPosition_();
         }
-    }
-    else if (flags.has(NodeModificationFlag::MeshChanged)) {
         frameData_.isSelectionGeometryDirty_ = true;
     }
 }

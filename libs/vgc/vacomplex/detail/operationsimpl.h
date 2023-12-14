@@ -275,9 +275,6 @@ private:
     friend vacomplex::KeyEdgeData;
 
     void onGeometryChanged_(Cell* cell);
-    void onBoundaryMeshChanged_(Cell* cell);
-    void dirtyMesh_(Cell* cell);
-    void doDirtyMesh_(Cell* cell);
 
     // Adds or remove the `boundingCell` to the boundary of the `boundedCell`.
     //
