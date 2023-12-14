@@ -392,7 +392,7 @@ void KeyEdgeData::initSamplingQuality_(const KeyEdgeData& other) {
     else {
         if (Cell* cell = this->cell()) {
             if (Complex* complex = cell->complex()) {
-                samplingQuality_ = cell->complex()->samplingQuality();
+                samplingQuality_ = complex->samplingQuality();
             }
         }
     }
