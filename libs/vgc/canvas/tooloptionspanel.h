@@ -39,6 +39,7 @@ protected:
 public:
     // TODO: A cleaner way to do this, also supporting translations.
     static constexpr std::string_view label = "Tool Options";
+    static constexpr std::string_view id = "vgc.common.toolOptions";
 
     /// Creates a `ToolOptionsPanel`.
     ///

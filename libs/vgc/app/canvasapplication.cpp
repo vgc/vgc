@@ -25,17 +25,16 @@
 #include <vgc/canvas/documentmanager.h>
 #include <vgc/canvas/tooloptionspanel.h>
 #include <vgc/canvas/toolspanel.h>
-#include <vgc/dom/strings.h>
 #include <vgc/tools/currentcolor.h>
 #include <vgc/tools/documentcolorpalette.h>
 #include <vgc/tools/paintbucket.h>
 #include <vgc/tools/sculpt.h>
 #include <vgc/tools/select.h>
+#include <vgc/tools/sketch.h>
 #include <vgc/ui/genericaction.h>
 #include <vgc/ui/genericcommands.h>
 #include <vgc/ui/inspector.h>
 #include <vgc/ui/qtutil.h>
-#include <vgc/ui/row.h>
 #include <vgc/ui/shortcut.h>
 #include <vgc/ui/standardmenus.h>
 #include <vgc/ui/tabbar.h>
@@ -45,14 +44,6 @@ namespace vgc::app {
 namespace {
 
 const core::Color initialColor(0.416f, 0.416f, 0.918f);
-
-namespace paneltypes_ {
-
-ui::PanelTypeId tools("vgc.common.tools");
-ui::PanelTypeId toolOptions("vgc.common.toolOptions");
-ui::PanelTypeId colors("vgc.common.colors");
-
-} // namespace paneltypes_
 
 core::StringId s_left_sidebar("left-sidebar");
 core::StringId s_with_padding("with-padding");
@@ -256,28 +247,13 @@ void CanvasApplication::createActions_(ui::Widget* parent) {
 
 void CanvasApplication::registerPanelTypes_() {
 
+    // Create PanelManager
     panelManager_ = ui::PanelManager::create(moduleManager());
 
-    // Tools
-    using canvas::ToolsPanel;
-    panelManager_->registerPanelType(
-        paneltypes_::tools, ToolsPanel::label, [=](ui::PanelArea* parent) {
-            return this->panelManager_->createPanelInstance_<ToolsPanel>(parent);
-        });
-
-    // Tool Options
-    using canvas::ToolOptionsPanel;
-    panelManager_->registerPanelType(
-        paneltypes_::toolOptions, ToolOptionsPanel::label, [=](ui::PanelArea* parent) {
-            return this->panelManager_->createPanelInstance_<ToolOptionsPanel>(parent);
-        });
-
-    // Colors
-    using tools::ColorsPanel;
-    panelManager_->registerPanelType(
-        paneltypes_::colors, ColorsPanel::label, [=](ui::PanelArea* parent) {
-            return this->panelManager_->createPanelInstance_<ColorsPanel>(parent);
-        });
+    // Register Panel types
+    panelManager_->registerPanelType<canvas::ToolsPanel>();
+    panelManager_->registerPanelType<canvas::ToolOptionsPanel>();
+    panelManager_->registerPanelType<tools::ColorsPanel>();
 
     // Create Panels menu
     ui::Menu* panelsMenu = nullptr;
@@ -334,9 +310,9 @@ void CanvasApplication::createDefaultPanels_() {
     createTools_(canvas);
 
     // Create other panels
-    onActionOpenPanel_(paneltypes_::tools);
-    onActionOpenPanel_(paneltypes_::toolOptions);
-    onActionOpenPanel_(paneltypes_::colors);
+    onActionOpenPanel_(ui::PanelTypeId(canvas::ToolsPanel::id));
+    onActionOpenPanel_(ui::PanelTypeId(canvas::ToolOptionsPanel::id));
+    onActionOpenPanel_(ui::PanelTypeId(tools::ColorsPanel::id));
 }
 
 ui::PanelArea* CanvasApplication::getOrCreateLeftPanelArea_() {
