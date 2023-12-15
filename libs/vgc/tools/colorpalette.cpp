@@ -25,6 +25,8 @@
 #include <vgc/geometry/mat3f.h>
 #include <vgc/graphics/strings.h>
 #include <vgc/style/strings.h>
+#include <vgc/tools/currentcolor.h>
+#include <vgc/tools/documentcolorpalette.h>
 #include <vgc/tools/logcategories.h>
 #include <vgc/tools/strings.h>
 #include <vgc/ui/button.h>
@@ -33,6 +35,7 @@
 #include <vgc/ui/lineedit.h>
 #include <vgc/ui/margins.h>
 #include <vgc/ui/numberedit.h>
+#include <vgc/ui/panelcontext.h>
 #include <vgc/ui/row.h>
 
 #include <vgc/ui/detail/paintutil.h>
@@ -3001,6 +3004,36 @@ bool ColorListView::selectColorFromHovered_() {
     else {
         return false;
     }
+}
+
+namespace {
+
+core::StringId s_with_padding("with-padding");
+
+} // namespace
+
+ColorsPanel::ColorsPanel(CreateKey key, const ui::PanelContext& context)
+    : Panel(key, context, label) {
+
+    ColorPalette* palette = createChild<ColorPalette>();
+
+    if (auto currentColor = context.importModule<CurrentColor>().lock()) {
+        palette->setSelectedColor(currentColor->color());
+        palette->colorSelected().connect(currentColor->setColorSlot());
+        currentColor->colorChanged().connect(palette->setSelectedColorSlot());
+    }
+
+    if (auto documentColorPalette = context.importModule<DocumentColorPalette>().lock()) {
+        palette->setColors(documentColorPalette->colors());
+        palette->colorsChanged().connect(documentColorPalette->setColorsSlot());
+        documentColorPalette->colorsChanged().connect(palette->setColorsSlot());
+    }
+
+    addStyleClass(s_with_padding);
+}
+
+ColorsPanelPtr ColorsPanel::create(const ui::PanelContext& context) {
+    return core::createObject<ColorsPanel>(context);
 }
 
 } // namespace vgc::tools

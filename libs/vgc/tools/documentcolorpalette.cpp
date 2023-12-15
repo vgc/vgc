@@ -115,6 +115,13 @@ DocumentColorPalettePtr DocumentColorPalette::create(const ui::ModuleContext& co
     return core::createObject<DocumentColorPalette>(context);
 }
 
+// Note: this cannot be in the header file since `getIfAlive()` requires the
+// full definition of `Document`.
+//
+dom::Document* DocumentColorPalette::document() const {
+    return document_.getIfAlive();
+}
+
 void DocumentColorPalette::setDocument(dom::Document* document) {
     if (document == this->document()) {
         return;

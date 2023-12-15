@@ -50,7 +50,7 @@ namespace paneltypes_ {
 
 ui::PanelTypeId tools("vgc.common.tools");
 ui::PanelTypeId toolOptions("vgc.common.toolOptions");
-ui::PanelTypeId colorPalette("vgc.common.colorPalette");
+ui::PanelTypeId colors("vgc.common.colors");
 
 } // namespace paneltypes_
 
@@ -273,20 +273,10 @@ void CanvasApplication::registerPanelTypes_() {
         });
 
     // Colors
-    std::string_view colorPaletteLabel = "Colors";
+    using tools::ColorsPanel;
     panelManager_->registerPanelType(
-        paneltypes_::colorPalette, colorPaletteLabel, [=](ui::PanelArea* parent) {
-            ui::PanelManager* panelManager = this->panelManager_.get();
-            ui::Panel* panel =
-                detail::createPanelWithPadding(panelManager, parent, colorPaletteLabel);
-            tools::ColorPalette* palette = panel->createChild<tools::ColorPalette>();
-            palette->setSelectedColor(currentColor_->color());
-            palette->setColors(documentColorPalette_->colors());
-            palette->colorSelected().connect(currentColor_->setColorSlot());
-            palette->colorsChanged().connect(documentColorPalette_->setColorsSlot());
-            currentColor_->colorChanged().connect(palette->setSelectedColorSlot());
-            documentColorPalette_->colorsChanged().connect(palette->setColorsSlot());
-            return panel;
+        paneltypes_::colors, ColorsPanel::label, [=](ui::PanelArea* parent) {
+            return this->panelManager_->createPanelInstance_<ColorsPanel>(parent);
         });
 
     // Create Panels menu
@@ -346,7 +336,7 @@ void CanvasApplication::createDefaultPanels_() {
     // Create other panels
     onActionOpenPanel_(paneltypes_::tools);
     onActionOpenPanel_(paneltypes_::toolOptions);
-    onActionOpenPanel_(paneltypes_::colorPalette);
+    onActionOpenPanel_(paneltypes_::colors);
 }
 
 ui::PanelArea* CanvasApplication::getOrCreateLeftPanelArea_() {

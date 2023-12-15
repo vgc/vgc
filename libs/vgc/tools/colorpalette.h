@@ -22,6 +22,7 @@
 #include <vgc/ui/button.h>
 #include <vgc/ui/column.h>
 #include <vgc/ui/cursor.h>
+#include <vgc/ui/panel.h>
 #include <vgc/ui/widget.h>
 
 namespace vgc::ui {
@@ -605,6 +606,27 @@ private:
     Metrics computeMetricsFromWidth_(float width) const;
     void updateMetrics_() const;
     bool selectColorFromHovered_();
+};
+
+VGC_DECLARE_OBJECT(ColorsPanel);
+
+/// \class vgc::canvas::ColorsPanel
+/// \brief A `Panel` for selecting the current color and document colors.
+///
+class VGC_TOOLS_API ColorsPanel : public ui::Panel {
+private:
+    VGC_OBJECT(ColorsPanel, ui::Panel)
+
+protected:
+    ColorsPanel(CreateKey key, const ui::PanelContext& context);
+
+public:
+    // TODO: A cleaner way to do this, also supporting translations.
+    static constexpr std::string_view label = "Colors";
+
+    /// Creates a `ToolsPanel`.
+    ///
+    static ColorsPanelPtr create(const ui::PanelContext& context);
 };
 
 } // namespace vgc::tools
