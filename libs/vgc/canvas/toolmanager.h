@@ -23,6 +23,7 @@
 #include <vgc/core/object.h>
 #include <vgc/ui/action.h>
 #include <vgc/ui/actiongroup.h>
+#include <vgc/ui/module.h>
 #include <vgc/ui/panel.h>
 
 namespace vgc::ui {
@@ -38,25 +39,26 @@ VGC_DECLARE_OBJECT(ToolManager);
 /// \class vgc::canvas::ToolManager
 /// \brief Stores a list of registered canvas tools and controls which one is the current tool.
 ///
-class VGC_CANVAS_API ToolManager : public core::Object {
+class VGC_CANVAS_API ToolManager : public ui::Module {
 private:
-    VGC_OBJECT(ToolManager, core::Object)
+    VGC_OBJECT(ToolManager, ui::Module)
 
 protected:
-    ToolManager(CreateKey, Canvas* canvas, ui::Widget* owner);
+    ToolManager(CreateKey, const ui::ModuleContext& context);
 
 public:
-    /// Creates a `ToolManager` for the given `canvas`.
+    /// Creates the `ToolManager` module.
     ///
-    /// The given `actionOwner` will be automatically populated with
-    /// `ui::Action` instances corresponding to the registered tools.
-    ///
+    static ToolManagerPtr create(const ui::ModuleContext& context);
+
+    // XXX This is temporary
+    //
     // TODO: allow having several canvases for the same ToolManager. This
     // requires to invert the dependency: it should be each Canvas instance
     // that stores a pointer to a ToolManager, and listens to
     // `currentToolChanged()`.
     //
-    static ToolManagerPtr create(Canvas* canvas, ui::Widget* actionOwner);
+    void setCanvas(Canvas* canvas);
 
     /// Adds a tool to this `ToolManager`.
     ///
@@ -87,7 +89,6 @@ public:
 
 private:
     Canvas* canvas_ = nullptr;
-    ui::Widget* actionOwner_ = nullptr;
 
     ui::ActionGroupPtr toolsActionGroup_;
     std::map<ui::Action*, canvas::CanvasToolPtr> toolMap_;

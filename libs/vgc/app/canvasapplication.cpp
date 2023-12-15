@@ -460,8 +460,8 @@ VGC_UI_DEFINE_WINDOW_COMMAND( //
 void CanvasApplication::createTools_(canvas::Canvas* canvas) {
 
     // Create the tool manager
-    ui::Widget* actionOwner = mainWidget();
-    toolManager_ = canvas::ToolManager::create(canvas, actionOwner);
+    toolManager_ = importModule<canvas::ToolManager>();
+    toolManager_->setCanvas(canvas);
 
     // Create and register all tools
     // TODO: add CanvasTool::command() and use a createAndRegisterTool() helper
