@@ -27,7 +27,6 @@ namespace {
 
 core::StringId s_with_padding("with-padding");
 core::StringId s_tools("tools");
-core::StringId s_tool_options("tool-options");
 
 } // namespace
 
