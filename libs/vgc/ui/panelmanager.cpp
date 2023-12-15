@@ -32,16 +32,6 @@ PanelManagerPtr PanelManager::create(ModuleManager* moduleManager) {
     return core::createObject<PanelManager>(moduleManager);
 }
 
-PanelTypeId PanelManager::registerPanelType(
-    std::string_view id_,
-    std::string_view label,
-    PanelFactory&& factory) {
-
-    PanelTypeId id(id_);
-    infos_.try_emplace(id, label, std::move(factory));
-    return id;
-}
-
 core::Array<PanelTypeId> PanelManager::registeredPanelTypeIds() const {
     core::Array<PanelTypeId> res;
     for (auto& [id, info] : infos_) {
@@ -110,6 +100,14 @@ Panel* PanelManager::createPanelInstance(PanelTypeId id, PanelArea* parent) {
 
 core::Array<Panel*> PanelManager::instances(PanelTypeId id) const {
     return getInfo_(infos_, id).instances_;
+}
+
+void PanelManager::registerPanelType_(
+    std::string_view id,
+    std::string_view label,
+    detail::PanelFactory&& factory) {
+
+    infos_.try_emplace(PanelTypeId(id), label, std::move(factory));
 }
 
 void PanelManager::onPanelInstanceAboutToBeDestroyed_(Object* object) {

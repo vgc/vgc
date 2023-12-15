@@ -31,22 +31,6 @@ VGC_DECLARE_OBJECT(PanelArea);
 VGC_DECLARE_OBJECT(PanelManager);
 VGC_DECLARE_OBJECT(Widget);
 
-/// A `PanelFactory` implementation should create a new `Panel`
-/// as a child of the given `PanelArea` and return it.
-///
-/// Example:
-///
-/// ```cpp
-/// auto colorsPanelFactory = [app](PanelArea* parent) {
-///     Panel* panel = createPanelWithPadding(parent, "Colors");
-///     tools::ColorPalette* palette = panel->createChild<tools::ColorPalette>();
-///     palette->colorSelected().connect(app->onColorChangedSlot_());
-///     return panel;
-/// };
-/// ```
-///
-using PanelFactory = std::function<Panel*(PanelArea* /* parent */)>;
-
 /// Uniquely identifies a panel type registered in a `PanelManager`.
 ///
 /// This is a string that is provided by the developer of the panel, for
@@ -55,6 +39,8 @@ using PanelFactory = std::function<Panel*(PanelArea* /* parent */)>;
 using PanelTypeId = core::StringId;
 
 namespace detail {
+
+using PanelFactory = std::function<Panel*(PanelArea* /* parent */)>;
 
 struct PanelTypeInfo {
     PanelTypeInfo(std::string_view label, PanelFactory&& factory)
@@ -98,15 +84,15 @@ public:
     ///
     static PanelManagerPtr create(ModuleManager* moduleManager);
 
-    /// Registers a panel type and returns its type ID as a `PanelTypeId`.
+    /// Registers a panel type.
     ///
-    /// If a panel type with the same `id` already exists, then it is
-    /// replaced and a warning is emitted.
-    ///
-    PanelTypeId registerPanelType(
-        std::string_view id,
-        std::string_view label,
-        PanelFactory&& factory);
+    template<typename TPanel>
+    void registerPanelType() {
+        // XXX Use ObjectType instead of TPanel::id?
+        registerPanelType_(TPanel::id, TPanel::label, [this](ui::PanelArea* parent) {
+            return this->createPanelInstance_<TPanel>(parent);
+        });
+    }
 
     /// Returns the list of all registered panel type IDs.
     ///
@@ -131,6 +117,13 @@ public:
     /// `id`.
     ///
     Panel* createPanelInstance(PanelTypeId id, PanelArea* parent);
+
+    /// \overload
+    ///
+    template<typename TPanel>
+    Panel* createPanelInstance(PanelArea* parent) {
+        return createPanelInstance(TPanel::id, parent);
+    }
 
     /// Creates an instance of a panel.
     ///
@@ -173,6 +166,14 @@ public:
 private:
     ModuleManager* moduleManager_; // ModuleManager outlives PanelManager
     detail::PanelTypeInfoMap infos_;
+
+    // Note: if a panel type with the same `id` already exists, then it is
+    // replaced and a warning is emitted.
+    //
+    void registerPanelType_(
+        std::string_view id,
+        std::string_view label,
+        detail::PanelFactory&& factory);
 
     void onPanelInstanceAboutToBeDestroyed_(Object* object);
     VGC_SLOT(onPanelInstanceAboutToBeDestroyed_)
