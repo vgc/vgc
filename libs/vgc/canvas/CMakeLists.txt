@@ -13,6 +13,7 @@ vgc_add_library(canvas
         strings.h
         toolmanager.h
         tooloptionspanel.h
+        toolspanel.h
 
     CPP_SOURCE_FILES
         canvas.cpp
@@ -23,4 +24,5 @@ vgc_add_library(canvas
         strings.cpp
         toolmanager.cpp
         tooloptionspanel.cpp
+        toolspanel.cpp
 )

@@ -14,8 +14,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef VGC_CANVAS_TOOLOPTIONSPANEL_H
-#define VGC_CANVAS_TOOLOPTIONSPANEL_H
+#ifndef VGC_CANVAS_TOOLSPANEL_H
+#define VGC_CANVAS_TOOLSPANEL_H
 
 #include <vgc/canvas/api.h>
 #include <vgc/canvas/canvastool.h>
@@ -24,31 +24,27 @@
 
 namespace vgc::canvas {
 
-VGC_DECLARE_OBJECT(ToolOptionsPanel);
+VGC_DECLARE_OBJECT(ToolsPanel);
 
-/// \class vgc::canvas::ToolOptionsPanel
-/// \brief A `Panel` that shows the options of the current canvas tool.
+/// \class vgc::canvas::ToolsPanel
+/// \brief A `Panel` that shows available canvas tools and allow to switch between them.
 ///
-class VGC_CANVAS_API ToolOptionsPanel : public ui::Panel {
+class VGC_CANVAS_API ToolsPanel : public ui::Panel {
 private:
-    VGC_OBJECT(ToolOptionsPanel, ui::Panel)
+    VGC_OBJECT(ToolsPanel, ui::Panel)
 
 protected:
-    ToolOptionsPanel(CreateKey key, const ui::PanelContext& context);
+    ToolsPanel(CreateKey key, const ui::PanelContext& context);
 
 public:
     // TODO: A cleaner way to do this, also supporting translations.
-    static constexpr std::string_view label = "Tool Options";
+    static constexpr std::string_view label = "Tools";
 
-    /// Creates a `ToolOptionsPanel`.
+    /// Creates a `ToolsPanel`.
     ///
-    static ToolOptionsPanelPtr create(const ui::PanelContext& context);
-
-private:
-    void onCurrentToolChanged_(CanvasTool* tool);
-    VGC_SLOT(onCurrentToolChanged_)
+    static ToolsPanelPtr create(const ui::PanelContext& context);
 };
 
 } // namespace vgc::canvas
 
-#endif // VGC_CANVAS_TOOLOPTIONSPANEL_H
+#endif // VGC_CANVAS_TOOLSPANEL_H

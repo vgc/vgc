@@ -16,11 +16,6 @@
 
 #include <vgc/canvas/toolmanager.h>
 
-#include <vgc/ui/button.h>
-#include <vgc/ui/panelarea.h>
-#include <vgc/ui/panelmanager.h>
-#include <vgc/ui/row.h>
-
 namespace vgc::canvas {
 
 ToolManager::ToolManager(CreateKey key, const ui::ModuleContext& context)
@@ -79,21 +74,6 @@ void ToolManager::setCurrentTool(canvas::CanvasTool* canvasTool) {
         }
         currentToolChanged().emit(currentTool_);
     }
-}
-
-ui::Panel*
-ToolManager::createToolsPanel(ui::PanelManager* panelManager, ui::PanelArea* panelArea) {
-    ui::Panel* panel = panelManager->createPanelInstance_<ui::Panel>(panelArea, "Tools");
-    ui::Row* row = panel->createChild<ui::Row>();
-    // TODO: iterate with a different order than the map order, to ensure the tools
-    //       appear in a specific, deterministic order.
-    for (const auto& pair : toolMap_) {
-        ui::Action* action = pair.first;
-        ui::Button* button = row->createChild<ui::Button>(action);
-        button->setIconVisible(true);
-        button->setTextVisible(false);
-    }
-    return panel;
 }
 
 void ToolManager::onToolCheckStateChanged_(

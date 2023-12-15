@@ -36,6 +36,8 @@ namespace vgc::canvas {
 
 VGC_DECLARE_OBJECT(ToolManager);
 
+class ToolsPanel;
+
 /// \class vgc::canvas::ToolManager
 /// \brief Stores a list of registered canvas tools and controls which one is the current tool.
 ///
@@ -82,12 +84,11 @@ public:
     ///
     VGC_SIGNAL(currentToolChanged, (canvas::CanvasTool*, currentTool))
 
-    /// Creates a new `Panel`, as child of the given `panelArea`,
-    /// that can be used for switching between tools.
-    ///
-    ui::Panel* createToolsPanel(ui::PanelManager* panelManager, ui::PanelArea* panelArea);
-
 private:
+    // Friendship is used so that the Tools panel can iterate on registered tools.
+    // TODO: publicize what's needed to avoid friendship.
+    friend ToolsPanel;
+
     Canvas* canvas_ = nullptr;
 
     ui::ActionGroupPtr toolsActionGroup_;

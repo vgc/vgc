@@ -24,6 +24,7 @@
 #include <vgc/canvas/canvasmanager.h>
 #include <vgc/canvas/documentmanager.h>
 #include <vgc/canvas/tooloptionspanel.h>
+#include <vgc/canvas/toolspanel.h>
 #include <vgc/dom/strings.h>
 #include <vgc/tools/currentcolor.h>
 #include <vgc/tools/documentcolorpalette.h>
@@ -55,8 +56,6 @@ ui::PanelTypeId colorPalette("vgc.common.colorPalette");
 
 core::StringId s_left_sidebar("left-sidebar");
 core::StringId s_with_padding("with-padding");
-core::StringId s_tools("tools");
-core::StringId s_tool_options("tool-options");
 
 } // namespace
 
@@ -260,30 +259,17 @@ void CanvasApplication::registerPanelTypes_() {
     panelManager_ = ui::PanelManager::create(moduleManager());
 
     // Tools
-    std::string_view toolsLabel = "Tools";
+    using canvas::ToolsPanel;
     panelManager_->registerPanelType(
-        paneltypes_::tools, toolsLabel, [=](ui::PanelArea* parent) {
-            ui::PanelManager* panelManager = this->panelManager_.get();
-            canvas::ToolManager* toolManager = this->toolManager_.get();
-            ui::Panel* panel = toolManager->createToolsPanel(panelManager, parent);
-            panel->addStyleClass(s_with_padding);
-            panel->addStyleClass(s_tools);
-            return panel;
+        paneltypes_::tools, ToolsPanel::label, [=](ui::PanelArea* parent) {
+            return this->panelManager_->createPanelInstance_<ToolsPanel>(parent);
         });
 
     // Tool Options
+    using canvas::ToolOptionsPanel;
     panelManager_->registerPanelType(
-        paneltypes_::toolOptions,
-        canvas::ToolOptionsPanel::label,
-        [=](ui::PanelArea* parent) {
-            ui::PanelManager* panelManager = this->panelManager_.get();
-            canvas::ToolManager* toolManager = this->toolManager_.get();
-            canvas::ToolOptionsPanel* panel =
-                panelManager->createPanelInstance_<canvas::ToolOptionsPanel>(
-                    parent, toolManager);
-            panel->addStyleClass(s_with_padding);
-            panel->addStyleClass(s_tool_options);
-            return panel;
+        paneltypes_::toolOptions, ToolOptionsPanel::label, [=](ui::PanelArea* parent) {
+            return this->panelManager_->createPanelInstance_<ToolOptionsPanel>(parent);
         });
 
     // Colors
