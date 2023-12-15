@@ -76,9 +76,7 @@ public:
 
     /// Returns the document that this document color palette is operating on.
     ///
-    dom::Document* document() const {
-        return document_.getIfAlive();
-    }
+    dom::Document* document() const;
 
     /// Sets the document that this document color palette is operating on.
     ///
