@@ -23,23 +23,25 @@
 
 namespace vgc::canvas {
 
-ToolManager::ToolManager(CreateKey key, Canvas* canvas, ui::Widget* actionOwner)
-    : Object(key)
-    , canvas_(canvas)
-    , actionOwner_(actionOwner) {
+ToolManager::ToolManager(CreateKey key, const ui::ModuleContext& context)
+    : Module(key, context) {
 
     // Create action group ensuring only one tool is active at a time
     toolsActionGroup_ = ui::ActionGroup::create(ui::CheckPolicy::ExactlyOne);
 }
 
-ToolManagerPtr ToolManager::create(Canvas* canvas, ui::Widget* actionOwner) {
-    return core::createObject<ToolManager>(canvas, actionOwner);
+ToolManagerPtr ToolManager::create(const ui::ModuleContext& context) {
+    return core::createObject<ToolManager>(context);
+}
+
+void ToolManager::setCanvas(Canvas* canvas) {
+    canvas_ = canvas;
 }
 
 void ToolManager::registerTool(core::StringId commandId, canvas::CanvasToolPtr tool) {
 
     // Create tool action and add it to the action group
-    ui::Action* action = actionOwner_->createTriggerAction(commandId);
+    ui::Action* action = createTriggerAction(commandId);
     action->setCheckable(true);
     action->checkStateChanged().connect(onToolCheckStateChanged_Slot());
     toolsActionGroup_->addAction(action);
@@ -83,6 +85,8 @@ ui::Panel*
 ToolManager::createToolsPanel(ui::PanelManager* panelManager, ui::PanelArea* panelArea) {
     ui::Panel* panel = panelManager->createPanelInstance_<ui::Panel>(panelArea, "Tools");
     ui::Row* row = panel->createChild<ui::Row>();
+    // TODO: iterate with a different order than the map order, to ensure the tools
+    //       appear in a specific, deterministic order.
     for (const auto& pair : toolMap_) {
         ui::Action* action = pair.first;
         ui::Button* button = row->createChild<ui::Button>(action);
