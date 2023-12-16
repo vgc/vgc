@@ -45,7 +45,7 @@ namespace {
 
 const core::Color initialColor(0.416f, 0.416f, 0.918f);
 
-core::StringId s_left_sidebar("left-sidebar");
+core::StringId s_default_side_area("default-side-area");
 core::StringId s_with_padding("with-padding");
 
 } // namespace
@@ -315,27 +315,34 @@ void CanvasApplication::createDefaultPanels_() {
     onActionOpenPanel_(ui::PanelTypeId(tools::ColorsPanel::id));
 }
 
-ui::PanelArea* CanvasApplication::getOrCreateLeftPanelArea_() {
+ui::PanelArea*
+CanvasApplication::getOrCreatePanelDefaultArea_(ui::PanelDefaultArea area) {
 
     if (!mainPanelArea_) {
         return nullptr;
     }
 
-    if (!leftPanelArea_) {
+    // Get reference to data member storing the PanelArea
+    bool isLeft = (area == ui::PanelDefaultArea::Left);
+    ui::PanelAreaPtr& panelArea_ = isLeft ? leftPanelArea_ : rightPanelArea_;
 
-        // Create panel
-        leftPanelArea_ = ui::PanelArea::createVerticalSplit(mainPanelArea_.get());
-        leftPanelArea_->addStyleClass(s_left_sidebar);
+    // Create PanelArea if it doesn't exist yet
+    if (!panelArea_) {
 
-        // Move it as first child (i.e., at the left) of the main panel area
-        mainPanelArea_->insertChild(mainPanelArea_->firstChild(), leftPanelArea_.get());
+        // Create PanelArea and assign it to data member
+        panelArea_ = ui::PanelArea::createVerticalSplit(mainPanelArea_.get());
+        panelArea_->addStyleClass(s_default_side_area);
+
+        // Move it as first or last child of the main panel area
+        ui::Widget* nextSibling = isLeft ? mainPanelArea_->firstChild() : nullptr;
+        mainPanelArea_->insertChild(nextSibling, panelArea_.get());
 
         // Set an appropriate size.
         // Note: This given size will be automatically increased to satisfy min-size.
         // TODO: Use a system to remember the last-used size.
-        leftPanelArea_->setSplitSize(100);
+        panelArea_->setSplitSize(100);
     }
-    return leftPanelArea_.get();
+    return panelArea_.get();
 }
 
 void CanvasApplication::onActionOpenPanel_(ui::PanelTypeId id) {
@@ -360,12 +367,13 @@ void CanvasApplication::onActionOpenPanel_(ui::PanelTypeId id) {
         return;
     }
 
-    ui::PanelArea* leftPanelArea = getOrCreateLeftPanelArea_();
-    if (!leftPanelArea) {
+    ui::PanelDefaultArea defaultArea = panelManager_->defaultArea(id);
+    ui::PanelArea* panelArea = getOrCreatePanelDefaultArea_(defaultArea);
+    if (!panelArea) {
         return;
     }
 
-    ui::PanelArea* tabs = ui::PanelArea::createTabs(leftPanelArea);
+    ui::PanelArea* tabs = ui::PanelArea::createTabs(panelArea);
     panelManager_->createPanelInstance(id, tabs);
 }
 

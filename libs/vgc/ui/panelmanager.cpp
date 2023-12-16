@@ -78,6 +78,10 @@ std::string_view PanelManager::label(PanelTypeId id) const {
     return getInfo_(infos_, id).label_;
 }
 
+PanelDefaultArea PanelManager::defaultArea(PanelTypeId id) const {
+    return getInfo_(infos_, id).defaultArea_;
+}
+
 Panel* PanelManager::createPanelInstance(PanelTypeId id, PanelArea* parent) {
     detail::PanelTypeInfo& info = getInfo_(infos_, id);
     Panel* panel = info.factory_(parent);
@@ -100,14 +104,6 @@ Panel* PanelManager::createPanelInstance(PanelTypeId id, PanelArea* parent) {
 
 core::Array<Panel*> PanelManager::instances(PanelTypeId id) const {
     return getInfo_(infos_, id).instances_;
-}
-
-void PanelManager::registerPanelType_(
-    std::string_view id,
-    std::string_view label,
-    detail::PanelFactory&& factory) {
-
-    infos_.try_emplace(PanelTypeId(id), label, std::move(factory));
 }
 
 void PanelManager::onPanelInstanceAboutToBeDestroyed_(Object* object) {
