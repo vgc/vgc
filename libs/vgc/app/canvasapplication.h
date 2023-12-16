@@ -151,7 +151,6 @@ private:
     void registerPanelTypes_();
     void createDefaultPanels_();
     ui::PanelArea* getOrCreatePanelDefaultArea_(ui::PanelDefaultArea area);
-    ui::PanelArea* getOrCreateRightPanelArea_();
     void onActionOpenPanel_(ui::PanelTypeId id);
 
     // Tools
