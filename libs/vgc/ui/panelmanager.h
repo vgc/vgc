@@ -21,6 +21,7 @@
 #include <vgc/core/object.h>
 #include <vgc/ui/api.h>
 #include <vgc/ui/panelcontext.h>
+#include <vgc/ui/paneldefaultarea.h>
 #include <vgc/ui/widget.h>
 
 namespace vgc::ui {
@@ -43,12 +44,18 @@ namespace detail {
 using PanelFactory = std::function<Panel*(PanelArea* /* parent */)>;
 
 struct PanelTypeInfo {
-    PanelTypeInfo(std::string_view label, PanelFactory&& factory)
+    PanelTypeInfo(
+        std::string_view label,
+        PanelDefaultArea defaultArea,
+        PanelFactory&& factory)
+
         : label_(label)
+        , defaultArea_(defaultArea)
         , factory_(std::move(factory)) {
     }
 
     std::string label_;
+    PanelDefaultArea defaultArea_;
     PanelFactory factory_;
 
     core::Array<Panel*> instances_;
@@ -89,9 +96,13 @@ public:
     template<typename TPanel>
     void registerPanelType() {
         // XXX Use ObjectType instead of TPanel::id?
-        registerPanelType_(TPanel::id, TPanel::label, [this](ui::PanelArea* parent) {
-            return this->createPanelInstance_<TPanel>(parent);
-        });
+        infos_.try_emplace(
+            PanelTypeId(TPanel::id),
+            TPanel::label,
+            TPanel::defaultArea,
+            [this](ui::PanelArea* parent) {
+                return this->createPanelInstance_<TPanel>(parent);
+            });
     }
 
     /// Returns the list of all registered panel type IDs.
@@ -109,6 +120,13 @@ public:
     /// `id`.
     ///
     std::string_view label(PanelTypeId id) const;
+
+    /// Returns the `PanelDefaultArea` of a registered panel type.
+    ///
+    /// Throws `IndexError` if there is no registered panel type with the given
+    /// `id`.
+    ///
+    PanelDefaultArea defaultArea(PanelTypeId id) const;
 
     /// Creates an instance of a registered panel type as a child of the given
     /// `parent` panel area.
@@ -166,14 +184,6 @@ public:
 private:
     ModuleManager* moduleManager_; // ModuleManager outlives PanelManager
     detail::PanelTypeInfoMap infos_;
-
-    // Note: if a panel type with the same `id` already exists, then it is
-    // replaced and a warning is emitted.
-    //
-    void registerPanelType_(
-        std::string_view id,
-        std::string_view label,
-        detail::PanelFactory&& factory);
 
     void onPanelInstanceAboutToBeDestroyed_(Object* object);
     VGC_SLOT(onPanelInstanceAboutToBeDestroyed_)

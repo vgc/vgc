@@ -17,6 +17,7 @@
 #ifndef VGC_UI_PANEL_H
 #define VGC_UI_PANEL_H
 
+#include <vgc/ui/paneldefaultarea.h> // for convenience for includers
 #include <vgc/ui/widget.h>
 
 namespace vgc::ui {

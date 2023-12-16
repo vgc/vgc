@@ -146,10 +146,11 @@ private:
     ui::PanelManagerPtr panelManager_;
     ui::PanelAreaPtr mainPanelArea_;
     ui::PanelAreaPtr leftPanelArea_;
+    ui::PanelAreaPtr rightPanelArea_;
 
     void registerPanelTypes_();
     void createDefaultPanels_();
-    ui::PanelArea* getOrCreateLeftPanelArea_();
+    ui::PanelArea* getOrCreatePanelDefaultArea_(ui::PanelDefaultArea area);
     void onActionOpenPanel_(ui::PanelTypeId id);
 
     // Tools

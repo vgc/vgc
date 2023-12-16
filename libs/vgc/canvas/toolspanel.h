@@ -40,6 +40,7 @@ public:
     // TODO: A cleaner way to do this, also supporting translations.
     static constexpr std::string_view label = "Tools";
     static constexpr std::string_view id = "vgc.common.tools";
+    static constexpr ui::PanelDefaultArea defaultArea = ui::PanelDefaultArea::Left;
 
     /// Creates a `ToolsPanel`.
     ///

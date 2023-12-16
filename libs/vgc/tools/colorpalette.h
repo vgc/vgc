@@ -624,6 +624,7 @@ public:
     // TODO: A cleaner way to do this, also supporting translations.
     static constexpr std::string_view label = "Colors";
     static constexpr std::string_view id = "vgc.common.colors";
+    static constexpr ui::PanelDefaultArea defaultArea = ui::PanelDefaultArea::Left;
 
     /// Creates a `ToolsPanel`.
     ///

@@ -24,7 +24,7 @@
     vertical-stretch: 1;
 }
 
-.PanelArea.left-sidebar {
+.PanelArea.default-side-area {
     min-width: 150dp; /* = 4*32 (4 icons) + 3*2 (3 gaps) + 2*8 (2 paddings) */
     horizontal-stretch: 0;
 }
