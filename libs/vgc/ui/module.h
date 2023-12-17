@@ -169,14 +169,12 @@ public:
     ///
     template<typename TModule>
     core::ObjPtr<TModule> importModule() const {
-        if (ModuleManagerPtr moduleManager = moduleManager_ /* lock */) {
-            return moduleManager->importModule<TModule>();
-        }
+        return moduleManager()->importModule<TModule>();
     }
 
 private:
     friend ModuleManager;                    // For accessing the constructor
-    ModuleManager* moduleManager_ = nullptr; // TODO: Use WeakPtr when we have them
+    ModuleManager* moduleManager_ = nullptr; // ModuleManager outlives ModuleContext
 };
 
 VGC_DECLARE_OBJECT(Module);
