@@ -18,7 +18,7 @@
 #define VGC_UI_PANELCONTEXT_H
 
 #include <vgc/ui/api.h>
-#include <vgc/ui/modulemanager.h>
+#include <vgc/ui/module.h>
 
 namespace vgc::ui {
 

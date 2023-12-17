@@ -19,7 +19,7 @@
 
 #include <vgc/core/object.h>
 #include <vgc/ui/api.h>
-#include <vgc/ui/modulemanager.h>
+#include <vgc/ui/module.h>
 
 namespace vgc::ui {
 
