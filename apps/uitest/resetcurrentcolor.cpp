@@ -18,7 +18,6 @@
 
 #include <vgc/tools/currentcolor.h>
 #include <vgc/ui/modifierkey.h>
-#include <vgc/ui/modulecontext.h>
 
 namespace vgc::apps::uitest {
 

@@ -17,6 +17,11 @@
 #ifndef VGC_UI_MODULE_H
 #define VGC_UI_MODULE_H
 
+#include <functional> // function
+#include <mutex>
+#include <thread>
+#include <unordered_map>
+
 #include <vgc/core/object.h>
 #include <vgc/core/objectarray.h>
 #include <vgc/ui/action.h>
@@ -24,10 +29,158 @@
 
 namespace vgc::ui {
 
-class ModuleContext;
 using ActionPtrArrayView = core::ObjPtrArrayView<Action>;
 
 VGC_DECLARE_OBJECT(Module);
+VGC_DECLARE_OBJECT(ModuleManager);
+
+class ModuleContext;
+
+/// Type trait for isModule<T>.
+///
+template<typename T, typename SFINAE = void>
+struct IsModule : std::false_type {};
+
+template<typename T>
+struct IsModule<T, core::Requires<std::is_base_of_v<Module, T>>> : std::true_type {};
+
+/// Checks whether T is vgc::core::Module or derives from it.
+///
+template<typename T>
+inline constexpr bool isModule = IsModule<T>::value;
+
+/// \class vgc::ui::ModuleManager
+/// \brief Organize application functionality into modules.
+///
+/// This class makes it possible to dynamically create and retrieve `Module`
+/// instances, ensuring that at most one `Module` of each module type is
+/// instanciated by the manager.
+///
+/// Therefore, the concept of module is similar to the concept of
+/// [singleton](https://en.wikipedia.org/wiki/Singleton_pattern), except that
+/// instead of having a unique instance for the whole program, there is a
+/// unique instance per `ModuleManager`.
+///
+/// In most use cases, there is only one `ModuleManager` instance, which is
+/// owned by the `Application`, so each module is effectively a singleton.
+///
+/// However, in some cases, for example for unit-testing, it can be useful to
+/// have multiple `ModuleManager` instances, and therefore there can be
+/// multiple instances of the same module, each instance belonging to a
+/// different `ModuleManager`.
+///
+/// See the documentation of `Module` for more information.
+///
+class VGC_UI_API ModuleManager : public core::Object {
+private:
+    VGC_OBJECT(ModuleManager, core::Object)
+    VGC_PRIVATIZE_OBJECT_TREE_MUTATORS
+
+    ModuleManager(CreateKey);
+
+public:
+    /// Creates a `ModuleManager()`.
+    ///
+    static ModuleManagerPtr create();
+
+    /// Retrieves the given `TModule` module, or creates it if there is no such
+    /// module yet.
+    ///
+    /// Note: it is not allowed to have cyclic dependencies between modules'
+    /// contructor, such as:
+    ///
+    /// - Module1's constructor calling importModule<Module2>(), and
+    /// - Module2's constructor calling importModule<Module1>()
+    ///
+    /// Indeed, modules are essentially global objects, and it makes no sense
+    /// for global objects to have their construction mutually depend
+    /// on each other.
+    ///
+    /// A workaround can be to defer calling `importModule()` until after
+    /// a given module is constructed, via a 2-step initialization or
+    /// lazy-initialization approach.
+    ///
+    template<typename TModule>
+    core::ObjPtr<TModule> importModule() {
+        checkIsModule_<TModule>();
+        core::ObjectType key = TModule::staticObjectType();
+        auto factory = [](const ModuleContext& context) -> ModulePtr {
+            return TModule::create(context);
+        };
+        ModulePtr module = importModule_(key, factory);
+        return core::static_pointer_cast<TModule>(module);
+    }
+
+    /// This signal is emitted when a module is created.
+    ///
+    VGC_SIGNAL(moduleCreated, (Module*, module))
+
+private:
+    struct Value_ {
+        ModulePtr module;
+
+        // Enable having two threads concurrently asking for the same module,
+        // while detecting cyclic dependencies between module construction
+        std::thread::id creationThread;
+        std::mutex creationMutex;
+
+        Value_()
+            : creationThread(std::this_thread::get_id()) {
+        }
+    };
+    std::mutex mapMutex_; // Prevent inserting concurrently in the map
+    std::unordered_map<core::ObjectType, Value_> modules_;
+
+    struct GetOrInsertInfo_ {
+        Value_& value;
+        bool inserted;
+    };
+    GetOrInsertInfo_ getOrInsert_(core::ObjectType objectType);
+
+    template<typename TModule>
+    static void checkIsModule_() {
+        static_assert(isModule<TModule>, "TModule must inherit from vgc::ui::Module");
+    }
+
+    // non-templated version to avoid bloating the .h
+    using ModuleFactory = std::function<ModulePtr(const ModuleContext& context)>;
+    ModulePtr importModule_(core::ObjectType key, ModuleFactory factory);
+};
+
+/// \class vgc::ui::ModuleContext
+/// \brief Provides access to various application objects that modules may need.
+///
+class VGC_UI_API ModuleContext {
+private:
+    ModuleContext(ModuleManager* moduleManager);
+
+public:
+    ModuleContext(const ModuleContext&) = delete;
+    ModuleContext& operator=(const ModuleContext&) = delete;
+
+    /// Returns the module manager of the application.
+    ///
+    ModuleManager* moduleManager() const {
+        return moduleManager_;
+    }
+
+    /// Retrieves the given `TModule` module, or creates it if there is no such
+    /// module yet.
+    ///
+    template<typename TModule>
+    core::ObjPtr<TModule> importModule() const {
+        if (ModuleManagerPtr moduleManager = moduleManager_ /* lock */) {
+            return moduleManager->importModule<TModule>();
+        }
+    }
+
+private:
+    friend ModuleManager;                    // For accessing the constructor
+    ModuleManager* moduleManager_ = nullptr; // TODO: Use WeakPtr when we have them
+};
+
+VGC_DECLARE_OBJECT(Module);
+VGC_DECLARE_OBJECT(ModuleManager);
 
 /// \class vgc::ui::Module
 /// \brief Encapsulates a piece of application functionality.
@@ -224,22 +377,6 @@ private:
     //
     core::Array<ActionPtr> actions_;
 };
-
-/// Type trait for isModule<T>.
-///
-template<typename T, typename SFINAE = void>
-struct IsModule : std::false_type {};
-
-template<>
-struct IsModule<Module, void> : std::true_type {};
-
-template<typename T>
-struct IsModule<T, core::Requires<std::is_base_of_v<Module, T>>> : std::true_type {};
-
-/// Checks whether T is vgc::core::Module or derives from it.
-///
-template<typename T>
-inline constexpr bool isModule = IsModule<T>::value;
 
 } // namespace vgc::ui
 

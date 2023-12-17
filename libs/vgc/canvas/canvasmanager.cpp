@@ -18,7 +18,6 @@
 
 #include <vgc/canvas/canvas.h>
 #include <vgc/canvas/documentmanager.h>
-#include <vgc/ui/modulecontext.h>
 
 namespace vgc::canvas {
 

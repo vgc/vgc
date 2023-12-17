@@ -28,7 +28,6 @@
 #include <vgc/ui/key.h>
 #include <vgc/ui/menu.h>
 #include <vgc/ui/modifierkey.h>
-#include <vgc/ui/modulecontext.h>
 #include <vgc/ui/qtutil.h>
 #include <vgc/ui/shortcut.h>
 #include <vgc/ui/standardmenus.h>
