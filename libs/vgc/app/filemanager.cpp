@@ -204,7 +204,7 @@ namespace {
 
 // XXX Move to core?
 template<typename T>
-[[nodiscard]] core::ObjPtr<T> lockAndThrowIfNull(const core::ObjPtr<T>& ptr) {
+[[nodiscard]] core::ObjLockPtr<T> lockAndThrowIfNull(const core::ObjWeakPtr<T>& ptr) {
     auto locked = ptr.lock();
     if (!locked) {
         throw core::NullError();
@@ -463,8 +463,13 @@ void FileManager::doSave_() {
     try {
         if (auto documentManager = documentManager_.lock()) {
             if (dom::Document* document = documentManager->currentDocument()) {
-                auto saver = documentColorPalette_->saver();
-                document->save(ui::fromQt(filename_));
+                if (auto documentColorPalette = documentColorPalette_.lock()) {
+                    auto saver = documentColorPalette->saver();
+                    document->save(ui::fromQt(filename_));
+                }
+                else {
+                    document->save(ui::fromQt(filename_));
+                }
             }
         }
     }
@@ -517,7 +522,7 @@ void FileManager::updateUndoRedoActionState_() {
         actionUndo->setEnabled(canUndo);
     }
     if (auto actionRedo = actionRedo_.lock()) {
-        actionRedo_->setEnabled(canRedo);
+        actionRedo->setEnabled(canRedo);
     }
 }
 

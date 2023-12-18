@@ -37,6 +37,15 @@ using ConnectionHandle = detail::ConnectionHandle;
 template<typename T>
 class ObjPtr;
 
+template<typename T>
+class ObjWeakPtr;
+
+template<typename T>
+using ObjSharedPtr = ObjPtr<T>;
+
+template<typename T>
+using ObjLockPtr = ObjPtr<T>;
+
 /// \enum vgc::core::ObjectStage
 /// \brief The different stages of construction / destruction of an `Object`.
 ///
@@ -131,6 +140,17 @@ public:
     //
     static void decref(const void* obj, Int64 k = 1);
 
+    // Increments by k the weakRefCount of the given obj.
+    // Does nothing if obj == nullptr.
+    //
+    static void weakIncref(const Object* obj, Int64 k = 1);
+
+    // Decrements by k the weakRefCount of the given obj.
+    // Deallocates the object if both strong and weak counts reach zero.
+    // Does nothing if obj == nullptr.
+    //
+    static void weakDecref(const void* obj, Int64 k = 1);
+
     // Creates an object.
     //
     template<typename T, typename... Args>
@@ -148,6 +168,16 @@ public:
     static ObjectType createObjectType(std::string_view unqualifiedName) {
         return ObjectType(typeId<T>(), unqualifiedName);
     }
+
+    template<typename T>
+    static T* get(const ObjWeakPtr<T>& ptr) {
+        return ptr.obj_;
+    }
+
+    template<typename T>
+    static T* get(const ObjSharedPtr<T>& ptr) {
+        return ptr.obj_;
+    }
 };
 
 } // namespace detail
@@ -160,6 +190,8 @@ public:
 template<typename T>
 class ObjPtr {
 private:
+    friend detail::ObjPtrAccess;
+
     template<typename Y>
     static constexpr bool isCompatible_ = std::is_convertible_v<Y*, T*>;
 
@@ -451,6 +483,331 @@ ObjPtr<T> const_pointer_cast(const ObjPtr<U>& r) noexcept {
 template<typename T, typename U>
 ObjPtr<T> const_pointer_cast(ObjPtr<U>&& r) noexcept {
     ObjPtr<T> ret(const_cast<T*>(r.get()), typename ObjPtr<T>::DontIncRefTag{});
+    r.obj_ = nullptr;
+    return ret;
+}
+
+/// \class ObjWeakPtr<T>
+/// \brief Weak smart pointer to an Object instances.
+///
+/// See documentation of `Object` for more details.
+///
+template<typename T>
+class ObjWeakPtr {
+private:
+    friend detail::ObjPtrAccess;
+
+    template<typename Y>
+    static constexpr bool isCompatible_ = std::is_convertible_v<Y*, T*>;
+
+    template<typename S, typename U>
+    friend ObjWeakPtr<S> static_pointer_cast(const ObjWeakPtr<U>& r) noexcept;
+    template<typename S, typename U>
+    friend ObjWeakPtr<S> static_pointer_cast(ObjWeakPtr<U>&& r) noexcept;
+
+    template<typename S, typename U>
+    friend ObjWeakPtr<S> dynamic_pointer_cast(const ObjWeakPtr<U>& r) noexcept;
+    template<typename S, typename U>
+    friend ObjWeakPtr<S> dynamic_pointer_cast(ObjWeakPtr<U>&& r) noexcept;
+
+    template<typename S, typename U>
+    friend ObjWeakPtr<S> const_pointer_cast(const ObjWeakPtr<U>& r) noexcept;
+    template<typename S, typename U>
+    friend ObjWeakPtr<S> const_pointer_cast(ObjWeakPtr<U>&& r) noexcept;
+
+    struct DontIncRefTag {};
+
+    // For move casts
+    ObjWeakPtr(T* obj, DontIncRefTag)
+        : obj_(obj) {
+    }
+
+public:
+    /// Creates a null `ObjWeakPtr<T>`.
+    ///
+    ObjWeakPtr() noexcept
+        : obj_(nullptr) {
+
+        // No-op, but verifies at compile time that T derives from Object.
+        detail::ObjPtrAccess::weakIncref(obj_);
+    }
+
+    /// Creates an `ObjWeakPtr<T>` to the given object.
+    ///
+    ObjWeakPtr(T* obj)
+        : obj_(obj) {
+
+        detail::ObjPtrAccess::weakIncref(obj_);
+    }
+
+    /// Creates a copy of the given `ObjWeakPtr<T>`.
+    ///
+    ObjWeakPtr(const ObjWeakPtr& other) noexcept
+        : obj_(other.obj_) {
+
+        detail::ObjPtrAccess::weakIncref(obj_);
+    }
+
+    /// Creates a copy of the given `ObjWeakPtr<Y>`. This template overload doesn't
+    /// participate in overload resolution if `Y*` is not implicitly convertible
+    /// to `T*`.
+    ///
+    template<typename Y, VGC_REQUIRES(isCompatible_<Y>)>
+    ObjWeakPtr(const ObjWeakPtr<Y>& other) noexcept
+        : obj_(other.obj_) {
+
+        detail::ObjPtrAccess::weakIncref(obj_);
+    }
+
+    /// Creates a `ObjWeakPtr<Y>` from a `ObjSharedPtr<Y>`. This template
+    /// overload doesn't participate in overload resolution if `Y*` is not
+    /// implicitly convertible to `T*`.
+    ///
+    template<typename Y, VGC_REQUIRES(isCompatible_<Y>)>
+    ObjWeakPtr(const ObjSharedPtr<Y>& other) noexcept
+        : obj_(other.get()) {
+
+        detail::ObjPtrAccess::weakIncref(obj_);
+    }
+
+    /// Assigns the given `T*` to this `ObjWeakPtr<T>`.
+    ///
+    ObjWeakPtr& operator=(T* obj) noexcept {
+        if (obj_ != obj) {
+            detail::ObjPtrAccess::weakDecref(obj_);
+            obj_ = obj;
+            detail::ObjPtrAccess::weakIncref(obj_);
+        }
+        return *this;
+    }
+
+    /// Assigns the given `ObjWeakPtr<T>` to this `ObjWeakPtr<T>`.
+    ///
+    ObjWeakPtr& operator=(const ObjWeakPtr& other) noexcept {
+        if (obj_ != other.obj_) {
+            detail::ObjPtrAccess::weakDecref(obj_);
+            obj_ = other.obj_;
+            detail::ObjPtrAccess::weakIncref(obj_);
+        }
+        return *this;
+    }
+
+    /// Assigns the given `ObjWeakPtr<Y>` to this `ObjWeakPtr<T>`. This template overload
+    /// doesn't participate in overload resolution if `Y*` is not implicitly
+    /// convertible to `T*`.
+    ///
+    template<typename Y, VGC_REQUIRES(isCompatible_<Y>)>
+    ObjWeakPtr& operator=(const ObjWeakPtr<Y>& other) noexcept {
+        if (obj_ != other.obj_) {
+            detail::ObjPtrAccess::weakDecref(obj_);
+            obj_ = other.obj_;
+            detail::ObjPtrAccess::weakIncref(obj_);
+        }
+        return *this;
+    }
+
+    /// Assigns the given `ObjSharedPtr<Y>` to this `ObjWeakPtr<T>`. This
+    /// template overload doesn't participate in overload resolution if `Y*` is
+    /// not implicitly convertible to `T*`.
+    ///
+    template<typename Y, VGC_REQUIRES(isCompatible_<Y>)>
+    ObjWeakPtr& operator=(const ObjSharedPtr<Y>& other) noexcept {
+        if (obj_ != other.get()) {
+            detail::ObjPtrAccess::weakDecref(obj_);
+            obj_ = other.get();
+            detail::ObjPtrAccess::weakIncref(obj_);
+        }
+        return *this;
+    }
+
+    /// Moves the given `ObjWeakPtr<T>` to a new `ObjWeakPtr<T>`.
+    ///
+    ObjWeakPtr(ObjWeakPtr&& other) noexcept
+        : obj_(other.obj_) {
+
+        other.obj_ = nullptr;
+    }
+
+    /// Moves the given `ObjWeakPtr<Y>` to a new `ObjWeakPtr<T>`. This template overload
+    /// doesn't participate in overload resolution if `Y*` is not implicitly
+    /// convertible to `T*`.
+    ///
+    template<typename Y, VGC_REQUIRES(isCompatible_<Y>)>
+    ObjWeakPtr(ObjWeakPtr<Y>&& other) noexcept
+        : obj_(other.obj_) {
+
+        other.obj_ = nullptr;
+    }
+
+    /// Moves the given `ObjWeakPtr<T>` to this `ObjWeakPtr<T>`.
+    ///
+    ObjWeakPtr& operator=(ObjWeakPtr&& other) noexcept {
+        if (*this != other) {
+            detail::ObjPtrAccess::weakDecref(obj_);
+            obj_ = other.obj_;
+            other.obj_ = nullptr;
+        }
+        return *this;
+    }
+
+    /// Moves the given `ObjWeakPtr<Y>` to this `ObjWeakPtr<T>`. This template overload
+    /// doesn't participate in overload resolution if `Y*` is not implicitly
+    /// convertible to `T*`.
+    ///
+    template<typename Y, VGC_REQUIRES(isCompatible_<Y>)>
+    ObjWeakPtr& operator=(ObjWeakPtr<Y>&& other) noexcept {
+        if (*this != other) {
+            detail::ObjPtrAccess::weakDecref(obj_);
+            obj_ = other.obj_;
+            other.obj_ = nullptr;
+        }
+        return *this;
+    }
+
+    /// Destroys this `ObjWeakPtr<T>`, deallocating the managed object if both
+    /// its weak and strong reference count becomes zero.
+    ///
+    ~ObjWeakPtr() {
+        detail::ObjPtrAccess::weakDecref(obj_);
+    }
+
+    /// Returns whether the object managed by this `ObjWeakPtr<T>` is a non-null and
+    /// alive object. This method doesn't throw.
+    ///
+    bool isAlive() const noexcept {
+        return obj_ && obj_->isAlive();
+    }
+
+    /// Returns the reference count of the object managed by this `ObjWeakPtr<T>`. Returns
+    /// `-1` if this `ObjWeakPtr<T>` is null. This method doesn't throw.
+    ///
+    Int64 refCount() const noexcept {
+        return obj_ ? obj_->refCount() : -1;
+    }
+
+    /// Returns the weak reference count of the object managed by this `ObjWeakPtr<T>`. Returns
+    /// `-1` if this `ObjWeakPtr<T>` is null. This method doesn't throw.
+    ///
+    Int64 weakRefCount() const noexcept {
+        return obj_ ? obj_->weakRefCount() : -1;
+    }
+
+    /// Takes temporary ownership of the `ObjWeakPtr` by converting it to a `LockPtr`.
+    ///
+    /// Returns a null `LockPtr` if the referenced object is not alive.
+    ///
+    ObjSharedPtr<T> lock() const noexcept {
+        return isAlive() ? ObjSharedPtr<T>(obj_) : ObjSharedPtr<T>();
+
+        // Note that with `std::shared/weak_ptr`, there is a semantic
+        // difference between `weak.lock()` and `shared_ptr(weak)`: if weak is
+        // null/expired, then the former returns a null shared_ptr, while the
+        // latter throws. In our case, the difference is meant to be more even
+        // greater, since the return type of the former is a `LockPtr`, while
+        // the return type of the latter is a `SharedPtr`.
+    }
+
+private:
+    T* obj_;
+
+    template<typename Y>
+    friend class ObjWeakPtr;
+};
+
+// Note: our weak pointers do not require all the `owner_equal`, `owner_hash`
+// shenanigans, since we do not support aliased shared pointers. See:
+//
+// - https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2023/p1901r2.html
+// - https://stackoverflow.com/questions/12301916/
+//
+// XXX: does it make sense to also support mixed weak/shared comparisons?
+//
+
+/// Returns whether the two given `ObjWeakPtr` manage the same object.
+///
+template<typename T, typename U>
+inline bool operator==(const ObjWeakPtr<T>& a, const ObjWeakPtr<U>& b) noexcept {
+    return detail::ObjPtrAccess::get(a) == detail::ObjPtrAccess::get(b);
+}
+
+/// Returns whether the two given `ObjWeakPtr` manage a different object.
+///
+template<typename T, typename U>
+inline bool operator!=(const ObjWeakPtr<T>& a, const ObjWeakPtr<U>& b) noexcept {
+    return detail::ObjPtrAccess::get(a) != detail::ObjPtrAccess::get(b);
+}
+
+/// Returns whether the two given `ObjWeakPtr` and `ObjSharedPtr` manage the
+/// same object.
+///
+template<typename T, typename U>
+inline bool operator==(const ObjSharedPtr<T>& a, const ObjWeakPtr<U>& b) noexcept {
+    return detail::ObjPtrAccess::get(a) == detail::ObjPtrAccess::get(b);
+}
+
+/// Returns whether the two given `ObjWeakPtr` and `ObjSharedPtr` manage the
+/// same object.
+///
+template<typename T, typename U>
+inline bool operator==(const ObjWeakPtr<T>& a, const ObjSharedPtr<U>& b) noexcept {
+    return detail::ObjPtrAccess::get(a) == detail::ObjPtrAccess::get(b);
+}
+
+/// Returns whether the two given `ObjWeakPtr` and `ObjSharedPtr` manage a
+/// different object.
+///
+template<typename T, typename U>
+inline bool operator!=(const ObjSharedPtr<T>& a, const ObjWeakPtr<U>& b) noexcept {
+    return detail::ObjPtrAccess::get(a) != detail::ObjPtrAccess::get(b);
+}
+
+/// Returns whether the two given `ObjWeakPtr` and `ObjSharedPtr` manage a
+/// different object.
+///
+template<typename T, typename U>
+inline bool operator!=(const ObjWeakPtr<T>& a, const ObjSharedPtr<U>& b) noexcept {
+    return detail::ObjPtrAccess::get(a) != detail::ObjPtrAccess::get(b);
+}
+
+template<typename T, typename U>
+ObjWeakPtr<T> static_pointer_cast(const ObjWeakPtr<U>& r) noexcept {
+    return ObjWeakPtr<T>(static_cast<T*>(detail::ObjPtrAccess::get(r)));
+}
+
+template<typename T, typename U>
+ObjWeakPtr<T> static_pointer_cast(ObjWeakPtr<U>&& r) noexcept {
+    ObjWeakPtr<T> ret(
+        static_cast<T*>(detail::ObjPtrAccess::get(r)),
+        typename ObjWeakPtr<T>::DontIncRefTag{});
+    r.obj_ = nullptr;
+    return ret;
+}
+
+template<typename T, typename U>
+ObjWeakPtr<T> dynamic_pointer_cast(const ObjWeakPtr<U>& r) noexcept {
+    return ObjWeakPtr<T>(dynamic_cast<T*>(detail::ObjPtrAccess::get(r)));
+}
+
+template<typename T, typename U>
+ObjWeakPtr<T> dynamic_pointer_cast(ObjWeakPtr<U>&& r) noexcept {
+    T* p = dynamic_cast<T*>(detail::ObjPtrAccess::get(r));
+    if (p) {
+        r.obj_ = nullptr;
+        return ObjWeakPtr<T>(p, typename ObjWeakPtr<T>::DontIncRefTag{});
+    }
+    return ObjWeakPtr<T>(nullptr);
+}
+
+template<typename T, typename U>
+ObjWeakPtr<T> const_pointer_cast(const ObjWeakPtr<U>& r) noexcept {
+    return ObjWeakPtr<T>(const_cast<T*>(detail::ObjPtrAccess::get(r)));
+}
+
+template<typename T, typename U>
+ObjWeakPtr<T> const_pointer_cast(ObjWeakPtr<U>&& r) noexcept {
+    ObjWeakPtr<T> ret(
+        const_cast<T*>(detail::ObjPtrAccess::get(r)),
+        typename ObjWeakPtr<T>::DontIncRefTag{});
     r.obj_ = nullptr;
     return ret;
 }
@@ -1282,6 +1639,7 @@ private:
     //
     friend detail::ObjPtrAccess;
     mutable Int64 refCount_ = 1;
+    mutable Int64 weakRefCount_ = 0;
     ObjectStage stage_ = ObjectStage::Constructing;
 
     // Parent-child relationship
@@ -1499,13 +1857,31 @@ inline void ObjPtrAccess::decref(const void* obj_, Int64 k) {
         bool isRoot = (obj->parentObject_ == nullptr);
         if (isRoot && obj->refCount_ == 0) {
             if (obj->hasReachedStage(ObjectStage::AboutToBeDestroyed)) {
-                delete obj;
+                if (obj->weakRefCount_ == 0) {
+                    delete obj;
+                }
             }
             else {
                 // See note in destroyObjectImpl_() explaining why we need const-cast
                 Object* root_ = const_cast<Object*>(obj);
                 root_->destroyObjectImpl_();
             }
+        }
+    }
+}
+
+inline void ObjPtrAccess::weakIncref(const Object* obj, Int64 k) {
+    if (obj) {
+        obj->weakRefCount_ += k;
+    }
+}
+
+inline void ObjPtrAccess::weakDecref(const void* obj_, Int64 k) {
+    const Object* obj = static_cast<const Object*>(obj_);
+    if (obj) {
+        obj->weakRefCount_ -= k;
+        if (obj->weakRefCount_ == 0 && obj->refCount_ == 0) {
+            delete obj;
         }
     }
 }
@@ -1760,12 +2136,12 @@ inline Int Object::numChildObjects() const {
     class T;                                                                             \
     using T##Ptr = ::vgc::core::ObjPtr<T>;                                               \
     using T##ConstPtr = ::vgc::core::ObjPtr<const T>;                                    \
-    using T##WeakPtr = ::vgc::core::ObjPtr<T>;                                           \
-    using T##WeakConstPtr = ::vgc::core::ObjPtr<const T>;                                \
-    using T##SharedPtr = ::vgc::core::ObjPtr<T>;                                         \
-    using T##SharedConstPtr = ::vgc::core::ObjPtr<const T>;                              \
-    using T##LockPtr = ::vgc::core::ObjPtr<T>;                                           \
-    using T##LockConstPtr = ::vgc::core::ObjPtr<const T>;                                \
+    using T##WeakPtr = ::vgc::core::ObjWeakPtr<T>;                                       \
+    using T##WeakConstPtr = ::vgc::core::ObjWeakPtr<const T>;                            \
+    using T##SharedPtr = ::vgc::core::ObjSharedPtr<T>;                                   \
+    using T##SharedConstPtr = ::vgc::core::ObjSharedPtr<const T>;                        \
+    using T##LockPtr = ::vgc::core::ObjLockPtr<T>;                                       \
+    using T##LockConstPtr = ::vgc::core::ObjLockPtr<const T>;                            \
     using T##List = ::vgc::core::ObjList<T>;                                             \
     using T##ListIterator = ::vgc::core::ObjListIterator<T>;                             \
     using T##ListView = ::vgc::core::ObjListView<T>
@@ -1848,11 +2224,12 @@ inline Int Object::numChildObjects() const {
 /// - Enforce memory safety via temporary ownership (`weakPtr.lock()`).
 /// - Reduce the risk of memory leaks by storing weak pointers rather than ObjPtrs.
 ///
-/// As a preliminary step, we already define the `FooSharedPtr` and
-/// `FooWeakPtr` variants, which for now are simply aliases to `FooPtr`, but
-/// expresses which type of ownership is meant. In the future, the idea would
-/// be to replace all usage of `FooPtr` with either the `Shared` or `Weak`
-/// variant, and actually make them different types with different behavior.
+/// We're gradually transitionning to a weak/shared approach. For now:
+/// - `FooSharedPtr` and `FooLockPtr` are aliases for `FooPtr`
+/// - `FooWeakPtr` is implemented and properly increases the weak refcount.
+///
+/// In the future, the idea would be to replace all usage of `FooPtr` with
+/// either the `Shared` or `Weak` variant.
 ///
 /// Also, we may want to follow more strictly this guideline: before
 /// dereferencing a non-scope-local shared ptr (e.g., a member variable), we
