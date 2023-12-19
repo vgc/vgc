@@ -19,7 +19,7 @@
         </Expand>
     </Type>
     <Type Name="vgc::core::ObjPtr&lt;*&gt;">
-        <DisplayString>{{refCount={obj_->refCount_} obj={obj_}}}</DisplayString>
+        <DisplayString>{{obj={obj_} shared={obj_->sharedCount_} weak={obj_->weakCount_}}}</DisplayString>
         <Expand>
             <ExpandedItem>obj_</ExpandedItem>
         </Expand>

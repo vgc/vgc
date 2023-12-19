@@ -18,9 +18,16 @@
 #include <vgc/core/object.h>
 
 using vgc::core::Object;
+using vgc::core::ObjectLockPtr;
 using vgc::core::ObjectPtr;
+using vgc::core::ObjectSharedPtr;
+using vgc::core::ObjectWeakPtr;
+
 using vgc::core::detail::ConstructibleTestObject;
+using vgc::core::detail::ConstructibleTestObjectLockPtr;
 using vgc::core::detail::ConstructibleTestObjectPtr;
+using vgc::core::detail::ConstructibleTestObjectSharedPtr;
+using vgc::core::detail::ConstructibleTestObjectWeakPtr;
 
 TEST(TestObject, StaticUnqualifiedName) {
     ASSERT_EQ(Object::staticObjectType().unqualifiedName(), "Object");
@@ -56,6 +63,117 @@ TEST(TestObject, Format) {
     expectedResult += "> is <Null Object>";
 
     ASSERT_EQ(s, expectedResult);
+}
+
+TEST(TestObject, RootSharedAndWeakPtr) {
+
+    bool isDestructed = false;
+
+    ConstructibleTestObjectSharedPtr sp = ConstructibleTestObject::create(&isDestructed);
+    ASSERT_EQ(sp.sharedCount(), 1);
+    ASSERT_EQ(sp.weakCount(), 0);
+    ASSERT_EQ(sp.isAlive(), true);
+    ASSERT_EQ(isDestructed, false);
+
+    ConstructibleTestObjectSharedPtr sp2 = sp;
+    ASSERT_EQ(sp.sharedCount(), 2);
+    ASSERT_EQ(sp.weakCount(), 0);
+    ASSERT_EQ(sp.isAlive(), true);
+    ASSERT_EQ(sp2.sharedCount(), 2);
+    ASSERT_EQ(sp2.weakCount(), 0);
+    ASSERT_EQ(sp2.isAlive(), true);
+    ASSERT_EQ(isDestructed, false);
+
+    sp = nullptr;
+    ASSERT_EQ(sp.sharedCount(), -1);
+    ASSERT_EQ(sp.weakCount(), -1);
+    ASSERT_EQ(sp.isAlive(), false);
+    ASSERT_EQ(sp2.sharedCount(), 1);
+    ASSERT_EQ(sp2.weakCount(), 0);
+    ASSERT_EQ(sp2.isAlive(), true);
+    ASSERT_EQ(isDestructed, false);
+
+    ConstructibleTestObjectWeakPtr wp = sp2;
+    ASSERT_EQ(sp2.sharedCount(), 1);
+    ASSERT_EQ(sp2.weakCount(), 1);
+    ASSERT_EQ(sp2.isAlive(), true);
+    ASSERT_EQ(wp.sharedCount(), 1);
+    ASSERT_EQ(wp.weakCount(), 1);
+    ASSERT_EQ(wp.isAlive(), true);
+    ASSERT_EQ(isDestructed, false);
+
+    ASSERT_EQ(bool(wp.lock()), true);
+
+    sp2 = nullptr;
+    ASSERT_EQ(sp2.sharedCount(), -1);
+    ASSERT_EQ(sp2.weakCount(), -1);
+    ASSERT_EQ(sp2.isAlive(), false);
+    ASSERT_EQ(wp.sharedCount(), 0);
+    ASSERT_EQ(wp.weakCount(), 1);
+    ASSERT_EQ(wp.isAlive(), false);
+    ASSERT_EQ(isDestructed, false);
+
+    ASSERT_EQ(bool(wp.lock()), false);
+
+    wp = nullptr;
+    ASSERT_EQ(wp.sharedCount(), -1);
+    ASSERT_EQ(wp.weakCount(), -1);
+    ASSERT_EQ(wp.isAlive(), false);
+    ASSERT_EQ(isDestructed, true);
+}
+
+TEST(TestObject, ChildSharedAndWeakPtr) {
+
+    bool isRootDestructed = false;
+    bool isChildDestructed = false;
+
+    // TODO: on assignment from SharedPtr to LockPtr, throw if null.
+    ConstructibleTestObjectLockPtr root =
+        ConstructibleTestObject::create(&isRootDestructed);
+    ASSERT_TRUE(root);
+
+    ConstructibleTestObjectWeakPtr child = root->createChild(&isChildDestructed);
+    ASSERT_EQ(child.sharedCount(), 0);
+    ASSERT_EQ(child.weakCount(), 1);
+    ASSERT_EQ(child.isAlive(), true);
+    ASSERT_EQ(isChildDestructed, false);
+
+    child = nullptr;
+    ASSERT_EQ(child.sharedCount(), -1);
+    ASSERT_EQ(child.weakCount(), -1);
+    ASSERT_EQ(child.isAlive(), false);
+    ASSERT_EQ(isChildDestructed, false);
+
+    ObjectSharedPtr child2 = root->firstChildObject();
+    ASSERT_EQ(child2.sharedCount(), 1);
+    ASSERT_EQ(child2.weakCount(), 0);
+    ASSERT_EQ(child2.isAlive(), true);
+    ASSERT_EQ(isChildDestructed, false);
+
+    child2 = nullptr;
+    ASSERT_EQ(child.sharedCount(), -1);
+    ASSERT_EQ(child.weakCount(), -1);
+    ASSERT_EQ(child.isAlive(), false);
+    ASSERT_EQ(isChildDestructed, false);
+
+    child2 = root->firstChildObject();
+    ASSERT_EQ(child2.sharedCount(), 1);
+    ASSERT_EQ(child2.weakCount(), 0);
+    ASSERT_EQ(child2.isAlive(), true);
+    ASSERT_EQ(isChildDestructed, false);
+
+    // Test that parent can uniquely destroy children
+    root->clearChildren();
+    ASSERT_EQ(child2.sharedCount(), 1); // one shared pointer
+    ASSERT_EQ(child2.weakCount(), 0);
+    ASSERT_EQ(child2.isAlive(), false); // but still dead
+    ASSERT_EQ(isChildDestructed, false);
+
+    child2 = nullptr;
+    ASSERT_EQ(child2.sharedCount(), -1);
+    ASSERT_EQ(child2.weakCount(), -1);
+    ASSERT_EQ(child2.isAlive(), false);
+    ASSERT_EQ(isChildDestructed, true);
 }
 
 int main(int argc, char** argv) {
