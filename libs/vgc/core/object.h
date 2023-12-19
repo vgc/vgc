@@ -2357,6 +2357,10 @@ public:
         }
     }
 
+    void clearChildren() {
+        destroyAllChildObjects_();
+    }
+
 private:
     bool* isDestructed_ = nullptr;
 };

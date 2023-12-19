@@ -198,9 +198,9 @@ void Object::destroyObject_() {
 void Object::destroyAllChildObjects_() {
     Object* x = this->firstChildObject_;
     while (x) {
-        Object* next = x->nextSiblingObject_;
-        x->destroyObject_();
-        x = next;
+        Object* next = x->nextSiblingObject_; // XXX Using a raw ptr here is unsafe:
+        x->destroyObject_();                  // < this may indirectly destroy `next`
+        x = next;                             // < in which case `next` is now dangling
     }
 }
 
