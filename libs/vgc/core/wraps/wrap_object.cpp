@@ -30,7 +30,8 @@ void wrap_object(py::module& m) {
 
     vgc::core::wraps::ObjClass<This>(m, "Object")
         .def("isAlive", &This::isAlive)
-        .def("refCount", &This::refCount)
+        .def("sharedCount", &This::sharedCount)
+        .def("weakCount", &This::sharedCount)
         .def(
             "__getattribute__",
             [getattribute](py::object self, py::str name) {
@@ -40,7 +41,9 @@ void wrap_object(py::module& m) {
                 }
                 else {
                     std::string name_(name);
-                    if (name_ == "isAlive" || name_ == "refCount") {
+                    if (name_ == "isAlive"        //
+                        || name_ == "sharedCount" //
+                        || name_ == "weakCount") {
                         return getattribute(self, name);
                     }
                     else {
@@ -61,8 +64,12 @@ void wrap_object(py::module& m) {
     // test objects
 
     using ConstructibleTestObject = vgc::core::detail::ConstructibleTestObject;
+    using ConstructibleTestObjectSharedPtr =
+        vgc::core::detail::ConstructibleTestObjectSharedPtr;
     vgc::core::wraps::ObjClass<ConstructibleTestObject>(m, "ConstructibleTestObject")
-        .def_create();
+        .def_create<
+            ConstructibleTestObjectSharedPtr>(); // explicitly choose constructor overload
+                                                 // without the bool* argument
 
     using SignalTestObject = vgc::core::detail::SignalTestObject;
     vgc::core::wraps::ObjClass<SignalTestObject>(m, "CppSignalTestObject")

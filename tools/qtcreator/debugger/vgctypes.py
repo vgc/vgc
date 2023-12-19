@@ -122,8 +122,9 @@ def qdump__vgc__core__Span(d, value):
 
 def qdump__vgc__core__ObjPtr(d, value):
     obj = hex(value["obj_"].pointer())
-    refCount = value["obj_"]["refCount_"].integer()
-    d.putValue(f"{{refCount={refCount} obj={obj}}}")
+    shared = value["obj_"]["sharedCount_"].integer()
+    weak = value["obj_"]["weakCount_"].integer()
+    d.putValue(f"{{obj={obj} shared={shared} weak={weak}}}")
     d.putPlainChildren(value["obj_"].dereference())
 
 

@@ -234,7 +234,7 @@ void SignalHub::emit_(SignalId from, const TransmitArgs& args) {
     emitting_ = true;
     // Keep weak pointer on owner to detect our own death (`this` becomes dangling).
     ObjectPtr ownerPtr;
-    if (owner_->parentObject() || owner_->refCount() > 0) {
+    if (owner_->parentObject() || owner_->sharedCount() > 0) {
         ownerPtr = owner_;
     }
     else {

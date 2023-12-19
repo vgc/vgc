@@ -71,12 +71,12 @@ void dumpObjectTree_(const Object* obj, std::string& out, std::string& prefix) {
     out += obj->objectType().unqualifiedName();
     if (obj->isAlive()) {
         out += " [";
-        out += core::toString(obj->refCount());
+        out += core::toString(obj->sharedCount());
         out += "]";
     }
     else {
         out += " (";
-        out += core::toString(obj->refCount());
+        out += core::toString(obj->sharedCount());
         out += ")";
     }
     out += "\n";
@@ -387,7 +387,7 @@ void Object::destroyObjectImpl_() {
     }
     stage_ = ObjectStage::AboutToBeDestroyed;
 
-    // Make the refCount >= 1 for the remainder of this function, ensuring that
+    // Make the sharedCount >= 1 for the remainder of this function, ensuring that
     // the C++ object outlives this function. This is important because due to
     // callbacks, some external ObjectPtr pointing to `this` could be created
     // in the middle of this function.
@@ -414,7 +414,7 @@ void Object::destroyObjectImpl_() {
     }
     stage_ = ObjectStage::ChildrenDestroyed;
 
-    // Make this object root. This ensures deletion once refCount() == 0.
+    // Make this object root. This ensures deletion once sharedCount() == 0.
     //
     // Note that it is a LogicError to add an AboutToBeDestroyed object as
     // child object, which guarantees that the object will stay root, and
@@ -434,7 +434,7 @@ void Object::destroyObjectImpl_() {
     // Note 1: at the end of this scope, `thisPtr` is destructed, which causes
     // a call to decref(). If there is no other ObjectPtr pointing to `this`,
     // then the Object will now be deleted since it is a root Object and its
-    // refCount will become zero. If there are other ObjectPtr pointing to
+    // sharedCount will become zero. If there are other ObjectPtr pointing to
     // `this` (there were none when entering this function, but some may have
     // been created in callbacks in the middle of this function), then the
     // Object is not deleted now, but only once all such ObjectPtr is
@@ -519,8 +519,8 @@ namespace detail {
 //   warning: Potential leak of memory pointed to by field '_obj'
 //   [clang-analyzer-cplusplus.NewDeleteLeaks]
 //
-ConstructibleTestObjectPtr ConstructibleTestObject::create() {
-    return createObject<ConstructibleTestObject>();
+ConstructibleTestObjectPtr ConstructibleTestObject::create(bool* isDestructed) {
+    return createObject<ConstructibleTestObject>(isDestructed);
 }
 
 void SignalTestObject::connectToOtherNoArgs(SignalTestObject* other) const {
