@@ -31,7 +31,7 @@ void wrap_object(py::module& m) {
     vgc::core::wraps::ObjClass<This>(m, "Object")
         .def("isAlive", &This::isAlive)
         .def("sharedCount", &This::sharedCount)
-        .def("weakCount", &This::sharedCount)
+        .def("weakCount", &This::weakCount)
         .def(
             "__getattribute__",
             [getattribute](py::object self, py::str name) {
