@@ -117,8 +117,8 @@ ModulePtr ModuleManager::importModule_(core::ObjectType key, ModuleFactory facto
     }
 }
 
-Module::Module(CreateKey key, const ModuleContext& /*context*/)
-    : Object(key) {
+Module::Module(CreateKey key, const ModuleContext& context)
+    : Object(key), moduleManager_(context.moduleManager()) {
 }
 
 ModulePtr Module::create(const ModuleContext& context) {
