@@ -248,7 +248,8 @@ void CanvasApplication::createActions_(ui::Widget* parent) {
 void CanvasApplication::registerPanelTypes_() {
     panelManager_ = importModule<ui::PanelManager>();
     if (auto panelManager = panelManager_.lock()) {
-        panelManager->createPanelInstanceRequested().connect(onCreatePanelInstanceRequested_Slot());
+        panelManager->createPanelInstanceRequested().connect(
+            onCreatePanelInstanceRequested_Slot());
         panelManager->registerPanelType<canvas::ToolsPanel>();
         panelManager->registerPanelType<canvas::ToolOptionsPanel>();
         panelManager->registerPanelType<tools::ColorsPanel>();

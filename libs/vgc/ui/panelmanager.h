@@ -20,10 +20,10 @@
 #include <vgc/core/id.h>
 #include <vgc/core/object.h>
 #include <vgc/ui/api.h>
+#include <vgc/ui/module.h>
 #include <vgc/ui/panelcontext.h>
 #include <vgc/ui/paneldefaultarea.h>
 #include <vgc/ui/widget.h>
-#include <vgc/ui/module.h>
 
 namespace vgc::ui {
 
