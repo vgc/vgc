@@ -217,6 +217,10 @@ public:
         return items_;
     }
 
+    /// Removes all the items on this menu.
+    ///
+    void clearItems();
+
     /// Returns whether this menu is open. A menu is considered open either
     /// when it is open as popup (see `isOpenAsPopup()`), or when it is not
     /// open as popup but visible anyway, as any regular widget can be (see

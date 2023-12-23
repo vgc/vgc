@@ -133,6 +133,14 @@ Menu* Menu::createSubMenu(std::string_view title) {
     return menu;
 }
 
+void Menu::clearItems() {
+    while (firstChild()) {
+        firstChild()->destroy();
+    }
+    items_.clear();
+    notifyChanged(true);
+}
+
 bool Menu::open(Widget* from) {
     close_();
     if (isPopupEnabled_) {
