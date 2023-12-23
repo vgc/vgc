@@ -18,7 +18,7 @@
 
 namespace vgc::ui {
 
-PanelContext::PanelContext(ModuleManager* moduleManager)
+PanelContext::PanelContext(ModuleManagerWeakPtr moduleManager)
     : moduleManager_(moduleManager) {
 }
 

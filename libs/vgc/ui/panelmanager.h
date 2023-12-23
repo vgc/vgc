@@ -23,10 +23,11 @@
 #include <vgc/ui/panelcontext.h>
 #include <vgc/ui/paneldefaultarea.h>
 #include <vgc/ui/widget.h>
+#include <vgc/ui/module.h>
 
 namespace vgc::ui {
 
-VGC_DECLARE_OBJECT(ModuleManager);
+VGC_DECLARE_OBJECT(Menu);
 VGC_DECLARE_OBJECT(Panel);
 VGC_DECLARE_OBJECT(PanelArea);
 VGC_DECLARE_OBJECT(PanelManager);
@@ -77,19 +78,18 @@ using PanelTypeInfoMap = std::unordered_map<PanelTypeId, detail::PanelTypeInfo>;
 /// - Remember the last location of closed panels to re-open them in a similar
 ///   location.
 ///
-class VGC_UI_API PanelManager : public core::Object {
+class VGC_UI_API PanelManager : public ui::Module {
 private:
-    VGC_OBJECT(PanelManager, core::Object)
-    VGC_PRIVATIZE_OBJECT_TREE_MUTATORS
+    VGC_OBJECT(PanelManager, ui::Module)
 
-    PanelManager(CreateKey, ModuleManager* moduleManager);
+    PanelManager(CreateKey, const ui::ModuleContext& context);
 
 public:
     /// Creates a `PanelManager()`.
     ///
     /// The given `moduleManager` must be non-null and must outlive this `PanelManager`.
     ///
-    static PanelManagerPtr create(ModuleManager* moduleManager);
+    static PanelManagerPtr create(const ui::ModuleContext& context);
 
     /// Registers a panel type.
     ///
@@ -103,6 +103,7 @@ public:
             [this](ui::PanelArea* parent) {
                 return this->createPanelInstance_<TPanel>(parent);
             });
+        updatePanelsMenu_();
     }
 
     /// Returns the list of all registered panel type IDs.
@@ -157,7 +158,7 @@ public:
         if (!parentWidget) {
             return nullptr;
         }
-        PanelContext context(moduleManager_);
+        PanelContext context(moduleManager());
         TPanel* panel =
             parentWidget->createChild<TPanel>(context, std::forward<Args>(args)...);
         postCreatePanel_(parentArea, panel);
@@ -181,8 +182,9 @@ public:
         return !instances(id).isEmpty();
     }
 
+    VGC_SIGNAL(createPanelInstanceRequested, (PanelTypeId, id))
+
 private:
-    ModuleManager* moduleManager_; // ModuleManager outlives PanelManager
     detail::PanelTypeInfoMap infos_;
 
     void onPanelInstanceAboutToBeDestroyed_(Object* object);
@@ -192,6 +194,10 @@ private:
 
     Widget* preCreatePanel_(PanelArea* parentArea);
     void postCreatePanel_(PanelArea* parentArea, Panel* panel);
+
+    ui::MenuWeakPtr panelsMenu_;
+    void createPanelsMenu_();
+    void updatePanelsMenu_();
 };
 
 } // namespace vgc::ui

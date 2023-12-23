@@ -29,15 +29,15 @@ class PanelManager;
 ///
 class VGC_UI_API PanelContext {
 private:
-    PanelContext(ModuleManager* moduleManager);
+    PanelContext(ModuleManagerWeakPtr moduleManager);
 
 public:
     PanelContext(const PanelContext&) = delete;
     PanelContext& operator=(const PanelContext&) = delete;
 
-    /// Returns the module manager of the application.
+    /// Returns the module manager related to this PanelContext.
     ///
-    ModuleManager* moduleManager() const {
+    ModuleManagerWeakPtr moduleManager() const {
         return moduleManager_;
     }
 
@@ -46,12 +46,17 @@ public:
     ///
     template<typename TModule>
     core::ObjPtr<TModule> importModule() const {
-        return moduleManager()->importModule<TModule>();
+        if (auto moduleManager = moduleManager_.lock()) {
+            return moduleManager->importModule<TModule>();
+        }
+        else {
+            return {};
+        }
     }
 
 private:
     friend PanelManager;
-    ModuleManager* moduleManager_ = nullptr; // PanelContext outlives ModuleManager
+    ModuleManagerWeakPtr moduleManager_;
 };
 
 } // namespace vgc::ui

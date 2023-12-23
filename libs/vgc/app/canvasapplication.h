@@ -113,8 +113,8 @@ public:
 
     /// Returns the `PanelManager` of this application.
     ///
-    ui::PanelManager* panelManager() const {
-        return panelManager_.get();
+    ui::PanelManagerWeakPtr panelManager() const {
+        return panelManager_;
     }
 
     /// Quits the application.
@@ -143,7 +143,7 @@ private:
     // ------------------------------------------------------------------------
     //                       Panels
 
-    ui::PanelManagerPtr panelManager_;
+    ui::PanelManagerWeakPtr panelManager_;
     ui::PanelAreaPtr mainPanelArea_;
     ui::PanelAreaPtr leftPanelArea_;
     ui::PanelAreaPtr rightPanelArea_;
@@ -151,7 +151,8 @@ private:
     void registerPanelTypes_();
     void createDefaultPanels_();
     ui::PanelArea* getOrCreatePanelDefaultArea_(ui::PanelDefaultArea area);
-    void onActionOpenPanel_(ui::PanelTypeId id);
+    void onCreatePanelInstanceRequested_(ui::PanelTypeId id);
+    VGC_SLOT(onCreatePanelInstanceRequested_)
 
     // Tools
     canvas::ToolManagerPtr toolManager_;

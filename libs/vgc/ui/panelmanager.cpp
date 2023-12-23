@@ -16,20 +16,23 @@
 
 #include <vgc/ui/panelmanager.h>
 
+#include <vgc/ui/menu.h>
 #include <vgc/ui/panel.h>
 #include <vgc/ui/panelarea.h>
+#include <vgc/ui/standardmenus.h>
 #include <vgc/ui/tabbar.h>
 #include <vgc/ui/tabbody.h>
 
 namespace vgc::ui {
 
-PanelManager::PanelManager(CreateKey key, ModuleManager* moduleManager)
-    : Object(key)
-    , moduleManager_(moduleManager) {
+PanelManager::PanelManager(CreateKey key, const ui::ModuleContext& context)
+    : Module(key, context) {
+
+    createPanelsMenu_();
 }
 
-PanelManagerPtr PanelManager::create(ModuleManager* moduleManager) {
-    return core::createObject<PanelManager>(moduleManager);
+PanelManagerPtr PanelManager::create(const ui::ModuleContext& context) {
+    return core::createObject<PanelManager>(context);
 }
 
 core::Array<PanelTypeId> PanelManager::registeredPanelTypeIds() const {
@@ -132,4 +135,39 @@ void PanelManager::postCreatePanel_(PanelArea* parentArea, Panel* panel) {
     parentArea->tabBar()->addTab(panel->title());
 }
 
+void PanelManager::createPanelsMenu_() {
+    if (auto standardMenus = importModule<ui::StandardMenus>().lock()) {
+        if (auto menuBar = standardMenus->menuBar().lock()) {
+            panelsMenu_ = menuBar->createSubMenu("Panels");
+        }
+    }
+}
+
+namespace {
+
+namespace commands {
+
+// TODO: one command per panel with specific shortcut?
+VGC_UI_DEFINE_WINDOW_COMMAND( //
+    openPanel,
+    "panels.openPanel",
+    "Open Panel",
+    Shortcut())
+
+} // namespace commands
+
+} // namespace
+
+void PanelManager::updatePanelsMenu_() {
+    if (auto panelsMenu = panelsMenu_.lock()) {
+        panelsMenu->clearItems();
+        for (ui::PanelTypeId id : registeredPanelTypeIds()) {
+            ui::Action* action = createTriggerAction(commands::openPanel());
+            action->triggered().connect(
+                [=]() { this->createPanelInstanceRequested().emit(id); });
+            action->setText(label(id));
+            panelsMenu->addItem(action);
+        }
+    }
+}
 } // namespace vgc::ui
