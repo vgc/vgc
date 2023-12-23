@@ -181,7 +181,7 @@ public:
     }
 
 private:
-    friend ModuleManager;                    // For accessing the constructor
+    friend ModuleManager; // For accessing the constructor
     ModuleManagerWeakPtr moduleManager_;
 };
 
