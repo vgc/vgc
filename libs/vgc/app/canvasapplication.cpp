@@ -246,38 +246,22 @@ void CanvasApplication::createActions_(ui::Widget* parent) {
 }
 
 void CanvasApplication::registerPanelTypes_() {
-
-    // Create PanelManager
-    panelManager_ = ui::PanelManager::create(moduleManager());
-
-    // Register Panel types
-    panelManager_->registerPanelType<canvas::ToolsPanel>();
-    panelManager_->registerPanelType<canvas::ToolOptionsPanel>();
-    panelManager_->registerPanelType<tools::ColorsPanel>();
-
-    // Create Panels menu
-    ui::Menu* panelsMenu = nullptr;
-    if (auto standardMenus = importModule<ui::StandardMenus>().lock()) {
-        if (auto menuBar = standardMenus->menuBar().lock()) {
-            panelsMenu = menuBar->createSubMenu("Panels");
-        }
-    }
-
-    // Populate Panels menu
-    if (panelsMenu) {
-        ui::Widget* actionParent = window_->mainWidget();
-        for (ui::PanelTypeId id : panelManager_->registeredPanelTypeIds()) {
-            ui::Action* action = actionParent->createTriggerAction(commands::openPanel());
-            action->triggered().connect([=]() { this->onActionOpenPanel_(id); });
-            action->setText(panelManager_->label(id));
-            panelsMenu->addItem(action);
-        }
+    panelManager_ = importModule<ui::PanelManager>();
+    if (auto panelManager = panelManager_.lock()) {
+        panelManager->createPanelInstanceRequested().connect(
+            onCreatePanelInstanceRequested_Slot());
+        panelManager->registerPanelType<canvas::ToolsPanel>();
+        panelManager->registerPanelType<canvas::ToolOptionsPanel>();
+        panelManager->registerPanelType<tools::ColorsPanel>();
     }
 }
 
 void CanvasApplication::createDefaultPanels_() {
 
-    using detail::createPanelWithPadding;
+    auto panelManager = panelManager_.lock();
+    if (!panelManager) {
+        return;
+    }
 
     // Create main panel area
     mainPanelArea_ = window_->mainWidget()->panelArea();
@@ -289,7 +273,7 @@ void CanvasApplication::createDefaultPanels_() {
     //
     ui::PanelArea* canvasArea = ui::PanelArea::createTabs(mainPanelArea_.get());
     ui::Panel* canvasPanel =
-        panelManager_->createPanelInstance_<ui::Panel>(canvasArea, "Canvas");
+        panelManager->createPanelInstance_<ui::Panel>(canvasArea, "Canvas");
     canvasArea->tabBar()->hide();
     canvas::Canvas* canvas = canvasPanel->createChild<canvas::Canvas>(nullptr);
     if (auto canvasManager = importModule<canvas::CanvasManager>().lock()) {
@@ -310,9 +294,9 @@ void CanvasApplication::createDefaultPanels_() {
     createTools_(canvas);
 
     // Create other panels
-    onActionOpenPanel_(ui::PanelTypeId(canvas::ToolsPanel::id));
-    onActionOpenPanel_(ui::PanelTypeId(canvas::ToolOptionsPanel::id));
-    onActionOpenPanel_(ui::PanelTypeId(tools::ColorsPanel::id));
+    onCreatePanelInstanceRequested_(ui::PanelTypeId(canvas::ToolsPanel::id));
+    onCreatePanelInstanceRequested_(ui::PanelTypeId(canvas::ToolOptionsPanel::id));
+    onCreatePanelInstanceRequested_(ui::PanelTypeId(tools::ColorsPanel::id));
 }
 
 ui::PanelArea*
@@ -345,11 +329,12 @@ CanvasApplication::getOrCreatePanelDefaultArea_(ui::PanelDefaultArea area) {
     return panelArea_.get();
 }
 
-void CanvasApplication::onActionOpenPanel_(ui::PanelTypeId id) {
+void CanvasApplication::onCreatePanelInstanceRequested_(ui::PanelTypeId id) {
 
     // No possible action to do if there is no panel manager or the panel type is unknown.
     //
-    if (!panelManager_ || !panelManager_->isRegistered(id)) {
+    auto panelManager = panelManager_.lock();
+    if (!panelManager || !panelManager->isRegistered(id)) {
         return;
     }
 
@@ -363,18 +348,18 @@ void CanvasApplication::onActionOpenPanel_(ui::PanelTypeId id) {
     // true.
     //
     constexpr bool allowMultipleInstances = false;
-    if (!allowMultipleInstances && panelManager_->hasInstance(id)) {
+    if (!allowMultipleInstances && panelManager->hasInstance(id)) {
         return;
     }
 
-    ui::PanelDefaultArea defaultArea = panelManager_->defaultArea(id);
+    ui::PanelDefaultArea defaultArea = panelManager->defaultArea(id);
     ui::PanelArea* panelArea = getOrCreatePanelDefaultArea_(defaultArea);
     if (!panelArea) {
         return;
     }
 
     ui::PanelArea* tabs = ui::PanelArea::createTabs(panelArea);
-    panelManager_->createPanelInstance(id, tabs);
+    panelManager->createPanelInstance(id, tabs);
 }
 
 namespace {
