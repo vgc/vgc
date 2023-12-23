@@ -117,7 +117,7 @@ public:
 
 private:
     struct Value_ {
-        ModulePtr module;
+        ModuleSharedPtr module;
 
         // Enable having two threads concurrently asking for the same module,
         // while detecting cyclic dependencies between module construction
@@ -158,23 +158,31 @@ public:
     ModuleContext(const ModuleContext&) = delete;
     ModuleContext& operator=(const ModuleContext&) = delete;
 
-    /// Returns the module manager of the application.
+    /// Returns the module manager related to this module context.
     ///
-    ModuleManager* moduleManager() const {
+    ModuleManagerWeakPtr moduleManager() const {
         return moduleManager_;
     }
 
     /// Retrieves the given `TModule` module, or creates it if there is no such
     /// module yet.
     ///
+    /// Returns a null pointer if the module couldn't be imported, for example if
+    /// the `moduleManager()` has already been destroyed.
+    ///
     template<typename TModule>
     core::ObjPtr<TModule> importModule() const {
-        return moduleManager()->importModule<TModule>();
+        if (auto moduleManager = moduleManager_.lock()) {
+            return moduleManager->importModule<TModule>();
+        }
+        else {
+            return {};
+        }
     }
 
 private:
-    friend ModuleManager;                    // For accessing the constructor
-    ModuleManager* moduleManager_ = nullptr; // ModuleManager outlives ModuleContext
+    friend ModuleManager; // For accessing the constructor
+    ModuleManagerWeakPtr moduleManager_;
 };
 
 VGC_DECLARE_OBJECT(Module);
@@ -358,6 +366,28 @@ public:
     ///
     VGC_SIGNAL(actionRemoved, (Action*, removedAction))
 
+    /// Returns the module manager that manages this module.
+    ///
+    ModuleManagerWeakPtr moduleManager() const {
+        return moduleManager_;
+    }
+
+    /// Retrieves the given `TModule` module, or creates it if there is no such
+    /// module yet.
+    ///
+    /// Returns a null pointer if the module couldn't be imported, for example if
+    /// the `moduleManager()` has already been destroyed.
+    ///
+    template<typename TModule>
+    core::ObjPtr<TModule> importModule() const {
+        if (auto moduleManager = moduleManager_.lock()) {
+            return moduleManager->importModule<TModule>();
+        }
+        else {
+            return {};
+        }
+    }
+
 private:
     // Note: in the Widget class, actions were implemented as child objects of
     // the widget (technically, grand-child objects, since there is the
@@ -374,6 +404,8 @@ private:
     // In the future, we'll update Widget to do the same.
     //
     core::Array<ActionPtr> actions_;
+
+    ModuleManagerWeakPtr moduleManager_;
 };
 
 } // namespace vgc::ui
