@@ -29,6 +29,7 @@ VGC_DECLARE_OBJECT(Application);
 
 /// Returns the global `Application` object.
 ///
+VGC_UI_API
 Application* application();
 
 /// \class vgc::ui::Application

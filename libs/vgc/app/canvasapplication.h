@@ -44,16 +44,6 @@ VGC_DECLARE_OBJECT(DocumentColorPalette);
 
 namespace vgc::app {
 
-namespace detail {
-
-VGC_APP_API
-ui::Panel* createPanelWithPadding(
-    ui::PanelManager* panelManager,
-    ui::PanelArea* panelArea,
-    std::string_view panelTitle = "Untitled");
-
-} // namespace detail
-
 VGC_DECLARE_OBJECT(CanvasApplication);
 
 /// \class vgc::app::CanvasApplication
@@ -97,24 +87,6 @@ public:
     ///
     MainWidget* mainWidget() const {
         return mainWindow()->mainWidget();
-    }
-
-    /// Returns the menu bar of the `MainWidget` of this application.
-    ///
-    ui::Menu* menuBar() const {
-        return mainWidget()->menuBar();
-    }
-
-    /// Returns the top-level panel area of the `MainWidget` of this application.
-    ///
-    ui::PanelArea* panelArea() const {
-        return mainWidget()->panelArea();
-    }
-
-    /// Returns the `PanelManager` of this application.
-    ///
-    ui::PanelManagerWeakPtr panelManager() const {
-        return panelManager_;
     }
 
     /// Quits the application.
