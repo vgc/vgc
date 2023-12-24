@@ -46,24 +46,8 @@ namespace {
 const core::Color initialColor(0.416f, 0.416f, 0.918f);
 
 core::StringId s_default_side_area("default-side-area");
-core::StringId s_with_padding("with-padding");
 
 } // namespace
-
-namespace detail {
-
-ui::Panel* createPanelWithPadding(
-    ui::PanelManager* panelManager,
-    ui::PanelArea* panelArea,
-    std::string_view panelTitle) {
-
-    ui::Panel* panel =
-        panelManager->createPanelInstance_<ui::Panel>(panelArea, panelTitle);
-    panel->addStyleClass(s_with_padding);
-    return panel;
-}
-
-} // namespace detail
 
 CanvasApplication::CanvasApplication(
     CreateKey key,
@@ -193,29 +177,6 @@ void CanvasApplication::crashHandler_([[maybe_unused]] std::string_view errorMes
 }
 
 namespace {
-
-namespace commands {
-
-using ui::Key;
-using ui::Shortcut;
-using ui::modifierkeys::ctrl;
-using ui::modifierkeys::shift;
-
-// TODO: one command per panel with specific shortcut?
-VGC_UI_DEFINE_WINDOW_COMMAND( //
-    openPanel,
-    "panels.openPanel",
-    "Open Panel",
-    Shortcut())
-
-} // namespace commands
-
-template<typename TSlot>
-ui::Action* createAction(ui::Widget* parent, core::StringId commandId, TSlot slot) {
-    ui::Action* action = parent->createTriggerAction(commandId);
-    action->triggered().connect(slot);
-    return action;
-}
 
 void createGenericAction_(ui::Widget* parent, ui::Menu& menu, core::StringId commandId) {
     ui::Action* action = parent->createAction<ui::GenericAction>(commandId);
@@ -365,6 +326,11 @@ void CanvasApplication::onCreatePanelInstanceRequested_(ui::PanelTypeId id) {
 namespace {
 
 namespace commands {
+
+using ui::Key;
+using ui::Shortcut;
+using ui::modifierkeys::ctrl;
+using ui::modifierkeys::shift;
 
 // Note: These shortcuts are standards in existing software (except "S" for
 // sculpt), and quite nice on QWERTY keyboards since they are all easy to

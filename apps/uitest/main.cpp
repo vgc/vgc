@@ -25,8 +25,10 @@
 #include <vgc/ui/messagedialog.h>
 #include <vgc/ui/numberedit.h>
 #include <vgc/ui/overlayarea.h>
+#include <vgc/ui/panelmanager.h>
 #include <vgc/ui/plot2d.h>
 #include <vgc/ui/row.h>
+#include <vgc/ui/standardmenus.h>
 #include <vgc/workspace/vertex.h>
 
 #include "resetcurrentcolor.h"
@@ -95,127 +97,33 @@ VGC_UI_DEFINE_WINDOW_COMMAND(
     Shortcut(mod, Key::S))
 
 } // namespace commands
-} // namespace
 
-class UiTestApplication : public app::CanvasApplication {
-    VGC_OBJECT(UiTestApplication, app::CanvasApplication)
+core::StringId s_with_padding("with-padding");
+
+VGC_DECLARE_OBJECT(Plot2dPanel);
+
+class Plot2dPanel : public ui::Panel {
+private:
+    VGC_OBJECT(Plot2dPanel, ui::Panel)
 
 public:
-    static UiTestApplicationPtr create(int argc, char* argv[]) {
-        return core::createObject<UiTestApplication>(argc, argv);
+    static constexpr std::string_view label = "Plot 2D";
+    static constexpr std::string_view id = "vgc.uitest.plot2d";
+    static constexpr ui::PanelDefaultArea defaultArea = ui::PanelDefaultArea::Right;
+
+    static Plot2dPanelPtr create(const ui::PanelContext& context) {
+        return core::createObject<Plot2dPanel>(context);
     }
 
 protected:
-    UiTestApplication(CreateKey key, int argc, char* argv[])
-        : app::CanvasApplication(key, argc, argv, "VGC UI Test") {
+    Plot2dPanel(CreateKey key, const ui::PanelContext& context)
+        : Panel(key, context, label) {
 
-        setOrganizationName("VGC Software");
-        setOrganizationDomain("vgc.io");
-        setWindowIconFromResource("apps/illustration/icons/512.png");
-        createTestActionsAndMenus_();
-        createTestWidgets_();
+        addStyleClass(s_with_padding);
 
-        importModule<uitest::ResetCurrentColor>();
-    }
-
-private:
-    ui::Menu* testMenu_ = nullptr;
-    void createTestActionsAndMenus_() {
-
-        using ui::Action;
-        using ui::Key;
-        using ui::Menu;
-        using ui::ModifierKey;
-        using ui::Shortcut;
-
-        ui::Widget* parent = mainWidget();
-
-        testMenu_ = menuBar()->createSubMenu("Test");
-
-        Action* actionCreateAction =
-            parent->createTriggerAction(commands::createAction());
-        actionCreateAction->triggered().connect([this]() {
-            Action* action = this->testMenu_->createTriggerAction(commands::hello());
-            this->testMenu_->addItem(action);
-        });
-
-        Action* actionCreateMenu = parent->createTriggerAction(commands::createMenu());
-        actionCreateMenu->triggered().connect([this]() {
-            Menu* menu = this->menuBar()->createSubMenu("Test 2");
-            Action* action = menu->createTriggerAction(commands::hello());
-            menu->addItem(action);
-        });
-
-        testMenu_->addItem(actionCreateAction);
-        testMenu_->addItem(actionCreateMenu);
-        Menu* menu1 = testMenu_->createSubMenu("Menu 1");
-        Menu* menu2 = testMenu_->createSubMenu("Menu 2");
-        Menu* menu3 = testMenu_->createSubMenu("Menu 3");
-
-        menu1->addItem(parent->createTriggerAction(commands::_1_1()));
-        menu1->addItem(parent->createTriggerAction(commands::_1_2()));
-        menu1->addItem(parent->createTriggerAction(commands::_1_3()));
-        menu1->addItem(parent->createTriggerAction(commands::_1_4()));
-        menu1->addItem(parent->createTriggerAction(commands::_1_5()));
-        menu1->addItem(parent->createTriggerAction(commands::_1_6()));
-        menu1->addItem(parent->createTriggerAction(commands::_1_7()));
-        Menu* menu1b = menu1->createSubMenu("Menu 1.8");
-
-        menu1b->addItem(parent->createTriggerAction(commands::_1_8_1()));
-        menu1b->addItem(parent->createTriggerAction(commands::_1_8_2()));
-        menu1b->addItem(parent->createTriggerAction(commands::_1_8_3()));
-        menu1b->addItem(parent->createTriggerAction(commands::_1_8_4()));
-        menu1b->addItem(parent->createTriggerAction(commands::_1_8_5()));
-        menu1b->addItem(parent->createTriggerAction(commands::_1_8_6()));
-        menu1b->addItem(parent->createTriggerAction(commands::_1_8_7()));
-
-        menu2->addItem(parent->createTriggerAction(commands::_2_1()));
-        menu2->addItem(parent->createTriggerAction(commands::_2_2()));
-
-        menu3->addItem(parent->createTriggerAction(commands::_3_1()));
-    }
-
-    void createTestWidgets_() {
-
-        using app::detail::createPanelWithPadding;
-
-        auto panelManager = this->panelManager().lock();
-        if (!panelManager) {
-            return;
-        }
-
-        // Create panel areas
-        ui::PanelArea* mainArea = panelArea();
-        ui::PanelArea* rightArea = ui::PanelArea::createVerticalSplit(mainArea);
-        ui::PanelArea* rightTopArea = ui::PanelArea::createTabs(rightArea);
-        ui::PanelArea* rightMiddleArea = ui::PanelArea::createTabs(rightArea);
-        ui::PanelArea* rightBottomArea = ui::PanelArea::createTabs(rightArea);
-
-        // Create panels
-        ui::Panel* rightTopPanel =
-            createPanelWithPadding(panelManager.get(), rightTopArea, "Plot 2D");
-        ui::Panel* rightMiddlePanel =
-            createPanelWithPadding(panelManager.get(), rightMiddleArea, "Misc Tests");
-        ui::Panel* rightBottomPanel = createPanelWithPadding(
-            panelManager.get(), rightBottomArea, "Images and icons");
-        ui::Column* rightTopContent = rightTopPanel->createChild<ui::Column>();
-        ui::Column* rightMiddleContent = rightMiddlePanel->createChild<ui::Column>();
-        ui::Row* rightBottomContent = rightBottomPanel->createChild<ui::Row>();
-
-        // Create widgets inside panels
-        createPlot2d_(rightTopContent);
-        createGrid_(rightMiddleContent);
-        createClickMePopups_(rightMiddleContent);
-        createMessageDialogButtons_(rightMiddleContent);
-        createLineEdits_(rightMiddleContent);
-        createNumberEdits_(rightMiddleContent);
-        createImageBox_(rightBottomContent);
-        createIconWidget_(rightBottomContent);
-    }
-
-    void createPlot2d_(ui::Widget* parent) {
-        ui::Plot2d* plot2d = parent->createChild<ui::Plot2d>();
+        ui::Plot2d* plot2d = createChild<ui::Plot2d>();
         plot2d->setNumYs(16);
+
         // clang-format off
         plot2d->appendDataPoint( 0.0f,  9.f,  9.f,  9.f,  9.f,  9.f,  9.f,  9.f,  9.f,  4.f,  5.f, 11.f,  4.f,  4.f,  5.f, 11.f,  4.f);
         plot2d->appendDataPoint( 1.0f,  5.f,  7.f,  2.f,  5.f,  5.f,  7.f,  2.f,  5.f,  7.f,  7.f,  8.f,  7.f,  7.f,  7.f,  8.f,  7.f);
@@ -229,7 +137,38 @@ private:
         plot2d->appendDataPoint(21.0f, 10.f,  1.f,  1.f, 10.f, 10.f,  1.f,  1.f, 10.f,  8.f,  2.f,  7.f,  8.f,  8.f,  2.f,  7.f,  8.f);
         // clang-format on
     }
+};
 
+VGC_DECLARE_OBJECT(MiscTestsPanel);
+
+class MiscTestsPanel : public ui::Panel {
+private:
+    VGC_OBJECT(MiscTestsPanel, ui::Panel)
+
+public:
+    static constexpr std::string_view label = "Misc Tests";
+    static constexpr std::string_view id = "vgc.uitest.miscTests";
+    static constexpr ui::PanelDefaultArea defaultArea = ui::PanelDefaultArea::Right;
+
+    static MiscTestsPanelPtr create(const ui::PanelContext& context) {
+        return core::createObject<MiscTestsPanel>(context);
+    }
+
+protected:
+    MiscTestsPanel(CreateKey key, const ui::PanelContext& context)
+        : Panel(key, context, label) {
+
+        addStyleClass(s_with_padding);
+
+        ui::Column* layout = createChild<ui::Column>();
+        createGrid_(layout);
+        createClickMePopups_(layout);
+        createMessageDialogButtons_(layout);
+        createLineEdits_(layout);
+        createNumberEdits_(layout);
+    }
+
+private:
     void createGrid_(ui::Widget* parent) {
         ui::Grid* gridTest = parent->createChild<ui::Grid>();
         gridTest->setStyleSheet(".Grid { column-gap: 30dp; row-gap: 10dp; }");
@@ -327,16 +266,41 @@ private:
         numberEdit3->setText("0.0000234");
     }
 
+    ui::OverlayAreaWeakPtr getClickMeOverlayArea_(ui::Widget& from) {
+        static ui::OverlayAreaWeakPtr overlayArea_;
+        if (!overlayArea_.isAlive()) { // XXX Add WeakPtr::operator bool()?
+            overlayArea_ = from.topmostOverlayArea();
+        }
+        return overlayArea_;
+    }
+
+    ui::WidgetWeakPtr getClickMePopup_(ui::OverlayArea& overlayArea) {
+        static ui::WidgetWeakPtr popup_;
+        if (!popup_.isAlive()) {
+            popup_ = overlayArea.createOverlayWidget<ui::Label>(
+                ui::OverlayResizePolicy::None, "you clicked here!");
+            if (auto popup = popup_.lock()) {
+                popup->setStyleSheet(".Label { background-color: rgb(20, 100, 100); "
+                                     "background-color-on-hover: rgb(20, 130, 130); }");
+            }
+        }
+        return popup_;
+    }
+
+    void onClickMe_(ui::Widget* from) {
+        if (from) {
+            if (auto overlayArea = getClickMeOverlayArea_(*from).lock()) {
+                if (auto popup = getClickMePopup_(*overlayArea).lock()) {
+                    geometry::Vec2f p =
+                        from->mapTo(overlayArea.get(), geometry::Vec2f(0.f, 0.f));
+                    popup->updateGeometry(
+                        p, geometry::Vec2f(120.f, 25.f)); // TODO Make dpi-independent
+                }
+            }
+        }
+    }
+
     void createClickMePopups_(ui::Widget* parent) {
-
-        // Get overlay area
-        ui::OverlayArea* overlayArea = parent->topmostOverlayArea();
-
-        // Create the popup. We can't see it at the beginning because its size is (0, 0).
-        ui::Label* label = overlayArea->createOverlayWidget<ui::Label>(
-            ui::OverlayResizePolicy::None, "you clicked here!");
-        label->setStyleSheet(".Label { background-color: rgb(20, 100, 100); "
-                             "background-color-on-hover: rgb(20, 130, 130); }");
 
         // Create a grid of "click me" buttons, whose actions are to set the popup geometry.
         ui::Grid* grid = parent->createChild<ui::Grid>();
@@ -347,12 +311,7 @@ private:
                     parent->createTriggerAction(commands::openPopup(), "click me");
                 ui::ButtonPtr button = ui::Button::create(action);
                 grid->setWidgetAt(button.get(), i, j);
-                action->triggered().connect([=](ui::Widget* from) {
-                    geometry::Vec2f p =
-                        from->mapTo(overlayArea, geometry::Vec2f(0.f, 0.f));
-                    label->updateGeometry(
-                        p, geometry::Vec2f(120.f, 25.f)); // TODO Make dpi-independent
-                });
+                action->triggered().connect([=](ui::Widget* from) { onClickMe_(from); });
             }
         }
     }
@@ -368,11 +327,44 @@ private:
             dialog->setTitle("Quit");
             dialog->addText("Are you sure you want to quit the application?");
             dialog->addButton("No", [=]() { dialog->destroy(); });
-            dialog->addButton("Yes", [=]() { quit(); });
+            dialog->addButton("Yes", []() {
+                if (auto application =
+                        dynamic_cast<app::CanvasApplication*>(ui::application())) {
+                    application->quit();
+                }
+            });
             dialog->showAtWindow(button);
         });
     }
+};
 
+VGC_DECLARE_OBJECT(ImagesAndIconsPanel);
+
+class ImagesAndIconsPanel : public ui::Panel {
+private:
+    VGC_OBJECT(ImagesAndIconsPanel, ui::Panel)
+
+public:
+    static constexpr std::string_view label = "Images and Icons";
+    static constexpr std::string_view id = "vgc.uitest.imagesAndIcons";
+    static constexpr ui::PanelDefaultArea defaultArea = ui::PanelDefaultArea::Right;
+
+    static ImagesAndIconsPanelPtr create(const ui::PanelContext& context) {
+        return core::createObject<ImagesAndIconsPanel>(context);
+    }
+
+protected:
+    ImagesAndIconsPanel(CreateKey key, const ui::PanelContext& context)
+        : Panel(key, context, label) {
+
+        addStyleClass(s_with_padding);
+
+        ui::Row* layout = createChild<ui::Row>();
+        createImageBox_(layout);
+        createIconWidget_(layout);
+    }
+
+private:
     void createImageBox_(ui::Widget* parent) {
         std::string imagePath = core::resourcePath("apps/uitest/icons/512.png");
         parent->createChild<ui::ImageBox>(imagePath);
@@ -430,6 +422,106 @@ private:
 
         ui::Action* action = parent->createTriggerAction(commands::cycleSvgIcon());
         action->triggered().connect(cycleSvgIconSlot_());
+    }
+};
+
+} // namespace
+
+class UiTestApplication : public app::CanvasApplication {
+    VGC_OBJECT(UiTestApplication, app::CanvasApplication)
+
+public:
+    static UiTestApplicationPtr create(int argc, char* argv[]) {
+        return core::createObject<UiTestApplication>(argc, argv);
+    }
+
+protected:
+    UiTestApplication(CreateKey key, int argc, char* argv[])
+        : app::CanvasApplication(key, argc, argv, "VGC UI Test") {
+
+        setOrganizationName("VGC Software");
+        setOrganizationDomain("vgc.io");
+        setWindowIconFromResource("apps/illustration/icons/512.png");
+        createTestActionsAndMenus_();
+        registerTestPanels_();
+
+        importModule<uitest::ResetCurrentColor>();
+    }
+
+private:
+    ui::Menu* testMenu_ = nullptr;
+    void createTestActionsAndMenus_() {
+
+        using ui::Action;
+        using ui::Key;
+        using ui::Menu;
+        using ui::ModifierKey;
+        using ui::Shortcut;
+
+        ui::Widget* parent = mainWidget();
+
+        if (auto standardMenus = importModule<ui::StandardMenus>().lock()) {
+            if (auto menuBar = standardMenus->menuBar().lock()) {
+                testMenu_ = menuBar->createSubMenu("Test");
+            }
+        }
+        if (!testMenu_) {
+            return;
+        }
+
+        Action* actionCreateAction =
+            parent->createTriggerAction(commands::createAction());
+        actionCreateAction->triggered().connect([this]() {
+            Action* action = this->testMenu_->createTriggerAction(commands::hello());
+            this->testMenu_->addItem(action);
+        });
+
+        Action* actionCreateMenu = parent->createTriggerAction(commands::createMenu());
+        actionCreateMenu->triggered().connect([this]() {
+            if (auto standardMenus = importModule<ui::StandardMenus>().lock()) {
+                if (auto menuBar = standardMenus->menuBar().lock()) {
+                    Menu* menu = menuBar->createSubMenu("Test 2");
+                    Action* action = menu->createTriggerAction(commands::hello());
+                    menu->addItem(action);
+                }
+            }
+        });
+
+        testMenu_->addItem(actionCreateAction);
+        testMenu_->addItem(actionCreateMenu);
+        Menu* menu1 = testMenu_->createSubMenu("Menu 1");
+        Menu* menu2 = testMenu_->createSubMenu("Menu 2");
+        Menu* menu3 = testMenu_->createSubMenu("Menu 3");
+
+        menu1->addItem(parent->createTriggerAction(commands::_1_1()));
+        menu1->addItem(parent->createTriggerAction(commands::_1_2()));
+        menu1->addItem(parent->createTriggerAction(commands::_1_3()));
+        menu1->addItem(parent->createTriggerAction(commands::_1_4()));
+        menu1->addItem(parent->createTriggerAction(commands::_1_5()));
+        menu1->addItem(parent->createTriggerAction(commands::_1_6()));
+        menu1->addItem(parent->createTriggerAction(commands::_1_7()));
+        Menu* menu1b = menu1->createSubMenu("Menu 1.8");
+
+        menu1b->addItem(parent->createTriggerAction(commands::_1_8_1()));
+        menu1b->addItem(parent->createTriggerAction(commands::_1_8_2()));
+        menu1b->addItem(parent->createTriggerAction(commands::_1_8_3()));
+        menu1b->addItem(parent->createTriggerAction(commands::_1_8_4()));
+        menu1b->addItem(parent->createTriggerAction(commands::_1_8_5()));
+        menu1b->addItem(parent->createTriggerAction(commands::_1_8_6()));
+        menu1b->addItem(parent->createTriggerAction(commands::_1_8_7()));
+
+        menu2->addItem(parent->createTriggerAction(commands::_2_1()));
+        menu2->addItem(parent->createTriggerAction(commands::_2_2()));
+
+        menu3->addItem(parent->createTriggerAction(commands::_3_1()));
+    }
+
+    void registerTestPanels_() {
+        if (auto panelManager = importModule<ui::PanelManager>().lock()) {
+            panelManager->registerPanelType<Plot2dPanel>();
+            panelManager->registerPanelType<MiscTestsPanel>();
+            panelManager->registerPanelType<ImagesAndIconsPanel>();
+        }
     }
 };
 
