@@ -160,14 +160,29 @@ VGC_UI_DEFINE_WINDOW_COMMAND( //
 
 void PanelManager::updatePanelsMenu_() {
     if (auto panelsMenu = panelsMenu_.lock()) {
-        panelsMenu->clearItems();
-        for (ui::PanelTypeId id : registeredPanelTypeIds()) {
-            ui::Action* action = createTriggerAction(commands::openPanel());
-            action->triggered().connect(
-                [=]() { this->createPanelInstanceRequested().emit(id); });
-            action->setText(label(id));
-            panelsMenu->addItem(action);
+        for (PanelTypeId id : registeredPanelTypeIds()) {
+            detail::PanelTypeInfo& info = getInfo_(infos_, id);
+            if (!info.action_.isAlive()) {
+                info.action_ = createTriggerAction(commands::openPanel());
+                if (auto action = info.action_.lock()) {
+                    action->triggered().connect(
+                        [=]() { this->createPanelInstanceRequested().emit(id); });
+                    std::string_view text = info.label_;
+                    action->setText(text);
+                    Int index = 0;
+                    for (const MenuItem& otherItem : panelsMenu->items()) {
+                        if (Action* otherAction = otherItem.action()) {
+                            if (otherAction->text() > text) {
+                                break;
+                            }
+                        }
+                        ++index;
+                    }
+                    panelsMenu->addItemAt(index, action.get());
+                }
+            }
         }
     }
 }
+
 } // namespace vgc::ui
