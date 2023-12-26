@@ -205,8 +205,9 @@ public:
         return WidgetListView(children_);
     }
 
-    /// Creates a new widget of type `WidgetClass` constructed with
-    /// the given arguments `args`, and add it as a child of this widget.
+    /// Creates a new widget of type `WidgetClass` constructed with the given
+    /// arguments `args`, and inserts it as the last child of this widget.
+    ///
     /// Returns a pointer to the created widget.
     ///
     template<typename WidgetClass, typename... Args>
@@ -218,7 +219,7 @@ public:
     }
 
     /// Creates a new widget of type `WidgetClass` constructed with the given
-    /// arguments `args`, and insert it as a child of this widget before
+    /// arguments `args`, and inserts it as a child of this widget before
     /// `nextSibling`.
     ///
     /// Returns a pointer to the created widget.
@@ -232,8 +233,8 @@ public:
     }
 
     /// Creates a new widget of type `WidgetClass` constructed with the given
-    /// arguments `args`, and insert it as a child of this widget at the given
-    /// index.
+    /// arguments `args`, and inserts it as a child of this widget at the given
+    /// `index`.
     ///
     /// Returns a pointer to the created widget.
     ///
@@ -251,15 +252,17 @@ public:
         return children().length();
     }
 
-    /// Adds a child to this widget.
+    /// Inserts the given `child` as the last child of this widget.
     ///
     void addChild(Widget* child);
 
-    /// Adds the given `child` to this widget children before `nextSibling`.
+    /// Inserts the given `child` as a child of this widget before
+    /// `nextSibling`.
     ///
     void insertChild(Widget* nextSibling, Widget* child);
 
-    /// Adds the given `child` to this widget children at position `i`.
+    /// Inserts the given `child` as a child of this widget at the given
+    /// `index`.
     ///
     void insertChild(Int i, Widget* child);
 
