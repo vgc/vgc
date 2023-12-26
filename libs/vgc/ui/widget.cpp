@@ -93,6 +93,18 @@ bool checkCanReparent_(Widget* parent, Widget* child, bool simulate = false) {
 
 } // namespace
 
+Widget* Widget::childAt(Int index) const {
+    Int i = 0;
+    for (Widget* child : children()) {
+        if (i == index) {
+            return child;
+        }
+        ++i;
+    }
+    throw core::IndexError(core::format(
+        "No widget child at index={} (numChildren() = {}).", index, numChildren()));
+}
+
 void Widget::addChild(Widget* child) {
     insertChild(nullptr, child);
 }

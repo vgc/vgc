@@ -165,6 +165,14 @@ public:
         return children_ ? children_->last() : nullptr;
     }
 
+    /// Returns the child Widget of this Widget at the given index.
+    ///
+    /// Throws `IndexError` if there is no child at the given index.
+    ///
+    /// \sa `children()`, `numChildren()`.
+    ///
+    Widget* childAt(Int index) const;
+
     /// Returns the previous sibling of this Widget. Returns nullptr if this
     /// Widget is a root widget, or if it is the first child of its parent.
     ///
@@ -220,6 +228,20 @@ public:
         core::ObjPtr<WidgetClass> child =
             WidgetClass::create(std::forward<Args>(args)...);
         insertChild(nextSibling, child.get());
+        return child.get();
+    }
+
+    /// Creates a new widget of type `WidgetClass` constructed with the given
+    /// arguments `args`, and insert it as a child of this widget at the given
+    /// index.
+    ///
+    /// Returns a pointer to the created widget.
+    ///
+    template<typename WidgetClass, typename... Args>
+    WidgetClass* createChildAt(Int index, Args&&... args) {
+        core::ObjPtr<WidgetClass> child =
+            WidgetClass::create(std::forward<Args>(args)...);
+        insertChild(index, child.get());
         return child.get();
     }
 
