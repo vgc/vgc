@@ -60,6 +60,9 @@ struct PanelTypeInfo {
     PanelFactory factory_;
 
     core::Array<Panel*> instances_;
+
+    // The "open panel" action. It is owned by the PanelManager module.
+    ActionWeakPtr action_;
 };
 
 using PanelTypeInfoMap = std::unordered_map<PanelTypeId, detail::PanelTypeInfo>;
@@ -78,9 +81,9 @@ using PanelTypeInfoMap = std::unordered_map<PanelTypeId, detail::PanelTypeInfo>;
 /// - Remember the last location of closed panels to re-open them in a similar
 ///   location.
 ///
-class VGC_UI_API PanelManager : public ui::Module {
+class VGC_UI_API PanelManager : public Module {
 private:
-    VGC_OBJECT(PanelManager, ui::Module)
+    VGC_OBJECT(PanelManager, Module)
 
     PanelManager(CreateKey, const ui::ModuleContext& context);
 
@@ -154,7 +157,7 @@ public:
     //
     template<typename TPanel, typename... Args>
     TPanel* createPanelInstance_(PanelArea* parentArea, Args&&... args) {
-        ui::Widget* parentWidget = preCreatePanel_(parentArea);
+        Widget* parentWidget = preCreatePanel_(parentArea);
         if (!parentWidget) {
             return nullptr;
         }
@@ -195,7 +198,7 @@ private:
     Widget* preCreatePanel_(PanelArea* parentArea);
     void postCreatePanel_(PanelArea* parentArea, Panel* panel);
 
-    ui::MenuWeakPtr panelsMenu_;
+    MenuWeakPtr panelsMenu_;
     void createPanelsMenu_();
     void updatePanelsMenu_();
 };
