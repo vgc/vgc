@@ -104,32 +104,44 @@ void Menu::setTitle(std::string_view title) {
     notifyChanged(false);
 }
 
-void Menu::addSeparator() {
-    Widget* separator = createChild<Widget>();
+void Menu::addSeparatorAt(Int index) {
+    Widget* separator = createChildAt<Widget>(index);
     separator->addStyleClass(strings::separator);
-    items_.emplaceLast(MenuItem(separator));
+    items_.insert(index, MenuItem(separator));
     notifyChanged(true);
 }
 
-void Menu::addItem(Action* action) {
-    MenuButton* menuButton = createChild<MenuButton>(action);
-    items_.emplaceLast(MenuItem(action, menuButton));
-    onItemAdded_(items_.last());
+void Menu::addItemAt(Int index, Action* action) {
+    MenuButton* menuButton = createChildAt<MenuButton>(index, action);
+    items_.insert(index, MenuItem(action, menuButton));
+    onItemAdded_(items_[index]);
     notifyChanged(true);
 }
 
-void Menu::addItem(Menu* menu) {
+void Menu::addItemAt(Int index, Menu* menu) {
     Action* action = menu->menuAction();
-    MenuButton* menuButton = createChild<MenuButton>(action);
-    items_.emplaceLast(MenuItem(action, menuButton, menu));
-    onItemAdded_(items_.last());
+    MenuButton* menuButton = createChildAt<MenuButton>(index, action);
+    items_.insert(index, MenuItem(action, menuButton, menu));
+    onItemAdded_(items_[index]);
     notifyChanged(true);
 }
 
-Menu* Menu::createSubMenu(std::string_view title) {
+Menu* Menu::createSubMenuAt(Int index, std::string_view title) {
+
+    // Create the submenu widget itself, and add it as a hidden child widget of
+    // this menu, after all menu items.
+    //
+    // Note that because of these hidden child widgets (owned submenus), we can
+    // have numItems() < numChildren(), so it's important that addItem(item) is
+    // implemented as addItemAt(numItem(), item), not as
+    // addItemAt(numChildren(), item).
+    //
     Menu* menu = createChild<Menu>(title);
     menu->hide();
-    addItem(menu);
+
+    // Insert the "open submenu" item at the desired index.
+    //
+    addItemAt(index, menu);
     return menu;
 }
 

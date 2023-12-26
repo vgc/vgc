@@ -191,30 +191,64 @@ public:
     ///
     void setTitle(std::string_view title);
 
-    /// Adds a separator item to this menu. This can be used to create visual
-    /// grouping inside the menu.
+    /// Adds a separator item to this menu at the given `index`. This can be
+    /// used to create visual grouping inside the menu.
     ///
-    void addSeparator();
+    void addSeparatorAt(Int index);
 
-    /// Adds an action item to this menu.
+    /// Adds a separator item at the end of this menu. This can be used to
+    /// create visual grouping inside the menu.
     ///
-    void addItem(Action* action);
+    void addSeparator() {
+        addSeparatorAt(numItems());
+    }
 
-    /// Adds a menu item to this menu.
+    /// Adds an action item to this menu at the given `index`.
+    ///
+    void addItemAt(Int index, Action* action);
+
+    /// Adds an action item at the end of this menu.
+    ///
+    void addItem(Action* action) {
+        addItemAt(numItems(), action);
+    }
+
+    /// Adds a menu item to this menu at the given `index`.
     ///
     /// Note that the given `menu` does not become a child widget of this `menu`.
     ///
-    void addItem(Menu* menu);
+    void addItemAt(Int index, Menu* menu);
 
-    /// Creates a new `Menu` with the given `title`, set it as child widget of
-    /// this menu, and add it as a menu item to this menu.
+    /// Adds a menu item at the end of this menu.
     ///
-    Menu* createSubMenu(std::string_view title);
+    /// Note that the given `menu` does not become a child widget of this `menu`.
+    ///
+    void addItem(Menu* menu) {
+        addItemAt(numItems(), menu);
+    }
+
+    /// Creates a new `Menu` with the given `title`, sets it as child widget of
+    /// this menu, and adds it as a menu item of this menu at the given `index`.
+    ///
+    Menu* createSubMenuAt(Int index, std::string_view title);
+
+    /// Creates a new `Menu` with the given `title`, sets it as child widget of
+    /// this menu, and adds it as a menu item at the end of this menu.
+    ///
+    Menu* createSubMenu(std::string_view title) {
+        return createSubMenuAt(numItems(), title);
+    }
 
     /// Returns the list of `MenuItem` in this menu.
     ///
     const core::Array<MenuItem>& items() const {
         return items_;
+    }
+
+    /// Returns the number of items in this menu.
+    ///
+    Int numItems() const {
+        return items().length();
     }
 
     /// Removes all the items on this menu.
