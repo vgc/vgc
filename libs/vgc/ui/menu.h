@@ -227,12 +227,12 @@ public:
         addItemAt(numItems(), menu);
     }
 
-    /// Creates a new `Menu` with the given `title`, set it as child widget of
+    /// Creates a new `Menu` with the given `title`, sets it as child widget of
     /// this menu, and adds it as a menu item of this menu at the given `index`.
     ///
     Menu* createSubMenuAt(Int index, std::string_view title);
 
-    /// Creates a new `Menu` with the given `title`, set it as child widget of
+    /// Creates a new `Menu` with the given `title`, sets it as child widget of
     /// this menu, and adds it as a menu item at the end of this menu.
     ///
     Menu* createSubMenu(std::string_view title) {
