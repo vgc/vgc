@@ -165,9 +165,9 @@ public:
         return children_ ? children_->last() : nullptr;
     }
 
-    /// Returns the child Widget of this Widget at the given index.
+    /// Returns the child Widget of this Widget at the given `index`.
     ///
-    /// Throws `IndexError` if there is no child at the given index.
+    /// Throws `IndexError` if there is no child at the given `index`.
     ///
     /// \sa `children()`, `numChildren()`.
     ///
