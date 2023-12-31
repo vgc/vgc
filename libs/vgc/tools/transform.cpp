@@ -432,6 +432,9 @@ public:
         draggedOnce_ = false;
         undoGroup_ = nullptr;
         transformer_.clear();
+        if (box_) {
+            box_->requestRepaint();
+        }
     }
 
 public:
