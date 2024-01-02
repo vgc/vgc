@@ -2990,6 +2990,9 @@ Operations::subPath_(const KeyCycle& cycle, Int first, Int last, bool loopIfEmpt
     if (cycle.steinerVertex()) {
         return KeyPath(cycle.steinerVertex());
     }
+    Int n = cycle.halfedges_.length();
+    first = ((first % n) + n) % n;
+    last = ((last % n) + n) % n;
     if (first == last) {
         if (loopIfEmptyRange) {
             return rotatedCycleHalfedges_(cycle, first);
@@ -3000,9 +3003,6 @@ Operations::subPath_(const KeyCycle& cycle, Int first, Int last, bool loopIfEmpt
         }
     }
     else {
-        Int n = cycle.halfedges_.length();
-        first = ((first % n) + n) % n;
-        last = ((last % n) + n) % n;
         core::Array<KeyHalfedge> halfedges;
         for (Int i = first; i != last; i = (i + 1) % n) {
             halfedges.append(cycle.halfedges_[i]);
