@@ -16,8 +16,12 @@
 
 #include <vgc/tools/arrange.h>
 
+#include <algorithm> // min
+
 #include <vgc/canvas/canvas.h>
 #include <vgc/canvas/canvasmanager.h>
+#include <vgc/ui/menu.h>
+#include <vgc/ui/standardmenus.h>
 #include <vgc/workspace/workspace.h>
 
 namespace vgc::tools {
@@ -56,10 +60,26 @@ ArrangeModule::ArrangeModule(CreateKey key, const ui::ModuleContext& context)
 
     canvasManager_ = importModule<canvas::CanvasManager>();
 
-    ui::Action* bringForwardAction = createTriggerAction(commands::bringForward());
+    ui::MenuWeakPtr arrangeMenu_;
+    if (auto standardMenus = importModule<ui::StandardMenus>().lock()) {
+        if (auto menuBar = standardMenus->menuBar().lock()) {
+            Int index = std::min<Int>(2, menuBar->numItems());
+            arrangeMenu_ = menuBar->createSubMenuAt(index, "Arrange");
+        }
+    }
+
+    auto createAction = [this, arrangeMenu_](core::StringId commandName) {
+        ui::Action* action = this->createTriggerAction(commandName);
+        if (auto arrangeMenu = arrangeMenu_.lock()) {
+            arrangeMenu->addItem(action);
+        }
+        return action;
+    };
+
+    ui::Action* bringForwardAction = createAction(commands::bringForward());
     bringForwardAction->triggered().connect(onBringForward_Slot());
 
-    ui::Action* bringBackwardAction = createTriggerAction(commands::bringBackward());
+    ui::Action* bringBackwardAction = createAction(commands::bringBackward());
     bringBackwardAction->triggered().connect(onBringBackward_Slot());
 }
 
