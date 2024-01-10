@@ -52,7 +52,7 @@ VGC_UI_DEFINE_WINDOW_COMMAND( //
 VGC_UI_DEFINE_WINDOW_COMMAND(
     open, //
     "file.open",
-    "Open",
+    "Open...",
     Shortcut(ctrl, Key::O))
 
 VGC_UI_DEFINE_WINDOW_COMMAND( //
