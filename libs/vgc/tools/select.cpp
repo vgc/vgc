@@ -159,12 +159,6 @@ Select::Select(CreateKey key)
     options::showTransformBox()->valueChanged().connect(onShowTransformBoxChangedSlot_());
     onShowTransformBoxChanged_();
 
-    ui::Action* raiseAction = createTriggerAction(commands::raise());
-    raiseAction->triggered().connect(onRaiseSlot_());
-
-    ui::Action* lowerAction = createTriggerAction(commands::lower());
-    lowerAction->triggered().connect(onLowerSlot_());
-
     ui::Action* glueAction = createTriggerAction(commands::glue());
     glueAction->triggered().connect(onGlueSlot_());
 
@@ -1008,60 +1002,6 @@ void Select::updateTransformBoxElements_() {
         else {
             transformBox_->setElements({});
         }
-    }
-}
-
-void Select::onRaise_() {
-    canvas::Canvas* canvas = this->canvas();
-    if (!canvas) {
-        return;
-    }
-
-    workspace::Workspace* workspace = canvas->workspace();
-    if (!workspace) {
-        return;
-    }
-
-    // Open history group
-    core::UndoGroup* undoGroup = nullptr;
-    core::History* history = workspace->history();
-    if (history) {
-        undoGroup = history->createUndoGroup(commands::raise());
-    }
-
-    core::Array<core::Id> selection = canvas->selection();
-    workspace->raise(selection, canvas->currentTime());
-
-    // Close history group
-    if (undoGroup) {
-        undoGroup->close();
-    }
-}
-
-void Select::onLower_() {
-    canvas::Canvas* canvas = this->canvas();
-    if (!canvas) {
-        return;
-    }
-
-    workspace::Workspace* workspace = canvas->workspace();
-    if (!workspace) {
-        return;
-    }
-
-    // Open history group
-    core::UndoGroup* undoGroup = nullptr;
-    core::History* history = workspace->history();
-    if (history) {
-        undoGroup = history->createUndoGroup(commands::lower());
-    }
-
-    core::Array<core::Id> selection = canvas->selection();
-    workspace->lower(selection, canvas->currentTime());
-
-    // Close history group
-    if (undoGroup) {
-        undoGroup->close();
     }
 }
 
