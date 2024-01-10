@@ -25,6 +25,7 @@
 #include <vgc/canvas/documentmanager.h>
 #include <vgc/canvas/tooloptionspanel.h>
 #include <vgc/canvas/toolspanel.h>
+#include <vgc/tools/arrange.h>
 #include <vgc/tools/currentcolor.h>
 #include <vgc/tools/documentcolorpalette.h>
 #include <vgc/tools/paintbucket.h>
@@ -95,6 +96,9 @@ CanvasApplication::CanvasApplication(
 
     // Widget Inspector
     importModule<ui::Inspector>();
+
+    // Other modules
+    importModule<tools::ArrangeModule>();
 }
 
 CanvasApplicationPtr

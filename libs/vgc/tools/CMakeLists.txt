@@ -7,6 +7,7 @@ vgc_add_library(tools
 
     CPP_HEADER_FILES
         api.h
+        arrange.h
         colorpalette.h
         copypaste.h
         currentcolor.h
@@ -21,6 +22,7 @@ vgc_add_library(tools
         transform.h
 
     CPP_SOURCE_FILES
+        arrange.cpp
         colorpalette.cpp
         copypaste.cpp
         currentcolor.cpp

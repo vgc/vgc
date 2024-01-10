@@ -151,12 +151,6 @@ private:
 
     void updateTransformBoxElements_();
 
-    void onRaise_();
-    VGC_SLOT(onRaiseSlot_, onRaise_)
-
-    void onLower_();
-    VGC_SLOT(onLowerSlot_, onLower_)
-
     void onGlue_();
     VGC_SLOT(onGlueSlot_, onGlue_)
 
