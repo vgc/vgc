@@ -65,7 +65,7 @@ public:
     ///
     MenuWeakPtr fileMenu() {
         return fileMenu_;
-    };
+    }
 
     /// Returns the existing File menu, if any, otherwise creates it.
     ///
@@ -81,7 +81,7 @@ public:
     ///
     MenuWeakPtr editMenu() {
         return editMenu_;
-    };
+    }
 
     /// Returns the existing Edit menu, if any, otherwise creates it.
     ///
@@ -97,7 +97,7 @@ public:
     ///
     MenuWeakPtr viewMenu() {
         return editMenu_;
-    };
+    }
 
     /// Returns the existing View menu, if any, otherwise creates it.
     ///
