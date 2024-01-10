@@ -23,7 +23,7 @@ more features for now.
 
 - **CMake 3.12+**: We recommend the latest version of CMake.
 - **C++17**: We recommend Visual Studio 2019 on Windows, Clang 5+ on macOS, and GCC 7+ on Linux.
-- **Python 3.6+**: We recommend the latest Python 3.7.x version via the [official installer](https://www.python.org/downloads/).
+- **Python 3.6+**: We recommend the latest Python version via the [official installer](https://www.python.org/downloads/).
 - **Qt 5.15+**: We recommend Qt 5.15.2 via the [official installer](https://www.qt.io/download-qt-installer).
 - **FreeType 2+**: We recommend the latest version of FreeType.
 - **HarfBuzz 2+**: We recommend the latest version of HarfBuzz.
