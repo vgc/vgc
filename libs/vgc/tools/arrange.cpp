@@ -104,7 +104,7 @@ struct ArrangeContextLock {
     }
 
     explicit operator bool() const {
-        return static_cast<bool>(workspace);
+        return canvas && workspace;
     }
 
 private:
@@ -121,7 +121,7 @@ void ArrangeModule::onBringForward_() {
 }
 
 void ArrangeModule::onBringBackward_() {
-    if (auto context = ArrangeContextLock(canvasManager_, commands::bringForward())) {
+    if (auto context = ArrangeContextLock(canvasManager_, commands::bringBackward())) {
         core::Array<core::Id> selection = context.canvas->selection();
         context.workspace->lower(selection, context.canvas->currentTime());
     }
