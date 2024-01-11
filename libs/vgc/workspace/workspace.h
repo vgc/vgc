@@ -306,13 +306,15 @@ public:
         const std::function<bool(Element*, Int)>& preOrderFn,
         const std::function<void(Element*, Int)>& postOrderFn);
 
-    /// Performs a move above operation.
+    /// Moves the given elements (and potentially their boundary) towards the
+    /// top of the stacking order.
     ///
-    void raise(core::ConstSpan<core::Id> elementIds, core::AnimTime t);
+    void bringForward(core::ConstSpan<core::Id> elementIds, core::AnimTime t);
 
-    /// Performs a move under operation.
+    /// Moves the given elements (and potentially their boundary/star) towards
+    /// the bottom of the stacking order.
     ///
-    void lower(core::ConstSpan<core::Id> elementIds, core::AnimTime t);
+    void sendBackward(core::ConstSpan<core::Id> elementIds, core::AnimTime t);
 
     /// Performs a glue operation on the given elements.
     ///
