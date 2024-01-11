@@ -395,13 +395,20 @@ Cell* uncutAtKeyEdge(KeyEdge* ke);
 VGC_VACOMPLEX_API
 void moveToGroup(Node* node, Group* parentGroup, Node* nextSibling = nullptr);
 
+/// Moves the given `node` just below its boundary, that is, just below its
+/// bottom-most boundary node that belongs to the same group.
+///
 VGC_VACOMPLEX_API
 void moveBelowBoundary(Node* node);
 
 /// Moves the given `nodes` (and their boundary) above the bottom-most node
 /// (and its boundary) that is above all `nodes` and overlaps the `nodes`.
 ///
-/// The nodes must belong to the same group, otherwise `LogicError()` is thrown.
+/// If there are no nodes above that overlap the `nodes`, then they are moved
+/// to the top.
+///
+/// The `nodes` must all belong to the same group, otherwise `LogicError()` is
+/// thrown.
 ///
 VGC_VACOMPLEX_API
 void bringForward(core::ConstSpan<Node*> nodes, core::AnimTime t);
@@ -409,10 +416,30 @@ void bringForward(core::ConstSpan<Node*> nodes, core::AnimTime t);
 /// Moves the given `nodes` (and their star) below the top-most node (and its
 /// star) that is below all `nodes` and overlaps at least one of the `nodes`.
 ///
-/// The nodes must belong to the same group, otherwise `LogicError()` is thrown.
+/// If there are no nodes below that overlap the `nodes`, then they are moved
+/// to the bottom.
+///
+/// The `nodes` must all belong to the same group, otherwise `LogicError()` is
+/// thrown.
 ///
 VGC_VACOMPLEX_API
 void sendBackward(core::ConstSpan<Node*> nodes, core::AnimTime t);
+
+/// Moves the given `nodes` (and their boundary) to the top of their group.
+///
+/// The `nodes` must all belong to the same group, otherwise `LogicError()` is
+/// thrown.
+///
+VGC_VACOMPLEX_API
+void bringToFront(core::ConstSpan<Node*> nodes, core::AnimTime t);
+
+/// Moves the given `nodes` (and their star) to the bottom of their group.
+///
+/// The `nodes` must all belong to the same group, otherwise `LogicError()` is
+/// thrown.
+///
+VGC_VACOMPLEX_API
+void sendToBack(core::ConstSpan<Node*> nodes, core::AnimTime t);
 
 // TODO: move to `keyVertex->data().setPosition()`, similarly to
 // `keyEdge->data().setStroke()`.

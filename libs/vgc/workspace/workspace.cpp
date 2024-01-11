@@ -382,6 +382,16 @@ void Workspace::sendBackward(core::ConstSpan<core::Id> elementIds, core::AnimTim
     doArrange_(this, opName, &vacomplex::ops::sendBackward, elementIds, t);
 }
 
+void Workspace::bringToFront(core::ConstSpan<core::Id> elementIds, core::AnimTime t) {
+    static core::StringId opName("workspace.bringToFront");
+    doArrange_(this, opName, &vacomplex::ops::bringToFront, elementIds, t);
+}
+
+void Workspace::sendToBack(core::ConstSpan<core::Id> elementIds, core::AnimTime t) {
+    static core::StringId opName("workspace.sendToBack");
+    doArrange_(this, opName, &vacomplex::ops::sendToBack, elementIds, t);
+}
+
 core::Id Workspace::glue(core::ConstSpan<core::Id> elementIds) {
     core::Id resultId = -1;
 
