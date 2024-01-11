@@ -40,8 +40,8 @@ VGC_UI_DEFINE_WINDOW_COMMAND( //
 
 VGC_UI_DEFINE_WINDOW_COMMAND( //
     bringBackward,
-    "tools.arrange.bringBackward",
-    "Bring Backward",
+    "tools.arrange.sendBackward",
+    "Send Backward",
     Shortcut(ctrl, Key::LeftSquareBracket));
 
 namespace {
@@ -136,14 +136,14 @@ private:
 void ArrangeModule::onBringForward_() {
     if (auto context = ArrangeContextLock(canvasManager_, commands::bringForward())) {
         core::Array<core::Id> selection = context.canvas->selection();
-        context.workspace->raise(selection, context.canvas->currentTime());
+        context.workspace->bringForward(selection, context.canvas->currentTime());
     }
 }
 
 void ArrangeModule::onBringBackward_() {
     if (auto context = ArrangeContextLock(canvasManager_, commands::bringBackward())) {
         core::Array<core::Id> selection = context.canvas->selection();
-        context.workspace->lower(selection, context.canvas->currentTime());
+        context.workspace->sendBackward(selection, context.canvas->currentTime());
     }
 }
 

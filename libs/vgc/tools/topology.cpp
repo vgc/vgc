@@ -54,25 +54,4 @@ VGC_UI_DEFINE_TRIGGER_COMMAND( //
     "Simplify",
     Shortcut(alt, Key::S));
 
-VGC_UI_DEFINE_TRIGGER_COMMAND( //
-    raise,
-    "tools.zOrder.raise",
-    "Raise",
-    Shortcut(ctrl, Key::RightSquareBracket));
-
-VGC_UI_DEFINE_TRIGGER_COMMAND( //
-    lower,
-    "tools.zOrder.lower",
-    "Lower",
-    Shortcut(ctrl, Key::LeftSquareBracket));
-
-namespace {
-
-// Secondary shortcuts for raise/lower
-//
-VGC_UI_ADD_DEFAULT_SHORTCUT(raise(), Shortcut(Key::PageUp))
-VGC_UI_ADD_DEFAULT_SHORTCUT(lower(), Shortcut(Key::PageDown))
-
-} // namespace
-
 } // namespace vgc::tools::commands

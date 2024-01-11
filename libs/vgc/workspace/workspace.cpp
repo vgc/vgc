@@ -318,7 +318,7 @@ void Workspace::visitDepthFirst(
     workspace::visitDfs<Element>(vgcElement(), preOrderFn, postOrderFn);
 }
 
-void Workspace::raise(core::ConstSpan<core::Id> elementIds, core::AnimTime t) {
+void Workspace::bringForward(core::ConstSpan<core::Id> elementIds, core::AnimTime t) {
 
     std::map<Layer*, core::Array<Element*>> byLayer;
 
@@ -336,7 +336,7 @@ void Workspace::raise(core::ConstSpan<core::Id> elementIds, core::AnimTime t) {
     }
 
     // Open history group
-    static core::StringId opName("workspace.raise");
+    static core::StringId opName("workspace.bringForward");
     detail::ScopedUndoGroup undoGroup = createScopedUndoGroup(opName);
 
     for (const auto& it : byLayer) {
@@ -350,13 +350,13 @@ void Workspace::raise(core::ConstSpan<core::Id> elementIds, core::AnimTime t) {
                 }
             }
         }
-        vacomplex::ops::raise(layerNodes, t);
+        vacomplex::ops::bringForward(layerNodes, t);
     }
 
     sync();
 }
 
-void Workspace::lower(core::ConstSpan<core::Id> elementIds, core::AnimTime t) {
+void Workspace::sendBackward(core::ConstSpan<core::Id> elementIds, core::AnimTime t) {
 
     std::map<Layer*, core::Array<Element*>> byLayer;
 
@@ -374,7 +374,7 @@ void Workspace::lower(core::ConstSpan<core::Id> elementIds, core::AnimTime t) {
     }
 
     // Open history group
-    static core::StringId opName("workspace.lower");
+    static core::StringId opName("workspace.sendBackward");
     detail::ScopedUndoGroup undoGroup = createScopedUndoGroup(opName);
 
     for (const auto& it : byLayer) {
@@ -388,7 +388,7 @@ void Workspace::lower(core::ConstSpan<core::Id> elementIds, core::AnimTime t) {
                 }
             }
         }
-        vacomplex::ops::lower(layerNodes, t);
+        vacomplex::ops::sendBackward(layerNodes, t);
     }
 
     sync();

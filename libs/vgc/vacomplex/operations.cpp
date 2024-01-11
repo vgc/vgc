@@ -723,14 +723,14 @@ void arrayDifferenceWith(core::Array<T>& dst, const Range& src) {
     }
 }
 
-Group* checkRaiseLowerPreConditions(core::ConstSpan<Node*> targets) {
+Group* checkReorderPreConditions(core::ConstSpan<Node*> targets) {
 
     if (targets.isEmpty()) {
         return nullptr;
     }
 
     if (targets.contains(nullptr)) {
-        throw LogicError("Cannot raise/lower nodes: one of nodes is null.");
+        throw LogicError("Cannot perform reordering operation: one of nodes is null.");
     }
 
     Node* node0 = targets.first();
@@ -738,11 +738,11 @@ Group* checkRaiseLowerPreConditions(core::ConstSpan<Node*> targets) {
     Complex* complex0 = node0->complex();
     for (Node* node : targets.subspan(1)) {
         if (node->complex() != complex0) {
-            throw LogicError("Cannot raise/lower nodes: One of the nodes is "
+            throw LogicError("Cannot perform reordering operation: One of the nodes is "
                              "from a different complex than the others.");
         }
         if (node->parentGroup() != group0) {
-            throw LogicError("Cannot raise/lower nodes: One of the nodes is "
+            throw LogicError("Cannot perform reordering operation: One of the nodes is "
                              "from a different group than the others.");
         }
     }
@@ -783,11 +783,11 @@ bool overlapsWith(
 } // namespace
 
 // Assumes same group
-void raise(core::ConstSpan<Node*> targets, core::AnimTime t) {
+void bringForward(core::ConstSpan<Node*> targets, core::AnimTime t) {
 
     // Check pre-condition and get group that contains all target nodes.
     //
-    Group* group = checkRaiseLowerPreConditions(targets);
+    Group* group = checkReorderPreConditions(targets);
     if (!group) {
         return;
     }
@@ -881,11 +881,11 @@ void raise(core::ConstSpan<Node*> targets, core::AnimTime t) {
     }
 }
 
-void lower(core::ConstSpan<Node*> targets, core::AnimTime t) {
+void sendBackward(core::ConstSpan<Node*> targets, core::AnimTime t) {
 
     // Check pre-condition and get group that contains all target nodes.
     //
-    Group* group = checkRaiseLowerPreConditions(targets);
+    Group* group = checkReorderPreConditions(targets);
     if (!group) {
         return;
     }

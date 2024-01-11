@@ -398,21 +398,21 @@ void moveToGroup(Node* node, Group* parentGroup, Node* nextSibling = nullptr);
 VGC_VACOMPLEX_API
 void moveBelowBoundary(Node* node);
 
-/// Raises the given `nodes` (and their boundary) above the bottom-most node
+/// Moves the given `nodes` (and their boundary) above the bottom-most node
 /// (and its boundary) that is above all `nodes` and overlaps the `nodes`.
 ///
 /// The nodes must belong to the same group, otherwise `LogicError()` is thrown.
 ///
 VGC_VACOMPLEX_API
-void raise(core::ConstSpan<Node*> nodes, core::AnimTime t);
+void bringForward(core::ConstSpan<Node*> nodes, core::AnimTime t);
 
-/// Lowers the given `nodes` (and their star) below the top-most node (and its
+/// Moves the given `nodes` (and their star) below the top-most node (and its
 /// star) that is below all `nodes` and overlaps at least one of the `nodes`.
 ///
 /// The nodes must belong to the same group, otherwise `LogicError()` is thrown.
 ///
 VGC_VACOMPLEX_API
-void lower(core::ConstSpan<Node*> nodes, core::AnimTime t);
+void sendBackward(core::ConstSpan<Node*> nodes, core::AnimTime t);
 
 // TODO: move to `keyVertex->data().setPosition()`, similarly to
 // `keyEdge->data().setStroke()`.
