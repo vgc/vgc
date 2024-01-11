@@ -39,7 +39,7 @@ VGC_UI_DEFINE_WINDOW_COMMAND( //
     Shortcut(ctrl, Key::RightSquareBracket));
 
 VGC_UI_DEFINE_WINDOW_COMMAND( //
-    bringBackward,
+    sendBackward,
     "tools.arrange.sendBackward",
     "Send Backward",
     Shortcut(ctrl, Key::LeftSquareBracket));
@@ -49,7 +49,7 @@ namespace {
 // Secondary shortcuts for bring forward/backward
 //
 VGC_UI_ADD_DEFAULT_SHORTCUT(bringForward(), Shortcut(Key::PageUp))
-VGC_UI_ADD_DEFAULT_SHORTCUT(bringBackward(), Shortcut(Key::PageDown))
+VGC_UI_ADD_DEFAULT_SHORTCUT(sendBackward(), Shortcut(Key::PageDown))
 
 } // namespace
 
@@ -79,8 +79,8 @@ ArrangeModule::ArrangeModule(CreateKey key, const ui::ModuleContext& context)
     ui::Action* bringForwardAction = createAction(commands::bringForward());
     bringForwardAction->triggered().connect(onBringForward_Slot());
 
-    ui::Action* bringBackwardAction = createAction(commands::bringBackward());
-    bringBackwardAction->triggered().connect(onBringBackward_Slot());
+    ui::Action* sendBackwardAction = createAction(commands::sendBackward());
+    sendBackwardAction->triggered().connect(onSendBackward_Slot());
 }
 
 ArrangeModulePtr ArrangeModule::create(const ui::ModuleContext& context) {
@@ -163,8 +163,8 @@ void ArrangeModule::onBringForward_() {
     }
 }
 
-void ArrangeModule::onBringBackward_() {
-    if (auto context = ArrangeContextLock(canvasManager_, commands::bringBackward())) {
+void ArrangeModule::onSendBackward_() {
+    if (auto context = ArrangeContextLock(canvasManager_, commands::sendBackward())) {
         context.workspace()->sendBackward(context.selection(), context.time());
     }
 }

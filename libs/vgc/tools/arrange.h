@@ -31,7 +31,7 @@ VGC_TOOLS_API
 VGC_UI_DECLARE_COMMAND(bringForward)
 
 VGC_TOOLS_API
-VGC_UI_DECLARE_COMMAND(bringBackward)
+VGC_UI_DECLARE_COMMAND(sendBackward)
 
 } // namespace commands
 
@@ -58,8 +58,8 @@ private:
     void onBringForward_();
     VGC_SLOT(onBringForward_)
 
-    void onBringBackward_();
-    VGC_SLOT(onBringBackward_)
+    void onSendBackward_();
+    VGC_SLOT(onSendBackward_)
 };
 
 } // namespace vgc::tools
