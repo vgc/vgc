@@ -40,9 +40,8 @@ namespace detail {
 struct VacElementLists;
 
 class ScopedUndoGroup {
-private:
-    friend Workspace;
-    core::UndoGroup* undoGroup_;
+public:
+    ScopedUndoGroup() = default;
 
     explicit ScopedUndoGroup(core::UndoGroup* undoGroup)
         : undoGroup_(undoGroup) {
@@ -66,11 +65,17 @@ private:
     }
 
     ~ScopedUndoGroup() {
-        if (undoGroup_) {
-            undoGroup_->close();
+        if (auto undoGroup = undoGroup_.lock()) {
+            undoGroup->close();
         }
     }
+
+private:
+    core::UndoGroupWeakPtr undoGroup_;
 };
+
+VGC_WORKSPACE_API
+ScopedUndoGroup createScopedUndoGroup(Workspace* workspace, core::StringId name);
 
 } // namespace detail
 
@@ -439,7 +444,9 @@ private:
     dom::DocumentPtr document_;
     vacomplex::ComplexPtr vac_;
 
-    detail::ScopedUndoGroup createScopedUndoGroup(core::StringId name);
+    detail::ScopedUndoGroup createScopedUndoGroup_(core::StringId name) {
+        return detail::createScopedUndoGroup(this, name);
+    }
 
     void debugPrintWorkspaceTree_();
 

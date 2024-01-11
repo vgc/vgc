@@ -44,6 +44,15 @@ struct VacElementLists {
     core::Array<Element*> inbetweenFaces;
 };
 
+ScopedUndoGroup createScopedUndoGroup(Workspace* workspace, core::StringId name) {
+    core::UndoGroup* undoGroup = nullptr;
+    core::History* history = workspace->history();
+    if (history) {
+        undoGroup = history->createUndoGroup(name);
+    }
+    return detail::ScopedUndoGroup(undoGroup);
+}
+
 } // namespace detail
 
 namespace {
@@ -318,12 +327,19 @@ void Workspace::visitDepthFirst(
     workspace::visitDfs<Element>(vgcElement(), preOrderFn, postOrderFn);
 }
 
-void Workspace::bringForward(core::ConstSpan<core::Id> elementIds, core::AnimTime t) {
+namespace {
+
+template<typename Fn, typename... Args>
+void doArrange_(
+    Workspace* workspace,
+    core::StringId opName,
+    Fn fn,
+    core::ConstSpan<core::Id> elementIds,
+    Args&&... args) {
 
     std::map<Layer*, core::Array<Element*>> byLayer;
-
     for (core::Id id : elementIds) {
-        Element* item = find(id);
+        Element* item = workspace->find(id);
         if (!item) {
             continue;
         }
@@ -335,9 +351,7 @@ void Workspace::bringForward(core::ConstSpan<core::Id> elementIds, core::AnimTim
         }
     }
 
-    // Open history group
-    static core::StringId opName("workspace.bringForward");
-    detail::ScopedUndoGroup undoGroup = createScopedUndoGroup(opName);
+    auto undoGroup = detail::createScopedUndoGroup(workspace, opName);
 
     for (const auto& it : byLayer) {
         const core::Array<Element*>& layerItems = it.second;
@@ -350,48 +364,22 @@ void Workspace::bringForward(core::ConstSpan<core::Id> elementIds, core::AnimTim
                 }
             }
         }
-        vacomplex::ops::bringForward(layerNodes, t);
+        fn(layerNodes, args...);
     }
 
-    sync();
+    workspace->sync();
+}
+
+} // namespace
+
+void Workspace::bringForward(core::ConstSpan<core::Id> elementIds, core::AnimTime t) {
+    static core::StringId opName("workspace.bringForward");
+    doArrange_(this, opName, &vacomplex::ops::bringForward, elementIds, t);
 }
 
 void Workspace::sendBackward(core::ConstSpan<core::Id> elementIds, core::AnimTime t) {
-
-    std::map<Layer*, core::Array<Element*>> byLayer;
-
-    for (core::Id id : elementIds) {
-        Element* item = find(id);
-        if (!item) {
-            continue;
-        }
-        Element* parent = item->parent();
-        Layer* layer = dynamic_cast<Layer*>(parent);
-        core::Array<Element*>& layerItems = byLayer[layer];
-        if (!layerItems.contains(item)) {
-            layerItems.append(item);
-        }
-    }
-
-    // Open history group
     static core::StringId opName("workspace.sendBackward");
-    detail::ScopedUndoGroup undoGroup = createScopedUndoGroup(opName);
-
-    for (const auto& it : byLayer) {
-        const core::Array<Element*>& layerItems = it.second;
-        core::Array<vacomplex::Node*> layerNodes;
-        for (Element* item : layerItems) {
-            if (VacElement* vacItem = item->toVacElement()) {
-                vacomplex::Node* node = vacItem->vacNode();
-                if (node && !layerNodes.contains(node)) {
-                    layerNodes.append(node);
-                }
-            }
-        }
-        vacomplex::ops::sendBackward(layerNodes, t);
-    }
-
-    sync();
+    doArrange_(this, opName, &vacomplex::ops::sendBackward, elementIds, t);
 }
 
 core::Id Workspace::glue(core::ConstSpan<core::Id> elementIds) {
@@ -399,7 +387,7 @@ core::Id Workspace::glue(core::ConstSpan<core::Id> elementIds) {
 
     // Open history group
     static core::StringId opName("workspace.glue");
-    detail::ScopedUndoGroup undoGroup = createScopedUndoGroup(opName);
+    detail::ScopedUndoGroup undoGroup = createScopedUndoGroup_(opName);
 
     core::Array<vacomplex::KeyVertex*> kvs;
     core::Array<vacomplex::KeyEdge*> openKes;
@@ -510,7 +498,7 @@ core::Array<core::Id> Workspace::unglue(core::ConstSpan<core::Id> elementIds) {
 
     // Open history group
     static core::StringId opName("workspace.unglue");
-    detail::ScopedUndoGroup undoGroup = createScopedUndoGroup(opName);
+    detail::ScopedUndoGroup undoGroup = createScopedUndoGroup_(opName);
 
     for (vacomplex::KeyEdge* targetKe : kes) {
 
@@ -597,7 +585,7 @@ bool Workspace::cutGlueFace(core::ConstSpan<core::Id> elementIds) {
 
     // Open history group
     static core::StringId opName("workspace.cutGlueFace");
-    detail::ScopedUndoGroup undoGroup = createScopedUndoGroup(opName);
+    detail::ScopedUndoGroup undoGroup = createScopedUndoGroup_(opName);
 
     auto result = vacomplex::ops::cutGlueFace(targetKf, targetKe);
     bool success = result.edge() != nullptr;
@@ -643,7 +631,7 @@ Workspace::simplify(core::ConstSpan<core::Id> elementIds, bool smoothJoins) {
 
     // Open history group
     static core::StringId opName("workspace.simplify");
-    detail::ScopedUndoGroup undoGroup = createScopedUndoGroup(opName);
+    detail::ScopedUndoGroup undoGroup = createScopedUndoGroup_(opName);
 
     auto appendToResult = [&](vacomplex::Node* node) {
         Element* e = this->findVacElement(node);
@@ -916,15 +904,6 @@ void Workspace::fillVacElementListsUsingTagName_(
 
         iterDfsPreOrder(e, depth, root, skipChildren);
     }
-}
-
-detail::ScopedUndoGroup Workspace::createScopedUndoGroup(core::StringId name) {
-    core::UndoGroup* undoGroup = nullptr;
-    core::History* history = this->history();
-    if (history) {
-        undoGroup = history->createUndoGroup(name);
-    }
-    return detail::ScopedUndoGroup(undoGroup);
 }
 
 namespace {
