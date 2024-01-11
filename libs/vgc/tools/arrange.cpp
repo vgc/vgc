@@ -39,7 +39,7 @@ VGC_UI_DEFINE_WINDOW_COMMAND( //
     Shortcut(ctrl, Key::RightSquareBracket));
 
 VGC_UI_DEFINE_WINDOW_COMMAND( //
-    bringBackward,
+    sendBackward,
     "tools.arrange.sendBackward",
     "Send Backward",
     Shortcut(ctrl, Key::LeftSquareBracket));
@@ -49,7 +49,7 @@ namespace {
 // Secondary shortcuts for bring forward/backward
 //
 VGC_UI_ADD_DEFAULT_SHORTCUT(bringForward(), Shortcut(Key::PageUp))
-VGC_UI_ADD_DEFAULT_SHORTCUT(bringBackward(), Shortcut(Key::PageDown))
+VGC_UI_ADD_DEFAULT_SHORTCUT(sendBackward(), Shortcut(Key::PageDown))
 
 } // namespace
 
@@ -79,8 +79,8 @@ ArrangeModule::ArrangeModule(CreateKey key, const ui::ModuleContext& context)
     ui::Action* bringForwardAction = createAction(commands::bringForward());
     bringForwardAction->triggered().connect(onBringForward_Slot());
 
-    ui::Action* bringBackwardAction = createAction(commands::bringBackward());
-    bringBackwardAction->triggered().connect(onBringBackward_Slot());
+    ui::Action* sendBackwardAction = createAction(commands::sendBackward());
+    sendBackwardAction->triggered().connect(onSendBackward_Slot());
 }
 
 ArrangeModulePtr ArrangeModule::create(const ui::ModuleContext& context) {
@@ -89,28 +89,30 @@ ArrangeModulePtr ArrangeModule::create(const ui::ModuleContext& context) {
 
 namespace {
 
-struct ArrangeContextLock {
-    canvas::CanvasLockPtr canvas;
-    workspace::WorkspaceLockPtr workspace;
-
+class ArrangeContextLock {
+public:
     ArrangeContextLock(
         canvas::CanvasManagerWeakPtr canvasManager_,
         core::StringId commandName) {
 
-        // Get canvas and workspace lock
+        // Get canvas and workspace lock, then init if locks acquired
         if (auto canvasManager = canvasManager_.lock()) {
-            canvas = canvasManager->activeCanvas().lock();
-            if (canvas) {
-                workspace::WorkspaceWeakPtr workspace_ = canvas->workspace();
-                workspace = workspace_.lock();
-            }
-        }
+            canvas_ = canvasManager->activeCanvas().lock();
+            if (canvas_) {
+                workspace::WorkspaceWeakPtr workspaceWeak = canvas_->workspace();
+                workspace_ = workspaceWeak.lock();
+                if (workspace_) {
 
-        // Open history group
-        if (workspace) {
-            core::History* history = workspace->history();
-            if (history) {
-                undoGroup_ = history->createUndoGroup(commandName);
+                    // Open history group
+                    core::History* history = workspace_->history();
+                    if (history) {
+                        undoGroup_ = history->createUndoGroup(commandName);
+                    }
+
+                    // Get required data
+                    selection_ = canvas_->selection();
+                    time_ = canvas_->currentTime();
+                }
             }
         }
     }
@@ -124,10 +126,32 @@ struct ArrangeContextLock {
     }
 
     explicit operator bool() const {
-        return canvas && workspace;
+        return static_cast<bool>(workspace_); // implies canvas_ also true
+    }
+
+    canvas::Canvas* canvas() const {
+        return canvas_.get();
+    }
+
+    workspace::Workspace* workspace() const {
+        return workspace_.get();
+    }
+
+    const core::Array<core::Id>& selection() const {
+        return selection_;
+    }
+
+    core::AnimTime time() const {
+        return time_;
     }
 
 private:
+    canvas::CanvasLockPtr canvas_;
+    workspace::WorkspaceLockPtr workspace_;
+
+    core::Array<core::Id> selection_;
+    core::AnimTime time_;
+
     core::UndoGroupWeakPtr undoGroup_;
 };
 
@@ -135,15 +159,13 @@ private:
 
 void ArrangeModule::onBringForward_() {
     if (auto context = ArrangeContextLock(canvasManager_, commands::bringForward())) {
-        core::Array<core::Id> selection = context.canvas->selection();
-        context.workspace->bringForward(selection, context.canvas->currentTime());
+        context.workspace()->bringForward(context.selection(), context.time());
     }
 }
 
-void ArrangeModule::onBringBackward_() {
-    if (auto context = ArrangeContextLock(canvasManager_, commands::bringBackward())) {
-        core::Array<core::Id> selection = context.canvas->selection();
-        context.workspace->sendBackward(selection, context.canvas->currentTime());
+void ArrangeModule::onSendBackward_() {
+    if (auto context = ArrangeContextLock(canvasManager_, commands::sendBackward())) {
+        context.workspace()->sendBackward(context.selection(), context.time());
     }
 }
 
