@@ -31,6 +31,7 @@ namespace commands {
 using ui::Key;
 using ui::Shortcut;
 using ui::modifierkeys::ctrl;
+using ui::modifierkeys::shift;
 
 VGC_UI_DEFINE_WINDOW_COMMAND( //
     bringForward,
@@ -44,12 +45,26 @@ VGC_UI_DEFINE_WINDOW_COMMAND( //
     "Send Backward",
     Shortcut(ctrl, Key::LeftSquareBracket));
 
+VGC_UI_DEFINE_WINDOW_COMMAND( //
+    bringToFront,
+    "tools.arrange.bringToFront",
+    "Bring to Front",
+    Shortcut(ctrl | shift, Key::RightSquareBracket));
+
+VGC_UI_DEFINE_WINDOW_COMMAND( //
+    sendToBack,
+    "tools.arrange.sendToBack",
+    "Send to Back",
+    Shortcut(ctrl | shift, Key::LeftSquareBracket));
+
 namespace {
 
 // Secondary shortcuts for bring forward/backward
 //
 VGC_UI_ADD_DEFAULT_SHORTCUT(bringForward(), Shortcut(Key::PageUp))
 VGC_UI_ADD_DEFAULT_SHORTCUT(sendBackward(), Shortcut(Key::PageDown))
+VGC_UI_ADD_DEFAULT_SHORTCUT(bringToFront(), Shortcut(ctrl, Key::PageUp))
+VGC_UI_ADD_DEFAULT_SHORTCUT(sendToBack(), Shortcut(ctrl, Key::PageDown))
 
 } // namespace
 
@@ -76,11 +91,17 @@ ArrangeModule::ArrangeModule(CreateKey key, const ui::ModuleContext& context)
         return action;
     };
 
+    ui::Action* bringToFrontAction = createAction(commands::bringToFront());
+    bringToFrontAction->triggered().connect(onBringToFront_Slot());
+
     ui::Action* bringForwardAction = createAction(commands::bringForward());
     bringForwardAction->triggered().connect(onBringForward_Slot());
 
     ui::Action* sendBackwardAction = createAction(commands::sendBackward());
     sendBackwardAction->triggered().connect(onSendBackward_Slot());
+
+    ui::Action* sendToBack = createAction(commands::sendToBack());
+    sendToBack->triggered().connect(onSendToBack_Slot());
 }
 
 ArrangeModulePtr ArrangeModule::create(const ui::ModuleContext& context) {
@@ -166,6 +187,18 @@ void ArrangeModule::onBringForward_() {
 void ArrangeModule::onSendBackward_() {
     if (auto context = ArrangeContextLock(canvasManager_, commands::sendBackward())) {
         context.workspace()->sendBackward(context.selection(), context.time());
+    }
+}
+
+void ArrangeModule::onBringToFront_() {
+    if (auto context = ArrangeContextLock(canvasManager_, commands::bringToFront())) {
+        context.workspace()->bringToFront(context.selection(), context.time());
+    }
+}
+
+void ArrangeModule::onSendToBack_() {
+    if (auto context = ArrangeContextLock(canvasManager_, commands::sendBackward())) {
+        context.workspace()->sendToBack(context.selection(), context.time());
     }
 }
 

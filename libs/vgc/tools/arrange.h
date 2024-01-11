@@ -33,6 +33,12 @@ VGC_UI_DECLARE_COMMAND(bringForward)
 VGC_TOOLS_API
 VGC_UI_DECLARE_COMMAND(sendBackward)
 
+VGC_TOOLS_API
+VGC_UI_DECLARE_COMMAND(bringToFront)
+
+VGC_TOOLS_API
+VGC_UI_DECLARE_COMMAND(sendToBack)
+
 } // namespace commands
 
 VGC_DECLARE_OBJECT(ArrangeModule);
@@ -60,6 +66,12 @@ private:
 
     void onSendBackward_();
     VGC_SLOT(onSendBackward_)
+
+    void onBringToFront_();
+    VGC_SLOT(onBringToFront_)
+
+    void onSendToBack_();
+    VGC_SLOT(onSendToBack_)
 };
 
 } // namespace vgc::tools

@@ -747,6 +747,11 @@ Group* checkReorderPreConditions(core::ConstSpan<Node*> targets) {
         }
     }
 
+    if (!group0) {
+        throw LogicError(
+            "Cannot perform reordering operation: they do not have a parent group.");
+    }
+
     return group0;
 }
 
@@ -780,17 +785,11 @@ bool overlapsWith(
     return false;
 }
 
-} // namespace
-
-// Assumes same group
-void bringForward(core::ConstSpan<Node*> targets, core::AnimTime t) {
-
-    // Check pre-condition and get group that contains all target nodes.
-    //
-    Group* group = checkReorderPreConditions(targets);
-    if (!group) {
-        return;
-    }
+void bringForward_(
+    Group* group,
+    core::ConstSpan<Node*> targets,
+    core::AnimTime t,
+    Node* destinationNode = nullptr) {
 
     // Compute bounding boxes of target nodes.
     //
@@ -816,6 +815,12 @@ void bringForward(core::ConstSpan<Node*> targets, core::AnimTime t) {
             collected.append(node);
             if (Cell* cell = node->toCell()) {
                 arrayUniteWith(collectedBoundary, cell->boundary());
+                // XXX Why do we only do this for visible targets?
+                //
+                // I think the idea was that "non-visible" in general means
+                // "defined at another time". So it makes sense not to use them
+                // as part of the targetBBoxes. But we probably still want to
+                // collect their boundary?
             }
         }
         else if (collectedBoundary.contains(node)) {
@@ -835,26 +840,30 @@ void bringForward(core::ConstSpan<Node*> targets, core::AnimTime t) {
     //   top-most node in the closure of the overlapping node, excluding the
     //   collected boundary.
     //
-    Node* destinationNode = nullptr;
-    while (node) {
-        if (collectedBoundary.contains(node)) {
-            collected.append(node);
-        }
-        else {
-            if (overlapsWith(targetBboxes, node, t)) {
-                destinationNode = node;
-                if (Cell* cell = node->toCell()) {
-                    core::Array<Node*> cellBoundary(cell->boundary());
-                    arrayDifferenceWith(cellBoundary, collectedBoundary);
-                    Node* topMost = topMostInGroupAbove(node, cellBoundary);
-                    if (topMost) {
-                        destinationNode = topMost;
-                    }
-                }
-                break;
+    // This step is entirely skipped if the destination node is explicitly
+    // provided as an argument to this helper method.
+    //
+    if (!destinationNode) {
+        while (node) {
+            if (collectedBoundary.contains(node)) {
+                collected.append(node);
             }
+            else {
+                if (overlapsWith(targetBboxes, node, t)) {
+                    destinationNode = node;
+                    if (Cell* cell = node->toCell()) {
+                        core::Array<Node*> cellBoundary(cell->boundary());
+                        arrayDifferenceWith(cellBoundary, collectedBoundary);
+                        Node* topMost = topMostInGroupAbove(node, cellBoundary);
+                        if (topMost) {
+                            destinationNode = topMost;
+                        }
+                    }
+                    break;
+                }
+            }
+            node = node->nextSibling();
         }
-        node = node->nextSibling();
     }
 
     // Continue iterating and collecting the boundary of target nodes until we
@@ -881,14 +890,11 @@ void bringForward(core::ConstSpan<Node*> targets, core::AnimTime t) {
     }
 }
 
-void sendBackward(core::ConstSpan<Node*> targets, core::AnimTime t) {
-
-    // Check pre-condition and get group that contains all target nodes.
-    //
-    Group* group = checkReorderPreConditions(targets);
-    if (!group) {
-        return;
-    }
+void sendBackward_(
+    Group* group,
+    core::ConstSpan<Node*> targets,
+    core::AnimTime t,
+    Node* destinationNode = nullptr) {
 
     // Compute bounding boxes of target nodes.
     //
@@ -910,6 +916,8 @@ void sendBackward(core::ConstSpan<Node*> targets, core::AnimTime t) {
             collected.append(node);
             if (Cell* cell = node->toCell()) {
                 arrayUniteWith(collectedStar, cell->star());
+                // XXX Why do we only do this for visible targets?
+                //     See bringForward_().
             }
         }
         else if (collectedStar.contains(node)) {
@@ -929,26 +937,27 @@ void sendBackward(core::ConstSpan<Node*> targets, core::AnimTime t) {
     //   bottom-most node in the opening of the overlapping node, excluding the
     //   collected star.
     //
-    Node* destinationNode = nullptr;
-    while (node) {
-        if (collectedStar.contains(node)) {
-            collected.append(node);
-        }
-        else {
-            if (overlapsWith(targetBboxes, node, t)) {
-                destinationNode = node;
-                if (Cell* cell = node->toCell()) {
-                    core::Array<Node*> cellStar(cell->star());
-                    arrayDifferenceWith(cellStar, collectedStar);
-                    Node* bottomMost = bottomMostInGroupBelow(node, cellStar);
-                    if (bottomMost) {
-                        destinationNode = bottomMost;
-                    }
-                }
-                break;
+    if (!destinationNode) {
+        while (node) {
+            if (collectedStar.contains(node)) {
+                collected.append(node);
             }
+            else {
+                if (overlapsWith(targetBboxes, node, t)) {
+                    destinationNode = node;
+                    if (Cell* cell = node->toCell()) {
+                        core::Array<Node*> cellStar(cell->star());
+                        arrayDifferenceWith(cellStar, collectedStar);
+                        Node* bottomMost = bottomMostInGroupBelow(node, cellStar);
+                        if (bottomMost) {
+                            destinationNode = bottomMost;
+                        }
+                    }
+                    break;
+                }
+            }
+            node = node->previousSibling();
         }
-        node = node->previousSibling();
     }
 
     // Continue iterating and collecting the star of target nodes until we
@@ -973,6 +982,28 @@ void sendBackward(core::ConstSpan<Node*> targets, core::AnimTime t) {
         ops.moveToGroup(cn, group, destinationNode);
         destinationNode = cn;
     }
+}
+
+} // namespace
+
+void bringForward(core::ConstSpan<Node*> targets, core::AnimTime t) {
+    Group* group = checkReorderPreConditions(targets);
+    bringForward_(group, targets, t);
+}
+
+void sendBackward(core::ConstSpan<Node*> targets, core::AnimTime t) {
+    Group* group = checkReorderPreConditions(targets);
+    sendBackward_(group, targets, t);
+}
+
+void bringToFront(core::ConstSpan<Node*> targets, core::AnimTime t) {
+    Group* group = checkReorderPreConditions(targets);
+    bringForward_(group, targets, t, group->lastChild());
+}
+
+void sendToBack(core::ConstSpan<Node*> targets, core::AnimTime t) {
+    Group* group = checkReorderPreConditions(targets);
+    sendBackward_(group, targets, t, group->firstChild());
 }
 
 void setKeyVertexPosition(KeyVertex* vertex, const geometry::Vec2d& pos) {

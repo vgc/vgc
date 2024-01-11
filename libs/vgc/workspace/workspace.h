@@ -321,6 +321,16 @@ public:
     ///
     void sendBackward(core::ConstSpan<core::Id> elementIds, core::AnimTime t);
 
+    /// Moves the given elements (and potentially their boundary) to the
+    /// top of the stacking order.
+    ///
+    void bringToFront(core::ConstSpan<core::Id> elementIds, core::AnimTime t);
+
+    /// Moves the given elements (and potentially their boundary/star) to
+    /// the bottom of the stacking order.
+    ///
+    void sendToBack(core::ConstSpan<core::Id> elementIds, core::AnimTime t);
+
     /// Performs a glue operation on the given elements.
     ///
     /// This is both a geometrical and topological operation.
