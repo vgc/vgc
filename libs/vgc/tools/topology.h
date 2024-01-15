@@ -19,24 +19,68 @@
 
 #include <vgc/tools/api.h>
 #include <vgc/ui/command.h>
+#include <vgc/ui/module.h>
 
-namespace vgc::tools::commands {
+VGC_DECLARE_OBJECT(vgc::canvas, CanvasManager);
+
+namespace vgc::tools {
+
+namespace commands {
+
+// Window commands
 
 VGC_TOOLS_API
 VGC_UI_DECLARE_COMMAND(glue)
 
 VGC_TOOLS_API
-VGC_UI_DECLARE_COMMAND(unglue)
-
-VGC_TOOLS_API
-VGC_UI_DECLARE_COMMAND(cutWithVertex)
-
-VGC_TOOLS_API
-VGC_UI_DECLARE_COMMAND(cutGlueFace)
+VGC_UI_DECLARE_COMMAND(explode)
 
 VGC_TOOLS_API
 VGC_UI_DECLARE_COMMAND(simplify)
 
-} // namespace vgc::tools::commands
+VGC_TOOLS_API
+VGC_UI_DECLARE_COMMAND(cutFaceWithEdge)
+
+// Mouse click commands
+
+VGC_TOOLS_API
+VGC_UI_DECLARE_COMMAND(cutWithVertex)
+
+} // namespace commands
+
+VGC_DECLARE_OBJECT(TopologyModule);
+
+/// \class vgc::tools::TopologyModule
+/// \brief A module to import all topology-related actions (glue, etc.).
+///
+class VGC_TOOLS_API TopologyModule : public ui::Module {
+private:
+    VGC_OBJECT(TopologyModule, ui::Module)
+
+protected:
+    TopologyModule(CreateKey, const ui::ModuleContext& context);
+
+public:
+    /// Creates the `TopologyModule` module.
+    ///
+    static TopologyModulePtr create(const ui::ModuleContext& context);
+
+private:
+    canvas::CanvasManagerWeakPtr canvasManager_;
+
+    void onGlue_();
+    VGC_SLOT(onGlue_)
+
+    void onExplode_();
+    VGC_SLOT(onExplode_)
+
+    void onSimplify_();
+    VGC_SLOT(onSimplify_)
+
+    void onCutFaceWithEdge_();
+    VGC_SLOT(onCutFaceWithEdge_)
+};
+
+} // namespace vgc::tools
 
 #endif // VGC_TOOLS_TOPOLOGY_H

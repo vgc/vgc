@@ -32,6 +32,7 @@
 #include <vgc/tools/sculpt.h>
 #include <vgc/tools/select.h>
 #include <vgc/tools/sketch.h>
+#include <vgc/tools/topology.h>
 #include <vgc/ui/genericaction.h>
 #include <vgc/ui/genericcommands.h>
 #include <vgc/ui/inspector.h>
@@ -99,6 +100,7 @@ CanvasApplication::CanvasApplication(
 
     // Other modules
     importModule<tools::ArrangeModule>();
+    importModule<tools::TopologyModule>();
 }
 
 CanvasApplicationPtr
