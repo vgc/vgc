@@ -39,12 +39,9 @@ ToolsPanel::ToolsPanel(CreateKey key, const ui::PanelContext& context)
 
     // Iterate over all registered tools and add each one as a button.
     //
-    // TODO: iterate with a different order than the map order, to ensure the
-    // tools appear in a specific, deterministic order.
-    //
     if (auto toolManager = context.importModule<ToolManager>().lock()) {
-        for (const auto& pair : toolManager->toolMap_) {
-            ui::Action* action = pair.first;
+        for (const ToolManager::RegisteredTool_& r : toolManager->tools_) {
+            ui::Action* action = r.action;
             ui::Button* button = row->createChild<ui::Button>(action);
             button->setIconVisible(true);
             button->setTextVisible(false);

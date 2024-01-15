@@ -33,7 +33,19 @@ void ToolManager::setCanvas(Canvas* canvas) {
     canvas_ = canvas;
 }
 
-void ToolManager::registerTool(core::StringId commandId, canvas::CanvasToolPtr tool) {
+void ToolManager::registerTool(
+    core::StringId commandId,
+    canvas::CanvasToolSharedPtr tool_) {
+
+    auto tool = tool_.lock();
+    if (!tool) {
+        return;
+    }
+
+    // Prevent registering the same tool twice
+    if (hasTool_(tool.get())) {
+        return;
+    }
 
     // Create tool action and add it to the action group
     ui::Action* action = createTriggerAction(commandId);
@@ -41,10 +53,9 @@ void ToolManager::registerTool(core::StringId commandId, canvas::CanvasToolPtr t
     action->checkStateChanged().connect(onToolCheckStateChanged_Slot());
     toolsActionGroup_->addAction(action);
 
-    // Keeps the CanvasTool alive by storing it as an ObjPtr and
-    // remembers which CanvasTool corresponds to which tool action.
-    toolMap_[action] = tool;
-    toolMapInv_[tool.get()] = action;
+    // Keep the CanvasTool alive by storing it as a SharedPtr and
+    // remember which CanvasTool corresponds to which Action.
+    tools_.append({action, tool});
 
     // Set first tool as current tool
     if (!currentTool()) {
@@ -70,10 +81,34 @@ void ToolManager::setCurrentTool(canvas::CanvasTool* canvasTool) {
                 // which of its descendants was the focused widget and restore
                 // this specific descendant as focused widget.
             }
-            toolMapInv_[canvasTool]->setChecked(true);
+            if (ui::Action* action = getActionFromTool_(canvasTool)) {
+                action->setChecked(true);
+            }
         }
         currentToolChanged().emit(currentTool_);
     }
+}
+
+ui::Action* ToolManager::getActionFromTool_(canvas::CanvasTool* tool) const {
+    auto res = tools_.search([tool](const RegisteredTool_& rt) { //
+        return rt.tool.get() == tool;
+    });
+    return res ? res->action : nullptr;
+}
+
+canvas::CanvasToolWeakPtr ToolManager::getToolFromAction_(ui::Action* action) const {
+    auto res = tools_.search([action](const RegisteredTool_& rt) { //
+        return rt.action == action;
+    });
+    return res ? res->tool : nullptr;
+}
+
+bool ToolManager::hasTool_(canvas::CanvasTool* tool) {
+    return getActionFromTool_(tool) != nullptr;
+}
+
+bool ToolManager::hasAction_(ui::Action* action) {
+    return getToolFromAction_(action).isAlive();
 }
 
 void ToolManager::onToolCheckStateChanged_(
@@ -81,8 +116,10 @@ void ToolManager::onToolCheckStateChanged_(
     ui::CheckState checkState) {
 
     if (checkState == ui::CheckState::Checked) {
-        canvas::CanvasTool* canvasTool = toolMap_[toolAction].get();
-        setCurrentTool(canvasTool);
+        canvas::CanvasToolWeakPtr tool_ = getToolFromAction_(toolAction);
+        if (auto tool = tool_.lock()) {
+            setCurrentTool(tool.get());
+        }
     }
 }
 
