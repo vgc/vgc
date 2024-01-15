@@ -20,7 +20,7 @@
 #include <vgc/canvas/api.h>
 #include <vgc/canvas/canvas.h>
 #include <vgc/canvas/canvastool.h>
-#include <vgc/core/object.h>
+#include <vgc/core/array.h>
 #include <vgc/ui/action.h>
 #include <vgc/ui/actiongroup.h>
 #include <vgc/ui/module.h>
@@ -64,7 +64,7 @@ public:
 
     /// Adds a tool to this `ToolManager`.
     ///
-    void registerTool(core::StringId commandId, canvas::CanvasToolPtr tool);
+    void registerTool(core::StringId commandId, canvas::CanvasToolSharedPtr tool);
 
     /// Returns the current tool.
     ///
@@ -92,9 +92,23 @@ private:
     Canvas* canvas_ = nullptr;
 
     ui::ActionGroupPtr toolsActionGroup_;
-    std::map<ui::Action*, canvas::CanvasToolPtr> toolMap_;
-    std::map<canvas::CanvasTool*, ui::Action*> toolMapInv_;
+
+    // We use a flat birectional map to store relation between tool and action.
+    // The array order is currently used as order tool order in the Tools panel.
+    //
+    struct RegisteredTool_ {
+        ui::Action* action;
+        canvas::CanvasToolSharedPtr tool;
+    };
+    core::Array<RegisteredTool_> tools_; // flat bidirectional map
+
     canvas::CanvasTool* currentTool_ = nullptr;
+
+    ui::Action* getActionFromTool_(canvas::CanvasTool* tool) const;
+    canvas::CanvasToolWeakPtr getToolFromAction_(ui::Action* action) const;
+
+    bool hasTool_(canvas::CanvasTool* tool);
+    bool hasAction_(ui::Action* action);
 
     void onToolCheckStateChanged_(ui::Action* toolAction, ui::CheckState checkState);
     VGC_SLOT(onToolCheckStateChanged_);
