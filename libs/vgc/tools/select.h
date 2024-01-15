@@ -151,18 +151,6 @@ private:
 
     void updateTransformBoxElements_();
 
-    void onGlue_();
-    VGC_SLOT(onGlueSlot_, onGlue_)
-
-    void onUnglue_();
-    VGC_SLOT(onUnglueSlot_, onUnglue_)
-
-    void onCutGlueFace_();
-    VGC_SLOT(onCutGlueFaceSlot_, onCutGlueFace_)
-
-    void onSimplify_();
-    VGC_SLOT(onSimplifySlot_, onSimplify_)
-
     void onCut_();
     VGC_SLOT(onCutSlot_, onCut_)
 

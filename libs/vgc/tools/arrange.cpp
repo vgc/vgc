@@ -147,7 +147,8 @@ public:
     }
 
     explicit operator bool() const {
-        return static_cast<bool>(workspace_); // implies canvas_ also true
+        return static_cast<bool>(workspace_) // implies canvas_ also true
+               && !selection_.isEmpty();     // avoid doing work if nothing is selected
     }
 
     canvas::Canvas* canvas() const {
