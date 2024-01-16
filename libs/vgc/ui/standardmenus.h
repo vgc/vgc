@@ -96,7 +96,7 @@ public:
     /// Returns the View menu, if any.
     ///
     MenuWeakPtr viewMenu() {
-        return editMenu_;
+        return viewMenu_;
     }
 
     /// Returns the existing View menu, if any, otherwise creates it.
