@@ -330,7 +330,7 @@ void Workspace::visitDepthFirst(
 namespace {
 
 template<typename Fn, typename... Args>
-void doArrange_(
+void doReorder_(
     Workspace* workspace,
     core::StringId opName,
     Fn fn,
@@ -374,22 +374,22 @@ void doArrange_(
 
 void Workspace::bringForward(core::ConstSpan<core::Id> elementIds, core::AnimTime t) {
     static core::StringId opName("workspace.bringForward");
-    doArrange_(this, opName, &vacomplex::ops::bringForward, elementIds, t);
+    doReorder_(this, opName, &vacomplex::ops::bringForward, elementIds, t);
 }
 
 void Workspace::sendBackward(core::ConstSpan<core::Id> elementIds, core::AnimTime t) {
     static core::StringId opName("workspace.sendBackward");
-    doArrange_(this, opName, &vacomplex::ops::sendBackward, elementIds, t);
+    doReorder_(this, opName, &vacomplex::ops::sendBackward, elementIds, t);
 }
 
 void Workspace::bringToFront(core::ConstSpan<core::Id> elementIds, core::AnimTime t) {
     static core::StringId opName("workspace.bringToFront");
-    doArrange_(this, opName, &vacomplex::ops::bringToFront, elementIds, t);
+    doReorder_(this, opName, &vacomplex::ops::bringToFront, elementIds, t);
 }
 
 void Workspace::sendToBack(core::ConstSpan<core::Id> elementIds, core::AnimTime t) {
     static core::StringId opName("workspace.sendToBack");
-    doArrange_(this, opName, &vacomplex::ops::sendToBack, elementIds, t);
+    doReorder_(this, opName, &vacomplex::ops::sendToBack, elementIds, t);
 }
 
 core::Id Workspace::glue(core::ConstSpan<core::Id> elementIds) {
