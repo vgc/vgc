@@ -14,7 +14,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <vgc/tools/arrange.h>
+#include <vgc/tools/order.h>
 
 #include <algorithm> // max
 
@@ -35,25 +35,25 @@ using ui::modifierkeys::shift;
 
 VGC_UI_DEFINE_WINDOW_COMMAND( //
     bringForward,
-    "tools.arrange.bringForward",
+    "tools.order.bringForward",
     "Bring Forward",
     Shortcut(ctrl, Key::RightSquareBracket));
 
 VGC_UI_DEFINE_WINDOW_COMMAND( //
     sendBackward,
-    "tools.arrange.sendBackward",
+    "tools.order.sendBackward",
     "Send Backward",
     Shortcut(ctrl, Key::LeftSquareBracket));
 
 VGC_UI_DEFINE_WINDOW_COMMAND( //
     bringToFront,
-    "tools.arrange.bringToFront",
+    "tools.order.bringToFront",
     "Bring to Front",
     Shortcut(ctrl | shift, Key::RightSquareBracket));
 
 VGC_UI_DEFINE_WINDOW_COMMAND( //
     sendToBack,
-    "tools.arrange.sendToBack",
+    "tools.order.sendToBack",
     "Send to Back",
     Shortcut(ctrl | shift, Key::LeftSquareBracket));
 
@@ -70,23 +70,23 @@ VGC_UI_ADD_DEFAULT_SHORTCUT(sendToBack(), Shortcut(ctrl, Key::PageDown))
 
 } // namespace commands
 
-ArrangeModule::ArrangeModule(CreateKey key, const ui::ModuleContext& context)
+OrderModule::OrderModule(CreateKey key, const ui::ModuleContext& context)
     : Module(key, context) {
 
     canvasManager_ = importModule<canvas::CanvasManager>();
 
-    ui::MenuWeakPtr arrangeMenu_;
+    ui::MenuWeakPtr orderMenu_;
     if (auto standardMenus = importModule<ui::StandardMenus>().lock()) {
         if (auto menuBar = standardMenus->menuBar().lock()) {
             Int index = std::max<Int>(0, menuBar->numItems() - 1);
-            arrangeMenu_ = menuBar->createSubMenuAt(index, "Arrange");
+            orderMenu_ = menuBar->createSubMenuAt(index, "Order");
         }
     }
 
-    auto createAction = [this, arrangeMenu_](core::StringId commandName) {
+    auto createAction = [this, orderMenu_](core::StringId commandName) {
         ui::Action* action = this->createTriggerAction(commandName);
-        if (auto arrangeMenu = arrangeMenu_.lock()) {
-            arrangeMenu->addItem(action);
+        if (auto orderMenu = orderMenu_.lock()) {
+            orderMenu->addItem(action);
         }
         return action;
     };
@@ -104,15 +104,15 @@ ArrangeModule::ArrangeModule(CreateKey key, const ui::ModuleContext& context)
     sendToBack->triggered().connect(onSendToBack_Slot());
 }
 
-ArrangeModulePtr ArrangeModule::create(const ui::ModuleContext& context) {
-    return core::createObject<ArrangeModule>(context);
+OrderModulePtr OrderModule::create(const ui::ModuleContext& context) {
+    return core::createObject<OrderModule>(context);
 }
 
 namespace {
 
-class ArrangeContextLock {
+class OrderContextLock {
 public:
-    ArrangeContextLock(
+    OrderContextLock(
         canvas::CanvasManagerWeakPtr canvasManager_,
         core::StringId commandName) {
 
@@ -138,7 +138,7 @@ public:
         }
     }
 
-    ~ArrangeContextLock() {
+    ~OrderContextLock() {
 
         // Close history group
         if (auto undoGroup = undoGroup_.lock()) {
@@ -179,26 +179,26 @@ private:
 
 } // namespace
 
-void ArrangeModule::onBringForward_() {
-    if (auto context = ArrangeContextLock(canvasManager_, commands::bringForward())) {
+void OrderModule::onBringForward_() {
+    if (auto context = OrderContextLock(canvasManager_, commands::bringForward())) {
         context.workspace()->bringForward(context.selection(), context.time());
     }
 }
 
-void ArrangeModule::onSendBackward_() {
-    if (auto context = ArrangeContextLock(canvasManager_, commands::sendBackward())) {
+void OrderModule::onSendBackward_() {
+    if (auto context = OrderContextLock(canvasManager_, commands::sendBackward())) {
         context.workspace()->sendBackward(context.selection(), context.time());
     }
 }
 
-void ArrangeModule::onBringToFront_() {
-    if (auto context = ArrangeContextLock(canvasManager_, commands::bringToFront())) {
+void OrderModule::onBringToFront_() {
+    if (auto context = OrderContextLock(canvasManager_, commands::bringToFront())) {
         context.workspace()->bringToFront(context.selection(), context.time());
     }
 }
 
-void ArrangeModule::onSendToBack_() {
-    if (auto context = ArrangeContextLock(canvasManager_, commands::sendBackward())) {
+void OrderModule::onSendToBack_() {
+    if (auto context = OrderContextLock(canvasManager_, commands::sendBackward())) {
         context.workspace()->sendToBack(context.selection(), context.time());
     }
 }

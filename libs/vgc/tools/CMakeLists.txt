@@ -7,12 +7,12 @@ vgc_add_library(tools
 
     CPP_HEADER_FILES
         api.h
-        arrange.h
         colorpalette.h
         copypaste.h
         currentcolor.h
         documentcolorpalette.h
         logcategories.h
+        order.h
         paintbucket.h
         sculpt.h
         select.h
@@ -22,12 +22,12 @@ vgc_add_library(tools
         transform.h
 
     CPP_SOURCE_FILES
-        arrange.cpp
         colorpalette.cpp
         copypaste.cpp
         currentcolor.cpp
         documentcolorpalette.cpp
         logcategories.cpp
+        order.cpp
         paintbucket.cpp
         sculpt.cpp
         select.cpp

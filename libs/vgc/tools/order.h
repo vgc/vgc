@@ -14,8 +14,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef VGC_TOOLS_ARRANGE_H
-#define VGC_TOOLS_ARRANGE_H
+#ifndef VGC_TOOLS_ORDER_H
+#define VGC_TOOLS_ORDER_H
 
 #include <vgc/tools/api.h>
 #include <vgc/ui/command.h>
@@ -41,22 +41,22 @@ VGC_UI_DECLARE_COMMAND(sendToBack)
 
 } // namespace commands
 
-VGC_DECLARE_OBJECT(ArrangeModule);
+VGC_DECLARE_OBJECT(OrderModule);
 
-/// \class vgc::tools::ArrangeModule
-/// \brief A module to import all arrange-related actions (bring forward, etc.).
+/// \class vgc::tools::OrderModule
+/// \brief A module to import all order-related actions (bring forward, etc.).
 ///
-class VGC_TOOLS_API ArrangeModule : public ui::Module {
+class VGC_TOOLS_API OrderModule : public ui::Module {
 private:
-    VGC_OBJECT(ArrangeModule, ui::Module)
+    VGC_OBJECT(OrderModule, ui::Module)
 
 protected:
-    ArrangeModule(CreateKey, const ui::ModuleContext& context);
+    OrderModule(CreateKey, const ui::ModuleContext& context);
 
 public:
-    /// Creates the `ArrangeModule` module.
+    /// Creates the `OrderModule` module.
     ///
-    static ArrangeModulePtr create(const ui::ModuleContext& context);
+    static OrderModulePtr create(const ui::ModuleContext& context);
 
 private:
     canvas::CanvasManagerWeakPtr canvasManager_;
@@ -76,4 +76,4 @@ private:
 
 } // namespace vgc::tools
 
-#endif // VGC_TOOLS_ARRANGE_H
+#endif // VGC_TOOLS_ORDER_H
