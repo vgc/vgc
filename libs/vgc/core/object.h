@@ -399,7 +399,7 @@ public:
     /// alive object. This is equivalent to `isAlive()`, and is provided for
     /// convenience for use in boolean expression. This method doesn't throw.
     ///
-    operator bool() const noexcept {
+    explicit operator bool() const noexcept {
         return obj_ && obj_->isAlive();
     }
 
