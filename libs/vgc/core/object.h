@@ -467,6 +467,16 @@ inline bool operator!=(const ObjPtr<T>& a, const ObjPtr<U>& b) noexcept {
     return a.get() != b.get();
 }
 
+/// Returns whether the object `a` compares smaller than `b`, based on
+/// the memory address of the underlying pointer.
+///
+/// This operator allows to use `ObjPtr` in a map.
+///
+template<typename T, typename U>
+inline bool operator<(const ObjPtr<T>& a, const ObjPtr<U>& b) noexcept {
+    return detail::ObjPtrAccess::get(a) < detail::ObjPtrAccess::get(b);
+}
+
 template<typename T, typename U>
 ObjPtr<T> static_pointer_cast(const ObjPtr<U>& r) noexcept {
     return ObjPtr<T>(static_cast<T*>(r.get()));
@@ -733,13 +743,12 @@ private:
     friend class ObjWeakPtr;
 };
 
-// Note: our weak pointers do not require all the `owner_equal`, `owner_hash`
-// shenanigans, since we do not support aliased shared pointers. See:
+// Note: our weak pointers do not require all the `owner_equal`, `owner_hash`,
+// `owner_less`, and `owner_before` shenanigans, since we do not support
+// aliased shared pointers. See:
 //
 // - https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2023/p1901r2.html
 // - https://stackoverflow.com/questions/12301916/
-//
-// XXX: does it make sense to also support mixed weak/shared comparisons?
 //
 
 /// Returns whether the two given `ObjWeakPtr` manage the same object.
@@ -786,6 +795,30 @@ inline bool operator!=(const ObjSharedPtr<T>& a, const ObjWeakPtr<U>& b) noexcep
 template<typename T, typename U>
 inline bool operator!=(const ObjWeakPtr<T>& a, const ObjSharedPtr<U>& b) noexcept {
     return detail::ObjPtrAccess::get(a) != detail::ObjPtrAccess::get(b);
+}
+
+/// Returns whether the object `a` compares smaller than `b`, based on
+/// the memory address of the underlying pointer.
+///
+/// This operator allows to use `ObjWeakPtr` in a map.
+///
+template<typename T, typename U>
+inline bool operator<(const ObjWeakPtr<T>& a, const ObjWeakPtr<U>& b) noexcept {
+    return detail::ObjPtrAccess::get(a) < detail::ObjPtrAccess::get(b);
+}
+
+/// Returns whether the object `a` compares smaller than `b`.
+///
+template<typename T, typename U>
+inline bool operator<(const ObjSharedPtr<T>& a, const ObjWeakPtr<U>& b) noexcept {
+    return detail::ObjPtrAccess::get(a) < detail::ObjPtrAccess::get(b);
+}
+
+/// Returns whether the object `a` compares smaller than `b`.
+///
+template<typename T, typename U>
+inline bool operator<(const ObjWeakPtr<T>& a, const ObjSharedPtr<U>& b) noexcept {
+    return detail::ObjPtrAccess::get(a) < detail::ObjPtrAccess::get(b);
 }
 
 template<typename T, typename U>
