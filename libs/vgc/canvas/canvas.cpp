@@ -55,22 +55,6 @@ VGC_UI_DEFINE_WINDOW_COMMAND( //
     "Frame Content",
     Key::F);
 
-// TODO:
-//
-// D: Toggle between the last two display modes used (default: Normal + OutlineOverlay)
-// Shift + D: Cycle between all display modes
-//
-// Note: using "D" for changing the display mode is nice since it is
-// easy to remember (D = Display), is easily accessibly with the left
-// hand on QWERTY keyboards, and is rarely used for anything very useful
-// on other software (sometimes used for "reset colors to default")
-//
-VGC_UI_DEFINE_WINDOW_COMMAND( //
-    cycleDisplayMode,
-    "canvas.cycleDisplayMode",
-    "Cycle Display Mode",
-    Key::D);
-
 } // namespace commands
 
 } // namespace
@@ -117,10 +101,6 @@ Canvas::Canvas(CreateKey key, workspace::Workspace* workspace)
 
     ui::Action* frameContentAction = createTriggerAction(commands::frameContent());
     frameContentAction->triggered().connect(onFrameContentSlot_());
-
-    ui::Action* cycleDisplayModeAction =
-        createTriggerAction(commands::cycleDisplayMode());
-    cycleDisplayModeAction->triggered().connect(cycleDisplayModeSlot_());
 }
 
 CanvasPtr Canvas::create(workspace::Workspace* workspace) {
@@ -241,9 +221,8 @@ core::Array<SelectionCandidate> Canvas::computeSelectionCandidatesAboveOrAt(
         worldTol /= camera_.zoom();
     }
 
-    bool isOutlineOverlay = (displayMode_ == DisplayMode::OutlineOverlay);
-    bool isMeshEnabled = isOutlineOverlay || (displayMode_ == DisplayMode::Normal);
-    bool isOutlineEnabled = isOutlineOverlay || (displayMode_ == DisplayMode::Outline);
+    bool isMeshEnabled = (displayMode_ != DisplayMode::OutlineOnly);
+    bool isOutlineEnabled = (displayMode_ != DisplayMode::Normal);
 
     if (workspace_) {
         bool skip = itemId > 0;
@@ -328,9 +307,7 @@ core::Array<core::Id> Canvas::computeRectangleSelectionCandidates(
 
     core::Array<core::Id> result;
 
-    bool isOutlineOverlay = (displayMode_ == DisplayMode::OutlineOverlay);
-    bool isMeshEnabled = isOutlineOverlay || (displayMode_ == DisplayMode::Normal);
-    //bool isOutlineEnabled = isOutlineOverlay || (displayMode_ == DisplayMode::Outline);
+    bool isMeshEnabled = (displayMode_ != DisplayMode::OutlineOnly);
 
     if (workspace_) {
 
@@ -782,9 +759,11 @@ void Canvas::onPaintDraw(graphics::Engine* engine, ui::PaintOptions options) {
         workspace_->sync();
         //VGC_PROFILE_SCOPE("Canvas:WorkspaceVisit");
 
+        bool isMeshEnabled = (displayMode_ != DisplayMode::OutlineOnly);
+        bool isOutlineEnabled = (displayMode_ != DisplayMode::Normal);
+
         // Draw Normal
-        if (displayMode_ == DisplayMode::Normal
-            || displayMode_ == DisplayMode::OutlineOverlay) {
+        if (isMeshEnabled) {
             workspace::PaintOptions paintOptions = commonPaintOptions;
             workspace_->visitDepthFirst(
                 [](workspace::Element* /*e*/, Int /*depth*/) {
@@ -799,8 +778,6 @@ void Canvas::onPaintDraw(graphics::Engine* engine, ui::PaintOptions options) {
         }
 
         // Draw Outline
-        bool isOutlineEnabled = displayMode_ == DisplayMode::Outline
-                                || displayMode_ == DisplayMode::OutlineOverlay;
         if (isOutlineEnabled) {
             workspace::PaintOptions paintOptions = commonPaintOptions;
             paintOptions.set(workspace::PaintOption::Outline);
@@ -951,21 +928,6 @@ void Canvas::onFrameContent_() {
 
         requestRepaint();
     }
-}
-
-void Canvas::cycleDisplayMode_() {
-    switch (displayMode_) {
-    case DisplayMode::Normal:
-        displayMode_ = DisplayMode::Outline;
-        break;
-    case DisplayMode::Outline:
-        displayMode_ = DisplayMode::OutlineOverlay;
-        break;
-    case DisplayMode::OutlineOverlay:
-        displayMode_ = DisplayMode::Normal;
-        break;
-    }
-    requestRepaint();
 }
 
 } // namespace vgc::canvas

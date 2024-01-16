@@ -18,11 +18,31 @@
 #define VGC_CANVAS_CANVASMANAGER_H
 
 #include <vgc/canvas/api.h>
+#include <vgc/canvas/displaymode.h>
 #include <vgc/dom/document.h>
 #include <vgc/ui/module.h>
 #include <vgc/workspace/workspace.h>
 
 namespace vgc::canvas {
+
+namespace commands {
+
+VGC_CANVAS_API
+VGC_UI_DECLARE_COMMAND(switchToNormalDisplayMode)
+
+VGC_CANVAS_API
+VGC_UI_DECLARE_COMMAND(switchToOutlineOverlayDisplayMode)
+
+VGC_CANVAS_API
+VGC_UI_DECLARE_COMMAND(switchToOutlineOnlyDisplayMode)
+
+VGC_CANVAS_API
+VGC_UI_DECLARE_COMMAND(toggleLastTwoDisplayModes)
+
+VGC_CANVAS_API
+VGC_UI_DECLARE_COMMAND(cycleDisplayModes)
+
+} // namespace commands
 
 VGC_DECLARE_OBJECT(Canvas);
 VGC_DECLARE_OBJECT(CanvasManager);
@@ -65,8 +85,35 @@ private:
     DocumentManagerWeakPtr documentManager_;
     CanvasWeakPtr activeCanvas_;
 
+    // In order to implement "toggle last two display modes", we store, for
+    // each canvas, the display mode it had just before its current display
+    // mode. We prefer doing this here rather than in `Canvas` to minimize the
+    // responsibilities of the `Canvas` class.
+    //
+    std::map<CanvasWeakPtr, DisplayMode> previousDisplayModes_;
+
+    static constexpr DisplayMode defaultFirstDisplayMode = DisplayMode::Normal;
+    static constexpr DisplayMode defaultSecondDisplayMode = DisplayMode::OutlineOverlay;
+
     void onCurrentWorkspaceChanged_();
     VGC_SLOT(onCurrentWorkspaceChanged_);
+
+    void switchToDisplayMode_(CanvasWeakPtr canvas, DisplayMode mode);
+
+    void onSwitchToNormalDisplayMode_();
+    VGC_SLOT(onSwitchToNormalDisplayMode_);
+
+    void onSwitchToOutlineOverlayDisplayMode_();
+    VGC_SLOT(onSwitchToOutlineOverlayDisplayMode_);
+
+    void onSwitchToOutlineOnlyDisplayMode_();
+    VGC_SLOT(onSwitchToOutlineOnlyDisplayMode_);
+
+    void onToggleLastTwoDisplayModes_();
+    VGC_SLOT(onToggleLastTwoDisplayModes_);
+
+    void onCycleDisplayModes_();
+    VGC_SLOT(onCycleDisplayModes_);
 };
 
 } // namespace vgc::canvas
