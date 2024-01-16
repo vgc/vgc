@@ -16,7 +16,7 @@
 
 #include <vgc/tools/topology.h>
 
-#include <algorithm> // min
+#include <algorithm> // max
 
 #include <vgc/canvas/canvas.h>
 #include <vgc/canvas/canvasmanager.h>
@@ -74,7 +74,7 @@ TopologyModule::TopologyModule(CreateKey key, const ui::ModuleContext& context)
     ui::MenuWeakPtr topologyMenu_;
     if (auto standardMenus = importModule<ui::StandardMenus>().lock()) {
         if (auto menuBar = standardMenus->menuBar().lock()) {
-            Int index = std::min<Int>(3, menuBar->numItems());
+            Int index = std::max<Int>(0, menuBar->numItems() - 1);
             topologyMenu_ = menuBar->createSubMenuAt(index, "Topology");
         }
     }

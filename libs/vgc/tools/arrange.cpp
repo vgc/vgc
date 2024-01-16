@@ -16,7 +16,7 @@
 
 #include <vgc/tools/arrange.h>
 
-#include <algorithm> // min
+#include <algorithm> // max
 
 #include <vgc/canvas/canvas.h>
 #include <vgc/canvas/canvasmanager.h>
@@ -78,7 +78,7 @@ ArrangeModule::ArrangeModule(CreateKey key, const ui::ModuleContext& context)
     ui::MenuWeakPtr arrangeMenu_;
     if (auto standardMenus = importModule<ui::StandardMenus>().lock()) {
         if (auto menuBar = standardMenus->menuBar().lock()) {
-            Int index = std::min<Int>(2, menuBar->numItems());
+            Int index = std::max<Int>(0, menuBar->numItems() - 1);
             arrangeMenu_ = menuBar->createSubMenuAt(index, "Arrange");
         }
     }
