@@ -321,9 +321,6 @@ private:
 
     void onFrameContent_();
     VGC_SLOT(onFrameContentSlot_, onFrameContent_)
-
-    void cycleDisplayMode_();
-    VGC_SLOT(cycleDisplayModeSlot_, cycleDisplayMode_)
 };
 
 } // namespace vgc::canvas
