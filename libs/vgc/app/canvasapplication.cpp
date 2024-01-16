@@ -71,6 +71,7 @@ CanvasApplication::CanvasApplication(
         standardMenus->setMenuBar(window_->mainWidget()->menuBar());
         standardMenus->createFileMenu();
         standardMenus->createEditMenu();
+        standardMenus->createViewMenu();
     }
 
     // CurrentColor module

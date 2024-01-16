@@ -8,6 +8,7 @@ vgc_add_library(canvas
         canvas.h
         canvasmanager.h
         canvastool.h
+        displaymode.h
         documentmanager.h
         logcategories.h
         strings.h
@@ -19,6 +20,7 @@ vgc_add_library(canvas
         canvas.cpp
         canvasmanager.cpp
         canvastool.cpp
+        displaymode.cpp
         documentmanager.cpp
         logcategories.cpp
         strings.cpp

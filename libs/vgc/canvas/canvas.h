@@ -20,6 +20,7 @@
 #include <variant>
 
 #include <vgc/canvas/api.h>
+#include <vgc/canvas/displaymode.h>
 #include <vgc/core/array.h>
 #include <vgc/core/color.h>
 #include <vgc/core/object.h>
@@ -32,16 +33,6 @@
 #include <vgc/workspace/workspace.h>
 
 namespace vgc::canvas {
-
-/// \enum vgc::canvas::DisplayMode
-/// \brief Specifies display mode.
-///
-enum class DisplayMode {
-    Normal,
-    Outline,
-    OutlineOverlay,
-    // Draft, Preview, Pixel, Print..
-};
 
 enum class CoordinateSpace {
     Widget,
@@ -330,9 +321,6 @@ private:
 
     void onFrameContent_();
     VGC_SLOT(onFrameContentSlot_, onFrameContent_)
-
-    void cycleDisplayMode_();
-    VGC_SLOT(cycleDisplayModeSlot_, cycleDisplayMode_)
 };
 
 } // namespace vgc::canvas
