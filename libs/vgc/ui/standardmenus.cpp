@@ -80,7 +80,7 @@ MenuWeakPtr StandardMenus::getOrCreateEditMenu() {
 }
 
 void StandardMenus::createViewMenu() {
-    createMenu(fileMenu_, menuBar_, "View");
+    createMenu(viewMenu_, menuBar_, "View");
 }
 
 MenuWeakPtr StandardMenus::getOrCreateViewMenu() {
