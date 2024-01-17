@@ -219,9 +219,9 @@ void CanvasManager::onCycleDisplayModes_() {
 
 namespace {
 
-void fitViewToRect_(Canvas& canvas, const geometry::Rect2d& frame) {
+void fitViewToRect_(Canvas& canvas, const geometry::Rect2d& rect) {
 
-    if (frame.isDegenerate()) {
+    if (rect.isDegenerate()) {
         return;
     }
 
@@ -234,7 +234,7 @@ void fitViewToRect_(Canvas& canvas, const geometry::Rect2d& frame) {
 
     // Compute new zoom, keeping a little margin around the rect
     static constexpr double marginFactor = 1.1;
-    geometry::Vec2d boundingCircleDiameter(frame.width(), frame.height());
+    geometry::Vec2d boundingCircleDiameter(rect.width(), rect.height());
     double a = boundingCircleDiameter.length();
     double b = viewportSize[0] / viewportSize[1];
     double z = 1;
@@ -246,7 +246,7 @@ void fitViewToRect_(Canvas& canvas, const geometry::Rect2d& frame) {
     }
 
     // Compute new center
-    geometry::Vec2d bboxCenter = 0.5 * (frame.pMin() + frame.pMax());
+    geometry::Vec2d bboxCenter = 0.5 * (rect.pMin() + rect.pMax());
 
     // Set camera assuming no rotation
     camera.setRotation(0);
@@ -270,12 +270,12 @@ void fitViewToRect_(Canvas& canvas, const geometry::Rect2d& frame) {
 void FitViewToDocument_(Canvas& canvas, workspace::Workspace& workspace) {
 
     // TODO: implement Workspace::boundingBox().
-    geometry::Rect2d frame = geometry::Rect2d::empty;
+    geometry::Rect2d rect = geometry::Rect2d::empty;
     workspace.visitDepthFirstPreOrder( //
-        [&frame](workspace::Element* e, Int /*depth*/) {
-            frame.uniteWith(e->boundingBox());
+        [&rect](workspace::Element* e, Int /*depth*/) {
+            rect.uniteWith(e->boundingBox());
         });
-    fitViewToRect_(canvas, frame);
+    fitViewToRect_(canvas, rect);
 }
 
 void FitViewToSelection_(Canvas& canvas, workspace::Workspace& workspace) {
@@ -285,14 +285,14 @@ void FitViewToSelection_(Canvas& canvas, workspace::Workspace& workspace) {
         FitViewToDocument_(canvas, workspace);
     }
     else {
-        geometry::Rect2d frame = geometry::Rect2d::empty;
+        geometry::Rect2d rect = geometry::Rect2d::empty;
         for (core::Id id : selection) {
             workspace::Element* e = workspace.find(id);
             if (e) {
-                frame.uniteWith(e->boundingBox());
+                rect.uniteWith(e->boundingBox());
             }
         }
-        fitViewToRect_(canvas, frame);
+        fitViewToRect_(canvas, rect);
     }
 }
 
