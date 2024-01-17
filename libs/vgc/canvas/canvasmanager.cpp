@@ -236,13 +236,13 @@ void fitViewToRect_(Canvas& canvas, const geometry::Rect2d& rect) {
     static constexpr double marginFactor = 1.1;
     geometry::Vec2d boundingCircleDiameter(rect.width(), rect.height());
     double a = boundingCircleDiameter.length();
-    double b = viewportSize[0] / viewportSize[1];
+    double b = viewportWidth / viewportHeight;
     double z = 1;
     if (b <= 1) {
-        z = camera.viewportWidth() / (a * marginFactor);
+        z = viewportWidth / (a * marginFactor);
     }
     else {
-        z = camera.viewportHeight() / (a * marginFactor);
+        z = viewportHeight / (a * marginFactor);
     }
 
     // Compute new center
