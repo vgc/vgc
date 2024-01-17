@@ -162,6 +162,12 @@ public:
         return camera_;
     }
 
+    /// Sets the camera of this view.
+    ///
+    void setCamera(const geometry::Camera2d& camera);
+
+    /// Returns the current time displayed by the canvas.
+    ///
     core::AnimTime currentTime() const {
         return {};
     }
@@ -318,9 +324,6 @@ private:
     core::PerformanceLogTask renderTask_;
     core::PerformanceLogTask updateTask_;
     core::PerformanceLogTask drawTask_;
-
-    void onFrameContent_();
-    VGC_SLOT(onFrameContentSlot_, onFrameContent_)
 };
 
 } // namespace vgc::canvas
