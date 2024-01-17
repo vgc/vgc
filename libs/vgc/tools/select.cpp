@@ -68,7 +68,11 @@ public:
 public:
     void onMouseClick(ui::MouseEvent* event) override {
 
-        auto context = tool_->contextLock();
+        auto tool = tool_.lock();
+        if (!tool) {
+            return;
+        }
+        auto context = tool->contextLock();
         if (!context) {
             return;
         }
@@ -141,7 +145,7 @@ public:
     }
 
 public:
-    Select* tool_ = nullptr;
+    SelectWeakPtr tool_;
 
     core::StringId actionName() const {
         static core::StringId actionName_("Vertex-Cut Edge");
