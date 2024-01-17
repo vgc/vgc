@@ -216,6 +216,12 @@ public:
         viewportHeight_ = height;
     }
 
+    /// Returns the width and height of the viewport, in pixels.
+    ///
+    Vec2d viewportSize() const {
+        return {viewportWidth_, viewportHeight_};
+    }
+
     /// Sets the viewport size.
     ///
     /// \sa viewportWidth(), viewportHeight()
@@ -223,6 +229,11 @@ public:
     void setViewportSize(double width, double height) {
         viewportWidth_ = width;
         viewportHeight_ = height;
+    }
+
+    /// \overload
+    void setViewportSize(const Vec2d& size) {
+        setViewportSize(size[0], size[1]);
     }
 
     /// Returns the near plane of the camera. This is the value under which

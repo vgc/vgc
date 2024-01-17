@@ -39,26 +39,6 @@
 
 namespace vgc::canvas {
 
-namespace {
-
-namespace commands {
-
-using ui::Key;
-
-// TODO:
-// Rename this to "FitSelectionToView" (F)
-// Add "FitDocumentToView" (Shift+F, or the more standard Ctrl + 0, or both)
-//
-VGC_UI_DEFINE_WINDOW_COMMAND( //
-    frameContent,
-    "canvas.frameContent",
-    "Frame Content",
-    Key::F);
-
-} // namespace commands
-
-} // namespace
-
 SelectionListHistory::SelectionListHistory(CreateKey key, PrivateKey)
     : Object(key) {
 }
@@ -98,9 +78,6 @@ Canvas::Canvas(CreateKey key, workspace::Workspace* workspace)
     }
 
     addStyleClass(canvas::strings::Canvas);
-
-    ui::Action* frameContentAction = createTriggerAction(commands::frameContent());
-    frameContentAction->triggered().connect(onFrameContentSlot_());
 }
 
 CanvasPtr Canvas::create(workspace::Workspace* workspace) {
@@ -148,6 +125,11 @@ void Canvas::stopLoggingUnder(core::PerformanceLog* parent) {
     core::PerformanceLogPtr renderLog = renderTask_.stopLoggingUnder(parent);
     updateTask_.stopLoggingUnder(renderLog.get());
     drawTask_.stopLoggingUnder(renderLog.get());
+}
+
+void Canvas::setCamera(const geometry::Camera2d& camera) {
+    camera_ = camera;
+    requestRepaint();
 }
 
 namespace {
@@ -217,8 +199,8 @@ core::Array<SelectionCandidate> Canvas::computeSelectionCandidatesAboveOrAt(
     double worldTol = tolerance;
 
     if (coordinateSpace == CoordinateSpace::Widget) {
-        worldCoords = camera_.viewMatrix().inverted().transformPointAffine(worldCoords);
-        worldTol /= camera_.zoom();
+        worldCoords = camera().viewMatrix().inverted().transformPointAffine(worldCoords);
+        worldTol /= camera().zoom();
     }
 
     bool isMeshEnabled = (displayMode_ != DisplayMode::OutlineOnly);
@@ -442,7 +424,6 @@ bool Canvas::onMouseMove(ui::MouseMoveEvent* event) {
         double deltaTime = event->timestamp() - timeAtPress_;
         float deltaPos = (event->position() - mousePosAtPress_).length();
         if (deltaPos >= dragDeltaThreshold || deltaTime > dragTimeThreshold) {
-
             isDragging_ = true;
         }
     }
@@ -455,11 +436,12 @@ bool Canvas::onMouseMove(ui::MouseMoveEvent* event) {
     geometry::Vec2d mousePosAtPress(mousePosAtPress_);
     geometry::Vec2d mousePos(event->position());
 
+    bool hasCameraChanged = true;
+    geometry::Camera2d camera = this->camera();
+
     if (isPanning_) {
         geometry::Vec2d delta = mousePosAtPress - mousePos;
-        camera_.setCenter(cameraAtPress_.center() + delta);
-        requestRepaint();
-        return true;
+        camera.setCenter(cameraAtPress_.center() + delta);
     }
     else if (isRotating_) {
         // Set new camera rotation
@@ -468,18 +450,15 @@ bool Canvas::onMouseMove(ui::MouseMoveEvent* event) {
         const double rotateViewSensitivity = 0.01;
         geometry::Vec2d deltaPos = mousePosAtPress - mousePos;
         double deltaRotation = rotateViewSensitivity * (deltaPos.x() - deltaPos.y());
-        camera_.setRotation(cameraAtPress_.rotation() + deltaRotation);
+        camera.setRotation(cameraAtPress_.rotation() + deltaRotation);
 
         // Set new camera center so that rotation center = mouse pos at press
         geometry::Vec2d pivotViewCoords = mousePosAtPress;
         geometry::Vec2d pivotWorldCoords =
             cameraAtPress_.viewMatrix().inverted().transformPointAffine(pivotViewCoords);
         geometry::Vec2d pivotViewCoordsNow =
-            camera_.viewMatrix().transformPointAffine(pivotWorldCoords);
-        camera_.setCenter(camera_.center() - pivotViewCoords + pivotViewCoordsNow);
-
-        requestRepaint();
-        return true;
+            camera.viewMatrix().transformPointAffine(pivotWorldCoords);
+        camera.setCenter(camera.center() - pivotViewCoords + pivotViewCoordsNow);
     }
     else if (isZooming_) {
         // Set new camera zoom
@@ -488,21 +467,27 @@ bool Canvas::onMouseMove(ui::MouseMoveEvent* event) {
         const double zoomViewSensitivity = 0.005;
         geometry::Vec2d deltaPos = mousePosAtPress - mousePos;
         const double s = std::exp(zoomViewSensitivity * (deltaPos.y() - deltaPos.x()));
-        camera_.setZoom(cameraAtPress_.zoom() * s);
+        camera.setZoom(cameraAtPress_.zoom() * s);
 
         // Set new camera center so that zoom center = mouse pos at press
         geometry::Vec2d pivotViewCoords = mousePosAtPress;
         geometry::Vec2d pivotWorldCoords =
             cameraAtPress_.viewMatrix().inverted().transformPointAffine(pivotViewCoords);
         geometry::Vec2d pivotViewCoordsNow =
-            camera_.viewMatrix().transformPointAffine(pivotWorldCoords);
-        camera_.setCenter(camera_.center() - pivotViewCoords + pivotViewCoordsNow);
-
-        requestRepaint();
-        return true;
+            camera.viewMatrix().transformPointAffine(pivotWorldCoords);
+        camera.setCenter(camera.center() - pivotViewCoords + pivotViewCoordsNow);
+    }
+    else {
+        hasCameraChanged = false;
     }
 
-    return false;
+    if (hasCameraChanged) {
+        setCamera(camera);
+        return true;
+    }
+    else {
+        return false;
+    }
 }
 
 bool Canvas::onMousePress(ui::MousePressEvent* event) {
@@ -533,7 +518,7 @@ bool Canvas::onMousePress(ui::MousePressEvent* event) {
 
     if (isPanning_ || isRotating_ || isZooming_) {
         mousePosAtPress_ = event->position();
-        cameraAtPress_ = camera_;
+        cameraAtPress_ = camera();
         timeAtPress_ = event->timestamp();
         return true;
     }
@@ -553,19 +538,21 @@ bool Canvas::onMouseRelease(ui::MouseReleaseEvent* event) {
     }
 
     if (isRotating_ && !isDragging_) {
+        geometry::Camera2d camera = this->camera();
+
         // Save mouse pos in world coords before modifying camera
         geometry::Vec2d mousePos(mousePosAtPress_);
         geometry::Vec2d p1 =
-            camera_.viewMatrix().inverted().transformPointAffine(mousePos);
+            camera.viewMatrix().inverted().transformPointAffine(mousePos);
 
         // Reset camera rotation
-        camera_.setRotation(0);
+        camera.setRotation(0);
 
         // Set new camera center so that zoom center = mouse pos at scroll
-        geometry::Vec2d p2 = camera_.viewMatrix().transformPointAffine(p1);
-        camera_.setCenter(camera_.center() - mousePos + p2);
+        geometry::Vec2d p2 = camera.viewMatrix().transformPointAffine(p1);
+        camera.setCenter(camera.center() - mousePos + p2);
 
-        requestRepaint();
+        setCamera(camera);
     }
 
     isRotating_ = false;
@@ -582,7 +569,7 @@ bool Canvas::onMouseScroll(ui::ScrollEvent* event) {
         return true;
     }
 
-    double oldZoom = camera_.zoom();
+    double oldZoom = camera().zoom();
     double newZoom = 0;
 
     // Cubic Root of 2 (we want to double zoom every 3 steps)
@@ -649,19 +636,20 @@ bool Canvas::onMouseScroll(ui::ScrollEvent* event) {
     }
 
     if (newZoom != 0) {
+        geometry::Camera2d camera = this->camera();
+
         // Save mouse pos in world coords before applying zoom
         geometry::Vec2d mousePos = geometry::Vec2d(event->position());
         geometry::Vec2d p1 =
-            camera_.viewMatrix().inverted().transformPointAffine(mousePos);
+            camera.viewMatrix().inverted().transformPointAffine(mousePos);
 
-        camera_.setZoom(newZoom);
+        camera.setZoom(newZoom);
 
         // Set new camera center so that zoom center = mouse pos at scroll
-        geometry::Vec2d p2 = camera_.viewMatrix().transformPointAffine(p1);
-        camera_.setCenter(camera_.center() - mousePos + p2);
+        geometry::Vec2d p2 = camera.viewMatrix().transformPointAffine(p1);
+        camera.setCenter(camera.center() - mousePos + p2);
 
-        requestGeometryUpdate();
-        requestRepaint();
+        setCamera(camera);
     }
 
     return true;
@@ -740,7 +728,7 @@ void Canvas::onPaintDraw(graphics::Engine* engine, ui::PaintOptions options) {
     engine->setRasterizerState(isWireframeMode_ ? wireframeRS_ : fillRS_);
 
     geometry::Mat4f vm = engine->viewMatrix();
-    geometry::Mat4f cameraViewf(camera_.viewMatrix());
+    geometry::Mat4f cameraViewf(camera().viewMatrix());
     engine->pushViewMatrix(vm * cameraViewf);
 
     core::Array<workspace::Element*> selectedElements = selectedElements_();
@@ -871,63 +859,6 @@ core::Array<workspace::Element*> Canvas::selectedElements_() const {
         }
     }
     return result;
-}
-
-void Canvas::onFrameContent_() {
-    if (!workspace_) {
-        return;
-    }
-
-    geometry::Rect2d frame = geometry::Rect2d::empty;
-    if (selectedElementIds_.isEmpty()) {
-        // Frame All
-        // TODO: implement Workspace::boundingBox().
-        workspace_->visitDepthFirstPreOrder( //
-            [&frame](workspace::Element* e, Int /*depth*/) {
-                frame.uniteWith(e->boundingBox());
-            });
-    }
-    else {
-        // Frame Selection
-        for (core::Id id : selectedElementIds_) {
-            workspace::Element* e = workspace_->find(id);
-            if (e) {
-                frame.uniteWith(e->boundingBox());
-            }
-        }
-    }
-
-    if (!frame.isDegenerate()) {
-
-        double oldRotation = camera_.rotation();
-        geometry::Vec2d boundingCircleDiameter(frame.width(), frame.height());
-        double a = boundingCircleDiameter.length();
-        double b = camera_.viewportWidth() / camera_.viewportHeight();
-        double z = 1;
-        if (b <= 1) {
-            z = camera_.viewportWidth() / (a * 1.1);
-        }
-        else {
-            z = camera_.viewportHeight() / (a * 1.1);
-        }
-
-        geometry::Vec2d bboxCenter = 0.5 * (frame.pMin() + frame.pMax());
-
-        camera_.setRotation(0);
-        camera_.setZoom(z);
-        camera_.setCenter(z * bboxCenter);
-
-        // now re-rotate.
-        // camera setters are not trivial.
-        geometry::Vec2d c0 =
-            0.5 * geometry::Vec2d(camera_.viewportWidth(), camera_.viewportHeight());
-        geometry::Vec2d c1 = camera_.viewMatrix().inverted().transformPointAffine(c0);
-        camera_.setRotation(oldRotation);
-        geometry::Vec2d c2 = camera_.viewMatrix().transformPointAffine(c1);
-        camera_.setCenter(camera_.center() - c0 + c2);
-
-        requestRepaint();
-    }
 }
 
 } // namespace vgc::canvas

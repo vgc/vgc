@@ -31,33 +31,45 @@ using ui::modifierkeys::shift;
 
 VGC_UI_DEFINE_WINDOW_COMMAND( //
     switchToNormalDisplayMode,
-    "tools.canvas.switchToNormalDisplayMode",
+    "canvas.switchToNormalDisplayMode",
     "Display Mode: Normal",
     Shortcut());
 
 VGC_UI_DEFINE_WINDOW_COMMAND( //
     switchToOutlineOverlayDisplayMode,
-    "tools.canvas.switchToOutlineOverlayDisplayMode",
+    "canvas.switchToOutlineOverlayDisplayMode",
     "Display Mode: Outline Overlay",
     Shortcut());
 
 VGC_UI_DEFINE_WINDOW_COMMAND( //
     switchToOutlineOnlyDisplayMode,
-    "tools.canvas.switchToOutlineOnlyDisplayMode",
+    "canvas.switchToOutlineOnlyDisplayMode",
     "Display Mode: Outline Only",
     Shortcut());
 
 VGC_UI_DEFINE_WINDOW_COMMAND( //
     toggleLastTwoDisplayModes,
-    "tools.canvas.toggleLastTwoDisplayModes",
+    "canvas.toggleLastTwoDisplayModes",
     "Toggle Last Two Display Modes",
     Shortcut(Key::D));
 
 VGC_UI_DEFINE_WINDOW_COMMAND( //
     cycleDisplayModes,
-    "tools.canvas.cycleDisplayModes",
+    "canvas.cycleDisplayModes",
     "Cycle Display Modes",
     Shortcut(shift, Key::D));
+
+VGC_UI_DEFINE_WINDOW_COMMAND( //
+    fitViewToSelection,
+    "canvas.fitViewToSelection",
+    "Fit View to Selection",
+    Key::F);
+
+VGC_UI_DEFINE_WINDOW_COMMAND( //
+    fitViewToDocument,
+    "canvas.fitViewToDocument",
+    "Fit View to Document",
+    Shortcut(shift, Key::F));
 
 } // namespace commands
 
@@ -119,6 +131,10 @@ CanvasManager::CanvasManager(CreateKey key, const ui::ModuleContext& context)
 
     h.addAction(toggleLastTwoDisplayModes(), onToggleLastTwoDisplayModes_Slot());
     h.addAction(cycleDisplayModes(), onCycleDisplayModes_Slot());
+    h.addSeparator();
+
+    h.addAction(fitViewToSelection(), onFitViewToSelection_Slot());
+    h.addAction(fitViewToDocument(), onFitViewToDocument_Slot());
     h.addSeparator();
 }
 
@@ -197,6 +213,103 @@ void CanvasManager::onCycleDisplayModes_() {
         case DisplayMode::OutlineOnly:
             switchToDisplayMode_(canvas, DisplayMode::Normal);
             break;
+        }
+    }
+}
+
+namespace {
+
+void fitViewToRect_(Canvas& canvas, const geometry::Rect2d& rect) {
+
+    if (rect.isDegenerate()) {
+        return;
+    }
+
+    // Get current camera, viewport size, and rotation
+    geometry::Camera2d camera = canvas.camera();
+    geometry::Vec2d viewportSize = camera.viewportSize();
+    double viewportWidth = viewportSize[0];
+    double viewportHeight = viewportSize[1];
+    double rotation = camera.rotation();
+
+    // Compute new zoom, keeping a little margin around the rect
+    static constexpr double marginFactor = 1.1;
+    geometry::Vec2d boundingCircleDiameter(rect.width(), rect.height());
+    double a = boundingCircleDiameter.length();
+    double b = viewportWidth / viewportHeight;
+    double z = 1;
+    if (b <= 1) {
+        z = viewportWidth / (a * marginFactor);
+    }
+    else {
+        z = viewportHeight / (a * marginFactor);
+    }
+
+    // Compute new center
+    geometry::Vec2d bboxCenter = 0.5 * (rect.pMin() + rect.pMax());
+
+    // Set camera assuming no rotation
+    camera.setRotation(0);
+    camera.setZoom(z);
+    camera.setCenter(z * bboxCenter);
+
+    // Set rotation
+    // TODO: improve Camera2d API to make this easier.
+    geometry::Vec2d c0 = 0.5 * viewportSize;
+    geometry::Vec2d c1 = camera.viewMatrix().inverted().transformPointAffine(c0);
+    camera.setRotation(rotation);
+    geometry::Vec2d c2 = camera.viewMatrix().transformPointAffine(c1);
+    camera.setCenter(camera.center() - c0 + c2);
+
+    canvas.setCamera(camera);
+}
+
+// TODO: have both const and non-const versions of Workspace::visit...() so
+// that we can use a `const Workspace&` argument here.
+//
+void FitViewToDocument_(Canvas& canvas, workspace::Workspace& workspace) {
+
+    // TODO: implement Workspace::boundingBox().
+    geometry::Rect2d rect = geometry::Rect2d::empty;
+    workspace.visitDepthFirstPreOrder( //
+        [&rect](workspace::Element* e, Int /*depth*/) {
+            rect.uniteWith(e->boundingBox());
+        });
+    fitViewToRect_(canvas, rect);
+}
+
+void FitViewToSelection_(Canvas& canvas, workspace::Workspace& workspace) {
+
+    core::Array<core::Id> selection = canvas.selection();
+    if (selection.isEmpty()) {
+        FitViewToDocument_(canvas, workspace);
+    }
+    else {
+        geometry::Rect2d rect = geometry::Rect2d::empty;
+        for (core::Id id : selection) {
+            workspace::Element* e = workspace.find(id);
+            if (e) {
+                rect.uniteWith(e->boundingBox());
+            }
+        }
+        fitViewToRect_(canvas, rect);
+    }
+}
+
+} // namespace
+
+void CanvasManager::onFitViewToSelection_() {
+    if (auto canvas = activeCanvas().lock()) {
+        if (auto workspace = workspace::WorkspaceWeakPtr(canvas->workspace()).lock()) {
+            FitViewToSelection_(*canvas, *workspace);
+        }
+    }
+}
+
+void CanvasManager::onFitViewToDocument_() {
+    if (auto canvas = activeCanvas().lock()) {
+        if (auto workspace = workspace::WorkspaceWeakPtr(canvas->workspace()).lock()) {
+            FitViewToDocument_(*canvas, *workspace);
         }
     }
 }

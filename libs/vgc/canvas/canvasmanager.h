@@ -42,6 +42,12 @@ VGC_UI_DECLARE_COMMAND(toggleLastTwoDisplayModes)
 VGC_CANVAS_API
 VGC_UI_DECLARE_COMMAND(cycleDisplayModes)
 
+VGC_CANVAS_API
+VGC_UI_DECLARE_COMMAND(fitViewToSelection)
+
+VGC_CANVAS_API
+VGC_UI_DECLARE_COMMAND(fitViewToDocument)
+
 } // namespace commands
 
 VGC_DECLARE_OBJECT(Canvas);
@@ -114,6 +120,12 @@ private:
 
     void onCycleDisplayModes_();
     VGC_SLOT(onCycleDisplayModes_);
+
+    void onFitViewToSelection_();
+    VGC_SLOT(onFitViewToSelection_);
+
+    void onFitViewToDocument_();
+    VGC_SLOT(onFitViewToDocument_);
 };
 
 } // namespace vgc::canvas
