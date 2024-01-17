@@ -353,6 +353,10 @@ public:
         return *this;
     }
 
+    // Note: we intentionally do not want to allow constructing a LockPtr from
+    // a WeakPtr or SharedPtr, in order to ensures that `lock()` must be
+    // explicitly called, preventing mistakes.
+
     /// Destroys this `ObjPtr<T>`, destroying the managed object if its reference
     /// count reaches zero.
     ///
@@ -1893,6 +1897,15 @@ struct fmt::formatter<vgc::core::ObjPtr<T>> : vgc::core::detail::ObjPtrFormatter
     template<typename FormatContext>
     auto format(const vgc::core::ObjPtr<T>& p, FormatContext& ctx) {
         return vgc::core::detail::ObjPtrFormatter::format(p.get(), ctx);
+    }
+};
+
+template<typename T>
+struct fmt::formatter<vgc::core::ObjWeakPtr<T>> : vgc::core::detail::ObjPtrFormatter {
+    template<typename FormatContext>
+    auto format(const vgc::core::ObjWeakPtr<T>& p, FormatContext& ctx) {
+        auto lock = p.lock();
+        return vgc::core::detail::ObjPtrFormatter::format(lock.get(), ctx);
     }
 };
 
