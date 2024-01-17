@@ -185,8 +185,10 @@ Workspace::Workspace(CreateKey key, dom::DocumentPtr document)
     document->changed().connect(onDocumentDiff());
 
     vac_ = vacomplex::Complex::create();
-    vac_->cellSamplingQualityChanged().connect(onVacCellSamplingQualityChanged_Slot());
-    vac_->nodesChanged().connect(onVacNodesChanged());
+    if (auto vac = vac_.lock()) {
+        vac->cellSamplingQualityChanged().connect(onVacCellSamplingQualityChanged_Slot());
+        vac->nodesChanged().connect(onVacNodesChanged());
+    }
 
     rebuildFromDom();
 }
@@ -252,17 +254,18 @@ void Workspace::registerElementClass_(
 }
 
 void Workspace::sync() {
-    document_->emitPendingDiff();
+    if (auto document = document_.lock()) {
+        document->emitPendingDiff();
+    }
 }
 
 void Workspace::rebuildFromDom() {
-    if (!document_) {
-        return;
+    if (auto document = document_.lock()) {
+        rebuildWorkspaceTreeFromDom_();
+        rebuildVacFromWorkspaceTree_();
+        lastSyncedDomVersionId_ = document->versionId();
+        changed().emit();
     }
-    rebuildWorkspaceTreeFromDom_();
-    rebuildVacFromWorkspaceTree_();
-    lastSyncedDomVersionId_ = document_->versionId();
-    changed().emit();
 }
 
 bool Workspace::updateElementFromDom(Element* element) {
@@ -719,14 +722,19 @@ dom::DocumentPtr Workspace::copy(core::ConstSpan<core::Id> elementIds) {
     return dom::Document::copy(domNodesToCopy);
 }
 
-core::Array<core::Id> Workspace::paste(dom::DocumentPtr document) {
+core::Array<core::Id> Workspace::paste(dom::DocumentPtr pastedDoc) {
+
+    auto document = document_.lock();
+    if (!document) {
+        return {};
+    }
 
     // Delegate the pasting operation to the DOM.
     //
     // TODO: use active group element as parent.
     //
-    dom::Node* parent = document_->rootElement();
-    core::Array<dom::Node*> nodes = document_->paste(document, parent);
+    dom::Node* parent = document->rootElement();
+    core::Array<dom::Node*> nodes = document->paste(pastedDoc, parent);
 
     // Convert the Node* to Workspace IDs.
     //
@@ -963,10 +971,15 @@ void Workspace::debugPrintWorkspaceTree_() {
 
 void Workspace::preUpdateDomFromVac_() {
 
+    auto document = document_.lock();
+    if (!document) {
+        return;
+    }
+
     // Check whether the Workspace is properly synchronized with the DOM before
     // we attempt to update the DOM from the VAC.
     //
-    if (document_->hasPendingDiff()) {
+    if (document->hasPendingDiff()) {
         VGC_ERROR(
             LogVgcWorkspace,
             "The topological complex has been edited while not being up to date with "
@@ -1021,6 +1034,11 @@ void Workspace::onVacCellSamplingQualityChanged_(const vacomplex::Cell* cell) {
 }
 
 void Workspace::onVacNodesChanged_(const vacomplex::ComplexDiff& diff) {
+
+    auto document = document_.lock();
+    if (!document) {
+        return;
+    }
 
     // Process destroyed VAC nodes.
     //
@@ -1138,7 +1156,7 @@ void Workspace::onVacNodesChanged_(const vacomplex::ComplexDiff& diff) {
         // Create the DOM element (as last child of root too)
 
         dom::ElementPtr domElement = dom::Element::create(
-            document_->rootElement(), element->domTagName().value(), nullptr);
+            document->rootElement(), element->domTagName().value(), nullptr);
         const core::Id id = domElement->internalId();
 
         const auto& p = elements_.emplace(id, std::move(u));
@@ -1178,7 +1196,7 @@ void Workspace::onVacNodesChanged_(const vacomplex::ComplexDiff& diff) {
         rootVacElement_->appendChild(element);
 
         dom::ElementPtr domElement =
-            dom::Element::create(document_->rootElement(), "transient", nullptr);
+            dom::Element::create(document->rootElement(), "transient", nullptr);
         const core::Id id = domElement->internalId();
 
         // Keep alive this transient node until the end of onVacNodesChanged_().
@@ -1329,9 +1347,11 @@ void Workspace::onDocumentDiff_(const dom::Diff& diff) {
 // but ignoring them.
 //
 void Workspace::flushDomDiff_() {
-    if (document_->hasPendingDiff()) {
-        ++numDocumentDiffToSkip_;
-        document_->emitPendingDiff();
+    if (auto document = document_.lock()) {
+        if (document->hasPendingDiff()) {
+            ++numDocumentDiffToSkip_;
+            document->emitPendingDiff();
+        }
     }
 }
 
@@ -1418,8 +1438,10 @@ dom::Element* rebuildTreeFromDomIter(Element* it, Element*& parent) {
 
 void Workspace::rebuildWorkspaceTreeFromDom_() {
 
-    VGC_ASSERT(document_);
-    VGC_ASSERT(vac_);
+    auto document = document_.lock();
+    auto vac = vac_.lock();
+    VGC_ASSERT(document);
+    VGC_ASSERT(vac);
 
     // reset tree
     clearElements_();
@@ -1427,13 +1449,13 @@ void Workspace::rebuildWorkspaceTreeFromDom_() {
     // reset VAC
     {
         core::BoolGuard bgVac(isUpdatingVacFromDom_);
-        vac_->clear();
-        //vac_->emitPendingDiff();
+        vac->clear();
+        //vac->emitPendingDiff();
     }
 
     flushDomDiff_();
 
-    dom::Element* domVgcElement = document_->rootElement();
+    dom::Element* domVgcElement = document->rootElement();
     if (!domVgcElement || domVgcElement->tagName() != dom::strings::vgc) {
         return;
     }
@@ -1456,15 +1478,16 @@ void Workspace::rebuildWorkspaceTreeFromDom_() {
 
 void Workspace::rebuildVacFromWorkspaceTree_() {
 
+    auto vac = vac_.lock();
+    VGC_ASSERT(vac);
     VGC_ASSERT(rootVacElement_);
-    VGC_ASSERT(vac_);
 
     core::BoolGuard bgVac(isUpdatingVacFromDom_);
 
     // reset vac
-    vac_->clear();
-    vac_->resetRoot();
-    rootVacElement_->setVacNode(vac_->rootGroup());
+    vac->clear();
+    vac->resetRoot();
+    rootVacElement_->setVacNode(vac->rootGroup());
 
     Element* root = rootVacElement_;
     Element* element = root->firstChild();
@@ -1563,10 +1586,12 @@ void Workspace::updateVacChildrenOrder_() {
 
 void Workspace::updateVacFromDom_(const dom::Diff& diff) {
 
-    VGC_ASSERT(document_);
-    VGC_ASSERT(vac_);
+    auto document = document_.lock();
+    auto vac = vac_.lock();
+    VGC_ASSERT(document);
+    VGC_ASSERT(vac);
 
-    if (vac()->isOperationInProgress()) {
+    if (vac->isOperationInProgress()) {
         throw core::LogicError("VAC and DOM have been concurrently modified (forgot to "
                                "call workspace.sync() after modifying the DOM?).");
 
@@ -1632,7 +1657,7 @@ void Workspace::updateVacFromDom_(const dom::Diff& diff) {
     // both an edge geometry and a vertex position, we do not want to perform
     // snapping between the update of the edge and the update of the vertex.
     //
-    vacomplex::ScopedOperationsGroup operationsGroup(vac());
+    vacomplex::ScopedOperationsGroup operationsGroup(vac.get());
 
     // Create new elements, but for now uninitialized and in a potentially
     // incorrect child ordering.
@@ -1763,7 +1788,7 @@ void Workspace::updateVacFromDom_(const dom::Diff& diff) {
 
     // Update Version ID and notify that the workspace changed.
     //
-    lastSyncedDomVersionId_ = document_->versionId();
+    lastSyncedDomVersionId_ = document->versionId();
     changed().emit();
 }
 

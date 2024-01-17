@@ -57,9 +57,8 @@ void SelectionListHistory::pushSelection(SelectionList&& list) {
     selectionChanged().emit();
 }
 
-Canvas::Canvas(CreateKey key, workspace::Workspace* workspace)
+Canvas::Canvas(CreateKey key)
     : Widget(key)
-    , workspace_(workspace)
     , renderTask_("Render")
     , updateTask_("Update")
     , drawTask_("Draw") {
@@ -70,18 +69,11 @@ Canvas::Canvas(CreateKey key, workspace::Workspace* workspace)
 
     setClippingEnabled(true);
 
-    if (workspace_) {
-        workspace_->changed().connect(onWorkspaceChanged());
-        // XXX to remove
-        workspace_->document()->emitPendingDiff();
-        workspace_->document()->changed().connect(onDocumentChanged());
-    }
-
     addStyleClass(canvas::strings::Canvas);
 }
 
-CanvasPtr Canvas::create(workspace::Workspace* workspace) {
-    return core::createObject<Canvas>(workspace);
+CanvasPtr Canvas::create() {
+    return core::createObject<Canvas>();
 }
 
 void Canvas::setDisplayMode(DisplayMode displayMode) {
@@ -91,27 +83,22 @@ void Canvas::setDisplayMode(DisplayMode displayMode) {
     }
 }
 
-void Canvas::setWorkspace(workspace::Workspace* workspace) {
+void Canvas::setWorkspace(workspace::WorkspaceWeakPtr newWorkspace_) {
 
-    if (workspace_ == workspace) {
+    if (workspace_ == newWorkspace_) {
         return;
     }
 
-    if (workspace_) {
-        workspace_->disconnect(this);
-        // XXX to remove
-        workspace_->document()->disconnect(this);
+    if (auto oldWorkspace = workspace_.lock()) {
+        oldWorkspace->disconnect(this);
     }
 
-    workspace_ = workspace;
-    if (workspace_) {
-        workspace_->changed().connect(onWorkspaceChanged());
-        // XXX to remove
-        workspace_->document()->changed().connect(onDocumentChanged());
-        onWorkspaceChanged_();
+    workspace_ = newWorkspace_;
+    if (auto newWorkspace = workspace_.lock()) {
+        newWorkspace->changed().connect(onWorkspaceChanged_Slot());
     }
 
-    requestRepaint();
+    onWorkspaceChanged_();
     workspaceReplaced().emit();
 }
 
@@ -136,8 +123,9 @@ namespace {
 
 void deleteElements(
     const core::Array<core::Id>& elementIds,
-    workspace::Workspace* workspace) {
+    workspace::WorkspaceWeakPtr workspace_) {
 
+    auto workspace = workspace_.lock();
     if (!workspace || elementIds.isEmpty()) {
         return;
     }
@@ -206,9 +194,9 @@ core::Array<SelectionCandidate> Canvas::computeSelectionCandidatesAboveOrAt(
     bool isMeshEnabled = (displayMode_ != DisplayMode::OutlineOnly);
     bool isOutlineEnabled = (displayMode_ != DisplayMode::Normal);
 
-    if (workspace_) {
+    if (auto workspace = workspace_.lock()) {
         bool skip = itemId > 0;
-        workspace_->visitDepthFirst(
+        workspace->visitDepthFirst(
             [](workspace::Element*, Int) { return true; },
             [=, &result, &skip](workspace::Element* e, Int /*depth*/) {
                 if (!e || (skip && e->id() != itemId)) {
@@ -291,13 +279,13 @@ core::Array<core::Id> Canvas::computeRectangleSelectionCandidates(
 
     bool isMeshEnabled = (displayMode_ != DisplayMode::OutlineOnly);
 
-    if (workspace_) {
+    if (auto workspace = workspace_.lock()) {
 
         geometry::Rect2d rect = geometry::Rect2d::empty;
         rect.uniteWith(a);
         rect.uniteWith(b);
 
-        workspace_->visitDepthFirst(
+        workspace->visitDepthFirst(
             [](workspace::Element*, Int) { return true; },
             [&, rect, isMeshEnabled](workspace::Element* e, Int /*depth*/) {
                 if (!e) {
@@ -340,7 +328,14 @@ bool Canvas::onKeyPress(ui::KeyPressEvent* event) {
         break;
     case ui::Key::I: {
         using geometry::CurveSamplingQuality;
-        vacomplex::Complex* complex = workspace_->vac();
+        auto workspace = workspace_.lock();
+        if (!workspace) {
+            break;
+        }
+        auto complex = workspace->vac().lock();
+        if (!complex) {
+            break;
+        }
         CurveSamplingQuality quality = complex->samplingQuality();
         switch (quality) {
         case CurveSamplingQuality::Disabled:
@@ -389,15 +384,7 @@ bool Canvas::onKeyPress(ui::KeyPressEvent* event) {
 }
 
 void Canvas::onWorkspaceChanged_() {
-
-    //selectionCandidateElements_.clear();
-    //selectedElementId_ = 0;
-
-    // ask for redraw
     requestRepaint();
-}
-
-void Canvas::onDocumentChanged_(const dom::Diff& /*diff*/) {
 }
 
 namespace {
@@ -743,8 +730,8 @@ void Canvas::onPaintDraw(graphics::Engine* engine, ui::PaintOptions options) {
         commonPaintOptions.set(workspace::PaintOption::Editing);
     }
 
-    if (workspace_) {
-        workspace_->sync();
+    if (auto workspace = workspace_.lock()) {
+        workspace->sync();
         //VGC_PROFILE_SCOPE("Canvas:WorkspaceVisit");
 
         bool isMeshEnabled = (displayMode_ != DisplayMode::OutlineOnly);
@@ -753,7 +740,7 @@ void Canvas::onPaintDraw(graphics::Engine* engine, ui::PaintOptions options) {
         // Draw Normal
         if (isMeshEnabled) {
             workspace::PaintOptions paintOptions = commonPaintOptions;
-            workspace_->visitDepthFirst(
+            workspace->visitDepthFirst(
                 [](workspace::Element* /*e*/, Int /*depth*/) {
                     // we always visit children for now
                     return true;
@@ -769,7 +756,7 @@ void Canvas::onPaintDraw(graphics::Engine* engine, ui::PaintOptions options) {
         if (isOutlineEnabled) {
             workspace::PaintOptions paintOptions = commonPaintOptions;
             paintOptions.set(workspace::PaintOption::Outline);
-            workspace_->visitDepthFirst(
+            workspace->visitDepthFirst(
                 [](workspace::Element* /*e*/, Int /*depth*/) {
                     // we always visit children for now
                     return true;
@@ -793,7 +780,7 @@ void Canvas::onPaintDraw(graphics::Engine* engine, ui::PaintOptions options) {
             if (isOutlineEnabled) {
                 paintOptions.set(workspace::PaintOption::Outline);
             }
-            workspace_->visitDepthFirst(
+            workspace->visitDepthFirst(
                 [](workspace::Element* /*e*/, Int /*depth*/) {
                     // we always visit children for now
                     return true;
@@ -850,9 +837,9 @@ void Canvas::updateChildrenGeometry() {
 
 core::Array<workspace::Element*> Canvas::selectedElements_() const {
     core::Array<workspace::Element*> result;
-    if (workspace()) {
+    if (auto workspace = workspace_.lock()) {
         for (core::Id id : selectedElementIds_) {
-            workspace::Element* element = workspace()->find(id);
+            workspace::Element* element = workspace->find(id);
             if (element && !result.contains(element)) {
                 result.append(element);
             }

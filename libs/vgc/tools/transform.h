@@ -72,13 +72,13 @@ public:
     TopologyAwareTransformer& operator=(const TopologyAwareTransformer&) = delete;
 
     void setElements(
-        const workspace::WorkspacePtr& workspace,
+        workspace::WorkspaceWeakPtr workspace,
         const core::Array<core::Id>& elementIds);
 
     void clear();
 
-    workspace::Workspace* workspace() const {
-        return workspace_.getIfAlive();
+    workspace::WorkspaceWeakPtr workspace() const {
+        return workspace_;
     }
 
     void transform(const geometry::Mat3d& transform);
@@ -91,15 +91,12 @@ public:
     void cancelDragTransform();
 
 private:
-    workspace::WorkspacePtr workspace_;
+    workspace::WorkspaceWeakPtr workspace_;
     core::Array<KeyVertexTransformData> vertices_;
     core::Array<KeyEdgeTransformData> edges_;
     core::Array<KeyEdgeTransformData> edgesToSnap_;
 
     bool isDragTransforming_ = false;
-
-    vacomplex::KeyVertex* findKeyVertex_(core::Id id);
-    vacomplex::KeyEdge* findKeyEdge_(core::Id id);
 };
 
 } // namespace detail
@@ -146,10 +143,10 @@ protected:
 private:
     friend detail::TransformDragAction;
 
-    canvas::CanvasTool* canvasTool_ = {};
+    canvas::CanvasToolWeakPtr canvasTool_;
     // we assume that the workspace will not change.
     // if we support that later, we could use a signal/slot.
-    workspace::WorkspacePtr workspace_ = {};
+    workspace::WorkspaceWeakPtr workspace_;
 
     core::Array<core::Id> elementIds_;
 
@@ -170,7 +167,7 @@ private:
     bool isTooSmallForBox_ = false;
 
     bool isBoundingBoxDirty_ = true;
-    void computeHoverData_(canvas::Canvas* canvas);
+    void computeHoverData_(const canvas::Canvas& canvas);
 
     detail::TransformDragAction* dragAction_ = nullptr;
     detail::TransformDragAction* dragAltAction_ = nullptr;
@@ -196,7 +193,7 @@ private:
     void hide_();
     void show_();
 
-    bool updateWorkspacePointer_();
+    void updateWorkspacePointer_();
 
     void setDragActions_(detail::TransformDragActionType transformType, Int manipIndex);
     void clearDragActions_();

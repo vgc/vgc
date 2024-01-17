@@ -107,16 +107,16 @@ protected:
     /// This is an implementation details. Please use
     /// Canvas::create() instead.
     ///
-    Canvas(CreateKey, workspace::Workspace* workspace);
+    Canvas(CreateKey);
 
 public:
     /// Creates a Canvas.
     ///
-    static CanvasPtr create(workspace::Workspace* workspace);
+    static CanvasPtr create();
 
     /// Returns the observed document workspace.
     ///
-    workspace::Workspace* workspace() const {
+    workspace::WorkspaceWeakPtr workspace() const {
         return workspace_;
     }
 
@@ -132,7 +132,7 @@ public:
 
     /// Sets the observed document workspace.
     ///
-    void setWorkspace(workspace::Workspace* workspace);
+    void setWorkspace(workspace::WorkspaceWeakPtr workspace);
 
     /// This signal is emitted whenever this `Canvas` changes which
     /// `workspace()` it is observing. In other words, this is emitted when
@@ -251,14 +251,11 @@ private:
     geometry::Camera2d camera_;
 
     // Scene
-    workspace::Workspace* workspace_ = nullptr;
+    workspace::WorkspaceWeakPtr workspace_;
     DisplayMode displayMode_ = DisplayMode::Normal;
 
     void onWorkspaceChanged_();
-    void onDocumentChanged_(const dom::Diff& diff);
-
-    VGC_SLOT(onWorkspaceChanged, onWorkspaceChanged_)
-    VGC_SLOT(onDocumentChanged, onDocumentChanged_)
+    VGC_SLOT(onWorkspaceChanged_)
 
     // Moving camera
     bool isPanning_ = false;

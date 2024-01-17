@@ -28,6 +28,55 @@ namespace vgc::canvas {
 
 VGC_DECLARE_OBJECT(CanvasTool);
 
+/// \class vgc::canvas::CanvasToolContextLock
+/// \brief Stores pointer locks to the Workspace and Canvas for tools to operate on.
+///
+/// If this context evaluates to true, then this means that both `workspace()`
+/// and `canvas()` are non-null pointers that outlive the context and can
+/// therefore be used without checks.
+///
+/// This should be treated similarly as an `ObjLockPtr` and only be stored as
+/// local variables (never as data member) for the purpose of temporary
+/// ownership.
+///
+class CanvasToolContextLock {
+public:
+    /// Creates an invalid context.
+    ///
+    CanvasToolContextLock() = default;
+
+    /// Creates a context from the given canvas.
+    ///
+    CanvasToolContextLock(canvas::CanvasWeakPtr canvas) {
+        canvas_ = canvas.lock();
+        if (canvas_) {
+            workspace_ = canvas_->workspace().lock();
+        }
+    }
+
+    /// Returns whether both `workspace()` and `canvas()` are non-null.
+    ///
+    operator bool() const {
+        return static_cast<bool>(workspace_); // if true, implies canvas_ true as well
+    }
+
+    /// Returns the workspace to operator on.
+    ///
+    workspace::WorkspaceLockPtr workspace() const {
+        return workspace_;
+    }
+
+    /// Returns the canvas to operator on.
+    ///
+    canvas::CanvasLockPtr canvas() const {
+        return canvas_;
+    }
+
+private:
+    canvas::CanvasLockPtr canvas_;
+    workspace::WorkspaceLockPtr workspace_;
+};
+
 /// \class vgc::canvas::CanvasTool
 /// \brief An abstract canvas tool widget.
 ///
@@ -48,14 +97,25 @@ public:
 
     /// Returns the working document workspace.
     ///
-    workspace::Workspace* workspace() const {
-        return canvas_ ? canvas_->workspace() : nullptr;
+    workspace::WorkspaceWeakPtr workspace() const {
+        if (auto canvas = canvas_.lock()) {
+            return canvas->workspace();
+        }
+        else {
+            return nullptr;
+        }
     }
 
     /// Returns the current canvas that this tool is operating on.
     ///
-    Canvas* canvas() const {
+    CanvasWeakPtr canvas() const {
         return canvas_;
+    }
+
+    /// Creates a `CanvasToolContextLock` for a tool to safely operate on.
+    ///
+    CanvasToolContextLock contextLock() const {
+        return CanvasToolContextLock(canvas());
     }
 
     /// This signal is emitted whenever the `canvas()` associated with this
@@ -82,7 +142,7 @@ protected:
     geometry::Vec2f computePreferredSize() const override;
 
 private:
-    Canvas* canvas_ = nullptr;
+    CanvasWeakPtr canvas_;
 
     // Make sure to disallow concurrent usage of the mouse and the tablet to
     // avoid conflicts. This also acts as a work around the following Qt bugs:

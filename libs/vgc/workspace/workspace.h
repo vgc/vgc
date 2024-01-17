@@ -131,8 +131,8 @@ public:
     ///
     /// \sa `vac()`.
     ///
-    dom::Document* document() const {
-        return document_.get();
+    dom::DocumentWeakPtr document() const {
+        return document_;
     }
 
     /// Returns the topological complex corresponding to the DOM that this
@@ -156,8 +156,8 @@ public:
     ///
     /// \sa `document()`.
     ///
-    vacomplex::Complex* vac() const {
-        return vac_.get();
+    vacomplex::ComplexWeakPtr vac() const {
+        return vac_;
     }
 
     /// If the `document()` of this workspace has enabled support for undo/redo
@@ -166,7 +166,12 @@ public:
     /// Otherwise, returns `nullptr`.
     ///
     core::History* history() const {
-        return document_.get()->history();
+        if (auto document = document_.lock()) {
+            return document->history();
+        }
+        else {
+            return nullptr;
+        }
     }
 
     /// Returns the root workspace element, that is, the workspace element
@@ -451,8 +456,8 @@ private:
     void
     fillVacElementListsUsingTagName_(Element* root, detail::VacElementLists& ce) const;
 
-    dom::DocumentPtr document_;
-    vacomplex::ComplexPtr vac_;
+    dom::DocumentSharedPtr document_;
+    vacomplex::ComplexSharedPtr vac_;
 
     detail::ScopedUndoGroup createScopedUndoGroup_(core::StringId name) {
         return detail::createScopedUndoGroup(this, name);

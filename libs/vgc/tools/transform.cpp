@@ -249,17 +249,24 @@ public:
     }
 
     void onMouseDragStart(ui::MouseEvent* event) override {
-        box_->isTransformActionOngoing_ = true;
-        box_->transformActionMatrix_ = geometry::Mat3d::identity;
 
-        canvas::Canvas* canvas = nullptr;
-        workspace::Workspace* workspace = nullptr;
-        if (!getPointers_(canvas, workspace)) {
+        auto context = contextLock_();
+        if (!context) {
+            return;
+        }
+        auto workspace = context.workspace();
+        auto canvas = context.canvas();
+
+        auto box = box_.lock();
+        if (!box) {
             return;
         }
 
+        box->isTransformActionOngoing_ = true;
+        box->transformActionMatrix_ = geometry::Mat3d::identity;
+
         // Prepare transformer
-        transformer_.setElements(workspace, box_->elementIds_);
+        transformer_.setElements(workspace, box->elementIds_);
 
         const geometry::Mat4d& cameraMatrix = canvas->camera().viewMatrix();
         geometry::Mat4d invCameraMatrix = cameraMatrix.inverted();
@@ -273,7 +280,7 @@ public:
         // - manip point
         // - opposite manip point
         //
-        geometry::Vec2d pivotPosition = box_->pivotPoint_;
+        geometry::Vec2d pivotPosition = box->pivotPoint_;
         auto getManipPosition = [](geometry::Rect2d rect,
                                    geometry::Vec2d cursorPosition,
                                    Int index) -> geometry::Vec2d {
@@ -287,16 +294,16 @@ public:
             return res;
         };
         originalManipPoint_ =
-            getManipPosition(box_->boundingBox_, cursorPosition, manipIndex_);
+            getManipPosition(box->boundingBox_, cursorPosition, manipIndex_);
         oppositeManipPoint_ =
-            getManipPosition(box_->boundingBox_, cursorPosition, (manipIndex_ + 4) % 8);
+            getManipPosition(box->boundingBox_, cursorPosition, (manipIndex_ + 4) % 8);
 
         if (usePivot_) {
             // use center for now
             oppositeManipPoint_ = pivotPosition;
         }
         else {
-            getManipPosition(box_->boundingBox_, cursorPosition, (manipIndex_ + 4) % 8);
+            getManipPosition(box->boundingBox_, cursorPosition, (manipIndex_ + 4) % 8);
         }
 
         // Compute delta in canvas space between cursor and manipulation point.
@@ -310,9 +317,16 @@ public:
     }
 
     void onMouseDragMove(ui::MouseEvent* event) override {
-        canvas::Canvas* canvas = nullptr;
-        workspace::Workspace* workspace = nullptr;
-        if (!getPointers_(canvas, workspace)) {
+
+        auto context = contextLock_();
+        if (!context) {
+            return;
+        }
+        auto workspace = context.workspace();
+        auto canvas = context.canvas();
+
+        auto box = box_.lock();
+        if (!box) {
             return;
         }
 
@@ -368,7 +382,7 @@ public:
 
             double angle = cursorManipAngleNow - cursorManipAngleStart_;
 
-            box_->cursorChanger_.set(rotationCursor(cursorManipAngleNow));
+            box->cursorChanger_.set(rotationCursor(cursorManipAngleNow));
 
             transform.rotate(angle);
             transform.translate(-oppositeManipPoint_);
@@ -381,16 +395,21 @@ public:
         }
         transformer_.updateDragTransform(transform);
 
-        box_->transformActionMatrix_ = transform;
+        box->transformActionMatrix_ = transform;
 
         draggedOnce_ = true;
     }
 
     void onMouseDragConfirm(ui::MouseEvent* /*event*/) override {
-        box_->isTransformActionOngoing_ = false;
-        box_->isBoundingBoxDirty_ = true;
 
-        workspace::Workspace* workspace = transformer_.workspace();
+        auto box = box_.lock();
+        if (!box) {
+            return;
+        }
+        box->isTransformActionOngoing_ = false;
+        box->isBoundingBoxDirty_ = true;
+
+        auto workspace = transformer_.workspace().lock();
         if (draggedOnce_ && workspace) {
             core::History* history = workspace->history();
             if (!undoGroup_ && history) {
@@ -410,10 +429,15 @@ public:
     }
 
     void onMouseDragCancel(ui::MouseEvent* /*event*/) override {
-        box_->isTransformActionOngoing_ = false;
-        box_->isBoundingBoxDirty_ = true;
 
-        workspace::Workspace* workspace = transformer_.workspace();
+        auto box = box_.lock();
+        if (!box) {
+            return;
+        }
+        box->isTransformActionOngoing_ = false;
+        box->isBoundingBoxDirty_ = true;
+
+        auto workspace = transformer_.workspace().lock();
         if (draggedOnce_ && workspace) {
             transformer_.cancelDragTransform();
 
@@ -432,13 +456,13 @@ public:
         draggedOnce_ = false;
         undoGroup_ = nullptr;
         transformer_.clear();
-        if (box_) {
-            box_->requestRepaint();
+        if (auto box = box_.lock()) {
+            box->requestRepaint();
         }
     }
 
-public:
-    TransformBox* const box_;
+private:
+    const TransformBoxWeakPtr box_;
     const TransformDragActionType transformType_;
     const Int manipIndex_;
     const bool usePivot_;
@@ -453,19 +477,13 @@ public:
 
     detail::TopologyAwareTransformer transformer_;
 
-    bool getPointers_(canvas::Canvas*& canvas, workspace::Workspace*& workspace) {
-        if (!box_->canvasTool_) {
-            return false;
+    canvas::CanvasToolContextLock contextLock_() {
+        if (auto box = box_.lock()) {
+            if (auto tool = box->canvasTool_.lock()) {
+                return tool->contextLock();
+            }
         }
-        canvas = box_->canvasTool_->canvas();
-        if (!canvas) {
-            return false;
-        }
-        workspace = box_->workspace_.getIfAlive();
-        if (!workspace) {
-            return false;
-        }
-        return true;
+        return {};
     }
 };
 
@@ -476,7 +494,7 @@ TopologyAwareTransformer::~TopologyAwareTransformer() {
 }
 
 void TopologyAwareTransformer::setElements(
-    const workspace::WorkspacePtr& workspace,
+    workspace::WorkspaceWeakPtr newWorkspace,
     const core::Array<core::Id>& elementIds) {
 
     if (isDragTransforming_) {
@@ -487,8 +505,9 @@ void TopologyAwareTransformer::setElements(
     edges_.clear();
     edgesToSnap_.clear();
 
-    workspace_ = workspace;
-    if (!workspace_.isAlive()) {
+    workspace_ = newWorkspace;
+    auto workspace = workspace_.lock();
+    if (!workspace) {
         return;
     }
 
@@ -513,7 +532,7 @@ void TopologyAwareTransformer::setElements(
     };
 
     for (core::Id id : elementIds) {
-        workspace::Element* element = workspace_->find(id);
+        workspace::Element* element = workspace->find(id);
         if (!element) {
             continue;
         }
@@ -560,19 +579,19 @@ void TopologyAwareTransformer::setElements(
 
     // Save original intrinsic geometry data for translation
     for (vacomplex::KeyVertex* kv : vertices) {
-        workspace::Element* element = workspace_->findVacElement(kv->id());
+        workspace::Element* element = workspace->findVacElement(kv->id());
         if (element) {
             vertices_.append({element->id(), kv->position()});
         }
     }
     for (vacomplex::KeyEdge* ke : edges) {
-        workspace::Element* element = workspace_->findVacElement(ke->id());
+        workspace::Element* element = workspace->findVacElement(ke->id());
         if (element) {
             edges_.append({element->id()});
         }
     }
     for (vacomplex::KeyEdge* ke : edgesToSnap) {
-        workspace::Element* element = workspace_->findVacElement(ke->id());
+        workspace::Element* element = workspace->findVacElement(ke->id());
         if (element) {
             edgesToSnap_.append({element->id()});
         }
@@ -615,6 +634,22 @@ private:
     core::Array<vacomplex::detail::Operations> ops_;
 };
 
+vacomplex::KeyVertex* findKeyVertex_(const workspace::Workspace& workspace, core::Id id) {
+    workspace::Element* element = workspace.find(id);
+    if (element && element->vacNode() && element->vacNode()->isCell()) {
+        return element->vacNode()->toCellUnchecked()->toKeyVertex();
+    }
+    return nullptr;
+}
+
+vacomplex::KeyEdge* findKeyEdge_(const workspace::Workspace& workspace, core::Id id) {
+    workspace::Element* element = workspace.find(id);
+    if (element && element->vacNode() && element->vacNode()->isCell()) {
+        return element->vacNode()->toCellUnchecked()->toKeyEdge();
+    }
+    return nullptr;
+}
+
 } // namespace
 
 void TopologyAwareTransformer::transform(const geometry::Mat3d& transform) {
@@ -623,13 +658,14 @@ void TopologyAwareTransformer::transform(const geometry::Mat3d& transform) {
 
     // TODO: take group transformations into account.
 
-    if (!workspace_.isAlive()) {
+    auto workspace = workspace_.lock();
+    if (!workspace) {
         return;
     }
 
     // Vertices
     for (const KeyVertexTransformData& td : vertices_) {
-        vacomplex::KeyVertex* kv = findKeyVertex_(td.elementId);
+        vacomplex::KeyVertex* kv = findKeyVertex_(*workspace, td.elementId);
         if (kv) {
             mainOp.addComplex(kv->complex());
             vacomplex::ops::setKeyVertexPosition(
@@ -639,7 +675,7 @@ void TopologyAwareTransformer::transform(const geometry::Mat3d& transform) {
 
     // Edges
     for (const KeyEdgeTransformData& td : edges_) {
-        vacomplex::KeyEdge* ke = findKeyEdge_(td.elementId);
+        vacomplex::KeyEdge* ke = findKeyEdge_(*workspace, td.elementId);
         if (ke) {
             mainOp.addComplex(ke->complex());
             vacomplex::KeyEdgeData& data = ke->data();
@@ -650,7 +686,7 @@ void TopologyAwareTransformer::transform(const geometry::Mat3d& transform) {
 
     // Edges to snap
     for (const KeyEdgeTransformData& td : edgesToSnap_) {
-        vacomplex::KeyEdge* ke = findKeyEdge_(td.elementId);
+        vacomplex::KeyEdge* ke = findKeyEdge_(*workspace, td.elementId);
         if (ke) {
             mainOp.addComplex(ke->complex());
             ke->snapGeometry();
@@ -664,13 +700,14 @@ void TopologyAwareTransformer::transform(const geometry::Vec2d& translation) {
 
     // TODO: take group transformations into account.
 
-    if (!workspace_.isAlive()) {
+    auto workspace = workspace_.lock();
+    if (!workspace) {
         return;
     }
 
     // Vertices
     for (const KeyVertexTransformData& td : vertices_) {
-        vacomplex::KeyVertex* kv = findKeyVertex_(td.elementId);
+        vacomplex::KeyVertex* kv = findKeyVertex_(*workspace, td.elementId);
         if (kv) {
             mainOp.addComplex(kv->complex());
             vacomplex::ops::setKeyVertexPosition(kv, kv->position() + translation);
@@ -679,7 +716,7 @@ void TopologyAwareTransformer::transform(const geometry::Vec2d& translation) {
 
     // Edges
     for (const KeyEdgeTransformData& td : edges_) {
-        vacomplex::KeyEdge* ke = findKeyEdge_(td.elementId);
+        vacomplex::KeyEdge* ke = findKeyEdge_(*workspace, td.elementId);
         if (ke) {
             mainOp.addComplex(ke->complex());
             vacomplex::KeyEdgeData& data = ke->data();
@@ -690,7 +727,7 @@ void TopologyAwareTransformer::transform(const geometry::Vec2d& translation) {
 
     // Edges to snap
     for (const KeyEdgeTransformData& td : edgesToSnap_) {
-        vacomplex::KeyEdge* ke = findKeyEdge_(td.elementId);
+        vacomplex::KeyEdge* ke = findKeyEdge_(*workspace, td.elementId);
         if (ke) {
             mainOp.addComplex(ke->complex());
             ke->snapGeometry();
@@ -699,14 +736,17 @@ void TopologyAwareTransformer::transform(const geometry::Vec2d& translation) {
 }
 
 void TopologyAwareTransformer::startDragTransform() {
-    if (!workspace_.isAlive() || isDragTransforming_) {
+
+    auto workspace = workspace_.lock();
+    if (!workspace || isDragTransforming_) {
         return;
     }
+
     isDragTransforming_ = true;
 
     // Vertices
     for (KeyVertexTransformData& td : vertices_) {
-        vacomplex::KeyVertex* kv = findKeyVertex_(td.elementId);
+        vacomplex::KeyVertex* kv = findKeyVertex_(*workspace, td.elementId);
         if (kv) {
             td.originalPosition = kv->position();
         }
@@ -714,7 +754,7 @@ void TopologyAwareTransformer::startDragTransform() {
 
     // Edges
     for (KeyEdgeTransformData& td : edges_) {
-        vacomplex::KeyEdge* ke = findKeyEdge_(td.elementId);
+        vacomplex::KeyEdge* ke = findKeyEdge_(*workspace, td.elementId);
         if (ke) {
             const vacomplex::KeyEdgeData& data = ke->data();
             td.oldData = data;
@@ -723,7 +763,7 @@ void TopologyAwareTransformer::startDragTransform() {
 
     // Edges to snap
     for (KeyEdgeTransformData& td : edgesToSnap_) {
-        vacomplex::KeyEdge* ke = findKeyEdge_(td.elementId);
+        vacomplex::KeyEdge* ke = findKeyEdge_(*workspace, td.elementId);
         if (ke) {
             const vacomplex::KeyEdgeData& data = ke->data();
             td.oldData = data;
@@ -732,7 +772,9 @@ void TopologyAwareTransformer::startDragTransform() {
 }
 
 void TopologyAwareTransformer::updateDragTransform(const geometry::Mat3d& transform) {
-    if (!workspace_.isAlive() || !isDragTransforming_) {
+
+    auto workspace = workspace_.lock();
+    if (!workspace || !isDragTransforming_) {
         return;
     }
 
@@ -742,7 +784,7 @@ void TopologyAwareTransformer::updateDragTransform(const geometry::Mat3d& transf
 
     // Vertices
     for (const KeyVertexTransformData& td : vertices_) {
-        vacomplex::KeyVertex* kv = findKeyVertex_(td.elementId);
+        vacomplex::KeyVertex* kv = findKeyVertex_(*workspace, td.elementId);
         if (kv) {
             mainOp.addComplex(kv->complex());
             vacomplex::ops::setKeyVertexPosition(
@@ -752,7 +794,7 @@ void TopologyAwareTransformer::updateDragTransform(const geometry::Mat3d& transf
 
     // Edges
     for (const KeyEdgeTransformData& td : edges_) {
-        vacomplex::KeyEdge* ke = findKeyEdge_(td.elementId);
+        vacomplex::KeyEdge* ke = findKeyEdge_(*workspace, td.elementId);
         if (ke) {
             mainOp.addComplex(ke->complex());
             vacomplex::KeyEdgeData& data = ke->data();
@@ -763,7 +805,7 @@ void TopologyAwareTransformer::updateDragTransform(const geometry::Mat3d& transf
 
     // Edges to snap
     for (const KeyEdgeTransformData& td : edgesToSnap_) {
-        vacomplex::KeyEdge* ke = findKeyEdge_(td.elementId);
+        vacomplex::KeyEdge* ke = findKeyEdge_(*workspace, td.elementId);
         if (ke) {
             mainOp.addComplex(ke->complex());
             vacomplex::KeyEdgeData& data = ke->data();
@@ -774,7 +816,9 @@ void TopologyAwareTransformer::updateDragTransform(const geometry::Mat3d& transf
 }
 
 void TopologyAwareTransformer::updateDragTransform(const geometry::Vec2d& translation) {
-    if (!workspace_.isAlive() || !isDragTransforming_) {
+
+    auto workspace = workspace_.lock();
+    if (!workspace || !isDragTransforming_) {
         return;
     }
 
@@ -784,7 +828,7 @@ void TopologyAwareTransformer::updateDragTransform(const geometry::Vec2d& transl
 
     // Vertices
     for (const KeyVertexTransformData& td : vertices_) {
-        vacomplex::KeyVertex* kv = findKeyVertex_(td.elementId);
+        vacomplex::KeyVertex* kv = findKeyVertex_(*workspace, td.elementId);
         if (kv) {
             mainOp.addComplex(kv->complex());
             vacomplex::ops::setKeyVertexPosition(kv, td.originalPosition + translation);
@@ -793,7 +837,7 @@ void TopologyAwareTransformer::updateDragTransform(const geometry::Vec2d& transl
 
     // Edges
     for (const KeyEdgeTransformData& td : edges_) {
-        vacomplex::KeyEdge* ke = findKeyEdge_(td.elementId);
+        vacomplex::KeyEdge* ke = findKeyEdge_(*workspace, td.elementId);
         if (ke) {
             mainOp.addComplex(ke->complex());
             vacomplex::KeyEdgeData& data = ke->data();
@@ -804,7 +848,7 @@ void TopologyAwareTransformer::updateDragTransform(const geometry::Vec2d& transl
 
     // Edges to snap
     for (const KeyEdgeTransformData& td : edgesToSnap_) {
-        vacomplex::KeyEdge* ke = findKeyEdge_(td.elementId);
+        vacomplex::KeyEdge* ke = findKeyEdge_(*workspace, td.elementId);
         if (ke) {
             mainOp.addComplex(ke->complex());
             vacomplex::KeyEdgeData& data = ke->data();
@@ -815,13 +859,15 @@ void TopologyAwareTransformer::updateDragTransform(const geometry::Vec2d& transl
 }
 
 void TopologyAwareTransformer::finalizeDragTransform() {
-    if (!workspace_.isAlive() || !isDragTransforming_) {
+
+    auto workspace = workspace_.lock();
+    if (!workspace || !isDragTransforming_) {
         return;
     }
 
     // Edges
     for (const KeyEdgeTransformData& td : edges_) {
-        vacomplex::KeyEdge* ke = findKeyEdge_(td.elementId);
+        vacomplex::KeyEdge* ke = findKeyEdge_(*workspace, td.elementId);
         if (ke) {
             const vacomplex::KeyEdgeData& data = ke->data();
             std::ignore = data;
@@ -831,7 +877,7 @@ void TopologyAwareTransformer::finalizeDragTransform() {
 
     // Edges to snap
     for (const KeyEdgeTransformData& td : edgesToSnap_) {
-        vacomplex::KeyEdge* ke = findKeyEdge_(td.elementId);
+        vacomplex::KeyEdge* ke = findKeyEdge_(*workspace, td.elementId);
         if (ke) {
             const vacomplex::KeyEdgeData& data = ke->data();
             std::ignore = data;
@@ -843,7 +889,9 @@ void TopologyAwareTransformer::finalizeDragTransform() {
 }
 
 void TopologyAwareTransformer::cancelDragTransform() {
-    if (!workspace_.isAlive() || !isDragTransforming_) {
+
+    auto workspace = workspace_.lock();
+    if (!workspace || !isDragTransforming_) {
         return;
     }
 
@@ -851,7 +899,7 @@ void TopologyAwareTransformer::cancelDragTransform() {
 
     // Vertices
     for (const KeyVertexTransformData& td : vertices_) {
-        vacomplex::KeyVertex* kv = findKeyVertex_(td.elementId);
+        vacomplex::KeyVertex* kv = findKeyVertex_(*workspace, td.elementId);
         if (kv) {
             vacomplex::ops::setKeyVertexPosition(kv, td.originalPosition);
         }
@@ -859,7 +907,7 @@ void TopologyAwareTransformer::cancelDragTransform() {
 
     // Edges
     for (const KeyEdgeTransformData& td : edges_) {
-        vacomplex::KeyEdge* ke = findKeyEdge_(td.elementId);
+        vacomplex::KeyEdge* ke = findKeyEdge_(*workspace, td.elementId);
         if (ke) {
             vacomplex::KeyEdgeData& data = ke->data();
             data = td.oldData;
@@ -867,22 +915,6 @@ void TopologyAwareTransformer::cancelDragTransform() {
     }
 
     isDragTransforming_ = false;
-}
-
-vacomplex::KeyVertex* TopologyAwareTransformer::findKeyVertex_(core::Id id) {
-    workspace::Element* element = workspace_->find(id);
-    if (element && element->vacNode() && element->vacNode()->isCell()) {
-        return element->vacNode()->toCellUnchecked()->toKeyVertex();
-    }
-    return nullptr;
-}
-
-vacomplex::KeyEdge* TopologyAwareTransformer::findKeyEdge_(core::Id id) {
-    workspace::Element* element = workspace_->find(id);
-    if (element && element->vacNode() && element->vacNode()->isCell()) {
-        return element->vacNode()->toCellUnchecked()->toKeyEdge();
-    }
-    return nullptr;
 }
 
 } // namespace detail
@@ -943,12 +975,15 @@ void TransformBox::onMouseHover(ui::MouseHoverEvent* event) {
     }
 
     // Recompute which mouse actions are available.
-    canvas::Canvas* canvas = canvasTool_ ? canvasTool_->canvas() : nullptr;
-    if (canvas) {
-        computeHoverData_(canvas);
+    bool isComputed = false;
+    if (auto canvasTool = canvasTool_.lock()) {
+        if (auto canvas = canvasTool->canvas().lock()) {
+            computeHoverData_(*canvas);
+            isComputed = true;
+        }
     }
 
-    if (!canvas || isTooSmallForBox_) {
+    if (!isComputed || isTooSmallForBox_) {
         clearDragActions_();
         cursorChanger_.clear();
         return;
@@ -1140,7 +1175,11 @@ void TransformBox::onPaintDraw(graphics::Engine* engine, ui::PaintOptions option
 
     SuperClass::onPaintDraw(engine, options);
 
-    canvas::Canvas* canvas = canvasTool_ ? canvasTool_->canvas() : nullptr;
+    auto canvasTool = canvasTool_.lock();
+    if (!canvasTool) {
+        return;
+    }
+    auto canvas = canvasTool->canvas().lock();
     if (!canvas) {
         return;
     }
@@ -1162,7 +1201,7 @@ void TransformBox::onPaintDraw(graphics::Engine* engine, ui::PaintOptions option
     const geometry::Mat4d& cameraMatrix = canvas->camera().viewMatrix();
 
     if (!isTransformActionOngoing_) {
-        computeHoverData_(canvas);
+        computeHoverData_(*canvas);
     }
 
     if (isTooSmallForBox_) {
@@ -1319,11 +1358,11 @@ geometry::Vec2f TransformBox::computePreferredSize() const {
     return geometry::Vec2f(0, 0);
 }
 
-void TransformBox::computeHoverData_(canvas::Canvas* canvas) {
+void TransformBox::computeHoverData_(const canvas::Canvas& canvas) {
 
     using geometry::Vec2f;
 
-    const geometry::Mat4d& cameraMatrix = canvas->camera().viewMatrix();
+    const geometry::Mat4d& cameraMatrix = canvas.camera().viewMatrix();
 
     // Compute corners_
     for (Int i = 0; i < 4; ++i) {
@@ -1411,8 +1450,12 @@ void TransformBox::onWorkspaceChanged_() {
 
 void TransformBox::updateFromElements_() {
 
-    if (!updateWorkspacePointer_() || elementIds_.isEmpty()) {
+    updateWorkspacePointer_();
+
+    auto workspace = workspace_.lock();
+    if (!workspace || elementIds_.isEmpty()) {
         hide_();
+        return;
     }
 
     boundingBox_ = geometry::Rect2d::empty;
@@ -1421,7 +1464,7 @@ void TransformBox::updateFromElements_() {
 
     bool hasContent = false;
     for (core::Id id : elementIds_) {
-        workspace::Element* element = workspace_->find(id);
+        workspace::Element* element = workspace->find(id);
         if (element) {
             // TODO: support layer transforms.
             // should bounding box of elements always be in workspace coords?
@@ -1456,24 +1499,25 @@ void TransformBox::show_() {
     }
 }
 
-bool TransformBox::updateWorkspacePointer_() {
-    workspace::Workspace* oldWorkspace = workspace_.getIfAlive();
+void TransformBox::updateWorkspacePointer_() {
+    workspace::WorkspaceWeakPtr oldWorkspace_ = workspace_;
 
-    workspace::Workspace* newWorkspace = canvasTool_ ? canvasTool_->workspace() : nullptr;
-    if (oldWorkspace != newWorkspace) {
-        if (oldWorkspace != nullptr) {
+    workspace::WorkspaceWeakPtr newWorkspace_;
+    if (auto tool = canvasTool_.lock()) {
+        newWorkspace_ = tool->workspace();
+    }
+    if (oldWorkspace_ != newWorkspace_) {
+        if (auto oldWorkspace = oldWorkspace_.lock()) {
             oldWorkspace->disconnect(this);
         }
-        if (newWorkspace != nullptr) {
+        if (auto newWorkspace = newWorkspace_.lock()) {
             newWorkspace->changed().connect(this->onWorkspaceChangedSlot_());
         }
-        workspace_ = newWorkspace;
+        workspace_ = newWorkspace_;
     }
-    else {
-        // sets it to nullptr if it was no longer alive.
-        workspace_ = oldWorkspace;
+    else if (!workspace_.isAlive()) {
+        workspace_ = nullptr;
     }
-    return newWorkspace != nullptr;
 }
 
 namespace {
@@ -1581,12 +1625,21 @@ void TransformBox::onTranslateDownBigStep_() {
 }
 
 void TransformBox::onTranslate_(detail::TranslateStepDirection direction, double size) {
-    if (!updateWorkspacePointer_()) {
+
+    updateWorkspacePointer_();
+
+    auto canvasTool = canvasTool_.lock();
+    if (!canvasTool) {
         return;
     }
 
-    canvas::Canvas* canvas = canvasTool_->canvas();
+    auto canvas = canvasTool->canvas().lock();
     if (!canvas) {
+        return;
+    }
+
+    auto workspace = workspace_.lock();
+    if (!workspace) {
         return;
     }
 
@@ -1599,7 +1652,7 @@ void TransformBox::onTranslate_(detail::TranslateStepDirection direction, double
 
     // Open history group
     core::UndoGroup* undoGroup = nullptr;
-    core::History* history = workspace_->history();
+    core::History* history = workspace->history();
     if (history) {
         undoGroup = history->createUndoGroup(groupId);
     }
@@ -1635,7 +1688,7 @@ void TransformBox::onTranslate_(detail::TranslateStepDirection direction, double
     geometry::Vec2d delta = p1 - p0;
 
     detail::TopologyAwareTransformer transformer;
-    transformer.setElements(workspace_, elementIds_);
+    transformer.setElements(workspace, elementIds_);
     transformer.transform(delta);
 
     // Close history group

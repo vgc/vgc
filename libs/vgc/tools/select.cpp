@@ -68,11 +68,12 @@ public:
 public:
     void onMouseClick(ui::MouseEvent* event) override {
 
-        canvas::Canvas* canvas = tool_->canvas();
-        workspace::Workspace* workspace = tool_->workspace();
-        if (!canvas || !workspace) {
+        auto context = tool_->contextLock();
+        if (!context) {
             return;
         }
+        auto workspace = context.workspace();
+        auto canvas = context.canvas();
 
         // Open history group
         core::UndoGroup* undoGroup = nullptr;
@@ -177,12 +178,11 @@ SelectPtr Select::create() {
 }
 
 core::Array<core::Id> Select::selection() {
-    canvas::Canvas* canvas = this->canvas();
-    if (!canvas) {
-        return {};
+    if (auto context = contextLock()) {
+        return context.canvas()->selection();
     }
     else {
-        return canvas->selection();
+        return {};
     }
 }
 
@@ -206,15 +206,12 @@ bool Select::onMouseMove(ui::MouseMoveEvent* event) {
         return false;
     }
 
-    canvas::Canvas* canvas = this->canvas();
-    if (!canvas) {
+    auto context = contextLock();
+    if (!context) {
         return isInAction_; // always true
     }
-
-    workspace::Workspace* workspace = canvas->workspace();
-    if (!workspace) {
-        return isInAction_; // always true
-    }
+    auto workspace = context.workspace();
+    auto canvas = context.canvas();
 
     cursorPosition_ = event->position();
 
@@ -239,11 +236,11 @@ bool Select::onMouseMove(ui::MouseMoveEvent* event) {
                 // Note: candidates_ is guaranteed to be not empty for this action.
                 core::Array<core::Id> elementsIds;
                 elementsIds.append(candidates_.first().id());
-                initializeDragMoveData_(workspace, elementsIds);
+                initializeDragMoveData_(workspace.get(), elementsIds);
                 break;
             }
             case DragAction::TranslateSelection: {
-                initializeDragMoveData_(workspace, selectionAtPress_);
+                initializeDragMoveData_(workspace.get(), selectionAtPress_);
                 break;
             }
             }
@@ -273,7 +270,7 @@ bool Select::onMouseMove(ui::MouseMoveEvent* event) {
         case DragAction::TranslateSelection: {
             deltaInWorkspace_ =
                 cursorPositionInWorkspace - cursorPositionInWorkspaceAtPress;
-            updateDragMovedElements_(workspace, deltaInWorkspace_);
+            updateDragMovedElements_(workspace.get(), deltaInWorkspace_);
             break;
         }
         }
@@ -295,10 +292,13 @@ bool Select::onMousePress(ui::MousePressEvent* event) {
         return false;
     }
 
-    canvas::Canvas* canvas = this->canvas();
-    if (!canvas) {
+    auto context = contextLock();
+    if (!context) {
         return false;
     }
+    auto canvas = context.canvas();
+
+    cursorPosition_ = event->position();
 
     ui::ModifierKeys keys = event->modifierKeys();
     ui::ModifierKeys supportedKeys =
@@ -513,9 +513,8 @@ bool Select::onMouseRelease(ui::MouseReleaseEvent* event) {
         // mouse button if we are in the middle of our own action.
         return true;
     }
-
-    canvas::Canvas* canvas = this->canvas();
-    if (!canvas) {
+    auto context = contextLock();
+    if (!context) {
         bool wasInAction = isInAction_;
         resetActionState_();
         return wasInAction;
@@ -526,13 +525,8 @@ bool Select::onMouseRelease(ui::MouseReleaseEvent* event) {
         // Here we stop the action early so our parent may receive releases for
         // buttons it didn't receive any press event for.
     }
-
-    workspace::Workspace* workspace = canvas->workspace();
-    if (!workspace) {
-        bool wasInAction = isInAction_;
-        resetActionState_();
-        return wasInAction;
-    }
+    auto canvas = context.canvas();
+    auto workspace = context.workspace();
 
     core::Array<core::Id> selection = selectionAtPress_;
     bool selectionChanged = false;
@@ -583,7 +577,7 @@ bool Select::onMouseRelease(ui::MouseReleaseEvent* event) {
         }
         case DragAction::TranslateCandidate:
         case DragAction::TranslateSelection: {
-            finalizeDragMovedElements_(workspace);
+            finalizeDragMovedElements_(workspace.get());
             break;
         }
         }
@@ -669,10 +663,11 @@ void Select::onPaintDraw(graphics::Engine* engine, ui::PaintOptions options) {
     using namespace graphics;
     namespace gs = graphics::strings;
 
-    canvas::Canvas* canvas = this->canvas();
-    if (!canvas) {
+    auto context = contextLock();
+    if (!context) {
         return;
     }
+    auto canvas = context.canvas();
 
     using geometry::Vec2d;
     using geometry::Vec2f;
@@ -931,20 +926,20 @@ void Select::resetActionState_() {
 }
 
 void Select::disconnectCanvas_() {
-    if (connectedCanvas_) {
-        connectedCanvas_->aboutToBeDestroyed().disconnect(
+    if (auto connectedCanvas = connectedCanvas_.lock()) {
+        connectedCanvas->aboutToBeDestroyed().disconnect(
             onCanvasAboutToBeDestroyedSlot_());
-        connectedCanvas_->selectionChanged().disconnect(onSelectionChangedSlot_());
+        connectedCanvas->selectionChanged().disconnect(onSelectionChangedSlot_());
     }
     // TODO: allow `oldCanvas_->disconnect(on..Slot_())` syntax?
 }
 
 void Select::onCanvasChanged_() {
     disconnectCanvas_();
-    connectedCanvas_ = this->canvas();
-    if (connectedCanvas_) {
-        connectedCanvas_->aboutToBeDestroyed().connect(onCanvasAboutToBeDestroyedSlot_());
-        connectedCanvas_->selectionChanged().connect(onSelectionChangedSlot_());
+    connectedCanvas_ = canvas();
+    if (auto connectedCanvas = connectedCanvas_.lock()) {
+        connectedCanvas->aboutToBeDestroyed().connect(onCanvasAboutToBeDestroyedSlot_());
+        connectedCanvas->selectionChanged().connect(onSelectionChangedSlot_());
     }
     onSelectionChanged_();
 }
@@ -983,8 +978,7 @@ void Select::onShowTransformBoxChanged_() {
 
 void Select::updateTransformBoxElements_() {
     if (transformBox_) {
-        canvas::Canvas* canvas = this->canvas();
-        if (canvas) {
+        if (auto canvas = this->canvas().lock()) {
             transformBox_->setElements(canvas->selection());
         }
         else {
@@ -1001,7 +995,7 @@ dom::DocumentPtr copyDoc_;
 
 void Select::onCut_() {
 
-    workspace::Workspace* workspace = this->workspace();
+    auto workspace = this->workspace().lock();
     if (!workspace) {
         return;
     }
@@ -1028,7 +1022,7 @@ void Select::onCut_() {
 
 void Select::onCopy_() {
 
-    workspace::Workspace* workspace = this->workspace();
+    auto workspace = this->workspace().lock();
     if (!workspace) {
         return;
     }
@@ -1043,7 +1037,7 @@ void Select::onCopy_() {
 
 void Select::onPaste_() {
 
-    workspace::Workspace* workspace = this->workspace();
+    auto workspace = this->workspace().lock();
     if (!workspace) {
         return;
     }
@@ -1059,8 +1053,7 @@ void Select::onPaste_() {
     core::Array<core::Id> pasted = workspace->paste(copyDoc_);
 
     // Set pasted elements as new selection
-    canvas::Canvas* canvas = this->canvas();
-    if (canvas) {
+    if (auto canvas = this->canvas().lock()) {
         canvas->setSelection(pasted);
     }
 

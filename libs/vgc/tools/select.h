@@ -134,7 +134,7 @@ private:
 
     void resetActionState_();
 
-    canvas::Canvas* connectedCanvas_ = nullptr;
+    canvas::CanvasWeakPtr connectedCanvas_;
     void disconnectCanvas_();
 
     void onCanvasChanged_();

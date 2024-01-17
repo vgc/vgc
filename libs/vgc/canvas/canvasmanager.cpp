@@ -145,8 +145,8 @@ CanvasManagerPtr CanvasManager::create(const ui::ModuleContext& context) {
 namespace {
 
 void setCanvasWorkspace(
-    CanvasWeakPtr& canvas_,
-    DocumentManagerWeakPtr& documentManager_) {
+    const CanvasWeakPtr& canvas_,
+    const DocumentManagerWeakPtr& documentManager_) {
 
     if (auto canvas = canvas_.lock()) {
         if (auto documentManager = documentManager_.lock()) {
@@ -300,7 +300,7 @@ void FitViewToSelection_(Canvas& canvas, workspace::Workspace& workspace) {
 
 void CanvasManager::onFitViewToSelection_() {
     if (auto canvas = activeCanvas().lock()) {
-        if (auto workspace = workspace::WorkspaceWeakPtr(canvas->workspace()).lock()) {
+        if (auto workspace = canvas->workspace().lock()) {
             FitViewToSelection_(*canvas, *workspace);
         }
     }
@@ -308,7 +308,7 @@ void CanvasManager::onFitViewToSelection_() {
 
 void CanvasManager::onFitViewToDocument_() {
     if (auto canvas = activeCanvas().lock()) {
-        if (auto workspace = workspace::WorkspaceWeakPtr(canvas->workspace()).lock()) {
+        if (auto workspace = canvas->workspace().lock()) {
             FitViewToDocument_(*canvas, *workspace);
         }
     }

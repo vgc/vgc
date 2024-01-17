@@ -60,7 +60,7 @@ public:
     // that stores a pointer to a ToolManager, and listens to
     // `currentToolChanged()`.
     //
-    void setCanvas(Canvas* canvas);
+    void setCanvas(CanvasWeakPtr canvas);
 
     /// Adds a tool to this `ToolManager`.
     ///
@@ -70,7 +70,7 @@ public:
     ///
     /// \sa `setCurrentTool()`, `currentToolChanged()`.
     ///
-    canvas::CanvasTool* currentTool() {
+    canvas::CanvasToolWeakPtr currentTool() {
         return currentTool_;
     }
 
@@ -78,18 +78,18 @@ public:
     ///
     /// \sa `currentTool()`, `currentToolChanged()`.
     ///
-    void setCurrentTool(canvas::CanvasTool* canvasTool);
+    void setCurrentTool(canvas::CanvasToolWeakPtr canvasTool);
 
     /// This signal is emitted whenever the `currentTool()` changes
     ///
-    VGC_SIGNAL(currentToolChanged, (canvas::CanvasTool*, currentTool))
+    VGC_SIGNAL(currentToolChanged, (canvas::CanvasToolWeakPtr, currentTool))
 
 private:
     // Friendship is used so that the Tools panel can iterate on registered tools.
     // TODO: publicize what's needed to avoid friendship.
     friend ToolsPanel;
 
-    Canvas* canvas_ = nullptr;
+    CanvasWeakPtr canvas_;
 
     ui::ActionGroupPtr toolsActionGroup_;
 
@@ -102,7 +102,7 @@ private:
     };
     core::Array<RegisteredTool_> tools_; // flat bidirectional map
 
-    canvas::CanvasTool* currentTool_ = nullptr;
+    canvas::CanvasToolWeakPtr currentTool_;
 
     ui::Action* getActionFromTool_(canvas::CanvasTool* tool) const;
     canvas::CanvasToolWeakPtr getToolFromAction_(ui::Action* action) const;

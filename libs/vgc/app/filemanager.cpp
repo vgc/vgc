@@ -149,7 +149,7 @@ RecoverySaveInfo FileManager::recoverySave() {
     if (!documentManager) {
         return RecoverySaveInfo::notSaved();
     }
-    dom::Document* document = documentManager->currentDocument();
+    auto document = documentManager->currentDocument().lock();
     if (!document) {
         return RecoverySaveInfo::notSaved();
     }
@@ -219,15 +219,13 @@ bool FileManager::maybeCloseCurrentDocument_() {
     auto documentManager = lockAndThrowIfNull(documentManager_);
     auto documentColorPalette = lockAndThrowIfNull(documentColorPalette_);
 
-    workspace::Workspace* workspace = documentManager->currentWorkspace();
-    if (workspace) {
+    if (auto workspace = documentManager->currentWorkspace().lock()) {
         workspace->sync();
-        dom::Document* document = workspace->document();
+        auto document = workspace->document().lock();
         if (document && document->versionId() != lastSavedDocumentVersionId) {
             // XXX "Do you want to save ?" => return false if "Cancel" pressed.
         }
-        core::History* history = workspace->history();
-        if (history) {
+        if (core::History* history = workspace->history()) {
             history->disconnect(this);
         }
         // There used to be `canvas_->setWorkspace(nullptr);` here
@@ -462,7 +460,7 @@ void FileManager::doSaveAs_() {
 void FileManager::doSave_() {
     try {
         if (auto documentManager = documentManager_.lock()) {
-            if (dom::Document* document = documentManager->currentDocument()) {
+            if (auto document = documentManager->currentDocument().lock()) {
                 if (auto documentColorPalette = documentColorPalette_.lock()) {
                     auto saver = documentColorPalette->saver();
                     document->save(ui::fromQt(filename_));
@@ -489,7 +487,7 @@ void FileManager::onActionQuit_() {
 
 void FileManager::onActionUndo_() {
     if (auto documentManager = documentManager_.lock()) {
-        if (workspace::Workspace* workspace = documentManager->currentWorkspace()) {
+        if (auto workspace = documentManager->currentWorkspace().lock()) {
             if (core::History* history = workspace->history()) {
                 history->undo();
             }
@@ -499,7 +497,7 @@ void FileManager::onActionUndo_() {
 
 void FileManager::onActionRedo_() {
     if (auto documentManager = documentManager_.lock()) {
-        if (workspace::Workspace* workspace = documentManager->currentWorkspace()) {
+        if (auto workspace = documentManager->currentWorkspace().lock()) {
             if (core::History* history = workspace->history()) {
                 history->redo();
             }
@@ -511,7 +509,7 @@ void FileManager::updateUndoRedoActionState_() {
     bool canUndo = false;
     bool canRedo = false;
     if (auto documentManager = documentManager_.lock()) {
-        if (workspace::Workspace* workspace = documentManager->currentWorkspace()) {
+        if (auto workspace = documentManager->currentWorkspace().lock()) {
             if (core::History* history = workspace->history()) {
                 canUndo = history->canUndo();
                 canRedo = history->canRedo();

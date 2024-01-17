@@ -103,11 +103,12 @@ public:
             return;
         }
 
-        canvas::Canvas* canvas = tool_->canvas();
-        workspace::Workspace* workspace = tool_->workspace();
-        if (!canvas || !workspace) {
+        auto context = tool_->contextLock();
+        if (!context) {
             return;
         }
+        auto workspace = context.workspace();
+        auto canvas = context.canvas();
 
         cursorPosition_ = event->position();
 
@@ -181,11 +182,11 @@ public:
             return;
         }
 
-        canvas::Canvas* canvas = tool_->canvas();
-        workspace::Workspace* workspace = tool_->workspace();
-        if (!canvas || !workspace) {
+        auto context = tool_->contextLock();
+        if (!context) {
             return;
         }
+        auto workspace = context.workspace();
 
         workspace::Element* element = workspace->find(edgeId_);
         if (element && element->vacNode() && element->vacNode()->isCell()) {
@@ -254,11 +255,12 @@ public:
             return;
         }
 
-        canvas::Canvas* canvas = tool_->canvas();
-        workspace::Workspace* workspace = tool_->workspace();
-        if (!canvas || !workspace) {
+        auto context = tool_->contextLock();
+        if (!context) {
             return;
         }
+        auto workspace = context.workspace();
+        auto canvas = context.canvas();
 
         cursorPosition_ = event->position();
 
@@ -335,11 +337,11 @@ public:
             return;
         }
 
-        canvas::Canvas* canvas = tool_->canvas();
-        workspace::Workspace* workspace = tool_->workspace();
-        if (!canvas || !workspace) {
+        auto context = tool_->contextLock();
+        if (!context) {
             return;
         }
+        auto workspace = context.workspace();
 
         workspace::Element* element = workspace->find(edgeId_);
         if (element && element->vacNode() && element->vacNode()->isCell()) {
@@ -408,11 +410,12 @@ public:
             return;
         }
 
-        canvas::Canvas* canvas = tool_->canvas();
-        workspace::Workspace* workspace = tool_->workspace();
-        if (!canvas || !workspace) {
+        auto context = tool_->contextLock();
+        if (!context) {
             return;
         }
+        auto workspace = context.workspace();
+        auto canvas = context.canvas();
 
         cursorPosition_ = event->position();
 
@@ -484,11 +487,11 @@ public:
             return;
         }
 
-        canvas::Canvas* canvas = tool_->canvas();
-        workspace::Workspace* workspace = tool_->workspace();
-        if (!canvas || !workspace) {
+        auto context = tool_->contextLock();
+        if (!context) {
             return;
         }
+        auto workspace = context.workspace();
 
         workspace::Element* element = workspace->find(edgeId_);
         if (element && element->vacNode() && element->vacNode()->isCell()) {
@@ -553,11 +556,11 @@ public:
     }
 
     void onMouseDragMove(ui::MouseEvent* event) override {
-        canvas::Canvas* canvas = tool_->canvas();
-        workspace::Workspace* workspace = tool_->workspace();
-        if (!canvas || !workspace) {
+        auto context = tool_->contextLock();
+        if (!context) {
             return;
         }
+        auto canvas = context.canvas();
         double zoom = canvas->camera().zoom();
         double dx = event->position().x() - cursorPositionAtPress_.x();
         double newRadius = (std::max)(0.0, oldRadius_ + dx / zoom);
@@ -606,14 +609,15 @@ ui::WidgetPtr Sculpt::doCreateOptionsWidget() const {
 
 void Sculpt::onMouseHover(ui::MouseHoverEvent* event) {
 
-    cursorPosition_ = event->position();
-
-    canvas::Canvas* canvas = this->canvas();
-    workspace::Workspace* workspace = this->workspace();
-    if (!canvas || !workspace) {
+    auto context = contextLock();
+    if (!context) {
         candidateId_ = -1;
         return;
     }
+    auto workspace = context.workspace();
+    auto canvas = context.canvas();
+
+    cursorPosition_ = event->position();
 
     // compute candidate
     core::Id candidateId = -1;
@@ -709,10 +713,11 @@ void Sculpt::onPaintDraw(graphics::Engine* engine, ui::PaintOptions options) {
     using namespace graphics;
     namespace gs = graphics::strings;
 
-    canvas::Canvas* canvas = this->canvas();
-    if (!canvas) {
+    auto context = contextLock();
+    if (!context) {
         return;
     }
+    auto canvas = context.canvas();
 
     using geometry::Vec2d;
     using geometry::Vec2f;
