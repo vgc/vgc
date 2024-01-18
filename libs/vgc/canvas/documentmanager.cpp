@@ -36,8 +36,8 @@ void DocumentManager::setCurrentWorkspace(workspace::WorkspaceSharedPtr workspac
     currentWorkspaceChanged().emit(workspace);
 }
 
-dom::Document* DocumentManager::currentDocument() const {
-    if (auto workspace = currentWorkspace_) {
+dom::DocumentWeakPtr DocumentManager::currentDocument() const {
+    if (auto workspace = currentWorkspace().lock()) {
         return workspace->document();
     }
     else {

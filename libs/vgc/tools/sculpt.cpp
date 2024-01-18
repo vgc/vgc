@@ -94,8 +94,13 @@ public:
 
 public:
     void onMouseDragStart(ui::MouseEvent* event) override {
-        cursorPositionAtPress_ = event->position();
-        edgeId_ = tool_->candidateId();
+        if (auto tool = tool_.lock()) {
+            cursorPositionAtPress_ = event->position();
+            edgeId_ = tool->candidateId();
+        }
+        else {
+            edgeId_ = -1;
+        }
     }
 
     void onMouseDragMove(ui::MouseEvent* event) override {
@@ -103,11 +108,16 @@ public:
             return;
         }
 
-        canvas::Canvas* canvas = tool_->canvas();
-        workspace::Workspace* workspace = tool_->workspace();
-        if (!canvas || !workspace) {
+        auto tool = tool_.lock();
+        if (!tool) {
             return;
         }
+        auto context = tool->contextLock();
+        if (!context) {
+            return;
+        }
+        auto workspace = context.workspace();
+        auto canvas = context.canvas();
 
         cursorPosition_ = event->position();
 
@@ -154,8 +164,8 @@ public:
                     pixelSize,
                     ke->isClosed());
                 data.setStroke(editStroke_.get());
-                tool_->setActionCircleCenter(grabbedPoint);
-                tool_->setActionCircleEnabled(true);
+                tool->setActionCircleCenter(grabbedPoint);
+                tool->setActionCircleEnabled(true);
             }
         }
 
@@ -171,8 +181,9 @@ public:
         if (edgeId_ == -1) {
             return;
         }
-
-        tool_->setActionCircleEnabled(false);
+        if (auto tool = tool_.lock()) {
+            tool->setActionCircleEnabled(false);
+        }
         reset_();
     }
 
@@ -180,12 +191,15 @@ public:
         if (edgeId_ == -1) {
             return;
         }
-
-        canvas::Canvas* canvas = tool_->canvas();
-        workspace::Workspace* workspace = tool_->workspace();
-        if (!canvas || !workspace) {
+        auto tool = tool_.lock();
+        if (!tool) {
             return;
         }
+        auto context = tool->contextLock();
+        if (!context) {
+            return;
+        }
+        auto workspace = context.workspace();
 
         workspace::Element* element = workspace->find(edgeId_);
         if (element && element->vacNode() && element->vacNode()->isCell()) {
@@ -195,7 +209,7 @@ public:
             }
         }
 
-        tool_->setActionCircleEnabled(false);
+        tool->setActionCircleEnabled(false);
         reset_();
     }
 
@@ -206,7 +220,7 @@ public:
     }
 
 public:
-    Sculpt* tool_ = nullptr;
+    SculptWeakPtr tool_;
     bool canAmendUndoGroup_ = false;
     bool started_ = false;
     core::Id edgeId_ = -1;
@@ -246,7 +260,12 @@ public:
 public:
     void onMouseDragStart(ui::MouseEvent* event) override {
         cursorPositionAtPress_ = event->position();
-        edgeId_ = tool_->candidateId();
+        if (auto tool = tool_.lock()) {
+            edgeId_ = tool->candidateId();
+        }
+        else {
+            edgeId_ = -1;
+        }
     }
 
     void onMouseDragMove(ui::MouseEvent* event) override {
@@ -254,11 +273,16 @@ public:
             return;
         }
 
-        canvas::Canvas* canvas = tool_->canvas();
-        workspace::Workspace* workspace = tool_->workspace();
-        if (!canvas || !workspace) {
+        auto tool = tool_.lock();
+        if (!tool) {
             return;
         }
+        auto context = tool->contextLock();
+        if (!context) {
+            return;
+        }
+        auto workspace = context.workspace();
+        auto canvas = context.canvas();
 
         cursorPosition_ = event->position();
 
@@ -308,8 +332,8 @@ public:
                     pixelSize,
                     ke->isClosed());
                 data.setStroke(editStroke_.get());
-                tool_->setActionCircleCenter(closestPoint);
-                tool_->setActionCircleEnabled(true);
+                tool->setActionCircleCenter(closestPoint);
+                tool->setActionCircleEnabled(true);
             }
         }
 
@@ -326,7 +350,10 @@ public:
             return;
         }
 
-        tool_->setActionCircleEnabled(false);
+        if (auto tool = tool_.lock()) {
+            tool->setActionCircleEnabled(false);
+        }
+
         reset_();
     }
 
@@ -335,11 +362,15 @@ public:
             return;
         }
 
-        canvas::Canvas* canvas = tool_->canvas();
-        workspace::Workspace* workspace = tool_->workspace();
-        if (!canvas || !workspace) {
+        auto tool = tool_.lock();
+        if (!tool) {
             return;
         }
+        auto context = tool->contextLock();
+        if (!context) {
+            return;
+        }
+        auto workspace = context.workspace();
 
         workspace::Element* element = workspace->find(edgeId_);
         if (element && element->vacNode() && element->vacNode()->isCell()) {
@@ -349,7 +380,7 @@ public:
             }
         }
 
-        tool_->setActionCircleEnabled(false);
+        tool->setActionCircleEnabled(false);
         reset_();
     }
 
@@ -360,7 +391,7 @@ public:
     }
 
 public:
-    Sculpt* tool_ = nullptr;
+    SculptWeakPtr tool_;
     bool canAmendUndoGroup_ = false;
     bool started_ = false;
     core::Id edgeId_ = -1;
@@ -400,7 +431,12 @@ public:
 public:
     void onMouseDragStart(ui::MouseEvent* event) override {
         cursorPositionAtLastSmooth_ = event->position();
-        edgeId_ = tool_->candidateId();
+        if (auto tool = tool_.lock()) {
+            edgeId_ = tool->candidateId();
+        }
+        else {
+            edgeId_ = -1;
+        }
     }
 
     void onMouseDragMove(ui::MouseEvent* event) override {
@@ -408,11 +444,16 @@ public:
             return;
         }
 
-        canvas::Canvas* canvas = tool_->canvas();
-        workspace::Workspace* workspace = tool_->workspace();
-        if (!canvas || !workspace) {
+        auto tool = tool_.lock();
+        if (!tool) {
             return;
         }
+        auto context = tool->contextLock();
+        if (!context) {
+            return;
+        }
+        auto workspace = context.workspace();
+        auto canvas = context.canvas();
 
         cursorPosition_ = event->position();
 
@@ -457,8 +498,8 @@ public:
                     pixelSize,
                     ke->isClosed());
                 data.setStroke(editStroke_.get());
-                tool_->setActionCircleCenter(smoothedPoint);
-                tool_->setActionCircleEnabled(true);
+                tool->setActionCircleCenter(smoothedPoint);
+                tool->setActionCircleEnabled(true);
             }
         }
 
@@ -475,7 +516,9 @@ public:
             return;
         }
 
-        tool_->setActionCircleEnabled(false);
+        if (auto tool = tool_.lock()) {
+            tool->setActionCircleEnabled(false);
+        }
         reset_();
     }
 
@@ -483,12 +526,15 @@ public:
         if (edgeId_ == -1) {
             return;
         }
-
-        canvas::Canvas* canvas = tool_->canvas();
-        workspace::Workspace* workspace = tool_->workspace();
-        if (!canvas || !workspace) {
+        auto tool = tool_.lock();
+        if (!tool) {
             return;
         }
+        auto context = tool->contextLock();
+        if (!context) {
+            return;
+        }
+        auto workspace = context.workspace();
 
         workspace::Element* element = workspace->find(edgeId_);
         if (element && element->vacNode() && element->vacNode()->isCell()) {
@@ -498,7 +544,7 @@ public:
             }
         }
 
-        tool_->setActionCircleEnabled(false);
+        tool->setActionCircleEnabled(false);
         reset_();
     }
 
@@ -509,7 +555,7 @@ public:
     }
 
 public:
-    Sculpt* tool_ = nullptr;
+    SculptWeakPtr tool_;
     bool canAmendUndoGroup_ = false;
     bool started_ = false;
     core::Id edgeId_ = -1;
@@ -553,16 +599,20 @@ public:
     }
 
     void onMouseDragMove(ui::MouseEvent* event) override {
-        canvas::Canvas* canvas = tool_->canvas();
-        workspace::Workspace* workspace = tool_->workspace();
-        if (!canvas || !workspace) {
+        auto tool = tool_.lock();
+        if (!tool) {
             return;
         }
+        auto context = tool->contextLock();
+        if (!context) {
+            return;
+        }
+        auto canvas = context.canvas();
         double zoom = canvas->camera().zoom();
         double dx = event->position().x() - cursorPositionAtPress_.x();
         double newRadius = (std::max)(0.0, oldRadius_ + dx / zoom);
         options::sculptRadius()->setValue(newRadius);
-        tool_->dirtyActionCircle();
+        tool->dirtyActionCircle();
     }
 
     void onMouseDragConfirm(ui::MouseEvent* /*event*/) override {
@@ -570,11 +620,13 @@ public:
 
     void onMouseDragCancel(ui::MouseEvent* /*event*/) override {
         options::sculptRadius()->setValue(oldRadius_);
-        tool_->dirtyActionCircle();
+        if (auto tool = tool_.lock()) {
+            tool->dirtyActionCircle();
+        }
     }
 
 public:
-    Sculpt* tool_ = nullptr;
+    SculptWeakPtr tool_;
     geometry::Vec2f cursorPositionAtPress_;
     double oldRadius_ = 0;
 };
@@ -606,14 +658,15 @@ ui::WidgetPtr Sculpt::doCreateOptionsWidget() const {
 
 void Sculpt::onMouseHover(ui::MouseHoverEvent* event) {
 
-    cursorPosition_ = event->position();
-
-    canvas::Canvas* canvas = this->canvas();
-    workspace::Workspace* workspace = this->workspace();
-    if (!canvas || !workspace) {
+    auto context = contextLock();
+    if (!context) {
         candidateId_ = -1;
         return;
     }
+    auto workspace = context.workspace();
+    auto canvas = context.canvas();
+
+    cursorPosition_ = event->position();
 
     // compute candidate
     core::Id candidateId = -1;
@@ -709,10 +762,11 @@ void Sculpt::onPaintDraw(graphics::Engine* engine, ui::PaintOptions options) {
     using namespace graphics;
     namespace gs = graphics::strings;
 
-    canvas::Canvas* canvas = this->canvas();
-    if (!canvas) {
+    auto context = contextLock();
+    if (!context) {
         return;
     }
+    auto canvas = context.canvas();
 
     using geometry::Vec2d;
     using geometry::Vec2f;

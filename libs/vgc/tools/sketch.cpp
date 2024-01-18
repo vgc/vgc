@@ -506,7 +506,7 @@ bool Sketch::onMouseMove(ui::MouseMoveEvent* event) {
         return false;
     }
 
-    canvas::Canvas* canvas = this->canvas();
+    auto canvas = this->canvas().lock();
     if (!canvas) {
         return false;
     }
@@ -546,7 +546,7 @@ bool Sketch::onMousePress(ui::MousePressEvent* event) {
         return false;
     }
 
-    canvas::Canvas* canvas = this->canvas();
+    auto canvas = this->canvas().lock();
     if (!canvas) {
         return false;
     }
@@ -657,10 +657,12 @@ void Sketch::onPaintDraw(graphics::Engine* engine, ui::PaintOptions options) {
     using namespace graphics;
     namespace gs = graphics::strings;
 
-    canvas::Canvas* canvas = this->canvas();
-    if (!canvas) {
+    auto context = contextLock();
+    if (!context) {
         return;
     }
+    auto workspace = context.workspace();
+    auto canvas = context.canvas();
 
     // Draw temporary tip of curve between mouse event position and actual current cursor
     // position to reduce visual lag.
@@ -703,7 +705,7 @@ void Sketch::onPaintDraw(graphics::Engine* engine, ui::PaintOptions options) {
         core::Color color = penColor_;
         geometry::Vec2fArray strokeVertices;
 
-        workspace::Element* edgeItem = workspace()->find(this->edgeItemId_);
+        workspace::Element* edgeItem = workspace->find(this->edgeItemId_);
         vacomplex::KeyEdge* ke = nullptr;
         auto edgeCell = dynamic_cast<workspace::VacKeyEdge*>(edgeItem);
         if (edgeCell) {
@@ -1035,7 +1037,7 @@ void Sketch::endSnapStartSnappedCleanInputPositions_(geometry::Vec2dArray& resul
         return;
     }
 
-    workspace::Workspace* workspace = this->workspace();
+    auto workspace = this->workspace().lock();
     if (!workspace) {
         return;
     }
@@ -1076,15 +1078,16 @@ void Sketch::endSnapStartSnappedCleanInputPositions_(geometry::Vec2dArray& resul
 workspace::Element*
 Sketch::computeSnapVertex_(const geometry::Vec2d& position, core::Id tmpVertexItemId) {
 
-    workspace::Workspace* workspace = this->workspace();
-    if (!workspace) {
+    auto context = contextLock();
+    if (!context) {
         return nullptr;
     }
+    auto workspace = context.workspace();
+    auto canvas = context.canvas();
 
     float snapDistanceFloat = static_cast<float>(options_::snapDistance()->value());
     style::Length snapDistanceLength(snapDistanceFloat, style::LengthUnit::Dp);
 
-    canvas::Canvas* canvas = this->canvas();
     double zoom = canvas ? canvas->camera().zoom() : 1.0;
     double snapDistance = snapDistanceLength.toPx(styleMetrics()) / zoom;
 
@@ -1164,8 +1167,10 @@ double Sketch::snapFalloff_() const {
     float snapFalloffFloat = static_cast<float>(options_::snapFalloff()->value());
     style::Length snapFalloffLength(snapFalloffFloat, style::LengthUnit::Dp);
 
-    canvas::Canvas* canvas = this->canvas();
-    double zoom = canvas ? canvas->camera().zoom() : 1.0;
+    double zoom = 1.0;
+    if (auto canvas = this->canvas().lock()) {
+        zoom = canvas->camera().zoom();
+    }
 
     return snapFalloffLength.toPx(styleMetrics()) / zoom;
 }
@@ -1208,13 +1213,17 @@ void Sketch::updatePendingWidths_() {
 }
 
 void Sketch::initCellInfoArrays_() {
-    workspace::Workspace* workspace = this->workspace();
-    if (!workspace) {
+
+    auto context = contextLock();
+    if (!context) {
         return;
     }
-
-    canvas::Canvas* canvas = this->canvas();
-    vacomplex::Complex* vac = workspace->vac();
+    auto workspace = context.workspace();
+    auto canvas = context.canvas();
+    auto vac = workspace->vac().lock();
+    if (!vac) {
+        return;
+    }
     core::AnimTime t = canvas->currentTime();
 
     vertexInfos_.clear();
@@ -1293,10 +1302,12 @@ void Sketch::startCurve_(ui::MouseEvent* event) {
     inputPoints_.clear();
 
     // Fast return if missing required context
-    workspace::Workspace* workspace = this->workspace();
-    if (!workspace || !workspace->document()) {
+    auto context = contextLock();
+    if (!context) {
         return;
     }
+    auto workspace = context.workspace();
+    auto canvas = context.canvas();
     dom::Element* parentDomElement = workspace->vgcElement()->domElement();
     if (!parentDomElement) {
         return;
@@ -1333,7 +1344,7 @@ void Sketch::startCurve_(ui::MouseEvent* event) {
     startTime_ = event->timestamp();
 
     // Transform: Save inverse view matrix
-    canvasToWorkspaceMatrix_ = canvas()->camera().viewMatrix().inverted();
+    canvasToWorkspaceMatrix_ = canvas->camera().viewMatrix().inverted();
 
     // Snapping: Compute start vertex to snap to
     workspace::Element* snapVertex = nullptr;
@@ -1388,7 +1399,7 @@ void Sketch::startCurve_(ui::MouseEvent* event) {
     // Append start vertex to snap/cut info
     appendVertexInfo_(startPosition, startVertexItemId_);
 
-    if (vacomplex::KeyEdge* keyEdge = toKeyEdge(workspace, edgeItemId_)) {
+    if (vacomplex::KeyEdge* keyEdge = toKeyEdge(workspace.get(), edgeItemId_)) {
 
         // Use low sampling quality override to minimize lag.
         keyEdge->data().setSamplingQualityOverride(
@@ -1405,14 +1416,17 @@ void Sketch::startCurve_(ui::MouseEvent* event) {
 void Sketch::continueCurve_(ui::MouseEvent* event) {
 
     // Fast return if missing required context
-    workspace::Workspace* workspace = this->workspace();
-    if (!workspace || !workspace->document()) {
+    auto workspace = this->workspace().lock();
+    if (!workspace) {
+        return;
+    }
+    auto document = workspace->document().lock();
+    if (!document) {
         return;
     }
 
-    dom::Document* dom = workspace->document();
-    dom::Element* domEndVertex = dom->elementFromInternalId(endVertexItemId_);
-    dom::Element* domEdge = dom->elementFromInternalId(edgeItemId_);
+    dom::Element* domEndVertex = document->elementFromInternalId(endVertexItemId_);
+    dom::Element* domEdge = document->elementFromInternalId(edgeItemId_);
     if (!domEndVertex || !domEdge) {
         return;
     }
@@ -1477,20 +1491,23 @@ void Sketch::finishCurve_(ui::MouseEvent* /*event*/) {
     namespace ds = dom::strings;
 
     // Fast return if missing required context
-    workspace::Workspace* workspace = this->workspace();
-    if (!workspace || !workspace->document()) {
+    auto workspace = this->workspace().lock();
+    if (!workspace) {
+        return;
+    }
+    auto document = workspace->document().lock();
+    if (!document) {
         return;
     }
 
-    dom::Document* dom = workspace->document();
-    dom::Element* domEndVertex = dom->elementFromInternalId(endVertexItemId_);
-    dom::Element* domEdge = dom->elementFromInternalId(edgeItemId_);
+    dom::Element* domEndVertex = document->elementFromInternalId(endVertexItemId_);
+    dom::Element* domEdge = document->elementFromInternalId(edgeItemId_);
     if (!domEndVertex || !domEdge) {
         return;
     }
 
     // Clear sampling quality override to use default sampling
-    if (vacomplex::KeyEdge* keyEdge = toKeyEdge(workspace, edgeItemId_)) {
+    if (vacomplex::KeyEdge* keyEdge = toKeyEdge(workspace.get(), edgeItemId_)) {
         keyEdge->data().clearSamplingQualityOverride();
     }
 
@@ -1516,7 +1533,7 @@ void Sketch::finishCurve_(ui::MouseEvent* /*event*/) {
 
             bool canClose = false;
             auto snapKvItem = dynamic_cast<workspace::VacKeyVertex*>(snapEndVertexItem);
-            workspace::VacKeyEdge* keItem = toKeyEdgeItem(workspace, edgeItemId_);
+            workspace::VacKeyEdge* keItem = toKeyEdgeItem(workspace.get(), edgeItemId_);
             if (snapKvItem && keItem) {
                 vacomplex::KeyVertex* kv = snapKvItem->vacKeyVertexNode();
                 vacomplex::KeyEdge* ke = keItem->vacKeyEdgeNode();

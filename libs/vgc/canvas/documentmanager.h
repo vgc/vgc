@@ -44,15 +44,14 @@ public:
 
     /// Returns the current workspace.
     ///
-    // TODO: use weak pointer. Cannot do it at the moment since we do not have
-    // them for root objects: using an ObjPtr would keep alive the workspace
-    // for longer than we want.
-    //
-    workspace::Workspace* currentWorkspace() const {
-        return currentWorkspace_.get();
+    workspace::WorkspaceWeakPtr currentWorkspace() const {
+        return currentWorkspace_;
     }
 
     /// Sets the current workspace.
+    ///
+    /// The `DocumentManager` will take ownership of the workspace, and release
+    /// ownership of the previous `currentWorkspace`, if any.
     ///
     void setCurrentWorkspace(workspace::WorkspaceSharedPtr workspace);
 
@@ -62,11 +61,7 @@ public:
 
     /// Returns the current document.
     ///
-    // TODO: use weak pointers. Cannot do it at the moment since we do not have
-    // them for root objects: using an ObjPtr would keep alive the workspace
-    // for longer than we want.
-    //
-    dom::Document* currentDocument() const;
+    dom::DocumentWeakPtr currentDocument() const;
 
 private:
     workspace::WorkspaceSharedPtr currentWorkspace_;

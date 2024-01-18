@@ -44,8 +44,8 @@ ToolOptionsPanelPtr ToolOptionsPanel::create(const ui::PanelContext& context) {
     return core::createObject<ToolOptionsPanel>(context);
 }
 
-void ToolOptionsPanel::onCurrentToolChanged_(CanvasTool* tool) {
-    if (tool) {
+void ToolOptionsPanel::onCurrentToolChanged_(CanvasToolWeakPtr tool_) {
+    if (auto tool = tool_.lock()) {
         ui::WidgetPtr optionsWidget = tool->createOptionsWidget();
         setBody(optionsWidget.get());
     }

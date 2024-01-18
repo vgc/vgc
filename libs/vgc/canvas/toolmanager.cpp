@@ -29,7 +29,7 @@ ToolManagerPtr ToolManager::create(const ui::ModuleContext& context) {
     return core::createObject<ToolManager>(context);
 }
 
-void ToolManager::setCanvas(Canvas* canvas) {
+void ToolManager::setCanvas(CanvasWeakPtr canvas) {
     canvas_ = canvas;
 }
 
@@ -58,30 +58,34 @@ void ToolManager::registerTool(
     tools_.append({action, tool});
 
     // Set first tool as current tool
-    if (!currentTool()) {
+    if (!currentTool_.isAlive()) {
+        // ^ XXX The above would be more readable if we added to WeakPtr:
+        //   - explicit bool conversion operator, or
+        //   - Comparison with nullptr
         setCurrentTool(tool.get());
     }
 }
 
-void ToolManager::setCurrentTool(canvas::CanvasTool* canvasTool) {
-
-    if (canvasTool != currentTool_) {
+void ToolManager::setCurrentTool(canvas::CanvasToolWeakPtr newCanvasTool) {
+    if (newCanvasTool != currentTool_) {
         bool hadFocusedWidget = false;
-        if (currentTool_) {
-            hadFocusedWidget = currentTool_->hasFocusedWidget();
-            currentTool_->clearFocus(ui::FocusReason::Other);
-            currentTool_->reparent(nullptr);
+        if (auto currentTool = currentTool_.lock()) {
+            hadFocusedWidget = currentTool->hasFocusedWidget();
+            currentTool->clearFocus(ui::FocusReason::Other);
+            currentTool->reparent(nullptr);
         }
-        currentTool_ = canvasTool;
-        if (currentTool_) {
-            canvas_->addChild(canvasTool);
+        currentTool_ = newCanvasTool;
+        if (auto currentTool = currentTool_.lock()) {
+            if (auto canvas = canvas_.lock()) {
+                canvas->addChild(currentTool.get());
+            }
             if (hadFocusedWidget) {
-                currentTool_->setFocus(ui::FocusReason::Other);
+                currentTool->setFocus(ui::FocusReason::Other);
                 // TODO: it would be even better to remember, for each tool,
                 // which of its descendants was the focused widget and restore
                 // this specific descendant as focused widget.
             }
-            if (ui::Action* action = getActionFromTool_(canvasTool)) {
+            if (ui::Action* action = getActionFromTool_(currentTool.get())) {
                 action->setChecked(true);
             }
         }
@@ -116,10 +120,8 @@ void ToolManager::onToolCheckStateChanged_(
     ui::CheckState checkState) {
 
     if (checkState == ui::CheckState::Checked) {
-        canvas::CanvasToolWeakPtr tool_ = getToolFromAction_(toolAction);
-        if (auto tool = tool_.lock()) {
-            setCurrentTool(tool.get());
-        }
+        canvas::CanvasToolWeakPtr tool = getToolFromAction_(toolAction);
+        setCurrentTool(tool);
     }
 }
 

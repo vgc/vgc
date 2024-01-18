@@ -130,7 +130,7 @@ private:
     canvas::ToolManagerPtr toolManager_;
     tools::Sketch* sketchTool_ = nullptr;
     tools::PaintBucket* paintBucketTool_ = nullptr;
-    void createTools_(canvas::Canvas* canvas);
+    void createTools_(canvas::CanvasWeakPtr canvas);
 
     // Colors
     tools::CurrentColorPtr currentColor_;

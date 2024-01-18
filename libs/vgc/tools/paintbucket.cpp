@@ -48,8 +48,8 @@ ui::WidgetPtr PaintBucket::doCreateOptionsWidget() const {
 
 void PaintBucket::onMouseHover(ui::MouseHoverEvent* event) {
 
-    canvas::Canvas* canvas = this->canvas();
-    if (!canvas) {
+    auto context = contextLock();
+    if (!context) {
         clearFaceCandidate_();
         return;
     }
@@ -61,7 +61,8 @@ void PaintBucket::onMouseHover(ui::MouseHoverEvent* event) {
     geometry::Vec2d mousePos = geometry::Vec2d(mousePosf.x(), mousePosf.y());
     geometry::Vec2d viewCoords = mousePos;
     geometry::Vec2d worldCoords =
-        canvas->camera().viewMatrix().inverted().transformPointAffine(viewCoords);
+        context.canvas()->camera().viewMatrix().inverted().transformPointAffine(
+            viewCoords);
 
     // Compute the key face candidate for the current mouse position.
     //
@@ -89,22 +90,20 @@ bool PaintBucket::onMouseMove(ui::MouseMoveEvent*) {
 
 bool PaintBucket::onMousePress(ui::MousePressEvent* event) {
 
+    auto context = contextLock();
+    if (!context) {
+        return false;
+    }
+    auto workspace = context.workspace();
+
     ui::ModifierKeys keys = event->modifierKeys();
     ui::MouseButton button = event->button();
 
     if (keys == ui::ModifierKey::None && button == ui::MouseButton::Left
         && hasFaceCandidate_()) {
 
-        // Get workspace and history
-        workspace::Workspace* workspace_ = workspace();
-        if (!workspace_) {
-            VGC_WARNING(
-                LogVgcToolsPaintBucket, "Workspace not found: cannot create face.");
-            return false;
-        }
-        core::History* history = workspace_->history();
-
         // Open undo group if history is enabled
+        core::History* history = workspace->history();
         static core::StringId operationName("Create Face with Paint Bucket");
         core::UndoGroup* undoGroup = nullptr;
         if (history) {
@@ -136,12 +135,12 @@ bool PaintBucket::onMousePress(ui::MousePressEvent* event) {
         vacomplex::ops::moveBelowBoundary(face);
 
         // Set the color of the face
-        workspace::VacElement* workspaceFace = workspace_->findVacElement(face);
+        workspace::VacElement* workspaceFace = workspace->findVacElement(face);
         dom::Element* domFace = workspaceFace ? workspaceFace->domElement() : nullptr;
         if (domFace) {
             domFace->setAttribute(dom::strings::color, color());
         }
-        workspace_->sync();
+        workspace->sync();
 
         // Close the undo group
         if (undoGroup) {
@@ -176,8 +175,8 @@ void PaintBucket::onPaintCreate(graphics::Engine* engine) {
 void PaintBucket::onPaintDraw(graphics::Engine* engine, ui::PaintOptions options) {
     SuperClass::onPaintDraw(engine, options);
 
-    canvas::Canvas* canvas = this->canvas();
-    if (!canvas) {
+    auto context = contextLock();
+    if (!context) {
         return;
     }
 
@@ -196,7 +195,7 @@ void PaintBucket::onPaintDraw(graphics::Engine* engine, ui::PaintOptions options
         // TODO: setting up the view matrix should be done by Canvas.
         engine->pushProgram(graphics::BuiltinProgram::SimplePreview);
         geometry::Mat4f vm = engine->viewMatrix();
-        geometry::Mat4f cameraViewf(canvas->camera().viewMatrix());
+        geometry::Mat4f cameraViewf(context.canvas()->camera().viewMatrix());
         engine->pushViewMatrix(vm * cameraViewf);
         engine->draw(faceCandidateFillGeometry_);
         engine->popViewMatrix();
@@ -218,21 +217,27 @@ void PaintBucket::clearFaceCandidate_() {
 }
 
 void PaintBucket::updateFaceCandidate_(const geometry::Vec2d& worldPosition) {
+    bool updated = false;
+    if (auto context = contextLock()) {
+        auto vac = context.workspace()->vac().lock();
+        auto document = context.workspace()->document().lock();
+        if (vac && document) {
 
-    // Fast return if no workspace
-    workspace::Workspace* workspace = this->workspace();
-    if (!workspace) {
-        clearFaceCandidate_();
-        return;
+            // Compute face candidate at given world position
+            faceCandidateCycles_ = vacomplex::detail::computeKeyFaceCandidateAt(
+                worldPosition, vac->rootGroup(), faceCandidateTriangles_);
+
+            // Clear face candidate if document or workspace changes
+            // XXX Aren't we non-intentionally adding the connections multiple times here?
+            document->changed().connect(clearFaceCandidateSlot_());
+            context.canvas()->workspaceReplaced().connect(clearFaceCandidateSlot_());
+
+            updated = true;
+        }
     }
-
-    // Compute face candidate at given world position
-    faceCandidateCycles_ = vacomplex::detail::computeKeyFaceCandidateAt(
-        worldPosition, workspace->vac()->rootGroup(), faceCandidateTriangles_);
-
-    // Clear face candidate if document or workspace changes
-    workspace->document()->changed().connect(clearFaceCandidateSlot_());
-    canvas()->workspaceReplaced().connect(clearFaceCandidateSlot_());
+    if (!updated) {
+        clearFaceCandidate_();
+    }
 }
 
 /*

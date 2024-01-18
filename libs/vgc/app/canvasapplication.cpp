@@ -243,7 +243,7 @@ void CanvasApplication::createDefaultPanels_() {
     ui::Panel* canvasPanel =
         panelManager->createPanelInstance_<ui::Panel>(canvasArea, "Canvas");
     canvasArea->tabBar()->hide();
-    canvas::Canvas* canvas = canvasPanel->createChild<canvas::Canvas>(nullptr);
+    canvas::CanvasWeakPtr canvas = canvasPanel->createChild<canvas::Canvas>();
     if (auto canvasManager = importModule<canvas::CanvasManager>().lock()) {
         // Set the canvas as being the active canvas. This ensures that
         // canvas->setWorkspace() is called whenever the current workspace
@@ -375,7 +375,7 @@ VGC_UI_DEFINE_WINDOW_COMMAND( //
 
 } // namespace
 
-void CanvasApplication::createTools_(canvas::Canvas* canvas) {
+void CanvasApplication::createTools_(canvas::CanvasWeakPtr canvas) {
 
     // Create the tool manager
     toolManager_ = importModule<canvas::ToolManager>();

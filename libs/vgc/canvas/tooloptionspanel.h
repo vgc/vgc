@@ -47,7 +47,7 @@ public:
     static ToolOptionsPanelPtr create(const ui::PanelContext& context);
 
 private:
-    void onCurrentToolChanged_(CanvasTool* tool);
+    void onCurrentToolChanged_(CanvasToolWeakPtr tool);
     VGC_SLOT(onCurrentToolChanged_)
 };
 
