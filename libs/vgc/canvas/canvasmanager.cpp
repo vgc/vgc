@@ -73,10 +73,6 @@ VGC_UI_DEFINE_WINDOW_COMMAND( //
 
 } // namespace commands
 
-namespace {
-
-} // namespace
-
 CanvasManager::CanvasManager(CreateKey key, const ui::ModuleContext& context)
     : Module(key, context) {
 
