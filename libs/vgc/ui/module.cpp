@@ -16,6 +16,7 @@
 
 #include <vgc/ui/module.h>
 
+#include <vgc/ui/menu.h>
 #include <vgc/ui/widget.h>
 
 namespace vgc::ui {
@@ -155,6 +156,50 @@ void Module::removeAction(Action* action) {
 void Module::clearActions() {
     while (!actions_.isEmpty()) {
         removeAction(actions_.last().get());
+    }
+}
+
+ModuleActionCreator::ModuleActionCreator(ui::ModuleWeakPtr module)
+    : module_(std::move(module)) {
+}
+
+// Note: this must be defined in the .cpp file because we cannot
+// copy an Obj[Weak]Ptr<T> with only a forward declaration of T.
+//
+ui::MenuWeakPtr ModuleActionCreator::menu() const {
+    return menu_;
+}
+
+void ModuleActionCreator::setMenu(ui::MenuWeakPtr menu) {
+    menu_ = std::move(menu);
+}
+
+void ModuleActionCreator::addSeparator() {
+    if (auto menu = menu_.lock()) {
+        menu->addSeparator();
+    }
+}
+
+ui::Action* ModuleActionCreator::createActionAndAddToMenu_(core::StringId commandName) {
+    ui::Action* action = createAction_(commandName);
+    if (action) {
+        addToMenu_(action);
+    }
+    return action;
+}
+
+ui::Action* ModuleActionCreator::createAction_(core::StringId commandName) {
+    if (auto module = module_.lock()) {
+        return module->createTriggerAction(commandName);
+    }
+    else {
+        return nullptr;
+    }
+}
+
+void ModuleActionCreator::addToMenu_(ui::Action* action) {
+    if (auto menu = menu_.lock()) {
+        menu->addItem(action);
     }
 }
 

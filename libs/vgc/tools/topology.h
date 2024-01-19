@@ -30,6 +30,12 @@ namespace commands {
 // Window commands
 
 VGC_TOOLS_API
+VGC_UI_DECLARE_COMMAND(softDelete)
+
+VGC_TOOLS_API
+VGC_UI_DECLARE_COMMAND(hardDelete)
+
+VGC_TOOLS_API
 VGC_UI_DECLARE_COMMAND(glue)
 
 VGC_TOOLS_API
@@ -67,6 +73,12 @@ public:
 
 private:
     canvas::CanvasManagerWeakPtr canvasManager_;
+
+    void onSoftDelete_();
+    VGC_SLOT(onSoftDelete_)
+
+    void onHardDelete_();
+    VGC_SLOT(onHardDelete_)
 
     void onGlue_();
     VGC_SLOT(onGlue_)

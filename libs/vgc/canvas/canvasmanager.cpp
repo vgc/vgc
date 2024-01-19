@@ -75,34 +75,6 @@ VGC_UI_DEFINE_WINDOW_COMMAND( //
 
 namespace {
 
-struct ActionHelper {
-public:
-    ActionHelper(ui::Module& module, ui::MenuWeakPtr menu)
-        : module_(module)
-        , menu_(menu) {
-    }
-
-    template<typename Slot>
-    ui::Action* addAction(core::StringId commandName, Slot slot) {
-        ui::Action* action = module_.createTriggerAction(commandName);
-        if (auto menu = menu_.lock()) {
-            menu->addItem(action);
-        }
-        action->triggered().connect(slot);
-        return action;
-    }
-
-    void addSeparator() {
-        if (auto menu = menu_.lock()) {
-            menu->addSeparator();
-        }
-    }
-
-private:
-    ui::Module& module_;
-    ui::MenuWeakPtr menu_;
-};
-
 } // namespace
 
 CanvasManager::CanvasManager(CreateKey key, const ui::ModuleContext& context)
@@ -120,22 +92,22 @@ CanvasManager::CanvasManager(CreateKey key, const ui::ModuleContext& context)
     }
 
     using namespace commands;
-    ActionHelper h(*this, viewMenu);
+    ui::ModuleActionCreator c(this);
+    c.setMenu(viewMenu);
 
-    h.addAction(switchToNormalDisplayMode(), onSwitchToNormalDisplayMode_Slot());
-    h.addAction(
+    c.addAction(switchToNormalDisplayMode(), onSwitchToNormalDisplayMode_Slot());
+    c.addAction(
         switchToOutlineOverlayDisplayMode(), onSwitchToOutlineOverlayDisplayMode_Slot());
-    h.addAction(
+    c.addAction(
         switchToOutlineOnlyDisplayMode(), onSwitchToOutlineOnlyDisplayMode_Slot());
-    h.addSeparator();
 
-    h.addAction(toggleLastTwoDisplayModes(), onToggleLastTwoDisplayModes_Slot());
-    h.addAction(cycleDisplayModes(), onCycleDisplayModes_Slot());
-    h.addSeparator();
+    c.addSeparator();
+    c.addAction(toggleLastTwoDisplayModes(), onToggleLastTwoDisplayModes_Slot());
+    c.addAction(cycleDisplayModes(), onCycleDisplayModes_Slot());
 
-    h.addAction(fitViewToSelection(), onFitViewToSelection_Slot());
-    h.addAction(fitViewToDocument(), onFitViewToDocument_Slot());
-    h.addSeparator();
+    c.addSeparator();
+    c.addAction(fitViewToSelection(), onFitViewToSelection_Slot());
+    c.addAction(fitViewToDocument(), onFitViewToDocument_Slot());
 }
 
 CanvasManagerPtr CanvasManager::create(const ui::ModuleContext& context) {

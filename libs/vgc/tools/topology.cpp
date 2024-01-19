@@ -35,6 +35,27 @@ using ui::modifierkeys::alt;
 using ui::modifierkeys::ctrl;
 
 VGC_UI_DEFINE_WINDOW_COMMAND( //
+    softDelete,
+    "tools.topology.softDelete",
+    "Soft Delete",
+    Shortcut(Key::Backspace));
+
+VGC_UI_DEFINE_WINDOW_COMMAND( //
+    hardDelete,
+    "tools.topology.hardDelete",
+    "Hard Delete",
+    Shortcut(ctrl, Key::Backspace));
+
+namespace {
+
+// Secondary shortcuts
+//
+VGC_UI_ADD_DEFAULT_SHORTCUT(softDelete(), Shortcut(Key::Delete))
+VGC_UI_ADD_DEFAULT_SHORTCUT(hardDelete(), Shortcut(ctrl, Key::Delete))
+
+} // namespace
+
+VGC_UI_DEFINE_WINDOW_COMMAND( //
     glue,
     "tools.topology.glue",
     "Glue",
@@ -71,33 +92,29 @@ TopologyModule::TopologyModule(CreateKey key, const ui::ModuleContext& context)
 
     canvasManager_ = importModule<canvas::CanvasManager>();
 
-    ui::MenuWeakPtr topologyMenu_;
+    ui::MenuWeakPtr editMenu;
+    ui::MenuWeakPtr topologyMenu;
     if (auto standardMenus = importModule<ui::StandardMenus>().lock()) {
+        editMenu = standardMenus->getOrCreateEditMenu();
         if (auto menuBar = standardMenus->menuBar().lock()) {
             Int index = std::max<Int>(0, menuBar->numItems() - 1);
-            topologyMenu_ = menuBar->createSubMenuAt(index, "Topology");
+            topologyMenu = menuBar->createSubMenuAt(index, "Topology");
         }
     }
 
-    auto createAction = [this, topologyMenu_](core::StringId commandName) {
-        ui::Action* action = this->createTriggerAction(commandName);
-        if (auto topologyMenu = topologyMenu_.lock()) {
-            topologyMenu->addItem(action);
-        }
-        return action;
-    };
+    using namespace commands;
+    ui::ModuleActionCreator c(this);
 
-    ui::Action* glueAction = createAction(commands::glue());
-    glueAction->triggered().connect(onGlue_Slot());
+    c.setMenu(editMenu);
+    c.addSeparator();
+    c.addAction(softDelete(), onSoftDelete_Slot());
+    c.addAction(hardDelete(), onHardDelete_Slot());
 
-    ui::Action* explodeAction = createAction(commands::explode());
-    explodeAction->triggered().connect(onExplode_Slot());
-
-    ui::Action* simplifyAction = createAction(commands::simplify());
-    simplifyAction->triggered().connect(onSimplify_Slot());
-
-    ui::Action* cutFaceWithEdgeAction = createAction(commands::cutFaceWithEdge());
-    cutFaceWithEdgeAction->triggered().connect(onCutFaceWithEdge_Slot());
+    c.setMenu(topologyMenu);
+    c.addAction(glue(), onGlue_Slot());
+    c.addAction(explode(), onExplode_Slot());
+    c.addAction(simplify(), onSimplify_Slot());
+    c.addAction(cutFaceWithEdge(), onCutFaceWithEdge_Slot());
 }
 
 TopologyModulePtr TopologyModule::create(const ui::ModuleContext& context) {
@@ -116,13 +133,11 @@ public:
         if (auto canvasManager = canvasManager_.lock()) {
             canvas_ = canvasManager->activeCanvas().lock();
             if (canvas_) {
-                workspace::WorkspaceWeakPtr workspaceWeak = canvas_->workspace();
-                workspace_ = workspaceWeak.lock();
+                workspace_ = canvas_->workspace().lock();
                 if (workspace_) {
 
                     // Open history group
-                    core::History* history = workspace_->history();
-                    if (history) {
+                    if (core::History* history = workspace_->history()) {
                         undoGroup_ = history->createUndoGroup(commandName);
                     }
 
@@ -174,6 +189,20 @@ private:
 };
 
 } // namespace
+
+void TopologyModule::onSoftDelete_() {
+    if (auto context = TopologyContextLock(canvasManager_, commands::softDelete())) {
+        context.workspace()->softDelete(context.selection());
+        context.canvas()->clearSelection();
+    }
+}
+
+void TopologyModule::onHardDelete_() {
+    if (auto context = TopologyContextLock(canvasManager_, commands::hardDelete())) {
+        context.workspace()->hardDelete(context.selection());
+        context.canvas()->clearSelection();
+    }
+}
 
 void TopologyModule::onGlue_() {
     if (auto context = TopologyContextLock(canvasManager_, commands::glue())) {

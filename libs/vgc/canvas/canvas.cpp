@@ -119,35 +119,6 @@ void Canvas::setCamera(const geometry::Camera2d& camera) {
     requestRepaint();
 }
 
-namespace {
-
-void deleteElements(
-    const core::Array<core::Id>& elementIds,
-    workspace::WorkspaceWeakPtr workspace_) {
-
-    auto workspace = workspace_.lock();
-    if (!workspace || elementIds.isEmpty()) {
-        return;
-    }
-
-    // Open history group
-    static core::StringId Delete_Element("Delete Element");
-    core::UndoGroup* undoGroup = nullptr;
-    core::History* history = workspace->history();
-    if (history) {
-        undoGroup = history->createUndoGroup(Delete_Element);
-    }
-
-    workspace->softDelete(elementIds);
-
-    // Close operation
-    if (undoGroup) {
-        undoGroup->close();
-    }
-}
-
-} // namespace
-
 core::Array<core::Id> Canvas::selection() const {
     return selectedElementIds_;
 }
@@ -368,11 +339,6 @@ bool Canvas::onKeyPress(ui::KeyPressEvent* event) {
     case ui::Key::P:
         showControlPoints_ = !showControlPoints_;
         requestRepaint();
-        break;
-    case ui::Key::Backspace:
-    case ui::Key::Delete:
-        deleteElements(selectedElementIds_, workspace());
-        clearSelection();
         break;
     default:
         return false;
