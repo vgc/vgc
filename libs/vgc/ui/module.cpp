@@ -16,7 +16,6 @@
 
 #include <vgc/ui/module.h>
 
-#include <vgc/ui/menu.h>
 #include <vgc/ui/widget.h>
 
 namespace vgc::ui {
@@ -165,6 +164,16 @@ ModuleActionCreator::ModuleActionCreator(ui::ModuleWeakPtr module)
 
 // Note: this must be defined in the .cpp file because we cannot
 // copy an Obj[Weak]Ptr<T> with only a forward declaration of T.
+//
+// Note 2: On Windows, defining this function in the .cpp file isn't even
+// enough: MSVC requires the full definition of T even to just accept the
+// function declaration in the .h file. So for now, we include <menu.h> from
+// <module.h>.
+//
+// XXX: Should we use some static_cast<void*> in weakIncref() so that
+// ObjWeakPtr<T> can be copyable with just a forward declaration? If we do
+// this, would it be still possible to prevent people to use ObjWeakPtr<T> even
+// when T does not derive from Object?
 //
 ui::MenuWeakPtr ModuleActionCreator::menu() const {
     return menu_;

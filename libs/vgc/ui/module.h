@@ -26,6 +26,7 @@
 #include <vgc/core/objectarray.h>
 #include <vgc/ui/action.h>
 #include <vgc/ui/api.h>
+#include <vgc/ui/menu.h>
 
 namespace vgc::ui {
 
