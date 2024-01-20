@@ -26,11 +26,13 @@
 #include <vgc/core/objectarray.h>
 #include <vgc/ui/action.h>
 #include <vgc/ui/api.h>
+#include <vgc/ui/menu.h>
 
 namespace vgc::ui {
 
 using ActionPtrArrayView = core::ObjPtrArrayView<Action>;
 
+VGC_DECLARE_OBJECT(Menu);
 VGC_DECLARE_OBJECT(Module);
 VGC_DECLARE_OBJECT(ModuleManager);
 
@@ -406,6 +408,55 @@ private:
     core::Array<ActionPtr> actions_;
 
     ModuleManagerWeakPtr moduleManager_;
+};
+
+/// \class vgc::ui::ModuleActionCreator
+/// \brief Helper class to create module actions.
+///
+class VGC_UI_API ModuleActionCreator {
+public:
+    /// Create a `ModuleActionCreator` acting on the given `module`.
+    ///
+    ModuleActionCreator(ui::ModuleWeakPtr module);
+
+    /// Returns the module to which created action are added.
+    ///
+    ui::ModuleWeakPtr module() const {
+        return module_;
+    }
+
+    /// Returns the current `menu` to which created action are added.
+    ///
+    ui::MenuWeakPtr menu() const;
+
+    /// Sets the current `menu` to which created action are added.
+    ///
+    void setMenu(ui::MenuWeakPtr menu);
+
+    /// Creates a new trigger action with the given `commandName`, adds it to
+    /// the `module()` and `menu()` (if any), and connect its `triggered()`
+    /// signal to the given `slot`.
+    ///
+    template<typename Slot>
+    ui::Action* addAction(core::StringId commandName, Slot slot) {
+        ui::Action* action = createActionAndAddToMenu_(commandName);
+        if (action) {
+            action->triggered().connect(slot);
+        }
+        return action;
+    }
+
+    /// Adds a separator to the `menu()` (if any).
+    ///
+    void addSeparator();
+
+private:
+    ui::ModuleWeakPtr module_;
+    ui::MenuWeakPtr menu_;
+
+    ui::Action* createActionAndAddToMenu_(core::StringId commandName);
+    ui::Action* createAction_(core::StringId commandName);
+    void addToMenu_(ui::Action* action);
 };
 
 } // namespace vgc::ui

@@ -75,33 +75,22 @@ OrderModule::OrderModule(CreateKey key, const ui::ModuleContext& context)
 
     canvasManager_ = importModule<canvas::CanvasManager>();
 
-    ui::MenuWeakPtr orderMenu_;
+    ui::MenuWeakPtr orderMenu;
     if (auto standardMenus = importModule<ui::StandardMenus>().lock()) {
         if (auto menuBar = standardMenus->menuBar().lock()) {
             Int index = std::max<Int>(0, menuBar->numItems() - 1);
-            orderMenu_ = menuBar->createSubMenuAt(index, "Order");
+            orderMenu = menuBar->createSubMenuAt(index, "Order");
         }
     }
 
-    auto createAction = [this, orderMenu_](core::StringId commandName) {
-        ui::Action* action = this->createTriggerAction(commandName);
-        if (auto orderMenu = orderMenu_.lock()) {
-            orderMenu->addItem(action);
-        }
-        return action;
-    };
+    using namespace commands;
+    ui::ModuleActionCreator c(this);
+    c.setMenu(orderMenu);
 
-    ui::Action* bringToFrontAction = createAction(commands::bringToFront());
-    bringToFrontAction->triggered().connect(onBringToFront_Slot());
-
-    ui::Action* bringForwardAction = createAction(commands::bringForward());
-    bringForwardAction->triggered().connect(onBringForward_Slot());
-
-    ui::Action* sendBackwardAction = createAction(commands::sendBackward());
-    sendBackwardAction->triggered().connect(onSendBackward_Slot());
-
-    ui::Action* sendToBack = createAction(commands::sendToBack());
-    sendToBack->triggered().connect(onSendToBack_Slot());
+    c.addAction(bringToFront(), onBringToFront_Slot());
+    c.addAction(bringForward(), onBringForward_Slot());
+    c.addAction(sendBackward(), onSendBackward_Slot());
+    c.addAction(sendToBack(), onSendToBack_Slot());
 }
 
 OrderModulePtr OrderModule::create(const ui::ModuleContext& context) {
