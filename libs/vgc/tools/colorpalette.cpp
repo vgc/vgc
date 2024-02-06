@@ -78,6 +78,13 @@ VGC_UI_DEFINE_WINDOW_COMMAND( //
     "colors.continuousMode",
     "Continuous Mode")
 
+VGC_UI_DEFINE_WINDOW_COMMAND( //
+    colorSelectSync,
+    "colors.colorSelectSync",
+    "Synchronize Current Color With Selection",
+    Key::None,
+    "tools/icons/colorSelectSync.svg")
+
 } // namespace commands
 
 namespace strings_ {
@@ -485,7 +492,17 @@ ColorPalette::ColorPalette(CreateKey key)
     : Column(key) {
 
     // Color preview
-    colorPreview_ = createChild<ColorPreview>();
+    ui::Row* colorPreviewRow = createChild<ui::Row>();
+    colorPreviewRow->addStyleClass(core::StringId("color-preview-row"));
+    colorPreview_ = colorPreviewRow->createChild<ColorPreview>();
+
+    // Color-Select Sync
+    ui::Action* colorSelectSyncAction = createTriggerAction(commands::colorSelectSync());
+    colorSelectSyncAction->setCheckable(true);
+    ui::Button* colorSelectSyncButton =
+        colorPreviewRow->createChild<ui::Button>(colorSelectSyncAction);
+    colorSelectSyncButton->setIconVisible(true);
+    colorSelectSyncButton->setTextVisible(false);
 
     // Continuous vs. Steps
     ui::Row* stepsModeRow = createChild<ui::Row>();
