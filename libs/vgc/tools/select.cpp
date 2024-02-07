@@ -18,6 +18,7 @@
 
 #include <set>
 
+#include <vgc/canvas/workspaceselection.h>
 #include <vgc/graphics/detail/shapeutil.h>
 #include <vgc/graphics/strings.h>
 #include <vgc/tools/copypaste.h>
@@ -78,6 +79,7 @@ public:
         }
         auto workspace = context.workspace();
         auto canvas = context.canvas();
+        auto workspaceSelection = context.workspaceSelection();
 
         // Open history group
         core::UndoGroup* undoGroup = nullptr;
@@ -117,7 +119,7 @@ public:
                     workspace::Element* vertexItem =
                         workspace->findVacElement(result.vertex());
                     if (vertexItem) {
-                        canvas->setSelection(std::array{vertexItem->id()});
+                        workspaceSelection->setItemIds(std::array{vertexItem->id()});
                     }
                     break;
                 }
@@ -131,7 +133,7 @@ public:
                     // select resulting vertex
                     workspace::Element* vertexItem = workspace->findVacElement(result);
                     if (vertexItem) {
-                        canvas->setSelection(std::array{vertexItem->id()});
+                        workspaceSelection->setItemIds(std::array{vertexItem->id()});
                     }
                     break;
                 }
@@ -181,9 +183,9 @@ SelectPtr Select::create() {
     return core::createObject<Select>();
 }
 
-core::Array<core::Id> Select::selection() {
+core::Array<core::Id> Select::selectedItemIds() {
     if (auto context = contextLock()) {
-        return context.canvas()->selection();
+        return context.workspaceSelection()->itemIds();
     }
     else {
         return {};
@@ -301,6 +303,7 @@ bool Select::onMousePress(ui::MousePressEvent* event) {
         return false;
     }
     auto canvas = context.canvas();
+    auto workspaceSelection = context.workspaceSelection();
 
     cursorPosition_ = event->position();
 
@@ -313,7 +316,7 @@ bool Select::onMousePress(ui::MousePressEvent* event) {
         isInAction_ = true;
         geometry::Vec2d position(event->position());
         candidates_ = canvas->computeSelectionCandidates(position);
-        selectionAtPress_ = canvas->selection();
+        selectionAtPress_ = workspaceSelection->itemIds();
         cursorPositionAtPress_ = event->position();
         timeAtPress_ = event->timestamp();
 
@@ -531,6 +534,7 @@ bool Select::onMouseRelease(ui::MouseReleaseEvent* event) {
     }
     auto canvas = context.canvas();
     auto workspace = context.workspace();
+    auto workspaceSelection = context.workspaceSelection();
 
     core::Array<core::Id> selection = selectionAtPress_;
     bool selectionChanged = false;
@@ -638,7 +642,7 @@ bool Select::onMouseRelease(ui::MouseReleaseEvent* event) {
     }
 
     if (selectionChanged) {
-        canvas->setSelection(selection);
+        workspaceSelection->setItemIds(selection);
     }
 
     resetActionState_();
@@ -933,7 +937,8 @@ void Select::disconnectCanvas_() {
     if (auto connectedCanvas = connectedCanvas_.lock()) {
         connectedCanvas->aboutToBeDestroyed().disconnect(
             onCanvasAboutToBeDestroyedSlot_());
-        connectedCanvas->selectionChanged().disconnect(onSelectionChangedSlot_());
+        connectedCanvas->workspaceSelectionChanged().disconnect(
+            onSelectionChangedSlot_());
     }
     // TODO: allow `oldCanvas_->disconnect(on..Slot_())` syntax?
 }
@@ -943,7 +948,7 @@ void Select::onCanvasChanged_() {
     connectedCanvas_ = canvas();
     if (auto connectedCanvas = connectedCanvas_.lock()) {
         connectedCanvas->aboutToBeDestroyed().connect(onCanvasAboutToBeDestroyedSlot_());
-        connectedCanvas->selectionChanged().connect(onSelectionChangedSlot_());
+        connectedCanvas->workspaceSelectionChanged().connect(onSelectionChangedSlot_());
     }
     onSelectionChanged_();
 }
@@ -983,11 +988,12 @@ void Select::onShowTransformBoxChanged_() {
 void Select::updateTransformBoxElements_() {
     if (transformBox_) {
         if (auto canvas = this->canvas().lock()) {
-            transformBox_->setElements(canvas->selection());
+            if (auto workspaceSelection = canvas->workspaceSelection().lock()) {
+                transformBox_->setElements(workspaceSelection->itemIds());
+                return;
+            }
         }
-        else {
-            transformBox_->setElements({});
-        }
+        transformBox_->setElements({});
     }
 }
 
@@ -1004,7 +1010,7 @@ void Select::onCut_() {
         return;
     }
 
-    core::Array<core::Id> selection = this->selection();
+    core::Array<core::Id> selection = this->selectedItemIds();
     if (selection.isEmpty()) {
         return;
     }
@@ -1031,7 +1037,7 @@ void Select::onCopy_() {
         return;
     }
 
-    core::Array<core::Id> selection = this->selection();
+    core::Array<core::Id> selection = this->selectedItemIds();
     if (selection.isEmpty()) {
         return;
     }
@@ -1041,10 +1047,12 @@ void Select::onCopy_() {
 
 void Select::onPaste_() {
 
-    auto workspace = this->workspace().lock();
-    if (!workspace) {
+    auto context = contextLock();
+    if (!context) {
         return;
     }
+    auto workspace = context.workspace();
+    auto workspaceSelection = context.workspaceSelection();
 
     // Open history group
     core::UndoGroup* undoGroup = nullptr;
@@ -1057,9 +1065,7 @@ void Select::onPaste_() {
     core::Array<core::Id> pasted = workspace->paste(copyDoc_);
 
     // Set pasted elements as new selection
-    if (auto canvas = this->canvas().lock()) {
-        canvas->setSelection(pasted);
-    }
+    workspaceSelection->setItemIds(pasted);
 
     // Close history group
     if (undoGroup) {

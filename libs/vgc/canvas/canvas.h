@@ -39,33 +39,8 @@ enum class CoordinateSpace {
     Workspace
 };
 
-VGC_DECLARE_OBJECT(SelectionListHistory);
 VGC_DECLARE_OBJECT(Canvas);
-
-using SelectionList = core::Array<core::Id>;
-
-class VGC_CANVAS_API SelectionListHistory : public core::Object {
-private:
-    VGC_OBJECT(SelectionListHistory, core::Object)
-
-    struct PrivateKey {};
-    SelectionListHistory(CreateKey, PrivateKey);
-
-public:
-    SelectionListHistoryPtr create();
-
-    const SelectionList& currentSelection() const {
-        return lists_.last();
-    }
-
-    void pushSelection(const SelectionList& list);
-    void pushSelection(SelectionList&& list);
-
-    VGC_SIGNAL(selectionChanged)
-
-private:
-    core::Array<SelectionList> lists_;
-};
+VGC_DECLARE_OBJECT(WorkspaceSelection);
 
 /// \class vgc::canvas::SelectionCandidate
 /// \brief A workspace item candidate for selection.
@@ -120,6 +95,51 @@ public:
         return workspace_;
     }
 
+    /// Sets the `Workspace` that this `Canvas is operating on.
+    ///
+    void setWorkspace(workspace::WorkspaceWeakPtr workspace);
+
+    /// This signal is emitted whenever this `Canvas` changes which
+    /// `workspace()` it is operating on.
+    ///
+    /// The new `workspace()` may be null, which means that the canvas doesn't
+    /// operate on any `Workspace` anymore.
+    ///
+    /// Note that this signal is different from `workspace()->changed()`, which
+    /// is emitted when the inner content of the `workspace()` changes.
+    ///
+    VGC_SIGNAL(workspaceReplaced)
+
+    /// Returns the `WorkspaceSelection` that this `Canvas` is operating on.
+    ///
+    WorkspaceSelectionWeakPtr workspaceSelection() const {
+        return workspaceSelection_;
+    }
+
+    /// Sets the observed document workspace.
+    ///
+    void setWorkspaceSelection(WorkspaceSelectionWeakPtr workspaceSelection);
+
+    /// This signal is emitted whenever this `Canvas` changes which
+    /// `workspaceSelection()` it is operating on.
+    ///
+    /// The new `workspaceSelection()` may be null, which means that the canvas
+    /// doesn't operate on any `WorkspaceSelection` anymore.
+    ///
+    /// Note that this signal is different from
+    /// `workspaceSelection()->changed()`, which is emitted when the selected
+    /// items of the `workspaceSelection()` changes.
+    ///
+    VGC_SIGNAL(workspaceSelectionReplaced)
+
+    /// This signal is emitted whenever:
+    ///
+    /// - this `Canvas` changes which `workspaceSelection()` it is operating on, or
+    ///
+    /// - `workspaceSelection()->changed()` is emitted
+    ///
+    VGC_SIGNAL(workspaceSelectionChanged)
+
     /// Returns the current display mode.
     ///
     DisplayMode displayMode() const {
@@ -129,22 +149,6 @@ public:
     /// Sets the current display mode.
     ///
     void setDisplayMode(DisplayMode displayMode);
-
-    /// Sets the observed document workspace.
-    ///
-    void setWorkspace(workspace::WorkspaceWeakPtr workspace);
-
-    /// This signal is emitted whenever this `Canvas` changes which
-    /// `workspace()` it is observing. In other words, this is emitted when
-    /// `setWorkspace()` is called with a different workspace.
-    ///
-    /// The new `workspace()` may be null, which means that the canvas doesn't
-    /// observe anymore a workspace.
-    ///
-    /// Note that this signal is different from `workspace()->changed()`, which
-    /// is emitted when the inner content of the `workspace()` changes.
-    ///
-    VGC_SIGNAL(workspaceReplaced)
 
     /// Creates and manages new performance logs as children of the given \p
     /// parent.
@@ -171,30 +175,6 @@ public:
     core::AnimTime currentTime() const {
         return {};
     }
-
-    //----------------------- Manage selection --------------------------------
-    //
-    // For now, we keep this in Canvas, but we may want to move this to a
-    // separate class (CanvasSelection? SelectionManager? WorkspaceSelection?)
-    // since the "current selection" can be shared across several canvases
-    // in case of split view, etc.
-    //
-
-    /// Returns the list of current selected elements.
-    ///
-    core::Array<core::Id> selection() const;
-
-    /// Sets the current selected elements.
-    ///
-    void setSelection(const core::ConstSpan<core::Id>& elementIds);
-
-    /// Deselects all selected elements.
-    ///
-    void clearSelection();
-
-    /// This signal is emitted whenever the selection changes.
-    ///
-    VGC_SIGNAL(selectionChanged)
 
     /// Computes candidate elements for selection at `position`.
     ///
@@ -252,10 +232,20 @@ private:
 
     // Scene
     workspace::WorkspaceWeakPtr workspace_;
-    DisplayMode displayMode_ = DisplayMode::Normal;
 
     void onWorkspaceChanged_();
     VGC_SLOT(onWorkspaceChanged_)
+
+    // Selection
+    WorkspaceSelectionWeakPtr workspaceSelection_;
+
+    void onWorkspaceSelectionChanged_();
+    VGC_SLOT(onWorkspaceSelectionChanged_)
+
+    core::Array<workspace::Element*> selectedElements_() const;
+
+    // View Settings
+    DisplayMode displayMode_ = DisplayMode::Normal;
 
     // Moving camera
     bool isPanning_ = false;
@@ -265,10 +255,6 @@ private:
     geometry::Camera2d cameraAtPress_;
     double timeAtPress_ = 0;
     bool isDragging_ = false;
-
-    // Selection
-    core::Array<core::Id> selectedElementIds_;
-    core::Array<workspace::Element*> selectedElements_() const;
 
     // Graphics resources
     // VgcGraph

@@ -49,7 +49,7 @@ public:
 
     /// Returns the IDs of the selected elements.
     ///
-    core::Array<core::Id> selection();
+    core::Array<core::Id> selectedItemIds();
 
 protected:
     // Reimplementation of CanvasTool virtual methods

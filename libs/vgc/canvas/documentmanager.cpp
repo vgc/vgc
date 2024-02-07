@@ -16,12 +16,18 @@
 
 #include <vgc/canvas/documentmanager.h>
 
+#include <vgc/canvas/workspaceselection.h>
 #include <vgc/workspace/workspace.h>
 
 namespace vgc::canvas {
 
 DocumentManager::DocumentManager(CreateKey key, const ui::ModuleContext& context)
     : Module(key, context) {
+
+    workspaceSelection_ = WorkspaceSelection::create();
+    if (auto workspaceSelection = workspaceSelection_.lock()) {
+        workspaceSelection->changed().connect(currentWorkspaceSelectionChanged());
+    }
 }
 
 DocumentManagerPtr DocumentManager::create(const ui::ModuleContext& context) {
@@ -32,8 +38,11 @@ void DocumentManager::setCurrentWorkspace(workspace::WorkspaceSharedPtr workspac
     if (currentWorkspace_ == workspace) {
         return;
     }
+    if (auto workspaceSelection = workspaceSelection_.lock()) {
+        workspaceSelection->clear();
+    }
     currentWorkspace_ = workspace;
-    currentWorkspaceChanged().emit(workspace);
+    currentWorkspaceReplaced().emit(workspace);
 }
 
 dom::DocumentWeakPtr DocumentManager::currentDocument() const {

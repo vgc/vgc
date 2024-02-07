@@ -18,6 +18,7 @@
 
 #include <vgc/canvas/canvas.h>
 #include <vgc/canvas/documentmanager.h>
+#include <vgc/canvas/workspaceselection.h>
 #include <vgc/ui/menu.h>
 #include <vgc/ui/standardmenus.h>
 
@@ -78,8 +79,8 @@ CanvasManager::CanvasManager(CreateKey key, const ui::ModuleContext& context)
 
     documentManager_ = context.importModule<DocumentManager>();
     if (auto documentManager = documentManager_.lock()) {
-        documentManager->currentWorkspaceChanged().connect(
-            onCurrentWorkspaceChanged_Slot());
+        documentManager->currentWorkspaceReplaced().connect(
+            onCurrentWorkspaceReplaced_Slot());
     }
 
     ui::MenuWeakPtr viewMenu;
@@ -119,6 +120,7 @@ void setCanvasWorkspace(
     if (auto canvas = canvas_.lock()) {
         if (auto documentManager = documentManager_.lock()) {
             canvas->setWorkspace(documentManager->currentWorkspace());
+            canvas->setWorkspaceSelection(documentManager->currentWorkspaceSelection());
         }
     }
 }
@@ -133,7 +135,7 @@ void CanvasManager::setActiveCanvas(CanvasWeakPtr canvas) {
     setCanvasWorkspace(activeCanvas_, documentManager_);
 }
 
-void CanvasManager::onCurrentWorkspaceChanged_() {
+void CanvasManager::onCurrentWorkspaceReplaced_() {
     setCanvasWorkspace(activeCanvas_, documentManager_);
 }
 
@@ -246,15 +248,18 @@ void FitViewToDocument_(Canvas& canvas, workspace::Workspace& workspace) {
     fitViewToRect_(canvas, rect);
 }
 
-void FitViewToSelection_(Canvas& canvas, workspace::Workspace& workspace) {
+void FitViewToSelection_(
+    Canvas& canvas,
+    workspace::Workspace& workspace,
+    WorkspaceSelection& selection) {
 
-    core::Array<core::Id> selection = canvas.selection();
-    if (selection.isEmpty()) {
+    const core::Array<core::Id>& itemIds = selection.itemIds();
+    if (itemIds.isEmpty()) {
         FitViewToDocument_(canvas, workspace);
     }
     else {
         geometry::Rect2d rect = geometry::Rect2d::empty;
-        for (core::Id id : selection) {
+        for (core::Id id : itemIds) {
             workspace::Element* e = workspace.find(id);
             if (e) {
                 rect.uniteWith(e->boundingBox());
@@ -269,7 +274,9 @@ void FitViewToSelection_(Canvas& canvas, workspace::Workspace& workspace) {
 void CanvasManager::onFitViewToSelection_() {
     if (auto canvas = activeCanvas().lock()) {
         if (auto workspace = canvas->workspace().lock()) {
-            FitViewToSelection_(*canvas, *workspace);
+            if (auto selection = canvas->workspaceSelection().lock()) {
+                FitViewToSelection_(*canvas, *workspace, *selection);
+            }
         }
     }
 }

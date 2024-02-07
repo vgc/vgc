@@ -546,11 +546,13 @@ bool Sketch::onMousePress(ui::MousePressEvent* event) {
         return false;
     }
 
-    auto canvas = this->canvas().lock();
-    if (!canvas) {
+    auto context = contextLock();
+    if (!context) {
         return false;
     }
-    canvas->clearSelection();
+    auto workspaceSelection = context.workspaceSelection();
+
+    workspaceSelection->clear();
 
     // XXX: could be done when not sketching yet but we need to
     //      do it on undo/redo too. use workspace signal ?
