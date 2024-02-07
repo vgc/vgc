@@ -153,7 +153,13 @@ public:
     //
     // Does nothing if obj == nullptr.
     //
-    static void weakIncref(const Object* obj, Int64 k = 1);
+    // Using `void*` instead of `Object*` makes it possible to convert a
+    // SharedPtr into a WeakPtr with just a forward declaration. It's not
+    // entirely clear if all cases of abuse are prevented, but the benefits are
+    // probably worth the unlikely risk of someone attempting to use an
+    // ObjWeakPtr on a non-Object class.
+    //
+    static void weakIncref(const void* obj, Int64 k = 1);
 
     // Decrements by k the weakCount of the object.
     //
@@ -1944,7 +1950,8 @@ inline void ObjPtrAccess::sharedDecref(const void* obj_, Int64 k) {
     }
 }
 
-inline void ObjPtrAccess::weakIncref(const Object* obj, Int64 k) {
+inline void ObjPtrAccess::weakIncref(const void* obj_, Int64 k) {
+    const Object* obj = static_cast<const Object*>(obj_);
     if (obj) {
         obj->weakCount_ += k;
     }
