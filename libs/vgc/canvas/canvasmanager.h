@@ -101,8 +101,8 @@ private:
     static constexpr DisplayMode defaultFirstDisplayMode = DisplayMode::Normal;
     static constexpr DisplayMode defaultSecondDisplayMode = DisplayMode::OutlineOverlay;
 
-    void onCurrentWorkspaceChanged_();
-    VGC_SLOT(onCurrentWorkspaceChanged_);
+    void onCurrentWorkspaceReplaced_();
+    VGC_SLOT(onCurrentWorkspaceReplaced_);
 
     void switchToDisplayMode_(CanvasWeakPtr canvas, DisplayMode mode);
 

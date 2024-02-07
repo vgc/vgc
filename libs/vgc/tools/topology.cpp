@@ -18,8 +18,8 @@
 
 #include <algorithm> // max
 
-#include <vgc/canvas/canvas.h>
-#include <vgc/canvas/canvasmanager.h>
+#include <vgc/canvas/documentmanager.h>
+#include <vgc/canvas/workspaceselection.h>
 #include <vgc/ui/menu.h>
 #include <vgc/ui/standardmenus.h>
 #include <vgc/workspace/workspace.h>
@@ -90,7 +90,7 @@ VGC_UI_DEFINE_MOUSE_CLICK_COMMAND( //
 TopologyModule::TopologyModule(CreateKey key, const ui::ModuleContext& context)
     : Module(key, context) {
 
-    canvasManager_ = importModule<canvas::CanvasManager>();
+    documentManager_ = importModule<canvas::DocumentManager>();
 
     ui::MenuWeakPtr editMenu;
     ui::MenuWeakPtr topologyMenu;
@@ -126,24 +126,26 @@ namespace {
 class TopologyContextLock {
 public:
     TopologyContextLock(
-        canvas::CanvasManagerWeakPtr canvasManager_,
+        canvas::DocumentManagerWeakPtr documentManager_,
         core::StringId commandName) {
 
-        // Get canvas and workspace lock, then init if locks acquired
-        if (auto canvasManager = canvasManager_.lock()) {
-            canvas_ = canvasManager->activeCanvas().lock();
-            if (canvas_) {
-                workspace_ = canvas_->workspace().lock();
-                if (workspace_) {
+        // TODO: get the current time from some TimeManager module
+        time_ = core::AnimTime();
 
-                    // Open history group
-                    if (core::History* history = workspace_->history()) {
-                        undoGroup_ = history->createUndoGroup(commandName);
+        // Acquires locks and initialize
+        if (auto documentManager = documentManager_.lock()) {
+            workspace_ = documentManager->currentWorkspace().lock();
+            if (workspace_) {
+                workspaceSelection_ = documentManager->currentWorkspaceSelection().lock();
+                if (workspaceSelection_) {
+                    itemIds_ = workspaceSelection_->itemIds();
+                    if (!itemIds_.isEmpty()) {
+
+                        // Open history group
+                        if (core::History* history = workspace_->history()) {
+                            undoGroup_ = history->createUndoGroup(commandName);
+                        }
                     }
-
-                    // Get required data
-                    selection_ = canvas_->selection();
-                    time_ = canvas_->currentTime();
                 }
             }
         }
@@ -157,21 +159,22 @@ public:
         }
     }
 
+    // Returns whether all locks are acquired and the selection is non-empty.
+    //
     explicit operator bool() const {
-        return static_cast<bool>(workspace_) // implies canvas_ also true
-               && !selection_.isEmpty();     // avoid doing work if nothing is selected
-    }
-
-    canvas::Canvas* canvas() const {
-        return canvas_.get();
+        return !itemIds_.isEmpty();
     }
 
     workspace::Workspace* workspace() const {
         return workspace_.get();
     }
 
-    const core::Array<core::Id>& selection() const {
-        return selection_;
+    canvas::WorkspaceSelection* workspaceSelection() const {
+        return workspaceSelection_.get();
+    }
+
+    const core::Array<core::Id>& itemIds() const {
+        return itemIds_;
     }
 
     core::AnimTime time() const {
@@ -179,62 +182,61 @@ public:
     }
 
 private:
-    canvas::CanvasLockPtr canvas_;
     workspace::WorkspaceLockPtr workspace_;
-
-    core::Array<core::Id> selection_;
-    core::AnimTime time_;
-
+    canvas::WorkspaceSelectionLockPtr workspaceSelection_;
     core::UndoGroupWeakPtr undoGroup_;
+
+    core::Array<core::Id> itemIds_;
+    core::AnimTime time_;
 };
 
 } // namespace
 
 void TopologyModule::onSoftDelete_() {
-    if (auto context = TopologyContextLock(canvasManager_, commands::softDelete())) {
-        context.workspace()->softDelete(context.selection());
-        context.canvas()->clearSelection();
+    if (auto context = TopologyContextLock(documentManager_, commands::softDelete())) {
+        context.workspace()->softDelete(context.itemIds());
+        context.workspaceSelection()->clear();
     }
 }
 
 void TopologyModule::onHardDelete_() {
-    if (auto context = TopologyContextLock(canvasManager_, commands::hardDelete())) {
-        context.workspace()->hardDelete(context.selection());
-        context.canvas()->clearSelection();
+    if (auto context = TopologyContextLock(documentManager_, commands::hardDelete())) {
+        context.workspace()->hardDelete(context.itemIds());
+        context.workspaceSelection()->clear();
     }
 }
 
 void TopologyModule::onGlue_() {
-    if (auto context = TopologyContextLock(canvasManager_, commands::glue())) {
-        core::Id gluedId = context.workspace()->glue(context.selection());
+    if (auto context = TopologyContextLock(documentManager_, commands::glue())) {
+        core::Id gluedId = context.workspace()->glue(context.itemIds());
         if (gluedId >= 0) {
-            context.canvas()->setSelection(std::array{gluedId});
+            context.workspaceSelection()->setItemIds(std::array{gluedId});
         }
     }
 }
 
 void TopologyModule::onExplode_() {
-    if (auto context = TopologyContextLock(canvasManager_, commands::explode())) {
-        core::Array<core::Id> ungluedIds =
-            context.workspace()->unglue(context.selection());
-        context.canvas()->setSelection(std::move(ungluedIds));
+    if (auto context = TopologyContextLock(documentManager_, commands::explode())) {
+        core::Array<core::Id> ungluedIds = context.workspace()->unglue(context.itemIds());
+        context.workspaceSelection()->setItemIds(std::move(ungluedIds));
     }
 }
 
 void TopologyModule::onSimplify_() {
-    if (auto context = TopologyContextLock(canvasManager_, commands::simplify())) {
+    if (auto context = TopologyContextLock(documentManager_, commands::simplify())) {
         bool smoothJoins = false;
         core::Array<core::Id> uncutIds =
-            context.workspace()->simplify(context.selection(), smoothJoins);
-        context.canvas()->setSelection(std::move(uncutIds));
+            context.workspace()->simplify(context.itemIds(), smoothJoins);
+        context.workspaceSelection()->setItemIds(std::move(uncutIds));
     }
 }
 
 void TopologyModule::onCutFaceWithEdge_() {
-    if (auto context = TopologyContextLock(canvasManager_, commands::cutFaceWithEdge())) {
-        bool success = context.workspace()->cutGlueFace(context.selection());
+    if (auto context =
+            TopologyContextLock(documentManager_, commands::cutFaceWithEdge())) {
+        bool success = context.workspace()->cutGlueFace(context.itemIds());
         if (success) {
-            context.canvas()->clearSelection();
+            context.workspaceSelection()->clear();
         }
     }
 }

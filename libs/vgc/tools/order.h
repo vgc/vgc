@@ -21,7 +21,7 @@
 #include <vgc/ui/command.h>
 #include <vgc/ui/module.h>
 
-VGC_DECLARE_OBJECT(vgc::canvas, CanvasManager);
+VGC_DECLARE_OBJECT(vgc::canvas, DocumentManager);
 
 namespace vgc::tools {
 
@@ -59,7 +59,7 @@ public:
     static OrderModulePtr create(const ui::ModuleContext& context);
 
 private:
-    canvas::CanvasManagerWeakPtr canvasManager_;
+    canvas::DocumentManagerWeakPtr documentManager_;
 
     void onBringForward_();
     VGC_SLOT(onBringForward_)

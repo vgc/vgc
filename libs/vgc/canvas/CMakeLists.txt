@@ -15,6 +15,7 @@ vgc_add_library(canvas
         toolmanager.h
         tooloptionspanel.h
         toolspanel.h
+        workspaceselection.h
 
     CPP_SOURCE_FILES
         canvas.cpp
@@ -27,4 +28,5 @@ vgc_add_library(canvas
         toolmanager.cpp
         tooloptionspanel.cpp
         toolspanel.cpp
+        workspaceselection.cpp
 )

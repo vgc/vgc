@@ -21,6 +21,7 @@
 
 #include <vgc/canvas/api.h>
 #include <vgc/canvas/canvas.h>
+#include <vgc/canvas/workspaceselection.h>
 #include <vgc/core/object.h>
 #include <vgc/workspace/workspace.h>
 
@@ -51,30 +52,45 @@ public:
         canvas_ = canvas.lock();
         if (canvas_) {
             workspace_ = canvas_->workspace().lock();
+            if (workspace_) {
+                workspaceSelection_ = canvas_->workspaceSelection().lock();
+            }
         }
     }
 
-    /// Returns whether both `workspace()` and `canvas()` are non-null.
+    /// Returns whether `workspace()`, `canvas()`, and `workspaceSelection()` are all non-null.
     ///
     operator bool() const {
-        return static_cast<bool>(workspace_); // if true, implies canvas_ true as well
+        return static_cast<bool>(workspaceSelection_); // implies others are true as well
     }
 
-    /// Returns the workspace to operator on.
+    /// Returns the workspace to operate on.
     ///
     workspace::WorkspaceLockPtr workspace() const {
         return workspace_;
     }
 
-    /// Returns the canvas to operator on.
+    /// Returns the canvas to operate on.
     ///
     canvas::CanvasLockPtr canvas() const {
         return canvas_;
     }
 
+    /// Returns the workspace selection to operate on.
+    ///
+    // Note: in the future, we may have canvasSelection, for cases where the
+    // canvas is allowed to select things are not not workspace-related, e.g.,
+    // transient UI manipulators. This is why the name of this function is
+    // not just "selection".
+    //
+    WorkspaceSelectionLockPtr workspaceSelection() const {
+        return workspaceSelection_;
+    }
+
 private:
     canvas::CanvasLockPtr canvas_;
     workspace::WorkspaceLockPtr workspace_;
+    WorkspaceSelectionLockPtr workspaceSelection_;
 };
 
 /// \class vgc::canvas::CanvasTool

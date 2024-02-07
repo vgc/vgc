@@ -22,6 +22,7 @@
 
 #include <vgc/canvas/logcategories.h>
 #include <vgc/canvas/strings.h>
+#include <vgc/canvas/workspaceselection.h>
 #include <vgc/core/array.h>
 #include <vgc/core/history.h>
 #include <vgc/core/paths.h>
@@ -38,24 +39,6 @@
 #include <vgc/ui/detail/paintutil.h>
 
 namespace vgc::canvas {
-
-SelectionListHistory::SelectionListHistory(CreateKey key, PrivateKey)
-    : Object(key) {
-}
-
-SelectionListHistoryPtr SelectionListHistory::create() {
-    return core::createObject<SelectionListHistory>(SelectionListHistory::PrivateKey{});
-}
-
-void SelectionListHistory::pushSelection(const SelectionList& list) {
-    lists_.emplaceLast(list);
-    selectionChanged().emit();
-}
-
-void SelectionListHistory::pushSelection(SelectionList&& list) {
-    lists_.emplaceLast(std::move(list));
-    selectionChanged().emit();
-}
 
 Canvas::Canvas(CreateKey key)
     : Widget(key)
@@ -74,13 +57,6 @@ Canvas::Canvas(CreateKey key)
 
 CanvasPtr Canvas::create() {
     return core::createObject<Canvas>();
-}
-
-void Canvas::setDisplayMode(DisplayMode displayMode) {
-    if (displayMode_ != displayMode) {
-        displayMode_ = displayMode;
-        requestRepaint();
-    }
 }
 
 void Canvas::setWorkspace(workspace::WorkspaceWeakPtr newWorkspace_) {
@@ -102,6 +78,32 @@ void Canvas::setWorkspace(workspace::WorkspaceWeakPtr newWorkspace_) {
     workspaceReplaced().emit();
 }
 
+void Canvas::setWorkspaceSelection(WorkspaceSelectionWeakPtr newWorkspaceSelection_) {
+
+    if (workspaceSelection_ == newWorkspaceSelection_) {
+        return;
+    }
+
+    if (auto oldWorkspaceSelection = workspaceSelection_.lock()) {
+        oldWorkspaceSelection->disconnect(this);
+    }
+
+    workspaceSelection_ = newWorkspaceSelection_;
+    if (auto newWorkspaceSelection = workspaceSelection_.lock()) {
+        newWorkspaceSelection->changed().connect(onWorkspaceSelectionChanged_Slot());
+    }
+
+    onWorkspaceSelectionChanged_();
+    workspaceSelectionReplaced().emit();
+}
+
+void Canvas::setDisplayMode(DisplayMode displayMode) {
+    if (displayMode_ != displayMode) {
+        displayMode_ = displayMode;
+        requestRepaint();
+    }
+}
+
 void Canvas::startLoggingUnder(core::PerformanceLog* parent) {
     core::PerformanceLog* renderLog = renderTask_.startLoggingUnder(parent);
     updateTask_.startLoggingUnder(renderLog);
@@ -117,25 +119,6 @@ void Canvas::stopLoggingUnder(core::PerformanceLog* parent) {
 void Canvas::setCamera(const geometry::Camera2d& camera) {
     camera_ = camera;
     requestRepaint();
-}
-
-core::Array<core::Id> Canvas::selection() const {
-    return selectedElementIds_;
-}
-
-void Canvas::setSelection(const core::ConstSpan<core::Id>& elementIds) {
-    selectedElementIds_.clear();
-    for (core::Id id : elementIds) {
-        if (!selectedElementIds_.contains(id)) {
-            selectedElementIds_.append(id);
-        }
-    }
-    selectionChanged().emit();
-    requestRepaint();
-}
-
-void Canvas::clearSelection() {
-    setSelection({});
 }
 
 core::Array<SelectionCandidate> Canvas::computeSelectionCandidates(
@@ -351,6 +334,11 @@ bool Canvas::onKeyPress(ui::KeyPressEvent* event) {
 
 void Canvas::onWorkspaceChanged_() {
     requestRepaint();
+}
+
+void Canvas::onWorkspaceSelectionChanged_() {
+    requestRepaint();
+    workspaceSelectionChanged().emit();
 }
 
 namespace {
@@ -804,10 +792,13 @@ void Canvas::updateChildrenGeometry() {
 core::Array<workspace::Element*> Canvas::selectedElements_() const {
     core::Array<workspace::Element*> result;
     if (auto workspace = workspace_.lock()) {
-        for (core::Id id : selectedElementIds_) {
-            workspace::Element* element = workspace->find(id);
-            if (element && !result.contains(element)) {
-                result.append(element);
+        if (auto workspaceSelection = workspaceSelection_.lock()) {
+
+            for (core::Id id : workspaceSelection->itemIds()) {
+                workspace::Element* element = workspace->find(id);
+                if (element && !result.contains(element)) {
+                    result.append(element);
+                }
             }
         }
     }

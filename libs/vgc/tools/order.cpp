@@ -18,8 +18,8 @@
 
 #include <algorithm> // max
 
-#include <vgc/canvas/canvas.h>
-#include <vgc/canvas/canvasmanager.h>
+#include <vgc/canvas/documentmanager.h>
+#include <vgc/canvas/workspaceselection.h>
 #include <vgc/ui/menu.h>
 #include <vgc/ui/standardmenus.h>
 #include <vgc/workspace/workspace.h>
@@ -73,7 +73,7 @@ VGC_UI_ADD_DEFAULT_SHORTCUT(sendToBack(), Shortcut(ctrl, Key::PageDown))
 OrderModule::OrderModule(CreateKey key, const ui::ModuleContext& context)
     : Module(key, context) {
 
-    canvasManager_ = importModule<canvas::CanvasManager>();
+    documentManager_ = importModule<canvas::DocumentManager>();
 
     ui::MenuWeakPtr orderMenu;
     if (auto standardMenus = importModule<ui::StandardMenus>().lock()) {
@@ -102,26 +102,26 @@ namespace {
 class OrderContextLock {
 public:
     OrderContextLock(
-        canvas::CanvasManagerWeakPtr canvasManager_,
+        canvas::DocumentManagerWeakPtr documentManager_,
         core::StringId commandName) {
 
-        // Get canvas and workspace lock, then init if locks acquired
-        if (auto canvasManager = canvasManager_.lock()) {
-            canvas_ = canvasManager->activeCanvas().lock();
-            if (canvas_) {
-                workspace::WorkspaceWeakPtr workspaceWeak = canvas_->workspace();
-                workspace_ = workspaceWeak.lock();
-                if (workspace_) {
+        // TODO: get the current time from some TimeManager module
+        time_ = core::AnimTime();
 
-                    // Open history group
-                    core::History* history = workspace_->history();
-                    if (history) {
-                        undoGroup_ = history->createUndoGroup(commandName);
+        // Acquires locks and initialize
+        if (auto documentManager = documentManager_.lock()) {
+            workspace_ = documentManager->currentWorkspace().lock();
+            if (workspace_) {
+                workspaceSelection_ = documentManager->currentWorkspaceSelection().lock();
+                if (workspaceSelection_) {
+                    itemIds_ = workspaceSelection_->itemIds();
+                    if (!itemIds_.isEmpty()) {
+
+                        // Open history group
+                        if (core::History* history = workspace_->history()) {
+                            undoGroup_ = history->createUndoGroup(commandName);
+                        }
                     }
-
-                    // Get required data
-                    selection_ = canvas_->selection();
-                    time_ = canvas_->currentTime();
                 }
             }
         }
@@ -135,21 +135,22 @@ public:
         }
     }
 
+    // Returns whether all locks are acquired and the selection is non-empty.
+    //
     explicit operator bool() const {
-        return static_cast<bool>(workspace_) // implies canvas_ also true
-               && !selection_.isEmpty();     // avoid doing work if nothing is selected
-    }
-
-    canvas::Canvas* canvas() const {
-        return canvas_.get();
+        return !itemIds_.isEmpty();
     }
 
     workspace::Workspace* workspace() const {
         return workspace_.get();
     }
 
-    const core::Array<core::Id>& selection() const {
-        return selection_;
+    canvas::WorkspaceSelection* workspaceSelection() const {
+        return workspaceSelection_.get();
+    }
+
+    const core::Array<core::Id>& itemIds() const {
+        return itemIds_;
     }
 
     core::AnimTime time() const {
@@ -157,38 +158,37 @@ public:
     }
 
 private:
-    canvas::CanvasLockPtr canvas_;
     workspace::WorkspaceLockPtr workspace_;
-
-    core::Array<core::Id> selection_;
-    core::AnimTime time_;
-
+    canvas::WorkspaceSelectionLockPtr workspaceSelection_;
     core::UndoGroupWeakPtr undoGroup_;
+
+    core::Array<core::Id> itemIds_;
+    core::AnimTime time_;
 };
 
 } // namespace
 
 void OrderModule::onBringForward_() {
-    if (auto context = OrderContextLock(canvasManager_, commands::bringForward())) {
-        context.workspace()->bringForward(context.selection(), context.time());
+    if (auto context = OrderContextLock(documentManager_, commands::bringForward())) {
+        context.workspace()->bringForward(context.itemIds(), context.time());
     }
 }
 
 void OrderModule::onSendBackward_() {
-    if (auto context = OrderContextLock(canvasManager_, commands::sendBackward())) {
-        context.workspace()->sendBackward(context.selection(), context.time());
+    if (auto context = OrderContextLock(documentManager_, commands::sendBackward())) {
+        context.workspace()->sendBackward(context.itemIds(), context.time());
     }
 }
 
 void OrderModule::onBringToFront_() {
-    if (auto context = OrderContextLock(canvasManager_, commands::bringToFront())) {
-        context.workspace()->bringToFront(context.selection(), context.time());
+    if (auto context = OrderContextLock(documentManager_, commands::bringToFront())) {
+        context.workspace()->bringToFront(context.itemIds(), context.time());
     }
 }
 
 void OrderModule::onSendToBack_() {
-    if (auto context = OrderContextLock(canvasManager_, commands::sendBackward())) {
-        context.workspace()->sendToBack(context.selection(), context.time());
+    if (auto context = OrderContextLock(documentManager_, commands::sendBackward())) {
+        context.workspace()->sendToBack(context.itemIds(), context.time());
     }
 }
 
