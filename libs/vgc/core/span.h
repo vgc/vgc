@@ -17,14 +17,11 @@
 #ifndef VGC_CORE_SPAN_H
 #define VGC_CORE_SPAN_H
 
-#include <algorithm>
+#include <algorithm> // equal
 #include <array>
-#include <cstddef> // ptrdiff_t
-#include <iterator>
-#include <memory> // std::addressof
-#include <stdexcept>
-#include <type_traits>
-#include <utility>
+#include <cstddef>     // ptrdiff_t
+#include <iterator>    // reverse_iterator, distance
+#include <type_traits> // is_convertible, is_arithmetic, is_signed, false_type, true_type
 
 #include <vgc/core/api.h>
 #include <vgc/core/arithmetic.h>
@@ -274,6 +271,16 @@ public:
     /// Copy-assigns from `other`.
     ///
     constexpr Span& operator=(const Span& other) noexcept = default;
+
+    /// By design, the `==` comparison operator is not provided.
+    ///
+    /// Use `core::equal`, `std::equal`, or `std::ranges::equal` instead.
+    ///
+    /// Rationale:
+    /// - https://stackoverflow.com/questions/60633668/why-does-stdspan-lack-the-comparison-operators
+    /// - https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2018/p1085r2.md
+    ///
+    bool operator==(const Span& other) = delete;
 
     /// Returns an iterator to the first element in this `Span`.
     ///
@@ -933,5 +940,55 @@ struct fmt::formatter<vgc::core::Span<T, extent>>
         return out;
     }
 };
+
+namespace vgc::core {
+
+/// Returns whether the two spans are equal in value, that is,
+/// whether they have the same length and their elements are equal.
+///
+/// This is equivalent to `std::equal(s1.begin(), s1.end(), s2.begin(), s2.end())`
+///
+/// Note that like `std::span`, our `core::Span` does not provide an `==`
+/// operator, because it is potentially bug-prone, as it would be unclear
+/// whether the developer meant "shallow-equality" or "deep-equality".
+///
+/// However, `core::equal` is less ambiguous, since by tradition the free
+/// functions `std::equal` and `std::ranges::equal` have always meant
+/// deep-equality. So if a developer writes `equal` explicitly (as opposed to
+/// writing the more natural `==`), it is safe to assume that they did mean
+/// deep-equality.
+///
+/// More details on the reasons for not having an `==` operator:
+/// - https://stackoverflow.com/questions/60633668/why-does-stdspan-lack-the-comparison-operators
+/// - https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2018/p1085r2.md
+///
+/// Some counter-arguments, for completeness:
+/// - https://medium.com/@barryrevzin/should-span-be-regular-6d7e828dd4
+/// - https://github.com/brevzin/span_ext
+///
+template<typename T1, vgc::Int extent1, typename T2, vgc::Int extent2>
+bool equal(Span<T1, extent1> s1, Span<T2, extent2> s2) {
+    return std::equal(s1.begin(), s1.end(), s2.begin(), s2.end());
+}
+
+/// Returns whether the given span is equal in value to the given range.
+///
+/// This is equivalent to `std::equal(span.begin(), span.end(), range.begin(), range.end())`
+///
+template<typename T, vgc::Int extent, typename Range>
+bool equal(Span<T, extent> span, Range&& range) {
+    return std::equal(span.begin(), span.end(), range.begin(), range.end());
+}
+
+/// Returns whether the given range is equal in value to the given span.
+///
+/// This is equivalent to `std::equal(range.begin(), range.end(), span.begin(), span.end())`
+///
+template<typename Range, typename T, vgc::Int extent>
+bool equal(Range&& range, Span<T, extent> span) {
+    return std::equal(range.begin(), range.end(), span.begin(), span.end());
+}
+
+} // namespace vgc::core
 
 #endif // VGC_CORE_SPAN_H
