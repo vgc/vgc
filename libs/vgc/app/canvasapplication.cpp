@@ -100,6 +100,7 @@ CanvasApplication::CanvasApplication(
     importModule<ui::Inspector>();
 
     // Other modules
+    importModule<tools::SelectModule>();
     importModule<tools::OrderModule>();
     importModule<tools::TopologyModule>();
 }
