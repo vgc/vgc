@@ -17,6 +17,7 @@
 #ifndef VGC_UI_BOOLSETTING_H
 #define VGC_UI_BOOLSETTING_H
 
+#include <vgc/ui/action.h>
 #include <vgc/ui/api.h>
 #include <vgc/ui/setting.h>
 
@@ -63,10 +64,28 @@ public:
     /// \sa `value()`.
     ///
     void setValue(bool value);
+    VGC_SLOT(setValue)
 
     /// This signal is emitted whenever `value()` changes.
     ///
     VGC_SIGNAL(valueChanged, (bool, value))
+
+    /// Synchronizes this `BoolSetting` with the checked state of an action.
+    ///
+    /// \sa `unsynchronizeWith()`.
+    ///
+    // XXX: Should checkable commands automatically (or optionally) have an
+    // associated synchronized bool setting, so that there is no need for the
+    // developer to define both a command and a setting?
+    //
+    void synchronizeWith(Action& action);
+
+    /// Stops the synchronization between this `BoolSetting` and the checked
+    /// state of an action.
+    ///
+    /// \sa `synchronizeWith()`.
+    ///
+    void unsynchronizeWith(Action& action);
 
 private:
     bool defaultValue_ = false;

@@ -50,4 +50,27 @@ void BoolSetting::setValue(bool newValue) {
     }
 }
 
+void BoolSetting::synchronizeWith(Action& action) {
+
+    // Enable synchronization for future changes.
+    //
+    action.toggled().connect(setValueSlot());
+    valueChanged().connect(action.setCheckedSlot());
+
+    // Changes the action's state right now to match the setting state.
+    //
+    // Note that it's better to change the action state based on the setting
+    // state rather than the other way around, because the setting state is
+    // preserved across sessions, while the action state is not. So doing it
+    // this way essentially makes the action state to also be preserved across
+    // sessions, which is usually the point of calling `synchronizeWith()`.
+    //
+    action.setChecked(value());
+}
+
+void BoolSetting::unsynchronizeWith(Action& action) {
+    action.toggled().disconnect(setValueSlot());
+    valueChanged().disconnect(action.setCheckedSlot());
+}
+
 } // namespace vgc::ui
