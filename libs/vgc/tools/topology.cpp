@@ -65,7 +65,7 @@ VGC_UI_DEFINE_WINDOW_COMMAND( //
     explode,
     "tools.topology.explode",
     "Explode",
-    Shortcut(alt, Key::E));
+    Shortcut(alt, Key::X));
 
 VGC_UI_DEFINE_WINDOW_COMMAND( //
     simplify,
