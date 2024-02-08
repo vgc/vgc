@@ -272,13 +272,13 @@ public:
 
     /// This signal is emitted when the action check state changed.
     ///
-    /// \sa `setCheckState()`, `checkState()`.
+    /// \sa `setCheckState()`, `checkState()`, `toggled()`.
     ///
     VGC_SIGNAL(checkStateChanged, (Action*, action), (CheckState, checkState))
 
     /// Returns whether the action's `CheckState` is `Checked`.
     ///
-    /// \sa `setChecked()`, `checkState()`.
+    /// \sa `setChecked()`, `checkState()`, `toggled()`.
     ///
     bool isChecked() const {
         return checkState_ == CheckState::Checked;
@@ -293,6 +293,12 @@ public:
         setCheckState(isChecked ? CheckState::Checked : CheckState::Unchecked);
     }
     VGC_SLOT(setChecked)
+
+    /// This signal is emitted when the value of `isChecked()` changed.
+    ///
+    /// \sa `setChecked()`, `checkStateChanged()`.
+    ///
+    VGC_SIGNAL(toggled, (bool, isChecked))
 
     /// Toggles the check state of the `Action`.
     ///

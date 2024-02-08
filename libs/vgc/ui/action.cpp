@@ -154,8 +154,13 @@ void Action::setCheckStateNoEmit_(CheckState newState) {
 
 void Action::emitPendingCheckState_() {
     if (lastEmittedCheckState_ != checkState_) {
+        bool wasChecked = (lastEmittedCheckState_ == CheckState::Checked);
+        bool isChecked = (checkState_ == CheckState::Checked);
         lastEmittedCheckState_ = checkState_;
         checkStateChanged().emit(this, checkState_);
+        if (wasChecked != isChecked) {
+            toggled().emit(isChecked);
+        }
     }
 }
 
