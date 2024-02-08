@@ -122,6 +122,13 @@ bool contains(const std::vector<T>& v, const T& x) {
     return contains(v, x, i);
 }
 
+/// Returns whether the given container `c` contains the given value `x`.
+///
+template<typename Container, typename T>
+bool contains(const Container& c, const T& x) {
+    return std::find(c.begin(), c.end(), x) != c.end();
+}
+
 /// Removes from the given vector `v` the first element which is equal to
 /// `x`, if any. Returns whether an element was removed.
 ///
