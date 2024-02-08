@@ -57,7 +57,7 @@ VGC_UI_DEFINE_WINDOW_COMMAND( //
 
 namespace {
 
-// Secondary shortcuts for deselectAll
+// Secondary shortcut for deselectAll.
 //
 VGC_UI_ADD_DEFAULT_SHORTCUT(deselectAll(), Shortcut(Key::Escape))
 
@@ -132,9 +132,9 @@ private:
 // in the workspace. Instead, we simply want to select the direct children of
 // the VGC root element, which already implicitly selects their descendants.
 //
-// In the future, when group isolation mode will be implement (double-clicking
-// to "enter" a group), then when calling "Select All", it should select the
-// direct children of the isolated group.
+// In the future, when group isolation mode will be implemented
+// (double-clicking to "enter" a group), then when calling "Select All", it
+// should select the direct children of the isolated group.
 //
 void SelectModule::onSelectAll_() {
     if (auto context = SelectContextLock(documentManager_)) {
