@@ -23,9 +23,50 @@
 #include <vgc/geometry/vec2f.h>
 #include <vgc/tools/api.h>
 #include <vgc/tools/transform.h>
+#include <vgc/ui/command.h>
+#include <vgc/ui/module.h>
 #include <vgc/vacomplex/keyedgedata.h>
 
+VGC_DECLARE_OBJECT(vgc::canvas, DocumentManager);
+
 namespace vgc::tools {
+
+namespace commands {
+
+VGC_TOOLS_API
+VGC_UI_DECLARE_COMMAND(selectAll)
+
+VGC_TOOLS_API
+VGC_UI_DECLARE_COMMAND(deselectAll)
+
+} // namespace commands
+
+VGC_DECLARE_OBJECT(SelectModule);
+
+/// \class vgc::tools::SelectModule
+/// \brief A module for select-related actions (select all, etc.).
+///
+class VGC_TOOLS_API SelectModule : public ui::Module {
+private:
+    VGC_OBJECT(SelectModule, ui::Module)
+
+protected:
+    SelectModule(CreateKey, const ui::ModuleContext& context);
+
+public:
+    /// Creates the `SelectModule`.
+    ///
+    static SelectModulePtr create(const ui::ModuleContext& context);
+
+private:
+    canvas::DocumentManagerWeakPtr documentManager_;
+
+    void onSelectAll_();
+    VGC_SLOT(onSelectAll_)
+
+    void onDeselectAll_();
+    VGC_SLOT(onDeselectAll_)
+};
 
 VGC_DECLARE_OBJECT(Select);
 

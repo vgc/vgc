@@ -16,8 +16,10 @@
 
 #include <vgc/tools/select.h>
 
+#include <algorithm> // max
 #include <set>
 
+#include <vgc/canvas/documentmanager.h>
 #include <vgc/canvas/workspaceselection.h>
 #include <vgc/graphics/detail/shapeutil.h>
 #include <vgc/graphics/strings.h>
@@ -25,11 +27,134 @@
 #include <vgc/tools/topology.h>
 #include <vgc/ui/boolsettingedit.h>
 #include <vgc/ui/column.h>
+#include <vgc/ui/menu.h>
+#include <vgc/ui/standardmenus.h>
 #include <vgc/vacomplex/detail/operationsimpl.h>
 #include <vgc/workspace/colors.h>
 #include <vgc/workspace/face.h>
+#include <vgc/workspace/workspace.h>
 
 namespace vgc::tools {
+
+namespace commands {
+
+using ui::Key;
+using ui::Shortcut;
+using ui::modifierkeys::ctrl;
+using ui::modifierkeys::shift;
+
+VGC_UI_DEFINE_WINDOW_COMMAND( //
+    selectAll,
+    "tools.select.selectAll",
+    "Select All",
+    Shortcut(ctrl, Key::A));
+
+VGC_UI_DEFINE_WINDOW_COMMAND( //
+    deselectAll,
+    "tools.select.deselectAll",
+    "Deselect All",
+    Shortcut(ctrl | shift, Key::A));
+
+namespace {
+
+// Secondary shortcut for deselectAll.
+//
+VGC_UI_ADD_DEFAULT_SHORTCUT(deselectAll(), Shortcut(Key::Escape))
+
+} // namespace
+
+} // namespace commands
+
+SelectModule::SelectModule(CreateKey key, const ui::ModuleContext& context)
+    : Module(key, context) {
+
+    documentManager_ = importModule<canvas::DocumentManager>();
+
+    ui::MenuWeakPtr selectMenu;
+    if (auto standardMenus = importModule<ui::StandardMenus>().lock()) {
+        if (auto menuBar = standardMenus->menuBar().lock()) {
+            Int index = std::max<Int>(0, menuBar->numItems() - 1);
+            selectMenu = menuBar->createSubMenuAt(index, "Select");
+        }
+    }
+
+    using namespace commands;
+    ui::ModuleActionCreator c(this);
+    c.setMenu(selectMenu);
+
+    c.addAction(selectAll(), onSelectAll_Slot());
+    c.addAction(deselectAll(), onDeselectAll_Slot());
+}
+
+SelectModulePtr SelectModule::create(const ui::ModuleContext& context) {
+    return core::createObject<SelectModule>(context);
+}
+
+namespace {
+
+class SelectContextLock {
+public:
+    SelectContextLock(canvas::DocumentManagerWeakPtr documentManager_) {
+        if (auto documentManager = documentManager_.lock()) {
+            workspace_ = documentManager->currentWorkspace().lock();
+            if (workspace_) {
+                workspaceSelection_ = documentManager->currentWorkspaceSelection().lock();
+            }
+        }
+    }
+
+    // Returns whether all locks are acquired.
+    //
+    explicit operator bool() const {
+        return static_cast<bool>(workspaceSelection_);
+    }
+
+    workspace::Workspace* workspace() const {
+        return workspace_.get();
+    }
+
+    canvas::WorkspaceSelection* workspaceSelection() const {
+        return workspaceSelection_.get();
+    }
+
+    const core::Array<core::Id>& itemIds() const {
+        return workspaceSelection_->itemIds();
+    }
+
+private:
+    workspace::WorkspaceLockPtr workspace_;
+    canvas::WorkspaceSelectionLockPtr workspaceSelection_;
+};
+
+} // namespace
+
+// Note: when calling "Select All", we don't actually want to select all items
+// in the workspace. Instead, we simply want to select the direct children of
+// the VGC root element, which already implicitly selects their descendants.
+//
+// In the future, when group isolation mode will be implemented
+// (double-clicking to "enter" a group), then when calling "Select All", it
+// should select the direct children of the isolated group.
+//
+void SelectModule::onSelectAll_() {
+    if (auto context = SelectContextLock(documentManager_)) {
+        core::Array<core::Id> itemIds;
+        if (workspace::Element* root = context.workspace()->vgcElement()) {
+            workspace::Element* child = root->firstChild();
+            while (child) {
+                itemIds.append(child->id());
+                child = child->nextSibling();
+            }
+        }
+        context.workspaceSelection()->setItemIds(itemIds);
+    }
+}
+
+void SelectModule::onDeselectAll_() {
+    if (auto context = SelectContextLock(documentManager_)) {
+        context.workspaceSelection()->clear();
+    }
+}
 
 namespace {
 
