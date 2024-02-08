@@ -54,7 +54,7 @@ protected:
     OrderModule(CreateKey, const ui::ModuleContext& context);
 
 public:
-    /// Creates the `OrderModule` module.
+    /// Creates the `OrderModule`.
     ///
     static OrderModulePtr create(const ui::ModuleContext& context);
 

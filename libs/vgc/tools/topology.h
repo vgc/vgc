@@ -67,7 +67,7 @@ protected:
     TopologyModule(CreateKey, const ui::ModuleContext& context);
 
 public:
-    /// Creates the `TopologyModule` module.
+    /// Creates the `TopologyModule`.
     ///
     static TopologyModulePtr create(const ui::ModuleContext& context);
 
