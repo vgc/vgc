@@ -161,7 +161,12 @@ public:
     inline vacomplex::Group* vacGroup() const;
 
     core::StringId tagName() const {
-        return domElement_->tagName();
+        if (domElement_) {
+            return domElement_->tagName();
+        }
+        else {
+            return {};
+        }
     }
 
     ElementFlags flags() const {
