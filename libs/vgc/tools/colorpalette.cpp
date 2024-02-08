@@ -48,7 +48,7 @@ const core::Color initialColor(0.416f, 0.416f, 0.918f);
 const core::Color cursorOuterColor(0.15f, 0.2f, 0.3f);
 const core::Color cursorInnerColor(1.0f, 1.0f, 1.0f);
 
-namespace commands {
+namespace commands_ {
 
 using Key = ui::Key;
 
@@ -78,7 +78,7 @@ VGC_UI_DEFINE_WINDOW_COMMAND( //
     "colors.continuousMode",
     "Continuous Mode")
 
-} // namespace commands
+} // namespace commands_
 
 namespace strings_ {
 
@@ -325,7 +325,7 @@ ScreenColorPickerButton::ScreenColorPickerButton(CreateKey key)
 ScreenColorPickerButtonPtr ScreenColorPickerButton::create() {
     ui::Action* action = nullptr;
     ScreenColorPickerButtonPtr button = core::createObject<ScreenColorPickerButton>();
-    action = button->createTriggerAction(commands::pickScreenColor());
+    action = button->createTriggerAction(commands_::pickScreenColor());
     button->setAction(action);
     action->triggered().connect(button->startPickingSlot_());
     return button;
@@ -481,18 +481,28 @@ ui::Button* createCheckableButton_(
 
 } // namespace
 
-ColorPalette::ColorPalette(CreateKey key)
+ColorPalette::ColorPalette(CreateKey key, ui::ActionWeakPtr colorSelectSyncAction)
     : Column(key) {
 
     // Color preview
-    colorPreview_ = createChild<ColorPreview>();
+    ui::Row* colorPreviewRow = createChild<ui::Row>();
+    colorPreviewRow->addStyleClass(core::StringId("color-preview-row"));
+    colorPreview_ = colorPreviewRow->createChild<ColorPreview>();
+
+    // Color-Select Sync
+    if (auto action = colorSelectSyncAction.lock()) {
+        ui::Button* colorSelectSyncButton =
+            colorPreviewRow->createChild<ui::Button>(action.get());
+        colorSelectSyncButton->setIconVisible(true);
+        colorSelectSyncButton->setTextVisible(false);
+    }
 
     // Continuous vs. Steps
     ui::Row* stepsModeRow = createChild<ui::Row>();
     stepsModeRow->addStyleClass(strings_::field_group);
-    stepsButton_ = createCheckableButton_(stepsModeRow, commands::stepsMode(), "Steps");
+    stepsButton_ = createCheckableButton_(stepsModeRow, commands_::stepsMode(), "Steps");
     continuousButton_ =
-        createCheckableButton_(stepsModeRow, commands::continuousMode(), "Continuous");
+        createCheckableButton_(stepsModeRow, commands_::continuousMode(), "Continuous");
     addFirstLastStyleClasses_({stepsButton_, continuousButton_});
     stepsActionGroup_ = ui::ActionGroup::create(ui::CheckPolicy::ExactlyOne);
     stepsActionGroup_->addAction(stepsButton_->action());
@@ -523,10 +533,10 @@ ColorPalette::ColorPalette(CreateKey key)
     // Palette
     ui::Row* paletteButtons = createChild<ui::Row>();
     paletteButtons->addStyleClass(strings_::field_row);
-    ui::Action* addToPaletteAction = createTriggerAction(commands::addToPalette());
+    ui::Action* addToPaletteAction = createTriggerAction(commands_::addToPalette());
     paletteButtons->createChild<ui::Button>(addToPaletteAction);
     ui::Action* removeFromPaletteAction =
-        createTriggerAction(commands::removeFromPalette());
+        createTriggerAction(commands_::removeFromPalette());
     removeFromPaletteAction->setText("-");
     paletteButtons->createChild<ui::Button>(removeFromPaletteAction);
     colorListView_ = createChild<ColorListView>();
@@ -569,8 +579,8 @@ ColorPalette::ColorPalette(CreateKey key)
     addStyleClass(strings::ColorPalette);
 }
 
-ColorPalettePtr ColorPalette::create() {
-    return core::createObject<ColorPalette>();
+ColorPalettePtr ColorPalette::create(ui::ActionWeakPtr colorSelectSyncAction) {
+    return core::createObject<ColorPalette>(colorSelectSyncAction);
 }
 
 void ColorPalette::setSelectedColor(const core::Color& color) {
@@ -3015,15 +3025,28 @@ core::StringId s_with_padding("with-padding");
 ColorsPanel::ColorsPanel(CreateKey key, const ui::PanelContext& context)
     : Panel(key, context, label) {
 
-    ColorPalette* palette = createChild<ColorPalette>();
+    // Import dependent modules
+    auto currentColor_ = context.importModule<CurrentColor>();
+    auto documentColorPalette_ = context.importModule<DocumentColorPalette>();
 
-    if (auto currentColor = context.importModule<CurrentColor>().lock()) {
+    // Get Color-Select Sync action if available
+    ui::ActionWeakPtr colorSelectSyncAction;
+    if (auto currentColor = currentColor_.lock()) {
+        colorSelectSyncAction = currentColor->colorSelectSyncAction();
+    }
+
+    // Create ColorPalette widget
+    ColorPalette* palette = createChild<ColorPalette>(colorSelectSyncAction);
+
+    // Synchronize widget with CurrentColor
+    if (auto currentColor = currentColor_.lock()) {
         palette->setSelectedColor(currentColor->color());
         palette->colorSelected().connect(currentColor->setColorSlot());
         currentColor->colorChanged().connect(palette->setSelectedColorSlot());
     }
 
-    if (auto documentColorPalette = context.importModule<DocumentColorPalette>().lock()) {
+    // Synchronize widget with DocumentColorPalette
+    if (auto documentColorPalette = documentColorPalette_.lock()) {
         palette->setColors(documentColorPalette->colors());
         palette->colorsChanged().connect(documentColorPalette->setColorsSlot());
         documentColorPalette->colorsChanged().connect(palette->setColorsSlot());

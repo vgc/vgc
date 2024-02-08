@@ -569,6 +569,73 @@
  *                               COLOR PALETTE
  */
 
+.color-preview-row {
+    preferred-height: 18dp;
+    horizontal-shrink: 1;
+    horizontal-stretch: 1;
+    vertical-shrink: 0;
+    vertical-stretch: 0;
+}
+
+.Panel > .Flex > .Flex.color-preview-row {
+    column-gap: 4dp;
+}
+
+.color-preview-row > .Button {
+    preferred-height: 18dp;
+    preferred-width: 18dp;
+    horizontal-shrink: 0;
+    horizontal-stretch: 0;
+    vertical-shrink: 0;
+    vertical-stretch: 0;
+}
+
+/* TODO: use more generic classes?
+ * Examples: "small-tool-button", "backgroundless-tool-button", etc.
+ */
+
+.color-preview-row > .Button > .icon {
+    preferred-height: 16dp;
+    preferred-width: 16dp;
+    margin-top: 1dp;
+    margin-right: 1dp;
+    margin-bottom: 1dp;
+    margin-left: 1dp;
+}
+
+.color-preview-row > .Button,
+.color-preview-row > .Button.hovered,
+.color-preview-row > .Button.pressed,
+.color-preview-row > .Button.checked,
+.color-preview-row > .Button.checked.hovered,
+.color-preview-row > .Button.checked.pressed {
+    background-color: rgba(0, 0, 0, 0);
+}
+
+.color-preview-row > .Button {
+    icon-foreground-color: rgb(120, 120, 120);
+}
+
+.color-preview-row > .Button.hovered {
+    icon-foreground-color: rgb(150, 150, 150);
+}
+
+.color-preview-row > .Button.pressed {
+    icon-foreground-color: rgb(170, 170, 170);
+}
+
+.color-preview-row > .Button.checked {
+    icon-foreground-color: rgb(54, 124, 232);
+}
+
+.color-preview-row > .Button.checked.hovered {
+    icon-foreground-color: rgb(74, 144, 252);
+}
+
+.color-preview-row > .Button.checked.pressed {
+    icon-foreground-color: rgb(94, 164, 255);
+}
+
 .ColorPreview {
     border-width: 1dp;
     border-top-left-radius: 3dp;

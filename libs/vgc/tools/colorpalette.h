@@ -101,12 +101,12 @@ protected:
     /// This is an implementation details. Please use
     /// ColorPalette::create() instead.
     ///
-    ColorPalette(CreateKey);
+    ColorPalette(CreateKey, ui::ActionWeakPtr colorSelectSyncAction);
 
 public:
     /// Creates a ColorPalette.
     ///
-    static ColorPalettePtr create();
+    static ColorPalettePtr create(ui::ActionWeakPtr colorSelectSyncAction = nullptr);
 
     /// Returns the selected color.
     ///
