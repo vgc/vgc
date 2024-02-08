@@ -79,24 +79,24 @@ void sort(Container& c, Compare comp) {
     std::sort(c.begin(), c.end(), comp);
 }
 
-/// Returns the vector index corresponding to the given vector iterator \p it,
-/// or -1 if pos == v.end();
+/// Returns the vector index corresponding to the given vector iterator `it`,
+/// or `-1` if `pos == v.end()`.
 ///
 template<typename T, typename It>
 int toIndex(const std::vector<T>& v, It pos) {
     return pos == v.end() ? -1 : pos - v.begin();
 }
 
-/// Returns the vector iterator corresponding to the given index \p i. Returns
-/// v.end() if i = -1.
+/// Returns the vector iterator corresponding to the given index `i`. Returns
+/// `v.end()` if `i == -1`.
 ///
 template<typename T>
 typename std::vector<T>::const_iterator toIterator(const std::vector<T>& v, int i) {
     return i == -1 ? v.end() : v.begin() + i;
 }
 
-/// Returns the index to the first element in the given vector \p v which is
-/// equal to \p x, or -1 if there is no such element.
+/// Returns the index to the first element in the given vector `v` which is
+/// equal to `x`, or `-1` if there is no such element.
 ///
 template<typename T>
 int find(const std::vector<T>& v, const T& x) {
@@ -104,9 +104,9 @@ int find(const std::vector<T>& v, const T& x) {
     return toIndex(v, it);
 }
 
-/// Returns whether the given vector \p v contains the given value \p x. Writes
-/// out in \p i the index of the first occurence of \p x, or -1 if \p v does
-/// not contain \p x.
+/// Returns whether the given vector `v` contains the given value `x`. Writes
+/// out in `i` the index of the first occurence of `x`, or `-1` if `v` does
+/// not contain `x`.
 ///
 template<typename T>
 bool contains(const std::vector<T>& v, const T& x, int& i) {
@@ -114,7 +114,7 @@ bool contains(const std::vector<T>& v, const T& x, int& i) {
     return i != -1;
 }
 
-/// Returns whether the given vector \p v contains the given value \p x.
+/// Returns whether the given vector `v` contains the given value `x`.
 ///
 template<typename T>
 bool contains(const std::vector<T>& v, const T& x) {
@@ -122,8 +122,8 @@ bool contains(const std::vector<T>& v, const T& x) {
     return contains(v, x, i);
 }
 
-/// Removes from the given vector \p v the first element which is equal to \p
-/// x, if any. Returns whether an element was removed.
+/// Removes from the given vector `v` the first element which is equal to
+/// `x`, if any. Returns whether an element was removed.
 ///
 template<typename T>
 bool removeOne(std::vector<T>& v, const T& x) {
@@ -141,12 +141,12 @@ bool removeOne(std::vector<T>& v, const T& x) {
 /// greater than value, or -1 if no such element is found.
 ///
 /// The vector must be at least partially ordered, that is it must satisfy:
-/// v[i] < v[j] => i < j.
+/// `v[i] < v[j]` => `i < j`.
 ///
 /// This is a convenient wrapper around std::upper_bound.
 ///
 /// Example:
-/// \code
+/// ```cpp
 /// std::vector<int> data = {2, 4, 6, 6, 8};
 /// int i1 = vgc::core::upper_bound(data, 1); // = 0
 /// int i2 = vgc::core::upper_bound(data, 2); // = 1
@@ -157,7 +157,7 @@ bool removeOne(std::vector<T>& v, const T& x) {
 /// int i7 = vgc::core::upper_bound(data, 7); // = 4
 /// int i8 = vgc::core::upper_bound(data, 8); // = 5
 /// int i9 = vgc::core::upper_bound(data, 9); // = 5
-/// \endcode
+/// ```
 ///
 template<typename T>
 int upper_bound(const std::vector<T>& v, const T& x) {
@@ -165,12 +165,18 @@ int upper_bound(const std::vector<T>& v, const T& x) {
     return toIndex(v, it);
 }
 
+/// Modifies in-place the given hash value `res` by combining it with
+/// `std::hash(v)`.
+///
 template<typename T>
 void hashCombine(std::size_t& res, const T& v) {
     res ^= std::hash<T>()(v) + 0x9E3779B1 // closest prime to commonly used 0x9E3779B9
            + (res << 6) + (res >> 2);
 }
 
+/// Modifies in-place the given hash value `res` by combining it with the
+/// `std::hash()` of all the given `values`.
+///
 template<typename... Ts>
 std::enable_if_t<(sizeof...(Ts) > 1), void>
 hashCombine(std::size_t& res, const Ts&... values) {
