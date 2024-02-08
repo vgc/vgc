@@ -21,6 +21,7 @@
 #include <vgc/core/algorithm.h> // contains
 #include <vgc/core/boolguard.h>
 #include <vgc/dom/strings.h>
+#include <vgc/ui/boolsetting.h>
 #include <vgc/workspace/workspace.h>
 
 namespace vgc::tools {
@@ -38,6 +39,23 @@ VGC_UI_DEFINE_WINDOW_COMMAND( //
 
 } // namespace commands
 
+namespace {
+
+namespace settings_ {
+
+ui::BoolSetting* colorSelectSync() {
+    static ui::BoolSettingPtr setting = ui::BoolSetting::create(
+        ui::settings::session(),
+        "tools.colors.colorSelectSync",
+        "Synchronize Current Color With Selection",
+        true);
+    return setting.get();
+}
+
+} // namespace settings_
+
+} // namespace
+
 CurrentColor::CurrentColor(CreateKey key, const ui::ModuleContext& context)
     : Module(key, context) {
 
@@ -47,6 +65,7 @@ CurrentColor::CurrentColor(CreateKey key, const ui::ModuleContext& context)
     if (auto action = colorSelectSyncAction_.lock()) {
         action->setCheckable(true); // XXX Make this part of the Command?
         action->checkStateChanged().connect(onColorSelectSyncCheckStateChanged_Slot());
+        settings_::colorSelectSync()->synchronizeWith(*action);
         onColorSelectSyncCheckStateChanged_();
     }
 }
