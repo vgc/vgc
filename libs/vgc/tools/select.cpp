@@ -29,6 +29,7 @@
 #include <vgc/ui/column.h>
 #include <vgc/ui/menu.h>
 #include <vgc/ui/standardmenus.h>
+#include <vgc/vacomplex/cell.h>
 #include <vgc/vacomplex/detail/operationsimpl.h>
 #include <vgc/workspace/colors.h>
 #include <vgc/workspace/face.h>
@@ -40,6 +41,7 @@ namespace commands {
 
 using ui::Key;
 using ui::Shortcut;
+using ui::modifierkeys::alt;
 using ui::modifierkeys::ctrl;
 using ui::modifierkeys::shift;
 
@@ -54,6 +56,42 @@ VGC_UI_DEFINE_WINDOW_COMMAND( //
     "tools.select.deselectAll",
     "Deselect All",
     Shortcut(ctrl | shift, Key::A));
+
+VGC_UI_DEFINE_WINDOW_COMMAND( //
+    selectVertices,
+    "tools.select.selectVertices",
+    "Select Vertices",
+    Shortcut(alt, Key::V));
+
+VGC_UI_DEFINE_WINDOW_COMMAND( //
+    selectEdges,
+    "tools.select.selectEdges",
+    "Select Edges",
+    Shortcut(alt, Key::E));
+
+VGC_UI_DEFINE_WINDOW_COMMAND( //
+    selectFaces,
+    "tools.select.selectFaces",
+    "Select Faces",
+    Shortcut(alt, Key::F));
+
+VGC_UI_DEFINE_WINDOW_COMMAND( //
+    deselectVertices,
+    "tools.select.deselectVertices",
+    "Deselect Vertices",
+    Shortcut(alt | shift, Key::V));
+
+VGC_UI_DEFINE_WINDOW_COMMAND( //
+    deselectEdges,
+    "tools.select.deselectEdges",
+    "Deselect Edges",
+    Shortcut(alt | shift, Key::E));
+
+VGC_UI_DEFINE_WINDOW_COMMAND( //
+    deselectFaces,
+    "tools.select.deselectFaces",
+    "Deselect Faces",
+    Shortcut(alt | shift, Key::F));
 
 namespace {
 
@@ -84,6 +122,16 @@ SelectModule::SelectModule(CreateKey key, const ui::ModuleContext& context)
 
     c.addAction(selectAll(), onSelectAll_Slot());
     c.addAction(deselectAll(), onDeselectAll_Slot());
+
+    c.addSeparator();
+    c.addAction(selectVertices(), onSelectVertices_Slot());
+    c.addAction(selectEdges(), onSelectEdges_Slot());
+    c.addAction(selectFaces(), onSelectFaces_Slot());
+
+    c.addSeparator();
+    c.addAction(deselectVertices(), onDeselectVertices_Slot());
+    c.addAction(deselectEdges(), onDeselectEdges_Slot());
+    c.addAction(deselectFaces(), onDeselectFaces_Slot());
 }
 
 SelectModulePtr SelectModule::create(const ui::ModuleContext& context) {
@@ -153,6 +201,107 @@ void SelectModule::onSelectAll_() {
 void SelectModule::onDeselectAll_() {
     if (auto context = SelectContextLock(documentManager_)) {
         context.workspaceSelection()->clear();
+    }
+}
+
+namespace {
+
+core::Array<core::Id> selectCellType(
+    const workspace::Workspace& workspace,
+    const core::Array<core::Id>& itemIds,
+    vacomplex::CellType cellType) {
+
+    core::Array<core::Id> res;
+    for (core::Id id : itemIds) {
+        if (workspace::Element* item = workspace.find(id)) {
+            if (vacomplex::Cell* cell = item->vacCell()) {
+                if (cell->cellType() == cellType) {
+                    res.append(id);
+                }
+            }
+        }
+    }
+    return res;
+}
+
+core::Array<core::Id> deselectCellType(
+    const workspace::Workspace& workspace,
+    const core::Array<core::Id>& itemIds,
+    vacomplex::CellType cellType) {
+
+    core::Array<core::Id> res;
+    for (core::Id id : itemIds) {
+        if (workspace::Element* item = workspace.find(id)) {
+            if (vacomplex::Cell* cell = item->vacCell()) {
+                if (cell->cellType() == cellType) {
+                    continue;
+                }
+            }
+        }
+        res.append(id);
+    }
+    return res;
+}
+
+} // namespace
+
+void SelectModule::onSelectVertices_() {
+    if (auto context = SelectContextLock(documentManager_)) {
+        core::Array<core::Id> itemIds = selectCellType(
+            *context.workspace(),
+            context.workspaceSelection()->itemIds(),
+            vacomplex::CellType::KeyVertex);
+        context.workspaceSelection()->setItemIds(itemIds);
+    }
+}
+
+void SelectModule::onSelectEdges_() {
+    if (auto context = SelectContextLock(documentManager_)) {
+        core::Array<core::Id> itemIds = selectCellType(
+            *context.workspace(),
+            context.workspaceSelection()->itemIds(),
+            vacomplex::CellType::KeyEdge);
+        context.workspaceSelection()->setItemIds(itemIds);
+    }
+}
+
+void SelectModule::onSelectFaces_() {
+    if (auto context = SelectContextLock(documentManager_)) {
+        core::Array<core::Id> itemIds = selectCellType(
+            *context.workspace(),
+            context.workspaceSelection()->itemIds(),
+            vacomplex::CellType::KeyFace);
+        context.workspaceSelection()->setItemIds(itemIds);
+    }
+}
+
+void SelectModule::onDeselectVertices_() {
+    if (auto context = SelectContextLock(documentManager_)) {
+        core::Array<core::Id> itemIds = deselectCellType(
+            *context.workspace(),
+            context.workspaceSelection()->itemIds(),
+            vacomplex::CellType::KeyVertex);
+        context.workspaceSelection()->setItemIds(itemIds);
+    }
+}
+
+void SelectModule::onDeselectEdges_() {
+    if (auto context = SelectContextLock(documentManager_)) {
+        core::Array<core::Id> itemIds = deselectCellType(
+            *context.workspace(),
+            context.workspaceSelection()->itemIds(),
+            vacomplex::CellType::KeyEdge);
+        context.workspaceSelection()->setItemIds(itemIds);
+    }
+}
+
+void SelectModule::onDeselectFaces_() {
+    if (auto context = SelectContextLock(documentManager_)) {
+        core::Array<core::Id> itemIds = deselectCellType(
+            *context.workspace(),
+            context.workspaceSelection()->itemIds(),
+            vacomplex::CellType::KeyFace);
+        context.workspaceSelection()->setItemIds(itemIds);
     }
 }
 

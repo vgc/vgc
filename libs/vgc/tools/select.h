@@ -39,6 +39,24 @@ VGC_UI_DECLARE_COMMAND(selectAll)
 VGC_TOOLS_API
 VGC_UI_DECLARE_COMMAND(deselectAll)
 
+VGC_TOOLS_API
+VGC_UI_DECLARE_COMMAND(selectVertices)
+
+VGC_TOOLS_API
+VGC_UI_DECLARE_COMMAND(selectEdges)
+
+VGC_TOOLS_API
+VGC_UI_DECLARE_COMMAND(selectFaces)
+
+VGC_TOOLS_API
+VGC_UI_DECLARE_COMMAND(deselectVertices)
+
+VGC_TOOLS_API
+VGC_UI_DECLARE_COMMAND(deselectEdges)
+
+VGC_TOOLS_API
+VGC_UI_DECLARE_COMMAND(deselectFaces)
+
 } // namespace commands
 
 VGC_DECLARE_OBJECT(SelectModule);
@@ -66,6 +84,24 @@ private:
 
     void onDeselectAll_();
     VGC_SLOT(onDeselectAll_)
+
+    void onSelectVertices_();
+    VGC_SLOT(onSelectVertices_)
+
+    void onSelectEdges_();
+    VGC_SLOT(onSelectEdges_)
+
+    void onSelectFaces_();
+    VGC_SLOT(onSelectFaces_)
+
+    void onDeselectVertices_();
+    VGC_SLOT(onDeselectVertices_)
+
+    void onDeselectEdges_();
+    VGC_SLOT(onDeselectEdges_)
+
+    void onDeselectFaces_();
+    VGC_SLOT(onDeselectFaces_)
 };
 
 VGC_DECLARE_OBJECT(Select);
