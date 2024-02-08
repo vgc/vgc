@@ -22,7 +22,16 @@
 #include <vgc/tools/api.h>
 #include <vgc/ui/module.h>
 
+VGC_DECLARE_OBJECT(vgc::canvas, DocumentManager);
+
 namespace vgc::tools {
+
+namespace commands {
+
+VGC_TOOLS_API
+VGC_UI_DECLARE_COMMAND(colorSelectSync)
+
+} // namespace commands
 
 VGC_DECLARE_OBJECT(CurrentColor);
 
@@ -56,8 +65,31 @@ public:
     ///
     VGC_SIGNAL(colorChanged, (const core::Color&, color))
 
+    /// Returns the Color-Select Sync action.
+    ///
+    ui::ActionWeakPtr colorSelectSyncAction() const {
+        return colorSelectSyncAction_;
+    }
+
 private:
     core::Color color_ = core::colors::black;
+
+    // Color-Select Sync
+    canvas::DocumentManagerWeakPtr documentManager_;
+    ui::ActionWeakPtr colorSelectSyncAction_;
+
+    void onColorSelectSyncCheckStateChanged_();
+    VGC_SLOT(onColorSelectSyncCheckStateChanged_)
+
+    void updateCurrentColorFromSelectionColor_();
+    VGC_SLOT(updateCurrentColorFromSelectionColor_)
+
+    void updateSelectionColorFromCurrentColor_();
+    VGC_SLOT(updateSelectionColorFromCurrentColor_)
+
+    bool canAmendUpdateSelectionColor_ = false;
+    bool isUpdatingCurrentColorFromSelectionColor_ = false;
+    bool isUpdatingSelectionColorFromCurrentColor_ = false;
 };
 
 } // namespace vgc::tools
