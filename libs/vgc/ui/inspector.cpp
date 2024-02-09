@@ -28,6 +28,7 @@ namespace {
 
 namespace commands {
 
+using modifierkeys::alt;
 using modifierkeys::ctrl;
 using modifierkeys::shift;
 
@@ -35,7 +36,7 @@ VGC_UI_DEFINE_WINDOW_COMMAND(
     inspectWidgets,
     "ui.inspectWidgets",
     "Inspect Widgets",
-    Shortcut(ctrl | shift, Key::I))
+    Shortcut(ctrl | alt | shift, Key::I))
 
 } // namespace commands
 
