@@ -269,18 +269,23 @@ core::Array<core::Id> Canvas::computeRectangleSelectionCandidates(
     return result;
 }
 
-// TODO:
-// - Use commands/actions instead of hard-coded onKeyPress
-// - Review shortcuts (advanced/debug shortcut should probably use key modifiers)
+// TODO: Use commands/actions instead of hard-coded onKeyPress
 //
 bool Canvas::onKeyPress(ui::KeyPressEvent* event) {
 
+    using namespace ui::modifierkeys;
+    if (event->modifierKeys() != (ctrl | alt | shift)) {
+        return false;
+    }
+
     switch (event->key()) {
-    case ui::Key::T:
+    case ui::Key::W:
         isWireframeMode_ = !isWireframeMode_;
         requestRepaint();
         break;
-    case ui::Key::I: {
+    case ui::Key::S: {
+        // Note: we can't use Key::Q (for "quality"), as Shift + Command + Q
+        // triggers macOS logout which takes precedence.
         using geometry::CurveSamplingQuality;
         auto workspace = workspace_.lock();
         if (!workspace) {
