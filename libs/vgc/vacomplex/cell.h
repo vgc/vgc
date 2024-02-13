@@ -932,6 +932,8 @@ public:
     /// 3. `c2->spatialDimension() > c1->spatialDimension()` or
     ///    `c2->temporalDimension() > c1->temporalDimension()` or both
     ///
+    /// \sa `boundary().
+    ///
     CellRangeView star() const {
         return CellRangeView(star_);
     }
