@@ -20,52 +20,84 @@
 
 namespace vgc::vacomplex {
 
-core::Array<Cell*> boundary(core::ConstSpan<Cell*> cells) {
-    core::Array<Cell*> result;
-    for (Cell* c : cells) {
-        for (Cell* sc : c->boundary()) {
-            if (!result.contains(sc)) {
-                result.append(sc);
+namespace {
+
+void addFromOp(
+    core::ConstSpan<Node*> input,
+    core::Array<Node*>& result,
+    CellRangeView (Cell::*op)() const) {
+
+    for (Node* node : input) {
+        if (Cell* cell = node->toCell()) {
+            for (Cell* otherCell : (cell->*op)()) {
+                if (!result.contains(otherCell)) {
+                    result.append(otherCell);
+                }
             }
         }
     }
+}
+
+void addFromOp(
+    core::ConstSpan<Cell*> input,
+    core::Array<Cell*>& result,
+    CellRangeView (Cell::*op)() const) {
+
+    for (Cell* cell : input) {
+        for (Cell* otherCell : (cell->*op)()) {
+            if (!result.contains(otherCell)) {
+                result.append(otherCell);
+            }
+        }
+    }
+}
+
+template<typename T>
+core::Array<T*> addFromOp(core::ConstSpan<T*> input, CellRangeView (Cell::*op)() const) {
+    core::Array<T*> result(input);
+    addFromOp(input, result, op);
     return result;
+}
+
+template<typename T>
+core::Array<T*> setFromOp(core::ConstSpan<T*> input, CellRangeView (Cell::*op)() const) {
+    core::Array<T*> result;
+    addFromOp(input, result, op);
+    return result;
+}
+
+} // namespace
+
+core::Array<Node*> boundary(core::ConstSpan<Node*> nodes) {
+    return setFromOp(nodes, &Cell::boundary);
+};
+
+core::Array<Cell*> boundary(core::ConstSpan<Cell*> cells) {
+    return setFromOp(cells, &Cell::boundary);
+};
+
+core::Array<Node*> star(core::ConstSpan<Node*> nodes) {
+    return setFromOp(nodes, &Cell::star);
 };
 
 core::Array<Cell*> star(core::ConstSpan<Cell*> cells) {
-    core::Array<Cell*> result;
-    for (Cell* c : cells) {
-        for (Cell* sc : c->star()) {
-            if (!result.contains(sc)) {
-                result.append(sc);
-            }
-        }
-    }
-    return result;
+    return setFromOp(cells, &Cell::star);
+};
+
+core::Array<Node*> closure(core::ConstSpan<Node*> nodes) {
+    return addFromOp(nodes, &Cell::boundary);
 };
 
 core::Array<Cell*> closure(core::ConstSpan<Cell*> cells) {
-    core::Array<Cell*> result(cells);
-    for (Cell* c : cells) {
-        for (Cell* bc : c->boundary()) {
-            if (!result.contains(bc)) {
-                result.append(bc);
-            }
-        }
-    }
-    return result;
+    return addFromOp(cells, &Cell::boundary);
+};
+
+core::Array<Node*> opening(core::ConstSpan<Node*> nodes) {
+    return addFromOp(nodes, &Cell::star);
 };
 
 core::Array<Cell*> opening(core::ConstSpan<Cell*> cells) {
-    core::Array<Cell*> result(cells);
-    for (Cell* c : cells) {
-        for (Cell* sc : c->star()) {
-            if (!result.contains(sc)) {
-                result.append(sc);
-            }
-        }
-    }
-    return result;
+    return addFromOp(cells, &Cell::star);
 };
 
 } // namespace vgc::vacomplex
