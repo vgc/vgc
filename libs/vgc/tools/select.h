@@ -40,6 +40,18 @@ VGC_TOOLS_API
 VGC_UI_DECLARE_COMMAND(deselectAll)
 
 VGC_TOOLS_API
+VGC_UI_DECLARE_COMMAND(selectBoundary)
+
+VGC_TOOLS_API
+VGC_UI_DECLARE_COMMAND(selectStar)
+
+VGC_TOOLS_API
+VGC_UI_DECLARE_COMMAND(selectClosure)
+
+VGC_TOOLS_API
+VGC_UI_DECLARE_COMMAND(selectOpening)
+
+VGC_TOOLS_API
 VGC_UI_DECLARE_COMMAND(selectVertices)
 
 VGC_TOOLS_API
@@ -84,6 +96,18 @@ private:
 
     void onDeselectAll_();
     VGC_SLOT(onDeselectAll_)
+
+    void onSelectBoundary_();
+    VGC_SLOT(onSelectBoundary_)
+
+    void onSelectStar_();
+    VGC_SLOT(onSelectStar_)
+
+    void onSelectClosure_();
+    VGC_SLOT(onSelectClosure_)
+
+    void onSelectOpening_();
+    VGC_SLOT(onSelectOpening_)
 
     void onSelectVertices_();
     VGC_SLOT(onSelectVertices_)

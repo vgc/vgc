@@ -58,6 +58,30 @@ VGC_UI_DEFINE_WINDOW_COMMAND( //
     Shortcut(ctrl | shift, Key::A));
 
 VGC_UI_DEFINE_WINDOW_COMMAND( //
+    selectBoundary,
+    "tools.select.selectBoundary",
+    "Select Boundary",
+    Shortcut());
+
+VGC_UI_DEFINE_WINDOW_COMMAND( //
+    selectStar,
+    "tools.select.selectStar",
+    "Select Star",
+    Shortcut());
+
+VGC_UI_DEFINE_WINDOW_COMMAND( //
+    selectClosure,
+    "tools.select.selectClosure",
+    "Select Closure (Selection + Boundary)",
+    Shortcut(Key::C));
+
+VGC_UI_DEFINE_WINDOW_COMMAND( //
+    selectOpening,
+    "tools.select.selectOpening",
+    "Select Opening (Selection + Star)",
+    Shortcut());
+
+VGC_UI_DEFINE_WINDOW_COMMAND( //
     selectVertices,
     "tools.select.selectVertices",
     "Select Vertices",
@@ -122,6 +146,12 @@ SelectModule::SelectModule(CreateKey key, const ui::ModuleContext& context)
 
     c.addAction(selectAll(), onSelectAll_Slot());
     c.addAction(deselectAll(), onDeselectAll_Slot());
+
+    c.addSeparator();
+    c.addAction(selectBoundary(), onSelectBoundary_Slot());
+    c.addAction(selectStar(), onSelectStar_Slot());
+    c.addAction(selectClosure(), onSelectClosure_Slot());
+    c.addAction(selectOpening(), onSelectOpening_Slot());
 
     c.addSeparator();
     c.addAction(selectVertices(), onSelectVertices_Slot());
@@ -201,6 +231,38 @@ void SelectModule::onSelectAll_() {
 void SelectModule::onDeselectAll_() {
     if (auto context = SelectContextLock(documentManager_)) {
         context.workspaceSelection()->clear();
+    }
+}
+
+void SelectModule::onSelectBoundary_() {
+    if (auto context = SelectContextLock(documentManager_)) {
+        core::Array<core::Id> oldItemIds = context.workspaceSelection()->itemIds();
+        core::Array<core::Id> newItemIds = context.workspace()->boundary(oldItemIds);
+        context.workspaceSelection()->setItemIds(newItemIds);
+    }
+}
+
+void SelectModule::onSelectStar_() {
+    if (auto context = SelectContextLock(documentManager_)) {
+        core::Array<core::Id> oldItemIds = context.workspaceSelection()->itemIds();
+        core::Array<core::Id> newItemIds = context.workspace()->star(oldItemIds);
+        context.workspaceSelection()->setItemIds(newItemIds);
+    }
+}
+
+void SelectModule::onSelectClosure_() {
+    if (auto context = SelectContextLock(documentManager_)) {
+        core::Array<core::Id> oldItemIds = context.workspaceSelection()->itemIds();
+        core::Array<core::Id> newItemIds = context.workspace()->closure(oldItemIds);
+        context.workspaceSelection()->setItemIds(newItemIds);
+    }
+}
+
+void SelectModule::onSelectOpening_() {
+    if (auto context = SelectContextLock(documentManager_)) {
+        core::Array<core::Id> oldItemIds = context.workspaceSelection()->itemIds();
+        core::Array<core::Id> newItemIds = context.workspace()->opening(oldItemIds);
+        context.workspaceSelection()->setItemIds(newItemIds);
     }
 }
 
