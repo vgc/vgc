@@ -3,6 +3,7 @@ vgc_add_library(vacomplex
         geometry
 
     CPP_HEADER_FILES
+        algorithms.h
         api.h
         cell.h
         celldata.h
@@ -27,6 +28,7 @@ vgc_add_library(vacomplex
         detail/operationsimpl.h
 
     CPP_SOURCE_FILES
+        algorithms.cpp
         cell.cpp
         celldata.cpp
         cellproperty.cpp

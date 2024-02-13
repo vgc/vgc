@@ -22,6 +22,7 @@
 #include <vgc/core/algorithm.h> // sort
 #include <vgc/core/array.h>
 #include <vgc/geometry/intersect.h>
+#include <vgc/vacomplex/algorithms.h>
 #include <vgc/vacomplex/exceptions.h>
 #include <vgc/vacomplex/inbetweenedge.h>
 #include <vgc/vacomplex/inbetweenface.h>
@@ -32,42 +33,6 @@
 namespace vgc::vacomplex {
 
 namespace detail {
-
-core::Array<Cell*> star(core::ConstSpan<Cell*> cells) {
-    core::Array<Cell*> result;
-    for (Cell* c : cells) {
-        for (Cell* sc : c->star()) {
-            if (!result.contains(sc) && !cells.contains(sc)) {
-                result.append(sc);
-            }
-        }
-    }
-    return result;
-};
-
-core::Array<Cell*> opening(core::ConstSpan<Cell*> cells) {
-    core::Array<Cell*> result(cells);
-    for (Cell* c : cells) {
-        for (Cell* sc : c->star()) {
-            if (!result.contains(sc)) {
-                result.append(sc);
-            }
-        }
-    }
-    return result;
-};
-
-core::Array<Cell*> closure(core::ConstSpan<Cell*> cells) {
-    core::Array<Cell*> result(cells);
-    for (Cell* c : cells) {
-        for (Cell* bc : c->boundary()) {
-            if (!result.contains(bc)) {
-                result.append(bc);
-            }
-        }
-    }
-    return result;
-};
 
 Operations::Operations(Complex* complex)
     : complex_(complex) {
