@@ -19,7 +19,7 @@
 #include <algorithm> // std::copy
 #include <numeric>   // std::accumulate
 
-#include <vgc/core/algorithm.h>
+#include <vgc/core/algorithms.h>
 #include <vgc/core/format.h>
 #include <vgc/core/span.h>
 #include <vgc/geometry/logcategories.h>

@@ -20,7 +20,7 @@
 #include <string>
 #include <string_view>
 
-#include <vgc/core/algorithm.h>
+#include <vgc/core/algorithms.h>
 #include <vgc/core/flags.h>
 #include <vgc/core/format.h>
 #include <vgc/core/id.h>

@@ -23,7 +23,7 @@
 #include <QTabletEvent>
 #include <QWheelEvent>
 
-#include <vgc/core/algorithm.h>
+#include <vgc/core/algorithms.h>
 #include <vgc/ui/keyevent.h>
 #include <vgc/ui/mouseevent.h>
 #include <vgc/ui/scrollevent.h>

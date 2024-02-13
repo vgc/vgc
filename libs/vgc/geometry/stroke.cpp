@@ -19,7 +19,7 @@
 #include <array>
 #include <optional>
 
-#include <vgc/core/algorithm.h>
+#include <vgc/core/algorithms.h>
 #include <vgc/core/array.h>
 #include <vgc/core/colors.h>
 #include <vgc/geometry/bezier.h>

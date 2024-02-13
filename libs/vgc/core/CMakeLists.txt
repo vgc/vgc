@@ -7,7 +7,7 @@ vgc_add_library(core
     VGC_DEPENDENCIES
 
     CPP_HEADER_FILES
-        algorithm.h
+        algorithms.h
         animtime.h
         api.h
         arithmetic.h
@@ -53,7 +53,7 @@ vgc_add_library(core
         detail/signal.h
 
     CPP_SOURCE_FILES
-        algorithm.cpp
+        algorithms.cpp
         animtime.cpp
         arithmetic.cpp
         boolguard.cpp

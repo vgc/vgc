@@ -14,7 +14,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-/// \file vgc/core/algorithm.h
+/// \file vgc/core/algorithms.h
 /// \brief General-purpose algorithms functions missing in <algorithm>
 
 #ifndef VGC_CORE_ALGORITHM_H
@@ -30,7 +30,7 @@
 #include <vgc/core/logging.h>
 
 // The following is not a dependency, but included for convenience: it defines
-// vgc::core::clamp, which some people may expect in <vgc/core/algorithm.h>,
+// vgc::core::clamp, which some people may expect in <vgc/core/algorithms.h>,
 // since std::clamp is in <algorithm>
 //
 #include <vgc/core/arithmetic.h>

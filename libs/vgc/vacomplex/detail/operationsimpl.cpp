@@ -19,7 +19,7 @@
 #include <algorithm> // std::reverse
 #include <unordered_set>
 
-#include <vgc/core/algorithm.h> // sort
+#include <vgc/core/algorithms.h> // sort
 #include <vgc/core/array.h>
 #include <vgc/geometry/intersect.h>
 #include <vgc/vacomplex/algorithms.h>

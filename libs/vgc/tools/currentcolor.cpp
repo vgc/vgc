@@ -18,7 +18,7 @@
 
 #include <vgc/canvas/documentmanager.h>
 #include <vgc/canvas/workspaceselection.h>
-#include <vgc/core/algorithm.h> // contains
+#include <vgc/core/algorithms.h> // contains
 #include <vgc/core/boolguard.h>
 #include <vgc/dom/strings.h>
 #include <vgc/ui/boolsetting.h>
