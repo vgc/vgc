@@ -20,7 +20,7 @@
 #include <cassert>
 #include <cmath>
 #include <vector>
-#include <vgc/core/algorithm.h>
+#include <vgc/core/algorithms.h>
 #include <vgc/geometry/api.h>
 
 namespace vgc::geometry {

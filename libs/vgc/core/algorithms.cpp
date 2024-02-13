@@ -14,7 +14,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <vgc/core/algorithm.h>
+#include <vgc/core/algorithms.h>
 
 namespace vgc::core {
 

@@ -16,7 +16,7 @@
 
 #include <vgc/core/performancelog.h>
 
-#include <vgc/core/algorithm.h>
+#include <vgc/core/algorithms.h>
 
 namespace vgc::core {
 
