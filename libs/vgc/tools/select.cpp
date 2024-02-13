@@ -82,6 +82,24 @@ VGC_UI_DEFINE_WINDOW_COMMAND( //
     Shortcut());
 
 VGC_UI_DEFINE_WINDOW_COMMAND( //
+    invertSelection,
+    "tools.select.invertSelection",
+    "Invert Selection",
+    Shortcut(ctrl, Key::I));
+
+VGC_UI_DEFINE_WINDOW_COMMAND( //
+    invertSelectionSameType,
+    "tools.select.invertSelectionSameType",
+    "Invert Selection (Same Type)",
+    Shortcut(ctrl | shift, Key::I));
+
+VGC_UI_DEFINE_WINDOW_COMMAND( //
+    invertSelectionExcludeBoundary,
+    "tools.select.invertSelectionExcludeBoundary",
+    "Invert Selection (Exclude Boundary)",
+    Shortcut(ctrl | alt, Key::I));
+
+VGC_UI_DEFINE_WINDOW_COMMAND( //
     selectVertices,
     "tools.select.selectVertices",
     "Select Vertices",
@@ -152,6 +170,12 @@ SelectModule::SelectModule(CreateKey key, const ui::ModuleContext& context)
     c.addAction(selectStar(), onSelectStar_Slot());
     c.addAction(selectClosure(), onSelectClosure_Slot());
     c.addAction(selectOpening(), onSelectOpening_Slot());
+
+    c.addSeparator();
+    c.addAction(invertSelection(), onInvertSelection_Slot());
+    c.addAction(invertSelectionSameType(), onInvertSelectionSameType_Slot());
+    c.addAction(
+        invertSelectionExcludeBoundary(), onInvertSelectionExcludeBoundary_Slot());
 
     c.addSeparator();
     c.addAction(selectVertices(), onSelectVertices_Slot());
@@ -263,6 +287,155 @@ void SelectModule::onSelectOpening_() {
         core::Array<core::Id> oldItemIds = context.workspaceSelection()->itemIds();
         core::Array<core::Id> newItemIds = context.workspace()->opening(oldItemIds);
         context.workspaceSelection()->setItemIds(newItemIds);
+    }
+}
+
+namespace {
+
+// When inverting the selection, by "same type", we basically want to mean "tag name".
+// Unfortunately, some elements may not have a tag name, such as implicit
+// vertices/edges/faces of basic shapes (rectangle, circle, etc.). So we use
+// the class `SelectionType` to capture this. For now we do not have basic shapes so it's
+// simply the tag name, but we can envision a more complex class later.
+//
+using SelectionType = core::StringId;
+
+SelectionType getSelectionType(const workspace::Element* element) {
+    if (element) {
+        return element->tagName();
+    }
+    else {
+        return SelectionType();
+    }
+}
+
+SelectionType getSelectionType(const workspace::Workspace& workspace, core::Id id) {
+    return getSelectionType(workspace.find(id));
+}
+
+} // namespace
+
+// Note: like for Select All, inverting the selection should work differently
+// when we implement isolation mode in the future.
+//
+// More discussion on inverting the selection.
+// -------------------------------------------
+//
+// The rationale for not just having the default "Invert Selection" action is
+// that if a user selects an edge and does "invert selection", then with the
+// default algorithm, this would unfortunately also select the end vertices of
+// the edge, which is often not what the user wants. For example, doing "invert
+// selection" then "delete" would delete everything including the initally
+// selected edge...
+//
+// Having "Invert Selection (Same Type)" is a simple alternative that
+// partially solves this problem: it is useful in many cases, although
+// it is not perfect in all cases.
+//
+// For example, if a user only has edges and vertices in the scene, then it is
+// pretty much perfect: the user would typically only select edges, and doing
+// "invert selection" would select all the other edges (but no vertices).
+//
+// However, if there are also faces, or groups (or basic shapes), perhaps the
+// user would have liked to select those too? Something like "Invert Selection
+// (Exclude Vertices)" might work in some cases, but not always. For example if
+// the user selects a face and does "invert selection" probably he also doesn't
+// want the edges in the boundary of the face to be selected, otherwise we
+// still have the problem that "invert selection + delete" would delete the
+// face.
+//
+// In conclusion, the desired result in many cases seem to be "Invert Selection
+// (Exclude Boundary)". This is equivalent to doing "Select Closure" followed
+// by "Invert Selection", but it's nice to have a shortcut that does it in one
+// shot. This makes sense because the boundary of the selection should often be
+// also considered part of the selection. For example, "Copy" (Ctrl + C) also
+// copies the boundary, and we want a similar behavior for "Bring
+// Forward/Backward".
+//
+// In any case, "Invert Selection (Same Type)" can also be useful, and not just
+// for topology, for example if the user wants to select all text elements
+// except a few of them. So we might as well provide it too.
+//
+// So a list of potentially useful alternatives would be:
+// - Invert Selection (Default)
+// - Invert Selection (Same Type)
+// - Invert Selection (Exclude Boundary)
+// - Invert Selection (Exclude Vertices)
+// - Invert Selection (Exclude Vertices and Boundary)
+//
+// However, to avoid bloat, we do not provide the versions that exclude the
+// vertices, since these can easily be removed from the selection as a second
+// step (Deselect Vertices), and users are used to these being selected anyway,
+// for example when doing a rectangle of selection, doing "Select All", or
+// simply copy-pasting. There could be a general setting to never select them
+// (except isolated vertices, or when clicking on a single vertex), but this
+// seems more harmful than helpful: it would add another layer of confusion
+// (why these vertices are selected when using this tool but not this one?),
+// and it seems best to just let the users become familiar with the concept of
+// vertices.
+
+void SelectModule::onInvertSelection_() {
+    if (auto context = SelectContextLock(documentManager_)) {
+        const core::Array<core::Id>& oldItemIds = context.workspaceSelection()->itemIds();
+        core::Array<core::Id> itemIds;
+        if (workspace::Element* root = context.workspace()->vgcElement()) {
+            workspace::Element* child = root->firstChild();
+            while (child) {
+                if (!oldItemIds.contains(child->id())) {
+                    itemIds.append(child->id());
+                }
+                child = child->nextSibling();
+            }
+        }
+        context.workspaceSelection()->setItemIds(itemIds);
+    }
+}
+
+// XXX:
+// - behavior if selection is empty? For now we do nothing.
+// - behavior if selection contains more than one type? For now we only use the first.
+//
+void SelectModule::onInvertSelectionSameType_() {
+    if (auto context = SelectContextLock(documentManager_)) {
+        const core::Array<core::Id>& oldItemIds = context.workspaceSelection()->itemIds();
+        if (oldItemIds.isEmpty()) {
+            return;
+        }
+        SelectionType targetType =
+            getSelectionType(*context.workspace(), oldItemIds.first());
+        if (targetType.isEmpty()) {
+            return;
+        }
+        core::Array<core::Id> itemIds;
+        if (workspace::Element* root = context.workspace()->vgcElement()) {
+            workspace::Element* child = root->firstChild();
+            while (child) {
+                SelectionType type = getSelectionType(child);
+                if (type == targetType && !oldItemIds.contains(child->id())) {
+                    itemIds.append(child->id());
+                }
+                child = child->nextSibling();
+            }
+        }
+        context.workspaceSelection()->setItemIds(itemIds);
+    }
+}
+
+void SelectModule::onInvertSelectionExcludeBoundary_() {
+    if (auto context = SelectContextLock(documentManager_)) {
+        const core::Array<core::Id>& oldItemIds = context.workspaceSelection()->itemIds();
+        core::Array<core::Id> closure = context.workspace()->closure(oldItemIds);
+        core::Array<core::Id> itemIds;
+        if (workspace::Element* root = context.workspace()->vgcElement()) {
+            workspace::Element* child = root->firstChild();
+            while (child) {
+                if (!closure.contains(child->id())) {
+                    itemIds.append(child->id());
+                }
+                child = child->nextSibling();
+            }
+        }
+        context.workspaceSelection()->setItemIds(itemIds);
     }
 }
 

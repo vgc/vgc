@@ -52,6 +52,15 @@ VGC_TOOLS_API
 VGC_UI_DECLARE_COMMAND(selectOpening)
 
 VGC_TOOLS_API
+VGC_UI_DECLARE_COMMAND(invertSelection)
+
+VGC_TOOLS_API
+VGC_UI_DECLARE_COMMAND(invertSelectionSameType)
+
+VGC_TOOLS_API
+VGC_UI_DECLARE_COMMAND(invertSelectionExcludeBoundary)
+
+VGC_TOOLS_API
 VGC_UI_DECLARE_COMMAND(selectVertices)
 
 VGC_TOOLS_API
@@ -108,6 +117,15 @@ private:
 
     void onSelectOpening_();
     VGC_SLOT(onSelectOpening_)
+
+    void onInvertSelection_();
+    VGC_SLOT(onInvertSelection_)
+
+    void onInvertSelectionSameType_();
+    VGC_SLOT(onInvertSelectionSameType_)
+
+    void onInvertSelectionExcludeBoundary_();
+    VGC_SLOT(onInvertSelectionExcludeBoundary_)
 
     void onSelectVertices_();
     VGC_SLOT(onSelectVertices_)
