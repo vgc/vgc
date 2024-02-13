@@ -21,6 +21,7 @@
 
 #include <vgc/core/boolguard.h>
 #include <vgc/dom/strings.h>
+#include <vgc/vacomplex/algorithms.h> // boundary, star, closure, opening
 #include <vgc/vacomplex/complex.h>
 #include <vgc/vacomplex/operations.h>
 #include <vgc/workspace/edge.h>
@@ -786,10 +787,13 @@ void Workspace::hardDelete(core::ConstSpan<core::Id> elementIds) {
     }
 }
 
-void Workspace::softDelete(core::ConstSpan<core::Id> elementIds) {
+namespace {
+
+core::Array<vacomplex::Node*>
+toVacNodes(const Workspace& workspace, core::ConstSpan<core::Id> elementIds) {
     core::Array<vacomplex::Node*> nodes;
     for (core::Id id : elementIds) {
-        workspace::Element* element = find(id);
+        workspace::Element* element = workspace.find(id);
         if (element) {
             vacomplex::Node* node = element->vacNode();
             if (node && !nodes.contains(node)) {
@@ -797,8 +801,66 @@ void Workspace::softDelete(core::ConstSpan<core::Id> elementIds) {
             }
         }
     }
+    return nodes;
+}
+
+void addVacNodes(
+    const Workspace& workspace,
+    const core::Array<vacomplex::Node*>& nodes,
+    core::Array<core::Id>& result) {
+
+    for (vacomplex::Node* node : nodes) {
+        if (Element* element = workspace.findVacElement(node)) {
+            core::Id id = element->id();
+            if (!result.contains(id)) {
+                result.append(id);
+            }
+        }
+    }
+}
+
+} // namespace
+
+void Workspace::softDelete(core::ConstSpan<core::Id> elementIds) {
+    core::Array<vacomplex::Node*> nodes = toVacNodes(*this, elementIds);
     bool deleteIsolatedVertices = true;
     vacomplex::ops::softDelete(nodes, deleteIsolatedVertices);
+}
+
+core::Array<core::Id> Workspace::boundary(core::ConstSpan<core::Id> elementIds) {
+    core::Array<core::Id> result;
+    core::Array<vacomplex::Node*> nodes = toVacNodes(*this, elementIds);
+    addVacNodes(*this, vacomplex::boundary(nodes), result);
+    return result;
+}
+
+core::Array<core::Id> Workspace::star(core::ConstSpan<core::Id> elementIds) {
+    core::Array<core::Id> result;
+    core::Array<vacomplex::Node*> nodes = toVacNodes(*this, elementIds);
+    addVacNodes(*this, vacomplex::star(nodes), result);
+    return result;
+}
+
+// Note: we intentionally use vacomplex::boundary() instead of closure() here
+// as it is more efficient and gives the same end result since all input
+// `elementsIds` are already included in `result`.
+//
+core::Array<core::Id> Workspace::closure(core::ConstSpan<core::Id> elementIds) {
+    core::Array<core::Id> result(elementIds);
+    core::Array<vacomplex::Node*> nodes = toVacNodes(*this, elementIds);
+    addVacNodes(*this, vacomplex::boundary(nodes), result);
+    return result;
+}
+
+// Note: we intentionally use vacomplex::star() instead of opening() here
+// as it is more efficient and gives the same end result since all input
+// `elementsIds` are already included in `result`.
+//
+core::Array<core::Id> Workspace::opening(core::ConstSpan<core::Id> elementIds) {
+    core::Array<core::Id> result(elementIds);
+    core::Array<vacomplex::Node*> nodes = toVacNodes(*this, elementIds);
+    addVacNodes(*this, vacomplex::star(nodes), result);
+    return result;
 }
 
 std::unordered_map<core::StringId, Workspace::ElementCreator>&
