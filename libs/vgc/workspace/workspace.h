@@ -174,6 +174,12 @@ public:
         }
     }
 
+    /// This signal is emitted whenever the workspace changes, either
+    /// as a result of the DOM changing, or the topological complex
+    /// changing.
+    ///
+    VGC_SIGNAL(changed);
+
     /// Returns the root workspace element, that is, the workspace element
     /// corresponding to the `<vgc>` root DOM element.
     ///
@@ -417,11 +423,29 @@ public:
     ///
     void softDelete(core::ConstSpan<core::Id> elementIds);
 
-    /// This signal is emitted whenever the workspace changes, either
-    /// as a result of the DOM changing, or the topological complex
-    /// changing.
+    /// Returns the union of the boundary of the given elements.
     ///
-    VGC_SIGNAL(changed);
+    /// \sa `star()`, `closure()`, `opening().
+    ///
+    core::Array<core::Id> boundary(core::ConstSpan<core::Id> elementIds);
+
+    /// Returns the union of the star of the given elements.
+    ///
+    /// \sa `boundary()`, `closure()`, `opening().
+    ///
+    core::Array<core::Id> star(core::ConstSpan<core::Id> elementIds);
+
+    /// Returns the union of the given elements and their boundary.
+    ///
+    /// \sa `boundary()`, `star()`, `opening().
+    ///
+    core::Array<core::Id> closure(core::ConstSpan<core::Id> elementIds);
+
+    /// Returns the union of the given elements and their star.
+    ///
+    /// \sa `boundary()`, `star()`, `closure()`.
+    ///
+    core::Array<core::Id> opening(core::ConstSpan<core::Id> elementIds);
 
 private:
     friend VacElement;
