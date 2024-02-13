@@ -24,6 +24,15 @@
 namespace vgc::vacomplex {
 
 class Cell;
+class Node;
+
+/// Returns the union of the boundary of the given `nodes`.
+///
+/// \sa `Cell::boundary()`, `Cell::star()`,
+///     `star()`, `closure()`, `opening().
+///
+VGC_VACOMPLEX_API
+core::Array<Node*> boundary(core::ConstSpan<Node*> nodes);
 
 /// Returns the union of the boundary of the given `cells`.
 ///
@@ -33,6 +42,14 @@ class Cell;
 VGC_VACOMPLEX_API
 core::Array<Cell*> boundary(core::ConstSpan<Cell*> cells);
 
+/// Returns the union of the star of the given `nodes`.
+///
+/// \sa `Cell::boundary()`, `Cell::star()`,
+///     `boundary()`, `closure()`, `opening().
+///
+VGC_VACOMPLEX_API
+core::Array<Node*> star(core::ConstSpan<Node*> nodes);
+
 /// Returns the union of the star of the given `cells`.
 ///
 /// \sa `Cell::boundary()`, `Cell::star()`,
@@ -41,6 +58,14 @@ core::Array<Cell*> boundary(core::ConstSpan<Cell*> cells);
 VGC_VACOMPLEX_API
 core::Array<Cell*> star(core::ConstSpan<Cell*> cells);
 
+/// Returns the union of the given `nodes` and their boundary.
+///
+/// \sa `Cell::boundary()`, `Cell::star()`,
+///     `boundary()`, `star()`, `opening().
+///
+VGC_VACOMPLEX_API
+core::Array<Node*> closure(core::ConstSpan<Node*> nodes);
+
 /// Returns the union of the given `cells` and their boundary.
 ///
 /// \sa `Cell::boundary()`, `Cell::star()`,
@@ -48,6 +73,14 @@ core::Array<Cell*> star(core::ConstSpan<Cell*> cells);
 ///
 VGC_VACOMPLEX_API
 core::Array<Cell*> closure(core::ConstSpan<Cell*> cells);
+
+/// Returns the union of the given `nodes` and their star.
+///
+/// \sa `Cell::boundary()`, `Cell::star()`,
+///     `boundary()`, `star()`, `closure()`.
+///
+VGC_VACOMPLEX_API
+core::Array<Node*> opening(core::ConstSpan<Node*> nodes);
 
 /// Returns the union of the given `cells` and their star.
 ///
