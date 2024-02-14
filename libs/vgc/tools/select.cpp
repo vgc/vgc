@@ -64,6 +64,12 @@ VGC_UI_DEFINE_WINDOW_COMMAND( //
     Shortcut());
 
 VGC_UI_DEFINE_WINDOW_COMMAND( //
+    selectOuterBoundary,
+    "tools.select.selectOuterBoundary",
+    "Select Outer Boundary",
+    Shortcut());
+
+VGC_UI_DEFINE_WINDOW_COMMAND( //
     selectStar,
     "tools.select.selectStar",
     "Select Star",
@@ -167,6 +173,7 @@ SelectModule::SelectModule(CreateKey key, const ui::ModuleContext& context)
 
     c.addSeparator();
     c.addAction(selectBoundary(), onSelectBoundary_Slot());
+    c.addAction(selectOuterBoundary(), onSelectOuterBoundary_Slot());
     c.addAction(selectStar(), onSelectStar_Slot());
     c.addAction(selectClosure(), onSelectClosure_Slot());
     c.addAction(selectOpening(), onSelectOpening_Slot());
@@ -262,6 +269,14 @@ void SelectModule::onSelectBoundary_() {
     if (auto context = SelectContextLock(documentManager_)) {
         core::Array<core::Id> oldItemIds = context.workspaceSelection()->itemIds();
         core::Array<core::Id> newItemIds = context.workspace()->boundary(oldItemIds);
+        context.workspaceSelection()->setItemIds(newItemIds);
+    }
+}
+
+void SelectModule::onSelectOuterBoundary_() {
+    if (auto context = SelectContextLock(documentManager_)) {
+        core::Array<core::Id> oldItemIds = context.workspaceSelection()->itemIds();
+        core::Array<core::Id> newItemIds = context.workspace()->outerBoundary(oldItemIds);
         context.workspaceSelection()->setItemIds(newItemIds);
     }
 }
