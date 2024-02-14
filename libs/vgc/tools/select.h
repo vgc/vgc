@@ -43,6 +43,9 @@ VGC_TOOLS_API
 VGC_UI_DECLARE_COMMAND(selectBoundary)
 
 VGC_TOOLS_API
+VGC_UI_DECLARE_COMMAND(selectOuterBoundary)
+
+VGC_TOOLS_API
 VGC_UI_DECLARE_COMMAND(selectStar)
 
 VGC_TOOLS_API
@@ -108,6 +111,9 @@ private:
 
     void onSelectBoundary_();
     VGC_SLOT(onSelectBoundary_)
+
+    void onSelectOuterBoundary_();
+    VGC_SLOT(onSelectOuterBoundary_)
 
     void onSelectStar_();
     VGC_SLOT(onSelectStar_)

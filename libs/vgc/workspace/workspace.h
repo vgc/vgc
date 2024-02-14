@@ -423,27 +423,36 @@ public:
     ///
     void softDelete(core::ConstSpan<core::Id> elementIds);
 
-    /// Returns the union of the boundary of the given elements.
+    /// Returns the boundary of the given elements.
     ///
-    /// \sa `star()`, `closure()`, `opening().
+    /// \sa `outerBoundary()`, `star()`, `closure()`, `opening()`.
     ///
     core::Array<core::Id> boundary(core::ConstSpan<core::Id> elementIds);
 
+    /// Returns the outer boundary of the given elements.
+    ///
+    /// This is equivalent to `boundary(closure(elementIds))`, but faster to
+    /// compute.
+    ///
+    /// \sa `boundary()`, `star()`, `closure()`, `opening()`.
+    ///
+    core::Array<core::Id> outerBoundary(core::ConstSpan<core::Id> elementIds);
+
     /// Returns the union of the star of the given elements.
     ///
-    /// \sa `boundary()`, `closure()`, `opening().
+    /// \sa `boundary()`, `outerBoundary()`, `closure()`, `opening()`.
     ///
     core::Array<core::Id> star(core::ConstSpan<core::Id> elementIds);
 
     /// Returns the union of the given elements and their boundary.
     ///
-    /// \sa `boundary()`, `star()`, `opening().
+    /// \sa `boundary()`, `outerBoundary()`, `star()`, `opening()`.
     ///
     core::Array<core::Id> closure(core::ConstSpan<core::Id> elementIds);
 
     /// Returns the union of the given elements and their star.
     ///
-    /// \sa `boundary()`, `star()`, `closure()`.
+    /// \sa `boundary()`, `outerBoundary()`, `star()`, `closure()`.
     ///
     core::Array<core::Id> opening(core::ConstSpan<core::Id> elementIds);
 

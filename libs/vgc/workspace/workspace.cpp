@@ -834,6 +834,13 @@ core::Array<core::Id> Workspace::boundary(core::ConstSpan<core::Id> elementIds) 
     return result;
 }
 
+core::Array<core::Id> Workspace::outerBoundary(core::ConstSpan<core::Id> elementIds) {
+    core::Array<core::Id> result;
+    core::Array<vacomplex::Node*> nodes = toVacNodes(*this, elementIds);
+    addVacNodes(*this, vacomplex::outerBoundary(nodes), result);
+    return result;
+}
+
 core::Array<core::Id> Workspace::star(core::ConstSpan<core::Id> elementIds) {
     core::Array<core::Id> result;
     core::Array<vacomplex::Node*> nodes = toVacNodes(*this, elementIds);
@@ -841,14 +848,17 @@ core::Array<core::Id> Workspace::star(core::ConstSpan<core::Id> elementIds) {
     return result;
 }
 
-// Note: we intentionally use vacomplex::boundary() instead of closure() here
-// as it is more efficient and gives the same end result since all input
-// `elementsIds` are already included in `result`.
+// Note: it should be equivalent here to use vacomplex::boundary() instead of
+// vacomplex::closure(), but it's unclear which is faster: the computation of
+// boundary is more complex, but the end array is smaller. In doubt, we simply
+// use vacomplex::closure(), but still initialize the result with the input
+// elementIds, since some of these may not be VAC nodes and need to stay
+// selected.
 //
 core::Array<core::Id> Workspace::closure(core::ConstSpan<core::Id> elementIds) {
     core::Array<core::Id> result(elementIds);
     core::Array<vacomplex::Node*> nodes = toVacNodes(*this, elementIds);
-    addVacNodes(*this, vacomplex::boundary(nodes), result);
+    addVacNodes(*this, vacomplex::closure(nodes), result);
     return result;
 }
 
