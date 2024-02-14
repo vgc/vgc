@@ -115,7 +115,7 @@ Int countUses_(KeyEdge* edge, KeyFace* face) {
     return count;
 }
 
-// Count the number of uses of `vertex` among the given `edges`.
+// Count the number of uses of `vertex` by the given `edge`.
 //
 Int countUses_(KeyVertex* vertex, KeyEdge* edge) {
     Int count = 0;
