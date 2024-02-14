@@ -41,10 +41,10 @@ VGC_VACOMPLEX_API
 core::Array<Node*> boundary(core::ConstSpan<Node*> nodes);
 
 /// Returns the boundary of the given `cells`, that is, the subset of
-/// cells in `closure(nodes)` that are:
+/// cells in `closure(cells)` that are:
 ///
-/// - not contained in `nodes`, or
-/// - whose opening in `closure(nodes)` is homeomorphic to Hn = Rn x [0, infinity), or
+/// - not contained in `cells`, or
+/// - whose opening in `closure(cells)` is homeomorphic to Hn = Rn x [0, infinity), or
 /// - that are in the boundary of any of the above cells
 ///
 ///
