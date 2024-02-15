@@ -427,7 +427,7 @@ public:
     ///
     /// See `vacomplex::boundary()` for details.
     ///
-    /// \sa `outerBoundary()`, `star()`, `closure()`, `opening()`.
+    /// \sa `outerBoundary()`, `star()`, `closure()`, `opening()`, `connected()`.
     ///
     core::Array<core::Id> boundary(core::ConstSpan<core::Id> elementIds);
 
@@ -436,28 +436,35 @@ public:
     /// This is equivalent to `boundary(closure(elementIds))`, but faster to
     /// compute.
     ///
-    /// \sa `boundary()`, `star()`, `closure()`, `opening()`.
+    /// \sa `boundary()`, `star()`, `closure()`, `opening()`, `connected()`.
     ///
     core::Array<core::Id> outerBoundary(core::ConstSpan<core::Id> elementIds);
 
     /// Returns the union of the star of the given elements, excluding any cell
     /// that is already in `elementIds`.
     ///
-    /// \sa `boundary()`, `outerBoundary()`, `closure()`, `opening()`.
+    /// \sa `boundary()`, `outerBoundary()`, `closure()`, `opening()`, `connected()`.
     ///
     core::Array<core::Id> star(core::ConstSpan<core::Id> elementIds);
 
     /// Returns the union of the given elements and their boundary.
     ///
-    /// \sa `boundary()`, `outerBoundary()`, `star()`, `opening()`.
+    /// \sa `boundary()`, `outerBoundary()`, `star()`, `opening()`, `connected()`.
     ///
     core::Array<core::Id> closure(core::ConstSpan<core::Id> elementIds);
 
     /// Returns the union of the given elements and their star.
     ///
-    /// \sa `boundary()`, `outerBoundary()`, `star()`, `closure()`.
+    /// \sa `boundary()`, `outerBoundary()`, `star()`, `closure()`, `connected()`.
     ///
     core::Array<core::Id> opening(core::ConstSpan<core::Id> elementIds);
+
+    /// Returns the union of the given elements and all other objects
+    /// that are connected to them via boundary/star relationships.
+    ///
+    /// \sa `boundary()`, `outerBoundary()`, `star()`, `closure()`, `opening()`.
+    ///
+    core::Array<core::Id> connected(core::ConstSpan<core::Id> elementIds);
 
 private:
     friend VacElement;
