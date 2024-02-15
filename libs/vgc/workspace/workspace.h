@@ -429,7 +429,7 @@ public:
     ///
     /// \sa `outerBoundary()`, `star()`, `closure()`, `opening()`, `connected()`.
     ///
-    core::Array<core::Id> boundary(core::ConstSpan<core::Id> elementIds);
+    core::Array<core::Id> boundary(core::ConstSpan<core::Id> elementIds) const;
 
     /// Returns the outer boundary of the given elements.
     ///
@@ -438,33 +438,38 @@ public:
     ///
     /// \sa `boundary()`, `star()`, `closure()`, `opening()`, `connected()`.
     ///
-    core::Array<core::Id> outerBoundary(core::ConstSpan<core::Id> elementIds);
+    core::Array<core::Id> outerBoundary(core::ConstSpan<core::Id> elementIds) const;
 
     /// Returns the union of the star of the given elements, excluding any cell
     /// that is already in `elementIds`.
     ///
     /// \sa `boundary()`, `outerBoundary()`, `closure()`, `opening()`, `connected()`.
     ///
-    core::Array<core::Id> star(core::ConstSpan<core::Id> elementIds);
+    core::Array<core::Id> star(core::ConstSpan<core::Id> elementIds) const;
 
     /// Returns the union of the given elements and their boundary.
     ///
     /// \sa `boundary()`, `outerBoundary()`, `star()`, `opening()`, `connected()`.
     ///
-    core::Array<core::Id> closure(core::ConstSpan<core::Id> elementIds);
+    core::Array<core::Id> closure(core::ConstSpan<core::Id> elementIds) const;
 
     /// Returns the union of the given elements and their star.
     ///
     /// \sa `boundary()`, `outerBoundary()`, `star()`, `closure()`, `connected()`.
     ///
-    core::Array<core::Id> opening(core::ConstSpan<core::Id> elementIds);
+    core::Array<core::Id> opening(core::ConstSpan<core::Id> elementIds) const;
 
     /// Returns the union of the given elements and all other objects
     /// that are connected to them via boundary/star relationships.
     ///
     /// \sa `boundary()`, `outerBoundary()`, `star()`, `closure()`, `opening()`.
     ///
-    core::Array<core::Id> connected(core::ConstSpan<core::Id> elementIds);
+    core::Array<core::Id> connected(core::ConstSpan<core::Id> elementIds) const;
+
+    /// Separates the given elements into connected components.
+    ///
+    core::Array<core::Array<core::Id>>
+    connectedComponents(core::ConstSpan<core::Id> elementIds) const;
 
 private:
     friend VacElement;

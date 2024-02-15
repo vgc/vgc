@@ -140,6 +140,16 @@ core::Array<Node*> connected(core::ConstSpan<Node*> nodes);
 VGC_VACOMPLEX_API
 core::Array<Cell*> connected(core::ConstSpan<Cell*> cells);
 
+/// Separates the given `nodes` into connected components.
+///
+VGC_VACOMPLEX_API
+core::Array<core::Array<Node*>> connectedComponents(core::ConstSpan<Node*> nodes);
+
+/// Separates the given `cells` into connected components.
+///
+VGC_VACOMPLEX_API
+core::Array<core::Array<Cell*>> connectedComponents(core::ConstSpan<Cell*> cells);
+
 } // namespace vgc::vacomplex
 
 #endif // VGC_VACOMPLEX_ALGORITHMS_H

@@ -16,6 +16,7 @@
 
 #include <vgc/vacomplex/algorithms.h>
 
+#include <unordered_map>
 #include <unordered_set>
 
 #include <vgc/vacomplex/cell.h>
@@ -99,7 +100,7 @@ core::Array<OutType*> closure_(core::ConstSpan<InType*> input) {
         extendUnique(output, cell->boundary());
     });
     return output;
-};
+}
 
 template<typename OutType, typename InType>
 core::Array<OutType*> opening_(core::ConstSpan<InType*> input) {
@@ -108,7 +109,7 @@ core::Array<OutType*> opening_(core::ConstSpan<InType*> input) {
         extendUnique(output, cell->star());
     });
     return output;
-};
+}
 
 template<typename OutType>
 core::Array<OutType*> star_(core::ConstSpan<OutType*> input) {
@@ -313,54 +314,136 @@ core::Array<OutType*> connected_(core::ConstSpan<OutType*> input) {
     return core::Array<OutType*>(output);
 }
 
+template<typename T, typename U>
+using Map = std::unordered_map<T, U>;
+
+template<typename OutType>
+core::Array<core::Array<OutType*>> connectedComponents_(core::ConstSpan<OutType*> input) {
+
+    // Initialization
+
+    Map<OutType*, int> component;
+    for (OutType* node : input) {
+        component[node] = -1;
+    }
+    int componentIndex = -1;
+
+    // Main loop
+
+    for (OutType* node : input) {
+
+        // If already assigned a connected component, do nothing
+        if (component[node] != -1) {
+            continue;
+        }
+
+        // Otherwise, create a new connected component and assign it to this node
+        ++componentIndex;
+        component[node] = componentIndex;
+
+        // If the node is not a cell, then it's alone in its connected component
+        Cell* cell = node->toCell();
+        if (!cell) {
+            continue;
+        }
+
+        // Otherwise, let's find all other cells in the input that are
+        // connected to this cell. We use a stack for yet unvisited cells
+        // belonging to the same component.
+        //
+        core::Array<Cell*> stack;
+        stack.append(cell);
+
+        // While there are cells to visit
+        while (!stack.isEmpty()) {
+
+            Cell* cellToVisit = stack.pop();
+            CellRangeView boundary = cellToVisit->boundary();
+            CellRangeView star = cellToVisit->star();
+
+            //  Find other cells to visit
+            for (OutType* otherNode : input) {
+                if (component[otherNode] != -1) {
+                    continue;
+                }
+                if (Cell* otherCell = otherNode->toCell()) {
+                    if (boundary.contains(otherCell) || star.contains(otherCell)) {
+                        component[otherNode] = componentIndex;
+                        stack.append(otherCell);
+                    }
+                }
+            }
+        }
+    }
+
+    // Convert to output
+
+    core::Array<core::Array<OutType*>> output;
+    for (int i = 0; i <= componentIndex; ++i) {
+        output.append({});
+    }
+    for (auto& [cell, i] : component) {
+        output[i].append(cell);
+    }
+    return output;
+}
+
 } // namespace
 
 core::Array<Node*> boundary(core::ConstSpan<Node*> nodes) {
     return boundary_<Node>(nodes);
-};
+}
 
 core::Array<Cell*> boundary(core::ConstSpan<Cell*> cells) {
     return boundary_<Cell>(cells);
-};
+}
 
 core::Array<Node*> outerBoundary(core::ConstSpan<Node*> nodes) {
     return outerBoundary_<Node>(nodes);
-};
+}
 
 core::Array<Cell*> outerBoundary(core::ConstSpan<Cell*> cells) {
     return outerBoundary_<Cell>(cells);
-};
+}
 
 core::Array<Node*> star(core::ConstSpan<Node*> nodes) {
     return star_<Node>(nodes);
-};
+}
 
 core::Array<Cell*> star(core::ConstSpan<Cell*> cells) {
     return star_<Cell>(cells);
-};
+}
 
 core::Array<Node*> closure(core::ConstSpan<Node*> nodes) {
     return closure_<Node>(nodes);
-};
+}
 
 core::Array<Cell*> closure(core::ConstSpan<Cell*> cells) {
     return closure_<Cell>(cells);
-};
+}
 
 core::Array<Node*> opening(core::ConstSpan<Node*> nodes) {
     return opening_<Node>(nodes);
-};
+}
 
 core::Array<Cell*> opening(core::ConstSpan<Cell*> cells) {
     return opening_<Cell>(cells);
-};
+}
 
 core::Array<Node*> connected(core::ConstSpan<Node*> nodes) {
     return connected_<Node>(nodes);
-};
+}
 
 core::Array<Cell*> connected(core::ConstSpan<Cell*> cells) {
     return connected_<Cell>(cells);
-};
+}
+
+core::Array<core::Array<Node*>> connectedComponents(core::ConstSpan<Node*> nodes) {
+    return connectedComponents_<Node>(nodes);
+}
+
+core::Array<core::Array<Cell*>> connectedComponents(core::ConstSpan<Cell*> cells) {
+    return connectedComponents_<Cell>(cells);
+}
 
 } // namespace vgc::vacomplex
