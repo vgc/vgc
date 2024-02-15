@@ -873,6 +873,13 @@ core::Array<core::Id> Workspace::opening(core::ConstSpan<core::Id> elementIds) {
     return result;
 }
 
+core::Array<core::Id> Workspace::connected(core::ConstSpan<core::Id> elementIds) {
+    core::Array<core::Id> result(elementIds);
+    core::Array<vacomplex::Node*> nodes = toVacNodes(*this, elementIds);
+    addVacNodes(*this, vacomplex::connected(nodes), result);
+    return result;
+}
+
 std::unordered_map<core::StringId, Workspace::ElementCreator>&
 Workspace::elementCreators_() {
     static std::unordered_map<core::StringId, Workspace::ElementCreator>* instance_ =

@@ -16,6 +16,8 @@
 
 #include <vgc/vacomplex/algorithms.h>
 
+#include <unordered_set>
+
 #include <vgc/vacomplex/cell.h>
 #include <vgc/vacomplex/keyedge.h>
 #include <vgc/vacomplex/keyface.h>
@@ -259,6 +261,58 @@ core::Array<OutType*> outerBoundary_(core::ConstSpan<OutType*> input) {
     return closure_<OutType, Cell>(output);
 }
 
+template<typename T>
+using Set = std::unordered_set<T>;
+
+template<typename OutType>
+Set<OutType*> toSet(core::ConstSpan<OutType*> input) {
+    return Set<OutType*>(input.begin(), input.end());
+}
+
+template<typename InType>
+Set<Cell*> toCellSet(core::ConstSpan<InType*> nodes) {
+    Set<Cell*> output;
+    output.reserve(nodes.length());
+    forEachCell(nodes, [&](Cell* cell) { //
+        output.insert(cell);
+    });
+    return output;
+}
+
+template<typename OutType>
+bool contains(const Set<OutType*>& nodes, Cell* cell) {
+    return nodes.find(cell) != nodes.end();
+}
+
+template<typename OutType>
+core::Array<OutType*> connected_(core::ConstSpan<OutType*> input) {
+
+    Set<OutType*> output = toSet(input);
+    Set<Cell*> cellsAddedInPreviousIteration = toCellSet(input);
+    Set<Cell*> cellsAddedInThisIteration;
+
+    while (cellsAddedInPreviousIteration.size() != 0) {
+        cellsAddedInThisIteration.clear();
+        for (Cell* c : cellsAddedInPreviousIteration) {
+            for (Cell* d : c->boundary()) {
+                if (!contains(output, d)) {
+                    output.insert(d);
+                    cellsAddedInThisIteration.insert(d);
+                }
+            }
+            for (Cell* d : c->star()) {
+                if (!contains(output, d)) {
+                    output.insert(d);
+                    cellsAddedInThisIteration.insert(d);
+                }
+            }
+        }
+        cellsAddedInPreviousIteration.swap(cellsAddedInThisIteration);
+    }
+
+    return core::Array<OutType*>(output);
+}
+
 } // namespace
 
 core::Array<Node*> boundary(core::ConstSpan<Node*> nodes) {
@@ -299,6 +353,14 @@ core::Array<Node*> opening(core::ConstSpan<Node*> nodes) {
 
 core::Array<Cell*> opening(core::ConstSpan<Cell*> cells) {
     return opening_<Cell>(cells);
+};
+
+core::Array<Node*> connected(core::ConstSpan<Node*> nodes) {
+    return connected_<Node>(nodes);
+};
+
+core::Array<Cell*> connected(core::ConstSpan<Cell*> cells) {
+    return connected_<Cell>(cells);
 };
 
 } // namespace vgc::vacomplex

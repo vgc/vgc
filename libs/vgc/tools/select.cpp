@@ -88,6 +88,12 @@ VGC_UI_DEFINE_WINDOW_COMMAND( //
     Shortcut());
 
 VGC_UI_DEFINE_WINDOW_COMMAND( //
+    selectConnectedObjects,
+    "tools.select.selectConnectedObjects",
+    "Select Connected Objects",
+    Shortcut(shift, Key::C));
+
+VGC_UI_DEFINE_WINDOW_COMMAND( //
     invertSelection,
     "tools.select.invertSelection",
     "Invert Selection",
@@ -177,6 +183,9 @@ SelectModule::SelectModule(CreateKey key, const ui::ModuleContext& context)
     c.addAction(selectStar(), onSelectStar_Slot());
     c.addAction(selectClosure(), onSelectClosure_Slot());
     c.addAction(selectOpening(), onSelectOpening_Slot());
+
+    c.addSeparator();
+    c.addAction(selectConnectedObjects(), onSelectConnectedObjects_Slot());
 
     c.addSeparator();
     c.addAction(invertSelection(), onInvertSelection_Slot());
@@ -301,6 +310,14 @@ void SelectModule::onSelectOpening_() {
     if (auto context = SelectContextLock(documentManager_)) {
         core::Array<core::Id> oldItemIds = context.workspaceSelection()->itemIds();
         core::Array<core::Id> newItemIds = context.workspace()->opening(oldItemIds);
+        context.workspaceSelection()->setItemIds(newItemIds);
+    }
+}
+
+void SelectModule::onSelectConnectedObjects_() {
+    if (auto context = SelectContextLock(documentManager_)) {
+        core::Array<core::Id> oldItemIds = context.workspaceSelection()->itemIds();
+        core::Array<core::Id> newItemIds = context.workspace()->connected(oldItemIds);
         context.workspaceSelection()->setItemIds(newItemIds);
     }
 }

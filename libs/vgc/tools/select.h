@@ -55,6 +55,9 @@ VGC_TOOLS_API
 VGC_UI_DECLARE_COMMAND(selectOpening)
 
 VGC_TOOLS_API
+VGC_UI_DECLARE_COMMAND(selectConnectedObjects)
+
+VGC_TOOLS_API
 VGC_UI_DECLARE_COMMAND(invertSelection)
 
 VGC_TOOLS_API
@@ -123,6 +126,9 @@ private:
 
     void onSelectOpening_();
     VGC_SLOT(onSelectOpening_)
+
+    void onSelectConnectedObjects_();
+    VGC_SLOT(onSelectConnectedObjects_)
 
     void onInvertSelection_();
     VGC_SLOT(onInvertSelection_)
