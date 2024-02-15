@@ -804,6 +804,33 @@ toVacNodes(const Workspace& workspace, core::ConstSpan<core::Id> elementIds) {
     return nodes;
 }
 
+// Same as above but also return the IDs of valid elements that are not VAC nodes.
+//
+core::Array<vacomplex::Node*> toVacNodes(
+    const Workspace& workspace,
+    core::ConstSpan<core::Id> elementIds,
+    core::Array<core::Id>& otherElements) {
+
+    core::Array<vacomplex::Node*> nodes;
+    for (core::Id id : elementIds) {
+        workspace::Element* element = workspace.find(id);
+        if (element) {
+            vacomplex::Node* node = element->vacNode();
+            if (node) {
+                if (!nodes.contains(node)) {
+                    nodes.append(node);
+                }
+            }
+            else {
+                if (!otherElements.contains(id)) {
+                    otherElements.append(id);
+                }
+            }
+        }
+    }
+    return nodes;
+}
+
 void addVacNodes(
     const Workspace& workspace,
     const core::Array<vacomplex::Node*>& nodes,
@@ -827,21 +854,22 @@ void Workspace::softDelete(core::ConstSpan<core::Id> elementIds) {
     vacomplex::ops::softDelete(nodes, deleteIsolatedVertices);
 }
 
-core::Array<core::Id> Workspace::boundary(core::ConstSpan<core::Id> elementIds) {
+core::Array<core::Id> Workspace::boundary(core::ConstSpan<core::Id> elementIds) const {
     core::Array<core::Id> result;
     core::Array<vacomplex::Node*> nodes = toVacNodes(*this, elementIds);
     addVacNodes(*this, vacomplex::boundary(nodes), result);
     return result;
 }
 
-core::Array<core::Id> Workspace::outerBoundary(core::ConstSpan<core::Id> elementIds) {
+core::Array<core::Id>
+Workspace::outerBoundary(core::ConstSpan<core::Id> elementIds) const {
     core::Array<core::Id> result;
     core::Array<vacomplex::Node*> nodes = toVacNodes(*this, elementIds);
     addVacNodes(*this, vacomplex::outerBoundary(nodes), result);
     return result;
 }
 
-core::Array<core::Id> Workspace::star(core::ConstSpan<core::Id> elementIds) {
+core::Array<core::Id> Workspace::star(core::ConstSpan<core::Id> elementIds) const {
     core::Array<core::Id> result;
     core::Array<vacomplex::Node*> nodes = toVacNodes(*this, elementIds);
     addVacNodes(*this, vacomplex::star(nodes), result);
@@ -855,7 +883,7 @@ core::Array<core::Id> Workspace::star(core::ConstSpan<core::Id> elementIds) {
 // elementIds, since some of these may not be VAC nodes and need to stay
 // selected.
 //
-core::Array<core::Id> Workspace::closure(core::ConstSpan<core::Id> elementIds) {
+core::Array<core::Id> Workspace::closure(core::ConstSpan<core::Id> elementIds) const {
     core::Array<core::Id> result(elementIds);
     core::Array<vacomplex::Node*> nodes = toVacNodes(*this, elementIds);
     addVacNodes(*this, vacomplex::closure(nodes), result);
@@ -866,17 +894,45 @@ core::Array<core::Id> Workspace::closure(core::ConstSpan<core::Id> elementIds) {
 // as it is more efficient and gives the same end result since all input
 // `elementsIds` are already included in `result`.
 //
-core::Array<core::Id> Workspace::opening(core::ConstSpan<core::Id> elementIds) {
+core::Array<core::Id> Workspace::opening(core::ConstSpan<core::Id> elementIds) const {
     core::Array<core::Id> result(elementIds);
     core::Array<vacomplex::Node*> nodes = toVacNodes(*this, elementIds);
     addVacNodes(*this, vacomplex::star(nodes), result);
     return result;
 }
 
-core::Array<core::Id> Workspace::connected(core::ConstSpan<core::Id> elementIds) {
+core::Array<core::Id> Workspace::connected(core::ConstSpan<core::Id> elementIds) const {
     core::Array<core::Id> result(elementIds);
     core::Array<vacomplex::Node*> nodes = toVacNodes(*this, elementIds);
     addVacNodes(*this, vacomplex::connected(nodes), result);
+    return result;
+}
+
+core::Array<core::Array<core::Id>>
+Workspace::connectedComponents(core::ConstSpan<core::Id> elementIds) const {
+
+    // Separate into VAC nodes and other elements
+    core::Array<core::Id> otherElements;
+    core::Array<vacomplex::Node*> nodeElements =
+        toVacNodes(*this, elementIds, otherElements);
+
+    // Compute connected components of VAC nodes
+    core::Array<core::Array<vacomplex::Node*>> connectedComponents =
+        vacomplex::connectedComponents(nodeElements);
+
+    // Convert to output IDs
+    core::Array<core::Array<core::Id>> result;
+    for (const core::Array<vacomplex::Node*>& nodes : connectedComponents) {
+        core::Array<core::Id> ids;
+        addVacNodes(*this, nodes, ids);
+        result.append(std::move(ids));
+    }
+
+    // Add other elements as separate connect components
+    for (core::Id id : otherElements) {
+        result.append(core::Array<core::Id>(id, 1));
+    }
+
     return result;
 }
 
