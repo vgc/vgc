@@ -67,6 +67,12 @@ VGC_TOOLS_API
 VGC_UI_DECLARE_COMMAND(selectConnectedObjects)
 
 VGC_TOOLS_API
+VGC_UI_DECLARE_COMMAND(selectMore)
+
+VGC_TOOLS_API
+VGC_UI_DECLARE_COMMAND(selectLess)
+
+VGC_TOOLS_API
 VGC_UI_DECLARE_COMMAND(selectVertices)
 
 VGC_TOOLS_API
@@ -138,6 +144,12 @@ private:
 
     void onSelectConnectedObjects_();
     VGC_SLOT(onSelectConnectedObjects_)
+
+    void onSelectMore_();
+    VGC_SLOT(onSelectMore_)
+
+    void onSelectLess_();
+    VGC_SLOT(onSelectLess_)
 
     void onSelectVertices_();
     VGC_SLOT(onSelectVertices_)
