@@ -21,6 +21,7 @@
 
 #include <vgc/canvas/documentmanager.h>
 #include <vgc/canvas/workspaceselection.h>
+#include <vgc/core/algorithms.h> // sort, set_difference, appender
 #include <vgc/graphics/detail/shapeutil.h>
 #include <vgc/graphics/strings.h>
 #include <vgc/tools/copypaste.h>
@@ -56,6 +57,14 @@ VGC_UI_DEFINE_WINDOW_COMMAND( //
     "tools.select.deselectAll",
     "Deselect All",
     Shortcut(ctrl | shift, Key::A));
+
+// Secondary shortcut for deselectAll.
+//
+namespace {
+
+VGC_UI_ADD_DEFAULT_SHORTCUT(deselectAll(), Shortcut(Key::Escape))
+
+} // namespace
 
 VGC_UI_DEFINE_WINDOW_COMMAND( //
     invertSelection,
@@ -112,6 +121,33 @@ VGC_UI_DEFINE_WINDOW_COMMAND( //
     Shortcut(shift, Key::C));
 
 VGC_UI_DEFINE_WINDOW_COMMAND( //
+    selectMore,
+    "tools.select.selectMore",
+    "Select More",
+    Shortcut(Key::GreaterThan));
+
+VGC_UI_DEFINE_WINDOW_COMMAND( //
+    selectLess,
+    "tools.select.selectLess",
+    "Select Less",
+    Shortcut(Key::LessThan));
+
+// Secondary shortcuts for select more/less.
+//
+// We need this because on a QWERTY keyboard, typing `>` requires pressing `Shift`,
+// and the KeyEvent reports `Shift + >`, which currently wouldn't match `>`.
+//
+// TODO: Properly handle shortcuts whose key require to press Shift or AltGr on some
+// keyboard layout.
+//
+namespace {
+
+VGC_UI_ADD_DEFAULT_SHORTCUT(selectMore(), Shortcut(shift, Key::GreaterThan))
+VGC_UI_ADD_DEFAULT_SHORTCUT(selectLess(), Shortcut(shift, Key::LessThan))
+
+} // namespace
+
+VGC_UI_DEFINE_WINDOW_COMMAND( //
     selectVertices,
     "tools.select.selectVertices",
     "Select Vertices",
@@ -146,14 +182,6 @@ VGC_UI_DEFINE_WINDOW_COMMAND( //
     "tools.select.deselectFaces",
     "Deselect Faces",
     Shortcut(alt | shift, Key::F));
-
-namespace {
-
-// Secondary shortcut for deselectAll.
-//
-VGC_UI_ADD_DEFAULT_SHORTCUT(deselectAll(), Shortcut(Key::Escape))
-
-} // namespace
 
 } // namespace commands
 
@@ -194,6 +222,10 @@ SelectModule::SelectModule(CreateKey key, const ui::ModuleContext& context)
 
     c.addSeparator();
     c.addAction(selectConnectedObjects(), onSelectConnectedObjects_Slot());
+
+    c.addSeparator();
+    c.addAction(selectMore(), onSelectMore_Slot());
+    c.addAction(selectLess(), onSelectLess_Slot());
 
     c.addSeparator();
     c.addAction(selectVertices(), onSelectVertices_Slot());
@@ -470,6 +502,93 @@ void SelectModule::onSelectConnectedObjects_() {
         core::Array<core::Id> oldItemIds = context.workspaceSelection()->itemIds();
         core::Array<core::Id> newItemIds = context.workspace()->connected(oldItemIds);
         context.workspaceSelection()->setItemIds(newItemIds);
+    }
+}
+
+void SelectModule::onSelectMore_() {
+    if (auto context = SelectContextLock(documentManager_)) {
+        core::Array<core::Id> input = context.workspaceSelection()->itemIds();
+        core::Array<core::Id> opening = context.workspace()->opening(input);
+        core::Array<core::Id> closure = context.workspace()->closure(opening);
+        context.workspaceSelection()->setItemIds(closure);
+    }
+}
+
+namespace {
+
+// Shrinks the input from its boundary, if any.
+// Assumes input is sorted.
+//
+core::Array<core::Id> selectLessOneStep_(
+    const workspace::Workspace& workspace,
+    core::ConstSpan<core::Id> input) {
+
+    core::Array<core::Id> boundary = workspace.boundary(input);
+    core::Array<core::Id> opening = workspace.opening(boundary);
+
+    core::sort(opening);
+    core::Array<core::Id> output;
+    core::set_difference(input, opening, core::appender(output));
+
+    return output;
+}
+
+} // namespace
+
+void SelectModule::onSelectLess_() {
+    if (auto context = SelectContextLock(documentManager_)) {
+
+        // Initialize output
+        core::Array<core::Id> output;
+
+        // Separate closure into connected components.
+        //
+        // We use the closure so that it behaves in a more intuitive way in the
+        // typical case where the user only select faces (or edges).
+        //
+        // Indeed, if the user only select faces (or edges), they are all
+        // technically isolated to each other, since their shared boundary
+        // isn't selected. So without the closure step, `Select Less` would
+        // deselect them all, which is unexpected.
+        //
+        core::Array<core::Id> input = context.workspaceSelection()->itemIds();
+        core::Array<core::Id> closure = context.workspace()->closure(input);
+        core::Array<core::Array<core::Id>> connectedComponents =
+            context.workspace()->connectedComponents(closure);
+
+        // For each component
+        for (core::Array<core::Id>& ids : connectedComponents) {
+
+            // Fast skip if only one element (isolated vertex or non-VAC element)
+            if (ids.length() == 1) {
+                continue;
+            }
+
+            // Attempt to shrink it from its boundary
+            core::sort(ids);
+            core::Array<core::Id> newIds = selectLessOneStep_(*context.workspace(), ids);
+
+            // If unchanged (loop of edges, sphere, or any set of cells without
+            // boundary), then we randomly remove one of the elements and try
+            // again.
+            //
+            if (newIds.length() == ids.length()) {
+                core::ConstSpan<core::Id> ids2(ids.data(), ids.length() - 1);
+                newIds = selectLessOneStep_(*context.workspace(), ids2);
+            }
+
+            // Add to output, except elements that were not initially
+            // in the input (they were added in the closure step).
+            //
+            output.reserve(output.length() + newIds.length());
+            for (core::Id id : newIds) {
+                if (input.contains(id)) {
+                    output.append(id);
+                }
+            }
+        }
+
+        context.workspaceSelection()->setItemIds(output);
     }
 }
 
