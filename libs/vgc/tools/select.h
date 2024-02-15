@@ -40,24 +40,6 @@ VGC_TOOLS_API
 VGC_UI_DECLARE_COMMAND(deselectAll)
 
 VGC_TOOLS_API
-VGC_UI_DECLARE_COMMAND(selectBoundary)
-
-VGC_TOOLS_API
-VGC_UI_DECLARE_COMMAND(selectOuterBoundary)
-
-VGC_TOOLS_API
-VGC_UI_DECLARE_COMMAND(selectStar)
-
-VGC_TOOLS_API
-VGC_UI_DECLARE_COMMAND(selectClosure)
-
-VGC_TOOLS_API
-VGC_UI_DECLARE_COMMAND(selectOpening)
-
-VGC_TOOLS_API
-VGC_UI_DECLARE_COMMAND(selectConnectedObjects)
-
-VGC_TOOLS_API
 VGC_UI_DECLARE_COMMAND(invertSelection)
 
 VGC_TOOLS_API
@@ -65,6 +47,24 @@ VGC_UI_DECLARE_COMMAND(invertSelectionSameType)
 
 VGC_TOOLS_API
 VGC_UI_DECLARE_COMMAND(invertSelectionExcludeBoundary)
+
+VGC_TOOLS_API
+VGC_UI_DECLARE_COMMAND(selectBoundary)
+
+VGC_TOOLS_API
+VGC_UI_DECLARE_COMMAND(selectOuterBoundary)
+
+VGC_TOOLS_API
+VGC_UI_DECLARE_COMMAND(selectClosure)
+
+VGC_TOOLS_API
+VGC_UI_DECLARE_COMMAND(selectStar)
+
+VGC_TOOLS_API
+VGC_UI_DECLARE_COMMAND(selectOpening)
+
+VGC_TOOLS_API
+VGC_UI_DECLARE_COMMAND(selectConnectedObjects)
 
 VGC_TOOLS_API
 VGC_UI_DECLARE_COMMAND(selectVertices)
@@ -112,24 +112,6 @@ private:
     void onDeselectAll_();
     VGC_SLOT(onDeselectAll_)
 
-    void onSelectBoundary_();
-    VGC_SLOT(onSelectBoundary_)
-
-    void onSelectOuterBoundary_();
-    VGC_SLOT(onSelectOuterBoundary_)
-
-    void onSelectStar_();
-    VGC_SLOT(onSelectStar_)
-
-    void onSelectClosure_();
-    VGC_SLOT(onSelectClosure_)
-
-    void onSelectOpening_();
-    VGC_SLOT(onSelectOpening_)
-
-    void onSelectConnectedObjects_();
-    VGC_SLOT(onSelectConnectedObjects_)
-
     void onInvertSelection_();
     VGC_SLOT(onInvertSelection_)
 
@@ -138,6 +120,24 @@ private:
 
     void onInvertSelectionExcludeBoundary_();
     VGC_SLOT(onInvertSelectionExcludeBoundary_)
+
+    void onSelectBoundary_();
+    VGC_SLOT(onSelectBoundary_)
+
+    void onSelectOuterBoundary_();
+    VGC_SLOT(onSelectOuterBoundary_)
+
+    void onSelectClosure_();
+    VGC_SLOT(onSelectClosure_)
+
+    void onSelectStar_();
+    VGC_SLOT(onSelectStar_)
+
+    void onSelectOpening_();
+    VGC_SLOT(onSelectOpening_)
+
+    void onSelectConnectedObjects_();
+    VGC_SLOT(onSelectConnectedObjects_)
 
     void onSelectVertices_();
     VGC_SLOT(onSelectVertices_)

@@ -58,42 +58,6 @@ VGC_UI_DEFINE_WINDOW_COMMAND( //
     Shortcut(ctrl | shift, Key::A));
 
 VGC_UI_DEFINE_WINDOW_COMMAND( //
-    selectBoundary,
-    "tools.select.selectBoundary",
-    "Select Boundary",
-    Shortcut());
-
-VGC_UI_DEFINE_WINDOW_COMMAND( //
-    selectOuterBoundary,
-    "tools.select.selectOuterBoundary",
-    "Select Outer Boundary",
-    Shortcut());
-
-VGC_UI_DEFINE_WINDOW_COMMAND( //
-    selectStar,
-    "tools.select.selectStar",
-    "Select Star",
-    Shortcut());
-
-VGC_UI_DEFINE_WINDOW_COMMAND( //
-    selectClosure,
-    "tools.select.selectClosure",
-    "Select Closure (Selection + Boundary)",
-    Shortcut(Key::C));
-
-VGC_UI_DEFINE_WINDOW_COMMAND( //
-    selectOpening,
-    "tools.select.selectOpening",
-    "Select Opening (Selection + Star)",
-    Shortcut());
-
-VGC_UI_DEFINE_WINDOW_COMMAND( //
-    selectConnectedObjects,
-    "tools.select.selectConnectedObjects",
-    "Select Connected Objects",
-    Shortcut(shift, Key::C));
-
-VGC_UI_DEFINE_WINDOW_COMMAND( //
     invertSelection,
     "tools.select.invertSelection",
     "Invert Selection",
@@ -110,6 +74,42 @@ VGC_UI_DEFINE_WINDOW_COMMAND( //
     "tools.select.invertSelectionExcludeBoundary",
     "Invert Selection (Exclude Boundary)",
     Shortcut(ctrl | alt, Key::I));
+
+VGC_UI_DEFINE_WINDOW_COMMAND( //
+    selectBoundary,
+    "tools.select.selectBoundary",
+    "Select Boundary",
+    Shortcut());
+
+VGC_UI_DEFINE_WINDOW_COMMAND( //
+    selectOuterBoundary,
+    "tools.select.selectOuterBoundary",
+    "Select Outer Boundary",
+    Shortcut());
+
+VGC_UI_DEFINE_WINDOW_COMMAND( //
+    selectClosure,
+    "tools.select.selectClosure",
+    "Select Closure (Selection + Boundary)",
+    Shortcut(Key::C));
+
+VGC_UI_DEFINE_WINDOW_COMMAND( //
+    selectStar,
+    "tools.select.selectStar",
+    "Select Star",
+    Shortcut());
+
+VGC_UI_DEFINE_WINDOW_COMMAND( //
+    selectOpening,
+    "tools.select.selectOpening",
+    "Select Opening (Selection + Star)",
+    Shortcut());
+
+VGC_UI_DEFINE_WINDOW_COMMAND( //
+    selectConnectedObjects,
+    "tools.select.selectConnectedObjects",
+    "Select Connected Objects",
+    Shortcut(shift, Key::C));
 
 VGC_UI_DEFINE_WINDOW_COMMAND( //
     selectVertices,
@@ -178,20 +178,22 @@ SelectModule::SelectModule(CreateKey key, const ui::ModuleContext& context)
     c.addAction(deselectAll(), onDeselectAll_Slot());
 
     c.addSeparator();
-    c.addAction(selectBoundary(), onSelectBoundary_Slot());
-    c.addAction(selectOuterBoundary(), onSelectOuterBoundary_Slot());
-    c.addAction(selectStar(), onSelectStar_Slot());
-    c.addAction(selectClosure(), onSelectClosure_Slot());
-    c.addAction(selectOpening(), onSelectOpening_Slot());
-
-    c.addSeparator();
-    c.addAction(selectConnectedObjects(), onSelectConnectedObjects_Slot());
-
-    c.addSeparator();
     c.addAction(invertSelection(), onInvertSelection_Slot());
     c.addAction(invertSelectionSameType(), onInvertSelectionSameType_Slot());
     c.addAction(
         invertSelectionExcludeBoundary(), onInvertSelectionExcludeBoundary_Slot());
+
+    c.addSeparator();
+    c.addAction(selectBoundary(), onSelectBoundary_Slot());
+    c.addAction(selectOuterBoundary(), onSelectOuterBoundary_Slot());
+    c.addAction(selectClosure(), onSelectClosure_Slot());
+
+    c.addSeparator();
+    c.addAction(selectStar(), onSelectStar_Slot());
+    c.addAction(selectOpening(), onSelectOpening_Slot());
+
+    c.addSeparator();
+    c.addAction(selectConnectedObjects(), onSelectConnectedObjects_Slot());
 
     c.addSeparator();
     c.addAction(selectVertices(), onSelectVertices_Slot());
@@ -271,54 +273,6 @@ void SelectModule::onSelectAll_() {
 void SelectModule::onDeselectAll_() {
     if (auto context = SelectContextLock(documentManager_)) {
         context.workspaceSelection()->clear();
-    }
-}
-
-void SelectModule::onSelectBoundary_() {
-    if (auto context = SelectContextLock(documentManager_)) {
-        core::Array<core::Id> oldItemIds = context.workspaceSelection()->itemIds();
-        core::Array<core::Id> newItemIds = context.workspace()->boundary(oldItemIds);
-        context.workspaceSelection()->setItemIds(newItemIds);
-    }
-}
-
-void SelectModule::onSelectOuterBoundary_() {
-    if (auto context = SelectContextLock(documentManager_)) {
-        core::Array<core::Id> oldItemIds = context.workspaceSelection()->itemIds();
-        core::Array<core::Id> newItemIds = context.workspace()->outerBoundary(oldItemIds);
-        context.workspaceSelection()->setItemIds(newItemIds);
-    }
-}
-
-void SelectModule::onSelectStar_() {
-    if (auto context = SelectContextLock(documentManager_)) {
-        core::Array<core::Id> oldItemIds = context.workspaceSelection()->itemIds();
-        core::Array<core::Id> newItemIds = context.workspace()->star(oldItemIds);
-        context.workspaceSelection()->setItemIds(newItemIds);
-    }
-}
-
-void SelectModule::onSelectClosure_() {
-    if (auto context = SelectContextLock(documentManager_)) {
-        core::Array<core::Id> oldItemIds = context.workspaceSelection()->itemIds();
-        core::Array<core::Id> newItemIds = context.workspace()->closure(oldItemIds);
-        context.workspaceSelection()->setItemIds(newItemIds);
-    }
-}
-
-void SelectModule::onSelectOpening_() {
-    if (auto context = SelectContextLock(documentManager_)) {
-        core::Array<core::Id> oldItemIds = context.workspaceSelection()->itemIds();
-        core::Array<core::Id> newItemIds = context.workspace()->opening(oldItemIds);
-        context.workspaceSelection()->setItemIds(newItemIds);
-    }
-}
-
-void SelectModule::onSelectConnectedObjects_() {
-    if (auto context = SelectContextLock(documentManager_)) {
-        core::Array<core::Id> oldItemIds = context.workspaceSelection()->itemIds();
-        core::Array<core::Id> newItemIds = context.workspace()->connected(oldItemIds);
-        context.workspaceSelection()->setItemIds(newItemIds);
     }
 }
 
@@ -468,6 +422,54 @@ void SelectModule::onInvertSelectionExcludeBoundary_() {
             }
         }
         context.workspaceSelection()->setItemIds(itemIds);
+    }
+}
+
+void SelectModule::onSelectBoundary_() {
+    if (auto context = SelectContextLock(documentManager_)) {
+        core::Array<core::Id> oldItemIds = context.workspaceSelection()->itemIds();
+        core::Array<core::Id> newItemIds = context.workspace()->boundary(oldItemIds);
+        context.workspaceSelection()->setItemIds(newItemIds);
+    }
+}
+
+void SelectModule::onSelectOuterBoundary_() {
+    if (auto context = SelectContextLock(documentManager_)) {
+        core::Array<core::Id> oldItemIds = context.workspaceSelection()->itemIds();
+        core::Array<core::Id> newItemIds = context.workspace()->outerBoundary(oldItemIds);
+        context.workspaceSelection()->setItemIds(newItemIds);
+    }
+}
+
+void SelectModule::onSelectClosure_() {
+    if (auto context = SelectContextLock(documentManager_)) {
+        core::Array<core::Id> oldItemIds = context.workspaceSelection()->itemIds();
+        core::Array<core::Id> newItemIds = context.workspace()->closure(oldItemIds);
+        context.workspaceSelection()->setItemIds(newItemIds);
+    }
+}
+
+void SelectModule::onSelectStar_() {
+    if (auto context = SelectContextLock(documentManager_)) {
+        core::Array<core::Id> oldItemIds = context.workspaceSelection()->itemIds();
+        core::Array<core::Id> newItemIds = context.workspace()->star(oldItemIds);
+        context.workspaceSelection()->setItemIds(newItemIds);
+    }
+}
+
+void SelectModule::onSelectOpening_() {
+    if (auto context = SelectContextLock(documentManager_)) {
+        core::Array<core::Id> oldItemIds = context.workspaceSelection()->itemIds();
+        core::Array<core::Id> newItemIds = context.workspace()->opening(oldItemIds);
+        context.workspaceSelection()->setItemIds(newItemIds);
+    }
+}
+
+void SelectModule::onSelectConnectedObjects_() {
+    if (auto context = SelectContextLock(documentManager_)) {
+        core::Array<core::Id> oldItemIds = context.workspaceSelection()->itemIds();
+        core::Array<core::Id> newItemIds = context.workspace()->connected(oldItemIds);
+        context.workspaceSelection()->setItemIds(newItemIds);
     }
 }
 
