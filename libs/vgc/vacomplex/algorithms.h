@@ -33,7 +33,6 @@ class Node;
 /// - whose opening in `closure(nodes)` is homeomorphic to Hn = Rn x [0, infinity), or
 /// - that are in the boundary of any of the above cells
 ///
-///
 /// \sa `Cell::boundary()`, `Cell::star()`,
 ///     `outerBoundary()`, `star()`, `closure()`, `opening()`.
 ///
@@ -46,7 +45,6 @@ core::Array<Node*> boundary(core::ConstSpan<Node*> nodes);
 /// - not contained in `cells`, or
 /// - whose opening in `closure(cells)` is homeomorphic to Hn = Rn x [0, infinity), or
 /// - that are in the boundary of any of the above cells
-///
 ///
 /// \sa `Cell::boundary()`, `Cell::star()`,
 ///     `outerBoundary()`, `star()`, `closure()`, `opening()`.
@@ -74,7 +72,8 @@ core::Array<Node*> outerBoundary(core::ConstSpan<Node*> nodes);
 VGC_VACOMPLEX_API
 core::Array<Cell*> outerBoundary(core::ConstSpan<Cell*> cells);
 
-/// Returns the union of the star of the given `nodes`.
+/// Returns the union of the star of the given `nodes`, excluding any cell that
+/// is already in `nodes`.
 ///
 /// \sa `Cell::boundary()`, `Cell::star()`,
 ///     `boundary()`, `outerBoundary()`, `closure()`, `opening()`.
@@ -82,7 +81,8 @@ core::Array<Cell*> outerBoundary(core::ConstSpan<Cell*> cells);
 VGC_VACOMPLEX_API
 core::Array<Node*> star(core::ConstSpan<Node*> nodes);
 
-/// Returns the union of the star of the given `cells`.
+/// Returns the union of the star of the given `cells`, excluding any cell that
+/// is already in `nodes`.
 ///
 /// \sa `Cell::boundary()`, `Cell::star()`,
 ///     `boundary()`, `outerBoundary()`, `closure()`, `opening()`.

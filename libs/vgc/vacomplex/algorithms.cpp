@@ -74,6 +74,22 @@ void extendUnique(core::Array<OutType*>& output, CellRangeView cells) {
     }
 }
 
+// Appends all the given `cells` to `output`, except if already in the `output`
+// or in the `exclusion` list.
+//
+template<typename OutType, typename ExType>
+void extendUniqueExcluded(
+    core::Array<OutType*>& output,
+    CellRangeView cells,
+    core::ConstSpan<ExType*> exclusion) {
+
+    for (Cell* cell : cells) {
+        if (!output.contains(cell) && !exclusion.contains(cell)) {
+            output.append(cell);
+        }
+    }
+}
+
 template<typename OutType, typename InType>
 core::Array<OutType*> closure_(core::ConstSpan<InType*> input) {
     core::Array<OutType*> output = copy<OutType>(input);
@@ -96,7 +112,7 @@ template<typename OutType>
 core::Array<OutType*> star_(core::ConstSpan<OutType*> input) {
     core::Array<OutType*> output;
     forEachCell(input, [&](Cell* cell) { //
-        extendUnique(output, cell->star());
+        extendUniqueExcluded(output, cell->star(), input);
     });
     return output;
 }

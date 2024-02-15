@@ -425,6 +425,8 @@ public:
 
     /// Returns the boundary of the given elements.
     ///
+    /// See `vacomplex::boundary()` for details.
+    ///
     /// \sa `outerBoundary()`, `star()`, `closure()`, `opening()`.
     ///
     core::Array<core::Id> boundary(core::ConstSpan<core::Id> elementIds);
@@ -438,7 +440,8 @@ public:
     ///
     core::Array<core::Id> outerBoundary(core::ConstSpan<core::Id> elementIds);
 
-    /// Returns the union of the star of the given elements.
+    /// Returns the union of the star of the given elements, excluding any cell
+    /// that is already in `elementIds`.
     ///
     /// \sa `boundary()`, `outerBoundary()`, `closure()`, `opening()`.
     ///
