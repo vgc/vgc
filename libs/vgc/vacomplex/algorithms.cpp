@@ -24,13 +24,15 @@ namespace vgc::vacomplex {
 
 namespace {
 
+// Copies the ConstSpan into an Array, safe-casting Node* to Cell* if necessary.
+//
 template<typename OutType, typename InType>
-core::Array<OutType*> initAddFromOp(core::ConstSpan<InType*> input) {
+core::Array<OutType*> copy(core::ConstSpan<InType*> input) {
     return core::Array<OutType*>(input);
 }
 
 template<>
-core::Array<Cell*> initAddFromOp(core::ConstSpan<Node*> input) {
+core::Array<Cell*> copy(core::ConstSpan<Node*> input) {
     core::Array<Cell*> output;
     output.reserve(input.length());
     for (Node* node : input) {
@@ -41,64 +43,65 @@ core::Array<Cell*> initAddFromOp(core::ConstSpan<Node*> input) {
     return output;
 }
 
-template<typename OutType>
-void addFromOp(
-    core::ConstSpan<Node*> input,
-    core::Array<OutType*>& output,
-    CellRangeView (Cell::*op)() const) {
+// Executes the given `fn` for all `cells`.
+//
+template<typename Fn>
+void forEachCell(core::ConstSpan<Cell*> cells, Fn fn) {
+    for (Cell* cell : cells) {
+        fn(cell);
+    }
+}
 
-    for (Node* node : input) {
+// Executes the given `fn` for all cells among the given `nodes`.
+//
+template<typename Fn>
+void forEachCell(core::ConstSpan<Node*> nodes, Fn fn) {
+    for (Node* node : nodes) {
         if (Cell* cell = node->toCell()) {
-            for (Cell* otherCell : (cell->*op)()) {
-                if (!output.contains(otherCell)) {
-                    output.append(otherCell);
-                }
-            }
+            fn(cell);
         }
     }
 }
 
+// Appends all the given `cells` to `output`, except if already in the `output`.
+//
 template<typename OutType>
-void addFromOp(
-    core::ConstSpan<Cell*> input,
-    core::Array<OutType*>& output,
-    CellRangeView (Cell::*op)() const) {
-
-    for (Cell* cell : input) {
-        for (Cell* otherCell : (cell->*op)()) {
-            if (!output.contains(otherCell)) {
-                output.append(otherCell);
-            }
+void extendUnique(core::Array<OutType*>& output, CellRangeView cells) {
+    for (Cell* cell : cells) {
+        if (!output.contains(cell)) {
+            output.append(cell);
         }
     }
-}
-
-template<typename OutType, typename InType>
-core::Array<OutType*>
-addFromOp(core::ConstSpan<InType*> input, CellRangeView (Cell::*op)() const) {
-    core::Array<OutType*> output = initAddFromOp<OutType>(input);
-    addFromOp(input, output, op);
-    return output;
-}
-
-template<typename T>
-core::Array<T*> setFromOp(core::ConstSpan<T*> input, CellRangeView (Cell::*op)() const) {
-    core::Array<T*> output;
-    addFromOp(input, output, op);
-    return output;
 }
 
 template<typename OutType, typename InType>
 core::Array<OutType*> closure_(core::ConstSpan<InType*> input) {
-    return addFromOp<OutType>(input, &Cell::boundary);
+    core::Array<OutType*> output = copy<OutType>(input);
+    forEachCell(input, [&](Cell* cell) { //
+        extendUnique(output, cell->boundary());
+    });
+    return output;
 };
 
 template<typename OutType, typename InType>
 core::Array<OutType*> opening_(core::ConstSpan<InType*> input) {
-    return addFromOp<OutType>(input, &Cell::star);
+    core::Array<OutType*> output = copy<OutType>(input);
+    forEachCell(input, [&](Cell* cell) { //
+        extendUnique(output, cell->star());
+    });
+    return output;
 };
 
-// Count the number of uses of `edge` by the given `face`.
+template<typename OutType>
+core::Array<OutType*> star_(core::ConstSpan<OutType*> input) {
+    core::Array<OutType*> output;
+    forEachCell(input, [&](Cell* cell) { //
+        extendUnique(output, cell->star());
+    });
+    return output;
+}
+
+// Returns the number of uses of `edge` by the given `face`.
 //
 Int countUses_(KeyEdge* edge, KeyFace* face) {
     Int count = 0;
@@ -115,7 +118,7 @@ Int countUses_(KeyEdge* edge, KeyFace* face) {
     return count;
 }
 
-// Count the number of uses of `vertex` by the given `edge`.
+// Returns the number of uses of `vertex` by the given `edge`.
 //
 Int countUses_(KeyVertex* vertex, KeyEdge* edge) {
     Int count = 0;
@@ -128,15 +131,23 @@ Int countUses_(KeyVertex* vertex, KeyEdge* edge) {
     return count;
 }
 
+// Appends the given `vertex` to `output` if its opening in `closure(input)` is
+// locally homeomorphic to the boundary of an open curve.
+//
+// Note:
+//
+// [1] `input.contains(starCell)` is equivalent to
+//     `closure(input).contains(starCell)` in this context.
+//
 template<typename InType>
-void maybeAddVertexToBoundary(
+void appendVertexIfBoundaryLike(
     core::ConstSpan<InType*> input,
     core::Array<Cell*>& output,
     KeyVertex* vertex) {
 
     Int nUses = 0;
     for (Cell* starCell : vertex->star()) {
-        if (input.contains(starCell)) {
+        if (input.contains(starCell)) { // [1]
             if (KeyFace* face = starCell->toKeyFace()) {
                 return;
             }
@@ -153,15 +164,18 @@ void maybeAddVertexToBoundary(
     }
 }
 
+// Appends the given `edge` to `output` if its opening in `closure(input)` is
+// locally homeomorphic to the boundary of a surface.
+//
 template<typename InType>
-void maybeAddEdgeToBoundary(
+void appendEdgeIfBoundaryLike(
     core::ConstSpan<InType*> input,
     core::Array<Cell*>& output,
     KeyEdge* edge) {
 
     Int nUses = 0;
     for (Cell* starCell : edge->star()) {
-        if (input.contains(starCell)) {
+        if (input.contains(starCell)) { // [1]
             if (KeyFace* face = starCell->toKeyFace()) {
                 nUses += countUses_(edge, face);
                 if (nUses > 1) {
@@ -175,17 +189,20 @@ void maybeAddEdgeToBoundary(
     }
 }
 
+// Appends the given `cell` to `output` if its opening in `closure(input)` is
+// locally homeomorphic to Hn = Rn x [0, infinity), where n = dim(cell) + 1.
+//
 template<typename InType>
-void maybeAddCellToBoundary(
+void appendCellIfBoundaryLike(
     core::ConstSpan<InType*> input,
     core::Array<Cell*>& output,
     Cell* cell) {
 
     if (KeyVertex* vertex = cell->toKeyVertex()) {
-        maybeAddVertexToBoundary(input, output, vertex);
+        appendVertexIfBoundaryLike(input, output, vertex);
     }
     else if (KeyEdge* edge = cell->toKeyEdge()) {
-        maybeAddEdgeToBoundary(input, output, edge);
+        appendEdgeIfBoundaryLike(input, output, edge);
     }
 }
 
@@ -196,14 +213,14 @@ core::Array<OutType*> boundary_(core::ConstSpan<OutType*> input) {
 
     // Iterate over the closure of the input and add to the boundary:
     // - each cell that is not in the input, and
-    // - each (n-1)-cell whose star within the input is homeomorphic to Hn = Rn x [0, infinity)
+    // - each (n-1)-cell whose opening in closure(input) is homeomorphic to Hn = Rn x [0, infinity)
     //
     for (Cell* cell : closure_<Cell>(input)) {
         if (!input.contains(cell)) {
             output.append(cell);
         }
         else {
-            maybeAddCellToBoundary(input, output, cell);
+            appendCellIfBoundaryLike(input, output, cell);
         }
     }
 
@@ -220,7 +237,7 @@ core::Array<OutType*> outerBoundary_(core::ConstSpan<OutType*> input) {
     // (!input_.contains(cell))`, since we know it is always false.
     //
     for (Cell* cell : input_) {
-        maybeAddCellToBoundary(input, output, cell);
+        appendCellIfBoundaryLike(input, output, cell);
     }
 
     return closure_<OutType, Cell>(output);
@@ -245,11 +262,11 @@ core::Array<Cell*> outerBoundary(core::ConstSpan<Cell*> cells) {
 };
 
 core::Array<Node*> star(core::ConstSpan<Node*> nodes) {
-    return setFromOp(nodes, &Cell::star);
+    return star_<Node>(nodes);
 };
 
 core::Array<Cell*> star(core::ConstSpan<Cell*> cells) {
-    return setFromOp(cells, &Cell::star);
+    return star_<Cell>(cells);
 };
 
 core::Array<Node*> closure(core::ConstSpan<Node*> nodes) {
