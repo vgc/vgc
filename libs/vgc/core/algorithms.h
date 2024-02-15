@@ -17,11 +17,13 @@
 /// \file vgc/core/algorithms.h
 /// \brief General-purpose algorithms functions missing in <algorithm>
 
-#ifndef VGC_CORE_ALGORITHM_H
-#define VGC_CORE_ALGORITHM_H
+#ifndef VGC_CORE_ALGORITHMS_H
+#define VGC_CORE_ALGORITHMS_H
 
-#include <algorithm>
+#include <algorithm> // find, sort, set_difference, upper_bound, ...
 #include <cassert>
+#include <iterator> // output_iterator_tag
+#include <memory>   // addressof
 #include <numeric>
 #include <string>
 #include <vector>
@@ -144,6 +146,18 @@ bool removeOne(std::vector<T>& v, const T& x) {
     }
 }
 
+/// Copies elements from the sorted container `c1` which are not found in the
+/// sorted container `c2` to the given output iterator `out`. The output range
+/// is also sorted.
+///
+/// This is equivalent to
+/// `std::set_difference(c1.begin(), c1.end(), c2.begin(), c2.end(), out)`.
+///
+template<class Container1, class Container2, class OutputIt>
+OutputIt set_difference(const Container1& c1, const Container2& c2, OutputIt out) {
+    return std::set_difference(c1.begin(), c1.end(), c2.begin(), c2.end(), out);
+}
+
 /// Returns the index of the first element in the vector that is (strictly)
 /// greater than value, or -1 if no such element is found.
 ///
@@ -190,6 +204,66 @@ hashCombine(std::size_t& res, const Ts&... values) {
     (hashCombine(res, values), ...);
 }
 
+/// \class vgc::core::AppendIterator
+/// \brief An output iterator for adding to containers via append() method.
+///
+/// This is similar to `std::back_insert_iterator`, but for containers
+/// providing an `append()` method instead.
+///
+/// \sa `vgc::core::appender()`.
+///
+template<class Container>
+class AppendIterator {
+protected:
+    Container* container_;
+
+public:
+    using iterator_category = std::output_iterator_tag;
+    using value_type = void;
+    using difference_type = ptrdiff_t;
+    using pointer = void;
+    using reference = void;
+    using container_type = Container;
+
+    constexpr explicit AppendIterator(Container& c)
+        : container_(std::addressof(c)) {
+    }
+
+    constexpr AppendIterator& operator=(const typename Container::value_type& v) {
+        container_->append(v);
+        return *this;
+    }
+
+    constexpr AppendIterator& operator=(typename Container::value_type&& v) {
+        container_->append(std::move(v));
+        return *this;
+    }
+
+    constexpr AppendIterator& operator*() {
+        return *this;
+    }
+
+    constexpr AppendIterator& operator++() {
+        return *this;
+    }
+
+    constexpr AppendIterator operator++(int) {
+        return *this;
+    }
+};
+
+/// Constructs an output `AppendIterator` for the given `container`.
+///
+/// ```cpp
+/// core::Array<int> v = {1, 2, 3};
+/// std::fill_n(core::appender(v), 2, 0); // v = {1, 2, 3, 0, 0}
+/// ```
+///
+template<class Container>
+constexpr AppendIterator<Container> appender(Container& container) {
+    return AppendIterator<Container>(container);
+}
+
 } // namespace vgc::core
 
-#endif // VGC_CORE_ALGORITHM_H
+#endif // VGC_CORE_ALGORITHMS_H
