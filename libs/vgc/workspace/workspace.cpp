@@ -913,11 +913,12 @@ Workspace::connectedComponents(core::ConstSpan<core::Id> elementIds) const {
 
     // Separate into VAC nodes and other elements
     core::Array<core::Id> otherElements;
-    core::Array<vacomplex::Node*> nodes = toVacNodes(*this, elementIds, otherElements);
+    core::Array<vacomplex::Node*> nodeElements =
+        toVacNodes(*this, elementIds, otherElements);
 
     // Compute connected components of VAC nodes
     core::Array<core::Array<vacomplex::Node*>> connectedComponents =
-        vacomplex::connectedComponents(nodes);
+        vacomplex::connectedComponents(nodeElements);
 
     // Convert to output IDs
     core::Array<core::Array<core::Id>> result;
