@@ -193,7 +193,7 @@
 }
 
 .Menu > .button > .shortcut {
-    text-horizontal-align: left;
+    text-horizontal-align: right;
 }
 
 .LineEdit {
