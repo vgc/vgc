@@ -49,6 +49,15 @@ VGC_TOOLS_API
 VGC_UI_DECLARE_COMMAND(invertSelectionExcludeBoundary)
 
 VGC_TOOLS_API
+VGC_UI_DECLARE_COMMAND(selectSameType)
+
+VGC_TOOLS_API
+VGC_UI_DECLARE_COMMAND(selectSameColor)
+
+VGC_TOOLS_API
+VGC_UI_DECLARE_COMMAND(selectSameTypeAndColor)
+
+VGC_TOOLS_API
 VGC_UI_DECLARE_COMMAND(selectBoundary)
 
 VGC_TOOLS_API
@@ -126,6 +135,15 @@ private:
 
     void onInvertSelectionExcludeBoundary_();
     VGC_SLOT(onInvertSelectionExcludeBoundary_)
+
+    void onSelectSameType_();
+    VGC_SLOT(onSelectSameType_)
+
+    void onSelectSameColor_();
+    VGC_SLOT(onSelectSameColor_)
+
+    void onSelectSameTypeAndColor_();
+    VGC_SLOT(onSelectSameTypeAndColor_)
 
     void onSelectBoundary_();
     VGC_SLOT(onSelectBoundary_)
