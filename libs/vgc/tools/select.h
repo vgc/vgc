@@ -73,13 +73,13 @@ VGC_TOOLS_API
 VGC_UI_DECLARE_COMMAND(selectLess)
 
 VGC_TOOLS_API
-VGC_UI_DECLARE_COMMAND(selectVertices)
+VGC_UI_DECLARE_COMMAND(keepOnlyVerticesSelected)
 
 VGC_TOOLS_API
-VGC_UI_DECLARE_COMMAND(selectEdges)
+VGC_UI_DECLARE_COMMAND(keepOnlyEdgesSelected)
 
 VGC_TOOLS_API
-VGC_UI_DECLARE_COMMAND(selectFaces)
+VGC_UI_DECLARE_COMMAND(keepOnlyFacesSelected)
 
 VGC_TOOLS_API
 VGC_UI_DECLARE_COMMAND(deselectVertices)
@@ -151,14 +151,14 @@ private:
     void onSelectLess_();
     VGC_SLOT(onSelectLess_)
 
-    void onSelectVertices_();
-    VGC_SLOT(onSelectVertices_)
+    void onKeepOnlyVerticesSelected_();
+    VGC_SLOT(onKeepOnlyVerticesSelected_)
 
-    void onSelectEdges_();
-    VGC_SLOT(onSelectEdges_)
+    void onKeepOnlyEdgesSelected_();
+    VGC_SLOT(onKeepOnlyEdgesSelected_)
 
-    void onSelectFaces_();
-    VGC_SLOT(onSelectFaces_)
+    void onKeepOnlyFacesSelected_();
+    VGC_SLOT(onKeepOnlyFacesSelected_)
 
     void onDeselectVertices_();
     VGC_SLOT(onDeselectVertices_)

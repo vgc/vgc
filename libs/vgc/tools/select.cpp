@@ -148,21 +148,21 @@ VGC_UI_ADD_DEFAULT_SHORTCUT(selectLess(), Shortcut(shift, Key::LessThan))
 } // namespace
 
 VGC_UI_DEFINE_WINDOW_COMMAND( //
-    selectVertices,
-    "tools.select.selectVertices",
-    "Select Vertices",
+    keepOnlyVerticesSelected,
+    "tools.select.keepOnlyVerticesSelected",
+    "Keep Only Vertices Selected",
     Shortcut(alt, Key::V));
 
 VGC_UI_DEFINE_WINDOW_COMMAND( //
-    selectEdges,
-    "tools.select.selectEdges",
-    "Select Edges",
+    keepOnlyEdgesSelected,
+    "tools.select.keepOnlyEdgesSelected",
+    "Keep Only Edges Selected",
     Shortcut(alt, Key::E));
 
 VGC_UI_DEFINE_WINDOW_COMMAND( //
-    selectFaces,
-    "tools.select.selectFaces",
-    "Select Faces",
+    keepOnlyFacesSelected,
+    "tools.select.keepOnlyFacesSelected",
+    "Keep Only Faces Selected",
     Shortcut(alt, Key::F));
 
 VGC_UI_DEFINE_WINDOW_COMMAND( //
@@ -228,9 +228,9 @@ SelectModule::SelectModule(CreateKey key, const ui::ModuleContext& context)
     c.addAction(selectLess(), onSelectLess_Slot());
 
     c.addSeparator();
-    c.addAction(selectVertices(), onSelectVertices_Slot());
-    c.addAction(selectEdges(), onSelectEdges_Slot());
-    c.addAction(selectFaces(), onSelectFaces_Slot());
+    c.addAction(keepOnlyVerticesSelected(), onKeepOnlyVerticesSelected_Slot());
+    c.addAction(keepOnlyEdgesSelected(), onKeepOnlyEdgesSelected_Slot());
+    c.addAction(keepOnlyFacesSelected(), onKeepOnlyFacesSelected_Slot());
 
     c.addSeparator();
     c.addAction(deselectVertices(), onDeselectVertices_Slot());
@@ -594,7 +594,7 @@ void SelectModule::onSelectLess_() {
 
 namespace {
 
-core::Array<core::Id> selectCellType(
+core::Array<core::Id> keepOnlyCellTypeSelected(
     const workspace::Workspace& workspace,
     const core::Array<core::Id>& itemIds,
     vacomplex::CellType cellType) {
@@ -633,9 +633,9 @@ core::Array<core::Id> deselectCellType(
 
 } // namespace
 
-void SelectModule::onSelectVertices_() {
+void SelectModule::onKeepOnlyVerticesSelected_() {
     if (auto context = SelectContextLock(documentManager_)) {
-        core::Array<core::Id> itemIds = selectCellType(
+        core::Array<core::Id> itemIds = keepOnlyCellTypeSelected(
             *context.workspace(),
             context.workspaceSelection()->itemIds(),
             vacomplex::CellType::KeyVertex);
@@ -643,9 +643,9 @@ void SelectModule::onSelectVertices_() {
     }
 }
 
-void SelectModule::onSelectEdges_() {
+void SelectModule::onKeepOnlyEdgesSelected_() {
     if (auto context = SelectContextLock(documentManager_)) {
-        core::Array<core::Id> itemIds = selectCellType(
+        core::Array<core::Id> itemIds = keepOnlyCellTypeSelected(
             *context.workspace(),
             context.workspaceSelection()->itemIds(),
             vacomplex::CellType::KeyEdge);
@@ -653,9 +653,9 @@ void SelectModule::onSelectEdges_() {
     }
 }
 
-void SelectModule::onSelectFaces_() {
+void SelectModule::onKeepOnlyFacesSelected_() {
     if (auto context = SelectContextLock(documentManager_)) {
-        core::Array<core::Id> itemIds = selectCellType(
+        core::Array<core::Id> itemIds = keepOnlyCellTypeSelected(
             *context.workspace(),
             context.workspaceSelection()->itemIds(),
             vacomplex::CellType::KeyFace);
