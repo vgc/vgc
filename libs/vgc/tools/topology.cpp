@@ -20,6 +20,7 @@
 
 #include <vgc/canvas/documentmanager.h>
 #include <vgc/canvas/workspaceselection.h>
+#include <vgc/core/os.h>
 #include <vgc/ui/menu.h>
 #include <vgc/ui/standardmenus.h>
 #include <vgc/workspace/workspace.h>
@@ -34,24 +35,36 @@ using ui::Shortcut;
 using ui::modifierkeys::alt;
 using ui::modifierkeys::ctrl;
 
+namespace {
+
+#ifdef VGC_CORE_OS_MACOS
+ui::Key primaryDeleteKey_ = Key::Backspace;
+ui::Key secondaryDeleteKey_ = Key::Delete;
+#else
+ui::Key primaryDeleteKey_ = Key::Delete;
+ui::Key secondaryDeleteKey_ = Key::Backspace;
+#endif
+
+} // namespace
+
 VGC_UI_DEFINE_WINDOW_COMMAND( //
     softDelete,
     "tools.topology.softDelete",
     "Soft Delete",
-    Shortcut(Key::Backspace));
+    Shortcut(primaryDeleteKey_));
 
 VGC_UI_DEFINE_WINDOW_COMMAND( //
     hardDelete,
     "tools.topology.hardDelete",
     "Hard Delete",
-    Shortcut(ctrl, Key::Backspace));
+    Shortcut(ctrl, primaryDeleteKey_));
 
 namespace {
 
 // Secondary shortcuts
 //
-VGC_UI_ADD_DEFAULT_SHORTCUT(softDelete(), Shortcut(Key::Delete))
-VGC_UI_ADD_DEFAULT_SHORTCUT(hardDelete(), Shortcut(ctrl, Key::Delete))
+VGC_UI_ADD_DEFAULT_SHORTCUT(softDelete(), Shortcut(secondaryDeleteKey_))
+VGC_UI_ADD_DEFAULT_SHORTCUT(hardDelete(), Shortcut(ctrl, secondaryDeleteKey_))
 
 } // namespace
 
