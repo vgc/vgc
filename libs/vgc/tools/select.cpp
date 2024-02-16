@@ -17,11 +17,14 @@
 #include <vgc/tools/select.h>
 
 #include <algorithm> // max
+#include <optional>
 #include <set>
+#include <utility> // pair
 
 #include <vgc/canvas/documentmanager.h>
 #include <vgc/canvas/workspaceselection.h>
 #include <vgc/core/algorithms.h> // sort, set_difference, appender
+#include <vgc/core/color.h>
 #include <vgc/graphics/detail/shapeutil.h>
 #include <vgc/graphics/strings.h>
 #include <vgc/tools/copypaste.h>
@@ -83,6 +86,24 @@ VGC_UI_DEFINE_WINDOW_COMMAND( //
     "tools.select.invertSelectionExcludeBoundary",
     "Invert Selection (Exclude Boundary)",
     Shortcut(ctrl | alt, Key::I));
+
+VGC_UI_DEFINE_WINDOW_COMMAND( //
+    selectSameType,
+    "tools.select.selectSameType",
+    "Select Same Type",
+    Shortcut());
+
+VGC_UI_DEFINE_WINDOW_COMMAND( //
+    selectSameColor,
+    "tools.select.selectSameColor",
+    "Select Same Color",
+    Shortcut());
+
+VGC_UI_DEFINE_WINDOW_COMMAND( //
+    selectSameTypeAndColor,
+    "tools.select.selectSameTypeAndColor",
+    "Select Same Type and Color",
+    Shortcut());
 
 VGC_UI_DEFINE_WINDOW_COMMAND( //
     selectBoundary,
@@ -212,6 +233,11 @@ SelectModule::SelectModule(CreateKey key, const ui::ModuleContext& context)
         invertSelectionExcludeBoundary(), onInvertSelectionExcludeBoundary_Slot());
 
     c.addSeparator();
+    c.addAction(selectSameType(), onSelectSameType_Slot());
+    c.addAction(selectSameColor(), onSelectSameColor_Slot());
+    c.addAction(selectSameTypeAndColor(), onSelectSameTypeAndColor_Slot());
+
+    c.addSeparator();
     c.addAction(selectBoundary(), onSelectBoundary_Slot());
     c.addAction(selectOuterBoundary(), onSelectOuterBoundary_Slot());
     c.addAction(selectClosure(), onSelectClosure_Slot());
@@ -318,17 +344,32 @@ namespace {
 //
 using SelectionType = core::StringId;
 
-SelectionType getSelectionType(const workspace::Element* element) {
-    if (element) {
-        return element->tagName();
+std::optional<SelectionType> getSelectionType(const workspace::Element& item) {
+    SelectionType res = item.tagName();
+    if (!res.isEmpty()) {
+        return res;
     }
-    else {
-        return SelectionType();
-    }
+    return std::nullopt;
 }
 
-SelectionType getSelectionType(const workspace::Workspace& workspace, core::Id id) {
-    return getSelectionType(workspace.find(id));
+std::optional<core::Color> getColor(const workspace::Element& item) {
+    if (dom::Element* element = item.domElement()) {
+        const dom::Value& value = element->getAttribute(dom::strings::color);
+        if (value.type() == dom::ValueType::Color) {
+            return value.getColor();
+        }
+    }
+    return std::nullopt;
+}
+
+using TypeAndColor = std::pair<SelectionType, core::Color>;
+
+std::optional<TypeAndColor> getTypeAndColor(const workspace::Element& item) {
+    if (std::optional<SelectionType> type = getSelectionType(item)) {
+        if (std::optional<core::Color> color = getColor(item))
+            return std::make_pair(*type, *color);
+    }
+    return std::nullopt;
 }
 
 } // namespace
@@ -415,27 +456,32 @@ void SelectModule::onInvertSelection_() {
 //
 void SelectModule::onInvertSelectionSameType_() {
     if (auto context = SelectContextLock(documentManager_)) {
-        const core::Array<core::Id>& oldItemIds = context.workspaceSelection()->itemIds();
+        const workspace::Workspace& workspace = *context.workspace();
+        canvas::WorkspaceSelection& selection = *context.workspaceSelection();
+        const core::Array<core::Id>& oldItemIds = selection.itemIds();
         if (oldItemIds.isEmpty()) {
             return;
         }
-        SelectionType targetType =
-            getSelectionType(*context.workspace(), oldItemIds.first());
-        if (targetType.isEmpty()) {
+        workspace::Element* firstElement = workspace.find(oldItemIds.first());
+        if (!firstElement) {
+            return;
+        }
+        std::optional<SelectionType> targetType = getSelectionType(*firstElement);
+        if (!targetType) {
             return;
         }
         core::Array<core::Id> itemIds;
-        if (workspace::Element* root = context.workspace()->vgcElement()) {
+        if (workspace::Element* root = workspace.vgcElement()) {
             workspace::Element* child = root->firstChild();
             while (child) {
-                SelectionType type = getSelectionType(child);
+                std::optional<SelectionType> type = getSelectionType(*child);
                 if (type == targetType && !oldItemIds.contains(child->id())) {
                     itemIds.append(child->id());
                 }
                 child = child->nextSibling();
             }
         }
-        context.workspaceSelection()->setItemIds(itemIds);
+        selection.setItemIds(itemIds);
     }
 }
 
@@ -455,6 +501,66 @@ void SelectModule::onInvertSelectionExcludeBoundary_() {
         }
         context.workspaceSelection()->setItemIds(itemIds);
     }
+}
+
+namespace {
+
+// Select all objects with the same properties of the first selected object.
+//
+// `fn` must be a callable taking as input a const workspace::Element&, and
+// return an std::optional<T>, where T is the property you want to test.
+//
+// std::nullopt means that the item doesn't have the property, and therefore will
+// not be selected.
+//
+// XXX:
+// - behavior if selection contains more than one different values for
+//   the tested property? For now we only use the first.
+//
+template<typename Fn>
+void selectSame_(const canvas::DocumentManagerWeakPtr& documentManager_, Fn fn) {
+    if (auto context = SelectContextLock(documentManager_)) {
+        const workspace::Workspace& workspace = *context.workspace();
+        canvas::WorkspaceSelection& selection = *context.workspaceSelection();
+        const core::Array<core::Id>& oldItemIds = selection.itemIds();
+        if (oldItemIds.isEmpty()) {
+            return;
+        }
+        workspace::Element* firstElement = workspace.find(oldItemIds.first());
+        if (!firstElement) {
+            return;
+        }
+        auto targetProperty = fn(*firstElement); // returns an std::optional<T>
+        if (!targetProperty) {
+            return;
+        }
+        core::Array<core::Id> itemIds;
+        if (workspace::Element* root = workspace.vgcElement()) {
+            workspace::Element* child = root->firstChild();
+            while (child) {
+                auto property = fn(*child); // returns an std::optional<T>
+                if (property == targetProperty) {
+                    itemIds.append(child->id());
+                }
+                child = child->nextSibling();
+            }
+        }
+        selection.setItemIds(itemIds);
+    }
+}
+
+} // namespace
+
+void SelectModule::onSelectSameType_() {
+    selectSame_(documentManager_, &getSelectionType);
+}
+
+void SelectModule::onSelectSameColor_() {
+    selectSame_(documentManager_, &getColor);
+}
+
+void SelectModule::onSelectSameTypeAndColor_() {
+    selectSame_(documentManager_, &getTypeAndColor);
 }
 
 void SelectModule::onSelectBoundary_() {
