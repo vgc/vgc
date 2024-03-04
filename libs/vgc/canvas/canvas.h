@@ -205,9 +205,31 @@ public:
         const geometry::Vec2d& b,
         CoordinateSpace coordinateSpace = CoordinateSpace::Widget) const;
 
+    // TODO: Use enums and/or specific class such as WireframeMode,
+    // ControlPointVisibility, CanvasSettings, etc?
+
+    /// Returns whether the wireframe mode is enabled.
+    ///
+    bool isWireframeMode() const {
+        return isWireframeMode_;
+    }
+
+    /// Sets whether the wireframe mode is enabled.
+    ///
+    void setWireframeMode(bool isWireframeMode);
+
+    /// Returns whether the control points of all curves are visible.
+    ///
+    bool areControlPointsVisible() const {
+        return areControlPointsVisible_;
+    }
+
+    /// Sets whether the wireframe mode is enabled.
+    ///
+    void setControlPointsVisible(bool areControlPointsVisible);
+
 protected:
     // Reimplementation of Widget virtual methods
-    bool onKeyPress(ui::KeyPressEvent* event) override;
     bool onMouseMove(ui::MouseMoveEvent* event) override;
     bool onMousePress(ui::MousePressEvent* event) override;
     bool onMouseRelease(ui::MouseReleaseEvent* event) override;
@@ -291,17 +313,13 @@ private:
     ui::MouseButton mouseButtonAtPress_ =
         ui::MouseButton::None; // value of event->button at press
 
-    // Polygon mode. This is selected with the n/t/f keys.
-    // XXX This is a temporary quick method to switch between
-    // render modes. A more engineered method will come later.
+    // Wireframe mode
     bool isWireframeMode_ = false;
     graphics::RasterizerStatePtr fillRS_;
     graphics::RasterizerStatePtr wireframeRS_;
 
-    // Show control points. This is toggled with the "p" key.
-    // XXX This is a temporary quick method to switch between
-    // render modes. A more engineered method will come later.
-    bool showControlPoints_ = false;
+    // Show control points
+    bool areControlPointsVisible_ = false;
 
     // Performance logging
     core::PerformanceLogTask renderTask_;

@@ -27,18 +27,57 @@
 
 namespace vgc::geometry {
 
-enum class CurveSamplingQuality {
-    Disabled,
-    UniformVeryLow,
-    AdaptiveLow,
-    UniformHigh,
-    AdaptiveHigh,
-    UniformVeryHigh,
-    Max_ = UniformVeryHigh
+enum class CurveSamplingQuality : UInt8 {
+    Disabled = 0x0,
+
+    UniformVeryLow = 0x01,
+    UniformLow = 0x02,
+    UniformMedium = 0x03,
+    UniformHigh = 0x04,
+    UniformVeryHigh = 0x05,
+
+    AdaptiveVeryLow = 0x11,
+    AdaptiveLow = 0x12,
+    AdaptiveMedium = 0x13,
+    AdaptiveHigh = 0x14,
+    AdaptiveVeryHigh = 0x15
 };
 
 VGC_GEOMETRY_API
 VGC_DECLARE_ENUM(CurveSamplingQuality)
+
+/// Returns whether the given `CurveSamplingQuality` is an adaptive sampling.
+///
+/// Note that `CurveSamplingQuality::Disabled` is not considered an adaptive
+/// sampling.
+///
+inline bool isAdaptiveSampling(CurveSamplingQuality quality) {
+    return (static_cast<UInt8>(quality) & 0x10) == 0x10;
+}
+
+/// Returns and integer describing the level of quality
+/// of the given `CurveSamplingQuality`:
+///
+/// - 0: Disabled
+/// - 1: Very Low
+/// - 2: Low
+/// - 3: Medium
+/// - 4: High
+/// - 5: Very High
+///
+inline Int8 getSamplingQualityLevel(CurveSamplingQuality quality) {
+    return static_cast<Int8>(static_cast<UInt8>(quality) & 0x0f);
+}
+
+/// Returns the `CurveSamplingQuality` corresponding to the given quality
+/// `level` (between 0 and 5) and `adaptiveSampling` mode.
+///
+/// Note that if `level` is `0` and `adaptiveSampling` is `true`, then the
+/// returned `CurveSamplingQuality` is `Disabled`, which is fact not considered
+/// an adaptive sampling.
+///
+VGC_GEOMETRY_API
+CurveSamplingQuality getSamplingQuality(Int8 level, bool adaptiveSampling);
 
 enum class CurveSnapTransformationMode {
     LinearInArclength,

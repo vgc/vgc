@@ -18,7 +18,9 @@
 
 #include <vgc/canvas/canvas.h>
 #include <vgc/canvas/documentmanager.h>
+#include <vgc/canvas/logcategories.h>
 #include <vgc/canvas/workspaceselection.h>
+#include <vgc/core/os.h>
 #include <vgc/ui/menu.h>
 #include <vgc/ui/standardmenus.h>
 
@@ -28,6 +30,8 @@ namespace commands {
 
 using ui::Key;
 using ui::Shortcut;
+using ui::modifierkeys::alt;
+using ui::modifierkeys::mod;
 using ui::modifierkeys::shift;
 
 VGC_UI_DEFINE_WINDOW_COMMAND( //
@@ -72,6 +76,39 @@ VGC_UI_DEFINE_WINDOW_COMMAND( //
     "Fit View to Document",
     Shortcut(shift, Key::F));
 
+VGC_UI_DEFINE_WINDOW_COMMAND( //
+    controlPoints,
+    "canvas.controlPoints",
+    "Show/Hide Control Points",
+    Shortcut(alt, Key::P));
+
+VGC_UI_DEFINE_WINDOW_COMMAND( //
+    wireframe,
+    "canvas.wireframe",
+    "Show/Hide Wireframe",
+    Shortcut(alt, Key::W));
+
+VGC_UI_DEFINE_WINDOW_COMMAND( //
+    adaptiveSampling,
+    "canvas.adaptiveSampling",
+    "Toggle Adaptive Sampling",
+    Shortcut(mod, Key::A));
+
+// Note: we can't use Shortcut(mod, Key::Q) (Q for "quality"), because
+// Shift + Command + Q triggers macOS logout, which takes precedence.
+
+VGC_UI_DEFINE_WINDOW_COMMAND( //
+    decreaseSamplingQuality,
+    "canvas.decreaseSamplingQuality",
+    "Decrease Sampling Quality (Faster Rendering)",
+    Shortcut(mod, Key::S));
+
+VGC_UI_DEFINE_WINDOW_COMMAND( //
+    increaseSamplingQuality,
+    "canvas.increaseSamplingQuality",
+    "Increase Sampling Quality (Slower Rendering)",
+    Shortcut(mod, Key::D));
+
 } // namespace commands
 
 CanvasManager::CanvasManager(CreateKey key, const ui::ModuleContext& context)
@@ -105,6 +142,20 @@ CanvasManager::CanvasManager(CreateKey key, const ui::ModuleContext& context)
     c.addSeparator();
     c.addAction(fitViewToSelection(), onFitViewToSelection_Slot());
     c.addAction(fitViewToDocument(), onFitViewToDocument_Slot());
+
+    c.addSeparator();
+    c.addAction(controlPoints(), onControlPoints_Slot());
+    c.addAction(wireframe(), onWireframe_Slot());
+
+    c.addSeparator();
+    c.addAction(adaptiveSampling(), onAdaptiveSampling_Slot());
+    c.addAction(decreaseSamplingQuality(), onDecreaseSamplingQuality_Slot());
+    c.addAction(increaseSamplingQuality(), onIncreaseSamplingQuality_Slot());
+
+// Add separation with automatically generated "Enter Fullscreen" item on macOS
+#ifdef VGC_CORE_OS_MACOS
+    c.addSeparator();
+#endif
 }
 
 CanvasManagerPtr CanvasManager::create(const ui::ModuleContext& context) {
@@ -237,7 +288,7 @@ void fitViewToRect_(Canvas& canvas, const geometry::Rect2d& rect) {
 // TODO: have both const and non-const versions of Workspace::visit...() so
 // that we can use a `const Workspace&` argument here.
 //
-void FitViewToDocument_(Canvas& canvas, workspace::Workspace& workspace) {
+void fitViewToDocument_(Canvas& canvas, workspace::Workspace& workspace) {
 
     // TODO: implement Workspace::boundingBox().
     geometry::Rect2d rect = geometry::Rect2d::empty;
@@ -248,14 +299,14 @@ void FitViewToDocument_(Canvas& canvas, workspace::Workspace& workspace) {
     fitViewToRect_(canvas, rect);
 }
 
-void FitViewToSelection_(
+void fitViewToSelection_(
     Canvas& canvas,
     workspace::Workspace& workspace,
     WorkspaceSelection& selection) {
 
     const core::Array<core::Id>& itemIds = selection.itemIds();
     if (itemIds.isEmpty()) {
-        FitViewToDocument_(canvas, workspace);
+        fitViewToDocument_(canvas, workspace);
     }
     else {
         geometry::Rect2d rect = geometry::Rect2d::empty;
@@ -275,7 +326,7 @@ void CanvasManager::onFitViewToSelection_() {
     if (auto canvas = activeCanvas().lock()) {
         if (auto workspace = canvas->workspace().lock()) {
             if (auto selection = canvas->workspaceSelection().lock()) {
-                FitViewToSelection_(*canvas, *workspace, *selection);
+                fitViewToSelection_(*canvas, *workspace, *selection);
             }
         }
     }
@@ -284,7 +335,92 @@ void CanvasManager::onFitViewToSelection_() {
 void CanvasManager::onFitViewToDocument_() {
     if (auto canvas = activeCanvas().lock()) {
         if (auto workspace = canvas->workspace().lock()) {
-            FitViewToDocument_(*canvas, *workspace);
+            fitViewToDocument_(*canvas, *workspace);
+        }
+    }
+}
+
+void CanvasManager::onControlPoints_() {
+    if (auto canvas = activeCanvas().lock()) {
+        canvas->setControlPointsVisible(!canvas->areControlPointsVisible());
+    }
+}
+
+void CanvasManager::onWireframe_() {
+    if (auto canvas = activeCanvas().lock()) {
+        canvas->setWireframeMode(!canvas->isWireframeMode());
+    }
+}
+
+namespace {
+
+void setSamplingQuality_(
+    vacomplex::Complex& complex,
+    canvas::Canvas& canvas,
+    geometry::CurveSamplingQuality quality) {
+
+    VGC_INFO(
+        LogVgcCanvas,
+        "Switched edge subdivision quality to: {}",
+        core::Enum::prettyName(quality));
+
+    complex.setSamplingQuality(quality);
+    canvas.requestRepaint();
+}
+
+} // namespace
+
+void CanvasManager::onAdaptiveSampling_() {
+    if (auto canvas = activeCanvas().lock()) {
+        if (auto workspace = canvas->workspace().lock()) {
+            auto complex = workspace->vac().lock();
+            if (!complex) {
+                return;
+            }
+            geometry::CurveSamplingQuality quality = complex->samplingQuality();
+            Int8 level = geometry::getSamplingQualityLevel(quality);
+            bool oldIsAdaptive = geometry::isAdaptiveSampling(quality);
+            bool newIsAdaptive = !oldIsAdaptive;
+            quality = geometry::getSamplingQuality(level, newIsAdaptive);
+            setSamplingQuality_(*complex, *canvas, quality);
+        }
+    }
+}
+
+void CanvasManager::onDecreaseSamplingQuality_() {
+    if (auto canvas = activeCanvas().lock()) {
+        if (auto workspace = canvas->workspace().lock()) {
+            auto complex = workspace->vac().lock();
+            if (!complex) {
+                return;
+            }
+            geometry::CurveSamplingQuality quality = complex->samplingQuality();
+            bool isAdaptive = geometry::isAdaptiveSampling(quality);
+            Int8 oldLevel = geometry::getSamplingQualityLevel(quality);
+            Int minLevel = isAdaptive ? 1 : 0;
+            Int maxLevel = 5;
+            Int8 newLevel = core::clamp(oldLevel - 1, minLevel, maxLevel);
+            quality = geometry::getSamplingQuality(newLevel, isAdaptive);
+            setSamplingQuality_(*complex, *canvas, quality);
+        }
+    }
+}
+
+void CanvasManager::onIncreaseSamplingQuality_() {
+    if (auto canvas = activeCanvas().lock()) {
+        if (auto workspace = canvas->workspace().lock()) {
+            auto complex = workspace->vac().lock();
+            if (!complex) {
+                return;
+            }
+            geometry::CurveSamplingQuality quality = complex->samplingQuality();
+            bool isAdaptive = geometry::isAdaptiveSampling(quality);
+            Int8 oldLevel = geometry::getSamplingQualityLevel(quality);
+            Int minLevel = isAdaptive ? 1 : 0;
+            Int maxLevel = 5;
+            Int8 newLevel = core::clamp(oldLevel + 1, minLevel, maxLevel);
+            quality = geometry::getSamplingQuality(newLevel, isAdaptive);
+            setSamplingQuality_(*complex, *canvas, quality);
         }
     }
 }
