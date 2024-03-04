@@ -48,6 +48,21 @@ VGC_UI_DECLARE_COMMAND(fitViewToSelection)
 VGC_CANVAS_API
 VGC_UI_DECLARE_COMMAND(fitViewToDocument)
 
+VGC_CANVAS_API
+VGC_UI_DECLARE_COMMAND(controlPoints)
+
+VGC_CANVAS_API
+VGC_UI_DECLARE_COMMAND(wireframe)
+
+VGC_CANVAS_API
+VGC_UI_DECLARE_COMMAND(adaptiveSampling)
+
+VGC_CANVAS_API
+VGC_UI_DECLARE_COMMAND(decreaseSamplingQuality)
+
+VGC_CANVAS_API
+VGC_UI_DECLARE_COMMAND(increaseSamplingQuality)
+
 } // namespace commands
 
 VGC_DECLARE_OBJECT(Canvas);
@@ -126,6 +141,21 @@ private:
 
     void onFitViewToDocument_();
     VGC_SLOT(onFitViewToDocument_);
+
+    void onControlPoints_();
+    VGC_SLOT(onControlPoints_);
+
+    void onWireframe_();
+    VGC_SLOT(onWireframe_);
+
+    void onAdaptiveSampling_();
+    VGC_SLOT(onAdaptiveSampling_);
+
+    void onDecreaseSamplingQuality_();
+    VGC_SLOT(onDecreaseSamplingQuality_);
+
+    void onIncreaseSamplingQuality_();
+    VGC_SLOT(onIncreaseSamplingQuality_);
 };
 
 } // namespace vgc::canvas

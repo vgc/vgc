@@ -1403,9 +1403,17 @@ void Sketch::startCurve_(ui::MouseEvent* event) {
 
     if (vacomplex::KeyEdge* keyEdge = toKeyEdge(workspace.get(), edgeItemId_)) {
 
-        // Use low sampling quality override to minimize lag.
-        keyEdge->data().setSamplingQualityOverride(
-            geometry::CurveSamplingQuality::AdaptiveLow);
+        // Use low sampling quality override to minimize lag, unless current quality
+        // is already even lower.
+        //
+        if (auto complex = workspace->vac().lock()) {
+            geometry::CurveSamplingQuality quality = complex->samplingQuality();
+            bool isAdaptive = geometry::isAdaptiveSampling(quality);
+            Int8 level = geometry::getSamplingQualityLevel(quality);
+            Int8 newLevel = std::min<Int8>(level, 2); // 2 = Low
+            quality = geometry::getSamplingQuality(newLevel, isAdaptive);
+            keyEdge->data().setSamplingQualityOverride(quality);
+        }
 
         // Move edge to proper depth location.
         vacomplex::ops::moveBelowBoundary(keyEdge);

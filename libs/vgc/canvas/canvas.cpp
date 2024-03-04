@@ -20,7 +20,6 @@
 #include <QCursor>
 #include <QPainter>
 
-#include <vgc/canvas/logcategories.h>
 #include <vgc/canvas/strings.h>
 #include <vgc/canvas/workspaceselection.h>
 #include <vgc/core/array.h>
@@ -269,72 +268,18 @@ core::Array<core::Id> Canvas::computeRectangleSelectionCandidates(
     return result;
 }
 
-// TODO: Use commands/actions instead of hard-coded onKeyPress
-//
-bool Canvas::onKeyPress(ui::KeyPressEvent* event) {
-
-    using namespace ui::modifierkeys;
-    if (event->modifierKeys() != (ctrl | alt | shift)) {
-        return false;
-    }
-
-    switch (event->key()) {
-    case ui::Key::W:
-        isWireframeMode_ = !isWireframeMode_;
+void Canvas::setWireframeMode(bool isWireframeMode) {
+    if (isWireframeMode_ != isWireframeMode) {
+        isWireframeMode_ = isWireframeMode;
         requestRepaint();
-        break;
-    case ui::Key::S: {
-        // Note: we can't use Key::Q (for "quality"), as Shift + Command + Q
-        // triggers macOS logout which takes precedence.
-        using geometry::CurveSamplingQuality;
-        auto workspace = workspace_.lock();
-        if (!workspace) {
-            break;
-        }
-        auto complex = workspace->vac().lock();
-        if (!complex) {
-            break;
-        }
-        CurveSamplingQuality quality = complex->samplingQuality();
-        switch (quality) {
-        case CurveSamplingQuality::Disabled:
-            quality = CurveSamplingQuality::UniformVeryLow;
-            break;
-        case CurveSamplingQuality::UniformVeryLow:
-            quality = CurveSamplingQuality::AdaptiveLow;
-            break;
-        case CurveSamplingQuality::AdaptiveLow:
-            quality = CurveSamplingQuality::UniformHigh;
-            break;
-        case CurveSamplingQuality::UniformHigh:
-            quality = CurveSamplingQuality::AdaptiveHigh;
-            break;
-        case CurveSamplingQuality::AdaptiveHigh:
-            quality = CurveSamplingQuality::UniformVeryHigh;
-            break;
-        case CurveSamplingQuality::UniformVeryHigh:
-            quality = CurveSamplingQuality::Disabled;
-            break;
-        }
-        VGC_INFO(
-            LogVgcCanvas,
-            "Switched edge subdivision quality to: {}",
-            core::Enum::prettyName(quality));
-        complex->setSamplingQuality(quality);
-        requestRepaint();
-        break;
     }
-    case ui::Key::P:
-        showControlPoints_ = !showControlPoints_;
-        requestRepaint();
-        break;
-    default:
-        return false;
-    }
+}
 
-    return true;
-    // Don't factor out "update()" here, to avoid unnecessary redraws for keys
-    // not handled here, including modifiers.
+void Canvas::setControlPointsVisible(bool areControlPointsVisible) {
+    if (areControlPointsVisible_ != areControlPointsVisible) {
+        areControlPointsVisible_ = areControlPointsVisible;
+        requestRepaint();
+    }
 }
 
 void Canvas::onWorkspaceChanged_() {
@@ -685,7 +630,7 @@ void Canvas::onPaintDraw(graphics::Engine* engine, ui::PaintOptions options) {
     //  - setup target for layers (painting a layer means using its result)
 
     workspace::PaintOptions commonPaintOptions = {};
-    if (showControlPoints_) {
+    if (areControlPointsVisible_) {
         commonPaintOptions.set(workspace::PaintOption::Editing);
     }
 
