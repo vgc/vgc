@@ -361,7 +361,7 @@ void setSamplingQuality_(
 
     VGC_INFO(
         LogVgcCanvas,
-        "Switched edge subdivision quality to: {}",
+        "Switched sampling quality to: {}",
         core::Enum::prettyName(quality));
 
     complex.setSamplingQuality(quality);
