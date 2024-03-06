@@ -209,7 +209,7 @@ void VacKeyFace::onPaintDraw(
         // in the next onPaintDraw(PaintOption::None), we go again in the code
         // path updating the face color.
     }
-    else if (!flags.has(PaintOption::Outline)) {
+    else if (flags.has(PaintOption::Normal)) {
         engine->setProgram(graphics::BuiltinProgram::Simple);
         engine->draw(graphics.fillGeometry());
     }

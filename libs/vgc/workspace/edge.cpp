@@ -327,7 +327,7 @@ void VacKeyEdge::onPaintDraw(
     constexpr core::Color offsetLine0Color(0.64f, 1.0f, 0.02f, 1.f);
     constexpr core::Color offsetLine1Color(1.0f, 0.02f, 0.64f, 1.f);
 
-    bool isPaintingStroke = !flags.hasAny({PaintOption::Outline, PaintOption::Selected});
+    bool isPaintingStroke = flags.has(PaintOption::Normal);
     bool isPaintingCPs = flags.has(PaintOption::Editing);
     bool isPaintingOutline = flags.has(PaintOption::Outline) || isPaintingCPs;
 
