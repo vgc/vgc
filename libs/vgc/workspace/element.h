@@ -71,6 +71,7 @@ struct Component {};
 ///
 enum class PaintOption : UInt64 {
     None = 0x00,
+    Normal = 0x01,
     Draft = 0x02,
     Hovered = 0x04,
     Selected = 0x08,

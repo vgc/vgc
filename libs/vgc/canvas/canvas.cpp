@@ -582,6 +582,29 @@ void Canvas::onPaintCreate(graphics::Engine* engine) {
     reload_ = true;
 }
 
+namespace {
+
+void drawSubpass(
+    graphics::Engine* engine,
+    const graphics::RasterizerStatePtr& rasterizerState,
+    workspace::Workspace& workspace,
+    workspace::PaintOptions paintOptions) {
+
+    engine->setRasterizerState(rasterizerState);
+    workspace.visitDepthFirst(
+        [](workspace::Element* /*e*/, Int /*depth*/) {
+            // we always visit children for now
+            return true;
+        },
+        [=](workspace::Element* e, Int /*depth*/) {
+            if (e) {
+                e->paint(engine, {}, paintOptions);
+            }
+        });
+}
+
+} // namespace
+
 // Note: In this override, we intentionally not call SuperClass::onPaintDraw()
 // since we draw our own background. We call paintChildren() explicitly at the
 // end to call the `onPaintDraw()` method of the CanvasTool children of the
@@ -591,6 +614,7 @@ void Canvas::onPaintDraw(graphics::Engine* engine, ui::PaintOptions options) {
 
     using namespace graphics;
     namespace gs = graphics::strings;
+    using workspace::PaintOption;
 
     drawTask_.start();
 
@@ -622,15 +646,9 @@ void Canvas::onPaintDraw(graphics::Engine* engine, ui::PaintOptions options) {
 
     core::Array<workspace::Element*> selectedElements = selectedElements_();
 
-    // render visit
-    // todo:
+    // TODO:
     //  - use transforms
     //  - setup target for layers (painting a layer means using its result)
-
-    workspace::PaintOptions commonPaintOptions = {};
-    if (areControlPointsVisible_) {
-        commonPaintOptions.set(workspace::PaintOption::Editing);
-    }
 
     if (auto workspace = workspace_.lock()) {
         workspace->sync();
@@ -639,21 +657,47 @@ void Canvas::onPaintDraw(graphics::Engine* engine, ui::PaintOptions options) {
         bool isMeshEnabled = (displayMode_ != DisplayMode::OutlineOnly);
         bool isOutlineEnabled = (displayMode_ != DisplayMode::Normal);
 
-        // Draw Normal
+        // Draw Normal.
+        //
+        // If Wireframe = on and ControlPoints = on, then we want this pass to
+        // actually be done in two subpasses:
+        //
+        // 1. First, the Normal option in wireframe.
+        // 2. Then, the Editing option in fill mode.
+        //
+        // Indeed, we never want to draw the control points (=Editing) in
+        // wireframe, and when we are in wireframe mode, it isn't a problem to
+        // draw all the control points after all the Normal geometry, since the
+        // control points of edges that are obscured by other edges/faces would
+        // anyway be partially visible since the Normal geometry is drawn in
+        // wireframe.
+        //
+        // However, if Wireframe = off and ControlPoints = on, then we can draw
+        // both the Normal and Editing option in one pass, and therefore the
+        // control points of edges that are obscured by other edges/faces would
+        // also be obscured, as intended (unless the edge is selected, in which
+        // case its control points would still be visible since they will be
+        // re-drawn in the Selection pass below).
+        //
+        // Also note that if ControlPoints = on and Outline = on, then there is
+        // no need to draw the control points at all in the Normal pass, since
+        // they will be drawn in the Outline pass anyway.
         //
         if (isMeshEnabled) {
-            engine->setRasterizerState(isWireframeMode_ ? wireframeRS_ : fillRS_);
-            workspace::PaintOptions paintOptions = commonPaintOptions;
-            workspace->visitDepthFirst(
-                [](workspace::Element* /*e*/, Int /*depth*/) {
-                    // we always visit children for now
-                    return true;
-                },
-                [=](workspace::Element* e, Int /*depth*/) {
-                    if (e) {
-                        e->paint(engine, {}, paintOptions);
-                    }
-                });
+            bool drawControlPoints = areControlPointsVisible_ && !isOutlineEnabled;
+            if (isWireframeMode_) {
+                drawSubpass(engine, wireframeRS_, *workspace, PaintOption::Normal);
+                if (drawControlPoints) {
+                    drawSubpass(engine, fillRS_, *workspace, PaintOption::Editing);
+                }
+            }
+            else {
+                workspace::PaintOptions paintOptions = PaintOption::Normal;
+                if (drawControlPoints) {
+                    paintOptions.set(PaintOption::Editing);
+                }
+                drawSubpass(engine, fillRS_, *workspace, paintOptions);
+            }
         }
 
         // Note: outline and selection shouldn't be drawn in wireframe, otherwise:
@@ -664,30 +708,24 @@ void Canvas::onPaintDraw(graphics::Engine* engine, ui::PaintOptions options) {
         // Draw Outline
         //
         if (isOutlineEnabled) {
-            engine->setRasterizerState(fillRS_);
-            workspace::PaintOptions paintOptions = commonPaintOptions;
-            paintOptions.set(workspace::PaintOption::Outline);
-            workspace->visitDepthFirst(
-                [](workspace::Element* /*e*/, Int /*depth*/) {
-                    // we always visit children for now
-                    return true;
-                },
-                [=](workspace::Element* e, Int /*depth*/) {
-                    if (e) {
-                        e->paint(engine, {}, paintOptions);
-                    }
-                });
+            workspace::PaintOptions paintOptions = PaintOption::Outline;
+            if (areControlPointsVisible_) {
+                paintOptions.set(PaintOption::Editing);
+            }
+            drawSubpass(engine, fillRS_, *workspace, paintOptions);
         }
 
         // Draw Selection
         //
         if (!selectedElements.isEmpty()) {
-            engine->setRasterizerState(fillRS_);
-            workspace::PaintOptions paintOptions = commonPaintOptions;
-            paintOptions.set(workspace::PaintOption::Selected);
+            workspace::PaintOptions paintOptions = PaintOption::Selected;
             if (isOutlineEnabled) {
                 paintOptions.set(workspace::PaintOption::Outline);
             }
+            if (areControlPointsVisible_) {
+                paintOptions.set(PaintOption::Editing);
+            }
+            engine->setRasterizerState(fillRS_);
             workspace->visitDepthFirst(
                 [](workspace::Element* /*e*/, Int /*depth*/) {
                     // we always visit children for now
