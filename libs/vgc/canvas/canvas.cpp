@@ -640,6 +640,7 @@ void Canvas::onPaintDraw(graphics::Engine* engine, ui::PaintOptions options) {
         bool isOutlineEnabled = (displayMode_ != DisplayMode::Normal);
 
         // Draw Normal
+        //
         if (isMeshEnabled) {
             engine->setRasterizerState(isWireframeMode_ ? wireframeRS_ : fillRS_);
             workspace::PaintOptions paintOptions = commonPaintOptions;
@@ -661,6 +662,7 @@ void Canvas::onPaintDraw(graphics::Engine* engine, ui::PaintOptions options) {
         //   useful data visualization anyway (too thin to see the triangles).
 
         // Draw Outline
+        //
         if (isOutlineEnabled) {
             engine->setRasterizerState(fillRS_);
             workspace::PaintOptions paintOptions = commonPaintOptions;
