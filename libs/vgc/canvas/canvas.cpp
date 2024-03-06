@@ -616,8 +616,6 @@ void Canvas::onPaintDraw(graphics::Engine* engine, ui::PaintOptions options) {
     }
     engine->draw(bgGeometry_);
 
-    engine->setRasterizerState(isWireframeMode_ ? wireframeRS_ : fillRS_);
-
     geometry::Mat4f vm = engine->viewMatrix();
     geometry::Mat4f cameraViewf(camera().viewMatrix());
     engine->pushViewMatrix(vm * cameraViewf);
@@ -642,7 +640,9 @@ void Canvas::onPaintDraw(graphics::Engine* engine, ui::PaintOptions options) {
         bool isOutlineEnabled = (displayMode_ != DisplayMode::Normal);
 
         // Draw Normal
+        //
         if (isMeshEnabled) {
+            engine->setRasterizerState(isWireframeMode_ ? wireframeRS_ : fillRS_);
             workspace::PaintOptions paintOptions = commonPaintOptions;
             workspace->visitDepthFirst(
                 [](workspace::Element* /*e*/, Int /*depth*/) {
@@ -656,8 +656,15 @@ void Canvas::onPaintDraw(graphics::Engine* engine, ui::PaintOptions options) {
                 });
         }
 
+        // Note: outline and selection shouldn't be drawn in wireframe, otherwise:
+        // - We cannot see which face is selected.
+        // - They don't look nice (seem to have "holes") while not providing any
+        //   useful data visualization anyway (too thin to see the triangles).
+
         // Draw Outline
+        //
         if (isOutlineEnabled) {
+            engine->setRasterizerState(fillRS_);
             workspace::PaintOptions paintOptions = commonPaintOptions;
             paintOptions.set(workspace::PaintOption::Outline);
             workspace->visitDepthFirst(
@@ -674,11 +681,8 @@ void Canvas::onPaintDraw(graphics::Engine* engine, ui::PaintOptions options) {
 
         // Draw Selection
         //
-        // This should never be drawn in wireframe mode, otherwise we cannot
-        // see which face is selected.
-        //
-        engine->setRasterizerState(fillRS_);
         if (!selectedElements.isEmpty()) {
+            engine->setRasterizerState(fillRS_);
             workspace::PaintOptions paintOptions = commonPaintOptions;
             paintOptions.set(workspace::PaintOption::Selected);
             if (isOutlineEnabled) {
