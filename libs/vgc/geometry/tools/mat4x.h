@@ -615,6 +615,10 @@ inline constexpr Mat4x Mat4x::identity = Mat4x(1);
 ///
 using Mat4xArray = core::Array<Mat4x>;
 
+/// Alias for `vgc::core::SharedConstArray<vgc::geometry::Mat4x>`.
+///
+using SharedConstMat4xArray = core::SharedConstArray<Mat4x>;
+
 /// Allows to iterate over a range of `Mat4x` stored in a memory buffer of
 /// floats, where consecutive `Mat4x` elements are separated by a given stride.
 ///
