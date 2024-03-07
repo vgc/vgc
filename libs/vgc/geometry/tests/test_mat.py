@@ -18,8 +18,9 @@
 
 import unittest
 from math import pi, sqrt
-from vgc.geometry import Vec2d, Vec2f, Mat3d, Mat3f, Mat4d, Mat4f
+from vgc.geometry import Vec2d, Vec2f, Mat2d, Mat2f, Mat3d, Mat3f, Mat4d, Mat4f
 
+Mat2Types = [Mat2d, Mat2f]
 Mat3Types = [Mat3d, Mat3f]
 Mat4Types = [Mat4d, Mat4f]
 Mat3Vec2Types = [(Mat3d, Vec2d), (Mat3f, Vec2f)]
@@ -37,6 +38,13 @@ class TestMat(unittest.TestCase):
                 self.assertEqual(m[i][j], 0)
 
     def testInitializingConstructor(self):
+        for Mat in Mat2Types:
+            m = Mat(1, 2,
+                    3, 4)
+            self.assertEqual(m[0][0], 1)
+            self.assertEqual(m[0][1], 2)
+            self.assertEqual(m[1][0], 3)
+            self.assertEqual(m[1][1], 4)
         for Mat in Mat3Types:
             m = Mat(1, 2, 3,
                     4, 5, 6,
@@ -493,6 +501,30 @@ class TestMat(unittest.TestCase):
             self.assertTrue(m1 != m3)
             self.assertFalse(m1 != m2)
             self.assertFalse(m1 == m3)
+
+    def testToString(self):
+        for Mat2 in Mat2Types:
+            # Setup a French locale (if available on this system) to check that even
+            # when the decimal point is ',' according to the locale, numbers are
+            # still printed with '.' as decimal point.
+            #
+            try:
+                locale.setlocale(locale.LC_ALL, 'fr_FR.UTF8')
+            except:
+                pass
+            m = Mat2(1, 2, 3, 4.5)
+            self.assertEqual(str(m), "((1, 2), (3, 4.5))")
+        for Mat3 in Mat3Types:
+            m = Mat3(1, 2, 3,
+                     4, 5, 6,
+                     7, 8, 9)
+            self.assertEqual(str(m), "((1, 2, 3), (4, 5, 6), (7, 8, 9))")
+        for Mat4 in Mat4Types:
+            m = Mat4(1,  2,  3,  4,
+                     5,  6,  7,  8,
+                     9,  10, 11, 12,
+                     13, 14, 15, 16)
+            self.assertEqual(str(m), "((1, 2, 3, 4), (5, 6, 7, 8), (9, 10, 11, 12), (13, 14, 15, 16))")
 
 
 if __name__ == '__main__':

@@ -365,8 +365,8 @@ inline void setZero(Mat2d& m) {
 template<typename OStream>
 void write(OStream& out, const Mat2d& m) {
     static const char* s = ", ";
-    write(out, '[', m(0,0), s, m(0,1), s,
-                    m(1,0), s, m(1,1), ']');
+    write(out, "((", m(0,0), s, m(0,1), "),",
+               " (", m(1,0), s, m(1,1), "))");
 }
 
 } // namespace vgc::geometry
@@ -383,8 +383,8 @@ struct fmt::formatter<vgc::geometry::Mat2d> {
     }
     template <typename FormatContext>
     auto format(const vgc::geometry::Mat2d& m, FormatContext& ctx) {
-        return format_to(ctx.out(),"[{}, {},"
-                                   " {}, {}]",
+        return format_to(ctx.out(),"(({}, {}),"
+                                   " ({}, {}))",
                          m(0,0), m(0,1),
                          m(1,0), m(1,1));
     }
