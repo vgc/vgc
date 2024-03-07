@@ -506,6 +506,10 @@ inline constexpr Mat3f Mat3f::identity = Mat3f(1);
 ///
 using Mat3fArray = core::Array<Mat3f>;
 
+/// Alias for `vgc::core::SharedConstArray<vgc::geometry::Mat3f>`.
+///
+using SharedConstMat3fArray = core::SharedConstArray<Mat3f>;
+
 /// Allows to iterate over a range of `Mat3f` stored in a memory buffer of
 /// floats, where consecutive `Mat3f` elements are separated by a given stride.
 ///

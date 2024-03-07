@@ -339,6 +339,10 @@ inline constexpr Mat2x Mat2x::identity = Mat2x(1);
 ///
 using Mat2xArray = core::Array<Mat2x>;
 
+/// Alias for `vgc::core::SharedConstArray<vgc::geometry::Mat2x>`.
+///
+using SharedConstMat2xArray = core::SharedConstArray<Mat2x>;
+
 /// Allows to iterate over a range of `Mat2x` stored in a memory buffer of
 /// floats, where consecutive `Mat2x` elements are separated by a given stride.
 ///

@@ -339,6 +339,10 @@ inline constexpr Mat2f Mat2f::identity = Mat2f(1);
 ///
 using Mat2fArray = core::Array<Mat2f>;
 
+/// Alias for `vgc::core::SharedConstArray<vgc::geometry::Mat2f>`.
+///
+using SharedConstMat2fArray = core::SharedConstArray<Mat2f>;
+
 /// Allows to iterate over a range of `Mat2f` stored in a memory buffer of
 /// floats, where consecutive `Mat2f` elements are separated by a given stride.
 ///
