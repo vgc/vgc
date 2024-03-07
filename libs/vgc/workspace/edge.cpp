@@ -308,6 +308,27 @@ void VacKeyEdge::onPaintPrepare(core::AnimTime /*t*/, PaintOptions /*flags*/) {
     computeStrokeStyle_();
 }
 
+namespace {
+
+// Whether the edge direction (and in case of closed curves, which control
+// point is the first) should be visible. For now, this is achieved via a color
+// gradient on control points, and making the first control point of closed
+// curves slightly bigger.
+//
+// TODO:
+// - Use arrows instead
+// - Decorellate this and visibility of control points (i.e., allow to show
+//   edge directions even if control points are not visible)
+// - Expose as settings in the application
+//
+enum class ShowEdgeDirection {
+    Never,
+    SelectedEdges,
+    AllEdges
+};
+
+} // namespace
+
 void VacKeyEdge::onPaintDraw(
     graphics::Engine* engine,
     core::AnimTime t,
@@ -316,29 +337,35 @@ void VacKeyEdge::onPaintDraw(
     // Selection settings
     constexpr float selectionCenterlineThickness = 2.0f;
 
-    // Disk settings
-    constexpr core::Color diskFillColor(1.0f, 1.0f, 1.0f);
-    constexpr float diskStrokeWidth = 1.0f;
-    constexpr float diskFillRadius = 2.5f;
-    constexpr Int diskNumSides = 16;
+    // Edge direction settings
+    constexpr ShowEdgeDirection showEdgeDirection = ShowEdgeDirection::SelectedEdges;
+    constexpr float edgeDirectionDeltaHue = 40.0f;
+
+    // Control points settings
+    constexpr core::Color controlPointFillColor(1.0f, 1.0f, 1.0f);
+    constexpr float controlPointFillRadius = 2.5f;
+    constexpr float controlPointStrokeWidth = 1.0f;
+    constexpr Int controlPointNumSides = 16;
 
     // Offset lines settings
+    constexpr bool shouldPaintOffsetLine0 = false;
+    constexpr bool shouldPaintOffsetLine1 = false;
     constexpr float offsetLineHalfwidth = 1.5f;
     constexpr core::Color offsetLine0Color(0.64f, 1.0f, 0.02f, 1.f);
     constexpr core::Color offsetLine1Color(1.0f, 0.02f, 0.64f, 1.f);
 
-    bool isPaintingStroke = flags.has(PaintOption::Normal);
-    bool isPaintingCPs = flags.has(PaintOption::Editing);
-    bool isPaintingOutline = flags.has(PaintOption::Outline) || isPaintingCPs;
-
+    bool isHovered = flags.has(PaintOption::Hovered);
     bool isSelected = flags.has(PaintOption::Selected);
 
-    bool isPaintingOffsetLine0 = false;
-    bool isPaintingOffsetLine1 = false;
+    bool shouldPaintStroke = flags.has(PaintOption::Normal);
+    bool shouldPaintControlPoints = flags.has(PaintOption::Editing);
+    bool shouldPaintOutline = isHovered || isSelected || shouldPaintControlPoints;
+    bool shouldPaintEdgeDirection =
+        (showEdgeDirection == ShowEdgeDirection::AllEdges)
+        || (isSelected && showEdgeDirection == ShowEdgeDirection::SelectedEdges);
 
     bool needsCenterlineGeometry =
-        (isPaintingOutline || isSelected
-         || flags.hasAny({PaintOption::Hovered, PaintOption::Editing}));
+        shouldPaintOutline || shouldPaintOffsetLine0 || shouldPaintOffsetLine1;
 
     // XXX: reuse buffers and geometry views
     // reuse geometry objects, create buffers separately (attributes waiting in EdgeGraphics).
@@ -364,7 +391,7 @@ void VacKeyEdge::onPaintDraw(
     bool hasPendingColorUpdate = !graphics.hasStyle();
     core::Color color = data.color();
 
-    if (isPaintingStroke && !graphics.strokeGeometry()) {
+    if (shouldPaintStroke && !graphics.strokeGeometry()) {
         hasNewStrokeGraphics = true;
 
         graphics.setStrokeGeometry(engine->createDynamicTriangleStripView(
@@ -417,19 +444,18 @@ void VacKeyEdge::onPaintDraw(
 
     bool hasNewCenterlineGraphics = false;
 
-    if ((needsCenterlineGeometry || isPaintingOffsetLine0 || isPaintingOffsetLine1)
-        && !graphics.centerlineGeometry()) {
+    if (needsCenterlineGeometry && !graphics.centerlineGeometry()) {
         hasNewCenterlineGraphics = true;
         graphics.setCenterlineGeometry(engine->createDynamicTriangleStripView(
             BuiltinGeometryLayout::XYDxDy_iXYRotWRGBA));
 
-        if (isPaintingOffsetLine0) {
+        if (shouldPaintOffsetLine0) {
             graphics.setOffsetLineGeometry(
                 0,
                 engine->createDynamicTriangleStripView(
                     BuiltinGeometryLayout::XYDxDy_iXYRotWRGBA));
         }
-        if (isPaintingOffsetLine1) {
+        if (shouldPaintOffsetLine1) {
             graphics.setOffsetLineGeometry(
                 1,
                 engine->createDynamicTriangleStripView(
@@ -481,12 +507,12 @@ void VacKeyEdge::onPaintDraw(
                 // clang-format off
                 lineVertices.emplaceLast(p.x(), p.y(), -n.x(), -n.y());
                 lineVertices.emplaceLast(p.x(), p.y(),  n.x(),  n.y());
-                if (isPaintingOffsetLine0) {
+                if (shouldPaintOffsetLine0) {
                     geometry::Vec2f p0 = geometry::Vec2f(s.offsetPoint(0));
                     offsetLine0Vertices.emplaceLast(p0.x(), p0.y(), -n.x(), -n.y());
                     offsetLine0Vertices.emplaceLast(p0.x(), p0.y(),  n.x(),  n.y());
                 }
-                if (isPaintingOffsetLine1) {
+                if (shouldPaintOffsetLine1) {
                     geometry::Vec2f p1 = geometry::Vec2f(s.offsetPoint(1));
                     offsetLine1Vertices.emplaceLast(p1.x(), p1.y(), -n.x(), -n.y());
                     offsetLine1Vertices.emplaceLast(p1.x(), p1.y(),  n.x(),  n.y());
@@ -517,7 +543,7 @@ void VacKeyEdge::onPaintDraw(
         engine->updateBufferData(
             graphics.centerlineGeometry()->vertexBuffer(1), std::move(lineInstData));
 
-        if (isPaintingOffsetLine0) {
+        if (shouldPaintOffsetLine0) {
             // X, Y, Rot, Width, R, G, B, A
             const float hw = offsetLineHalfwidth;
             const core::Color& c = offsetLine0Color;
@@ -528,7 +554,7 @@ void VacKeyEdge::onPaintDraw(
             engine->updateBufferData(vertBuffer, std::move(offsetLine0Vertices));
             engine->updateBufferData(instBuffer, std::move(instData));
         }
-        if (isPaintingOffsetLine1) {
+        if (shouldPaintOffsetLine1) {
             // X, Y, Rot, Width, R, G, B, A
             const float hw = offsetLineHalfwidth;
             const core::Color& c = offsetLine1Color;
@@ -551,7 +577,7 @@ void VacKeyEdge::onPaintDraw(
     }
 
     // Draw control points (CP)
-    if (isPaintingCPs) {
+    if (shouldPaintControlPoints) {
         bool wasSelected = isLastDrawOfControlPointsSelected_;
         isLastDrawOfControlPointsSelected_ = isSelected;
         bool shouldUpdateCPColor = isSelected != wasSelected;
@@ -559,41 +585,52 @@ void VacKeyEdge::onPaintDraw(
         bool shouldUpdateCPBuffers = shouldCreateCPBuffers || shouldUpdateCPColor;
         if (shouldCreateCPBuffers) {
             controlPointsGeometry_ =
-                graphics::detail::createScreenSpaceDisk(engine, diskNumSides);
+                graphics::detail::createScreenSpaceDisk(engine, controlPointNumSides);
         }
         if (shouldUpdateCPBuffers) {
-            const Int numPoints = controlPoints_.length();
-            core::Array<graphics::detail::ScreenSpaceInstanceData> pointInstData(
-                numPoints * 2);
-            const float dl = 1.f / numPoints;
-            for (Int i = 0; i < numPoints; ++i) {
+            Int n = controlPoints_.length();
+            core::Array<graphics::detail::ScreenSpaceInstanceData> pointInstData(n * 2);
+
+            // Color
+            core::Color strokeColor = isSelected ? colors::selection : colors::outline;
+            float h1 = 0.0f;
+            float h2 = 0.0f;
+            float s = 0.0f;
+            float l = 0.0f;
+            if (shouldPaintEdgeDirection) {
+                // TODO: pre-compute this instead of doing it for all edges
+                std::array<float, 3> hsl = strokeColor.toHsl();
+                h1 = hsl[0] - 0.5f * edgeDirectionDeltaHue;
+                h2 = h1 + edgeDirectionDeltaHue;
+                s = hsl[1];
+                l = hsl[2];
+            }
+
+            float du = 1.f / std::max<Int>(n - 1, 1);
+            for (Int i = 0; i < n; ++i) {
                 geometry::Vec2f p = geometry::Vec2f(controlPoints_[i]);
-                core::Color strokeColor;
-                float adjustedDiskFillRadius = diskFillRadius;
-                if (isSelected) {
-                    // Use gradient to visualize direction of the curve (from start to end)
-                    float l = i * dl;
-                    strokeColor = core::Color::hsl(210 + 90 * l, 1.0, 0.5);
-                    //(l > 0.5f ? 2 * (1.f - l) : 1.f), 0, (l < 0.5f ? 2 * l : 1.f));
+                float adjustedFillRadius = controlPointFillRadius;
+                if (shouldPaintEdgeDirection) {
+                    // Use gradient to visualize edge direction (from start to end)
+                    float h = core::fastLerp(h1, h2, i * du);
+                    strokeColor = core::Color::hsl(h, s, l);
                     if (i == 0 && isClosed()) {
                         // Increase radius of the first control point of closed
-                        // edges: this helps identify them.
-                        adjustedDiskFillRadius *= 1.5f;
+                        // edges to help identify them. We only do this if the
+                        // edge direction is visible, otherwise it could be
+                        // confused for a vertex.
+                        adjustedFillRadius *= 1.5f;
                     }
-                }
-                else {
-                    // Use constant color
-                    strokeColor = colors::outline;
                 }
                 Int j = i * 2;
                 graphics::detail::ScreenSpaceInstanceData& inst0 = pointInstData[j];
                 graphics::detail::ScreenSpaceInstanceData& inst1 = pointInstData[j + 1];
                 inst0.position = p;
-                inst0.displacementScale = adjustedDiskFillRadius + diskStrokeWidth;
+                inst0.displacementScale = adjustedFillRadius + controlPointStrokeWidth;
                 inst0.color = strokeColor;
                 inst1.position = p;
-                inst1.displacementScale = adjustedDiskFillRadius;
-                inst1.color = diskFillColor;
+                inst1.displacementScale = adjustedFillRadius;
+                inst1.color = controlPointFillColor;
             }
 
             engine->updateBufferData(
@@ -603,7 +640,7 @@ void VacKeyEdge::onPaintDraw(
 
     graphics.setStyle();
 
-    if (isPaintingStroke) {
+    if (shouldPaintStroke) {
         engine->setProgram(graphics::BuiltinProgram::Simple /*TexturedDebug*/);
         engine->draw(graphics.strokeGeometry());
         //engine->draw(graphics.joinGeometry());
@@ -613,22 +650,22 @@ void VacKeyEdge::onPaintDraw(
         engine->setProgram(graphics::BuiltinProgram::ScreenSpaceDisplacement);
         engine->draw(graphics.selectionGeometry());
     }
-    else if (isPaintingOutline) {
+    else if (shouldPaintOutline) {
         engine->setProgram(graphics::BuiltinProgram::ScreenSpaceDisplacement);
         engine->draw(graphics.centerlineGeometry());
     }
 
-    if (isPaintingCPs) {
+    if (shouldPaintControlPoints) {
         engine->setProgram(graphics::BuiltinProgram::ScreenSpaceDisplacement);
         engine->drawInstanced(controlPointsGeometry_);
     }
 
-    if (isPaintingOffsetLine0) {
+    if (shouldPaintOffsetLine0) {
         engine->setProgram(graphics::BuiltinProgram::ScreenSpaceDisplacement);
         engine->draw(graphics.offsetLineGeometry(0));
     }
 
-    if (isPaintingOffsetLine1) {
+    if (shouldPaintOffsetLine1) {
         engine->setProgram(graphics::BuiltinProgram::ScreenSpaceDisplacement);
         engine->draw(graphics.offsetLineGeometry(1));
     }
