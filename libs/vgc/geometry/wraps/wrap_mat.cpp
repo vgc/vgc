@@ -132,6 +132,10 @@ void wrap_mat(py::module& m, const std::string& name) {
     // don't have this constraint, so there is no good reason to do the same.
     //
     // clang-format off
+    if constexpr (dimension == 2) {
+        cmat.def(py::init<T, T,
+                          T, T>());
+    }
     if constexpr (dimension == 3) {
         cmat.def(py::init<T, T, T,
                           T, T, T,
