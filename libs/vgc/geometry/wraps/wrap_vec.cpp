@@ -17,6 +17,10 @@
 #include <vgc/core/format.h>
 #include <vgc/geometry/vec2d.h>
 #include <vgc/geometry/vec2f.h>
+#include <vgc/geometry/vec3d.h>
+#include <vgc/geometry/vec3f.h>
+#include <vgc/geometry/vec4d.h>
+#include <vgc/geometry/vec4f.h>
 
 #include <vgc/core/wraps/array.h>
 #include <vgc/core/wraps/class.h>
@@ -25,55 +29,113 @@
 
 namespace {
 
-template<typename This>
-This normalizedOrThrow(const This& v) {
+template<typename T>
+constexpr T relTol_();
+
+template<>
+constexpr float relTol_() {
+    return 1e-5f;
+}
+
+template<>
+constexpr double relTol_() {
+    return 1e-9;
+}
+
+template<typename TVec>
+TVec normalizedOrThrow(const TVec& v) {
     bool isNormalizable;
-    This res = v.normalized(&isNormalizable);
+    TVec res = v.normalized(&isNormalizable);
     if (!isNormalizable) {
         throw py::value_error("The vector is not normalizable.");
     }
     return res;
 }
 
-template<
-    typename This,
-    typename T,
-    VGC_REQUIRES(std::is_same_v<typename This::ScalarType, T>)>
-void wrap_vec2x(py::module& m, const std::string& thisTypeName, T relTol) {
+template<typename TVec>
+void wrap_vecArray(py::module& m, const std::string& name) {
+    using ArrayType = vgc::core::Array<TVec>;
+    using SharedConstArrayType = vgc::core::SharedConstArray<TVec>;
 
-    // Fix https://github.com/pybind/pybind11/issues/1893
-    auto self2 = py::self;
+    std::string moduleFullName = py::cast<std::string>(m.attr("__name__"));
 
-    vgc::core::wraps::Class<This>(m, thisTypeName.c_str())
+    std::string arrayTypeName = name + "Array";
+    vgc::core::wraps::Class<ArrayType> c1(m, arrayTypeName.c_str());
+    vgc::core::wraps::defineArrayCommonMethods<TVec, true>(
+        c1, vgc::core::format("{}.{}", moduleFullName, arrayTypeName));
+    c1.def(py::init([name](py::sequence s) {
+        ArrayType res;
+        for (auto it : s) {
+            auto t = py::reinterpret_borrow<py::tuple>(it);
+            res.append(vgc::geometry::wraps::vecFromTuple<TVec>(t));
+        }
+        return res;
+    }));
 
-        .def(py::init<>())
-        .def(py::init<T, T>())
-        .def(py::init([](const std::string& s) { return vgc::core::parse<This>(s); }))
-        .def(py::init(
-            [](py::tuple t) { return vgc::geometry::wraps::vecFromTuple<This>(t); }))
-        .def(py::init<This>())
+    std::string sharedConstArrayTypeName = std::string("SharedConst") + arrayTypeName;
+    vgc::core::wraps::Class<SharedConstArrayType> c2(m, sharedConstArrayTypeName.c_str());
+    vgc::core::wraps::defineSharedConstArrayCommonMethods<TVec, true>(
+        c2, vgc::core::format("{}.{}", moduleFullName, sharedConstArrayTypeName));
+}
 
-        .def(
+template<int dimension, typename T>
+void wrap_vec(py::module& m, const std::string& name) {
+
+    using TVec = vgc::geometry::Vec<dimension, T>;
+
+    vgc::core::wraps::Class<TVec> cvec(m, name.c_str());
+
+    // Default constructor and copy constructor
+    cvec.def(py::init<>());
+    cvec.def(py::init<TVec>());
+
+    // Constructor with explicit initialization of all elements
+    if constexpr (dimension == 2) {
+        cvec.def(py::init<T, T>());
+    }
+    if constexpr (dimension == 3) {
+        cvec.def(py::init<T, T, T>());
+    }
+    else if constexpr (dimension == 4) {
+        cvec.def(py::init<T, T, T, T>());
+    }
+
+    // Constructor from Python tuple
+    cvec.def(py::init(
+        [](py::tuple t) { return vgc::geometry::wraps::vecFromTuple<TVec>(t); }));
+
+    // Constructor from string (parse)
+    cvec.def(py::init([](const std::string& s) { return vgc::core::parse<TVec>(s); }));
+
+    // Index-based getter and setter
+    cvec.def(
             "__getitem__",
-            [](const This& v, int i) {
-                if (i < 0 || i >= 2) {
+            [](const TVec& v, int i) {
+                if (i < 0 || i >= dimension) {
                     throw py::index_error();
                 }
                 return v[i];
             })
-        .def(
-            "__setitem__",
-            [](This& v, int i, T x) {
-                if (i < 0 || i >= 2) {
-                    throw py::index_error();
-                }
-                v[i] = x;
-            })
+        .def("__setitem__", [](TVec& v, int i, T x) {
+            if (i < 0 || i >= dimension) {
+                throw py::index_error();
+            }
+            v[i] = x;
+        });
 
-        .def_property("x", &This::x, &This::setX)
-        .def_property("y", &This::y, &This::setY)
+    // Named getters and setters
+    cvec.def_property("x", &TVec::x, &TVec::setX);
+    cvec.def_property("y", &TVec::y, &TVec::setY);
+    if constexpr (dimension >= 3) {
+        cvec.def_property("z", &TVec::z, &TVec::setZ);
+    }
+    if constexpr (dimension >= 4) {
+        cvec.def_property("w", &TVec::w, &TVec::setW);
+    }
 
-        .def(py::self += py::self)
+    // Overload of arithmetic operators
+    auto self2 = py::self; // Fix https://github.com/pybind/pybind11/issues/1893
+    cvec.def(py::self += py::self)
         .def(py::self + py::self)
         .def(+py::self)
         .def(self2 -= py::self)
@@ -89,63 +151,50 @@ void wrap_vec2x(py::module& m, const std::string& thisTypeName, T relTol) {
         .def(py::self < py::self)
         .def(py::self <= py::self)
         .def(py::self > py::self)
-        .def(py::self >= py::self)
+        .def(py::self >= py::self);
 
-        .def("length", &This::length)
-        .def("squaredLength", &This::squaredLength)
+    // Misc methods
+    cvec.def("length", &TVec::length)
+        .def("squaredLength", &TVec::squaredLength)
+        .def("normalize", [](TVec& v) { v = normalizedOrThrow(v); })
+        .def("normalized", [](const TVec& v) { return normalizedOrThrow(v); })
+        .def("dot", &TVec::dot)
+        .def("angle", py::overload_cast<const TVec&>(&TVec::angle, py::const_));
 
-        .def("normalize", [](This& v) { v = normalizedOrThrow(v); })
-        .def("normalized", [](const This& v) { return normalizedOrThrow(v); })
-        .def("orthogonalize", &This::orthogonalize)
-        .def("orthogonalized", &This::orthogonalized)
-        .def("dot", &This::dot)
-        .def("det", &This::det)
-        .def("angle", py::overload_cast<const This&>(&This::angle, py::const_))
-        .def("angle", py::overload_cast<>(&This::angle, py::const_))
-        .def("isClose", &This::isClose, "b"_a, "relTol"_a = relTol, "absTol"_a = 0)
-        .def("allClose", &This::allClose, "b"_a, "relTol"_a = relTol, "absTol"_a = 0)
-        .def("isNear", &This::isNear, "b"_a, "absTol"_a)
-        .def("allNear", &This::allNear, "b"_a, "absTol"_a)
+    // Vec2-specific methods
+    if constexpr (dimension == 2) {
+        cvec.def("orthogonalize", &TVec::orthogonalize)
+            .def("orthogonalized", &TVec::orthogonalized)
+            .def("det", &TVec::det)
+            .def("angle", py::overload_cast<>(&TVec::angle, py::const_));
+    }
 
-        .def("__repr__", [](const This& v) { return vgc::core::toString(v); });
-}
+    // Vec3-specific methods
+    if constexpr (dimension == 3) {
+        cvec.def("cross", &TVec::cross);
+    }
 
-template<typename Vec2x>
-void wrap_vec2xArray(py::module& m, const std::string& valueTypeName) {
-    using ArrayType = vgc::core::Array<Vec2x>;
-    using SharedConstArrayType = vgc::core::SharedConstArray<Vec2x>;
-    using ScalarType = typename Vec2x::ScalarType; // Example: double
+    // Tests for almost-equality
+    constexpr T relTol = relTol_<T>();
+    cvec.def("isClose", &TVec::isClose, "b"_a, "relTol"_a = relTol, "absTol"_a = 0)
+        .def("allClose", &TVec::allClose, "b"_a, "relTol"_a = relTol, "absTol"_a = 0)
+        .def("isNear", &TVec::isNear, "b"_a, "absTol"_a)
+        .def("allNear", &TVec::allNear, "b"_a, "absTol"_a);
 
-    std::string moduleFullName = py::cast<std::string>(m.attr("__name__"));
+    // Conversion to string
+    cvec.def("__repr__", [](const TVec& v) { return vgc::core::toString(v); });
 
-    std::string arrayTypeName = valueTypeName + "Array";
-    vgc::core::wraps::Class<ArrayType> c1(m, arrayTypeName.c_str());
-    vgc::core::wraps::defineArrayCommonMethods<Vec2x, true>(
-        c1, vgc::core::format("{}.{}", moduleFullName, arrayTypeName));
-    c1.def(py::init([valueTypeName](py::sequence s) {
-        ArrayType res;
-        for (auto it : s) {
-            auto t = py::reinterpret_borrow<py::tuple>(it);
-            if (t.size() != 2) {
-                throw py::value_error(
-                    "Tuple length must be 2 for conversion to " + valueTypeName);
-            }
-            res.append(Vec2x(t[0].cast<ScalarType>(), t[1].cast<ScalarType>()));
-        }
-        return res;
-    }));
-
-    std::string sharedConstArrayTypeName = std::string("SharedConst") + arrayTypeName;
-    vgc::core::wraps::Class<SharedConstArrayType> c2(m, sharedConstArrayTypeName.c_str());
-    vgc::core::wraps::defineSharedConstArrayCommonMethods<Vec2x, true>(
-        c2, vgc::core::format("{}.{}", moduleFullName, sharedConstArrayTypeName));
+    // Wrap Array type
+    wrap_vecArray<TVec>(m, name);
 }
 
 } // namespace
 
 void wrap_vec(py::module& m) {
-    wrap_vec2x<vgc::geometry::Vec2d>(m, "Vec2d", 1e-9);
-    wrap_vec2x<vgc::geometry::Vec2f>(m, "Vec2f", 1e-5f);
-    wrap_vec2xArray<vgc::geometry::Vec2d>(m, "Vec2d");
-    wrap_vec2xArray<vgc::geometry::Vec2f>(m, "Vec2f");
+    wrap_vec<2, float>(m, "Vec2f");
+    wrap_vec<2, double>(m, "Vec2d");
+    wrap_vec<3, float>(m, "Vec3f");
+    wrap_vec<3, double>(m, "Vec3d");
+    wrap_vec<4, float>(m, "Vec4f");
+    wrap_vec<4, double>(m, "Vec4d");
 }
