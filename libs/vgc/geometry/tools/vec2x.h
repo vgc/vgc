@@ -747,14 +747,11 @@ void write(OStream& out, const Vec2x& v) {
 ///
 template <typename IStream>
 void readTo(Vec2x& v, IStream& in) {
-    skipWhitespaceCharacters(in);
-    skipExpectedCharacter(in, '(');
+    skipWhitespacesAndExpectedCharacter(in, '(');
     readTo(v[0], in);
-    skipWhitespaceCharacters(in);
-    skipExpectedCharacter(in, ',');
+    skipWhitespacesAndExpectedCharacter(in, ',');
     readTo(v[1], in);
-    skipWhitespaceCharacters(in);
-    skipExpectedCharacter(in, ')');
+    skipWhitespacesAndExpectedCharacter(in, ')');
 }
 
 } // namespace vgc::geometry

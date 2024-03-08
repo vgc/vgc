@@ -506,20 +506,15 @@ void write(OStream& out, const Vec4f& v) {
 ///
 template <typename IStream>
 void readTo(Vec4f& v, IStream& in) {
-    skipWhitespaceCharacters(in);
-    skipExpectedCharacter(in, '(');
+    skipWhitespacesAndExpectedCharacter(in, '(');
     readTo(v[0], in);
-    skipWhitespaceCharacters(in);
-    skipExpectedCharacter(in, ',');
+    skipWhitespacesAndExpectedCharacter(in, ',');
     readTo(v[1], in);
-    skipWhitespaceCharacters(in);
-    skipExpectedCharacter(in, ',');
+    skipWhitespacesAndExpectedCharacter(in, ',');
     readTo(v[2], in);
-    skipWhitespaceCharacters(in);
-    skipExpectedCharacter(in, ',');
+    skipWhitespacesAndExpectedCharacter(in, ',');
     readTo(v[3], in);
-    skipWhitespaceCharacters(in);
-    skipExpectedCharacter(in, ')');
+    skipWhitespacesAndExpectedCharacter(in, ')');
 }
 
 } // namespace vgc::geometry
