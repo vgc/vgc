@@ -25,7 +25,8 @@ Mat3Types = [Mat3d, Mat3f]
 Mat4Types = [Mat4d, Mat4f]
 Mat3Vec2Types = [(Mat3d, Vec2d), (Mat3f, Vec2f)]
 Mat4Vec2Types = [(Mat4d, Vec2d), (Mat4f, Vec2f)]
-MatTypes = [(Mat3d, 3), (Mat3f, 3),
+MatTypes = [(Mat2d, 2), (Mat2f, 2),
+            (Mat3d, 3), (Mat3f, 3),
             (Mat4d, 4), (Mat4f, 4)]
 
 
@@ -40,15 +41,15 @@ class TestMat(unittest.TestCase):
     def testInitializingConstructor(self):
         for Mat in Mat2Types:
             m = Mat(1, 2,
-                    3, 4)
+                    3, 4.5)
             self.assertEqual(m[0][0], 1)
             self.assertEqual(m[0][1], 2)
             self.assertEqual(m[1][0], 3)
-            self.assertEqual(m[1][1], 4)
+            self.assertEqual(m[1][1], 4.5)
         for Mat in Mat3Types:
             m = Mat(1, 2, 3,
                     4, 5, 6,
-                    7, 8, 9.5)
+                    7, 8, 9)
             self.assertEqual(m[0][0], 1)
             self.assertEqual(m[0][1], 2)
             self.assertEqual(m[0][2], 3)
@@ -57,7 +58,7 @@ class TestMat(unittest.TestCase):
             self.assertEqual(m[1][2], 6)
             self.assertEqual(m[2][0], 7)
             self.assertEqual(m[2][1], 8)
-            self.assertEqual(m[2][2], 9.5)
+            self.assertEqual(m[2][2], 9)
 
         for Mat in Mat4Types:
             m = Mat(1,  2,  3,  4,
@@ -113,12 +114,22 @@ class TestMat(unittest.TestCase):
             self.assertNotEqual(m, n)
 
     def testSetElements(self):
+        for Mat in Mat2Types:
+            m = Mat()
+            m.setElements(
+                    1, 2,
+                    3, 4.5)
+            self.assertEqual(m[0][0], 1)
+            self.assertEqual(m[0][1], 2)
+            self.assertEqual(m[1][0], 3)
+            self.assertEqual(m[1][1], 4.5)
+
         for Mat in Mat3Types:
             m = Mat()
             m.setElements(
                     1, 2, 3,
                     4, 5, 6,
-                    7, 8, 9.5)
+                    7, 8, 9)
             self.assertEqual(m[0][0], 1)
             self.assertEqual(m[0][1], 2)
             self.assertEqual(m[0][2], 3)
@@ -127,7 +138,7 @@ class TestMat(unittest.TestCase):
             self.assertEqual(m[1][2], 6)
             self.assertEqual(m[2][0], 7)
             self.assertEqual(m[2][1], 8)
-            self.assertEqual(m[2][2], 9.5)
+            self.assertEqual(m[2][2], 9)
 
         for Mat in Mat4Types:
             m = Mat()
@@ -165,10 +176,13 @@ class TestMat(unittest.TestCase):
 
     def testSetToZero(self):
         for (Mat, dim) in MatTypes:
-            if dim == 3:
+            if dim == 2:
+                m = Mat(1, 2,
+                        3, 4.5)
+            elif dim == 3:
                 m = Mat(1, 2, 3,
                         4, 5, 6,
-                        7, 8, 9.5)
+                        7, 8, 9)
             elif dim == 4:
                 m = Mat(1,  2,  3,  4,
                         5,  6,  7,  8,
@@ -179,10 +193,13 @@ class TestMat(unittest.TestCase):
 
     def testSetToIdentity(self):
         for (Mat, dim) in MatTypes:
-            if dim == 3:
+            if dim == 2:
+                m = Mat(1, 2,
+                        3, 4.5)
+            elif dim == 3:
                 m = Mat(1, 2, 3,
                         4, 5, 6,
-                        7, 8, 9.5)
+                        7, 8, 9)
             elif dim == 4:
                 m = Mat(1,  2,  3,  4,
                         5,  6,  7,  8,
@@ -204,7 +221,7 @@ class TestMat(unittest.TestCase):
             self.assertNotEqual(m, Mat(1))
             self.assertEqual(Mat.identity, Mat(1))
 
-            Mat.identity[0][0] = 42   # => actually mutates a temporaty
+            Mat.identity[0][0] = 42   # => actually mutates a temporary
             self.assertEqual(Mat.identity, Mat(1))
 
             with self.assertRaises(AttributeError):
@@ -252,6 +269,39 @@ class TestMat(unittest.TestCase):
                     self.assertEqual(m[i][j], 1 + j + i*dim)
 
     def testArithmeticOperators(self):
+        for Mat in Mat2Types:
+            m1 = Mat(1, 2, 3, 4)
+            m2 = Mat(10, 20, 30, 40)
+            m3 = m1 + m2
+            self.assertEqual(m1, Mat(1, 2, 3, 4))
+            self.assertEqual(m2, Mat(10, 20, 30, 40))
+            self.assertEqual(m3, Mat(11, 22, 33, 44))
+            m3 += m2
+            self.assertEqual(m2, Mat(10, 20, 30, 40))
+            self.assertEqual(m3, Mat(21, 42, 63, 84))
+            m4 = +m1
+            self.assertEqual(m1, Mat(1, 2, 3, 4))
+            self.assertEqual(m4, Mat(1, 2, 3, 4))
+            m3 = m2 - m1
+            self.assertEqual(m2, Mat(10, 20, 30, 40))
+            self.assertEqual(m1, Mat(1, 2, 3, 4))
+            self.assertEqual(m3, Mat(9, 18, 27, 36))
+            m3 -= m2
+            self.assertEqual(m2, Mat(10, 20, 30, 40))
+            self.assertEqual(m3, Mat(-1, -2, -3, -4))
+            m4 = -m2
+            self.assertEqual(m2, Mat(10, 20, 30, 40))
+            self.assertEqual(m4, Mat(-10, -20, -30, -40))
+            m3 = 3 * m1 * 2
+            self.assertEqual(m1, Mat(1, 2, 3, 4))
+            self.assertEqual(m3, Mat(6, 12, 18, 24))
+            m3 *= 10
+            self.assertEqual(m3, Mat(60, 120, 180, 240))
+            m3 /= 10
+            self.assertEqual(m3, Mat(6, 12, 18, 24))
+            m4 = m3 / 2
+            self.assertEqual(m4, Mat(3, 6, 9, 12))
+
         for Mat in Mat3Types:
             m1 = Mat(1, 2, 3, 4, 5, 6, 7, 8, 9)
             m2 = Mat(10, 20, 30, 40, 50, 60, 70, 80, 90)
@@ -321,6 +371,26 @@ class TestMat(unittest.TestCase):
             self.assertEqual(m4, Mat(3, 6, 9, 12, 15, 18, 21, 24, 27, 30, 33, 36, 39, 42, 45, 48))
 
     def testMatMatMultiplication(self):
+        for Mat in Mat2Types:
+            m1 = Mat(1, 2,
+                     3, 4)
+            m2 = Mat(30, 40,
+                     10, 20)
+            m3 = Mat(50, 80,
+                     130, 200)
+            m4 = Mat(150, 220,
+                     70, 100)
+            m5 = m1 * m2
+            m6 = m2 * m1
+            m7 = Mat(m1)
+            m7 *= m2
+            m8 = Mat(m2)
+            m8 *= m1
+            self.assertEqual(m5, m3)
+            self.assertEqual(m6, m4)
+            self.assertEqual(m7, m3)
+            self.assertEqual(m8, m4)
+
         for Mat in Mat3Types:
             m1 = Mat(1, 2, 3,
                      4, 5, 6,
@@ -512,19 +582,23 @@ class TestMat(unittest.TestCase):
                 locale.setlocale(locale.LC_ALL, 'fr_FR.UTF8')
             except:
                 pass
-            m = Mat2(1, 2, 3, 4.5)
-            self.assertEqual(str(m), "((1, 2), (3, 4.5))")
+            m = Mat2(1, 2,
+                     3, 4.5)
+            s = "((1, 2), (3, 4.5))"
+            self.assertEqual(str(m), s)
         for Mat3 in Mat3Types:
             m = Mat3(1, 2, 3,
                      4, 5, 6,
                      7, 8, 9)
-            self.assertEqual(str(m), "((1, 2, 3), (4, 5, 6), (7, 8, 9))")
+            s = "((1, 2, 3), (4, 5, 6), (7, 8, 9))"
+            self.assertEqual(str(m), s)
         for Mat4 in Mat4Types:
             m = Mat4(1,  2,  3,  4,
                      5,  6,  7,  8,
                      9,  10, 11, 12,
                      13, 14, 15, 16)
-            self.assertEqual(str(m), "((1, 2, 3, 4), (5, 6, 7, 8), (9, 10, 11, 12), (13, 14, 15, 16))")
+            s = "((1, 2, 3, 4), (5, 6, 7, 8), (9, 10, 11, 12), (13, 14, 15, 16))"
+            self.assertEqual(str(m), s)
 
     def testParse(self):
         for Mat2 in Mat2Types:
