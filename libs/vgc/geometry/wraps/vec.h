@@ -24,13 +24,25 @@
 
 namespace vgc::geometry::wraps {
 
-template<typename TVec, VGC_REQUIRES(TVec::dimension == 2)>
+template<typename TVec>
 TVec vecFromTuple(py::tuple t) {
     using T = typename TVec::ScalarType;
-    if (t.size() != 2) {
-        throw py::value_error("Tuple length must be 2 to be convertible to a Vec2 type.");
+    constexpr Int dimension = TVec::dimension;
+    if (t.size() != dimension) {
+        throw py::value_error("Tuple length does not match dimension of Vec type.");
     }
-    return TVec(t[0].cast<T>(), t[1].cast<T>());
+    if constexpr (dimension == 2) {
+        return TVec(t[0].cast<T>(), t[1].cast<T>());
+    }
+    else if constexpr (dimension == 3) {
+        return TVec(t[0].cast<T>(), t[1].cast<T>(), t[2].cast<T>());
+    }
+    else if constexpr (dimension == 4) {
+        return TVec(t[0].cast<T>(), t[1].cast<T>(), t[2].cast<T>(), t[3].cast<T>());
+    }
+    else {
+        static_assert("Vec type not supported");
+    }
 }
 
 } // namespace vgc::geometry::wraps
