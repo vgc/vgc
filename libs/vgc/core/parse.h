@@ -174,6 +174,23 @@ void skipExpectedCharacter(IStream& in, char c) {
     }
 }
 
+/// Extracts all leading whitespace characters from the input stream, then
+/// extracts the next character from the input stream, and raises ParseError if
+/// this character is not the given character, or if the stream ends.
+///
+/// This is equivalent to:
+///
+/// ```cpp
+/// skipWhitespaceCharacters(in);
+/// skipExpectedCharacter(in, c);
+/// ```
+///
+template<typename IStream>
+void skipWhitespacesAndExpectedCharacter(IStream& in, char c) {
+    skipWhitespaceCharacters(in);
+    skipExpectedCharacter(in, c);
+}
+
 /// Attempts to read the string [begin, end) from the input stream.
 /// Raises ParseError if the input stream does not start with [begin, end).
 ///
