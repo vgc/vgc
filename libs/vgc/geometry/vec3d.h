@@ -473,7 +473,7 @@ inline void setZero(Vec3d& v) {
 ///
 template<typename OStream>
 void write(OStream& out, const Vec3d& v) {
-    write(out, '(', v[0], ", ", v[1], ',', v[2], ')');
+    write(out, '(', v[0], ", ", v[1], ", ", v[2], ')');
 }
 
 /// Reads a `Vec3d` from the input stream, and stores it in the given output
