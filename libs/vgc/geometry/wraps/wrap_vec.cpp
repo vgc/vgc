@@ -100,12 +100,17 @@ void wrap_vec(py::module& m, const std::string& name) {
         cvec.def(py::init<T, T, T, T>());
     }
 
-    // Constructor from Python tuple
-    cvec.def(py::init(
-        [](py::tuple t) { return vgc::geometry::wraps::vecFromTuple<TVec>(t); }));
-
     // Constructor from string (parse)
     cvec.def(py::init([](const std::string& s) { return vgc::core::parse<TVec>(s); }));
+
+    // Constructor from any Python object implementing the Sequence protocol
+    // (tuple, list, numpy array, etc.)
+    //
+    // Important: this must be defined after the string overload, otherwise it
+    // would take precendence since a string implements the Sequence protocol.
+    //
+    cvec.def(py::init(
+        [](py::sequence s) { return vgc::geometry::wraps::vecFromSequence<TVec>(s); }));
 
     // Index-based getter and setter
     cvec.def(
@@ -122,6 +127,26 @@ void wrap_vec(py::module& m, const std::string& name) {
             }
             v[i] = x;
         });
+
+    // Implements the Sequence protocol, which requires both __getitem__ (see
+    // above) and __len__ (see below).
+    //
+    // For example, this allows for easy conversion to numpy arrays:
+    //
+    // ```python
+    // from vgc.geometry import Vec2d
+    // import numpy as np
+    // v = Vec2d(1, 2)
+    // a = np.array(v) # => array([1., 2.])
+    // ```
+    //
+    // Note that __getitem__ alone is enough to make the Vec iterable (e.g.,
+    // `for x in v:`), but numpy's array constructor requires the Sequence
+    // protocol to work properly. Without __len__, the code above would result
+    // in an np.array of size=1 and dtype=object, containing the Vec2d as
+    // unique element.
+    //
+    cvec.def("__len__", [](const TVec&) { return dimension; });
 
     // Named getters and setters
     cvec.def_property("x", &TVec::x, &TVec::setX);

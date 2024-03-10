@@ -66,34 +66,31 @@ class TestVec(unittest.TestCase):
 
     def testFromTuple(self):
         for Vec in Vec2Types:
-            t = (12.5, 42)
-            v = Vec(t)
-            self.assertEqual(v.x, 12.5)
-            self.assertEqual(v.y, 42)
-            t2 = (12.5, 42, 12)
+            self.assertEqual(Vec((1, 2)), Vec(1, 2))
             with self.assertRaises(ValueError):
-                v = Vec(t2)
-
+                v = Vec((1, 2, 3))
         for Vec in Vec3Types:
-            t = (12.5, 42, 12)
-            v = Vec(t)
-            self.assertEqual(v.x, 12.5)
-            self.assertEqual(v.y, 42)
-            self.assertEqual(v.z, 12)
-            t2 = (12.5, 42, 12, 13)
+            self.assertEqual(Vec((1, 2, 3)), Vec(1, 2, 3))
             with self.assertRaises(ValueError):
-                v = Vec(t2)
-
+                v = Vec((1, 2, 3, 4))
         for Vec in Vec4Types:
-            t = (12.5, 42, 12, 13)
-            v = Vec(t)
-            self.assertEqual(v.x, 12.5)
-            self.assertEqual(v.y, 42)
-            self.assertEqual(v.z, 12)
-            self.assertEqual(v.w, 13)
-            t2 = (12.5, 42, 12)
+            self.assertEqual(Vec((1, 2, 3, 4)), Vec(1, 2, 3, 4))
             with self.assertRaises(ValueError):
-                v = Vec(t2)
+                v = Vec((1, 2, 3))
+
+    def testFromArray(self):
+        for Vec in Vec2Types:
+            self.assertEqual(Vec([1, 2]), Vec(1, 2))
+            with self.assertRaises(ValueError):
+                v = Vec([1, 2, 3])
+        for Vec in Vec3Types:
+            self.assertEqual(Vec([1, 2, 3]), Vec(1, 2, 3))
+            with self.assertRaises(ValueError):
+                v = Vec([1, 2, 3, 4])
+        for Vec in Vec4Types:
+            self.assertEqual(Vec((1, 2, 3, 4)), Vec(1, 2, 3, 4))
+            with self.assertRaises(ValueError):
+                v = Vec([1, 2, 3])
 
     def testCopyByReference(self):
         for (Vec, dim) in VecTypes:

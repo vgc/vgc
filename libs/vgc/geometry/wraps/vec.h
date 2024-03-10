@@ -45,6 +45,27 @@ TVec vecFromTuple(py::tuple t) {
     }
 }
 
+template<typename TVec>
+TVec vecFromSequence(py::sequence s) {
+    using T = typename TVec::ScalarType;
+    constexpr Int dimension = TVec::dimension;
+    if (s.size() != dimension) {
+        throw py::value_error("Sequence length does not match dimension of Vec type.");
+    }
+    if constexpr (dimension == 2) {
+        return TVec(s[0].cast<T>(), s[1].cast<T>());
+    }
+    else if constexpr (dimension == 3) {
+        return TVec(s[0].cast<T>(), s[1].cast<T>(), s[2].cast<T>());
+    }
+    else if constexpr (dimension == 4) {
+        return TVec(s[0].cast<T>(), s[1].cast<T>(), s[2].cast<T>(), s[3].cast<T>());
+    }
+    else {
+        static_assert("Vec type not supported");
+    }
+}
+
 } // namespace vgc::geometry::wraps
 
 #endif // VGC_GEOMETRY_WRAPS_VEC_H
