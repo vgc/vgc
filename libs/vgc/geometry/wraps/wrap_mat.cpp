@@ -201,7 +201,7 @@ void wrap_mat(py::module& m, const std::string& name) {
                 }
                 row[j] = x;
             })
-        .def("__len__", [](TRow& row) { return dimension; });
+        .def("__len__", [](TRow&) { return dimension; });
 
     vgc::core::wraps::Class<TMat> cmat(m, name.c_str());
 
