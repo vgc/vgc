@@ -537,6 +537,35 @@ void write(OStream& out, const Mat3d& m) {
                " (", m(2,0), s, m(2,1), s, m(2,2), "))");
 }
 
+namespace detail {
+
+template <typename IStream>
+void readToMatRow(Mat3d& m, Int i, IStream& in) {
+    Vec3d v;
+    readTo(v, in);
+    m(i, 0) = v[0];
+    m(i, 1) = v[1];
+    m(i, 2) = v[2];
+}
+
+} // namespace detail
+
+/// Reads a `Mat3d` from the input stream, and stores it in the given output
+/// parameter `m`. Leading whitespaces are allowed. Raises `ParseError` if the
+/// stream does not start with a `Mat2d`. Raises `RangeError` if one of its
+/// coordinates is outside the representable range of a double.
+///
+template <typename IStream>
+void readTo(Mat3d& m, IStream& in) {
+    skipWhitespacesAndExpectedCharacter(in, '(');
+    detail::readToMatRow(m, 0, in);
+    skipWhitespacesAndExpectedCharacter(in, ',');
+    detail::readToMatRow(m, 1, in);
+    skipWhitespacesAndExpectedCharacter(in, ',');
+    detail::readToMatRow(m, 2, in);
+    skipExpectedCharacter(in, ')');
+}
+
 } // namespace vgc::geometry
 
 // see https://fmt.dev/latest/api.html#formatting-user-defined-types

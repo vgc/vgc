@@ -131,6 +131,10 @@ void wrap_mat(py::module& m, const std::string& name) {
     // numColumns, since numpy doesn't have per-size specific matrix types. We
     // don't have this constraint, so there is no good reason to do the same.
     //
+    // TODO: Despite the above, it might still be a good idea to also support
+    // constructing from "tuple of tuple" and/or "array of array", to enable
+    // easier copy-pasting from debug output to Python Console.
+    //
     // clang-format off
     if constexpr (dimension == 2) {
         cmat.def(py::init<T, T,
@@ -148,6 +152,9 @@ void wrap_mat(py::module& m, const std::string& name) {
                           T, T, T, T>());
     }
     // clang-format on
+
+    // Constructor from string (parse)
+    cmat.def(py::init([](const std::string& s) { return vgc::core::parse<TMat>(s); }));
 
     // TODO: constructor from list so we can do:
     //

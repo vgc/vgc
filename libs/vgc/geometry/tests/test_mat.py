@@ -526,6 +526,25 @@ class TestMat(unittest.TestCase):
                      13, 14, 15, 16)
             self.assertEqual(str(m), "((1, 2, 3, 4), (5, 6, 7, 8), (9, 10, 11, 12), (13, 14, 15, 16))")
 
+    def testParse(self):
+        for Mat2 in Mat2Types:
+            m = Mat2(1, 2,
+                     3, 4.5)
+            s = "  ( (1, 2)  ,\n(3, 4.5)) " # test various formatting variants
+            self.assertEqual(Mat2(s), m)
+        for Mat3 in Mat3Types:
+            m = Mat3(1, 2, 3,
+                     4, 5, 6,
+                     7, 8, 9)
+            s = "((1, 2, 3), (4, 5, 6), (7, 8, 9))"
+            self.assertEqual(Mat3(s), m)
+        for Mat4 in Mat4Types:
+            m = Mat4(1,  2,  3,  4,
+                     5,  6,  7,  8,
+                     9,  10, 11, 12,
+                     13, 14, 15, 16)
+            s = "((1, 2, 3, 4), (5, 6, 7, 8), (9, 10, 11, 12), (13, 14, 15, 16))"
+            self.assertEqual(Mat4(s), m)
 
 if __name__ == '__main__':
     unittest.main()
