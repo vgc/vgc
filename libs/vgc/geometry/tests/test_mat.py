@@ -215,6 +215,25 @@ class TestMat(unittest.TestCase):
             m2 = Mat([2*i+j for i,j in Mat.indices])
             self.assertEqual(m1, m2)
 
+    # See wraps/vec.h: "Implicit conversion from string is not allowed in this context"
+    #
+    def testFromStringList(self):
+        for Mat in Mat2Types:
+            with self.assertRaises(ValueError):
+                m = Mat(['(1, 2)',
+                         '(3, 4)'])
+        for Mat in Mat3Types:
+            with self.assertRaises(ValueError):
+                m = Mat(['(1, 2, 3)',
+                         '(4, 5, 6)',
+                         '(7, 8, 9)'])
+        for Mat in Mat4Types:
+            with self.assertRaises(ValueError):
+                m = Mat(['(1, 2, 3, 4)',
+                         '(5, 6, 7, 8)',
+                         '(9, 10, 11, 12)',
+                         '(13, 14, 15, 16)'])
+
     def testCopyByReference(self):
         for (Mat, dim) in MatTypes:
             m = Mat()
