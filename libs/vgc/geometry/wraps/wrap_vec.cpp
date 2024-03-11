@@ -222,7 +222,11 @@ void wrap_vec(py::module& m, const std::string& name) {
         .def("allNear", &TVec::allNear, "b"_a, "absTol"_a);
 
     // Conversion to string
-    cvec.def("__repr__", [](const TVec& v) { return vgc::core::toString(v); });
+    cvec.def("__str__", [](const TVec& v) { return vgc::core::toString(v); });
+    cvec.def("__repr__", [name](const TVec& v) {
+        std::string str = vgc::core::toString(v);
+        return vgc::core::format("vgc.geometry.{}{}", name, str);
+    });
 
     // Wrap Array type
     wrap_vecArray<TVec>(m, name);

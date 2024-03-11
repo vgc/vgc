@@ -761,7 +761,10 @@ class TestMat(unittest.TestCase):
             self.assertFalse(m1 == m3)
 
     def testToString(self):
-        for Mat2 in Mat2Types:
+        m = Mat2d(1, 2, 3, 4)
+        self.assertEqual(str(m), "((1, 2), (3, 4))")
+        self.assertEqual(repr(m), "vgc.geometry.Mat2d((1, 2), (3, 4))")
+        for Mat in Mat2Types:
             # Setup a French locale (if available on this system) to check that even
             # when the decimal point is ',' according to the locale, numbers are
             # still printed with '.' as decimal point.
@@ -770,43 +773,46 @@ class TestMat(unittest.TestCase):
                 locale.setlocale(locale.LC_ALL, 'fr_FR.UTF8')
             except:
                 pass
-            m = Mat2(1, 2,
-                     3, 4.5)
+            m = Mat(1, 2,
+                    3, 4.5)
             s = "((1, 2), (3, 4.5))"
             self.assertEqual(str(m), s)
-        for Mat3 in Mat3Types:
-            m = Mat3(1, 2, 3,
-                     4, 5, 6,
-                     7, 8, 9)
+            self.assertEqual(repr(m), "vgc.geometry." + Mat.__name__ + s)
+        for Mat in Mat3Types:
+            m = Mat(1, 2, 3,
+                    4, 5, 6,
+                    7, 8, 9)
             s = "((1, 2, 3), (4, 5, 6), (7, 8, 9))"
             self.assertEqual(str(m), s)
-        for Mat4 in Mat4Types:
-            m = Mat4(1,  2,  3,  4,
-                     5,  6,  7,  8,
-                     9,  10, 11, 12,
-                     13, 14, 15, 16)
+            self.assertEqual(repr(m), "vgc.geometry." + Mat.__name__ + s)
+        for Mat in Mat4Types:
+            m = Mat(1,  2,  3,  4,
+                    5,  6,  7,  8,
+                    9,  10, 11, 12,
+                    13, 14, 15, 16)
             s = "((1, 2, 3, 4), (5, 6, 7, 8), (9, 10, 11, 12), (13, 14, 15, 16))"
             self.assertEqual(str(m), s)
+            self.assertEqual(repr(m), "vgc.geometry." + Mat.__name__ + s)
 
     def testParse(self):
-        for Mat2 in Mat2Types:
-            m = Mat2(1, 2,
-                     3, 4.5)
+        for Mat in Mat2Types:
+            m = Mat(1, 2,
+                    3, 4.5)
             s = "  ( (1, 2)  ,\n(3, 4.5)) " # test various formatting variants
-            self.assertEqual(Mat2(s), m)
-        for Mat3 in Mat3Types:
-            m = Mat3(1, 2, 3,
-                     4, 5, 6,
-                     7, 8, 9)
+            self.assertEqual(Mat(s), m)
+        for Mat in Mat3Types:
+            m = Mat(1, 2, 3,
+                    4, 5, 6,
+                    7, 8, 9)
             s = "((1, 2, 3), (4, 5, 6), (7, 8, 9))"
-            self.assertEqual(Mat3(s), m)
-        for Mat4 in Mat4Types:
-            m = Mat4(1,  2,  3,  4,
-                     5,  6,  7,  8,
-                     9,  10, 11, 12,
-                     13, 14, 15, 16)
+            self.assertEqual(Mat(s), m)
+        for Mat in Mat4Types:
+            m = Mat(1,  2,  3,  4,
+                    5,  6,  7,  8,
+                    9,  10, 11, 12,
+                    13, 14, 15, 16)
             s = "((1, 2, 3, 4), (5, 6, 7, 8), (9, 10, 11, 12), (13, 14, 15, 16))"
-            self.assertEqual(Mat4(s), m)
+            self.assertEqual(Mat(s), m)
 
 if __name__ == '__main__':
     unittest.main()

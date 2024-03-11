@@ -406,7 +406,11 @@ void wrap_mat(py::module& m, const std::string& name) {
     }
 
     // Conversion to string
-    cmat.def("__repr__", [](const TMat& m) { return vgc::core::toString(m); });
+    cmat.def("__str__", [](const TMat& m) { return vgc::core::toString(m); });
+    cmat.def("__repr__", [name](const TMat& m) {
+        std::string str = vgc::core::toString(m);
+        return vgc::core::format("vgc.geometry.{}{}", name, str);
+    });
 }
 
 } // namespace
