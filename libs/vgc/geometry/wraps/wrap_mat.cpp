@@ -136,11 +136,11 @@ TMat mat4FromSequence_(py::sequence s, bool isFlatList) {
         // clang-format on
     }
     else {
-        // clang-format off
         TVec v0 = vgc::geometry::wraps::vecFromObject<TVec>(s[0]);
         TVec v1 = vgc::geometry::wraps::vecFromObject<TVec>(s[1]);
         TVec v2 = vgc::geometry::wraps::vecFromObject<TVec>(s[2]);
         TVec v3 = vgc::geometry::wraps::vecFromObject<TVec>(s[3]);
+        // clang-format off
         return TMat(v0[0], v0[1], v0[2], v0[3],
                     v1[0], v1[1], v1[2], v1[3],
                     v2[0], v2[1], v2[2], v2[3],
