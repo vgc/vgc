@@ -117,7 +117,7 @@ class TestMat(unittest.TestCase):
                       (13, 14, 15, 16)))
             self.assertEqual(m1, m2)
 
-    def testFromListTuple(self):
+    def testFromTupleList(self):
         for Mat in Mat2Types:
             m1 = Mat(1, 2,
                      3, 4)
@@ -143,7 +143,7 @@ class TestMat(unittest.TestCase):
                       (13, 14, 15, 16)])
             self.assertEqual(m1, m2)
 
-    def testFromTupleList(self):
+    def testFromListTuple(self):
         for Mat in Mat2Types:
             m1 = Mat(1, 2,
                      3, 4)

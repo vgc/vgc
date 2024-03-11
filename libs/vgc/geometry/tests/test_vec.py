@@ -78,7 +78,7 @@ class TestVec(unittest.TestCase):
             with self.assertRaises(ValueError):
                 v = Vec((1, 2, 3))
 
-    def testFromArray(self):
+    def testFromList(self):
         for Vec in Vec2Types:
             self.assertEqual(Vec([1, 2]), Vec(1, 2))
             with self.assertRaises(ValueError):
@@ -88,7 +88,7 @@ class TestVec(unittest.TestCase):
             with self.assertRaises(ValueError):
                 v = Vec([1, 2, 3, 4])
         for Vec in Vec4Types:
-            self.assertEqual(Vec((1, 2, 3, 4)), Vec(1, 2, 3, 4))
+            self.assertEqual(Vec([1, 2, 3, 4]), Vec(1, 2, 3, 4))
             with self.assertRaises(ValueError):
                 v = Vec([1, 2, 3])
 
