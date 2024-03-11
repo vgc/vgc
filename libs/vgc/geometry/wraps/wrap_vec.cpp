@@ -112,6 +112,21 @@ void wrap_vec(py::module& m, const std::string& name) {
     cvec.def(py::init(
         [](py::sequence s) { return vgc::geometry::wraps::vecFromSequence<TVec>(s); }));
 
+    // Enable implicit conversions from Python tuples to Vec types.
+    //
+    // This allows to use the `(x, y)` syntax for all functions
+    // that expect a Vec type, for example:
+    //
+    //   m = Mat2d((1, 2), (3, 4))
+    //   r = Rect2d(position=(1, 2), size=(2, 3))
+    //
+    // which would otherwise have to be written as:
+    //
+    //   m = Mat2d(Vec2d(1, 2), Vec2d(3, 4))
+    //   r = Rect2d(position=Vec2d(1, 2), size=Vec2d(2, 3))
+    //
+    py::implicitly_convertible<py::tuple, TVec>();
+
     // Index-based getter and setter
     cvec.def(
             "__getitem__",
