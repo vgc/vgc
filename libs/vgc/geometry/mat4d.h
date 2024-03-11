@@ -74,15 +74,29 @@ public:
     /// Creates a Mat4d initialized with the given arguments.
     ///
     constexpr Mat4d(
-        double m11, double m12, double m13, double m14,
-        double m21, double m22, double m23, double m24,
-        double m31, double m32, double m33, double m34,
+        double m00, double m01, double m02, double m14,
+        double m10, double m11, double m12, double m24,
+        double m20, double m21, double m22, double m34,
         double m41, double m42, double m43, double m44) noexcept
 
-        : data_{{m11, m21, m31, m41},
-                {m12, m22, m32, m42},
-                {m13, m23, m33, m43},
+        : data_{{m00, m10, m20, m41},
+                {m01, m11, m21, m42},
+                {m02, m12, m22, m43},
                 {m14, m24, m34, m44}} {
+    }
+
+    /// Creates a Mat4d initialized with the given row vectors.
+    ///
+    constexpr Mat4d(
+        const Vec4d& v0,
+        const Vec4d& v1,
+        const Vec4d& v2,
+        const Vec4d& v3) noexcept
+
+        : data_{{v0[0], v1[0], v2[0], v3[0]},
+                {v0[1], v1[1], v2[1], v3[1]},
+                {v0[2], v1[2], v2[2], v3[2]},
+                {v0[3], v1[3], v2[3], v3[3]}} {
     }
 
     /// Creates a diagonal matrix with diagonal elements equal to the given
@@ -122,17 +136,17 @@ public:
                  static_cast<double>(other(2, 3)),
                  static_cast<double>(other(3, 3))}} {}
 
-    /// Defines explicitely all the elements of the matrix
+    /// Defines explicitly all the elements of the matrix
     ///
     Mat4d& setElements(
-        double m11, double m12, double m13, double m14,
-        double m21, double m22, double m23, double m24,
-        double m31, double m32, double m33, double m34,
+        double m00, double m01, double m02, double m14,
+        double m10, double m11, double m12, double m24,
+        double m20, double m21, double m22, double m34,
         double m41, double m42, double m43, double m44) {
 
-        data_[0][0] = m11; data_[0][1] = m21; data_[0][2] = m31; data_[0][3] = m41;
-        data_[1][0] = m12; data_[1][1] = m22; data_[1][2] = m32; data_[1][3] = m42;
-        data_[2][0] = m13; data_[2][1] = m23; data_[2][2] = m33; data_[2][3] = m43;
+        data_[0][0] = m00; data_[0][1] = m10; data_[0][2] = m20; data_[0][3] = m41;
+        data_[1][0] = m01; data_[1][1] = m11; data_[1][2] = m21; data_[1][3] = m42;
+        data_[2][0] = m02; data_[2][1] = m12; data_[2][2] = m22; data_[2][3] = m43;
         data_[3][0] = m14; data_[3][1] = m24; data_[3][2] = m34; data_[3][3] = m44;
         return *this;
     }

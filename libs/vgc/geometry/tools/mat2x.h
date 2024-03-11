@@ -65,11 +65,21 @@ public:
     /// Creates a Mat2x initialized with the given arguments.
     ///
     constexpr Mat2x(
-        float m11, float m12,
-        float m21, float m22) noexcept
+        float m00, float m01,
+        float m10, float m11) noexcept
 
-        : data_{{m11, m21},
-                {m12, m22}} {
+        : data_{{m00, m10},
+                {m01, m11}} {
+    }
+
+    /// Creates a Mat2x initialized with the given row vectors.
+    ///
+    constexpr Mat2x(
+        const Vec2x& v0,
+        const Vec2x& v1) noexcept
+
+        : data_{{v0[0], v1[0]},
+                {v0[1], v1[1]}} {
     }
 
     /// Creates a diagonal matrix with diagonal elements equal to the given
@@ -96,14 +106,14 @@ public:
                  static_cast<float>(other(1, 1))}} {
     }
 
-    /// Defines explicitely all the elements of the matrix
+    /// Defines explicitly all the elements of the matrix
     ///
     Mat2x& setElements(
-        float m11, float m12,
-        float m21, float m22) {
+        float m00, float m01,
+        float m10, float m11) {
 
-        data_[0][0] = m11; data_[0][1] = m21;
-        data_[1][0] = m12; data_[1][1] = m22;
+        data_[0][0] = m00; data_[0][1] = m10;
+        data_[1][0] = m01; data_[1][1] = m11;
         return *this;
     }
 

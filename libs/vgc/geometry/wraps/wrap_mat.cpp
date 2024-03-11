@@ -95,10 +95,7 @@ TMat mat2FromSequence_(py::sequence s, bool isFlatList) {
     else {
         TVec v0 = vgc::geometry::wraps::vecFromObject<TVec>(s[0]);
         TVec v1 = vgc::geometry::wraps::vecFromObject<TVec>(s[1]);
-        // clang-format off
-        return TMat(v0[0], v0[1],
-                    v1[0], v1[1]);
-        // clang-format on
+        return TMat(v0, v1);
     }
 }
 
@@ -116,11 +113,7 @@ TMat mat3FromSequence_(py::sequence s, bool isFlatList) {
         TVec v0 = vgc::geometry::wraps::vecFromObject<TVec>(s[0]);
         TVec v1 = vgc::geometry::wraps::vecFromObject<TVec>(s[1]);
         TVec v2 = vgc::geometry::wraps::vecFromObject<TVec>(s[2]);
-        // clang-format off
-        return TMat(v0[0], v0[1], v0[2],
-                    v1[0], v1[1], v1[2],
-                    v2[0], v2[1], v2[2]);
-        // clang-format on
+        return TMat(v0, v1, v2);
     }
 }
 
@@ -140,12 +133,7 @@ TMat mat4FromSequence_(py::sequence s, bool isFlatList) {
         TVec v1 = vgc::geometry::wraps::vecFromObject<TVec>(s[1]);
         TVec v2 = vgc::geometry::wraps::vecFromObject<TVec>(s[2]);
         TVec v3 = vgc::geometry::wraps::vecFromObject<TVec>(s[3]);
-        // clang-format off
-        return TMat(v0[0], v0[1], v0[2], v0[3],
-                    v1[0], v1[1], v1[2], v1[3],
-                    v2[0], v2[1], v2[2], v2[3],
-                    v3[0], v3[1], v3[2], v3[3]);
-        // clang-format on
+        return TMat(v0, v1, v2, v3);
     }
 }
 
@@ -219,25 +207,48 @@ void wrap_mat(py::module& m, const std::string& name) {
         .def(py::init<TMat>()) //
         .def(py::init<T>());
 
+    // Constructor from row vectors, e.g.:
+    //
+    // m = Mat3d(Vec3d(1, 2, 3),
+    //           Vec3d(4, 5, 6),
+    //           Vec3d(7, 8, 9))
+    //
+    // or thanks to implicit conversion from tuple to Vec:
+    //
+    // m = Mat3d((1, 2, 3),
+    //           (4, 5, 6),
+    //           (7, 8, 9))
+    //
+    if constexpr (dimension == 2) {
+        cmat.def(py::init<const TVec&, const TVec&>());
+    }
+    if constexpr (dimension == 3) {
+        cmat.def(py::init<const TVec&, const TVec&, const TVec&>());
+    }
+    else if constexpr (dimension == 4) {
+        cmat.def(py::init<const TVec&, const TVec&, const TVec&, const TVec&>());
+    }
+
     // Constructor with explicit initialization of all elements, e.g.:
     //
     // m = Mat3d(1, 2, 3,
     //           4, 5, 6,
     //           7, 8, 9)
     //
-    // Note that in numpy the typical syntax is:
+    // Note that in numpy the typical syntax to create a matrix is:
     //
     // A = np.array([[1, 2, 3],
     //               [4, 5, 6],
     //               [7, 8, 9]])
     //
-    // The "list of list" is required so that numpy can infer the numRows and
-    // numColumns, since numpy doesn't have per-size specific matrix types. We
-    // don't have this constraint, so there is no good reason to do the same.
-    //
-    // TODO: Despite the above, it might still be a good idea to also support
-    // constructing from "tuple of tuple" and/or "array of array", to enable
-    // easier copy-pasting from debug output to Python Console.
+    // Such "list of list" syntax is necessary in numpy because otherwise it
+    // couldn't know the number of rows and columns, as this info is not part
+    // of the type itself. In our case, the dimension is part of the type,
+    // therefore we do not have this constraint, and we can support both the
+    // "concise" syntax defined here, but also the "list of list" syntax (see
+    // "Constructor from Sequence" below), which is still useful for
+    // compatibility and conversion to and from numpy types and other
+    // third-party libs.
     //
     // clang-format off
     if constexpr (dimension == 2) {
@@ -277,10 +288,6 @@ void wrap_mat(py::module& m, const std::string& name) {
     //
     // Important: this must be defined after the string overload, otherwise it
     // would take precendence since a string implements the Sequence protocol.
-    //
-    // TODO: Also allow `m = Mat2d((1, 2), (3, 4))`. For consistency, this
-    // requires to also add the constructor `Mat2d(const Vec2d&, const Vec2d&)`
-    // in C++.
     //
     cmat.def(py::init([](py::sequence s) { return matFromSequence<TMat>(s); }));
 
