@@ -18,13 +18,19 @@
 
 import unittest
 from math import pi, sqrt
-from vgc.geometry import Vec2d, Vec2f, Mat2d, Mat2f, Mat3d, Mat3f, Mat4d, Mat4f
+from vgc.geometry import (
+    Vec2d, Vec2f, Vec3d, Vec3f, Vec4d, Vec4f,
+    Mat2d, Mat2f, Mat3d, Mat3f, Mat4d, Mat4f
+)
 
 Mat2Types = [Mat2d, Mat2f]
 Mat3Types = [Mat3d, Mat3f]
 Mat4Types = [Mat4d, Mat4f]
+Mat2Vec2Types = [(Mat2d, Vec2d), (Mat2f, Vec2f)]
 Mat3Vec2Types = [(Mat3d, Vec2d), (Mat3f, Vec2f)]
 Mat4Vec2Types = [(Mat4d, Vec2d), (Mat4f, Vec2f)]
+Mat3Vec3Types = [(Mat3d, Vec3d), (Mat3f, Vec3f)]
+Mat4Vec4Types = [(Mat4d, Vec4d), (Mat4f, Vec4f)]
 MatTypes = [(Mat2d, 2), (Mat2f, 2),
             (Mat3d, 3), (Mat3f, 3),
             (Mat4d, 4), (Mat4f, 4)]
@@ -90,6 +96,45 @@ class TestMat(unittest.TestCase):
                     self.assertEqual(m[i][j], 42)
                 else:
                     self.assertEqual(m[i][j], 0)
+
+    def testFromRows(self):
+        for (Mat, Vec) in Mat2Vec2Types:
+            m1 = Mat(1, 2,
+                     3, 4)
+            m2 = Mat((1, 2),
+                     (3, 4))
+            m3 = Mat(Vec(1, 2),
+                     Vec(3, 4))
+            self.assertEqual(m1, m2)
+            self.assertEqual(m1, m3)
+        for (Mat, Vec) in Mat3Vec3Types:
+            pass
+            m1 = Mat(1, 2, 3,
+                     4, 5, 6,
+                     7, 8, 9)
+            m2 = Mat((1, 2, 3),
+                     (4, 5, 6),
+                     (7, 8, 9))
+            m3 = Mat(Vec(1, 2, 3),
+                     Vec(4, 5, 6),
+                     Vec(7, 8, 9))
+            self.assertEqual(m1, m2)
+            self.assertEqual(m1, m3)
+        for (Mat, Vec) in Mat4Vec4Types:
+            m1 = Mat(1,  2,  3,  4,
+                     5,  6,  7,  8,
+                     9,  10, 11, 12,
+                     13, 14, 15, 16)
+            m2 = Mat((1,  2,  3,  4),
+                     (5,  6,  7,  8),
+                     (9,  10, 11, 12),
+                     (13, 14, 15, 16))
+            m3 = Mat(Vec(1,  2,  3,  4),
+                     Vec(5,  6,  7,  8),
+                     Vec(9,  10, 11, 12),
+                     Vec(13, 14, 15, 16))
+            self.assertEqual(m1, m2)
+            self.assertEqual(m1, m3)
 
     def testFromTupleTuple(self):
         for Mat in Mat2Types:

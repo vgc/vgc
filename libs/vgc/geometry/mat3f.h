@@ -71,13 +71,25 @@ public:
     /// Creates a Mat3f initialized with the given arguments.
     ///
     constexpr Mat3f(
-        float m11, float m12, float m13,
-        float m21, float m22, float m23,
-        float m31, float m32, float m33) noexcept
+        float m00, float m01, float m02,
+        float m10, float m11, float m12,
+        float m20, float m21, float m22) noexcept
 
-        : data_{{m11, m21, m31},
-                {m12, m22, m32},
-                {m13, m23, m33}} {
+        : data_{{m00, m10, m20},
+                {m01, m11, m21},
+                {m02, m12, m22}} {
+    }
+
+    /// Creates a Mat3f initialized with the given row vectors.
+    ///
+    constexpr Mat3f(
+        const Vec3f& v0,
+        const Vec3f& v1,
+        const Vec3f& v2) noexcept
+
+        : data_{{v0[0], v1[0], v2[0]},
+                {v0[1], v1[1], v2[1]},
+                {v0[2], v1[2], v2[2]}} {
     }
 
     /// Creates a diagonal matrix with diagonal elements equal to the given
@@ -110,16 +122,16 @@ public:
                  static_cast<float>(other(2, 2))}} {
     }
 
-    /// Defines explicitely all the elements of the matrix
+    /// Defines explicitly all the elements of the matrix
     ///
     Mat3f& setElements(
-        float m11, float m12, float m13,
-        float m21, float m22, float m23,
-        float m31, float m32, float m33) {
+        float m00, float m01, float m02,
+        float m10, float m11, float m12,
+        float m20, float m21, float m22) {
 
-        data_[0][0] = m11; data_[0][1] = m21; data_[0][2] = m31;
-        data_[1][0] = m12; data_[1][1] = m22; data_[1][2] = m32;
-        data_[2][0] = m13; data_[2][1] = m23; data_[2][2] = m33;
+        data_[0][0] = m00; data_[0][1] = m10; data_[0][2] = m20;
+        data_[1][0] = m01; data_[1][1] = m11; data_[1][2] = m21;
+        data_[2][0] = m02; data_[2][1] = m12; data_[2][2] = m22;
         return *this;
     }
 
