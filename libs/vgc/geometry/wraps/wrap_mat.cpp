@@ -30,6 +30,7 @@
 
 #include <vgc/core/wraps/class.h>
 #include <vgc/core/wraps/common.h>
+#include <vgc/geometry/wraps/vec.h>
 
 using vgc::geometry::Mat;
 using vgc::geometry::Vec;
@@ -82,6 +83,106 @@ private:
     vgc::Int i_;
 };
 
+template<typename TMat, typename TVec, typename T>
+TMat mat2FromSequence_(py::sequence s, bool isFlatList) {
+    using vgc::geometry::wraps::detail::cast;
+    if (isFlatList) {
+        // clang-format off
+        return TMat(cast<T>(s[0]), cast<T>(s[1]),
+                    cast<T>(s[2]), cast<T>(s[3]));
+        // clang-format on
+    }
+    else {
+        TVec v0 = vgc::geometry::wraps::vecFromObject<TVec>(s[0]);
+        TVec v1 = vgc::geometry::wraps::vecFromObject<TVec>(s[1]);
+        // clang-format off
+        return TMat(v0[0], v0[1],
+                    v1[0], v1[1]);
+        // clang-format on
+    }
+}
+
+template<typename TMat, typename TVec, typename T>
+TMat mat3FromSequence_(py::sequence s, bool isFlatList) {
+    using vgc::geometry::wraps::detail::cast;
+    if (isFlatList) {
+        // clang-format off
+        return TMat(cast<T>(s[0]), cast<T>(s[1]), cast<T>(s[2]),
+                    cast<T>(s[3]), cast<T>(s[4]), cast<T>(s[5]),
+                    cast<T>(s[6]), cast<T>(s[7]), cast<T>(s[8]));
+        // clang-format on
+    }
+    else {
+        TVec v0 = vgc::geometry::wraps::vecFromObject<TVec>(s[0]);
+        TVec v1 = vgc::geometry::wraps::vecFromObject<TVec>(s[1]);
+        TVec v2 = vgc::geometry::wraps::vecFromObject<TVec>(s[2]);
+        // clang-format off
+        return TMat(v0[0], v0[1], v0[2],
+                    v1[0], v1[1], v1[2],
+                    v2[0], v2[1], v2[2]);
+        // clang-format on
+    }
+}
+
+template<typename TMat, typename TVec, typename T>
+TMat mat4FromSequence_(py::sequence s, bool isFlatList) {
+    using vgc::geometry::wraps::detail::cast;
+    if (isFlatList) {
+        // clang-format off
+        return TMat(cast<T>(s[0]), cast<T>(s[1]), cast<T>(s[2]), cast<T>(s[3]),
+                    cast<T>(s[4]), cast<T>(s[5]), cast<T>(s[6]), cast<T>(s[7]),
+                    cast<T>(s[8]), cast<T>(s[9]), cast<T>(s[10]), cast<T>(s[11]),
+                    cast<T>(s[12]), cast<T>(s[13]), cast<T>(s[14]), cast<T>(s[15]));
+        // clang-format on
+    }
+    else {
+        TVec v0 = vgc::geometry::wraps::vecFromObject<TVec>(s[0]);
+        TVec v1 = vgc::geometry::wraps::vecFromObject<TVec>(s[1]);
+        TVec v2 = vgc::geometry::wraps::vecFromObject<TVec>(s[2]);
+        TVec v3 = vgc::geometry::wraps::vecFromObject<TVec>(s[3]);
+        // clang-format off
+        return TMat(v0[0], v0[1], v0[2], v0[3],
+                    v1[0], v1[1], v1[2], v1[3],
+                    v2[0], v2[1], v2[2], v2[3],
+                    v3[0], v3[1], v3[2], v3[3]);
+        // clang-format on
+    }
+}
+
+template<typename TMat>
+TMat matFromSequence(py::sequence s) {
+    using T = typename TMat::ScalarType;
+    constexpr vgc::Int dimension = TMat::dimension;
+    using TVec = typename vgc::geometry::Vec<dimension, T>;
+
+    bool isFlatList = (s.size() == dimension * dimension);
+    if (!isFlatList && s.size() != dimension) {
+        vgc::geometry::wraps::detail::throwUnableToConvertVecOrMat<TMat>(
+            s, "Incompatible sizes.");
+    }
+
+    try {
+        if constexpr (dimension == 2) {
+            return mat2FromSequence_<TMat, TVec, T>(s, isFlatList);
+        }
+        else if constexpr (dimension == 3) {
+            return mat3FromSequence_<TMat, TVec, T>(s, isFlatList);
+        }
+        else if constexpr (dimension == 4) {
+            return mat4FromSequence_<TMat, TVec, T>(s, isFlatList);
+        }
+        else {
+            static_assert("Mat type not supported");
+        }
+    }
+    catch (const std::exception& error) {
+        vgc::geometry::wraps::detail::throwUnableToConvertVecOrMat<TMat>(s, error.what());
+    }
+    catch (...) {
+        vgc::geometry::wraps::detail::throwUnableToConvertVecOrMat<TMat>(s);
+    }
+}
+
 template<int dimension, typename T>
 void wrap_mat(py::module& m, const std::string& name) {
 
@@ -91,7 +192,7 @@ void wrap_mat(py::module& m, const std::string& name) {
     using TMat = vgc::geometry::Mat<dimension, T>;
     using TRow = MatRowView<dimension, T>;
 
-    // Wrap RowView class
+    // Wrap RowView class, implementing the Sequence protocol
     vgc::core::wraps::Class<TRow>(m, (name + "RowView").c_str())
         .def(
             "__getitem__",
@@ -101,12 +202,15 @@ void wrap_mat(py::module& m, const std::string& name) {
                 }
                 return row[j];
             })
-        .def("__setitem__", [](TRow& row, vgc::Int j, T x) {
-            if (j < 0 || j >= dimension) {
-                throw py::index_error();
-            }
-            row[j] = x;
-        });
+        .def(
+            "__setitem__", //
+            [](TRow& row, vgc::Int j, T x) {
+                if (j < 0 || j >= dimension) {
+                    throw py::index_error();
+                }
+                row[j] = x;
+            })
+        .def("__len__", [](TRow&) { return dimension; });
 
     vgc::core::wraps::Class<TMat> cmat(m, name.c_str());
 
@@ -156,14 +260,29 @@ void wrap_mat(py::module& m, const std::string& name) {
     // Constructor from string (parse)
     cmat.def(py::init([](const std::string& s) { return vgc::core::parse<TMat>(s); }));
 
-    // TODO: constructor from list so we can do:
+    // Constructor from Sequence.
     //
-    //     m = Mat4d([i+j for i, j in Mat4d.indices])
+    // This allows both a Sequence of Sequence (outer size N and inner size N),
+    // as well as a flat Sequence (size N*N), so that all of these are allowed:
     //
-    // or perhaps also a constructor taking a lambda, e.g.:
+    // ```python
+    // m = Mat2d((1, 2, 3, 4))
+    // m = Mat2d([1, 2, 3, 4])
+    // m = Mat2d(((1, 2), (3, 4)))
+    // m = Mat2d([[1, 2], [3, 4]])
+    // m = Mat2d([(1, 2), (3, 4)])
+    // m = Mat2d(([1, 2], [3, 4]))
+    // m = Mat4d([i+j for i, j in Mat4d.indices])
+    // ```
     //
-    //     m = Mat4d(lambda i, j: i+j)
+    // Important: this must be defined after the string overload, otherwise it
+    // would take precendence since a string implements the Sequence protocol.
     //
+    // TODO: Also allow `m = Mat2d((1, 2), (3, 4))`. For consistency, this
+    // requires to also add the constructor `Mat2d(const Vec2d&, const Vec2d&)`
+    // in C++.
+    //
+    cmat.def(py::init([](py::sequence s) { return matFromSequence<TMat>(s); }));
 
     // Get/Set individual element via `m[i][j] = 42`
     cmat.def(
@@ -177,6 +296,9 @@ void wrap_mat(py::module& m, const std::string& name) {
         py::keep_alive<0, 1>()); // we want the Row to keep the Mat alive
     // Note: py::return_value_policy::reference_internal wouldn't work
     // here because it expects a T* or T&, and here we return a T.
+
+    // Implements the Sequence protocol. See wrap_vec.cpp.
+    cmat.def("__len__", [](const TMat&) { return dimension; });
 
     // Convenient way to iterate over all valid indices in the matrix type
     cmat.def_property_readonly_static("indices", [](py::object) {
@@ -278,8 +400,6 @@ void wrap_mat(py::module& m, const std::string& name) {
 
     // Conversion to string
     cmat.def("__repr__", [](const TMat& m) { return vgc::core::toString(m); });
-
-    // TODO: parse from string
 }
 
 } // namespace

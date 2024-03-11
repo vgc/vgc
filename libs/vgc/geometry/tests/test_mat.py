@@ -91,6 +91,149 @@ class TestMat(unittest.TestCase):
                 else:
                     self.assertEqual(m[i][j], 0)
 
+    def testFromTupleTuple(self):
+        for Mat in Mat2Types:
+            m1 = Mat(1, 2,
+                     3, 4)
+            m2 = Mat(((1, 2),
+                      (3, 4)))
+            self.assertEqual(m1, m2)
+        for Mat in Mat3Types:
+            m1 = Mat(1, 2, 3,
+                     4, 5, 6,
+                     7, 8, 9)
+            m2 = Mat(((1, 2, 3),
+                      (4, 5, 6),
+                      (7, 8, 9)))
+            self.assertEqual(m1, m2)
+        for Mat in Mat4Types:
+            m1 = Mat(1,  2,  3,  4,
+                     5,  6,  7,  8,
+                     9,  10, 11, 12,
+                     13, 14, 15, 16)
+            m2 = Mat(((1,  2,  3,  4),
+                      (5,  6,  7,  8),
+                      (9,  10, 11, 12),
+                      (13, 14, 15, 16)))
+            self.assertEqual(m1, m2)
+
+    def testFromTupleList(self):
+        for Mat in Mat2Types:
+            m1 = Mat(1, 2,
+                     3, 4)
+            m2 = Mat([(1, 2),
+                      (3, 4)])
+            self.assertEqual(m1, m2)
+        for Mat in Mat3Types:
+            m1 = Mat(1, 2, 3,
+                     4, 5, 6,
+                     7, 8, 9)
+            m2 = Mat([(1, 2, 3),
+                      (4, 5, 6),
+                      (7, 8, 9)])
+            self.assertEqual(m1, m2)
+        for Mat in Mat4Types:
+            m1 = Mat(1,  2,  3,  4,
+                     5,  6,  7,  8,
+                     9,  10, 11, 12,
+                     13, 14, 15, 16)
+            m2 = Mat([(1,  2,  3,  4),
+                      (5,  6,  7,  8),
+                      (9,  10, 11, 12),
+                      (13, 14, 15, 16)])
+            self.assertEqual(m1, m2)
+
+    def testFromListTuple(self):
+        for Mat in Mat2Types:
+            m1 = Mat(1, 2,
+                     3, 4)
+            m2 = Mat(([1, 2],
+                      [3, 4]))
+            self.assertEqual(m1, m2)
+        for Mat in Mat3Types:
+            m1 = Mat(1, 2, 3,
+                     4, 5, 6,
+                     7, 8, 9)
+            m2 = Mat(([1, 2, 3],
+                      [4, 5, 6],
+                      [7, 8, 9]))
+            self.assertEqual(m1, m2)
+        for Mat in Mat4Types:
+            m1 = Mat(1,  2,  3,  4,
+                     5,  6,  7,  8,
+                     9,  10, 11, 12,
+                     13, 14, 15, 16)
+            m2 = Mat(([1,  2,  3,  4],
+                      [5,  6,  7,  8],
+                      [9,  10, 11, 12],
+                      [13, 14, 15, 16]))
+            self.assertEqual(m1, m2)
+
+    def testFromListList(self):
+        for Mat in Mat2Types:
+            m1 = Mat(1, 2,
+                     3, 4)
+            m2 = Mat([[1, 2],
+                      [3, 4]])
+            self.assertEqual(m1, m2)
+        for Mat in Mat3Types:
+            m1 = Mat(1, 2, 3,
+                     4, 5, 6,
+                     7, 8, 9)
+            m2 = Mat([[1, 2, 3],
+                      [4, 5, 6],
+                      [7, 8, 9]])
+            self.assertEqual(m1, m2)
+        for Mat in Mat4Types:
+            m1 = Mat(1,  2,  3,  4,
+                     5,  6,  7,  8,
+                     9,  10, 11, 12,
+                     13, 14, 15, 16)
+            m2 = Mat([[1,  2,  3,  4],
+                      [5,  6,  7,  8],
+                      [9,  10, 11, 12],
+                      [13, 14, 15, 16]])
+            self.assertEqual(m1, m2)
+
+    def testFromFlatList(self):
+        for Mat in Mat2Types:
+            m1 = Mat(0, 1,
+                     2, 3)
+            m2 = Mat([2*i+j for i,j in Mat.indices])
+            self.assertEqual(m1, m2)
+        for Mat in Mat3Types:
+            m1 = Mat(0, 1, 2,
+                     2, 3, 4,
+                     4, 5, 6)
+            m2 = Mat([2*i+j for i,j in Mat.indices])
+            self.assertEqual(m1, m2)
+        for Mat in Mat4Types:
+            m1 = Mat(0, 1, 2, 3,
+                     2, 3, 4, 5,
+                     4, 5, 6, 7,
+                     6, 7, 8, 9)
+            m2 = Mat([2*i+j for i,j in Mat.indices])
+            self.assertEqual(m1, m2)
+
+    # See wraps/vec.h: "Implicit conversion from string is not allowed in this context"
+    #
+    def testFromStringList(self):
+        for Mat in Mat2Types:
+            with self.assertRaises(ValueError):
+                m = Mat(['(1, 2)',
+                         '(3, 4)'])
+        for Mat in Mat3Types:
+            with self.assertRaises(ValueError):
+                m = Mat(['(1, 2, 3)',
+                         '(4, 5, 6)',
+                         '(7, 8, 9)'])
+        for Mat in Mat4Types:
+            with self.assertRaises(ValueError):
+                m = Mat(['(1, 2, 3, 4)',
+                         '(5, 6, 7, 8)',
+                         '(9, 10, 11, 12)',
+                         '(13, 14, 15, 16)'])
+
     def testCopyByReference(self):
         for (Mat, dim) in MatTypes:
             m = Mat()
