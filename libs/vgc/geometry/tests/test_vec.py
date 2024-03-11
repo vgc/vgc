@@ -646,6 +646,9 @@ class TestVec(unittest.TestCase):
             self.assertFalse(Vec(1, 2, 3, 4).allNear(Vec(1, 2, 3, 5), absTol))
 
     def testToString(self):
+        v = Vec2d(1, 2)
+        self.assertEqual(str(v), "(1, 2)")
+        self.assertEqual(repr(v), "vgc.geometry.Vec2d(1, 2)")
         for Vec in Vec2Types:
             # Setup a French locale (if available on this system) to check that even
             # when the decimal point is ',' according to the locale, numbers are
@@ -658,14 +661,17 @@ class TestVec(unittest.TestCase):
             v = Vec(1, 2.5)
             s = "(1, 2.5)"
             self.assertEqual(str(v), s)
+            self.assertEqual(repr(v), "vgc.geometry." + Vec.__name__ + s)
         for Vec in Vec3Types:
             v = Vec(1, 2, 3)
             s = "(1, 2, 3)"
             self.assertEqual(str(v), s)
+            self.assertEqual(repr(v), "vgc.geometry." + Vec.__name__ + s)
         for Vec in Vec4Types:
             v = Vec(1,  2,  3,  4)
             s = "(1, 2, 3, 4)"
             self.assertEqual(str(v), s)
+            self.assertEqual(repr(v), "vgc.geometry." + Vec.__name__ + s)
 
     def testParse(self):
         for Vec in Vec2Types:
