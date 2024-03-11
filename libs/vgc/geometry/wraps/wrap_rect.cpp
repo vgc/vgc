@@ -19,7 +19,6 @@
 
 #include <vgc/core/wraps/class.h>
 #include <vgc/core/wraps/common.h>
-#include <vgc/geometry/wraps/vec.h>
 
 namespace {
 
@@ -61,8 +60,6 @@ void wrap_rect(py::module& m, const std::string& name, T relTol) {
     using This = Rect2<T>;
     using Vec2x = Vec2<T>;
 
-    using vgc::geometry::wraps::vecFromTuple;
-
     vgc::core::wraps::Class<This>(m, name.c_str())
 
         .def(py::init<>())
@@ -74,25 +71,6 @@ void wrap_rect(py::module& m, const std::string& name, T relTol) {
         .def(
             py::init([](const Vec2x& position, const Vec2x& size) {
                 return This::fromPositionSize(position, size);
-            }),
-            "position"_a,
-            "size"_a)
-        .def(
-            py::init([](const Vec2x& position, py::tuple size) {
-                return This::fromPositionSize(position, vecFromTuple<Vec2x>(size));
-            }),
-            "position"_a,
-            "size"_a)
-        .def(
-            py::init([](py::tuple position, const Vec2x& size) {
-                return This::fromPositionSize(vecFromTuple<Vec2x>(position), size);
-            }),
-            "position"_a,
-            "size"_a)
-        .def(
-            py::init([](py::tuple position, py::tuple size) {
-                return This::fromPositionSize(
-                    vecFromTuple<Vec2x>(position), vecFromTuple<Vec2x>(size));
             }),
             "position"_a,
             "size"_a)

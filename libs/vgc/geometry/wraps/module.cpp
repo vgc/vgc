@@ -25,11 +25,15 @@ void wrap_triangle(py::module& m);
 void wrap_vec(py::module& m);
 
 PYBIND11_MODULE(geometry, m) {
+
+    // Vec must be wrapped first because other wrappers depends on it
+    wrap_vec(m);
+
+    // Other types
     wrap_curve(m);
     wrap_intersect(m);
     wrap_mat(m);
     wrap_range(m);
     wrap_rect(m);
     wrap_triangle(m);
-    wrap_vec(m);
 }

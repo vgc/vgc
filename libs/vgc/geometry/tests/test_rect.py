@@ -41,6 +41,12 @@ class TestRect(unittest.TestCase):
             self.assertEqual(r.xMax, 3)
             self.assertEqual(r.yMax, 4)
 
+            r = Rect2((1, 2), (3, 4))
+            self.assertEqual(r.xMin, 1)
+            self.assertEqual(r.yMin, 2)
+            self.assertEqual(r.xMax, 3)
+            self.assertEqual(r.yMax, 4)
+
             r = Rect2(1, 2, 3, 4)
             self.assertEqual(r.xMin, 1)
             self.assertEqual(r.yMin, 2)
@@ -48,6 +54,12 @@ class TestRect(unittest.TestCase):
             self.assertEqual(r.yMax, 4)
 
             r = Rect2(Vec2(3, 4), Vec2(1, 2))
+            self.assertEqual(r.xMin, 3)
+            self.assertEqual(r.yMin, 4)
+            self.assertEqual(r.xMax, 1)
+            self.assertEqual(r.yMax, 2)
+
+            r = Rect2((3, 4), (1, 2))
             self.assertEqual(r.xMin, 3)
             self.assertEqual(r.yMin, 4)
             self.assertEqual(r.xMax, 1)
