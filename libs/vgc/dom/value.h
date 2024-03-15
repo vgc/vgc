@@ -32,6 +32,7 @@
 #include <vgc/core/parse.h>
 #include <vgc/core/sharedconst.h>
 #include <vgc/core/stringid.h>
+#include <vgc/core/typeid.h>
 #include <vgc/dom/api.h>
 #include <vgc/dom/path.h>
 #include <vgc/geometry/vec2d.h>
@@ -44,6 +45,7 @@ class Value;
 using StreamReader = core::StringReader;
 using StreamWriter = core::StringWriter;
 
+/*
 /// \enum vgc::dom::ValueType
 /// \brief Specifies the type of an attribute Value
 ///
@@ -124,6 +126,8 @@ enum class ValueType {
 VGC_DOM_API
 VGC_DECLARE_ENUM(ValueType)
 
+*/
+
 struct NoneValue : std::monostate {};
 struct InvalidValue : std::monostate {};
 
@@ -173,11 +177,7 @@ public:
     }
 };
 
-namespace detail {
-
-class CustomValueHolder;
-
-}
+class Value;
 
 using FormatterBufferCtx = fmt::buffer_context<char>;
 using FormatterBufferIterator = decltype(std::declval<FormatterBufferCtx>().out());
@@ -209,112 +209,416 @@ private:
     core::Array<core::Id> absolutePathChangedElements_;
 };
 
-class VGC_DOM_API CustomValue {
-public:
-    virtual ~CustomValue() = default;
-
-    std::unique_ptr<CustomValue> clone(bool move = false) const {
-        return clone_(move);
-    }
-
-    bool compareEqual(const CustomValue* rhs) const {
-        return compareEqual_(rhs);
-    }
-    bool compareLess(const CustomValue* rhs) const {
-        return compareLess_(rhs);
-    }
-
-    void read(StreamReader& in) {
-        read_(in);
-    }
-    void write(StreamWriter& out) const {
-        write_(out);
-    }
-
-    FormatterBufferIterator format(FormatterBufferCtx& ctx) const {
-        return format_(ctx);
-    }
-
-protected:
-    explicit CustomValue(bool hasPaths) noexcept
-        : hasPaths_(hasPaths) {
-    }
-
-    friend detail::CustomValueHolder;
-    friend Value;
-
-    // must be called before doing any rename or hierarchical moves in the dom.
-    virtual void preparePathsForUpdate_(const Element* owner) const = 0;
-    virtual void updatePaths_(const Element* owner, const PathUpdateData& data) = 0;
-
-    virtual std::unique_ptr<CustomValue> clone_(bool move) const = 0;
-
-    virtual bool compareEqual_(const CustomValue* rhs) const = 0;
-    virtual bool compareLess_(const CustomValue* rhs) const = 0;
-
-    virtual void read_(StreamReader& in) = 0;
-    virtual void write_(StreamWriter& out) const = 0;
-
-    virtual FormatterBufferIterator format_(FormatterBufferCtx& ctx) const = 0;
-
-private:
-    const bool hasPaths_;
+template<typename T>
+struct ValueTraits {
+    static constexpr bool hasPaths = false;
 };
+
+// This should be specialized by custom types internally storing
+// `vgc::dom::Path` data so they can update their in case an
+// referenced element is moved or its ID changes.
+//
+// ```cpp
+// namespace my::lib {
+//
+// class Foo {
+//     ...
+// };
+//
+// template<>
+// constexpr bool hasVgcDomPaths<Foo>() {
+//     return true;
+// }
+//
+// } // namespace my::lib
+// ```
+//
+// Note: we do not use a type trait for this so that we can rely on
+// Argument-Dependent Lookup, instead of forcing people to specialize the trait
+// in the vgc::dom namespace.
+//
+template<typename T>
+constexpr bool hasVgcDomPaths(const T*) {
+    return false;
+}
+
+#define VGC_DOM_DECLARE_HAS_PATHS(T)                                                     \
+    template<>                                                                           \
+    constexpr bool hasVgcDomPaths<T>(const T*) {                                         \
+        return true;                                                                     \
+    }
 
 namespace detail {
 
-class VGC_DOM_API CustomValueHolder {
+class ValueData {
 public:
-    explicit CustomValueHolder(std::unique_ptr<CustomValue>&& uptr)
-        : uptr_(std::move(uptr)) {
+    ValueData() = default;
+    ~ValueData() = default;
+
+    ValueData(ValueData&& other) = default;
+    ValueData& operator=(ValueData&& other) = default;
+
+    // Owner must use the appropriate function pointers to copy
+    ValueData(const ValueData&) = delete;
+    ValueData& operator=(const ValueData&) = delete;
+
+    template<typename T>
+    ValueData(T&& x)
+        : data_(static_cast<void*>(new std::decay_t<T>(std::forward<T>(x)))) {
     }
 
-    CustomValueHolder(const CustomValueHolder& other)
-        : uptr_(other.uptr_->clone()) {
+    template<typename T>
+    static ValueData create(T&& x) {
+        return ValueData(std::move(x));
     }
 
-    CustomValueHolder(CustomValueHolder&& other)
-        : uptr_(std::move(other.uptr_)) {
+    template<typename T>
+    static ValueData create(const T& x) {
+        return ValueData(x);
     }
 
-    CustomValueHolder& operator=(const CustomValueHolder& other) {
-        uptr_ = other.uptr_->clone();
-        return *this;
+    template<typename T>
+    void destroy() {
+        delete static_cast<T*>(data_);
+        data_ = nullptr;
     }
 
-    CustomValueHolder& operator=(CustomValueHolder&& other) {
-        uptr_ = std::move(other.uptr_);
-        return *this;
+    template<typename T>
+    T& get() {
+        return *static_cast<T*>(data_);
     }
 
-    CustomValue& operator*() const noexcept {
-        return *uptr_;
-    }
-
-    CustomValue* operator->() const noexcept {
-        return uptr_.get();
-    }
-
-    CustomValue* get() const {
-        return uptr_.get();
-    }
-
-    friend bool operator==(const CustomValueHolder& lhs, const CustomValueHolder& rhs) {
-        return lhs->compareEqual(rhs.get());
-    }
-
-    friend bool operator!=(const CustomValueHolder& lhs, const CustomValueHolder& rhs) {
-        return !lhs->compareEqual(rhs.get());
-    }
-
-    friend bool operator<(const CustomValueHolder& lhs, const CustomValueHolder& rhs) {
-        return lhs->compareLess(rhs.get());
+    template<typename T>
+    const T& get() const {
+        return *static_cast<const T*>(data_);
     }
 
 private:
-    std::unique_ptr<CustomValue> uptr_;
+    // For now we don't do Small-Value Optimization: values are always dynamically
+    // allocated. If in the future we want SVO, we could do that by modifying
+    // ValueData.
+    //
+    void* data_ = nullptr;
 };
 
+// Stores meta data and function pointers to operate on type-erased data.
+// This is essentially a hand-written virtual table.
+//
+class VGC_DOM_API ValueTypeInfo {
+public:
+    core::StringId name;
+    bool hasPaths;
+
+    void (*copy)(const ValueData&, ValueData&);
+    void (*move)(ValueData&, ValueData&);
+    void (*destroy)(ValueData&);
+
+    bool (*equal)(const ValueData&, const ValueData&);
+    bool (*less)(const ValueData&, const ValueData&);
+
+    void (*read)(ValueData&, StreamReader& in);
+    void (*write)(const ValueData&, StreamWriter& out);
+
+    FormatterBufferIterator (*format)(const ValueData&, FormatterBufferCtx& ctx);
+
+    void (*preparePathsForUpdate)(const ValueData&, const Element* owner);
+    void (*updatePaths)(const ValueData&, const Element* owner, const PathUpdateData&);
+
+    template<typename T>
+    static ValueTypeInfo create() {
+        ValueTypeInfo info;
+        info.name = core::StringId(typeid(T).name());
+        info.hasPaths = vgc::dom::ValueTraits<T>::hasPaths;
+        info.copy = &copy_<T>;
+        info.move = &move_<T>;
+        info.destroy = &destroy_<T>;
+        info.equal = &equal_<T>;
+        info.less = &less_<T>;
+        info.read = &read_<T>;
+        info.write = &write_<T>;
+        info.format = &format_<T>;
+        info.preparePathsForUpdate = &preparePathsForUpdate_<T>;
+        info.updatePaths = &updatePaths_<T>;
+        return info;
+    }
+
+private:
+    template<typename T>
+    static void copy_(const ValueData& from, ValueData& to) {
+        to = ValueData::create<T>(from.get<T>());
+    }
+
+    template<typename T>
+    static void move_(ValueData& from, ValueData& to) {
+        to = ValueData::create<T>(std::move(from.get<T>()));
+    }
+
+    template<typename T>
+    static void destroy_(ValueData& d) {
+        d.destroy<T>();
+    }
+
+    template<typename T>
+    static bool equal_(const ValueData& d1, const ValueData& d2) {
+        return d1.get<T>() == d2.get<T>();
+    }
+
+    template<typename T>
+    static bool less_(const ValueData& d1, const ValueData& d2) {
+        return d1.get<T>() < d2.get<T>();
+    }
+
+    template<typename T>
+    static void read_(ValueData& d, StreamReader& in) {
+        using vgc::core::readTo;
+        readTo(d.get<T>(), in);
+    }
+
+    template<typename T>
+    static void write_(const ValueData& d, StreamWriter& out) {
+        using vgc::core::write;
+        write(out, d.get<T>());
+    }
+
+    template<typename T>
+    static FormatterBufferIterator format_(const ValueData& d, FormatterBufferCtx& ctx) {
+        return core::formatTo(ctx.out(), "{}", d.get<T>());
+    }
+
+    template<typename T>
+    static void preparePathsForUpdate_(const ValueData&, const Element*) {
+        // TODO: Use Traits
+    }
+
+    template<typename T>
+    static void updatePaths_(const ValueData&, const Element*, const PathUpdateData&) {
+        // TODO: Use Traits
+    }
+};
+
+// This is just a wrapper for `ValueTypeInfo*` that reimplements the equality
+// operator: it tests for equality of `info->name` rather than equality of
+// the pointer address, because pointer equality may not be guaranteed across
+// shared library boundaries.
+//
+class VGC_DOM_API ValueTypeId {
+public:
+    ValueTypeId(const ValueTypeInfo* info)
+        : info_(info) {
+    }
+
+    const ValueTypeInfo& info() const {
+        return *info_;
+    }
+
+    bool operator==(const ValueTypeId& other) const {
+        return info_->name == other.info_->name;
+    }
+
+    bool operator!=(const ValueTypeId& other) const {
+        return !(*this == other);
+    }
+
+private:
+    const ValueTypeInfo* info_;
+};
+
+template<typename T>
+ValueTypeId valueTypeId() {
+    // Each DLL may have its own &info address, but their info.name is equal
+    static const ValueTypeInfo info = ValueTypeInfo::create<T>();
+    return ValueTypeId(&info);
+}
+
+} // namespace detail
+
+/*
+class VGC_DOM_API AbstractValue {
+public:
+    virtual ~AbstractValue();
+
+    virtual std::unique_ptr<AbstractValue> copy() const = 0;
+    virtual std::unique_ptr<AbstractValue> move() const = 0;
+
+    virtual bool compareEqual(const AbstractValue& rhs) const = 0;
+    virtual bool compareLess(const AbstractValue& rhs) const = 0;
+
+    virtual void read(StreamReader& in) = 0;
+    virtual void write(StreamWriter& out) const = 0;
+
+    virtual FormatterBufferIterator format(FormatterBufferCtx& ctx) const = 0;
+
+    virtual void preparePathsForUpdate(const Element* owner) const = 0;
+    virtual void updatePaths(const Element* owner, const PathUpdateData& data) = 0;
+};
+
+// XXX Use CRTP?
+
+template<typename T>
+class ArithmeticValue : public AbstractValue {
+public:
+    virtual ~ArithmeticValue() = default;
+
+    explicit ArithmeticValue(const T& value) noexcept
+        : value_(value) {
+    }
+
+    explicit ArithmeticValue(T&& value) noexcept
+        : value_(std::move(value)) {
+    }
+
+    const T& value() const {
+        return value_;
+    }
+
+    std::unique_ptr<AbstractValue> copy() const override {
+        return std::make_unique<ArithmeticValue>(value_);
+    }
+
+    std::unique_ptr<AbstractValue> move() const override {
+        return std::make_unique<ArithmeticValue>(std::move(value_));
+    }
+
+    bool compareEqual(const AbstractValue& rhs) const override {
+        const auto& derived = static_cast<const ArithmeticValue&>(rhs);
+        return value_ == derived.value_;
+    }
+
+    bool compareLess(const AbstractValue& rhs) const override {
+        const auto& derived = static_cast<const ArithmeticValue&>(rhs);
+        return value_ < derived.value_;
+    }
+
+    void read(StreamReader& in) override {
+        using vgc::core::readTo;
+        readTo(value_, in);
+    }
+
+    void write(StreamWriter& out) const override {
+        using vgc::core::write;
+        write(out, value_);
+    }
+
+    FormatterBufferIterator format(FormatterBufferCtx& ctx) const override {
+        return core::formatTo(ctx.out(), "{}", value_);
+    }
+
+    void preparePathsForUpdate(const Element*) const override {
+    }
+
+    void updatePaths(const Element*, const PathUpdateData&) override {
+    }
+
+private:
+    T value_;
+};
+*/
+
+class VGC_DOM_API Value {
+public:
+    Value()
+        : typeId_(detail::valueTypeId<NoneValue>())
+        , data_() {
+    }
+
+    // This constructor is intentionally implicit
+    template<typename T>
+    Value(T&& x)
+        : typeId_(detail::valueTypeId<std::decay_t<T>>())
+        , data_(std::forward<T>(x)) {
+    }
+
+    ~Value() {
+        info_().destroy(data_);
+    }
+
+    Value(Value& other)
+        : typeId_(other.typeId_) {
+
+        info_().copy(other.data_, data_);
+    }
+
+    Value(Value&& other)
+        : typeId_(other.typeId_) {
+
+        info_().move(other.data_, data_);
+    }
+
+    Value& operator=(const Value& other) {
+        if (&other != this) {
+            typeId_ = other.typeId_;
+            info_().copy(other.data_, data_);
+        }
+        return *this;
+    }
+
+    Value& operator=(Value&& other) {
+        data_ = std::move(other.data_);
+        return *this;
+    }
+
+    template<typename T>
+    const T& has() const {
+        return data_.get<T>();
+    }
+
+    template<typename T>
+    const T* get() const {
+        if (has<T>()) {
+            return &data_.get<T>();
+        }
+        else {
+            return nullptr;
+        }
+    }
+
+    template<typename T>
+    const T& getUnchecked() const {
+        return data_.get<T>();
+    }
+
+    friend bool operator==(const Value& lhs, const Value& rhs) {
+        return lhs.typeId_ == rhs.typeId_ //
+               && lhs.info_().equal(lhs.data_, rhs.data_);
+    }
+
+    friend bool operator!=(const Value& lhs, const Value& rhs) {
+        return !(lhs == rhs);
+    }
+
+    friend bool operator<(const Value& lhs, const Value& rhs) {
+        return lhs.typeId_ == rhs.typeId_ //
+               && lhs.info_().less(lhs.data_, rhs.data_);
+    }
+
+    /*
+    template<typename T>
+    void read(StreamReader& in) {
+        info_().destroy(data_);
+        typeId_ = detail::valueTypeId<T>();
+        // TODO: create default-initialized? 
+        info_().read(data_, in);
+    }
+    */
+
+    void write(StreamWriter& out) const {
+        info_().write(data_, out);
+    }
+
+    FormatterBufferIterator format(FormatterBufferCtx& ctx) const {
+        return info_().format(data_, ctx);
+    }
+
+private:
+    detail::ValueTypeId typeId_;
+    detail::ValueData data_;
+
+    const detail::ValueTypeInfo& info_() const {
+        return typeId_.info();
+    }
+};
+
+/*
 template<ValueType valueType>
 struct ValueTypeTraits {};
 
@@ -382,12 +686,20 @@ inline constexpr bool isValueVariantAlternative = IsValueVariantAlternative<T>::
 
 } // namespace detail
 
+*/
+
+/*
 template<typename T>
 inline constexpr bool isValueConstructibleFrom =
     (detail::isValueVariantAlternative<T>                       //
      || detail::isValueVariantAlternative<core::SharedConst<T>> //
      || std::is_base_of_v<CustomValue, T>);
+*/
 
+template<typename T>
+inline constexpr bool isValueConstructibleFrom = true;
+
+/*
 /// \class vgc::dom::Value
 /// \brief Holds the value of an attribute
 ///
@@ -810,7 +1122,7 @@ public:
     }
 
     template<typename Visitor>
-    /*constexpr*/ // clang errors with "inline function is not defined".
+    // constexpr // clang errors with "inline function is not defined".
     decltype(std::invoke(std::declval<Visitor>(), std::declval<NoneValue>()))
     visit(Visitor&& visitor) const {
         return std::visit(std::forward<Visitor>(visitor), var_);
@@ -930,8 +1242,7 @@ public:
         return !(b == a);
     }
 
-private:
-    constexpr explicit Value(InvalidValue x)
+    private : constexpr explicit Value(InvalidValue x)
         : var_(x) {
     }
 
@@ -949,26 +1260,21 @@ private:
 
     detail::ValueVariant var_;
 };
+*/
 
 /// Writes the given Value to the output stream.
 ///
 template<typename OStream>
 void write(OStream& out, const Value& v) {
-    v.visit([&](auto&& arg) {
-        using T = std::decay_t<decltype(arg)>;
-        if constexpr (std::is_same_v<T, NoneValue>) {
-            write(out, "None");
-        }
-        else if constexpr (std::is_same_v<T, InvalidValue>) {
-            write(out, "Invalid");
-        }
-        else if constexpr (std::is_same_v<T, detail::CustomValueHolder>) {
-            arg->write(out);
-        }
-        else {
-            write(out, arg);
-        }
-    });
+    if constexpr (std::is_same_v<OStream, StreamWriter>) {
+        v.write(out);
+    }
+    else {
+        std::string tmp;
+        StreamWriter sw(tmp);
+        v.write(sw);
+        write(out, tmp);
+    }
 }
 
 /// Converts the given string into a Value. Raises vgc::dom::VgcSyntaxError if
@@ -1023,21 +1329,14 @@ void readTo(NoneOr<T>& v, IStream& in) {
     readTo(v.emplace(), in);
 }
 
+/*
 template<typename OStream>
 void write(OStream& out, const detail::CustomValueHolder& v) {
-    if constexpr (std::is_same_v<OStream, StreamWriter>) {
-        v->write(out);
-    }
-    else {
-        std::string tmp;
-        StreamWriter sw(tmp);
-        v->write(sw);
-        write(out, tmp);
-    }
 }
 
 VGC_DOM_API
 void readTo(detail::CustomValueHolder& v, StreamReader& in);
+*/
 
 } // namespace vgc::dom
 
@@ -1074,16 +1373,7 @@ template<>
 struct fmt::formatter<vgc::dom::Value> : fmt::formatter<double> {
     template<typename FormatContext>
     auto format(const vgc::dom::Value& v, FormatContext& ctx) -> decltype(ctx.out()) {
-        return v.visit([&](auto&& arg) {
-            using T = std::decay_t<decltype(arg)>;
-            if constexpr (std::is_same_v<T, vgc::dom::detail::CustomValueHolder>) {
-                return arg->format(ctx);
-            }
-            else {
-                return vgc::core::formatTo(
-                    ctx.out(), "{}", std::forward<decltype(arg)>(arg));
-            }
-        });
+        return v.format(ctx);
     }
 };
 

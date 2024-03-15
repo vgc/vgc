@@ -60,11 +60,13 @@ public:
         value_ = std::move(value);
     }
 
+    /*
     /// Returns the ValueType of this authored attribute.
     ///
     ValueType valueType() const {
         return value_.type();
     }
+*/
 
 private:
     core::StringId name_;

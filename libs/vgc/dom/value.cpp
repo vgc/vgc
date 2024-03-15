@@ -23,6 +23,7 @@
 
 namespace vgc::dom {
 
+/*
 VGC_DEFINE_ENUM(
     ValueType,
     (None, "None"),
@@ -233,5 +234,6 @@ void parseValue(Value& value, const std::string& s) {
 void readTo(detail::CustomValueHolder& v, StreamReader& in) {
     v->read(in);
 }
+*/
 
 } // namespace vgc::dom
