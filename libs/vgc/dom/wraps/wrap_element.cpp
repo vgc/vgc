@@ -49,13 +49,13 @@ OutputIt writeAttributes(OutputIt out, const This& self) {
     vgc::dom::Value v = self.getAuthoredAttribute(ss::name);
     if (v.hasValue()) {
         core::copyStringTo(out, " name=");
-        out = writeRepr(out, v.getStringId().string());
+        out = writeRepr(out, v.get<StringId>().string());
     }
 
     v = self.getAuthoredAttribute(ss::id);
     if (v.hasValue()) {
         core::copyStringTo(out, " id=");
-        out = writeRepr(out, v.getStringId().string());
+        out = writeRepr(out, v.get<StringId>().string());
     }
     for (const vgc::dom::AuthoredAttribute& attr : self.authoredAttributes()) {
         const vgc::core::StringId name = attr.name();
@@ -81,13 +81,13 @@ OutputIt writeAttributesRepr(OutputIt out, const This& self) {
     vgc::dom::Value v = self.getAuthoredAttribute(ss::name);
     if (v.hasValue()) {
         core::copyStringTo(out, " name=");
-        out = writeRepr(out, v.getStringId().string());
+        out = writeRepr(out, v.get<StringId>().string());
     }
 
     v = self.getAuthoredAttribute(ss::id);
     if (v.hasValue()) {
         core::copyStringTo(out, " id=");
-        out = writeRepr(out, v.getStringId().string());
+        out = writeRepr(out, v.get<StringId>().string());
     }
 
     //for (const vgc::dom::AuthoredAttribute& attr : self.authoredAttributes()) {
@@ -143,7 +143,7 @@ void wrap_element(py::module& m) {
         .def("getAttribute", &Element::getAttribute)
         .def(
             "setAttribute",
-            static_cast<void (This::*)(vgc::core::StringId, const vgc::dom::Value&)>(
+            static_cast<void (This::*)(vgc::core::StringId, vgc::dom::Value)>(
                 &Element::setAttribute))
         .def("clearAttribute", &Element::clearAttribute)
         .def(

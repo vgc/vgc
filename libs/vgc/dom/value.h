@@ -316,6 +316,8 @@ public:
     bool (*equal)(const ValueData&, const ValueData&);
     bool (*less)(const ValueData&, const ValueData&);
 
+    Value (*getArrayItemWrapped)(const ValueData&, Int);
+
     void (*read)(ValueData&, StreamReader& in);
     void (*write)(const ValueData&, StreamWriter& out);
 
@@ -334,6 +336,7 @@ public:
         info.destroy = &destroy_<T>;
         info.equal = &equal_<T>;
         info.less = &less_<T>;
+        info.getArrayItemWrapped = &getArrayItemWrapped_<T>;
         info.read = &read_<T>;
         info.write = &write_<T>;
         info.format = &format_<T>;
@@ -367,6 +370,10 @@ private:
     static bool less_(const ValueData& d1, const ValueData& d2) {
         return d1.get<T>() < d2.get<T>();
     }
+
+    // This function is defined further in this file due to cyclic dependency with Value
+    template<typename T>
+    static Value getArrayItemWrapped_(const ValueData& d, Int index);
 
     template<typename T>
     static void read_(ValueData& d, StreamReader& in) {
@@ -514,6 +521,13 @@ private:
 };
 */
 
+namespace detail {
+
+template<typename T>
+inline constexpr bool isValueType = !std::is_same_v<std::decay_t<T>, Value>;
+
+} // namespace detail
+
 class VGC_DOM_API Value {
 public:
     Value()
@@ -521,8 +535,30 @@ public:
         , data_() {
     }
 
+    /// Returns a const reference to an empty value. This is useful for instance
+    /// for optional values or to simply express non-initialized or null.
+    ///
+    static const Value& none();
+
+    /// Returns a const reference to an invalid value. This is useful for error
+    /// handling in methods that must return a `Value` by const reference.
+    ///
+    static const Value& invalid();
+
+    Value(const Value& other)
+        : typeId_(other.typeId_) {
+
+        info_().copy(other.data_, data_);
+    }
+
+    Value(Value&& other) noexcept
+        : typeId_(other.typeId_) {
+
+        info_().move(other.data_, data_);
+    }
+
     // This constructor is intentionally implicit
-    template<typename T>
+    template<typename T, VGC_REQUIRES(detail::isValueType<T>)>
     Value(T&& x)
         : typeId_(detail::valueTypeId<std::decay_t<T>>())
         , data_(std::forward<T>(x)) {
@@ -530,18 +566,6 @@ public:
 
     ~Value() {
         info_().destroy(data_);
-    }
-
-    Value(Value& other)
-        : typeId_(other.typeId_) {
-
-        info_().copy(other.data_, data_);
-    }
-
-    Value(Value&& other)
-        : typeId_(other.typeId_) {
-
-        info_().move(other.data_, data_);
     }
 
     Value& operator=(const Value& other) {
@@ -558,12 +582,15 @@ public:
     }
 
     template<typename T>
-    const T& has() const {
-        return data_.get<T>();
+    bool has() const {
+        return typeId_ == detail::valueTypeId<T>();
+
+        // Note: using std::decay_t<T> would be incorrect here, since this is
+        // used to know whether we can static_cast<T*>() the data.
     }
 
     template<typename T>
-    const T* get() const {
+    const T* getIf() const {
         if (has<T>()) {
             return &data_.get<T>();
         }
@@ -573,8 +600,34 @@ public:
     }
 
     template<typename T>
+    const T& get() const {
+        if (has<T>()) {
+            return data_.get<T>();
+        }
+        else {
+            throw core::LogicError("Bad vgc::dom::Value cast.");
+        }
+    }
+
+    template<typename T>
     const T& getUnchecked() const {
         return data_.get<T>();
+    }
+
+    bool isNone() const { // XXX: Rename to isEmpty()?
+        return has<NoneValue>();
+    }
+
+    bool isValid() const {
+        return !has<InvalidValue>();
+    }
+
+    bool hasValue() const {
+        return isValid() && !isNone();
+    }
+
+    Value getArrayItemWrapped(Int index) const {
+        return info_().getArrayItemWrapped(data_, index);
     }
 
     friend bool operator==(const Value& lhs, const Value& rhs) {
@@ -591,15 +644,22 @@ public:
                && lhs.info_().less(lhs.data_, rhs.data_);
     }
 
-    /*
-    template<typename T>
+    // Reads as a T, where T is the type currently held by this Value.
+    //
+    // TODO: read<T> variant?
+    //
     void read(StreamReader& in) {
-        info_().destroy(data_);
-        typeId_ = detail::valueTypeId<T>();
-        // TODO: create default-initialized? 
         info_().read(data_, in);
     }
-    */
+
+    // Parses as a T, where T is the type currently held by this Value.
+    //
+    // TODO: parse<T> variant?
+    //
+    void parse(const std::string& s) {
+        StreamReader sr(s);
+        read(sr);
+    }
 
     void write(StreamWriter& out) const {
         info_().write(data_, out);
@@ -616,7 +676,33 @@ private:
     const detail::ValueTypeInfo& info_() const {
         return typeId_.info();
     }
+
+    friend Element;
+
+    void preparePathsForUpdate_(const Element* owner) const {
+        info_().preparePathsForUpdate(data_, owner);
+    }
+
+    void updatePaths_(const Element* owner, const PathUpdateData& data) {
+        info_().updatePaths(data_, owner, data);
+    }
 };
+
+namespace detail {
+
+template<typename T>
+Value ValueTypeInfo::getArrayItemWrapped_(const ValueData& d, Int index) {
+    using T_ = core::RemoveSharedConst<T>;
+    if constexpr (core::isArray<T_>) {
+        const T_& x = d.get<T>(); // c.f. `SharedConst<T>::operator const T&()`
+        return Value(x.getWrapped(index));
+    }
+    else {
+        return Value();
+    }
+}
+
+} // namespace detail
 
 /*
 template<ValueType valueType>
@@ -1280,8 +1366,8 @@ void write(OStream& out, const Value& v) {
 /// Converts the given string into a Value. Raises vgc::dom::VgcSyntaxError if
 /// the given string does not represent a `Value` of the given ValueType.
 ///
-VGC_DOM_API
-void parseValue(Value& value, const std::string& s);
+//VGC_DOM_API
+//void parseValue(Value& value, const std::string& s);
 
 template<typename OStream, typename T>
 void write(OStream& out, const NoneOr<T>& v) {
@@ -1327,6 +1413,32 @@ void readTo(NoneOr<T>& v, IStream& in) {
     }
 
     readTo(v.emplace(), in);
+}
+
+template<typename IStream>
+void readTo(NoneValue&, IStream& in) {
+    static std::string s = "none";
+    core::skipWhitespaceCharacters(in);
+    core::skipExpectedString(in, s);
+    core::expectsEofOrWhitespaceCharacter(in);
+}
+
+template<typename IStream>
+void readTo(InvalidValue&, IStream& in) {
+    static std::string s = "invalid";
+    core::skipWhitespaceCharacters(in);
+    core::skipExpectedString(in, s);
+    core::expectsEofOrWhitespaceCharacter(in);
+}
+
+template<typename OStream>
+void write(OStream& out, const NoneValue&) {
+    core::write(out, "none");
+}
+
+template<typename OStream>
+void write(OStream& out, const InvalidValue&) {
+    core::write(out, "invalid");
 }
 
 /*

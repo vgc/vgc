@@ -50,6 +50,7 @@ vgc_add_library(core
         xml.h
 
         detail/containerutil.h
+        detail/parsebits.h
         detail/signal.h
 
     CPP_SOURCE_FILES

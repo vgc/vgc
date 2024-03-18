@@ -23,6 +23,18 @@
 
 namespace vgc::dom {
 
+const Value& Value::none() {
+    // trusty leaky singleton
+    static const Value* v = new Value();
+    return *v;
+}
+
+const Value& Value::invalid() {
+    // trusty leaky singleton
+    static const Value* v = new Value(InvalidValue{});
+    return *v;
+}
+
 /*
 VGC_DEFINE_ENUM(
     ValueType,
@@ -42,18 +54,6 @@ VGC_DEFINE_ENUM(
     (NoneOrPath, "Path"),
     (PathArray, "PathArray"),
     (Custom, "Custom"))
-
-const Value& Value::none() {
-    // trusty leaky singleton
-    static const Value* v = new Value();
-    return *v;
-}
-
-const Value& Value::invalid() {
-    // trusty leaky singleton
-    static const Value* v = new Value(InvalidValue{});
-    return *v;
-}
 
 void Value::clear() {
     var_ = NoneValue{};

@@ -20,6 +20,8 @@
 #include <vgc/core/wraps/class.h>
 #include <vgc/core/wraps/common.h>
 
+/*
+
 template<typename T>
 void defineValueComparisonMethods(vgc::core::wraps::Class<vgc::dom::Value>& c) {
     c.def(py::self == T());
@@ -28,10 +30,13 @@ void defineValueComparisonMethods(vgc::core::wraps::Class<vgc::dom::Value>& c) {
     c.def(T() != py::self);
 }
 
+*/
+
 void wrap_value(py::module& m) {
 
     using This = vgc::dom::Value;
 
+    /*
     using ValueType = vgc::dom::ValueType;
     py::enum_<ValueType>(m, "ValueType")
         .value("None", ValueType::None)
@@ -47,9 +52,12 @@ void wrap_value(py::module& m) {
         .value("Vec2dArray", ValueType::Vec2dArray)
         .value("Path", ValueType::Path)
         .value("PathArray", ValueType::PathArray);
+    */
 
     vgc::core::wraps::Class<This> c(m, "Value");
-    c.def(py::init<>())
+    c.def(py::init<>());
+
+    /*
         .def(py::init<std::string>())
         .def(py::init<vgc::Int>())
         .def(py::init<vgc::core::IntArray>())
@@ -177,4 +185,6 @@ void wrap_value(py::module& m) {
     py::implicitly_convertible<vgc::dom::Path, vgc::dom::Value>();
     py::implicitly_convertible<vgc::dom::PathArray, vgc::dom::Value>();
     py::implicitly_convertible<vgc::dom::SharedConstPathArray, vgc::dom::Value>();
+
+*/
 }

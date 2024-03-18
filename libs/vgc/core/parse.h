@@ -45,6 +45,8 @@
 #include <vgc/core/format.h>
 #include <vgc/core/templateutil.h>
 
+#include <vgc/core/detail/parsebits.h>
+
 namespace vgc::core {
 
 /// Returns whether the given char is a whitespace character, that is, ' ',
@@ -72,6 +74,13 @@ char readCharacter(IStream& in) {
         throw ParseError("Unexpected end of stream. Expected a character.");
     }
     return c;
+}
+
+/// Extracts a string up to the end of the input stream.
+///
+template<typename IStream>
+std::string readStringUntilEof(IStream& in) {
+    return detail::readStringUntilEof(in);
 }
 
 /// Extracts a string up to the given character from the input stream. Raises
@@ -251,6 +260,26 @@ void skipExpectedEof(IStream& in) {
     if (in.get(c)) {
         throw ParseError(
             std::string("Unexpected character '") + c + "'. Expected end of stream.");
+    }
+}
+
+/// Throws ParseError if:
+/// 1. The stream still has characters, and
+/// 2. The next character is not a whitespace character.
+///
+/// This function does not actually read anything, that is, any get() is later
+/// unget().
+///
+template<typename IStream>
+void expectsEofOrWhitespaceCharacter(IStream& in) {
+    char c = -1; // dummy-initialization in order to silence warning
+    if (in.get(c)) {
+        in.unget();
+        if (!core::isWhitespace(c)) {
+            throw ParseError(
+                std::string("Unexpected character '") + c
+                + "'. Expected end of stream or whitespace character.");
+        }
     }
 }
 

@@ -74,10 +74,12 @@ const Value& ElementSpec::defaultValue(core::StringId name) const {
     return attr ? attr->defaultValue() : Value::invalid();
 }
 
+/*
 ValueType ElementSpec::valueType(core::StringId name) const {
     const AttributeSpec* attr = findAttributeSpec(name);
     return attr ? attr->valueType() : ValueType::Invalid;
 }
+*/
 
 Schema::Schema(std::initializer_list<ElementSpec> elements)
     : elements_() {

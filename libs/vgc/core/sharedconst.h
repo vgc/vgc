@@ -64,6 +64,8 @@ public:
         : value_(std::make_shared<const T>(std::forward<Args>(args)...)) {
     }
 
+    /// Implicit conversion from `SharedConst<T>` to `const T&`.
+    ///
     operator const T&() const noexcept {
         return *value_;
     }

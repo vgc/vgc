@@ -187,7 +187,8 @@ private:
             value = spec->defaultValue();
         }
 
-        parseValue(value, attributeValue_);
+        value.parse(attributeValue_);
+
         Element::cast(currentNode_)->setAttribute(name, std::move(value));
     }
 };
@@ -780,7 +781,7 @@ Value Document::resolveAttributePartOfPath_(
         case PathSegmentType::Attribute: {
             result = element->getAttribute(segIt->nameOrId());
             if (result.isValid() && segIt->isIndexed()) {
-                result = result.getItemWrapped(segIt->arrayIndex());
+                result = result.getArrayItemWrapped(segIt->arrayIndex());
             }
             break;
         }

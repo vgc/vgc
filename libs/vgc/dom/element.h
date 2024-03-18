@@ -240,6 +240,7 @@ public:
     /// Sets the custom name of this element.
     ///
     void setName(core::StringId name) {
+        Value v(name);
         setAttribute(strings::name, name);
     }
 
@@ -318,9 +319,7 @@ public:
 
     /// Sets the value of the given attribute.
     ///
-    void setAttribute(core::StringId name, const Value& value);
-    /// \overload
-    void setAttribute(core::StringId name, Value&& value);
+    void setAttribute(core::StringId name, Value value);
 
     /// Clears the authored value of the given attribute.
     ///

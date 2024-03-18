@@ -157,15 +157,13 @@ private:
 
 // TODO: CustomValueArray<TCustomValue>
 
-class VGC_DOM_API DomFaceCycles final : public CustomValue {
+class VGC_DOM_API DomFaceCycles {
 public:
-    DomFaceCycles() noexcept
-        : CustomValue(true) {
+    DomFaceCycles() noexcept {
     }
 
     explicit DomFaceCycles(core::Array<DomCycle>&& cycles)
-        : CustomValue(true)
-        , cycles_(std::move(cycles)) {
+        : cycles_(std::move(cycles)) {
     }
 
     const core::Array<DomCycle>& cycles() const {
@@ -188,19 +186,24 @@ public:
         return cycles_.end();
     }
 
+    bool operator==(const DomFaceCycles& other) const;
+
+    bool operator<(const DomFaceCycles& other) const;
+
+    template<typename IStream>
+    friend void readTo(DomFaceCycles& self, IStream& in) {
+        readTo(self.cycles_, in);
+    }
+
+    template<typename OStream>
+    friend void write(OStream& out, const DomFaceCycles& self) {
+        using core::write;
+        write(out, self.cycles_);
+    }
+
 protected:
-    void preparePathsForUpdate_(const Element* owner) const override;
-    void updatePaths_(const Element* owner, const PathUpdateData& data) override;
-
-    std::unique_ptr<CustomValue> clone_(bool move) const override;
-
-    bool compareEqual_(const CustomValue* rhs) const override;
-    bool compareLess_(const CustomValue* rhs) const override;
-
-    void read_(StreamReader& in) override;
-    void write_(StreamWriter& out) const override;
-
-    FormatterBufferIterator format_(FormatterBufferCtx& ctx) const override;
+    void preparePathsForUpdate(const Element* owner) const;
+    void updatePaths(const Element* owner, const PathUpdateData& data);
 
 private:
     core::Array<DomCycle> cycles_;
@@ -218,6 +221,15 @@ struct fmt::formatter<vgc::dom::detail::DomCycle> : fmt::formatter<double> {
         vgc::core::StringWriter sr(s);
         v.write(sr);
         return vgc::core::formatTo(ctx.out(), "{}", s);
+    }
+};
+
+template<>
+struct fmt::formatter<vgc::dom::detail::DomFaceCycles> : fmt::formatter<double> {
+    auto format(const vgc::dom::detail::DomFaceCycles& v, fmt::buffer_context<char>& ctx)
+        -> decltype(ctx.out()) {
+
+        return vgc::core::formatTo(ctx.out(), "{}", v.cycles());
     }
 };
 

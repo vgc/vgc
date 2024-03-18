@@ -99,58 +99,26 @@ void DomCycle::updatePaths(const Element* owner, const PathUpdateData& data) {
     }
 }
 
-void DomFaceCycles::preparePathsForUpdate_(const Element* owner) const {
+void DomFaceCycles::preparePathsForUpdate(const Element* owner) const {
     for (const DomCycle& cycle : cycles_) {
         cycle.preparePathsForUpdate(owner);
     }
 }
 
-void DomFaceCycles::updatePaths_(const Element* owner, const PathUpdateData& data) {
+void DomFaceCycles::updatePaths(const Element* owner, const PathUpdateData& data) {
     for (DomCycle& cycle : cycles_) {
         cycle.updatePaths(owner, data);
     }
 }
 
-std::unique_ptr<CustomValue> DomFaceCycles::clone_(bool move) const {
-    auto result = std::make_unique<DomFaceCycles>();
-    if (move) {
-        result->cycles_ = std::move(cycles_);
-    }
-    else {
-        result->cycles_ = cycles_;
-    }
-    return result;
+bool DomFaceCycles::operator==(const DomFaceCycles& other) const {
+    return std::equal(
+        cycles_.begin(), cycles_.end(), other.cycles_.begin(), other.cycles_.end());
 }
 
-bool DomFaceCycles::compareEqual_(const CustomValue* rhs) const {
-    auto other = dynamic_cast<const DomFaceCycles*>(rhs);
-    if (other) {
-        return std::equal(
-            cycles_.begin(), cycles_.end(), other->cycles_.begin(), other->cycles_.end());
-    }
-    return false;
-}
-
-bool DomFaceCycles::compareLess_(const CustomValue* rhs) const {
-    auto other = dynamic_cast<const DomFaceCycles*>(rhs);
-    if (other) {
-        return std::lexicographical_compare(
-            cycles_.begin(), cycles_.end(), other->cycles_.begin(), other->cycles_.end());
-    }
-    return false;
-}
-
-void DomFaceCycles::read_(StreamReader& in) {
-    readTo(cycles_, in);
-}
-
-void DomFaceCycles::write_(StreamWriter& out) const {
-    using core::write;
-    write(out, cycles_);
-}
-
-FormatterBufferIterator DomFaceCycles::format_(FormatterBufferCtx& ctx) const {
-    return core::formatTo(ctx.out(), "{}", cycles_);
+bool DomFaceCycles::operator<(const DomFaceCycles& other) const {
+    return std::lexicographical_compare(
+        cycles_.begin(), cycles_.end(), other.cycles_.begin(), other.cycles_.end());
 }
 
 } // namespace vgc::dom::detail

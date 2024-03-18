@@ -133,6 +133,7 @@ public:
         return defaultValue(core::StringId(attrName));
     }
 
+    /*
     /// Returns the `ValueType` of the built-in attribute given by its
     /// `attrName`. Returns `ValueType::Invalid` if the given `attrName`
     /// is not a built-in attribute of this `Element` type.
@@ -142,6 +143,7 @@ public:
     ValueType valueType(std::string_view attrName) const {
         return valueType(core::StringId(attrName));
     }
+    */
 
 private:
     core::StringId tagName_;
