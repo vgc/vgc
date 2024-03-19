@@ -37,7 +37,7 @@ core::Array<core::Color> getColorPalette_(dom::Document* doc) {
     for (dom::Element* user : root->childElements(s_user)) {
         for (dom::Element* colorpalette : user->childElements(s_colorpalette)) {
             for (dom::Element* item : colorpalette->childElements(s_colorpaletteitem)) {
-                core::Color color = item->getAttribute(s_color).getColor();
+                const auto& color = item->getAttribute(s_color).get<core::Color>();
                 colors.append(color);
             }
         }

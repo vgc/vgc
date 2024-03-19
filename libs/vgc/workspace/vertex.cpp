@@ -222,7 +222,7 @@ ElementStatus VacKeyVertex::updateFromDom_(Workspace* /*workspace*/) {
         return ElementStatus::InternalError;
     }
 
-    const auto& position = domElement->getAttribute(ds::position).getVec2d();
+    const auto& position = domElement->getAttribute(ds::position).get<geometry::Vec2d>();
 
     vacomplex::KeyVertex* kv = vacKeyVertexNode();
     if (!kv) {
@@ -268,7 +268,8 @@ void VacKeyVertex::updateFromVac_(vacomplex::NodeModificationFlags flags) {
 
     using vacomplex::NodeModificationFlag;
     if (flags.has(NodeModificationFlag::GeometryChanged)) {
-        const auto& position = domElement->getAttribute(ds::position).getVec2d();
+        const auto& position =
+            domElement->getAttribute(ds::position).get<geometry::Vec2d>();
         if (kv->position() != position) {
             domElement->setAttribute(ds::position, kv->position());
             dirtyPosition_();

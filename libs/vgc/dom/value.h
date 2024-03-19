@@ -255,8 +255,18 @@ public:
     ValueData() = default;
     ~ValueData() = default;
 
-    ValueData(ValueData&& other) = default;
-    ValueData& operator=(ValueData&& other) = default;
+    ValueData(ValueData&& other) {
+        data_ = other.data_;
+        other.data_ = nullptr;
+    }
+
+    ValueData& operator=(ValueData&& other) {
+        if (this != &other) {
+            data_ = other.data_;
+            other.data_ = nullptr;
+        }
+        return *this;
+    }
 
     // Owner must use the appropriate function pointers to copy
     ValueData(const ValueData&) = delete;
@@ -537,9 +547,10 @@ inline constexpr bool isValueType = !std::is_same_v<std::decay_t<T>, Value>;
 
 class VGC_DOM_API Value {
 public:
+    // TODO: make this noexcept and allocation free: should just keep
+    // the pointers as nullptr
     Value()
-        : typeId_(detail::valueTypeId<NoneValue>())
-        , data_() {
+        : Value(NoneValue{}) {
     }
 
     /// Returns a const reference to an empty value. This is useful for instance
@@ -559,9 +570,8 @@ public:
     }
 
     Value(Value&& other) noexcept
-        : typeId_(other.typeId_) {
-
-        info_().move(other.data_, data_);
+        : typeId_(other.typeId_)
+        , data_(std::move(other.data_)) {
     }
 
     // This constructor is intentionally implicit
@@ -581,16 +591,32 @@ public:
 
     Value& operator=(const Value& other) {
         if (&other != this) {
+            info_().destroy(data_);
             typeId_ = other.typeId_;
             info_().copy(other.data_, data_);
         }
         return *this;
     }
 
-    Value& operator=(Value&& other) {
-        data_ = std::move(other.data_);
+    Value& operator=(Value&& other) noexcept {
+        if (&other != this) {
+            info_().destroy(data_);
+            typeId_ = other.typeId_;
+            data_ = std::move(other.data_);
+        }
         return *this;
     }
+
+    // TODO:
+    // template<typename T, VGC_REQUIRES(detail::isValueType<T>)>
+    // Value& operator=(T&& other) noexcept;
+    //
+    // Currently, `value = Vec2d(1, 2)` works through the implicit:
+    // 1. Value(Vec2d&&)
+    // 2. Value::operator=(Value&&)
+    //
+    // But by implementing operator=(T&&), we can probably avoid allocations
+    // when the current type of the Value matches the target type.
 
     template<typename T>
     bool has() const {
