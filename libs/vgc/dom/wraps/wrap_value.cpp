@@ -68,18 +68,10 @@ void wrap_value(py::module& m) {
     c.def_property_readonly_static("none", [](py::object) { return This::none(); });
     c.def_property_readonly_static("invalid", [](py::object) { return This::invalid(); });
 
-    c.def(py::init([](py::handle h) { return vgc::dom::detail::createValue(h); }));
+    c.def(py::init([](py::handle h) { return vgc::dom::detail::toValue(h); }));
 
-    c.def("getPyObject", [](const This& self) {
-        if (self.has<vgc::dom::detail::AnyPyValue>()) {
-            return self.getUnchecked<vgc::dom::detail::AnyPyValue>().object();
-        }
-        else {
-            // For now, cast to a Python int for testing
-            // TODO: also use a registry map for this.
-            py::object obj = py::cast(self.get<vgc::Int>());
-            return obj;
-        }
+    c.def("toPyObject", [](const This& self) {
+        return vgc::dom::detail::toPyObject(self);
     });
 
     /*

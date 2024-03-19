@@ -30,6 +30,7 @@ namespace py = pybind11;
 
 #include <vgc/core/format.h>
 #include <vgc/core/stringid.h>
+#include <vgc/core/typeid.h>
 #include <vgc/dom/api.h>
 #include <vgc/dom/value.h>
 
@@ -101,18 +102,32 @@ struct fmt::formatter<vgc::dom::detail::AnyPyValue> : fmt::formatter<std::string
 
 namespace vgc::dom::detail {
 
-// Type of a function that creates a C++ dom::Value from a Python handle
-using PyValueFactory = Value (*)(py::handle);
+// Convert from Python object to C++ dom::Value
 
-// Creates a C++ dom::Value holding a T from a Python handle
+using PyObjectToValueFn = Value (*)(py::handle);
+
 template<typename T>
-Value createValue(py::handle h) {
+Value toValue(py::handle h) {
     return Value(py::cast<T>(h));
     // TODO: error handling?
 }
 
+// Convert from C++ dom::Value to Python object
+
+using ValueToPyObjectFn = py::object (*)(const Value&);
+
+template<typename T>
+py::object toPyObject(const Value& value) {
+    return py::cast(value.get<T>());
+    // TODO: error handling?
+}
+
 VGC_DOM_API
-void registerPyValue(std::string_view pyTypeName, PyValueFactory factory);
+void registerPyValue(
+    std::string_view pyTypeName,
+    core::TypeId typeId,
+    PyObjectToValueFn toValue,
+    ValueToPyObjectFn toPyObject);
 
 /// Registers the C++ type T as the type that should be used as
 /// `vgc::dom::Value` held type for a given Python type name.
@@ -126,15 +141,22 @@ void registerPyValue(std::string_view pyTypeName, PyValueFactory factory);
 ///
 template<typename T>
 void registerPyValue(std::string_view pyTypeName) {
-    auto factory = &detail::createValue<T>;
-    detail::registerPyValue(pyTypeName, factory);
+    core::TypeId typeId = core::typeId<T>();
+    auto toValue_ = &toValue<T>;
+    auto toPyObject_ = &toPyObject<T>;
+    detail::registerPyValue(pyTypeName, typeId, toValue_, toPyObject_);
 }
 
-/// Creates a dom::Value holding a copy of the Python object as
-/// the most appropriate C++ type.
+/// Converts the given Python object to a dom::Value holding the most
+/// appropriate C++ type.
 ///
 VGC_DOM_API
-Value createValue(py::handle h);
+Value toValue(py::handle h);
+
+/// Converts the given C++ dom::Value to a Python object.
+///
+VGC_DOM_API
+py::object toPyObject(const Value& value);
 
 } // namespace vgc::dom::detail
 

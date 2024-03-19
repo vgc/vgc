@@ -305,7 +305,14 @@ private:
 // This is essentially a hand-written virtual table.
 //
 class VGC_DOM_API ValueTypeInfo {
+private:
+    // This is needed because core::TypeId is not default-constructible
+    ValueTypeInfo(core::TypeId typeId)
+        : typeId(typeId) {
+    }
+
 public:
+    core::TypeId typeId;
     core::StringId name;
     bool hasPaths;
 
@@ -328,7 +335,7 @@ public:
 
     template<typename T>
     static ValueTypeInfo create() {
-        ValueTypeInfo info;
+        ValueTypeInfo info(core::typeId<T>());
         info.name = core::StringId(typeid(T).name());
         info.hasPaths = vgc::dom::ValueTraits<T>::hasPaths;
         info.copy = &copy_<T>;
@@ -566,6 +573,10 @@ public:
 
     ~Value() {
         info_().destroy(data_);
+    }
+
+    core::TypeId type() const {
+        return info_().typeId;
     }
 
     Value& operator=(const Value& other) {

@@ -20,15 +20,17 @@ namespace vgc::dom::detail {
 
 namespace {
 
-// Python type identifier
 using PyTypeId = core::StringId;
+using PyObjectToValueMap = std::unordered_map<PyTypeId, PyObjectToValueFn>;
+using ValueToPyObjectMap = std::unordered_map<core::TypeId, ValueToPyObjectFn>;
 
-// Type of a map from a Python type identifier to a PyValueFactory
-using PyValueFactoryMap = std::unordered_map<PyTypeId, PyValueFactory>;
+PyObjectToValueMap& pyObjectToValueMap() {
+    static PyObjectToValueMap map;
+    return map;
+}
 
-// Returns the global factory map
-PyValueFactoryMap& pyValueFactoryMap() {
-    static PyValueFactoryMap map;
+ValueToPyObjectMap& valueToPyObjectMap() {
+    static ValueToPyObjectMap map;
     return map;
 }
 
@@ -58,14 +60,21 @@ PyTypeId getPyTypeId(std::string_view pyTypeName) {
 
 } // namespace
 
-void registerPyValue(std::string_view pyTypeName, PyValueFactory factory) {
-    detail::PyTypeId id = detail::getPyTypeId(pyTypeName);
-    pyValueFactoryMap()[id] = factory;
+void registerPyValue(
+    std::string_view pyTypeName,
+    core::TypeId typeId,
+    PyObjectToValueFn toValue,
+    ValueToPyObjectFn toPyObject) {
+
+    detail::PyTypeId pyTypeId = detail::getPyTypeId(pyTypeName);
+    pyObjectToValueMap()[pyTypeId] = toValue;
+
+    valueToPyObjectMap()[typeId] = toPyObject;
 }
 
-Value createValue(py::handle h) {
+Value toValue(py::handle h) {
     detail::PyTypeId id = detail::getPyTypeId(h);
-    const auto& map = detail::pyValueFactoryMap();
+    const auto& map = pyObjectToValueMap();
     auto it = map.find(id);
     if (it != map.end()) {
         const auto& factory = it->second;
@@ -75,6 +84,26 @@ Value createValue(py::handle h) {
         // If there is no registered C++ type corresponding to
         // the Python type of h, then fallback to holding the Python object directly.
         return Value(detail::AnyPyValue(h));
+    }
+}
+
+py::object toPyObject(const Value& value) {
+    if (value.has<detail::AnyPyValue>()) {
+        VGC_DEBUG_TMP("has AnyPyValue");
+        return value.getUnchecked<detail::AnyPyValue>().object();
+    }
+    else {
+        core::TypeId id = value.type();
+        VGC_DEBUG_TMP("has {}", id);
+        const auto& map = valueToPyObjectMap();
+        auto it = map.find(id);
+        if (it != map.end()) {
+            const auto& factory = it->second;
+            return factory(value);
+        }
+        else {
+            return py::none(); // XXX throw instead?
+        }
     }
 }
 

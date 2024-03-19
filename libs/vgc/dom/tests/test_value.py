@@ -20,6 +20,7 @@ import unittest
 
 from vgc.core import IntArray, SharedConstIntArray
 from vgc.dom import Value
+from vgc.geometry import Vec2d
 
 from vgc.core.detail import (
     sharedConstIntArrayDataAddress
@@ -30,8 +31,13 @@ class TestValue(unittest.TestCase):
     def testInt(self):
         i = 42
         v = Value(i)
-        j = v.getPyObject()
+        j = v.toPyObject()
         self.assertEqual(i, j)
+
+    def testVec2d(self):
+        v = Value(Vec2d(1, 2))
+        self.assertEqual(v.toPyObject(), Vec2d(1, 2))
+        self.assertNotEqual(v.toPyObject(), Vec2d(2, 2))
 
     def testPyObject(self):
 
@@ -41,7 +47,7 @@ class TestValue(unittest.TestCase):
 
         f = Foo(42)
         v = Value(f)
-        self.assertEqual(f, v.getPyObject())
+        self.assertEqual(f, v.toPyObject())
 
     '''
     def testGetSharedConst(self):
