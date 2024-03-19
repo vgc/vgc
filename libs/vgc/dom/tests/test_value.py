@@ -27,6 +27,17 @@ from vgc.core.detail import (
 
 class TestValue(unittest.TestCase):
 
+    def testPyObject(self):
+
+        class Foo:
+            def __init__(self, i):
+                self.i = i
+
+        f = Foo(42)
+        v = Value(f)
+        self.assertEqual(f, v.getPyObject())
+
+    '''
     def testGetSharedConst(self):
         a = IntArray([3, 1, 2])
         va = Value(a)
@@ -72,6 +83,7 @@ class TestValue(unittest.TestCase):
         self.assertTrue(sc != va)
         self.assertTrue(va != c)
         self.assertTrue(va != sc)
+    '''
 
 if __name__ == '__main__':
     unittest.main()

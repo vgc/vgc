@@ -32,6 +32,64 @@ void defineValueComparisonMethods(vgc::core::wraps::Class<vgc::dom::Value>& c) {
 
 */
 
+namespace {
+
+// Allows to hold any Python object in a dom::Value.
+//
+// This is used as fallback for when there is no corresponding C++ type
+// registered.
+//
+class PyValue {
+public:
+    PyValue(py::object obj)
+        : obj_(obj) {
+    }
+
+    bool operator==(const PyValue& other) const {
+        return obj_.is(other.obj_);
+    }
+
+    bool operator<(const PyValue& other) const {
+        return obj_ < other.obj_;
+    }
+
+    py::handle handle() const {
+        return obj_;
+    }
+
+private:
+    py::object obj_;
+};
+
+template<typename IStream>
+void readTo(PyValue&, IStream&) {
+
+    // TODO: Use Python's type constructor from string, and emit a warning is
+    // no construction from string exists.
+    //
+    // Rationale: In Python, converting from int to string is simply calling
+    // `int("12")`, which hints that using a constructor from string is the
+    // Pythonic way to do parsing. And we do implement such string constructors
+    // for the Python version of IntArray, Vec2dArray, etc.
+}
+
+template<typename OStream>
+void write(OStream& out, const PyValue& v) {
+    std::string s = py::str(v.handle());
+    vgc::core::write(out, s);
+}
+
+} // namespace
+
+template<>
+struct fmt::formatter<PyValue> : fmt::formatter<std::string_view> {
+    template<typename FormatContext>
+    auto format(const PyValue& v, FormatContext& ctx) {
+        std::string s = py::str(v.handle());
+        return fmt::formatter<std::string_view>::format(s, ctx);
+    }
+};
+
 void wrap_value(py::module& m) {
 
     using This = vgc::dom::Value;
@@ -55,7 +113,18 @@ void wrap_value(py::module& m) {
     */
 
     vgc::core::wraps::Class<This> c(m, "Value");
+
+    // Default constructor: creates a None value
     c.def(py::init<>());
+
+    // Explicitly create a None or Invalid value
+    c.def_property_readonly_static("none", [](py::object) { return This::none(); });
+    c.def_property_readonly_static("invalid", [](py::object) { return This::invalid(); });
+
+    // As a fallback, direclty hold the Python object without converting to a C++ type
+    c.def(py::init([](py::object obj) { return This(PyValue(obj)); }));
+
+    c.def("getPyObject", [](const This& self) { return self.get<PyValue>().handle(); });
 
     /*
         .def(py::init<std::string>())
@@ -74,10 +143,6 @@ void wrap_value(py::module& m) {
         .def(py::init<vgc::dom::Path>())
         .def(py::init<vgc::dom::PathArray>())
         .def(py::init<vgc::dom::SharedConstPathArray>())
-
-        .def_property_readonly_static("none", [](py::object) { return This::none(); })
-        .def_property_readonly_static(
-            "invalid", [](py::object) { return This::invalid(); })
 
         .def_property_readonly("type", &This::type)
         .def("isValid", &This::isValid)
