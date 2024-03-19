@@ -21,6 +21,7 @@ vgc_add_library(dom
         xmlformattingstyle.h
 
         detail/facecycles.h
+        detail/pyvalue.h
 
     CPP_SOURCE_FILES
         attribute.cpp
@@ -38,6 +39,7 @@ vgc_add_library(dom
         xmlformattingstyle.cpp
 
         detail/facecycles.cpp
+        detail/pyvalue.cpp
 
     COMPILE_DEFINITIONS
 )

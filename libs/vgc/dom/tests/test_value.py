@@ -27,6 +27,12 @@ from vgc.core.detail import (
 
 class TestValue(unittest.TestCase):
 
+    def testInt(self):
+        i = 42
+        v = Value(i)
+        j = v.getPyObject()
+        self.assertEqual(i, j)
+
     def testPyObject(self):
 
         class Foo:
