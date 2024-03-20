@@ -16,6 +16,9 @@
 
 #include <vgc/dom/value.h>
 
+#include <mutex>
+#include <unordered_map>
+
 #include <vgc/dom/document.h>
 #include <vgc/dom/element.h>
 #include <vgc/dom/exceptions.h>
@@ -35,6 +38,26 @@ const Value& Value::invalid() {
     return *v;
 }
 
+namespace detail {
+
+const ValueTypeInfo* registerValueTypeInfo(const ValueTypeInfo* info) {
+
+    using Map = std::unordered_map<core::TypeId, const ValueTypeInfo*>;
+
+    // trusty leaky singletons
+    static std::mutex* mutex = new std::mutex();
+    static Map* map = new Map();
+
+    std::lock_guard<std::mutex> lock(*mutex);
+
+    auto res = map->try_emplace(info->typeId, info); // => ((key, value), emplaced))
+    auto it = res.first;
+    auto value = it->second;
+
+    return value;
+}
+
+} // namespace detail
 /*
 VGC_DEFINE_ENUM(
     ValueType,

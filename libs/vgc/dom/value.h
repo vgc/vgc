@@ -18,22 +18,15 @@
 #define VGC_DOM_VALUE_H
 
 #include <string>
-#include <type_traits>
-#include <utility>
-#include <variant>
+#include <type_traits> // decay, is_same
 
 #include <vgc/core/array.h>
-#include <vgc/core/color.h>
-#include <vgc/core/enum.h>
 #include <vgc/core/exceptions.h>
 #include <vgc/core/format.h>
 #include <vgc/core/parse.h>
-#include <vgc/core/sharedconst.h>
-#include <vgc/core/stringid.h>
 #include <vgc/core/typeid.h>
 #include <vgc/dom/api.h>
 #include <vgc/dom/path.h>
-#include <vgc/geometry/vec2d.h>
 
 namespace vgc::dom {
 
@@ -229,10 +222,7 @@ private:
     }
 
 public:
-    // Note: `name` is redundant with `typeId.info_->id_`, but it allows
-    // to avoid one indirection for faster equality test.
     core::TypeId typeId;
-    core::StringId name;
 
     bool hasPaths;
 
@@ -256,7 +246,6 @@ public:
     template<typename T>
     static ValueTypeInfo create() {
         ValueTypeInfo info(core::typeId<T>());
-        info.name = core::StringId(typeid(T).name());
         info.hasPaths = vgc::dom::ValueTraits<T>::hasPaths;
         info.copy = &copy_<T>;
         info.move = &move_<T>;
@@ -330,38 +319,31 @@ private:
     }
 };
 
-// This is just a wrapper for `ValueTypeInfo*` that reimplements the equality
-// operator: it tests for equality of `info->name` rather than equality of
-// the pointer address, because pointer equality may not be guaranteed across
-// shared library boundaries.
+// Inserts `info` in a registry of all known `ValueTypeInfo`, unless it was
+// already registered. Returns a pointer to the `ValueTypeInfo` stored in the
+// registry.
 //
-class VGC_DOM_API ValueTypeId {
-public:
-    ValueTypeId(const ValueTypeInfo* info)
-        : info_(info) {
-    }
-
-    const ValueTypeInfo& info() const {
-        return *info_;
-    }
-
-    bool operator==(const ValueTypeId& other) const {
-        return info_->name == other.info_->name;
-    }
-
-    bool operator!=(const ValueTypeId& other) const {
-        return !(*this == other);
-    }
-
-private:
-    const ValueTypeInfo* info_;
-};
+// This mechanism ensures uniqueness of the `valueTypeInfo<T>()` address even
+// across shared library boundary, which makes it possible to have a very
+// fast implementation of Value::has<T>().
+//
+// Indeed, on Windows, each DLL gets their own copy of static local variables
+// that are defined in template functions, so a registry shared across DLL is
+// necessary to achieve such uniqueness goal.
+//
+VGC_DOM_API
+const ValueTypeInfo* registerValueTypeInfo(const ValueTypeInfo* info);
 
 template<typename T>
-ValueTypeId valueTypeId() {
-    // Each DLL may have its own &info address, but their info.name is equal
-    static const ValueTypeInfo info = ValueTypeInfo::create<T>();
-    return ValueTypeId(&info);
+const ValueTypeInfo* registerValueTypeInfo() {
+    static const ValueTypeInfo perDllInfo = ValueTypeInfo::create<T>();
+    return registerValueTypeInfo(&perDllInfo);
+}
+
+template<typename T>
+const ValueTypeInfo* valueTypeInfo() {
+    static const ValueTypeInfo* info = registerValueTypeInfo<T>();
+    return info;
 }
 
 } // namespace detail
@@ -392,20 +374,20 @@ public:
     static const Value& invalid();
 
     Value(const Value& other)
-        : typeId_(other.typeId_) {
+        : typeInfo_(other.typeInfo_) {
 
         info_().copy(other.data_, data_);
     }
 
     Value(Value&& other) noexcept
-        : typeId_(other.typeId_)
+        : typeInfo_(other.typeInfo_)
         , data_(std::move(other.data_)) {
     }
 
     // This constructor is intentionally implicit
     template<typename T, VGC_REQUIRES(detail::isValueType<T>)>
     Value(T&& x)
-        : typeId_(detail::valueTypeId<std::decay_t<T>>())
+        : typeInfo_(detail::valueTypeInfo<std::decay_t<T>>())
         , data_(std::forward<T>(x)) {
     }
 
@@ -416,7 +398,7 @@ public:
     Value& operator=(const Value& other) {
         if (&other != this) {
             info_().destroy(data_);
-            typeId_ = other.typeId_;
+            typeInfo_ = other.typeInfo_;
             info_().copy(other.data_, data_);
         }
         return *this;
@@ -425,7 +407,7 @@ public:
     Value& operator=(Value&& other) noexcept {
         if (&other != this) {
             info_().destroy(data_);
-            typeId_ = other.typeId_;
+            typeInfo_ = other.typeInfo_;
             data_ = std::move(other.data_);
         }
         return *this;
@@ -452,7 +434,7 @@ public:
     ///
     template<typename T>
     bool has() const {
-        return typeId_ == detail::valueTypeId<T>();
+        return typeInfo_ == detail::valueTypeInfo<T>();
 
         // Note: using std::decay_t<T> would be incorrect here, since this is
         // used to know whether we can static_cast<T*>() the data.
@@ -502,7 +484,7 @@ public:
     }
 
     friend bool operator==(const Value& lhs, const Value& rhs) {
-        return lhs.typeId_ == rhs.typeId_ //
+        return lhs.typeInfo_ == rhs.typeInfo_ //
                && lhs.info_().equal(lhs.data_, rhs.data_);
     }
 
@@ -511,7 +493,7 @@ public:
     }
 
     friend bool operator<(const Value& lhs, const Value& rhs) {
-        return lhs.typeId_ == rhs.typeId_ //
+        return lhs.typeInfo_ == rhs.typeInfo_ //
                && lhs.info_().less(lhs.data_, rhs.data_);
     }
 
@@ -541,11 +523,11 @@ public:
     }
 
 private:
-    detail::ValueTypeId typeId_;
+    const detail::ValueTypeInfo* typeInfo_;
     detail::ValueData data_;
 
     const detail::ValueTypeInfo& info_() const {
-        return typeId_.info();
+        return *typeInfo_;
     }
 
     friend Element;
