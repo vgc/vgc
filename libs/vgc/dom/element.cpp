@@ -211,7 +211,7 @@ std::optional<Element*> Element::getElementFromPathAttribute(
     const Path* pathPtr = nullptr;
 
     if (const NoneOr<Path>* noneOrPath = value.getIf<NoneOr<Path>>()) {
-        if (noneOrPath->has_value()) {
+        if (!noneOrPath->has_value()) {
             return std::nullopt;
         }
         pathPtr = &noneOrPath->value();
