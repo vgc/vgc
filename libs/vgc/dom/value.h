@@ -82,67 +82,6 @@ using StreamWriter = core::StringWriter;
 using FormatterBufferCtx = fmt::buffer_context<char>;
 using FormatterBufferIterator = decltype(std::declval<FormatterBufferCtx>().out());
 
-class PathUpdateData {
-public:
-    PathUpdateData() = default;
-
-    const std::unordered_map<core::Id, core::Id>& copiedElements() const {
-        return copiedElements_;
-    }
-
-    void addCopiedElement(core::Id oldInternalId, core::Id newInternalId) {
-        copiedElements_[oldInternalId] = newInternalId;
-    }
-
-    const core::Array<core::Id>& absolutePathChangedElements() const {
-        return absolutePathChangedElements_;
-    }
-
-    void addAbsolutePathChangedElement(core::Id internalId) {
-        if (!absolutePathChangedElements_.contains(internalId)) {
-            absolutePathChangedElements_.append(internalId);
-        }
-    }
-
-private:
-    std::unordered_map<core::Id, core::Id> copiedElements_;
-    core::Array<core::Id> absolutePathChangedElements_;
-};
-
-// This should be specialized by custom types internally storing
-// `vgc::dom::Path` data so they can update their in case an
-// referenced element is moved or its ID changes.
-//
-// ```cpp
-// namespace my::lib {
-//
-// class Foo {
-//     ...
-// };
-//
-// template<>
-// constexpr bool hasVgcDomPaths<Foo>() {
-//     return true;
-// }
-//
-// } // namespace my::lib
-// ```
-//
-// Note: we do not use a type trait for this so that we can rely on
-// Argument-Dependent Lookup, instead of forcing people to specialize the trait
-// in the vgc::dom namespace.
-//
-template<typename T>
-constexpr bool hasVgcDomPaths(const T*) {
-    return false;
-}
-
-#define VGC_DOM_DECLARE_HAS_PATHS(T)                                                     \
-    template<>                                                                           \
-    constexpr bool hasVgcDomPaths<T>(const T*) {                                         \
-        return true;                                                                     \
-    }
-
 namespace detail {
 
 class ValueData {
@@ -238,6 +177,10 @@ public:
     void (*preparePathsForUpdate)(const ValueData&, const Node*);
     void (*updatePaths)(ValueData&, const Node*, const PathUpdateData&);
 
+    // TODO: Use type_identity<T> / Tag<T> to actually be able to turn this into
+    // a templated constructor that can be called as `ValueTypeInfo(Tag<T>())`.
+    // See: https://stackoverflow.com/questions/2786946/c-invoke-explicit-template-constructor
+    //
     template<typename T>
     static ValueTypeInfo create() {
         ValueTypeInfo info(core::typeId<T>());
@@ -397,7 +340,8 @@ public:
 
     Value& operator=(const Value& other) {
         if (&other != this) {
-            info_().destroy(data_);
+            info_().destroy(data_); // TODO: what if this Value owns the other value?
+                // It would be better to keep-alive until the end of this function.
             typeInfo_ = other.typeInfo_;
             info_().copy(other.data_, data_);
         }
@@ -406,7 +350,7 @@ public:
 
     Value& operator=(Value&& other) noexcept {
         if (&other != this) {
-            info_().destroy(data_);
+            info_().destroy(data_); // Same comment as above
             typeInfo_ = other.typeInfo_;
             data_ = std::move(other.data_);
         }
@@ -423,6 +367,15 @@ public:
     //
     // But by implementing operator=(T&&), we can probably avoid allocations
     // when the current type of the Value matches the target type.
+    //
+    // Same comment as other operator=:
+    // Beware of the case where we do for example:
+    //
+    // value = value.get<Vec2dArray>()[12];
+    //
+    // The `value` needs to keep the Vec2dArray alive long enough
+    // until until it a copy of the Vec2d is stored in `value`.
+    //
 
     /// Returns the `TypeId` of the held value.
     ///

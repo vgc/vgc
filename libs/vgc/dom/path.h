@@ -19,8 +19,10 @@
 
 #include <string>
 #include <string_view>
+#include <unordered_map>
 
 #include <vgc/core/algorithms.h>
+#include <vgc/core/array.h>
 #include <vgc/core/flags.h>
 #include <vgc/core/format.h>
 #include <vgc/core/id.h>
@@ -287,6 +289,33 @@ private:
     }
 
     void write_(fmt::memory_buffer& out) const;
+};
+
+class PathUpdateData {
+public:
+    PathUpdateData() = default;
+
+    const std::unordered_map<core::Id, core::Id>& copiedElements() const {
+        return copiedElements_;
+    }
+
+    void addCopiedElement(core::Id oldInternalId, core::Id newInternalId) {
+        copiedElements_[oldInternalId] = newInternalId;
+    }
+
+    const core::Array<core::Id>& absolutePathChangedElements() const {
+        return absolutePathChangedElements_;
+    }
+
+    void addAbsolutePathChangedElement(core::Id internalId) {
+        if (!absolutePathChangedElements_.contains(internalId)) {
+            absolutePathChangedElements_.append(internalId);
+        }
+    }
+
+private:
+    std::unordered_map<core::Id, core::Id> copiedElements_;
+    core::Array<core::Id> absolutePathChangedElements_;
 };
 
 template<>
