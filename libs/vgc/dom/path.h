@@ -27,7 +27,9 @@
 #include <vgc/core/object.h>
 #include <vgc/core/parse.h>
 #include <vgc/core/stringid.h>
+#include <vgc/core/templateutil.h> // RequiresValid
 #include <vgc/dom/api.h>
+#include <vgc/dom/noneor.h>
 
 namespace vgc::dom {
 
@@ -41,12 +43,25 @@ class PathUpdateData;
 using StreamReader = core::StringReader;
 using StreamWriter = core::StringWriter;
 
-namespace detail {
+/// This is a type traits that should be specialized for any type that
+/// internally stores `vgc::dom::Path` data, so that these paths they can
+/// update their in case an referenced element is moved, copied, or its ID
+/// changed.
+///
+/// See implementation of PathTraits<detail::DomFaceCycles> for an example.
+///
+template<typename T, typename SFINAE = void>
+struct PathTraits {};
 
-void preparePathForUpdate(const Path& path, const Node* workingNode);
-void updatePath(Path& path, const Node* workingNode, const PathUpdateData& data);
+template<typename T, typename SFINAE = void>
+struct HasPaths : std::false_type {};
 
-} // namespace detail
+template<typename T>
+struct HasPaths<T, core::RequiresValid<decltype(&PathTraits<T>::updatePaths)>>
+    : std::true_type {};
+
+template<typename T>
+inline constexpr bool hasPaths = HasPaths<T>::value;
 
 /*
 path examples:
@@ -260,19 +275,39 @@ public:
 private:
     core::Array<PathSegment> segments_;
 
-    friend void detail::preparePathForUpdate(const Path&, const Node*);
-    friend void detail::updatePath(Path&, const Node*, const PathUpdateData&);
     // Used for path updates.
     // Could use a wrapper InternalPath in Value/Schema
     // if the size of Path becomes an issue.
     mutable core::Id baseInternalId_ = {};
     mutable core::Id targetInternalId_ = {};
+    friend PathTraits<Path>;
 
     Path(core::Array<PathSegment>&& segments)
         : segments_(std::move(segments)) {
     }
 
     void write_(fmt::memory_buffer& out) const;
+};
+
+template<>
+struct VGC_DOM_API PathTraits<Path> {
+    static void preparePathsForUpdate(const Path& path, const Node* owner);
+    static void updatePaths(Path& path, const Node* owner, const PathUpdateData& data);
+};
+
+template<typename T>
+struct PathTraits<NoneOr<T>, core::Requires<hasPaths<T>>> {
+    static void preparePathsForUpdate(const NoneOr<T>& self, const Node* owner) {
+        if (self.has_value()) {
+            PathTraits<T>::preparePathsForUpdate(self.value(), owner);
+        }
+    }
+    static void
+    updatePaths(NoneOr<T>& self, const Node* owner, const PathUpdateData& data) {
+        if (self.has_value()) {
+            PathTraits<T>::updatePaths(self.value(), owner, data);
+        }
+    }
 };
 
 static_assert(std::is_copy_constructible_v<Path>);

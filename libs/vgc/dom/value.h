@@ -73,7 +73,7 @@ struct fmt::formatter<vgc::dom::InvalidValue> : fmt::formatter<std::string_view>
 
 namespace vgc::dom {
 
-VGC_DECLARE_OBJECT(Element);
+class Node;
 class Value;
 
 using StreamReader = core::StringReader;
@@ -107,11 +107,6 @@ public:
 private:
     std::unordered_map<core::Id, core::Id> copiedElements_;
     core::Array<core::Id> absolutePathChangedElements_;
-};
-
-template<typename T>
-struct ValueTraits {
-    static constexpr bool hasPaths = false;
 };
 
 // This should be specialized by custom types internally storing
@@ -235,18 +230,18 @@ public:
 
     Value (*getArrayItemWrapped)(const ValueData&, Int);
 
-    void (*read)(ValueData&, StreamReader& in);
-    void (*write)(const ValueData&, StreamWriter& out);
+    void (*read)(ValueData&, StreamReader&);
+    void (*write)(const ValueData&, StreamWriter&);
 
-    FormatterBufferIterator (*format)(const ValueData&, FormatterBufferCtx& ctx);
+    FormatterBufferIterator (*format)(const ValueData&, FormatterBufferCtx&);
 
-    void (*preparePathsForUpdate)(const ValueData&, const Element* owner);
-    void (*updatePaths)(const ValueData&, const Element* owner, const PathUpdateData&);
+    void (*preparePathsForUpdate)(const ValueData&, const Node*);
+    void (*updatePaths)(ValueData&, const Node*, const PathUpdateData&);
 
     template<typename T>
     static ValueTypeInfo create() {
         ValueTypeInfo info(core::typeId<T>());
-        info.hasPaths = vgc::dom::ValueTraits<T>::hasPaths;
+        info.hasPaths = dom::hasPaths<T>;
         info.copy = &copy_<T>;
         info.move = &move_<T>;
         info.destroy = &destroy_<T>;
@@ -309,13 +304,18 @@ private:
     }
 
     template<typename T>
-    static void preparePathsForUpdate_(const ValueData&, const Element*) {
-        // TODO: Use Traits
+    static void preparePathsForUpdate_(const ValueData& d, const Node* owner) {
+        if constexpr (dom::hasPaths<T>) {
+            PathTraits<T>::preparePathsForUpdate(d.get<T>(), owner);
+        }
     }
 
     template<typename T>
-    static void updatePaths_(const ValueData&, const Element*, const PathUpdateData&) {
-        // TODO: Use Traits
+    static void
+    updatePaths_(ValueData& d, const Node* owner, const PathUpdateData& data) {
+        if constexpr (dom::hasPaths<T>) {
+            PathTraits<T>::updatePaths(d.get<T>(), owner, data);
+        }
     }
 };
 
@@ -532,11 +532,11 @@ private:
 
     friend Element;
 
-    void preparePathsForUpdate_(const Element* owner) const {
+    void preparePathsForUpdate_(const Node* owner) const {
         info_().preparePathsForUpdate(data_, owner);
     }
 
-    void updatePaths_(const Element* owner, const PathUpdateData& data) {
+    void updatePaths_(const Node* owner, const PathUpdateData& data) {
         info_().updatePaths(data_, owner, data);
     }
 };

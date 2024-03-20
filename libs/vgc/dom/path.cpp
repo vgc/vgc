@@ -306,11 +306,9 @@ void Path::write_(fmt::memory_buffer& out) const {
     }
 }
 
-namespace detail {
-
 // TODO: With a dependency system all internal paths should always be in sync
 //       outside of dom operations. This would remove the need for this function.
-void preparePathForUpdate(const Path& path, const Node* workingNode) {
+void PathTraits<Path>::preparePathsForUpdate(const Path& path, const Node* workingNode) {
     Document* document = workingNode->document();
     core::StringId baseId = path.baseId();
     if (!baseId.isEmpty()) {
@@ -331,7 +329,11 @@ void preparePathForUpdate(const Path& path, const Node* workingNode) {
     }
 }
 
-void updatePath(Path& path, const Node* workingNode, const PathUpdateData& data) {
+void PathTraits<Path>::updatePaths(
+    Path& path,
+    const Node* workingNode,
+    const PathUpdateData& data) {
+
     Document* document = workingNode->document();
     core::Id baseIid = path.baseInternalId_;
     core::Id targetIid = path.targetInternalId_;
@@ -366,7 +368,5 @@ void updatePath(Path& path, const Node* workingNode, const PathUpdateData& data)
         }
     }
 }
-
-} // namespace detail
 
 } // namespace vgc::dom

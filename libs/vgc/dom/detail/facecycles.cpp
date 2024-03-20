@@ -18,7 +18,9 @@
 
 #include <vgc/dom/value.h>
 
-namespace vgc::dom::detail {
+namespace vgc::dom {
+
+namespace detail {
 
 void DomCycleComponent::write(StreamWriter& out) const {
     using core::write;
@@ -44,14 +46,6 @@ void DomCycleComponent::read(StreamReader& in) {
     else {
         direction_ = true;
     }
-}
-
-void DomCycleComponent::preparePathsForUpdate(const Element* owner) const {
-    detail::preparePathForUpdate(path_, owner);
-}
-
-void DomCycleComponent::updatePaths(const Element* owner, const PathUpdateData& data) {
-    detail::updatePath(path_, owner, data);
 }
 
 void DomCycle::write(StreamWriter& out) const {
@@ -87,30 +81,6 @@ void DomCycle::read(StreamReader& in) {
     }
 }
 
-void DomCycle::preparePathsForUpdate(const Element* owner) const {
-    for (const DomCycleComponent& component : components_) {
-        component.preparePathsForUpdate(owner);
-    }
-}
-
-void DomCycle::updatePaths(const Element* owner, const PathUpdateData& data) {
-    for (DomCycleComponent& component : components_) {
-        component.updatePaths(owner, data);
-    }
-}
-
-void DomFaceCycles::preparePathsForUpdate(const Element* owner) const {
-    for (const DomCycle& cycle : cycles_) {
-        cycle.preparePathsForUpdate(owner);
-    }
-}
-
-void DomFaceCycles::updatePaths(const Element* owner, const PathUpdateData& data) {
-    for (DomCycle& cycle : cycles_) {
-        cycle.updatePaths(owner, data);
-    }
-}
-
 bool DomFaceCycles::operator==(const DomFaceCycles& other) const {
     return std::equal(
         cycles_.begin(), cycles_.end(), other.cycles_.begin(), other.cycles_.end());
@@ -121,4 +91,63 @@ bool DomFaceCycles::operator<(const DomFaceCycles& other) const {
         cycles_.begin(), cycles_.end(), other.cycles_.begin(), other.cycles_.end());
 }
 
-} // namespace vgc::dom::detail
+} // namespace detail
+
+using detail::DomCycle;
+using detail::DomCycleComponent;
+using detail::DomFaceCycles;
+
+void PathTraits<DomCycleComponent>::preparePathsForUpdate(
+    const DomCycleComponent& self,
+    const Node* owner) {
+
+    PathTraits<Path>::preparePathsForUpdate(self.path_, owner);
+}
+
+void PathTraits<DomCycleComponent>::updatePaths(
+    DomCycleComponent& self,
+    const Node* owner,
+    const PathUpdateData& data) {
+
+    PathTraits<Path>::updatePaths(self.path_, owner, data);
+}
+
+void PathTraits<DomCycle>::preparePathsForUpdate(
+    const DomCycle& self,
+    const Node* owner) {
+
+    for (const DomCycleComponent& component : self.components_) {
+        PathTraits<DomCycleComponent>::preparePathsForUpdate(component, owner);
+    }
+}
+
+void PathTraits<DomCycle>::updatePaths(
+    DomCycle& self,
+    const Node* owner,
+    const PathUpdateData& data) {
+
+    for (DomCycleComponent& component : self.components_) {
+        PathTraits<DomCycleComponent>::updatePaths(component, owner, data);
+    }
+}
+
+void PathTraits<DomFaceCycles>::preparePathsForUpdate(
+    const DomFaceCycles& self,
+    const Node* owner) {
+
+    for (const DomCycle& cycle : self.cycles_) {
+        PathTraits<DomCycle>::preparePathsForUpdate(cycle, owner);
+    }
+}
+
+void PathTraits<DomFaceCycles>::updatePaths(
+    DomFaceCycles& self,
+    const Node* owner,
+    const PathUpdateData& data) {
+
+    for (DomCycle& cycle : self.cycles_) {
+        PathTraits<DomCycle>::updatePaths(cycle, owner, data);
+    }
+}
+
+} // namespace vgc::dom

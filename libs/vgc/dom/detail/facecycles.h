@@ -22,16 +22,9 @@
 #include <vgc/dom/path.h>
 #include <vgc/dom/value.h>
 
-namespace vgc::dom::detail {
+namespace vgc::dom {
 
-/*
-virtual bool read(StreamReader& in) = 0;
-virtual bool write(StreamWriter& out) const = 0;
-
-virtual FormatterBufferIterator
-format(FormatterBufferCtx& ctx, std::string_view fmtString) const = 0;
-
-*/
+namespace detail {
 
 class VGC_DOM_API DomCycleComponent {
 public:
@@ -61,9 +54,6 @@ public:
         component.read(in);
     }
 
-    void preparePathsForUpdate(const Element* owner) const;
-    void updatePaths(const Element* owner, const PathUpdateData& data);
-
     friend bool
     operator==(const DomCycleComponent& lhs, const DomCycleComponent& rhs) noexcept {
         return lhs.direction_ == rhs.direction_ && lhs.path_ == rhs.path_;
@@ -87,6 +77,8 @@ public:
 private:
     Path path_ = {};
     bool direction_ = true;
+
+    friend PathTraits<DomCycleComponent>;
 };
 
 class VGC_DOM_API DomCycle {
@@ -128,9 +120,6 @@ public:
         cycle.read(in);
     }
 
-    void preparePathsForUpdate(const Element* owner) const;
-    void updatePaths(const Element* owner, const PathUpdateData& data);
-
     friend bool operator==(const DomCycle& lhs, const DomCycle& rhs) noexcept {
         return std::equal(
             lhs.components_.begin(),
@@ -153,6 +142,8 @@ public:
 
 private:
     core::Array<DomCycleComponent> components_;
+
+    friend PathTraits<DomCycle>;
 };
 
 // TODO: CustomValueArray<TCustomValue>
@@ -201,17 +192,38 @@ public:
         write(out, self.cycles_);
     }
 
-protected:
-    void preparePathsForUpdate(const Element* owner) const;
-    void updatePaths(const Element* owner, const PathUpdateData& data);
-
 private:
     core::Array<DomCycle> cycles_;
 
     // TODO: keep original string from parse
+
+    friend PathTraits<DomFaceCycles>;
 };
 
-} // namespace vgc::dom::detail
+} // namespace detail
+
+template<>
+struct VGC_DOM_API PathTraits<detail::DomCycleComponent> {
+    using T = detail::DomCycleComponent;
+    static void preparePathsForUpdate(const T& self, const Node* owner);
+    static void updatePaths(T& self, const Node* owner, const PathUpdateData& data);
+};
+
+template<>
+struct VGC_DOM_API PathTraits<detail::DomCycle> {
+    using T = detail::DomCycle;
+    static void preparePathsForUpdate(const T& self, const Node* owner);
+    static void updatePaths(T& self, const Node* owner, const PathUpdateData& data);
+};
+
+template<>
+struct VGC_DOM_API PathTraits<detail::DomFaceCycles> {
+    using T = detail::DomFaceCycles;
+    static void preparePathsForUpdate(const T& self, const Node* owner);
+    static void updatePaths(T& self, const Node* owner, const PathUpdateData& data);
+};
+
+} // namespace vgc::dom
 
 template<>
 struct fmt::formatter<vgc::dom::detail::DomCycle> : fmt::formatter<double> {
