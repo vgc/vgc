@@ -19,6 +19,7 @@
 #include <vgc/core/logging.h>
 #include <vgc/dom/document.h>
 #include <vgc/dom/logcategories.h>
+#include <vgc/dom/noneor.h>
 #include <vgc/dom/operation.h>
 #include <vgc/dom/schema.h>
 #include <vgc/dom/strings.h>

@@ -13,6 +13,7 @@ vgc_add_library(dom
         io.h
         logcategories.h
         node.h
+        noneor.h
         operation.h
         path.h
         schema.h

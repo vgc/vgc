@@ -93,7 +93,7 @@ py::object toPyObject(const Value& value) {
         return value.getUnchecked<detail::AnyPyValue>().object();
     }
     else {
-        core::TypeId id = value.type();
+        core::TypeId id = value.typeId();
         VGC_DEBUG_TMP("has {}", id);
         const auto& map = valueToPyObjectMap();
         auto it = map.find(id);

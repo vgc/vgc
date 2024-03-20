@@ -41,13 +41,10 @@ class VGC_DOM_API AttributeSpec {
 public:
     /// Creates a built-in attribute.
     ///
-    template<typename T, VGC_REQUIRES(dom::isValueConstructibleFrom<T>)>
+    template<typename T>
     AttributeSpec(std::string_view name, const T& defaultValue)
         : name_(core::StringId(name))
-        , defaultValue_(defaultValue)
-    /*, valueType_(ValueType::Invalid)*/ {
-
-        //valueType_ = defaultValue_.type();
+        , defaultValue_(defaultValue) {
     }
 
     /// Returns the name of this built-in attribute.
@@ -62,18 +59,15 @@ public:
         return defaultValue_;
     }
 
-    /*
-    /// Returns the ValueType of this built-in attribute.
+    /// Returns the `TypeId` of this built-in attribute.
     ///
-    ValueType valueType() const {
-        return valueType_;
+    core::TypeId typeId() const {
+        return defaultValue_.typeId();
     }
-*/
 
 private:
     core::StringId name_;
     Value defaultValue_;
-    //ValueType valueType_;
 };
 
 /// \class vgc::dom::ElementSpec
