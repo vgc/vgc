@@ -284,7 +284,7 @@ void prepareInternalPathsForUpdate(const Node* workingNode) {
     }
 }
 
-void updateInternalPaths(const Node* workingNode, const PathUpdateData& data) {
+void updateInternalPaths(const Node* workingNode, const detail::PathUpdateData& data) {
     Element* element = Element::cast(const_cast<Node*>(workingNode));
     if (element) {
         element->updateInternalPaths_(data);

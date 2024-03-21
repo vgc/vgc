@@ -78,7 +78,7 @@ private:
     Path path_ = {};
     bool direction_ = true;
 
-    friend PathTraits<DomCycleComponent>;
+    friend PathVisitor<DomCycleComponent>;
 };
 
 class VGC_DOM_API DomCycle {
@@ -143,7 +143,7 @@ public:
 private:
     core::Array<DomCycleComponent> components_;
 
-    friend PathTraits<DomCycle>;
+    friend PathVisitor<DomCycle>;
 };
 
 // TODO: CustomValueArray<TCustomValue>
@@ -197,30 +197,37 @@ private:
 
     // TODO: keep original string from parse
 
-    friend PathTraits<DomFaceCycles>;
+    friend PathVisitor<DomFaceCycles>;
 };
 
 } // namespace detail
 
 template<>
-struct VGC_DOM_API PathTraits<detail::DomCycleComponent> {
-    using T = detail::DomCycleComponent;
-    static void preparePathsForUpdate(const T& self, const Node* owner);
-    static void updatePaths(T& self, const Node* owner, const PathUpdateData& data);
+struct PathVisitor<detail::DomCycleComponent> {
+    template<typename Component, typename Fn>
+    static void visit(Component&& component, Fn&& fn) {
+        fn(component.path_);
+    }
 };
 
 template<>
-struct VGC_DOM_API PathTraits<detail::DomCycle> {
-    using T = detail::DomCycle;
-    static void preparePathsForUpdate(const T& self, const Node* owner);
-    static void updatePaths(T& self, const Node* owner, const PathUpdateData& data);
+struct PathVisitor<detail::DomCycle> {
+    template<typename Cycle, typename Fn>
+    static void visit(Cycle&& cycle, Fn&& fn) {
+        for (auto& component : cycle.components_) { // auto needed to deduce constness
+            PathVisitor<detail::DomCycleComponent>::visit(component, fn);
+        }
+    }
 };
 
 template<>
-struct VGC_DOM_API PathTraits<detail::DomFaceCycles> {
-    using T = detail::DomFaceCycles;
-    static void preparePathsForUpdate(const T& self, const Node* owner);
-    static void updatePaths(T& self, const Node* owner, const PathUpdateData& data);
+struct PathVisitor<detail::DomFaceCycles> {
+    template<typename Cycles, typename Fn>
+    static void visit(Cycles&& cycles, Fn&& fn) {
+        for (auto& cycle : cycles.cycles_) { // auto needed to deduce constness
+            PathVisitor<detail::DomCycle>::visit(cycle, fn);
+        }
+    }
 };
 
 } // namespace vgc::dom

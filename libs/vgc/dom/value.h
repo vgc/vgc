@@ -17,6 +17,7 @@
 #ifndef VGC_DOM_VALUE_H
 #define VGC_DOM_VALUE_H
 
+#include <functional> // function
 #include <string>
 #include <type_traits> // decay, is_same
 
@@ -174,8 +175,8 @@ public:
 
     FormatterBufferIterator (*format)(const ValueData&, FormatterBufferCtx&);
 
-    void (*preparePathsForUpdate)(const ValueData&, const Node*);
-    void (*updatePaths)(ValueData&, const Node*, const PathUpdateData&);
+    void (*visitPaths)(ValueData&, const std::function<void(Path&)>&);
+    void (*visitPathsConst)(const ValueData&, const std::function<void(const Path&)>&);
 
     // TODO: Use type_identity<T> / Tag<T> to actually be able to turn this into
     // a templated constructor that can be called as `ValueTypeInfo(Tag<T>())`.
@@ -194,8 +195,8 @@ public:
         info.read = &read_<T>;
         info.write = &write_<T>;
         info.format = &format_<T>;
-        info.preparePathsForUpdate = &preparePathsForUpdate_<T>;
-        info.updatePaths = &updatePaths_<T>;
+        info.visitPaths = &visitPaths_<T>;
+        info.visitPathsConst = &visitPathsConst_<T>;
         return info;
     }
 
@@ -247,17 +248,17 @@ private:
     }
 
     template<typename T>
-    static void preparePathsForUpdate_(const ValueData& d, const Node* owner) {
+    static void visitPaths_(ValueData& d, const std::function<void(Path&)>& fn) {
         if constexpr (dom::hasPaths<T>) {
-            PathTraits<T>::preparePathsForUpdate(d.get<T>(), owner);
+            PathVisitor<T>::visit(d.get<T>(), fn);
         }
     }
 
     template<typename T>
     static void
-    updatePaths_(ValueData& d, const Node* owner, const PathUpdateData& data) {
+    visitPathsConst_(const ValueData& d, const std::function<void(const Path&)>& fn) {
         if constexpr (dom::hasPaths<T>) {
-            PathTraits<T>::updatePaths(d.get<T>(), owner, data);
+            PathVisitor<T>::visit(d.get<T>(), fn);
         }
     }
 };
@@ -475,22 +476,20 @@ public:
         return info_().format(data_, ctx);
     }
 
+    void visitPaths(const std::function<void(const Path&)>& fn) const {
+        return info_().visitPathsConst(data_, fn);
+    }
+
+    void visitPaths(const std::function<void(Path&)>& fn) {
+        return info_().visitPaths(data_, fn);
+    }
+
 private:
     const detail::ValueTypeInfo* typeInfo_;
     detail::ValueData data_;
 
     const detail::ValueTypeInfo& info_() const {
         return *typeInfo_;
-    }
-
-    friend Element;
-
-    void preparePathsForUpdate_(const Node* owner) const {
-        info_().preparePathsForUpdate(data_, owner);
-    }
-
-    void updatePaths_(const Node* owner, const PathUpdateData& data) {
-        info_().updatePaths(data_, owner, data);
     }
 };
 

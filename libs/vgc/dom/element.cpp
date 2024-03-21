@@ -64,7 +64,7 @@ Element* Element::createCopy_(Node* parent, const Element* source, Element* next
 
     srcDoc->preparePathsUpdateRec_(srcDoc);
 
-    PathUpdateData pud = {};
+    detail::PathUpdateData pud = {};
     Element* result = createCopy_(parent, source, nextSibling, pud);
 
     tgtDoc->updatePathsRec_(tgtDoc, pud);
@@ -77,7 +77,7 @@ Element* Element::createCopy_(
     Node* parent,
     const Element* source,
     Element* nextSibling,
-    PathUpdateData& pud) {
+    detail::PathUpdateData& pud) {
 
     Document* doc = parent->document();
 
@@ -92,7 +92,7 @@ Element* Element::createCopyRec_(
     Node* parent,
     const Element* source,
     Element* nextSibling,
-    PathUpdateData& pud) {
+    detail::PathUpdateData& pud) {
 
     Document* doc = parent->document();
 
@@ -291,13 +291,19 @@ void Element::onAttributeChanged_(
 
 void Element::prepareInternalPathsForUpdate_() const {
     for (const AuthoredAttribute& attr : authoredAttributes_) {
-        attr.value().preparePathsForUpdate_(this);
+        const Value& value = attr.value();
+        value.visitPaths([owner = this](const Path& path) {
+            detail::PathUpdater::preparePathForUpdate(path, owner);
+        });
     }
 }
 
-void Element::updateInternalPaths_(const PathUpdateData& data) {
+void Element::updateInternalPaths_(const detail::PathUpdateData& data) {
     for (AuthoredAttribute& attr : authoredAttributes_) {
-        const_cast<Value&>(attr.value()).updatePaths_(this, data);
+        Value& value = const_cast<Value&>(attr.value());
+        value.visitPaths([owner = this, &data](Path& path) {
+            detail::PathUpdater::updatePath(path, owner, data);
+        });
     }
 }
 

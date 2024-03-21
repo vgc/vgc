@@ -379,7 +379,7 @@ DocumentPtr Document::copy(core::ConstSpan<Node*> nodes) {
     // Copy in order
     Document* srcDoc = n0->document();
     Document* tgtDoc = result.get();
-    PathUpdateData pud = {};
+    detail::PathUpdateData pud = {};
 
     Node* copyContainer = Element::create(tgtDoc, "copyContainer");
 
@@ -406,7 +406,7 @@ core::Array<Node*> Document::paste(DocumentPtr document, Node* parent) {
     // Copy in order
     Document* sourceDoc = document.get();
     Document* targetDoc = parent->document();
-    PathUpdateData pathUpdateData = {};
+    detail::PathUpdateData pathUpdateData = {};
 
     if (!sourceDoc || sourceDoc == targetDoc) {
         return res;
@@ -551,7 +551,7 @@ void Document::onElementIdChanged_(Element* element, core::StringId oldId) {
             std::ignore = eId;
             detail::prepareInternalPathsForUpdate(e);
         }
-        PathUpdateData pud;
+        detail::PathUpdateData pud;
         pud.addAbsolutePathChangedElement(element->internalId());
         for (const auto& [eId, e] : elementByInternalIdMap_) {
             std::ignore = eId;
@@ -797,7 +797,7 @@ void Document::preparePathsUpdateRec_(const Node* node) {
     }
 }
 
-void Document::updatePathsRec_(const Node* node, const PathUpdateData& pud) {
+void Document::updatePathsRec_(const Node* node, const detail::PathUpdateData& pud) {
     detail::updateInternalPaths(node, pud);
     for (Node* c : node->children()) {
         updatePathsRec_(c, pud);

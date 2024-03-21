@@ -30,7 +30,12 @@ VGC_DECLARE_OBJECT(Node);
 VGC_DECLARE_OBJECT(Document);
 
 class Path;
+
+namespace detail {
+
 class PathUpdateData;
+
+} // namespace detail
 
 /// \enum vgc::dom::NodeType
 /// \brief Specifies the type of a Node.
@@ -427,7 +432,7 @@ private:
 namespace detail {
 
 void prepareInternalPathsForUpdate(const Node* workingNode);
-void updateInternalPaths(const Node* workingNode, const PathUpdateData& data);
+void updateInternalPaths(const Node* workingNode, const detail::PathUpdateData& data);
 
 } // namespace detail
 
