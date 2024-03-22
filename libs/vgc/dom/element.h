@@ -240,7 +240,6 @@ public:
     /// Sets the custom name of this element.
     ///
     void setName(core::StringId name) {
-        Value v(name);
         setAttribute(strings::name, name);
     }
 
