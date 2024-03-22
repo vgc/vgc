@@ -163,13 +163,16 @@ public:
     void (*visitPathsConst)(const ValueData&, const std::function<void(const Path&)>&);
 
     // Constructors can't have explicit template arguments,
-    // so we use this instead for type deduction
+    // so we use this instead for type deduction.
+    //
     template<typename T>
     struct Tag {};
 
     template<typename T>
     ValueTypeInfo(Tag<T>)
-        : typeId(core::typeId<T>())
+        : typeId(                // Comma operator:
+            (check_<T>(),        // - first do the static checks
+             core::typeId<T>())) // - then get and assign the typeId
         , hasPaths(dom::hasPaths<T>)
         , copy(&copy_<T>)
         , move(&move_<T>)
@@ -185,6 +188,25 @@ public:
     }
 
 private:
+    // Checks that T can be held as a Value. The intent is to provide nice
+    // error messages rather than gnarly template instanciation errors.
+    //
+    template<typename T>
+    static void check_() {
+
+        constexpr bool defaultConstructible = std::is_default_constructible_v<T>;
+        static_assert(
+            defaultConstructible,
+            "vgc::dom::Value cannot hold type T because it is not "
+            "default-constructible.");
+
+        constexpr bool copyConstructible = std::is_copy_constructible_v<T>;
+        static_assert(
+            copyConstructible,
+            "vgc::dom::Value cannot hold type T because it is not "
+            "copy-constructible.");
+    }
+
     template<typename T>
     static void copy_(const ValueData& from, ValueData& to) {
         to = ValueData::create<T>(from.get<T>());
@@ -277,7 +299,7 @@ const ValueTypeInfo* valueTypeInfo() {
 namespace detail {
 
 template<typename T>
-inline constexpr bool isValueType = !std::is_same_v<std::decay_t<T>, Value>;
+inline constexpr bool isNotValue = !std::is_same_v<std::decay_t<T>, Value>;
 
 } // namespace detail
 
@@ -289,15 +311,12 @@ public:
         : Value(NoneValue{}) {
     }
 
-    /// Returns a const reference to an empty value. This is useful for instance
-    /// for optional values or to simply express non-initialized or null.
-    ///
-    static const Value& none();
-
-    /// Returns a const reference to an invalid value. This is useful for error
-    /// handling in methods that must return a `Value` by const reference.
-    ///
-    static const Value& invalid();
+    // This constructor is intentionally implicit
+    template<typename T, VGC_REQUIRES(detail::isNotValue<T>)>
+    Value(T&& x)
+        : typeInfo_(detail::valueTypeInfo<std::decay_t<T>>())
+        , data_(std::forward<T>(x)) {
+    }
 
     Value(const Value& other)
         : typeInfo_(other.typeInfo_) {
@@ -308,17 +327,6 @@ public:
     Value(Value&& other) noexcept
         : typeInfo_(other.typeInfo_)
         , data_(std::move(other.data_)) {
-    }
-
-    // This constructor is intentionally implicit
-    template<typename T, VGC_REQUIRES(detail::isValueType<T>)>
-    Value(T&& x)
-        : typeInfo_(detail::valueTypeInfo<std::decay_t<T>>())
-        , data_(std::forward<T>(x)) {
-    }
-
-    ~Value() {
-        info_().destroy(data_);
     }
 
     Value& operator=(const Value& other) {
@@ -340,8 +348,12 @@ public:
         return *this;
     }
 
+    ~Value() {
+        info_().destroy(data_);
+    }
+
     // TODO:
-    // template<typename T, VGC_REQUIRES(detail::isValueType<T>)>
+    // template<typename T, VGC_REQUIRES(detail::isNotValue<T>)>
     // Value& operator=(T&& other) noexcept;
     //
     // Currently, `value = Vec2d(1, 2)` works through the implicit:
@@ -359,6 +371,16 @@ public:
     // The `value` needs to keep the Vec2dArray alive long enough
     // until until it a copy of the Vec2d is stored in `value`.
     //
+
+    /// Returns a const reference to an empty value. This is useful for instance
+    /// for optional values or to simply express non-initialized or null.
+    ///
+    static const Value& none();
+
+    /// Returns a const reference to an invalid value. This is useful for error
+    /// handling in methods that must return a `Value` by const reference.
+    ///
+    static const Value& invalid();
 
     /// Returns the `TypeId` of the held value.
     ///
