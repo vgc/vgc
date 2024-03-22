@@ -425,6 +425,12 @@ public:
         return data_.get<T>();
     }
 
+    void clear() {
+        if (!isNone()) {
+            *this = NoneValue{};
+        }
+    }
+
     bool isNone() const { // XXX: Rename to isEmpty()?
         return has<NoneValue>();
     }
@@ -436,6 +442,8 @@ public:
     bool hasValue() const {
         return isValid() && !isNone();
     }
+
+    // TODO: getArrayItem (non-wrapped), arrayLength, etc.
 
     Value getArrayItemWrapped(Int index) const {
         return info_().getArrayItemWrapped(data_, index);

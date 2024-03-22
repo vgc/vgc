@@ -23,7 +23,10 @@
 #include <vgc/core/wraps/class.h>
 #include <vgc/core/wraps/common.h>
 
-/*
+// Supported types as Value
+#include <vgc/core/color.h>
+#include <vgc/dom/path.h>
+#include <vgc/geometry/vec2d.h>
 
 template<typename T>
 void defineValueComparisonMethods(vgc::core::wraps::Class<vgc::dom::Value>& c) {
@@ -33,31 +36,23 @@ void defineValueComparisonMethods(vgc::core::wraps::Class<vgc::dom::Value>& c) {
     c.def(T() != py::self);
 }
 
-*/
+// XXX: How to publicize this in vgc::dom::wraps, so that other wrapper
+//      modules can register their own types? The question is how to get
+//      the reference to the Value class from other modules.
+//
+template<typename T>
+void registerValue(
+    vgc::core::wraps::Class<vgc::dom::Value>& c,
+    std::string_view pyTypeName) {
+
+    vgc::dom::detail::registerPyValue<T>(pyTypeName);
+    py::implicitly_convertible<T, vgc::dom::Value>();
+    defineValueComparisonMethods<T>(c);
+}
 
 void wrap_value(py::module& m) {
 
-    vgc::dom::detail::registerPyValue<vgc::Int>("int");
-
     using This = vgc::dom::Value;
-
-    /*
-    using ValueType = vgc::dom::ValueType;
-    py::enum_<ValueType>(m, "ValueType")
-        .value("None", ValueType::None)
-        .value("Invalid", ValueType::Invalid)
-        .value("String", ValueType::String)
-        .value("Int", ValueType::Int)
-        .value("IntArray", ValueType::IntArray)
-        .value("Double", ValueType::Double)
-        .value("DoubleArray", ValueType::DoubleArray)
-        .value("Color", ValueType::Color)
-        .value("ColorArray", ValueType::ColorArray)
-        .value("Vec2d", ValueType::Vec2d)
-        .value("Vec2dArray", ValueType::Vec2dArray)
-        .value("Path", ValueType::Path)
-        .value("PathArray", ValueType::PathArray);
-    */
 
     vgc::core::wraps::Class<This> c(m, "Value");
 
@@ -74,130 +69,75 @@ void wrap_value(py::module& m) {
         return vgc::dom::detail::toPyObject(self);
     });
 
-    /*
-        .def(py::init<std::string>())
-        .def(py::init<vgc::Int>())
-        .def(py::init<vgc::core::IntArray>())
-        .def(py::init<vgc::core::SharedConstIntArray>())
-        .def(py::init<double>())
-        .def(py::init<vgc::core::DoubleArray>())
-        .def(py::init<vgc::core::SharedConstDoubleArray>())
-        .def(py::init<vgc::core::Color>())
-        .def(py::init<vgc::core::ColorArray>())
-        .def(py::init<vgc::core::SharedConstColorArray>())
-        .def(py::init<vgc::geometry::Vec2d>())
-        .def(py::init<vgc::geometry::Vec2dArray>())
-        .def(py::init<vgc::geometry::SharedConstVec2dArray>())
-        .def(py::init<vgc::dom::Path>())
-        .def(py::init<vgc::dom::PathArray>())
-        .def(py::init<vgc::dom::SharedConstPathArray>())
+    c.def("clear", &This::clear);
 
-        .def_property_readonly("type", &This::type)
-        .def("isValid", &This::isValid)
-        .def("clear", &This::clear)
-        .def("getItemWrapped", &This::getItemWrapped)
-        .def("arrayLength", &This::arrayLength)
+    c.def("isNone", &This::isNone);
+    c.def("isValid", &This::isValid);
+    c.def("hasValue", &This::hasValue);
 
-        .def("getString", &This::getString)
-        .def("set", py::overload_cast<std::string>(&This::set))
-        .def("getStringId", &This::getStringId)
-        .def("set", py::overload_cast<vgc::core::StringId>(&This::set))
+    // Note: typeId is not currently wrapped.
+    // As a workaround, Python users can use `type(v.toPyObject())`.
+    //
+    // TODO?
+    // c.def_property_readonly("typeId", &This::typeId)
 
-        .def("getInt", &This::getInt)
-        .def("set", py::overload_cast<vgc::Int>(&This::set))
-        .def("getIntArray", &This::getIntArray)
-        .def("set", py::overload_cast<vgc::core::SharedConstIntArray>(&This::set))
+    c.def("getArrayItemWrapped", &This::getArrayItemWrapped);
+    // TODO: other array methods
 
-        .def("getDouble", &This::getDouble)
-        .def("set", py::overload_cast<double>(&This::set))
-        .def("getDoubleArray", &This::getDoubleArray)
-        .def("set", py::overload_cast<vgc::core::SharedConstDoubleArray>(&This::set))
+    c.def(py::self == py::self);
+    c.def(py::self != py::self);
+    c.def(py::self < py::self);
+    //c.def(py::self > py::self);
+    //c.def(py::self <= py::self);
+    //c.def(py::self >= py::self);
 
-        .def("getColor", &This::getColor)
-        .def("set", py::overload_cast<const vgc::core::Color&>(&This::set))
-        .def("getColorArray", &This::getColorArray)
-        .def("set", py::overload_cast<vgc::core::SharedConstColorArray>(&This::set))
+    c.def("__str__", [](const This& self) -> std::string {
+        fmt::memory_buffer mbuf;
+        fmt::format_to(std::back_inserter(mbuf), "{}", self);
+        return std::string(mbuf.begin(), mbuf.size());
+    });
 
-        .def("getVec2d", &This::getVec2d)
-        .def("set", py::overload_cast<const vgc::geometry::Vec2d&>(&This::set))
-        .def("getVec2dArray", &This::getVec2dArray)
-        .def("set", py::overload_cast<vgc::geometry::SharedConstVec2dArray>(&This::set))
+    c.def("__repr__", [](const This& self) -> std::string {
+        if (self.has<vgc::dom::NoneValue>()) {
+            return "vgc.dom.Value.none";
+        }
+        else if (self.has<vgc::dom::InvalidValue>()) {
+            return "vgc.dom.Value.invalid";
+        }
+        else {
+            // XXX Something faster avoiding creating a Python object copy?
+            py::object obj = vgc::dom::detail::toPyObject(self);
+            std::string r = py::cast<std::string>(obj.attr("__repr__")());
+            return vgc::core::format("vgc.dom.Value({})", r);
+        }
+    });
 
-        .def("getPath", &This::getPath)
-        .def("set", py::overload_cast<vgc::dom::Path>(&This::set))
-        .def("getPathArray", &This::getPathArray)
+    registerValue<vgc::Int>(c, "int");
+    registerValue<double>(c, "float");
+    registerValue<std::string>(c, "str");
 
-        .def(py::self == py::self)
-        .def(py::self != py::self)
-        .def(py::self < py::self)
-        //.def(py::self > py::self)
-        //.def(py::self <= py::self)
-        //.def(py::self >= py::self)
+    // StringId?
 
-        .def(
-            "__str__",
-            [](const This& a) -> std::string {
-                fmt::memory_buffer mbuf;
-                fmt::format_to(std::back_inserter(mbuf), "{}", a);
-                return std::string(mbuf.begin(), mbuf.size());
-            })
+    // XXX How to handle possible N to 1 mappings, e.g.:
+    //
+    // registerValue<float>(c, "float"); // Conflicts with <double>("float")
+    //
+    // One solution might simply be to provide more fine-grained versions of
+    // vgc::dom::detail::registerPyValue(), allowing to specify only the
+    // `toPyObject` or the `toValue` function.
+    //
+    // This way, we could specify N to 1 mappings from Python to C++ and N to 1
+    // mappings from C++ to Python
 
-        .def(
-            "__repr__",
-            [](const This& a) -> std::string {
-                return a.visit([&](auto&& arg) -> std::string {
-                    using T = std::decay_t<decltype(arg)>;
-                    if constexpr (std::is_same_v<T, vgc::dom::NoneValue>) {
-                        return "vgc.dom.Value.none";
-                    }
-                    else if constexpr (std::is_same_v<T, vgc::dom::InvalidValue>) {
-                        return "vgc.dom.Value.invalid";
-                    }
-                    else {
-                        py::object obj = py::cast(&arg);
-                        std::string r = py::cast<std::string>(obj.attr("__repr__")());
-                        return vgc::core::format("vgc.dom.Value({})", r);
-                    }
-                });
-            })
+    registerValue<vgc::core::Color>(c, "vgc.core.Color");
 
-        ;
+    registerValue<vgc::core::IntArray>(c, "vgc.core.IntArray");
+    registerValue<vgc::core::DoubleArray>(c, "vgc.core.DoubleArray");
+    registerValue<vgc::core::ColorArray>(c, "vgc.core.ColorArray");
 
-    defineValueComparisonMethods<std::string>(c);
-    defineValueComparisonMethods<vgc::core::StringId>(c);
-    defineValueComparisonMethods<vgc::Int>(c);
-    defineValueComparisonMethods<vgc::core::IntArray>(c);
-    defineValueComparisonMethods<vgc::core::SharedConstIntArray>(c);
-    defineValueComparisonMethods<double>(c);
-    defineValueComparisonMethods<vgc::core::DoubleArray>(c);
-    defineValueComparisonMethods<vgc::core::SharedConstDoubleArray>(c);
-    defineValueComparisonMethods<vgc::core::Color>(c);
-    defineValueComparisonMethods<vgc::core::ColorArray>(c);
-    defineValueComparisonMethods<vgc::core::SharedConstColorArray>(c);
-    defineValueComparisonMethods<vgc::geometry::Vec2d>(c);
-    defineValueComparisonMethods<vgc::geometry::Vec2dArray>(c);
-    defineValueComparisonMethods<vgc::geometry::SharedConstVec2dArray>(c);
-    defineValueComparisonMethods<vgc::dom::Path>(c);
-    defineValueComparisonMethods<vgc::dom::PathArray>(c);
-    defineValueComparisonMethods<vgc::dom::SharedConstPathArray>(c);
+    registerValue<vgc::geometry::Vec2d>(c, "vgc.geometry.Vec2d");
+    registerValue<vgc::geometry::Vec2dArray>(c, "vgc.geometry.Vec2dArray");
 
-    py::implicitly_convertible<std::string, vgc::dom::Value>();
-    py::implicitly_convertible<vgc::core::StringId, vgc::dom::Value>();
-    py::implicitly_convertible<vgc::Int, vgc::dom::Value>();
-    py::implicitly_convertible<vgc::core::IntArray, vgc::dom::Value>();
-    py::implicitly_convertible<vgc::core::SharedConstIntArray, vgc::dom::Value>();
-    py::implicitly_convertible<double, vgc::dom::Value>();
-    py::implicitly_convertible<vgc::core::DoubleArray, vgc::dom::Value>();
-    py::implicitly_convertible<vgc::core::SharedConstDoubleArray, vgc::dom::Value>();
-    py::implicitly_convertible<vgc::core::Color, vgc::dom::Value>();
-    py::implicitly_convertible<vgc::core::ColorArray, vgc::dom::Value>();
-    py::implicitly_convertible<vgc::core::SharedConstColorArray, vgc::dom::Value>();
-    py::implicitly_convertible<vgc::geometry::Vec2d, vgc::dom::Value>();
-    py::implicitly_convertible<vgc::geometry::Vec2dArray, vgc::dom::Value>();
-    py::implicitly_convertible<vgc::geometry::SharedConstVec2dArray, vgc::dom::Value>();
-    py::implicitly_convertible<vgc::dom::Path, vgc::dom::Value>();
-    py::implicitly_convertible<vgc::dom::PathArray, vgc::dom::Value>();
-    py::implicitly_convertible<vgc::dom::SharedConstPathArray, vgc::dom::Value>();
-
-*/
+    registerValue<vgc::dom::Path>(c, "vgc.dom.Path");
+    registerValue<vgc::dom::PathArray>(c, "vgc.dom.PathArray");
 }

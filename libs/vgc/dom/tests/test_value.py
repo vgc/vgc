@@ -49,7 +49,14 @@ class TestValue(unittest.TestCase):
         v = Value(f)
         self.assertEqual(f, v.toPyObject())
 
-    '''
+    ''' These tests where for a previous implementation of dom::Value
+        that implicitly stored all arrays as SharedConstArray.
+
+        We do not do this anymore, but later we may want to add implicit
+        sharing (copy-on-write) for all dom::Value and provide a similar
+        mechanism to get the underlying SharedConst, so we keep these
+        tests commented instead of deleted.
+
     def testGetSharedConst(self):
         a = IntArray([3, 1, 2])
         va = Value(a)
@@ -79,6 +86,7 @@ class TestValue(unittest.TestCase):
             sharedConstIntArrayDataAddress(sa),
             sharedConstIntArrayDataAddress(vaVal))
         self.assertEqual(a, vaVal)
+    '''
 
     def testComparisons(self):
         va = Value(IntArray([3, 1, 2]))
@@ -95,7 +103,6 @@ class TestValue(unittest.TestCase):
         self.assertTrue(sc != va)
         self.assertTrue(va != c)
         self.assertTrue(va != sc)
-    '''
 
 if __name__ == '__main__':
     unittest.main()
