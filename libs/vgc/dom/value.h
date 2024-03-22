@@ -150,54 +150,41 @@ private:
 // This is essentially a hand-written virtual table.
 //
 class VGC_DOM_API ValueTypeInfo {
-private:
-    // This is needed because core::TypeId is not default-constructible
-    ValueTypeInfo(core::TypeId typeId)
-        : typeId(typeId) {
-    }
-
 public:
     core::TypeId typeId;
-
     bool hasPaths;
-
     void (*copy)(const ValueData&, ValueData&);
     void (*move)(ValueData&, ValueData&);
     void (*destroy)(ValueData&);
-
     bool (*equal)(const ValueData&, const ValueData&);
     bool (*less)(const ValueData&, const ValueData&);
-
     Value (*getArrayItemWrapped)(const ValueData&, Int);
-
     void (*read)(ValueData&, StreamReader&);
     void (*write)(const ValueData&, StreamWriter&);
-
     FormatterBufferIterator (*format)(const ValueData&, FormatterBufferCtx&);
-
     void (*visitPaths)(ValueData&, const std::function<void(Path&)>&);
     void (*visitPathsConst)(const ValueData&, const std::function<void(const Path&)>&);
 
-    // TODO: Use type_identity<T> / Tag<T> to actually be able to turn this into
-    // a templated constructor that can be called as `ValueTypeInfo(Tag<T>())`.
-    // See: https://stackoverflow.com/questions/2786946/c-invoke-explicit-template-constructor
-    //
+    // Constructors can't have explicit template arguments,
+    // so we use this instead for type deduction
     template<typename T>
-    static ValueTypeInfo create() {
-        ValueTypeInfo info(core::typeId<T>());
-        info.hasPaths = dom::hasPaths<T>;
-        info.copy = &copy_<T>;
-        info.move = &move_<T>;
-        info.destroy = &destroy_<T>;
-        info.equal = &equal_<T>;
-        info.less = &less_<T>;
-        info.getArrayItemWrapped = &getArrayItemWrapped_<T>;
-        info.read = &read_<T>;
-        info.write = &write_<T>;
-        info.format = &format_<T>;
-        info.visitPaths = &visitPaths_<T>;
-        info.visitPathsConst = &visitPathsConst_<T>;
-        return info;
+    struct Tag {};
+
+    template<typename T>
+    ValueTypeInfo(Tag<T>)
+        : typeId(core::typeId<T>())
+        , hasPaths(dom::hasPaths<T>)
+        , copy(&copy_<T>)
+        , move(&move_<T>)
+        , destroy(&destroy_<T>)
+        , equal(&equal_<T>)
+        , less(&less_<T>)
+        , getArrayItemWrapped(&getArrayItemWrapped_<T>)
+        , read(&read_<T>)
+        , write(&write_<T>)
+        , format(&format_<T>)
+        , visitPaths(&visitPaths_<T>)
+        , visitPathsConst(&visitPathsConst_<T>) {
     }
 
 private:
@@ -280,7 +267,7 @@ const ValueTypeInfo* registerValueTypeInfo(const ValueTypeInfo* info);
 
 template<typename T>
 const ValueTypeInfo* registerValueTypeInfo() {
-    static const ValueTypeInfo perDllInfo = ValueTypeInfo::create<T>();
+    static const ValueTypeInfo perDllInfo = ValueTypeInfo::Tag<T>();
     return registerValueTypeInfo(&perDllInfo);
 }
 
