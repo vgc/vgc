@@ -43,17 +43,6 @@ public:
         return direction_;
     }
 
-    void write(StreamWriter& out) const;
-    void read(StreamReader& in);
-
-    friend void write(StreamWriter& out, const DomCycleComponent& component) {
-        component.write(out);
-    }
-
-    friend void readTo(DomCycleComponent& component, StreamReader& in) {
-        component.read(in);
-    }
-
     friend bool
     operator==(const DomCycleComponent& lhs, const DomCycleComponent& rhs) noexcept {
         return lhs.direction_ == rhs.direction_ && lhs.path_ == rhs.path_;
@@ -71,6 +60,34 @@ public:
         }
         else {
             return lhs.path_ < rhs.path_;
+        }
+    }
+
+    template<typename OStream>
+    friend void write(OStream& out, const DomCycleComponent& self) {
+        using core::write;
+        write(out, self.path_);
+        if (!self.direction_) {
+            write(out, '*');
+        }
+    }
+
+    template<typename IStream>
+    friend void readTo(DomCycleComponent& self, IStream& in) {
+        using core::readTo;
+        readTo(self.path_, in);
+        char c = -1;
+        if (in.get(c)) {
+            if (c == '*') {
+                self.direction_ = false;
+            }
+            else {
+                self.direction_ = true;
+                in.unget();
+            }
+        }
+        else {
+            self.direction_ = true;
         }
     }
 
@@ -109,17 +126,6 @@ public:
         return components_.end();
     }
 
-    void write(StreamWriter& out) const;
-    void read(StreamReader& in);
-
-    friend void write(StreamWriter& out, const DomCycle& cycle) {
-        cycle.write(out);
-    }
-
-    friend void readTo(DomCycle& cycle, StreamReader& in) {
-        cycle.read(in);
-    }
-
     friend bool operator==(const DomCycle& lhs, const DomCycle& rhs) noexcept {
         return std::equal(
             lhs.components_.begin(),
@@ -140,13 +146,46 @@ public:
             rhs.components_.end());
     }
 
+    template<typename OStream>
+    friend void write(OStream& out, const DomCycle& self) {
+        using core::write;
+        bool first = true;
+        for (const DomCycleComponent& component : self.components_) {
+            if (!first) {
+                write(out, ' ');
+            }
+            else {
+                first = false;
+            }
+            write(out, component);
+        }
+    }
+
+    template<typename IStream>
+    friend void readTo(DomCycle& self, IStream& in) {
+        using core::readTo;
+        self.components_.clear();
+        char c = -1;
+        bool got = false;
+        readTo(self.components_.emplaceLast(), in);
+        core::skipWhitespaceCharacters(in);
+        got = bool(in.get(c));
+        while (got && dom::isValidPathFirstChar(c)) {
+            in.unget();
+            readTo(self.components_.emplaceLast(), in);
+            core::skipWhitespaceCharacters(in);
+            got = bool(in.get(c));
+        }
+        if (got) {
+            in.unget();
+        }
+    }
+
 private:
     core::Array<DomCycleComponent> components_;
 
     friend PathVisitor<DomCycle>;
 };
-
-// TODO: CustomValueArray<TCustomValue>
 
 class VGC_DOM_API DomFaceCycles {
 public:
@@ -181,15 +220,15 @@ public:
 
     bool operator<(const DomFaceCycles& other) const;
 
-    template<typename IStream>
-    friend void readTo(DomFaceCycles& self, IStream& in) {
-        readTo(self.cycles_, in);
-    }
-
     template<typename OStream>
     friend void write(OStream& out, const DomFaceCycles& self) {
         using core::write;
         write(out, self.cycles_);
+    }
+
+    template<typename IStream>
+    friend void readTo(DomFaceCycles& self, IStream& in) {
+        readTo(self.cycles_, in);
     }
 
 private:
@@ -233,22 +272,35 @@ struct PathVisitor<detail::DomFaceCycles> {
 } // namespace vgc::dom
 
 template<>
-struct fmt::formatter<vgc::dom::detail::DomCycle> : fmt::formatter<double> {
-    auto format(const vgc::dom::detail::DomCycle& v, fmt::buffer_context<char>& ctx)
-        -> decltype(ctx.out()) {
+struct fmt::formatter<vgc::dom::detail::DomCycleComponent> : fmt::formatter<double> {
+    template<typename FormatContext>
+    auto format(const vgc::dom::detail::DomCycleComponent& v, FormatContext& ctx) {
         std::string s;
         vgc::core::StringWriter sr(s);
-        v.write(sr);
+        write(sr, v);
+        return vgc::core::formatTo(ctx.out(), "{}", s);
+    }
+};
+
+template<>
+struct fmt::formatter<vgc::dom::detail::DomCycle> : fmt::formatter<double> {
+    template<typename FormatContext>
+    auto format(const vgc::dom::detail::DomCycle& v, FormatContext& ctx) {
+        std::string s;
+        vgc::core::StringWriter sr(s);
+        write(sr, v);
         return vgc::core::formatTo(ctx.out(), "{}", s);
     }
 };
 
 template<>
 struct fmt::formatter<vgc::dom::detail::DomFaceCycles> : fmt::formatter<double> {
-    auto format(const vgc::dom::detail::DomFaceCycles& v, fmt::buffer_context<char>& ctx)
-        -> decltype(ctx.out()) {
-
-        return vgc::core::formatTo(ctx.out(), "{}", v.cycles());
+    template<typename FormatContext>
+    auto format(const vgc::dom::detail::DomFaceCycles& v, FormatContext& ctx) {
+        std::string s;
+        vgc::core::StringWriter sr(s);
+        write(sr, v);
+        return vgc::core::formatTo(ctx.out(), "{}", s);
     }
 };
 

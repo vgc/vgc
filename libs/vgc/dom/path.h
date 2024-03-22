@@ -41,9 +41,6 @@ VGC_DECLARE_OBJECT(Element);
 
 class Path;
 
-using StreamReader = core::StringReader;
-using StreamWriter = core::StringWriter;
-
 /*
 path examples:
 /layer/rect.v[0] = "/layer/rect/v0" if real ?

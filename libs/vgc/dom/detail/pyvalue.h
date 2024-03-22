@@ -43,6 +43,13 @@ namespace vgc::dom::detail {
 //
 class VGC_DOM_API AnyPyValue {
 public:
+    // Needs to be default-constructible for being heldable in a `Value`.
+    // This is due to the implementation of readAs_(). Can lift this
+    // restriction? Maybe there could be a constructor with a `ReadInit{}`
+    // tag?
+    AnyPyValue() {
+    }
+
     AnyPyValue(py::handle h)
         : obj_(py::reinterpret_borrow<py::object>(h)) {
     }

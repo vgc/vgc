@@ -164,30 +164,38 @@ private:
         }
     }
 
-    // Action to be performed when an element attribute is encountered. The
-    // attribute name and string value are available in attributeName_ and
-    // attributeValue_.
-    void onAttribute_() {
-        core::StringId name(attributeName_);
+    const Value& getDefaultValue_(core::StringId name) {
 
-        Value value = {};
-        if (name == strings::name) {
-            value = core::StringId();
-        }
-        else if (name == strings::id) {
-            value = core::StringId();
+        // Use static local variable to avoid repeated allocations
+        static Value emptyString = core::StringId();
+
+        if (name == strings::name || name == strings::id) {
+            return emptyString;
         }
         else {
             const AttributeSpec* spec = elementSpec_->findAttributeSpec(name);
             if (!spec) {
-                throw VgcSyntaxError(
-                    "Unknown attribute '" + attributeName_ + "' for element '" + tagName_
-                    + "'. Expected an attribute name defined in the VGC schema.");
+                // XXX Warning instead of throwing?
+                throw VgcSyntaxError(core::format(
+                    "Unknown attribute '{}' for element '{}'. "
+                    "Expected an attribute name defined in the VGC schema.",
+                    name,
+                    tagName_));
             }
-            value = spec->defaultValue();
+            return spec->defaultValue();
         }
+    }
 
-        value.parse(attributeValue_);
+    // Action to be performed when an element attribute is encountered. The
+    // attribute name and string value are available in attributeName_ and
+    // attributeValue_.
+    void onAttribute_() {
+
+        core::StringId name(attributeName_);
+        const Value& defaultValue = getDefaultValue_(name);
+
+        core::StringReader sr(attributeValue_);
+        Value value = Value::readAs(defaultValue, sr);
 
         Element::cast(currentNode_)->setAttribute(name, std::move(value));
     }

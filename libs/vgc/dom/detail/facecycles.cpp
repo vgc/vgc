@@ -22,65 +22,6 @@ namespace vgc::dom {
 
 namespace detail {
 
-void DomCycleComponent::write(StreamWriter& out) const {
-    using core::write;
-    write(out, path_);
-    if (!direction_) {
-        write(out, '*');
-    }
-}
-
-void DomCycleComponent::read(StreamReader& in) {
-    using core::readTo;
-    readTo(path_, in);
-    char c = -1;
-    if (in.get(c)) {
-        if (c == '*') {
-            direction_ = false;
-        }
-        else {
-            direction_ = true;
-            in.unget();
-        }
-    }
-    else {
-        direction_ = true;
-    }
-}
-
-void DomCycle::write(StreamWriter& out) const {
-    using core::write;
-    bool first = true;
-    for (const DomCycleComponent& component : components_) {
-        if (!first) {
-            write(out, ' ');
-        }
-        else {
-            first = false;
-        }
-        write(out, component);
-    }
-}
-
-void DomCycle::read(StreamReader& in) {
-    using core::readTo;
-    components_.clear();
-    char c = -1;
-    bool got = false;
-    readTo(components_.emplaceLast(), in);
-    core::skipWhitespaceCharacters(in);
-    got = bool(in.get(c));
-    while (got && dom::isValidPathFirstChar(c)) {
-        in.unget();
-        readTo(components_.emplaceLast(), in);
-        core::skipWhitespaceCharacters(in);
-        got = bool(in.get(c));
-    }
-    if (got) {
-        in.unget();
-    }
-}
-
 bool DomFaceCycles::operator==(const DomFaceCycles& other) const {
     return std::equal(
         cycles_.begin(), cycles_.end(), other.cycles_.begin(), other.cycles_.end());

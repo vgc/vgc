@@ -77,12 +77,6 @@ namespace vgc::dom {
 class Node;
 class Value;
 
-using StreamReader = core::StringReader;
-using StreamWriter = core::StringWriter;
-
-using FormatterBufferCtx = fmt::buffer_context<char>;
-using FormatterBufferIterator = decltype(std::declval<FormatterBufferCtx>().out());
-
 namespace detail {
 
 class ValueData {
@@ -151,6 +145,9 @@ private:
 //
 class VGC_DOM_API ValueTypeInfo {
 public:
+    using FmtBufferContext = fmt::buffer_context<char>;
+    using FmtBufferIterator = FmtBufferContext::iterator;
+
     core::TypeId typeId;
     bool hasPaths;
     void (*copy)(const ValueData&, ValueData&);
@@ -159,9 +156,9 @@ public:
     bool (*equal)(const ValueData&, const ValueData&);
     bool (*less)(const ValueData&, const ValueData&);
     Value (*getArrayItemWrapped)(const ValueData&, Int);
-    void (*read)(ValueData&, StreamReader&);
-    void (*write)(const ValueData&, StreamWriter&);
-    FormatterBufferIterator (*format)(const ValueData&, FormatterBufferCtx&);
+    void (*write)(const ValueData&, core::StringWriter&);
+    Value (*readAs)(core::StringReader&);
+    FmtBufferIterator (*format)(const ValueData&, FmtBufferContext&);
     void (*visitPaths)(ValueData&, const std::function<void(Path&)>&);
     void (*visitPathsConst)(const ValueData&, const std::function<void(const Path&)>&);
 
@@ -180,8 +177,8 @@ public:
         , equal(&equal_<T>)
         , less(&less_<T>)
         , getArrayItemWrapped(&getArrayItemWrapped_<T>)
-        , read(&read_<T>)
         , write(&write_<T>)
+        , readAs(&readAs_<T>)
         , format(&format_<T>)
         , visitPaths(&visitPaths_<T>)
         , visitPathsConst(&visitPathsConst_<T>) {
@@ -218,19 +215,17 @@ private:
     static Value getArrayItemWrapped_(const ValueData& d, Int index);
 
     template<typename T>
-    static void read_(ValueData& d, StreamReader& in) {
-        using vgc::core::readTo;
-        readTo(d.get<T>(), in);
-    }
-
-    template<typename T>
-    static void write_(const ValueData& d, StreamWriter& out) {
+    static void write_(const ValueData& d, core::StringWriter& out) {
         using vgc::core::write;
         write(out, d.get<T>());
     }
 
+    // This function is defined further in this file due to cyclic dependency with Value
     template<typename T>
-    static FormatterBufferIterator format_(const ValueData& d, FormatterBufferCtx& ctx) {
+    static Value readAs_(core::StringReader& in);
+
+    template<typename T>
+    static FmtBufferIterator format_(const ValueData& d, FmtBufferContext& ctx) {
         return core::formatTo(ctx.out(), "{}", d.get<T>());
     }
 
@@ -438,29 +433,45 @@ public:
                && lhs.info_().less(lhs.data_, rhs.data_);
     }
 
-    // Reads as a T, where T is the type currently held by this Value.
-    //
-    // TODO: read<T> variant?
-    //
-    void read(StreamReader& in) {
-        info_().read(data_, in);
+    template<typename OStream>
+    friend void write(OStream& out, const Value& self) {
+        if constexpr (std::is_same_v<OStream, core::StringWriter>) {
+            self.info_().write(self.data_, out);
+        }
+        else {
+            std::string s;
+            core::StringWriter sw(s);
+            self.info_().write(self.data_, sw);
+            write(out, s);
+        }
     }
 
-    // Parses as a T, where T is the type currently held by this Value.
+    /// Reads from the input stream a value of type `T`, where `T` is the type
+    /// currently held by `other`, and returns it as a `Value`.
+    ///
+    /// Note: the `Value` type intentionally does not implement the usual
+    /// `void readTo(Value& v, IStream&)` interface, because:
+    ///
+    /// 1. Unless we use the type currently held by `v`, we would not know
+    /// which type `T` to read from the input stream.
+    ///
+    /// 2. If we use the type currently held by `v` as type to read, then this
+    /// means that the result of `readTo(v, in)` depends on the current state
+    /// of `v`, which is unexcepted.
+    ///
+    /// 3. If we implement `readTo(v, in)` as above, then this means that both
+    /// `core::read<Value>(in)` and `core::parse<Value>(in)` would also be
+    /// available, but they would always attempt to read a `NoneValue`, which
+    /// is unexpected. Indeed, they are basically implemented as `{ T x;
+    /// readTo(x, in); return x; }`, and a default-constructed `Value` holds
+    /// the type `NoneValue`.
+    ///
+    // TODO: Allow reading from an arbitrary IStream (instead of just a
+    // StringReader) by automatically wrapping the IStream in a virtual class.
+    // This would be essentially similar to visitPaths taking an std::function.
     //
-    // TODO: parse<T> variant?
-    //
-    void parse(const std::string& s) {
-        StreamReader sr(s);
-        read(sr);
-    }
-
-    void write(StreamWriter& out) const {
-        info_().write(data_, out);
-    }
-
-    FormatterBufferIterator format(FormatterBufferCtx& ctx) const {
-        return info_().format(data_, ctx);
+    static Value readAs(const Value& other, core::StringReader& in) {
+        return other.info_().readAs(in);
     }
 
     void visitPaths(const std::function<void(const Path&)>& fn) const {
@@ -478,6 +489,8 @@ private:
     const detail::ValueTypeInfo& info_() const {
         return *typeInfo_;
     }
+
+    friend ::fmt::formatter<Value>;
 };
 
 namespace detail {
@@ -493,21 +506,15 @@ Value ValueTypeInfo::getArrayItemWrapped_(const ValueData& d, Int index) {
         return Value();
     }
 }
+template<typename T>
+Value ValueTypeInfo::readAs_(core::StringReader& in) {
+    using vgc::core::readTo;
+    T x;
+    readTo(x, in);
+    return Value(std::move(x));
+}
 
 } // namespace detail
-
-template<typename OStream>
-void write(OStream& out, const Value& v) {
-    if constexpr (std::is_same_v<OStream, StreamWriter>) {
-        v.write(out);
-    }
-    else {
-        std::string tmp;
-        StreamWriter sw(tmp);
-        v.write(sw);
-        write(out, tmp);
-    }
-}
 
 } // namespace vgc::dom
 
@@ -515,7 +522,7 @@ template<>
 struct fmt::formatter<vgc::dom::Value> : fmt::formatter<double> {
     template<typename FormatContext>
     auto format(const vgc::dom::Value& v, FormatContext& ctx) -> decltype(ctx.out()) {
-        return v.format(ctx);
+        return v.info_().format(v.data_, ctx);
     }
 };
 
