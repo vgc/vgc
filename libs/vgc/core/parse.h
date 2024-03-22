@@ -80,7 +80,9 @@ char readCharacter(IStream& in) {
 ///
 template<typename IStream>
 std::string readStringUntilEof(IStream& in) {
-    return detail::readStringUntilEof(in);
+    std::string s;
+    detail::readStringUntilEof(s, in);
+    return s;
 }
 
 /// Extracts a string up to the given character from the input stream. Raises
@@ -832,6 +834,14 @@ void readTo(float& x, IStream& in) {
 template<typename IStream>
 void readTo(double& x, IStream& in) {
     x = readDoubleApprox(in);
+}
+
+/// Reads the whole input stream to the string.
+///
+template<typename IStream>
+void readTo(std::string& s, IStream& in) {
+    s.clear();
+    detail::readStringUntilEof(s, in);
 }
 
 /// Reads and returns a value of the given type T from the input stream \p in.

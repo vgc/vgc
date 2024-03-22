@@ -24,8 +24,7 @@
 namespace vgc::core::detail {
 
 template<typename IStream>
-std::string readStringUntilEof(IStream& in) {
-    std::string s;
+std::string readStringUntilEof(std::string& s, IStream& in) {
     char c;
     while (in.get(c)) {
         s.push_back(c);

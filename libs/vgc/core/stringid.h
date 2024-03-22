@@ -238,7 +238,9 @@ void write(OStream& out, StringId x) {
 ///
 template<typename IStream>
 void readTo(StringId& s, IStream& in) {
-    s = StringId(readStringUntilEof(in));
+    std::string tmp;
+    detail::readStringUntilEof(tmp, in);
+    s = StringId(tmp);
 }
 
 } // namespace vgc::core
