@@ -526,7 +526,10 @@ private:
 namespace detail {
 
 template<typename T>
-Value ValueTypeInfo::getArrayItemWrapped_(const ValueData& d, Int index) {
+Value ValueTypeInfo::getArrayItemWrapped_(
+    const ValueData& d,
+    [[maybe_unused]] Int index) {
+
     using T_ = core::RemoveSharedConst<T>;
     if constexpr (core::isArray<T_>) {
         const T_& x = d.get<T>(); // c.f. `SharedConst<T>::operator const T&()`
