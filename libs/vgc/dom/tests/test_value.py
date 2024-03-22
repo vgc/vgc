@@ -20,12 +20,42 @@ import unittest
 
 from vgc.core import IntArray, SharedConstIntArray
 from vgc.dom import Value
+from vgc.geometry import Vec2d
 
 from vgc.core.detail import (
     sharedConstIntArrayDataAddress
 )
 
 class TestValue(unittest.TestCase):
+
+    def testInt(self):
+        i = 42
+        v = Value(i)
+        j = v.toPyObject()
+        self.assertEqual(i, j)
+
+    def testVec2d(self):
+        v = Value(Vec2d(1, 2))
+        self.assertEqual(v.toPyObject(), Vec2d(1, 2))
+        self.assertNotEqual(v.toPyObject(), Vec2d(2, 2))
+
+    def testPyObject(self):
+
+        class Foo:
+            def __init__(self, i):
+                self.i = i
+
+        f = Foo(42)
+        v = Value(f)
+        self.assertEqual(f, v.toPyObject())
+
+    ''' These tests where for a previous implementation of dom::Value
+        that implicitly stored all arrays as SharedConstArray.
+
+        We do not do this anymore, but later we may want to add implicit
+        sharing (copy-on-write) for all dom::Value and provide a similar
+        mechanism to get the underlying SharedConst, so we keep these
+        tests commented instead of deleted.
 
     def testGetSharedConst(self):
         a = IntArray([3, 1, 2])
@@ -56,6 +86,7 @@ class TestValue(unittest.TestCase):
             sharedConstIntArrayDataAddress(sa),
             sharedConstIntArrayDataAddress(vaVal))
         self.assertEqual(a, vaVal)
+    '''
 
     def testComparisons(self):
         va = Value(IntArray([3, 1, 2]))

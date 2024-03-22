@@ -19,6 +19,7 @@
 #include <vgc/core/logging.h>
 #include <vgc/dom/document.h>
 #include <vgc/dom/logcategories.h>
+#include <vgc/dom/noneor.h>
 #include <vgc/dom/operation.h>
 #include <vgc/dom/schema.h>
 #include <vgc/dom/strings.h>
@@ -63,7 +64,7 @@ Element* Element::createCopy_(Node* parent, const Element* source, Element* next
 
     srcDoc->preparePathsUpdateRec_(srcDoc);
 
-    PathUpdateData pud = {};
+    detail::PathUpdateData pud = {};
     Element* result = createCopy_(parent, source, nextSibling, pud);
 
     tgtDoc->updatePathsRec_(tgtDoc, pud);
@@ -76,7 +77,7 @@ Element* Element::createCopy_(
     Node* parent,
     const Element* source,
     Element* nextSibling,
-    PathUpdateData& pud) {
+    detail::PathUpdateData& pud) {
 
     Document* doc = parent->document();
 
@@ -91,7 +92,7 @@ Element* Element::createCopyRec_(
     Node* parent,
     const Element* source,
     Element* nextSibling,
-    PathUpdateData& pud) {
+    detail::PathUpdateData& pud) {
 
     Document* doc = parent->document();
 
@@ -206,19 +207,18 @@ std::optional<Element*> Element::getElementFromPathAttribute(
     core::StringId name,
     core::StringId tagNameFilter) const {
 
-    const dom::Value& value = getAttribute(name);
-    const dom::Path* pathPtr = nullptr;
+    const Value& value = getAttribute(name);
+    const Path* pathPtr = nullptr;
 
-    if (value.type() == dom::ValueType::NoneOrPath) {
-        const dom::NoneOr<dom::Path>& noneOrPath = value.getNoneOrPath();
-        if (!noneOrPath.has_value()) {
+    if (const NoneOr<Path>* noneOrPath = value.getIf<NoneOr<Path>>()) {
+        if (!noneOrPath->has_value()) {
             return std::nullopt;
         }
-        pathPtr = &noneOrPath.value();
+        pathPtr = &noneOrPath->value();
     }
     else {
-        // cast as path and throws if it is not one
-        pathPtr = &value.getPath();
+        // cast as path or throw if attribute is not a path
+        pathPtr = &value.get<Path>();
     }
 
     // resolve path (relative to this element if the path is relative
@@ -249,11 +249,7 @@ std::optional<Element*> Element::getElementFromPathAttribute(
     return element;
 }
 
-void Element::setAttribute(core::StringId name, const Value& value) {
-    core::History::do_<SetAttributeOperation>(document()->history(), this, name, value);
-}
-
-void Element::setAttribute(core::StringId name, Value&& value) {
+void Element::setAttribute(core::StringId name, Value value) {
     core::History::do_<SetAttributeOperation>(
         document()->history(), this, name, std::move(value));
 }
@@ -281,13 +277,13 @@ void Element::onAttributeChanged_(
     const Value& newValue) {
 
     if (name == strings::name) {
-        name_ = newValue.hasValue() ? newValue.getStringId() : core::StringId();
+        name_ = newValue.hasValue() ? newValue.get<core::StringId>() : core::StringId();
         document()->onElementNameChanged_(this);
     }
     else if (name == strings::id) {
         // TODO: deal with conflicts
         core::StringId oldId = id_;
-        id_ = newValue.hasValue() ? newValue.getStringId() : core::StringId();
+        id_ = newValue.hasValue() ? newValue.get<core::StringId>() : core::StringId();
         document()->onElementIdChanged_(this, oldId);
     }
     attributeChanged().emit(name, oldValue, newValue);
@@ -295,13 +291,19 @@ void Element::onAttributeChanged_(
 
 void Element::prepareInternalPathsForUpdate_() const {
     for (const AuthoredAttribute& attr : authoredAttributes_) {
-        attr.value().preparePathsForUpdate_(this);
+        const Value& value = attr.value();
+        value.visitPaths([owner = this](const Path& path) {
+            detail::PathUpdater::preparePathForUpdate(path, owner);
+        });
     }
 }
 
-void Element::updateInternalPaths_(const PathUpdateData& data) {
+void Element::updateInternalPaths_(const detail::PathUpdateData& data) {
     for (AuthoredAttribute& attr : authoredAttributes_) {
-        const_cast<Value&>(attr.value()).updatePaths_(this, data);
+        Value& value = const_cast<Value&>(attr.value());
+        value.visitPaths([owner = this, &data](Path& path) {
+            detail::PathUpdater::updatePath(path, owner, data);
+        });
     }
 }
 

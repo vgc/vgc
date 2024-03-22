@@ -355,8 +355,8 @@ std::optional<SelectionType> getSelectionType(const workspace::Element& item) {
 std::optional<core::Color> getColor(const workspace::Element& item) {
     if (dom::Element* element = item.domElement()) {
         const dom::Value& value = element->getAttribute(dom::strings::color);
-        if (value.type() == dom::ValueType::Color) {
-            return value.getColor();
+        if (value.has<core::Color>()) {
+            return value.getUnchecked<core::Color>();
         }
     }
     return std::nullopt;

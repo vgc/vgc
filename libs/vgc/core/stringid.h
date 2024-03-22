@@ -24,6 +24,8 @@
 #include <vgc/core/api.h>
 #include <vgc/core/format.h>
 
+#include <vgc/core/detail/parsebits.h>
+
 namespace vgc::core {
 
 /// \class vgc::core::StringId
@@ -230,6 +232,15 @@ OutputStream& operator<<(OutputStream& out, StringId stringId) {
 template<typename OStream>
 void write(OStream& out, StringId x) {
     write(out, std::string_view(x));
+}
+
+/// Reads the whole input stream to the StringId.
+///
+template<typename IStream>
+void readTo(StringId& s, IStream& in) {
+    std::string tmp;
+    detail::readStringUntilEof(tmp, in);
+    s = StringId(tmp);
 }
 
 } // namespace vgc::core

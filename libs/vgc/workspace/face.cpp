@@ -249,7 +249,7 @@ bool VacKeyFace::updatePropertiesFromDom_(
             const CellStyle* oldStyle =
                 static_cast<const CellStyle*>(data->findProperty(strings::style));
             auto newStyle = std::make_unique<CellStyle>();
-            const auto& color = value.getColor();
+            const auto& color = value.get<core::Color>();
             if (!oldStyle || oldStyle->color() != color) {
                 newStyle->setColor(color);
                 data->insertProperty(std::move(newStyle));

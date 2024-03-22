@@ -1,4 +1,4 @@
-// Copyright 2023 The VGC Developers
+// Copyright 2021 The VGC Developers
 // See the COPYRIGHT file at the top-level directory of this distribution
 // and at https://github.com/vgc/vgc/blob/master/COPYRIGHT
 //
@@ -14,24 +14,24 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <vgc/dom/detail/facecycles.h>
+#ifndef VGC_CORE_INTERNAL_PARSEBITS_H
+#define VGC_CORE_INTERNAL_PARSEBITS_H
 
-#include <vgc/dom/value.h>
+// This header helps avoiding a cyclic dependency between stringid.h and parse.h
 
-namespace vgc::dom {
+#include <string>
 
-namespace detail {
+namespace vgc::core::detail {
 
-bool DomFaceCycles::operator==(const DomFaceCycles& other) const {
-    return std::equal(
-        cycles_.begin(), cycles_.end(), other.cycles_.begin(), other.cycles_.end());
+template<typename IStream>
+std::string readStringUntilEof(std::string& s, IStream& in) {
+    char c;
+    while (in.get(c)) {
+        s.push_back(c);
+    }
+    return s;
 }
 
-bool DomFaceCycles::operator<(const DomFaceCycles& other) const {
-    return std::lexicographical_compare(
-        cycles_.begin(), cycles_.end(), other.cycles_.begin(), other.cycles_.end());
-}
+} // namespace vgc::core::detail
 
-} // namespace detail
-
-} // namespace vgc::dom
+#endif // VGC_CORE_INTERNAL_PARSEBITS_H

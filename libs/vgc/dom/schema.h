@@ -41,13 +41,10 @@ class VGC_DOM_API AttributeSpec {
 public:
     /// Creates a built-in attribute.
     ///
-    template<typename T, VGC_REQUIRES(dom::isValueConstructibleFrom<T>)>
+    template<typename T>
     AttributeSpec(std::string_view name, const T& defaultValue)
         : name_(core::StringId(name))
-        , defaultValue_(defaultValue)
-        , valueType_(ValueType::Invalid) {
-
-        valueType_ = defaultValue_.type();
+        , defaultValue_(defaultValue) {
     }
 
     /// Returns the name of this built-in attribute.
@@ -62,16 +59,15 @@ public:
         return defaultValue_;
     }
 
-    /// Returns the ValueType of this built-in attribute.
+    /// Returns the `TypeId` of this built-in attribute.
     ///
-    ValueType valueType() const {
-        return valueType_;
+    core::TypeId typeId() const {
+        return defaultValue_.typeId();
     }
 
 private:
     core::StringId name_;
     Value defaultValue_;
-    ValueType valueType_;
 };
 
 /// \class vgc::dom::ElementSpec
@@ -131,14 +127,14 @@ public:
         return defaultValue(core::StringId(attrName));
     }
 
-    /// Returns the `ValueType` of the built-in attribute given by its
-    /// `attrName`. Returns `ValueType::Invalid` if the given `attrName`
+    /// Returns the `TypeId` of the built-in attribute given by its
+    /// `attrName`. Returns an empty `optional` if the given `attrName`
     /// is not a built-in attribute of this `Element` type.
     ///
-    ValueType valueType(core::StringId attrName) const;
+    std::optional<core::TypeId> typeId(core::StringId attrName) const;
     /// \overload
-    ValueType valueType(std::string_view attrName) const {
-        return valueType(core::StringId(attrName));
+    std::optional<core::TypeId> typeId(std::string_view attrName) const {
+        return typeId(core::StringId(attrName));
     }
 
 private:

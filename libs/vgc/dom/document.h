@@ -547,7 +547,7 @@ private:
         const Element* element);
 
     void preparePathsUpdateRec_(const Node* node);
-    void updatePathsRec_(const Node* node, const PathUpdateData& pud);
+    void updatePathsRec_(const Node* node, const detail::PathUpdateData& pud);
 };
 
 } // namespace vgc::dom

@@ -60,10 +60,10 @@ public:
         value_ = std::move(value);
     }
 
-    /// Returns the ValueType of this authored attribute.
+    /// Returns the `TypeId` of this authored attribute.
     ///
-    ValueType valueType() const {
-        return value_.type();
+    core::TypeId typeId() const {
+        return value_.typeId();
     }
 
 private:

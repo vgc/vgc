@@ -19,15 +19,19 @@
 
 #include <string>
 #include <string_view>
+#include <unordered_map>
 
 #include <vgc/core/algorithms.h>
+#include <vgc/core/array.h>
 #include <vgc/core/flags.h>
 #include <vgc/core/format.h>
 #include <vgc/core/id.h>
 #include <vgc/core/object.h>
 #include <vgc/core/parse.h>
 #include <vgc/core/stringid.h>
+#include <vgc/core/templateutil.h> // RequiresValid
 #include <vgc/dom/api.h>
+#include <vgc/dom/noneor.h>
 
 namespace vgc::dom {
 
@@ -36,17 +40,6 @@ VGC_DECLARE_OBJECT(Document);
 VGC_DECLARE_OBJECT(Element);
 
 class Path;
-class PathUpdateData;
-
-using StreamReader = core::StringReader;
-using StreamWriter = core::StringWriter;
-
-namespace detail {
-
-void preparePathForUpdate(const Path& path, const Node* workingNode);
-void updatePath(Path& path, const Node* workingNode, const PathUpdateData& data);
-
-} // namespace detail
 
 /*
 path examples:
@@ -150,6 +143,12 @@ private:
 };
 
 using PathSegmentArray = core::Array<PathSegment>;
+
+namespace detail {
+
+struct PathUpdater;
+
+} // namespace detail
 
 /// \class vgc::dom::Path
 /// \brief Represents a path to a node or attribute.
@@ -260,19 +259,136 @@ public:
 private:
     core::Array<PathSegment> segments_;
 
-    friend void detail::preparePathForUpdate(const Path&, const Node*);
-    friend void detail::updatePath(Path&, const Node*, const PathUpdateData&);
     // Used for path updates.
     // Could use a wrapper InternalPath in Value/Schema
     // if the size of Path becomes an issue.
     mutable core::Id baseInternalId_ = {};
     mutable core::Id targetInternalId_ = {};
+    friend detail::PathUpdater;
 
     Path(core::Array<PathSegment>&& segments)
         : segments_(std::move(segments)) {
     }
 
     void write_(fmt::memory_buffer& out) const;
+};
+
+namespace detail {
+
+class PathUpdateData {
+public:
+    PathUpdateData() = default;
+
+    const std::unordered_map<core::Id, core::Id>& copiedElements() const {
+        return copiedElements_;
+    }
+
+    void addCopiedElement(core::Id oldInternalId, core::Id newInternalId) {
+        copiedElements_[oldInternalId] = newInternalId;
+    }
+
+    const core::Array<core::Id>& absolutePathChangedElements() const {
+        return absolutePathChangedElements_;
+    }
+
+    void addAbsolutePathChangedElement(core::Id internalId) {
+        if (!absolutePathChangedElements_.contains(internalId)) {
+            absolutePathChangedElements_.append(internalId);
+        }
+    }
+
+private:
+    std::unordered_map<core::Id, core::Id> copiedElements_;
+    core::Array<core::Id> absolutePathChangedElements_;
+};
+
+struct PathUpdater {
+
+    VGC_DOM_API
+    static void preparePathForUpdate(const Path& path, const Node* owner);
+
+    VGC_DOM_API
+    static void updatePath(Path& path, const Node* owner, const PathUpdateData& data);
+};
+
+} // namespace detail
+
+/// This is a type trait that should be specialized for any type that stores
+/// `vgc::dom::Path` data, so that these paths can be updated by the `Document`
+/// in case a referenced element is moved, copied, or its ID changed.
+///
+/// See implementation of `PathVisitor<detail::DomFaceCycles>` for an example.
+///
+template<typename T, typename SFINAE = void>
+struct PathVisitor {};
+
+/// Type trait for `hasPaths<T>`.
+///
+template<typename T, typename SFINAE = void>
+struct HasPaths : std::false_type {};
+
+template<typename T>
+struct HasPaths<
+    T,
+    core::RequiresValid<decltype(&PathVisitor<T>::template visit<T&, void (*)(Path&)>)>>
+    : std::true_type {};
+
+/// Checks whether the given type `T` has a `PathVisitor<T>` specialization.
+///
+template<typename T>
+inline constexpr bool hasPaths = HasPaths<T>::value;
+
+template<>
+struct PathVisitor<Path> {
+
+    // Note: we use a forwarding reference `Fn&&` instead of a copy since:
+    //
+    // - The functor can be an `std::function` which is slow to copy (heap
+    // allocation) if the state is larger than the storage size of its
+    // small-value optimization. This would be really bad since the visitor
+    // typically calls downstream visitors, which would result in more copies
+    // of the functor than there are paths to visit.
+    //
+    // - This allows to use functors that have mutable state, for example, a
+    // visitor that counts the number of paths.
+    //
+    // However, we must not use `std::forward<Fn>(fn)` in the implementation of
+    // `visit()`, since we never want to forward the functor as an rvalue
+    // reference (`Fn&&`). It would indeed be incorrect to do so, since we
+    // typically call `visit(x, fn)` multiple times, so none of these calls
+    // should consume the resources of `fn`, otherwise `fn` would not be usable
+    // for subsequent calls.
+    //
+    // In other words, the only reason we use a forwarding reference is to
+    // allow passing the functor as either `Fn&` or `const Fn&`, and this is
+    // properly deduced without using `std::forward`. passing `fn` as a rvalue
+    // would be incorrect.
+    //
+    // Similarly, we use a forwarding reference for the type to visit so that
+    // we support `Path&&`, `const Path&`, and `Path&` as input, but we do not
+    // need to forward it as a rvalue reference.
+    //
+    // Note: using the following:
+    //
+    //   template<typename MaybeConst, typename Fn>
+    //   static void visit(MaybeConst& path, Fn&& fn);
+    //
+    // would not allow to use `PathVisitor<Path>::visit(Path(), fn);`.
+    //
+    template<typename Path, typename Fn>
+    static void visit(Path&& path, Fn&& fn) {
+        fn(path);
+    }
+};
+
+template<typename T>
+struct PathVisitor<NoneOr<T>, core::Requires<hasPaths<T>>> {
+    template<typename NoneOrT, typename Fn>
+    static void visit(NoneOrT&& noneOr, Fn&& fn) {
+        if (noneOr.has_value()) {
+            PathVisitor<T>::visit(noneOr.value(), fn);
+        }
+    }
 };
 
 static_assert(std::is_copy_constructible_v<Path>);

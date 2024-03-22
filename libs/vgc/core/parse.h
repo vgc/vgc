@@ -45,6 +45,8 @@
 #include <vgc/core/format.h>
 #include <vgc/core/templateutil.h>
 
+#include <vgc/core/detail/parsebits.h>
+
 namespace vgc::core {
 
 /// Returns whether the given char is a whitespace character, that is, ' ',
@@ -72,6 +74,15 @@ char readCharacter(IStream& in) {
         throw ParseError("Unexpected end of stream. Expected a character.");
     }
     return c;
+}
+
+/// Extracts a string up to the end of the input stream.
+///
+template<typename IStream>
+std::string readStringUntilEof(IStream& in) {
+    std::string s;
+    detail::readStringUntilEof(s, in);
+    return s;
 }
 
 /// Extracts a string up to the given character from the input stream. Raises
@@ -230,16 +241,8 @@ void skipExpectedString(IStream& in, CharIterator begin, CharIterator end) {
 /// Raises ParseError if the input stream does not start with s.
 ///
 template<typename IStream>
-void skipExpectedString(IStream& in, const std::string& s) {
+void skipExpectedString(IStream& in, std::string_view s) {
     skipExpectedString(in, s.begin(), s.end());
-}
-
-/// Attempts to read the string literal s from the input stream.
-/// Raises ParseError if the input stream does not start with s.
-///
-template<typename IStream>
-void skipExpectedString(IStream& in, const char* s) {
-    skipExpectedString(in, s, s + std::strlen(s));
 }
 
 /// Extracts the next character from the input stream, excepting that there is
@@ -252,6 +255,68 @@ void skipExpectedEof(IStream& in) {
         throw ParseError(
             std::string("Unexpected character '") + c + "'. Expected end of stream.");
     }
+}
+
+/// Throws ParseError if:
+/// 1. The stream still has characters, and
+/// 2. The next character is not a whitespace character.
+///
+/// This function does not actually read anything, that is, all calls to
+/// `in.get()` are followed by calls to `in.unget()`.
+///
+template<typename IStream>
+void expectEofOrWhitespaceCharacter(IStream& in) {
+    char c = -1; // dummy-initialization in order to silence warning
+    if (in.get(c)) {
+        in.unget();
+        if (!core::isWhitespace(c)) {
+            throw ParseError(
+                std::string("Unexpected character '") + c
+                + "'. Expected end of stream or whitespace character.");
+        }
+    }
+}
+
+/// Extracts the given string from the input stream.
+///
+/// Throws ParseError if:
+/// 1. The characters of the stream do no match the input string, or
+/// 2. The following character is not a whitespace character (or the end of
+///    the stream).
+///
+/// It is equivalent to:
+///
+/// ```cpp
+/// skipExpectedString(in, s);
+/// expectEofOrWhitespaceCharacter(in);
+/// ```
+///
+/// This function is the same as `readExpectedWord()`, except that the latter
+/// also allows leading whitespaces.
+///
+template<typename IStream>
+void skipExpectedWord(IStream& in, std::string_view s) {
+    skipExpectedString(in, s);
+    expectEofOrWhitespaceCharacter(in);
+}
+
+/// Extracts the following characters from the input stream:
+/// 1. All leading whitespaces,
+/// 2. Then the given string.
+///
+/// Throws ParseError if:
+/// 1. After extracting leading whitespaces, the characters of the stream
+///    do no match the input string, or
+/// 2. The following character is not a whitespace character (or the end of
+///    the stream).
+///
+/// This function is the same as `skipExpectedWord()`, except that the latter
+/// does not allow leading whitespaces.
+///
+template<typename IStream>
+void readExpectedWord(IStream& in, std::string_view s) {
+    skipWhitespaceCharacters(in);
+    skipExpectedWord(in, s);
 }
 
 /// Reads a base-10 text representation of an unsigned integer from the input
@@ -769,6 +834,14 @@ void readTo(float& x, IStream& in) {
 template<typename IStream>
 void readTo(double& x, IStream& in) {
     x = readDoubleApprox(in);
+}
+
+/// Reads the whole input stream to the string.
+///
+template<typename IStream>
+void readTo(std::string& s, IStream& in) {
+    s.clear();
+    detail::readStringUntilEof(s, in);
 }
 
 /// Reads and returns a value of the given type T from the input stream \p in.

@@ -168,7 +168,7 @@ protected:
     SetAttributeOperation(Element* element, core::StringId name, Value value)
         : element_(element)
         , name_(name)
-        , newValue_(value) {
+        , newValue_(std::move(value)) {
     }
 
 public:

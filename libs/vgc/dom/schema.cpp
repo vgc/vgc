@@ -21,6 +21,7 @@
 #include <vgc/core/array.h>
 #include <vgc/core/colors.h>
 #include <vgc/dom/detail/facecycles.h>
+#include <vgc/dom/noneor.h>
 #include <vgc/dom/path.h>
 #include <vgc/geometry/vec2d.h>
 
@@ -74,9 +75,13 @@ const Value& ElementSpec::defaultValue(core::StringId name) const {
     return attr ? attr->defaultValue() : Value::invalid();
 }
 
-ValueType ElementSpec::valueType(core::StringId name) const {
-    const AttributeSpec* attr = findAttributeSpec(name);
-    return attr ? attr->valueType() : ValueType::Invalid;
+std::optional<core::TypeId> ElementSpec::typeId(core::StringId name) const {
+    if (const AttributeSpec* attr = findAttributeSpec(name)) {
+        return attr->typeId();
+    }
+    else {
+        return std::nullopt;
+    }
 }
 
 Schema::Schema(std::initializer_list<ElementSpec> elements)

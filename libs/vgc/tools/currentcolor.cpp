@@ -162,7 +162,8 @@ void CurrentColor::updateCurrentColorFromSelectionColor_() {
         workspace::Element* item = workspace->find(id);
         dom::Element* element = item ? item->domElement() : nullptr;
         if (element && core::contains(colorableElements(), element->tagName())) {
-            core::Color color = element->getAttribute(dom::strings::color).getColor();
+            const auto& color =
+                element->getAttribute(dom::strings::color).get<core::Color>();
             setColor(color);
             break;
         }

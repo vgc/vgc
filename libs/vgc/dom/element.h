@@ -318,9 +318,7 @@ public:
 
     /// Sets the value of the given attribute.
     ///
-    void setAttribute(core::StringId name, const Value& value);
-    /// \overload
-    void setAttribute(core::StringId name, Value&& value);
+    void setAttribute(core::StringId name, Value value);
 
     /// Clears the authored value of the given attribute.
     ///
@@ -457,13 +455,13 @@ private:
         Node* parent,
         const Element* source,
         Element* nextSibling,
-        PathUpdateData& pud);
+        detail::PathUpdateData& pud);
 
     static Element* createCopyRec_(
         Node* parent,
         const Element* source,
         Element* nextSibling,
-        PathUpdateData& pud);
+        detail::PathUpdateData& pud);
 
     // Authored attributes of this element. Note: copying AuthoredAttribute
     // instances is expensive, but fortunately there shouldn't be any copy with
@@ -517,9 +515,11 @@ private:
     friend void detail::prepareInternalPathsForUpdate(const Node* workingNode);
     void prepareInternalPathsForUpdate_() const;
 
-    friend void
-    detail::updateInternalPaths(const Node* workingNode, const PathUpdateData& data);
-    void updateInternalPaths_(const PathUpdateData& data);
+    friend void detail::updateInternalPaths(
+        const Node* workingNode,
+        const detail::PathUpdateData& data);
+
+    void updateInternalPaths_(const detail::PathUpdateData& data);
 };
 
 inline NamedElementIterator& NamedElementIterator::operator++() {

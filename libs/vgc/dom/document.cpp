@@ -164,30 +164,39 @@ private:
         }
     }
 
-    // Action to be performed when an element attribute is encountered. The
-    // attribute name and string value are available in attributeName_ and
-    // attributeValue_.
-    void onAttribute_() {
-        core::StringId name(attributeName_);
+    const Value& getDefaultValue_(core::StringId name) {
 
-        Value value = {};
-        if (name == strings::name) {
-            value = core::StringId();
-        }
-        else if (name == strings::id) {
-            value = core::StringId();
+        // Use static local variable to avoid repeated allocations
+        static Value emptyString = core::StringId();
+
+        if (name == strings::name || name == strings::id) {
+            return emptyString;
         }
         else {
             const AttributeSpec* spec = elementSpec_->findAttributeSpec(name);
             if (!spec) {
-                throw VgcSyntaxError(
-                    "Unknown attribute '" + attributeName_ + "' for element '" + tagName_
-                    + "'. Expected an attribute name defined in the VGC schema.");
+                // XXX Warning instead of throwing?
+                throw VgcSyntaxError(core::format(
+                    "Unknown attribute '{}' for element '{}'. "
+                    "Expected an attribute name defined in the VGC schema.",
+                    name,
+                    tagName_));
             }
-            value = spec->defaultValue();
+            return spec->defaultValue();
         }
+    }
 
-        parseValue(value, attributeValue_);
+    // Action to be performed when an element attribute is encountered. The
+    // attribute name and string value are available in attributeName_ and
+    // attributeValue_.
+    void onAttribute_() {
+
+        core::StringId name(attributeName_);
+        const Value& defaultValue = getDefaultValue_(name);
+
+        core::StringReader sr(attributeValue_);
+        Value value = Value::readAs(defaultValue, sr);
+
         Element::cast(currentNode_)->setAttribute(name, std::move(value));
     }
 };
@@ -378,7 +387,7 @@ DocumentPtr Document::copy(core::ConstSpan<Node*> nodes) {
     // Copy in order
     Document* srcDoc = n0->document();
     Document* tgtDoc = result.get();
-    PathUpdateData pud = {};
+    detail::PathUpdateData pud = {};
 
     Node* copyContainer = Element::create(tgtDoc, "copyContainer");
 
@@ -405,7 +414,7 @@ core::Array<Node*> Document::paste(DocumentPtr document, Node* parent) {
     // Copy in order
     Document* sourceDoc = document.get();
     Document* targetDoc = parent->document();
-    PathUpdateData pathUpdateData = {};
+    detail::PathUpdateData pathUpdateData = {};
 
     if (!sourceDoc || sourceDoc == targetDoc) {
         return res;
@@ -550,7 +559,7 @@ void Document::onElementIdChanged_(Element* element, core::StringId oldId) {
             std::ignore = eId;
             detail::prepareInternalPathsForUpdate(e);
         }
-        PathUpdateData pud;
+        detail::PathUpdateData pud;
         pud.addAbsolutePathChangedElement(element->internalId());
         for (const auto& [eId, e] : elementByInternalIdMap_) {
             std::ignore = eId;
@@ -780,7 +789,7 @@ Value Document::resolveAttributePartOfPath_(
         case PathSegmentType::Attribute: {
             result = element->getAttribute(segIt->nameOrId());
             if (result.isValid() && segIt->isIndexed()) {
-                result = result.getItemWrapped(segIt->arrayIndex());
+                result = result.getArrayItemWrapped(segIt->arrayIndex());
             }
             break;
         }
@@ -796,7 +805,7 @@ void Document::preparePathsUpdateRec_(const Node* node) {
     }
 }
 
-void Document::updatePathsRec_(const Node* node, const PathUpdateData& pud) {
+void Document::updatePathsRec_(const Node* node, const detail::PathUpdateData& pud) {
     detail::updateInternalPaths(node, pud);
     for (Node* c : node->children()) {
         updatePathsRec_(c, pud);
