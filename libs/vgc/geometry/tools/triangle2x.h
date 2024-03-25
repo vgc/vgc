@@ -363,7 +363,7 @@ struct fmt::formatter<vgc::geometry::Triangle2x> {
     }
     template<typename FormatContext>
     auto format(const vgc::geometry::Triangle2x& t, FormatContext& ctx) {
-        return format_to(ctx.out(),"([{}, {}, {}])", t[0], t[1], t[2]);
+        return format_to(ctx.out(), "([{}, {}, {}])", t[0], t[1], t[2]);
     }
 };
 

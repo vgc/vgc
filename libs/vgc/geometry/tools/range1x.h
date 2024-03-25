@@ -473,8 +473,7 @@ struct fmt::formatter<vgc::geometry::Range1x> {
     }
     template<typename FormatContext>
     auto format(const vgc::geometry::Range1x& r, FormatContext& ctx) {
-        return format_to(ctx.out(),"({}, {})",
-                         r.pMin(), r.pMax());
+        return format_to(ctx.out(), "({}, {})", r.pMin(), r.pMax());
     }
 };
 
