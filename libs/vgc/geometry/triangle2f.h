@@ -336,17 +336,13 @@ void write(OStream& out, const Triangle2f& t) {
 ///
 template<typename IStream>
 void readTo(Triangle2f& t, IStream& in) {
-    skipWhitespaceCharacters(in);
-    skipExpectedCharacter(in, '[');
+    skipWhitespacesAndExpectedCharacter(in, '[');
     readTo(t[0], in);
-    skipWhitespaceCharacters(in);
-    skipExpectedCharacter(in, ',');
+    skipWhitespacesAndExpectedCharacter(in, ',');
     readTo(t[1], in);
-    skipWhitespaceCharacters(in);
-    skipExpectedCharacter(in, ',');
+    skipWhitespacesAndExpectedCharacter(in, ',');
     readTo(t[2], in);
-    skipWhitespaceCharacters(in);
-    skipExpectedCharacter(in, ']');
+    skipWhitespacesAndExpectedCharacter(in, ']');
 }
 
 } // namespace vgc::geometry

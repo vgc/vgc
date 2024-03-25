@@ -418,22 +418,18 @@ void readTo(Color& c, IStream& in) {
         skipExpectedCharacter(in, '(');
     }
     c[0] = Color::mapFrom255(read<Int>(in));
-    skipWhitespaceCharacters(in);
-    skipExpectedCharacter(in, ',');
+    skipWhitespacesAndExpectedCharacter(in, ',');
     c[1] = Color::mapFrom255(read<Int>(in));
-    skipWhitespaceCharacters(in);
-    skipExpectedCharacter(in, ',');
+    skipWhitespacesAndExpectedCharacter(in, ',');
     c[2] = Color::mapFrom255(read<Int>(in));
-    skipWhitespaceCharacters(in);
     if (hasAlpha) {
-        skipExpectedCharacter(in, ',');
+        skipWhitespacesAndExpectedCharacter(in, ',');
         readTo(c[3], in);
-        skipWhitespaceCharacters(in);
     }
     else {
         c[3] = 1.0;
     }
-    skipExpectedCharacter(in, ')');
+    skipWhitespacesAndExpectedCharacter(in, ')');
 }
 
 } // namespace vgc::core

@@ -861,20 +861,15 @@ void write(OStream& out, const Rect2f& r) {
 template<typename IStream>
 void readTo(Rect2f& r, IStream& in) {
     float xMin, yMin, xMax, yMax;
-    core::skipWhitespaceCharacters(in);
-    core::skipExpectedCharacter(in, '(');
+    core::skipWhitespacesAndExpectedCharacter(in, '(');
     core::readTo(xMin, in);
-    core::skipWhitespaceCharacters(in);
-    core::skipExpectedCharacter(in, ',');
+    core::skipWhitespacesAndExpectedCharacter(in, ',');
     core::readTo(yMin, in);
-    core::skipWhitespaceCharacters(in);
-    core::skipExpectedCharacter(in, ',');
+    core::skipWhitespacesAndExpectedCharacter(in, ',');
     core::readTo(xMax, in);
-    core::skipWhitespaceCharacters(in);
-    core::skipExpectedCharacter(in, ',');
+    core::skipWhitespacesAndExpectedCharacter(in, ',');
     core::readTo(yMax, in);
-    core::skipWhitespaceCharacters(in);
-    core::skipExpectedCharacter(in, ')');
+    core::skipWhitespacesAndExpectedCharacter(in, ')');
     r = Rect2f(xMin, yMin, xMax, yMax);
 }
 
