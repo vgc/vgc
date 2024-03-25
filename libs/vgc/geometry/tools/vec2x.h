@@ -768,7 +768,7 @@ struct fmt::formatter<vgc::geometry::Vec2x> {
     }
     template<typename FormatContext>
     auto format(const vgc::geometry::Vec2x& v, FormatContext& ctx) {
-        return format_to(ctx.out(),"({}, {})", v[0], v[1]);
+        return format_to(ctx.out(), "({}, {})", v[0], v[1]);
     }
 };
 

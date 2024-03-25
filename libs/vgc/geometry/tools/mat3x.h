@@ -544,9 +544,10 @@ inline void setZero(Mat3x& m) {
 template<typename OStream>
 void write(OStream& out, const Mat3x& m) {
     static const char* s = ", ";
-    write(out, "((", m(0,0), s, m(0,1), s, m(0,2), "),",
-               " (", m(1,0), s, m(1,1), s, m(1,2), "),",
-               " (", m(2,0), s, m(2,1), s, m(2,2), "))");
+    write(out,
+          "((", m(0,0), s, m(0,1), s, m(0,2), "),",
+          " (", m(1,0), s, m(1,1), s, m(1,2), "),",
+          " (", m(2,0), s, m(2,1), s, m(2,2), "))");
 }
 
 namespace detail {
@@ -592,9 +593,10 @@ struct fmt::formatter<vgc::geometry::Mat3x> {
     }
     template<typename FormatContext>
     auto format(const vgc::geometry::Mat3x& m, FormatContext& ctx) {
-        return format_to(ctx.out(),"(({}, {}, {}),"
-                                   " ({}, {}, {}),"
-                                   " ({}, {}, {}))",
+        return format_to(ctx.out(),
+                         "(({}, {}, {}),"
+                         " ({}, {}, {}),"
+                         " ({}, {}, {}))",
                          m(0,0), m(0,1), m(0,2),
                          m(1,0), m(1,1), m(1,2),
                          m(2,0), m(2,1), m(2,2));
