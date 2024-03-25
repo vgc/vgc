@@ -448,14 +448,11 @@ void write(OStream& out, const Range1x& r) {
 template<typename IStream>
 void readTo(Range1x& r, IStream& in) {
     float pMin, pMax;
-    core::skipWhitespaceCharacters(in);
-    core::skipExpectedCharacter(in, '(');
+    core::skipWhitespacesAndExpectedCharacter(in, '(');
     core::readTo(pMin, in);
-    core::skipWhitespaceCharacters(in);
-    core::skipExpectedCharacter(in, ',');
+    core::skipWhitespacesAndExpectedCharacter(in, ',');
     core::readTo(pMax, in);
-    core::skipWhitespaceCharacters(in);
-    core::skipExpectedCharacter(in, ')');
+    core::skipWhitespacesAndExpectedCharacter(in, ')');
     r = Range1x(pMin, pMax);
 }
 
