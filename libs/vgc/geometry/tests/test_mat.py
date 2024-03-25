@@ -108,7 +108,6 @@ class TestMat(unittest.TestCase):
             self.assertEqual(m1, m2)
             self.assertEqual(m1, m3)
         for (Mat, Vec) in Mat3Vec3Types:
-            pass
             m1 = Mat(1, 2, 3,
                      4, 5, 6,
                      7, 8, 9)
