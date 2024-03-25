@@ -27,7 +27,9 @@ using vgc::core::dynamicExtent;
 using vgc::core::IndexError;
 using vgc::core::LogicError;
 using vgc::core::NegativeIntegerError;
+using vgc::core::RangeError;
 using vgc::core::Span;
+using vgc::core::StringReader;
 
 inline constexpr vgc::core::NoInit noInit = vgc::core::noInit;
 
@@ -569,6 +571,29 @@ TEST(TestSpan, ToString) {
     Span<int, 0> s0 = {};
     EXPECT_EQ(toString(sX), "[]");
     EXPECT_EQ(toString(s0), "[]");
+}
+
+TEST(TestSpan, ReadTo) {
+    {
+        std::array<int, 6> array;
+        Span<int> span(array);
+        StringReader in("[3, 4, 5, 42, 10, 42]");
+        readTo(span, in);
+        EXPECT_TRUE(equal(span, std::array{3, 4, 5, 42, 10, 42}));
+    }
+    {
+        std::array<int, 7> array{}; // brace-init fills with zeroes
+        Span<int> span(array);
+        StringReader in("[3, 4, 5, 42, 10, 42]");
+        readTo(span, in);
+        EXPECT_TRUE(equal(span, std::array{3, 4, 5, 42, 10, 42, 0}));
+    }
+    {
+        std::array<int, 5> array;
+        Span<int> span(array);
+        StringReader in("[3, 4, 5, 42, 10, 42]");
+        EXPECT_THROW((readTo(span, in)), RangeError);
+    }
 }
 
 int main(int argc, char** argv) {

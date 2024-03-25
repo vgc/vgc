@@ -868,18 +868,27 @@ void write(OStream& out, const Span<T, extent>& a) {
     }
 }
 
-/// Reads the given `Span<T>` from the input stream, and stores it in the given
-/// output parameter `a`. Leading whitespaces are allowed.
+/// Reads a string of the form `[<x_0>, <x_1>, ..., <x_n-1>]` from the input
+/// stream, where `<x_i>` is a valid string representation of an object of type
+/// `T`, and stores each parsed element `<x_i>` in the given span at index `i`.
 ///
-/// Throws `ParseError` if the stream does not start with an `Span<T>`.
+/// If `n == a.length()`, then all values in the span are written to.
+///
+/// If `n < a.length()`, then only the first `n` values in the span are written to:
+/// the remaining ones are left untouched.
+///
+/// If `n > a.length()`, then `RangeError` is thrown.
+///
+/// Throws `ParseError` if the stream does not start with a `Span<T>`.
+///
 /// Throws `RangeError` if one of the values in the array is outside of the
 /// representable range of its type.
 ///
 template<typename IStream, typename T, Int extent>
 void readTo(Span<T, extent>& a, IStream& in) {
-    a.clear();
-    skipWhitespaceCharacters(in);
-    skipExpectedCharacter(in, '[');
+    Int i = 0;
+    Int n = a.length();
+    skipWhitespacesAndExpectedCharacter(in, '[');
     skipWhitespaceCharacters(in);
     char c = readCharacter(in);
     if (c != ']') {
@@ -887,10 +896,30 @@ void readTo(Span<T, extent>& a, IStream& in) {
         c = ',';
         while (c == ',') {
             skipWhitespaceCharacters(in);
-            a.append(read<T>(in));
+            if (i < n) {
+                using core::readTo;
+                readTo(a.getUnchecked(i), in);
+            }
+            else {
+                static_cast<void>(read<T>(in)); // read and discard value
+            }
+            ++i;
             skipWhitespaceCharacters(in);
             c = readExpectedCharacter(in, {',', ']'});
         }
+    }
+
+    // Throw if number of elements didn't fit. We do it here (rather than
+    // within the loop) to detect other potential errors first, as well as
+    // give a more meaningful error message (number of read elements).
+    //
+    Int numReadElements = i;
+    if (numReadElements > n) {
+        throw core::RangeError(core::format(
+            "Number of read elements ({}) exceeds the length ({}) of the "
+            "span that was provided to store them.",
+            numReadElements,
+            n));
     }
 }
 
