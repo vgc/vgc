@@ -481,7 +481,7 @@ void write(OStream& out, const Vec3d& v) {
 /// stream does not start with a `Vec3d`. Raises `RangeError` if one of its
 /// coordinates is outside the representable range of a double.
 ///
-template <typename IStream>
+template<typename IStream>
 void readTo(Vec3d& v, IStream& in) {
     skipWhitespacesAndExpectedCharacter(in, '(');
     readTo(v[0], in);
@@ -495,7 +495,7 @@ void readTo(Vec3d& v, IStream& in) {
 } // namespace vgc::geometry
 
 // see https://fmt.dev/latest/api.html#formatting-user-defined-types
-template <>
+template<>
 struct fmt::formatter<vgc::geometry::Vec3d> {
     constexpr auto parse(format_parse_context& ctx) {
         auto it = ctx.begin(), end = ctx.end();
@@ -504,7 +504,7 @@ struct fmt::formatter<vgc::geometry::Vec3d> {
         }
         return it;
     }
-    template <typename FormatContext>
+    template<typename FormatContext>
     auto format(const vgc::geometry::Vec3d& v, FormatContext& ctx) {
         return format_to(ctx.out(),"({}, {}, {})", v[0], v[1], v[2]);
     }

@@ -149,11 +149,11 @@ enum class PixelFormat : UInt8 {
 
 namespace detail {
 
-    template <PixelFormat Format>
+    template<PixelFormat Format>
     struct pixelFormatElementSizeInBytes_;
 
 #define VGC_PIXEL_FORMAT_MACRO_(Enumerator, ElemSizeInBytes, DXGIFormat, OpenGLInternalFormat, OpenGLPixelType, OpenGLPixelFormat) \
-    template <> \
+    template<> \
     struct pixelFormatElementSizeInBytes_<PixelFormat::Enumerator>\
         : std::integral_constant<UInt8, ElemSizeInBytes> {};
 #include <vgc/graphics/detail/pixelformats.h>

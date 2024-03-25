@@ -745,7 +745,7 @@ void write(OStream& out, const Vec2f& v) {
 /// stream does not start with a `Vec2f`. Raises `RangeError` if one of its
 /// coordinates is outside the representable range of a float.
 ///
-template <typename IStream>
+template<typename IStream>
 void readTo(Vec2f& v, IStream& in) {
     skipWhitespacesAndExpectedCharacter(in, '(');
     readTo(v[0], in);
@@ -757,7 +757,7 @@ void readTo(Vec2f& v, IStream& in) {
 } // namespace vgc::geometry
 
 // see https://fmt.dev/latest/api.html#formatting-user-defined-types
-template <>
+template<>
 struct fmt::formatter<vgc::geometry::Vec2f> {
     constexpr auto parse(format_parse_context& ctx) {
         auto it = ctx.begin(), end = ctx.end();
@@ -766,7 +766,7 @@ struct fmt::formatter<vgc::geometry::Vec2f> {
         }
         return it;
     }
-    template <typename FormatContext>
+    template<typename FormatContext>
     auto format(const vgc::geometry::Vec2f& v, FormatContext& ctx) {
         return format_to(ctx.out(),"({}, {})", v[0], v[1]);
     }
