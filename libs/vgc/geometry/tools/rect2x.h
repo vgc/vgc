@@ -858,7 +858,7 @@ void write(OStream& out, const Rect2x& r) {
 /// Raises `RangeError` if one of its coordinates is outside the representable
 /// range of a float.
 ///
-template <typename IStream>
+template<typename IStream>
 void readTo(Rect2x& r, IStream& in) {
     float xMin, yMin, xMax, yMax;
     core::skipWhitespaceCharacters(in);
@@ -881,7 +881,7 @@ void readTo(Rect2x& r, IStream& in) {
 } // namespace vgc::geometry
 
 // see https://fmt.dev/latest/api.html#formatting-user-defined-types
-template <>
+template<>
 struct fmt::formatter<vgc::geometry::Rect2x> {
     constexpr auto parse(format_parse_context& ctx) {
         auto it = ctx.begin(), end = ctx.end();
@@ -890,7 +890,7 @@ struct fmt::formatter<vgc::geometry::Rect2x> {
         }
         return it;
     }
-    template <typename FormatContext>
+    template<typename FormatContext>
     auto format(const vgc::geometry::Rect2x& r, FormatContext& ctx) {
         return format_to(ctx.out(),"({}, {}, {}, {})",
                          r.xMin(), r.yMin(), r.xMax(), r.yMax());

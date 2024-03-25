@@ -445,7 +445,7 @@ void write(OStream& out, const Range1d& r) {
 /// Raises `RangeError` if one of its coordinates is outside the representable
 /// range of a double.
 ///
-template <typename IStream>
+template<typename IStream>
 void readTo(Range1d& r, IStream& in) {
     double pMin, pMax;
     core::skipWhitespaceCharacters(in);
@@ -462,7 +462,7 @@ void readTo(Range1d& r, IStream& in) {
 } // namespace vgc::geometry
 
 // see https://fmt.dev/latest/api.html#formatting-user-defined-types
-template <>
+template<>
 struct fmt::formatter<vgc::geometry::Range1d> {
     constexpr auto parse(format_parse_context& ctx) {
         auto it = ctx.begin(), end = ctx.end();
@@ -471,7 +471,7 @@ struct fmt::formatter<vgc::geometry::Range1d> {
         }
         return it;
     }
-    template <typename FormatContext>
+    template<typename FormatContext>
     auto format(const vgc::geometry::Range1d& r, FormatContext& ctx) {
         return format_to(ctx.out(),"({}, {})",
                          r.pMin(), r.pMax());

@@ -504,7 +504,7 @@ void write(OStream& out, const Vec4d& v) {
 /// stream does not start with a `Vec4d`. Raises `RangeError` if one of its
 /// coordinates is outside the representable range of a double.
 ///
-template <typename IStream>
+template<typename IStream>
 void readTo(Vec4d& v, IStream& in) {
     skipWhitespacesAndExpectedCharacter(in, '(');
     readTo(v[0], in);
@@ -520,7 +520,7 @@ void readTo(Vec4d& v, IStream& in) {
 } // namespace vgc::geometry
 
 // see https://fmt.dev/latest/api.html#formatting-user-defined-types
-template <>
+template<>
 struct fmt::formatter<vgc::geometry::Vec4d> {
     constexpr auto parse(format_parse_context& ctx) {
         auto it = ctx.begin(), end = ctx.end();
@@ -529,7 +529,7 @@ struct fmt::formatter<vgc::geometry::Vec4d> {
         }
         return it;
     }
-    template <typename FormatContext>
+    template<typename FormatContext>
     auto format(const vgc::geometry::Vec4d& v, FormatContext& ctx) {
         return format_to(ctx.out(),"({}, {}, {}, {})", v[0], v[1], v[2], v[3]);
     }

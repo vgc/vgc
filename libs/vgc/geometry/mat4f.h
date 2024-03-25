@@ -663,7 +663,7 @@ void write(OStream& out, const Mat4f& m) {
 
 namespace detail {
 
-template <typename IStream>
+template<typename IStream>
 void readToMatRow(Mat4f& m, Int i, IStream& in) {
     Vec4f v;
     readTo(v, in);
@@ -680,7 +680,7 @@ void readToMatRow(Mat4f& m, Int i, IStream& in) {
 /// stream does not start with a `Mat4f`. Raises `RangeError` if one of its
 /// coordinates is outside the representable range of a float.
 ///
-template <typename IStream>
+template<typename IStream>
 void readTo(Mat4f& m, IStream& in) {
     skipWhitespacesAndExpectedCharacter(in, '(');
     detail::readToMatRow(m, 0, in);
@@ -696,7 +696,7 @@ void readTo(Mat4f& m, IStream& in) {
 } // namespace vgc::geometry
 
 // see https://fmt.dev/latest/api.html#formatting-user-defined-types
-template <>
+template<>
 struct fmt::formatter<vgc::geometry::Mat4f> {
     constexpr auto parse(format_parse_context& ctx) {
         auto it = ctx.begin(), end = ctx.end();
@@ -705,7 +705,7 @@ struct fmt::formatter<vgc::geometry::Mat4f> {
         }
         return it;
     }
-    template <typename FormatContext>
+    template<typename FormatContext>
     auto format(const vgc::geometry::Mat4f& m, FormatContext& ctx) {
         return format_to(ctx.out(),"(({}, {}, {}, {}),"
                                    " ({}, {}, {}, {}),"

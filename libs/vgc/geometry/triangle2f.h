@@ -334,7 +334,7 @@ void write(OStream& out, const Triangle2f& t) {
 /// stream does not start with a `Triangle2f`. Raises `RangeError` if one of its
 /// coordinates is outside the representable range of a float.
 ///
-template <typename IStream>
+template<typename IStream>
 void readTo(Triangle2f& t, IStream& in) {
     skipWhitespaceCharacters(in);
     skipExpectedCharacter(in, '[');
@@ -352,7 +352,7 @@ void readTo(Triangle2f& t, IStream& in) {
 } // namespace vgc::geometry
 
 // see https://fmt.dev/latest/api.html#formatting-user-defined-types
-template <>
+template<>
 struct fmt::formatter<vgc::geometry::Triangle2f> {
     constexpr auto parse(format_parse_context& ctx) {
         auto it = ctx.begin(), end = ctx.end();
@@ -361,7 +361,7 @@ struct fmt::formatter<vgc::geometry::Triangle2f> {
         }
         return it;
     }
-    template <typename FormatContext>
+    template<typename FormatContext>
     auto format(const vgc::geometry::Triangle2f& t, FormatContext& ctx) {
         return format_to(ctx.out(),"([{}, {}, {}])", t[0], t[1], t[2]);
     }
