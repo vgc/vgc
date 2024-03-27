@@ -95,7 +95,7 @@ Transform Group::computeInverseTransformTo(Group* ancestor) const {
 void Group::setTransform_(const Transform& transform) {
     transform_ = transform;
     // todo: handle non-invertible case.
-    inverseTransform_ = transform_.inverted();
+    inverseTransform_ = transform_.inverse();
     updateTransformFromRoot_();
 }
 

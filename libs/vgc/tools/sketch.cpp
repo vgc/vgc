@@ -675,7 +675,7 @@ void Sketch::onPaintDraw(graphics::Engine* engine, ui::PaintOptions options) {
         geometry::Vec2f pos(w->mapFromGlobal(ui::globalCursorPosition()));
         geometry::Vec2d posd(root()->mapTo(this, pos));
         pos = geometry::Vec2f(
-            canvas->camera().viewMatrix().inverted().transformPointAffine(posd));
+            canvas->camera().viewMatrix().inverse().transformPointAffine(posd));
         if (lastImmediateCursorPos_ != pos) {
             lastImmediateCursorPos_ = pos;
             cursorMoved = true;
@@ -1346,7 +1346,7 @@ void Sketch::startCurve_(ui::MouseEvent* event) {
     startTime_ = event->timestamp();
 
     // Transform: Save inverse view matrix
-    canvasToWorkspaceMatrix_ = canvas->camera().viewMatrix().inverted();
+    canvasToWorkspaceMatrix_ = canvas->camera().viewMatrix().inverse();
 
     // Snapping: Compute start vertex to snap to
     workspace::Element* snapVertex = nullptr;

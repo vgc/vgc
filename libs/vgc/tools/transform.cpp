@@ -269,7 +269,7 @@ public:
         transformer_.setElements(workspace, box->elementIds_);
 
         const geometry::Mat4d& cameraMatrix = canvas->camera().viewMatrix();
-        geometry::Mat4d invCameraMatrix = cameraMatrix.inverted();
+        geometry::Mat4d invCameraMatrix = cameraMatrix.inverse();
 
         geometry::Vec2d cursorPositionInCanvas(event->position());
         geometry::Vec2d cursorPosition =
@@ -344,7 +344,7 @@ public:
         geometry::Mat3d transform = geometry::Mat3d::identity;
 
         const geometry::Mat4d& cameraMatrix = canvas->camera().viewMatrix();
-        geometry::Mat4d invCameraMatrix = cameraMatrix.inverted();
+        geometry::Mat4d invCameraMatrix = cameraMatrix.inverse();
         geometry::Vec2d cursorPositionInCanvas(event->position());
 
         switch (transformType_) {
@@ -1679,7 +1679,7 @@ void TransformBox::onTranslate_(detail::TranslateStepDirection direction, double
     }
 
     const geometry::Mat4d& cameraMatrix = canvas->camera().viewMatrix();
-    geometry::Mat4d invCameraMatrix = cameraMatrix.inverted();
+    geometry::Mat4d invCameraMatrix = cameraMatrix.inverse();
     geometry::Vec2d p0 = pivotPoint_; // or center
     geometry::Vec2d p0c = cameraMatrix.transformPoint(p0);
     geometry::Vec2d p1c = cameraMatrix.transformPoint(p0 + unitDelta);

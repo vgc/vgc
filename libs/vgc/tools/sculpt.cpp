@@ -121,7 +121,7 @@ public:
 
         cursorPosition_ = event->position();
 
-        geometry::Mat4d inverseViewMatrix = canvas->camera().viewMatrix().inverted();
+        geometry::Mat4d inverseViewMatrix = canvas->camera().viewMatrix().inverse();
 
         float pixelSize = static_cast<float>(
             (inverseViewMatrix.transformPointAffine(geometry::Vec2d(0, 1))
@@ -286,7 +286,7 @@ public:
 
         cursorPosition_ = event->position();
 
-        geometry::Mat4d inverseViewMatrix = canvas->camera().viewMatrix().inverted();
+        geometry::Mat4d inverseViewMatrix = canvas->camera().viewMatrix().inverse();
 
         float pixelSize = static_cast<float>(
             (inverseViewMatrix.transformPointAffine(geometry::Vec2d(0, 1))
@@ -457,7 +457,7 @@ public:
 
         cursorPosition_ = event->position();
 
-        geometry::Mat4d inverseViewMatrix = canvas->camera().viewMatrix().inverted();
+        geometry::Mat4d inverseViewMatrix = canvas->camera().viewMatrix().inverse();
 
         float pixelSize = static_cast<float>(
             (inverseViewMatrix.transformPointAffine(geometry::Vec2d(0, 1))
@@ -675,7 +675,7 @@ void Sculpt::onMouseHover(ui::MouseHoverEvent* event) {
 
     geometry::Vec2d viewCursor(event->position());
     geometry::Vec2d worldCursor =
-        canvas->camera().viewMatrix().inverted().transformPointAffine(viewCursor);
+        canvas->camera().viewMatrix().inverse().transformPointAffine(viewCursor);
 
     double worldSculptRadius =
         options::sculptRadius()->value(); // / canvas->camera().zoom();
@@ -771,7 +771,7 @@ void Sculpt::onPaintDraw(graphics::Engine* engine, ui::PaintOptions options) {
     using geometry::Vec2d;
     using geometry::Vec2f;
 
-    geometry::Mat4d ivm = canvas->camera().viewMatrix().inverted();
+    geometry::Mat4d ivm = canvas->camera().viewMatrix().inverse();
 
     geometry::Mat4f translation = geometry::Mat4f::identity;
     if (isActionCircleEnabled_) {

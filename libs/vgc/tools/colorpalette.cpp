@@ -155,7 +155,7 @@ core::Color xyzToSrgb(const geometry::Vec3f& c) {
         0.0193f, 0.1192f, 0.9505f
     };
     // clang-format on
-    static geometry::Mat3f invM = m.inverted();
+    static geometry::Mat3f invM = m.inverse();
     return srgbLinearToGamma(invM * c);
 }
 

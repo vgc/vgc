@@ -656,14 +656,14 @@ class TestMat(unittest.TestCase):
                     4, 5, 6,
                     7, 8, 9)
             with self.assertRaises(ValueError):
-                m3 = m.inverted()
+                m3 = m.inverse()
             m = Mat(+1,  2,  4,
                     -4, -3, -2,
                     +5, -1,  3)
             m2 = (1.0 / 69) * Mat(-11, -10, 8,
                                   +2,  -17, -14,
                                   +19,  11, 5)
-            m3 = m.inverted()
+            m3 = m.inverse()
             self.assertEqual(m2, m3)
 
         for Mat in Mat4Types:
@@ -675,7 +675,7 @@ class TestMat(unittest.TestCase):
                                    +347, 50, 135, 207,
                                    -104, -71, -15, -23,
                                    +143, 24, -53, -42)
-            m3 = m.inverted()
+            m3 = m.inverse()
             self.assertEqual(m2, m3)
 
     def testTranslate(self):

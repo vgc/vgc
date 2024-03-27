@@ -337,7 +337,7 @@ public:
     /// has all its elements set to std::numeric_limits<double>::infinity().
     ///
     VGC_GEOMETRY_API
-    Mat2d inverted(bool* isInvertible = nullptr, double epsilon = 0) const;
+    Mat2d inverse(bool* isInvertible = nullptr, double epsilon = 0) const;
 
 private:
     double data_[2][2];

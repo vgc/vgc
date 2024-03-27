@@ -858,7 +858,7 @@ public:
 
         geometry::Vec2d position(event->position());
 
-        geometry::Mat4d inverseViewMatrix = canvas->camera().viewMatrix().inverted();
+        geometry::Mat4d inverseViewMatrix = canvas->camera().viewMatrix().inverse();
         geometry::Vec2d cursorPositionInWorkspace =
             inverseViewMatrix.transformPointAffine(position);
 
@@ -1022,7 +1022,7 @@ bool Select::onMouseMove(ui::MouseMoveEvent* event) {
     }
 
     if (isDragging_) {
-        geometry::Mat4d inverseViewMatrix = canvas->camera().viewMatrix().inverted();
+        geometry::Mat4d inverseViewMatrix = canvas->camera().viewMatrix().inverse();
 
         geometry::Vec2d cursorPosition(cursorPosition_);
         geometry::Vec2d cursorPositionAtPress(cursorPositionAtPress_);
@@ -1450,7 +1450,7 @@ void Select::onPaintDraw(graphics::Engine* engine, ui::PaintOptions options) {
 
     if (isDragging_ && dragAction_ == DragAction::Select) {
         if (!selectionRectangleGeometry_) {
-            geometry::Mat4d invView = canvas->camera().viewMatrix().inverted();
+            geometry::Mat4d invView = canvas->camera().viewMatrix().inverse();
             Vec2f a(invView.transformPointAffine(Vec2d(cursorPositionAtPress_)));
             Vec2f b(invView.transformPointAffine(Vec2d(cursorPosition_)));
             geometry::Rect2f rect = geometry::Rect2f::empty;

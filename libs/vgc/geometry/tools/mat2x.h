@@ -337,7 +337,7 @@ public:
     /// has all its elements set to std::numeric_limits<float>::infinity().
     ///
     VGC_GEOMETRY_API
-    Mat2x inverted(bool* isInvertible = nullptr, float epsilon = 0) const;
+    Mat2x inverse(bool* isInvertible = nullptr, float epsilon = 0) const;
 
 private:
     float data_[2][2];

@@ -365,9 +365,9 @@ void wrap_mat(py::module& m, const std::string& name) {
         .def("setToDiagonal", &TMat::setToDiagonal)
         .def("setToZero", &TMat::setToZero)
         .def("setToIdentity", &TMat::setToIdentity)
-        .def("inverted", [](const TMat& m) {
+        .def("inverse", [](const TMat& m) {
             bool isInvertible;
-            TMat res = m.inverted(&isInvertible);
+            TMat res = m.inverse(&isInvertible);
             if (!isInvertible) {
                 throw py::value_error("The matrix is not invertible.");
             }
