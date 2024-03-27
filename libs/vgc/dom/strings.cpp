@@ -35,6 +35,12 @@ const core::StringId widths("widths");
 const core::StringId color("color");
 const core::StringId cycles("cycles");
 
+const core::StringId inputtransform("inputtransform");
+const core::StringId inputpenwidth("inputpenwidth");
+const core::StringId inputpositions("inputpositions");
+const core::StringId inputpressures("inputpressures");
+const core::StringId inputtimestamps("inputtimestamps");
+
 const core::StringId New_Document("New Document");
 const core::StringId Open_Document("Open Document");
 

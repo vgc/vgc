@@ -22,6 +22,7 @@
 #include <QCursor>
 #include <QPainter>
 
+#include <vgc/core/arithmetic.h> // roundToSignificantDigits
 #include <vgc/core/profile.h>
 #include <vgc/core/stringid.h>
 #include <vgc/geometry/curve.h>
@@ -80,12 +81,25 @@ ui::BoolSetting* autoFill() {
     return setting.get();
 }
 
+ui::BoolSetting* saveInputSketchPoints() {
+    static ui::BoolSettingPtr setting = ui::BoolSetting::create(
+        ui::settings::session(),
+        "tools.sketch.experimental.saveInputSketchPoints",
+        "Save Input Sketch Point",
+        false);
+    return setting.get();
+}
+
 } // namespace options_
 
 namespace {
 
 bool isAutoFillEnabled() {
     return options_::autoFill()->value();
+}
+
+bool saveInputSketchPoints() {
+    return options_::saveInputSketchPoints()->value();
 }
 
 } // namespace
@@ -1391,6 +1405,10 @@ void Sketch::startCurve_(ui::MouseEvent* event) {
     domEdge->setAttribute(ds::color, penColor_);
     domEdge->setAttribute(ds::startvertex, domStartVertex->getPathFromId());
     domEdge->setAttribute(ds::endvertex, domEndVertex->getPathFromId());
+    if (saveInputSketchPoints()) {
+        domEdge->setAttribute(ds::inputtransform, canvasToWorkspaceMatrix_);
+        domEdge->setAttribute(ds::inputpenwidth, options_::penWidth()->value());
+    }
     edgeItemId_ = domEdge->internalId();
 
     // Append start point to geometry
@@ -1422,6 +1440,41 @@ void Sketch::startCurve_(ui::MouseEvent* event) {
     minimalLatencyStrokeReload_ = true;
 }
 
+namespace {
+
+// Note: one may be tempted to try to optimize the function below by not
+// recreating the arrays from scratch every time. However, this function is in
+// fact already as optimized as possible, since we need anyway to create a new
+// Value storing a new Array. We cannot do better than creating the Array here
+// then moving it to the Value.
+//
+void doSaveInputPoints(dom::Element* edge, const SketchPointBuffer& inputPoints) {
+
+    Int n = inputPoints.length();
+
+    geometry::Vec2dArray inputPositions;
+    core::DoubleArray inputPressures;
+    core::DoubleArray inputTimestamps;
+
+    inputPositions.reserve(n);
+    inputPressures.reserve(n);
+    inputTimestamps.reserve(n);
+
+    for (const SketchPoint& p : inputPoints) {
+
+        inputPositions.append(p.position());
+        inputPressures.append(p.pressure());
+        inputTimestamps.append(p.timestamp());
+    }
+
+    namespace ds = dom::strings;
+    edge->setAttribute(ds::inputpositions, std::move(inputPositions));
+    edge->setAttribute(ds::inputpressures, std::move(inputPressures));
+    edge->setAttribute(ds::inputtimestamps, std::move(inputTimestamps));
+}
+
+} // namespace
+
 void Sketch::continueCurve_(ui::MouseEvent* event) {
 
     // Fast return if missing required context
@@ -1440,15 +1493,29 @@ void Sketch::continueCurve_(ui::MouseEvent* event) {
         return;
     }
 
-    geometry::Vec2d eventPos2d(event->position());
-
     // Append the input point
+    //
+    // XXX: it might to interesting to also record the current time (now) as
+    // useful log info for performance analysis, so that we can answer
+    // questions such as: which points where processed at the same time? Is
+    // there significant delay between the event time and the processing time?
+    // Are we processing them in batch every 16ms, or in real time when they
+    // occur?
+    //
+    // We round double values to float precision since:
+    // - Most come from a float anyway, so we do not actually lose precision.
+    // - Even if we did lose precision, the extra precision is overkill/useless anyway.
+    // - It significantly reduces the size of the XML file output. A striking
+    //   example is the timestamps, that at least in macOS, are always an exact
+    //   number of milliseconds, but would otherwise be formatted like 0.128000000004.
+    //
+    auto round = [](double x) { return core::roundToSignificantDigits(x, 7); };
     double pressure = pressurePen(event);
     inputPoints_.emplaceLast(
-        eventPos2d,
-        pressure,
-        event->timestamp() - startTime_,
-        pressurePenWidth(pressure));
+        geometry::Vec2d(round(event->x()), round(event->y())),
+        round(pressure),
+        round(event->timestamp() - startTime_),
+        round(pressurePenWidth(pressure)));
     inputPoints_.setNumStablePoints(inputPoints_.length());
 
     // Apply all processing steps
@@ -1466,6 +1533,9 @@ void Sketch::continueCurve_(ui::MouseEvent* event) {
     domEndVertex->setAttribute(ds::position, pendingPositions_.last());
     domEdge->setAttribute(ds::positions, pendingPositions_);
     domEdge->setAttribute(ds::widths, pendingWidths_);
+    if (saveInputSketchPoints()) {
+        doSaveInputPoints(domEdge, inputPoints_);
+    }
     workspace->sync();
 }
 

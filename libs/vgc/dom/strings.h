@@ -39,6 +39,12 @@ VGC_DOM_API extern const core::StringId widths;
 VGC_DOM_API extern const core::StringId color;
 VGC_DOM_API extern const core::StringId cycles;
 
+VGC_DOM_API extern const core::StringId inputtransform;
+VGC_DOM_API extern const core::StringId inputpenwidth;
+VGC_DOM_API extern const core::StringId inputpositions;
+VGC_DOM_API extern const core::StringId inputpressures;
+VGC_DOM_API extern const core::StringId inputtimestamps;
+
 VGC_DOM_API extern const core::StringId New_Document;
 VGC_DOM_API extern const core::StringId Open_Document;
 

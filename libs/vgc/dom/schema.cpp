@@ -23,6 +23,7 @@
 #include <vgc/dom/detail/facecycles.h>
 #include <vgc/dom/noneor.h>
 #include <vgc/dom/path.h>
+#include <vgc/geometry/mat3d.h>
 #include <vgc/geometry/vec2d.h>
 
 namespace vgc::dom {
@@ -123,6 +124,11 @@ const Schema& schema() {
             {"widths", core::DoubleArray()},
             {"startvertex", NoneOr<Path>()},
             {"endvertex", NoneOr<Path>()},
+            {"inputtransform", geometry::Mat3d()},
+            {"inputpenwidth", 0.0},
+            {"inputpositions", geometry::Vec2dArray()},
+            {"inputpressures", core::DoubleArray()},
+            {"inputtimestamps", core::DoubleArray()}
         }},
         { "face", "f", {
             {"color", core::colors::black},
