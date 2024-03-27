@@ -195,8 +195,8 @@ void PaintBucket::onPaintDraw(graphics::Engine* engine, ui::PaintOptions options
         // TODO: setting up the view matrix should be done by Canvas.
         engine->pushProgram(graphics::BuiltinProgram::SimplePreview);
         geometry::Mat4f vm = engine->viewMatrix();
-        geometry::Mat4f cameraViewf(context.canvas()->camera().viewMatrix());
-        engine->pushViewMatrix(vm * cameraViewf);
+        geometry::Mat3d cameraView = context.canvas()->camera().viewMatrix();
+        engine->pushViewMatrix(vm * geometry::Mat4f::fromTransform(cameraView));
         engine->draw(faceCandidateFillGeometry_);
         engine->popViewMatrix();
         engine->popProgram();

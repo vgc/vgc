@@ -43,27 +43,6 @@
 
 namespace vgc::ui::detail {
 
-inline geometry::Mat4f toMat4f(const geometry::Mat4d& m) {
-    // TODO: implement Mat4d to Mat4f conversion directly in Mat4x classes
-    return geometry::Mat4f(
-        (float)m(0, 0),
-        (float)m(0, 1),
-        (float)m(0, 2),
-        (float)m(0, 3),
-        (float)m(1, 0),
-        (float)m(1, 1),
-        (float)m(1, 2),
-        (float)m(1, 3),
-        (float)m(2, 0),
-        (float)m(2, 1),
-        (float)m(2, 2),
-        (float)m(2, 3),
-        (float)m(3, 0),
-        (float)m(3, 1),
-        (float)m(3, 2),
-        (float)m(3, 3));
-}
-
 namespace qopengl {
 
 VGC_DECLARE_OBJECT(QglEngine);

@@ -268,8 +268,8 @@ public:
         // Prepare transformer
         transformer_.setElements(workspace, box->elementIds_);
 
-        const geometry::Mat4d& cameraMatrix = canvas->camera().viewMatrix();
-        geometry::Mat4d invCameraMatrix = cameraMatrix.inverse();
+        geometry::Mat3d cameraMatrix = canvas->camera().viewMatrix();
+        geometry::Mat3d invCameraMatrix = cameraMatrix.inverse();
 
         geometry::Vec2d cursorPositionInCanvas(event->position());
         geometry::Vec2d cursorPosition =
@@ -343,8 +343,8 @@ public:
 
         geometry::Mat3d transform = geometry::Mat3d::identity;
 
-        const geometry::Mat4d& cameraMatrix = canvas->camera().viewMatrix();
-        geometry::Mat4d invCameraMatrix = cameraMatrix.inverse();
+        geometry::Mat3d cameraMatrix = canvas->camera().viewMatrix();
+        geometry::Mat3d invCameraMatrix = cameraMatrix.inverse();
         geometry::Vec2d cursorPositionInCanvas(event->position());
 
         switch (transformType_) {
@@ -1189,6 +1189,7 @@ void TransformBox::onPaintDraw(graphics::Engine* engine, ui::PaintOptions option
 
     using geometry::Vec2d;
     using geometry::Vec2f;
+    using geometry::Vec3d;
 
     // Recompute the bounding box whenever necessary.
     //
@@ -1198,7 +1199,7 @@ void TransformBox::onPaintDraw(graphics::Engine* engine, ui::PaintOptions option
     }
 
     // Let's check if the rect is not too small.
-    const geometry::Mat4d& cameraMatrix = canvas->camera().viewMatrix();
+    geometry::Mat3d cameraMatrix = canvas->camera().viewMatrix();
 
     if (!isTransformActionOngoing_) {
         computeHoverData_(*canvas);
@@ -1210,8 +1211,8 @@ void TransformBox::onPaintDraw(graphics::Engine* engine, ui::PaintOptions option
     }
 
     // TODO: also check the bounding-box view when per-element/group transforms are implemented.
-    bool hasRotation = (cameraMatrix * geometry::Vec4d(0, 1, 0, 0)).x() != 0
-                       || (cameraMatrix * geometry::Vec4d(1, 0, 0, 0)).y() != 0;
+    bool hasRotation = (cameraMatrix * Vec3d(0, 1, 0)).x() != 0
+                       || (cameraMatrix * Vec3d(1, 0, 0)).y() != 0;
     std::array<Vec2f, 4> corners;
     Vec2f pivot;
     if (isTransformActionOngoing_) {
@@ -1223,8 +1224,8 @@ void TransformBox::onPaintDraw(graphics::Engine* engine, ui::PaintOptions option
             Vec2d p = transformActionMatrix_.transformPoint(pivotPoint_);
             pivot = Vec2f(cameraMatrix.transformPoint(p));
         }
-        hasRotation |= (transformActionMatrix_ * geometry::Vec3d(0, 1, 0)).x() != 0
-                       || (transformActionMatrix_ * geometry::Vec3d(1, 0, 0)).y() != 0;
+        hasRotation |= (transformActionMatrix_ * Vec3d(0, 1, 0)).x() != 0
+                       || (transformActionMatrix_ * Vec3d(1, 0, 0)).y() != 0;
     }
     else {
         corners = corners_;
@@ -1321,7 +1322,6 @@ void TransformBox::onPaintDraw(graphics::Engine* engine, ui::PaintOptions option
     scaling.scale(squareWidth);
 
     geometry::Mat4f currentView(engine->viewMatrix());
-    geometry::Mat4f canvasView(canvas->camera().viewMatrix());
 
     engine->setProgram(graphics::BuiltinProgram::ScreenSpaceDisplacement);
     engine->pushViewMatrix();
@@ -1362,7 +1362,7 @@ void TransformBox::computeHoverData_(const canvas::Canvas& canvas) {
 
     using geometry::Vec2f;
 
-    const geometry::Mat4d& cameraMatrix = canvas.camera().viewMatrix();
+    geometry::Mat3d cameraMatrix = canvas.camera().viewMatrix();
 
     // Compute corners_
     for (Int i = 0; i < 4; ++i) {
@@ -1678,8 +1678,8 @@ void TransformBox::onTranslate_(detail::TranslateStepDirection direction, double
     }
     }
 
-    const geometry::Mat4d& cameraMatrix = canvas->camera().viewMatrix();
-    geometry::Mat4d invCameraMatrix = cameraMatrix.inverse();
+    geometry::Mat3d cameraMatrix = canvas->camera().viewMatrix();
+    geometry::Mat3d invCameraMatrix = cameraMatrix.inverse();
     geometry::Vec2d p0 = pivotPoint_; // or center
     geometry::Vec2d p0c = cameraMatrix.transformPoint(p0);
     geometry::Vec2d p1c = cameraMatrix.transformPoint(p0 + unitDelta);

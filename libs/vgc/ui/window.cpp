@@ -703,7 +703,7 @@ void Window::updateViewportSize_() {
     // Update projection matrix
     geometry::Camera2d c;
     c.setViewportSize(w, h);
-    proj_ = detail::toMat4f(c.projectionMatrix());
+    proj_ = geometry::Mat4f::fromTransform(c.projectionMatrix());
 
     // Update size of root widget
     if (widget_) {

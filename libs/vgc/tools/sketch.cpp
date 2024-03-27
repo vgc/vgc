@@ -794,8 +794,8 @@ void Sketch::onPaintDraw(graphics::Engine* engine, ui::PaintOptions options) {
     }
 
     geometry::Mat4f vm = engine->viewMatrix();
-    geometry::Mat4f cameraViewf(canvas->camera().viewMatrix());
-    engine->pushViewMatrix(vm * cameraViewf);
+    geometry::Mat3d cameraView = canvas->camera().viewMatrix();
+    engine->pushViewMatrix(vm * geometry::Mat4f::fromTransform(cameraView));
 
     if (isSketching_) {
         engine->setProgram(graphics::BuiltinProgram::Simple);

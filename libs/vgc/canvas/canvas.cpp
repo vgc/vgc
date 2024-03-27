@@ -223,7 +223,7 @@ core::Array<core::Id> Canvas::computeRectangleSelectionCandidates(
     geometry::Vec2d a = a_;
     geometry::Vec2d b = b_;
     if (coordinateSpace == CoordinateSpace::Widget) {
-        geometry::Mat4d invView = camera().viewMatrix().inverse();
+        geometry::Mat3d invView = camera().viewMatrix().inverse();
         a = invView.transformPointAffine(a);
         b = invView.transformPointAffine(b);
     }
@@ -639,8 +639,8 @@ void Canvas::onPaintDraw(graphics::Engine* engine, ui::PaintOptions options) {
     engine->draw(bgGeometry_);
 
     geometry::Mat4f vm = engine->viewMatrix();
-    geometry::Mat4f cameraViewf(camera().viewMatrix());
-    engine->pushViewMatrix(vm * cameraViewf);
+    geometry::Mat3d cameraView = camera().viewMatrix();
+    engine->pushViewMatrix(vm * geometry::Mat4f::fromTransform(cameraView));
 
     core::Array<workspace::Element*> selectedElements = selectedElements_();
 
