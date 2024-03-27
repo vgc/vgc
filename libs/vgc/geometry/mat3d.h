@@ -394,7 +394,7 @@ public:
     /// has all its elements set to std::numeric_limits<double>::infinity().
     ///
     VGC_GEOMETRY_API
-    Mat3d inverted(bool* isInvertible = nullptr, double epsilon = 0) const;
+    Mat3d inverse(bool* isInvertible = nullptr, double epsilon = 0) const;
 
     /// Right-multiplies this matrix by the translation matrix given
     /// by vx and vy, that is:

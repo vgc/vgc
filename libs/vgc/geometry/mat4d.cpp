@@ -25,7 +25,7 @@
 
 namespace vgc::geometry {
 
-Mat4d Mat4d::inverted(bool* isInvertible, double epsilon_) const {
+Mat4d Mat4d::inverse(bool* isInvertible, double epsilon_) const {
 
     Mat4d res;
 

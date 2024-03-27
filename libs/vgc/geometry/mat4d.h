@@ -490,7 +490,7 @@ public:
     /// has all its elements set to std::numeric_limits<double>::infinity().
     ///
     VGC_GEOMETRY_API
-    Mat4d inverted(bool* isInvertible = nullptr, double epsilon = 0) const;
+    Mat4d inverse(bool* isInvertible = nullptr, double epsilon = 0) const;
 
     /// Right-multiplies this matrix by the translation matrix given
     /// by vx, vy, and vy, that is:
