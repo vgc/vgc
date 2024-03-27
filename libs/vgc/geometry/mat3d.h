@@ -122,6 +122,61 @@ public:
                  static_cast<double>(other(2, 2))}} {
     }
 
+    /// Creates a `Mat3d` from a `Mat<2, T>` matrix, assuming the given
+    /// matrix represents a 2D linear transformation.
+    /// 
+    /// ```verbatim
+    /// |a b|    |a b 0|
+    /// |c d| -> |c d 0|
+    ///          |0 0 1|
+    /// ```
+    /// 
+    /// The returned matrix can be used either as a 3D linear transformation
+    /// that doesn't modify the third coordinate, or as a 2D homogeneous
+    /// transformation that also happens to be a linear transformation (no
+    /// translation or projective components).
+    /// 
+    /// If the given matrix is not a `Mat2d`, then each of its elements is
+    /// converted to `double` by performing a `static_cast`.
+    ///
+    template<typename TMat2, VGC_REQUIRES(isMat<TMat2> && TMat2::dimension == 2)>
+    static constexpr Mat3d fromLinear(const TMat2& other) noexcept {
+        double a = static_cast<double>(other(0, 0));
+        double b = static_cast<double>(other(0, 1));
+        double c = static_cast<double>(other(1, 0));
+        double d = static_cast<double>(other(1, 1));
+        return Mat3d(a, b, 0,
+                     c, d, 0,
+                     0, 0, 1);
+    }
+
+    /// Creates a `Mat3d` from a `Mat<2, T>` matrix, assuming the given matrix
+    /// represents a 1D homogeneous transformation (possibly affine or
+    /// projective).
+    /// 
+    /// ```verbatim
+    /// |a b|    |a 0 b|
+    /// |c d| -> |0 1 0|
+    ///          |c 0 d|
+    /// ``
+    ///
+    /// The returned matrix can be used as a 2D homogeneous transformation
+    /// whose linear part does not modify the second coordinate.
+    /// 
+    /// If the given matrix is not a `Mat2d`, then each of its elements is
+    /// converted to `double` by performing a `static_cast`.
+    ///
+    template<typename TMat2, VGC_REQUIRES(isMat<TMat2> && TMat2::dimension == 2)>
+    static constexpr Mat3d fromTransform(const TMat2& other) noexcept {
+        double a = static_cast<double>(other(0, 0));
+        double b = static_cast<double>(other(0, 1));
+        double c = static_cast<double>(other(1, 0));
+        double d = static_cast<double>(other(1, 1));
+        return Mat3d(a, 0, b,
+                     0, 1, 0,
+                     c, 0, d);
+    }
+
     /// Defines explicitly all the elements of the matrix
     ///
     Mat3d& setElements(
