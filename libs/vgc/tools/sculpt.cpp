@@ -121,7 +121,7 @@ public:
 
         cursorPosition_ = event->position();
 
-        geometry::Mat4d inverseViewMatrix = canvas->camera().viewMatrix().inverse();
+        geometry::Mat3d inverseViewMatrix = canvas->camera().viewMatrix().inverse();
 
         float pixelSize = static_cast<float>(
             (inverseViewMatrix.transformPointAffine(geometry::Vec2d(0, 1))
@@ -286,7 +286,7 @@ public:
 
         cursorPosition_ = event->position();
 
-        geometry::Mat4d inverseViewMatrix = canvas->camera().viewMatrix().inverse();
+        geometry::Mat3d inverseViewMatrix = canvas->camera().viewMatrix().inverse();
 
         float pixelSize = static_cast<float>(
             (inverseViewMatrix.transformPointAffine(geometry::Vec2d(0, 1))
@@ -457,7 +457,7 @@ public:
 
         cursorPosition_ = event->position();
 
-        geometry::Mat4d inverseViewMatrix = canvas->camera().viewMatrix().inverse();
+        geometry::Mat3d inverseViewMatrix = canvas->camera().viewMatrix().inverse();
 
         float pixelSize = static_cast<float>(
             (inverseViewMatrix.transformPointAffine(geometry::Vec2d(0, 1))
@@ -768,34 +768,34 @@ void Sculpt::onPaintDraw(graphics::Engine* engine, ui::PaintOptions options) {
     }
     auto canvas = context.canvas();
 
+    using geometry::Mat3d;
+    using geometry::Mat4f;
     using geometry::Vec2d;
     using geometry::Vec2f;
 
-    geometry::Mat4d ivm = canvas->camera().viewMatrix().inverse();
+    Mat3d canvasView = canvas->camera().viewMatrix();
+    Mat3d canvasViewInverse = canvasView.inverse();
 
-    geometry::Mat4f translation = geometry::Mat4f::identity;
+    Mat3d translation = Mat3d::identity;
     if (isActionCircleEnabled_) {
-        geometry::Vec2f pos(actionCircleCenter_);
-        translation.translate(pos);
+        translation.translate(actionCircleCenter_);
     }
     else if (candidateId_ != -1) {
-        geometry::Vec2f pos(candidateClosestPoint_);
-        translation.translate(pos);
+        translation.translate(candidateClosestPoint_);
     }
     else {
-        geometry::Vec2f pos(ivm.transformPointAffine(geometry::Vec2d(cursorPosition_)));
-        translation.translate(pos);
+        Vec2d pos(cursorPosition_);
+        translation.translate(canvasViewInverse.transformPointAffine(pos));
     }
 
-    geometry::Mat4f scaling = geometry::Mat4f::identity;
+    Mat4f scaling = Mat4f::identity;
     scaling.scale(static_cast<float>(options::sculptRadius()->value()));
-
-    geometry::Mat4f currentView(engine->viewMatrix());
-    geometry::Mat4f canvasView(canvas->camera().viewMatrix());
 
     engine->setProgram(graphics::BuiltinProgram::ScreenSpaceDisplacement);
 
-    geometry::Mat4f view = currentView * canvasView * translation;
+    Mat4f currentView = engine->viewMatrix();
+    Mat4f view = currentView * Mat4f::fromTransform(canvasView * translation);
+
     engine->pushViewMatrix(view);
     engine->draw(pointGeometry_);
 

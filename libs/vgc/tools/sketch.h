@@ -442,7 +442,7 @@ protected:
     //
     // Invariant: all arrays have the same length.
     //
-    geometry::Mat4d canvasToWorkspaceMatrix_;
+    geometry::Mat3d canvasToWorkspaceMatrix_;
     SketchPointBuffer transformedPoints_;
     void updateTransformedPoints_();
 

@@ -18,7 +18,7 @@
 #define VGC_GEOMETRY_CAMERA2D_H
 
 #include <vgc/geometry/api.h>
-#include <vgc/geometry/mat4d.h>
+#include <vgc/geometry/mat3d.h>
 #include <vgc/geometry/vec2d.h>
 
 namespace vgc::geometry {
@@ -47,32 +47,30 @@ namespace vgc::geometry {
 ///
 /// - viewportHeight: the height of the viewport, in pixels.
 ///
-/// - nearPlane: value under which z-coordinates are clipped. Default is -1.0.
-///
-/// - farPlane: value above which z-coordinates are clipped. Default is 1.0.
-///
 /// Where:
 ///
-/// - "World coordinates" refer to the coordinates of an object as authored
-///   by the user. For example, in the following example:
+/// - "World coordinates" refer to the coordinates of an object as authored by
+///   the user. For example, in the following document, the world coordinates of
+///   the vertex are (300, 100):
 ///
+///   ```xml
 ///   <vgc>
-///     <vertex pos="300 100" />,
-///   </vgc>,
+///     <vertex position="(300, 100)" />,
+///   </vgc>
+///   ```
 ///
-///   the world coordinates of the vertex are (300, 100). Note that the world
-///   coordinates of objects do not change when the user pan, zoom, or rotate
-///   the view.
+///   Note that the world coordinates of objects do not change when the user
+///   pan, zoom, or rotate the view.
 ///
 ///   In SVG terminology, world coordinates are referred to as "user space".
 ///   For consistency with SVG, we use the convention that the Y-axis in
 ///   world coordinates is top-down:
 ///
-///   \verbatim
+///   ```text
 ///         o---> X
 ///         |
 ///         v Y
-///   \endverbatim
+///   ```
 ///
 /// - "Viewport" refers to the area of the screen where the VGC illustration
 ///   or animation is rendered.
@@ -83,11 +81,11 @@ namespace vgc::geometry {
 ///   consistency with Qt (i.e., widget coordinates), we use the convention that
 ///   the viewport origin is top-left, and that the Y-axis is top-down:
 ///
-///   \verbatim
+///   ```text
 ///         o---> X
 ///         |
 ///         v Y
-///   \endverbatim
+///   ```
 ///
 ///   Note that the view coordinates of an object change when the user pan,
 ///   zoom, or rotate the view. For example, an object A whose world
@@ -100,29 +98,35 @@ namespace vgc::geometry {
 /// In order to convert from world coordinates to view coordinates, one can
 /// use the viewMatrix() associated with the 2D camera:
 ///
-/// \code
-/// Vec2d viewCoords = camera.viewMatrix() * worldCoords;
-/// \endcode
+/// ```cpp
+/// Vec2d viewCoords = camera.viewMatrix().transformPointAffine(worldCoords);
+/// ```
 ///
 /// This view matrix is always invertible, therefore we also have:
 ///
-/// \code
-/// Vec2d worldCoords = camera.viewMatrix().inverse() * viewCoords;
-/// \endcode
+/// ```cpp
+/// Vec2d worldCoords = camera.viewMatrix().inverse().transformPointAffine(viewCoords);
+/// ```
 ///
 /// The projectionMatrix() is provided for conveninence when using OpenGL. It
 /// maps from view coordinates to NDC (normalized device coordinates), that is,
 /// the top-left corner of the viewport (0, 0) is mapped to (-1, -1), and the
 /// bottom
 ///
-/// \verbatim
+/// ```text
 ///       Y
 ///    ---^---  OpenGL NDC
 ///   |   |   |
 ///   |   o--->  X
 ///   |       |
 ///    -------
-/// \endverbatim
+/// ```
+///
+/// Both the `viewMatrix()` and `projectionMatrix()` are 3x3 matrices that
+/// represent a 2D transformation in homogeneous coordinates.
+///
+/// In order to convert this 3x3 matrix `m` to a 4x4 matrix (3D transformation
+/// in homogeneous coordinates), you can use `Mat4d::fromTransform(m)`.
 ///
 class VGC_GEOMETRY_API Camera2d {
 public:
@@ -236,47 +240,13 @@ public:
         setViewportSize(size[0], size[1]);
     }
 
-    /// Returns the near plane of the camera. This is the value under which
-    /// z-coordinates are clipped. Default is -1.0.
+    /// Returns the 3x3 view matrix corresponding to the camera.
     ///
-    /// \sa setNearPlane()
-    ///
-    double nearPlane() const {
-        return nearPlane_;
-    }
+    Mat3d viewMatrix() const;
 
-    /// Sets the near plane of the camera.
+    /// Returns the 3x3 projection matrix corresponding to the camera.
     ///
-    /// \sa nearPlane()
-    ///
-    void setNearPlane(double nearPlane) {
-        nearPlane_ = nearPlane;
-    }
-
-    /// Returns the far plane of the camera. This is the value above which
-    /// z-coordinates are clipped. Default is 1.0.
-    ///
-    /// \sa setFarPlane()
-    ///
-    double farPlane() const {
-        return farPlane_;
-    }
-
-    /// Sets the far plane of the camera.
-    ///
-    /// \sa farPlane()
-    ///
-    void setFarPlane(double farPlane) {
-        farPlane_ = farPlane;
-    }
-
-    /// Returns the 4x4 view matrix corresponding to the camera.
-    ///
-    Mat4d viewMatrix() const;
-
-    /// Returns the 4x4 projection matrix corresponding to the camera.
-    ///
-    Mat4d projectionMatrix() const;
+    Mat3d projectionMatrix() const;
 
 private:
     Vec2d center_;
@@ -284,8 +254,6 @@ private:
     double rotation_;
     double viewportWidth_;
     double viewportHeight_;
-    double nearPlane_;
-    double farPlane_;
 };
 
 } // namespace vgc::geometry

@@ -25,45 +25,47 @@ Camera2d::Camera2d()
     , zoom_(1)
     , rotation_(0)
     , viewportWidth_(1)
-    , viewportHeight_(1)
-    , nearPlane_(-1)
-    , farPlane_(1) {
+    , viewportHeight_(1) {
 }
 
-Mat4d Camera2d::viewMatrix() const {
+Mat3d Camera2d::viewMatrix() const {
 
     const double cx = center().x();
     const double cy = center().y();
     const double w = viewportWidth();
     const double h = viewportHeight();
 
-    Mat4d res;
-    res.setToIdentity();
+    Mat3d res = Mat3d::identity;
     res.translate(0.5 * w - cx, 0.5 * h - cy);
     res.rotate(rotation());
-    res.scale(zoom(), zoom(), 1); // don't scale the Z coordinate
+    res.scale(zoom());
     return res;
 }
 
-Mat4d Camera2d::projectionMatrix() const {
+Mat3d Camera2d::projectionMatrix() const {
 
     const double w = viewportWidth_;
     const double h = viewportHeight_;
-    const double n = nearPlane_;
-    const double f = farPlane_;
 
     // clang-format off
-    return Mat4d(2/w , 0    , 0       , -1          ,
-                 0   , -2/h , 0       , 1           ,
-                 0   , 0    , 2/(n-f) , (n+f)/(n-f) ,
-                 0   , 0    , 0       , 1           );
+    return Mat3d(2/w, 0   , -1,
+                 0  , -2/h,  1,
+                 0  , 0   ,  1);
     // clang-format on
 
     // Notes:
+    //
     // 1. In the second row of the matrix, we perform
     //    the inversion of Y axis (SVG -> OpenGL conventions).
-    // 2. I'm not 100% sure of the signs on the 3rd row. We should
-    //    try with an object at (0, 0, 0.5) obsuring one at (0, 0, -0.5).
+    //
+    // 2. For a potential Camera3d, it would look like:
+    //
+    //    return Mat4d(2/w, 0   , 0      , -1         ,
+    //                 0  , -2/h, 0      , 1          ,
+    //                 0  , 0   , 2/(n-f), (n+f)/(n-f),
+    //                 0  , 0   , 0      , 1          );
+    //
+    //    where n = nearPlane() and f = farPlane()
 }
 
 } // namespace vgc::geometry
