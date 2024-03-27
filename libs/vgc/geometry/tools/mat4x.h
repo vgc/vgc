@@ -139,7 +139,7 @@ public:
     /// Creates a `Mat4x` from a `Mat<2, T>` matrix, assuming the given
     /// matrix represents a 2D linear transformation.
     /// 
-    /// ```verbatim
+    /// ```text
     /// |a b|    |a b 0 0|
     /// |c d| -> |c d 0 0|
     ///          |0 0 1 0|
@@ -170,7 +170,7 @@ public:
     /// Creates a `Mat4x` from a `Mat<3, T>` matrix, assuming the given
     /// matrix represents a 3D linear transformation.
     /// 
-    /// ```verbatim
+    /// ```text
     /// |a b c|    |a b c 0|
     /// |d e f| -> |d e f 0|
     /// |g h i|    |g h i 0|
@@ -206,7 +206,7 @@ public:
     /// represents a 1D homogeneous transformation (possibly affine or
     /// projective).
     /// 
-    /// ```verbatim
+    /// ```text
     /// |a b|    |a 0 0 b|
     /// |c d| -> |0 1 0 0|
     ///          |0 0 1 0|
@@ -235,7 +235,7 @@ public:
     /// represents a 2D homogeneous transformation (possibly affine or
     /// projective).
     /// 
-    /// ```verbatim
+    /// ```text
     /// |a b c|    |a b 0 c|
     /// |d e f| -> |d e 0 f|
     /// |g h i|    |0 0 1 0|

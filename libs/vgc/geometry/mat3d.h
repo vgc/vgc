@@ -125,7 +125,7 @@ public:
     /// Creates a `Mat3d` from a `Mat<2, T>` matrix, assuming the given
     /// matrix represents a 2D linear transformation.
     /// 
-    /// ```verbatim
+    /// ```text
     /// |a b|    |a b 0|
     /// |c d| -> |c d 0|
     ///          |0 0 1|
@@ -154,7 +154,7 @@ public:
     /// represents a 1D homogeneous transformation (possibly affine or
     /// projective).
     /// 
-    /// ```verbatim
+    /// ```text
     /// |a b|    |a 0 b|
     /// |c d| -> |0 1 0|
     ///          |c 0 d|
