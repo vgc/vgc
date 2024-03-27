@@ -86,10 +86,6 @@ void wrap_value(py::module& m) {
 
     c.def(py::self == py::self);
     c.def(py::self != py::self);
-    c.def(py::self < py::self);
-    //c.def(py::self > py::self);
-    //c.def(py::self <= py::self);
-    //c.def(py::self >= py::self);
 
     c.def("__str__", [](const This& self) -> std::string {
         fmt::memory_buffer mbuf;

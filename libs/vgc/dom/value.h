@@ -154,7 +154,6 @@ public:
     void (*move)(ValueData&, ValueData&);
     void (*destroy)(ValueData&);
     bool (*equal)(const ValueData&, const ValueData&);
-    bool (*less)(const ValueData&, const ValueData&);
     Value (*getArrayItemWrapped)(const ValueData&, Int);
     void (*write)(const ValueData&, core::StringWriter&);
     Value (*readAs)(core::StringReader&);
@@ -178,7 +177,6 @@ public:
         , move(&move_<T>)
         , destroy(&destroy_<T>)
         , equal(&equal_<T>)
-        , less(&less_<T>)
         , getArrayItemWrapped(&getArrayItemWrapped_<T>)
         , write(&write_<T>)
         , readAs(&readAs_<T>)
@@ -225,11 +223,6 @@ private:
     template<typename T>
     static bool equal_(const ValueData& d1, const ValueData& d2) {
         return d1.get<T>() == d2.get<T>();
-    }
-
-    template<typename T>
-    static bool less_(const ValueData& d1, const ValueData& d2) {
-        return d1.get<T>() < d2.get<T>();
     }
 
     // This function is defined further in this file due to cyclic dependency with Value
@@ -456,11 +449,6 @@ public:
 
     friend bool operator!=(const Value& lhs, const Value& rhs) {
         return !(lhs == rhs);
-    }
-
-    friend bool operator<(const Value& lhs, const Value& rhs) {
-        return lhs.typeInfo_ == rhs.typeInfo_ //
-               && lhs.info_().less(lhs.data_, rhs.data_);
     }
 
     template<typename OStream>

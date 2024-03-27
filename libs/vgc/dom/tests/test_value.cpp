@@ -73,10 +73,6 @@ public:
         return false;
     }
 
-    bool operator<(const TestObject&) const {
-        return false;
-    }
-
     template<typename IStream>
     friend void readTo(TestObject&, IStream&) {
     }
@@ -131,10 +127,6 @@ public:
     }
 
     bool operator!=(const TestObject2&) const {
-        return false;
-    }
-
-    bool operator<(const TestObject2&) const {
         return false;
     }
 
