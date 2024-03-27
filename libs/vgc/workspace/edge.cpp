@@ -327,6 +327,76 @@ enum class ShowEdgeDirection {
     AllEdges
 };
 
+// Note: we do not bother to implement any caching for this since it is
+// mostly for debugging purposes and performance is not critical.
+//
+void doPaintInputSketchPoints(
+    graphics::Engine* engine,
+    const VacKeyEdge& edge,
+    graphics::GeometryViewPtr& geometry) {
+
+    using geometry::Mat3d;
+    using geometry::Vec2d;
+    using geometry::Vec2dArray;
+    using geometry::Vec2f;
+    namespace ds = dom::strings;
+
+    // Get the positions of the input sketch points, in widget coordinates (at
+    // time of sketch)
+    //
+    dom::Element* e = edge.domElement();
+    const auto& positions = e->getAttribute(ds::inputpositions).get<Vec2dArray>();
+    Int n = positions.length();
+    if (n <= 0) {
+        return;
+    }
+
+    // Get the widget to scene transform matrix
+    //
+    const auto& transform = e->getAttribute(ds::inputtransform).get<Mat3d>();
+
+    // Creates the graphics resource
+    //
+    if (!geometry) {
+        geometry = engine->createDynamicTriangleStripView(
+            graphics::BuiltinGeometryLayout::XYDxDy_iXYRotWRGBA);
+    }
+
+    // Compute, in scene coordinates, what was the size `hp` of half a pixel
+    // when the stroke was sketched.
+    //
+    Vec2d pixelCorner = transform.transformPointAffine(Vec2d(0, 0));
+    Vec2d pixelEdgeMidPoint = transform.transformPointAffine(Vec2d(0, 0.5));
+    float hp = static_cast<float>((pixelCorner - pixelEdgeMidPoint).length());
+
+    // The geometry of each instance is a quad
+    //
+    core::FloatArray pointVertices(
+        {-hp, -hp, -1, -1, hp, -hp, 1, -1, -hp, hp, -1, 1, hp, hp, 1, 1});
+    //  (X    Y    Dx  Dy)
+
+    // We draw two instances for each position:
+    // - one without screen displacement (w = 0)
+    // - one with a small screen displacement
+    //
+    const core::Color& c = colors::selection;
+    core::FloatArray pointInstData;
+    for (Int i = 0; i < n; ++i) {
+        float w = 1.f; // screen displacement
+        Vec2d pWidget = positions[i];
+        Vec2f pScene = Vec2f(transform.transformPointAffine(pWidget));
+        pointInstData.extend({pScene.x(), pScene.y(), 1.f, w, c.r(), c.g(), c.b(), 1.f});
+        pointInstData.extend({pScene.x(), pScene.y(), 1.f, 0.f, 1.f, 1.f, 1.f, 1.f});
+        //                    X           Y           Rot  W    R    G    B    A
+    }
+
+    engine->updateBufferData(geometry->vertexBuffer(0), std::move(pointVertices));
+    engine->updateBufferData(geometry->vertexBuffer(1), std::move(pointInstData));
+
+    engine->setProgram(graphics::BuiltinProgram::ScreenSpaceDisplacement);
+    engine->drawInstanced(geometry);
+}
+
 } // namespace
 
 void VacKeyEdge::onPaintDraw(
@@ -364,6 +434,8 @@ void VacKeyEdge::onPaintDraw(
     bool shouldPaintEdgeDirection =
         (showEdgeDirection == ShowEdgeDirection::AllEdges)
         || (isSelected && showEdgeDirection == ShowEdgeDirection::SelectedEdges);
+    bool shouldPaintInputSketchPoints = isSelected;
+    //                           TODO: `&& options::showInputSketchPoints();`
 
     bool needsCenterlineGeometry =
         shouldPaintOutline || shouldPaintOffsetLine0 || shouldPaintOffsetLine1;
@@ -650,6 +722,9 @@ void VacKeyEdge::onPaintDraw(
     if (isSelected) {
         engine->setProgram(graphics::BuiltinProgram::ScreenSpaceDisplacement);
         engine->draw(graphics.selectionGeometry());
+        if (shouldPaintInputSketchPoints) {
+            doPaintInputSketchPoints(engine, *this, inputSketchPointsGeometry_);
+        }
     }
     else if (shouldPaintOutline) {
         engine->setProgram(graphics::BuiltinProgram::ScreenSpaceDisplacement);

@@ -782,31 +782,6 @@ void Sketch::onPaintDraw(graphics::Engine* engine, ui::PaintOptions options) {
         minimalLatencyStrokeReload_ = false;
     }
 
-    const bool showInputPixels = false;
-
-    if (showInputPixels) { // TODO: only update on new points
-        float hp = static_cast<float>(
-            (canvasToWorkspaceMatrix_.transformAffine(geometry::Vec2d(0, 0.5))
-             - canvasToWorkspaceMatrix_.transformAffine(geometry::Vec2d(0, 0)))
-                .length());
-        core::FloatArray pointVertices(
-            {-hp, -hp, 0, 0, hp, -hp, 0, 0, -hp, hp, 0, 0, hp, hp, 0, 0});
-
-        core::FloatArray pointInstData;
-        const Int numPoints = inputPoints_.length();
-        for (Int i = 0; i < numPoints; ++i) {
-            geometry::Vec2d pd = inputPoints_[i].position();
-            geometry::Vec2f p =
-                geometry::Vec2f(canvasToWorkspaceMatrix_.transformAffine(pd));
-            pointInstData.extend({p.x(), p.y(), 0.f, 4.f, 0.f, 1.f, 0.f, 0.5f});
-        }
-
-        engine->updateBufferData(
-            mouseInputGeometry_->vertexBuffer(0), std::move(pointVertices));
-        engine->updateBufferData(
-            mouseInputGeometry_->vertexBuffer(1), std::move(pointInstData));
-    }
-
     geometry::Mat4f vm = engine->viewMatrix();
     geometry::Mat3d cameraView = canvas->camera().viewMatrix();
     engine->pushViewMatrix(vm * geometry::Mat4f::fromTransform(cameraView));
@@ -814,11 +789,6 @@ void Sketch::onPaintDraw(graphics::Engine* engine, ui::PaintOptions options) {
     if (isSketching_) {
         engine->setProgram(graphics::BuiltinProgram::Simple);
         engine->draw(minimalLatencyStrokeGeometry_);
-    }
-
-    if (showInputPixels) {
-        engine->setProgram(graphics::BuiltinProgram::ScreenSpaceDisplacement);
-        engine->drawInstanced(mouseInputGeometry_);
     }
 
     engine->popViewMatrix();
