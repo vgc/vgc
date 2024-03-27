@@ -35,6 +35,11 @@
 using vgc::geometry::Mat;
 using vgc::geometry::Vec;
 
+using vgc::geometry::Mat2d;
+using vgc::geometry::Mat2f;
+using vgc::geometry::Mat3d;
+using vgc::geometry::Mat3f;
+
 namespace {
 
 template<int dimension, typename T>
@@ -290,6 +295,30 @@ void wrap_mat(py::module& m, const std::string& name) {
     // would take precendence since a string implements the Sequence protocol.
     //
     cmat.def(py::init([](py::sequence s) { return matFromSequence<TMat>(s); }));
+
+    // Static constructor from matrices of lower dimensions
+    if constexpr (dimension == 3) {
+        cmat.def_static("fromLinear", [](const Mat2f& m) { return TMat::fromLinear(m); });
+        cmat.def_static("fromLinear", [](const Mat2d& m) { return TMat::fromLinear(m); });
+        cmat.def_static(
+            "fromTransform", [](const Mat2f& m) { return TMat::fromTransform(m); });
+        cmat.def_static(
+            "fromTransform", [](const Mat2d& m) { return TMat::fromTransform(m); });
+    }
+    else if constexpr (dimension == 4) {
+        cmat.def_static("fromLinear", [](const Mat2f& m) { return TMat::fromLinear(m); });
+        cmat.def_static("fromLinear", [](const Mat2d& m) { return TMat::fromLinear(m); });
+        cmat.def_static("fromLinear", [](const Mat3f& m) { return TMat::fromLinear(m); });
+        cmat.def_static("fromLinear", [](const Mat3d& m) { return TMat::fromLinear(m); });
+        cmat.def_static(
+            "fromTransform", [](const Mat2f& m) { return TMat::fromTransform(m); });
+        cmat.def_static(
+            "fromTransform", [](const Mat2d& m) { return TMat::fromTransform(m); });
+        cmat.def_static(
+            "fromTransform", [](const Mat3f& m) { return TMat::fromTransform(m); });
+        cmat.def_static(
+            "fromTransform", [](const Mat3d& m) { return TMat::fromTransform(m); });
+    }
 
     // Get/Set individual element via `m[i][j] = 42`
     cmat.def(

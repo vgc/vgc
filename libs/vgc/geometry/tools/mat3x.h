@@ -122,6 +122,61 @@ public:
                  static_cast<float>(other(2, 2))}} {
     }
 
+    /// Creates a `Mat3x` from a `Mat<2, T>` matrix, assuming the given
+    /// matrix represents a 2D linear transformation.
+    /// 
+    /// ```text
+    /// |a b|    |a b 0|
+    /// |c d| -> |c d 0|
+    ///          |0 0 1|
+    /// ```
+    /// 
+    /// The returned matrix can be used either as a 3D linear transformation
+    /// that doesn't modify the third coordinate, or as a 2D homogeneous
+    /// transformation that also happens to be a linear transformation (no
+    /// translation or projective components).
+    /// 
+    /// If the given matrix is not a `Mat2x`, then each of its elements is
+    /// converted to `float` by performing a `static_cast`.
+    ///
+    template<typename TMat2, VGC_REQUIRES(isMat<TMat2> && TMat2::dimension == 2)>
+    static constexpr Mat3x fromLinear(const TMat2& other) noexcept {
+        float a = static_cast<float>(other(0, 0));
+        float b = static_cast<float>(other(0, 1));
+        float c = static_cast<float>(other(1, 0));
+        float d = static_cast<float>(other(1, 1));
+        return Mat3x(a, b, 0,
+                     c, d, 0,
+                     0, 0, 1);
+    }
+
+    /// Creates a `Mat3x` from a `Mat<2, T>` matrix, assuming the given matrix
+    /// represents a 1D homogeneous transformation (possibly affine or
+    /// projective).
+    /// 
+    /// ```text
+    /// |a b|    |a 0 b|
+    /// |c d| -> |0 1 0|
+    ///          |c 0 d|
+    /// ``
+    ///
+    /// The returned matrix can be used as a 2D homogeneous transformation
+    /// whose linear part does not modify the second coordinate.
+    /// 
+    /// If the given matrix is not a `Mat2x`, then each of its elements is
+    /// converted to `float` by performing a `static_cast`.
+    ///
+    template<typename TMat2, VGC_REQUIRES(isMat<TMat2> && TMat2::dimension == 2)>
+    static constexpr Mat3x fromTransform(const TMat2& other) noexcept {
+        float a = static_cast<float>(other(0, 0));
+        float b = static_cast<float>(other(0, 1));
+        float c = static_cast<float>(other(1, 0));
+        float d = static_cast<float>(other(1, 1));
+        return Mat3x(a, 0, b,
+                     0, 1, 0,
+                     c, 0, d);
+    }
+
     /// Defines explicitly all the elements of the matrix
     ///
     Mat3x& setElements(

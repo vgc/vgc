@@ -136,6 +136,135 @@ public:
                  static_cast<double>(other(2, 3)),
                  static_cast<double>(other(3, 3))}} {}
 
+    /// Creates a `Mat4d` from a `Mat<2, T>` matrix, assuming the given
+    /// matrix represents a 2D linear transformation.
+    /// 
+    /// ```text
+    /// |a b|    |a b 0 0|
+    /// |c d| -> |c d 0 0|
+    ///          |0 0 1 0|
+    ///          |0 0 0 1|
+    /// ```
+    /// 
+    /// The returned matrix can be used either as a 4D linear transformation
+    /// that doesn't modify the third and fourth coordinates, or as a 3D
+    /// homogeneous transformation that also happens to be a linear
+    /// transformation (no translation or projective components) that also does
+    /// not modify the third coordinate.
+    /// 
+    /// If the given matrix is not a `Mat2d`, then each of its elements is
+    /// converted to `double` by performing a `static_cast`.
+    ///
+    template<typename TMat2, VGC_REQUIRES(isMat<TMat2> && TMat2::dimension == 2)>
+    static constexpr Mat4d fromLinear(const TMat2& other) noexcept {
+        double a = static_cast<double>(other(0, 0));
+        double b = static_cast<double>(other(0, 1));
+        double c = static_cast<double>(other(1, 0));
+        double d = static_cast<double>(other(1, 1));
+        return Mat4d(a, b, 0, 0,
+                     c, d, 0, 0,
+                     0, 0, 1, 0,
+                     0, 0, 0, 1);
+    }
+
+    /// Creates a `Mat4d` from a `Mat<3, T>` matrix, assuming the given
+    /// matrix represents a 3D linear transformation.
+    /// 
+    /// ```text
+    /// |a b c|    |a b c 0|
+    /// |d e f| -> |d e f 0|
+    /// |g h i|    |g h i 0|
+    ///            |0 0 0 1|
+    /// ```
+    /// 
+    /// The returned matrix can be used either as a 4D linear transformation
+    /// that doesn't modify the fourth coordinates, or as a 3D homogeneous
+    /// transformation that also happens to be a linear transformation (no
+    /// translation or projective components).
+    /// 
+    /// If the given matrix is not a `Mat3d`, then each of its elements is
+    /// converted to `double` by performing a `static_cast`.
+    ///
+    template<typename TMat3, VGC_REQUIRES(isMat<TMat3> && TMat3::dimension == 3)>
+    static constexpr Mat4d fromLinear(const TMat3& other) noexcept {
+        double a = static_cast<double>(other(0, 0));
+        double b = static_cast<double>(other(0, 1));
+        double c = static_cast<double>(other(0, 2));
+        double d = static_cast<double>(other(1, 0));
+        double e = static_cast<double>(other(1, 1));
+        double f = static_cast<double>(other(1, 2));
+        double g = static_cast<double>(other(2, 0));
+        double h = static_cast<double>(other(2, 1));
+        double i = static_cast<double>(other(2, 2));
+        return Mat4d(a, b, c, 0,
+                     d, e, f, 0,
+                     g, h, i, 0,
+                     0, 0, 0, 1);
+    }
+
+    /// Creates a `Mat4d` from a `Mat<2, T>` matrix, assuming the given matrix
+    /// represents a 1D homogeneous transformation (possibly affine or
+    /// projective).
+    /// 
+    /// ```text
+    /// |a b|    |a 0 0 b|
+    /// |c d| -> |0 1 0 0|
+    ///          |0 0 1 0|
+    ///          |c 0 0 d|
+    /// ``
+    ///
+    /// The returned matrix can be used as a 3D homogeneous transformation
+    /// whose linear part does not modify the second and third coordinate.
+    /// 
+    /// If the given matrix is not a `Mat2d`, then each of its elements is
+    /// converted to `double` by performing a `static_cast`.
+    ///
+    template<typename TMat2, VGC_REQUIRES(isMat<TMat2> && TMat2::dimension == 2)>
+    static constexpr Mat4d fromTransform(const TMat2& other) noexcept {
+        double a = static_cast<double>(other(0, 0));
+        double b = static_cast<double>(other(0, 1));
+        double c = static_cast<double>(other(1, 0));
+        double d = static_cast<double>(other(1, 1));
+        return Mat4d(a, 0, 0, b,
+                     0, 1, 0, 0,
+                     0, 0, 1, 0,
+                     c, 0, 0, d);
+    }
+
+    /// Creates a `Mat4d` from a `Mat<3, T>` matrix, assuming the given matrix
+    /// represents a 2D homogeneous transformation (possibly affine or
+    /// projective).
+    /// 
+    /// ```text
+    /// |a b c|    |a b 0 c|
+    /// |d e f| -> |d e 0 f|
+    /// |g h i|    |0 0 1 0|
+    ///            |g h 0 i|
+    /// ``
+    ///
+    /// The returned matrix can be used as a 3D homogeneous transformation
+    /// whose linear part does not modify the third coordinate.
+    /// 
+    /// If the given matrix is not a `Mat3d`, then each of its elements is
+    /// converted to `double` by performing a `static_cast`.
+    ///
+    template<typename TMat3, VGC_REQUIRES(isMat<TMat3> && TMat3::dimension == 3)>
+    static constexpr Mat4d fromTransform(const TMat3& other) noexcept {
+        double a = static_cast<double>(other(0, 0));
+        double b = static_cast<double>(other(0, 1));
+        double c = static_cast<double>(other(0, 2));
+        double d = static_cast<double>(other(1, 0));
+        double e = static_cast<double>(other(1, 1));
+        double f = static_cast<double>(other(1, 2));
+        double g = static_cast<double>(other(2, 0));
+        double h = static_cast<double>(other(2, 1));
+        double i = static_cast<double>(other(2, 2));
+        return Mat4d(a, b, 0, c,
+                     d, e, 0, f,
+                     0, 0, 1, 0,
+                     g, h, 0, i);
+    }
+
     /// Defines explicitly all the elements of the matrix
     ///
     Mat4d& setElements(

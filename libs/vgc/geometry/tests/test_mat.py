@@ -300,6 +300,56 @@ class TestMat(unittest.TestCase):
             self.assertEqual(m[0][0], 0)
             self.assertNotEqual(m, n)
 
+    def testFromLowerDimension(self):
+        for Mat2 in Mat2Types:
+            for Mat3 in Mat3Types:
+                m2 = Mat2(2, 3,
+                          4, 5)
+
+                m3 = Mat3(2, 3, 0,
+                          4, 5, 0,
+                          0, 0, 1)
+                self.assertEqual(Mat3.fromLinear(m2), m3)
+
+                m3 = Mat3(2, 0, 3,
+                          0, 1, 0,
+                          4, 0, 5)
+                self.assertEqual(Mat3.fromTransform(m2), m3)
+
+            for Mat4 in Mat4Types:
+                m2 = Mat2(2, 3,
+                          4, 5)
+
+                m4 = Mat4(2, 3, 0, 0,
+                          4, 5, 0, 0,
+                          0, 0, 1, 0,
+                          0, 0, 0, 1)
+                self.assertEqual(Mat4.fromLinear(m2), m4)
+
+                m4 = Mat4(2, 0, 0, 3,
+                          0, 1, 0, 0,
+                          0, 0, 1, 0,
+                          4, 0, 0, 5)
+                self.assertEqual(Mat4.fromTransform(m2), m4)
+
+        for Mat3 in Mat3Types:
+            for Mat4 in Mat4Types:
+                m3 = Mat3(2, 3, 4,
+                          5, 6, 7,
+                          8, 9, 10)
+
+                m4 = Mat4(2, 3, 4, 0,
+                          5, 6, 7, 0,
+                          8, 9, 10, 0,
+                          0, 0, 0, 1)
+                self.assertEqual(Mat4.fromLinear(m3), m4)
+
+                m4 = Mat4(2, 3, 0, 4,
+                          5, 6, 0, 7,
+                          0, 0, 1, 0,
+                          8, 9, 0, 10)
+                self.assertEqual(Mat4.fromTransform(m3), m4)
+
     def testSetElements(self):
         for Mat in Mat2Types:
             m = Mat()
