@@ -355,43 +355,59 @@ void doPaintInputSketchPoints(
     //
     const auto& transform = e->getAttribute(ds::inputtransform).get<Mat3d>();
 
-    // Creates the graphics resource
+    // Create the graphics resource
     //
     if (!geometry) {
         geometry = engine->createDynamicTriangleStripView(
             graphics::BuiltinGeometryLayout::XYDxDy_iXYRotWRGBA);
     }
 
-    // Compute, in scene coordinates, what was the size `hp` of half a pixel
-    // when the stroke was sketched.
+    // Compute, in scene coordinates, the corners of a square centered at the
+    // origin, scaled and rotated such that it has the same size and
+    // orientation as a pixel when the edge was first sketched. The "disp"
+    // component is used to be able to apply a small screen-space displacement,
+    // so that we can paint a thin border of w pixels around the square.
     //
-    Vec2d pixelCorner = transform.transformAffine(Vec2d(0, 0));
-    Vec2d pixelEdgeMidPoint = transform.transformAffine(Vec2d(0, 0.5));
-    float hp = static_cast<float>((pixelCorner - pixelEdgeMidPoint).length());
-
-    // The geometry of each instance is a quad
+    //  x-----------x
+    //  | x-------x |
+    //  | |       | |
+    //  | |       |w|
+    //  | |       | |
+    //  | x-------x |  <- cornerPos
+    //  x-----------x  <- cornerPos + cornerDisp * w
     //
-    core::FloatArray pointVertices(
-        {-hp, -hp, -1, -1, hp, -hp, 1, -1, -hp, hp, -1, 1, hp, hp, 1, 1});
-    //  (X    Y    Dx  Dy)
+    constexpr float sqrt2 = 1.4142135f;
+    struct PosAndDisp {
+        PosAndDisp(const Vec2d& pos)
+            : pos_(pos)
+            , disp_(sqrt2 * pos_.normalized()) {
+        }
+        Vec2f pos_;
+        Vec2f disp_;
+    };
+    core::Array<PosAndDisp> sharedInstData = {
+        PosAndDisp(transform.transformLinear({-0.5, -0.5})),
+        PosAndDisp(transform.transformLinear({0.5, -0.5})),
+        PosAndDisp(transform.transformLinear({-0.5, 0.5})),
+        PosAndDisp(transform.transformLinear({0.5, 0.5}))};
 
-    // We draw two instances for each position:
-    // - one without screen displacement (w = 0)
-    // - one with a small screen displacement
+    // We draw two quads for each input sketch point:
+    // - one with a small screen-space displacement w
+    // - one without screen-space displacement (w = 0)
     //
     const core::Color& c = colors::selection;
-    core::FloatArray pointInstData;
+    core::FloatArray perInstData;
     for (Int i = 0; i < n; ++i) {
-        float w = 1.f; // screen displacement
+        float w = 1.f;
         Vec2d pWidget = positions[i];
         Vec2f pScene = Vec2f(transform.transformAffine(pWidget));
-        pointInstData.extend({pScene.x(), pScene.y(), 1.f, w, c.r(), c.g(), c.b(), 1.f});
-        pointInstData.extend({pScene.x(), pScene.y(), 1.f, 0.f, 1.f, 1.f, 1.f, 1.f});
-        //                    X           Y           Rot  W    R    G    B    A
+        perInstData.extend({pScene.x(), pScene.y(), 1.f, w, c.r(), c.g(), c.b(), 1.f});
+        perInstData.extend({pScene.x(), pScene.y(), 1.f, 0.f, 1.f, 1.f, 1.f, 1.f});
+        //                     X           Y        Rot   W    R    G    B    A
     }
 
-    engine->updateBufferData(geometry->vertexBuffer(0), std::move(pointVertices));
-    engine->updateBufferData(geometry->vertexBuffer(1), std::move(pointInstData));
+    engine->updateBufferData(geometry->vertexBuffer(0), std::move(sharedInstData));
+    engine->updateBufferData(geometry->vertexBuffer(1), std::move(perInstData));
 
     engine->setProgram(graphics::BuiltinProgram::ScreenSpaceDisplacement);
     engine->drawInstanced(geometry);
