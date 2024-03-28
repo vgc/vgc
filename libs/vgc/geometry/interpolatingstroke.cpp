@@ -234,7 +234,7 @@ void AbstractInterpolatingStroke2d::translate_(const Vec2d& delta) {
 
 void AbstractInterpolatingStroke2d::transform_(const Mat3d& transformation) {
     for (Vec2d& p : positions_) {
-        p = transformation.transformPoint(p);
+        p = transformation.transform(p);
     }
     onPositionsChanged_();
 }

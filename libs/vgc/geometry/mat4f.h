@@ -550,7 +550,7 @@ public:
     /// then returning the first three coordinates divided by the fourth
     /// coordinate.
     ///
-    Vec3f transformPoint(const Vec3f& v) const {
+    Vec3f transform(const Vec3f& v) const {
         float x = data_[0][0]*v[0] + data_[1][0]*v[1] + data_[2][0]*v[2] + data_[3][0];
         float y = data_[0][1]*v[0] + data_[1][1]*v[1] + data_[2][1]*v[2] + data_[3][1];
         float z = data_[0][2]*v[0] + data_[1][2]*v[1] + data_[2][2]*v[2] + data_[3][2];
@@ -563,9 +563,9 @@ public:
     /// `Vec3f` with `z = 0`) by this `Mat4f` (interpreted as a 3D projective
     /// transformation), and returns the first 2 coordinates.
     ///
-    /// See `transformPoint(const Vec3f& v)` for details.
+    /// See `transform(const Vec3f& v)` for details.
     ///
-    Vec2f transformPoint(const Vec2f& v) const {
+    Vec2f transform(const Vec2f& v) const {
         float x = data_[0][0]*v[0] + data_[1][0]*v[1] + data_[3][0];
         float y = data_[0][1]*v[0] + data_[1][1]*v[1] + data_[3][1];
         float w = data_[0][3]*v[0] + data_[1][3]*v[1] + data_[3][3];
@@ -580,11 +580,11 @@ public:
     /// This is equivalent to multiplying the 3x4 submatrix of this `Mat4f` by
     /// `Vec4f(x, y, z, 1)`.
     ///
-    /// This can be used as a faster version of `transformPoint()` whenever you
+    /// This can be used as a faster version of `transform()` whenever you
     /// know that the last row of the matrix is equal to `[0, 0, 0, 1]`, or
     /// whenever you prefer to behave as if the last row was `[0, 0, 0, 1]`.
     ///
-    Vec3f transformPointAffine(const Vec3f& v) const {
+    Vec3f transformAffine(const Vec3f& v) const {
         float x = data_[0][0]*v[0] + data_[1][0]*v[1] + data_[2][0]*v[2] + data_[3][0];
         float y = data_[0][1]*v[0] + data_[1][1]*v[1] + data_[2][1]*v[2] + data_[3][1];
         float z = data_[0][2]*v[0] + data_[1][2]*v[1] + data_[2][2]*v[2] + data_[3][2];
@@ -596,9 +596,9 @@ public:
     /// transformation, that is, ignoring the projective component), and
     /// returns the first 2 coordinates.
     ///
-    /// See `transformPointAffine(const Vec3f& v)` for details.
+    /// See `transformAffine(const Vec3f& v)` for details.
     ///
-    Vec2f transformPointAffine(const Vec2f& v) const {
+    Vec2f transformAffine(const Vec2f& v) const {
         float x = data_[0][0]*v[0] + data_[1][0]*v[1] + data_[3][0];
         float y = data_[0][1]*v[0] + data_[1][1]*v[1] + data_[3][1];
         return Vec2f(x, y);

@@ -860,7 +860,7 @@ public:
 
         geometry::Mat3d inverseViewMatrix = canvas->camera().viewMatrix().inverse();
         geometry::Vec2d cursorPositionInWorkspace =
-            inverseViewMatrix.transformPointAffine(position);
+            inverseViewMatrix.transformAffine(position);
 
         core::Array<canvas::SelectionCandidate> candidates =
             canvas->computeSelectionCandidates(position);
@@ -1028,9 +1028,9 @@ bool Select::onMouseMove(ui::MouseMoveEvent* event) {
         geometry::Vec2d cursorPositionAtPress(cursorPositionAtPress_);
 
         geometry::Vec2d cursorPositionInWorkspace =
-            inverseViewMatrix.transformPointAffine(cursorPosition);
+            inverseViewMatrix.transformAffine(cursorPosition);
         geometry::Vec2d cursorPositionInWorkspaceAtPress =
-            inverseViewMatrix.transformPointAffine(cursorPositionAtPress);
+            inverseViewMatrix.transformAffine(cursorPositionAtPress);
 
         switch (dragAction_) {
         case DragAction::Select: {
@@ -1451,8 +1451,8 @@ void Select::onPaintDraw(graphics::Engine* engine, ui::PaintOptions options) {
     if (isDragging_ && dragAction_ == DragAction::Select) {
         if (!selectionRectangleGeometry_) {
             geometry::Mat3d invView = canvas->camera().viewMatrix().inverse();
-            Vec2f a(invView.transformPointAffine(Vec2d(cursorPositionAtPress_)));
-            Vec2f b(invView.transformPointAffine(Vec2d(cursorPosition_)));
+            Vec2f a(invView.transformAffine(Vec2d(cursorPositionAtPress_)));
+            Vec2f b(invView.transformAffine(Vec2d(cursorPosition_)));
             geometry::Rect2f rect = geometry::Rect2f::empty;
             rect.uniteWith(a);
             rect.uniteWith(b);

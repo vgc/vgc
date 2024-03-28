@@ -277,9 +277,9 @@ void fitViewToRect_(Canvas& canvas, const geometry::Rect2d& rect) {
     // Set rotation
     // TODO: improve Camera2d API to make this easier.
     geometry::Vec2d c0 = 0.5 * viewportSize;
-    geometry::Vec2d c1 = camera.viewMatrix().inverse().transformPointAffine(c0);
+    geometry::Vec2d c1 = camera.viewMatrix().inverse().transformAffine(c0);
     camera.setRotation(rotation);
-    geometry::Vec2d c2 = camera.viewMatrix().transformPointAffine(c1);
+    geometry::Vec2d c2 = camera.viewMatrix().transformAffine(c1);
     camera.setCenter(camera.center() - c0 + c2);
 
     canvas.setCamera(camera);

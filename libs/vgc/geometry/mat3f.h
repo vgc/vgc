@@ -409,7 +409,7 @@ public:
     /// then returning the first two coordinates divided by the third
     /// coordinate.
     ///
-    Vec2f transformPoint(const Vec2f& v) const {
+    Vec2f transform(const Vec2f& v) const {
         float x = data_[0][0]*v[0] + data_[1][0]*v[1] + data_[2][0];
         float y = data_[0][1]*v[0] + data_[1][1]*v[1] + data_[2][1];
         float w = data_[0][2]*v[0] + data_[1][2]*v[1] + data_[2][2];
@@ -424,11 +424,11 @@ public:
     /// This is equivalent to multiplying the 2x3 submatrix of this `Mat3f` by
     /// `Vec3f(x, y, 1)`.
     ///
-    /// This can be used as a faster version of `transformPoint()` whenever you
+    /// This can be used as a faster version of `transform()` whenever you
     /// know that the last row of the matrix is equal to `[0, 0, 1]`, or
     /// whenever you prefer to behave as if the last row was `[0, 0, 1]`.
     ///
-    Vec2f transformPointAffine(const Vec2f& v) const {
+    Vec2f transformAffine(const Vec2f& v) const {
         float x = data_[0][0]*v[0] + data_[1][0]*v[1] + data_[2][0];
         float y = data_[0][1]*v[0] + data_[1][1]*v[1] + data_[2][1];
         return Vec2f(x, y);

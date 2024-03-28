@@ -124,14 +124,14 @@ public:
         geometry::Mat3d inverseViewMatrix = canvas->camera().viewMatrix().inverse();
 
         float pixelSize = static_cast<float>(
-            (inverseViewMatrix.transformPointAffine(geometry::Vec2d(0, 1))
-             - inverseViewMatrix.transformPointAffine(geometry::Vec2d(0, 0)))
+            (inverseViewMatrix.transformAffine(geometry::Vec2d(0, 1))
+             - inverseViewMatrix.transformAffine(geometry::Vec2d(0, 0)))
                 .length());
 
         geometry::Vec2d cursorPositionInWorkspace =
-            inverseViewMatrix.transformPointAffine(geometry::Vec2d(cursorPosition_));
+            inverseViewMatrix.transformAffine(geometry::Vec2d(cursorPosition_));
         geometry::Vec2d cursorPositionInWorkspaceAtPress =
-            inverseViewMatrix.transformPointAffine(
+            inverseViewMatrix.transformAffine(
                 geometry::Vec2d(cursorPositionAtPress_));
 
         // Open history group
@@ -289,12 +289,12 @@ public:
         geometry::Mat3d inverseViewMatrix = canvas->camera().viewMatrix().inverse();
 
         float pixelSize = static_cast<float>(
-            (inverseViewMatrix.transformPointAffine(geometry::Vec2d(0, 1))
-             - inverseViewMatrix.transformPointAffine(geometry::Vec2d(0, 0)))
+            (inverseViewMatrix.transformAffine(geometry::Vec2d(0, 1))
+             - inverseViewMatrix.transformAffine(geometry::Vec2d(0, 0)))
                 .length());
 
         geometry::Vec2d cursorPositionInWorkspaceAtPress =
-            inverseViewMatrix.transformPointAffine(
+            inverseViewMatrix.transformAffine(
                 geometry::Vec2d(cursorPositionAtPress_));
 
         geometry::Vec2f deltaCursor = cursorPosition_ - cursorPositionAtPress_;
@@ -460,12 +460,12 @@ public:
         geometry::Mat3d inverseViewMatrix = canvas->camera().viewMatrix().inverse();
 
         float pixelSize = static_cast<float>(
-            (inverseViewMatrix.transformPointAffine(geometry::Vec2d(0, 1))
-             - inverseViewMatrix.transformPointAffine(geometry::Vec2d(0, 0)))
+            (inverseViewMatrix.transformAffine(geometry::Vec2d(0, 1))
+             - inverseViewMatrix.transformAffine(geometry::Vec2d(0, 0)))
                 .length());
 
         // for now, smooth once in the middle of the cursor displacement
-        geometry::Vec2d positionInWorkspace = inverseViewMatrix.transformPointAffine(
+        geometry::Vec2d positionInWorkspace = inverseViewMatrix.transformAffine(
             geometry::Vec2d(0.5 * (cursorPosition_ + cursorPositionAtLastSmooth_)));
         double disp = (cursorPosition_ - cursorPositionAtLastSmooth_).length()
                       / canvas->camera().zoom();
@@ -675,7 +675,7 @@ void Sculpt::onMouseHover(ui::MouseHoverEvent* event) {
 
     geometry::Vec2d viewCursor(event->position());
     geometry::Vec2d worldCursor =
-        canvas->camera().viewMatrix().inverse().transformPointAffine(viewCursor);
+        canvas->camera().viewMatrix().inverse().transformAffine(viewCursor);
 
     double worldSculptRadius =
         options::sculptRadius()->value(); // / canvas->camera().zoom();
@@ -785,7 +785,7 @@ void Sculpt::onPaintDraw(graphics::Engine* engine, ui::PaintOptions options) {
     }
     else {
         Vec2d pos(cursorPosition_);
-        translation.translate(canvasViewInverse.transformPointAffine(pos));
+        translation.translate(canvasViewInverse.transformAffine(pos));
     }
 
     Mat4f scaling = Mat4f::identity;
