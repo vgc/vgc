@@ -365,8 +365,8 @@ void doPaintInputSketchPoints(
     // Compute, in scene coordinates, what was the size `hp` of half a pixel
     // when the stroke was sketched.
     //
-    Vec2d pixelCorner = transform.transformPointAffine(Vec2d(0, 0));
-    Vec2d pixelEdgeMidPoint = transform.transformPointAffine(Vec2d(0, 0.5));
+    Vec2d pixelCorner = transform.transformAffine(Vec2d(0, 0));
+    Vec2d pixelEdgeMidPoint = transform.transformAffine(Vec2d(0, 0.5));
     float hp = static_cast<float>((pixelCorner - pixelEdgeMidPoint).length());
 
     // The geometry of each instance is a quad
@@ -384,7 +384,7 @@ void doPaintInputSketchPoints(
     for (Int i = 0; i < n; ++i) {
         float w = 1.f; // screen displacement
         Vec2d pWidget = positions[i];
-        Vec2f pScene = Vec2f(transform.transformPointAffine(pWidget));
+        Vec2f pScene = Vec2f(transform.transformAffine(pWidget));
         pointInstData.extend({pScene.x(), pScene.y(), 1.f, w, c.r(), c.g(), c.b(), 1.f});
         pointInstData.extend({pScene.x(), pScene.y(), 1.f, 0.f, 1.f, 1.f, 1.f, 1.f});
         //                    X           Y           Rot  W    R    G    B    A
