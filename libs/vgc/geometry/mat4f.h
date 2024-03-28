@@ -604,6 +604,36 @@ public:
         return Vec2f(x, y);
     }
 
+    /// Returns the result of transforming the given `Vec3f` by the linear part
+    /// of this `Mat4f` interpreted as a 3D projective transformation. That is,
+    /// this ignores the translation and projective components, and only
+    /// applies the rotation, scale, and shear components.
+    /// 
+    /// This is equivalent to multiplying this matrix by `Vec4f(x, y, z, 0)`
+    /// and returning only the first three components.
+    ///
+    /// This is typically used to transform "directions" rather than "points".
+    ///
+    Vec3f transformLinear(const Vec3f& v) const {
+        float x = data_[0][0]*v[0] + data_[1][0]*v[1] + data_[2][0]*v[2];
+        float y = data_[0][1]*v[0] + data_[1][1]*v[1] + data_[2][1]*v[2];
+        float z = data_[0][2]*v[0] + data_[1][2]*v[1] + data_[2][2]*v[2];
+        return Vec3f(x, y, z);
+    }
+
+    /// Computes the transformation of the given `Vec2f` (interpreted as a
+    /// `Vec3f` with `z = 0`) by the linear part of this `Mat4f` (interpreted
+    /// as a 3D projective transformation), and returns the first 2
+    /// coordinates.
+    ///
+    /// See `transformLinear(const Vec3f& v)` for details.
+    ///
+    Vec2f transformLinear(const Vec2f& v) const {
+        float x = data_[0][0]*v[0] + data_[1][0]*v[1];
+        float y = data_[0][1]*v[0] + data_[1][1]*v[1];
+        return Vec2f(x, y);
+    }
+
     /// Returns the inverse of this Mat4f.
     ///
     /// If provided, isInvertible is set to either true or false depending on
