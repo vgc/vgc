@@ -322,6 +322,27 @@ public:
         return data_[0][0]*x + data_[1][0];
     }
 
+    /// Returns the result of transforming the given `float` by the linear part
+    /// of this `Mat2x` interpreted as a 1D projective transformation. That is,
+    /// this ignores the translation and projective components, and only
+    /// applies the scale component.
+    /// 
+    /// This is equivalent to multiplying this matrix by `Vec2x(x, 0)` and returning
+    /// only the first component.
+    ///
+    /// ```cpp
+    /// Mat2x m(a, b,
+    ///         c, d);
+    /// float x;
+    /// float y = m.transformLinear(x); // y = ax
+    /// ```
+    ///
+    /// This is typically used to transform "directions" rather than "points".
+    ///
+    float transformLinear(float x) const {
+        return data_[0][0]*x;
+    }
+
     /// Returns the inverse of this Mat2x.
     ///
     /// If provided, isInvertible is set to either true or false depending on

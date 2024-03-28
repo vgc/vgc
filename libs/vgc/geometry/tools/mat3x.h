@@ -434,6 +434,22 @@ public:
         return Vec2x(x, y);
     }
 
+    /// Returns the result of transforming the given `Vec2x` by the linear part
+    /// of this `Mat3x` interpreted as a 2D projective transformation. That is,
+    /// this ignores the translation and projective components, and only
+    /// applies the rotation, scale, and shear components.
+    /// 
+    /// This is equivalent to multiplying this matrix by `Vec3x(x, y, 0)` and
+    /// returning only the first two components.
+    ///
+    /// This is typically used to transform "directions" rather than "points".
+    ///
+    Vec2x transformLinear(const Vec2x& v) const {
+        float x = data_[0][0]*v[0] + data_[1][0]*v[1];
+        float y = data_[0][1]*v[0] + data_[1][1]*v[1];
+        return Vec2x(x, y);
+    }
+
     /// Returns the inverse of this Mat3x.
     ///
     /// If provided, isInvertible is set to either true or false depending on

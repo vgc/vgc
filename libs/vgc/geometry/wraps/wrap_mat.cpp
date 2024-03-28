@@ -374,12 +374,18 @@ void wrap_mat(py::module& m, const std::string& name) {
     cmat.def(
         "transformAffine",
         py::overload_cast<TPointParam>(&TMat::transformAffine, py::const_));
+    cmat.def(
+        "transformLinear",
+        py::overload_cast<TPointParam>(&TMat::transformLinear, py::const_));
     if constexpr (dimension == 4) {
         cmat.def(
             "transform", py::overload_cast<const TVec2&>(&TMat::transform, py::const_));
         cmat.def(
             "transformAffine",
             py::overload_cast<const TVec2&>(&TMat::transformAffine, py::const_));
+        cmat.def(
+            "transformLinear",
+            py::overload_cast<const TVec2&>(&TMat::transformLinear, py::const_));
     }
 
     // Identity

@@ -28,8 +28,9 @@ Mat3Types = [Mat3d, Mat3f]
 Mat4Types = [Mat4d, Mat4f]
 Mat2Vec2Types = [(Mat2d, Vec2d), (Mat2f, Vec2f)]
 Mat3Vec2Types = [(Mat3d, Vec2d), (Mat3f, Vec2f)]
-Mat4Vec2Types = [(Mat4d, Vec2d), (Mat4f, Vec2f)]
 Mat3Vec3Types = [(Mat3d, Vec3d), (Mat3f, Vec3f)]
+Mat4Vec2Types = [(Mat4d, Vec2d), (Mat4f, Vec2f)]
+Mat4Vec3Types = [(Mat4d, Vec3d), (Mat4f, Vec3f)]
 Mat4Vec4Types = [(Mat4d, Vec4d), (Mat4f, Vec4f)]
 MatTypes = [(Mat2d, 2), (Mat2f, 2),
             (Mat3d, 3), (Mat3f, 3),
@@ -680,7 +681,7 @@ class TestMat(unittest.TestCase):
             self.assertEqual(m7, m3)
             self.assertEqual(m8, m4)
 
-    def testTransformPointAffine(self):
+    def testTransformAffine(self):
         for (Mat3, Vec2) in Mat3Vec2Types:
             m = Mat3(1, 2, 3,
                      4, 5, 6,
@@ -698,6 +699,52 @@ class TestMat(unittest.TestCase):
             v1 = Vec2(10, 20)
             v2 = Vec2(54, 178)
             v3 = m.transformAffine(v1)
+            self.assertEqual(v3, v2)
+
+        for (Mat4, Vec3) in Mat4Vec3Types:
+            m = Mat4(1,  2,  3,  4,
+                     5,  6,  7,  8,
+                     9, 10,  11, 12,
+                     13, 14, 15, 16)
+            v1 = Vec3(10, 20, 30)
+            v2 = Vec3(144, 388, 632)
+            v3 = m.transformAffine(v1)
+            self.assertEqual(v3, v2)
+
+    def testTransformLinear(self):
+        for Mat2 in Mat2Types:
+            m = Mat2(2, 3,
+                     4, 5)
+            y = m.transformLinear(6)
+            self.assertEqual(y, 12)
+
+        for (Mat3, Vec2) in Mat3Vec2Types:
+            m = Mat3(1, 2, 3,
+                     4, 5, 6,
+                     7, 8, 9)
+            v1 = Vec2(10, 20)
+            v2 = Vec2(50, 140)
+            v3 = m.transformLinear(v1)
+            self.assertEqual(v3, v2)
+
+        for (Mat4, Vec2) in Mat4Vec2Types:
+            m = Mat4(1,  2,  3,  4,
+                     5,  6,  7,  8,
+                     9, 10,  11, 12,
+                     13, 14, 15, 16)
+            v1 = Vec2(10, 20)
+            v2 = Vec2(50, 170)
+            v3 = m.transformLinear(v1)
+            self.assertEqual(v3, v2)
+
+        for (Mat4, Vec3) in Mat4Vec3Types:
+            m = Mat4(1,  2,  3,  4,
+                     5,  6,  7,  8,
+                     9, 10,  11, 12,
+                     13, 14, 15, 16)
+            v1 = Vec3(10, 20, 30)
+            v2 = Vec3(140, 380, 620)
+            v3 = m.transformLinear(v1)
             self.assertEqual(v3, v2)
 
     def testInvertedScale(self):

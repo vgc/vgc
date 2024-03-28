@@ -322,6 +322,27 @@ public:
         return data_[0][0]*x + data_[1][0];
     }
 
+    /// Returns the result of transforming the given `double` by the linear part
+    /// of this `Mat2d` interpreted as a 1D projective transformation. That is,
+    /// this ignores the translation and projective components, and only
+    /// applies the scale component.
+    /// 
+    /// This is equivalent to multiplying this matrix by `Vec2d(x, 0)` and returning
+    /// only the first component.
+    ///
+    /// ```cpp
+    /// Mat2d m(a, b,
+    ///         c, d);
+    /// double x;
+    /// double y = m.transformLinear(x); // y = ax
+    /// ```
+    ///
+    /// This is typically used to transform "directions" rather than "points".
+    ///
+    double transformLinear(double x) const {
+        return data_[0][0]*x;
+    }
+
     /// Returns the inverse of this Mat2d.
     ///
     /// If provided, isInvertible is set to either true or false depending on
