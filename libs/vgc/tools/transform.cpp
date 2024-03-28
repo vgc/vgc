@@ -349,8 +349,8 @@ public:
 
         switch (transformType_) {
         case detail::TransformDragActionType::Scale: {
-            geometry::Vec2d cursorPosition = invCameraMatrix.transform(
-                cursorPositionInCanvas + cursorManipDelta_);
+            geometry::Vec2d cursorPosition =
+                invCameraMatrix.transform(cursorPositionInCanvas + cursorManipDelta_);
             transform.translate(oppositeManipPoint_);
             geometry::Vec2d d0 = (originalManipPoint_ - oppositeManipPoint_);
             geometry::Vec2d d1 = (cursorPosition - oppositeManipPoint_);
@@ -668,8 +668,7 @@ void TopologyAwareTransformer::transform(const geometry::Mat3d& transform) {
         vacomplex::KeyVertex* kv = findKeyVertex_(*workspace, td.elementId);
         if (kv) {
             mainOp.addComplex(kv->complex());
-            vacomplex::ops::setKeyVertexPosition(
-                kv, transform.transform(kv->position()));
+            vacomplex::ops::setKeyVertexPosition(kv, transform.transform(kv->position()));
         }
     }
 

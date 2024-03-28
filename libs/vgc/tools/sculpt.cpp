@@ -131,8 +131,7 @@ public:
         geometry::Vec2d cursorPositionInWorkspace =
             inverseViewMatrix.transformAffine(geometry::Vec2d(cursorPosition_));
         geometry::Vec2d cursorPositionInWorkspaceAtPress =
-            inverseViewMatrix.transformAffine(
-                geometry::Vec2d(cursorPositionAtPress_));
+            inverseViewMatrix.transformAffine(geometry::Vec2d(cursorPositionAtPress_));
 
         // Open history group
         core::UndoGroup* undoGroup = nullptr;
@@ -294,8 +293,7 @@ public:
                 .length());
 
         geometry::Vec2d cursorPositionInWorkspaceAtPress =
-            inverseViewMatrix.transformAffine(
-                geometry::Vec2d(cursorPositionAtPress_));
+            inverseViewMatrix.transformAffine(geometry::Vec2d(cursorPositionAtPress_));
 
         geometry::Vec2f deltaCursor = cursorPosition_ - cursorPositionAtPress_;
         double sinAngle = deltaCursor.normalized().det(geometry::Vec2f(1, 0));

@@ -61,8 +61,7 @@ void PaintBucket::onMouseHover(ui::MouseHoverEvent* event) {
     geometry::Vec2d mousePos = geometry::Vec2d(mousePosf.x(), mousePosf.y());
     geometry::Vec2d viewCoords = mousePos;
     geometry::Vec2d worldCoords =
-        context.canvas()->camera().viewMatrix().inverse().transformAffine(
-            viewCoords);
+        context.canvas()->camera().viewMatrix().inverse().transformAffine(viewCoords);
 
     // Compute the key face candidate for the current mouse position.
     //
