@@ -140,7 +140,7 @@ core::Array<SelectionCandidate> Canvas::computeSelectionCandidatesAboveOrAt(
     double worldTol = tolerance;
 
     if (coordinateSpace == CoordinateSpace::Widget) {
-        worldCoords = camera().viewMatrix().inverse().transformPointAffine(worldCoords);
+        worldCoords = camera().viewMatrix().inverse().transformAffine(worldCoords);
         worldTol /= camera().zoom();
     }
 
@@ -224,8 +224,8 @@ core::Array<core::Id> Canvas::computeRectangleSelectionCandidates(
     geometry::Vec2d b = b_;
     if (coordinateSpace == CoordinateSpace::Widget) {
         geometry::Mat3d invView = camera().viewMatrix().inverse();
-        a = invView.transformPointAffine(a);
-        b = invView.transformPointAffine(b);
+        a = invView.transformAffine(a);
+        b = invView.transformAffine(b);
     }
 
     core::Array<core::Id> result;
@@ -346,9 +346,9 @@ bool Canvas::onMouseMove(ui::MouseMoveEvent* event) {
         // Set new camera center so that rotation center = mouse pos at press
         geometry::Vec2d pivotViewCoords = mousePosAtPress;
         geometry::Vec2d pivotWorldCoords =
-            cameraAtPress_.viewMatrix().inverse().transformPointAffine(pivotViewCoords);
+            cameraAtPress_.viewMatrix().inverse().transformAffine(pivotViewCoords);
         geometry::Vec2d pivotViewCoordsNow =
-            camera.viewMatrix().transformPointAffine(pivotWorldCoords);
+            camera.viewMatrix().transformAffine(pivotWorldCoords);
         camera.setCenter(camera.center() - pivotViewCoords + pivotViewCoordsNow);
     }
     else if (isZooming_) {
@@ -363,9 +363,9 @@ bool Canvas::onMouseMove(ui::MouseMoveEvent* event) {
         // Set new camera center so that zoom center = mouse pos at press
         geometry::Vec2d pivotViewCoords = mousePosAtPress;
         geometry::Vec2d pivotWorldCoords =
-            cameraAtPress_.viewMatrix().inverse().transformPointAffine(pivotViewCoords);
+            cameraAtPress_.viewMatrix().inverse().transformAffine(pivotViewCoords);
         geometry::Vec2d pivotViewCoordsNow =
-            camera.viewMatrix().transformPointAffine(pivotWorldCoords);
+            camera.viewMatrix().transformAffine(pivotWorldCoords);
         camera.setCenter(camera.center() - pivotViewCoords + pivotViewCoordsNow);
     }
     else {
@@ -433,13 +433,13 @@ bool Canvas::onMouseRelease(ui::MouseReleaseEvent* event) {
 
         // Save mouse pos in world coords before modifying camera
         geometry::Vec2d mousePos(mousePosAtPress_);
-        geometry::Vec2d p1 = camera.viewMatrix().inverse().transformPointAffine(mousePos);
+        geometry::Vec2d p1 = camera.viewMatrix().inverse().transformAffine(mousePos);
 
         // Reset camera rotation
         camera.setRotation(0);
 
         // Set new camera center so that zoom center = mouse pos at scroll
-        geometry::Vec2d p2 = camera.viewMatrix().transformPointAffine(p1);
+        geometry::Vec2d p2 = camera.viewMatrix().transformAffine(p1);
         camera.setCenter(camera.center() - mousePos + p2);
 
         setCamera(camera);
@@ -530,12 +530,12 @@ bool Canvas::onMouseScroll(ui::ScrollEvent* event) {
 
         // Save mouse pos in world coords before applying zoom
         geometry::Vec2d mousePos = geometry::Vec2d(event->position());
-        geometry::Vec2d p1 = camera.viewMatrix().inverse().transformPointAffine(mousePos);
+        geometry::Vec2d p1 = camera.viewMatrix().inverse().transformAffine(mousePos);
 
         camera.setZoom(newZoom);
 
         // Set new camera center so that zoom center = mouse pos at scroll
-        geometry::Vec2d p2 = camera.viewMatrix().transformPointAffine(p1);
+        geometry::Vec2d p2 = camera.viewMatrix().transformAffine(p1);
         camera.setCenter(camera.center() - mousePos + p2);
 
         setCamera(camera);

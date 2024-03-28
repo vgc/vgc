@@ -99,13 +99,13 @@ namespace vgc::geometry {
 /// use the viewMatrix() associated with the 2D camera:
 ///
 /// ```cpp
-/// Vec2d viewCoords = camera.viewMatrix().transformPointAffine(worldCoords);
+/// Vec2d viewCoords = camera.viewMatrix().transformAffine(worldCoords);
 /// ```
 ///
 /// This view matrix is always invertible, therefore we also have:
 ///
 /// ```cpp
-/// Vec2d worldCoords = camera.viewMatrix().inverse().transformPointAffine(viewCoords);
+/// Vec2d worldCoords = camera.viewMatrix().inverse().transformAffine(viewCoords);
 /// ```
 ///
 /// The projectionMatrix() is provided for conveninence when using OpenGL. It

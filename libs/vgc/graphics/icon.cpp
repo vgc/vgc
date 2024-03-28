@@ -143,7 +143,7 @@ void applyTransform(Batch& batch, const SvgSimplePath& path, Int oldLength) {
     for (Int i = oldLength; i + 1 < newLength; i += 2) {
         float& x = batch.vertices.getUnchecked(i);
         float& y = batch.vertices.getUnchecked(i + 1);
-        geometry::Vec2f p = tf.transformPoint(geometry::Vec2f(x, y));
+        geometry::Vec2f p = tf.transform(geometry::Vec2f(x, y));
         x = p.x();
         y = p.y();
     }

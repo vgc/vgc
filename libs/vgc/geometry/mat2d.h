@@ -291,10 +291,10 @@ public:
     /// Mat2d m(a, b,
     ///         c, d);
     /// double x;
-    /// double y = m.transformPoint(x); // y = (ax + b) / (cx + d)
+    /// double y = m.transform(x); // y = (ax + b) / (cx + d)
     /// ```
     ///
-    double transformPoint(double x) const {
+    double transform(double x) const {
         double x_ = data_[0][0]*x + data_[1][0];
         double w_ = data_[0][1]*x + data_[1][1];
         return x_ / w_;
@@ -311,14 +311,14 @@ public:
     /// Mat2d m(a, b,
     ///         c, d);
     /// double x;
-    /// double y = m.transformPointAffine(x); // y = ax + b
+    /// double y = m.transformAffine(x); // y = ax + b
     /// ```
     ///
-    /// This can be used as a faster version of `transformPoint()` whenever you
+    /// This can be used as a faster version of `transform()` whenever you
     /// know that the last row of the matrix is equal to `[0, 1]`, or
     /// whenever you prefer to behave as if the last row was `[0, 1]`.
     ///
-    double transformPointAffine(double x) const {
+    double transformAffine(double x) const {
         return data_[0][0]*x + data_[1][0];
     }
 

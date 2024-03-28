@@ -273,7 +273,7 @@ public:
 
         geometry::Vec2d cursorPositionInCanvas(event->position());
         geometry::Vec2d cursorPosition =
-            invCameraMatrix.transformPoint(cursorPositionInCanvas);
+            invCameraMatrix.transform(cursorPositionInCanvas);
 
         // Retrieve positions in workspace of:
         // - pivot point
@@ -308,10 +308,10 @@ public:
 
         // Compute delta in canvas space between cursor and manipulation point.
         cursorManipDelta_ =
-            cameraMatrix.transformPoint(originalManipPoint_) - cursorPositionInCanvas;
+            cameraMatrix.transform(originalManipPoint_) - cursorPositionInCanvas;
 
         geometry::Vec2d oppositeManipPointInCanvas =
-            cameraMatrix.transformPoint(oppositeManipPoint_);
+            cameraMatrix.transform(oppositeManipPoint_);
         cursorManipAngleStart_ =
             (cursorPositionInCanvas - oppositeManipPointInCanvas).angle();
     }
@@ -349,8 +349,8 @@ public:
 
         switch (transformType_) {
         case detail::TransformDragActionType::Scale: {
-            geometry::Vec2d cursorPosition = invCameraMatrix.transformPoint(
-                cursorPositionInCanvas + cursorManipDelta_);
+            geometry::Vec2d cursorPosition =
+                invCameraMatrix.transform(cursorPositionInCanvas + cursorManipDelta_);
             transform.translate(oppositeManipPoint_);
             geometry::Vec2d d0 = (originalManipPoint_ - oppositeManipPoint_);
             geometry::Vec2d d1 = (cursorPosition - oppositeManipPoint_);
@@ -376,7 +376,7 @@ public:
             transform.translate(oppositeManipPoint_);
 
             geometry::Vec2d oppositeManipPointInCanvas =
-                cameraMatrix.transformPoint(oppositeManipPoint_);
+                cameraMatrix.transform(oppositeManipPoint_);
             double cursorManipAngleNow =
                 (cursorPositionInCanvas - oppositeManipPointInCanvas).angle();
 
@@ -668,8 +668,7 @@ void TopologyAwareTransformer::transform(const geometry::Mat3d& transform) {
         vacomplex::KeyVertex* kv = findKeyVertex_(*workspace, td.elementId);
         if (kv) {
             mainOp.addComplex(kv->complex());
-            vacomplex::ops::setKeyVertexPosition(
-                kv, transform.transformPoint(kv->position()));
+            vacomplex::ops::setKeyVertexPosition(kv, transform.transform(kv->position()));
         }
     }
 
@@ -788,7 +787,7 @@ void TopologyAwareTransformer::updateDragTransform(const geometry::Mat3d& transf
         if (kv) {
             mainOp.addComplex(kv->complex());
             vacomplex::ops::setKeyVertexPosition(
-                kv, transform.transformPoint(td.originalPosition));
+                kv, transform.transform(td.originalPosition));
         }
     }
 
@@ -1217,19 +1216,19 @@ void TransformBox::onPaintDraw(graphics::Engine* engine, ui::PaintOptions option
     Vec2f pivot;
     if (isTransformActionOngoing_) {
         for (Int i = 0; i < 4; ++i) {
-            Vec2d p = transformActionMatrix_.transformPoint(boundingBox_.corner(i));
-            corners[i] = Vec2f(cameraMatrix.transformPoint(p));
+            Vec2d p = transformActionMatrix_.transform(boundingBox_.corner(i));
+            corners[i] = Vec2f(cameraMatrix.transform(p));
         }
         {
-            Vec2d p = transformActionMatrix_.transformPoint(pivotPoint_);
-            pivot = Vec2f(cameraMatrix.transformPoint(p));
+            Vec2d p = transformActionMatrix_.transform(pivotPoint_);
+            pivot = Vec2f(cameraMatrix.transform(p));
         }
         hasRotation |= (transformActionMatrix_ * Vec3d(0, 1, 0)).x() != 0
                        || (transformActionMatrix_ * Vec3d(1, 0, 0)).y() != 0;
     }
     else {
         corners = corners_;
-        pivot = Vec2f(cameraMatrix.transformPoint(pivotPoint_));
+        pivot = Vec2f(cameraMatrix.transform(pivotPoint_));
     }
 
     if (doHinting && !hasRotation) {
@@ -1366,7 +1365,7 @@ void TransformBox::computeHoverData_(const canvas::Canvas& canvas) {
 
     // Compute corners_
     for (Int i = 0; i < 4; ++i) {
-        Vec2f p(cameraMatrix.transformPoint(boundingBox_.corner(i)));
+        Vec2f p(cameraMatrix.transform(boundingBox_.corner(i)));
         corners_[i] = p;
     }
 
@@ -1681,10 +1680,10 @@ void TransformBox::onTranslate_(detail::TranslateStepDirection direction, double
     geometry::Mat3d cameraMatrix = canvas->camera().viewMatrix();
     geometry::Mat3d invCameraMatrix = cameraMatrix.inverse();
     geometry::Vec2d p0 = pivotPoint_; // or center
-    geometry::Vec2d p0c = cameraMatrix.transformPoint(p0);
-    geometry::Vec2d p1c = cameraMatrix.transformPoint(p0 + unitDelta);
+    geometry::Vec2d p0c = cameraMatrix.transform(p0);
+    geometry::Vec2d p1c = cameraMatrix.transform(p0 + unitDelta);
     geometry::Vec2d dir = (p1c - p0c).normalized();
-    geometry::Vec2d p1 = invCameraMatrix.transformPoint(p0c + dir * size);
+    geometry::Vec2d p1 = invCameraMatrix.transform(p0c + dir * size);
     geometry::Vec2d delta = p1 - p0;
 
     detail::TopologyAwareTransformer transformer;

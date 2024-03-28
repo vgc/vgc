@@ -675,7 +675,7 @@ void Sketch::onPaintDraw(graphics::Engine* engine, ui::PaintOptions options) {
         geometry::Vec2f pos(w->mapFromGlobal(ui::globalCursorPosition()));
         geometry::Vec2d posd(root()->mapTo(this, pos));
         pos = geometry::Vec2f(
-            canvas->camera().viewMatrix().inverse().transformPointAffine(posd));
+            canvas->camera().viewMatrix().inverse().transformAffine(posd));
         if (lastImmediateCursorPos_ != pos) {
             lastImmediateCursorPos_ = pos;
             cursorMoved = true;
@@ -772,8 +772,8 @@ void Sketch::onPaintDraw(graphics::Engine* engine, ui::PaintOptions options) {
 
     if (showInputPixels) { // TODO: only update on new points
         float hp = static_cast<float>(
-            (canvasToWorkspaceMatrix_.transformPointAffine(geometry::Vec2d(0, 0.5))
-             - canvasToWorkspaceMatrix_.transformPointAffine(geometry::Vec2d(0, 0)))
+            (canvasToWorkspaceMatrix_.transformAffine(geometry::Vec2d(0, 0.5))
+             - canvasToWorkspaceMatrix_.transformAffine(geometry::Vec2d(0, 0)))
                 .length());
         core::FloatArray pointVertices(
             {-hp, -hp, 0, 0, hp, -hp, 0, 0, -hp, hp, 0, 0, hp, hp, 0, 0});
@@ -783,7 +783,7 @@ void Sketch::onPaintDraw(graphics::Engine* engine, ui::PaintOptions options) {
         for (Int i = 0; i < numPoints; ++i) {
             geometry::Vec2d pd = inputPoints_[i].position();
             geometry::Vec2f p =
-                geometry::Vec2f(canvasToWorkspaceMatrix_.transformPointAffine(pd));
+                geometry::Vec2f(canvasToWorkspaceMatrix_.transformAffine(pd));
             pointInstData.extend({p.x(), p.y(), 0.f, 4.f, 0.f, 1.f, 0.f, 0.5f});
         }
 
@@ -955,7 +955,7 @@ void Sketch::updateTransformedPoints_() {
 
     for (auto it = inputPoints.begin() + n; it != inputPoints.end(); ++it) {
         SketchPoint& p = transformedPoints_.append(*it);
-        p.setPosition(canvasToWorkspaceMatrix_.transformPointAffine(p.position()));
+        p.setPosition(canvasToWorkspaceMatrix_.transformAffine(p.position()));
     }
 }
 
@@ -1350,8 +1350,7 @@ void Sketch::startCurve_(ui::MouseEvent* event) {
 
     // Snapping: Compute start vertex to snap to
     workspace::Element* snapVertex = nullptr;
-    geometry::Vec2d startPosition =
-        canvasToWorkspaceMatrix_.transformPointAffine(eventPos2d);
+    geometry::Vec2d startPosition = canvasToWorkspaceMatrix_.transformAffine(eventPos2d);
     if (isSnappingEnabled()) {
         snapVertex = computeSnapVertex_(startPosition, 0);
         if (snapVertex) {
