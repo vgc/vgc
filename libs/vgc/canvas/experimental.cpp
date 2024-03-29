@@ -16,9 +16,7 @@
 
 #include <vgc/canvas/experimental.h>
 
-#include <vgc/canvas/toolmanager.h>
 #include <vgc/ui/boolsettingedit.h>
-#include <vgc/ui/button.h>
 #include <vgc/ui/column.h>
 #include <vgc/ui/panelcontext.h>
 #include <vgc/ui/strings.h>
