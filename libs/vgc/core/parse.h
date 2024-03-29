@@ -951,7 +951,7 @@ public:
     /// read yet, if the last call to get() was successful, or if unget() was
     /// called more recently than get().
     ///
-    explicit operator bool() {
+    explicit operator bool() const {
         return !fail_;
     }
 
