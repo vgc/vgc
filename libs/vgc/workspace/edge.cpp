@@ -359,7 +359,8 @@ void VacKeyEdge::onPaintDraw(
 
     bool shouldPaintStroke = flags.has(PaintOption::Normal);
     bool shouldPaintControlPoints = flags.has(PaintOption::Editing);
-    bool shouldPaintOutline = isHovered || isSelected || shouldPaintControlPoints;
+    bool shouldPaintOutline = flags.has(PaintOption::Outline) //
+                              || isHovered || isSelected || shouldPaintControlPoints;
     bool shouldPaintEdgeDirection =
         (showEdgeDirection == ShowEdgeDirection::AllEdges)
         || (isSelected && showEdgeDirection == ShowEdgeDirection::SelectedEdges);
