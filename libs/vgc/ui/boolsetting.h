@@ -61,7 +61,7 @@ public:
 
     /// Enables explicit conversion to bool.
     ///
-    /// This returns the same as `value().
+    /// This returns the same as `value()`.
     ///
     explicit operator bool() const {
         return value();
