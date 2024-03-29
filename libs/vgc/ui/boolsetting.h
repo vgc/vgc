@@ -59,6 +59,14 @@ public:
     ///
     bool value() const;
 
+    /// Enables explicit conversion to bool.
+    ///
+    /// This returns the same as `value().
+    ///
+    explicit operator bool() const {
+        return value();
+    }
+
     /// Sets the value of this `BoolSetting`.
     ///
     /// \sa `value()`.
