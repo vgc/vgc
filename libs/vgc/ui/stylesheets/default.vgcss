@@ -540,26 +540,26 @@
     vertical-shrink: 1;
 }
 
-.tool-options > .Flex {
+.settings > .Flex {
     vertical-stretch: 0;
     main-alignment: start;
     main-spacing: packed;
 }
 
-.tool-options .SettingEdit {
+.settings .SettingEdit {
     vertical-shrink: 0;
     vertical-stretch: 0;
     main-alignment: start;
     main-spacing: packed;
 }
 
-.tool-options .SettingEdit > .Label {
+.settings .SettingEdit > .Label {
     horizontal-stretch: 1;
     preferred-width: 80dp;
     text-horizontal-align: left;
 }
 
-.tool-options .NumberSettingEdit > .NumberEdit {
+.settings .NumberSettingEdit > .NumberEdit {
     horizontal-stretch: 1;
     min-width: 10dp;
     preferred-width: 40dp;

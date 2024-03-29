@@ -22,6 +22,7 @@
 #include <QCursor>
 #include <QPainter>
 
+#include <vgc/canvas/experimental.h>
 #include <vgc/core/arithmetic.h> // roundToSignificantDigits
 #include <vgc/core/profile.h>
 #include <vgc/core/stringid.h>
@@ -81,25 +82,12 @@ ui::BoolSetting* autoFill() {
     return setting.get();
 }
 
-ui::BoolSetting* saveInputSketchPoints() {
-    static ui::BoolSettingPtr setting = ui::BoolSetting::create(
-        ui::settings::session(),
-        "tools.sketch.experimental.saveInputSketchPoints",
-        "Save Input Sketch Point",
-        false);
-    return setting.get();
-}
-
 } // namespace options_
 
 namespace {
 
 bool isAutoFillEnabled() {
     return options_::autoFill()->value();
-}
-
-bool saveInputSketchPoints() {
-    return options_::saveInputSketchPoints()->value();
 }
 
 } // namespace
@@ -1375,7 +1363,7 @@ void Sketch::startCurve_(ui::MouseEvent* event) {
     domEdge->setAttribute(ds::color, penColor_);
     domEdge->setAttribute(ds::startvertex, domStartVertex->getPathFromId());
     domEdge->setAttribute(ds::endvertex, domEndVertex->getPathFromId());
-    if (saveInputSketchPoints()) {
+    if (canvas::experimental::saveInputSketchPoints()) {
         domEdge->setAttribute(ds::inputtransform, canvasToWorkspaceMatrix_);
         domEdge->setAttribute(ds::inputpenwidth, options_::penWidth()->value());
     }
@@ -1503,7 +1491,7 @@ void Sketch::continueCurve_(ui::MouseEvent* event) {
     domEndVertex->setAttribute(ds::position, pendingPositions_.last());
     domEdge->setAttribute(ds::positions, pendingPositions_);
     domEdge->setAttribute(ds::widths, pendingWidths_);
-    if (saveInputSketchPoints()) {
+    if (canvas::experimental::saveInputSketchPoints()) {
         doSaveInputPoints(domEdge, inputPoints_);
     }
     workspace->sync();

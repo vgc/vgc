@@ -1,4 +1,4 @@
-// Copyright 2023 The VGC Developers
+// Copyright 2024 The VGC Developers
 // See the COPYRIGHT file at the top-level directory of this distribution
 // and at https://github.com/vgc/vgc/blob/master/COPYRIGHT
 //
@@ -14,9 +14,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <vgc/canvas/tooloptionspanel.h>
+#include <vgc/canvas/experimental.h>
 
 #include <vgc/canvas/toolmanager.h>
+#include <vgc/ui/boolsettingedit.h>
+#include <vgc/ui/button.h>
+#include <vgc/ui/column.h>
 #include <vgc/ui/panelcontext.h>
 #include <vgc/ui/strings.h>
 
@@ -25,35 +28,38 @@ namespace vgc::canvas {
 namespace {
 
 core::StringId s_with_padding("with-padding");
-core::StringId s_tool_options("tool-options");
+
+ui::BoolSetting* saveInputSketchPoints_() {
+    static ui::BoolSettingPtr setting = ui::BoolSetting::create(
+        ui::settings::session(),
+        "canvas.experimental.saveInputSketchPoints",
+        "Save Input Sketch Points",
+        false);
+    return setting.get();
+}
 
 } // namespace
 
-ToolOptionsPanel::ToolOptionsPanel(CreateKey key, const ui::PanelContext& context)
+namespace experimental {
+
+bool saveInputSketchPoints() {
+    return saveInputSketchPoints_()->value();
+}
+
+} // namespace experimental
+
+ExperimentalPanel::ExperimentalPanel(CreateKey key, const ui::PanelContext& context)
     : Panel(key, context, label) {
 
-    if (auto toolManager = context.importModule<ToolManager>().lock()) {
-        toolManager->currentToolChanged().connect(onCurrentToolChanged_Slot());
-        onCurrentToolChanged_(toolManager->currentTool());
-    }
+    ui::WidgetPtr w = createChild<ui::Column>();
+    w->createChild<ui::BoolSettingEdit>(saveInputSketchPoints_());
 
     addStyleClass(s_with_padding);
-    addStyleClass(s_tool_options);
     addStyleClass(ui::strings::settings);
 }
 
-ToolOptionsPanelPtr ToolOptionsPanel::create(const ui::PanelContext& context) {
-    return core::createObject<ToolOptionsPanel>(context);
-}
-
-void ToolOptionsPanel::onCurrentToolChanged_(CanvasToolWeakPtr tool_) {
-    if (auto tool = tool_.lock()) {
-        ui::WidgetPtr optionsWidget = tool->createOptionsWidget();
-        setBody(optionsWidget.get());
-    }
-    else {
-        setBody(nullptr);
-    }
+ExperimentalPanelPtr ExperimentalPanel::create(const ui::PanelContext& context) {
+    return core::createObject<ExperimentalPanel>(context);
 }
 
 } // namespace vgc::canvas
