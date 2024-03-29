@@ -609,32 +609,40 @@ void drawSubpass(
 void doPaintInputSketchPoints(
     graphics::Engine* engine,
     const workspace::VacKeyEdge& edge,
-    graphics::GeometryViewPtr& geometry) {
-
-    using geometry::Mat3d;
-    using geometry::Vec2d;
-    using geometry::Vec2dArray;
-    using geometry::Vec2f;
-    namespace ds = dom::strings;
+    graphics::GeometryViewPtr& geometryView,
+    const core::Color& color) {
 
     // Get the positions of the input sketch points, in widget coordinates (at
     // time of sketch)
     //
-    dom::Element* e = edge.domElement();
-    const auto& positions = e->getAttribute(ds::inputpositions).get<Vec2dArray>();
+    dom::Element* element = edge.domElement();
+    if (!element) {
+        return;
+    }
+
+    const dom::Value& vPositions = element->getAttribute(dom::strings::inputpositions);
+    if (!vPositions.has<geometry::Vec2dArray>()) {
+        return;
+    }
+    const auto& positions = vPositions.getUnchecked<geometry::Vec2dArray>();
+
     Int n = positions.length();
     if (n <= 0) {
         return;
     }
 
-    // Get the widget to scene transform matrix
+    // Get the transform matrix from widget coords to scene coords
     //
-    const auto& transform = e->getAttribute(ds::inputtransform).get<Mat3d>();
+    const dom::Value& vTransform = element->getAttribute(dom::strings::inputtransform);
+    if (!vTransform.has<geometry::Mat3d>()) {
+        return;
+    }
+    const auto& transform = vTransform.getUnchecked<geometry::Mat3d>();
 
     // Create the graphics resource
     //
-    if (!geometry) {
-        geometry = engine->createDynamicTriangleStripView(
+    if (!geometryView) {
+        geometryView = engine->createDynamicTriangleStripView(
             graphics::BuiltinGeometryLayout::XYDxDy_iXYRotWRGBA);
     }
 
@@ -644,22 +652,22 @@ void doPaintInputSketchPoints(
     // component is used to be able to apply a small screen-space displacement,
     // so that we can paint a thin border of w pixels around the square.
     //
-    //  x-----------x
-    //  | x-------x |
+    //  x-----------x <- cornerPos + cornerDisp * (w/2)
+    //  | x-------x | <- cornerPos + cornerDisp * (-w/2)
     //  | |       | |
     //  | |       |w|
     //  | |       | |
-    //  | x-------x |  <- cornerPos
-    //  x-----------x  <- cornerPos + cornerDisp * w
+    //  | x-------x |
+    //  x-----------x
     //
     constexpr float sqrt2 = 1.4142135f;
     struct PosAndDisp {
-        PosAndDisp(const Vec2d& pos)
+        PosAndDisp(const geometry::Vec2d& pos)
             : pos_(pos)
             , disp_(sqrt2 * pos_.normalized()) {
         }
-        Vec2f pos_;
-        Vec2f disp_;
+        geometry::Vec2f pos_;
+        geometry::Vec2f disp_;
     };
     core::Array<PosAndDisp> sharedInstData = {
         PosAndDisp(transform.transformLinear({-0.5, -0.5})),
@@ -668,26 +676,41 @@ void doPaintInputSketchPoints(
         PosAndDisp(transform.transformLinear({0.5, 0.5}))};
 
     // We draw two quads for each input sketch point:
-    // - one with a small screen-space displacement w
-    // - one without screen-space displacement (w = 0)
+    // - one colored with a small screen-space positive displacement w/2
+    // - one white   with a small screen-space negative displacement -w/2
     //
-    const core::Color& c = workspace::colors::selection;
-    const float w = 1.f;
-    const float a = 1.f; // semi-opaque to show control points below
+    // An alternative to the (w/2, -w/2) coefficients is to use (w, 0) instead,
+    // but the former has the following advantages:
+    //
+    // - When looking at it at 100% scale (such as when drawing), then
+    //   it is rendered exactly as one pixel with the given `color`
+    //
+    // - When input points are adjacent integer pixels, then they become perfectly
+    //   aligned and shared their border
+    //
+    // It does have the disadvantage to create some artifacts when un-zooming
+    // (the smaller white quad becomes inverted and eventually covers the
+    // colored quad), but un-zooming is typically rare when inspecting input
+    // points (we typically zoom in), and the advantages seem to outweight this
+    // disadvantage.
+    //
+    const core::Color& c = color;
+    const float w = 1.0f;
+    const float hw = 0.5f * w;
     core::FloatArray perInstData;
     for (Int i = 0; i < n; ++i) {
-        Vec2d pWidget = positions[i];
-        Vec2f pScene = Vec2f(transform.transformAffine(pWidget));
-        perInstData.extend({pScene.x(), pScene.y(), 1.f, w, c.r(), c.g(), c.b(), a});
-        perInstData.extend({pScene.x(), pScene.y(), 1.f, 0.f, 1.f, 1.f, 1.f, a});
+        geometry::Vec2d pWidget = positions[i];
+        geometry::Vec2f pScene(transform.transformAffine(pWidget));
+        perInstData.extend({pScene.x(), pScene.y(), 1.f, hw, c.r(), c.g(), c.b(), c.a()});
+        perInstData.extend({pScene.x(), pScene.y(), 1.f, -hw, 1.f, 1.f, 1.f, 1.f});
         //                     X           Y        Rot   W    R    G    B    A
     }
 
-    engine->updateBufferData(geometry->vertexBuffer(0), std::move(sharedInstData));
-    engine->updateBufferData(geometry->vertexBuffer(1), std::move(perInstData));
+    engine->updateBufferData(geometryView->vertexBuffer(0), std::move(sharedInstData));
+    engine->updateBufferData(geometryView->vertexBuffer(1), std::move(perInstData));
 
     engine->setProgram(graphics::BuiltinProgram::ScreenSpaceDisplacement);
-    engine->drawInstanced(geometry);
+    engine->drawInstanced(geometryView);
 }
 
 } // namespace
@@ -743,6 +766,7 @@ void Canvas::onPaintDraw(graphics::Engine* engine, ui::PaintOptions options) {
 
         bool isMeshEnabled = (displayMode_ != DisplayMode::OutlineOnly);
         bool isOutlineEnabled = (displayMode_ != DisplayMode::Normal);
+        bool showInputSketchPoints = experimental::showInputSketchPoints().value();
 
         // Draw Normal.
         //
@@ -792,6 +816,31 @@ void Canvas::onPaintDraw(graphics::Engine* engine, ui::PaintOptions options) {
         // - They don't look nice (seem to have "holes") while not providing any
         //   useful data visualization anyway (too thin to see the triangles).
 
+        // Draw non-selected input sketch points
+        //
+        // Note: drawing them here (between the "Normal" and "Outline" pass)
+        // means that when drawControlPoints is true, then the user can choose
+        // whether the input sketch points are above the control points (by
+        // using the Normal display mode) or below the control points (by using
+        // the Outline or Outline Only mode). Both are useful in different
+        // circumstances.
+        //
+        if (showInputSketchPoints) {
+            engine->setRasterizerState(fillRS_);
+            workspace->visitDepthFirstPreOrder(
+                [=, &selectedElements](workspace::Element* e, Int /*depth*/) {
+                    if (e && !selectedElements.contains(e)) {
+                        if (auto edge = dynamic_cast<workspace::VacKeyEdge*>(e)) {
+                            doPaintInputSketchPoints(
+                                engine,
+                                *edge,
+                                inputSketchPointsGeometry_,
+                                workspace::colors::outline);
+                        };
+                    }
+                });
+        }
+
         // Draw Outline
         //
         if (isOutlineEnabled) {
@@ -805,7 +854,6 @@ void Canvas::onPaintDraw(graphics::Engine* engine, ui::PaintOptions options) {
         // Draw Selection
         //
         if (!selectedElements.isEmpty()) {
-            bool showInputSketchPoints = experimental::showInputSketchPoints().value();
             workspace::PaintOptions paintOptions = PaintOption::Selected;
             if (isOutlineEnabled) {
                 paintOptions.set(workspace::PaintOption::Outline);
@@ -814,6 +862,8 @@ void Canvas::onPaintDraw(graphics::Engine* engine, ui::PaintOptions options) {
                 paintOptions.set(PaintOption::Editing);
             }
             engine->setRasterizerState(fillRS_);
+            bool areNonSelectedVerticesVisible =
+                isOutlineEnabled || areControlPointsVisible_;
             workspace->visitDepthFirst(
                 [](workspace::Element* /*e*/, Int /*depth*/) {
                     // we always visit children for now
@@ -822,15 +872,30 @@ void Canvas::onPaintDraw(graphics::Engine* engine, ui::PaintOptions options) {
                 [=, &selectedElements](workspace::Element* e, Int /*depth*/) {
                     if (e && selectedElements.contains(e)) {
                         auto edge = dynamic_cast<workspace::VacKeyEdge*>(e);
+
+                        // If the element is an edge, we first draw its input points now.
+                        // Indeed, we prefer them to be under the control points, since
+                        // zooming in makes the input points bigger, but keeps the control
+                        // points at the same screen size.
+                        //
                         if (edge && showInputSketchPoints) {
                             doPaintInputSketchPoints(
-                                engine, *edge, inputSketchPointsGeometry_);
+                                engine,
+                                *edge,
+                                inputSketchPointsGeometry_,
+                                workspace::colors::selection);
                         }
+
+                        // We then draw the selected element in "Selected" mode, with
+                        // maybe edge outlines and control points (based on settings).
+                        //
                         e->paint(engine, {}, paintOptions);
-                        if (edge && (isOutlineEnabled || areControlPointsVisible_)) {
-                            // Redraw outline of end vertices on top of selected edges,
-                            // otherwise the centerline of the selected edge is on top of the
-                            // outline of its end vertices and it doesn't look good.
+
+                        // Finally, if the selected element is an edge, we redraw its
+                        // end vertices on top, otherwise the edge centerline appears
+                        // over its non-selected vertices, which looks ugly.
+                        //
+                        if (edge && areNonSelectedVerticesVisible) {
                             workspace::VacKeyVertex* startVertex = edge->startVertex();
                             workspace::VacKeyVertex* endVertex = edge->endVertex();
                             workspace::PaintOptions paintOptions2 = paintOptions;
