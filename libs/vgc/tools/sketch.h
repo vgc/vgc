@@ -411,12 +411,6 @@ protected:
 
     // Raw input in widget space (pixels).
     //
-    // Invariant: all arrays have the same length.
-    //
-    // Notes:
-    // - for now, we do not smooth widths.
-    // - we assume the view matrix does not change during the operation.
-    //
     SketchPointBuffer inputPoints_;
 
     // Pre-transform processing.
@@ -424,8 +418,6 @@ protected:
     // In this step, we apply any processing that we'd like to do before the
     // transform step, that is, all processing that relies on positions in
     // canvas coordinates space rather than positions in workspace coordinates.
-    //
-    // Invariant: all arrays have the same length.
     //
     detail::EmptyPass dummyPreTransformPass_;
 
@@ -435,20 +427,17 @@ protected:
     // Transformation.
     //
     // This step applies the transformation from canvas coordinates to
-    // workspace/group coordinates.
+    // workspace/group coordinates. Note that we assume the view matrix does
+    // not change while sketching the stroke.
     //
     // It also translate the timestamps such that the timestamp of the
     // first sample is 0.
-    //
-    // Invariant: all arrays have the same length.
     //
     geometry::Mat3d canvasToWorkspaceMatrix_;
     SketchPointBuffer transformedPoints_;
     void updateTransformedPoints_();
 
     // Smoothing.
-    //
-    // Invariant: all arrays have the same length.
     //
     detail::SmoothingPass smoothingPass_;
 

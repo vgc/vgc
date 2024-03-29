@@ -120,6 +120,9 @@ VGC_UI_API extern const core::StringId dont_ask_again;
 VGC_UI_API extern const core::StringId tabs;
 VGC_UI_API extern const core::StringId close;
 
+// Style for a container with column-arranged settings
+VGC_UI_API extern const core::StringId settings;
+
 } // namespace vgc::ui::strings
 
 #endif // VGC_UI_STRINGS_H

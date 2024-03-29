@@ -128,4 +128,7 @@ const core::StringId dont_ask_again("dont-ask-again");
 const core::StringId tabs("tabs");
 const core::StringId close("close");
 
+// Settings
+const core::StringId settings("settings");
+
 } // namespace vgc::ui::strings

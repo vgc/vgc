@@ -321,6 +321,9 @@ private:
     // Show control points
     bool areControlPointsVisible_ = false;
 
+    // Show input sketch points
+    mutable graphics::GeometryViewPtr inputSketchPointsGeometry_;
+
     // Performance logging
     core::PerformanceLogTask renderTask_;
     core::PerformanceLogTask updateTask_;

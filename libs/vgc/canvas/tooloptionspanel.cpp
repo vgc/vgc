@@ -18,6 +18,7 @@
 
 #include <vgc/canvas/toolmanager.h>
 #include <vgc/ui/panelcontext.h>
+#include <vgc/ui/strings.h>
 
 namespace vgc::canvas {
 
@@ -38,6 +39,7 @@ ToolOptionsPanel::ToolOptionsPanel(CreateKey key, const ui::PanelContext& contex
 
     addStyleClass(s_with_padding);
     addStyleClass(s_tool_options);
+    addStyleClass(ui::strings::settings);
 }
 
 ToolOptionsPanelPtr ToolOptionsPanel::create(const ui::PanelContext& context) {

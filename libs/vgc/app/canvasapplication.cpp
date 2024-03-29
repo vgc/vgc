@@ -23,6 +23,7 @@
 #include <vgc/app/logcategories.h>
 #include <vgc/canvas/canvasmanager.h>
 #include <vgc/canvas/documentmanager.h>
+#include <vgc/canvas/experimental.h>
 #include <vgc/canvas/tooloptionspanel.h>
 #include <vgc/canvas/toolspanel.h>
 #include <vgc/tools/currentcolor.h>
@@ -221,6 +222,7 @@ void CanvasApplication::registerPanelTypes_() {
             onCreatePanelInstanceRequested_Slot());
         panelManager->registerPanelType<canvas::ToolsPanel>();
         panelManager->registerPanelType<canvas::ToolOptionsPanel>();
+        panelManager->registerPanelType<canvas::ExperimentalPanel>();
         panelManager->registerPanelType<tools::ColorsPanel>();
     }
 }
