@@ -589,7 +589,7 @@ public:
     /// add more characters to a string, unless we run out of memory which will
     /// cause other errors anyway.
     ///
-    explicit operator bool() {
+    explicit operator bool() const {
         return true;
     }
 
