@@ -731,3 +731,11 @@
     text-horizontal-align: center;
     text-vertical-align: middle;
 }
+
+/* ----------------------------------------------------------------------------
+ *                                 EXPERIMENTAL
+*/
+
+.experimental  {
+    preferred-width: 300dp;
+}

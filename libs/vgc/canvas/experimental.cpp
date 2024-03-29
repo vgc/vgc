@@ -28,22 +28,28 @@ namespace vgc::canvas {
 namespace {
 
 core::StringId s_with_padding("with-padding");
-
-ui::BoolSetting* saveInputSketchPoints_() {
-    static ui::BoolSettingPtr setting = ui::BoolSetting::create(
-        ui::settings::session(),
-        "canvas.experimental.saveInputSketchPoints",
-        "Save Input Sketch Points",
-        false);
-    return setting.get();
-}
+core::StringId s_experimental("experimental");
 
 } // namespace
 
 namespace experimental {
 
-bool saveInputSketchPoints() {
-    return saveInputSketchPoints_()->value();
+ui::BoolSetting& saveInputSketchPoints() {
+    static ui::BoolSettingSharedPtr setting = ui::BoolSetting::create(
+        ui::settings::session(),
+        "canvas.experimental.saveInputSketchPoints",
+        "Save Input Sketch Points",
+        false);
+    return *setting;
+}
+
+ui::BoolSetting& showInputSketchPoints() {
+    static ui::BoolSettingSharedPtr setting = ui::BoolSetting::create(
+        ui::settings::session(),
+        "canvas.experimental.showInputSketchPoints",
+        "Show Input Sketch Points",
+        false);
+    return *setting;
 }
 
 } // namespace experimental
@@ -52,9 +58,11 @@ ExperimentalPanel::ExperimentalPanel(CreateKey key, const ui::PanelContext& cont
     : Panel(key, context, label) {
 
     ui::WidgetPtr w = createChild<ui::Column>();
-    w->createChild<ui::BoolSettingEdit>(saveInputSketchPoints_());
+    w->createChild<ui::BoolSettingEdit>(&experimental::saveInputSketchPoints());
+    w->createChild<ui::BoolSettingEdit>(&experimental::showInputSketchPoints());
 
     addStyleClass(s_with_padding);
+    addStyleClass(s_experimental);
     addStyleClass(ui::strings::settings);
 }
 

@@ -20,6 +20,7 @@
 #include <QCursor>
 #include <QPainter>
 
+#include <vgc/canvas/experimental.h>
 #include <vgc/canvas/strings.h>
 #include <vgc/canvas/workspaceselection.h>
 #include <vgc/core/array.h>
@@ -33,6 +34,7 @@
 #include <vgc/ui/cursor.h>
 #include <vgc/ui/qtutil.h>
 #include <vgc/ui/window.h>
+#include <vgc/workspace/colors.h>
 #include <vgc/workspace/edge.h>
 
 #include <vgc/ui/detail/paintutil.h>
@@ -601,6 +603,93 @@ void drawSubpass(
         });
 }
 
+// Note: we do not bother to implement any caching for this since it is
+// mostly for debugging purposes and performance is not critical.
+//
+void doPaintInputSketchPoints(
+    graphics::Engine* engine,
+    const workspace::VacKeyEdge& edge,
+    graphics::GeometryViewPtr& geometry) {
+
+    using geometry::Mat3d;
+    using geometry::Vec2d;
+    using geometry::Vec2dArray;
+    using geometry::Vec2f;
+    namespace ds = dom::strings;
+
+    // Get the positions of the input sketch points, in widget coordinates (at
+    // time of sketch)
+    //
+    dom::Element* e = edge.domElement();
+    const auto& positions = e->getAttribute(ds::inputpositions).get<Vec2dArray>();
+    Int n = positions.length();
+    if (n <= 0) {
+        return;
+    }
+
+    // Get the widget to scene transform matrix
+    //
+    const auto& transform = e->getAttribute(ds::inputtransform).get<Mat3d>();
+
+    // Create the graphics resource
+    //
+    if (!geometry) {
+        geometry = engine->createDynamicTriangleStripView(
+            graphics::BuiltinGeometryLayout::XYDxDy_iXYRotWRGBA);
+    }
+
+    // Compute, in scene coordinates, the corners of a square centered at the
+    // origin, scaled and rotated such that it has the same size and
+    // orientation as a pixel when the edge was first sketched. The "disp"
+    // component is used to be able to apply a small screen-space displacement,
+    // so that we can paint a thin border of w pixels around the square.
+    //
+    //  x-----------x
+    //  | x-------x |
+    //  | |       | |
+    //  | |       |w|
+    //  | |       | |
+    //  | x-------x |  <- cornerPos
+    //  x-----------x  <- cornerPos + cornerDisp * w
+    //
+    constexpr float sqrt2 = 1.4142135f;
+    struct PosAndDisp {
+        PosAndDisp(const Vec2d& pos)
+            : pos_(pos)
+            , disp_(sqrt2 * pos_.normalized()) {
+        }
+        Vec2f pos_;
+        Vec2f disp_;
+    };
+    core::Array<PosAndDisp> sharedInstData = {
+        PosAndDisp(transform.transformLinear({-0.5, -0.5})),
+        PosAndDisp(transform.transformLinear({0.5, -0.5})),
+        PosAndDisp(transform.transformLinear({-0.5, 0.5})),
+        PosAndDisp(transform.transformLinear({0.5, 0.5}))};
+
+    // We draw two quads for each input sketch point:
+    // - one with a small screen-space displacement w
+    // - one without screen-space displacement (w = 0)
+    //
+    const core::Color& c = workspace::colors::selection;
+    const float w = 1.f;
+    const float a = 1.f; // semi-opaque to show control points below
+    core::FloatArray perInstData;
+    for (Int i = 0; i < n; ++i) {
+        Vec2d pWidget = positions[i];
+        Vec2f pScene = Vec2f(transform.transformAffine(pWidget));
+        perInstData.extend({pScene.x(), pScene.y(), 1.f, w, c.r(), c.g(), c.b(), a});
+        perInstData.extend({pScene.x(), pScene.y(), 1.f, 0.f, 1.f, 1.f, 1.f, a});
+        //                     X           Y        Rot   W    R    G    B    A
+    }
+
+    engine->updateBufferData(geometry->vertexBuffer(0), std::move(sharedInstData));
+    engine->updateBufferData(geometry->vertexBuffer(1), std::move(perInstData));
+
+    engine->setProgram(graphics::BuiltinProgram::ScreenSpaceDisplacement);
+    engine->drawInstanced(geometry);
+}
+
 } // namespace
 
 // Note: In this override, we intentionally not call SuperClass::onPaintDraw()
@@ -716,6 +805,7 @@ void Canvas::onPaintDraw(graphics::Engine* engine, ui::PaintOptions options) {
         // Draw Selection
         //
         if (!selectedElements.isEmpty()) {
+            bool showInputSketchPoints = experimental::showInputSketchPoints().value();
             workspace::PaintOptions paintOptions = PaintOption::Selected;
             if (isOutlineEnabled) {
                 paintOptions.set(workspace::PaintOption::Outline);
@@ -731,25 +821,25 @@ void Canvas::onPaintDraw(graphics::Engine* engine, ui::PaintOptions options) {
                 },
                 [=, &selectedElements](workspace::Element* e, Int /*depth*/) {
                     if (e && selectedElements.contains(e)) {
+                        auto edge = dynamic_cast<workspace::VacKeyEdge*>(e);
+                        if (edge && showInputSketchPoints) {
+                            doPaintInputSketchPoints(
+                                engine, *edge, inputSketchPointsGeometry_);
+                        }
                         e->paint(engine, {}, paintOptions);
-                        if (isOutlineEnabled
-                            || paintOptions.has(workspace::PaintOption::Editing)) {
+                        if (edge && (isOutlineEnabled || areControlPointsVisible_)) {
                             // Redraw outline of end vertices on top of selected edges,
                             // otherwise the centerline of the selected edge is on top of the
                             // outline of its end vertices and it doesn't look good.
-                            if (auto edge = dynamic_cast<workspace::VacKeyEdge*>(e)) {
-                                workspace::VacKeyVertex* startVertex =
-                                    edge->startVertex();
-                                workspace::VacKeyVertex* endVertex = edge->endVertex();
-                                workspace::PaintOptions paintOptions2 = paintOptions;
-                                paintOptions2.unset(workspace::PaintOption::Selected);
-                                if (startVertex
-                                    && !selectedElements.contains(startVertex)) {
-                                    startVertex->paint(engine, {}, paintOptions2);
-                                }
-                                if (endVertex && !selectedElements.contains(endVertex)) {
-                                    endVertex->paint(engine, {}, paintOptions2);
-                                }
+                            workspace::VacKeyVertex* startVertex = edge->startVertex();
+                            workspace::VacKeyVertex* endVertex = edge->endVertex();
+                            workspace::PaintOptions paintOptions2 = paintOptions;
+                            paintOptions2.unset(workspace::PaintOption::Selected);
+                            if (startVertex && !selectedElements.contains(startVertex)) {
+                                startVertex->paint(engine, {}, paintOptions2);
+                            }
+                            if (endVertex && !selectedElements.contains(endVertex)) {
+                                endVertex->paint(engine, {}, paintOptions2);
                             }
                         }
                     }

@@ -20,6 +20,7 @@
 #include <vgc/canvas/api.h>
 #include <vgc/canvas/canvastool.h>
 #include <vgc/canvas/toolmanager.h>
+#include <vgc/ui/boolsetting.h>
 #include <vgc/ui/panel.h>
 
 namespace vgc::canvas {
@@ -27,7 +28,10 @@ namespace vgc::canvas {
 namespace experimental {
 
 VGC_CANVAS_API
-bool saveInputSketchPoints();
+ui::BoolSetting& saveInputSketchPoints();
+
+VGC_CANVAS_API
+ui::BoolSetting& showInputSketchPoints();
 
 } // namespace experimental
 

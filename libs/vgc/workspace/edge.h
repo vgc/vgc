@@ -541,7 +541,6 @@ private:
     geometry::Vec2dArray controlPoints_;
     mutable graphics::GeometryViewPtr controlPointsGeometry_;
     mutable bool isLastDrawOfControlPointsSelected_ = false;
-    mutable graphics::GeometryViewPtr inputSketchPointsGeometry_;
 
     mutable geometry::CurveSamplingQuality strokeSamplingQuality_ =
         geometry::CurveSamplingQuality::AdaptiveHigh;
