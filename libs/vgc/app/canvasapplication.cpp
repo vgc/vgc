@@ -102,6 +102,7 @@ CanvasApplication::CanvasApplication(
 
     // Other modules
     importModule<tools::SelectModule>();
+    importModule<tools::SketchModule>();
     importModule<tools::OrderModule>();
     importModule<tools::TopologyModule>();
 }
@@ -402,6 +403,15 @@ void CanvasApplication::createTools_(canvas::CanvasWeakPtr canvas) {
     paintBucketTool_ = paintBucketTool.get();
     if (auto currentColor = currentColor_.lock()) {
         onCurrentColorChanged_(currentColor->color());
+    }
+
+    // Tell the SketchTool about the SketchModule
+    // TODO: Delegate this to the tool itself by passing a ToolContext
+    // to the tool, so that it can do context.importModule<SketchModule>().
+    if (auto module = importModule<tools::SketchModule>()) {
+        if (auto tool = sketchTool.lock()) {
+            tool->setSketchModule(module);
+        }
     }
 }
 

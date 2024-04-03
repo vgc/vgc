@@ -92,6 +92,57 @@ bool isAutoFillEnabled() {
 
 } // namespace
 
+VGC_DEFINE_ENUM( //
+    SketchFitMethod,
+    (NoFit, "NoFit"),
+    (IndexGaussianSmoothing, "IndexGaussianSmoothing"),
+    (DouglasPeucker, "DouglasPeucker"))
+
+namespace commands {
+
+using ui::Key;
+using ui::Shortcut;
+using ui::modifierkeys::ctrl;
+using ui::modifierkeys::mod;
+using ui::modifierkeys::shift;
+
+VGC_UI_DEFINE_WINDOW_COMMAND( //
+    cycleSketchFitMethod,
+    "tools.sketch.cycleSketchFitMethod",
+    "Cycle Sketch Fit Method",
+    Shortcut(mod, Key::F));
+
+} // namespace commands
+
+SketchModule::SketchModule(CreateKey key, const ui::ModuleContext& context)
+    : Module(key, context) {
+
+    using namespace commands;
+    ui::ModuleActionCreator c(this);
+    c.setMenu(nullptr);
+
+    c.addAction(cycleSketchFitMethod(), onCycleSketchFitMethod_Slot());
+}
+
+SketchModulePtr SketchModule::create(const ui::ModuleContext& context) {
+    return core::createObject<SketchModule>(context);
+}
+
+void SketchModule::onCycleSketchFitMethod_() {
+
+    Int8 n = 3;
+    Int8 i = core::toUnderlying(fitMethod_);
+    i = (i + 1) % n;
+    fitMethod_ = static_cast<SketchFitMethod>(i);
+
+    VGC_INFO(
+        LogVgcToolsSketch,
+        "Switched Sketch Fit Method to: {}",
+        core::Enum::prettyName(fitMethod_));
+
+    fitMethodChanged().emit();
+}
+
 void SketchPointsProcessingPass::updateCumulativeChordalDistances() {
     Int n = numPoints();
     if (n == 0) {
@@ -415,6 +466,164 @@ Int SmoothingPass::update_(
 }
 
 void SmoothingPass::reset_() {
+    // no custom state
+}
+
+namespace {
+
+// This is a variant of Douglas-Peucker designed to dequantize mouse inputs
+// from integer to float coordinates.
+//
+// To this end, the distance test checks if the current line segment AB passes
+// through all pixel squares of the samples in the interval. We call
+// `threshold` the minimal distance between AB and the pixel center such that
+// AB does not passes through the pixel square.
+//
+//     ---------------
+//    |               |
+//    |     pixel     |             threshold = distance(pixelCenter, A'B'),
+//    |     center    |         B'  where A'B' is a line parallel to AB and
+//    |       x       |       '     touching the pixel square.
+//    |               |     '
+//    |               |   '
+//    |               | '
+//     ---------------'
+//                  '
+//                ' A'
+//
+// This threshold only depends on the angle AB. If AB is perfectly horizontal
+// or vertical, the threshold is equal to 0.5. If AB is at 45°, the threshold
+// is equal to sqrt(2)/2 (the half-diagonal).
+//
+// We then scale this threshold is scaled with the given `thresholdCoefficient`
+// and add the given `tolerance`.
+//
+// If the current segment does not pass the test, then the farthest samples is
+// selected for the next iteration.
+//
+// In some variants of this algorithm, we may also slighly move the position of
+// selected samples towards the segment AB (e.g., by 0.75 * threshold), which
+// seems to empirically give nicer results in some circumstances.
+//
+Int reconstructInputStep(
+    core::Span<SketchPoint> points,
+    core::IntArray& indices,
+    Int intervalStart,
+    double thresholdCoefficient,
+    double tolerance = 1e-10) {
+
+    Int i = intervalStart;
+    Int endIndex = indices[i + 1];
+    while (indices[i] != endIndex) {
+
+        // Get line AB. Fast discard if AB too small.
+        Int iA = indices[i];
+        Int iB = indices[i + 1];
+        geometry::Vec2d a = points[iA].position();
+        geometry::Vec2d b = points[iB].position();
+        geometry::Vec2d ab = b - a;
+        double abLen = ab.length();
+        if (abLen < core::epsilon) {
+            ++i;
+            continue;
+        }
+
+        // Compute `threshold`
+        constexpr double sqrtOf2 = 1.4142135623730950488017;
+        double abMaxNormalizedAbsoluteCoord =
+            (std::max)(std::abs(ab.x()), std::abs(ab.y())) / abLen;
+        double abAngleWithClosestAxis = std::acos(abMaxNormalizedAbsoluteCoord);
+        double threshold =
+            std::cos(core::pi / 4 - abAngleWithClosestAxis) * (sqrtOf2 / 2);
+
+        // Apply threshold coefficient and additive tolerance
+        double adjustedThreshold = thresholdCoefficient * threshold + tolerance;
+
+        // Compute which sample between A and B is furthest from the line AB
+        double maxDist = 0;
+        Int farthestPointSide = 0;
+        Int farthestPointIndex = -1;
+        for (Int j = iA + 1; j < iB; ++j) {
+            geometry::Vec2d p = points[j].position();
+            geometry::Vec2d ap = p - a;
+            double dist = ab.det(ap) / abLen;
+            // ┌─── x
+            // │    ↑ side 1
+            // │ A ───→ B
+            // y    ↓ side 0
+            Int side = 0;
+            if (dist < 0) {
+                dist = -dist;
+                side = 1;
+            }
+            if (dist > maxDist) {
+                maxDist = dist;
+                farthestPointSide = side;
+                farthestPointIndex = j;
+            }
+        }
+
+        // If the furthest point is too far from AB, then recurse.
+        // Otherwise, stop the recursion and move one to the next segment.
+        if (maxDist > adjustedThreshold) {
+
+            // Add sample to the list of selected samples
+            indices.insert(i + 1, farthestPointIndex);
+
+            // Move the position of the selected sample slightly towards AB
+            constexpr bool isMoveEnabled = true;
+            if (isMoveEnabled) {
+                geometry::Vec2d n = ab.orthogonalized() / abLen;
+                if (farthestPointSide != 0) {
+                    n = -n;
+                }
+                // TODO: scale delta based on some data to prevent shrinkage?
+                double delta = 0.8 * threshold;
+                SketchPoint& p = points[farthestPointIndex];
+                p.setPosition(p.position() - delta * n);
+            }
+        }
+        else {
+            ++i;
+        }
+    }
+    return i;
+}
+
+} // namespace
+
+Int DouglasPeuckerPass::update_(
+    const SketchPointBuffer& input,
+    Int /*lastNumStableInputPoints*/) {
+
+    // A copy required to make a mutable span, which the Douglas-Peuckert
+    // algorithm needs (it modifies the points slightly).
+    //
+    SketchPointArray inputPoints = input.data();
+
+    Int firstIndex = 0;
+    Int lastIndex = inputPoints.length() - 1;
+    core::IntArray indices = {firstIndex, lastIndex};
+    Int intervalStart = 0;
+
+    core::Span<SketchPoint> span = inputPoints;
+    double thresholdCoefficient = 1.0;
+    reconstructInputStep(span, indices, intervalStart, thresholdCoefficient);
+
+    Int numSimplifiedPoints = indices.length();
+    resizePoints(numSimplifiedPoints);
+    for (Int i = 0; i < numSimplifiedPoints; ++i) {
+        getPointRef(i) = inputPoints[indices[i]];
+    }
+
+    // For now, for simplicity, we do not provide any stable points guarantees
+    // and simply recompute the Douglas-Peuckert algorithm from scratch{
+    //
+    Int numStablePoints = 0;
+    return numStablePoints;
+}
+
+void DouglasPeuckerPass::reset_() {
     // no custom state
 }
 
@@ -787,129 +996,6 @@ void Sketch::onPaintDestroy(graphics::Engine* engine) {
     minimalLatencyStrokeGeometry_.reset();
 }
 
-namespace {
-
-// This is a variant of Douglas-Peucker designed to dequantize mouse inputs
-// from integer to float coordinates.
-//
-// To this end, the distance test checks if the current line segment AB passes
-// through all pixel squares of the samples in the interval. We call
-// `threshold` the minimal distance between AB and the pixel center such that
-// AB does not passes through the pixel square.
-//
-//     ---------------
-//    |               |
-//    |     pixel     |             threshold = distance(pixelCenter, A'B'),
-//    |     center    |         B'  where A'B' is a line parallel to AB and
-//    |       x       |       '     touching the pixel square.
-//    |               |     '
-//    |               |   '
-//    |               | '
-//     ---------------'
-//                  '
-//                ' A'
-//
-// This threshold only depends on the angle AB. If AB is perfectly horizontal
-// or vertical, the threshold is equal to 0.5. If AB is at 45°, the threshold
-// is equal to sqrt(2)/2 (the half-diagonal).
-//
-// We then scale this threshold is scaled with the given `thresholdCoefficient`
-// and add the given `tolerance`.
-//
-// If the current segment does not pass the test, then the farthest samples is
-// selected for the next iteration.
-//
-// In some variants of this algorithm, we may also slighly move the position of
-// selected samples towards the segment AB (e.g., by 0.75 * threshold), which
-// seems to empirically give nicer results in some circumstances.
-//
-//Int reconstructInputStep(
-//    core::Span<SketchPoint> points,
-//    core::IntArray& indices,
-//    Int intervalStart,
-//    double thresholdCoefficient,
-//    double tolerance = 1e-10) {
-//
-//    Int i = intervalStart;
-//    Int endIndex = indices[i + 1];
-//    while (indices[i] != endIndex) {
-//
-//        // Get line AB. Fast discard if AB too small.
-//        Int iA = indices[i];
-//        Int iB = indices[i + 1];
-//        geometry::Vec2d a = points[iA].position();
-//        geometry::Vec2d b = points[iB].position();
-//        geometry::Vec2d ab = b - a;
-//        double abLen = ab.length();
-//        if (abLen < core::epsilon) {
-//            ++i;
-//            continue;
-//        }
-//
-//        // Compute `threshold`
-//        constexpr double sqrtOf2 = 1.4142135623730950488017;
-//        double abMaxNormalizedAbsoluteCoord =
-//            (std::max)(std::abs(ab.x()), std::abs(ab.y())) / abLen;
-//        double abAngleWithClosestAxis = std::acos(abMaxNormalizedAbsoluteCoord);
-//        double threshold =
-//            std::cos(core::pi / 4 - abAngleWithClosestAxis) * (sqrtOf2 / 2);
-//
-//        // Apply threshold coefficient and additive tolerance
-//        double adjustedThreshold = thresholdCoefficient * threshold + tolerance;
-//
-//        // Compute which sample between A and B is furthest from the line AB
-//        double maxDist = 0;
-//        Int farthestPointSide = 0;
-//        Int farthestPointIndex = -1;
-//        for (Int j = iA + 1; j < iB; ++j) {
-//            geometry::Vec2d p = points[j].position();
-//            geometry::Vec2d ap = p - a;
-//            double dist = ab.det(ap) / abLen;
-//            // ┌─── x
-//            // │    ↑ side 1
-//            // │ A ───→ B
-//            // y    ↓ side 0
-//            Int side = 0;
-//            if (dist < 0) {
-//                dist = -dist;
-//                side = 1;
-//            }
-//            if (dist > maxDist) {
-//                maxDist = dist;
-//                farthestPointSide = side;
-//                farthestPointIndex = j;
-//            }
-//        }
-//
-//        // If the furthest point is too far from AB, then recurse.
-//        // Otherwise, stop the recursion and move one to the next segment.
-//        if (maxDist > adjustedThreshold) {
-//
-//            // Add sample to the list of selected samples
-//            indices.insert(i + 1, farthestPointIndex);
-//
-//            // Move the position of the selected sample slightly towards AB
-//            constexpr bool isMoveEnabled = true;
-//            if (isMoveEnabled) {
-//                geometry::Vec2d n = ab.orthogonalized() / abLen;
-//                if (farthestPointSide != 0) {
-//                    n = -n;
-//                }
-//                // TODO: scale delta based on some data to prevent shrinkage?
-//                float delta = 0.8f * threshold;
-//                SketchPoint& p = points[farthestPointIndex];
-//                p.setPosition(p.position() - delta * n);
-//            }
-//        }
-//        else {
-//            ++i;
-//        }
-//    }
-//    return i;
-//}
-
-} // namespace
-
 void Sketch::updatePreTransformPassesResult_() {
     dummyPreTransformPass_.updateResultFrom(inputPoints_);
 }
@@ -933,11 +1019,12 @@ void Sketch::updateTransformedPoints_() {
 
 void Sketch::updatePostTransformPassesResult_() {
     // Note: last pass must produce points with computed arclengths.
-    smoothingPass_.updateResultFrom(transformedPoints_);
+
+    smoothingPass_->updateResultFrom(transformedPoints_);
 }
 
 const SketchPointBuffer& Sketch::postTransformPassesResult_() const {
-    return smoothingPass_.buffer();
+    return smoothingPass_->buffer();
 }
 
 core::ConstSpan<SketchPoint> Sketch::cleanInputPoints_() const {
@@ -1369,6 +1456,26 @@ void Sketch::startCurve_(ui::MouseEvent* event) {
     }
     edgeItemId_ = domEdge->internalId();
 
+    // Configure fit method
+    SketchFitMethod fitMethod = SketchFitMethod::NoFit;
+    if (auto module = sketchModule_.lock()) {
+        fitMethod = module->fitMethod();
+    }
+    if (!lastFitMethod_ || *lastFitMethod_ != fitMethod) {
+        lastFitMethod_ = fitMethod;
+        switch (fitMethod) {
+        case SketchFitMethod::NoFit:
+            smoothingPass_ = std::make_unique<detail::EmptyPass>();
+            break;
+        case SketchFitMethod::IndexGaussianSmoothing:
+            smoothingPass_ = std::make_unique<detail::SmoothingPass>();
+            break;
+        case SketchFitMethod::DouglasPeucker:
+            smoothingPass_ = std::make_unique<detail::DouglasPeuckerPass>();
+            break;
+        }
+    }
+
     // Append start point to geometry
     continueCurve_(event);
     workspace->sync(); // required for toKeyEdge() below
@@ -1630,7 +1737,7 @@ void Sketch::resetData_() {
     transformedPoints_.clear();
 
     // post-transform passes
-    smoothingPass_.reset();
+    smoothingPass_->reset();
 
     // pending clean input
     cleanInputStartIndex_ = 0;

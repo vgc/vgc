@@ -24,7 +24,9 @@
 #include <vgc/dom/element.h>
 #include <vgc/geometry/vec2d.h>
 #include <vgc/tools/api.h>
+#include <vgc/ui/command.h>
 #include <vgc/ui/cursor.h>
+#include <vgc/ui/module.h>
 #include <vgc/workspace/workspace.h>
 
 namespace vgc::tools {
@@ -217,9 +219,10 @@ private:
 class VGC_TOOLS_API SketchPointsProcessingPass {
 protected:
     SketchPointsProcessingPass() noexcept = default;
-    virtual ~SketchPointsProcessingPass() = default;
 
 public:
+    virtual ~SketchPointsProcessingPass() = default;
+
     void updateResultFrom(const SketchPointBuffer& input) {
         Int numStablePoints = update_(input, lastNumStableInputPoints_);
         buffer_.setNumStablePoints(numStablePoints);
@@ -324,7 +327,61 @@ protected:
     void reset_() override;
 };
 
+class VGC_TOOLS_API DouglasPeuckerPass : public SketchPointsProcessingPass {
+public:
+    DouglasPeuckerPass() noexcept = default;
+
+protected:
+    Int update_(const SketchPointBuffer& input, Int lastNumStableInputPoints) override;
+
+    void reset_() override;
+};
+
 } // namespace detail
+
+enum class SketchFitMethod : Int8 {
+    NoFit,                  // Raw input points (RP) are used as control points (CP)
+    IndexGaussianSmoothing, // A gaussian smoothing is applied to RP
+    DouglasPeucker,         // Douglas-Peucker algorithm
+};
+
+VGC_TOOLS_API
+VGC_DECLARE_ENUM(SketchFitMethod)
+
+namespace commands {
+
+VGC_TOOLS_API
+VGC_UI_DECLARE_COMMAND(cycleSketchFitMethod)
+
+} // namespace commands
+
+VGC_DECLARE_OBJECT(SketchModule);
+
+/// \class vgc::tools::SketchModule
+/// \brief A module with sketch-related commands and actions.
+///
+class VGC_TOOLS_API SketchModule : public ui::Module {
+private:
+    VGC_OBJECT(SketchModule, ui::Module)
+
+protected:
+    SketchModule(CreateKey, const ui::ModuleContext& context);
+
+public:
+    static SketchModulePtr create(const ui::ModuleContext& context);
+
+    SketchFitMethod fitMethod() const {
+        return fitMethod_;
+    }
+
+    VGC_SIGNAL(fitMethodChanged)
+
+private:
+    void onCycleSketchFitMethod_();
+    VGC_SLOT(onCycleSketchFitMethod_)
+
+    SketchFitMethod fitMethod_ = SketchFitMethod::IndexGaussianSmoothing;
+};
 
 /// \class vgc::tools::SketchTool
 /// \brief A CanvasTool that implements sketching strokes.
@@ -343,6 +400,15 @@ public:
     /// Creates a `SketchTool`.
     ///
     static SketchPtr create();
+
+    /// Make the SketchTool aware of the SketchModule.
+    ///
+    // TODO: Make it possible to do this in the constructor of the tool, e.g.,
+    // via a ToolContext that allows for context.importModule<SketchModule>();
+    //
+    void setSketchModule(SketchModuleWeakPtr sketchModule) {
+        sketchModule_ = sketchModule;
+    }
 
     /// Returns the pen color of the tool.
     ///
@@ -391,6 +457,8 @@ protected:
     void onPaintDestroy(graphics::Engine* engine) override;
 
 protected:
+    SketchModuleWeakPtr sketchModule_;
+
     // Stroke style
     core::Color penColor_ = core::Color(0, 0, 0, 1);
 
@@ -439,7 +507,8 @@ protected:
 
     // Smoothing.
     //
-    detail::SmoothingPass smoothingPass_;
+    std::optional<SketchFitMethod> lastFitMethod_;
+    std::unique_ptr<SketchPointsProcessingPass> smoothingPass_;
 
     void updatePostTransformPassesResult_();
     const SketchPointBuffer& postTransformPassesResult_() const;
