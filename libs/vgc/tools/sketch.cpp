@@ -578,7 +578,7 @@ Int reconstructInputStep(
                     n = -n;
                 }
                 // TODO: scale delta based on some data to prevent shrinkage?
-                float delta = 0.8f * threshold;
+                double delta = 0.8 * threshold;
                 SketchPoint& p = points[farthestPointIndex];
                 p.setPosition(p.position() - delta * n);
             }
