@@ -48,11 +48,11 @@
 /// #    define VGC_FOO_API_HIDDEN
 /// #else
 /// #    if defined(VGC_FOO_EXPORTS)
-/// #        define VGC_FOO_API VGC_CORE_DLL_EXPORT
+/// #        define VGC_FOO_API VGC_DLL_EXPORT
 /// #    else
-/// #        define VGC_FOO_API VGC_CORE_DLL_IMPORT
+/// #        define VGC_FOO_API VGC_DLL_IMPORT
 /// #    endif
-/// #    define VGC_FOO_API_HIDDEN VGC_CORE_DLL_HIDDEN
+/// #    define VGC_FOO_API_HIDDEN VGC_DLL_HIDDEN
 /// #endif
 ///
 /// #endif // VGC_FOO_API_H
@@ -139,14 +139,14 @@
 /// #    define VGC_FOO_API __declspec(dllimport)
 /// \endcode
 ///
-/// You should instead use `VGC_CORE_DLL_EXPORT` and `VGC_CORE_DLL_IMPORT`
+/// You should instead use `VGC_DLL_EXPORT` and `VGC_DLL_IMPORT`
 /// provided in this file, like so:
 ///
 /// \code
 /// #if defined(VGC_FOO_EXPORTS)
-/// #    define VGC_FOO_API VGC_CORE_DLL_EXPORT
+/// #    define VGC_FOO_API VGC_DLL_EXPORT
 /// #else
-/// #    define VGC_FOO_API VGC_CORE_DLL_IMPORT
+/// #    define VGC_FOO_API VGC_DLL_IMPORT
 /// \endcode
 ///
 /// In addition, what if a client desires to compile `foo` as a static library
@@ -159,9 +159,9 @@
 /// #    define VGC_FOO_API
 /// #else
 /// #    if defined(VGC_FOO_EXPORTS)
-/// #        define VGC_FOO_API VGC_CORE_DLL_EXPORT
+/// #        define VGC_FOO_API VGC_DLL_EXPORT
 /// #    else
-/// #        define VGC_FOO_API VGC_CORE_DLL_IMPORT
+/// #        define VGC_FOO_API VGC_DLL_IMPORT
 /// #    endif
 /// #endif
 /// \endcode
@@ -174,29 +174,29 @@
 #if defined(VGC_OS_WINDOWS)
 #    if defined(VGC_COMPILER_GCC) && VGC_COMPILER_GCC_MAJOR >= 4                         \
         || defined(VGC_COMPILER_CLANG)
-#        define VGC_CORE_DLL_EXPORT __attribute__((dllexport))
-#        define VGC_CORE_DLL_IMPORT __attribute__((dllimport))
-#        define VGC_CORE_DLL_HIDDEN
+#        define VGC_DLL_EXPORT __attribute__((dllexport))
+#        define VGC_DLL_IMPORT __attribute__((dllimport))
+#        define VGC_DLL_HIDDEN
 #    else
-#        define VGC_CORE_DLL_EXPORT __declspec(dllexport)
-#        define VGC_CORE_DLL_IMPORT __declspec(dllimport)
-#        define VGC_CORE_DLL_HIDDEN
+#        define VGC_DLL_EXPORT __declspec(dllexport)
+#        define VGC_DLL_IMPORT __declspec(dllimport)
+#        define VGC_DLL_HIDDEN
 #    endif
-#    define VGC_CORE_DLL_EXPORT_EXCEPTION
-#    define VGC_CORE_DLL_IMPORT_EXCEPTION
+#    define VGC_DLL_EXPORT_EXCEPTION
+#    define VGC_DLL_IMPORT_EXCEPTION
 #elif defined(VGC_COMPILER_GCC) && VGC_COMPILER_GCC_MAJOR >= 4                           \
     || defined(VGC_COMPILER_CLANG)
-#    define VGC_CORE_DLL_EXPORT __attribute__((visibility("default")))
-#    define VGC_CORE_DLL_IMPORT __attribute__((visibility("default")))
-#    define VGC_CORE_DLL_HIDDEN __attribute__((visibility("hidden")))
-#    define VGC_CORE_DLL_EXPORT_EXCEPTION VGC_CORE_DLL_EXPORT
-#    define VGC_CORE_DLL_IMPORT_EXCEPTION VGC_CORE_DLL_IMPORT
+#    define VGC_DLL_EXPORT __attribute__((visibility("default")))
+#    define VGC_DLL_IMPORT __attribute__((visibility("default")))
+#    define VGC_DLL_HIDDEN __attribute__((visibility("hidden")))
+#    define VGC_DLL_EXPORT_EXCEPTION VGC_DLL_EXPORT
+#    define VGC_DLL_IMPORT_EXCEPTION VGC_DLL_IMPORT
 #else
-#    define VGC_CORE_DLL_EXPORT
-#    define VGC_CORE_DLL_IMPORT
-#    define VGC_CORE_DLL_HIDDEN
-#    define VGC_CORE_DLL_EXPORT_EXCEPTION
-#    define VGC_CORE_DLL_IMPORT_EXCEPTION
+#    define VGC_DLL_EXPORT
+#    define VGC_DLL_IMPORT
+#    define VGC_DLL_HIDDEN
+#    define VGC_DLL_EXPORT_EXCEPTION
+#    define VGC_DLL_IMPORT_EXCEPTION
 #endif
 
 #endif // VGC_CORE_DLL_H
