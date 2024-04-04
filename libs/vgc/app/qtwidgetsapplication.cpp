@@ -24,7 +24,7 @@
 #include <QIcon>
 #include <QSettings>
 
-#ifdef VGC_CORE_OS_WINDOWS
+#ifdef VGC_OS_WINDOWS
 #    define WIN32_LEAN_AND_MEAN
 #    include <Windows.h>
 #endif
@@ -187,7 +187,7 @@ QApplicationImpl::QApplicationImpl(int& argc, char** argv, QtWidgetsApplication*
     : QApplication(argc, argv)
     , app_(app) {
 
-#ifdef VGC_CORE_OS_MACOS
+#ifdef VGC_OS_MACOS
     // Fix all text in message boxes being bold in macOS.
     //
     // Also note that in Qt 5.15.2 (fixed in 5.15.3 and Qt6), there are
@@ -279,7 +279,7 @@ QtWidgetsApplication::QtWidgetsApplication(CreateKey key, int argc, char* argv[]
 
     setBasePath();
 
-#ifdef VGC_CORE_OS_WINDOWS
+#ifdef VGC_OS_WINDOWS
     for (int i = 0; i < argc_; ++i) {
         std::string_view arg = argv[i];
         if (arg == "--console") {

@@ -121,7 +121,7 @@ void setGlobalCursorPosition(const geometry::Vec2f& position) {
 }
 
 bool canSetGlobalCursorPosition() {
-#ifdef VGC_CORE_OS_MACOS
+#ifdef VGC_OS_MACOS
     return hasAccessibilityPermissions();
 #else
     return true;

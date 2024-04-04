@@ -18,7 +18,6 @@
 
 #include <unordered_set>
 
-#include <vgc/core/os.h>
 #include <vgc/ui/command.h>
 #include <vgc/ui/logcategories.h>
 
@@ -63,7 +62,7 @@ namespace {
 void appendString(std::string& res, std::string& separator, std::string_view str) {
     res += separator;
     res += str;
-#ifndef VGC_CORE_OS_MACOS
+#ifndef VGC_OS_MACOS
     separator = "+";
 #else
     separator = " ";
@@ -84,7 +83,7 @@ std::string toString(const Shortcut& shortcut) {
     // Note:
     // - on Windows, we want the order Ctrl + Alt + Shift + Meta
     // - on macOS, on Windows, we want the order Control + Alt + Shift + Command
-#ifndef VGC_CORE_OS_MACOS
+#ifndef VGC_OS_MACOS
     if (modifierKeys.has(ModifierKey::Ctrl)) {
         appendString(res, separator, "Ctrl");
     }

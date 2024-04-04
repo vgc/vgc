@@ -20,7 +20,6 @@
 #include <QWindow>
 
 #include <vgc/core/array.h>
-#include <vgc/core/os.h>
 #include <vgc/core/stopwatch.h>
 #include <vgc/geometry/vec2f.h>
 #include <vgc/graphics/engine.h>
@@ -33,7 +32,7 @@ namespace vgc::ui {
 
 namespace detail {
 
-#ifdef VGC_CORE_OS_MACOS
+#ifdef VGC_OS_MACOS
 constexpr float baseLogicalDpi = 72.0f;
 #else
 constexpr float baseLogicalDpi = 96.0f;
@@ -270,7 +269,7 @@ protected:
         NativeEventResult* result) override;
 
 private:
-#if defined(VGC_CORE_OS_WINDOWS)
+#if defined(VGC_OS_WINDOWS)
     HWND hwnd_ = {};
     static LRESULT WINAPI WndProc(HWND, UINT, WPARAM, LPARAM);
 #endif

@@ -17,10 +17,9 @@
 #ifndef VGC_UI_MACOSPERMISSIONS_H
 #define VGC_UI_MACOSPERMISSIONS_H
 
-#include <vgc/core/os.h>
 #include <vgc/ui/api.h>
 
-#ifdef VGC_CORE_OS_MACOS
+#ifdef VGC_OS_MACOS
 
 namespace vgc::ui {
 
@@ -49,6 +48,6 @@ void openAccessibilityPermissions();
 
 } // namespace vgc::ui
 
-#endif // VGC_CORE_OS_MACOS
+#endif // VGC_OS_MACOS
 
 #endif // VGC_UI_MACOSPERMISSIONS_H

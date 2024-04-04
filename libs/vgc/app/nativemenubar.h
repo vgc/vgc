@@ -19,10 +19,9 @@
 
 #include <vgc/app/api.h>
 #include <vgc/core/object.h>
-#include <vgc/core/os.h>
 #include <vgc/ui/menu.h>
 
-#ifdef VGC_CORE_OS_WINDOWS
+#ifdef VGC_OS_WINDOWS
 #    define VGC_APP_MAY_HAVE_NATIVE_MENU_BAR 0
 #else
 #    define VGC_APP_MAY_HAVE_NATIVE_MENU_BAR 1

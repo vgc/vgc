@@ -17,7 +17,6 @@
 #include <gtest/gtest.h>
 #include <sstream>
 #include <vgc/core/arithmetic.h>
-#include <vgc/core/compiler.h>
 #include <vgc/core/enum.h>
 #include <vgc/core/format.h>
 
@@ -108,7 +107,7 @@ void writeFloat(T x, const char* expected) {
     EXPECT_EQ(s, expected);
 }
 
-#if defined(VGC_CORE_COMPILER_MSVC)
+#if defined(VGC_COMPILER_MSVC)
 #    pragma warning(push)
 #    pragma warning(disable : 4723) // potential divide by 0
 #endif
@@ -121,7 +120,7 @@ void writeFloatsCreatedViaDivideByZero() {
     writeFloat(zero / zero, "nan");
     writeFloat(-zero / zero, "nan");
 }
-#if defined(VGC_CORE_COMPILER_MSVC)
+#if defined(VGC_COMPILER_MSVC)
 #    pragma warning(pop)
 #endif
 

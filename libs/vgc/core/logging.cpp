@@ -18,7 +18,7 @@
 
 #include <iostream>
 
-#ifdef VGC_CORE_OS_WINDOWS
+#ifdef VGC_OS_WINDOWS
 #    define WIN32_LEAN_AND_MEAN
 #    include <Windows.h>
 #endif
@@ -64,7 +64,7 @@ void appendPreambleToLogMessage(
 void printLogMessageToStderr(fmt::memory_buffer& message) {
     message.push_back('\n');
     message.push_back('\0');
-#ifdef VGC_CORE_OS_WINDOWS
+#ifdef VGC_OS_WINDOWS
     if (GetConsoleWindow() == NULL) {
         OutputDebugStringA(message.data());
     }

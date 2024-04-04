@@ -25,7 +25,6 @@
 
 #include <vgc/core/api.h>
 #include <vgc/core/format.h>
-#include <vgc/core/os.h>
 #include <vgc/core/preprocessor.h>
 #include <vgc/core/stringid.h>
 

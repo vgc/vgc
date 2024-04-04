@@ -16,8 +16,8 @@ vgc_add_library(core
         boolguard.h
         color.h
         colors.h
-        compiler.h
         datetime.h
+        defs.h
         dll.h
         enum.h
         exceptions.h
@@ -32,7 +32,6 @@ vgc_add_library(core
         object.h
         objecttype.h
         objectarray.h
-        os.h
         parse.h
         paths.h
         performancelog.h

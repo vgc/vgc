@@ -179,12 +179,12 @@ TEST(TestSignal, SlotWithConvertibleArgs) {
     o1->signalIntFloat().connect(o2->slotUInt());
 
 // C4244 = conversion from 'const int' to 'float', possible loss of data
-#if defined(VGC_CORE_COMPILER_MSVC)
+#if defined(VGC_COMPILER_MSVC)
 #    pragma warning(push)
 #    pragma warning(disable : 4244)
 #endif
     o1->signalIntFloat().connect(o2->slotFloat());
-#if defined(VGC_CORE_COMPILER_MSVC)
+#if defined(VGC_COMPILER_MSVC)
 #    pragma warning(pop)
 #endif
 
