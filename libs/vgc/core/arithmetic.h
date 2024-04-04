@@ -565,7 +565,7 @@ void throwNegativeIntegerError(U value) {
 // - it's more concise/readable than specializing the templates for 'bool'
 // So we simply silence the warning.
 //
-#if defined(VGC_CORE_COMPILER_MSVC)
+#if defined(VGC_COMPILER_MSVC)
 #    pragma warning(push)
 #    pragma warning(disable : 4804) // unsafe use of type 'bool' in operation
 #endif
@@ -690,7 +690,7 @@ T int_cast(U value) {
 
 // clang-format on
 
-#if defined(VGC_CORE_COMPILER_MSVC)
+#if defined(VGC_COMPILER_MSVC)
 #    pragma warning(pop)
 #endif
 

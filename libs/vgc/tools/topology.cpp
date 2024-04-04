@@ -20,7 +20,6 @@
 
 #include <vgc/canvas/documentmanager.h>
 #include <vgc/canvas/workspaceselection.h>
-#include <vgc/core/os.h>
 #include <vgc/ui/menu.h>
 #include <vgc/ui/standardmenus.h>
 #include <vgc/workspace/workspace.h>
@@ -37,7 +36,7 @@ using ui::modifierkeys::ctrl;
 
 namespace {
 
-#ifdef VGC_CORE_OS_MACOS
+#ifdef VGC_OS_MACOS
 ui::Key primaryDeleteKey_ = Key::Backspace;
 ui::Key secondaryDeleteKey_ = Key::Delete;
 #else

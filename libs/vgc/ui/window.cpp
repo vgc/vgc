@@ -23,7 +23,6 @@
 
 #include <QScreen>
 
-#include <vgc/core/os.h>
 #include <vgc/core/paths.h>
 #include <vgc/core/profile.h>
 #include <vgc/geometry/camera2d.h>
@@ -118,7 +117,7 @@ static constexpr bool debugEvents = false;
 
 //#define VGC_DISABLE_WINDOWS_WINDOW_ARTIFACTS_ON_RESIZE_FIX
 
-#ifdef VGC_CORE_OS_WINDOWS
+#ifdef VGC_OS_WINDOWS
 #    ifndef VGC_DISABLE_WINDOWS_WINDOW_ARTIFACTS_ON_RESIZE_FIX
 #        define VGC_WINDOWS_WINDOW_ARTIFACTS_ON_RESIZE_FIX
 #    endif
@@ -1016,7 +1015,7 @@ bool Window::nativeEvent(
     return false;
 }
 
-#if defined(VGC_CORE_OS_WINDOWS)
+#if defined(VGC_OS_WINDOWS)
 
 LRESULT WINAPI Window::WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
     Window* w = reinterpret_cast<Window*>(GetWindowLongPtr(hwnd, 19 * sizeof(LONG_PTR)));
@@ -1053,13 +1052,13 @@ void Window::initEngine_() {
     windowSwapChainFormat.setNumBuffers(2);
     windowSwapChainFormat.setNumSamples(8);
 
-#if defined(VGC_CORE_OS_MACOS)
+#if defined(VGC_OS_MACOS)
     engineCreateInfo.setMultithreadingEnabled(false);
 #else
     engineCreateInfo.setMultithreadingEnabled(true);
 #endif
 
-#if defined(VGC_CORE_OS_WINDOWS) && TRUE
+#if defined(VGC_OS_WINDOWS) && TRUE
 
     // Set WindowSwapChainFormat to RGBA_8_UNORM, that is, linear RGB.
     //

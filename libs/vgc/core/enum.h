@@ -17,7 +17,7 @@
 #ifndef VGC_CORE_ENUM_H
 #define VGC_CORE_ENUM_H
 
-#include <vgc/core/compiler.h>
+#include <vgc/core/defs.h>
 #include <vgc/core/format.h>
 #include <vgc/core/templateutil.h>
 

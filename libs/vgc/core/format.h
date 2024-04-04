@@ -45,7 +45,9 @@
 #include <unordered_map>
 #include <vector>
 
-// Include <fmt/format.h>, suppressing the following two warnings:
+#include <vgc/core/defs.h> // VGC_WARNING_[...]
+
+// Include <fmt/format.h>, suppressing the following warnings:
 //
 //   warning C4275: non dll-interface class 'std::runtime_error' used as base
 //   for dll-interface class 'fmt::v6::format_error' / 'fmt::v6::system_error'
@@ -55,17 +57,14 @@
 //   fmt/format.h: note: see reference to function template instantiation
 //                 'fmt::v8::detail::dragonbox::'... being compiled
 //
-#include <vgc/core/compiler.h>
-#if defined(VGC_CORE_COMPILER_MSVC)
-#    pragma warning(push)
-#    pragma warning(disable : 4275)
-#    pragma warning(disable : 4459)
-#    pragma warning(disable : 4189)
-#endif
+//   warning C4189: local variable is initialized but not referenced
+//
+VGC_WARNING_PUSH
+VGC_WARNING_MSVC_DISABLE(4275)
+VGC_WARNING_MSVC_DISABLE(4459)
+VGC_WARNING_MSVC_DISABLE(4189)
 #include <fmt/format.h>
-#if defined(VGC_CORE_COMPILER_MSVC)
-#    pragma warning(pop)
-#endif
+VGC_WARNING_POP
 
 #include <vgc/core/api.h>
 #include <vgc/core/preprocessor.h>

@@ -26,7 +26,6 @@
 #include <hb.h>
 
 #include <vgc/core/io.h>
-#include <vgc/core/os.h>
 #include <vgc/core/paths.h>
 #include <vgc/graphics/exceptions.h>
 #include <vgc/graphics/logcategories.h>
@@ -464,7 +463,7 @@ std::string getDefaultFontPath() {
 
     std::string fontPath = core::resourcePath("graphics/fonts/Roboto/Roboto-Regular.ttf");
 
-#ifdef VGC_CORE_OS_MACOS
+#ifdef VGC_OS_MACOS
     std::string appleFont = "/Library/Fonts/SF-Pro-Text-Medium.otf";
     if (core::fileExists(appleFont)) {
         fontPath = appleFont;

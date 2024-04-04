@@ -17,8 +17,8 @@
 #ifndef VGC_GRAPHICS_D3D11_D3D11ENGINE_H
 #define VGC_GRAPHICS_D3D11_D3D11ENGINE_H
 
-#include <vgc/core/os.h>
-#ifdef VGC_CORE_OS_WINDOWS
+#include <vgc/core/defs.h>
+#ifdef VGC_OS_WINDOWS
 
 // clang-format off
 
@@ -190,5 +190,5 @@ private:
 
 } // namespace vgc::graphics
 
-#endif // VGC_CORE_OS_WINDOWS
+#endif // VGC_OS_WINDOWS
 #endif // VGC_GRAPHICS_D3D11_D3D11ENGINE_H

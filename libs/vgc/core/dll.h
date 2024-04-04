@@ -169,12 +169,11 @@
 /// The macro `VGC_FOO_API_HIDDEN` is defined following the same idea.
 ///
 
-#include <vgc/core/compiler.h>
-#include <vgc/core/os.h>
+#include <vgc/core/defs.h>
 
-#if defined(VGC_CORE_OS_WINDOWS)
-#    if defined(VGC_CORE_COMPILER_GCC) && VGC_CORE_COMPILER_GCC_MAJOR >= 4               \
-        || defined(VGC_CORE_COMPILER_CLANG)
+#if defined(VGC_OS_WINDOWS)
+#    if defined(VGC_COMPILER_GCC) && VGC_COMPILER_GCC_MAJOR >= 4                         \
+        || defined(VGC_COMPILER_CLANG)
 #        define VGC_CORE_DLL_EXPORT __attribute__((dllexport))
 #        define VGC_CORE_DLL_IMPORT __attribute__((dllimport))
 #        define VGC_CORE_DLL_HIDDEN
@@ -185,8 +184,8 @@
 #    endif
 #    define VGC_CORE_DLL_EXPORT_EXCEPTION
 #    define VGC_CORE_DLL_IMPORT_EXCEPTION
-#elif defined(VGC_CORE_COMPILER_GCC) && VGC_CORE_COMPILER_GCC_MAJOR >= 4                 \
-    || defined(VGC_CORE_COMPILER_CLANG)
+#elif defined(VGC_COMPILER_GCC) && VGC_COMPILER_GCC_MAJOR >= 4                           \
+    || defined(VGC_COMPILER_CLANG)
 #    define VGC_CORE_DLL_EXPORT __attribute__((visibility("default")))
 #    define VGC_CORE_DLL_IMPORT __attribute__((visibility("default")))
 #    define VGC_CORE_DLL_HIDDEN __attribute__((visibility("hidden")))

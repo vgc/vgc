@@ -20,7 +20,6 @@
 #include <vgc/canvas/documentmanager.h>
 #include <vgc/canvas/logcategories.h>
 #include <vgc/canvas/workspaceselection.h>
-#include <vgc/core/os.h>
 #include <vgc/ui/menu.h>
 #include <vgc/ui/standardmenus.h>
 
@@ -153,7 +152,7 @@ CanvasManager::CanvasManager(CreateKey key, const ui::ModuleContext& context)
     c.addAction(increaseSamplingQuality(), onIncreaseSamplingQuality_Slot());
 
 // Add separation with automatically generated "Enter Fullscreen" item on macOS
-#ifdef VGC_CORE_OS_MACOS
+#ifdef VGC_OS_MACOS
     c.addSeparator();
 #endif
 }

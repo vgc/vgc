@@ -167,7 +167,7 @@ std::array<QCursor, cursorCount> createRotatedCursors(DrawFn drawFn) {
 
         //image.setMask(mask);
 
-#ifndef VGC_CORE_OS_WINDOWS
+#ifndef VGC_OS_WINDOWS
         // Make the cursor color XOR'd on Windows, black on other platforms. Ideally,
         // we'd prefer XOR'd on all platforms, but it's only supported on Windows.
         // See Qt doc for QCursor(const QBitmap &bitmap, const QBitmap &mask).

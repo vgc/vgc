@@ -17,7 +17,6 @@
 #include <vgc/app/mainwidget.h>
 
 #include <vgc/core/io.h>
-#include <vgc/core/os.h>
 #include <vgc/core/paths.h>
 #include <vgc/ui/overlayarea.h>
 #include <vgc/ui/widget.h>
@@ -42,7 +41,7 @@ MainWidget::MainWidget(CreateKey key)
                   "    padding-left: 0dp; }";
     overlayArea_->setStyleSheet(styleSheet);
     overlayArea_->addStyleClass(ui::strings::root);
-#ifdef VGC_CORE_OS_MACOS
+#ifdef VGC_OS_MACOS
     overlayArea_->addStyleClass(ui::strings::macos);
 #endif
 

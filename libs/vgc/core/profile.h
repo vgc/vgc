@@ -18,7 +18,7 @@
 #define VGC_CORE_PROFILE_H
 
 #include <vgc/core/arithmetic.h>
-#include <vgc/core/compiler.h>
+#include <vgc/core/defs.h> // VGC_PRETTY_FUNCTION
 #include <vgc/core/preprocessor.h>
 
 namespace vgc::core::detail {

@@ -18,13 +18,12 @@
 
 #include <string>
 
-#include <vgc/core/os.h>
 #include <vgc/geometry/vec2f.h>
 #include <vgc/ui/cursor.h>
 #include <vgc/ui/window.h>
 
 // for requesting to capture mouse in macos
-#ifdef VGC_CORE_OS_MACOS
+#ifdef VGC_OS_MACOS
 #    include <QTimer>
 #    include <vgc/ui/macospermissions.h>
 #    include <vgc/ui/messagedialog.h>
@@ -267,7 +266,7 @@ bool NumberEdit::onMousePress(MousePressEvent* event) {
     return true;
 }
 
-#ifdef VGC_CORE_OS_MACOS
+#ifdef VGC_OS_MACOS
 
 namespace {
 
@@ -365,7 +364,7 @@ void macosEnableInfiniteDrag(
 
 } // namespace
 
-#endif // VGC_CORE_OS_MACOS
+#endif // VGC_OS_MACOS
 
 bool NumberEdit::onMouseRelease(MouseReleaseEvent* event) {
 
@@ -385,7 +384,7 @@ bool NumberEdit::onMouseRelease(MouseReleaseEvent* event) {
     }
 
     // Conditionally ask for permission to enable infinite drag on macOS
-#ifdef VGC_CORE_OS_MACOS
+#ifdef VGC_OS_MACOS
     bool wasDrag = isDragInitiated_ && isDragEpsilonReached_;
     bool wasInfinite = isDragInfiniteMode_;
     bool couldHaveBeenInfinite = wasDrag && !event->hasPressure();
@@ -498,7 +497,7 @@ void NumberEdit::updateCursor_() {
     else {
         if (isHovered()) {
             Qt::CursorShape cursorShape = Qt::SizeHorCursor;
-#ifdef VGC_CORE_OS_MACOS
+#ifdef VGC_OS_MACOS
             // SizeHorCursor is currently ugly on macOS, so we use another one
             // (see https://github.com/vgc/vgc/issues/1131)
             cursorShape = Qt::SplitHCursor;

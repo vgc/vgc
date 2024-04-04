@@ -16,7 +16,7 @@
 
 #include <vgc/graphics/d3d11/d3d11engine.h>
 
-#ifdef VGC_CORE_OS_WINDOWS
+#ifdef VGC_OS_WINDOWS
 
 // clang-format off
 
@@ -29,7 +29,6 @@
 #pragma comment(lib, "d3dcompiler")
 #pragma comment(lib, "d3d11")
 
-#include <vgc/core/compiler.h>
 #include <vgc/core/exceptions.h>
 
 // clang-format on
@@ -2158,4 +2157,4 @@ bool D3d11Engine::writeBufferReserved_(
 
 } // namespace vgc::graphics
 
-#endif // VGC_CORE_OS_WINDOWS
+#endif // VGC_OS_WINDOWS
