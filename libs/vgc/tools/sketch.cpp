@@ -22,6 +22,7 @@
 #include <QCursor>
 #include <QPainter>
 
+#include <vgc/canvas/documentmanager.h>
 #include <vgc/canvas/experimental.h>
 #include <vgc/core/arithmetic.h> // roundToSignificantDigits
 #include <vgc/core/profile.h>
@@ -140,7 +141,196 @@ void SketchModule::onCycleSketchFitMethod_() {
         "Switched Sketch Fit Method to: {}",
         core::Enum::prettyName(fitMethod_));
 
+    recomputeEdgesWithFitMethod_();
+
     fitMethodChanged().emit();
+}
+
+namespace {
+
+double pressurePen(const ui::MouseEvent* event) {
+    return event->hasPressure() ? event->pressure() : 0.5;
+}
+
+double pressurePenWidth(double pressure, double baseWidth) {
+    return 2.0 * pressure * baseWidth;
+}
+
+double pressurePenWidth(double pressure) {
+    double baseWidth = options_::penWidth()->value();
+    return pressurePenWidth(pressure, baseWidth);
+}
+
+// We round double values to float precision since:
+// - Most come from a float anyway, so we do not actually lose precision.
+// - Even if we did lose precision, the extra precision is overkill/useless anyway.
+// - It significantly reduces the size of the XML file output. A striking
+//   example is the timestamps, that at least in macOS, are always an exact
+//   number of milliseconds, but would otherwise be formatted like 0.128000000004.
+//
+double roundInput(double x) {
+    return core::roundToSignificantDigits(x, 7);
+}
+
+std::unique_ptr<SketchPointsProcessingPass>
+makePostTransformPass(SketchFitMethod fitMethod) {
+    switch (fitMethod) {
+    case SketchFitMethod::NoFit:
+        return std::make_unique<detail::EmptyPass>();
+    case SketchFitMethod::IndexGaussianSmoothing:
+        return std::make_unique<detail::SmoothingPass>();
+    case SketchFitMethod::DouglasPeucker:
+        return std::make_unique<detail::DouglasPeuckerPass>();
+    }
+    return std::make_unique<detail::EmptyPass>();
+}
+
+// Sets the SketchPoint buffer and the transform matrix from saved input points.
+//
+// Returns false if there was no saved input points or if the saved data was
+// corrupted (unexpected type of array sizes).
+//
+bool setFromSavedInputPoints(
+    SketchPointBuffer& inputPoints,
+    geometry::Mat3d& transformMatrix,
+    workspace::Element* item) {
+
+    namespace ds = dom::strings;
+    using core::DoubleArray;
+    using dom::Value;
+    using geometry::Mat3d;
+    using geometry::Vec2dArray;
+
+    // Check that the item is a key edge
+    if (!dynamic_cast<workspace::VacKeyEdge*>(item)) {
+        return false;
+    }
+
+    // Check that it has a valid DOM element
+    dom::Element* e = item->domElement();
+    if (!e) {
+        return false;
+    }
+
+    // Check that it has non-corrupted saved input data
+    const auto* transform = e->getAttributeIf<Mat3d>(ds::inputtransform);
+    const auto* penWidth = e->getAttributeIf<double>(ds::inputpenwidth);
+    const auto* positions = e->getAttributeIf<Vec2dArray>(ds::inputpositions);
+    const auto* pressures = e->getAttributeIf<DoubleArray>(ds::inputpressures);
+    const auto* timestamps = e->getAttributeIf<DoubleArray>(ds::inputtimestamps);
+    if (!(transform && penWidth && positions && pressures && timestamps)) {
+        return false;
+    }
+    Int n = positions->length();
+    if (!(pressures->length() == n && timestamps->length() == n)) {
+        return false;
+    }
+
+    // Sets the transform matrix
+    transformMatrix = *transform;
+
+    // Sets the input points
+    inputPoints.clear();
+    for (Int i = 0; i < n; ++i) {
+        inputPoints.emplaceLast(
+            (*positions)[i],
+            (*pressures)[i],
+            (*timestamps)[i],
+            roundInput(pressurePenWidth((*pressures)[i], *penWidth)));
+        inputPoints.setNumStablePoints(inputPoints.length());
+    }
+    inputPoints.setNumStablePoints(inputPoints.length());
+
+    return true;
+}
+
+void updateEdgeGeometry(const SketchPointBuffer& points, workspace::Element* item) {
+
+    namespace ds = dom::strings;
+
+    // Check that the item is a key edge
+    if (!dynamic_cast<workspace::VacKeyEdge*>(item)) {
+        return;
+    }
+
+    // Check that it has a valid DOM element
+    dom::Element* domEdge = item->domElement();
+    if (!domEdge) {
+        return;
+    }
+
+    geometry::Vec2dArray positions;
+    core::DoubleArray widths;
+    for (const SketchPoint& p : points) {
+        positions.append(p.position());
+        widths.append(p.width());
+    }
+    domEdge->setAttribute(ds::positions, positions);
+    domEdge->setAttribute(ds::widths, widths);
+}
+
+} // namespace
+
+void SketchModule::recomputeEdgesWithFitMethod_() {
+
+    // Get the workspace.
+    //
+    workspace::WorkspaceLockPtr workspace;
+    if (auto module = importModule<canvas::DocumentManager>().lock()) {
+        workspace = module->currentWorkspace().lock();
+    }
+    if (!workspace) {
+        return;
+    }
+
+    // Create processing passes.
+    //
+    // Note: the recomputation ignores any snapping that may have occured when
+    // originally sketching the curve, since this info is not saved. However,
+    // if the start/end endpoints of the recomputed curve do not match the
+    // current positions of the start/end vertices of the edge, then the curve
+    // will anyway be automatically transformed by the workspace/vacomplex as a
+    // post-processing step to make these match.
+    //
+    SketchPointBuffer inputPoints;
+    detail::EmptyPass preTransformPass;
+    detail::TransformPass transformPass;
+    auto postTransformPass = makePostTransformPass(fitMethod());
+
+    // Create undo group
+    static core::StringId undoGroupName("Change Fit Method");
+    core::UndoGroupWeakPtr undoGroup_;
+    if (core::History* history = workspace->history()) {
+        undoGroup_ = history->createUndoGroup(undoGroupName);
+    }
+
+    // Apply passes to all curves with saved input sketch points.
+    //
+    workspace->visitDepthFirstPreOrder([&](workspace::Element* item, Int depth) {
+        VGC_UNUSED(depth);
+        geometry::Mat3d transform;
+        if (setFromSavedInputPoints(inputPoints, transform, item)) {
+
+            // Setup passes
+            preTransformPass.reset();
+            transformPass.reset();
+            transformPass.setTransformMatrix(transform);
+            postTransformPass->reset();
+
+            // Apply passes
+            preTransformPass.updateResultFrom(inputPoints);
+            transformPass.updateResultFrom(preTransformPass);
+            postTransformPass->updateResultFrom(transformPass);
+
+            // Save result to DOM
+            updateEdgeGeometry(postTransformPass->buffer(), item);
+        }
+    });
+    workspace->sync();
+
+    if (auto undoGroup = undoGroup_.lock()) {
+        undoGroup->close();
+    }
 }
 
 void SketchPointsProcessingPass::updateCumulativeChordalDistances() {
@@ -165,15 +355,58 @@ namespace detail {
 Int EmptyPass::update_(const SketchPointBuffer& input, Int lastNumStableInputPoints) {
 
     VGC_UNUSED(lastNumStableInputPoints);
-
     const SketchPointArray& inputPoints = input.data();
-    Int numStablePoints = this->numStablePoints();
-    resizePoints(numStablePoints);
-    extendPoints(inputPoints.begin() + numStablePoints, inputPoints.end());
-    return numStablePoints;
+
+    // Remove all previously unstable points.
+    //
+    Int oldNumStablePoints = this->numStablePoints();
+    resizePoints(oldNumStablePoints);
+
+    // Add all other points (some of which are now stable, some of which are
+    // still unstable).
+    //
+    extendPoints(inputPoints.begin() + oldNumStablePoints, inputPoints.end());
+
+    // Set the new number of stable points as being the same as the input.
+    //
+    Int newNumStablePoints = input.numStablePoints();
+    return newNumStablePoints;
 }
 
 void EmptyPass::reset_() {
+    // no custom state
+}
+
+Int TransformPass::update_(const SketchPointBuffer& input, Int lastNumStableInputPoints) {
+
+    VGC_UNUSED(lastNumStableInputPoints);
+    const SketchPointArray& inputPoints = input.data();
+
+    // Remove all previously unstable points.
+    //
+    Int oldNumStablePoints = this->numStablePoints();
+    resizePoints(oldNumStablePoints);
+
+    // Add all other points (some of which are now stable, some of which are
+    // still unstable).
+    //
+
+    for (auto it = inputPoints.begin() + oldNumStablePoints; //
+         it != inputPoints.end();
+         ++it) {
+
+        SketchPoint p = *it;
+        p.setPosition(transformAffine(p.position()));
+        appendPoint(p);
+    }
+
+    // Set the new number of stable points as being the same as the input.
+    //
+    Int newNumStablePoints = input.numStablePoints();
+    return newNumStablePoints;
+}
+
+void TransformPass::reset_() {
     // no custom state
 }
 
@@ -703,19 +936,6 @@ bool Sketch::onKeyPress(ui::KeyPressEvent* event) {
     return false;
 }
 
-namespace {
-
-double pressurePen(const ui::MouseEvent* event) {
-    return event->hasPressure() ? event->pressure() : 0.5;
-}
-
-double pressurePenWidth(double pressure) {
-    double baseWidth = options_::penWidth()->value();
-    return 2.0 * pressure * baseWidth;
-}
-
-} // namespace
-
 bool Sketch::onMouseMove(ui::MouseMoveEvent* event) {
 
     if (!isSketching_) {
@@ -1001,35 +1221,8 @@ void Sketch::onPaintDestroy(graphics::Engine* engine) {
     minimalLatencyStrokeGeometry_.reset();
 }
 
-void Sketch::updatePreTransformPassesResult_() {
-    dummyPreTransformPass_.updateResultFrom(inputPoints_);
-}
-
-const SketchPointBuffer& Sketch::preTransformPassesResult_() {
-    return dummyPreTransformPass_.buffer();
-}
-
-void Sketch::updateTransformedPoints_() {
-    const SketchPointBuffer& input = Sketch::preTransformPassesResult_();
-    const SketchPointArray& inputPoints = input.data();
-
-    Int n = transformedPoints_.length();
-    transformedPoints_.reserve(input.length());
-
-    for (auto it = inputPoints.begin() + n; it != inputPoints.end(); ++it) {
-        SketchPoint& p = transformedPoints_.append(*it);
-        p.setPosition(canvasToWorkspaceMatrix_.transformAffine(p.position()));
-    }
-}
-
-void Sketch::updatePostTransformPassesResult_() {
-    // Note: last pass must produce points with computed arclengths.
-
-    smoothingPass_->updateResultFrom(transformedPoints_);
-}
-
 const SketchPointBuffer& Sketch::postTransformPassesResult_() const {
-    return smoothingPass_->buffer();
+    return postTransformPass_->buffer();
 }
 
 core::ConstSpan<SketchPoint> Sketch::cleanInputPoints_() const {
@@ -1410,11 +1603,11 @@ void Sketch::startCurve_(ui::MouseEvent* event) {
     startTime_ = event->timestamp();
 
     // Transform: Save inverse view matrix
-    canvasToWorkspaceMatrix_ = canvas->camera().viewMatrix().inverse();
+    transformPass_.setTransformMatrix(canvas->camera().viewMatrix().inverse());
 
     // Snapping: Compute start vertex to snap to
     workspace::Element* snapVertex = nullptr;
-    geometry::Vec2d startPosition = canvasToWorkspaceMatrix_.transformAffine(eventPos2d);
+    geometry::Vec2d startPosition = transformPass_.transformAffine(eventPos2d);
     if (isSnappingEnabled()) {
         snapVertex = computeSnapVertex_(startPosition, 0);
         if (snapVertex) {
@@ -1456,7 +1649,7 @@ void Sketch::startCurve_(ui::MouseEvent* event) {
     domEdge->setAttribute(ds::startvertex, domStartVertex->getPathFromId());
     domEdge->setAttribute(ds::endvertex, domEndVertex->getPathFromId());
     if (canvas::experimental::saveInputSketchPoints()) {
-        domEdge->setAttribute(ds::inputtransform, canvasToWorkspaceMatrix_);
+        domEdge->setAttribute(ds::inputtransform, transformPass_.transformMatrix());
         domEdge->setAttribute(ds::inputpenwidth, options_::penWidth()->value());
     }
     edgeItemId_ = domEdge->internalId();
@@ -1468,17 +1661,7 @@ void Sketch::startCurve_(ui::MouseEvent* event) {
     }
     if (!lastFitMethod_ || *lastFitMethod_ != fitMethod) {
         lastFitMethod_ = fitMethod;
-        switch (fitMethod) {
-        case SketchFitMethod::NoFit:
-            smoothingPass_ = std::make_unique<detail::EmptyPass>();
-            break;
-        case SketchFitMethod::IndexGaussianSmoothing:
-            smoothingPass_ = std::make_unique<detail::SmoothingPass>();
-            break;
-        case SketchFitMethod::DouglasPeucker:
-            smoothingPass_ = std::make_unique<detail::DouglasPeuckerPass>();
-            break;
-        }
+        postTransformPass_ = makePostTransformPass(fitMethod);
     }
 
     // Append start point to geometry
@@ -1572,27 +1755,20 @@ void Sketch::continueCurve_(ui::MouseEvent* event) {
     // Are we processing them in batch every 16ms, or in real time when they
     // occur?
     //
-    // We round double values to float precision since:
-    // - Most come from a float anyway, so we do not actually lose precision.
-    // - Even if we did lose precision, the extra precision is overkill/useless anyway.
-    // - It significantly reduces the size of the XML file output. A striking
-    //   example is the timestamps, that at least in macOS, are always an exact
-    //   number of milliseconds, but would otherwise be formatted like 0.128000000004.
-    //
-    auto round = [](double x) { return core::roundToSignificantDigits(x, 7); };
     double pressure = pressurePen(event);
     inputPoints_.emplaceLast(
-        geometry::Vec2d(round(event->x()), round(event->y())),
-        round(pressure),
-        round(event->timestamp() - startTime_),
-        round(pressurePenWidth(pressure)));
+        geometry::Vec2d(roundInput(event->x()), roundInput(event->y())),
+        roundInput(pressure),
+        roundInput(event->timestamp() - startTime_),
+        roundInput(pressurePenWidth(pressure)));
     inputPoints_.setNumStablePoints(inputPoints_.length());
 
     // Apply all processing steps
 
-    updatePreTransformPassesResult_();
-    updateTransformedPoints_();
-    updatePostTransformPassesResult_();
+    preTransformPass_.updateResultFrom(inputPoints_);
+    transformPass_.updateResultFrom(preTransformPass_);
+    postTransformPass_->updateResultFrom(transformPass_);
+
     updatePendingPositions_();
     updatePendingWidths_();
 
@@ -1738,13 +1914,13 @@ void Sketch::resetData_() {
     //inputPoints_.clear();
 
     // pre-transform passes
-    dummyPreTransformPass_.reset();
+    preTransformPass_.reset();
 
-    // transform (fixed pass)
-    transformedPoints_.clear();
+    // transform
+    transformPass_.reset();
 
     // post-transform passes
-    smoothingPass_->reset();
+    postTransformPass_->reset();
 
     // pending clean input
     cleanInputStartIndex_ = 0;

@@ -223,6 +223,10 @@ protected:
 public:
     virtual ~SketchPointsProcessingPass() = default;
 
+    void updateResultFrom(const SketchPointsProcessingPass& input) {
+        updateResultFrom(input.buffer());
+    }
+
     void updateResultFrom(const SketchPointBuffer& input) {
         Int numStablePoints = update_(input, lastNumStableInputPoints_);
         buffer_.setNumStablePoints(numStablePoints);
@@ -317,6 +321,35 @@ protected:
     void reset_() override;
 };
 
+class VGC_TOOLS_API TransformPass : public SketchPointsProcessingPass {
+public:
+    TransformPass() noexcept = default;
+
+    const geometry::Mat3d& transformMatrix() const {
+        return transform_;
+    }
+
+    void setTransformMatrix(const geometry::Mat3d& transform) {
+        transform_ = transform;
+    }
+
+    geometry::Vec2d transform(const geometry::Vec2d& v) {
+        return transform_.transform(v);
+    }
+
+    geometry::Vec2d transformAffine(const geometry::Vec2d& v) {
+        return transform_.transformAffine(v);
+    }
+
+protected:
+    Int update_(const SketchPointBuffer& input, Int lastNumStableInputPoints) override;
+
+    void reset_() override;
+
+private:
+    geometry::Mat3d transform_;
+};
+
 class VGC_TOOLS_API SmoothingPass : public SketchPointsProcessingPass {
 public:
     SmoothingPass() noexcept = default;
@@ -379,6 +412,8 @@ public:
 private:
     void onCycleSketchFitMethod_();
     VGC_SLOT(onCycleSketchFitMethod_)
+
+    void recomputeEdgesWithFitMethod_();
 
     SketchFitMethod fitMethod_ = SketchFitMethod::IndexGaussianSmoothing;
 };
@@ -487,10 +522,7 @@ protected:
     // transform step, that is, all processing that relies on positions in
     // canvas coordinates space rather than positions in workspace coordinates.
     //
-    detail::EmptyPass dummyPreTransformPass_;
-
-    void updatePreTransformPassesResult_();
-    const SketchPointBuffer& preTransformPassesResult_();
+    detail::EmptyPass preTransformPass_;
 
     // Transformation.
     //
@@ -498,19 +530,15 @@ protected:
     // workspace/group coordinates. Note that we assume the view matrix does
     // not change while sketching the stroke.
     //
-    // It also translate the timestamps such that the timestamp of the
-    // first sample is 0.
-    //
-    geometry::Mat3d canvasToWorkspaceMatrix_;
-    SketchPointBuffer transformedPoints_;
-    void updateTransformedPoints_();
+    detail::TransformPass transformPass_;
 
-    // Smoothing.
+    // Pre-transform processing.
+    //
+    // Everything that we want to occur after the transformation step,
+    // and before snapping is applied.
     //
     std::optional<SketchFitMethod> lastFitMethod_;
-    std::unique_ptr<SketchPointsProcessingPass> smoothingPass_;
-
-    void updatePostTransformPassesResult_();
+    std::unique_ptr<SketchPointsProcessingPass> postTransformPass_;
     const SketchPointBuffer& postTransformPassesResult_() const;
 
     // Pending Clean Input

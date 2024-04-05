@@ -196,8 +196,6 @@ const Value& Element::getAttribute(core::StringId name) const {
             return attributeSpec->defaultValue();
         }
         else {
-            VGC_WARNING(
-                LogVgcDom, "Attribute is neither authored nor have a default value.");
             return Value::invalid();
         }
     }
