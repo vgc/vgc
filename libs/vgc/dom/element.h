@@ -298,10 +298,22 @@ public:
     ///
     const Value& getAuthoredAttribute(core::StringId name) const;
 
-    /// Gets the value of the attribute named `name`. Emits a warning and returns an
-    /// invalid value if the attribute neither is authored nor has a default value.
+    /// Gets the value of the attribute named `name`. Returns an invalid value
+    /// if the attribute neither is authored nor has a default value.
     ///
     const Value& getAttribute(core::StringId name) const;
+
+    /// Gets the value of the attribute named `name` as a `const T*`. Returns
+    /// `nullptr` if the attribute neither is authored nor has a default value,
+    /// or if the held value is not of the requested type.
+    ///
+    // XXX Use smart pointers instead?
+    //
+    template<typename T>
+    const T* getAttributeIf(core::StringId name) const {
+        const Value& value = getAttribute(name);
+        return value.getIf<T>();
+    }
 
     /// Gets the element referred to by the path attribute named `name`.
     ///
