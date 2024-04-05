@@ -871,14 +871,12 @@ void QglEngine::onDestroyed() {
     surface_ = nullptr;
 }
 
-/* static */
 QglEnginePtr QglEngine::create(const EngineCreateInfo& createInfo) {
     QglEnginePtr engine = core::createObject<QglEngine>(createInfo, nullptr);
     engine->init_();
     return engine;
 }
 
-/* static */
 QglEnginePtr
 QglEngine::create(const EngineCreateInfo& createInfo, QOpenGLContext* externalCtx) {
     // Multithreading not supported atm, Qt does thread affinity

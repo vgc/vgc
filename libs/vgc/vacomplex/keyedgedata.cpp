@@ -209,7 +209,6 @@ void KeyEdgeData::closeStroke(bool smoothJoin) {
 // IDEA: do conversion to common best stroke geometry to merge
 //       then match cell properties by pairs (use null if not present)
 
-/* static */
 KeyEdgeData KeyEdgeData::fromConcatStep(
     const KeyHalfedgeData& khd1,
     const KeyHalfedgeData& khd2,
@@ -249,7 +248,6 @@ void KeyEdgeData::finalizeConcat() {
     properties_.finalizeConcat();
 }
 
-/* static */
 KeyEdgeData KeyEdgeData::fromGlueOpen(core::ConstSpan<KeyHalfedgeData> khds) {
 
     struct ConvertedStroke {
@@ -292,7 +290,6 @@ KeyEdgeData KeyEdgeData::fromGlueOpen(core::ConstSpan<KeyHalfedgeData> khds) {
     return fromGlue(khds, std::move(gluedStroke));
 }
 
-/* static */
 KeyEdgeData KeyEdgeData::fromGlueClosed(
     core::ConstSpan<KeyHalfedgeData> khds,
     core::ConstSpan<double> uOffsets) {
@@ -337,7 +334,6 @@ KeyEdgeData KeyEdgeData::fromGlueClosed(
     return fromGlue(khds, std::move(gluedStroke));
 }
 
-/* static */
 KeyEdgeData KeyEdgeData::fromGlue(
     core::ConstSpan<KeyHalfedgeData> khds,
     std::unique_ptr<geometry::AbstractStroke2d>&& gluedStroke) {

@@ -193,7 +193,6 @@ PythonInterpreter::PythonInterpreter(
         pythonPath());
 }
 
-/* static */
 PythonInterpreterPtr
 PythonInterpreter::create(const std::string& programName, const std::string& pythonHome) {
     return createObject<PythonInterpreter>(programName, pythonHome);

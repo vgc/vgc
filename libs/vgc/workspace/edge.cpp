@@ -700,7 +700,6 @@ ElementStatus VacKeyEdge::onDependencyRemoved_(Element* dependency) {
     return status;
 }
 
-/* static */
 bool VacKeyEdge::updateStrokeFromDom_(
     vacomplex::KeyEdgeData& data,
     const dom::Element* domElement) {
@@ -736,7 +735,6 @@ bool VacKeyEdge::updateStrokeFromDom_(
     return true;
 }
 
-/* static */
 void VacKeyEdge::writeStrokeToDom_(
     dom::Element* domElement,
     const vacomplex::KeyEdgeData& data) {
@@ -753,7 +751,6 @@ void VacKeyEdge::writeStrokeToDom_(
     }
 }
 
-/* static */
 void VacKeyEdge::clearStrokeFromDom_(dom::Element* domElement) {
     namespace ds = dom::strings;
     domElement->clearAttribute(ds::positions);

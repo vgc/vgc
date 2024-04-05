@@ -853,7 +853,6 @@ void D3d11Engine::onDestroyed() {
     Engine::onDestroyed();
 }
 
-/* static */
 D3d11EnginePtr D3d11Engine::create(const EngineCreateInfo& createInfo) {
     D3d11EnginePtr engine = core::createObject<D3d11Engine>(createInfo);
     engine->init_();

@@ -60,7 +60,6 @@ void KeyFaceData::transform(const geometry::Mat3d& transformation) {
     properties_.onTransformGeometry(transformation);
 }
 
-/* static */
 void KeyFaceData::assignFromConcatStep(
     KeyFaceData& result,
     const KeyFaceData& kfd1,
