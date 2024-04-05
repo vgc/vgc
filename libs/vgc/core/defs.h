@@ -180,10 +180,10 @@
 /// intentionally discarded. This is equivalent to a cast to `void` but
 /// clarifies intent and improves searchability.
 ///
-/// For unused variable, prefer using `VGC_UNUSED`.
+/// For unused variables, prefer using `VGC_UNUSED`.
 ///
 /// ```cpp
-/// [[nodiscar]] int foo();
+/// [[nodiscard]] int foo();
 /// void bar() {
 ///     VGC_DISCARD(foo());
 /// }
@@ -220,8 +220,8 @@
 /// int getOrInsert(const std::map<int, int>& map, int key, int value) {
 ///     auto [it, inserted] = map.try_emplace(key, value);
 ///     VGC_UNUSED(inserted);
-///     int value = it->second;;
-///     return value;
+///     int valueInMap = it->second;
+///     return valueInMap;
 /// }
 ///
 /// // Conditionally used argument depending on template instantiation.
