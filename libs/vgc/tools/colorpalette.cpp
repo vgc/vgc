@@ -864,7 +864,6 @@ ColorPaletteSelector::ColorPaletteSelector(CreateKey key)
     addStyleClass(strings::ColorPaletteSelector);
 }
 
-/* static */
 ColorPaletteSelectorPtr ColorPaletteSelector::create() {
     return core::createObject<ColorPaletteSelector>();
 }

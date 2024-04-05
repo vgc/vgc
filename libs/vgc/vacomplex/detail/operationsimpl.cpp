@@ -2378,7 +2378,6 @@ void Operations::insertNodeAsLastChild_(Node* node, Group* parent) {
     }
 }
 
-/* static */
 Node* Operations::findTopMost(core::ConstSpan<Node*> nodes) {
     // currently only looking under a single parent
     // TODO: tree-wide top most.
@@ -2397,7 +2396,6 @@ Node* Operations::findTopMost(core::ConstSpan<Node*> nodes) {
     return topMostNode;
 }
 
-/* static */
 Node* Operations::findBottomMost(core::ConstSpan<Node*> nodes) {
     // currently only looking under a single parent
     // TODO: tree-wide bottom most.

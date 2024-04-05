@@ -35,7 +35,6 @@ PerformanceLog::PerformanceLog(
     }
 }
 
-/* static */
 PerformanceLogPtr PerformanceLog::create(const std::string& name) {
     return createObject<PerformanceLog>(nullptr, name);
 }
@@ -72,7 +71,6 @@ PerformanceLogParams::PerformanceLogParams(CreateKey key)
     : Object(key) {
 }
 
-/* static */
 PerformanceLogParamsPtr PerformanceLogParams::create() {
     return createObject<PerformanceLogParams>();
 }

@@ -48,7 +48,6 @@ ScrollEvent::ScrollEvent(
     , verticalSteps_(verticalSteps) {
 }
 
-/* static */
 ScrollEventPtr ScrollEvent::create(
     double timestamp,
     ModifierKeys modifiers,

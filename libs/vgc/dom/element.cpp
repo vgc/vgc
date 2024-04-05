@@ -40,7 +40,6 @@ void Element::onDestroyed() {
     SuperClass::onDestroyed();
 }
 
-/* static */
 Element* Element::create_(Node* parent, core::StringId tagName, Element* nextSibling) {
     Document* doc = parent->document();
 
@@ -52,7 +51,6 @@ Element* Element::create_(Node* parent, core::StringId tagName, Element* nextSib
     return e.get();
 }
 
-/* static */
 Element* Element::createCopy_(Node* parent, const Element* source, Element* nextSibling) {
 
     Document* srcDoc = source->document();
@@ -72,7 +70,6 @@ Element* Element::createCopy_(Node* parent, const Element* source, Element* next
     return result;
 }
 
-/* static */
 Element* Element::createCopy_(
     Node* parent,
     const Element* source,
@@ -87,7 +84,6 @@ Element* Element::createCopy_(
     return e;
 }
 
-/* static */
 Element* Element::createCopyRec_(
     Node* parent,
     const Element* source,
@@ -126,7 +122,6 @@ Element* Element::createCopyRec_(
     return e.get();
 }
 
-/* static */
 Element* Element::create(Document* parent, core::StringId tagName) {
     if (parent->rootElement()) {
         throw SecondRootElementError(parent);
@@ -135,12 +130,10 @@ Element* Element::create(Document* parent, core::StringId tagName) {
     return create_(parent, tagName, nullptr);
 }
 
-/* static */
 Element* Element::create(Element* parent, core::StringId tagName, Element* nextSibling) {
     return create_(parent, tagName, nextSibling);
 }
 
-/* static */
 Element* Element::createCopy(Document* parent, const Element* source) {
     if (parent->rootElement()) {
         throw SecondRootElementError(parent);
@@ -149,7 +142,6 @@ Element* Element::createCopy(Document* parent, const Element* source) {
     return createCopy_(parent, source, nullptr);
 }
 
-/* static */
 Element*
 Element::createCopy(Element* parent, const Element* source, Element* nextSibling) {
     return createCopy_(parent, source, nextSibling);

@@ -24,7 +24,6 @@ Event::Event(CreateKey key, double timestamp, ModifierKeys modifiers)
     , modifierKeys_(modifiers) {
 }
 
-/* static */
 EventPtr Event::create(double timestamp, ModifierKeys modifiers) {
     return core::createObject<Event>(timestamp, modifiers);
 }

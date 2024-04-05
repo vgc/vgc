@@ -283,7 +283,6 @@ void CellProperties::assignFromSlice(
     }
 }
 
-/* static */
 void CellProperties::emitPropertyChanged_(core::StringId name) {
     if (cell_) {
         Complex* complex = cell_->complex();

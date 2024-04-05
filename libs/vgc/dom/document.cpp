@@ -46,7 +46,6 @@ Document::Document(CreateKey key)
     generateXmlDeclaration_();
 }
 
-/* static */
 DocumentPtr Document::create() {
     return core::createObject<Document>();
 }
@@ -203,7 +202,6 @@ private:
 
 } // namespace
 
-/* static */
 DocumentPtr Document::open(std::string_view filePath) {
     // Note: in the future, we want to be able to detect formatting style of
     // input XML files, and preserve this style, as well as existing
@@ -329,7 +327,6 @@ void Document::save(const std::string& filePath, const XmlFormattingStyle& style
     writeChildren(out, style, 0, this);
 }
 
-/* static */
 DocumentPtr Document::copy(core::ConstSpan<Node*> nodes) {
 
     static_assert(core::isRange<core::Span<Node*>>);
@@ -406,7 +403,6 @@ DocumentPtr Document::copy(core::ConstSpan<Node*> nodes) {
     return result;
 }
 
-/* static */
 core::Array<Node*> Document::paste(DocumentPtr document, Node* parent) {
 
     core::Array<Node*> res;
