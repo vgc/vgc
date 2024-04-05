@@ -538,7 +538,9 @@ void Widget::onPaintCreate(graphics::Engine* engine) {
     triangles_ = engine->createDynamicTriangleListView(layout);
 }
 
-void Widget::onPaintPrepare(graphics::Engine* /*engine*/, PaintOptions /*options*/) {
+void Widget::onPaintPrepare(graphics::Engine* engine, PaintOptions options) {
+    VGC_UNUSED(engine);
+    VGC_UNUSED(options);
 }
 
 void Widget::onPaintDraw(graphics::Engine* engine, PaintOptions options) {
@@ -546,11 +548,13 @@ void Widget::onPaintDraw(graphics::Engine* engine, PaintOptions options) {
     paintChildren(engine, options);
 }
 
-void Widget::onPaintDestroy(graphics::Engine* /*engine*/) {
+void Widget::onPaintDestroy(graphics::Engine* engine) {
+    VGC_UNUSED(engine);
     triangles_.reset();
 }
 
-void Widget::paintBackground(graphics::Engine* engine, PaintOptions /*options*/) {
+void Widget::paintBackground(graphics::Engine* engine, PaintOptions options) {
+    VGC_UNUSED(options);
     if (backgroundColor_.a() > 0) {
         if (backgroundChanged_) {
             backgroundChanged_ = false;
@@ -769,31 +773,38 @@ bool Widget::mouseScroll(ScrollEvent* event) {
     // updated as a result of that change.
 }
 
-void Widget::preMouseMove(MouseMoveEvent* /*event*/) {
+void Widget::preMouseMove(MouseMoveEvent* event) {
+    VGC_UNUSED(event);
     // no-op
 }
 
-void Widget::preMousePress(MousePressEvent* /*event*/) {
+void Widget::preMousePress(MousePressEvent* event) {
+    VGC_UNUSED(event);
     // no-op
 }
 
-void Widget::preMouseRelease(MouseReleaseEvent* /*event*/) {
+void Widget::preMouseRelease(MouseReleaseEvent* event) {
+    VGC_UNUSED(event);
     // no-op
 }
 
-bool Widget::onMouseMove(MouseMoveEvent* /*event*/) {
+bool Widget::onMouseMove(MouseMoveEvent* event) {
+    VGC_UNUSED(event);
     return false;
 }
 
-bool Widget::onMousePress(MousePressEvent* /*event*/) {
+bool Widget::onMousePress(MousePressEvent* event) {
+    VGC_UNUSED(event);
     return false;
 }
 
-bool Widget::onMouseRelease(MouseReleaseEvent* /*event*/) {
+bool Widget::onMouseRelease(MouseReleaseEvent* event) {
+    VGC_UNUSED(event);
     return false;
 }
 
-bool Widget::onMouseScroll(ScrollEvent* /*event*/) {
+bool Widget::onMouseScroll(ScrollEvent* event) {
+    VGC_UNUSED(event);
     return false;
 }
 

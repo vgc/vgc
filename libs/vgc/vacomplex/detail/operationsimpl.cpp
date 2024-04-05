@@ -441,9 +441,9 @@ private:
 } // namespace
 
 // deleteIsolatedVertices is not supported yet
-void Operations::softDelete(
-    core::ConstSpan<Node*> nodes,
-    bool /*deleteIsolatedVertices*/) {
+void Operations::softDelete(core::ConstSpan<Node*> nodes, bool deleteIsolatedVertices) {
+
+    VGC_UNUSED(deleteIsolatedVertices);
 
     if (nodes.isEmpty()) {
         return;

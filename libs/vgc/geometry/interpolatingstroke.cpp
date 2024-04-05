@@ -252,7 +252,8 @@ void AbstractInterpolatingStroke2d::close_(bool smoothJoin) {
     }
 }
 
-void AbstractInterpolatingStroke2d::open_(bool /*keepJoinAsBestAsPossible*/) {
+void AbstractInterpolatingStroke2d::open_(bool keepJoinAsBestAsPossible) {
+    VGC_UNUSED(keepJoinAsBestAsPossible);
     if (positions_.length() > 0) {
         positions_.append(positions_.first());
         if (!hasConstantWidth_) {
@@ -500,10 +501,13 @@ template<typename TPoint, typename PositionGetter, typename WidthGetter>
     core::Span<TPoint> points,
     core::IntArray& indices,
     Int intervalStart,
-    bool /*isClosed*/,
-    double /*tolerance*/,
+    bool isClosed,
+    double tolerance,
     PositionGetter positionGetter,
     WidthGetter widthGetter) {
+
+    VGC_UNUSED(isClosed);
+    VGC_UNUSED(tolerance);
 
     Int i = intervalStart;
     Int endIndex = indices[i + 1];
@@ -1819,7 +1823,9 @@ public:
     }
 
 private:
-    bool initStrokeSampling_(CurveSamplingQuality /*quality*/, double /*maxDs*/) {
+    bool initStrokeSampling_(CurveSamplingQuality quality, double maxDs) {
+        VGC_UNUSED(quality);
+        VGC_UNUSED(maxDs);
         if (numKnots_ < 2) {
             return false;
         }
@@ -2373,9 +2379,11 @@ Vec2d AbstractInterpolatingStroke2d::sculptGrab_(
     const Vec2d& startPosition,
     const Vec2d& endPosition,
     double radius,
-    double /*strength*/,
+    double strength,
     double tolerance,
     bool isClosed) {
+
+    VGC_UNUSED(strength);
 
     // Let's consider tolerance will be ~= pixelSize for now.
     //
@@ -2645,8 +2653,10 @@ Vec2d AbstractInterpolatingStroke2d::sculptWidth_(
     const Vec2d& position,
     double delta,
     double radius,
-    double /*tolerance*/,
+    double tolerance,
     bool isClosed) {
+
+    VGC_UNUSED(tolerance);
 
     Int numKnots = positions_.length();
     if (numKnots == 0) {

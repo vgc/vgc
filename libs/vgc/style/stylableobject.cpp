@@ -160,7 +160,7 @@ void StylableObject::populateStyleSpecTable(SpecTable*) {
 
 void StylableObject::debugPrintStyle(core::StringWriter& out) {
     for (auto [ruleSet, specificity] : styleCache_.ruleSetArray) {
-        std::ignore = specificity;
+        VGC_UNUSED(specificity);
         write(out, ruleSet->text());
         write(out, "\n\n");
     }

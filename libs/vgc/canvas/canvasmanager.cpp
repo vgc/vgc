@@ -292,7 +292,8 @@ void fitViewToDocument_(Canvas& canvas, workspace::Workspace& workspace) {
     // TODO: implement Workspace::boundingBox().
     geometry::Rect2d rect = geometry::Rect2d::empty;
     workspace.visitDepthFirstPreOrder( //
-        [&rect](workspace::Element* e, Int /*depth*/) {
+        [&rect](workspace::Element* e, Int depth) {
+            VGC_UNUSED(depth);
             rect.uniteWith(e->boundingBox());
         });
     fitViewToRect_(canvas, rect);

@@ -1672,7 +1672,7 @@ void Select::finalizeDragMovedElements_(workspace::Workspace* workspace) {
             vacomplex::KeyEdge* ke = element->vacNode()->toCellUnchecked()->toKeyEdge();
             if (ke && ked.isEditStarted) {
                 const vacomplex::KeyEdgeData& data = ke->data();
-                std::ignore = data;
+                VGC_UNUSED(data);
                 //data.finishEdit();
             }
         }

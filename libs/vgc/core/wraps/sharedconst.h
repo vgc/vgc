@@ -53,7 +53,8 @@ void wrapSharedConstImplicitCast() {
         }
     };
 
-    auto implicitCaster = [](PyObject* obj, PyTypeObject* /*type*/) -> PyObject* {
+    auto implicitCaster = [](PyObject* obj, PyTypeObject* type) -> PyObject* {
+        VGC_UNUSED(type);
         static bool currentlyUsed = false;
         if (currentlyUsed) { // non-reentrant
             return nullptr;

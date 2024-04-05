@@ -87,7 +87,8 @@ void NativeMenuBar::convertToNativeMenuBar_() {
     populateMenuBar_(menu_, qMenuBar_);
 }
 
-void NativeMenuBar::registerMenuBar_(ui::Menu* menu, QMenuBar* /*qMenu*/) {
+void NativeMenuBar::registerMenuBar_(ui::Menu* menu, QMenuBar* qMenu) {
+    VGC_UNUSED(qMenu);
     menu->changed().connect(onMenuChangedSlot_());
     ui::userShortcuts()->changed().connect(onShortcutsChangedSlot_());
 }

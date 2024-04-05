@@ -232,8 +232,11 @@ void KeyEdge::substituteKeyVertex_(KeyVertex* oldVertex, KeyVertex* newVertex) {
 }
 
 void KeyEdge::substituteKeyEdge_(
-    const class KeyHalfedge& /*oldHalfedge*/,
-    const class KeyHalfedge& /*newHalfedge*/) {
+    const class KeyHalfedge& oldHalfedge,
+    const class KeyHalfedge& newHalfedge) {
+
+    VGC_UNUSED(oldHalfedge);
+    VGC_UNUSED(newHalfedge);
     // no-op
 }
 

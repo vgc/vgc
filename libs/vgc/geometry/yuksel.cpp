@@ -518,7 +518,10 @@ StrokeBoundaryInfo YukselSplineStroke2d::computeBoundaryInfo_() const {
 }
 
 void YukselSplineStroke2d::updateCache_(
-    const core::Array<SegmentComputeData>& /*baseComputeDataArray*/) const {
+    const core::Array<SegmentComputeData>& baseComputeDataArray) const {
+
+    VGC_UNUSED(baseComputeDataArray);
+
     // no custom cache data
 }
 

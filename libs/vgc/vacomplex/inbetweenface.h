@@ -37,7 +37,7 @@ private:
 public:
     VGC_VACOMPLEX_DEFINE_SPATIOTEMPORAL_CELL_CAST_METHODS(Inbetween, Face)
 
-    geometry::Rect2d boundingBoxAt(core::AnimTime /*t*/) const override;
+    geometry::Rect2d boundingBoxAt(core::AnimTime t) const override;
 
 private:
     void substituteKeyVertex_(KeyVertex* oldVertex, KeyVertex* newVertex) override;

@@ -23,32 +23,37 @@
 
 namespace vgc::vacomplex {
 
-CellProperty::OpResult
-CellProperty::onTranslateGeometry_(const geometry::Vec2d& /*delta*/) {
+CellProperty::OpResult CellProperty::onTranslateGeometry_(const geometry::Vec2d& delta) {
+    VGC_UNUSED(delta);
     return OpResult::Unchanged;
 }
 
 CellProperty::OpResult
-CellProperty::onTransformGeometry_(const geometry::Mat3d& /*transformation*/) {
+CellProperty::onTransformGeometry_(const geometry::Mat3d& transformation) {
+    VGC_UNUSED(transformation);
     return OpResult::Unchanged;
 }
 
 CellProperty::OpResult
-CellProperty::onUpdateGeometry_(const geometry::AbstractStroke2d* /*newStroke*/) {
+CellProperty::onUpdateGeometry_(const geometry::AbstractStroke2d* newStroke) {
+    VGC_UNUSED(newStroke);
     return OpResult::Unchanged;
 }
 
 std::unique_ptr<CellProperty> CellProperty::fromConcatStep_(
-    const KeyHalfedgeData& /*khd1*/,
-    const KeyHalfedgeData& /*khd2*/) const {
+    const KeyHalfedgeData& khd1,
+    const KeyHalfedgeData& khd2) const {
 
+    VGC_UNUSED(khd1);
+    VGC_UNUSED(khd2);
     return nullptr;
 }
 
-std::unique_ptr<CellProperty> CellProperty::fromConcatStep_(
-    const KeyFaceData& /*kfd1*/,
-    const KeyFaceData& /*kfd2*/) const {
+std::unique_ptr<CellProperty>
+CellProperty::fromConcatStep_(const KeyFaceData& kfd1, const KeyFaceData& kfd2) const {
 
+    VGC_UNUSED(kfd1);
+    VGC_UNUSED(kfd2);
     return nullptr;
 }
 
@@ -57,19 +62,26 @@ CellProperty::OpResult CellProperty::finalizeConcat_() {
 }
 
 std::unique_ptr<CellProperty> CellProperty::fromGlue_(
-    core::ConstSpan<KeyHalfedgeData> /*khds*/,
-    const geometry::AbstractStroke2d* /*gluedStroke*/) const {
+    core::ConstSpan<KeyHalfedgeData> khds,
+    const geometry::AbstractStroke2d* gluedStroke) const {
 
+    VGC_UNUSED(khds);
+    VGC_UNUSED(gluedStroke);
     return nullptr;
 }
 
 std::unique_ptr<CellProperty> CellProperty::fromSlice_(
-    const KeyEdgeData& /*ked*/,
-    const geometry::CurveParameter& /*start*/,
-    const geometry::CurveParameter& /*end*/,
-    Int /*numWraps*/,
-    const geometry::AbstractStroke2d* /*subStroke*/) const {
+    const KeyEdgeData& ked,
+    const geometry::CurveParameter& start,
+    const geometry::CurveParameter& end,
+    Int numWraps,
+    const geometry::AbstractStroke2d* subStroke) const {
 
+    VGC_UNUSED(ked);
+    VGC_UNUSED(start);
+    VGC_UNUSED(end);
+    VGC_UNUSED(numWraps);
+    VGC_UNUSED(subStroke);
     return nullptr;
 }
 

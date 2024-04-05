@@ -1004,7 +1004,7 @@ void destroyAreaAndToBeEmptyAncestorAreas(PanelArea* area) {
 } // namespace
 
 void PanelArea::onTabClosed_(Int tabIndex) {
-    std::ignore = tabIndex;
+    VGC_UNUSED(tabIndex);
     TabBar* tabBar = this->tabBar();
     Int numRemainingTabs = tabBar ? tabBar->numTabs() : 0;
     if (numRemainingTabs == 0) {

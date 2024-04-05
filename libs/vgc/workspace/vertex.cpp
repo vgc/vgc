@@ -44,10 +44,8 @@ void setMultiJoinEnabled(bool enabled) {
 
 } // namespace detail
 
-void VacVertexCellFrameData::debugPaint_(graphics::Engine* /*engine*/) {
-
-    using namespace graphics;
-    using detail::VacJoinHalfedgeFrameData;
+void VacVertexCellFrameData::debugPaint_(graphics::Engine* engine) {
+    VGC_UNUSED(engine);
 }
 
 void VacVertexCell::rebuildJoinHalfedgesArray() const {
@@ -115,10 +113,12 @@ geometry::Rect2d VacKeyVertex::boundingBox(core::AnimTime t) const {
 
 bool VacKeyVertex::isSelectableAt(
     const geometry::Vec2d& p,
-    bool /*outlineOnly*/,
+    bool outlineOnly,
     double tol,
     double* outDistance,
     core::AnimTime t) const {
+
+    VGC_UNUSED(outlineOnly);
 
     vacomplex::KeyVertex* kv = vacKeyVertexNode();
     if (kv && frameData_.time() == t) {
@@ -213,7 +213,8 @@ void VacKeyVertex::onPaintDraw(
     }
 }
 
-ElementStatus VacKeyVertex::updateFromDom_(Workspace* /*workspace*/) {
+ElementStatus VacKeyVertex::updateFromDom_(Workspace* workspace) {
+    VGC_UNUSED(workspace);
     namespace ds = dom::strings;
     dom::Element* const domElement = this->domElement();
     if (!domElement) {

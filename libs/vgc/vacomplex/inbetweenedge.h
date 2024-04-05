@@ -42,11 +42,12 @@ public:
     bool isClosed() const override;
 
     std::shared_ptr<const geometry::StrokeSampling2d>
-    strokeSamplingShared(core::AnimTime /*t*/) const override {
+    strokeSamplingShared(core::AnimTime t) const override {
+        VGC_UNUSED(t);
         return nullptr;
     }
 
-    geometry::Rect2d boundingBoxAt(core::AnimTime /*t*/) const override;
+    geometry::Rect2d boundingBoxAt(core::AnimTime t) const override;
 
 private:
     void substituteKeyVertex_(KeyVertex* oldVertex, KeyVertex* newVertex) override;

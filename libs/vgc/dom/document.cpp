@@ -556,13 +556,13 @@ void Document::onElementIdChanged_(Element* element, core::StringId oldId) {
     // iterating on all elements.
     if (!oldId.isEmpty()) {
         for (const auto& [eId, e] : elementByInternalIdMap_) {
-            std::ignore = eId;
+            VGC_UNUSED(eId);
             detail::prepareInternalPathsForUpdate(e);
         }
         detail::PathUpdateData pud;
         pud.addAbsolutePathChangedElement(element->internalId());
         for (const auto& [eId, e] : elementByInternalIdMap_) {
-            std::ignore = eId;
+            VGC_UNUSED(eId);
             detail::updateInternalPaths(e, pud);
         }
     }
@@ -740,7 +740,7 @@ Element* Document::resolveElementPartOfPath_(
         }
         // Break out of loop if there is an error or we reached the end of
         // the "element part" of the path.
-        if (!element /* <- error */) {
+        if (!element) {
             hasError = true;
             break;
         }
@@ -772,10 +772,12 @@ Element* Document::resolveElementPartOfPath_(
 
 // static
 Value Document::resolveAttributePartOfPath_(
-    const Path& /*path*/,
+    const Path& path,
     Path::ConstSegmentIterator& segIt,
     Path::ConstSegmentIterator segEnd,
     const Element* element) {
+
+    VGC_UNUSED(path);
 
     Value result = {};
     for (; segIt != segEnd; ++segIt) {

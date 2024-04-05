@@ -18,8 +18,9 @@
 
 namespace vgc::vacomplex {
 
-geometry::Rect2d InbetweenFace::boundingBoxAt(core::AnimTime /*t*/) const {
+geometry::Rect2d InbetweenFace::boundingBoxAt(core::AnimTime t) const {
     // TODO
+    VGC_UNUSED(t);
     return geometry::Rect2d::empty;
 }
 

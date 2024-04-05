@@ -153,7 +153,8 @@ bool PaintBucket::onMousePress(ui::MousePressEvent* event) {
     return false;
 }
 
-bool PaintBucket::onMouseRelease(ui::MouseReleaseEvent* /*event*/) {
+bool PaintBucket::onMouseRelease(ui::MouseReleaseEvent* event) {
+    VGC_UNUSED(event);
     // TODO
     return false;
 }

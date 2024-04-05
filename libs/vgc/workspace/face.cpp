@@ -67,9 +67,11 @@ geometry::Rect2d VacKeyFace::boundingBox(core::AnimTime t) const {
 bool VacKeyFace::isSelectableAt(
     const geometry::Vec2d& position,
     bool outlineOnly,
-    double /*tol*/,
+    double tol,
     double* outDistance,
     core::AnimTime t) const {
+
+    VGC_UNUSED(tol);
 
     if (frameData_.time() == t) {
         if (outlineOnly) {
@@ -141,8 +143,10 @@ const VacFaceCellFrameData* VacKeyFace::computeFrameDataAt(core::AnimTime t) {
     return nullptr;
 }
 
-void VacKeyFace::onPaintPrepare(core::AnimTime /*t*/, PaintOptions /*flags*/) {
+void VacKeyFace::onPaintPrepare(core::AnimTime t, PaintOptions flags) {
     // todo, use paint options to not compute everything or with lower quality
+    VGC_UNUSED(t);
+    VGC_UNUSED(flags);
     computeFillMesh_();
     computeStrokeStyle_();
 }
@@ -217,8 +221,8 @@ void VacKeyFace::onPaintDraw(
     // draws nothing if non-selected and in outline mode
 }
 
-ElementStatus
-VacKeyFace::onDependencyChanged_(Element* /*dependency*/, ChangeFlags changes) {
+ElementStatus VacKeyFace::onDependencyChanged_(Element* dependency, ChangeFlags changes) {
+    VGC_UNUSED(dependency);
     ElementStatus status = this->status();
     if (status == ElementStatus::Ok) {
         if (changes.has(ChangeFlag::EdgePreJoinGeometry)) {
@@ -228,7 +232,8 @@ VacKeyFace::onDependencyChanged_(Element* /*dependency*/, ChangeFlags changes) {
     return status;
 }
 
-ElementStatus VacKeyFace::onDependencyRemoved_(Element* /*dependency*/) {
+ElementStatus VacKeyFace::onDependencyRemoved_(Element* dependency) {
+    VGC_UNUSED(dependency);
     ElementStatus status = this->status();
     if (status == ElementStatus::Ok) {
         status = ElementStatus::UnresolvedDependency;
@@ -636,12 +641,13 @@ bool VacKeyFace::computeStrokeStyle_() {
     return true;
 }
 
-void VacKeyFace::dirtyStrokeStyle_(bool /*notifyDependentsImmediately*/) {
+void VacKeyFace::dirtyStrokeStyle_(bool notifyDependentsImmediately) {
     VacKeyFaceFrameData& frameData = frameData_;
     if (!frameData.isStyleDirty_) {
         frameData.isStyleDirty_ = true;
         frameData.graphics_.clearStyle();
         notifyChangesToDependents(ChangeFlag::Style);
+        VGC_UNUSED(notifyDependentsImmediately);
         //notifyChanges_({ ChangeFlag::Style }, notifyDependentsImmediately);
     }
 }

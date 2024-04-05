@@ -1294,7 +1294,8 @@ void D3d11Engine::initBuiltinResources_() {
     // no-op
 }
 
-void D3d11Engine::initFramebuffer_(Framebuffer* /*framebuffer*/) {
+void D3d11Engine::initFramebuffer_(Framebuffer* framebuffer) {
+    VGC_UNUSED(framebuffer);
     // no-op
 }
 
@@ -1677,7 +1678,8 @@ void D3d11Engine::initSamplerState_(SamplerState* state) {
     device_->CreateSamplerState(&desc, d3dSamplerState->object_.releaseAndGetAddressOf());
 }
 
-void D3d11Engine::initGeometryView_(GeometryView* /*view*/) {
+void D3d11Engine::initGeometryView_(GeometryView* view) {
+    VGC_UNUSED(view);
     //D3d11GeometryView* d3dGeometryView = static_cast<D3d11GeometryView*>(view);
     // no-op ?
 }
@@ -2043,8 +2045,8 @@ void D3d11Engine::clear_(const core::Color& color) {
 }
 
 UInt64
-D3d11Engine::present_(SwapChain* swapChain, UInt32 syncInterval, PresentFlags /*flags*/) {
-
+D3d11Engine::present_(SwapChain* swapChain, UInt32 syncInterval, PresentFlags flags) {
+    VGC_UNUSED(flags);
     D3d11SwapChain* d3dSwapChain = static_cast<D3d11SwapChain*>(swapChain);
     IDXGISwapChain1* dxgiSwapChain1 = d3dSwapChain->dxgiSwapChain1();
     if (dxgiSwapChain1->Present(syncInterval, 0) != S_OK) {

@@ -18,5 +18,6 @@
 
 #include <vgc/core/wraps/common.h>
 
-void wrap_parse(py::module& /*m*/) {
+void wrap_parse(py::module& m) {
+    VGC_UNUSED(m);
 }

@@ -67,7 +67,7 @@ private:
     // https://www.w3.org/TR/css-syntax-3/#consume-list-of-rules
     // Note: we use 'styleSheet != nullptr' as top-level flag
     core::Array<RuleSetPtr> consumeRuleList_(TokenIterator& it, TokenIterator end) {
-        std::ignore = topLevel_; // suppress warning
+        VGC_UNUSED(topLevel_);
         core::Array<RuleSetPtr> res;
         while (true) {
             if (it == end) {

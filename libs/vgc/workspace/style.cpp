@@ -24,20 +24,23 @@
 
 namespace vgc::workspace {
 
-CellStyle::OpResult CellStyle::onTranslateGeometry_(const geometry::Vec2d& /*delta*/) {
+CellStyle::OpResult CellStyle::onTranslateGeometry_(const geometry::Vec2d& delta) {
     // XXX: gradient ?
+    VGC_UNUSED(delta);
     return OpResult::Unchanged;
 }
 
 CellStyle::OpResult
-CellStyle::onTransformGeometry_(const geometry::Mat3d& /*transformation*/) {
+CellStyle::onTransformGeometry_(const geometry::Mat3d& transformation) {
     // XXX: gradient ?
+    VGC_UNUSED(transformation);
     return OpResult::Unchanged;
 }
 
 CellStyle::OpResult
-CellStyle::onUpdateGeometry_(const geometry::AbstractStroke2d* /*newStroke*/) {
+CellStyle::onUpdateGeometry_(const geometry::AbstractStroke2d* newStroke) {
     // XXX: something to do ?
+    VGC_UNUSED(newStroke);
     return OpResult::Unchanged;
 }
 
@@ -220,7 +223,9 @@ CellStyle::OpResult CellStyle::finalizeConcat_() {
 
 std::unique_ptr<vacomplex::CellProperty> CellStyle::fromGlue_(
     core::ConstSpan<vacomplex::KeyHalfedgeData> khds,
-    const geometry::AbstractStroke2d* /*gluedStroke*/) const {
+    const geometry::AbstractStroke2d* gluedStroke) const {
+
+    VGC_UNUSED(gluedStroke);
 
     // use color used the most arclength-wise
 
@@ -256,10 +261,15 @@ std::unique_ptr<vacomplex::CellProperty> CellStyle::fromGlue_(
 
 std::unique_ptr<vacomplex::CellProperty> CellStyle::fromSlice_(
     const vacomplex::KeyEdgeData& ked,
-    const geometry::CurveParameter& /*start*/,
-    const geometry::CurveParameter& /*end*/,
-    Int /*numWraps*/,
-    const geometry::AbstractStroke2d* /*subStroke*/) const {
+    const geometry::CurveParameter& start,
+    const geometry::CurveParameter& end,
+    Int numWraps,
+    const geometry::AbstractStroke2d* subStroke) const {
+
+    VGC_UNUSED(start);
+    VGC_UNUSED(end);
+    VGC_UNUSED(numWraps);
+    VGC_UNUSED(subStroke);
 
     auto styleProp = static_cast<const CellStyle*>(ked.findProperty(strings::style));
     if (styleProp) {
