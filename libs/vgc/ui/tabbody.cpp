@@ -55,7 +55,8 @@ void TabBody::updateChildrenGeometry() {
     }
 }
 
-void TabBody::onWidgetAdded(Widget* /*child*/, bool) {
+void TabBody::onWidgetAdded(Widget* child, bool) {
+    VGC_UNUSED(child);
     // TODO: auto-hide if not active
 }
 

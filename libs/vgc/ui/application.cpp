@@ -69,8 +69,11 @@ Application* application() {
     return globalApplication_;
 }
 
-Application::Application(CreateKey key, int /*argc*/, char* /*argv*/[])
+Application::Application(CreateKey key, int argc, char* argv[])
     : Object(key) {
+
+    VGC_UNUSED(argc);
+    VGC_UNUSED(argv);
 
     if (globalApplication_) {
         throw core::LogicError(

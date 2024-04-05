@@ -38,7 +38,7 @@ PanelManagerPtr PanelManager::create(const ui::ModuleContext& context) {
 core::Array<PanelTypeId> PanelManager::registeredPanelTypeIds() const {
     core::Array<PanelTypeId> res;
     for (auto& [id, info] : infos_) {
-        std::ignore = info;
+        VGC_UNUSED(info);
         res.append(id);
     }
     return res;

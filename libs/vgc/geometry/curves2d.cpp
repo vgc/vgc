@@ -283,8 +283,8 @@ public:
         segmentData_.append(data);
     }
 
-    void
-    addJoin_(const Vec2d& p1, const Vec2d& p2, const Vec2d& t1, const Vec2d& /*t2*/) {
+    void addJoin_(const Vec2d& p1, const Vec2d& p2, const Vec2d& t1, const Vec2d& t2) {
+        VGC_UNUSED(t2);
         if (p1 == p2) {
             return;
         }

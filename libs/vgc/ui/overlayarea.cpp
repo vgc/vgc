@@ -73,7 +73,10 @@ void OverlayArea::onResize() {
     SuperClass::onResize();
 }
 
-void OverlayArea::onWidgetAdded(Widget* w, bool /*wasOnlyReordered*/) {
+void OverlayArea::onWidgetAdded(Widget* w, bool wasOnlyReordered) {
+
+    VGC_UNUSED(wasOnlyReordered);
+
     // If area is no longer first, move to first.
     if (areaWidget_ && areaWidget_->previousSibling()) {
         insertChild(firstChild(), areaWidget_);

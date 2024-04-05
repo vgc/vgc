@@ -1307,7 +1307,8 @@ bool Engine::hasSubmittedCommandListPendingForTranslation_() {
     return lastExecutedCommandListId_ != lastSubmittedCommandListId_;
 }
 
-void Engine::sanitize_(SwapChainCreateInfo& /*createInfo*/) {
+void Engine::sanitize_(SwapChainCreateInfo& createInfo) {
+    VGC_UNUSED(createInfo);
     // XXX
 }
 
@@ -1486,7 +1487,8 @@ void Engine::sanitize_(ImageCreateInfo& createInfo) {
     //resourceMiscFlags
 }
 
-void Engine::sanitize_(ImageViewCreateInfo& /*createInfo*/) {
+void Engine::sanitize_(ImageViewCreateInfo& createInfo) {
+    VGC_UNUSED(createInfo);
     // XXX should check bind flags compatibility here
 }
 
@@ -1496,15 +1498,18 @@ void Engine::sanitize_(SamplerStateCreateInfo& createInfo) {
     }
 }
 
-void Engine::sanitize_(GeometryViewCreateInfo& /*createInfo*/) {
+void Engine::sanitize_(GeometryViewCreateInfo& createInfo) {
+    VGC_UNUSED(createInfo);
     // XXX
 }
 
-void Engine::sanitize_(BlendStateCreateInfo& /*createInfo*/) {
+void Engine::sanitize_(BlendStateCreateInfo& createInfo) {
+    VGC_UNUSED(createInfo);
     // XXX
 }
 
-void Engine::sanitize_(RasterizerStateCreateInfo& /*createInfo*/) {
+void Engine::sanitize_(RasterizerStateCreateInfo& createInfo) {
+    VGC_UNUSED(createInfo);
     // XXX
 }
 

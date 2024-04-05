@@ -102,7 +102,8 @@ public:
         return position_;
     }
 
-    geometry::Vec2d position(core::AnimTime /*t*/) const override {
+    geometry::Vec2d position(core::AnimTime t) const override {
+        VGC_UNUSED(t);
         return position_;
     }
 

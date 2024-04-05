@@ -224,8 +224,10 @@ bool VacEdgeCellFrameData::isSelectableInRect(const geometry::Rect2d& rect) cons
 namespace detail {
 
 graphics::GeometryViewPtr
-loadMeshGraphics(graphics::Engine* /*engine*/, const StuvMesh2d& /*mesh*/) {
+loadMeshGraphics(graphics::Engine* engine, const StuvMesh2d& mesh) {
     // TODO
+    VGC_UNUSED(engine);
+    VGC_UNUSED(mesh);
     return {};
 }
 
@@ -302,8 +304,10 @@ VacKeyEdge::computeFrameDataAt(core::AnimTime t, VacEdgeComputationStage stage) 
     return nullptr;
 }
 
-void VacKeyEdge::onPaintPrepare(core::AnimTime /*t*/, PaintOptions /*flags*/) {
+void VacKeyEdge::onPaintPrepare(core::AnimTime t, PaintOptions flags) {
     // todo, use paint options to not compute everything or with lower quality
+    VGC_UNUSED(t);
+    VGC_UNUSED(flags);
     computeStrokeMesh_();
     computeStrokeStyle_();
 }
@@ -672,8 +676,8 @@ void VacKeyEdge::onPaintDraw(
     }
 }
 
-ElementStatus
-VacKeyEdge::onDependencyChanged_(Element* /*dependency*/, ChangeFlags changes) {
+ElementStatus VacKeyEdge::onDependencyChanged_(Element* dependency, ChangeFlags changes) {
+    VGC_UNUSED(dependency);
     ElementStatus status = this->status();
     if (status == ElementStatus::Ok) {
         if (changes.has(ChangeFlag::VertexPosition)) {

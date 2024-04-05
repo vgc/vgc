@@ -252,7 +252,7 @@ computeHighlightColor(const core::Color& c, HighlightStyle style = HighlightStyl
 
     // Convert to HSL
     auto [h, s, lightness] = c.toHsl();
-    std::ignore = s;
+    VGC_UNUSED(s);
 
     // Convert to Lab space, which is a perceptual color space. This means that
     // increasing the luminance by a fixed amount in this space looks like an
@@ -290,7 +290,7 @@ computeHighlightColor(const core::Color& c, HighlightStyle style = HighlightStyl
     // Apply back the original hue. Indeed, modifying the luminance in Lab
     // space alters the hue, which sometimes look weird for an highlight.
     auto [newH, newS, newL] = labSpaceContrasted.toHsl();
-    std::ignore = newH;
+    VGC_UNUSED(newH);
     core::Color res = core::Color::hsl(h, newS, newL);
 
     return res;
@@ -2083,7 +2083,9 @@ void ColorPaletteSelector::computeSlSubMetrics_(float width, Metrics& m) const {
     m.saturationLightnessRect = {x0, y0, x0 + w, y0 + h};
 }
 
-void ColorPaletteSelector::computeHueSubMetrics_(float /* width */, Metrics& m) const {
+void ColorPaletteSelector::computeHueSubMetrics_(float width, Metrics& m) const {
+
+    VGC_UNUSED(width);
 
     using namespace style::literals;
     const style::Length minCellWidth_ = 0.0_dp;
@@ -2229,7 +2231,8 @@ bool ColorPaletteSelector::onMousePress(ui::MousePressEvent* event) {
     }
 }
 
-bool ColorPaletteSelector::onMouseRelease(ui::MouseReleaseEvent* /*event*/) {
+bool ColorPaletteSelector::onMouseRelease(ui::MouseReleaseEvent* event) {
+    VGC_UNUSED(event);
     scrubbedSelector_ = SelectorType::None;
     return true;
 }
@@ -2865,8 +2868,9 @@ void ColorListView::onMouseLeave() {
     }
 }
 
-float ColorListView::preferredWidthForHeight(float /* height */) const {
+float ColorListView::preferredWidthForHeight(float height) const {
     // TODO
+    VGC_UNUSED(height);
     return preferredSize()[0];
 }
 

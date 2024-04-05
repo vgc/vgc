@@ -31,23 +31,29 @@ std::optional<core::StringId> Element::domTagName() const {
     return {};
 }
 
-geometry::Rect2d Element::boundingBox(core::AnimTime /*t*/) const {
+geometry::Rect2d Element::boundingBox(core::AnimTime t) const {
+    VGC_UNUSED(t);
     return geometry::Rect2d::empty;
 }
 
 bool Element::isSelectableAt(
-    const geometry::Vec2d& /*pos*/,
-    bool /*outlineOnly*/,
-    double /*tol*/,
-    double* /*outDistance*/,
-    core::AnimTime /*t*/) const {
+    const geometry::Vec2d& pos,
+    bool outlineOnly,
+    double tol,
+    double* outDistance,
+    core::AnimTime t) const {
 
+    VGC_UNUSED(pos);
+    VGC_UNUSED(outlineOnly);
+    VGC_UNUSED(tol);
+    VGC_UNUSED(outDistance);
+    VGC_UNUSED(t);
     return false;
 }
 
-bool Element::isSelectableInRect(const geometry::Rect2d& /*rect*/, core::AnimTime /*t*/)
-    const {
-
+bool Element::isSelectableInRect(const geometry::Rect2d& rect, core::AnimTime t) const {
+    VGC_UNUSED(rect);
+    VGC_UNUSED(t);
     return false;
 }
 
@@ -91,14 +97,17 @@ void Element::notifyChangesToDependents(ChangeFlags changes) {
     }
 }
 
-void Element::onPaintPrepare(core::AnimTime /*t*/, PaintOptions /*flags*/) {
+void Element::onPaintPrepare(core::AnimTime t, PaintOptions flags) {
+    VGC_UNUSED(t);
+    VGC_UNUSED(flags);
 }
 
-void Element::onPaintDraw(
-    graphics::Engine* /*engine*/,
-    core::AnimTime /*t*/,
-    PaintOptions /*flags*/) const {
+void Element::onPaintDraw(graphics::Engine* engine, core::AnimTime t, PaintOptions flags)
+    const {
 
+    VGC_UNUSED(engine);
+    VGC_UNUSED(t);
+    VGC_UNUSED(flags);
     // XXX make it pure virtual once the factory is in.
 }
 
@@ -118,17 +127,20 @@ VacElement* Element::findFirstSiblingVacElementReverse_(Element* start) {
     return static_cast<VacElement*>(e);
 }
 
-ElementStatus Element::updateFromDom_(Workspace* /*workspace*/) {
+ElementStatus Element::updateFromDom_(Workspace* workspace) {
+    VGC_UNUSED(workspace);
     return ElementStatus::Ok;
 }
 
-ElementStatus
-Element::onDependencyChanged_(Element* /*dependency*/, ChangeFlags /*changes*/) {
+ElementStatus Element::onDependencyChanged_(Element* dependency, ChangeFlags changes) {
+    VGC_UNUSED(dependency);
+    VGC_UNUSED(changes);
     return status_;
 }
 
-ElementStatus Element::onDependencyRemoved_(Element* /*dependency*/) {
+ElementStatus Element::onDependencyRemoved_(Element* dependency) {
     // child classes typically have to invalidate data when a dependency is removed
+    VGC_UNUSED(dependency);
     ElementStatus status = this->status();
     if (status == ElementStatus::Ok) {
         status = ElementStatus::UnresolvedDependency;
@@ -136,14 +148,17 @@ ElementStatus Element::onDependencyRemoved_(Element* /*dependency*/) {
     return status;
 }
 
-void Element::onDependencyMoved_(Element* /*dependency*/) {
+void Element::onDependencyMoved_(Element* dependency) {
     // child classes typically have to update paths when a dependency moves
+    VGC_UNUSED(dependency);
 }
 
-void Element::onDependentElementRemoved_(Element* /*dependent*/) {
+void Element::onDependentElementRemoved_(Element* dependent) {
+    VGC_UNUSED(dependent);
 }
 
-void Element::onDependentElementAdded_(Element* /*dependent*/) {
+void Element::onDependentElementAdded_(Element* dependent) {
+    VGC_UNUSED(dependent);
 }
 
 VacElement::~VacElement() {

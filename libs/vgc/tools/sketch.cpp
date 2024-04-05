@@ -162,7 +162,9 @@ void SketchPointsProcessingPass::updateCumulativeChordalDistances() {
 
 namespace detail {
 
-Int EmptyPass::update_(const SketchPointBuffer& input, Int /*lastNumStableInputPoints*/) {
+Int EmptyPass::update_(const SketchPointBuffer& input, Int lastNumStableInputPoints) {
+
+    VGC_UNUSED(lastNumStableInputPoints);
 
     const SketchPointArray& inputPoints = input.data();
     Int numStablePoints = this->numStablePoints();
@@ -362,9 +364,9 @@ void applyWidthRoughnessLimitor(
 
 } // namespace
 
-Int SmoothingPass::update_(
-    const SketchPointBuffer& input,
-    Int /*lastNumStableInputPoints*/) {
+Int SmoothingPass::update_(const SketchPointBuffer& input, Int lastNumStableInputPoints) {
+
+    VGC_UNUSED(lastNumStableInputPoints);
 
     const SketchPointArray& inputPoints = input.data();
     Int numPoints = inputPoints.length();
@@ -594,7 +596,9 @@ Int reconstructInputStep(
 
 Int DouglasPeuckerPass::update_(
     const SketchPointBuffer& input,
-    Int /*lastNumStableInputPoints*/) {
+    Int lastNumStableInputPoints) {
+
+    VGC_UNUSED(lastNumStableInputPoints);
 
     // A copy required to make a mutable span, which the Douglas-Peuckert
     // algorithm needs (it modifies the points slightly).
@@ -694,7 +698,8 @@ ui::WidgetPtr Sketch::doCreateOptionsWidget() const {
     return res;
 }
 
-bool Sketch::onKeyPress(ui::KeyPressEvent* /*event*/) {
+bool Sketch::onKeyPress(ui::KeyPressEvent* event) {
+    VGC_UNUSED(event);
     return false;
 }
 
@@ -1630,7 +1635,9 @@ void autoFill(vacomplex::Node* keNode) {
 
 } // namespace
 
-void Sketch::finishCurve_(ui::MouseEvent* /*event*/) {
+void Sketch::finishCurve_(ui::MouseEvent* event) {
+
+    VGC_UNUSED(event);
 
     namespace ds = dom::strings;
 

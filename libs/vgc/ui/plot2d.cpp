@@ -394,11 +394,13 @@ bool Plot2d::onMouseMove(MouseMoveEvent* event) {
     return true;
 }
 
-bool Plot2d::onMousePress(MousePressEvent* /*event*/) {
+bool Plot2d::onMousePress(MousePressEvent* event) {
+    VGC_UNUSED(event);
     return true;
 }
 
-bool Plot2d::onMouseRelease(MouseReleaseEvent* /*event*/) {
+bool Plot2d::onMouseRelease(MouseReleaseEvent* event) {
+    VGC_UNUSED(event);
     return true;
 }
 

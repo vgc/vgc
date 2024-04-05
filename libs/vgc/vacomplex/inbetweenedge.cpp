@@ -18,12 +18,14 @@
 
 namespace vgc::vacomplex {
 
-bool InbetweenEdge::isStartVertex(const VertexCell* /*v*/) const {
+bool InbetweenEdge::isStartVertex(const VertexCell* v) const {
+    VGC_UNUSED(v);
     // TODO: check whether v is one of the start vertices of this inbetween edge.
     return false;
 }
 
-bool InbetweenEdge::isEndVertex(const VertexCell* /*v*/) const {
+bool InbetweenEdge::isEndVertex(const VertexCell* v) const {
+    VGC_UNUSED(v);
     // TODO: check whether v is one of the end vertices of this inbetween edge.
     return false;
 }
@@ -33,8 +35,9 @@ bool InbetweenEdge::isClosed() const {
     return false;
 }
 
-geometry::Rect2d InbetweenEdge::boundingBoxAt(core::AnimTime /*t*/) const {
+geometry::Rect2d InbetweenEdge::boundingBoxAt(core::AnimTime t) const {
     // TODO
+    VGC_UNUSED(t);
     return geometry::Rect2d::empty;
 }
 

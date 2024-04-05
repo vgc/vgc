@@ -153,7 +153,8 @@ core::Array<SelectionCandidate> Canvas::computeSelectionCandidatesAboveOrAt(
         bool skip = itemId > 0;
         workspace->visitDepthFirst(
             [](workspace::Element*, Int) { return true; },
-            [=, &result, &skip](workspace::Element* e, Int /*depth*/) {
+            [=, &result, &skip](workspace::Element* e, Int depth) {
+                VGC_UNUSED(depth);
                 if (!e || (skip && e->id() != itemId)) {
                     return;
                 }
@@ -242,7 +243,8 @@ core::Array<core::Id> Canvas::computeRectangleSelectionCandidates(
 
         workspace->visitDepthFirst(
             [](workspace::Element*, Int) { return true; },
-            [&, rect, isMeshEnabled](workspace::Element* e, Int /*depth*/) {
+            [&, rect, isMeshEnabled](workspace::Element* e, Int depth) {
+                VGC_UNUSED(depth);
                 if (!e) {
                     return;
                 }
@@ -592,11 +594,14 @@ void drawSubpass(
 
     engine->setRasterizerState(rasterizerState);
     workspace.visitDepthFirst(
-        [](workspace::Element* /*e*/, Int /*depth*/) {
+        [](workspace::Element* e, Int depth) {
+            VGC_UNUSED(e);
+            VGC_UNUSED(depth);
             // we always visit children for now
             return true;
         },
-        [=](workspace::Element* e, Int /*depth*/) {
+        [=](workspace::Element* e, Int depth) {
+            VGC_UNUSED(depth);
             if (e) {
                 e->paint(engine, {}, paintOptions);
             }
@@ -828,7 +833,8 @@ void Canvas::onPaintDraw(graphics::Engine* engine, ui::PaintOptions options) {
         if (showInputSketchPoints) {
             engine->setRasterizerState(fillRS_);
             workspace->visitDepthFirstPreOrder(
-                [=, &selectedElements](workspace::Element* e, Int /*depth*/) {
+                [=, &selectedElements](workspace::Element* e, Int depth) {
+                    VGC_UNUSED(depth);
                     if (e && !selectedElements.contains(e)) {
                         if (auto edge = dynamic_cast<workspace::VacKeyEdge*>(e)) {
                             doPaintInputSketchPoints(
@@ -865,11 +871,14 @@ void Canvas::onPaintDraw(graphics::Engine* engine, ui::PaintOptions options) {
             bool areNonSelectedVerticesVisible =
                 isOutlineEnabled || areControlPointsVisible_;
             workspace->visitDepthFirst(
-                [](workspace::Element* /*e*/, Int /*depth*/) {
+                [](workspace::Element* e, Int depth) {
+                    VGC_UNUSED(e);
+                    VGC_UNUSED(depth);
                     // we always visit children for now
                     return true;
                 },
-                [=, &selectedElements](workspace::Element* e, Int /*depth*/) {
+                [=, &selectedElements](workspace::Element* e, Int depth) {
+                    VGC_UNUSED(depth);
                     if (e && selectedElements.contains(e)) {
                         auto edge = dynamic_cast<workspace::VacKeyEdge*>(e);
 

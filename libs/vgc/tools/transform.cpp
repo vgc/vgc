@@ -400,7 +400,9 @@ public:
         draggedOnce_ = true;
     }
 
-    void onMouseDragConfirm(ui::MouseEvent* /*event*/) override {
+    void onMouseDragConfirm(ui::MouseEvent* event) override {
+
+        VGC_UNUSED(event);
 
         auto box = box_.lock();
         if (!box) {
@@ -428,7 +430,9 @@ public:
         reset_();
     }
 
-    void onMouseDragCancel(ui::MouseEvent* /*event*/) override {
+    void onMouseDragCancel(ui::MouseEvent* event) override {
+
+        VGC_UNUSED(event);
 
         auto box = box_.lock();
         if (!box) {
@@ -869,7 +873,7 @@ void TopologyAwareTransformer::finalizeDragTransform() {
         vacomplex::KeyEdge* ke = findKeyEdge_(*workspace, td.elementId);
         if (ke) {
             const vacomplex::KeyEdgeData& data = ke->data();
-            std::ignore = data;
+            VGC_UNUSED(data);
             //data->finishEdit();
         }
     }
@@ -879,7 +883,7 @@ void TopologyAwareTransformer::finalizeDragTransform() {
         vacomplex::KeyEdge* ke = findKeyEdge_(*workspace, td.elementId);
         if (ke) {
             const vacomplex::KeyEdgeData& data = ke->data();
-            std::ignore = data;
+            VGC_UNUSED(data);
             //data->finishEdit();
         }
     }

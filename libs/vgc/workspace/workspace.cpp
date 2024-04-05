@@ -1452,7 +1452,7 @@ void Workspace::onVacNodesChanged_(const vacomplex::ComplexDiff& diff) {
     // Note: transient vac nodes are included.
     //
     for (auto [id, vacElement] : workspaceItemsToDestroy) {
-        std::ignore = id;
+        VGC_UNUSED(id);
 
         // Delete the corresponding DOM element if any.
         //
@@ -1927,7 +1927,10 @@ void Workspace::updateVacFromDom_(const dom::Diff& diff) {
     changed().emit();
 }
 
-//void Workspace::updateTreeAndDomFromVac_(const vacomplex::Diff& /*diff*/) {
+//void Workspace::updateTreeAndDomFromVac_(const vacomplex::Diff& diff) {
+//
+//    VGC_UNUSED(diff);
+//
 //    if (!document_) {
 //        VGC_ERROR(LogVgcWorkspace, "DOM is null.")
 //        return;

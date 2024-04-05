@@ -20,7 +20,9 @@
 #include <vgc/core/wraps/class.h>
 #include <vgc/core/wraps/common.h>
 
-void wrap_curve(py::module& /*m*/) {
+void wrap_curve(py::module& m) {
+
+    VGC_UNUSED(m);
 
     //using This = vgc::geometry::StrokeView2d;
     ////using Vec2d = vgc::geometry::Vec2d;

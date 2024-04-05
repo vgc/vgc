@@ -16,10 +16,11 @@
 
 #include <vgc/core/wraps/common.h>
 
-void wrap_style(py::module& /*m*/) {
+void wrap_style(py::module& m) {
     // Necessary to define inheritance across modules. See:
     // http://pybind11.readthedocs.io/en/stable/advanced/misc.html#partitioning-code-over-multiple-extension-modules
     py::module::import("vgc.core");
 
+    VGC_UNUSED(m);
     // TODO
 }

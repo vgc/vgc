@@ -39,7 +39,8 @@ PopupLayerPtr PopupLayer::create(Widget* underlyingWidget) {
     return core::createObject<PopupLayer>(underlyingWidget);
 }
 
-void PopupLayer::onWidgetAdded(Widget* child, bool /*wasOnlyReordered*/) {
+void PopupLayer::onWidgetAdded(Widget* child, bool wasOnlyReordered) {
+    VGC_UNUSED(wasOnlyReordered);
     child->updateGeometry(0, 0, 0, 0);
 }
 

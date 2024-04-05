@@ -313,7 +313,8 @@ public:
             controlPoints_[0], controlPoints_[1], controlPoints_[2], u);
     }
 
-    T evalSecondDerivative(Scalar /*u*/) const {
+    T evalSecondDerivative(Scalar u) const {
+        VGC_UNUSED(u);
         return quadraticBezierSecondDerivative(
             controlPoints_[0], controlPoints_[1], controlPoints_[2]);
     }

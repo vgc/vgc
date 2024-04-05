@@ -24,19 +24,24 @@ std::optional<core::StringId> Layer::domTagName() const {
     return dom::strings::layer;
 }
 
-geometry::Rect2d Layer::boundingBox(core::AnimTime /*t*/) const {
+geometry::Rect2d Layer::boundingBox(core::AnimTime t) const {
     // todo, union of children
+    VGC_UNUSED(t);
     return geometry::Rect2d::empty;
 }
 
-void Layer::onPaintDraw(
-    graphics::Engine* /*engine*/,
-    core::AnimTime /*t*/,
-    PaintOptions /*flags*/) const {
+void Layer::onPaintDraw(graphics::Engine* engine, core::AnimTime t, PaintOptions flags)
+    const {
+
+    VGC_UNUSED(engine);
+    VGC_UNUSED(t);
+    VGC_UNUSED(flags);
 }
 
-ElementStatus Layer::updateFromDom_(Workspace* /*workspace*/) {
+ElementStatus Layer::updateFromDom_(Workspace* workspace) {
     //dom::Element* const domElement = this->domElement();
+
+    VGC_UNUSED(workspace);
 
     vacomplex::Node* node = vacNode();
     vacomplex::Group* group =
@@ -60,8 +65,9 @@ ElementStatus Layer::updateFromDom_(Workspace* /*workspace*/) {
     return ElementStatus::Ok;
 }
 
-void Layer::updateFromVac_(vacomplex::NodeModificationFlags /*flags*/) {
+void Layer::updateFromVac_(vacomplex::NodeModificationFlags flags) {
     // TODO
+    VGC_UNUSED(flags);
 }
 
 } // namespace vgc::workspace

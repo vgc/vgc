@@ -480,7 +480,9 @@ void RichText::fill(core::FloatArray& a) const {
 Int RichText::movedPosition(
     Int position,
     RichTextMoveOperation operation,
-    Int /* selectionIndex */) const {
+    Int selectionIndex) const {
+
+    VGC_UNUSED(selectionIndex);
 
     using Op = RichTextMoveOperation;
 

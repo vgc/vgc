@@ -74,7 +74,8 @@ public:
     }
 
     std::shared_ptr<const geometry::StrokeSampling2d>
-    strokeSamplingShared(core::AnimTime /*t*/) const override {
+    strokeSamplingShared(core::AnimTime t) const override {
+        VGC_UNUSED(t);
         return data_.strokeSamplingShared();
     }
 

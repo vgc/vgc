@@ -1173,7 +1173,7 @@ public:
     //       if we want to share the data. The straight forward implementation
     //       is to not cache this result in the cell, otherwise we'd have to manage
     //       a cache array in inbetween cells.
-    //virtual EdgeGeometry computeSamplingAt(core::AnimTime /*t*/) = 0;
+    //virtual EdgeGeometry computeSamplingAt(core::AnimTime t) = 0;
 };
 
 class VGC_VACOMPLEX_API FaceCell : public Cell {

@@ -176,7 +176,8 @@ public:
         }
     }
 
-    void onMouseDragConfirm(ui::MouseEvent* /*event*/) override {
+    void onMouseDragConfirm(ui::MouseEvent* event) override {
+        VGC_UNUSED(event);
         if (edgeId_ == -1) {
             return;
         }
@@ -186,7 +187,8 @@ public:
         reset_();
     }
 
-    void onMouseDragCancel(ui::MouseEvent* /*event*/) override {
+    void onMouseDragCancel(ui::MouseEvent* event) override {
+        VGC_UNUSED(event);
         if (edgeId_ == -1) {
             return;
         }
@@ -343,7 +345,8 @@ public:
         }
     }
 
-    void onMouseDragConfirm(ui::MouseEvent* /*event*/) override {
+    void onMouseDragConfirm(ui::MouseEvent* event) override {
+        VGC_UNUSED(event);
         if (edgeId_ == -1) {
             return;
         }
@@ -355,7 +358,8 @@ public:
         reset_();
     }
 
-    void onMouseDragCancel(ui::MouseEvent* /*event*/) override {
+    void onMouseDragCancel(ui::MouseEvent* event) override {
+        VGC_UNUSED(event);
         if (edgeId_ == -1) {
             return;
         }
@@ -509,7 +513,8 @@ public:
         }
     }
 
-    void onMouseDragConfirm(ui::MouseEvent* /*event*/) override {
+    void onMouseDragConfirm(ui::MouseEvent* event) override {
+        VGC_UNUSED(event);
         if (edgeId_ == -1) {
             return;
         }
@@ -520,7 +525,8 @@ public:
         reset_();
     }
 
-    void onMouseDragCancel(ui::MouseEvent* /*event*/) override {
+    void onMouseDragCancel(ui::MouseEvent* event) override {
+        VGC_UNUSED(event);
         if (edgeId_ == -1) {
             return;
         }
@@ -613,10 +619,12 @@ public:
         tool->dirtyActionCircle();
     }
 
-    void onMouseDragConfirm(ui::MouseEvent* /*event*/) override {
+    void onMouseDragConfirm(ui::MouseEvent* event) override {
+        VGC_UNUSED(event);
     }
 
-    void onMouseDragCancel(ui::MouseEvent* /*event*/) override {
+    void onMouseDragCancel(ui::MouseEvent* event) override {
+        VGC_UNUSED(event);
         options::sculptRadius()->setValue(oldRadius_);
         if (auto tool = tool_.lock()) {
             tool->dirtyActionCircle();
@@ -681,7 +689,8 @@ void Sculpt::onMouseHover(ui::MouseHoverEvent* event) {
 
     workspace->visitDepthFirst(
         [](workspace::Element*, Int) { return true; },
-        [&, worldCursor](workspace::Element* e, Int /*depth*/) {
+        [&, worldCursor](workspace::Element* e, Int depth) {
+            VGC_UNUSED(depth);
             if (!e) {
                 return;
             }

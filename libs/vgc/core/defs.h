@@ -174,6 +174,95 @@
 #    define VGC_NODISCARD(msg) [[nodiscard]]
 #endif
 
+/// \def VGC_DISCARD
+///
+/// Declares that the returned value of a ``[[nodiscard]]`` function is
+/// intentionally discarded. This is equivalent to a cast to `void` but
+/// clarifies intent and improves searchability.
+///
+/// For unused variables, prefer using `VGC_UNUSED`.
+///
+/// ```cpp
+/// [[nodiscard]] int foo();
+/// void bar() {
+///     VGC_DISCARD(foo());
+/// }
+/// ```
+///
+/// Related:
+/// - https://stackoverflow.com/questions/53581744/how-can-i-intentionally-discard-a-nodiscard-return-value
+///
+// Note: `do { (void)(x); } while(0)` generates extra assembly in MSVC debug builds.
+//
+#define VGC_DISCARD(x) (void)(x)
+
+/// \def VGC_UNUSED
+///
+/// Declares that the given variable is intentionally unused, therefore
+/// silencing potential compiler warnings. This is equivalent to a cast to
+/// `void` but clarifies intent and improves searchability.
+///
+/// For a variable/argument that is conditionally used in some template
+/// instantiations but not others, prefer using `[[maybe_unused]]`.
+///
+/// For intentionally discarding the result of a `[[nodiscard]]` function,
+/// prefer using `VGC_DISCARD`.
+///
+/// ```cpp
+/// // Unused function argument.
+/// //
+/// void foo(int arg) {
+///     VGC_UNUSED(arg);
+/// }
+///
+/// // Partially unused structured binding.
+/// //
+/// int getOrInsert(const std::map<int, int>& map, int key, int value) {
+///     auto [it, inserted] = map.try_emplace(key, value);
+///     VGC_UNUSED(inserted);
+///     int valueInMap = it->second;
+///     return valueInMap;
+/// }
+///
+/// // Conditionally used argument depending on template instantiation.
+/// //
+/// template<class T>
+/// bool isPositive([[maybe_unused]] T x) {
+///     if constexpr (std::is_unsigned_v<T>) {
+///         return true;
+///     }
+///     else {
+///         return x >= 0;
+///     }
+/// }
+/// ```
+///
+/// Using `VGC_UNUSED` is preferred over commenting out function arguments
+/// (e.g., `void foo(int /* arg */)`), since it makes it easier to later
+/// comment out a block of code if necessary (C-style comments cannot be
+/// nested), and commented arguments are potentially confusing to external
+/// tools and IDE (e.g., autocompletion, tooltips, doxygen).
+///
+/// Using `VGC_UNUSED` is preferred over `std::ignore` (except if using
+/// `std::tie`), since `std::ignore` is only meant to be used with `std::tie`,
+/// requires including the `<tuple>` header, and may generate extra assembly
+/// code in debug builds. The situation might improve in C++26 (P2968), but
+/// `VGC_UNUSED` is still preferred for now, and might still be preferred then
+/// for searchability (distinguishes usages between std::tie and other cases).
+///
+/// Starting in C++26, prefer using the `_` placeholder for partially unused
+/// structured bindings.
+///
+/// Related:
+/// - [Stack Overflow: How to silence unused variables warnings](https://stackoverflow.com/questions/1486904)
+/// - [Stack Overflow: About C++26 underscore variables](https://stackoverflow.com/questions/1486904)
+/// - [P2968: Make std::ignore a first-class object](https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2023/p2968r2.html)
+/// - [P2169: A nice placeholder with no name](https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2023/p2169r3.pdf)
+///
+// Note: `do { (void)(x); } while(0)` generates extra assembly in MSVC debug builds.
+//
+#define VGC_UNUSED(x) (void)(x)
+
 /// \def VGC_PRETTY_FUNCTION
 /// Returns the name of the current function. This is a cross-platform
 /// way to use the non-standard `__PRETTY_FUNCTION__`, `__FUNCSIG__`,

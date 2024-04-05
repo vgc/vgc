@@ -1059,7 +1059,9 @@ QglEngine::constructRasterizerState_(const RasterizerStateCreateInfo& createInfo
     return RasterizerStatePtr(state.release());
 }
 
-void QglEngine::onWindowResize_(SwapChain* aSwapChain, UInt32 /*width*/, UInt32 height) {
+void QglEngine::onWindowResize_(SwapChain* aSwapChain, UInt32 width, UInt32 height) {
+
+    VGC_UNUSED(width);
 
     // Store the height in order to be able to convert from OpenGL coordinates
     // (origin is bottom-left) to Engine coordinate (origin is top-left).
@@ -1450,15 +1452,18 @@ void QglEngine::initSamplerState_(SamplerState* aState) {
     api_->glSamplerParameterf(object, GL_TEXTURE_MAX_LOD, state->maxLOD());
 }
 
-void QglEngine::initGeometryView_(GeometryView* /*view*/) {
+void QglEngine::initGeometryView_(GeometryView* view) {
+    VGC_UNUSED(view);
     // no-op, vaos are built per program
 }
 
-void QglEngine::initBlendState_(BlendState* /*state*/) {
+void QglEngine::initBlendState_(BlendState* state) {
+    VGC_UNUSED(state);
     // no-op
 }
 
-void QglEngine::initRasterizerState_(RasterizerState* /*state*/) {
+void QglEngine::initRasterizerState_(RasterizerState* state) {
+    VGC_UNUSED(state);
     // no-op
 }
 
@@ -1866,10 +1871,11 @@ void QglEngine::clear_(const core::Color& color) {
     api_->glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 }
 
-UInt64 QglEngine::present_(
-    SwapChain* aSwapChain,
-    UInt32 /*syncInterval*/,
-    PresentFlags /*flags*/) {
+UInt64
+QglEngine::present_(SwapChain* aSwapChain, UInt32 syncInterval, PresentFlags flags) {
+
+    VGC_UNUSED(syncInterval);
+    VGC_UNUSED(flags);
 
     QglSwapChain* swapChain = static_cast<QglSwapChain*>(aSwapChain);
     if (surface_ != swapChain->surface_) {
