@@ -112,6 +112,8 @@ void wrap_rect(py::module& m, const std::string& name, T relTol) {
         .def(py::self == py::self)
         .def(py::self != py::self)
 
+        .def("clamp", py::overload_cast<const Vec2x&>(&This::clamp, py::const_))
+        .def("clamp", py::overload_cast<const This&>(&This::clamp, py::const_))
         .def("unitedWith", py::overload_cast<const This&>(&This::unitedWith, py::const_))
         .def("unitedWith", py::overload_cast<const Vec2x&>(&This::unitedWith, py::const_))
         .def("uniteWith", py::overload_cast<const This&>(&This::uniteWith))

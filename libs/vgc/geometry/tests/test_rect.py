@@ -359,6 +359,44 @@ class TestRect(unittest.TestCase):
             self.assertFalse(r1 != r2)
             self.assertFalse(r1 == r3)
 
+    def testClampPoint(self):
+        for Rect2, Vec2 in Rect2Vec2Types:
+            r = Rect2(2, 3, 4, 5)
+            self.assertEqual(r.clamp(Vec2(1, 2)), Vec2(2, 3))
+            self.assertEqual(r.clamp(Vec2(2, 3)), Vec2(2, 3))
+            self.assertEqual(r.clamp(Vec2(3, 4)), Vec2(3, 4))
+            self.assertEqual(r.clamp(Vec2(4, 5)), Vec2(4, 5))
+            self.assertEqual(r.clamp(Vec2(5, 6)), Vec2(4, 5))
+            r = Rect2(4, 5, 2, 3)
+            self.assertEqual(r.clamp(Vec2(1, 2)), Vec2(2, 3))
+            self.assertEqual(r.clamp(Vec2(2, 3)), Vec2(2, 3))
+            self.assertEqual(r.clamp(Vec2(3, 4)), Vec2(3, 4))
+            self.assertEqual(r.clamp(Vec2(4, 5)), Vec2(4, 5))
+            self.assertEqual(r.clamp(Vec2(5, 6)), Vec2(4, 5))
+
+    def testClampRect(self):
+        for Rect2, Vec2 in Rect2Vec2Types:
+            r = Rect2(3, 4, 5, 6)
+            self.assertEqual(r.clamp(Rect2(0, 1, 2, 3)), Rect2(3, 4, 3, 4))
+            self.assertEqual(r.clamp(Rect2(1, 2, 3, 4)), Rect2(3, 4, 3, 4))
+            self.assertEqual(r.clamp(Rect2(2, 3, 4, 5)), Rect2(3, 4, 4, 5))
+            self.assertEqual(r.clamp(Rect2(3, 4, 5, 6)), Rect2(3, 4, 5, 6))
+            self.assertEqual(r.clamp(Rect2(4, 5, 6, 7)), Rect2(4, 5, 5, 6))
+            self.assertEqual(r.clamp(Rect2(5, 6, 7, 8)), Rect2(5, 6, 5, 6))
+            self.assertEqual(r.clamp(Rect2(6, 7, 8, 9)), Rect2(5, 6, 5, 6))
+            self.assertEqual(r.clamp(Rect2(4, 5, 4, 5)), Rect2(4, 5, 4, 5))
+            self.assertEqual(r.clamp(Rect2(1, 2, 6, 7)), Rect2(3, 4, 5, 6))
+            r = Rect2(5, 6, 3, 4)
+            self.assertEqual(r.clamp(Rect2(0, 1, 2, 3)), Rect2(3, 4, 3, 4))
+            self.assertEqual(r.clamp(Rect2(1, 2, 3, 4)), Rect2(3, 4, 3, 4))
+            self.assertEqual(r.clamp(Rect2(2, 3, 4, 5)), Rect2(3, 4, 4, 5))
+            self.assertEqual(r.clamp(Rect2(3, 4, 5, 6)), Rect2(3, 4, 5, 6))
+            self.assertEqual(r.clamp(Rect2(4, 5, 6, 7)), Rect2(4, 5, 5, 6))
+            self.assertEqual(r.clamp(Rect2(5, 6, 7, 8)), Rect2(5, 6, 5, 6))
+            self.assertEqual(r.clamp(Rect2(6, 7, 8, 9)), Rect2(5, 6, 5, 6))
+            self.assertEqual(r.clamp(Rect2(4, 5, 4, 5)), Rect2(4, 5, 4, 5))
+            self.assertEqual(r.clamp(Rect2(1, 2, 6, 7)), Rect2(3, 4, 5, 6))
+
     def testUnitedWithRect2(self):
         for Rect2 in Rect2Types:
             r1 = Rect2(0, 0, 1, 1)

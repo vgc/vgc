@@ -248,6 +248,22 @@ public:
             && core::isNear(pMax_, other.pMax_, absTol);
     }
 
+    /// Returns the result of clamping the given `value` to this range.
+    /// 
+    /// If this range is empty, then a warning is issued and the value is
+    /// clamped to [`pMax()`, `pMin()`] instead (the `normalized()` range).
+    /// 
+    float clamp(float value) const {
+        return core::clamp(value, pMin_, pMax_);
+    }
+
+    /// Returns the result of clamping both `other.pMin()` and `other.pMax()`
+    /// to this range.
+    /// 
+    Range1x clamp(const Range1x& other) const {
+        return Range1x(clamp(other.pMin()), clamp(other.pMax()));
+    }
+
     /// Returns the smallest range that contains both this range
     /// and the `other` range.
     ///
