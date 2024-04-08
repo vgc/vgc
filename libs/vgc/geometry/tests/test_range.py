@@ -175,6 +175,44 @@ class TestRange(unittest.TestCase):
             self.assertFalse(r1 != r2)
             self.assertFalse(r1 == r3)
 
+    def testClampValue(self):
+        for Range1 in Range1Types:
+            r = Range1(2, 4)
+            self.assertEqual(r.clamp(1), 2)
+            self.assertEqual(r.clamp(2), 2)
+            self.assertEqual(r.clamp(3), 3)
+            self.assertEqual(r.clamp(4), 4)
+            self.assertEqual(r.clamp(5), 4)
+            r = Range1(4, 2)
+            self.assertEqual(r.clamp(1), 2)
+            self.assertEqual(r.clamp(2), 2)
+            self.assertEqual(r.clamp(3), 3)
+            self.assertEqual(r.clamp(4), 4)
+            self.assertEqual(r.clamp(5), 4)
+
+    def testClampRange(self):
+        for Range1 in Range1Types:
+            r = Range1(3, 5)
+            self.assertEqual(r.clamp(Range1(0, 2)), Range1(3, 3))
+            self.assertEqual(r.clamp(Range1(1, 3)), Range1(3, 3))
+            self.assertEqual(r.clamp(Range1(2, 4)), Range1(3, 4))
+            self.assertEqual(r.clamp(Range1(3, 5)), Range1(3, 5))
+            self.assertEqual(r.clamp(Range1(4, 6)), Range1(4, 5))
+            self.assertEqual(r.clamp(Range1(5, 7)), Range1(5, 5))
+            self.assertEqual(r.clamp(Range1(6, 8)), Range1(5, 5))
+            self.assertEqual(r.clamp(Range1(4, 4)), Range1(4, 4))
+            self.assertEqual(r.clamp(Range1(1, 6)), Range1(3, 5))
+            r = Range1(5, 3)
+            self.assertEqual(r.clamp(Range1(0, 2)), Range1(3, 3))
+            self.assertEqual(r.clamp(Range1(1, 3)), Range1(3, 3))
+            self.assertEqual(r.clamp(Range1(2, 4)), Range1(3, 4))
+            self.assertEqual(r.clamp(Range1(3, 5)), Range1(3, 5))
+            self.assertEqual(r.clamp(Range1(4, 6)), Range1(4, 5))
+            self.assertEqual(r.clamp(Range1(5, 7)), Range1(5, 5))
+            self.assertEqual(r.clamp(Range1(6, 8)), Range1(5, 5))
+            self.assertEqual(r.clamp(Range1(4, 4)), Range1(4, 4))
+            self.assertEqual(r.clamp(Range1(1, 6)), Range1(3, 5))
+
     def testUnitedWithRange1(self):
         for Range1 in Range1Types:
             r1 = Range1(0, 1)

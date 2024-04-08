@@ -563,6 +563,27 @@ public:
             && pMax_.allNear(other.pMax_, absTol);
     }
 
+    /// Returns the result of clamping the given point `p` to this rectangle,
+    /// that is, clamping:
+    /// 1. `p.x()` to [`xMin()`, `xMax()`], and
+    /// 2. `p.y()` to [`yMin()`, `yMax()`].
+    /// 
+    /// If this rectangle is empty, then a warning is issued and `p` is clamped
+    /// to the `normalized()` rectangle instead.
+    /// 
+    Vec2f clamp(const Vec2f& p) const {
+        return {
+            core::clamp(p.x(), xMin(), xMax()),
+            core::clamp(p.y(), yMin(), yMax())};
+    }
+
+    /// Returns the result of clamping both `other.pMin()` and `other.pMax()`
+    /// to this rectangle.
+    /// 
+    Rect2f clamp(const Rect2f& other) const {
+        return Rect2f(clamp(other.pMin()), clamp(other.pMax()));
+    }
+
     /// Returns the smallest rectangle that contains both this rectangle
     /// and the `other` rectangle.
     ///
