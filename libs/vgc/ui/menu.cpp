@@ -206,7 +206,7 @@ void Menu::setShortcutTrackEnabled(bool enabled) {
 
 namespace {
 
-bool placeMenuFit(
+void placeMenuFit(
     geometry::Rect2f& menuRect,
     const geometry::Vec2f& fixedCrossAlignShifts,
     const geometry::Rect2f& areaRect,
@@ -226,30 +226,46 @@ bool placeMenuFit(
         // Enough space on the Right/Bottom
         resultPos[dropDir] = anchorMax[dropDir];
     }
-    else if (anchorMin[dropDir] - menuSize[dropDir] >= areaMin[dropDir]) {
-        // Enough space on the Left/Top
-        resultPos[dropDir] = anchorMin[dropDir] - menuSize[dropDir];
-    }
     else {
-        return false;
+        // Place either on the Right/Bottom or Left/Top, whichever has more space
+        float spaceAfter = areaMax[dropDir] - anchorMax[dropDir];
+        float spaceBefore = anchorMin[dropDir] - areaMin[dropDir];
+        if (spaceAfter >= spaceBefore) {
+            resultPos[dropDir] = anchorMax[dropDir];
+        }
+        else {
+            resultPos[dropDir] = anchorMin[dropDir] - menuSize[dropDir];
+        }
     }
 
     float delta = menuSize[crossDir];
-    if (anchorMin[crossDir] + delta + fixedCrossAlignShifts[1] <= areaMax[crossDir]) {
+    if (anchorMin[crossDir] + delta + fixedCrossAlignShifts[1] <= areaMax[crossDir]
+        && anchorMin[crossDir] + fixedCrossAlignShifts[0] >= areaMin[crossDir]) {
         // Enough space Bottom/Right
         resultPos[crossDir] = anchorMin[crossDir] + fixedCrossAlignShifts[1];
     }
     else if (
-        anchorMax[crossDir] - delta - fixedCrossAlignShifts[0] >= areaMin[crossDir]) {
+        anchorMax[crossDir] - delta - fixedCrossAlignShifts[0] >= areaMin[crossDir]
+        && anchorMax[crossDir] - fixedCrossAlignShifts[1] <= areaMax[crossDir]) {
         // Enough space Top/Left
         resultPos[crossDir] = anchorMax[crossDir] - delta - fixedCrossAlignShifts[0];
     }
     else {
-        return false;
+        const geometry::Vec2f areaSize = areaRect.size();
+        float areaCrossSize = areaSize[crossDir];
+        float menuCrossSize = menuSize[crossDir];
+        if (menuCrossSize < areaCrossSize) {
+            // Enough total Height/Width: align the menu with the bottom/right of the area
+            resultPos[crossDir] = areaMax[crossDir] - menuCrossSize;
+        }
+        else {
+            // Align the menu with the top/left of the available area
+            // (i.e., prefer cropping the "end" of the menu)
+            resultPos[crossDir] = areaMin[crossDir];
+        }
     }
 
     menuRect.setPosition(resultPos);
-    return true;
 }
 
 MenuDropDirection getMenuDropDirection(Menu* parentMenu, MenuButton* button) {
@@ -277,46 +293,30 @@ geometry::Vec2f Menu::computePopupPosition(Widget* opener, Widget* area) {
     Menu* parentMenu = button ? button->parentMenu() : nullptr;
 
     MenuDropDirection dropDir = getMenuDropDirection(parentMenu, button);
+    int dropDirIndex = (dropDir == MenuDropDirection::Horizontal) ? 0 : 1;
 
-    geometry::Rect2f anchorRect = opener->mapTo(area, opener->rect());
     geometry::Rect2f areaRect = area->rect();
+    geometry::Rect2f anchorRect = opener->mapTo(area, opener->rect());
+
     geometry::Rect2f menuRect(geometry::Vec2f(), preferredSize());
 
-    const bool preferLeftRight = (dropDir == MenuDropDirection::Horizontal);
-    const int sideDir = preferLeftRight ? 0 : 1;
-    const int crossDir = preferLeftRight ? 1 : 0;
+    // Ensures that anchorRect is a subset of areaRect. Note that this is not
+    // the same as computing the intersection between anchorRect and areaRect
+    // in case where the intersection is empty.
+    //
+    anchorRect = areaRect.clamp(anchorRect);
 
-    Margins paddingAndBorder(rect(), contentRect());
-    std::array<geometry::Vec2f, 2> fixedShifts = {
-        geometry::Vec2f{-paddingAndBorder.bottom(), -paddingAndBorder.top()},
-        geometry::Vec2f{-paddingAndBorder.right(), -paddingAndBorder.left()}};
-
-    float crossShift = anchorRect.size()[sideDir] * 0.2f;
-    fixedShifts[crossDir] = geometry::Vec2f(crossShift, crossShift);
-
-    if (!placeMenuFit(menuRect, fixedShifts[sideDir], areaRect, anchorRect, sideDir)) {
-        if (!placeMenuFit(
-                menuRect, fixedShifts[crossDir], areaRect, anchorRect, crossDir)) {
-            // doesn't fit at aligned locations, fallback
-            menuRect.setPosition(anchorRect.pMax());
-            menuRect.setWidth((std::min)(menuRect.width(), areaRect.width()));
-            menuRect.setHeight((std::min)(menuRect.height(), areaRect.height()));
-            geometry::Vec2f newPos = menuRect.position();
-            if (menuRect.pMax().x() > areaRect.pMax().x()) {
-                newPos[0] = areaRect.pMax().x() - menuRect.width();
-            }
-            else if (menuRect.pMin().x() < areaRect.pMin().x()) {
-                newPos[0] = areaRect.pMin().x();
-            }
-            if (menuRect.pMax().y() > areaRect.pMax().y()) {
-                newPos[1] = areaRect.pMax().y() - menuRect.width();
-            }
-            else if (menuRect.pMin().y() < areaRect.pMin().y()) {
-                newPos[1] = areaRect.pMin().y();
-            }
-            menuRect.setPosition(newPos);
-        }
+    Margins paddingAndBorder = padding() + border();
+    geometry::Vec2f fixedShifts;
+    if (dropDir == MenuDropDirection::Horizontal) {
+        fixedShifts = {-paddingAndBorder.bottom(), -paddingAndBorder.top()};
     }
+    else {
+        fixedShifts = {-paddingAndBorder.right(), -paddingAndBorder.left()};
+    }
+
+    placeMenuFit(menuRect, fixedShifts, areaRect, anchorRect, dropDirIndex);
+
     return menuRect.position();
 }
 
@@ -437,9 +437,19 @@ bool Menu::openAsPopup_(Widget* from) {
         createPopupLayer_(area);
     }
 
-    geometry::Vec2f pos = computePopupPosition(from, area);
+    // Place the popup in the overlay area.
+    //
+    // Note: we need to add the menu as overlay with its preferred size before
+    // computing its preferred position, since this position may depend both on
+    // its size and on style attributes (which depend on the location of the
+    // menu in the widget tree).
+    //
+    geometry::Vec2f pos(0, 0);
+    geometry::Vec2f size = preferredSize();
     area->addOverlayWidget(this);
-    updateGeometry(pos, preferredSize());
+    updateGeometry(pos, size);
+    pos = computePopupPosition(from, area);
+    updateGeometry(pos, size);
 
     // Let the button know.
     if (button) {
