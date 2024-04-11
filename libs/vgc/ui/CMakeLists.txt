@@ -58,7 +58,6 @@ vgc_add_library(ui
         paneldefaultarea.h
         panelmanager.h
         plot2d.h
-        popuplayer.h
         preferredsizecalculator.h
         qtutil.h
         row.h
@@ -126,7 +125,6 @@ vgc_add_library(ui
         paneldefaultarea.cpp
         panelmanager.cpp
         plot2d.cpp
-        popuplayer.cpp
         preferredsizecalculator.cpp
         qtutil.cpp
         row.cpp

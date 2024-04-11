@@ -25,7 +25,6 @@
 #include <vgc/ui/api.h>
 #include <vgc/ui/flex.h>
 #include <vgc/ui/menubutton.h>
-#include <vgc/ui/popuplayer.h>
 #include <vgc/ui/widget.h>
 
 namespace vgc::ui {
@@ -169,7 +168,7 @@ public:
 
     /// Creates a `Menu` with the given title.
     ///
-    static MenuPtr create(std::string_view = "");
+    static MenuPtr create(std::string_view title);
 
     /// Returns the action corresponding to this menu. This is an action that,
     /// when triggered, opens the menu.
@@ -286,13 +285,9 @@ public:
     ///
     bool open(Widget* from);
 
-    /// Closes this menu. This is the reverse operation of `open()`.
-    ///
-    bool close();
-
     /// If this menu has an open submenu, then closes this submenu.
     ///
-    bool closeSubMenu();
+    void closeSubMenu();
 
     /// Returns whether this menu can be open as a popup.
     ///
@@ -353,7 +348,6 @@ public:
 
 protected:
     // Reimplementation of Widget virtual methods
-    void onParentWidgetChanged(Widget* newParent) override;
     void onWidgetRemoved(Widget* widget) override;
     void preMouseMove(MouseMoveEvent* event) override;
     void preMousePress(MousePressEvent* event) override;
@@ -398,13 +392,9 @@ private:
     bool isFirstMoveSinceEnter_ = true;
     geometry::Rect2f subMenuPopupHitRect_ = {};
 
-    // Handling of PopupLayer
-    PopupLayerPtr popupLayer_ = nullptr;
-    void createPopupLayer_(OverlayArea* area, Widget* underlyingWidget = nullptr);
-    void destroyPopupLayer_();
-
     bool openAsPopup_(Widget* from);
 
+    void onClosed() override;
     bool close_(bool recursive = false);
 
     void exit_();

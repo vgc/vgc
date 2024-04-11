@@ -960,14 +960,14 @@ public:
     ///
     /// You can override this method if you wish this widget to have a
     /// non-standard method of deciding which of its children is hovered. For
-    /// example, `PopupLayer` overrides this method to let mouse events "pass
-    /// through" its underlying widget, and `PanelArea` overrides this method
-    /// to ensure that no subpanels are hovered if the mouse is within
-    /// `handle-size` of a boundary between two subpanels.
+    /// example, the modal backdrop of `OverlayArea` overrides this method to
+    /// let mouse events "pass through" specific widgets, and `PanelArea`
+    /// overrides this method to ensure that no subpanels are hovered if the
+    /// mouse is within `handle-size` of a boundary between two subpanels.
     ///
     /// This method is called by the default implementation of
     /// `updateHoverChainChild()`. Therefore, if you wish even more control,
-    /// you can override `updateHoverChainChild()` instead..
+    /// you can override `updateHoverChainChild()` instead.
     ///
     virtual Widget* computeHoverChainChild(MouseHoverEvent* event) const;
 
@@ -1090,6 +1090,18 @@ public:
     void hide() {
         setVisibility(Visibility::Invisible);
     }
+
+    /// Closes the widget.
+    ///
+    /// This function should typically be called by layouts and other widget
+    /// managers (e.g., `OverlayArea`) whenever the user indicated that the
+    /// widget should be "closed", which typically means hidden or destroyed.
+    ///
+    /// The exact behavior of closing a widget is up to the widget's
+    /// implementation of the virtual function `onClosed()`. By default, it simply
+    /// hides the widget.
+    ///
+    void close();
 
     /// Returns whether this widget tree is active, that is, whether it
     /// receives key press and focus events.
@@ -1476,6 +1488,11 @@ protected:
     /// inheritance. An occluded widget is not hidden.
     ///
     virtual void onHidden();
+
+    /// Override this function if you wish to do something when the widget
+    /// is closed. By default, this hides the widget.
+    ///
+    virtual void onClosed();
 
     /// Computes the preferred size of this widget based on its size policy, as
     /// well as its content and the preferred size and size policy of its

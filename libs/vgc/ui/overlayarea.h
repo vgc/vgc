@@ -23,6 +23,28 @@ namespace vgc::ui {
 
 VGC_DECLARE_OBJECT(OverlayArea);
 
+namespace detail {
+
+VGC_DECLARE_OBJECT(ModalBackdrop);
+
+}
+
+enum class OverlayModalPolicy {
+
+    /// The overlay is not modal: users can still interact with other widgets
+    /// in the application.
+    ///
+    NotModal,
+
+    /// The overlay is modal and clicking outside the overlay does nothing.
+    ///
+    PersistentModal,
+
+    /// The overlay is modal and clicking outside the overlay closes it.
+    ///
+    TransientModal
+};
+
 enum class OverlayResizePolicy {
     None,
     //Fill,
@@ -57,7 +79,7 @@ public:
     ///
     /// \sa `setAreaWidget()`, `createAreaWidget()`
     ///
-    Widget* areaWidget() const {
+    WidgetWeakPtr areaWidget() const {
         return areaWidget_;
     }
 
@@ -65,7 +87,7 @@ public:
     ///
     /// \sa `areaWidget()`, `createAreaWidget()`
     ///
-    void setAreaWidget(Widget* widget);
+    void setAreaWidget(WidgetWeakPtr widget);
 
     /// Creates a new widget of the given `WidgetClass`, and sets it
     /// as the area widget of this overlay area.
@@ -85,7 +107,8 @@ public:
     /// \sa `createOverlayWidget()`.
     ///
     void addOverlayWidget(
-        Widget* widget,
+        WidgetWeakPtr widget,
+        OverlayModalPolicy modalPolicy = OverlayModalPolicy::NotModal,
         OverlayResizePolicy resizePolicy = OverlayResizePolicy::None);
 
     /// Creates a new widget of the given `WidgetClass`, and adds it as an
@@ -94,12 +117,43 @@ public:
     /// \sa `addOverlayWidget()`.
     ///
     template<typename WidgetClass, typename... Args>
-    WidgetClass* createOverlayWidget(OverlayResizePolicy resizePolicy, Args&&... args) {
+    WidgetClass* createOverlayWidget(
+        OverlayModalPolicy modalPolicy,
+        OverlayResizePolicy resizePolicy,
+        Args&&... args) {
+
         core::ObjPtr<WidgetClass> child =
             WidgetClass::create(std::forward<Args>(args)...);
-        addOverlayWidget(child.get(), resizePolicy);
+        addOverlayWidget(child.get(), modalPolicy, resizePolicy);
         return child.get();
     }
+
+    /// Removes the given `overlay` from this `OverlayArea`.
+    ///
+    /// If `overlay` was the last modal overlay of this `OverlayArea`, then the
+    /// modal background is also removed, making it possible again to interact
+    /// with widgets in the `areaWidget()`.
+    ///
+    /// If the given `overlay` was not in the list of overlays, then this function
+    /// returns a null pointer.
+    ///
+    /// Otherwise, it returns a shared pointer to the now-parentless widget.
+    ///
+    WidgetSharedPtr removeOverlay(WidgetWeakPtr overlay);
+
+    /// Allows the given `passthrough` widget to be accessible even if
+    /// `overlay` is a modal overlay. In other words, this makes mouse events
+    /// "pass through" the modal background.
+    ///
+    /// An example is the main menubar of the application: when one of its
+    /// submenu is open, we still want the menubar to accept mouse events, for
+    /// example to allow users to open other submenus by simply moving the
+    /// mouse. Without adding the menubar as passthrough for the submenu
+    /// overlay, this would not work, since by the submenu is a modal overlay
+    /// and would by default prevent interaction with all other application
+    /// widgets.
+    ///
+    void addPassthroughFor(WidgetWeakPtr overlay, WidgetWeakPtr passthrough);
 
     // reimpl
     float preferredWidthForHeight(float height) const override;
@@ -113,17 +167,34 @@ protected:
     void updateChildrenGeometry() override;
 
 private:
-    Widget* areaWidget_ = nullptr;
+    WidgetWeakPtr areaWidget_ = nullptr;
+    detail::ModalBackdropWeakPtr modalBackdrop_ = nullptr;
+
+    bool hasModalOverlays_() const;
+    void addModalBackdropIfNeeded_();
+    void removeModalBackdropIfUnneeded_();
+    WidgetSharedPtr getFirstTransientModal_() const;
+    void onModalBackdropClicked_();
+    VGC_SLOT(onModalBackdropClicked_)
 
     class OverlayDesc {
     public:
-        OverlayDesc(Widget* widget, OverlayResizePolicy resizePolicy)
+        OverlayDesc(
+            WidgetWeakPtr widget,
+            OverlayModalPolicy modalPolicy,
+            OverlayResizePolicy resizePolicy)
+
             : widget_(widget)
+            , modalPolicy_(modalPolicy)
             , resizePolicy_(resizePolicy) {
         }
 
-        Widget* widget() const {
+        const WidgetWeakPtr& widget() const {
             return widget_;
+        }
+
+        OverlayModalPolicy modalPolicy() const {
+            return modalPolicy_;
         }
 
         OverlayResizePolicy resizePolicy() const {
@@ -139,8 +210,9 @@ private:
         }
 
     private:
-        Widget* widget_ = nullptr;
-        OverlayResizePolicy resizePolicy_ = {};
+        WidgetWeakPtr widget_;
+        OverlayModalPolicy modalPolicy_ = OverlayModalPolicy::NotModal;
+        OverlayResizePolicy resizePolicy_ = OverlayResizePolicy::None;
         bool isGeometryDirty_ = true;
     };
 

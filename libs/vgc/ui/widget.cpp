@@ -1719,6 +1719,10 @@ void Widget::setVisibility(Visibility visibility) {
     }
 }
 
+void Widget::close() {
+    onClosed();
+}
+
 void Widget::onParentWidgetChanged(Widget*) {
     // no-op
 }
@@ -1895,6 +1899,10 @@ void Widget::onVisible() {
 
 void Widget::onHidden() {
     // no-op
+}
+
+void Widget::onClosed() {
+    hide();
 }
 
 void Widget::setTreeActive(bool active, FocusReason reason) {

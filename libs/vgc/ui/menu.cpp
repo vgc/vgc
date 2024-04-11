@@ -21,7 +21,6 @@
 #include <vgc/ui/logcategories.h>
 #include <vgc/ui/menubutton.h>
 #include <vgc/ui/overlayarea.h>
-#include <vgc/ui/popuplayer.h>
 #include <vgc/ui/strings.h>
 
 #include <vgc/ui/detail/paintutil.h>
@@ -171,16 +170,10 @@ bool Menu::open(Widget* from) {
     return true;
 }
 
-bool Menu::close() {
-    return close_();
-}
-
-bool Menu::closeSubMenu() {
-    Menu* subMenu = subMenuPopup();
-    if (subMenu) {
-        return subMenu->close();
+void Menu::closeSubMenu() {
+    if (Menu* subMenu = subMenuPopup()) {
+        subMenu->close();
     }
-    return false;
 }
 
 void Menu::setPopupEnabled(bool enabled) {
@@ -387,24 +380,6 @@ void Menu::setupWidthOverrides_() const {
     }
 }
 
-void Menu::createPopupLayer_(OverlayArea* area, Widget* underlyingWidget) {
-    if (popupLayer_) {
-        destroyPopupLayer_();
-    }
-    PopupLayer* popupLayer = area->createOverlayWidget<PopupLayer>(
-        OverlayResizePolicy::Stretch, underlyingWidget);
-    popupLayer_ = popupLayer;
-    popupLayer->resized().connect(exitSlot_());
-    popupLayer->backgroundPressed().connect(exitSlot_());
-}
-
-void Menu::destroyPopupLayer_() {
-    if (popupLayer_) {
-        popupLayer_->destroy();
-        popupLayer_ = nullptr;
-    }
-}
-
 bool Menu::openAsPopup_(Widget* from) {
 
     MenuButton* button = dynamic_cast<MenuButton*>(from);
@@ -427,26 +402,18 @@ bool Menu::openAsPopup_(Widget* from) {
         return false;
     }
 
-    // Create a PopupLayer catching all clicks outside of the popup.
-    //
-    // Note that if this menu has a parent menu, then it is the responsibility
-    // of the parent to create the PopupLayer, if there isn't one already. This
-    // is done in `onSubMenuPopupOpened_()`.
-    //
-    if (!parentMenu) {
-        createPopupLayer_(area);
-    }
-
     // Place the popup in the overlay area.
     //
-    // Note: we need to add the menu as overlay with its preferred size before
-    // computing its preferred position, since this position may depend both on
-    // its size and on style attributes (which depend on the location of the
-    // menu in the widget tree).
+    // Note: we need to add the menu as overlay before computing its preferred
+    // size and position, since these may depend on style attributes, which
+    // depend on the location of the menu in the widget tree.
     //
+    area->addOverlayWidget(this, OverlayModalPolicy::TransientModal);
+    if (parentMenu && !parentMenu->isOpenAsPopup()) {
+        area->addPassthroughFor(this, parentMenu);
+    }
     geometry::Vec2f pos(0, 0);
     geometry::Vec2f size = preferredSize();
-    area->addOverlayWidget(this);
     updateGeometry(pos, size);
     pos = computePopupPosition(from, area);
     updateGeometry(pos, size);
@@ -457,6 +424,10 @@ bool Menu::openAsPopup_(Widget* from) {
     }
 
     return true;
+}
+
+void Menu::onClosed() {
+    close_();
 }
 
 bool Menu::close_(bool recursive) {
@@ -485,7 +456,6 @@ void Menu::exit_() {
         bool recursive = true;
         close_(recursive);
     }
-    destroyPopupLayer_();
     clearFocus(FocusReason::Menu);
 }
 
@@ -522,7 +492,7 @@ void Menu::onItemActionTriggered_(Widget* from) {
 
     if (newPopup) {
         // If a new popup menu was opened, then we register it as our
-        // subMenuPopup(), and create a PopupLayer if necessary.
+        // subMenuPopup().
         onSubMenuPopupOpened_(newPopup);
     }
     else {
@@ -558,22 +528,7 @@ void Menu::onSubMenuPopupOpened_(Menu* subMenu) {
     }
     subMenuPopupHitRect_ = subMenuPopupHitRect_ + hitMargins;
 
-    // Create a PopupLayer catching all clicks outside the popup or `this`
-    // menu, and move the subMenu above the PopupLayer.
-    //
     isDeferringOpen_ = false;
-    if (!isOpenAsPopup_) {
-        if (!popupLayer_) {
-            OverlayArea* area = dynamic_cast<OverlayArea*>(subMenu->parent());
-            if (!area) {
-                area = topmostOverlayArea();
-            }
-            if (area) {
-                createPopupLayer_(area, this);
-                area->addOverlayWidget(subMenu);
-            }
-        }
-    }
 }
 
 void Menu::onSubMenuPopupClosed_(bool recursive) {
@@ -604,10 +559,6 @@ void Menu::onItemActionAboutToBeDestroyed_() {
 }
 
 // Reimplementation of Widget virtual methods
-
-void Menu::onParentWidgetChanged(Widget* newParent) {
-    popupLayer_ = dynamic_cast<PopupLayer*>(newParent);
-}
 
 void Menu::onWidgetRemoved(Widget* widget) {
     removeItem(widget);
@@ -739,7 +690,6 @@ void Menu::onVisible() {
 
 void Menu::onHidden() {
     closeSubMenu();
-    destroyPopupLayer_();
     isDeferringOpen_ = true;
 }
 
