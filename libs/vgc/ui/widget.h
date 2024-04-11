@@ -228,7 +228,7 @@ public:
     WidgetClass* createChildBefore(Widget* nextSibling, Args&&... args) {
         core::ObjPtr<WidgetClass> child =
             WidgetClass::create(std::forward<Args>(args)...);
-        insertChild(nextSibling, child.get());
+        insertChildBefore(nextSibling, child.get());
         return child.get();
     }
 
@@ -242,7 +242,7 @@ public:
     WidgetClass* createChildAt(Int index, Args&&... args) {
         core::ObjPtr<WidgetClass> child =
             WidgetClass::create(std::forward<Args>(args)...);
-        insertChild(index, child.get());
+        insertChildAt(index, child.get());
         return child.get();
     }
 
@@ -259,12 +259,12 @@ public:
     /// Inserts the given `child` as a child of this widget before
     /// `nextSibling`.
     ///
-    void insertChild(Widget* nextSibling, Widget* child);
+    void insertChildBefore(Widget* nextSibling, Widget* child);
 
     /// Inserts the given `child` as a child of this widget at the given
     /// `index`.
     ///
-    void insertChild(Int i, Widget* child);
+    void insertChildAt(Int i, Widget* child);
 
     /// Returns whether this Widget can be reparented with the given `newParent`.
     /// See `reparent()` for details.

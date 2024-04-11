@@ -76,7 +76,7 @@ void MessageDialog::setTitle(std::string_view text) {
             title_ = content_->createChild<Label>();
             title_->addStyleClass(strings::title);
             // Move as first child
-            content_->insertChild(content_->firstChild(), title_.get());
+            content_->insertChildAt(0, title_.get());
         }
         title_->setText(text);
         updateSize_();
@@ -171,11 +171,11 @@ void MessageDialog::createBodyIfNotCreated_() {
         body_->addStyleClass(strings::body);
         if (title_) {
             // move just after title
-            content_->insertChild(title_->nextSibling(), body_.get());
+            content_->insertChildBefore(title_->nextSibling(), body_.get());
         }
         else {
             // Move as first child
-            content_->insertChild(content_->firstChild(), body_.get());
+            content_->insertChildAt(0, body_.get());
         }
     }
 }
