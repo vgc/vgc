@@ -18,6 +18,7 @@
 #include <vgc/core/paths.h>
 #include <vgc/core/random.h>
 #include <vgc/ui/column.h>
+#include <vgc/ui/combobox.h>
 #include <vgc/ui/grid.h>
 #include <vgc/ui/iconwidget.h>
 #include <vgc/ui/imagebox.h>
@@ -166,6 +167,7 @@ protected:
         createMessageDialogButtons_(layout);
         createLineEdits_(layout);
         createNumberEdits_(layout);
+        createComboBoxes_(layout);
     }
 
 private:
@@ -264,6 +266,18 @@ private:
         numberEdit3->setSignificantDigits(2);
         numberEdit3->setStep(0.001);
         numberEdit3->setText("0.0000234");
+    }
+
+    void createComboBoxes_(ui::Widget* parent) {
+
+        ui::Row* row = parent->createChild<ui::Row>();
+
+        // Default ComboBox
+        row->createChild<ui::ComboBox>();
+
+        // TODO:
+        // - ComboBox with manually set items
+        // - ComboBox with items set from a registered enum
     }
 
     ui::OverlayAreaWeakPtr getClickMeOverlayArea_(ui::Widget& from) {

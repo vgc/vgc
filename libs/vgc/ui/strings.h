@@ -25,6 +25,7 @@ namespace vgc::ui::strings {
 VGC_UI_API extern const core::StringId BoolSettingEdit;
 VGC_UI_API extern const core::StringId Button;
 VGC_UI_API extern const core::StringId Checkbox;
+VGC_UI_API extern const core::StringId ComboBox;
 VGC_UI_API extern const core::StringId Dialog;
 VGC_UI_API extern const core::StringId Flex;
 VGC_UI_API extern const core::StringId Grid;
@@ -103,6 +104,9 @@ VGC_UI_API extern const core::StringId off;
 VGC_UI_API extern const core::StringId icon;
 VGC_UI_API extern const core::StringId text;
 VGC_UI_API extern const core::StringId shortcut;
+VGC_UI_API extern const core::StringId arrow;
+
+// ComboBox
 VGC_UI_API extern const core::StringId arrow;
 
 // Menu

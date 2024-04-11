@@ -24,6 +24,7 @@ namespace vgc::ui::strings {
 const core::StringId BoolSettingEdit("BoolSettingEdit");
 const core::StringId Button("Button");
 const core::StringId Checkbox("Checkbox");
+const core::StringId ComboBox("ComboBox");
 const core::StringId Dialog("Dialog");
 const core::StringId Flex("Flex");
 const core::StringId Grid("Grid");
@@ -111,6 +112,9 @@ const core::StringId off("off");
 const core::StringId icon("icon");
 const core::StringId text("text");
 const core::StringId shortcut("shortcut");
+const core::StringId arrow("arrow");
+
+// ComboBox
 const core::StringId arrow("arrow");
 
 // Menu
