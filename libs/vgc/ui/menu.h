@@ -349,7 +349,6 @@ public:
 
 protected:
     // Reimplementation of Widget virtual methods
-    void onParentWidgetChanged(Widget* newParent) override;
     void onWidgetRemoved(Widget* widget) override;
     void preMouseMove(MouseMoveEvent* event) override;
     void preMousePress(MousePressEvent* event) override;
@@ -393,11 +392,6 @@ private:
     geometry::Vec2f lastHoverPos_ = {};
     bool isFirstMoveSinceEnter_ = true;
     geometry::Rect2f subMenuPopupHitRect_ = {};
-
-    // Handling of PopupLayer
-    PopupLayerPtr popupLayer_ = nullptr;
-    void createPopupLayer_(OverlayArea* area, Widget* underlyingWidget = nullptr);
-    void destroyPopupLayer_();
 
     bool openAsPopup_(Widget* from);
 

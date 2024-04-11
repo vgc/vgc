@@ -381,30 +381,6 @@ void Menu::setupWidthOverrides_() const {
     }
 }
 
-void Menu::createPopupLayer_(OverlayArea* area, Widget* underlyingWidget) {
-    /*
-    if (popupLayer_) {
-        destroyPopupLayer_();
-    }
-    PopupLayer* popupLayer = area->createOverlayWidget<PopupLayer>(
-        OverlayResizePolicy::Stretch, underlyingWidget);
-    popupLayer_ = popupLayer;
-    popupLayer->resized().connect(exitSlot_());
-    popupLayer->backgroundPressed().connect(exitSlot_());
-*/
-    // XXX TODO: equivalent of popupLayer->backgroundPressed().connect(exitSlot_());
-    // via OverlayArea
-}
-
-void Menu::destroyPopupLayer_() {
-    /*
-    if (popupLayer_) {
-        popupLayer_->destroy();
-        popupLayer_ = nullptr;
-    }
-    */
-}
-
 bool Menu::openAsPopup_(Widget* from) {
 
     MenuButton* button = dynamic_cast<MenuButton*>(from);
@@ -426,18 +402,6 @@ bool Menu::openAsPopup_(Widget* from) {
             "top-most overlay area.")
         return false;
     }
-
-    /*
-    // Create a PopupLayer catching all clicks outside of the popup.
-    //
-    // Note that if this menu has a parent menu, then it is the responsibility
-    // of the parent to create the PopupLayer, if there isn't one already. This
-    // is done in `onSubMenuPopupOpened_()`.
-    //
-    if (!parentMenu) {
-        createPopupLayer_(area);
-    }
-    */
 
     // Place the popup in the overlay area.
     //
@@ -493,7 +457,6 @@ void Menu::exit_() {
         bool recursive = true;
         close_(recursive);
     }
-    destroyPopupLayer_();
     clearFocus(FocusReason::Menu);
 }
 
@@ -567,24 +530,6 @@ void Menu::onSubMenuPopupOpened_(Menu* subMenu) {
     subMenuPopupHitRect_ = subMenuPopupHitRect_ + hitMargins;
 
     isDeferringOpen_ = false;
-
-    /*
-    // Create a PopupLayer catching all clicks outside the popup or `this`
-    // menu, and move the subMenu above the PopupLayer.
-    //
-    if (!isOpenAsPopup_) {
-        if (!popupLayer_) {
-            OverlayArea* area = dynamic_cast<OverlayArea*>(subMenu->parent());
-            if (!area) {
-                area = topmostOverlayArea();
-            }
-            if (area) {
-                createPopupLayer_(area, this);
-                area->addOverlayWidget(subMenu);
-            }
-        }
-    }
-   */
 }
 
 void Menu::onSubMenuPopupClosed_(bool recursive) {
@@ -615,16 +560,6 @@ void Menu::onItemActionAboutToBeDestroyed_() {
 }
 
 // Reimplementation of Widget virtual methods
-
-void Menu::onParentWidgetChanged(Widget* newParent) {
-    // XXX BUG HERE?????
-    // Why would the popupLayer be the new parent?
-    // The popup layer isn't supposed to any child, is it?
-    // Commented this line fixes the ComboBox problem that the popup
-    // layer was never destroyed.
-    //
-    //popupLayer_ = dynamic_cast<PopupLayer*>(newParent);
-}
 
 void Menu::onWidgetRemoved(Widget* widget) {
     removeItem(widget);
@@ -756,7 +691,6 @@ void Menu::onVisible() {
 
 void Menu::onHidden() {
     closeSubMenu();
-    destroyPopupLayer_();
     isDeferringOpen_ = true;
 }
 

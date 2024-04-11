@@ -278,7 +278,9 @@ private:
         static ui::WidgetWeakPtr popup_;
         if (!popup_.isAlive()) {
             popup_ = overlayArea.createOverlayWidget<ui::Label>(
-                ui::OverlayResizePolicy::None, "you clicked here!");
+                ui::OverlayModalPolicy::NotModal,
+                ui::OverlayResizePolicy::None,
+                "you clicked here!");
             if (auto popup = popup_.lock()) {
                 popup->setStyleSheet(".Label { background-color: rgb(20, 100, 100); "
                                      "background-color-on-hover: rgb(20, 130, 130); }");
