@@ -58,7 +58,7 @@ void Panel::setBody(Widget* newBody) {
         }
     }
     else {
-        insertChild(firstChild(), newBody);
+        insertChildAt(0, newBody);
     }
 }
 

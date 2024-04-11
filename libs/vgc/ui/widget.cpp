@@ -106,10 +106,10 @@ Widget* Widget::childAt(Int index) const {
 }
 
 void Widget::addChild(Widget* child) {
-    insertChild(nullptr, child);
+    insertChildBefore(nullptr, child);
 }
 
-void Widget::insertChild(Widget* nextSibling, Widget* child) {
+void Widget::insertChildBefore(Widget* nextSibling, Widget* child) {
 
     // Check whether reparenting is possible
     checkCanReparent_(this, child);
@@ -129,7 +129,7 @@ void Widget::insertChild(Widget* nextSibling, Widget* child) {
     child->isReparentingWithinSameTree_ = false;
 }
 
-void Widget::insertChild(Int i, Widget* child) {
+void Widget::insertChildAt(Int i, Widget* child) {
     if (i < 0 || i > numChildren()) {
         throw core::IndexError(core::format(
             "Cannot insert child widget at index {} (numChildren() == {}).",
@@ -140,7 +140,7 @@ void Widget::insertChild(Int i, Widget* child) {
     for (; i > 0; --i) {
         nextSibling = nextSibling->nextSibling();
     }
-    insertChild(nextSibling, child);
+    insertChildBefore(nextSibling, child);
 }
 
 bool Widget::canReparent(Widget* newParent) {

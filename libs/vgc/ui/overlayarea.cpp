@@ -41,7 +41,7 @@ void OverlayArea::setAreaWidget(Widget* widget) {
         }
         areaWidget_ = widget;
     }
-    insertChild(firstChild(), areaWidget_);
+    insertChildAt(0, areaWidget_);
 }
 
 void OverlayArea::addOverlayWidget(Widget* widget, OverlayResizePolicy resizePolicy) {
@@ -79,7 +79,7 @@ void OverlayArea::onWidgetAdded(Widget* w, bool wasOnlyReordered) {
 
     // If area is no longer first, move to first.
     if (areaWidget_ && areaWidget_->previousSibling()) {
-        insertChild(firstChild(), areaWidget_);
+        insertChildAt(0, areaWidget_);
     }
 
     if (w == areaWidget_) {

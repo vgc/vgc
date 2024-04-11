@@ -291,7 +291,7 @@ CanvasApplication::getOrCreatePanelDefaultArea_(ui::PanelDefaultArea area) {
 
         // Move it as first or last child of the main panel area
         ui::Widget* nextSibling = isLeft ? mainPanelArea_->firstChild() : nullptr;
-        mainPanelArea_->insertChild(nextSibling, panelArea_.get());
+        mainPanelArea_->insertChildBefore(nextSibling, panelArea_.get());
 
         // Set an appropriate size.
         // Note: This given size will be automatically increased to satisfy min-size.
