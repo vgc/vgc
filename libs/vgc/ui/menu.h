@@ -25,7 +25,6 @@
 #include <vgc/ui/api.h>
 #include <vgc/ui/flex.h>
 #include <vgc/ui/menubutton.h>
-#include <vgc/ui/popuplayer.h>
 #include <vgc/ui/widget.h>
 
 namespace vgc::ui {

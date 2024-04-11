@@ -960,14 +960,14 @@ public:
     ///
     /// You can override this method if you wish this widget to have a
     /// non-standard method of deciding which of its children is hovered. For
-    /// example, `PopupLayer` overrides this method to let mouse events "pass
-    /// through" its underlying widget, and `PanelArea` overrides this method
-    /// to ensure that no subpanels are hovered if the mouse is within
-    /// `handle-size` of a boundary between two subpanels.
+    /// example, the modal backdrop of `OverlayArea` overrides this method to
+    /// let mouse events "pass through" specific widgets, and `PanelArea`
+    /// overrides this method to ensure that no subpanels are hovered if the
+    /// mouse is within `handle-size` of a boundary between two subpanels.
     ///
     /// This method is called by the default implementation of
     /// `updateHoverChainChild()`. Therefore, if you wish even more control,
-    /// you can override `updateHoverChainChild()` instead..
+    /// you can override `updateHoverChainChild()` instead.
     ///
     virtual Widget* computeHoverChainChild(MouseHoverEvent* event) const;
 

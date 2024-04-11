@@ -18,12 +18,70 @@
 
 #include <vgc/graphics/strings.h>
 #include <vgc/ui/logcategories.h>
-#include <vgc/ui/popuplayer.h>
 #include <vgc/ui/strings.h>
 
 #include <vgc/ui/detail/paintutil.h>
 
 namespace vgc::ui {
+
+namespace detail {
+
+// A ModalBackdrop is a widget that covers an overlay area and prevents clicks
+// from reaching underneath except for a given passthrough widget.
+//
+// In the future, we may also want to enable making this backdrop semi-opaque
+// to hide the underneath content as visual clue that they are not clickable
+// anymore.
+//
+class ModalBackdrop : public Widget {
+private:
+    VGC_OBJECT(ModalBackdrop, Widget)
+
+protected:
+    ModalBackdrop(CreateKey key)
+        : Widget(key) {
+    }
+
+public:
+    static ModalBackdropPtr create() {
+        return core::createObject<ModalBackdrop>();
+    }
+
+    void setPassthrough(WidgetWeakPtr passthrough) {
+        passthrough_ = passthrough;
+    }
+
+    // This signal is emitted when the ModalBackdrop itself received a click.
+    //
+    // This is not emitted if the click was propagated to child widgets or to
+    // the passthrough widget.
+    //
+    VGC_SIGNAL(clicked)
+
+protected:
+    Widget* computeHoverChainChild(MouseHoverEvent* event) const override {
+        if (auto passthrough = passthrough_.lock()) {
+            geometry::Vec2f posInTarget = mapTo(passthrough.get(), event->position());
+            if (passthrough->rect().contains(posInTarget)) {
+                return passthrough.get();
+            }
+        }
+        return nullptr;
+    }
+
+    bool onMousePress(MousePressEvent* event) override {
+        bool handled = Widget::onMousePress(event);
+        if (!handled && !hoverChainChild()) {
+            clicked().emit();
+        }
+        return handled;
+    }
+
+private:
+    WidgetWeakPtr passthrough_;
+};
+
+} // namespace detail
 
 OverlayArea::OverlayArea(CreateKey key)
     : Widget(key) {
@@ -37,10 +95,10 @@ void OverlayArea::setAreaWidget(WidgetWeakPtr widget_) {
 
     if (widget_ != areaWidget_) {
 
-        // Handle the case when widget_ is the modal background.
+        // Handle the case when widget_ is the modal backdrop.
         // This is not allowed.
         //
-        if (modalBackground_.isAlive() && widget_ == modalBackground_) {
+        if (modalBackdrop_.isAlive() && widget_ == modalBackdrop_) {
             return;
         }
 
@@ -48,7 +106,7 @@ void OverlayArea::setAreaWidget(WidgetWeakPtr widget_) {
         //
         WidgetSharedPtr keepAlive = removeOverlay(widget_);
 
-        // Replace the old areaWidget by widget
+        // Replace the old areaWidget by the given widget.
         //
         auto oldAreaWidget = areaWidget_.lock();
         auto newAreaWidget = widget_.lock();
@@ -99,9 +157,9 @@ void OverlayArea::addOverlayWidget(
     overlays_.emplaceLast(widget_, modalPolicy, resizePolicy);
     addChild(widget.get());
 
-    // Add the modal background if necessary.
+    // Add the modal backdrop if necessary.
     //
-    addModalBackgroundIfNeeded_();
+    addModalBackdropIfNeeded_();
 
     switch (resizePolicy) {
     case OverlayResizePolicy::Stretch: {
@@ -132,11 +190,11 @@ WidgetSharedPtr OverlayArea::removeOverlay(WidgetWeakPtr overlay) {
     }
 
     // If found, make the overlay parentless, and also remove
-    // the modal background if there is no modal overlays anymore.
+    // the modal backdrop if there is no modal overlays anymore.
     //
     if (res) {
         res->reparent(nullptr);
-        removeModalBackgroundIfUnneeded_();
+        removeModalBackdropIfUnneeded_();
     }
 
     return res;
@@ -149,8 +207,8 @@ void OverlayArea::addPassthroughFor(WidgetWeakPtr overlay, WidgetWeakPtr passthr
     // TODO: allow multiple passthrough, auto-remove when the overlay is not an
     // overlay anymore, etc.
     //
-    if (auto modalBackground = modalBackground_.lock()) {
-        modalBackground->setPassthrough(passthrough);
+    if (auto modalBackdrop = modalBackdrop_.lock()) {
+        modalBackdrop->setPassthrough(passthrough);
     }
 }
 
@@ -169,16 +227,16 @@ void OverlayArea::onWidgetAdded(Widget* w, bool wasOnlyReordered) {
         }
     }
 
-    // If modal background no longer at its desired location, move it.
-    if (auto modalBackground = modalBackground_.lock()) {
+    // If modal backdrop no longer at its desired location, move it.
+    if (auto modalBackdrop = modalBackdrop_.lock()) {
         if (auto areaWidget = areaWidget_.lock()) {
-            if (modalBackground->previousSibling() != areaWidget.get()) {
-                insertChildAt(1, modalBackground.get());
+            if (modalBackdrop->previousSibling() != areaWidget.get()) {
+                insertChildAt(1, modalBackdrop.get());
             }
         }
         else {
-            if (modalBackground->previousSibling()) {
-                insertChildAt(0, modalBackground.get());
+            if (modalBackdrop->previousSibling()) {
+                insertChildAt(0, modalBackdrop.get());
             }
         }
     }
@@ -197,15 +255,15 @@ void OverlayArea::onWidgetRemoved(Widget* w) {
         areaWidget_ = nullptr;
         requestGeometryUpdate();
     }
-    else if (widget == modalBackground_) {
-        modalBackground_ = nullptr;
-        addModalBackgroundIfNeeded_(); // re-create it if someone stole it
+    else if (widget == modalBackdrop_) {
+        modalBackdrop_ = nullptr;
+        addModalBackdropIfNeeded_(); // re-create it if someone stole it
     }
     else {
         overlays_.removeIf([=](const OverlayDesc& od) { //
             return od.widget() == widget;
         });
-        removeModalBackgroundIfUnneeded_();
+        removeModalBackdropIfUnneeded_();
         requestRepaint();
     }
 }
@@ -242,8 +300,8 @@ void OverlayArea::updateChildrenGeometry() {
     if (auto areaWidget = areaWidget_.lock()) {
         areaWidget->updateGeometry(areaRect);
     }
-    if (auto modalBackground = modalBackground_.lock()) {
-        modalBackground->updateGeometry(areaRect);
+    if (auto modalBackdrop = modalBackdrop_.lock()) {
+        modalBackdrop->updateGeometry(areaRect);
     }
     for (OverlayDesc& od : overlays_) {
         od.setGeometryDirty(true);
@@ -292,25 +350,24 @@ bool OverlayArea::hasModalOverlays_() const {
     return false;
 }
 
-void OverlayArea::addModalBackgroundIfNeeded_() {
+void OverlayArea::addModalBackdropIfNeeded_() {
     if (hasModalOverlays_()) {
-        if (!modalBackground_.isAlive()) {
+        if (!modalBackdrop_.isAlive()) {
             Int index = areaWidget_.isAlive() ? 1 : 0;
-            PopupLayerSharedPtr sp = createChildAt<PopupLayer>(index);
-            modalBackground_ = sp;
-            if (auto modalBackground = sp.lock()) {
-                modalBackground->clicked().connect(onModalBackgroundClicked_Slot());
+            modalBackdrop_ = createChildAt<detail::ModalBackdrop>(index);
+            if (auto modalBackdrop = modalBackdrop_.lock()) {
+                modalBackdrop->clicked().connect(onModalBackdropClicked_Slot());
             }
         }
     }
 }
 
-void OverlayArea::removeModalBackgroundIfUnneeded_() {
+void OverlayArea::removeModalBackdropIfUnneeded_() {
     if (!hasModalOverlays_()) {
-        if (auto modalBackground = modalBackground_.lock()) {
-            modalBackground->reparent(nullptr);
+        if (auto modalBackdrop = modalBackdrop_.lock()) {
+            modalBackdrop->reparent(nullptr);
         }
-        modalBackground_ = nullptr;
+        modalBackdrop_ = nullptr;
     }
 }
 
@@ -326,7 +383,7 @@ WidgetSharedPtr OverlayArea::getFirstTransientModal_() const {
     return {};
 }
 
-void OverlayArea::onModalBackgroundClicked_() {
+void OverlayArea::onModalBackdropClicked_() {
 
     // safe-guard against infinite loops.
     Int iterMax = overlays_.length() * 10;

@@ -21,7 +21,6 @@
 #include <vgc/ui/logcategories.h>
 #include <vgc/ui/menubutton.h>
 #include <vgc/ui/overlayarea.h>
-#include <vgc/ui/popuplayer.h>
 #include <vgc/ui/strings.h>
 
 #include <vgc/ui/detail/paintutil.h>
@@ -493,7 +492,7 @@ void Menu::onItemActionTriggered_(Widget* from) {
 
     if (newPopup) {
         // If a new popup menu was opened, then we register it as our
-        // subMenuPopup(), and create a PopupLayer if necessary.
+        // subMenuPopup().
         onSubMenuPopupOpened_(newPopup);
     }
     else {

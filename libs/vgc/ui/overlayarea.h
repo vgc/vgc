@@ -22,7 +22,12 @@
 namespace vgc::ui {
 
 VGC_DECLARE_OBJECT(OverlayArea);
-VGC_DECLARE_OBJECT(PopupLayer);
+
+namespace detail {
+
+VGC_DECLARE_OBJECT(ModalBackdrop);
+
+}
 
 enum class OverlayModalPolicy {
 
@@ -163,14 +168,14 @@ protected:
 
 private:
     WidgetWeakPtr areaWidget_ = nullptr;
-    PopupLayerWeakPtr modalBackground_ = nullptr;
+    detail::ModalBackdropWeakPtr modalBackdrop_ = nullptr;
 
     bool hasModalOverlays_() const;
-    void addModalBackgroundIfNeeded_();
-    void removeModalBackgroundIfUnneeded_();
+    void addModalBackdropIfNeeded_();
+    void removeModalBackdropIfUnneeded_();
     WidgetSharedPtr getFirstTransientModal_() const;
-    void onModalBackgroundClicked_();
-    VGC_SLOT(onModalBackgroundClicked_)
+    void onModalBackdropClicked_();
+    VGC_SLOT(onModalBackdropClicked_)
 
     class OverlayDesc {
     public:
