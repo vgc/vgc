@@ -21,39 +21,28 @@
 
 namespace vgc::ui {
 
-PopupLayer::PopupLayer(CreateKey key, Widget* underlyingWidget)
+PopupLayer::PopupLayer(CreateKey key, WidgetWeakPtr passthrough)
     : Widget(key)
-    , underlyingWidget_(underlyingWidget) {
-
-    if (underlyingWidget_) {
-        underlyingWidget_->aboutToBeDestroyed().connect(
-            onUnderlyingWidgetAboutToBeDestroyedSlot_());
-    }
+    , passthrough_(passthrough) {
 }
 
 PopupLayerPtr PopupLayer::create() {
     return core::createObject<PopupLayer>(nullptr);
 }
 
-PopupLayerPtr PopupLayer::create(Widget* underlyingWidget) {
-    return core::createObject<PopupLayer>(underlyingWidget);
+PopupLayerPtr PopupLayer::create(WidgetWeakPtr passthrough) {
+    return core::createObject<PopupLayer>(passthrough);
 }
 
-void PopupLayer::onWidgetAdded(Widget* child, bool wasOnlyReordered) {
-    VGC_UNUSED(wasOnlyReordered);
-    child->updateGeometry(0, 0, 0, 0);
-}
-
-void PopupLayer::onResize() {
-    SuperClass::onResize();
-    resized().emit();
+void PopupLayer::setPassthrough(WidgetWeakPtr passthrough) {
+    passthrough_ = passthrough;
 }
 
 Widget* PopupLayer::computeHoverChainChild(MouseHoverEvent* event) const {
-    if (underlyingWidget_) {
-        geometry::Vec2f posInTarget = mapTo(underlyingWidget_, event->position());
-        if (underlyingWidget_->rect().contains(posInTarget)) {
-            return underlyingWidget_;
+    if (auto passthrough = passthrough_.lock()) {
+        geometry::Vec2f posInTarget = mapTo(passthrough.get(), event->position());
+        if (passthrough->rect().contains(posInTarget)) {
+            return passthrough.get();
         }
     }
     return nullptr;
@@ -62,7 +51,7 @@ Widget* PopupLayer::computeHoverChainChild(MouseHoverEvent* event) const {
 bool PopupLayer::onMousePress(MousePressEvent* event) {
     bool handled = Widget::onMousePress(event);
     if (!handled && !hoverChainChild()) {
-        backgroundPressed().emit();
+        clicked().emit();
     }
     return handled;
 }

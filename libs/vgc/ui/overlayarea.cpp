@@ -17,6 +17,8 @@
 #include <vgc/ui/overlayarea.h>
 
 #include <vgc/graphics/strings.h>
+#include <vgc/ui/logcategories.h>
+#include <vgc/ui/popuplayer.h>
 #include <vgc/ui/strings.h>
 
 #include <vgc/ui/detail/paintutil.h>
@@ -31,30 +33,75 @@ OverlayAreaPtr OverlayArea::create() {
     return core::createObject<OverlayArea>();
 }
 
-void OverlayArea::setAreaWidget(Widget* widget) {
-    if (widget != areaWidget_) {
-        // It is possible that widget was an overlay widget before entering this function.
-        overlays_.removeIf([=](const OverlayDesc& od) { return od.widget() == widget; });
+void OverlayArea::setAreaWidget(WidgetWeakPtr widget_) {
 
-        if (areaWidget_) {
-            widget->replace(areaWidget_);
+    if (widget_ != areaWidget_) {
+
+        // Handle the case when widget_ is the modal background.
+        // This is not allowed.
+        //
+        if (modalBackground_.isAlive() && widget_ == modalBackground_) {
+            return;
         }
-        areaWidget_ = widget;
+
+        // Handle the case when widget_ was initially an overlay widget.
+        //
+        WidgetSharedPtr keepAlive = removeOverlay(widget_);
+
+        // Replace the old areaWidget by widget
+        //
+        auto oldAreaWidget = areaWidget_.lock();
+        auto newAreaWidget = widget_.lock();
+        areaWidget_ = widget_;
+        if (oldAreaWidget) {
+            if (newAreaWidget) {
+                newAreaWidget->replace(oldAreaWidget.get());
+            }
+            else {
+                oldAreaWidget->reparent(nullptr);
+            }
+        }
+        else {
+            if (newAreaWidget) {
+                insertChildAt(0, newAreaWidget.get());
+            }
+            else {
+                // Nothing to do
+            }
+        }
     }
-    insertChildAt(0, areaWidget_);
 }
 
-void OverlayArea::addOverlayWidget(Widget* widget, OverlayResizePolicy resizePolicy) {
+void OverlayArea::addOverlayWidget(
+    WidgetWeakPtr widget_,
+    OverlayModalPolicy modalPolicy,
+    OverlayResizePolicy resizePolicy) {
 
-    // move widget from area to overlay
-    if (widget == areaWidget_) {
-        areaWidget_ = nullptr;
+    auto widget = widget_.lock();
+    if (!widget) {
+        return;
     }
 
-    // append in both lists
-    addChild(widget);
-    overlays_.removeIf([=](const OverlayDesc& od) { return od.widget() == widget; });
-    overlays_.emplaceLast(widget, resizePolicy);
+    // Handle the case when widget_ was initially the area widget.
+    //
+    if (widget_ == areaWidget_) {
+        setAreaWidget(nullptr);
+    }
+
+    // Handle the case when widget_ was alreay an overlay.
+    // In this case, we first remove it, then re-add it as the last child
+    // with potentially a different modal policy and resize policy.
+    //
+    auto keepAlive = removeOverlay(widget_);
+
+    // Register the new overlay and add it as a child widget.
+    //
+    overlays_.emplaceLast(widget_, modalPolicy, resizePolicy);
+    addChild(widget.get());
+
+    // Add the modal background if necessary.
+    //
+    addModalBackgroundIfNeeded_();
 
     switch (resizePolicy) {
     case OverlayResizePolicy::Stretch: {
@@ -69,6 +116,44 @@ void OverlayArea::addOverlayWidget(Widget* widget, OverlayResizePolicy resizePol
     requestRepaint();
 }
 
+WidgetSharedPtr OverlayArea::removeOverlay(WidgetWeakPtr overlay) {
+
+    // Find the overlay in the list of overlays and remove it.
+    //
+    WidgetSharedPtr res;
+    Int i = 0;
+    for (const OverlayDesc& desc : overlays_) {
+        if (desc.widget() == overlay) {
+            res = overlay.lock();
+            overlays_.removeAt(i);
+            break;
+        }
+        ++i;
+    }
+
+    // If found, make the overlay parentless, and also remove
+    // the modal background if there is no modal overlays anymore.
+    //
+    if (res) {
+        res->reparent(nullptr);
+        removeModalBackgroundIfUnneeded_();
+    }
+
+    return res;
+}
+
+void OverlayArea::addPassthroughFor(WidgetWeakPtr overlay, WidgetWeakPtr passthrough) {
+
+    VGC_UNUSED(overlay);
+
+    // TODO: allow multiple passthrough, auto-remove when the overlay is not an
+    // overlay anymore, etc.
+    //
+    if (auto modalBackground = modalBackground_.lock()) {
+        modalBackground->setPassthrough(passthrough);
+    }
+}
+
 void OverlayArea::onResize() {
     SuperClass::onResize();
 }
@@ -78,11 +163,27 @@ void OverlayArea::onWidgetAdded(Widget* w, bool wasOnlyReordered) {
     VGC_UNUSED(wasOnlyReordered);
 
     // If area is no longer first, move to first.
-    if (areaWidget_ && areaWidget_->previousSibling()) {
-        insertChildAt(0, areaWidget_);
+    if (auto areaWidget = areaWidget_.lock()) {
+        if (areaWidget->previousSibling()) {
+            insertChildAt(0, areaWidget.get());
+        }
     }
 
-    if (w == areaWidget_) {
+    // If modal background no longer at its desired location, move it.
+    if (auto modalBackground = modalBackground_.lock()) {
+        if (auto areaWidget = areaWidget_.lock()) {
+            if (modalBackground->previousSibling() != areaWidget.get()) {
+                insertChildAt(1, modalBackground.get());
+            }
+        }
+        else {
+            if (modalBackground->previousSibling()) {
+                insertChildAt(0, modalBackground.get());
+            }
+        }
+    }
+
+    if (WidgetWeakPtr(w) == areaWidget_) {
         requestGeometryUpdate();
     }
     else {
@@ -91,32 +192,58 @@ void OverlayArea::onWidgetAdded(Widget* w, bool wasOnlyReordered) {
 }
 
 void OverlayArea::onWidgetRemoved(Widget* w) {
-    if (w == areaWidget_) {
+    WidgetWeakPtr widget = w;
+    if (widget == areaWidget_) {
         areaWidget_ = nullptr;
         requestGeometryUpdate();
     }
+    else if (widget == modalBackground_) {
+        modalBackground_ = nullptr;
+        addModalBackgroundIfNeeded_(); // re-create it if someone stole it
+    }
     else {
-        overlays_.removeIf([=](const OverlayDesc& od) { return od.widget() == w; });
+        overlays_.removeIf([=](const OverlayDesc& od) { //
+            return od.widget() == widget;
+        });
+        removeModalBackgroundIfUnneeded_();
         requestRepaint();
     }
 }
 
 float OverlayArea::preferredWidthForHeight(float height) const {
-    return areaWidget_ ? areaWidget_->preferredWidthForHeight(height) : 0;
+    if (auto areaWidget = areaWidget_.lock()) {
+        return areaWidget->preferredWidthForHeight(height);
+    }
+    else {
+        return 0;
+    }
 }
 
 float OverlayArea::preferredHeightForWidth(float width) const {
-    return areaWidget_ ? areaWidget_->preferredHeightForWidth(width) : 0;
+    if (auto areaWidget = areaWidget_.lock()) {
+        return areaWidget->preferredHeightForWidth(width);
+    }
+    else {
+        return 0;
+    }
 }
 
 geometry::Vec2f OverlayArea::computePreferredSize() const {
-    return areaWidget_ ? areaWidget_->preferredSize() : geometry::Vec2f();
+    if (auto areaWidget = areaWidget_.lock()) {
+        return areaWidget->preferredSize();
+    }
+    else {
+        return {};
+    }
 }
 
 void OverlayArea::updateChildrenGeometry() {
     geometry::Rect2f areaRect = rect();
-    if (areaWidget_) {
-        areaWidget_->updateGeometry(areaRect);
+    if (auto areaWidget = areaWidget_.lock()) {
+        areaWidget->updateGeometry(areaRect);
+    }
+    if (auto modalBackground = modalBackground_.lock()) {
+        modalBackground->updateGeometry(areaRect);
     }
     for (OverlayDesc& od : overlays_) {
         od.setGeometryDirty(true);
@@ -129,27 +256,105 @@ void OverlayArea::updateChildrenGeometry() {
             OverlayDesc& od = overlays_[i];
             if (od.isGeometryDirty()) {
                 od.setGeometryDirty(false);
-                Widget* w = od.widget();
-                switch (od.resizePolicy()) {
-                case OverlayResizePolicy::Stretch: {
-                    w->updateGeometry(areaRect);
-                    break;
+                if (auto widget = od.widget().lock()) {
+                    switch (od.resizePolicy()) {
+                    case OverlayResizePolicy::Stretch: {
+                        widget->updateGeometry(areaRect);
+                        break;
+                    }
+                    case OverlayResizePolicy::None:
+                    default:
+                        widget->updateGeometry();
+                        break;
+                    }
+                    hasUpdatedSomething = true;
                 }
-                case OverlayResizePolicy::None:
-                default:
-                    w->updateGeometry();
-                    break;
-                }
-                hasUpdatedSomething = true;
             }
         }
     }
 
     for (auto c : children()) {
-        if (c != areaWidget_) {
-            c->updateGeometry();
+        WidgetWeakPtr child_ = c;
+        if (child_ != areaWidget_) {
+            if (auto child = child_.lock()) {
+                c->updateGeometry();
+            }
         }
     }
+}
+
+bool OverlayArea::hasModalOverlays_() const {
+    for (const OverlayDesc& desc : overlays_) {
+        if (desc.modalPolicy() != OverlayModalPolicy::NotModal) {
+            return true;
+        }
+    }
+    return false;
+}
+
+void OverlayArea::addModalBackgroundIfNeeded_() {
+    if (hasModalOverlays_()) {
+        if (!modalBackground_.isAlive()) {
+            Int index = areaWidget_.isAlive() ? 1 : 0;
+            PopupLayerSharedPtr sp = createChildAt<PopupLayer>(index);
+            modalBackground_ = sp;
+            if (auto modalBackground = sp.lock()) {
+                modalBackground->clicked().connect(onModalBackgroundClicked_Slot());
+            }
+        }
+    }
+}
+
+void OverlayArea::removeModalBackgroundIfUnneeded_() {
+    if (!hasModalOverlays_()) {
+        if (auto modalBackground = modalBackground_.lock()) {
+            modalBackground->reparent(nullptr);
+        }
+        modalBackground_ = nullptr;
+    }
+}
+
+WidgetSharedPtr OverlayArea::getFirstTransientModal_() const {
+    for (const OverlayDesc& desc : overlays_) {
+        if (desc.modalPolicy() == OverlayModalPolicy::TransientModal) {
+            WidgetSharedPtr lock = desc.widget().lock();
+            if (lock) {
+                return lock;
+            }
+        }
+    }
+    return {};
+}
+
+void OverlayArea::onModalBackgroundClicked_() {
+
+    // safe-guard against infinite loops.
+    Int iterMax = overlays_.length() * 10;
+    Int iter = 0;
+
+    // For all transient modal overlays
+    while (iter <= iterMax) {
+        ++iter;
+        if (auto widget = getFirstTransientModal_()) {
+
+            // Perform custom close operation
+            // Note: this may add other modal overlays
+            widget->close();
+
+            // Remove overlay unless already done indirectly by widget->close()
+            if (widget->parent() == this) {
+                removeOverlay(widget);
+            }
+        }
+        else {
+            // Return if there is no more transient modal overlay
+            return;
+        }
+    }
+    VGC_WARNING(
+        LogVgcUi,
+        "Infinite recursion detected when attempting to close all transient modal "
+        "overlays.");
 }
 
 } // namespace vgc::ui

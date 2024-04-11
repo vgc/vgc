@@ -57,9 +57,10 @@ MenuButtonPtr MenuButton::create(Action* action, FlexDirection layoutDirection) 
     return core::createObject<MenuButton>(action, layoutDirection);
 }
 
-bool MenuButton::closePopupMenu() {
-    Menu* menu = popupMenu();
-    return menu && menu->close();
+void MenuButton::closePopupMenu() {
+    if (Menu* menu = popupMenu()) {
+        menu->close();
+    }
 }
 
 void MenuButton::onMenuPopupOpened_(Menu* menu) {

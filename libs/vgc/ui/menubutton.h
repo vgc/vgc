@@ -123,7 +123,7 @@ public:
         return popupMenu_;
     };
 
-    bool closePopupMenu();
+    void closePopupMenu();
 
     VGC_SIGNAL(menuPopupOpened);
     VGC_SIGNAL(menuPopupClosed, (bool, recursive));

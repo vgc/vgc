@@ -37,40 +37,41 @@ private:
     VGC_OBJECT(PopupLayer, Widget)
 
 protected:
-    PopupLayer(CreateKey, Widget* underlyingWidget);
+    PopupLayer(CreateKey, WidgetWeakPtr passthrough);
 
 public:
     /// Creates a PopupLayer.
     ///
     static PopupLayerPtr create();
 
-    /// Creates a PopupLayer with the given `underlyingWidget`.
+    /// Creates a PopupLayer with the given `passthrough` widget.
     ///
-    static PopupLayerPtr create(Widget* underlyingWidget);
+    static PopupLayerPtr create(WidgetWeakPtr passthrough);
 
-    Widget* underlyingWidget() const {
-        return underlyingWidget_;
+    /// Returns the passthrough widget, if any.
+    ///
+    WidgetWeakPtr passthrough() const {
+        return passthrough_;
     }
 
-    void close();
-
-    /// This signal is emitted when the layer is resized.
-    VGC_SIGNAL(resized);
-
-    /// This signal is emitted when a click happens in the layer but not in
-    /// any child nor the underlying widget.
+    /// Sets the passthrough widget.
     ///
-    VGC_SIGNAL(backgroundPressed);
+    void setPassthrough(WidgetWeakPtr passthrough);
+
+    /// This signal is emitted when the PopupLayer itself received a click.
+    ///
+    /// This is not emitted if the click was propagated to child widgets
+    /// or to the `passthrough()` widget.
+    ///
+    VGC_SIGNAL(clicked)
 
 protected:
     // Reimplementation of Widget virtual methods
-    void onWidgetAdded(Widget* child, bool wasOnlyReordered) override;
-    void onResize() override;
     Widget* computeHoverChainChild(MouseHoverEvent* event) const override;
     bool onMousePress(MousePressEvent* event) override;
 
 private:
-    Widget* underlyingWidget_ = nullptr;
+    WidgetWeakPtr passthrough_;
 
     VGC_SLOT(onUnderlyingWidgetAboutToBeDestroyedSlot_, destroy);
 };

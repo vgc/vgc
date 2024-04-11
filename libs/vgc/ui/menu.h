@@ -169,7 +169,7 @@ public:
 
     /// Creates a `Menu` with the given title.
     ///
-    static MenuPtr create(std::string_view = "");
+    static MenuPtr create(std::string_view title);
 
     /// Returns the action corresponding to this menu. This is an action that,
     /// when triggered, opens the menu.
@@ -286,13 +286,9 @@ public:
     ///
     bool open(Widget* from);
 
-    /// Closes this menu. This is the reverse operation of `open()`.
-    ///
-    bool close();
-
     /// If this menu has an open submenu, then closes this submenu.
     ///
-    bool closeSubMenu();
+    void closeSubMenu();
 
     /// Returns whether this menu can be open as a popup.
     ///
@@ -405,6 +401,7 @@ private:
 
     bool openAsPopup_(Widget* from);
 
+    void onClosed() override;
     bool close_(bool recursive = false);
 
     void exit_();
