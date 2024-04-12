@@ -39,6 +39,15 @@ namespace detail {
 //       background-color: rgba(0, 0, 0, 0.5);
 //   }
 //
+// Or equivalently, to keep the class ModalBackdrop private (although this
+// would be less generic? What if users want a gradient? or a border? Or in the
+// future add some blur?):
+//
+//   .OverlayArea {
+//       weak-backdrop-color: rgba(0, 0, 0, 0);
+//       strong-backdrop-color: rgba(0, 0, 0, 0.5);
+//   }
+//
 // Or is it better to be something like this?
 //
 //   .Menu {
@@ -46,12 +55,15 @@ namespace detail {
 //       strong-backdrop-color: rgba(0, 0, 0, 0.5);
 //   }
 //
-// In other words, do we want to allow per-overlay specific styling (second option),
-// or do we prefer to enforce consistency (first option)?
+// In other words, do we want to allow per-overlay specific styling (third
+// option), or do we prefer to enforce consistency (first two options)?
 //
 // Also, how to handle passthrough widgets? Possibly we can reimplementg
 // ModalBackdrop::onPaintDraw() by manually drawing several quads around the
-// passthrough instead of calling paintBackground().
+// passthrough instead of calling paintBackground(). Or maybe more generic and
+// performant, setting a custom fragment shader to clip the inside of the
+// passthrough widgets (would better support gradients, potential future blur,
+// etc.).
 //
 // Also, how to handle multiple modal overlays? Currently there is only one
 // backdrop. Should we possibly have more? Or perhaps one backdrop per
