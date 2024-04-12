@@ -408,9 +408,9 @@ bool Menu::openAsPopup_(Widget* from) {
     // size and position, since these may depend on style attributes, which
     // depend on the location of the menu in the widget tree.
     //
-    area->addOverlay(this, OverlayModality::Weak);
+    area->addWeakModalOverlay(this);
     if (parentMenu && !parentMenu->isOpenAsPopup()) {
-        area->addPassthroughFor(this, parentMenu);
+        area->addPassthrough(this, parentMenu);
     }
     geometry::Vec2f pos(0, 0);
     geometry::Vec2f size = preferredSize();

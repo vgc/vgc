@@ -277,10 +277,7 @@ private:
     ui::WidgetWeakPtr getClickMePopup_(ui::OverlayArea& overlayArea) {
         static ui::WidgetWeakPtr popup_;
         if (!popup_.isAlive()) {
-            popup_ = overlayArea.createOverlay<ui::Label>(
-                ui::OverlayModality::Modeless,
-                ui::OverlayResizePolicy::None,
-                "you clicked here!");
+            popup_ = overlayArea.createModelessOverlay<ui::Label>("you clicked here!");
             if (auto popup = popup_.lock()) {
                 popup->setStyleSheet(".Label { background-color: rgb(20, 100, 100); "
                                      "background-color-on-hover: rgb(20, 130, 130); }");

@@ -46,9 +46,11 @@ MainWidget::MainWidget(CreateKey key)
 #endif
 
     // Create main layout
-    ui::Column* mainLayout = overlayArea_->createChild<ui::Column>();
+    auto mainLayout = overlayArea_->createBody<ui::Column>().lock();
+    if (!mainLayout) {
+        return;
+    }
     mainLayout->addStyleClass(core::StringId("main-layout"));
-    overlayArea_->setBody(mainLayout);
 
     // Create menu bar
     menuBar_ = mainLayout->createChild<ui::Menu>("Menu");
@@ -59,7 +61,7 @@ MainWidget::MainWidget(CreateKey key)
     nativeMenuBar_ = NativeMenuBar::create(menuBar_);
 
     // Create panel area
-    panelArea_ = ui::PanelArea::createTabs(mainLayout);
+    panelArea_ = ui::PanelArea::createTabs(mainLayout.get());
 }
 
 MainWidgetPtr MainWidget::create() {
