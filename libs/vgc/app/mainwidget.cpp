@@ -48,7 +48,7 @@ MainWidget::MainWidget(CreateKey key)
     // Create main layout
     ui::Column* mainLayout = overlayArea_->createChild<ui::Column>();
     mainLayout->addStyleClass(core::StringId("main-layout"));
-    overlayArea_->setAreaWidget(mainLayout);
+    overlayArea_->setBody(mainLayout);
 
     // Create menu bar
     menuBar_ = mainLayout->createChild<ui::Menu>("Menu");

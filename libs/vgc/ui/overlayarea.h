@@ -21,46 +21,45 @@
 
 namespace vgc::ui {
 
-VGC_DECLARE_OBJECT(OverlayArea);
-
-namespace detail {
-
-VGC_DECLARE_OBJECT(ModalBackdrop);
-
-}
-
-/// \enum vgc::ui::OverlayModalPolicy
-/// \brief Specifies whether an overlay is modal and what is its behavior.
+/// \enum vgc::ui::OverlayModality
+/// \brief Specifies whether an overlay is modeless or modal (weak/strong).
 ///
-/// A "modal overlay" is a type of overlay that prevents users from interacting
+/// A *modal overlay* is a type of overlay that prevents users from interacting
 /// with other widgets in the application. This is achieved via an invisible
-/// "modal backdrop" automatically created behind the overlay, covering the
+/// *modal backdrop* automatically created behind the overlay, covering the
 /// rest of the application.
 ///
-/// There are two types of modal overlays: persistent modal overlays and
-/// transient modal overlays. A persistent modal overlay stays visible until
-/// the user explicitly closes them via in-overlay interaction, such as
-/// clicking an "OK" or "Cancel" button inside a modal dialog. Clicking outside
-/// a persistent modal overlay does nothing. By contrast, a transient modal
-/// overlay is automatically closed when clicking outside the overlay, which is
-/// typically a good choice for dropdown menus.
+/// An overlay which is not modal is called `Modeless`.
 ///
-enum class OverlayModalPolicy {
+/// An overlay which is modal can either be `Weak` or `Strong`.
+///
+/// A `Weak` modal overlay is automatically closed when clicking outside the
+/// overlay, which is typically a good choice for dropdown menus.
+///
+/// A `Strong` modal overlay stays visible until the user explicitly closes
+/// them via in-overlay interaction, such as clicking an "OK" or "Cancel"
+/// button inside a modal dialog. Clicking outside a `Strong` modal overlay
+/// does nothing.
+///
+enum class OverlayModality {
 
     /// The overlay is not modal: users can still interact with other widgets
     /// in the application.
     ///
-    NotModal,
-
-    /// The overlay is modal and clicking outside the overlay does nothing.
-    ///
-    PersistentModal,
+    Modeless,
 
     /// The overlay is modal and clicking outside the overlay closes it.
     ///
-    TransientModal
+    Weak,
+
+    /// The overlay is modal and clicking outside the overlay does nothing.
+    ///
+    Strong
 };
 
+/// \enum vgc::ui::OverlayResizePolicy
+/// \brief Specifies how should an overlay react when the OverlayArea is resized.
+///
 enum class OverlayResizePolicy {
     None,
     //Fill,
@@ -70,77 +69,121 @@ enum class OverlayResizePolicy {
     //Suicide,
 };
 
+namespace detail {
+
+VGC_DECLARE_OBJECT(ModalBackdrop);
+
+class Overlay {
+public:
+    Overlay(
+        WidgetWeakPtr widget,
+        OverlayModality modality,
+        OverlayResizePolicy resizePolicy)
+
+        : widget_(widget)
+        , modality_(modality)
+        , resizePolicy_(resizePolicy) {
+    }
+
+    const WidgetWeakPtr& widget() const {
+        return widget_;
+    }
+
+    OverlayModality modality() const {
+        return modality_;
+    }
+
+    OverlayResizePolicy resizePolicy() const {
+        return resizePolicy_;
+    }
+
+    bool isGeometryDirty() const {
+        return isGeometryDirty_;
+    }
+
+    void setGeometryDirty(bool isDirty) {
+        isGeometryDirty_ = isDirty;
+    }
+
+private:
+    WidgetWeakPtr widget_;
+    OverlayModality modality_ = OverlayModality::Modeless;
+    OverlayResizePolicy resizePolicy_ = OverlayResizePolicy::None;
+    bool isGeometryDirty_ = true;
+};
+
+} // namespace detail
+
+VGC_DECLARE_OBJECT(OverlayArea);
+
 /// \class vgc::ui::OverlayArea
-/// \brief Allows the area of a widget to be overlaid by other
-/// widgets.
+/// \brief Allows a widget to be overlaid by other widgets.
 ///
 class VGC_UI_API OverlayArea : public Widget {
 private:
     VGC_OBJECT(OverlayArea, Widget)
 
 protected:
-    /// This is an implementation details. Please use
-    /// OverlayArea::create() instead.
-    ///
     OverlayArea(CreateKey);
 
 public:
-    /// Creates an overlay area.
+    /// Creates an `OverlayArea`.
     ///
     static OverlayAreaPtr create();
 
-    /// Returns the area widget of this overlay area. This is the only child of
-    /// the overlay area that is not actually an overlay, but instead is the
-    /// widget that fills the space of the overlay area, below all overlays.
+    /// Returns the body widget of this overlay area, if any. This is the only
+    /// child of the overlay area that is not actually an overlay, but instead
+    /// is a widget that fills the whole space of the overlay area, below all
+    /// overlays.
     ///
-    /// \sa `setAreaWidget()`, `createAreaWidget()`
+    /// \sa `setBody()`, `createBody()`.
     ///
-    WidgetWeakPtr areaWidget() const {
-        return areaWidget_;
+    WidgetWeakPtr body() const {
+        return body_;
     }
 
-    /// Sets the given widget as the area widget of this overlay area.
+    /// Sets the given `widget` as body of this overlay area.
     ///
-    /// \sa `areaWidget()`, `createAreaWidget()`
+    /// \sa `body()`, `createBody()`.
     ///
-    void setAreaWidget(WidgetWeakPtr widget);
+    void setBody(WidgetWeakPtr widget);
 
     /// Creates a new widget of the given `WidgetClass`, and sets it
-    /// as the area widget of this overlay area.
+    /// as body of this overlay area.
     ///
-    /// \sa `areaWidget()`, `setAreaWidget()`
+    /// \sa `body()`, `setBody()`.
     ///
     template<typename WidgetClass, typename... Args>
-    WidgetClass* createAreaWidget(Args&&... args) {
+    WidgetClass* createBody(Args&&... args) {
         core::ObjPtr<WidgetClass> child =
             WidgetClass::create(std::forward<Args>(args)...);
-        setAreaWidget(child.get());
+        setBody(child.get());
         return child.get();
     }
 
-    /// Adds the given widget as an overlay to this overlay area.
+    /// Adds the given `widget` as an overlay to this overlay area.
     ///
-    /// \sa `createOverlayWidget()`.
+    /// \sa `createOverlay()`.
     ///
-    void addOverlayWidget(
+    void addOverlay(
         WidgetWeakPtr widget,
-        OverlayModalPolicy modalPolicy = OverlayModalPolicy::NotModal,
+        OverlayModality modality = OverlayModality::Modeless,
         OverlayResizePolicy resizePolicy = OverlayResizePolicy::None);
 
     /// Creates a new widget of the given `WidgetClass`, and adds it as an
     /// overlay to this overlay area.
     ///
-    /// \sa `addOverlayWidget()`.
+    /// \sa `addOverlay()`.
     ///
     template<typename WidgetClass, typename... Args>
-    WidgetClass* createOverlayWidget(
-        OverlayModalPolicy modalPolicy,
+    WidgetClass* createOverlay(
+        OverlayModality modality,
         OverlayResizePolicy resizePolicy,
         Args&&... args) {
 
         core::ObjPtr<WidgetClass> child =
             WidgetClass::create(std::forward<Args>(args)...);
-        addOverlayWidget(child.get(), modalPolicy, resizePolicy);
+        addOverlay(child.get(), modality, resizePolicy);
         return child.get();
     }
 
@@ -148,7 +191,7 @@ public:
     ///
     /// If `overlay` was the last modal overlay of this `OverlayArea`, then the
     /// modal backdrop is also removed, making it possible again to interact
-    /// with widgets in the `areaWidget()`.
+    /// with widgets in the `body()`.
     ///
     /// If the given `overlay` was not in the list of overlays, then this function
     /// returns a null pointer.
@@ -183,57 +226,16 @@ protected:
     void updateChildrenGeometry() override;
 
 private:
-    WidgetWeakPtr areaWidget_ = nullptr;
-    detail::ModalBackdropWeakPtr modalBackdrop_ = nullptr;
+    WidgetWeakPtr body_;
+    detail::ModalBackdropWeakPtr modalBackdrop_;
+    core::Array<detail::Overlay> overlays_; // order may differ from child widgets
 
     bool hasModalOverlays_() const;
     void addModalBackdropIfNeeded_();
     void removeModalBackdropIfUnneeded_();
-    WidgetSharedPtr getFirstTransientModal_() const;
+    WidgetSharedPtr getFirstWeakOverlay_() const;
     void onModalBackdropClicked_();
     VGC_SLOT(onModalBackdropClicked_)
-
-    class OverlayDesc {
-    public:
-        OverlayDesc(
-            WidgetWeakPtr widget,
-            OverlayModalPolicy modalPolicy,
-            OverlayResizePolicy resizePolicy)
-
-            : widget_(widget)
-            , modalPolicy_(modalPolicy)
-            , resizePolicy_(resizePolicy) {
-        }
-
-        const WidgetWeakPtr& widget() const {
-            return widget_;
-        }
-
-        OverlayModalPolicy modalPolicy() const {
-            return modalPolicy_;
-        }
-
-        OverlayResizePolicy resizePolicy() const {
-            return resizePolicy_;
-        }
-
-        bool isGeometryDirty() const {
-            return isGeometryDirty_;
-        }
-
-        void setGeometryDirty(bool isDirty) {
-            isGeometryDirty_ = isDirty;
-        }
-
-    private:
-        WidgetWeakPtr widget_;
-        OverlayModalPolicy modalPolicy_ = OverlayModalPolicy::NotModal;
-        OverlayResizePolicy resizePolicy_ = OverlayResizePolicy::None;
-        bool isGeometryDirty_ = true;
-    };
-
-    // order does not matter
-    core::Array<OverlayDesc> overlays_ = {};
 };
 
 } // namespace vgc::ui

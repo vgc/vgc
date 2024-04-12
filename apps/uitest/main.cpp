@@ -277,8 +277,8 @@ private:
     ui::WidgetWeakPtr getClickMePopup_(ui::OverlayArea& overlayArea) {
         static ui::WidgetWeakPtr popup_;
         if (!popup_.isAlive()) {
-            popup_ = overlayArea.createOverlayWidget<ui::Label>(
-                ui::OverlayModalPolicy::NotModal,
+            popup_ = overlayArea.createOverlay<ui::Label>(
+                ui::OverlayModality::Modeless,
                 ui::OverlayResizePolicy::None,
                 "you clicked here!");
             if (auto popup = popup_.lock()) {
