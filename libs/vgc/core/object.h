@@ -18,7 +18,7 @@
 #define VGC_CORE_OBJECT_H
 
 #include <functional> // hash
-#include <iterator> // distance
+#include <iterator>   // distance
 #include <type_traits>
 
 #include <vgc/core/api.h>
