@@ -16,8 +16,6 @@
 
 #include <vgc/ui/overlayarea.h>
 
-#include <vgc/ui/logcategories.h>
-
 namespace vgc::ui {
 
 namespace detail {
@@ -85,7 +83,7 @@ public:
     }
 
     void setPassthrough(WidgetWeakPtr passthrough) {
-        passthrough_ = passthrough;
+        passthrough_ = std::move(passthrough);
     }
 
     // This signal is emitted when the ModalBackdrop itself received a click.
@@ -167,10 +165,7 @@ void OverlayArea::setBody(WidgetWeakPtr widget_) {
     }
 }
 
-void OverlayArea::addOverlay(
-    WidgetWeakPtr widget_,
-    OverlayModality modality,
-    OverlayResizePolicy resizePolicy) {
+void OverlayArea::addOverlay(OverlayModality modality, WidgetWeakPtr widget_) {
 
     auto widget = widget_.lock();
     if (!widget) {
@@ -191,22 +186,12 @@ void OverlayArea::addOverlay(
 
     // Register the new overlay and add it as a child widget.
     //
-    overlays_.emplaceLast(widget_, modality, resizePolicy);
+    overlays_.try_emplace(widget_, widget_, modality);
     addChild(widget.get());
 
     // Add the modal backdrop if necessary.
     //
     addModalBackdropIfNeeded_();
-
-    switch (resizePolicy) {
-    case OverlayResizePolicy::Stretch: {
-        widget->updateGeometry(rect());
-        break;
-    }
-    case OverlayResizePolicy::None:
-    default:
-        break;
-    }
 
     requestRepaint();
 }
@@ -216,14 +201,10 @@ WidgetSharedPtr OverlayArea::removeOverlay(WidgetWeakPtr widget) {
     // Find the overlay in the list of overlays and remove it.
     //
     WidgetSharedPtr res;
-    Int i = 0;
-    for (const detail::Overlay& overlay : overlays_) {
-        if (overlay.widget() == widget) {
-            res = widget.lock();
-            overlays_.removeAt(i);
-            break;
-        }
-        ++i;
+    auto it = overlays_.find(widget);
+    if (it != overlays_.end()) {
+        res = widget.lock();
+        overlays_.erase(it);
     }
 
     // If found, make the overlay parentless, and also remove
@@ -237,7 +218,43 @@ WidgetSharedPtr OverlayArea::removeOverlay(WidgetWeakPtr widget) {
     return res;
 }
 
-void OverlayArea::addPassthroughFor(WidgetWeakPtr overlay, WidgetWeakPtr passthrough) {
+namespace {
+
+void applyResizePolicy_(
+    Widget& widget,
+    OverlayResizePolicy resizePolicy,
+    const geometry::Rect2f& areaRect) {
+
+    switch (resizePolicy) {
+    case OverlayResizePolicy::Stretch: {
+        widget.updateGeometry(areaRect);
+        break;
+    }
+    case OverlayResizePolicy::None:
+        [[fallthrough]];
+    default:
+        widget.updateGeometry();
+    }
+}
+
+} // namespace
+
+void OverlayArea::setResizePolicy(
+    WidgetWeakPtr widget_,
+    OverlayResizePolicy resizePolicy) {
+
+    if (auto widget = widget_.lock()) {
+        auto it = overlays_.find(widget);
+        if (it != overlays_.end()) {
+            auto& [key, overlay] = *it;
+            VGC_UNUSED(key);
+            overlay.setResizePolicy(resizePolicy);
+            applyResizePolicy_(*widget, resizePolicy, rect());
+        }
+    }
+}
+
+void OverlayArea::addPassthrough(WidgetWeakPtr overlay, WidgetWeakPtr passthrough) {
 
     VGC_UNUSED(overlay);
 
@@ -245,7 +262,7 @@ void OverlayArea::addPassthroughFor(WidgetWeakPtr overlay, WidgetWeakPtr passthr
     // overlay anymore, etc.
     //
     if (auto modalBackdrop = modalBackdrop_.lock()) {
-        modalBackdrop->setPassthrough(passthrough);
+        modalBackdrop->setPassthrough(std::move(passthrough));
     }
 }
 
@@ -297,9 +314,7 @@ void OverlayArea::onWidgetRemoved(Widget* w) {
         addModalBackdropIfNeeded_(); // re-create it if someone stole it
     }
     else {
-        overlays_.removeIf([=](const detail::Overlay& overlay) { //
-            return overlay.widget() == widget;
-        });
+        overlays_.erase(widget);
         removeModalBackdropIfUnneeded_();
         requestRepaint();
     }
@@ -332,54 +347,51 @@ geometry::Vec2f OverlayArea::computePreferredSize() const {
     }
 }
 
+namespace {
+
+template<typename Key, typename Value>
+core::Array<Value> copyValues(const std::unordered_map<Key, Value>& map) {
+    core::Array<Value> res;
+    res.reserve(map.size());
+    for (const auto& [key, value] : map) {
+        VGC_UNUSED(key);
+        res.append(value);
+    }
+    return res;
+}
+
+} // namespace
+
 void OverlayArea::updateChildrenGeometry() {
+
+    // Update body
     geometry::Rect2f areaRect = rect();
     if (auto body = body_.lock()) {
         body->updateGeometry(areaRect);
     }
+
+    // Update modal backdrop
     if (auto modalBackdrop = modalBackdrop_.lock()) {
         modalBackdrop->updateGeometry(areaRect);
     }
-    for (detail::Overlay& overlay : overlays_) {
-        overlay.setGeometryDirty(true);
-    }
-    bool hasUpdatedSomething = true;
-    while (hasUpdatedSomething) {
-        hasUpdatedSomething = false;
-        // Note: overlays_.length() may change during iteration.
-        for (Int i = 0; i < overlays_.length(); ++i) {
-            detail::Overlay& overlay = overlays_[i];
-            if (overlay.isGeometryDirty()) {
-                overlay.setGeometryDirty(false);
-                if (auto widget = overlay.widget().lock()) {
-                    switch (overlay.resizePolicy()) {
-                    case OverlayResizePolicy::Stretch: {
-                        widget->updateGeometry(areaRect);
-                        break;
-                    }
-                    case OverlayResizePolicy::None:
-                    default:
-                        widget->updateGeometry();
-                        break;
-                    }
-                    hasUpdatedSomething = true;
-                }
-            }
-        }
-    }
 
-    for (auto c : children()) {
-        WidgetWeakPtr child_ = c;
-        if (child_ != body_) {
-            if (auto child = child_.lock()) {
-                c->updateGeometry();
-            }
+    // Update overlays. Note that `overlays_` may change during iteration,
+    // reason why we must do a copy for memory safety (invalidated iterators).
+    // However, new overlays created during iteration are intentionally not
+    // updated. Indeed, it should typically not happen, and supporting this use
+    // case would complexify significantly the code (prevent infinite loops,
+    // etc.) and decrease performance.
+    //
+    for (const detail::Overlay& overlay : copyValues(overlays_)) {
+        if (auto widget = overlay.widget().lock()) {
+            applyResizePolicy_(*widget, overlay.resizePolicy(), areaRect);
         }
     }
 }
 
 bool OverlayArea::hasModalOverlays_() const {
-    for (const detail::Overlay& overlay : overlays_) {
+    for (const auto& [key, overlay] : overlays_) {
+        VGC_UNUSED(key);
         if (overlay.modality() != OverlayModality::Modeless) {
             return true;
         }
@@ -408,46 +420,27 @@ void OverlayArea::removeModalBackdropIfUnneeded_() {
     }
 }
 
-WidgetSharedPtr OverlayArea::getFirstWeakOverlay_() const {
-    for (const detail::Overlay& overlay : overlays_) {
-        if (overlay.modality() == OverlayModality::Weak) {
-            WidgetSharedPtr widget = overlay.widget().lock();
-            if (widget) {
-                return widget;
-            }
-        }
-    }
-    return {};
-}
-
 void OverlayArea::onModalBackdropClicked_() {
 
-    // safe-guard against infinite loops.
-    Int iterMax = overlays_.length() * 10;
-    Int iter = 0;
+    // We make a copy because `overlay_` changes during iteration.
+    //
+    // Newly created overlays are intentionally not closed, and potentially
+    // already closed overlays are intentionally re-closed.
+    //
+    for (const detail::Overlay& overlay : copyValues(overlays_)) {
+        if (overlay.modality() != OverlayModality::Modeless) {
+            if (auto widget = overlay.widget().lock()) {
 
-    // For all weak modal overlays
-    while (iter <= iterMax) {
-        ++iter;
-        if (auto widget = getFirstWeakOverlay_()) {
+                // Perform custom close operation.
+                // This may add or remove other overlays: we ignore them.
+                widget->close();
 
-            // Perform custom close operation
-            // Note: this may add other modal overlays
-            widget->close();
-
-            // Remove overlay unless already done indirectly by widget->close()
-            if (widget->parent() == this) {
+                // Remove overlay. It might have already been done indirectly by widget->close(),
+                // in which case this is a no-op.
                 removeOverlay(widget);
             }
         }
-        else {
-            // Return if there is no more weak modal overlay
-            return;
-        }
     }
-    VGC_WARNING(
-        LogVgcUi,
-        "Infinite recursion detected when attempting to close all weak modal overlays.");
 }
 
 } // namespace vgc::ui

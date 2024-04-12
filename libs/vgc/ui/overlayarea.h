@@ -19,6 +19,8 @@
 
 #include <vgc/ui/widget.h>
 
+#include <unordered_map>
+
 namespace vgc::ui {
 
 /// \enum vgc::ui::OverlayModality
@@ -41,7 +43,7 @@ namespace vgc::ui {
 /// button inside a modal dialog. Clicking outside a `Strong` modal overlay
 /// does nothing.
 ///
-enum class OverlayModality {
+enum class OverlayModality : UInt8 {
 
     /// The overlay is not modal: users can still interact with other widgets
     /// in the application.
@@ -60,7 +62,7 @@ enum class OverlayModality {
 /// \enum vgc::ui::OverlayResizePolicy
 /// \brief Specifies how should an overlay react when the OverlayArea is resized.
 ///
-enum class OverlayResizePolicy {
+enum class OverlayResizePolicy : UInt8 {
     None,
     //Fill,
     Stretch,
@@ -78,7 +80,7 @@ public:
     Overlay(
         WidgetWeakPtr widget,
         OverlayModality modality,
-        OverlayResizePolicy resizePolicy)
+        OverlayResizePolicy resizePolicy = OverlayResizePolicy::None)
 
         : widget_(widget)
         , modality_(modality)
@@ -97,19 +99,14 @@ public:
         return resizePolicy_;
     }
 
-    bool isGeometryDirty() const {
-        return isGeometryDirty_;
-    }
-
-    void setGeometryDirty(bool isDirty) {
-        isGeometryDirty_ = isDirty;
+    void setResizePolicy(OverlayResizePolicy resizePolicy) {
+        resizePolicy_ = resizePolicy;
     }
 
 private:
     WidgetWeakPtr widget_;
     OverlayModality modality_ = OverlayModality::Modeless;
     OverlayResizePolicy resizePolicy_ = OverlayResizePolicy::None;
-    bool isGeometryDirty_ = true;
 };
 
 } // namespace detail
@@ -154,37 +151,95 @@ public:
     /// \sa `body()`, `setBody()`.
     ///
     template<typename WidgetClass, typename... Args>
-    WidgetClass* createBody(Args&&... args) {
-        core::ObjPtr<WidgetClass> child =
-            WidgetClass::create(std::forward<Args>(args)...);
-        setBody(child.get());
-        return child.get();
+    WidgetWeakPtr createBody(Args&&... args) {
+        auto child = WidgetClass::create(std::forward<Args>(args)...);
+        setBody(child);
+        return child;
     }
 
-    /// Adds the given `widget` as an overlay to this overlay area.
+    /// Adds the given `widget` as an overlay to this overlay area with the
+    /// given `modality`.
     ///
-    /// \sa `createOverlay()`.
+    /// \sa `createOverlay()`, `addModelessOverlay()`,
+    ///      `addWeakModalOverlay()`, `addStrongModalOverlay()`.
     ///
-    void addOverlay(
-        WidgetWeakPtr widget,
-        OverlayModality modality = OverlayModality::Modeless,
-        OverlayResizePolicy resizePolicy = OverlayResizePolicy::None);
+    void addOverlay(OverlayModality modality, WidgetWeakPtr widget);
+
+    /// Adds the given `widget` as a modeless overlay.
+    ///
+    /// \sa `OverlayModality`, `addOverlay()`, `createOverlay()`,
+    ///     `addWeakModalOverlay()`, `addStrongModalOverlay()`.
+    ///
+    void addModelessOverlay(WidgetWeakPtr widget) {
+        addOverlay(OverlayModality::Modeless, std::move(widget));
+    }
+
+    /// Adds the given `widget` as a weak modal overlay.
+    ///
+    /// \sa `OverlayModality`, `addOverlay()`, `createOverlay()`,
+    ///     `addModelessOverlay()`, `addStrongModalOverlay()`.
+    ///
+    void addWeakModalOverlay(WidgetWeakPtr widget) {
+        addOverlay(OverlayModality::Weak, std::move(widget));
+    }
+
+    /// Adds the given `widget` as a strong modal overlay.
+    ///
+    /// \sa `OverlayModality`, `addOverlay()`, `createOverlay()`,
+    ///     `addModelessOverlay()`, `addWeakModalOverlay()`.
+    ///
+    void addStrongModalOverlay(WidgetWeakPtr widget) {
+        addOverlay(OverlayModality::Weak, std::move(widget));
+    }
 
     /// Creates a new widget of the given `WidgetClass`, and adds it as an
     /// overlay to this overlay area.
     ///
-    /// \sa `addOverlay()`.
+    /// \sa `addOverlay()`, `createModelessOverlay()`,
+    ///     `createWeakModalOverlay()`, `createStrongModalOverlay()`.
     ///
     template<typename WidgetClass, typename... Args>
-    WidgetClass* createOverlay(
-        OverlayModality modality,
-        OverlayResizePolicy resizePolicy,
-        Args&&... args) {
+    core::ObjWeakPtr<WidgetClass>
+    createOverlay(OverlayModality modality, Args&&... args) {
+        auto child = WidgetClass::create(std::forward<Args>(args)...);
+        addOverlay(modality, child);
+        return child;
+    }
 
-        core::ObjPtr<WidgetClass> child =
-            WidgetClass::create(std::forward<Args>(args)...);
-        addOverlay(child.get(), modality, resizePolicy);
-        return child.get();
+    /// Creates a new widget of the given `WidgetClass`, and adds it as a
+    /// modeless overlay to this overlay area.
+    ///
+    /// \sa `OverlayModality`, `addOverlay()`, `createOverlay()`,
+    ///     `createWeakModalOverlay()`, `createStrongModalOverlay()`.
+    ///
+    template<typename WidgetClass, typename... Args>
+    core::ObjWeakPtr<WidgetClass> createModelessOverlay(Args&&... args) {
+        return createOverlay<WidgetClass>(
+            OverlayModality::Modeless, std::forward<Args>(args)...);
+    }
+
+    /// Creates a new widget of the given `WidgetClass`, and adds it as a
+    /// weak modal overlay to this overlay area.
+    ///
+    /// \sa `OverlayModality`, `addOverlay()`, `createOverlay()`,
+    ///     `createModelessOverlay()`, `createStrongModalOverlay()`.
+    ///
+    template<typename WidgetClass, typename... Args>
+    core::ObjWeakPtr<WidgetClass> createWeakModalOverlay(Args&&... args) {
+        return createOverlay<WidgetClass>(
+            OverlayModality::Weak, std::forward<Args>(args)...);
+    }
+
+    /// Creates a new widget of the given `WidgetClass`, and adds it as a
+    /// strong modal overlay to this overlay area.
+    ///
+    /// \sa `OverlayModality`, `addOverlay()`, `createOverlay()`,
+    ///     `createModelessOverlay()`, `createWeakModalOverlay()`.
+    ///
+    template<typename WidgetClass, typename... Args>
+    core::ObjWeakPtr<WidgetClass> createStrongModalOverlay(Args&&... args) {
+        return createOverlay<WidgetClass>(
+            OverlayModality::Strong, std::forward<Args>(args)...);
     }
 
     /// Removes the given `overlay` from this `OverlayArea`.
@@ -200,6 +255,10 @@ public:
     ///
     WidgetSharedPtr removeOverlay(WidgetWeakPtr overlay);
 
+    /// Sets a `resizePolicy for the given `overlay`.
+    ///
+    void setResizePolicy(WidgetWeakPtr overlay, OverlayResizePolicy resizePolicy);
+
     /// Allows the given `passthrough` widget to be accessible even if
     /// `overlay` is a modal overlay. In other words, this makes mouse events
     /// "pass through" the modal backdrop.
@@ -212,7 +271,7 @@ public:
     /// and would by default prevent interaction with all other application
     /// widgets.
     ///
-    void addPassthroughFor(WidgetWeakPtr overlay, WidgetWeakPtr passthrough);
+    void addPassthrough(WidgetWeakPtr overlay, WidgetWeakPtr passthrough);
 
     // reimpl
     float preferredWidthForHeight(float height) const override;
@@ -228,12 +287,11 @@ protected:
 private:
     WidgetWeakPtr body_;
     detail::ModalBackdropWeakPtr modalBackdrop_;
-    core::Array<detail::Overlay> overlays_; // order may differ from child widgets
+    std::unordered_map<WidgetWeakPtr, detail::Overlay> overlays_;
 
     bool hasModalOverlays_() const;
     void addModalBackdropIfNeeded_();
     void removeModalBackdropIfUnneeded_();
-    WidgetSharedPtr getFirstWeakOverlay_() const;
     void onModalBackdropClicked_();
     VGC_SLOT(onModalBackdropClicked_)
 };
