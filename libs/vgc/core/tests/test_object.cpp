@@ -17,6 +17,8 @@
 #include <gtest/gtest.h>
 #include <vgc/core/object.h>
 
+#include <unordered_map>
+
 using vgc::core::Object;
 using vgc::core::ObjectLockPtr;
 using vgc::core::ObjectPtr;
@@ -174,6 +176,76 @@ TEST(TestObject, ChildSharedAndWeakPtr) {
     ASSERT_EQ(child2.weakCount(), -1);
     ASSERT_EQ(child2.isAlive(), false);
     ASSERT_EQ(isChildDestructed, true);
+}
+
+TEST(TestObject, SharedPtrHash) {
+    bool isDestructed = false;
+    std::unordered_map<ConstructibleTestObjectSharedPtr, int> map;
+    auto obj1 = ConstructibleTestObject::create(&isDestructed);
+    auto obj2 = ConstructibleTestObject::create(&isDestructed);
+
+    map.try_emplace(obj1, 1);
+    map[obj2] = 2;
+    ASSERT_EQ(map.size(), 2);
+    ASSERT_EQ(map[obj1], 1);
+    ASSERT_EQ(map[obj2], 2);
+
+    map.erase(obj1);
+    map[obj2] = 3;
+    ASSERT_EQ(map.size(), 1);
+    ASSERT_EQ(map.find(obj1), map.end());
+    ASSERT_NE(map.find(obj2), map.end());
+    ASSERT_EQ(map[obj2], 3);
+
+    // The following must fail to compile with:
+    // "no known conversion from ObjWeakPtr to ObjSharedPtr"
+    //
+    //   ConstructibleTestObjectWeakPtr weak2 = obj2;
+    //   ASSERT_NE(map.find(weak2), map.end());
+}
+
+TEST(TestObject, WeakPtrHash) {
+    bool isDestructed = false;
+    std::unordered_map<ConstructibleTestObjectWeakPtr, int> map;
+    auto obj1 = ConstructibleTestObject::create(&isDestructed);
+    auto obj2 = ConstructibleTestObject::create(&isDestructed);
+    auto obj3 = ConstructibleTestObject::create(&isDestructed);
+    auto obj4 = ConstructibleTestObject::create(&isDestructed);
+
+    ConstructibleTestObjectWeakPtr weak1 = obj1;
+    ConstructibleTestObjectWeakPtr weak2 = obj2;
+    ConstructibleTestObjectWeakPtr weak3 = obj3;
+    ConstructibleTestObjectWeakPtr weak4 = obj4;
+
+    map.try_emplace(weak1, 1); //
+    map.try_emplace(obj2, 2);  // intentionally inserting via SharedPtr
+    map[weak3] = 3;            //
+    map[obj4] = 4;             // intentionally inserting via SharedPtr
+    ASSERT_EQ(map.size(), 4);
+    ASSERT_EQ(map[weak1], 1);
+    ASSERT_EQ(map[weak2], 2);
+    ASSERT_EQ(map[weak3], 3);
+    ASSERT_EQ(map[weak4], 4);
+    ASSERT_EQ(map[obj1], 1);
+    ASSERT_EQ(map[obj2], 2);
+    ASSERT_EQ(map[obj3], 3);
+    ASSERT_EQ(map[obj4], 4);
+
+    map.erase(weak1);
+    map.erase(weak2);
+    map.erase(obj3);
+    map[weak4] = 5;
+    ASSERT_EQ(map.size(), 1);
+    ASSERT_EQ(map.find(weak1), map.end());
+    ASSERT_EQ(map.find(weak2), map.end());
+    ASSERT_EQ(map.find(weak3), map.end());
+    ASSERT_NE(map.find(weak4), map.end());
+    ASSERT_EQ(map[weak4], 5);
+    ASSERT_EQ(map.find(obj1), map.end());
+    ASSERT_EQ(map.find(obj2), map.end());
+    ASSERT_EQ(map.find(obj3), map.end());
+    ASSERT_NE(map.find(obj4), map.end());
+    ASSERT_EQ(map[obj4], 5);
 }
 
 int main(int argc, char** argv) {
