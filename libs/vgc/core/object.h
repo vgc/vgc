@@ -17,7 +17,8 @@
 #ifndef VGC_CORE_OBJECT_H
 #define VGC_CORE_OBJECT_H
 
-#include <iterator> // distance
+#include <functional> // hash
+#include <iterator>   // distance
 #include <type_traits>
 
 #include <vgc/core/api.h>
@@ -461,6 +462,8 @@ private:
 
     template<typename Y>
     friend class ObjPtr;
+
+    friend std::hash<ObjPtr<T>>;
 };
 
 /// Returns whether the two given `ObjPtr` manage the same object.
@@ -751,6 +754,8 @@ private:
 
     template<typename Y>
     friend class ObjWeakPtr;
+
+    friend std::hash<ObjWeakPtr<T>>;
 };
 
 // Note: our weak pointers do not require all the `owner_equal`, `owner_hash`,
@@ -875,6 +880,24 @@ ObjWeakPtr<T> const_pointer_cast(ObjWeakPtr<U>&& r) noexcept {
 }
 
 } // namespace vgc::core
+
+namespace std {
+
+template<typename T>
+struct hash<vgc::core::ObjWeakPtr<T>> {
+    std::size_t operator()(const vgc::core::ObjWeakPtr<T>& objWeakPtr) const {
+        return std::hash<T*>()(objWeakPtr.obj_);
+    }
+};
+
+template<typename T>
+struct hash<vgc::core::ObjSharedPtr<T>> {
+    std::size_t operator()(const vgc::core::ObjSharedPtr<T>& objSharedPtr) const {
+        return std::hash<T*>()(objSharedPtr.obj_);
+    }
+};
+
+} // namespace std
 
 #define VGC_OBJECT_NO_DEFAULT_PROTECTED_DESTRUCTOR(T, S)                                 \
 public:                                                                                  \
