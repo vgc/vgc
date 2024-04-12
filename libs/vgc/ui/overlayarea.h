@@ -29,6 +29,22 @@ VGC_DECLARE_OBJECT(ModalBackdrop);
 
 }
 
+/// \enum vgc::ui::OverlayModalPolicy
+/// \brief Specifies whether an overlay is modal and what is its behavior.
+///
+/// A "modal overlay" is a type of overlay that prevents users from interacting
+/// with other widgets in the application. This is achieved via an invisible
+/// "modal backdrop" automatically created behind the overlay, covering the
+/// rest of the application.
+///
+/// There are two types of modal overlays: persistent modal overlays and
+/// transient modal overlays. A persistent modal overlay stays visible until
+/// the user explicitly closes them via in-overlay interaction, such as
+/// clicking an "OK" or "Cancel" button inside a modal dialog. Clicking outside
+/// a persistent modal overlay does nothing. By contrast, a transient modal
+/// overlay is automatically closed when clicking outside the overlay, which is
+/// typically a good choice for dropdown menus.
+///
 enum class OverlayModalPolicy {
 
     /// The overlay is not modal: users can still interact with other widgets
@@ -131,7 +147,7 @@ public:
     /// Removes the given `overlay` from this `OverlayArea`.
     ///
     /// If `overlay` was the last modal overlay of this `OverlayArea`, then the
-    /// modal background is also removed, making it possible again to interact
+    /// modal backdrop is also removed, making it possible again to interact
     /// with widgets in the `areaWidget()`.
     ///
     /// If the given `overlay` was not in the list of overlays, then this function
@@ -143,7 +159,7 @@ public:
 
     /// Allows the given `passthrough` widget to be accessible even if
     /// `overlay` is a modal overlay. In other words, this makes mouse events
-    /// "pass through" the modal background.
+    /// "pass through" the modal backdrop.
     ///
     /// An example is the main menubar of the application: when one of its
     /// submenu is open, we still want the menubar to accept mouse events, for
