@@ -31,7 +31,7 @@ namespace detail {
 //
 // Example:
 //
-//   .ModalBackdrop.light {
+//   .ModalBackdrop.weak {
 //       background-color: rgba(0, 0, 0, 0);
 //   }
 //
@@ -42,7 +42,7 @@ namespace detail {
 // Or is it better to be something like this?
 //
 //   .Menu {
-//       light-backdrop-color: rgba(0, 0, 0, 0);
+//       weak-backdrop-color: rgba(0, 0, 0, 0);
 //       strong-backdrop-color: rgba(0, 0, 0, 0.5);
 //   }
 //
@@ -55,7 +55,7 @@ namespace detail {
 //
 // Also, how to handle multiple modal overlays? Currently there is only one
 // backdrop. Should we possibly have more? Or perhaps one backdrop per
-// consecutive series of light modal overlays, but one backdrop per strong
+// consecutive series of weak modal overlays, but one backdrop per strong
 // modal overlay?
 //
 class ModalBackdrop : public Widget {
