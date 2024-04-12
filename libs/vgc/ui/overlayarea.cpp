@@ -16,11 +16,7 @@
 
 #include <vgc/ui/overlayarea.h>
 
-#include <vgc/graphics/strings.h>
 #include <vgc/ui/logcategories.h>
-#include <vgc/ui/strings.h>
-
-#include <vgc/ui/detail/paintutil.h>
 
 namespace vgc::ui {
 
@@ -32,6 +28,35 @@ namespace detail {
 // In the future, we may also want to enable making this backdrop semi-opaque
 // to hide the underneath content as visual clue that they are not clickable
 // anymore.
+//
+// Example:
+//
+//   .ModalBackdrop.light {
+//       background-color: rgba(0, 0, 0, 0);
+//   }
+//
+//   .ModalBackdrop.strong {
+//       background-color: rgba(0, 0, 0, 0.5);
+//   }
+//
+// Or is it better to be something like this?
+//
+//   .Menu {
+//       light-backdrop-color: rgba(0, 0, 0, 0);
+//       strong-backdrop-color: rgba(0, 0, 0, 0.5);
+//   }
+//
+// In other words, do we want to allow per-overlay specific styling (second option),
+// or do we prefer to enforce consistency (first option)?
+//
+// Also, how to handle passthrough widgets? Possibly we can reimplementg
+// ModalBackdrop::onPaintDraw() by manually drawing several quads around the
+// passthrough instead of calling paintBackground().
+//
+// Also, how to handle multiple modal overlays? Currently there is only one
+// backdrop. Should we possibly have more? Or perhaps one backdrop per
+// consecutive series of light modal overlays, but one backdrop per strong
+// modal overlay?
 //
 class ModalBackdrop : public Widget {
 private:
@@ -91,9 +116,9 @@ OverlayAreaPtr OverlayArea::create() {
     return core::createObject<OverlayArea>();
 }
 
-void OverlayArea::setAreaWidget(WidgetWeakPtr widget_) {
+void OverlayArea::setBody(WidgetWeakPtr widget_) {
 
-    if (widget_ != areaWidget_) {
+    if (widget_ != body_) {
 
         // Handle the case when widget_ is the modal backdrop.
         // This is not allowed.
@@ -106,22 +131,22 @@ void OverlayArea::setAreaWidget(WidgetWeakPtr widget_) {
         //
         WidgetSharedPtr keepAlive = removeOverlay(widget_);
 
-        // Replace the old areaWidget by the given widget.
+        // Replace the old body by the given widget.
         //
-        auto oldAreaWidget = areaWidget_.lock();
-        auto newAreaWidget = widget_.lock();
-        areaWidget_ = widget_;
-        if (oldAreaWidget) {
-            if (newAreaWidget) {
-                newAreaWidget->replace(oldAreaWidget.get());
+        auto oldBody = body_.lock();
+        auto newBody = widget_.lock();
+        body_ = widget_;
+        if (oldBody) {
+            if (newBody) {
+                newBody->replace(oldBody.get());
             }
             else {
-                oldAreaWidget->reparent(nullptr);
+                oldBody->reparent(nullptr);
             }
         }
         else {
-            if (newAreaWidget) {
-                insertChildAt(0, newAreaWidget.get());
+            if (newBody) {
+                insertChildAt(0, newBody.get());
             }
             else {
                 // Nothing to do
@@ -130,9 +155,9 @@ void OverlayArea::setAreaWidget(WidgetWeakPtr widget_) {
     }
 }
 
-void OverlayArea::addOverlayWidget(
+void OverlayArea::addOverlay(
     WidgetWeakPtr widget_,
-    OverlayModalPolicy modalPolicy,
+    OverlayModality modality,
     OverlayResizePolicy resizePolicy) {
 
     auto widget = widget_.lock();
@@ -140,10 +165,10 @@ void OverlayArea::addOverlayWidget(
         return;
     }
 
-    // Handle the case when widget_ was initially the area widget.
+    // Handle the case when widget_ was initially the body.
     //
-    if (widget_ == areaWidget_) {
-        setAreaWidget(nullptr);
+    if (widget_ == body_) {
+        setBody(nullptr);
     }
 
     // Handle the case when widget_ was alreay an overlay.
@@ -154,7 +179,7 @@ void OverlayArea::addOverlayWidget(
 
     // Register the new overlay and add it as a child widget.
     //
-    overlays_.emplaceLast(widget_, modalPolicy, resizePolicy);
+    overlays_.emplaceLast(widget_, modality, resizePolicy);
     addChild(widget.get());
 
     // Add the modal backdrop if necessary.
@@ -174,15 +199,15 @@ void OverlayArea::addOverlayWidget(
     requestRepaint();
 }
 
-WidgetSharedPtr OverlayArea::removeOverlay(WidgetWeakPtr overlay) {
+WidgetSharedPtr OverlayArea::removeOverlay(WidgetWeakPtr widget) {
 
     // Find the overlay in the list of overlays and remove it.
     //
     WidgetSharedPtr res;
     Int i = 0;
-    for (const OverlayDesc& desc : overlays_) {
-        if (desc.widget() == overlay) {
-            res = overlay.lock();
+    for (const detail::Overlay& overlay : overlays_) {
+        if (overlay.widget() == widget) {
+            res = widget.lock();
             overlays_.removeAt(i);
             break;
         }
@@ -221,16 +246,16 @@ void OverlayArea::onWidgetAdded(Widget* w, bool wasOnlyReordered) {
     VGC_UNUSED(wasOnlyReordered);
 
     // If area is no longer first, move to first.
-    if (auto areaWidget = areaWidget_.lock()) {
-        if (areaWidget->previousSibling()) {
-            insertChildAt(0, areaWidget.get());
+    if (auto body = body_.lock()) {
+        if (body->previousSibling()) {
+            insertChildAt(0, body.get());
         }
     }
 
     // If modal backdrop no longer at its desired location, move it.
     if (auto modalBackdrop = modalBackdrop_.lock()) {
-        if (auto areaWidget = areaWidget_.lock()) {
-            if (modalBackdrop->previousSibling() != areaWidget.get()) {
+        if (auto body = body_.lock()) {
+            if (modalBackdrop->previousSibling() != body.get()) {
                 insertChildAt(1, modalBackdrop.get());
             }
         }
@@ -241,7 +266,7 @@ void OverlayArea::onWidgetAdded(Widget* w, bool wasOnlyReordered) {
         }
     }
 
-    if (WidgetWeakPtr(w) == areaWidget_) {
+    if (WidgetWeakPtr(w) == body_) {
         requestGeometryUpdate();
     }
     else {
@@ -251,8 +276,8 @@ void OverlayArea::onWidgetAdded(Widget* w, bool wasOnlyReordered) {
 
 void OverlayArea::onWidgetRemoved(Widget* w) {
     WidgetWeakPtr widget = w;
-    if (widget == areaWidget_) {
-        areaWidget_ = nullptr;
+    if (widget == body_) {
+        body_ = nullptr;
         requestGeometryUpdate();
     }
     else if (widget == modalBackdrop_) {
@@ -260,8 +285,8 @@ void OverlayArea::onWidgetRemoved(Widget* w) {
         addModalBackdropIfNeeded_(); // re-create it if someone stole it
     }
     else {
-        overlays_.removeIf([=](const OverlayDesc& od) { //
-            return od.widget() == widget;
+        overlays_.removeIf([=](const detail::Overlay& overlay) { //
+            return overlay.widget() == widget;
         });
         removeModalBackdropIfUnneeded_();
         requestRepaint();
@@ -269,8 +294,8 @@ void OverlayArea::onWidgetRemoved(Widget* w) {
 }
 
 float OverlayArea::preferredWidthForHeight(float height) const {
-    if (auto areaWidget = areaWidget_.lock()) {
-        return areaWidget->preferredWidthForHeight(height);
+    if (auto body = body_.lock()) {
+        return body->preferredWidthForHeight(height);
     }
     else {
         return 0;
@@ -278,8 +303,8 @@ float OverlayArea::preferredWidthForHeight(float height) const {
 }
 
 float OverlayArea::preferredHeightForWidth(float width) const {
-    if (auto areaWidget = areaWidget_.lock()) {
-        return areaWidget->preferredHeightForWidth(width);
+    if (auto body = body_.lock()) {
+        return body->preferredHeightForWidth(width);
     }
     else {
         return 0;
@@ -287,8 +312,8 @@ float OverlayArea::preferredHeightForWidth(float width) const {
 }
 
 geometry::Vec2f OverlayArea::computePreferredSize() const {
-    if (auto areaWidget = areaWidget_.lock()) {
-        return areaWidget->preferredSize();
+    if (auto body = body_.lock()) {
+        return body->preferredSize();
     }
     else {
         return {};
@@ -297,25 +322,25 @@ geometry::Vec2f OverlayArea::computePreferredSize() const {
 
 void OverlayArea::updateChildrenGeometry() {
     geometry::Rect2f areaRect = rect();
-    if (auto areaWidget = areaWidget_.lock()) {
-        areaWidget->updateGeometry(areaRect);
+    if (auto body = body_.lock()) {
+        body->updateGeometry(areaRect);
     }
     if (auto modalBackdrop = modalBackdrop_.lock()) {
         modalBackdrop->updateGeometry(areaRect);
     }
-    for (OverlayDesc& od : overlays_) {
-        od.setGeometryDirty(true);
+    for (detail::Overlay& overlay : overlays_) {
+        overlay.setGeometryDirty(true);
     }
     bool hasUpdatedSomething = true;
     while (hasUpdatedSomething) {
         hasUpdatedSomething = false;
         // Note: overlays_.length() may change during iteration.
         for (Int i = 0; i < overlays_.length(); ++i) {
-            OverlayDesc& od = overlays_[i];
-            if (od.isGeometryDirty()) {
-                od.setGeometryDirty(false);
-                if (auto widget = od.widget().lock()) {
-                    switch (od.resizePolicy()) {
+            detail::Overlay& overlay = overlays_[i];
+            if (overlay.isGeometryDirty()) {
+                overlay.setGeometryDirty(false);
+                if (auto widget = overlay.widget().lock()) {
+                    switch (overlay.resizePolicy()) {
                     case OverlayResizePolicy::Stretch: {
                         widget->updateGeometry(areaRect);
                         break;
@@ -333,7 +358,7 @@ void OverlayArea::updateChildrenGeometry() {
 
     for (auto c : children()) {
         WidgetWeakPtr child_ = c;
-        if (child_ != areaWidget_) {
+        if (child_ != body_) {
             if (auto child = child_.lock()) {
                 c->updateGeometry();
             }
@@ -342,8 +367,8 @@ void OverlayArea::updateChildrenGeometry() {
 }
 
 bool OverlayArea::hasModalOverlays_() const {
-    for (const OverlayDesc& desc : overlays_) {
-        if (desc.modalPolicy() != OverlayModalPolicy::NotModal) {
+    for (const detail::Overlay& overlay : overlays_) {
+        if (overlay.modality() != OverlayModality::Modeless) {
             return true;
         }
     }
@@ -353,7 +378,7 @@ bool OverlayArea::hasModalOverlays_() const {
 void OverlayArea::addModalBackdropIfNeeded_() {
     if (hasModalOverlays_()) {
         if (!modalBackdrop_.isAlive()) {
-            Int index = areaWidget_.isAlive() ? 1 : 0;
+            Int index = body_.isAlive() ? 1 : 0;
             modalBackdrop_ = createChildAt<detail::ModalBackdrop>(index);
             if (auto modalBackdrop = modalBackdrop_.lock()) {
                 modalBackdrop->clicked().connect(onModalBackdropClicked_Slot());
@@ -371,12 +396,12 @@ void OverlayArea::removeModalBackdropIfUnneeded_() {
     }
 }
 
-WidgetSharedPtr OverlayArea::getFirstTransientModal_() const {
-    for (const OverlayDesc& desc : overlays_) {
-        if (desc.modalPolicy() == OverlayModalPolicy::TransientModal) {
-            WidgetSharedPtr lock = desc.widget().lock();
-            if (lock) {
-                return lock;
+WidgetSharedPtr OverlayArea::getFirstWeakOverlay_() const {
+    for (const detail::Overlay& overlay : overlays_) {
+        if (overlay.modality() == OverlayModality::Weak) {
+            WidgetSharedPtr widget = overlay.widget().lock();
+            if (widget) {
+                return widget;
             }
         }
     }
@@ -389,10 +414,10 @@ void OverlayArea::onModalBackdropClicked_() {
     Int iterMax = overlays_.length() * 10;
     Int iter = 0;
 
-    // For all transient modal overlays
+    // For all weak modal overlays
     while (iter <= iterMax) {
         ++iter;
-        if (auto widget = getFirstTransientModal_()) {
+        if (auto widget = getFirstWeakOverlay_()) {
 
             // Perform custom close operation
             // Note: this may add other modal overlays
@@ -404,14 +429,13 @@ void OverlayArea::onModalBackdropClicked_() {
             }
         }
         else {
-            // Return if there is no more transient modal overlay
+            // Return if there is no more weak modal overlay
             return;
         }
     }
     VGC_WARNING(
         LogVgcUi,
-        "Infinite recursion detected when attempting to close all transient modal "
-        "overlays.");
+        "Infinite recursion detected when attempting to close all weak modal overlays.");
 }
 
 } // namespace vgc::ui

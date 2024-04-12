@@ -153,7 +153,7 @@ void Dialog::showAt(DialogLocation horizontalLocation, DialogLocation verticalLo
     }
 
     // Add dialog to overlay area
-    overlayArea->addOverlayWidget(this);
+    overlayArea->addOverlay(this);
 
     // Get margins from style
     Margins margin = this->margin();
