@@ -41,15 +41,11 @@ VGC_UI_DEFINE_TRIGGER_COMMAND( //
 ComboBox::ComboBox(CreateKey key)
     : MenuButton(key, nullptr, FlexDirection::Row) {
 
-    Action* testItem1 = createTriggerAction(commands_::item1());
-    testItem1->setText("Item 1");
+    setMenuDropDirection(MenuDropDirection::Vertical);
 
-    Action* testItem2 = createTriggerAction(commands_::item2());
-    testItem1->setText("Item 2");
-
-    menu_ = Menu::create("My Combo Box");
-    menu_->addItem(testItem1);
-    menu_->addItem(testItem2);
+    menu_ = ComboBoxMenu::create("My Combo Box", this);
+    menu_->addItem(createTriggerAction(commands_::item1()));
+    menu_->addItem(createTriggerAction(commands_::item2()));
 
     setAction(menu_->menuAction());
 
@@ -58,6 +54,25 @@ ComboBox::ComboBox(CreateKey key)
 
 ComboBoxPtr ComboBox::create() {
     return core::createObject<ComboBox>();
+}
+
+ComboBoxMenu::ComboBoxMenu(CreateKey key, std::string_view title, Widget* comboBox)
+    : Menu(key, title)
+    , comboBox_(comboBox) {
+
+    addStyleClass(strings::ComboBoxMenu);
+}
+
+ComboBoxMenuPtr ComboBoxMenu::create(std::string_view title, Widget* comboBox) {
+    return core::createObject<ComboBoxMenu>(title, comboBox);
+}
+
+geometry::Vec2f ComboBoxMenu::computePreferredSize() const {
+    geometry::Vec2f ret = Menu::computePreferredSize();
+    if (auto comboBox = comboBox_.lock()) {
+        ret[0] = (std::max)(comboBox->width(), ret[0]);
+    }
+    return ret;
 }
 
 } // namespace vgc::ui

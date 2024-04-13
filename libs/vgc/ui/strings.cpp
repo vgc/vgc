@@ -25,6 +25,7 @@ const core::StringId BoolSettingEdit("BoolSettingEdit");
 const core::StringId Button("Button");
 const core::StringId Checkbox("Checkbox");
 const core::StringId ComboBox("ComboBox");
+const core::StringId ComboBoxMenu("ComboBoxMenu");
 const core::StringId Dialog("Dialog");
 const core::StringId Flex("Flex");
 const core::StringId Grid("Grid");

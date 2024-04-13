@@ -20,12 +20,10 @@
 #include <string_view>
 
 #include <vgc/core/array.h>
+#include <vgc/ui/menu.h>
 #include <vgc/ui/menubutton.h>
 
 namespace vgc::ui {
-
-VGC_DECLARE_OBJECT(ComboBox);
-VGC_DECLARE_OBJECT(Menu);
 
 namespace detail {
 
@@ -35,12 +33,14 @@ struct ComboBoxItem {
 
 } // namespace detail
 
+VGC_DECLARE_OBJECT(ComboBox);
+
 /// \class vgc::ui::ComboBox
 /// \brief A widget to select one among multiple options.
 ///
 class VGC_UI_API ComboBox : public MenuButton {
 private:
-    VGC_OBJECT(ComboBox, Flex)
+    VGC_OBJECT(ComboBox, MenuButton)
 
 protected:
     ComboBox(CreateKey);
@@ -85,6 +85,31 @@ private:
 
     // Owned widget
     MenuSharedPtr menu_;
+};
+
+VGC_DECLARE_OBJECT(ComboBoxMenu);
+
+/// \class vgc::ui::ComboBoxMenu
+/// \brief A menu typically used for combo boxes.
+///
+class VGC_UI_API ComboBoxMenu : public Menu {
+private:
+    VGC_OBJECT(ComboBoxMenu, Menu)
+
+protected:
+    ComboBoxMenu(CreateKey, std::string_view title, Widget* comboBox);
+
+public:
+    /// Creates a `ComboBoxMenu` associated with the given `comboBox`.
+    ///
+    static ComboBoxMenuPtr create(std::string_view title, Widget* comboBox);
+
+protected:
+    geometry::Vec2f computePreferredSize() const override;
+
+private:
+    WidgetWeakPtr comboBox_;
+    // Note: using a Widget rather than a ComboBox makes the class more re-usable
 };
 
 } // namespace vgc::ui
