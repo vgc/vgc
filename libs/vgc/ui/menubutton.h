@@ -62,6 +62,10 @@ public:
     static MenuButtonPtr
     create(Action* action, FlexDirection layoutDirection = FlexDirection::Column);
 
+    void setMenuDropDirection(MenuDropDirection direction) {
+        menuDropDirection_ = direction;
+    }
+
     MenuDropDirection menuDropDirection() const {
         return menuDropDirection_;
     }
