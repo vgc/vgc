@@ -57,7 +57,7 @@ class MenuItem {
 protected:
     friend Menu;
 
-    constexpr MenuItem() noexcept = default;
+    MenuItem() noexcept = default;
     MenuItem(Widget* separator) noexcept;
     MenuItem(Action* action, MenuButton* button) noexcept;
     MenuItem(Action* action, MenuButton* button, Menu* menu) noexcept;
@@ -82,7 +82,7 @@ public:
     /// \sa `isAction()`, `isSeparator()`, `menu()`.
     ///
     bool isMenu() const {
-        return menu_ != nullptr;
+        return menu_.isAlive();
     }
 
     /// Returns whether this item is a visual separation between actions.
@@ -113,7 +113,7 @@ public:
     /// \sa `isMenu()`.
     ///
     Menu* menu() const {
-        return menu_;
+        return menu_.get();
     }
 
     /// Returns the `MenuButton` widget, if any, that is used to visually show
@@ -143,7 +143,7 @@ public:
 private:
     Action* action_ = nullptr;
     Widget* widget_ = nullptr;
-    Menu* menu_ = nullptr;
+    MenuSharedPtr menu_;
 
     // could add custom widget
 };
@@ -214,7 +214,7 @@ public:
 
     /// Adds a menu item to this menu at the given `index`.
     ///
-    /// Note that the given `menu` does not become a child widget of this `menu`.
+    /// This menu takes ownership of the given menu.
     ///
     void addItemAt(Int index, Menu* menu);
 
@@ -385,9 +385,7 @@ private:
     void setupWidthOverrides_() const;
 
     // Behavior popin/popup
-    Widget* host_ = nullptr;
     Menu* subMenuPopup_ = nullptr;
-    bool isDeferringOpen_ = true;
     geometry::Vec2f lastHoverPos_ = {};
     bool isFirstMoveSinceEnter_ = true;
     geometry::Rect2f subMenuPopupHitRect_ = {};

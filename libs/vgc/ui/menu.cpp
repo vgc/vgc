@@ -126,22 +126,9 @@ void Menu::addItemAt(Int index, Menu* menu) {
 }
 
 Menu* Menu::createSubMenuAt(Int index, std::string_view title) {
-
-    // Create the submenu widget itself, and add it as a hidden child widget of
-    // this menu, after all menu items.
-    //
-    // Note that because of these hidden child widgets (owned submenus), we can
-    // have numItems() < numChildren(), so it's important that addItem(item) is
-    // implemented as addItemAt(numItem(), item), not as
-    // addItemAt(numChildren(), item).
-    //
-    Menu* menu = createChild<Menu>(title);
-    menu->hide();
-
-    // Insert the "open submenu" item at the desired index.
-    //
-    addItemAt(index, menu);
-    return menu;
+    MenuSharedPtr menu = Menu::create(title);
+    addItemAt(index, menu.get());
+    return menu.get();
 }
 
 void Menu::clearItems() {
@@ -155,13 +142,10 @@ void Menu::clearItems() {
 bool Menu::open(Widget* from) {
     close_();
     if (isPopupEnabled_) {
-        Widget* host = parent();
         if (!openAsPopup_(from)) {
             return false;
         }
-        host_ = host;
         isOpenAsPopup_ = true;
-        show();
         popupOpened().emit();
     }
     else if (!isVisible()) {
@@ -431,16 +415,20 @@ void Menu::onClosed() {
 }
 
 bool Menu::close_(bool recursive) {
+
+    // Recursively close submenus.
+    //
+    // Note: the `recursive` param above is for parent menus, not submenus.
+    //
+    closeSubMenu();
+
     if (isPopupEnabled_) {
         if (!isOpenAsPopup_) {
             return false;
         }
-        if (host_) {
-            reparent(host_);
-        }
-        host_ = nullptr;
         isOpenAsPopup_ = false;
-        hide();
+        MenuSharedPtr keepAlive = this;
+        reparent(nullptr);
         popupClosed().emit(recursive);
     }
     else if (isVisible()) {
@@ -527,8 +515,6 @@ void Menu::onSubMenuPopupOpened_(Menu* subMenu) {
         hitMargins.setLeft(hitMargin);
     }
     subMenuPopupHitRect_ = subMenuPopupHitRect_ + hitMargins;
-
-    isDeferringOpen_ = false;
 }
 
 void Menu::onSubMenuPopupClosed_(bool recursive) {
@@ -690,7 +676,6 @@ void Menu::onVisible() {
 
 void Menu::onHidden() {
     closeSubMenu();
-    isDeferringOpen_ = true;
 }
 
 geometry::Vec2f Menu::computePreferredSize() const {
