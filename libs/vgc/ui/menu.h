@@ -254,50 +254,20 @@ public:
     ///
     void clearItems();
 
-    /// Returns whether this menu is open. A menu is considered open either
-    /// when it is open as popup (see `isOpenAsPopup()`), or when it is not
-    /// open as popup but visible anyway, as any regular widget can be (see
-    /// `isVisible()`).
-    ///
-    bool isOpen() const {
-        return isPopupEnabled_ ? isOpenAsPopup_ : isVisible();
-    }
-
     /// Returns whether this menu is open as a popup.
     ///
-    bool isOpenAsPopup() const {
-        return isOpenAsPopup_;
-    }
+    bool isOpenAsPopup() const;
 
-    /// Opens the menu either in-place with `show()` if `isPopupEnabled()` is
-    /// false or as a popup in a popup-layer under the top-most overlay of
-    /// `from`.
+    /// If this menu has no parent, then opens this menu as an overlay
+    /// at a position near `from`.
     ///
-    /// Returns true on success, false otherwise.
+    /// Otherwise, just `show()` the menu.
     ///
-    /// If `from` is null, the top-most overlay of the menu itself is used.
-    ///
-    /// Opening an already open menu triggers both `closed()` then `opened()`.
-    ///
-    /// If it is opened as a popup, it is aligned for a MenuButton but centered for
-    /// any other widget. The behavior is customizable via the overridable
-    /// `computePopupPosition()`.
-    ///
-    bool open(Widget* from);
+    void open(Widget* from);
 
     /// If this menu has an open submenu, then closes this submenu.
     ///
     void closeSubMenu();
-
-    /// Returns whether this menu can be open as a popup.
-    ///
-    bool isPopupEnabled() const {
-        return isPopupEnabled_;
-    }
-
-    /// Sets whether this menu can be open as a popup.
-    ///
-    void setPopupEnabled(bool enabled);
 
     // temporary, will be a style prop
     // Sets the icon track fixed size.
@@ -344,13 +314,13 @@ public:
 
     VGC_SIGNAL(changed);
     VGC_SIGNAL(popupOpened);
-    VGC_SIGNAL(popupClosed, (bool, recursive));
+    VGC_SIGNAL(popupClosed, (bool, recursivelyCloseParentPopupMenus));
 
 protected:
     // Reimplementation of Widget virtual methods
     void onWidgetRemoved(Widget* widget) override;
     void preMouseMove(MouseMoveEvent* event) override;
-    void preMousePress(MousePressEvent* event) override;
+    bool onMousePress(MousePressEvent* event) override;
     void onMouseEnter() override;
     void onMouseLeave() override;
     void onVisible() override;
@@ -372,7 +342,6 @@ protected:
 private:
     Action* action_;
     core::Array<MenuItem> items_;
-    //MenuItem* lastHovered_ = nullptr;
 
     void onItemAdded_(const MenuItem& item);
     void preItemRemoved_(const MenuItem& item);
@@ -393,8 +362,11 @@ private:
     bool openAsPopup_(Widget* from);
 
     void onClosed() override;
-    bool close_(bool recursive = false);
+    void close_(bool recursivelyCloseParentPopupMenus = false);
 
+    // Exiting a menu means:
+    // - if open as popup: close the menu + submenus + parent popup menus
+    // - otherwise: keep it visible but clear focus and close submenus
     void exit_();
     VGC_SLOT(exitSlot_, exit_);
 
@@ -406,7 +378,7 @@ private:
 
     void onSubMenuPopupOpened_(Menu* subMenu);
 
-    void onSubMenuPopupClosed_(bool recursive);
+    void onSubMenuPopupClosed_(bool recursivelyCloseParentPopupMenus);
     VGC_SLOT(onSubMenuPopupClosedSlot_, onSubMenuPopupClosed_);
 
     void onSubMenuPopupDestroy_();
@@ -418,9 +390,6 @@ private:
     // Flags
     mutable bool isIconTrackEnabled_ = true;
     mutable bool isShortcutTrackEnabled_ = true;
-    bool isPopupEnabled_ = true;
-    bool isOpenAsPopup_ = false;
-    //float subMenuOpenDelay_ = 0.f;
 };
 
 } // namespace vgc::ui
