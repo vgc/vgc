@@ -25,35 +25,102 @@ namespace commands_ {
 namespace {
 
 VGC_UI_DEFINE_TRIGGER_COMMAND( //
-    item1,
-    "ui.combobox.test.item1",
-    "Item 1");
-
-VGC_UI_DEFINE_TRIGGER_COMMAND( //
-    item2,
-    "ui.combobox.test.item2",
-    "Item 2");
+    item,
+    "ui.combobox.item",
+    "ComboBox Item");
 
 } // namespace
 
 } // namespace commands_
 
-ComboBox::ComboBox(CreateKey key)
-    : MenuButton(key, nullptr, FlexDirection::Row) {
-
-    setMenuDropDirection(MenuDropDirection::Vertical);
-
-    menu_ = ComboBoxMenu::create("My Combo Box", this);
-    menu_->addItem(createTriggerAction(commands_::item1()));
-    menu_->addItem(createTriggerAction(commands_::item2()));
-
-    setAction(menu_->menuAction());
+ComboBox::ComboBox(CreateKey key, std::string_view title)
+    : MenuButton(key, nullptr, FlexDirection::Row)
+    , title_(title) {
 
     addStyleClass(strings::ComboBox);
+    setMenuDropDirection(MenuDropDirection::Vertical);
+
+    menu_ = ComboBoxMenu::create(title, this);
+    if (auto menu = menu_.lock()) {
+        setAction(menu->menuAction());
+    }
 }
 
-ComboBoxPtr ComboBox::create() {
-    return core::createObject<ComboBox>();
+ComboBoxPtr ComboBox::create(std::string_view title) {
+    return core::createObject<ComboBox>(title);
+}
+
+Int ComboBox::numItems() const {
+    if (auto menu = menu_.lock()) {
+        return menu->numItems();
+    }
+    else {
+        return 0;
+    }
+}
+
+void ComboBox::setCurrentIndex(Int index) {
+    if (index != currentIndex_) {
+        if (0 <= index && index < numItems()) {
+            if (auto menu = menu_.lock()) {
+                if (auto item = WidgetWeakPtr(menu->childAt(index)).lock()) {
+                    setCurrentItem_(item.get(), index);
+                    return;
+                }
+            }
+            setCurrentItem_(nullptr, index);
+        }
+        else {
+            setCurrentItem_(nullptr, -1);
+        }
+    }
+}
+
+void ComboBox::addItem(std::string_view text) {
+    ActionWeakPtr itemAction_ = createTriggerAction(commands_::item());
+    if (auto itemAction = itemAction_.lock()) {
+        itemAction->setText(text);
+        itemAction->triggered().connect(onItemActionTriggered_Slot());
+        if (auto menu = menu_.lock()) {
+            menu->addItem(itemAction.get());
+        }
+    }
+}
+
+void ComboBox::setText_(std::string_view text) {
+    if (auto comboBoxAction = ActionWeakPtr(action()).lock()) {
+        comboBoxAction->setText(text);
+    }
+}
+
+void ComboBox::setCurrentItem_(Widget* item, Int index) {
+    if (currentIndex_ != index) {
+        currentIndex_ = index;
+        if (Button* button = dynamic_cast<Button*>(item)) {
+            if (auto action = ActionWeakPtr(button->action()).lock()) {
+                setText_(action->text());
+            }
+            else {
+                setText_(title_);
+            }
+        }
+        else {
+            setText_(title_);
+        }
+        currentIndexChanged().emit(index);
+    }
+}
+
+void ComboBox::onItemActionTriggered_(Widget* from) {
+    if (auto menu = menu_.lock()) {
+        Int index = 0;
+        for (Widget* child : menu->children()) {
+            if (child == from) {
+                setCurrentItem_(child, index);
+            }
+            ++index;
+        }
+    }
 }
 
 ComboBoxMenu::ComboBoxMenu(CreateKey key, std::string_view title, Widget* comboBox)

@@ -43,18 +43,16 @@ private:
     VGC_OBJECT(ComboBox, MenuButton)
 
 protected:
-    ComboBox(CreateKey);
+    ComboBox(CreateKey, std::string_view title);
 
 public:
     /// Creates a `ComboBox`.
     ///
-    static ComboBoxPtr create();
+    static ComboBoxPtr create(std::string_view title = "");
 
     /// Returns the number of items in this combo box.
     ///
-    Int numItems() const {
-        return items_.length();
-    }
+    Int numItems() const;
 
     /// Returns the index of the current item, or -1 if there is no current item.
     ///
@@ -80,11 +78,18 @@ public:
 
 private:
     // State
-    core::Array<detail::ComboBoxItem> items_;
+    std::string title_;
     Int currentIndex_ = -1;
 
-    // Owned widget
+    // Menu storing the combo box items
     MenuSharedPtr menu_;
+
+    void setText_(std::string_view text);
+
+    void setCurrentItem_(Widget* item, Int index);
+
+    void onItemActionTriggered_(Widget* from);
+    VGC_SLOT(onItemActionTriggered_)
 };
 
 VGC_DECLARE_OBJECT(ComboBoxMenu);
