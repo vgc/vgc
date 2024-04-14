@@ -184,10 +184,12 @@ void OverlayArea::addOverlay(OverlayModality modality, WidgetWeakPtr widget_) {
     //
     auto keepAlive = removeOverlay(widget_);
 
-    // Register the new overlay and add it as a child widget.
+    // Register the new overlay, add it as a child widget, and ensure it is
+    // visible.
     //
     overlays_.try_emplace(widget_, widget_, modality);
     addChild(widget.get());
+    widget->show();
 
     // Add the modal backdrop if necessary.
     //

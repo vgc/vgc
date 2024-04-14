@@ -79,7 +79,6 @@ Menu::Menu(CreateKey key, std::string_view title)
     : Flex(key, FlexDirection::Column, FlexWrap::NoWrap) {
 
     addStyleClass(strings::Menu);
-    setFocusPolicy(FocusPolicy::Click);
     setFocusStrength(FocusStrength::Low);
 
     action_ = createTriggerAction(commands::open(), title);
@@ -139,33 +138,23 @@ void Menu::clearItems() {
     notifyChanged(true);
 }
 
-bool Menu::open(Widget* from) {
-    close_();
-    if (isPopupEnabled_) {
-        if (!openAsPopup_(from)) {
-            return false;
+bool Menu::isOpenAsPopup() const {
+    return dynamic_cast<OverlayArea*>(parent());
+}
+
+void Menu::open(Widget* from) {
+    if (!parent() && !isOpenAsPopup()) {
+        if (openAsPopup_(from)) {
+            setFocus(FocusReason::Menu);
+            popupOpened().emit();
         }
-        isOpenAsPopup_ = true;
-        popupOpened().emit();
     }
-    else if (!isVisible()) {
-        show();
-    }
-    return true;
 }
 
 void Menu::closeSubMenu() {
     if (Menu* subMenu = subMenuPopup()) {
         subMenu->close();
     }
-}
-
-void Menu::setPopupEnabled(bool enabled) {
-    if (isPopupEnabled_ == enabled) {
-        return;
-    }
-    close_();
-    isPopupEnabled_ = enabled;
 }
 
 void Menu::setShortcutTrackEnabled(bool enabled) {
@@ -414,48 +403,60 @@ void Menu::onClosed() {
     close_();
 }
 
-bool Menu::close_(bool recursive) {
+void Menu::close_(bool recursivelyCloseParentPopupMenus) {
 
-    // Recursively close submenus.
-    //
-    // Note: the `recursive` param above is for parent menus, not submenus.
-    //
+    // Remove focus if any. This must be done first while
+    // the menu is still in the widget tree.
+    clearFocus(FocusReason::Menu);
+
+    // Recursively close all submenus.
     closeSubMenu();
 
-    if (isPopupEnabled_) {
-        if (!isOpenAsPopup_) {
-            return false;
-        }
-        isOpenAsPopup_ = false;
+    if (isOpenAsPopup()) {
+        // Close this menu
         MenuSharedPtr keepAlive = this;
         reparent(nullptr);
-        popupClosed().emit(recursive);
+
+        // Emit signal, and (maybe) recursively close parent popup menus.
+        popupClosed().emit(recursivelyCloseParentPopupMenus);
     }
-    else if (isVisible()) {
+    else {
         hide();
     }
-    clearFocus(FocusReason::Menu);
-    return true;
 }
 
 void Menu::exit_() {
-    closeSubMenu();
     if (isOpenAsPopup()) {
-        bool recursive = true;
-        close_(recursive);
+        bool recursivelyCloseParentPopupMenus = true;
+        close_(recursivelyCloseParentPopupMenus);
     }
-    clearFocus(FocusReason::Menu);
+    else {
+        clearFocus(FocusReason::Menu);
+        closeSubMenu();
+    }
 }
 
 void Menu::onSelfActionTriggered_(Widget* from) {
-    if (isPopupEnabled_) {
-        open(from);
-    }
-    else if (isVisible()) {
-        close_();
+
+    MenuButton* button = dynamic_cast<MenuButton*>(from);
+    Menu* parentMenu = button ? button->parentMenu() : nullptr;
+
+    if (parentMenu && !parentMenu->isOpenAsPopup() && isOpenAsPopup()) {
+        parentMenu->exit_();
+        // Example:
+        // - Clicking on the 'Menubar > File' button when the 'File' menu
+        //   is already open exits the 'Menubar' (clears focus + closes 'File' menu).
     }
     else {
-        open(nullptr);
+        open(from);
+        // Examples:
+        // - Clicking on the 'Menubar > File' button when the 'File' menu
+        //   is not already open opens the 'File' menu.
+        // - Clicking on the 'Menubar > File > More' button when the 'More' menu
+        //   is not already open opens the 'More' menu.
+        // - Clicking on the 'Menubar > File > More' button when the 'More' menu
+        //   is already open keeps the 'More' menu open.
+        // - Clicking on a ComboBox (no parent menu) opens its menu
     }
 }
 
@@ -485,7 +486,8 @@ void Menu::onItemActionTriggered_(Widget* from) {
     }
     else {
         // Otherwise, this means that an actual action has been perfomed,
-        // so we we can now close this menu and all its parent menus.
+        // so if this menu was open as a popup, we can now close it
+        // as well as all its parent popup menu.
         exit_();
     }
 }
@@ -517,13 +519,13 @@ void Menu::onSubMenuPopupOpened_(Menu* subMenu) {
     subMenuPopupHitRect_ = subMenuPopupHitRect_ + hitMargins;
 }
 
-void Menu::onSubMenuPopupClosed_(bool recursive) {
+void Menu::onSubMenuPopupClosed_(bool recursivelyCloseParentPopupMenus) {
     if (subMenuPopup_ == emitter()) {
         subMenuPopup_->popupClosed().disconnect(onSubMenuPopupClosedSlot_());
         subMenuPopup_->aboutToBeDestroyed().disconnect(onSubMenuPopupDestroySlot_());
         subMenuPopup_ = nullptr;
-        if (recursive) {
-            exit_();
+        if (recursivelyCloseParentPopupMenus && isOpenAsPopup()) {
+            close_(recursivelyCloseParentPopupMenus);
         }
     }
 }
@@ -571,8 +573,9 @@ void Menu::preMouseMove(MouseMoveEvent* event) {
     // A menu is either docked (menu bar) or popup (dropdown).
     // A drop-down menu always opens sub-menus on hover.
     // A menu bar opens its sub-menus on hover only if one is already open.
-    const bool shouldOpenSubmenuOnHover = isOpenAsPopup_ || hasOpenSubmenuPopup;
-    const bool shouldProtectOpenSubMenu = isOpenAsPopup_;
+    const bool isOpenAsPopup = this->isOpenAsPopup();
+    const bool shouldOpenSubmenuOnHover = isOpenAsPopup || hasOpenSubmenuPopup;
+    const bool shouldProtectOpenSubMenu = isOpenAsPopup;
 
     MenuButton* button = dynamic_cast<MenuButton*>(hcc);
     Action* action = button ? button->action() : nullptr;
@@ -633,7 +636,7 @@ void Menu::preMouseMove(MouseMoveEvent* event) {
         // menu is our open sub-menu.
         Menu* hccMenuPopup = button ? button->popupMenu() : nullptr;
         if (!subMenuPopup_ || subMenuPopup_ != hccMenuPopup) {
-            if (isOpenAsPopup_ || isHccMenu) {
+            if (isOpenAsPopup || isHccMenu) {
                 closeSubMenu();
             }
             if (isHccMenu && shouldOpenSubmenuOnHover) {
@@ -650,18 +653,14 @@ void Menu::preMouseMove(MouseMoveEvent* event) {
     isFirstMoveSinceEnter_ = false;
 }
 
-void Menu::preMousePress(MousePressEvent* event) {
-    // Close everything if we click on an openable menu in a docked menu that
-    // is already active.
-    if (!isOpenAsPopup_ && subMenuPopup_) {
-        Widget* hcc = hoverChainChild();
-        if (!hcc || !hcc->isHoverLocked()) {
-            exit_();
-            event->stopPropagation();
-        }
+bool Menu::onMousePress(MousePressEvent*) {
+    // Clicking on empty space of a docked menu (e.g., the menubar) that
+    // has a submenu opened should clear focus and close the submenu.
+    if (!isOpenAsPopup() && subMenuPopup_) {
+        exit_();
+        return true;
     }
-    // Update move origin now.
-    lastHoverPos_ = event->position();
+    return false;
 }
 
 void Menu::onMouseEnter() {
