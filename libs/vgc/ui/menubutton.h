@@ -70,55 +70,6 @@ public:
         return menuDropDirection_;
     }
 
-    geometry::Vec2f preferredIconSize() const {
-        return iconWidget()->preferredSize();
-    }
-
-    geometry::Vec2f preferredTextSize() const {
-        return textLabel()->preferredSize();
-    }
-
-    geometry::Vec2f preferredShortcutSize() const {
-        return shortcutLabel()->preferredSize();
-    }
-
-    geometry::Vec2f preferredArrowSize() const {
-        // XXX todo
-        return isActionEnabled() ? geometry::Vec2f(10.f, 10.f) : geometry::Vec2f();
-    }
-
-    /// Returns the icon size overrides.
-    ///
-    const geometry::Vec2f& iconSizeOverrides() const {
-        return iconSizeOverrides_;
-    }
-
-    /// Sets the icon size overrides.
-    /// A component value < 0.f means it is automatic (uses preferred-size).
-    /// Any component value at 0.f makes the icon invisible.
-    ///
-    /// No geometry update request is made.
-    ///
-    void setIconSizeOverrides(float x, float y) {
-        iconSizeOverrides_ = geometry::Vec2f(x, y);
-    }
-
-    /// Returns the shortcut size overrides.
-    ///
-    const geometry::Vec2f& shortcutSizeOverrides() const {
-        return shortcutSizeOverrides_;
-    }
-
-    /// Sets the shortcut size overrides.
-    /// A component value < 0.f means it is automatic (uses preferred-size).
-    /// Any component value at 0.f makes the shortcut invisible.
-    ///
-    /// No geometry update request is made.
-    ///
-    void setShortcutSizeOverrides(float x, float y) {
-        shortcutSizeOverrides_ = geometry::Vec2f(x, y);
-    }
-
     Menu* parentMenu() const {
         return parentMenu_;
     };
@@ -133,17 +84,9 @@ public:
     VGC_SIGNAL(menuPopupClosed, (bool, recursive));
 
 protected:
-    // Reimplementation of Widget virtual methods.
     void onParentWidgetChanged(Widget* newParent) override;
-    geometry::Vec2f computePreferredSize() const override;
-    void updateChildrenGeometry() override;
 
 private:
-    // Style
-    geometry::Vec2f iconSizeOverrides_ = {-1.f, -1.f};
-    geometry::Vec2f textSizeOverrides_ = {-1.f, -1.f};
-    geometry::Vec2f shortcutSizeOverrides_ = {-1.f, -1.f};
-    float arrowSizeOverride_ = 0.f;
     MenuDropDirection menuDropDirection_ = MenuDropDirection::Horizontal;
     Menu* parentMenu_ = nullptr;
     Menu* popupMenu_ = nullptr;
