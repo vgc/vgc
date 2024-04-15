@@ -103,6 +103,7 @@ VGC_UI_API extern const core::StringId off;
 VGC_UI_API extern const core::StringId icon;
 VGC_UI_API extern const core::StringId text;
 VGC_UI_API extern const core::StringId shortcut;
+VGC_UI_API extern const core::StringId arrow;
 
 // Menu
 VGC_UI_API extern const core::StringId button;

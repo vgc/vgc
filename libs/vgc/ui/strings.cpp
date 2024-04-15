@@ -111,6 +111,7 @@ const core::StringId off("off");
 const core::StringId icon("icon");
 const core::StringId text("text");
 const core::StringId shortcut("shortcut");
+const core::StringId arrow("arrow");
 
 // Menu
 const core::StringId button("button");
