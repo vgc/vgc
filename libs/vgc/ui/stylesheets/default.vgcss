@@ -120,6 +120,8 @@
     horizontal-stretch: 1;
     vertical-shrink: 1;
     vertical-stretch: 1;
+    margin-left: 5dp;
+    margin-right: 0dp;
 }
 
 .Button > .icon {
@@ -133,6 +135,18 @@
     margin-right: 4dp;
     margin-bottom: 4dp;
     margin-left: 4dp;
+}
+
+.Button > .arrow {
+    preferred-width: 10dp;
+    preferred-height: 10dp;
+    horizontal-shrink: 0;
+    horizontal-stretch: 0;
+    vertical-shrink: 0;
+    vertical-stretch: 0;
+    margin-top: 4dp;
+    margin-right: 2dp;
+    margin-bottom: 4dp;
 }
 
 .Menu > .button {
