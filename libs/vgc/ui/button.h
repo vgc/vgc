@@ -130,6 +130,14 @@ public:
     ///
     void setShortcutVisible(bool visible);
 
+    /// Returns whether the arrow is visible.
+    ///
+    bool isArrowVisible() const;
+
+    /// Sets whether the arrow is visible. By default, it is hidden.
+    ///
+    void setArrowVisible(bool visible);
+
     /// Returns whether a tooltip appears when hovering the button.
     ///
     /// The default is `true`.
@@ -273,6 +281,10 @@ protected:
         return shortcutLabel_;
     }
 
+    IconWidget* arrowIcon() const {
+        return arrowIcon_;
+    }
+
     void setActive(bool isActive);
 
 private:
@@ -281,6 +293,7 @@ private:
     IconWidget* iconWidget_ = nullptr;
     Label* textLabel_ = nullptr;
     Label* shortcutLabel_ = nullptr;
+    IconWidget* arrowIcon_ = nullptr;
 
     // Style
     bool isPressed_ = false;

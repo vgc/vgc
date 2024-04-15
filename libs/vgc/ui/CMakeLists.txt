@@ -149,6 +149,7 @@ vgc_add_library(ui
         macospermissions.mm
 
     RESOURCE_FILES
+        icons/button-down-arrow.svg
         icons/checkmark.svg
         icons/close.svg
         stylesheets/default.vgcss
