@@ -39,6 +39,8 @@ ComboBox::ComboBox(CreateKey key, std::string_view title)
 
     addStyleClass(strings::ComboBox);
     setMenuDropDirection(MenuDropDirection::Vertical);
+    setArrowVisible(true);
+    setShortcutVisible(false);
 
     menu_ = ComboBoxMenu::create(title, this);
     if (auto menu = menu_.lock()) {
@@ -83,6 +85,15 @@ void ComboBox::addItem(std::string_view text) {
         itemAction->triggered().connect(onItemActionTriggered_Slot());
         if (auto menu = menu_.lock()) {
             menu->addItem(itemAction.get());
+
+            // Disable shortcut otherwise it adds an extra gap even if
+            // the shortcut size itself is 0.
+            Int index = menu->numItems() - 1;
+            if (auto item = WidgetWeakPtr(menu->childAt(index)).lock()) {
+                if (auto button = dynamic_cast<MenuButton*>(item.get())) {
+                    button->setShortcutVisible(false);
+                }
+            }
         }
     }
 }

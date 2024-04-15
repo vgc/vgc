@@ -71,6 +71,11 @@
     vertical-stretch: 0;
 }
 
+.ComboBoxMenu {
+    padding-top: 3dp;
+    padding-bottom: 3dp;
+}
+
 .Menu.horizontal {
     padding-top: 0dp;
     padding-right: 5dp;
@@ -83,6 +88,13 @@
     padding-right: 5dp;
     padding-bottom: 0dp;
     padding-left: 5dp;
+}
+
+.ComboBoxMenu > .button {
+    padding-top: 0dp;
+    padding-right: 4dp;
+    padding-bottom: 0dp;
+    padding-left: 0dp;
 }
 
 .Menu > .separator {
@@ -151,6 +163,11 @@
     preferred-height: 24dp;
 }
 
+.ComboBoxMenu > .button {
+    preferred-height: 18dp;
+}
+
+.ComboBox > .text,
 .LineEdit {
     text-horizontal-align: left;
 }
@@ -179,8 +196,18 @@
     font-descent: 3dp;
 }
 
+.ComboBoxMenu {
+    font-size: 11dp;
+    font-ascent: 11dp;
+    font-descent: 3dp;
+}
+
 .Menu > .button {
     column-gap: 20dp;
+}
+
+.ComboBoxMenu > .button {
+    column-gap: 0dp;
 }
 
 .Flex.Flex.field-row,
