@@ -107,9 +107,6 @@ VGC_UI_API extern const core::StringId text;
 VGC_UI_API extern const core::StringId shortcut;
 VGC_UI_API extern const core::StringId arrow;
 
-// ComboBox
-VGC_UI_API extern const core::StringId arrow;
-
 // Menu
 VGC_UI_API extern const core::StringId button;
 VGC_UI_API extern const core::StringId separator;

@@ -115,9 +115,6 @@ const core::StringId text("text");
 const core::StringId shortcut("shortcut");
 const core::StringId arrow("arrow");
 
-// ComboBox
-const core::StringId arrow("arrow");
-
 // Menu
 const core::StringId button("button");
 const core::StringId separator("separator");
