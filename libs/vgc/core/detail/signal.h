@@ -874,6 +874,8 @@ SignalTransmitter buildRetransmitter(const Object* from, SignalId id) {
 
 // It is intended to be locally subclassed in the slot (getter).
 //
+// TODO: Rename to `Slot`
+//
 template<typename TObjectMethodTag, typename TSlotMethod>
 class SlotRef {
 public:
@@ -918,18 +920,64 @@ private:
     SlotMethod m_;
 };
 
-template<typename T>
-struct IsSlotRef : IsTemplateBaseOf<SlotRef, T> {};
-template<typename T>
-inline constexpr bool isSlotRef = IsSlotRef<T>::value;
-
+// TODO: Rename to `Signal`
+//
 template<typename TObjectMethodTag, typename TObj, typename TArgRefsTuple>
 class SignalRef;
 
+} // namespace detail
+
+/// Type trait for `isSlot<T>`.
+///
 template<typename T>
-struct IsSignalRef : IsTemplateBaseOf<SignalRef, T> {};
+struct IsSlot : IsTemplateBaseOf<detail::SlotRef, T> {};
+
+/// Checks whether the given type is a slot.
+///
 template<typename T>
-inline constexpr bool isSignalRef = IsSignalRef<T>::value;
+inline constexpr bool isSlot = IsSlot<T>::value;
+
+/// Type trait for `isSignal<T>`.
+///
+template<typename T>
+struct IsSignal : IsTemplateBaseOf<detail::SignalRef, T> {};
+
+/// Checks whether the given type is a signal.
+///
+template<typename T>
+inline constexpr bool isSignal = IsSignal<T>::value;
+
+/// Type trait for `isSlotGetter<T>`.
+///
+template<typename T>
+struct IsSlotGetter : std::false_type {};
+
+template<typename TObj, typename TSlot>
+struct IsSlotGetter<TSlot (TObj::*)()> //
+    : std::conjunction<IsSlot<TSlot>, IsObject<TObj>> {};
+
+/// Checks whether the given type is a pointer to an Object's method that
+/// returns a signal.
+///
+template<typename T>
+inline constexpr bool isSlotGetter = IsSlotGetter<T>::value;
+
+/// Type trait for `isSignalGetter<T>`.
+///
+template<typename T>
+struct IsSignalGetter : std::false_type {};
+
+template<typename TObj, typename TSignal>
+struct IsSignalGetter<TSignal (TObj::*)() const>
+    : std::conjunction<IsSignal<TSignal>, IsObject<TObj>> {};
+
+/// Checks whether the given type is a pointer to an Object's method that
+/// returns a signal.
+///
+template<typename T>
+inline constexpr bool isSignalGetter = IsSignalGetter<T>::value;
+
+namespace detail {
 
 // It does not define emit(..) and is intended to be locally subclassed in
 // the signal (getter).
@@ -970,13 +1018,13 @@ public:
     }
 
     // Connects to a method slot.
-    template<typename TSlotRef, VGC_REQUIRES(isSlotRef<TSlotRef>)>
+    template<typename TSlotRef, VGC_REQUIRES(isSlot<TSlotRef>)>
     ConnectionHandle connect(const TSlotRef& slotRef) const {
         return connect_(slotRef);
     }
 
     // Connects to a signal-slot.
-    template<typename USignalRef, VGC_REQUIRES(isSignalRef<USignalRef>)>
+    template<typename USignalRef, VGC_REQUIRES(isSignal<USignalRef>)>
     ConnectionHandle connect(const USignalRef& signalRef) const {
         using SignalSlotArgRefsTuple = typename RemoveCVRef<USignalRef>::ArgRefsTuple;
         constexpr size_t signalSlotArity = std::tuple_size_v<SignalSlotArgRefsTuple>;
@@ -1037,7 +1085,7 @@ public:
     // Disconnects the given slot `slotRef`.
     // Returns true if a disconnection happened.
     //
-    template<typename TSlotRef, VGC_REQUIRES(isSlotRef<RemoveCVRef<TSlotRef>>)>
+    template<typename TSlotRef, VGC_REQUIRES(isSlot<RemoveCVRef<TSlotRef>>)>
     bool disconnect(TSlotRef&& slotRef) const {
         return SignalHub::disconnect(
             object_, id(), ObjectSlotId(slotRef.object(), slotRef.id()));
@@ -1046,7 +1094,7 @@ public:
     // Disconnects the given signal-slot `signalRef`.
     // Returns true if a disconnection happened.
     //
-    template<typename USignalRef, VGC_REQUIRES(isSignalRef<RemoveCVRef<USignalRef>>)>
+    template<typename USignalRef, VGC_REQUIRES(isSignal<RemoveCVRef<USignalRef>>)>
     bool disconnect(USignalRef&& signalRef) const {
         return SignalHub::disconnect(
             object_, id(), ObjectSlotId(signalRef.object(), signalRef.id()));
@@ -1164,18 +1212,6 @@ private:
     }
 // clang-format on
 
-namespace vgc::core::detail {
-
-template<typename T>
-struct IsSignal : std::false_type {};
-template<typename TObj, typename TSignalRef>
-struct IsSignal<TSignalRef (TObj::*)() const>
-    : std::conjunction<IsSignalRef<TSignalRef>, IsObject<TObj>> {};
-template<typename T>
-inline constexpr bool isSignal = IsSignal<T>::value;
-
-} // namespace vgc::core::detail
-
 // clang-format off
 // clang format bug: `SlotRefBase(object, m) {}` bin-packed since Clang 15.0
 #define VGC_SLOT_ALIAS_(name_, funcName_)                                                \
@@ -1224,17 +1260,5 @@ inline constexpr bool isSignal = IsSignal<T>::value;
 #define VGC_SLOT(...)                                                                    \
     VGC_PP_EXPAND(VGC_SLOT_DISPATCH_(__VA_ARGS__, NOOVERLOAD, VGC_SLOT2_, VGC_SLOT1_)(   \
         __VA_ARGS__))
-
-namespace vgc::core::detail {
-
-template<typename T>
-struct IsSlot : std::false_type {};
-template<typename TObj, typename TSlotRef>
-struct IsSlot<TSlotRef (TObj::*)()>
-    : std::conjunction<IsSlotRef<TSlotRef>, IsObject<TObj>> {};
-template<typename T>
-inline constexpr bool isSlot = IsSlot<T>::value;
-
-} // namespace vgc::core::detail
 
 #endif // VGC_CORE_INTERNAL_SIGNAL_H

@@ -246,7 +246,7 @@ private:
     // clang-format off
     template<typename SlotRefT>
     static constexpr bool isCompatible_ = 
-        core::detail::isSlotRef<SlotRefT>
+        core::isSlot<SlotRefT>
         && std::is_same_v<typename SlotRefT::SlotMethod, Method>;
     // clang-format on
 
@@ -258,10 +258,10 @@ public:
 
     PyCppSlotRefImpl(const Id id, Method method, This obj)
         : PyCppSlotRef(
-            obj,
-            id,
-            py::cpp_function(method),
-            static_cast<SignalArgRefsTuple*>(nullptr))
+              obj,
+              id,
+              py::cpp_function(method),
+              static_cast<SignalArgRefsTuple*>(nullptr))
         , method_(method) {
     }
 
@@ -367,7 +367,7 @@ protected:
 // Should only be constructed from the return value of a Signal method defined
 // with the VGC_SIGNAL macro.
 //
-template<typename SignalRefT, VGC_REQUIRES(core::detail::isSignalRef<SignalRefT>)>
+template<typename SignalRefT, VGC_REQUIRES(core::isSignal<SignalRefT>)>
 class PyCppSignalRefImpl : public PyCppSignalRef {
 public:
     using ArgRefsTuple = typename SignalRefT::ArgRefsTuple;
@@ -381,10 +381,10 @@ protected:
         std::tuple<ArgRefs...>* sig)
 
         : PyCppSignalRef(
-            object,
-            signalRef.id(),
-            buildUnboundPyEmitFn(signalRef.id(), sig),
-            sig) {
+              object,
+              signalRef.id(),
+              buildUnboundPyEmitFn(signalRef.id(), sig),
+              sig) {
 
         cppToPyTransmitterFactory_ = buildCppToPyTransmitterFactory<ArgRefs...>();
     }
@@ -392,9 +392,9 @@ protected:
 public:
     PyCppSignalRefImpl(const SignalRefT& signalRef)
         : PyCppSignalRefImpl(
-            signalRef,
-            signalRef.object(),
-            static_cast<ArgRefsTuple*>(nullptr)) {
+              signalRef,
+              signalRef.object(),
+              static_cast<ArgRefsTuple*>(nullptr)) {
     }
 
     virtual SignalTransmitter buildCppTransmitter() override {
