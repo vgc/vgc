@@ -937,14 +937,9 @@ Select::Select(CreateKey key)
     CutWithVertexAction* cutWithVertexAction = createAction<CutWithVertexAction>();
     cutWithVertexAction->tool_ = this;
 
-    ui::Action* cutAction = createTriggerAction(commands::cut());
-    cutAction->triggered().connect(onCutSlot_());
-
-    ui::Action* copyAction = createTriggerAction(commands::copy());
-    copyAction->triggered().connect(onCopySlot_());
-
-    ui::Action* pasteAction = createTriggerAction(commands::paste());
-    pasteAction->triggered().connect(onPasteSlot_());
+    defineAction(commands::cut(), onCutSlot_());
+    defineAction(commands::copy(), onCopySlot_());
+    defineAction(commands::paste(), onPasteSlot_());
 }
 
 SelectPtr Select::create() {

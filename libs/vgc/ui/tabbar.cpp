@@ -44,8 +44,7 @@ VGC_UI_DEFINE_TRIGGER_COMMAND( //
 TabBar::TabBar(CreateKey key)
     : Widget(key) {
 
-    Action* closeTabAction = createTriggerAction(commands::closeTab());
-    closeTabAction->triggered().connect(onCloseTabTriggeredSlot_());
+    Action* closeTabAction = defineAction(commands::closeTab(), onCloseTab_Slot());
 
     tabs_ = createChild<Flex>(FlexDirection::Row);
 
@@ -141,7 +140,7 @@ void TabBar::updateChildrenGeometry() {
     }
 }
 
-void TabBar::onCloseTabTriggered_() {
+void TabBar::onCloseTab_() {
     Widget* activeTab = nullptr;
     Int tabIndex = 0;
     if (tabs_) {

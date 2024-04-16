@@ -43,8 +43,7 @@ ResetCurrentColor::ResetCurrentColor(CreateKey key, const ui::ModuleContext& con
     : Module(key, context)
     , currentColor_(context.importModule<tools::CurrentColor>()) {
 
-    ui::Action* action = createTriggerAction(commands::resetCurrentColor());
-    action->triggered().connect(onActionTriggered_Slot());
+    defineAction(commands::resetCurrentColor(), onActionTriggered_Slot());
 }
 
 ResetCurrentColorPtr ResetCurrentColor::create(const ui::ModuleContext& context) {

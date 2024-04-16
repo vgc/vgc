@@ -1386,9 +1386,27 @@ public:
     /// Creates an action of type `ActionType::Trigger`, adds it to this
     /// widget, and returns the action.
     ///
+    /// \sa `defineAction()`.
+    ///
     template<typename... Args>
     Action* createTriggerAction(Args&&... args) {
         return createAction<Action>(std::forward<Args>(args)...);
+    }
+
+    /// Creates a new trigger action with the given `commandName`, adds it to
+    /// this widget, connects its `triggered()` signal to the given `slot`, and
+    /// returns the action.
+    ///
+    /// \sa `createTriggerAction()`.
+    ///
+    // Note: we don't constrain with `isSlot<TSlot>`, otherwise lambdas, free
+    //       functions and functors wouldn't be accepted.
+    //
+    template<typename TSlot>
+    Action* defineAction(core::StringId commandName, TSlot slot) {
+        Action* action = createTriggerAction(commandName);
+        action->triggered().connect(slot);
+        return action;
     }
 
     /// This signal is emitted whenever an action is added to this widget.

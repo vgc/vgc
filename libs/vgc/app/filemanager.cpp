@@ -87,23 +87,6 @@ VGC_UI_DEFINE_WINDOW_COMMAND( //
 
 } // namespace commands
 
-void addSeparator_(ui::Menu* menu) {
-    if (menu) {
-        menu->addSeparator();
-    }
-}
-
-template<typename TSlot>
-ui::Action*
-createAction_(ui::Module& self, ui::Menu* menu, core::StringId commandId, TSlot slot) {
-    ui::Action* action = self.createTriggerAction(commandId);
-    action->triggered().connect(slot);
-    if (menu) {
-        menu->addItem(action);
-    }
-    return action;
-}
-
 } // namespace
 
 FileManager::FileManager(CreateKey key, const ui::ModuleContext& context)
@@ -112,28 +95,31 @@ FileManager::FileManager(CreateKey key, const ui::ModuleContext& context)
     documentManager_ = context.importModule<canvas::DocumentManager>();
     documentColorPalette_ = context.importModule<tools::DocumentColorPalette>();
 
-    ui::MenuLockPtr lFileMenu;
-    ui::MenuLockPtr lEditMenu;
+    ui::MenuWeakPtr fileMenu;
+    ui::MenuWeakPtr editMenu;
     if (auto standardMenus = context.importModule<ui::StandardMenus>().lock()) {
-        lFileMenu = standardMenus->getOrCreateFileMenu().lock();
-        lEditMenu = standardMenus->getOrCreateEditMenu().lock();
+        fileMenu = standardMenus->getOrCreateFileMenu();
+        editMenu = standardMenus->getOrCreateEditMenu();
     }
-    ui::Menu* fileMenu = lFileMenu.get();
-    ui::Menu* editMenu = lEditMenu.get();
 
-    createAction_(*this, fileMenu, commands::_new(), onActionNew_Slot());
-    createAction_(*this, fileMenu, commands::open(), onActionOpen_Slot());
-    addSeparator_(fileMenu);
-    createAction_(*this, fileMenu, commands::save(), onActionSave_Slot());
-    createAction_(*this, fileMenu, commands::saveAs(), onActionSaveAs_Slot());
-    addSeparator_(fileMenu);
-    createAction_(*this, fileMenu, commands::quit(), onActionQuit_Slot());
+    ui::ModuleActionCreator c(this);
+
+    c.setMenu(fileMenu);
+
+    c.addAction(commands::_new(), onActionNew_Slot());
+    c.addAction(commands::open(), onActionOpen_Slot());
+    c.addSeparator();
+    c.addAction(commands::save(), onActionSave_Slot());
+    c.addAction(commands::saveAs(), onActionSaveAs_Slot());
+    c.addSeparator();
+    c.addAction(commands::quit(), onActionQuit_Slot());
 
     // XXX: Make these generic actions? Note that we currently cannot: generic
     // actions rely on `Action::owningWidget` so they don't work in a module.
     //
-    actionUndo_ = createAction_(*this, editMenu, commands::undo(), onActionUndo_Slot());
-    actionRedo_ = createAction_(*this, editMenu, commands::redo(), onActionRedo_Slot());
+    c.setMenu(editMenu);
+    actionUndo_ = c.addAction(commands::undo(), onActionUndo_Slot());
+    actionRedo_ = c.addAction(commands::redo(), onActionRedo_Slot());
 
     openDocument_("");
     updateUndoRedoActionState_();

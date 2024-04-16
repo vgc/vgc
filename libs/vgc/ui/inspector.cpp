@@ -45,8 +45,7 @@ VGC_UI_DEFINE_WINDOW_COMMAND(
 Inspector::Inspector(CreateKey key, const ui::ModuleContext& context)
     : Module(key, context) {
 
-    ui::Action* action = createTriggerAction(commands::inspectWidgets());
-    action->triggered().connect(onInspect_Slot());
+    defineAction(commands::inspectWidgets(), onInspect_Slot());
 }
 
 InspectorSharedPtr Inspector::create(const ui::ModuleContext& context) {
