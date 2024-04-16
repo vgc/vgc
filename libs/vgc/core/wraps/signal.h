@@ -246,7 +246,7 @@ private:
     // clang-format off
     template<typename SlotRefT>
     static constexpr bool isCompatible_ = 
-        core::detail::isSlotRef<SlotRefT>
+        core::isSlot<SlotRefT>
         && std::is_same_v<typename SlotRefT::SlotMethod, Method>;
     // clang-format on
 
@@ -367,7 +367,7 @@ protected:
 // Should only be constructed from the return value of a Signal method defined
 // with the VGC_SIGNAL macro.
 //
-template<typename SignalRefT, VGC_REQUIRES(core::detail::isSignalRef<SignalRefT>)>
+template<typename SignalRefT, VGC_REQUIRES(core::isSignal<SignalRefT>)>
 class PyCppSignalRefImpl : public PyCppSignalRef {
 public:
     using ArgRefsTuple = typename SignalRefT::ArgRefsTuple;

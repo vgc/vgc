@@ -137,7 +137,7 @@ public:
     template<
         typename TSignal,
         typename... Extra,
-        VGC_REQUIRES(core::detail::isSignal<TSignal>)>
+        VGC_REQUIRES(core::isSignalGetter<TSignal>)>
     ObjClass& def_signal(const char* name, TSignal signal, const Extra&... extra) {
         static_assert(
             std::is_invocable_v<TSignal, const TObj*>,
@@ -147,7 +147,10 @@ public:
     }
 
     // XXX prevent signatures with references to python immutables (int..)
-    template<typename TSlot, typename... Extra, VGC_REQUIRES(core::detail::isSlot<TSlot>)>
+    template<
+        typename TSlot, //
+        typename... Extra,
+        VGC_REQUIRES(core::isSlotGetter<TSlot>)>
     ObjClass& def_slot(const char* name, TSlot slot, const Extra&... extra) {
         static_assert(
             std::is_invocable_v<TSlot, TObj*>,
