@@ -80,9 +80,9 @@
 
 .Menu > .button {
     padding-top: 0dp;
-    padding-right: 10dp;
+    padding-right: 5dp;
     padding-bottom: 0dp;
-    padding-left: 10dp;
+    padding-left: 5dp;
 }
 
 .Menu > .separator {
@@ -120,8 +120,6 @@
     horizontal-stretch: 1;
     vertical-shrink: 1;
     vertical-stretch: 1;
-    margin-left: 5dp;
-    margin-right: 0dp;
 }
 
 .Button > .icon {
@@ -210,7 +208,9 @@
     text-horizontal-align: right;
 }
 
-.LineEdit {
+.LineEdit,
+.Button > .text,
+.Button > .shortcut {
     padding-right: 5dp;
     padding-left: 5dp;
 }
