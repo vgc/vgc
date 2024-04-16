@@ -25,9 +25,21 @@ namespace commands_ {
 namespace {
 
 VGC_UI_DEFINE_TRIGGER_COMMAND( //
-    item,
-    "ui.combobox.item",
-    "ComboBox Item");
+    selectItem,
+    "ui.combobox.selectItem",
+    "ComboBox: Select Item");
+
+VGC_UI_DEFINE_TRIGGER_COMMAND( //
+    selectPreviousItem,
+    "ui.combobox.selectPreviousItem",
+    "ComboBox: Select Previous Item",
+    Key::Up);
+
+VGC_UI_DEFINE_TRIGGER_COMMAND( //
+    selectNextItem,
+    "ui.combobox.selectNextItem",
+    "ComboBox: Select Next Item",
+    Key::Down);
 
 } // namespace
 
@@ -38,6 +50,40 @@ ComboBox::ComboBox(CreateKey key, std::string_view title)
     , title_(title) {
 
     addStyleClass(strings::ComboBox);
+
+    // Setup focus policy.
+    //
+    // Note: we intentionally don't give (single-)Click focus policy since we
+    // believe this is more annoying than helpful in most of our use cases.
+    //
+    // Advantages of giving focus:
+    // - Users can use arrow keys to quickly compare different results based on
+    //   the combo box value.
+    //
+    // Disadvantages of giving focus (too easily):
+    // - Clears the focus of other medium-strength widget (e.g., a line edit).
+    // - Users cannot use anymore the arrow keys for their other purposes
+    //   (translating objects, previous/next frame or keyframe, etc.), and
+    //   become confused / not understand why the arrow keys don't work
+    // - Users would have to make an extra click or pressing `Esc` to give
+    //   the focus back to the previously high-strengh focused widget.
+    // - Change of border/outline of the combo-box (or any other style choice
+    //   to indicate that the combo box has focus) can be distracting.
+    //
+    // Basically, the disadvantages can be serious usability issues or/and
+    // annoyances, while the only advantage is rarely useful. But in some
+    // cases, the advantage can in fact be super useful (e.g., choosing a
+    // font), so it's nice to be able to do it.
+    //
+    // For this reason, we choose to give focus on double-click, which is a
+    // nice tradeoff, whose only issue is discoverability (perhaps we could add
+    // in the tootip: "double-click to focus"?). But since there is no focus
+    // policy or action type for doing this yet, we detect it manually via
+    // delay between opening and closing the menu.
+    //
+    setFocusPolicy(FocusPolicy::Tab);
+    setFocusStrength(FocusStrength::Medium);
+
     setMenuDropDirection(MenuDropDirection::Vertical);
     setArrowVisible(true);
     setShortcutVisible(false);
@@ -45,7 +91,12 @@ ComboBox::ComboBox(CreateKey key, std::string_view title)
     menu_ = ComboBoxMenu::create(title, this);
     if (auto menu = menu_.lock()) {
         setAction(menu->menuAction());
+        menu->popupOpened().connect(onMenuOpened_Slot());
+        menu->popupClosed().connect(onMenuClosed_Slot());
     }
+
+    defineAction(commands_::selectPreviousItem(), onSelectPreviousItem_Slot());
+    defineAction(commands_::selectNextItem(), onSelectNextItem_Slot());
 }
 
 ComboBoxPtr ComboBox::create(std::string_view title) {
@@ -79,12 +130,12 @@ void ComboBox::setCurrentIndex(Int index) {
 }
 
 void ComboBox::addItem(std::string_view text) {
-    ActionWeakPtr itemAction_ = createTriggerAction(commands_::item());
-    if (auto itemAction = itemAction_.lock()) {
-        itemAction->setText(text);
-        itemAction->triggered().connect(onItemActionTriggered_Slot());
+    ActionWeakPtr action_ = createTriggerAction(commands_::selectItem());
+    if (auto action = action_.lock()) {
+        action->setText(text);
+        action->triggered().connect(onSelectItem_Slot());
         if (auto menu = menu_.lock()) {
-            menu->addItem(itemAction.get());
+            menu->addItem(action.get());
 
             // Disable shortcut otherwise it adds an extra gap even if
             // the shortcut size itself is 0.
@@ -122,7 +173,8 @@ void ComboBox::setCurrentItem_(Widget* item, Int index) {
     }
 }
 
-void ComboBox::onItemActionTriggered_(Widget* from) {
+void ComboBox::onSelectItem_(Widget* from) {
+    wasItemSelectedSinceMenuOpened_ = true;
     if (auto menu = menu_.lock()) {
         Int index = 0;
         for (Widget* child : menu->children()) {
@@ -130,6 +182,48 @@ void ComboBox::onItemActionTriggered_(Widget* from) {
                 setCurrentItem_(child, index);
             }
             ++index;
+        }
+    }
+}
+
+void ComboBox::onMenuOpened_() {
+    wasItemSelectedSinceMenuOpened_ = false;
+    menuOpenedWatch_.start();
+}
+
+void ComboBox::onMenuClosed_() {
+
+    constexpr float doubleClickMaxDuration = 0.3f;
+
+    if (!wasItemSelectedSinceMenuOpened_
+        && menuOpenedWatch_.elapsed() < doubleClickMaxDuration) {
+
+        setFocus(FocusReason::Other);
+    }
+}
+
+void ComboBox::onSelectPreviousItem_() {
+    Int n = numItems();
+    if (n > 0) {
+        Int i = currentIndex();
+        if (i < 0) {
+            setCurrentIndex(n - 1);
+        }
+        else {
+            setCurrentIndex((i - 1 + n) % n);
+        }
+    }
+}
+
+void ComboBox::onSelectNextItem_() {
+    Int n = numItems();
+    if (n > 0) {
+        Int i = currentIndex();
+        if (i < 0) {
+            setCurrentIndex(0);
+        }
+        else {
+            setCurrentIndex((i + 1) % n);
         }
     }
 }

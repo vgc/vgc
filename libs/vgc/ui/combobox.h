@@ -20,6 +20,7 @@
 #include <string_view>
 
 #include <vgc/core/array.h>
+#include <vgc/core/stopwatch.h>
 #include <vgc/ui/menu.h>
 #include <vgc/ui/menubutton.h>
 
@@ -88,8 +89,27 @@ private:
 
     void setCurrentItem_(Widget* item, Int index);
 
-    void onItemActionTriggered_(Widget* from);
-    VGC_SLOT(onItemActionTriggered_)
+    void onSelectItem_(Widget* from);
+    VGC_SLOT(onSelectItem_)
+
+    // Ad-hoc detection of double-click to give focus
+
+    bool wasItemSelectedSinceMenuOpened_ = false;
+    core::Stopwatch menuOpenedWatch_;
+
+    void onMenuOpened_();
+    VGC_SLOT(onMenuOpened_)
+
+    void onMenuClosed_();
+    VGC_SLOT(onMenuClosed_)
+
+    // Possible actions when the combo box has focus
+
+    void onSelectPreviousItem_();
+    VGC_SLOT(onSelectPreviousItem_)
+
+    void onSelectNextItem_();
+    VGC_SLOT(onSelectNextItem_)
 };
 
 VGC_DECLARE_OBJECT(ComboBoxMenu);
