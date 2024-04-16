@@ -258,10 +258,10 @@ public:
 
     PyCppSlotRefImpl(const Id id, Method method, This obj)
         : PyCppSlotRef(
-              obj,
-              id,
-              py::cpp_function(method),
-              static_cast<SignalArgRefsTuple*>(nullptr))
+            obj,
+            id,
+            py::cpp_function(method),
+            static_cast<SignalArgRefsTuple*>(nullptr))
         , method_(method) {
     }
 
@@ -381,10 +381,10 @@ protected:
         std::tuple<ArgRefs...>* sig)
 
         : PyCppSignalRef(
-              object,
-              signalRef.id(),
-              buildUnboundPyEmitFn(signalRef.id(), sig),
-              sig) {
+            object,
+            signalRef.id(),
+            buildUnboundPyEmitFn(signalRef.id(), sig),
+            sig) {
 
         cppToPyTransmitterFactory_ = buildCppToPyTransmitterFactory<ArgRefs...>();
     }
@@ -392,9 +392,9 @@ protected:
 public:
     PyCppSignalRefImpl(const SignalRefT& signalRef)
         : PyCppSignalRefImpl(
-              signalRef,
-              signalRef.object(),
-              static_cast<ArgRefsTuple*>(nullptr)) {
+            signalRef,
+            signalRef.object(),
+            static_cast<ArgRefsTuple*>(nullptr)) {
     }
 
     virtual SignalTransmitter buildCppTransmitter() override {
