@@ -418,9 +418,7 @@ private:
     void createIconWidget_(ui::Widget* parent) {
         std::string iconPath = core::resourcePath(iconNames_[iconIndex_]);
         iconWidget_ = parent->createChild<ui::IconWidget>(iconPath);
-
-        ui::Action* action = parent->createTriggerAction(commands::cycleSvgIcon());
-        action->triggered().connect(cycleSvgIconSlot_());
+        parent->defineAction(commands::cycleSvgIcon(), cycleSvgIconSlot_());
     }
 };
 
@@ -469,14 +467,12 @@ private:
         }
 
         Action* actionCreateAction =
-            parent->createTriggerAction(commands::createAction());
-        actionCreateAction->triggered().connect([this]() {
-            Action* action = this->testMenu_->createTriggerAction(commands::hello());
-            this->testMenu_->addItem(action);
-        });
+            parent->defineAction(commands::createAction(), [this]() {
+                Action* action = this->testMenu_->createTriggerAction(commands::hello());
+                this->testMenu_->addItem(action);
+            });
 
-        Action* actionCreateMenu = parent->createTriggerAction(commands::createMenu());
-        actionCreateMenu->triggered().connect([this]() {
+        Action* actionCreateMenu = parent->defineAction(commands::createMenu(), [this]() {
             if (auto standardMenus = importModule<ui::StandardMenus>().lock()) {
                 if (auto menuBar = standardMenus->menuBar().lock()) {
                     Menu* menu = menuBar->createSubMenu("Test 2");

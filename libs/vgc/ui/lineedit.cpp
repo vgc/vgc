@@ -97,14 +97,9 @@ LineEdit::LineEdit(CreateKey key, std::string_view text)
     //
     // Example: `virtual ActionListView Widget::classActions() const;`
 
-    ui::Action* cutAction = createTriggerAction(commands_::cut());
-    cutAction->triggered().connect(onCutSlot_());
-
-    ui::Action* copyAction = createTriggerAction(commands_::copy());
-    copyAction->triggered().connect(onCopySlot_());
-
-    ui::Action* pasteAction = createTriggerAction(commands_::paste());
-    pasteAction->triggered().connect(onPasteSlot_());
+    defineAction(commands_::cut(), onCutSlot_());
+    defineAction(commands_::copy(), onCopySlot_());
+    defineAction(commands_::paste(), onPasteSlot_());
 }
 
 LineEditPtr LineEdit::create() {

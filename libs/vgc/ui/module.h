@@ -355,9 +355,24 @@ public:
     /// Creates an action of type `ActionType::Trigger`, adds it to this
     /// module, and returns the action.
     ///
+    /// \sa `defineAction()`.
+    ///
     template<typename... Args>
     Action* createTriggerAction(Args&&... args) {
         return createAction<Action>(std::forward<Args>(args)...);
+    }
+
+    /// Creates an action of type `ActionType::Trigger` with the given
+    /// `commandName`, adds it to this module, connect it to the given slot,
+    /// and returns the action.
+    ///
+    /// \sa `createTriggerAction()`.
+    ///
+    template<typename TSlot>
+    Action* defineAction(core::StringId commandName, TSlot slot) {
+        Action* action = createTriggerAction(commandName);
+        action->triggered().connect(slot);
+        return action;
     }
 
     /// This signal is emitted whenever an action is added to this module.

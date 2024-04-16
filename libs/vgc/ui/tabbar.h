@@ -78,8 +78,8 @@ private:
     WidgetPtr tabs_;
     WidgetPtr close_;
 
-    void onCloseTabTriggered_();
-    VGC_SLOT(onCloseTabTriggeredSlot_, onCloseTabTriggered_)
+    void onCloseTab_();
+    VGC_SLOT(onCloseTab_)
 };
 
 } // namespace vgc::ui

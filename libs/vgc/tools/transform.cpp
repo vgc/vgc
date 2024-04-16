@@ -1523,18 +1523,6 @@ void TransformBox::updateWorkspacePointer_() {
     }
 }
 
-namespace {
-
-template<typename TSlot>
-ui::Action*
-createTriggerActionWithSlot(ui::Widget* parent, core::StringId commandId, TSlot slot) {
-    ui::Action* action = parent->createTriggerAction(commandId);
-    action->triggered().connect(slot);
-    return action;
-}
-
-} // namespace
-
 void TransformBox::setDragActions_(
     detail::TransformDragActionType transformType,
     Int manipIndex) {
@@ -1574,22 +1562,14 @@ void TransformBox::clearDragActions_() {
 }
 
 void TransformBox::createTranslateStepActions_() {
-    createTriggerActionWithSlot(
-        this, commands::translateLeftSmallStep(), onTranslateLeftSmallStepSlot_());
-    createTriggerActionWithSlot(
-        this, commands::translateRightSmallStep(), onTranslateRightSmallStepSlot_());
-    createTriggerActionWithSlot(
-        this, commands::translateUpSmallStep(), onTranslateUpSmallStepSlot_());
-    createTriggerActionWithSlot(
-        this, commands::translateDownSmallStep(), onTranslateDownSmallStepSlot_());
-    createTriggerActionWithSlot(
-        this, commands::translateLeftBigStep(), onTranslateLeftBigStepSlot_());
-    createTriggerActionWithSlot(
-        this, commands::translateRightBigStep(), onTranslateRightBigStepSlot_());
-    createTriggerActionWithSlot(
-        this, commands::translateUpBigStep(), onTranslateUpBigStepSlot_());
-    createTriggerActionWithSlot(
-        this, commands::translateDownBigStep(), onTranslateDownBigStepSlot_());
+    defineAction(commands::translateLeftSmallStep(), onTranslateLeftSmallStepSlot_());
+    defineAction(commands::translateRightSmallStep(), onTranslateRightSmallStepSlot_());
+    defineAction(commands::translateUpSmallStep(), onTranslateUpSmallStepSlot_());
+    defineAction(commands::translateDownSmallStep(), onTranslateDownSmallStepSlot_());
+    defineAction(commands::translateLeftBigStep(), onTranslateLeftBigStepSlot_());
+    defineAction(commands::translateRightBigStep(), onTranslateRightBigStepSlot_());
+    defineAction(commands::translateUpBigStep(), onTranslateUpBigStepSlot_());
+    defineAction(commands::translateDownBigStep(), onTranslateDownBigStepSlot_());
 }
 
 constexpr double smallTranslateStep = 1.0;
