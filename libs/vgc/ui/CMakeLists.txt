@@ -21,6 +21,7 @@ vgc_add_library(ui
         checkbox.h
         checkenums.h
         column.h
+        combobox.h
         command.h
         cursor.h
         dialog.h
@@ -89,6 +90,7 @@ vgc_add_library(ui
         checkbox.cpp
         checkenums.cpp
         column.cpp
+        combobox.cpp
         command.cpp
         cursor.cpp
         dialog.cpp

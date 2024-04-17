@@ -18,6 +18,7 @@
 #include <vgc/core/paths.h>
 #include <vgc/core/random.h>
 #include <vgc/ui/column.h>
+#include <vgc/ui/combobox.h>
 #include <vgc/ui/grid.h>
 #include <vgc/ui/iconwidget.h>
 #include <vgc/ui/imagebox.h>
@@ -166,6 +167,7 @@ protected:
         createMessageDialogButtons_(layout);
         createLineEdits_(layout);
         createNumberEdits_(layout);
+        createComboBoxes_(layout);
     }
 
 private:
@@ -264,6 +266,64 @@ private:
         numberEdit3->setSignificantDigits(2);
         numberEdit3->setStep(0.001);
         numberEdit3->setText("0.0000234");
+    }
+
+    static void setComboBoxLabelText_(
+        ui::LabelWeakPtr label_,
+        ui::ComboBoxWeakPtr comboBox_,
+        Int index) {
+
+        if (auto l = label_.lock()) {
+            //   ^ Note: compiler warning if named `label` (hides Panel::label)
+            if (auto comboBox = comboBox_.lock()) {
+                if (index != comboBox->index()) {
+                    throw core::LogicError(core::format(
+                        "Indices don't match: {} != {}.", index, comboBox->index()));
+                }
+                l->setText(core::format("index={} text={}", index, comboBox->text()));
+            }
+        }
+    }
+
+    ui::ComboBoxWeakPtr createComboBox_(ui::Widget* parent, std::string_view title) {
+        ui::Column* col = parent->createChild<ui::Column>();
+        ui::LabelWeakPtr label_ = col->createChild<ui::Label>();
+        ui::ComboBoxWeakPtr comboBox_ = col->createChild<ui::ComboBox>(title);
+        setComboBoxLabelText_(label_, comboBox_, -1);
+        if (auto comboBox = comboBox_.lock()) {
+            comboBox->indexChanged().connect([label_, comboBox_](Int index) {
+                setComboBoxLabelText_(label_, comboBox_, index);
+            });
+        }
+        return comboBox_;
+    }
+
+    void createComboBoxes_(ui::Widget* parent) {
+
+        using ui::ComboBox;
+        using ui::ComboBoxWeakPtr;
+
+        ui::Row* row = parent->createChild<ui::Row>();
+
+        // Default ComboBox
+        createComboBox_(row, "Combo Box 1");
+
+        // ComboBox with manually set items, none set as current index
+        if (auto comboBox = createComboBox_(row, "Combo Box 2").lock()) {
+            comboBox->addItem("Item 1");
+            comboBox->addItem("Item 2");
+            comboBox->addItem("Item 3");
+        }
+
+        // ComboBox with manually set items, with the first set as current index
+        if (auto comboBox = createComboBox_(row, "Combo Box 3").lock()) {
+            comboBox->addItem("Item 1");
+            comboBox->addItem("Item 2");
+            comboBox->addItem("Item 3");
+            comboBox->setIndex(0);
+        }
+
+        // TODO: ComboBox with items set from a registered enum
     }
 
     ui::OverlayAreaWeakPtr getClickMeOverlayArea_(ui::Widget& from) {
