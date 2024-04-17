@@ -273,13 +273,14 @@ private:
         ui::ComboBoxWeakPtr comboBox_,
         Int index) {
 
-        if (auto label = label_.lock()) {
+        if (auto l = label_.lock()) {
+            //   ^ Note: compiler warning if named `label` (hides Panel::label)
             if (auto comboBox = comboBox_.lock()) {
                 if (index != comboBox->index()) {
                     throw core::LogicError(core::format(
                         "Indices don't match: {} != {}.", index, comboBox->index()));
                 }
-                label->setText(core::format("index={} text={}", index, comboBox->text()));
+                l->setText(core::format("index={} text={}", index, comboBox->text()));
             }
         }
     }
