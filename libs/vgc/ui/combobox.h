@@ -26,14 +26,6 @@
 
 namespace vgc::ui {
 
-namespace detail {
-
-struct ComboBoxItem {
-    std::string text;
-};
-
-} // namespace detail
-
 VGC_DECLARE_OBJECT(ComboBox);
 
 /// \class vgc::ui::ComboBox
