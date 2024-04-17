@@ -77,7 +77,7 @@ ComboBox::ComboBox(CreateKey key, std::string_view title)
     //
     // For this reason, we choose to give focus on double-click, which is a
     // nice tradeoff, whose only issue is discoverability (perhaps we could add
-    // in the tootip: "double-click to focus"?). But since there is no focus
+    // in the tooltip: "double-click to focus"?). But since there is no focus
     // policy or action type for doing this yet, we detect it manually via
     // delay between opening and closing the menu.
     //
@@ -112,19 +112,19 @@ Int ComboBox::numItems() const {
     }
 }
 
-void ComboBox::setCurrentIndex(Int index) {
-    if (index != currentIndex_) {
+void ComboBox::setIndex(Int index) {
+    if (index != index_) {
         if (0 <= index && index < numItems()) {
             if (auto menu = menu_.lock()) {
                 if (auto item = WidgetWeakPtr(menu->childAt(index)).lock()) {
-                    setCurrentItem_(item.get(), index);
+                    setItem_(item.get(), index);
                     return;
                 }
             }
-            setCurrentItem_(nullptr, index);
+            setItem_(nullptr, index);
         }
         else {
-            setCurrentItem_(nullptr, -1);
+            setItem_(nullptr, -1);
         }
     }
 }
@@ -155,9 +155,9 @@ void ComboBox::setText_(std::string_view text) {
     }
 }
 
-void ComboBox::setCurrentItem_(Widget* item, Int index) {
-    if (currentIndex_ != index) {
-        currentIndex_ = index;
+void ComboBox::setItem_(Widget* item, Int index) {
+    if (index_ != index) {
+        index_ = index;
         if (Button* button = dynamic_cast<Button*>(item)) {
             if (auto action = ActionWeakPtr(button->action()).lock()) {
                 setText_(action->text());
@@ -169,7 +169,7 @@ void ComboBox::setCurrentItem_(Widget* item, Int index) {
         else {
             setText_(title_);
         }
-        currentIndexChanged().emit(index);
+        indexChanged().emit(index);
     }
 }
 
@@ -179,7 +179,7 @@ void ComboBox::onSelectItem_(Widget* from) {
         Int index = 0;
         for (Widget* child : menu->children()) {
             if (child == from) {
-                setCurrentItem_(child, index);
+                setItem_(child, index);
             }
             ++index;
         }
@@ -205,12 +205,12 @@ void ComboBox::onMenuClosed_() {
 void ComboBox::onSelectPreviousItem_() {
     Int n = numItems();
     if (n > 0) {
-        Int i = currentIndex();
+        Int i = index();
         if (i < 0) {
-            setCurrentIndex(n - 1);
+            setIndex(n - 1);
         }
         else {
-            setCurrentIndex((i - 1 + n) % n);
+            setIndex((i - 1 + n) % n);
         }
     }
 }
@@ -218,12 +218,12 @@ void ComboBox::onSelectPreviousItem_() {
 void ComboBox::onSelectNextItem_() {
     Int n = numItems();
     if (n > 0) {
-        Int i = currentIndex();
+        Int i = index();
         if (i < 0) {
-            setCurrentIndex(0);
+            setIndex(0);
         }
         else {
-            setCurrentIndex((i + 1) % n);
+            setIndex((i + 1) % n);
         }
     }
 }

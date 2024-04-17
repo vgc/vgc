@@ -57,37 +57,42 @@ public:
 
     /// Returns the index of the current item, or -1 if there is no current item.
     ///
-    Int currentIndex() const {
-        return currentIndex_;
+    Int index() const {
+        return index_;
     }
 
-    /// Sets the current item to the one at index `index`.
+    /// Unsets the current item, that is, re-initialize the combo box to have
+    /// no current item. After calling this function, `index()` becomes -1.
     ///
-    /// If `index` is not in [0, `numItems() - 1`], then this is equivalent to `unset()`.
-    ///
-    void setCurrentIndex(Int index);
-    VGC_SLOT(setCurrentIndex)
+    void unset() {
+        setIndex(-1);
+    }
 
-    /// This signal is emitted whenever the `currentIndex()` of this combo box
+    /// Sets the current item to be the one at the given `index`.
+    ///
+    /// If `index` is not in [0, `numItems() - 1`], then this is equivalent to calling
+    /// `unset()`.
+    ///
+    void setIndex(Int index);
+    VGC_SLOT(setIndex)
+
+    /// This signal is emitted whenever the `index()` of this combo box
     /// changes.
     ///
-    VGC_SIGNAL(currentIndexChanged, (Int, index))
+    VGC_SIGNAL(indexChanged, (Int, index))
 
     /// Adds a text item to this combo box.
     ///
     void addItem(std::string_view text);
 
 private:
-    // State
-    std::string title_;
-    Int currentIndex_ = -1;
-
-    // Menu storing the combo box items
-    MenuSharedPtr menu_;
+    std::string title_;  // text when no current item is set
+    Int index_ = -1;     // index of current item
+    MenuSharedPtr menu_; // drop-down menu, storing all the item data
 
     void setText_(std::string_view text);
 
-    void setCurrentItem_(Widget* item, Int index);
+    void setItem_(Widget* item, Int index);
 
     void onSelectItem_(Widget* from);
     VGC_SLOT(onSelectItem_)

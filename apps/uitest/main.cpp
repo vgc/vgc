@@ -272,25 +272,27 @@ private:
         ui::LabelWeakPtr label_,
         ui::ComboBoxWeakPtr comboBox_,
         Int index) {
+
         if (auto label = label_.lock()) {
             if (auto comboBox = comboBox_.lock()) {
-                if (index != comboBox->currentIndex()) {
+                if (index != comboBox->index()) {
                     throw core::LogicError(core::format(
                         "Indices don't match: {} != {}.",
                         index,
-                        comboBox->currentIndex()));
+                        comboBox->index()));
                 }
                 label->setText(core::format("index={} text={}", index, comboBox->text()));
             }
         }
     }
+
     ui::ComboBoxWeakPtr createComboBox_(ui::Widget* parent, std::string_view title) {
         ui::Column* col = parent->createChild<ui::Column>();
         ui::LabelWeakPtr label_ = col->createChild<ui::Label>();
         ui::ComboBoxWeakPtr comboBox_ = col->createChild<ui::ComboBox>(title);
         setComboBoxLabelText_(label_, comboBox_, -1);
         if (auto comboBox = comboBox_.lock()) {
-            comboBox->currentIndexChanged().connect([label_, comboBox_](Int index) {
+            comboBox->indexChanged().connect([label_, comboBox_](Int index) {
                 setComboBoxLabelText_(label_, comboBox_, index);
             });
         }
@@ -319,7 +321,7 @@ private:
             comboBox->addItem("Item 1");
             comboBox->addItem("Item 2");
             comboBox->addItem("Item 3");
-            comboBox->setCurrentIndex(0);
+            comboBox->setIndex(0);
         }
 
         // TODO: ComboBox with items set from a registered enum
