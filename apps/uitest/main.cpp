@@ -277,9 +277,7 @@ private:
             if (auto comboBox = comboBox_.lock()) {
                 if (index != comboBox->index()) {
                     throw core::LogicError(core::format(
-                        "Indices don't match: {} != {}.",
-                        index,
-                        comboBox->index()));
+                        "Indices don't match: {} != {}.", index, comboBox->index()));
                 }
                 label->setText(core::format("index={} text={}", index, comboBox->text()));
             }
