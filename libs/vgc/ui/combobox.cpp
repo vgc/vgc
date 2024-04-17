@@ -130,8 +130,8 @@ void ComboBox::setIndex(Int index) {
 }
 
 void ComboBox::addItem(std::string_view text) {
-    ActionWeakPtr action_ = createTriggerAction(commands_::selectItem());
-    if (auto action = action_.lock()) {
+    ActionWeakPtr actionWeak = createTriggerAction(commands_::selectItem());
+    if (auto action = actionWeak.lock()) {
         action->setText(text);
         action->triggered().connect(onSelectItem_Slot());
         if (auto menu = menu_.lock()) {
