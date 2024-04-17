@@ -242,6 +242,10 @@
     padding-left: 5dp;
 }
 
+.ComboBox > .text {
+    padding-right: 0dp; /* the arrow already has margins */
+}
+
 .Dialog {
     border-top-left-radius: 8dp;
     border-top-right-radius: 8dp;
