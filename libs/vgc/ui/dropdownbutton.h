@@ -70,10 +70,6 @@ public:
         return dropDirection_;
     }
 
-    Menu* parentMenu() const {
-        return parentMenu_;
-    };
-
     Menu* popupMenu() const {
         return popupMenu_;
     };
@@ -83,12 +79,8 @@ public:
     VGC_SIGNAL(menuPopupOpened);
     VGC_SIGNAL(menuPopupClosed, (bool, recursive));
 
-protected:
-    void onParentWidgetChanged(Widget* newParent) override;
-
 private:
     DropDirection dropDirection_ = DropDirection::Horizontal;
-    Menu* parentMenu_ = nullptr;
     Menu* popupMenu_ = nullptr;
 
     // The menu calls this when it opens as a popup.
