@@ -344,7 +344,7 @@ void Menu::preItemRemoved_(const MenuItem& item) {
 void Menu::setupWidthOverrides_() const {
 
     // This logic is currently disabled because we removed the ability of now-deleted
-    // DropdownButton class to override children sizes (it did not implement all style
+    // MenuButton class to override children sizes (it did not implement all style
     // rules and made styling difficult). We still keep the code below as
     // comments in case we re-implement it later more generically, for example
     // by adding the ability to setup size overrides to any widget. Or with
@@ -354,14 +354,14 @@ void Menu::setupWidthOverrides_() const {
     //    if (isShortcutTrackEnabled_) {
     //        float maxShortcutWidth = 0.f;
     //        for (const MenuItem& item : items) {
-    //            DropdownButton* button = item.button();
+    //            MenuButton* button = item.button();
     //            if (button) {
     //                maxShortcutWidth =
     //                    (std::max)(maxShortcutWidth, button->preferredShortcutSize().x());
     //            }
     //        }
     //        for (const MenuItem& item : items) {
-    //            DropdownButton* button = item.button();
+    //            MenuButton* button = item.button();
     //            if (button) {
     //                button->setShortcutSizeOverrides(maxShortcutWidth, -1.0f);
     //            }
