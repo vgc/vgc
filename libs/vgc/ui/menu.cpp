@@ -176,9 +176,46 @@ void Menu::setShortcutTrackEnabled(bool enabled) {
 
 namespace {
 
+// crossOffsets[0]: Offset to apply to the cross position if placed after
+// crossOffsets[1]: Offset to apply to the cross position if placed before
+//
+// These are used to perfectly align the first item of a submenu with the item
+// of the parent menu that opened the submenu, by taking into account padding
+// and border of the menu.
+//
+// Example: DropDirection = Horizontal
+//
+// If placed "after" in the cross dir (i.e., top-aligned with the anchor):
+//
+//           main dir
+// o----------------------------->
+// |
+// |                  +----------+ ^ crossOffsets[0] (negative in this case)
+// |    +------------+|          | ^
+// |    |   anchor   ||   drop   |
+// |    +------------+|          |
+// |                  |          |
+// | cross dir        |          |
+// V                  +----------+
+//
+// If placed "before" in the cross dir (i.e., bottom-aligned with the anchor):
+//
+//           main dir
+// o----------------------------->
+// |
+// |                  +----------+
+// |                  |          |
+// |                  |          |
+// |    +------------+|          |
+// |    |   anchor   ||   drop   |
+// |    +------------+|          | v
+// |                  +----------+ v crossOffsets[1] (positive in this case)
+// | cross dir
+// V
+//
 void placeMenuFit(
     geometry::Rect2f& menuRect,
-    const geometry::Vec2f& fixedCrossAlignShifts,
+    const geometry::Vec2f& crossOffsets,
     const geometry::Rect2f& areaRect,
     const geometry::Rect2f& anchorRect,
     int dropDir) {
@@ -192,12 +229,15 @@ void placeMenuFit(
     const geometry::Vec2f anchorMax = anchorRect.pMax();
     geometry::Vec2f resultPos;
 
+    // Determine whether to place to menu "after" or "before"
+    // in the main direction.
+    //
     if (anchorMax[dropDir] + menuSize[dropDir] <= areaMax[dropDir]) {
-        // Enough space on the Right/Bottom
+        // Enough space after, so place it after
         resultPos[dropDir] = anchorMax[dropDir];
     }
     else {
-        // Place either on the Right/Bottom or Left/Top, whichever has more space
+        // Place either after or before, whichever has more space
         float spaceAfter = areaMax[dropDir] - anchorMax[dropDir];
         float spaceBefore = anchorMin[dropDir] - areaMin[dropDir];
         if (spaceAfter >= spaceBefore) {
@@ -208,30 +248,41 @@ void placeMenuFit(
         }
     }
 
-    float delta = menuSize[crossDir];
-    if (anchorMin[crossDir] + delta + fixedCrossAlignShifts[1] <= areaMax[crossDir]
-        && anchorMin[crossDir] + fixedCrossAlignShifts[0] >= areaMin[crossDir]) {
-        // Enough space Bottom/Right
-        resultPos[crossDir] = anchorMin[crossDir] + fixedCrossAlignShifts[1];
+    // Determine whether to place to menu "after" (min-aligned) or "before"
+    // (max-aligned) in the cross direction.
+    //
+    const float areaCrossMin = areaMin[crossDir];
+    const float areaCrossMax = areaMax[crossDir];
+    const float crossSize = menuSize[crossDir];
+    const float minIfAfter = anchorMin[crossDir] + crossOffsets[0];
+    const float maxIfAfter = minIfAfter + crossSize;
+    const float maxIfBefore = anchorMax[crossDir] + crossOffsets[1];
+    const float minIfBefore = maxIfBefore - crossSize;
+
+    if (minIfAfter >= areaCrossMin && maxIfAfter <= areaCrossMax) {
+        // Enough space after, so place it after
+        resultPos[crossDir] = minIfAfter;
     }
-    else if (
-        anchorMax[crossDir] - delta - fixedCrossAlignShifts[0] >= areaMin[crossDir]
-        && anchorMax[crossDir] - fixedCrossAlignShifts[1] <= areaMax[crossDir]) {
-        // Enough space Top/Left
-        resultPos[crossDir] = anchorMax[crossDir] - delta - fixedCrossAlignShifts[0];
+    else if (minIfBefore >= areaCrossMin && maxIfBefore <= areaCrossMax) {
+        // Enough space before, so place it before
+        resultPos[crossDir] = minIfBefore;
     }
     else {
-        const geometry::Vec2f areaSize = areaRect.size();
-        float areaCrossSize = areaSize[crossDir];
-        float menuCrossSize = menuSize[crossDir];
-        if (menuCrossSize < areaCrossSize) {
-            // Enough total Height/Width: align the menu with the bottom/right of the area
-            resultPos[crossDir] = areaMax[crossDir] - menuCrossSize;
+        const float areaCrossSize = areaCrossMax - areaCrossMin;
+        if (crossSize < areaCrossSize) {
+            // Enough total space: align the menu with the area border
+            // that was otherwise cropping the menu
+            if (minIfAfter < areaCrossMin) {
+                resultPos[crossDir] = areaCrossMin;
+            }
+            else {
+                resultPos[crossDir] = areaCrossMax - crossSize;
+            }
         }
         else {
-            // Align the menu with the top/left of the available area
-            // (i.e., prefer cropping the "end" of the menu)
-            resultPos[crossDir] = areaMin[crossDir];
+            // Not enough space to fit the menu in the area.
+            // So we min-align it (i.e., prefer cropping the "end" of the menu).
+            resultPos[crossDir] = areaCrossMin;
         }
     }
 
@@ -277,15 +328,15 @@ geometry::Vec2f Menu::computePopupPosition(Widget* opener, Widget* area) {
     anchorRect = areaRect.clamp(anchorRect);
 
     Margins paddingAndBorder = padding() + border();
-    geometry::Vec2f fixedShifts;
+    geometry::Vec2f crossOffsets;
     if (dropDir == DropDirection::Horizontal) {
-        fixedShifts = {-paddingAndBorder.bottom(), -paddingAndBorder.top()};
+        crossOffsets = {-paddingAndBorder.top(), paddingAndBorder.bottom()};
     }
     else {
-        fixedShifts = {-paddingAndBorder.right(), -paddingAndBorder.left()};
+        crossOffsets = {-paddingAndBorder.left(), paddingAndBorder.right()};
     }
 
-    placeMenuFit(menuRect, fixedShifts, areaRect, anchorRect, dropDirIndex);
+    placeMenuFit(menuRect, crossOffsets, areaRect, anchorRect, dropDirIndex);
 
     return menuRect.position();
 }
