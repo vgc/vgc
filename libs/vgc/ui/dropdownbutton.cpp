@@ -46,7 +46,7 @@ void DropdownButton::setDropDirection(DropDirection direction) {
 
 bool DropdownButton::isArrowVisible() const {
     if (auto arrowIcon = arrowIcon_.lock()) {
-        return arrowIcon_->visibility() == Visibility::Inherit;
+        return arrowIcon->visibility() == Visibility::Inherit;
     }
     else {
         return false;
@@ -74,7 +74,7 @@ std::string getArrowIconPath(DropDirection direction) {
     case DropDirection::Vertical:
         return core::resourcePath("ui/icons/button-down-arrow.svg");
     }
-    return core::resourcePath("");
+    return "";
 }
 
 } // namespace
@@ -87,7 +87,9 @@ void DropdownButton::updateArrowIcon_() {
     std::string iconPath = getArrowIconPath(dropDirection());
     if (!iconPath.empty()) {
         arrowIcon_ = createChild<IconWidget>(iconPath);
-        arrowIcon_->addStyleClass(strings::arrow);
+        if (auto arrowIcon = arrowIcon_.lock()) {
+            arrowIcon->addStyleClass(strings::arrow);
+        }
     }
 }
 

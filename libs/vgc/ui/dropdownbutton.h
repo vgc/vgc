@@ -81,7 +81,7 @@ private:
     DropDirection dropDirection_ = DropDirection::Vertical;
     Menu* popupMenu_ = nullptr;
 
-    IconWidgetSharedPtr arrowIcon_;
+    IconWidgetWeakPtr arrowIcon_;
     void updateArrowIcon_();
 
     // The menu calls this when it opens as a popup.
