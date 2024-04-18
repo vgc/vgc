@@ -92,7 +92,7 @@
 
 .ComboBoxMenu > .button {
     padding-top: 0dp;
-    padding-right: 4dp;
+    padding-right: 0dp;
     padding-bottom: 0dp;
     padding-left: 0dp;
 }
