@@ -17,20 +17,8 @@
 #ifndef VGC_UI_DROPDOWNBUTTON_H
 #define VGC_UI_DROPDOWNBUTTON_H
 
-#include <string>
-#include <string_view>
-
-#include <vgc/core/innercore.h>
-#include <vgc/geometry/vec2f.h>
-#include <vgc/graphics/richtext.h>
-#include <vgc/ui/action.h>
-#include <vgc/ui/api.h>
 #include <vgc/ui/button.h>
-#include <vgc/ui/flex.h>
 #include <vgc/ui/iconwidget.h>
-#include <vgc/ui/label.h>
-#include <vgc/ui/margins.h>
-#include <vgc/ui/widget.h>
 
 namespace vgc::ui {
 
@@ -41,8 +29,8 @@ VGC_DECLARE_OBJECT(DropdownButton);
 /// \brief The direction in which a dropdown overlay should appear.
 ///
 enum class DropDirection {
-    Horizontal,
     Vertical,
+    Horizontal,
 };
 
 /// \class vgc::ui::DropdownButton
@@ -62,13 +50,23 @@ public:
     static DropdownButtonPtr
     create(Action* action, FlexDirection layoutDirection = FlexDirection::Column);
 
-    void setDropDirection(DropDirection direction) {
-        dropDirection_ = direction;
-    }
-
+    /// Returns the `DropDirection` of this dropdown button.
+    ///
     DropDirection dropDirection() const {
         return dropDirection_;
     }
+
+    /// Sets the `DropDirection` of this dropdown button.
+    ///
+    void setDropDirection(DropDirection direction);
+
+    /// Returns whether the arrow is visible.
+    ///
+    bool isArrowVisible() const;
+
+    /// Sets whether the arrow is visible. By default, it is visible.
+    ///
+    void setArrowVisible(bool visible);
 
     Menu* popupMenu() const {
         return popupMenu_;
@@ -80,8 +78,11 @@ public:
     VGC_SIGNAL(menuPopupClosed, (bool, recursive));
 
 private:
-    DropDirection dropDirection_ = DropDirection::Horizontal;
+    DropDirection dropDirection_ = DropDirection::Vertical;
     Menu* popupMenu_ = nullptr;
+
+    IconWidgetSharedPtr arrowIcon_;
+    void updateArrowIcon_();
 
     // The menu calls this when it opens as a popup.
     void onMenuPopupOpened_(Menu* menu);

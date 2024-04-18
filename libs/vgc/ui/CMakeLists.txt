@@ -152,6 +152,7 @@ vgc_add_library(ui
 
     RESOURCE_FILES
         icons/button-down-arrow.svg
+        icons/button-right-arrow.svg
         icons/checkmark.svg
         icons/close.svg
         stylesheets/default.vgcss

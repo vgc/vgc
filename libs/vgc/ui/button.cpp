@@ -106,21 +106,6 @@ void Button::setShortcutVisible(bool visible) {
     }
 }
 
-bool Button::isArrowVisible() const {
-    return arrowIcon_ ? arrowIcon_->visibility() == Visibility::Inherit : false;
-}
-
-void Button::setArrowVisible(bool visible) {
-    if (visible && !arrowIcon_) {
-        std::string arrowIconPath = core::resourcePath("ui/icons/button-down-arrow.svg");
-        arrowIcon_ = createChild<IconWidget>(arrowIconPath);
-        arrowIcon_->addStyleClass(strings::arrow);
-    }
-    if (arrowIcon_) {
-        arrowIcon_->setVisibility(visible ? Visibility::Inherit : Visibility::Invisible);
-    }
-}
-
 bool Button::isTextVisible() const {
     return textLabel_ ? textLabel_->visibility() == Visibility::Inherit : false;
 }
