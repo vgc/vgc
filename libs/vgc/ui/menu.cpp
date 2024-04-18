@@ -123,6 +123,14 @@ void Menu::addItemAt(Int index, Menu* menu) {
     DropdownButton* button = createChildAt<DropdownButton>(index, action);
     button->addStyleClass(strings::button);
     button->setTooltipEnabled(false);
+    if (direction() == FlexDirection::Column) {
+        button->setArrowVisible(true);
+        button->setDropDirection(DropDirection::Horizontal);
+    }
+    else {
+        button->setArrowVisible(false);
+        button->setDropDirection(DropDirection::Vertical);
+    }
     items_.insert(index, MenuItem(action, button, menu));
     onItemAdded_(items_[index]);
     notifyChanged(true);
@@ -289,20 +297,12 @@ void placeMenuFit(
     menuRect.setPosition(resultPos);
 }
 
-DropDirection getDropDirection(Menu* parentMenu, DropdownButton* button) {
-    if (parentMenu) {
-        if (parentMenu->isRow()) {
-            return DropDirection::Vertical;
-        }
-        else {
-            return DropDirection::Horizontal;
-        }
-    }
-    else if (button) {
+DropDirection getDropDirection(Widget* opener) {
+    if (DropdownButton* button = dynamic_cast<DropdownButton*>(opener)) {
         return button->dropDirection();
     }
     else {
-        return DropDirection::Horizontal;
+        return DropDirection::Vertical;
     }
 }
 
@@ -314,10 +314,7 @@ Menu* getMenuFromItem(Widget* item) {
 
 geometry::Vec2f Menu::computePopupPosition(Widget* opener, Widget* area) {
 
-    DropdownButton* button = dynamic_cast<DropdownButton*>(opener);
-    Menu* parentMenu = getMenuFromItem(opener);
-
-    DropDirection dropDir = getDropDirection(parentMenu, button);
+    DropDirection dropDir = getDropDirection(opener);
     int dropDirIndex = (dropDir == DropDirection::Horizontal) ? 0 : 1;
 
     geometry::Rect2f areaRect = area->rect();

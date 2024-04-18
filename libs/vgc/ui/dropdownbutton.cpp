@@ -16,6 +16,7 @@
 
 #include <vgc/ui/dropdownbutton.h>
 
+#include <vgc/core/paths.h>
 #include <vgc/ui/menu.h>
 #include <vgc/ui/strings.h>
 
@@ -29,16 +30,66 @@ DropdownButton::DropdownButton(
     : Button(key, action, layoutDirection) {
 
     addStyleClass(strings::DropdownButton);
-    setShortcutVisible(true);
+    updateArrowIcon_();
 }
 
 DropdownButtonPtr DropdownButton::create(Action* action, FlexDirection layoutDirection) {
     return core::createObject<DropdownButton>(action, layoutDirection);
 }
 
+void DropdownButton::setDropDirection(DropDirection direction) {
+    if (dropDirection_ != direction) {
+        dropDirection_ = direction;
+        updateArrowIcon_();
+    }
+}
+
+bool DropdownButton::isArrowVisible() const {
+    if (auto arrowIcon = arrowIcon_.lock()) {
+        return arrowIcon->visibility() == Visibility::Inherit;
+    }
+    else {
+        return false;
+    }
+}
+
+void DropdownButton::setArrowVisible(bool visible) {
+    if (auto arrowIcon = arrowIcon_.lock()) {
+        arrowIcon->setVisibility(visible ? Visibility::Inherit : Visibility::Invisible);
+    }
+}
+
 void DropdownButton::closePopupMenu() {
     if (Menu* menu = popupMenu()) {
         menu->close();
+    }
+}
+
+namespace {
+
+std::string getArrowIconPath(DropDirection direction) {
+    switch (direction) {
+    case DropDirection::Horizontal:
+        return core::resourcePath("ui/icons/button-right-arrow.svg");
+    case DropDirection::Vertical:
+        return core::resourcePath("ui/icons/button-down-arrow.svg");
+    }
+    return "";
+}
+
+} // namespace
+
+void DropdownButton::updateArrowIcon_() {
+    if (auto arrowIcon = arrowIcon_.lock()) {
+        arrowIcon->reparent(nullptr);
+        arrowIcon_ = nullptr;
+    }
+    std::string iconPath = getArrowIconPath(dropDirection());
+    if (!iconPath.empty()) {
+        arrowIcon_ = createChild<IconWidget>(iconPath);
+        if (auto arrowIcon = arrowIcon_.lock()) {
+            arrowIcon->addStyleClass(strings::arrow);
+        }
     }
 }
 
