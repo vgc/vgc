@@ -18,8 +18,8 @@
 
 #include <vgc/core/array.h>
 #include <vgc/style/strings.h>
+#include <vgc/ui/dropdownbutton.h>
 #include <vgc/ui/logcategories.h>
-#include <vgc/ui/menubutton.h>
 #include <vgc/ui/overlayarea.h>
 #include <vgc/ui/strings.h>
 
@@ -64,12 +64,12 @@ MenuItem::MenuItem(Widget* widget) noexcept
     : widget_(widget) {
 }
 
-MenuItem::MenuItem(Action* action, MenuButton* button) noexcept
+MenuItem::MenuItem(Action* action, Button* button) noexcept
     : action_(action)
     , widget_(button) {
 }
 
-MenuItem::MenuItem(Action* action, MenuButton* button, Menu* menu) noexcept
+MenuItem::MenuItem(Action* action, Button* button, Menu* menu) noexcept
     : action_(action)
     , widget_(button)
     , menu_(menu) {
@@ -110,16 +110,20 @@ void Menu::addSeparatorAt(Int index) {
 }
 
 void Menu::addItemAt(Int index, Action* action) {
-    MenuButton* menuButton = createChildAt<MenuButton>(index, action);
-    items_.insert(index, MenuItem(action, menuButton));
+    Button* button = createChildAt<Button>(index, action);
+    button->addStyleClass(strings::button);
+    button->setTooltipEnabled(false);
+    items_.insert(index, MenuItem(action, button));
     onItemAdded_(items_[index]);
     notifyChanged(true);
 }
 
 void Menu::addItemAt(Int index, Menu* menu) {
     Action* action = menu->menuAction();
-    MenuButton* menuButton = createChildAt<MenuButton>(index, action);
-    items_.insert(index, MenuItem(action, menuButton, menu));
+    DropdownButton* button = createChildAt<DropdownButton>(index, action);
+    button->addStyleClass(strings::button);
+    button->setTooltipEnabled(false);
+    items_.insert(index, MenuItem(action, button, menu));
     onItemAdded_(items_[index]);
     notifyChanged(true);
 }
@@ -161,7 +165,7 @@ void Menu::setShortcutTrackEnabled(bool enabled) {
     if (isShortcutTrackEnabled_ != enabled) {
         isShortcutTrackEnabled_ = enabled;
         for (const MenuItem& item : items_) {
-            MenuButton* button = item.button();
+            Button* button = item.button();
             if (button) {
                 button->setShortcutVisible(enabled);
             }
@@ -234,20 +238,20 @@ void placeMenuFit(
     menuRect.setPosition(resultPos);
 }
 
-MenuDropDirection getMenuDropDirection(Menu* parentMenu, MenuButton* button) {
+DropDirection getDropDirection(Menu* parentMenu, DropdownButton* button) {
     if (parentMenu) {
         if (parentMenu->isRow()) {
-            return MenuDropDirection::Vertical;
+            return DropDirection::Vertical;
         }
         else {
-            return MenuDropDirection::Horizontal;
+            return DropDirection::Horizontal;
         }
     }
     else if (button) {
-        return button->menuDropDirection();
+        return button->dropDirection();
     }
     else {
-        return MenuDropDirection::Horizontal;
+        return DropDirection::Horizontal;
     }
 }
 
@@ -255,11 +259,11 @@ MenuDropDirection getMenuDropDirection(Menu* parentMenu, MenuButton* button) {
 
 geometry::Vec2f Menu::computePopupPosition(Widget* opener, Widget* area) {
 
-    MenuButton* button = dynamic_cast<MenuButton*>(opener);
+    DropdownButton* button = dynamic_cast<DropdownButton*>(opener);
     Menu* parentMenu = button ? button->parentMenu() : nullptr;
 
-    MenuDropDirection dropDir = getMenuDropDirection(parentMenu, button);
-    int dropDirIndex = (dropDir == MenuDropDirection::Horizontal) ? 0 : 1;
+    DropDirection dropDir = getDropDirection(parentMenu, button);
+    int dropDirIndex = (dropDir == DropDirection::Horizontal) ? 0 : 1;
 
     geometry::Rect2f areaRect = area->rect();
     geometry::Rect2f anchorRect = opener->mapTo(area, opener->rect());
@@ -274,7 +278,7 @@ geometry::Vec2f Menu::computePopupPosition(Widget* opener, Widget* area) {
 
     Margins paddingAndBorder = padding() + border();
     geometry::Vec2f fixedShifts;
-    if (dropDir == MenuDropDirection::Horizontal) {
+    if (dropDir == DropDirection::Horizontal) {
         fixedShifts = {-paddingAndBorder.bottom(), -paddingAndBorder.top()};
     }
     else {
@@ -310,22 +314,26 @@ void Menu::removeItem(Widget* widget) {
 }
 
 void Menu::onItemAdded_(const MenuItem& item) {
-    MenuButton* button = item.button();
+    Button* button = item.button();
     if (button) {
-        button->parentMenu_ = this;
         //button->setDirection(orthoDir(direction()));
         button->setDirection(FlexDirection::Row);
         button->setShortcutVisible(isShortcutTrackEnabled_);
+    }
+    DropdownButton* dropdownButton = dynamic_cast<DropdownButton*>(button);
+    if (dropdownButton) {
+        dropdownButton->parentMenu_ = this;
     }
     item.action()->triggered().connect(onItemActionTriggeredSlot_());
     item.action()->aboutToBeDestroyed().connect(onItemActionAboutToBeDestroyedSlot_());
 }
 
 void Menu::preItemRemoved_(const MenuItem& item) {
-    MenuButton* button = item.button();
-    if (button) {
-        button->closePopupMenu();
-        button->parentMenu_ = nullptr;
+    Button* button = item.button();
+    DropdownButton* dropdownButton = dynamic_cast<DropdownButton*>(button);
+    if (dropdownButton) {
+        dropdownButton->closePopupMenu();
+        dropdownButton->parentMenu_ = nullptr;
     }
     Action* action = item.action();
     if (action) {
@@ -335,8 +343,8 @@ void Menu::preItemRemoved_(const MenuItem& item) {
 
 void Menu::setupWidthOverrides_() const {
 
-    // This logic is currently disabled because we removed the ability of
-    // MenuButton to override children sizes (it did not implement all style
+    // This logic is currently disabled because we removed the ability of now-deleted
+    // MenuButton class to override children sizes (it did not implement all style
     // rules and made styling difficult). We still keep the code below as
     // comments in case we re-implement it later more generically, for example
     // by adding the ability to setup size overrides to any widget. Or with
@@ -363,7 +371,7 @@ void Menu::setupWidthOverrides_() const {
 
 bool Menu::openAsPopup_(Widget* from) {
 
-    MenuButton* button = dynamic_cast<MenuButton*>(from);
+    DropdownButton* button = dynamic_cast<DropdownButton*>(from);
     Menu* parentMenu = button ? button->parentMenu() : nullptr;
 
     // Find the OverlayArea where to place the popup.
@@ -446,7 +454,7 @@ void Menu::exit_() {
 
 void Menu::onSelfActionTriggered_(Widget* from) {
 
-    MenuButton* button = dynamic_cast<MenuButton*>(from);
+    DropdownButton* button = dynamic_cast<DropdownButton*>(from);
     Menu* parentMenu = button ? button->parentMenu() : nullptr;
 
     if (parentMenu && !parentMenu->isOpenAsPopup() && isOpenAsPopup()) {
@@ -475,15 +483,15 @@ void Menu::onItemActionTriggered_(Widget* from) {
     //
     Menu* newPopup = nullptr;
     for (const MenuItem& item : items_) {
-        MenuButton* button = item.button();
+        DropdownButton* dropdownButton = dynamic_cast<DropdownButton*>(item.button());
         if (item.widget() == from) {
-            if (button) {
-                newPopup = button->popupMenu();
+            if (dropdownButton) {
+                newPopup = dropdownButton->popupMenu();
             }
         }
-        else if (button) {
+        else if (dropdownButton) {
             // close other menus
-            button->closePopupMenu();
+            dropdownButton->closePopupMenu();
         }
     }
 
@@ -585,7 +593,7 @@ void Menu::preMouseMove(MouseMoveEvent* event) {
     const bool shouldOpenSubmenuOnHover = isOpenAsPopup || hasOpenSubmenuPopup;
     const bool shouldProtectOpenSubMenu = isOpenAsPopup;
 
-    MenuButton* button = dynamic_cast<MenuButton*>(hcc);
+    Button* button = dynamic_cast<Button*>(hcc);
     Action* action = button ? button->action() : nullptr;
     const bool isHccMenu = action && action->isMenu_ && action->isEnabled();
 
@@ -642,7 +650,8 @@ void Menu::preMouseMove(MouseMoveEvent* event) {
         // We have no pointer to our current active button atm.
         // But we can check if the hovered button's open popup
         // menu is our open sub-menu.
-        Menu* hccMenuPopup = button ? button->popupMenu() : nullptr;
+        DropdownButton* dropdownButton = dynamic_cast<DropdownButton*>(button);
+        Menu* hccMenuPopup = dropdownButton ? dropdownButton->popupMenu() : nullptr;
         if (!subMenuPopup_ || subMenuPopup_ != hccMenuPopup) {
             if (isOpenAsPopup || isHccMenu) {
                 closeSubMenu();

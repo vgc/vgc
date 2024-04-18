@@ -21,8 +21,8 @@
 
 #include <vgc/core/array.h>
 #include <vgc/core/stopwatch.h>
+#include <vgc/ui/dropdownbutton.h>
 #include <vgc/ui/menu.h>
-#include <vgc/ui/menubutton.h>
 
 namespace vgc::ui {
 
@@ -31,9 +31,9 @@ VGC_DECLARE_OBJECT(ComboBox);
 /// \class vgc::ui::ComboBox
 /// \brief A widget to select one among multiple options.
 ///
-class VGC_UI_API ComboBox : public MenuButton {
+class VGC_UI_API ComboBox : public DropdownButton {
 private:
-    VGC_OBJECT(ComboBox, MenuButton)
+    VGC_OBJECT(ComboBox, DropdownButton)
 
 protected:
     ComboBox(CreateKey, std::string_view title);

@@ -46,7 +46,7 @@ VGC_UI_DEFINE_TRIGGER_COMMAND( //
 } // namespace commands_
 
 ComboBox::ComboBox(CreateKey key, std::string_view title)
-    : MenuButton(key, nullptr, FlexDirection::Row)
+    : DropdownButton(key, nullptr, FlexDirection::Row)
     , title_(title) {
 
     addStyleClass(strings::ComboBox);
@@ -84,7 +84,7 @@ ComboBox::ComboBox(CreateKey key, std::string_view title)
     setFocusPolicy(FocusPolicy::Tab);
     setFocusStrength(FocusStrength::Medium);
 
-    setMenuDropDirection(MenuDropDirection::Vertical);
+    setDropDirection(DropDirection::Vertical);
     setArrowVisible(true);
     setShortcutVisible(false);
 
@@ -141,7 +141,7 @@ void ComboBox::addItem(std::string_view text) {
             // the shortcut size itself is 0.
             Int index = menu->numItems() - 1;
             if (auto item = WidgetWeakPtr(menu->childAt(index)).lock()) {
-                if (auto button = dynamic_cast<MenuButton*>(item.get())) {
+                if (auto button = dynamic_cast<Button*>(item.get())) {
                     button->setShortcutVisible(false);
                 }
             }

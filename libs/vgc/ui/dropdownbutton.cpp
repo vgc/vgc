@@ -14,33 +14,35 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <vgc/ui/menubutton.h>
+#include <vgc/ui/dropdownbutton.h>
 
 #include <vgc/ui/menu.h>
 #include <vgc/ui/strings.h>
 
 namespace vgc::ui {
 
-MenuButton::MenuButton(CreateKey key, Action* action, FlexDirection layoutDirection)
+DropdownButton::DropdownButton(
+    CreateKey key,
+    Action* action,
+    FlexDirection layoutDirection)
+
     : Button(key, action, layoutDirection) {
 
-    addStyleClass(strings::MenuButton);
-    addStyleClass(strings::button);
+    addStyleClass(strings::DropdownButton);
     setShortcutVisible(true);
-    setTooltipEnabled(false);
 }
 
-MenuButtonPtr MenuButton::create(Action* action, FlexDirection layoutDirection) {
-    return core::createObject<MenuButton>(action, layoutDirection);
+DropdownButtonPtr DropdownButton::create(Action* action, FlexDirection layoutDirection) {
+    return core::createObject<DropdownButton>(action, layoutDirection);
 }
 
-void MenuButton::closePopupMenu() {
+void DropdownButton::closePopupMenu() {
     if (Menu* menu = popupMenu()) {
         menu->close();
     }
 }
 
-void MenuButton::onMenuPopupOpened_(Menu* menu) {
+void DropdownButton::onMenuPopupOpened_(Menu* menu) {
     if (popupMenu_ == menu) {
         return;
     }
@@ -53,14 +55,14 @@ void MenuButton::onMenuPopupOpened_(Menu* menu) {
     menuPopupOpened().emit();
 }
 
-void MenuButton::onMenuPopupClosed_(bool recursive) {
+void DropdownButton::onMenuPopupClosed_(bool recursive) {
     setActive(false);
     popupMenu_->popupClosed().disconnect(onMenuPopupClosedSlot_());
     popupMenu_ = nullptr;
     menuPopupClosed().emit(recursive);
 }
 
-void MenuButton::onParentWidgetChanged(Widget* newParent) {
+void DropdownButton::onParentWidgetChanged(Widget* newParent) {
     SuperClass::onParentWidgetChanged(newParent);
     parentMenu_ = dynamic_cast<Menu*>(newParent);
 }
