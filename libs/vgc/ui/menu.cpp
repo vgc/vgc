@@ -64,12 +64,12 @@ MenuItem::MenuItem(Widget* widget) noexcept
     : widget_(widget) {
 }
 
-MenuItem::MenuItem(Action* action, MenuButton* button) noexcept
+MenuItem::MenuItem(Action* action, Button* button) noexcept
     : action_(action)
     , widget_(button) {
 }
 
-MenuItem::MenuItem(Action* action, MenuButton* button, Menu* menu) noexcept
+MenuItem::MenuItem(Action* action, Button* button, Menu* menu) noexcept
     : action_(action)
     , widget_(button)
     , menu_(menu) {
@@ -110,16 +110,20 @@ void Menu::addSeparatorAt(Int index) {
 }
 
 void Menu::addItemAt(Int index, Action* action) {
-    MenuButton* menuButton = createChildAt<MenuButton>(index, action);
-    items_.insert(index, MenuItem(action, menuButton));
+    Button* button = createChildAt<Button>(index, action);
+    button->addStyleClass(strings::button);
+    button->setTooltipEnabled(false);
+    items_.insert(index, MenuItem(action, button));
     onItemAdded_(items_[index]);
     notifyChanged(true);
 }
 
 void Menu::addItemAt(Int index, Menu* menu) {
     Action* action = menu->menuAction();
-    MenuButton* menuButton = createChildAt<MenuButton>(index, action);
-    items_.insert(index, MenuItem(action, menuButton, menu));
+    MenuButton* button = createChildAt<MenuButton>(index, action);
+    button->addStyleClass(strings::button);
+    button->setTooltipEnabled(false);
+    items_.insert(index, MenuItem(action, button, menu));
     onItemAdded_(items_[index]);
     notifyChanged(true);
 }
@@ -161,7 +165,7 @@ void Menu::setShortcutTrackEnabled(bool enabled) {
     if (isShortcutTrackEnabled_ != enabled) {
         isShortcutTrackEnabled_ = enabled;
         for (const MenuItem& item : items_) {
-            MenuButton* button = item.button();
+            Button* button = item.button();
             if (button) {
                 button->setShortcutVisible(enabled);
             }
@@ -310,22 +314,26 @@ void Menu::removeItem(Widget* widget) {
 }
 
 void Menu::onItemAdded_(const MenuItem& item) {
-    MenuButton* button = item.button();
+    Button* button = item.button();
     if (button) {
-        button->parentMenu_ = this;
         //button->setDirection(orthoDir(direction()));
         button->setDirection(FlexDirection::Row);
         button->setShortcutVisible(isShortcutTrackEnabled_);
+    }
+    MenuButton* menuButton = dynamic_cast<MenuButton*>(button);
+    if (menuButton) {
+        menuButton->parentMenu_ = this;
     }
     item.action()->triggered().connect(onItemActionTriggeredSlot_());
     item.action()->aboutToBeDestroyed().connect(onItemActionAboutToBeDestroyedSlot_());
 }
 
 void Menu::preItemRemoved_(const MenuItem& item) {
-    MenuButton* button = item.button();
-    if (button) {
-        button->closePopupMenu();
-        button->parentMenu_ = nullptr;
+    Button* button = item.button();
+    MenuButton* menuButton = dynamic_cast<MenuButton*>(button);
+    if (menuButton) {
+        menuButton->closePopupMenu();
+        menuButton->parentMenu_ = nullptr;
     }
     Action* action = item.action();
     if (action) {
@@ -335,8 +343,8 @@ void Menu::preItemRemoved_(const MenuItem& item) {
 
 void Menu::setupWidthOverrides_() const {
 
-    // This logic is currently disabled because we removed the ability of
-    // MenuButton to override children sizes (it did not implement all style
+    // This logic is currently disabled because we removed the ability of now-deleted
+    // MenuButton class to override children sizes (it did not implement all style
     // rules and made styling difficult). We still keep the code below as
     // comments in case we re-implement it later more generically, for example
     // by adding the ability to setup size overrides to any widget. Or with
@@ -475,15 +483,15 @@ void Menu::onItemActionTriggered_(Widget* from) {
     //
     Menu* newPopup = nullptr;
     for (const MenuItem& item : items_) {
-        MenuButton* button = item.button();
+        MenuButton* menuButton = dynamic_cast<MenuButton*>(item.button());
         if (item.widget() == from) {
-            if (button) {
-                newPopup = button->popupMenu();
+            if (menuButton) {
+                newPopup = menuButton->popupMenu();
             }
         }
-        else if (button) {
+        else if (menuButton) {
             // close other menus
-            button->closePopupMenu();
+            menuButton->closePopupMenu();
         }
     }
 
@@ -585,7 +593,7 @@ void Menu::preMouseMove(MouseMoveEvent* event) {
     const bool shouldOpenSubmenuOnHover = isOpenAsPopup || hasOpenSubmenuPopup;
     const bool shouldProtectOpenSubMenu = isOpenAsPopup;
 
-    MenuButton* button = dynamic_cast<MenuButton*>(hcc);
+    Button* button = dynamic_cast<Button*>(hcc);
     Action* action = button ? button->action() : nullptr;
     const bool isHccMenu = action && action->isMenu_ && action->isEnabled();
 
@@ -642,7 +650,8 @@ void Menu::preMouseMove(MouseMoveEvent* event) {
         // We have no pointer to our current active button atm.
         // But we can check if the hovered button's open popup
         // menu is our open sub-menu.
-        Menu* hccMenuPopup = button ? button->popupMenu() : nullptr;
+        MenuButton* menuButton = dynamic_cast<MenuButton*>(button);
+        Menu* hccMenuPopup = menuButton ? menuButton->popupMenu() : nullptr;
         if (!subMenuPopup_ || subMenuPopup_ != hccMenuPopup) {
             if (isOpenAsPopup || isHccMenu) {
                 closeSubMenu();

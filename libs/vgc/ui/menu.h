@@ -59,8 +59,8 @@ protected:
 
     MenuItem() noexcept = default;
     MenuItem(Widget* separator) noexcept;
-    MenuItem(Action* action, MenuButton* button) noexcept;
-    MenuItem(Action* action, MenuButton* button, Menu* menu) noexcept;
+    MenuItem(Action* action, Button* button) noexcept;
+    MenuItem(Action* action, Button* button, Menu* menu) noexcept;
 
 public:
     /// Returns whether this item has a non-null `action()`, whose role could
@@ -116,17 +116,17 @@ public:
         return menu_.get();
     }
 
-    /// Returns the `MenuButton` widget, if any, that is used to visually show
+    /// Returns the `Button` widget, if any, that is used to visually show
     /// this `MenuItem` in the widget tree.
     ///
     /// This is typically non-null if `isAction()` is true, but we do not provide
     /// this guarantee and therefore the return value must always be checked. For example,
     /// in future version of the library, we could add support for custom menu widgets,
-    /// which a represented differently than a `MenuButton`.
+    /// which a represented differently than a `Button`.
     ///
-    MenuButton* button() const {
+    Button* button() const {
         if (isAction()) {
-            return static_cast<MenuButton*>(widget_);
+            return static_cast<Button*>(widget_);
         }
         else {
             return nullptr;

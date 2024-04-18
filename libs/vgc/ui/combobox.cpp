@@ -141,7 +141,7 @@ void ComboBox::addItem(std::string_view text) {
             // the shortcut size itself is 0.
             Int index = menu->numItems() - 1;
             if (auto item = WidgetWeakPtr(menu->childAt(index)).lock()) {
-                if (auto button = dynamic_cast<MenuButton*>(item.get())) {
+                if (auto button = dynamic_cast<Button*>(item.get())) {
                     button->setShortcutVisible(false);
                 }
             }
