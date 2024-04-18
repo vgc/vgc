@@ -62,9 +62,4 @@ void DropdownButton::onMenuPopupClosed_(bool recursive) {
     menuPopupClosed().emit(recursive);
 }
 
-void DropdownButton::onParentWidgetChanged(Widget* newParent) {
-    SuperClass::onParentWidgetChanged(newParent);
-    parentMenu_ = dynamic_cast<Menu*>(newParent);
-}
-
 } // namespace vgc::ui

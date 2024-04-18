@@ -306,12 +306,16 @@ DropDirection getDropDirection(Menu* parentMenu, DropdownButton* button) {
     }
 }
 
+Menu* getMenuFromItem(Widget* item) {
+    return item ? dynamic_cast<Menu*>(item->parent()) : nullptr;
+}
+
 } // namespace
 
 geometry::Vec2f Menu::computePopupPosition(Widget* opener, Widget* area) {
 
     DropdownButton* button = dynamic_cast<DropdownButton*>(opener);
-    Menu* parentMenu = button ? button->parentMenu() : nullptr;
+    Menu* parentMenu = getMenuFromItem(opener);
 
     DropDirection dropDir = getDropDirection(parentMenu, button);
     int dropDirIndex = (dropDir == DropDirection::Horizontal) ? 0 : 1;
@@ -371,10 +375,6 @@ void Menu::onItemAdded_(const MenuItem& item) {
         button->setDirection(FlexDirection::Row);
         button->setShortcutVisible(isShortcutTrackEnabled_);
     }
-    DropdownButton* dropdownButton = dynamic_cast<DropdownButton*>(button);
-    if (dropdownButton) {
-        dropdownButton->parentMenu_ = this;
-    }
     item.action()->triggered().connect(onItemActionTriggeredSlot_());
     item.action()->aboutToBeDestroyed().connect(onItemActionAboutToBeDestroyedSlot_());
 }
@@ -384,7 +384,6 @@ void Menu::preItemRemoved_(const MenuItem& item) {
     DropdownButton* dropdownButton = dynamic_cast<DropdownButton*>(button);
     if (dropdownButton) {
         dropdownButton->closePopupMenu();
-        dropdownButton->parentMenu_ = nullptr;
     }
     Action* action = item.action();
     if (action) {
@@ -423,7 +422,7 @@ void Menu::setupWidthOverrides_() const {
 bool Menu::openAsPopup_(Widget* from) {
 
     DropdownButton* button = dynamic_cast<DropdownButton*>(from);
-    Menu* parentMenu = button ? button->parentMenu() : nullptr;
+    Menu* parentMenu = getMenuFromItem(from);
 
     // Find the OverlayArea where to place the popup.
     //
@@ -505,8 +504,7 @@ void Menu::exit_() {
 
 void Menu::onSelfActionTriggered_(Widget* from) {
 
-    DropdownButton* button = dynamic_cast<DropdownButton*>(from);
-    Menu* parentMenu = button ? button->parentMenu() : nullptr;
+    Menu* parentMenu = getMenuFromItem(from);
 
     if (parentMenu && !parentMenu->isOpenAsPopup() && isOpenAsPopup()) {
         parentMenu->exit_();
