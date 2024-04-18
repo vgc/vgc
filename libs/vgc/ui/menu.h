@@ -23,8 +23,8 @@
 #include <vgc/graphics/richtext.h>
 #include <vgc/ui/action.h>
 #include <vgc/ui/api.h>
+#include <vgc/ui/dropdownbutton.h>
 #include <vgc/ui/flex.h>
-#include <vgc/ui/menubutton.h>
 #include <vgc/ui/widget.h>
 
 namespace vgc::ui {

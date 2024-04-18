@@ -14,8 +14,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef VGC_UI_MENUBUTTON_H
-#define VGC_UI_MENUBUTTON_H
+#ifndef VGC_UI_DROPDOWNBUTTON_H
+#define VGC_UI_DROPDOWNBUTTON_H
 
 #include <string>
 #include <string_view>
@@ -35,7 +35,7 @@
 namespace vgc::ui {
 
 VGC_DECLARE_OBJECT(Menu);
-VGC_DECLARE_OBJECT(MenuButton);
+VGC_DECLARE_OBJECT(DropdownButton);
 
 /// \enum vgc::ui::MenuDropDirection
 /// \brief The direction in which a dropdown menu should appear.
@@ -45,21 +45,21 @@ enum class MenuDropDirection {
     Vertical,
 };
 
-/// \class vgc::ui::MenuButton
+/// \class vgc::ui::DropdownButton
 /// \brief A button with a special layout for Menus.
 ///
-class VGC_UI_API MenuButton : public Button {
+class VGC_UI_API DropdownButton : public Button {
 private:
-    VGC_OBJECT(MenuButton, Button)
+    VGC_OBJECT(DropdownButton, Button)
     friend Menu;
 
 protected:
-    MenuButton(CreateKey, Action* action, FlexDirection layoutDirection);
+    DropdownButton(CreateKey, Action* action, FlexDirection layoutDirection);
 
 public:
-    /// Creates an MenuButton with the given `action`.
+    /// Creates an DropdownButton with the given `action`.
     ///
-    static MenuButtonPtr
+    static DropdownButtonPtr
     create(Action* action, FlexDirection layoutDirection = FlexDirection::Column);
 
     void setMenuDropDirection(MenuDropDirection direction) {
@@ -100,4 +100,4 @@ private:
 
 } // namespace vgc::ui
 
-#endif // VGC_UI_MENUBUTTON_H
+#endif // VGC_UI_DROPDOWNBUTTON_H

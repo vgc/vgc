@@ -25,6 +25,7 @@ vgc_add_library(ui
         command.h
         cursor.h
         dialog.h
+        dropdownbutton.h
         event.h
         exceptions.h
         focus.h
@@ -43,7 +44,6 @@ vgc_add_library(ui
         macospermissions.h
         margins.h
         menu.h
-        menubutton.h
         messagedialog.h
         modifierkey.h
         module.h
@@ -94,6 +94,7 @@ vgc_add_library(ui
         command.cpp
         cursor.cpp
         dialog.cpp
+        dropdownbutton.cpp
         event.cpp
         exceptions.cpp
         focus.cpp
@@ -111,7 +112,6 @@ vgc_add_library(ui
         logcategories.cpp
         margins.cpp
         menu.cpp
-        menubutton.cpp
         messagedialog.cpp
         modifierkey.cpp
         module.cpp

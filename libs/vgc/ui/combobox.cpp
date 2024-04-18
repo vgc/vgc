@@ -46,7 +46,7 @@ VGC_UI_DEFINE_TRIGGER_COMMAND( //
 } // namespace commands_
 
 ComboBox::ComboBox(CreateKey key, std::string_view title)
-    : MenuButton(key, nullptr, FlexDirection::Row)
+    : DropdownButton(key, nullptr, FlexDirection::Row)
     , title_(title) {
 
     addStyleClass(strings::ComboBox);
