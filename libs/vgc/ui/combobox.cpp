@@ -84,7 +84,7 @@ ComboBox::ComboBox(CreateKey key, std::string_view title)
     setFocusPolicy(FocusPolicy::Tab);
     setFocusStrength(FocusStrength::Medium);
 
-    setMenuDropDirection(MenuDropDirection::Vertical);
+    setDropDirection(DropDirection::Vertical);
     setArrowVisible(true);
     setShortcutVisible(false);
 

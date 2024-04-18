@@ -238,20 +238,20 @@ void placeMenuFit(
     menuRect.setPosition(resultPos);
 }
 
-MenuDropDirection getMenuDropDirection(Menu* parentMenu, DropdownButton* button) {
+DropDirection getDropDirection(Menu* parentMenu, DropdownButton* button) {
     if (parentMenu) {
         if (parentMenu->isRow()) {
-            return MenuDropDirection::Vertical;
+            return DropDirection::Vertical;
         }
         else {
-            return MenuDropDirection::Horizontal;
+            return DropDirection::Horizontal;
         }
     }
     else if (button) {
-        return button->menuDropDirection();
+        return button->dropDirection();
     }
     else {
-        return MenuDropDirection::Horizontal;
+        return DropDirection::Horizontal;
     }
 }
 
@@ -262,8 +262,8 @@ geometry::Vec2f Menu::computePopupPosition(Widget* opener, Widget* area) {
     DropdownButton* button = dynamic_cast<DropdownButton*>(opener);
     Menu* parentMenu = button ? button->parentMenu() : nullptr;
 
-    MenuDropDirection dropDir = getMenuDropDirection(parentMenu, button);
-    int dropDirIndex = (dropDir == MenuDropDirection::Horizontal) ? 0 : 1;
+    DropDirection dropDir = getDropDirection(parentMenu, button);
+    int dropDirIndex = (dropDir == DropDirection::Horizontal) ? 0 : 1;
 
     geometry::Rect2f areaRect = area->rect();
     geometry::Rect2f anchorRect = opener->mapTo(area, opener->rect());
@@ -278,7 +278,7 @@ geometry::Vec2f Menu::computePopupPosition(Widget* opener, Widget* area) {
 
     Margins paddingAndBorder = padding() + border();
     geometry::Vec2f fixedShifts;
-    if (dropDir == MenuDropDirection::Horizontal) {
+    if (dropDir == DropDirection::Horizontal) {
         fixedShifts = {-paddingAndBorder.bottom(), -paddingAndBorder.top()};
     }
     else {

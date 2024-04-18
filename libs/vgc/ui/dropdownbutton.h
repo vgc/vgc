@@ -37,16 +37,16 @@ namespace vgc::ui {
 VGC_DECLARE_OBJECT(Menu);
 VGC_DECLARE_OBJECT(DropdownButton);
 
-/// \enum vgc::ui::MenuDropDirection
-/// \brief The direction in which a dropdown menu should appear.
+/// \enum vgc::ui::DropDirection
+/// \brief The direction in which a dropdown overlay should appear.
 ///
-enum class MenuDropDirection {
+enum class DropDirection {
     Horizontal,
     Vertical,
 };
 
 /// \class vgc::ui::DropdownButton
-/// \brief A button with a special layout for Menus.
+/// \brief A button with the ability to open a dropdown overlay.
 ///
 class VGC_UI_API DropdownButton : public Button {
 private:
@@ -62,12 +62,12 @@ public:
     static DropdownButtonPtr
     create(Action* action, FlexDirection layoutDirection = FlexDirection::Column);
 
-    void setMenuDropDirection(MenuDropDirection direction) {
-        menuDropDirection_ = direction;
+    void setDropDirection(DropDirection direction) {
+        dropDirection_ = direction;
     }
 
-    MenuDropDirection menuDropDirection() const {
-        return menuDropDirection_;
+    DropDirection dropDirection() const {
+        return dropDirection_;
     }
 
     Menu* parentMenu() const {
@@ -87,7 +87,7 @@ protected:
     void onParentWidgetChanged(Widget* newParent) override;
 
 private:
-    MenuDropDirection menuDropDirection_ = MenuDropDirection::Horizontal;
+    DropDirection dropDirection_ = DropDirection::Horizontal;
     Menu* parentMenu_ = nullptr;
     Menu* popupMenu_ = nullptr;
 
