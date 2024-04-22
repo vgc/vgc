@@ -59,6 +59,7 @@ vgc_add_library(core
         boolguard.cpp
         color.cpp
         datetime.cpp
+        enum.cpp
         exceptions.cpp
         format.cpp
         history.cpp
