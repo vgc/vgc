@@ -101,7 +101,7 @@ std::string getEnumFullTypeName(std::string_view prettyFunction) {
 
 } // namespace
 
-EnumData::EnumData(TypeId id, std::string_view prettyFunction)
+EnumDataBase::EnumDataBase(TypeId id, std::string_view prettyFunction)
     : id(id)
     , fullTypeName(getEnumFullTypeName(prettyFunction)) {
 
@@ -120,15 +120,11 @@ EnumData::EnumData(TypeId id, std::string_view prettyFunction)
     unknownItemFullName = fullTypeName + unknownItemShortName;
 }
 
-void EnumData::addItem(
-    UInt64 value,
-    std::string_view shortName,
-    std::string_view prettyName) {
+EnumDataBase::~EnumDataBase() {
+}
 
-    Int index = values.length();
-    valueToIndex[value] = index;
+void EnumDataBase::addItemBase(std::string_view shortName, std::string_view prettyName) {
 
-    values.append(value);
     shortNames.append(std::string(shortName));
     prettyNames.append(std::string(prettyName));
 
@@ -139,15 +135,5 @@ void EnumData::addItem(
     fullName.append(shortName);
     fullNames.append(std::move(fullName));
 };
-
-std::optional<Int> EnumData::getIndex(UInt64 value) const {
-    auto search = valueToIndex.find(value);
-    if (search != valueToIndex.end()) {
-        return search->second;
-    }
-    else {
-        return std::nullopt;
-    }
-}
 
 } // namespace vgc::core::detail
