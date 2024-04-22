@@ -34,7 +34,10 @@ namespace vgc::core {
 
 namespace detail {
 
-struct VGC_CORE_API EnumData {
+// We use this base class for everything that does not need to be templated and
+// can therefore be moved to the .cpp file.
+//
+struct VGC_CORE_API EnumDataBase {
 
     TypeId id;
 
@@ -45,12 +48,9 @@ struct VGC_CORE_API EnumData {
     std::string unknownItemShortName;  // "Unknown_Key"
     std::string unknownItemPrettyName; // "Unknown Key"
 
-    Array<UInt64> values;           // static_cast<UInt64>(vgc::ui::Key::Digit0) (= 0x30)
     Array<std::string> fullNames;   // "vgc::ui::Key::Digit0"
     Array<std::string> shortNames;  // "Digit0"
     Array<std::string> prettyNames; // "0"
-
-    std::unordered_map<UInt64, Int> valueToIndex;
 
     // Note: we store the data in separate arrays (rather than a single
     // Array<ItemData>) and with redundant info (common prefix for all
@@ -59,20 +59,38 @@ struct VGC_CORE_API EnumData {
     // increases debuggability, and works better with parallelization libs
     // (sometimes not supporting proxy iterators).
 
-    EnumData(TypeId id, std::string_view prettyFunction);
+    EnumDataBase(TypeId id, std::string_view prettyFunction);
+    virtual ~EnumDataBase() = 0;
 
-    void addItem(UInt64 value, std::string_view shortName, std::string_view prettyName);
+    void addItemBase(std::string_view shortName, std::string_view prettyName);
+};
 
-    template<typename EnumType>
-    void addItem(EnumType item, std::string_view shortName, std::string_view prettyName) {
-        addItem(static_cast<UInt64>(item), shortName, prettyName);
+template<typename EnumType>
+struct EnumData : EnumDataBase {
+
+    Array<EnumType> values;
+    std::unordered_map<EnumType, Int> valueToIndex;
+
+    EnumData(TypeId id, std::string_view prettyFunction)
+        : EnumDataBase(id, prettyFunction) {
     }
 
-    std::optional<Int> getIndex(UInt64 value) const;
+    void
+    addItem(EnumType value, std::string_view shortName, std::string_view prettyName) {
+        Int index = values.length();
+        valueToIndex[value] = index;
+        values.append(value);
+        addItemBase(shortName, prettyName);
+    }
 
-    template<typename EnumType>
-    std::optional<Int> getIndex(EnumType item) const {
-        return getIndex(static_cast<UInt64>(item));
+    std::optional<Int> getIndex(EnumType value) const {
+        auto search = valueToIndex.find(value);
+        if (search != valueToIndex.end()) {
+            return search->second;
+        }
+        else {
+            return std::nullopt;
+        }
     }
 };
 
@@ -139,50 +157,52 @@ class Enum;
 ///
 class Enum {
 public:
-    using UInt64ArrayView = const Array<UInt64>&;
-    using StringArrayView = const Array<std::string>&;
+    template<typename T>
+    using ArrayView = const Array<T>&;
+
+    using StringArrayView = ArrayView<std::string>;
 
     template<typename EnumType>
     static std::string_view shortTypeName() {
-        const detail::EnumData& data = enumData_(EnumType{});
+        const detail::EnumData<EnumType>& data = enumData_(EnumType{});
         return data.shortTypeName;
     }
 
     template<typename EnumType>
     static std::string_view fullTypeName() {
-        const detail::EnumData& data = enumData_(EnumType{});
+        const detail::EnumData<EnumType>& data = enumData_(EnumType{});
         return data.fullTypeName;
     }
 
     // TODO: prettyTypeName?
 
     template<typename EnumType>
-    static UInt64ArrayView values() {
-        const detail::EnumData& data = enumData_(EnumType{});
+    static ArrayView<EnumType> values() {
+        const detail::EnumData<EnumType>& data = enumData_(EnumType{});
         return data.values;
     }
 
     template<typename EnumType>
     static StringArrayView shortNames() {
-        const detail::EnumData& data = enumData_(EnumType{});
+        const detail::EnumData<EnumType>& data = enumData_(EnumType{});
         return data.shortNames;
     }
 
     template<typename EnumType>
     static StringArrayView fullNames() {
-        const detail::EnumData& data = enumData_(EnumType{});
+        const detail::EnumData<EnumType>& data = enumData_(EnumType{});
         return data.fullNames;
     }
 
     template<typename EnumType>
     static StringArrayView prettyNames() {
-        const detail::EnumData& data = enumData_(EnumType{});
+        const detail::EnumData<EnumType>& data = enumData_(EnumType{});
         return data.prettyNames;
     }
 
     template<typename EnumType>
     static std::string_view shortName(EnumType item) {
-        const detail::EnumData& data = enumData_(item);
+        const detail::EnumData<EnumType>& data = enumData_(item);
         if (auto index = data.getIndex(item)) {
             return data.shortNames[*index];
         }
@@ -193,7 +213,7 @@ public:
 
     template<typename EnumType>
     static std::string_view fullName(EnumType item) {
-        const detail::EnumData& data = enumData_(item);
+        const detail::EnumData<EnumType>& data = enumData_(item);
         if (auto index = data.getIndex(item)) {
             return data.fullNames[*index];
         }
@@ -204,7 +224,7 @@ public:
 
     template<typename EnumType>
     static std::string_view prettyName(EnumType item) {
-        const detail::EnumData& data = enumData_(item);
+        const detail::EnumData<EnumType>& data = enumData_(item);
         if (auto index = data.getIndex(item)) {
             return data.prettyNames[*index];
         }
@@ -240,16 +260,16 @@ struct fmt::formatter<
 /// Declares a scoped enum. See `Enum` for more details.
 ///
 #define VGC_DECLARE_ENUM(Enum)                                                           \
-    const ::vgc::core::detail::EnumData& enumData_(Enum value);
+    const ::vgc::core::detail::EnumData<Enum>& enumData_(Enum value);
 
 /// Starts the definition of a scoped enum. See `Enum` for more details.
 ///
 #define VGC_DEFINE_ENUM_BEGIN(Enum)                                                      \
-    const ::vgc::core::detail::EnumData& enumData_(Enum) {                               \
+    const ::vgc::core::detail::EnumData<Enum>& enumData_(Enum) {                         \
         using EnumType = Enum;                                                           \
         static ::std::string pf = VGC_PRETTY_FUNCTION;                                   \
         static auto createData = []() {                                                  \
-            ::vgc::core::detail::EnumData data(::vgc::core::typeId<EnumType>(), pf);
+            ::vgc::core::detail::EnumData<Enum> data(::vgc::core::typeId<EnumType>(), pf);
 
 /// Defines an enumerator of a scoped enum. See `Enum` for more details.
 ///
