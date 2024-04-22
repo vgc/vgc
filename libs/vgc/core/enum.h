@@ -17,121 +17,68 @@
 #ifndef VGC_CORE_ENUM_H
 #define VGC_CORE_ENUM_H
 
-#include <vgc/core/defs.h>
+#include <optional>
+#include <string>
+#include <string_view>
+#include <unordered_map>
+
+#include <vgc/core/api.h>
+#include <vgc/core/arithmetic.h>
+#include <vgc/core/array.h>
 #include <vgc/core/format.h>
+#include <vgc/core/preprocessor.h>
 #include <vgc/core/templateutil.h>
+#include <vgc/core/typeid.h>
 
 namespace vgc::core {
 
 namespace detail {
 
-// Extracts the fully-qualified name of the enum class (e.g., `vgc::ui::Key`)
-// from the platform-dependent VGC_PRETTY_FUNCTION output of enumData_, e.g.:
-//
-// `const class vgc::core::detail::EnumData &__cdecl vgc::ui::enumData_(enum vgc::ui::Key)`
-// `const ::vgc::core::detail::EnumData &vgc::ui::enumData_(Key)`
-//
-inline std::string fullEnumClassName(std::string_view enumDataPrettyFunction) {
+struct VGC_CORE_API EnumData {
 
-    const auto& s = enumDataPrettyFunction;
+    TypeId id;
 
-    std::string res;
+    std::string fullTypeName;  // "vgc::ui::Key"
+    std::string shortTypeName; // "Key"
 
-    // `&__cdecl vgc::ui::enumData_(enum vgc::ui::Key)`
-    //           ^        ^                       ^  ^
-    //           k        l                       i  j
-    //
-    // `&vgc::ui::enumData_(Key)`
-    //   ^        ^         ^  ^
-    //   k        l         i  j
+    std::string unknownItemFullName;   // "vgc::ui::Key::Unknown_Key"
+    std::string unknownItemShortName;  // "Unknown_Key"
+    std::string unknownItemPrettyName; // "Unknown Key"
 
-    // Find closing parenthesis
-    size_t j = s.size();
-    if (j == 0) {
-        return "";
-    }
-    --j;
-    while (j > 0 && s[j] != ')') {
-        --j;
-    }
+    Array<UInt64> values;           // static_cast<UInt64>(vgc::ui::Key::Digit0) (= 0x30)
+    Array<std::string> fullNames;   // "vgc::ui::Key::Digit0"
+    Array<std::string> shortNames;  // "Digit0"
+    Array<std::string> prettyNames; // "0"
 
-    // Find opening parenthesis or whitespace or colon
-    size_t i = j;
-    while (i > 0 && s[i] != '(' && s[i] != ' ' && s[i] != ':') {
-        --i;
+    std::unordered_map<UInt64, Int> valueToIndex;
+
+    // Note: we store the data in separate arrays (rather than a single
+    // Array<ItemData>) and with redundant info (common prefix for all
+    // fullNames) in order to facilitate iteration without the need for proxy
+    // iterators. This approach is typically safer (stable string addresses),
+    // increases debuggability, and works better with parallelization libs
+    // (sometimes not supporting proxy iterators).
+
+    EnumData(TypeId id, std::string_view prettyFunction);
+
+    void addItem(UInt64 value, std::string_view shortName, std::string_view prettyName);
+
+    template<typename EnumType>
+    void addItem(EnumType item, std::string_view shortName, std::string_view prettyName) {
+        addItem(static_cast<UInt64>(item), shortName, prettyName);
     }
 
-    // Set i to be the character just after found parenthese/whitespace/colon
-    ++i;
+    std::optional<Int> getIndex(UInt64 value) const;
 
-    // Find opening parenthesis
-    size_t l = i;
-    while (l > 0 && s[l] != '(') {
-        --l;
+    template<typename EnumType>
+    std::optional<Int> getIndex(EnumType item) const {
+        return getIndex(static_cast<UInt64>(item));
     }
-
-    // Skip "enumData_"
-    size_t enumDataSize = 9;
-    if (l >= enumDataSize) {
-        l -= enumDataSize;
-    }
-    else {
-        l = 0;
-    }
-
-    // Find whitespace or ampersand
-    size_t k = l;
-    while (k > 0 && s[k] != ' ' && s[k] != '&') {
-        --k;
-    }
-
-    // Set k to be the character just after found whitespace/ampersand
-    ++k;
-
-    // Concatenate namespace and class name
-    if (l > k) {
-        res += s.substr(k, l - k);
-    }
-    if (j > i) {
-        res += s.substr(i, j - i);
-    }
-    return res;
-}
-
-// Stores strings related to an enum item
-class EnumData {
-public:
-    EnumData(
-        std::string fullEnumClassName,         // "vgc::ui::Key"
-        std::string_view shortEnumItemName,    // "Digit0"
-        std::string_view enumItemPrettyName) { // "0"
-
-        fullEnumItemName_ = fullEnumClassName;
-        fullEnumItemName_.append("::");
-        fullEnumItemName_.append(shortEnumItemName);
-        enumItemPrettyName_ = enumItemPrettyName;
-        prefixSize_ = fullEnumItemName_.size() - shortEnumItemName.size();
-    }
-
-    std::string_view shortName() const {
-        return std::string_view(fullEnumItemName_).substr(prefixSize_);
-    }
-
-    std::string_view fullName() const {
-        return fullEnumItemName_;
-    }
-
-    std::string_view prettyName() const {
-        return enumItemPrettyName_;
-    }
-
-private:
-    std::string fullEnumItemName_;   // "vgc::ui::Key::Digit0"
-    std::string enumItemPrettyName_; // "0"
-    size_t prefixSize_;              // "vgc::ui::Key::".size()
 };
 
 } // namespace detail
+
+class Enum;
 
 /// \class vgc::core::Enum
 /// \brief Query metadata about registered enum items
@@ -192,19 +139,78 @@ private:
 ///
 class Enum {
 public:
+    using UInt64ArrayView = const Array<UInt64>&;
+    using StringArrayView = const Array<std::string>&;
+
+    template<typename EnumType>
+    static std::string_view shortTypeName() {
+        const detail::EnumData& data = enumData_(EnumType{});
+        return data.shortTypeName;
+    }
+
+    template<typename EnumType>
+    static std::string_view fullTypeName() {
+        const detail::EnumData& data = enumData_(EnumType{});
+        return data.fullTypeName;
+    }
+
+    // TODO: prettyTypeName?
+
+    template<typename EnumType>
+    static UInt64ArrayView values() {
+        const detail::EnumData& data = enumData_(EnumType{});
+        return data.values;
+    }
+
+    template<typename EnumType>
+    static StringArrayView shortNames() {
+        const detail::EnumData& data = enumData_(EnumType{});
+        return data.shortNames;
+    }
+
+    template<typename EnumType>
+    static StringArrayView fullNames() {
+        const detail::EnumData& data = enumData_(EnumType{});
+        return data.fullNames;
+    }
+
+    template<typename EnumType>
+    static StringArrayView prettyNames() {
+        const detail::EnumData& data = enumData_(EnumType{});
+        return data.prettyNames;
+    }
+
     template<typename EnumType>
     static std::string_view shortName(EnumType item) {
-        return enumData_(item).shortName();
+        const detail::EnumData& data = enumData_(item);
+        if (auto index = data.getIndex(item)) {
+            return data.shortNames[*index];
+        }
+        else {
+            return data.unknownItemShortName;
+        }
     }
 
     template<typename EnumType>
     static std::string_view fullName(EnumType item) {
-        return enumData_(item).fullName();
+        const detail::EnumData& data = enumData_(item);
+        if (auto index = data.getIndex(item)) {
+            return data.fullNames[*index];
+        }
+        else {
+            return data.unknownItemFullName;
+        }
     }
 
     template<typename EnumType>
     static std::string_view prettyName(EnumType item) {
-        return enumData_(item).prettyName();
+        const detail::EnumData& data = enumData_(item);
+        if (auto index = data.getIndex(item)) {
+            return data.prettyNames[*index];
+        }
+        else {
+            return data.unknownItemPrettyName;
+        }
     }
 };
 
@@ -239,35 +245,24 @@ struct fmt::formatter<
 /// Starts the definition of a scoped enum. See `Enum` for more details.
 ///
 #define VGC_DEFINE_ENUM_BEGIN(Enum)                                                      \
-    const ::vgc::core::detail::EnumData& enumData_(Enum value) {                         \
-        using E = Enum;                                                                  \
-        using S = ::vgc::core::detail::EnumData;                                         \
-        using Map = std::unordered_map<E, S>;                                            \
-        std::string pf = VGC_PRETTY_FUNCTION;                                            \
-        static const std::string fecn = ::vgc::core::detail::fullEnumClassName(pf);      \
-        static const S unknown =                                                         \
-            S(fecn, "Unknown_" #Enum, "Unknown " #Enum);                                 \
-        static auto createMap = []() {                                                   \
-            Map map;
+    const ::vgc::core::detail::EnumData& enumData_(Enum) {                               \
+        using EnumType = Enum;                                                           \
+        static ::std::string pf = VGC_PRETTY_FUNCTION;                                   \
+        static auto createData = []() {                                                  \
+            ::vgc::core::detail::EnumData data(::vgc::core::typeId<EnumType>(), pf);
 
 /// Defines an enumerator of a scoped enum. See `Enum` for more details.
 ///
 #define VGC_ENUM_ITEM(name, prettyName)                                                  \
-            map.insert({E::name, S(fecn, VGC_PP_STR(name), prettyName)});
+            data.addItem(EnumType::name, VGC_PP_STR(name), prettyName);
 
 /// Ends the definition of a scoped enum. See `Enum` for more details.
 ///
 #define VGC_DEFINE_ENUM_END()                                                            \
-            return map;                                                                  \
+            return data;                                                                 \
         };                                                                               \
-        static const Map map = createMap();                                              \
-        auto search = map.find(value);                                                   \
-        if (search != map.end()) {                                                       \
-            return search->second;                                                       \
-        }                                                                                \
-        else {                                                                           \
-            return unknown;                                                              \
-        }                                                                                \
+        static auto data = createData();                                                 \
+        return data;                                                                     \
     }
 
 #define VGC_ENUM_ITEM_(x, t)                                                             \

@@ -658,15 +658,8 @@ TEST(TestFormat, Enum) {
     using vgc::foo::MyEnum;
     using vgc::foo::VeryLongEnum;
 
-    // clang-format off
-    std::string_view prettyFunction1 =
-        "const class vgc::core::detail::EnumData &__cdecl vgc::ui::enumData_(enum vgc::ui::Key)";
-    std::string_view prettyFunction2 =
-        "const ::vgc::core::detail::EnumData &vgc::ui::enumData_(Key)";
-    // clang-format on
-
-    EXPECT_EQ(vgc::core::detail::fullEnumClassName(prettyFunction1), "vgc::ui::Key");
-    EXPECT_EQ(vgc::core::detail::fullEnumClassName(prettyFunction2), "vgc::ui::Key");
+    EXPECT_EQ(Enum::fullTypeName<MyEnum>(), "vgc::foo::MyEnum");
+    EXPECT_EQ(Enum::shortTypeName<MyEnum>(), "MyEnum");
 
     EXPECT_EQ(Enum::shortName(MyEnum::MyValue), "MyValue");
     EXPECT_EQ(Enum::fullName(MyEnum::MyValue), "vgc::foo::MyEnum::MyValue");
