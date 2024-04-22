@@ -34,12 +34,6 @@ namespace vgc::core {
 
 namespace detail {
 
-// Extracts the fully-qualified name of the enum type (e.g., `vgc::ui::Key`)
-// from the result of calling VGC_PRETTY_FUNCTION in enumData_().
-//
-VGC_CORE_API
-std::string getEnumFullTypeName(std::string_view prettyFunction);
-
 struct VGC_CORE_API EnumData {
 
     TypeId id;
