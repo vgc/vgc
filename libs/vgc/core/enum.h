@@ -66,7 +66,7 @@ struct VGC_CORE_API EnumDataBase {
 };
 
 template<typename EnumType>
-struct VGC_CORE_API EnumData : EnumDataBase {
+struct EnumData : EnumDataBase {
 
     Array<EnumType> values;
     std::unordered_map<EnumType, Int> valueToIndex;
