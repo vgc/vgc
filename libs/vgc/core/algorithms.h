@@ -37,6 +37,8 @@
 //
 #include <vgc/core/arithmetic.h>
 
+#include <vgc/core/detail/containerutil.h> // IsCompatibleRange
+
 namespace vgc::core {
 
 /// Returns the sum of all values in the given vector.
@@ -126,7 +128,10 @@ bool contains(const std::vector<T>& v, const T& x) {
 
 /// Returns whether the given container `c` contains the given value `x`.
 ///
-template<typename Container, typename T>
+template<
+    typename Container,
+    typename T,
+    VGC_REQUIRES(detail::isCompatibleRange<Container, T>)>
 bool contains(const Container& c, const T& x) {
     return std::find(c.begin(), c.end(), x) != c.end();
 }
