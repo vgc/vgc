@@ -137,7 +137,7 @@ void EnumDataBase::addItemBase(
     Int index = valueData.length();
     valueToIndex[value] = index;
 
-    // Note: we will be able to use emplaceLast in C++20:
+    // Note: we will be able to use make_unique in C++20:
     // https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2019/p0960r3.html
     //
     std::unique_ptr<EnumValueData> ptr(new EnumValueData{

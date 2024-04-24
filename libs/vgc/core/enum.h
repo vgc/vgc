@@ -55,13 +55,6 @@ struct EnumValueData {
 // can therefore be moved to the .cpp file.
 //
 struct VGC_CORE_API EnumDataBase {
-
-    EnumDataBase(const EnumDataBase&) = delete;
-    EnumDataBase& operator=(const EnumDataBase&) = delete;
-
-    EnumDataBase(EnumDataBase&&) = default;
-    EnumDataBase& operator=(EnumDataBase&&) = default;
-
     TypeId typeId;
 
     std::string fullTypeName;  // "vgc::ui::Key"
@@ -525,7 +518,7 @@ struct fmt::formatter<
         static auto createData = []() {                                                  \
             auto data = new ::vgc::core::detail::EnumData<Enum>(                         \
                 ::vgc::core::typeId<EnumType>(), pf);                                    \
-                registerEnumDataBase(*data);
+            registerEnumDataBase(*data);
 
 /// Defines an enumerator of a scoped enum. See `Enum` for more details.
 ///
@@ -537,8 +530,7 @@ struct fmt::formatter<
 #define VGC_DEFINE_ENUM_END()                                                            \
             return data;                                                                 \
         };                                                                               \
-        static auto data = createData();                                      \
-                                                             \
+        static auto data = createData();                                                 \
         return *data;                                                                    \
     }
 
