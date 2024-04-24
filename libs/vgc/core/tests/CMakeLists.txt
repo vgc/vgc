@@ -3,6 +3,7 @@ vgc_test_library(core
         test_arithmetic.cpp
         test_array.cpp
         test_datetime.cpp
+        test_enum.cpp
         test_flags.cpp
         test_format.cpp
         test_int.cpp
