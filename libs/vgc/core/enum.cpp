@@ -177,14 +177,28 @@ LockedRegistryPtr getRegistry() {
 } // namespace
 
 void registerEnumDataBase(const EnumDataBase& data) {
-    VGC_DEBUG_TMP_EXPR(data.typeId);
     auto registry = getRegistry();
     registry->try_emplace(data.typeId, &data);
 }
 
-const EnumDataBase& getEnumDataBase(TypeId typeId) {
+const EnumDataBase* getEnumDataBase(TypeId typeId) {
     auto registry = getRegistry();
-    return *registry->at(typeId);
+    auto search = registry->find(typeId);
+    if (search != registry->end()) {
+        return search->second;
+    }
+    else {
+        return nullptr;
+    }
+}
+
+const EnumValueData* getEnumValueData(TypeId typeId, UInt64 value) {
+    if (const EnumDataBase* dataBase = getEnumDataBase(typeId)) {
+        if (auto index = dataBase->getIndexBase(value)) {
+            return dataBase->valueData[*index].get();
+        }
+    }
+    return nullptr;
 }
 
 } // namespace vgc::core::detail

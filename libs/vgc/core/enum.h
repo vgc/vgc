@@ -22,6 +22,7 @@
 #include <string_view>
 #include <unordered_map>
 
+#include <vgc/core/algorithms.h> // hashCombine
 #include <vgc/core/api.h>
 #include <vgc/core/arithmetic.h>
 #include <vgc/core/array.h>
@@ -104,17 +105,10 @@ VGC_CORE_API
 void registerEnumDataBase(const EnumDataBase& data);
 
 VGC_CORE_API
-const EnumDataBase& getEnumDataBase(TypeId typeId);
+const EnumDataBase* getEnumDataBase(TypeId typeId);
 
-inline const EnumValueData* getEnumValueData(TypeId typeId, UInt64 value) {
-    const EnumDataBase& dataBase = getEnumDataBase(typeId);
-    if (auto index = dataBase.getIndexBase(value)) {
-        return dataBase.valueData[*index].get();
-    }
-    else {
-        return nullptr;
-    }
-}
+VGC_CORE_API
+const EnumValueData* getEnumValueData(TypeId typeId, UInt64 value);
 
 template<typename EnumType>
 struct EnumData : EnumDataBase {
@@ -138,6 +132,21 @@ struct EnumData : EnumDataBase {
 
 } // namespace detail
 
+/// Type trait for `isRegisteredEnum`.
+///
+template<typename EnumType, typename SFINAE = void>
+struct IsRegisteredEnum : std::false_type {};
+
+template<typename EnumType>
+struct IsRegisteredEnum<EnumType, RequiresValid<decltype(enumData_(EnumType()))>>
+    : std::true_type {};
+
+/// Checks whether `EnumType` is an enumeration type that has been registered
+/// via `VGC_DECLARE_ENUM` and `VGC_DEFINE_ENUM`.
+///
+template<typename EnumType>
+inline constexpr bool isRegisteredEnum = IsRegisteredEnum<EnumType>::value;
+
 /// \class vgc::core::EnumValue
 /// \brief Stores any Enum value in a type-safe way.
 ///
@@ -149,7 +158,7 @@ public:
     /// Creates an empty `EnumValue`.
     ///
     EnumValue()
-        : data_(nullptr) {
+        : typeId_(core::typeId<EmptyTag>()) {
     }
 
     /// Creates an `EnumValue` from the given enumerator value.
@@ -158,39 +167,45 @@ public:
     //
     template<typename EnumType, VGC_REQUIRES(std::is_enum_v<EnumType>)>
     EnumValue(EnumType value)
-        : data_(detail::getEnumValueData(
-              core::typeId<EnumType>(),
-              static_cast<UInt64>(value))) {
+        : typeId_(core::typeId<EnumType>())
+        , value_(static_cast<UInt64>(value)) {
 
-        // Note: alternatively, we could store the typeId and the UInt64 value
-        // as data members, and defer the call to getEnumValueData() to when
-        // it's needed. However, this would double the sizeof(EnumValue), and
-        // be slower if the data is needed more than once. But it would be
-        // faster is the data is never needed. If we defer the call to
-        // getEnumValueData() but keep it in cache, this would triple the
-        // sizeof(EnumValue) and would need thread-safey considerations.
-        //
-        // However, note that our current approach doesn't allow storing
-        // values which have not been registered.
-        //
-        // So it's a tradeoff, and we haven't yet do serious benchmarking to
-        // know what's best.
+        if constexpr (isRegisteredEnum<EnumType>) {
+
+            // Ensures that the global EnumData<EnumType> is initialized by
+            // making a call to `enumData_()` now. This is important since the
+            // data is lazy-initialized, and this constructor might be our only
+            // opportunity to call `enumData_()` before other methods such as
+            // `EnumValue::shortName()` are called, which require the data to
+            // have already been initialized (we cannot initialize it there
+            // because we do not have access to `EnumType` anymore).
+            //
+            const auto& init = enumData_(value);
+            VGC_UNUSED(init);
+        }
+
+        // Note: alternatively, we could call getEnumValueData() here and only
+        // store the returned pointer as data member. This would make
+        // `EnumValue` 64bit instead of 128bit, but would only work for
+        // registered enums, and would not support enum values outside of the
+        // registered values (so wouldn't work for flags). Therefore, for more
+        // genericity, we have chosen the current approach.
     }
 
     /// Returns whether the `EnumValue` is empty.
     ///
     bool isEmpty() const {
-        return data_ == nullptr;
+        return typeId_ == core::typeId<EmptyTag>();
     }
 
     /// Returns the `TypeId` of the type of the stored enumerator value, if any.
     ///
     std::optional<TypeId> typeId() const {
-        if (data_) {
-            return data_->typeId;
+        if (isEmpty()) {
+            return std::nullopt;
         }
         else {
-            return std::nullopt;
+            return typeId_;
         }
     }
 
@@ -199,7 +214,7 @@ public:
     ///
     template<typename EnumType>
     bool has() const {
-        return typeId() == core::typeId<EnumType>();
+        return typeId_ == core::typeId<EnumType>();
     }
 
     /// Returns the stored value as an `EnumType`.
@@ -209,18 +224,18 @@ public:
     ///
     template<typename EnumType>
     EnumType get() {
-        if (!data_) {
+        if (isEmpty()) {
             throw core::LogicError(
                 "Attempting to get the stored value of an empty EnumValue.");
         }
         TypeId requestedType = core::typeId<EnumType>();
-        if (data_->typeId != requestedType) {
+        if (typeId_ != requestedType) {
             throw core::LogicError(core::format(
                 "Mismatch between stored EnumValue type ({}) and requested type ({}).",
-                data_->typeId.name(),
+                typeId_.name(),
                 requestedType.name()));
         }
-        return static_cast<EnumType>(data_->value);
+        return static_cast<EnumType>(value_);
     }
 
     /// Returns the stored value as an `EnumType`.
@@ -230,7 +245,7 @@ public:
     ///
     template<typename EnumType>
     EnumType getUnchecked() {
-        return static_cast<EnumType>(data_->value);
+        return static_cast<EnumType>(value_);
     }
 
     /// Returns the short name (e.g., "Digit0") of the stored enumerator value,
@@ -239,8 +254,8 @@ public:
     /// Otherwise, returns "NoValue".
     ///
     std::string_view shortName() const {
-        if (data_) {
-            return data_->shortName;
+        if (auto data = getEnumValueData_()) {
+            return data->shortName;
         }
         else {
             return "NoValue";
@@ -253,8 +268,8 @@ public:
     /// Otherwise, returns "NoType::NoValue".
     ///
     std::string_view fullName() const {
-        if (data_) {
-            return data_->fullName;
+        if (auto data = getEnumValueData_()) {
+            return data->fullName;
         }
         else {
             return "NoType::NoValue";
@@ -267,8 +282,8 @@ public:
     /// Otherwise, returns "No Value".
     ///
     std::string_view prettyName() const {
-        if (data_) {
-            return data_->prettyName;
+        if (auto data = getEnumValueData_()) {
+            return data->prettyName;
         }
         else {
             return "No Value";
@@ -279,7 +294,7 @@ public:
     /// they have both same type and value.
     ///
     bool operator==(const EnumValue& other) const {
-        return data_ == other.data_;
+        return typeId_ == other.typeId_ && value_ == other.value_;
     }
 
     /// Returns whether the two `EnumValue` are different.
@@ -291,24 +306,24 @@ public:
     /// Compares the two `EnumValue`.
     ///
     bool operator<(const EnumValue& other) const {
-        if (data_ && other.data_) {
-            if (data_->typeId == other.data_->typeId) {
-                return data_->value < other.data_->value;
-            }
-            else {
-                return data_->typeId < other.data_->typeId;
-            }
+        if (typeId_ == other.typeId_) {
+            return value_ < other.value_;
         }
         else {
-            return data_ < other.data_;
+            return typeId_ < other.typeId_;
         }
     }
 
 private:
-    const detail::EnumValueData* data_ = nullptr;
+    TypeId typeId_;
+    UInt64 value_ = 0;
 
     friend std::hash<EnumValue>;
     friend fmt::formatter<EnumValue>;
+
+    const detail::EnumValueData* getEnumValueData_() const {
+        return detail::getEnumValueData(typeId_, value_);
+    }
 };
 
 } // namespace vgc::core
@@ -318,7 +333,9 @@ namespace std {
 template<>
 struct hash<vgc::core::EnumValue> {
     std::size_t operator()(const vgc::core::EnumValue& v) const {
-        return std::hash<const vgc::core::detail::EnumValueData*>()(v.data_);
+        size_t res = 123456;
+        vgc::core::hashCombine(res, v.typeId_, v.value_);
+        return res;
     }
 };
 

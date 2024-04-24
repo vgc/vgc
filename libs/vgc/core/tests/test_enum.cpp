@@ -41,6 +41,20 @@ enum class ScopedBar {
 
 } // namespace
 
+namespace foo {
+
+// Note: for testing purposes, we intentionally do not place this in an unnamed namespace.
+
+enum class RegisteredFoo {
+    HelloWorld
+};
+
+VGC_DEFINE_ENUM(
+    RegisteredFoo, //
+    (HelloWorld, "Hello, world!"))
+
+} // namespace foo
+
 TEST(TestEnumValue, Empty) {
     vgc::core::EnumValue v;
     EXPECT_TRUE(v.isEmpty());
@@ -131,6 +145,14 @@ TEST(TestEnumValue, Assignment) {
 
     v1 = A;
     EXPECT_EQ(v1.get<UnscopedFoo>(), UnscopedFoo::A);
+}
+
+TEST(TestEnumValue, Names) {
+
+    vgc::core::EnumValue v = foo::RegisteredFoo::HelloWorld;
+    EXPECT_EQ(v.shortName(), "HelloWorld");
+    EXPECT_EQ(v.fullName(), "foo::RegisteredFoo::HelloWorld");
+    EXPECT_EQ(v.prettyName(), "Hello, world!");
 }
 
 int main(int argc, char** argv) {
