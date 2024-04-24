@@ -973,7 +973,7 @@ std::optional<core::Color> parseColor(std::string_view s) {
         // Return result
         return core::Color(colors[0], colors[1], colors[2]);
     }
-    else if (startsWith(s, "hsla") && endsWith(s, ")") && contains(s, "(")) {
+    else if (startsWith(s, "hsla") && endsWith(s, ")") && contains(s, '(')) {
 
         // Remove hsla()
         s.remove_prefix(4);
@@ -1010,7 +1010,7 @@ std::optional<core::Color> parseColor(std::string_view s) {
         // Return result
         return core::Color::hsla(hue, saturation, lightness, alpha);
     }
-    else if (startsWith(s, "hsl") && endsWith(s, ")") && contains(s, "(")) {
+    else if (startsWith(s, "hsl") && endsWith(s, ")") && contains(s, '(')) {
 
         // Remove hsl()
         s.remove_prefix(3);
@@ -1048,7 +1048,7 @@ std::optional<core::Color> parseColor(std::string_view s) {
         s = trimmed(s);
         return core::Color::fromHex(s);
     }
-    else if (startsWith(s, "url") && endsWith(s, ")") && contains(s, "(")) {
+    else if (startsWith(s, "url") && endsWith(s, ")") && contains(s, '(')) {
         VGC_WARNING(LogVgcGraphicsSvg, "Unsupported color type: {}", s);
         return std::nullopt;
     }
