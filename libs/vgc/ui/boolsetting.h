@@ -51,7 +51,9 @@ public:
 
     /// Returns the default value of this `BoolSetting`.
     ///
-    bool defaultValue() const;
+    bool defaultValue() const {
+        return defaultValue_;
+    }
 
     /// Returns the current value of this `BoolSetting`.
     ///
