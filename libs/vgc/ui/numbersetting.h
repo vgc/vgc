@@ -59,7 +59,9 @@ public:
 
     /// Returns the default value of this `NumberSetting`.
     ///
-    double defaultValue() const;
+    double defaultValue() const {
+        return defaultValue_;
+    }
 
     /// Returns the current value of this `NumberSetting`.
     ///
