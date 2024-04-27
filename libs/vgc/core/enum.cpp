@@ -102,7 +102,7 @@ std::string getEnumFullTypeName(std::string_view prettyFunction) {
 } // namespace
 
 EnumDataBase::EnumDataBase(TypeId id, std::string_view prettyFunction)
-    : id(id)
+    : typeId(id)
     , fullTypeName(getEnumFullTypeName(prettyFunction)) {
 
     // Get unqualified type name from fully-qualified type name
@@ -123,17 +123,82 @@ EnumDataBase::EnumDataBase(TypeId id, std::string_view prettyFunction)
 EnumDataBase::~EnumDataBase() {
 }
 
-void EnumDataBase::addItemBase(std::string_view shortName, std::string_view prettyName) {
-
-    shortNames.append(std::string(shortName));
-    prettyNames.append(std::string(prettyName));
+void EnumDataBase::addItemBase(
+    UInt64 value,
+    std::string_view shortName,
+    std::string_view prettyName) {
 
     std::string fullName;
     fullName.reserve(fullTypeName.size() + 2 + shortName.size());
-    fullName = fullTypeName;
+    fullName.append(fullTypeName);
     fullName.append("::");
     fullName.append(shortName);
-    fullNames.append(std::move(fullName));
+
+    Int index = valueData.length();
+    valueToIndex[value] = index;
+
+    // Note: we will be able to use make_unique in C++20:
+    // https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2019/p0960r3.html
+    //
+    std::unique_ptr<EnumValueData> ptr(new EnumValueData{
+        typeId,
+        value,
+        std::move(fullName),
+        std::string(shortName),
+        std::string(prettyName)});
+    valueData.append(std::move(ptr));
+
+    const EnumValueData& data = *valueData.last();
+    fullNames.append(data.fullName);
+    shortNames.append(data.shortName);
+    prettyNames.append(data.prettyName);
 };
+
+namespace {
+
+using Registry = std::unordered_map<TypeId, const EnumDataBase*>;
+
+struct LockedRegistryPtr {
+    Registry* registry_;
+    std::lock_guard<std::mutex> lock_;
+
+    Registry* operator->() const {
+        return registry_;
+    }
+};
+
+LockedRegistryPtr getRegistry() {
+    static std::mutex* mutex = new std::mutex;
+    static Registry* registry = new Registry;
+
+    return {registry, std::lock_guard<std::mutex>(*mutex)};
+}
+
+} // namespace
+
+void registerEnumDataBase(const EnumDataBase& data) {
+    auto registry = getRegistry();
+    registry->try_emplace(data.typeId, &data);
+}
+
+const EnumDataBase* getEnumDataBase(TypeId typeId) {
+    auto registry = getRegistry();
+    auto search = registry->find(typeId);
+    if (search != registry->end()) {
+        return search->second;
+    }
+    else {
+        return nullptr;
+    }
+}
+
+const EnumValueData* getEnumValueData(TypeId typeId, UInt64 value) {
+    if (const EnumDataBase* dataBase = getEnumDataBase(typeId)) {
+        if (auto index = dataBase->getIndexBase(value)) {
+            return dataBase->valueData[*index].get();
+        }
+    }
+    return nullptr;
+}
 
 } // namespace vgc::core::detail
