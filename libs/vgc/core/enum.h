@@ -55,6 +55,12 @@ struct EnumValueData {
 // can therefore be moved to the .cpp file.
 //
 struct VGC_CORE_API EnumDataBase {
+
+    // EnumDataBase is non-copyable (because it stores unique_ptrs).
+    // We need to explicitly mark it non-copyable otherwise it doesn't compile on MSVC.
+    EnumDataBase(const EnumDataBase&) = delete;
+    EnumDataBase& operator=(const EnumDataBase&) = delete;
+
     TypeId typeId;
 
     std::string fullTypeName;  // "vgc::ui::Key"
