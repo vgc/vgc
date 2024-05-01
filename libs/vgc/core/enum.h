@@ -70,18 +70,26 @@ struct VGC_CORE_API EnumDataBase {
     std::string unknownItemShortName;  // "Unknown_Key"
     std::string unknownItemPrettyName; // "Unknown Key"
 
-    std::unordered_map<UInt64, Int> valueToIndex;
-
-    // We use pointers to ensure the string_views stay valid when valueData grows.
+    // This is where the actual per-enumerator data is stored. We use pointers
+    // to ensure that any string_view to the stored strings stay valid when
+    // valueData grows, or when this EnumDataBase is moved.
+    //
     Array<std::unique_ptr<EnumValueData>> valueData;
+
+    // These maps make it possible to quickly find the appropriate
+    // EnumValueData from the enum value or the enum short name.
+    //
+    std::unordered_map<UInt64, Int> valueToIndex;
+    std::unordered_map<std::string_view, Int> shortNameToIndex;
+
+    // These are convenient arrays (redundant with valueData) facilitating
+    // iteration without the need for proxy iterators. This approach increases
+    // debuggability and works better with parallelization libs (sometimes not
+    // supporting proxy iterators).
+    //
     Array<std::string_view> fullNames;
     Array<std::string_view> shortNames;
     Array<std::string_view> prettyNames;
-
-    // Note: we redundantly store the data in separate arrays in order to
-    // facilitate iteration without the need for proxy iterators. This approach
-    // increases debuggability and works better with parallelization libs
-    // (sometimes not supporting proxy iterators).
 
     EnumDataBase(TypeId id, std::string_view prettyFunction);
     virtual ~EnumDataBase() = 0;
@@ -92,6 +100,16 @@ struct VGC_CORE_API EnumDataBase {
     std::optional<Int> getIndexBase(UInt64 value) const {
         auto search = valueToIndex.find(value);
         if (search != valueToIndex.end()) {
+            return search->second;
+        }
+        else {
+            return std::nullopt;
+        }
+    }
+
+    std::optional<Int> getIndexFromShortName(std::string_view shortName) const {
+        auto search = shortNameToIndex.find(shortName);
+        if (search != shortNameToIndex.end()) {
             return search->second;
         }
         else {
@@ -146,18 +164,17 @@ struct IsRegisteredEnum<EnumType, RequiresValid<decltype(enumData_(EnumType()))>
 template<typename EnumType>
 inline constexpr bool isRegisteredEnum = IsRegisteredEnum<EnumType>::value;
 
+class Enum;
+
 /// \class vgc::core::EnumValue
 /// \brief Stores any Enum value in a type-safe way.
 ///
 class EnumValue {
-private:
-    struct EmptyTag {};
-
 public:
     /// Creates an empty `EnumValue`.
     ///
     EnumValue()
-        : typeId_(core::typeId<EmptyTag>()) {
+        : typeId_(core::typeId<void>()) {
     }
 
     /// Creates an `EnumValue` from the given enumerator value.
@@ -194,18 +211,15 @@ public:
     /// Returns whether the `EnumValue` is empty.
     ///
     bool isEmpty() const {
-        return typeId_ == core::typeId<EmptyTag>();
+        return typeId_ == core::typeId<void>();
     }
 
-    /// Returns the `TypeId` of the type of the stored enumerator value, if any.
+    /// Returns the `TypeId` of the type of the stored enumerator value.
     ///
-    std::optional<TypeId> typeId() const {
-        if (isEmpty()) {
-            return std::nullopt;
-        }
-        else {
-            return typeId_;
-        }
+    /// Returns `typeId<void>()` if `isEmpty()` is true.
+    ///
+    TypeId typeId() const {
+        return typeId_;
     }
 
     /// Returns whether the `EnumValue` stores an enumerator value
@@ -317,11 +331,65 @@ private:
     TypeId typeId_;
     UInt64 value_ = 0;
 
+    friend Enum; // for EnumValue(TypeId, UInt64) constructor
     friend std::hash<EnumValue>;
     friend fmt::formatter<EnumValue>;
 
     const detail::EnumValueData* getEnumValueData_() const {
         return detail::getEnumValueData(typeId_, value_);
+    }
+
+    // Creates an `EnumValue` given the `typeId` of the enum type and the
+    // `underlyingValue` of the enumerator as an `UInt64`.
+    //
+    // This constructor is only meant for advanced use cases and should rarely
+    // be needed: whenever possible, prefer using the constructor from an
+    // actual C++ enum value, as it is typically more convenient and improves
+    // type-safety.
+    //
+    // ```cpp
+    // enumClass MyEnum {
+    //     Foo = 0,
+    //     Bar = 1
+    // };
+    //
+    // // Using this constructor
+    // EnumValue v1 = EnumValue(typeId<MyEnum>(), 0);
+    //
+    // // Using the type-safe constructor
+    // EnumValue v2 = EnumValue(MyEnum::Foo);
+    //
+    // assert(v1 == v2);
+    // ```
+    //
+    // Also, note that when using this constructor, then the `shortName()`,
+    // `fullName()`, and `prettyName()` may not return correct values as they
+    // may not be properly initialized yet, especially at program startup.
+    // Using the type-safe constructor instead ensures proper initialization.
+    //
+    // XXX Publicize, or is it too dangerous?
+    //
+    // XXX Is it possible/desirable to modify the EnumData implementation to
+    // enforce at-least-partial initialization from this constructor? Indeed,
+    // while it is impossible to initialize `EnumData<EnumType>::values` here,
+    // it might be possible to at least initialize the `EnumDataBase` instance
+    // (including shortName, etc.), for example by actually storing it in the
+    // global registry separately from the EnumData<EnumType> instance.
+    // Instead, we currently have EnumData<EnumType> inherit EnumDataBase, and
+    // instanciated as a function static variable discovered via ADL (reason
+    // why we need the actual type to be able to call this function), the
+    // registry only pointing to this instance. But maybe even partial
+    // initialization is impossible, e.g.: how can we find the init function to
+    // call without being able to rely on ADL, while keeping the
+    // VGC_DECLARE/DEFINE_ENUM macros in the same namespace as the enum type?
+    // Should we instead use an actual global variable rather than a function
+    // static variable, which would enforce initialization when the dynamic
+    // library is loaded rather than at first use? Possibly using a Schwarz
+    // counter for more initialization order safety?
+    //
+    EnumValue(core::TypeId typeId, UInt64 underlyingValue)
+        : typeId_(typeId)
+        , value_(underlyingValue) {
     }
 };
 
@@ -453,6 +521,7 @@ public:
         return data.prettyNames;
     }
 
+    // XXX return std::optional<std::string_view> instead of using the "unknown name"?
     template<typename EnumType>
     static std::string_view shortName(EnumType item) {
         const detail::EnumData<EnumType>& data = enumData_(item);
@@ -464,6 +533,7 @@ public:
         }
     }
 
+    // XXX return std::optional<std::string_view> instead of using the "unknown name"?
     template<typename EnumType>
     static std::string_view fullName(EnumType item) {
         const detail::EnumData<EnumType>& data = enumData_(item);
@@ -475,6 +545,7 @@ public:
         }
     }
 
+    // XXX return std::optional<std::string_view> instead of using the "unknown name"?
     template<typename EnumType>
     static std::string_view prettyName(EnumType item) {
         const detail::EnumData<EnumType>& data = enumData_(item);
@@ -483,6 +554,35 @@ public:
         }
         else {
             return data.unknownItemPrettyName;
+        }
+    }
+
+    template<typename EnumType>
+    static std::optional<EnumType> fromShortName(std::string_view shortName) {
+        const detail::EnumData<EnumType>& data = enumData_(EnumType{});
+        if (auto index = data.getIndexFromShortName(shortName)) {
+            return data.value[*index];
+        }
+        else {
+            return std::nullopt;
+        }
+    }
+
+    static std::optional<EnumValue>
+    fromShortName(TypeId enumTypeId, std::string_view shortName) {
+        if (auto data = detail::getEnumDataBase(enumTypeId)) {
+            if (auto index = data->getIndexFromShortName(shortName)) {
+                // Note: Using the generally unsafe EnumValue(TypeId, UInt64)
+                // constructor is safe in this case, because we know that the
+                // enumerator data is already initialized, since we found it.
+                return EnumValue(enumTypeId, data->valueData[*index]->value);
+            }
+            else {
+                return std::nullopt;
+            }
+        }
+        else {
+            return std::nullopt;
         }
     }
 };

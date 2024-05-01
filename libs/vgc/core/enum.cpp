@@ -134,9 +134,6 @@ void EnumDataBase::addItemBase(
     fullName.append("::");
     fullName.append(shortName);
 
-    Int index = valueData.length();
-    valueToIndex[value] = index;
-
     // Note: we will be able to use make_unique in C++20:
     // https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2019/p0960r3.html
     //
@@ -149,6 +146,11 @@ void EnumDataBase::addItemBase(
     valueData.append(std::move(ptr));
 
     const EnumValueData& data = *valueData.last();
+    Int index = valueData.length() - 1;
+
+    valueToIndex[value] = index;
+    shortNameToIndex[data.shortName] = index;
+
     fullNames.append(data.fullName);
     shortNames.append(data.shortName);
     prettyNames.append(data.prettyName);
