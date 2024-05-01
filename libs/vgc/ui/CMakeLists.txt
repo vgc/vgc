@@ -26,6 +26,7 @@ vgc_add_library(ui
         cursor.h
         dialog.h
         dropdownbutton.h
+        enumsetting.h
         event.h
         exceptions.h
         focus.h
@@ -95,6 +96,7 @@ vgc_add_library(ui
         cursor.cpp
         dialog.cpp
         dropdownbutton.cpp
+        enumsetting.cpp
         event.cpp
         exceptions.cpp
         focus.cpp
