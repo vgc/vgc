@@ -254,7 +254,7 @@ void Settings::setStringValue(std::string_view key, std::string_view value) {
 }
 
 std::string
-Settings::getOrSetStringFloatValue(std::string_view key, std::string_view fallback) {
+Settings::getOrSetStringValue(std::string_view key, std::string_view fallback) {
     std::string fallback_(fallback);
     return getOrSet<std::string>(map_, key, fallback_);
 }
