@@ -250,7 +250,7 @@ public:
     /// not a string, then this function returns `fallback` but does not
     /// overwrite the preexisting value.
     ///
-    std::string getOrSetStringFloatValue(std::string_view key, std::string_view fallback);
+    std::string getOrSetStringValue(std::string_view key, std::string_view fallback);
 
 protected:
     // reimpl
