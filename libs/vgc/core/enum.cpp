@@ -151,6 +151,7 @@ void EnumDataBase::addItemBase(
     valueToIndex[value] = index;
     shortNameToIndex[data.shortName] = index;
 
+    enumValues.append(EnumValue(typeId, value));
     fullNames.append(data.fullName);
     shortNames.append(data.shortName);
     prettyNames.append(data.prettyName);
