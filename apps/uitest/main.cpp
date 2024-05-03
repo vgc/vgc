@@ -24,6 +24,7 @@
 #include <vgc/ui/imagebox.h>
 #include <vgc/ui/lineedit.h>
 #include <vgc/ui/messagedialog.h>
+#include <vgc/ui/mousebutton.h>
 #include <vgc/ui/numberedit.h>
 #include <vgc/ui/overlayarea.h>
 #include <vgc/ui/panelmanager.h>
@@ -298,6 +299,22 @@ private:
         return comboBox_;
     }
 
+    template<typename EnumType>
+    ui::ComboBoxWeakPtr createComboBoxFromEnum_(ui::Widget* parent) {
+        ui::Column* col = parent->createChild<ui::Column>();
+        ui::LabelWeakPtr label_ = col->createChild<ui::Label>();
+        auto comboBoxShared_ = ui::ComboBox::createFromEnum<EnumType>();
+        ui::ComboBoxWeakPtr comboBox_ = comboBoxShared_;
+        setComboBoxLabelText_(label_, comboBox_, -1);
+        if (auto comboBox = comboBox_.lock()) {
+            col->addChild(comboBox.get());
+            comboBox->indexChanged().connect([label_, comboBox_](Int index) {
+                setComboBoxLabelText_(label_, comboBox_, index);
+            });
+        }
+        return comboBox_;
+    }
+
     void createComboBoxes_(ui::Widget* parent) {
 
         using ui::ComboBox;
@@ -323,7 +340,10 @@ private:
             comboBox->setIndex(0);
         }
 
-        // TODO: ComboBox with items set from a registered enum
+        // ComboBox with items set from a registered enum
+        if (auto comboBox = createComboBoxFromEnum_<ui::MouseButton>(row).lock()) {
+            // nothing to do
+        }
     }
 
     ui::OverlayAreaWeakPtr getClickMeOverlayArea_(ui::Widget& from) {
