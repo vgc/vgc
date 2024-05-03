@@ -29,6 +29,7 @@ VGC_UI_API extern const core::StringId ComboBox;
 VGC_UI_API extern const core::StringId ComboBoxMenu;
 VGC_UI_API extern const core::StringId Dialog;
 VGC_UI_API extern const core::StringId DropdownButton;
+VGC_UI_API extern const core::StringId EnumSettingEdit;
 VGC_UI_API extern const core::StringId Flex;
 VGC_UI_API extern const core::StringId Grid;
 VGC_UI_API extern const core::StringId IconWidget;

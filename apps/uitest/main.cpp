@@ -19,6 +19,8 @@
 #include <vgc/core/random.h>
 #include <vgc/ui/column.h>
 #include <vgc/ui/combobox.h>
+#include <vgc/ui/enumsetting.h>
+#include <vgc/ui/enumsettingedit.h>
 #include <vgc/ui/grid.h>
 #include <vgc/ui/iconwidget.h>
 #include <vgc/ui/imagebox.h>
@@ -99,6 +101,19 @@ VGC_UI_DEFINE_WINDOW_COMMAND(
     Shortcut(mod, Key::S))
 
 } // namespace commands
+
+namespace settings {
+
+ui::EnumSetting& mouseButton() {
+    static ui::EnumSettingSharedPtr setting = ui::EnumSetting::create(
+        ui::settings::session(),
+        "uitest.mouseButton",
+        "Mouse Button",
+        ui::MouseButton::Left);
+    return *setting;
+}
+
+} // namespace settings
 
 core::StringId s_with_padding("with-padding");
 
@@ -344,6 +359,11 @@ private:
         if (auto comboBox = createComboBoxFromEnum_<ui::MouseButton>(row).lock()) {
             // nothing to do
         }
+
+        // Create an EnumSettingEdit
+        ui::Column* col = parent->createChild<ui::Column>();
+        col->addStyleClass(ui::strings::settings);
+        col->createChild<ui::EnumSettingEdit>(&settings::mouseButton());
     }
 
     ui::OverlayAreaWeakPtr getClickMeOverlayArea_(ui::Widget& from) {
