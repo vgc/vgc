@@ -610,6 +610,12 @@
     preferred-width: 40dp;
 }
 
+.settings .EnumSettingEdit > .ComboBox {
+    horizontal-stretch: 1;
+    min-width: 30dp;
+    preferred-width: 80dp;
+}
+
 /* ----------------------------------------------------------------------------
  *                               COLOR PALETTE
  */

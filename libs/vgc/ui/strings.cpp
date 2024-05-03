@@ -28,6 +28,7 @@ const core::StringId ComboBox("ComboBox");
 const core::StringId ComboBoxMenu("ComboBoxMenu");
 const core::StringId Dialog("Dialog");
 const core::StringId DropdownButton("DropdownButton");
+const core::StringId EnumSettingEdit("EnumSettingEdit");
 const core::StringId Flex("Flex");
 const core::StringId Grid("Grid");
 const core::StringId IconWidget("IconWidget");
