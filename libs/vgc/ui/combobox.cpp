@@ -103,6 +103,26 @@ ComboBoxPtr ComboBox::create(std::string_view title) {
     return core::createObject<ComboBox>(title);
 }
 
+ComboBoxPtr ComboBox::create(core::TypeId enumTypeId, std::string_view title) {
+    if (title.empty()) {
+        if (auto name = core::Enum::shortTypeName(enumTypeId)) {
+            title = *name;
+        }
+    }
+    ComboBoxPtr res = core::createObject<ComboBox>(title);
+    res->setItemsFromEnum(enumTypeId);
+    return res;
+}
+
+void ComboBox::setTitle(std::string_view title) {
+    if (title != title_) {
+        title_ = title;
+        if (index() == -1) {
+            setText_(title_);
+        }
+    }
+}
+
 Int ComboBox::numItems() const {
     if (auto menu = menu_.lock()) {
         return menu->numItems();
@@ -145,6 +165,52 @@ void ComboBox::addItem(std::string_view text) {
                     button->setShortcutVisible(false);
                 }
             }
+        }
+    }
+}
+
+void ComboBox::clearItems() {
+    enumTypeId_ = std::nullopt;
+    unset();
+    if (auto menu = menu_.lock()) {
+        menu->clearItems();
+    }
+}
+
+void ComboBox::setItemsFromEnum(core::TypeId enumTypeId) {
+    clearItems();
+    for (const core::EnumValue& value : core::Enum::values(enumTypeId)) {
+        addItem(value.prettyName());
+    }
+    enumTypeId_ = enumTypeId;
+}
+
+std::optional<core::EnumValue> ComboBox::enumValue() const {
+    if (enumTypeId_) {
+        const auto& values = core::Enum::values(*enumTypeId_);
+        Int i = index();
+        if (0 <= i && i < values.length()) {
+            return values[i];
+        }
+        else {
+            return std::nullopt;
+        }
+    }
+    else {
+        return std::nullopt;
+    }
+}
+
+void ComboBox::setEnumValue(core::EnumValue enumValue) {
+    // XXX: Use a map? Publicize core::EnumDataBase::getIndex()?
+    if (enumTypeId_) {
+        Int index = 0;
+        for (core::EnumValue value : core::Enum::values(*enumTypeId_)) {
+            if (value == enumValue) {
+                setIndex(index);
+                return;
+            }
+            ++index;
         }
     }
 }
