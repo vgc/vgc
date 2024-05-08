@@ -16,7 +16,46 @@
 
 #include <vgc/core/typeid.h>
 
+#include <string_view>
+
+#if defined(VGC_COMPILER_CLANG) || defined(VGC_COMPILER_GCC)
+#    include <cxxabi.h> // abi::__cxa_demangle
+#endif
+
 namespace vgc::core::detail {
+
+namespace {
+
+std::string demangleTypeInfoName(const char* name) {
+#if defined(VGC_COMPILER_CLANG) || defined(VGC_COMPILER_GCC)
+    int status = 0;
+    char* demangled = abi::__cxa_demangle(name, 0, 0, &status);
+    std::string res = demangled;
+    free(demangled);
+    return res;
+#else
+    // Already demangled on MSVC
+    return name;
+#endif
+}
+
+// Extract unqualified type name from fully-qualified type name
+std::string_view getUnqualifiedName(std::string_view fullName) {
+    size_t i = fullName.rfind(':');    // index of last ':' character
+    if (i == std::string_view::npos) { // if no ':' character
+        return fullName;
+    }
+    else {
+        return fullName.substr(i + 1);
+    }
+}
+
+} // namespace
+
+TypeInfo::TypeInfo(const std::type_info& info)
+    : fullName(demangleTypeInfoName(info.name()))
+    , name(getUnqualifiedName(fullName)) {
+}
 
 TypeId typeIdTestClass() {
     return typeId<TypeIdTestClass>();
