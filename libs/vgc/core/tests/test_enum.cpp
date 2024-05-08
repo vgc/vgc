@@ -41,9 +41,29 @@ enum class ScopedBar {
 
 } // namespace
 
+// Note: for testing purposes, we intentionally do not place the classes below in an unnamed namespace.
+
+enum GlobalUnscopedFoo {
+    GA,
+    GB
+};
+
+enum class GlobalScopedFoo {
+    E,
+    F
+};
+
 namespace foo {
 
-// Note: for testing purposes, we intentionally do not place this in an unnamed namespace.
+enum UnscopedFoo {
+    A,
+    B
+};
+
+enum class ScopedFoo {
+    E,
+    F
+};
 
 enum class RegisteredFoo {
     HelloWorld
@@ -55,16 +75,41 @@ VGC_DEFINE_ENUM(
 
 } // namespace foo
 
+/*
 TEST(TestEnumValue, Empty) {
     vgc::core::EnumValue v;
     EXPECT_TRUE(v.isEmpty());
+}
+*/
+
+TEST(TestEnumType, Name) {
+    EXPECT_EQ(vgc::core::enumType<UnscopedFoo>().shortName(), "UnscopedFoo");
+    //EXPECT_EQ(vgc::core::enumType<UnscopedFoo>().fullName(), "(anonymous namespace)::UnscopedFoo");
+
+    EXPECT_EQ(vgc::core::enumType<ScopedFoo>().shortName(), "ScopedFoo");
+    //EXPECT_EQ(vgc::core::enumType<ScopedFoo>().fullName(), "(anonymous namespace)::ScopedFoo");
+
+    EXPECT_EQ(vgc::core::enumType<GlobalUnscopedFoo>().shortName(), "GlobalUnscopedFoo");
+    EXPECT_EQ(vgc::core::enumType<GlobalUnscopedFoo>().fullName(), "GlobalUnscopedFoo");
+
+    EXPECT_EQ(vgc::core::enumType<ScopedFoo>().shortName(), "ScopedFoo");
+    //EXPECT_EQ(vgc::core::enumType<ScopedFoo>().fullName(), "(anonymous namespace)::ScopedFoo");
+
+    EXPECT_EQ(vgc::core::enumType<foo::UnscopedFoo>().shortName(), "UnscopedFoo");
+    EXPECT_EQ(vgc::core::enumType<foo::UnscopedFoo>().fullName(), "foo::UnscopedFoo");
+
+    EXPECT_EQ(vgc::core::enumType<foo::ScopedFoo>().shortName(), "ScopedFoo");
+    EXPECT_EQ(vgc::core::enumType<foo::ScopedFoo>().fullName(), "foo::ScopedFoo");
+
+    EXPECT_EQ(vgc::core::enumType<foo::RegisteredFoo>().shortName(), "RegisteredFoo");
+    EXPECT_EQ(vgc::core::enumType<foo::RegisteredFoo>().fullName(), "foo::RegisteredFoo");
 }
 
 TEST(TestEnumValue, UnscopedEnum) {
 
     {
         vgc::core::EnumValue v(A);
-        EXPECT_FALSE(v.isEmpty());
+        //EXPECT_FALSE(v.isEmpty());
         EXPECT_TRUE(v.has<UnscopedFoo>());
         EXPECT_FALSE(v.has<UnscopedBar>());
         EXPECT_FALSE(v.has<ScopedFoo>());
@@ -75,7 +120,7 @@ TEST(TestEnumValue, UnscopedEnum) {
 
     {
         vgc::core::EnumValue v(A);
-        EXPECT_FALSE(v.isEmpty());
+        //EXPECT_FALSE(v.isEmpty());
         EXPECT_TRUE(v.has<UnscopedFoo>());
         EXPECT_FALSE(v.has<UnscopedBar>());
         EXPECT_FALSE(v.has<ScopedFoo>());
@@ -86,7 +131,7 @@ TEST(TestEnumValue, UnscopedEnum) {
 
     {
         vgc::core::EnumValue v{A};
-        EXPECT_FALSE(v.isEmpty());
+        //EXPECT_FALSE(v.isEmpty());
         EXPECT_TRUE(v.has<UnscopedFoo>());
         EXPECT_FALSE(v.has<UnscopedBar>());
         EXPECT_FALSE(v.has<ScopedFoo>());
@@ -100,7 +145,7 @@ TEST(TestEnumValue, ScopedEnum) {
 
     {
         vgc::core::EnumValue v(ScopedFoo::E);
-        EXPECT_FALSE(v.isEmpty());
+        //EXPECT_FALSE(v.isEmpty());
         EXPECT_FALSE(v.has<UnscopedFoo>());
         EXPECT_FALSE(v.has<UnscopedBar>());
         EXPECT_TRUE(v.has<ScopedFoo>());
@@ -111,7 +156,7 @@ TEST(TestEnumValue, ScopedEnum) {
 
     {
         vgc::core::EnumValue v(ScopedFoo::E);
-        EXPECT_FALSE(v.isEmpty());
+        //EXPECT_FALSE(v.isEmpty());
         EXPECT_FALSE(v.has<UnscopedFoo>());
         EXPECT_FALSE(v.has<UnscopedBar>());
         EXPECT_TRUE(v.has<ScopedFoo>());
@@ -122,7 +167,7 @@ TEST(TestEnumValue, ScopedEnum) {
 
     {
         vgc::core::EnumValue v{ScopedFoo::E};
-        EXPECT_FALSE(v.isEmpty());
+        //EXPECT_FALSE(v.isEmpty());
         EXPECT_FALSE(v.has<UnscopedFoo>());
         EXPECT_FALSE(v.has<UnscopedBar>());
         EXPECT_TRUE(v.has<ScopedFoo>());

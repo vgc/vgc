@@ -16,192 +16,107 @@
 
 #include <vgc/core/enum.h>
 
-namespace vgc::core::detail {
+namespace vgc::core {
 
-namespace {
+namespace detail {
 
-// Extracts the fully-qualified name of the enum type (e.g., `vgc::ui::Key`)
-// from the result of calling VGC_PRETTY_FUNCTION in enumData_().
-//
-// Example input (platform-dependent):
-//
-// "const class vgc::core::detail::EnumTypeData &__cdecl vgc::ui::enumData_(enum vgc::ui::Key)"
-// "const ::vgc::core::detail::EnumTypeData &vgc::ui::enumData_(Key)"
-//
-// Desired output:
-//
-// "vgc::ui::Key"
-//
-std::string getEnumFullTypeName(std::string_view prettyFunction) {
+EnumTypeInfo_::EnumTypeInfo_(TypeId id)
+    : typeId(id) {
 
-    const auto& s = prettyFunction;
+    unknownItemShortName = "Unknown_";
+    unknownItemShortName.append(typeId.name());
 
-    std::string res;
+    unknownItemPrettyName = "Unknown ";
+    unknownItemPrettyName.append(typeId.name());
 
-    // `&__cdecl vgc::ui::enumData_(enum vgc::ui::Key)`
-    //           ^        ^                       ^  ^
-    //           k        l                       i  j
-    //
-    // `&vgc::ui::enumData_(Key)`
-    //   ^        ^         ^  ^
-    //   k        l         i  j
-
-    // Find closing parenthesis
-    size_t j = s.size();
-    if (j == 0) {
-        return "";
-    }
-    --j;
-    while (j > 0 && s[j] != ')') {
-        --j;
-    }
-
-    // Find opening parenthesis or whitespace or colon
-    size_t i = j;
-    while (i > 0 && s[i] != '(' && s[i] != ' ' && s[i] != ':') {
-        --i;
-    }
-
-    // Set i to be the character just after found parenthese/whitespace/colon
-    ++i;
-
-    // Find opening parenthesis
-    size_t l = i;
-    while (l > 0 && s[l] != '(') {
-        --l;
-    }
-
-    // Skip "enumData_"
-    size_t enumDataSize = 9;
-    if (l >= enumDataSize) {
-        l -= enumDataSize;
-    }
-    else {
-        l = 0;
-    }
-
-    // Find whitespace or ampersand
-    size_t k = l;
-    while (k > 0 && s[k] != ' ' && s[k] != '&') {
-        --k;
-    }
-
-    // Set k to be the character just after found whitespace/ampersand
-    ++k;
-
-    // Concatenate namespace and class name
-    if (l > k) {
-        res += s.substr(k, l - k);
-    }
-    if (j > i) {
-        res += s.substr(i, j - i);
-    }
-    return res;
+    unknownItemFullName = typeId.fullName();
+    unknownItemFullName.append("::");
+    unknownItemFullName.append(unknownItemShortName);
 }
 
-} // namespace
-
-EnumDataBase::EnumDataBase(TypeId id, std::string_view prettyFunction)
-    : typeId(id)
-    , fullTypeName(getEnumFullTypeName(prettyFunction)) {
-
-    // Get unqualified type name from fully-qualified type name
-    size_t i = fullTypeName.rfind(':'); // index of last ':' character
-    if (i == std::string_view::npos) {  // if no ':' character
-        shortTypeName = fullTypeName;
-    }
-    else {
-        shortTypeName = std::string_view(fullTypeName).substr(i + 1);
-    }
-
-    // Create strings to return in case an unknown item is requested
-    unknownItemShortName = "Unknown_" + shortTypeName;
-    unknownItemPrettyName = "Unknown " + shortTypeName;
-    unknownItemFullName = fullTypeName + unknownItemShortName;
+EnumTypeInfo_::~EnumTypeInfo_() {
 }
 
-EnumDataBase::~EnumDataBase() {
-}
-
-void EnumDataBase::addItemBase(
+void EnumTypeInfo_::addValue_(
     UInt64 value,
     std::string_view shortName,
     std::string_view prettyName) {
 
     std::string fullName;
-    fullName.reserve(fullTypeName.size() + 2 + shortName.size());
-    fullName.append(fullTypeName);
+    fullName.reserve(typeId.fullName().size() + 2 + shortName.size());
+    fullName.append(typeId.fullName());
     fullName.append("::");
     fullName.append(shortName);
 
     // Note: we will be able to use make_unique in C++20:
     // https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2019/p0960r3.html
     //
-    std::unique_ptr<EnumValueData> ptr(new EnumValueData{
-        typeId,
-        value,
-        std::move(fullName),
-        std::string(shortName),
+    std::unique_ptr<EnumValueInfo> ptr(new EnumValueInfo{
+        value,                  //
+        std::move(fullName),    //
+        std::string(shortName), //
         std::string(prettyName)});
-    valueData.append(std::move(ptr));
+    valueInfo.append(std::move(ptr));
 
-    const EnumValueData& data = *valueData.last();
-    Int index = valueData.length() - 1;
+    const EnumValueInfo& info = *valueInfo.last();
+    Int index = valueInfo.length() - 1;
 
     valueToIndex[value] = index;
-    shortNameToIndex[data.shortName] = index;
+    shortNameToIndex[info.shortName] = index;
 
-    enumValues.append(EnumValue(typeId, value));
-    fullNames.append(data.fullName);
-    shortNames.append(data.shortName);
-    prettyNames.append(data.prettyName);
+    enumValues.append(EnumValue(EnumType(this), value));
+    fullNames.append(info.fullName);
+    shortNames.append(info.shortName);
+    prettyNames.append(info.prettyName);
 };
 
-namespace {
-
-using Registry = std::unordered_map<TypeId, const EnumDataBase*>;
-
-struct LockedRegistryPtr {
-    Registry* registry_;
-    std::lock_guard<std::mutex> lock_;
-
-    Registry* operator->() const {
-        return registry_;
-    }
-};
-
-LockedRegistryPtr getRegistry() {
-    static std::mutex* mutex = new std::mutex;
-    static Registry* registry = new Registry;
-
-    return {registry, std::lock_guard<std::mutex>(*mutex)};
-}
-
-} // namespace
-
-void registerEnumDataBase(const EnumDataBase& data) {
-    auto registry = getRegistry();
-    registry->try_emplace(data.typeId, &data);
-}
-
-const EnumDataBase* getEnumDataBase(TypeId typeId) {
-    auto registry = getRegistry();
-    auto search = registry->find(typeId);
-    if (search != registry->end()) {
+std::optional<Int> EnumTypeInfo_::getIndex(UInt64 value) const {
+    auto search = valueToIndex.find(value);
+    if (search != valueToIndex.end()) {
         return search->second;
     }
     else {
-        return nullptr;
+        return std::nullopt;
     }
 }
 
-const EnumValueData* getEnumValueData(TypeId typeId, UInt64 value) {
-    if (const EnumDataBase* dataBase = getEnumDataBase(typeId)) {
-        if (auto index = dataBase->getIndexBase(value)) {
-            return dataBase->valueData[*index].get();
-        }
+std::optional<Int>
+EnumTypeInfo_::getIndexFromShortName(std::string_view shortName) const {
+    auto search = shortNameToIndex.find(shortName);
+    if (search != shortNameToIndex.end()) {
+        return search->second;
     }
-    return nullptr;
+    else {
+        return std::nullopt;
+    }
 }
 
-} // namespace vgc::core::detail
+const EnumTypeInfo_* getOrCreateEnumTypeInfo(TypeId typeId, EnumTypeInfoFactory factory) {
+
+    using Map = std::unordered_map<TypeId, const EnumTypeInfo_*>;
+
+    // trusty leaky singletons
+    static std::mutex* mutex = new std::mutex();
+    static Map* map = new Map();
+
+    std::lock_guard<std::mutex> lock(*mutex);
+    auto it = map->find(typeId);
+    if (it == map->end()) {
+        const EnumTypeInfo_* info = factory();
+        it = map->try_emplace(info->typeId, info).first;
+    }
+    return it->second;
+}
+
+} // namespace detail
+
+std::optional<EnumValue> EnumType::fromShortName(std::string_view shortName) const {
+    if (auto index = info_->getIndexFromShortName(shortName)) {
+        return info_->enumValues[*index];
+    }
+    else {
+        return std::nullopt;
+    }
+}
+
+} // namespace vgc::core

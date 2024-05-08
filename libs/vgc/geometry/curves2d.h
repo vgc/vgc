@@ -622,12 +622,11 @@ struct fmt::formatter<vgc::geometry::Curves2dCommandRef> : fmt::formatter<double
         -> decltype(ctx.out()) {
 
         using vgc::core::copyStringTo;
-        using vgc::core::Enum;
         using vgc::geometry::CurveCommandType;
         using DoubleFormatter = fmt::formatter<double>;
 
         auto out = ctx.out();
-        out = copyStringTo(out, Enum::shortName(c.type()));
+        out = copyStringTo(out, vgc::core::EnumValue(c.type()).shortName());
         *out++ = '(';
         switch (c.type()) {
         case CurveCommandType::Close:

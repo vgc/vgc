@@ -362,7 +362,7 @@ void setSamplingQuality_(
     VGC_INFO(
         LogVgcCanvas,
         "Switched sampling quality to: {}",
-        core::Enum::prettyName(quality));
+        core::EnumValue(quality).prettyName());
 
     complex.setSamplingQuality(quality);
     canvas.requestRepaint();

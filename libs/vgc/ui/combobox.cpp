@@ -103,14 +103,12 @@ ComboBoxPtr ComboBox::create(std::string_view title) {
     return core::createObject<ComboBox>(title);
 }
 
-ComboBoxPtr ComboBox::create(core::TypeId enumTypeId, std::string_view title) {
+ComboBoxPtr ComboBox::create(core::EnumType enumType, std::string_view title) {
     if (title.empty()) {
-        if (auto name = core::Enum::shortTypeName(enumTypeId)) {
-            title = *name;
-        }
+        title = enumType.shortName();
     }
     ComboBoxPtr res = core::createObject<ComboBox>(title);
-    res->setItemsFromEnum(enumTypeId);
+    res->setItemsFromEnum(enumType);
     return res;
 }
 
@@ -170,24 +168,24 @@ void ComboBox::addItem(std::string_view text) {
 }
 
 void ComboBox::clearItems() {
-    enumTypeId_ = std::nullopt;
+    enumType_ = std::nullopt;
     unset();
     if (auto menu = menu_.lock()) {
         menu->clearItems();
     }
 }
 
-void ComboBox::setItemsFromEnum(core::TypeId enumTypeId) {
+void ComboBox::setItemsFromEnum(core::EnumType enumType) {
     clearItems();
-    for (const core::EnumValue& value : core::Enum::values(enumTypeId)) {
+    for (const core::EnumValue& value : enumType.values()) {
         addItem(value.prettyName());
     }
-    enumTypeId_ = enumTypeId;
+    enumType_ = enumType;
 }
 
 std::optional<core::EnumValue> ComboBox::enumValue() const {
-    if (enumTypeId_) {
-        const auto& values = core::Enum::values(*enumTypeId_);
+    if (enumType_) {
+        const auto& values = enumType_->values();
         Int i = index();
         if (0 <= i && i < values.length()) {
             return values[i];
@@ -202,10 +200,10 @@ std::optional<core::EnumValue> ComboBox::enumValue() const {
 }
 
 void ComboBox::setEnumValue(core::EnumValue enumValue) {
-    // XXX: Use a map? Publicize core::EnumDataBase::getIndex()?
-    if (enumTypeId_) {
+    // XXX: Use a map? Publicize core::detail::EnumTypeInfo_::getIndex()?
+    if (enumType_) {
         Int index = 0;
-        for (core::EnumValue value : core::Enum::values(*enumTypeId_)) {
+        for (core::EnumValue value : enumType_->values()) {
             if (value == enumValue) {
                 setIndex(index);
                 return;

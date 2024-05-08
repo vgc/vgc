@@ -57,8 +57,8 @@ public:
 
     /// Returns the `TypeId` of the enum type of this `EnumSetting`.
     ///
-    core::TypeId enumTypeId() const {
-        return defaultValue_.typeId();
+    core::EnumType enumType() const {
+        return defaultValue_.type();
     }
 
     /// Returns the current value of this `EnumSetting`.

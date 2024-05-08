@@ -52,7 +52,7 @@ public:
     /// If `title` is empty (the default), the title of the combo box is set as
     /// the unqualified name of the enumeration.
     ///
-    static ComboBoxPtr create(core::TypeId enumTypeId, std::string_view title = "");
+    static ComboBoxPtr create(core::EnumType enumType, std::string_view title = "");
 
     /// Creates a `ComboBox`, and populates its items from a registered
     /// enumeration.
@@ -60,9 +60,9 @@ public:
     /// If `title` is empty (the default), the title of the combo box is set as
     /// the unqualified name of the enumeration.
     ///
-    template<typename EnumType, VGC_REQUIRES(core::isRegisteredEnum<EnumType>)>
+    template<typename TEnum, VGC_REQUIRES(core::isRegisteredEnum<TEnum>)>
     static ComboBoxPtr createFromEnum(std::string_view title = "") {
-        return create(core::typeId<EnumType>(), title);
+        return create(core::enumType<TEnum>(), title);
     }
 
     /// Returns the title of this combo box. This is the text that
@@ -117,13 +117,13 @@ public:
     /// Sets the items of this combo box from a registered enumeration
     /// given by its `TypeId`.
     ///
-    void setItemsFromEnum(core::TypeId enumTypeId);
+    void setItemsFromEnum(core::EnumType enumTypeId);
 
     /// Sets the items of this combo box from a registered enumeration.
     ///
-    template<typename EnumType, VGC_REQUIRES(core::isRegisteredEnum<EnumType>)>
+    template<typename TEnum, VGC_REQUIRES(core::isRegisteredEnum<TEnum>)>
     void setItemsFromEnum() {
-        setItemsFromEnum(core::typeId<EnumType>());
+        setItemsFromEnum(core::enumType<TEnum>());
     }
 
     /// Returns the `EnumValue` that corresponds to the current `index()`, if any.
@@ -142,11 +142,11 @@ public:
     /// Returns `std::nullopt` if there is no `enumValue()` of if `enumValue()`
     /// does not hold a value of type `EnumType`.
     ///
-    template<typename EnumType, VGC_REQUIRES(core::isRegisteredEnum<EnumType>)>
-    std::optional<EnumType> enumValueAs() const {
+    template<typename TEnum, VGC_REQUIRES(core::isRegisteredEnum<TEnum>)>
+    std::optional<TEnum> enumValueAs() const {
         if (auto value = enumValue()) {
-            if (value->has<EnumType>()) {
-                return value->getUnchecked<EnumType>();
+            if (value->has<TEnum>()) {
+                return value->getUnchecked<TEnum>();
             }
         }
         return std::nullopt;
@@ -165,10 +165,10 @@ private:
     Int index_ = -1;     // index of current item
     MenuSharedPtr menu_; // drop-down menu, storing all the item data
 
-    // Remembers which Enum type this combo box was set from, if any.
-    // This enforces type safety by ensuring that `getEnumValue()` always
+    // Remembers which EnumType this combo box was set from, if any.
+    // This enforces type safety by ensuring that `enumValue()` always
     // returns a registered Enum value.
-    std::optional<core::TypeId> enumTypeId_;
+    std::optional<core::EnumType> enumType_;
 
     void setText_(std::string_view text);
 

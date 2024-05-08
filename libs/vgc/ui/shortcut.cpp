@@ -111,11 +111,11 @@ std::string toString(const Shortcut& shortcut) {
     }
 #endif
     if (shortcut.type() == ShortcutType::Keyboard) {
-        appendString(res, separator, core::Enum::prettyName(shortcut.key()));
+        appendString(res, separator, core::EnumValue(shortcut.key()).prettyName());
     }
     else if (shortcut.type() == ShortcutType::Mouse) {
         appendString(res, separator, "Mouse ");
-        res += core::Enum::prettyName(shortcut.mouseButton());
+        res += core::EnumValue(shortcut.mouseButton()).prettyName();
     }
     return res;
 }

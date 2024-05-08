@@ -53,7 +53,7 @@ EnumSettingPtr EnumSetting::create(
 //
 core::EnumValue EnumSetting::value() const {
     std::string name = settings()->getOrSetStringValue(key(), defaultValueString_);
-    if (auto value = core::Enum::fromShortName(enumTypeId(), name)) {
+    if (auto value = enumType().fromShortName(name)) {
         return *value;
     }
     else {
@@ -64,7 +64,7 @@ core::EnumValue EnumSetting::value() const {
 void EnumSetting::setValue(core::EnumValue newValue) {
     core::EnumValue oldValue = value();
     if (oldValue != newValue) {
-        if (newValue.typeId() != enumTypeId()) {
+        if (newValue.type() != enumType()) {
             VGC_WARNING(
                 LogVgcUi,
                 "Cannot set value '{}' to setting '{}': the value has a "
