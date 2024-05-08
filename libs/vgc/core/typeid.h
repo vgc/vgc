@@ -33,29 +33,10 @@ namespace detail {
 
 class VGC_CORE_API TypeInfo {
 public:
-    TypeInfo(const std::type_info& info)
-        : id_(info.name()) {
-    }
+    TypeInfo(const std::type_info& info);
 
-    bool operator==(const TypeInfo& other) const {
-        return id_ == other.id_;
-    }
-
-    bool operator!=(const TypeInfo& other) const {
-        return id_ != other.id_;
-    }
-
-    bool operator<(const TypeInfo& other) const {
-        return id_ < other.id_;
-    }
-
-    std::string_view name() {
-        return id_;
-    }
-
-private:
-    friend struct std::hash<TypeId>;
-    core::StringId id_;
+    core::StringId fullName;
+    core::StringId name;
 };
 
 } // namespace detail
@@ -76,36 +57,44 @@ private:
 /// which makes it possible to insert in maps, sets, as well as their unordered
 /// versions.
 ///
-/// You can use `TypeId::name()` to query the name (possibly mangled) of the
-/// type.
+/// You can use `TypeId::name()` and `TypeId::name()` to query the unqualified
+/// or fully-qualified name of the type.
 ///
 class VGC_CORE_API TypeId {
 public:
-    /// Returns the name of the type (possibly mangled).
+    /// Returns the unqualified name of the type.
     ///
     std::string_view name() const {
-        return info_->name();
+        return info_->name;
+    }
+
+    /// Returns the fully-qualified name of the type.
+    ///
+    std::string_view fullName() const {
+        return info_->fullName;
     }
 
     /// Returns whether this `TypeId` is equal to `other`.
     ///
     bool operator==(const TypeId& other) const {
-        return *info_ == *other.info_;
+        return info_->fullName == other.info_->fullName;
     }
 
     /// Returns whether this `TypeId` is different from `other`.
     ///
     bool operator!=(const TypeId& other) const {
-        return *info_ != *other.info_;
+        return info_->fullName != other.info_->fullName;
     }
 
     /// Returns whether this `TypeId` is less than `other`.
     ///
     bool operator<(const TypeId& other) const {
-        return *info_ < *other.info_;
+        return info_->fullName < other.info_->fullName;
     }
 
 private:
+    detail::TypeInfo* info_;
+
     template<typename T>
     friend TypeId typeId();
 
@@ -114,8 +103,6 @@ private:
     TypeId(detail::TypeInfo* info)
         : info_(info) {
     }
-
-    detail::TypeInfo* info_;
 };
 
 /// Returns the `TypeId` of the given type.
@@ -162,7 +149,7 @@ namespace std {
 template<>
 struct hash<vgc::core::TypeId> {
     std::size_t operator()(const vgc::core::TypeId& t) const {
-        return std::hash<vgc::core::StringId>()(t.info_->id_);
+        return std::hash<vgc::core::StringId>()(t.info_->fullName);
     }
 };
 
@@ -173,7 +160,7 @@ template<>
 struct fmt::formatter<vgc::core::TypeId> : fmt::formatter<std::string_view> {
     template<typename FormatContext>
     auto format(vgc::core::TypeId t, FormatContext& ctx) {
-        return fmt::formatter<std::string_view>::format(t.name(), ctx);
+        return fmt::formatter<std::string_view>::format(t.fullName(), ctx);
     }
 };
 

@@ -25,11 +25,55 @@ using vgc::core::detail::TypeIdTestClass;
 using vgc::core::detail::typeIdTestClass;
 
 class Foo {};
-class Bar {};
+struct Bar {};
+
+enum class FooEnum {
+};
+
+enum BarEnum {
+};
+
+namespace foo {
+
+class Foo {};
+struct Bar {};
+
+enum class FooEnum {
+};
+
+enum BarEnum {
+};
+
+} // namespace foo
 
 TEST(TestTypeId, Name) {
-    EXPECT_EQ(typeId<int>().name(), typeid(int).name());
-    EXPECT_EQ(typeId<Foo>().name(), typeid(Foo).name());
+
+    EXPECT_EQ(typeId<int>().name(), "int");
+
+    EXPECT_EQ(typeId<Foo>().name(), "Foo");
+    EXPECT_EQ(typeId<Bar>().name(), "Bar");
+    EXPECT_EQ(typeId<FooEnum>().name(), "FooEnum");
+    EXPECT_EQ(typeId<BarEnum>().name(), "BarEnum");
+
+    EXPECT_EQ(typeId<foo::Foo>().name(), "Foo");
+    EXPECT_EQ(typeId<foo::Bar>().name(), "Bar");
+    EXPECT_EQ(typeId<foo::FooEnum>().name(), "FooEnum");
+    EXPECT_EQ(typeId<foo::BarEnum>().name(), "BarEnum");
+}
+
+TEST(TestTypeId, FullName) {
+
+    EXPECT_EQ(typeId<int>().fullName(), "int");
+
+    EXPECT_EQ(typeId<Foo>().fullName(), "Foo");
+    EXPECT_EQ(typeId<Bar>().fullName(), "Bar");
+    EXPECT_EQ(typeId<FooEnum>().fullName(), "FooEnum");
+    EXPECT_EQ(typeId<BarEnum>().fullName(), "BarEnum");
+
+    EXPECT_EQ(typeId<foo::Foo>().fullName(), "foo::Foo");
+    EXPECT_EQ(typeId<foo::Bar>().fullName(), "foo::Bar");
+    EXPECT_EQ(typeId<foo::FooEnum>().fullName(), "foo::FooEnum");
+    EXPECT_EQ(typeId<foo::BarEnum>().fullName(), "foo::BarEnum");
 }
 
 TEST(TestTypeId, Equal) {
