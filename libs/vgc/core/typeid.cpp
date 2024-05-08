@@ -18,6 +18,8 @@
 
 #include <string_view>
 
+#include <vgc/core/stringutil.h>
+
 #if defined(VGC_COMPILER_CLANG) || defined(VGC_COMPILER_GCC)
 #    include <cxxabi.h> // abi::__cxa_demangle
 #endif
@@ -33,9 +35,20 @@ std::string demangleTypeInfoName(const char* name) {
     std::string res = demangled;
     free(demangled);
     return res;
+#elif defined(VGC_COMPILER_MSVC)
+    // Already demangled on MSVC, but prefixed by 'struct ', 'class ', or 'enum '
+    using namespace std::literals::string_view_literals;
+    std::string_view name_ = name;
+    std::string_view res = name_;
+    for (const auto& prefix : {"struct "sv, "class "sv, "enum "sv}) {
+        if (startsWith(name_, prefix)) {
+            res = name_.substr(prefix.size());
+            break;
+        }
+    }
+    return std::string(res);
 #else
-    // Already demangled on MSVC
-    return name;
+    return std::string(name);
 #endif
 }
 

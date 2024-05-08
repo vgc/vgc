@@ -25,7 +25,7 @@ using vgc::core::detail::TypeIdTestClass;
 using vgc::core::detail::typeIdTestClass;
 
 class Foo {};
-class Bar {};
+struct Bar {};
 
 enum class FooEnum {
 };
@@ -36,7 +36,7 @@ enum BarEnum {
 namespace foo {
 
 class Foo {};
-class Bar {};
+struct Bar {};
 
 enum class FooEnum {
 };
