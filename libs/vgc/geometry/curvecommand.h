@@ -44,7 +44,7 @@ VGC_DECLARE_ENUM(CurveCommandType)
 template<typename OStream>
 void write(OStream& out, CurveCommandType c) {
     using core::write;
-    write(out, core::Enum::shortName(c));
+    write(out, core::EnumValue(c).shortName());
 }
 
 namespace detail {

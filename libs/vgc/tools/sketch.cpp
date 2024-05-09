@@ -139,7 +139,7 @@ void SketchModule::onCycleSketchFitMethod_() {
     VGC_INFO(
         LogVgcToolsSketch,
         "Switched Sketch Fit Method to: {}",
-        core::Enum::prettyName(fitMethod_));
+        core::EnumValue(fitMethod_).prettyName());
 
     recomputeEdgesWithFitMethod_();
 

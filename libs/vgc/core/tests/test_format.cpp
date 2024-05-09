@@ -652,39 +652,41 @@ VGC_DEFINE_ENUM_END()
 } // namespace vgc::foo
 
 TEST(TestFormat, Enum) {
-    using vgc::core::Enum;
+    using vgc::core::enumType;
+    using vgc::core::EnumValue;
     using vgc::core::format;
     using vgc::foo::LongEnum;
     using vgc::foo::MyEnum;
     using vgc::foo::VeryLongEnum;
 
-    EXPECT_EQ(Enum::fullTypeName<MyEnum>(), "vgc::foo::MyEnum");
-    EXPECT_EQ(Enum::shortTypeName<MyEnum>(), "MyEnum");
+    EXPECT_EQ(enumType<MyEnum>().fullName(), "vgc::foo::MyEnum");
+    EXPECT_EQ(enumType<MyEnum>().shortName(), "MyEnum");
 
-    EXPECT_EQ(Enum::shortName(MyEnum::MyValue), "MyValue");
-    EXPECT_EQ(Enum::fullName(MyEnum::MyValue), "vgc::foo::MyEnum::MyValue");
-    EXPECT_EQ(Enum::prettyName(MyEnum::MyValue), "My Value");
+    EXPECT_EQ(EnumValue(MyEnum::MyValue).shortName(), "MyValue");
+    EXPECT_EQ(EnumValue(MyEnum::MyValue).fullName(), "vgc::foo::MyEnum::MyValue");
+    EXPECT_EQ(EnumValue(MyEnum::MyValue).prettyName(), "My Value");
 
     std::string s1 = format("{:-^29}", MyEnum::MyValue);
-    std::string_view s2 = Enum::prettyName(MyEnum::MyOtherValue);
-    std::string_view s3 = Enum::prettyName(LongEnum::V1);
-    std::string_view s4 = Enum::prettyName(LongEnum::V122);
-    std::string_view s5 = Enum::prettyName(VeryLongEnum::V1);
-    std::string_view s6 = Enum::prettyName(VeryLongEnum::V200);
+    std::string_view s2 = EnumValue(MyEnum::MyOtherValue).prettyName();
+    std::string_view s3 = EnumValue(LongEnum::V1).prettyName();
+    std::string_view s4 = EnumValue(LongEnum::V122).prettyName();
+    std::string_view s5 = EnumValue(VeryLongEnum::V1).prettyName();
+    std::string_view s6 = EnumValue(VeryLongEnum::V200).prettyName();
     EXPECT_EQ(s1, "--vgc::foo::MyEnum::MyValue--");
     EXPECT_EQ(s2, "My Other Value");
     EXPECT_EQ(s3, "v1");
     EXPECT_EQ(s4, "v122");
     for (int i = 1; i <= 122; ++i) {
         std::string v = "v";
-        std::string_view prettyName = Enum::prettyName(static_cast<LongEnum>(i));
+        std::string_view prettyName = EnumValue(static_cast<LongEnum>(i)).prettyName();
         EXPECT_EQ(prettyName, format("v{}", i));
     }
     EXPECT_EQ(s5, "v1");
     EXPECT_EQ(s6, "v200");
     for (int i = 1; i <= 200; ++i) {
         std::string v = "v";
-        std::string_view prettyName = Enum::prettyName(static_cast<VeryLongEnum>(i));
+        std::string_view prettyName =
+            EnumValue(static_cast<VeryLongEnum>(i)).prettyName();
         EXPECT_EQ(prettyName, format("v{}", i));
     }
 }

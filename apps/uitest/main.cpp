@@ -314,11 +314,11 @@ private:
         return comboBox_;
     }
 
-    template<typename EnumType>
+    template<typename TEnum>
     ui::ComboBoxWeakPtr createComboBoxFromEnum_(ui::Widget* parent) {
         ui::Column* col = parent->createChild<ui::Column>();
         ui::LabelWeakPtr label_ = col->createChild<ui::Label>();
-        auto comboBoxShared_ = ui::ComboBox::createFromEnum<EnumType>();
+        auto comboBoxShared_ = ui::ComboBox::createFromEnum<TEnum>();
         ui::ComboBoxWeakPtr comboBox_ = comboBoxShared_;
         setComboBoxLabelText_(label_, comboBox_, -1);
         if (auto comboBox = comboBox_.lock()) {

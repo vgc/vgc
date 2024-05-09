@@ -40,7 +40,7 @@ EnumSettingEdit::EnumSettingEdit(CreateKey key, EnumSettingPtr setting)
     }
 
     comboBox->setTitle(enumSetting->label());
-    comboBox->setItemsFromEnum(enumSetting->enumTypeId());
+    comboBox->setItemsFromEnum(enumSetting->enumType());
     comboBox->setEnumValue(enumSetting->value());
     comboBox->indexChanged().connect(onComboBoxIndexChanged_Slot());
 

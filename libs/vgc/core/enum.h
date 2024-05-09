@@ -20,12 +20,14 @@
 #include <optional>
 #include <string>
 #include <string_view>
+#include <type_traits>
 #include <unordered_map>
 
 #include <vgc/core/algorithms.h> // hashCombine
 #include <vgc/core/api.h>
 #include <vgc/core/arithmetic.h>
 #include <vgc/core/array.h>
+#include <vgc/core/exceptions.h>
 #include <vgc/core/format.h>
 #include <vgc/core/preprocessor.h>
 #include <vgc/core/templateutil.h>
@@ -33,233 +35,312 @@
 
 namespace vgc::core {
 
+class EnumValue;
+
 namespace detail {
 
-struct EnumValueData {
-    TypeId typeId;          //  core::typeId<vgc::ui::Key>()
+// Note: We have chosen to store type-erased enum values by casting them to a
+// 64bit integer, which means that we do not support enum types whose
+// underlying type is larger than 64bit. This is unlikely to ever be an issue,
+// since as of this writing (e.g., up to C++23), such enum types are not
+// portably supported anyway. Example with Clang:
+//
+//   enum Foo { _65bitValue = 0x1ffff'ffff'ffff'ffff };
+//
+//   error: integer literal is too large to be represented in any integer type.
+
+struct EnumValueInfo {
     UInt64 value;           //  static_cast<UInt64>(vgc::ui::Key::Digit0)
     std::string fullName;   //  "vgc::ui::Key::Digit0"
     std::string shortName;  //  "Digit0"
     std::string prettyName; //  "0"
-
-    // Note: Not supporting enum types larger than 64bit is unlikely to ever be
-    // an issue, since (at least up to C++23), such enum types are not portably
-    // supported anyway. Example with Clang:
-    //
-    //   enum Foo { _65bitValue = 0x1ffff'ffff'ffff'ffff };
-    //
-    //   error: integer literal is too large to be represented in any integer type.
 };
 
-struct EnumDataBase;
+// Base class storing most of the meta-info of a given EnumType.
+//
+class VGC_CORE_API EnumTypeInfo_ {
+public:
+    core::TypeId typeId;
+    bool isRegistered = false;
 
-VGC_CORE_API
-void registerEnumDataBase(const EnumDataBase& data);
+    std::string unknownItemFullName;   // "vgc::ui::Key::Unknown_Key"
+    std::string unknownItemShortName;  // "Unknown_Key"
+    std::string unknownItemPrettyName; // "Unknown Key"
 
-VGC_CORE_API
-const EnumDataBase* getEnumDataBase(TypeId typeId);
+    // This is where the actual per-enumerator data is stored. We allocate each
+    // EnumValueInfo separately on the heap to ensure that it has a stable
+    // address, and therefore that string_views to the stored strings stay
+    // valid when valueInfo grows (or if this EnumTypeInfo_ is moved).
+    //
+    Array<std::unique_ptr<EnumValueInfo>> valueInfo;
 
-VGC_CORE_API
-const EnumValueData* getEnumValueData(TypeId typeId, UInt64 value);
+    // These maps make it possible to quickly find the appropriate
+    // EnumValueInfo from the enum value or the enum short name.
+    //
+    std::unordered_map<UInt64, Int> valueToIndex;
+    std::unordered_map<std::string_view, Int> shortNameToIndex;
+
+    // These are convenient arrays (redundant with valueInfo) facilitating
+    // iteration without the need for proxy iterators. This approach increases
+    // debuggability and works better with parallelization libs (sometimes not
+    // supporting proxy iterators).
+    //
+    Array<EnumValue> enumValues;
+    Array<std::string_view> fullNames;
+    Array<std::string_view> shortNames;
+    Array<std::string_view> prettyNames;
+
+    EnumTypeInfo_(TypeId id);
+    virtual ~EnumTypeInfo_() = 0;
+
+    // EnumTypeInfo_ is non-copyable (because it stores unique_ptrs).
+    // We need to explicitly mark it non-copyable otherwise it doesn't compile on MSVC.
+    EnumTypeInfo_(const EnumTypeInfo_&) = delete;
+    EnumTypeInfo_& operator=(const EnumTypeInfo_&) = delete;
+
+    // Returns the index corresponding to the given enum value, if any.
+    //
+    std::optional<Int> getIndex(UInt64 value) const;
+
+    // Returns the index corresponding to the given enum short name, if any.
+    //
+    std::optional<Int> getIndexFromShortName(std::string_view shortName) const;
+
+protected:
+    void addValue_(UInt64 value, std::string_view shortName, std::string_view prettyName);
+};
+
+// Derived template class providing a non-type-erased API.
+//
+// For example, this allows iteration over all enum values stored as their
+// original types instead of casted as a 64bit integer.
+//
+template<typename TEnum, VGC_REQUIRES(std::is_enum_v<TEnum>)>
+class EnumTypeInfo : public EnumTypeInfo_ {
+public:
+    Array<TEnum> values;
+
+    EnumTypeInfo(TypeId id)
+        : EnumTypeInfo_(id) {
+    }
+
+    void addValue(TEnum value, std::string_view shortName, std::string_view prettyName) {
+        addValue_(static_cast<UInt64>(value), shortName, prettyName);
+        values.append(value);
+    }
+
+    std::optional<Int> getIndex(TEnum value) const {
+        return getIndex(static_cast<UInt64>(value));
+    }
+};
 
 } // namespace detail
 
 /// Type trait for `isRegisteredEnum`.
 ///
-template<typename EnumType, typename SFINAE = void>
+template<typename TEnum, typename SFINAE = void>
 struct IsRegisteredEnum : std::false_type {};
 
-template<typename EnumType>
-struct IsRegisteredEnum<EnumType, RequiresValid<decltype(enumData_(EnumType()))>>
+template<typename TEnum>
+struct IsRegisteredEnum<
+    TEnum,
+    RequiresValid<decltype(initEnumTypeInfo_((detail::EnumTypeInfo<TEnum>*)(0)))>>
     : std::true_type {};
 
-/// Checks whether `EnumType` is an enumeration type that has been registered
+/// Checks whether `TEnum` is an enumeration type that has been registered
 /// via `VGC_DECLARE_ENUM` and `VGC_DEFINE_ENUM`.
 ///
-template<typename EnumType>
-inline constexpr bool isRegisteredEnum = IsRegisteredEnum<EnumType>::value;
+template<typename TEnum>
+inline constexpr bool isRegisteredEnum = IsRegisteredEnum<TEnum>::value;
 
-class Enum;
+namespace detail {
+
+using EnumTypeInfoFactory = std::function<const EnumTypeInfo_*()>;
+
+// Creates and returns an `EnumTypeInfo_` with the given `factory`, unless an
+// `EnumTypeInfo_` with the given `typeId` has already been created, in which
+// case the pre-existing `EnumTypeInfo_` is returned instead. This ensures
+// uniqueness of the `EnumTypeInfo_*` even across shared library boundary.
+//
+VGC_CORE_API const EnumTypeInfo_*
+getOrCreateEnumTypeInfo(TypeId typeId, EnumTypeInfoFactory factory);
+
+template<typename TEnum>
+const EnumTypeInfo<TEnum>* getOrCreateEnumTypeInfo() {
+    TypeId typeId = core::typeId<TEnum>();
+    const EnumTypeInfo_* info_ = getOrCreateEnumTypeInfo(typeId, [typeId]() {
+        auto info = new EnumTypeInfo<TEnum>(typeId); // leaks intentionally
+        if constexpr (isRegisteredEnum<TEnum>) {
+            info->isRegistered = true;
+            initEnumTypeInfo_(info); // found via ADL
+        }
+        return info;
+    });
+    return static_cast<const EnumTypeInfo<TEnum>*>(info_);
+}
+
+template<typename TEnum>
+const EnumTypeInfo<TEnum>* enumTypeInfo() {
+    static const EnumTypeInfo<TEnum>* info = detail::getOrCreateEnumTypeInfo<TEnum>();
+    return info;
+}
+
+} // namespace detail
+
+template<typename T>
+using EnumArrayView = const Array<T>&;
+
+using EnumStringArrayView = EnumArrayView<std::string_view>;
+
+/// \class vgc::core::EnumType
+/// \brief Represents the type of an enum value.
+///
+/// ```cpp
+/// EnumType type = enumType<vgc::ui::Key>();
+/// ```
+///
+class VGC_CORE_API EnumType {
+public:
+    /// Returns the unqualified type name of this `EnumType`.
+    ///
+    /// ```cpp
+    /// enumType<vgc::ui::Key>().shortName()`; // => "Key"
+    /// ```
+    ///
+    std::string_view shortName() const {
+        return info_->typeId.name();
+    }
+
+    /// Returns the fully-qualified type name of this `EnumType`.
+    ///
+    /// ```cpp
+    /// enumType<vgc::ui::Key>().shortName()`; // => "vgc::ui::Key"
+    /// ```
+    ///
+    std::string_view fullName() const {
+        return info_->typeId.fullName();
+    }
+
+    // TODO: prettyName?
+
+    /// Iterates over all the registered `EnumValue` of this `EnumType`,
+    /// in the same order as defined by `VGC_DEFINE_ENUM`.
+    ///
+    /// Returns an empty sequence if this is not a registered enum.
+    ///
+    /// \sa `core::enumValues<TEnum>()`.
+    ///
+    EnumArrayView<EnumValue> values() const {
+        return info_->enumValues;
+    }
+
+    /// Iterates over all the short names of the registered values of this
+    /// `EnumType`.
+    ///
+    EnumStringArrayView shortNames() const {
+        return info_->shortNames;
+    }
+
+    /// Iterates over all the full names of the registered values of this
+    /// `EnumType`.
+    ///
+    EnumStringArrayView fullNames() const {
+        return info_->fullNames;
+    }
+
+    /// Iterates over all the pretty names of the registered values of this
+    /// `EnumType`.
+    ///
+    EnumStringArrayView prettyNames() const {
+        return info_->prettyNames;
+    }
+
+    /// Converts the given enumerator's `shortName` (e.g., "Digit0")
+    /// to its corresponding value, if any.
+    ///
+    /// Return `std::nullopt` if there is no registered value with the given
+    /// `shortName` for this `EnumType`.
+    ///
+    /// \sa `core::enumFromShortName<TEnum>()`.
+    ///
+    std::optional<EnumValue> fromShortName(std::string_view shortName) const;
+
+    /// Returns whether this `EnumType` is equal to `other`.
+    ///
+    bool operator==(const EnumType& other) const {
+        return info_ == other.info_;
+    }
+
+    /// Returns whether this `EnumType` is different from `other`.
+    ///
+    bool operator!=(const EnumType& other) const {
+        return info_ != other.info_;
+    }
+
+    /// Returns whether this `EnumType` is less than `other`.
+    ///
+    bool operator<(const EnumType& other) const {
+        return info_ < other.info_;
+    }
+
+private:
+    const detail::EnumTypeInfo_* info_;
+
+    template<typename T>
+    friend EnumType enumType();
+
+    friend struct std::hash<EnumType>;
+
+    friend detail::EnumTypeInfo_;
+    friend EnumValue;
+
+    EnumType(const detail::EnumTypeInfo_* info)
+        : info_(info) {
+    }
+};
+
+/// Returns the `EnumType` of the given enum type.
+///
+/// ```
+/// enum class Animal { Cat, Dog };
+/// EnumType type = enumType<Animal>();
+/// ```
+///
+template<typename TEnum>
+EnumType enumType() {
+    return EnumType(detail::enumTypeInfo<TEnum>());
+}
+
+} // namespace vgc::core
+
+namespace std {
+
+template<>
+struct hash<vgc::core::EnumType> {
+    std::size_t operator()(const vgc::core::EnumType& t) const {
+        return std::hash<const vgc::core::detail::EnumTypeInfo_*>()(t.info_);
+    }
+};
+
+} // namespace std
+
+template<>
+struct fmt::formatter<vgc::core::EnumType> : fmt::formatter<std::string_view> {
+    template<typename FormatContext>
+    auto format(vgc::core::EnumType t, FormatContext& ctx) {
+        return fmt::formatter<std::string_view>::format(t.fullName(), ctx);
+    }
+};
+
+namespace vgc::core {
 
 /// \class vgc::core::EnumValue
 /// \brief Stores any Enum value in a type-safe way.
 ///
-class EnumValue {
+class VGC_CORE_API EnumValue {
 public:
-    /// Creates an empty `EnumValue`.
-    ///
-    EnumValue()
-        : typeId_(core::typeId<void>()) {
-    }
-
-    /// Creates an `EnumValue` from the given enumerator value.
-    ///
-    // Note: This constructor intentionally allows implicit conversions.
-    //
-    template<typename EnumType, VGC_REQUIRES(std::is_enum_v<EnumType>)>
-    EnumValue(EnumType value)
-        : typeId_(core::typeId<EnumType>())
-        , value_(static_cast<UInt64>(value)) {
-
-        if constexpr (isRegisteredEnum<EnumType>) {
-
-            // Ensures that the global EnumData<EnumType> is initialized by
-            // making a call to `enumData_()` now. This is important since the
-            // data is lazy-initialized, and this constructor might be our only
-            // opportunity to call `enumData_()` before other methods such as
-            // `EnumValue::shortName()` are called, which require the data to
-            // have already been initialized (we cannot initialize it there
-            // because we do not have access to `EnumType` anymore).
-            //
-            const auto& init = enumData_(value);
-            VGC_UNUSED(init);
-        }
-
-        // Note: alternatively, we could call getEnumValueData() here and only
-        // store the returned pointer as data member. This would make
-        // `EnumValue` 64bit instead of 128bit, but would only work for
-        // registered enums, and would not support enum values outside of the
-        // registered values (so wouldn't work for flags). Therefore, for more
-        // genericity, we have chosen the current approach.
-    }
-
-    /// Returns whether the `EnumValue` is empty.
-    ///
-    bool isEmpty() const {
-        return typeId_ == core::typeId<void>();
-    }
-
-    /// Returns the `TypeId` of the type of the stored enumerator value.
-    ///
-    /// Returns `typeId<void>()` if `isEmpty()` is true.
-    ///
-    TypeId typeId() const {
-        return typeId_;
-    }
-
-    /// Returns whether the `EnumValue` stores an enumerator value
-    /// of the given `EnumType`.
-    ///
-    template<typename EnumType>
-    bool has() const {
-        return typeId_ == core::typeId<EnumType>();
-    }
-
-    /// Returns the stored value as an `EnumType`.
-    ///
-    /// Throws an exception if the `EnumType` is empty or if the stored
-    /// enumerator value is not of type `EnumType`.
-    ///
-    template<typename EnumType>
-    EnumType get() {
-        if (isEmpty()) {
-            throw core::LogicError(
-                "Attempting to get the stored value of an empty EnumValue.");
-        }
-        TypeId requestedType = core::typeId<EnumType>();
-        if (typeId_ != requestedType) {
-            throw core::LogicError(core::format(
-                "Mismatch between stored EnumValue type ({}) and requested type ({}).",
-                typeId_.name(),
-                requestedType.name()));
-        }
-        return static_cast<EnumType>(value_);
-    }
-
-    /// Returns the stored value as an `EnumType`.
-    ///
-    /// The behavior is undefined if the `EnumType` is empty or if the stored
-    /// enumerator value is not of type `EnumType`.
-    ///
-    template<typename EnumType>
-    EnumType getUnchecked() {
-        return static_cast<EnumType>(value_);
-    }
-
-    /// Returns the unqualified name (e.g., "Digit0") of the stored enumerator
-    /// value, if any.
-    ///
-    /// Otherwise, returns "NoValue".
-    ///
-    std::string_view shortName() const {
-        if (auto data = getEnumValueData_()) {
-            return data->shortName;
-        }
-        else {
-            return "NoValue";
-        }
-    }
-
-    /// Returns the fully-qualified name (e.g., "vgc::ui::Key::Digit0") of the
-    /// stored enumerator value, if any.
-    ///
-    /// Otherwise, returns "NoType::NoValue".
-    ///
-    std::string_view fullName() const {
-        if (auto data = getEnumValueData_()) {
-            return data->fullName;
-        }
-        else {
-            return "NoType::NoValue";
-        }
-    }
-
-    /// Returns the pretty name (e.g., "0") of the stored enumerator value, if
-    /// any.
-    ///
-    /// Otherwise, returns "No Value".
-    ///
-    std::string_view prettyName() const {
-        if (auto data = getEnumValueData_()) {
-            return data->prettyName;
-        }
-        else {
-            return "No Value";
-        }
-    }
-
-    /// Returns whether the two `EnumValue` are equal, that is, if
-    /// they have both same type and value.
-    ///
-    bool operator==(const EnumValue& other) const {
-        return typeId_ == other.typeId_ && value_ == other.value_;
-    }
-
-    /// Returns whether the two `EnumValue` are different.
-    ///
-    bool operator!=(const EnumValue& other) const {
-        return !(*this == other);
-    }
-
-    /// Compares the two `EnumValue`.
-    ///
-    bool operator<(const EnumValue& other) const {
-        if (typeId_ == other.typeId_) {
-            return value_ < other.value_;
-        }
-        else {
-            return typeId_ < other.typeId_;
-        }
-    }
-
-private:
-    TypeId typeId_;
-    UInt64 value_ = 0;
-
-    friend std::hash<EnumValue>;
-    friend fmt::formatter<EnumValue>;
-
-    const detail::EnumValueData* getEnumValueData_() const {
-        return detail::getEnumValueData(typeId_, value_);
-    }
-
-    // For access to the EnumValue(TypeId, UInt64) constructor.
-    // Will not be needed anymore if/when we publicize it (see comment below)
-    friend Enum;
-    friend detail::EnumDataBase;
-
-    // Creates an `EnumValue` given the `typeId` of the enum type and the
-    // `underlyingValue` of the enumerator as an `UInt64`.
+    // Creates an `EnumValue` given its `type` and underlying `value` as an
+    // `UInt64`.
     //
     // This constructor is only meant for advanced use cases and should rarely
     // be needed: whenever possible, prefer using the constructor from an
@@ -273,7 +354,7 @@ private:
     // };
     //
     // // Using this constructor
-    // EnumValue v1 = EnumValue(typeId<MyEnum>(), 0);
+    // EnumValue v1 = EnumValue(enumType<MyEnum>(), 0);
     //
     // // Using the type-safe constructor
     // EnumValue v2 = EnumValue(MyEnum::Foo);
@@ -281,37 +362,154 @@ private:
     // assert(v1 == v2);
     // ```
     //
-    // Also, note that when using this constructor, then the `shortName()`,
-    // `fullName()`, and `prettyName()` may not return correct values as they
-    // may not be properly initialized yet, especially at program startup.
-    // Using the type-safe constructor instead ensures proper initialization.
+    EnumValue(EnumType type, UInt64 value)
+        : type_(type)
+        , value_(value) {
+    }
+
+    /// Creates an `EnumValue` from the given enumerator value.
+    ///
+    // Note: This constructor intentionally allows implicit conversions.
     //
-    // XXX Publicize, or is it too dangerous?
+    template<typename TEnum, VGC_REQUIRES(std::is_enum_v<TEnum>)>
+    EnumValue(TEnum value)
+        : type_(enumType<TEnum>())
+        , value_(static_cast<UInt64>(value)) {
+    }
+
+    /// Returns the `EnumType` of this `EnumValue`.
+    ///
+    EnumType type() const {
+        return type_;
+    }
+
+    /// Returns whether the `EnumValue` stores an enumerator value
+    /// of the given `TEnum` type.
+    ///
+    template<typename TEnum>
+    bool has() const {
+        return type_ == enumType<TEnum>();
+    }
+
+    /// Returns the stored value as a `TEnum`.
+    ///
+    /// Throws an exception if the `EnumValue` is empty or if the stored
+    /// enumerator value is not of type `TEnum`.
+    ///
+    template<typename TEnum>
+    TEnum get() const {
+        EnumType requestedType = enumType<TEnum>();
+        if (type_ != requestedType) {
+            throw core::LogicError(core::format(
+                "Mismatch between stored EnumValue type ({}) and requested type ({}).",
+                type_.fullName(),
+                requestedType.fullName()));
+        }
+        return static_cast<TEnum>(value_);
+    }
+
+    /// Returns the stored value as a `TEnum`.
+    ///
+    /// The behavior is undefined if the `EnumValue` is empty or if the stored
+    /// enumerator value is not of type `TEnum`.
+    ///
+    template<typename TEnum>
+    TEnum getUnchecked() const {
+        return static_cast<TEnum>(value_);
+    }
+
+    /// Returns the unqualified name (e.g., "Digit0") of the stored enumerator
+    /// value, if any.
+    ///
+    /// Otherwise, returns "NoValue".
+    ///
+    // TODO: Return format("{}({})", shortTypeName, value) instead of "NoValue".
+    //       This requires returning something like `StringOrStringView`.
     //
-    // XXX Is it possible/desirable to modify the EnumData implementation to
-    // enforce at-least-partial initialization from this constructor? Indeed,
-    // while it is impossible to initialize `EnumData<EnumType>::values` here,
-    // it might be possible to at least initialize the `EnumDataBase` instance
-    // (including shortName, etc.), for example by actually storing it in the
-    // global registry separately from the EnumData<EnumType> instance.
-    // Instead, we currently have EnumData<EnumType> inherit EnumDataBase, and
-    // instanciated as a function static variable discovered via ADL (reason
-    // why we need the actual type to be able to call this function), the
-    // registry only pointing to this instance. But maybe even partial
-    // initialization is impossible, e.g.: how can we find the init function to
-    // call without being able to rely on ADL, while keeping the
-    // VGC_DECLARE/DEFINE_ENUM macros in the same namespace as the enum type?
-    // Should we instead use an actual global variable rather than a function
-    // static variable, which would enforce initialization when the dynamic
-    // library is loaded rather than at first use? Possibly using a Schwarz
-    // counter for more initialization order safety?
+    std::string_view shortName() const {
+        if (auto info = getEnumValueInfo_()) {
+            return info->shortName;
+        }
+        else {
+            return "NoValue";
+        }
+    }
+
+    /// Returns the fully-qualified name (e.g., "vgc::ui::Key::Digit0") of the
+    /// stored enumerator value, if any.
+    ///
+    /// Otherwise, returns "NoType::NoValue".
+    ///
+    // TODO: Return format("{}({})", fullTypeName, value) instead of "NoValue".
+    //       This requires returning something like `StringOrStringView`.
     //
-    // => The points above might be solvable with a new EnumTypeId class (or
-    //    just `EnumType`), see comment [1] in Enum class.
+    std::string_view fullName() const {
+        if (auto info = getEnumValueInfo_()) {
+            return info->fullName;
+        }
+        else {
+            return "NoType::NoValue";
+        }
+    }
+
+    /// Returns the pretty name (e.g., "0") of the stored enumerator value, if
+    /// any.
+    ///
+    /// Otherwise, returns "No Value".
+    ///
+    // TODO: Return format("{}({})", shortTypeName, value) instead of "NoValue".
+    //       This requires returning something like `StringOrStringView`.
     //
-    EnumValue(core::TypeId typeId, UInt64 underlyingValue)
-        : typeId_(typeId)
-        , value_(underlyingValue) {
+    std::string_view prettyName() const {
+        if (auto info = getEnumValueInfo_()) {
+            return info->prettyName;
+        }
+        else {
+            return "No Value";
+        }
+    }
+
+    /// Returns whether the two `EnumValue` are equal, that is, if
+    /// they have both same type and value.
+    ///
+    bool operator==(const EnumValue& other) const {
+        return type_ == other.type_ && value_ == other.value_;
+    }
+
+    /// Returns whether the two `EnumValue` are different.
+    ///
+    bool operator!=(const EnumValue& other) const {
+        return !(*this == other);
+    }
+
+    /// Compares the two `EnumValue`.
+    ///
+    bool operator<(const EnumValue& other) const {
+        if (type_ == other.type_) {
+            return value_ < other.value_;
+        }
+        else {
+            return type_ < other.type_;
+        }
+    }
+
+private:
+    EnumType type_;
+    UInt64 value_ = 0;
+
+    // Note: alternatively, we could just store an EnumValueInfo*. This
+    // would make `EnumValue` 64bit instead of 128bit, but would only work for
+    // registered enums, and would not support enum values outside of the
+    // registered values (so wouldn't work for flags). Therefore, for more
+    // genericity, we have chosen the current approach.
+
+    friend std::hash<EnumValue>;
+
+    const detail::EnumValueInfo* getEnumValueInfo_() const {
+        if (auto index = type_.info_->getIndex(value_)) {
+            return type_.info_->valueInfo[*index].get();
+        }
+        return nullptr;
     }
 };
 
@@ -323,7 +521,7 @@ template<>
 struct hash<vgc::core::EnumValue> {
     std::size_t operator()(const vgc::core::EnumValue& v) const {
         size_t res = 123456;
-        vgc::core::hashCombine(res, v.typeId_, v.value_);
+        vgc::core::hashCombine(res, v.type_, v.value_);
         return res;
     }
 };
@@ -334,107 +532,65 @@ template<>
 struct fmt::formatter<vgc::core::EnumValue> : fmt::formatter<std::string_view> {
     template<typename FormatContext>
     auto format(const vgc::core::EnumValue& v, FormatContext& ctx) {
-
         return fmt::formatter<std::string_view>::format(v.fullName(), ctx);
+    }
+};
+
+template<typename TEnum>
+struct fmt::formatter< //
+    TEnum,
+    char,
+    vgc::core::Requires<vgc::core::isRegisteredEnum<TEnum>>>
+
+    : fmt::formatter<vgc::core::EnumValue> {
+
+    template<typename FormatContext>
+    auto format(TEnum value, FormatContext& ctx) {
+        return fmt::formatter<vgc::core::EnumValue>::format(value, ctx);
     }
 };
 
 namespace vgc::core {
 
-namespace detail {
+// Below, we define templated free functions which are similar to methods in
+// `EnumType`, but return actual enum values instead of type-erased
+// `EnumValue`.
 
-// We use this base class for everything that does not need to be templated and
-// can therefore be moved to the .cpp file.
-//
-struct VGC_CORE_API EnumDataBase {
+/// Returns the sequence of all the registered values of the enum type
+/// `TEnum`.
+///
+/// \sa `EnumType::values()`.
+///
+template<typename TEnum, VGC_REQUIRES(isRegisteredEnum<TEnum>)>
+EnumArrayView<TEnum> enumValues() {
+    auto info = detail::enumTypeInfo<TEnum>();
+    return info->values;
+}
 
-    // EnumDataBase is non-copyable (because it stores unique_ptrs).
-    // We need to explicitly mark it non-copyable otherwise it doesn't compile on MSVC.
-    EnumDataBase(const EnumDataBase&) = delete;
-    EnumDataBase& operator=(const EnumDataBase&) = delete;
-
-    TypeId typeId;
-
-    std::string fullTypeName;  // "vgc::ui::Key"
-    std::string shortTypeName; // "Key"
-
-    std::string unknownItemFullName;   // "vgc::ui::Key::Unknown_Key"
-    std::string unknownItemShortName;  // "Unknown_Key"
-    std::string unknownItemPrettyName; // "Unknown Key"
-
-    // This is where the actual per-enumerator data is stored. We use pointers
-    // to ensure that any string_view to the stored strings stay valid when
-    // valueData grows, or when this EnumDataBase is moved.
-    //
-    Array<std::unique_ptr<EnumValueData>> valueData;
-
-    // These maps make it possible to quickly find the appropriate
-    // EnumValueData from the enum value or the enum short name.
-    //
-    std::unordered_map<UInt64, Int> valueToIndex;
-    std::unordered_map<std::string_view, Int> shortNameToIndex;
-
-    // These are convenient arrays (redundant with valueData) facilitating
-    // iteration without the need for proxy iterators. This approach increases
-    // debuggability and works better with parallelization libs (sometimes not
-    // supporting proxy iterators).
-    //
-    Array<EnumValue> enumValues;
-    Array<std::string_view> fullNames;
-    Array<std::string_view> shortNames;
-    Array<std::string_view> prettyNames;
-
-    EnumDataBase(TypeId id, std::string_view prettyFunction);
-    virtual ~EnumDataBase() = 0;
-
-    void
-    addItemBase(UInt64 value, std::string_view shortName, std::string_view prettyName);
-
-    std::optional<Int> getIndexBase(UInt64 value) const {
-        auto search = valueToIndex.find(value);
-        if (search != valueToIndex.end()) {
-            return search->second;
-        }
-        else {
-            return std::nullopt;
-        }
+/// Converts the given enumerator's `shortName` (e.g., "Digit0") to its
+/// corresponding value, if any.
+///
+/// Return `std::nullopt` if there is no registered value with the given
+/// `shortName` for the enum type `TEnum`.
+///
+/// \sa `EnumType::fromShortName()`.
+///
+template<typename TEnum, VGC_REQUIRES(isRegisteredEnum<TEnum>)>
+std::optional<TEnum> enumFromShortName(std::string_view shortName) {
+    auto info = detail::enumTypeInfo<TEnum>();
+    if (auto index = info->getIndexFromShortName(shortName)) {
+        return info->values[*index];
     }
-
-    std::optional<Int> getIndexFromShortName(std::string_view shortName) const {
-        auto search = shortNameToIndex.find(shortName);
-        if (search != shortNameToIndex.end()) {
-            return search->second;
-        }
-        else {
-            return std::nullopt;
-        }
+    else {
+        return std::nullopt;
     }
-};
+}
 
-template<typename EnumType>
-struct EnumData : EnumDataBase {
+} // namespace vgc::core
 
-    Array<EnumType> values;
+// clang-format off
 
-    EnumData(TypeId id, std::string_view prettyFunction)
-        : EnumDataBase(id, prettyFunction) {
-    }
-
-    void
-    addItem(EnumType value, std::string_view shortName, std::string_view prettyName) {
-        addItemBase(static_cast<UInt64>(value), shortName, prettyName);
-        values.append(value);
-    }
-
-    std::optional<Int> getIndex(EnumType value) const {
-        return getIndexBase(static_cast<UInt64>(value));
-    }
-};
-
-} // namespace detail
-
-/// \class vgc::core::Enum
-/// \brief Provides runtime introspection for registered enum types
+/// \brief Provides runtime introspection for a given enum type
 ///
 /// In order to support iteration over items of an enum type, and support
 /// conversion from an enum integer value to a string (and vice-versa), any
@@ -470,43 +626,6 @@ struct EnumData : EnumDataBase {
 ///
 /// ```
 ///
-/// Once registered, you can use the static functions of this `Enum` class to
-/// iterate over items or convert integer values from/to strings.
-///
-/// Examples:
-///
-/// ```cpp
-/// // Iterate over all registered values of an enum type
-/// for (foo::MyEnum value : Enum::values<foo::MyEnum>()) {
-///     // ...
-/// }
-///
-/// // Convert from an enum type to a string
-/// print(Enum::shortTypeName<foo::MyEnum>()); // => "MyEnum"
-/// print(Enum::fullTypeName<foo::MyEnum>()); // => "foo::MyEnum"
-///
-/// // Convert from an enum value to a string
-/// print(Enum::shortName(foo::MyEnum::Value1));  // => "Value1"
-/// print(Enum::fullName(foo::MyEnum::Value1));   // => "foo::MyEnum::Value1"
-/// print(Enum::prettyName(foo::MyEnum::Value1)); // => "Value 1"
-///
-/// // Convert from a string to an enum value
-/// if (auto value = Enum::fromShortName<foo::MyEnum>("Value1")) {
-///     foo::MyEnum v = *value; // => foo::MyEnum::Value1
-/// }
-/// ```
-///
-/// All the functions in the example above are templated by an `EnumType`,
-/// which should either be explicitly provided, or can be automatically deduced
-/// (as is the case with `shortName(EnumType value)`, `fullName(EnumType
-/// value)`, and `prettyName(EnumType value)`). A call to any of these
-/// functions will only compile if `EnumType` is a registered enum type.
-///
-/// Alternatively, there also exists a non-templated version for some of these
-/// functions, taking an extra `TypeId` argument, which always compiles but
-/// typically returns an `std::optional` to handle the case where the enum type
-/// is not registered.
-///
 /// Note that due to compiler limits (maximum number of macro arguments
 /// allowed), `VGC_DEFINE_ENUM` only supports up to 122 enum items. If you
 /// need more, you can use the following long-form version, which is a little
@@ -521,311 +640,49 @@ struct EnumData : EnumDataBase {
 /// VGC_DEFINE_ENUM_END()
 /// ```
 ///
-class Enum {
-public:
-    template<typename T>
-    using ArrayView = const Array<T>&;
-
-    using StringArrayView = ArrayView<std::string_view>;
-
-    /// Returns the unqualified type name of the given `EnumType`.
-    ///
-    /// ```cpp
-    /// Enum::shortTypeName<vgc::ui::Key>()`; // => "Key"
-    /// ```
-    ///
-    /// \sa `shortTypeName(TypeId)`,
-    ///     `fullTypeName<EnumType>()`, `fullTypeName(TypeId)`.
-    ///
-    template<typename EnumType>
-    static std::string_view shortTypeName() {
-        const detail::EnumData<EnumType>& data = enumData_(EnumType{});
-        return data.shortTypeName;
-    }
-
-    /// Returns the unqualified type name of an enum type given by its `TypeId`.
-    ///
-    /// Returns `std::nullopt` if there is no registered enum type corresponding
-    /// to the given `TypeId`.
-    ///
-    /// ```cpp
-    /// TypeId id = typeId<vgc::ui::Key>();
-    /// if (auto name = Enum::shortTypeName(id)) {
-    ///     print(*name); // => "Key"
-    /// }
-    /// ```
-    ///
-    /// \sa `shortTypeName<EnumType>()`,
-    ///     `fullTypeName<EnumType>()`, `fullTypeName(TypeId)`.
-    ///
-    static std::optional<std::string_view> shortTypeName(TypeId enumTypeId) {
-        if (auto data = detail::getEnumDataBase(enumTypeId)) { // [1]
-            return data->shortTypeName;
-        }
-        else {
-            return std::nullopt;
-        }
-        // [1] XXX: What if the enum type does have a corresponding
-        // VGC_DECLARE/DEFINE_ENUM, but it is *not yet* registered due to lazy
-        // initialization? (This applies to all other usages of TypeId in
-        // Enum). This might be solved by implementing a new class EnumTypeId
-        // (or simply EnumType?), similar to TypeId, but ensuring that EnumData
-        // is initialized when an EnumTypeId is instanciated. Using such
-        // EnumTypeId class instead of TypeId in EnumValue would also make it
-        // possible to safely publicize EnumValue(EnumTypeId, UInt64 value).
-    }
-
-    /// Returns the fully-qualified type name of the given `EnumType`.
-    ///
-    /// ```cpp
-    /// Enum::fullTypeName<vgc::ui::Key>()`; // => "vgc::ui::Key"
-    /// ```
-    ///
-    /// \sa `fullTypeName(TypeId)`,
-    ///     `shortTypeName<EnumType>()`, `shortTypeName(TypeId)`.
-    ///
-    /// Example: `"vgc::ui::Key"`.
-    ///
-    template<typename EnumType>
-    static std::string_view fullTypeName() {
-        const detail::EnumData<EnumType>& data = enumData_(EnumType{});
-        return data.fullTypeName;
-    }
-
-    /// Returns the fully-qualified type name of an enum type given by its
-    /// `TypeId`.
-    ///
-    /// Returns `std::nullopt` if there is no registered enum type corresponding
-    /// to the given `TypeId`.
-    ///
-    /// ```cpp
-    /// TypeId id = typeId<vgc::ui::Key>();
-    /// if (auto name = Enum::fullTypeName(id)) {
-    ///     print(*name); // => "vgc::ui::Key"
-    /// }
-    /// ```
-    ///
-    /// \sa `fullTypeName<EnumType>()`,
-    ///     `shortTypeName<EnumType>()`, `shortTypeName(TypeId)`.
-    ///
-    static std::optional<std::string_view> fullTypeName(TypeId enumTypeId) {
-        if (auto data = detail::getEnumDataBase(enumTypeId)) { // [1]
-            return data->fullTypeName;
-        }
-        else {
-            return std::nullopt;
-        }
-    }
-
-    // TODO: prettyTypeName?
-
-    /// Returns the sequence of all the registered values of the given `EnumType`.
-    ///
-    /// The sequence is in the same order as defined by `VGC_DEFINE_ENUM`.
-    ///
-    /// \sa `values(TypeId)`.
-    ///
-    template<typename EnumType>
-    static ArrayView<EnumType> values() {
-        const detail::EnumData<EnumType>& data = enumData_(EnumType{});
-        return data.values;
-    }
-
-    /// Returns the sequence of all the registered `EnumValue` of an enum type
-    /// given by its `TypeId`.
-    ///
-    /// The sequence is in the same order as defined by `VGC_DEFINE_ENUM`.
-    ///
-    /// Returns an empty sequence if there is no registered enum type
-    /// corresponding to the given `TypeId`.
-    ///
-    /// \sa `values<EnumType>()`.
-    ///
-    static ArrayView<EnumValue> values(TypeId enumTypeId) {
-        if (auto data = detail::getEnumDataBase(enumTypeId)) { // [1]
-            return data->enumValues;
-        }
-        else {
-            static Array<EnumValue> emptyArray;
-            return emptyArray;
-        }
-    }
-
-    /// Returns the sequence of unqualified names (e.g., "Digit0") of all the
-    /// registered values of the given `EnumType`.
-    ///
-    /// The sequence is in the same order as defined by `VGC_DEFINE_ENUM`.
-    ///
-    /// \sa `fullNames()`, `prettyNames()`.
-    ///
-    template<typename EnumType>
-    static StringArrayView shortNames() {
-        const detail::EnumData<EnumType>& data = enumData_(EnumType{});
-        return data.shortNames;
-    }
-
-    /// Returns the sequence of fully-qualified names (e.g., "Digit0") of all
-    /// the registered values of the given `EnumType`.
-    ///
-    /// The sequence is in the same order as defined by `VGC_DEFINE_ENUM`.
-    ///
-    /// \sa `shortNames()`, `prettyNames()`.
-    ///
-    template<typename EnumType>
-    static StringArrayView fullNames() {
-        const detail::EnumData<EnumType>& data = enumData_(EnumType{});
-        return data.fullNames;
-    }
-
-    /// Returns the sequence of pretty names (e.g., "Digit 0") of all the
-    /// registered values of the given `EnumType`.
-    ///
-    /// The sequence is in the same order as defined by `VGC_DEFINE_ENUM`.
-    ///
-    /// \sa `shortNames()`, `fullNames()`.
-    ///
-    template<typename EnumType>
-    static StringArrayView prettyNames() {
-        const detail::EnumData<EnumType>& data = enumData_(EnumType{});
-        return data.prettyNames;
-    }
-
-    // XXX return std::optional<std::string_view> instead of using the "unknown name"?
-    // XXX remove in favor of EnumValue(EnumType value).shortName()?
-    template<typename EnumType>
-    static std::string_view shortName(EnumType value) {
-        const detail::EnumData<EnumType>& data = enumData_(value);
-        if (auto index = data.getIndex(value)) {
-            return data.shortNames[*index];
-        }
-        else {
-            return data.unknownItemShortName;
-        }
-    }
-
-    // XXX return std::optional<std::string_view> instead of using the "unknown name"?
-    // XXX remove in favor of EnumValue(EnumType value).fullName()?
-    template<typename EnumType>
-    static std::string_view fullName(EnumType value) {
-        const detail::EnumData<EnumType>& data = enumData_(value);
-        if (auto index = data.getIndex(value)) {
-            return data.fullNames[*index];
-        }
-        else {
-            return data.unknownItemFullName;
-        }
-    }
-
-    // XXX return std::optional<std::string_view> instead of using the "unknown name"?
-    // XXX remove in favor of EnumValue(EnumType value).prettyName()?
-    template<typename EnumType>
-    static std::string_view prettyName(EnumType value) {
-        const detail::EnumData<EnumType>& data = enumData_(value);
-        if (auto index = data.getIndex(value)) {
-            return data.prettyNames[*index];
-        }
-        else {
-            return data.unknownItemPrettyName;
-        }
-    }
-
-    /// Converts the given enumerator's `shortName` (e.g., "Digit0")
-    /// to its corresponding value, if any.
-    ///
-    /// Return `std::nullopt` if there is no registered value with the given
-    /// `shortName` for the given `EnumType`.
-    ///
-    /// \sa `fromShortName(TypeId, string_view)`.
-    ///
-    template<typename EnumType>
-    static std::optional<EnumType> fromShortName(std::string_view shortName) {
-        const detail::EnumData<EnumType>& data = enumData_(EnumType{});
-        if (auto index = data.getIndexFromShortName(shortName)) {
-            return data.value[*index];
-        }
-        else {
-            return std::nullopt;
-        }
-    }
-
-    /// Converts the given enumerator's `shortName` (e.g., "Digit0")
-    /// to its corresponding value, if any.
-    ///
-    /// Return `std::nullopt` if there is no registered value with the given
-    /// `shortName` for the given `enumTypeId`.
-    ///
-    /// \sa `fromShortName<EnumType>(string_view)`.
-    ///
-    static std::optional<EnumValue>
-    fromShortName(TypeId enumTypeId, std::string_view shortName) {
-        if (auto data = detail::getEnumDataBase(enumTypeId)) {
-            if (auto index = data->getIndexFromShortName(shortName)) {
-                // Note: Using the generally unsafe EnumValue(TypeId, UInt64)
-                // constructor is safe in this case, because we know that the
-                // enumerator data is already initialized, since we found it.
-                return EnumValue(enumTypeId, data->valueData[*index]->value);
-            }
-            else {
-                return std::nullopt;
-            }
-        }
-        else {
-            return std::nullopt;
-        }
-    }
-};
-
-} // namespace vgc::core
-
-// clang-format off
-
-// Partial specialization of fmt::formatter for registered enum types. This
-// relies on SFINAE and ADL: we SFINAE-test whether enumData_(item) is valid
-// code, which is true for registered enum types since the function enumData_()
-// is found via Argument-Dependent Lookup. Note that for this reason, we cannot
-// move the function enumData_() to a separate namespace, e.g., `detail`.
-//
-template<typename EnumType>
-struct fmt::formatter<
-        EnumType, char,
-        vgc::core::RequiresValid<decltype(enumData_(EnumType()))>>
-    : fmt::formatter<std::string_view> {
-
-    template<typename FormatContext>
-    auto format(EnumType item, FormatContext& ctx) {
-        return fmt::formatter<std::string_view>::format(
-            vgc::core::Enum::fullName(item), ctx);
-    }
-};
-
-/// Declares a scoped enum. See `Enum` for more details.
+/// Once registered, you can use the following functions to iterate over items
+/// or convert integer values from/to strings.
 ///
-#define VGC_DECLARE_ENUM(Enum)                                                           \
-    const ::vgc::core::detail::EnumData<Enum>& enumData_(Enum value);
+/// Examples:
+///
+/// ```cpp
+/// // Iterate over all registered values of an enum type
+/// for (foo::MyEnum value : enumValues<foo::MyEnum>()) {
+///     // ...
+/// }
+///
+/// // Convert from an enum type to a string
+/// print(enumType<foo::MyEnum>().shortName()); // => "MyEnum"
+/// print(enumType<foo::MyEnum>().fullName()); // => "foo::MyEnum"
+///
+/// // Convert from an enum value to a string
+/// print(EnumValue(foo::MyEnum::Value1).shortName());  // => "Value1"
+/// print(EnumValue(foo::MyEnum::Value1).fullName());   // => "foo::MyEnum::Value1"
+/// print(EnumValue(foo::MyEnum::Value1).prettyName()); // => "Value 1"
+///
+/// // Convert from a string to an enum value
+/// if (auto value = enumType<foo::MyEnum>().fromShortName("Value1")) {
+///     foo::MyEnum v = *value; // => foo::MyEnum::Value1
+/// }
+/// ```
+///
+#define VGC_DECLARE_ENUM(TEnum)                                                          \
+    void initEnumTypeInfo_(::vgc::core::detail::EnumTypeInfo<TEnum>* info);
 
 /// Starts the definition of a scoped enum. See `Enum` for more details.
 ///
-#define VGC_DEFINE_ENUM_BEGIN(Enum)                                                      \
-    const ::vgc::core::detail::EnumData<Enum>& enumData_(Enum) {                         \
-        using EnumType = Enum;                                                           \
-        static ::std::string pf = VGC_PRETTY_FUNCTION;                                   \
-        static auto createData = []() {                                                  \
-            auto data = new ::vgc::core::detail::EnumData<Enum>(                         \
-                ::vgc::core::typeId<EnumType>(), pf);                                    \
-            registerEnumDataBase(*data);
+#define VGC_DEFINE_ENUM_BEGIN(TEnum)                                                     \
+    void initEnumTypeInfo_(::vgc::core::detail::EnumTypeInfo<TEnum>* info) {             \
+        using TEnum_ = TEnum;
 
 /// Defines an enumerator of a scoped enum. See `Enum` for more details.
 ///
 #define VGC_ENUM_ITEM(name, prettyName)                                                  \
-            data->addItem(EnumType::name, VGC_PP_STR(name), prettyName);
+        info->addValue(TEnum_::name, VGC_PP_STR(name), prettyName);
 
 /// Ends the definition of a scoped enum. See `Enum` for more details.
 ///
 #define VGC_DEFINE_ENUM_END()                                                            \
-            return data;                                                                 \
-        };                                                                               \
-        static auto data = createData();                                                 \
-        return *data;                                                                    \
     }
 
 #define VGC_ENUM_ITEM_(x, t)                                                             \
