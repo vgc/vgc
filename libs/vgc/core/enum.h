@@ -27,6 +27,7 @@
 #include <vgc/core/api.h>
 #include <vgc/core/arithmetic.h>
 #include <vgc/core/array.h>
+#include <vgc/core/exceptions.h>
 #include <vgc/core/format.h>
 #include <vgc/core/preprocessor.h>
 #include <vgc/core/templateutil.h>
@@ -338,14 +339,6 @@ namespace vgc::core {
 ///
 class VGC_CORE_API EnumValue {
 public:
-    /*
-    /// Creates an empty `EnumValue`.
-    ///
-    EnumValue()
-        : typeId_(core::typeId<void>()) {
-    }
-    */
-
     // Creates an `EnumValue` given its `type` and underlying `value` as an
     // `UInt64`.
     //
@@ -405,10 +398,6 @@ public:
     ///
     template<typename TEnum>
     TEnum get() const {
-        // if (isEmpty()) {
-        //     throw core::LogicError(
-        //         "Attempting to get the stored value of an empty EnumValue.");
-        // }
         EnumType requestedType = enumType<TEnum>();
         if (type_ != requestedType) {
             throw core::LogicError(core::format(
