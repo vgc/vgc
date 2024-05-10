@@ -52,20 +52,53 @@ ui::BoolSetting& showInputSketchPoints() {
 
 } // namespace experimental
 
+ExperimentalModule::ExperimentalModule(CreateKey key, const ui::ModuleContext& context)
+    : Module(key, context) {
+
+    addWidget(*ui::BoolSettingEdit::create(&experimental::saveInputSketchPoints()));
+    addWidget(*ui::BoolSettingEdit::create(&experimental::showInputSketchPoints()));
+}
+
+ExperimentalModulePtr ExperimentalModule::create(const ui::ModuleContext& context) {
+    return core::createObject<ExperimentalModule>(context);
+}
+
+void ExperimentalModule::addWidget(ui::Widget& widget) {
+    widgets_.append(&widget);
+    widgetAdded().emit(widget);
+}
+
+void ExperimentalModule::onDestroyed() {
+    widgets_.clear();
+}
+
 ExperimentalPanel::ExperimentalPanel(CreateKey key, const ui::PanelContext& context)
     : Panel(key, context, label) {
 
-    ui::WidgetPtr w = createChild<ui::Column>();
-    w->createChild<ui::BoolSettingEdit>(&experimental::saveInputSketchPoints());
-    w->createChild<ui::BoolSettingEdit>(&experimental::showInputSketchPoints());
+    layout_ = createChild<ui::Column>();
 
     addStyleClass(s_with_padding);
     addStyleClass(s_experimental);
     addStyleClass(ui::strings::settings);
+
+    if (auto module = context.importModule<ExperimentalModule>().lock()) {
+        for (auto& widget_ : module->widgets()) {
+            if (auto widget = widget_.lock()) {
+                onModuleWidgetAdded_(*widget);
+            }
+        }
+        module->widgetAdded().connect(onModuleWidgetAdded_Slot());
+    }
 }
 
 ExperimentalPanelPtr ExperimentalPanel::create(const ui::PanelContext& context) {
     return core::createObject<ExperimentalPanel>(context);
+}
+
+void ExperimentalPanel::onModuleWidgetAdded_(ui::Widget& widget) {
+    if (auto layout = layout_.lock()) {
+        layout->addChild(&widget);
+    }
 }
 
 } // namespace vgc::canvas
