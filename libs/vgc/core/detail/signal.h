@@ -14,8 +14,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef VGC_CORE_INTERNAL_SIGNAL_H
-#define VGC_CORE_INTERNAL_SIGNAL_H
+#ifndef VGC_CORE_DETAIL_SIGNAL_H
+#define VGC_CORE_DETAIL_SIGNAL_H
 
 #include <any>
 #include <array>
@@ -1261,4 +1261,4 @@ private:
     VGC_PP_EXPAND(VGC_SLOT_DISPATCH_(__VA_ARGS__, NOOVERLOAD, VGC_SLOT2_, VGC_SLOT1_)(   \
         __VA_ARGS__))
 
-#endif // VGC_CORE_INTERNAL_SIGNAL_H
+#endif // VGC_CORE_DETAIL_SIGNAL_H

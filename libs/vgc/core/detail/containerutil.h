@@ -14,8 +14,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef VGC_CORE_INTERNAL_CONTAINERUTIL_H
-#define VGC_CORE_INTERNAL_CONTAINERUTIL_H
+#ifndef VGC_CORE_DETAIL_CONTAINERUTIL_H
+#define VGC_CORE_DETAIL_CONTAINERUTIL_H
 
 #include <iterator>
 #include <type_traits>
@@ -72,4 +72,4 @@ inline constexpr bool isNoInitConstructible = std::is_constructible_v<T, NoInit>
 
 } // namespace vgc::core::detail
 
-#endif // VGC_CORE_INTERNAL_CONTAINERUTIL_H
+#endif // VGC_CORE_DETAIL_CONTAINERUTIL_H

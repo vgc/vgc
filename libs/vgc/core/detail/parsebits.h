@@ -14,8 +14,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef VGC_CORE_INTERNAL_PARSEBITS_H
-#define VGC_CORE_INTERNAL_PARSEBITS_H
+#ifndef VGC_CORE_DETAIL_PARSEBITS_H
+#define VGC_CORE_DETAIL_PARSEBITS_H
 
 // This header helps avoiding a cyclic dependency between stringid.h and parse.h
 
@@ -34,4 +34,4 @@ std::string readStringUntilEof(std::string& s, IStream& in) {
 
 } // namespace vgc::core::detail
 
-#endif // VGC_CORE_INTERNAL_PARSEBITS_H
+#endif // VGC_CORE_DETAIL_PARSEBITS_H
