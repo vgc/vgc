@@ -35,6 +35,37 @@ ui::BoolSetting& showInputSketchPoints();
 
 } // namespace experimental
 
+VGC_DECLARE_OBJECT(ExperimentalModule);
+
+/// \class vgc::tools::ExperimentalModule
+/// \brief A module for registering experimental settings.
+///
+class VGC_CANVAS_API ExperimentalModule : public ui::Module {
+private:
+    VGC_OBJECT(ExperimentalModule, ui::Module)
+
+protected:
+    ExperimentalModule(CreateKey, const ui::ModuleContext& context);
+
+public:
+    static ExperimentalModulePtr create(const ui::ModuleContext& context);
+
+    void addWidget(ui::Widget& widget);
+
+    const core::Array<ui::WidgetSharedPtr>& widgets() const {
+        return widgets_;
+    }
+
+    VGC_SIGNAL(widgetAdded, (ui::Widget&, widget))
+
+private:
+    // We need to keep ownership since the widget may otherwise
+    // have no other owner until the panel is opened.
+    core::Array<ui::WidgetSharedPtr> widgets_;
+
+    void onDestroyed() override;
+};
+
 VGC_DECLARE_OBJECT(ExperimentalPanel);
 
 /// \class vgc::canvas::ExperimentalPanel
@@ -56,6 +87,12 @@ public:
     /// Creates a `ToolsPanel`.
     ///
     static ExperimentalPanelPtr create(const ui::PanelContext& context);
+
+private:
+    ui::FlexWeakPtr layout_;
+
+    void onModuleWidgetAdded_(ui::Widget& widget);
+    VGC_SLOT(onModuleWidgetAdded_)
 };
 
 } // namespace vgc::canvas
