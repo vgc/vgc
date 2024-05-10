@@ -22,16 +22,16 @@ namespace detail {
 
 EnumTypeInfo_::EnumTypeInfo_(TypeId id)
     : typeId(id) {
+    
+    unknownValueShortName = "Unknown_";
+    unknownValueShortName.append(typeId.name());
 
-    unknownItemShortName = "Unknown_";
-    unknownItemShortName.append(typeId.name());
-
-    unknownItemPrettyName = "Unknown ";
-    unknownItemPrettyName.append(typeId.name());
-
-    unknownItemFullName = typeId.fullName();
-    unknownItemFullName.append("::");
-    unknownItemFullName.append(unknownItemShortName);
+    unknownValuePrettyName = "Unknown ";
+    unknownValuePrettyName.append(typeId.name());
+    
+    unknownValueFullName = typeId.fullName();
+    unknownValueFullName.append("::");
+    unknownValueFullName.append(unknownValueShortName);
 }
 
 EnumTypeInfo_::~EnumTypeInfo_() {
