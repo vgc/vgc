@@ -14,8 +14,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef VGC_UI_INTERNAL_PAINTUTIL_H
-#define VGC_UI_INTERNAL_PAINTUTIL_H
+#ifndef VGC_UI_DETAIL_PAINTUTIL_H
+#define VGC_UI_DETAIL_PAINTUTIL_H
 
 #include <string>
 
@@ -144,4 +144,4 @@ float getLengthOrPercentageInPx(
 
 } // namespace vgc::ui::detail
 
-#endif // VGC_UI_INTERNAL_PAINTUTIL_H
+#endif // VGC_UI_DETAIL_PAINTUTIL_H
