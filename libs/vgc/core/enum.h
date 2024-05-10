@@ -633,10 +633,10 @@ std::optional<TEnum> enumFromShortName(std::string_view shortName) {
 ///
 /// ```cpp
 /// VGC_DEFINE_ENUM_BEGIN(MyEnum)
-///     VGC_ENUM_ITEM(Value1, "Value 1")
-///     VGC_ENUM_ITEM(Value2, "Value 2")
+///     VGC_ENUM_VALUE(Value1, "Value 1")
+///     VGC_ENUM_VALUE(Value2, "Value 2")
 ///     ...
-///     VGC_ENUM_ITEM(ValueN, "Value N")
+///     VGC_ENUM_VALUE(ValueN, "Value N")
 /// VGC_DEFINE_ENUM_END()
 /// ```
 ///
@@ -677,7 +677,7 @@ std::optional<TEnum> enumFromShortName(std::string_view shortName) {
 
 /// Defines an enumerator of a scoped enum. See `Enum` for more details.
 ///
-#define VGC_ENUM_ITEM(name, prettyName)                                                  \
+#define VGC_ENUM_VALUE(name, prettyName)                                                 \
         info->addValue(TEnum_::name, VGC_PP_STR(name), prettyName);
 
 /// Ends the definition of a scoped enum. See `Enum` for more details.
@@ -685,14 +685,14 @@ std::optional<TEnum> enumFromShortName(std::string_view shortName) {
 #define VGC_DEFINE_ENUM_END()                                                            \
     }
 
-#define VGC_ENUM_ITEM_(x, t)                                                             \
-    VGC_ENUM_ITEM(                                                                       \
+#define VGC_ENUM_VALUE_(x, t)                                                            \
+    VGC_ENUM_VALUE(                                                                      \
         VGC_PP_EXPAND(VGC_PP_PAIR_FIRST t),                                              \
         VGC_PP_EXPAND(VGC_PP_PAIR_SECOND t))
 
 #define VGC_DEFINE_ENUM_X_(Enum, ...)                                                    \
     VGC_DEFINE_ENUM_BEGIN(Enum)                                                          \
-        VGC_PP_EXPAND(VGC_PP_FOREACH_X(VGC_ENUM_ITEM_, Enum, __VA_ARGS__))               \
+        VGC_PP_EXPAND(VGC_PP_FOREACH_X(VGC_ENUM_VALUE_, Enum, __VA_ARGS__))              \
     VGC_DEFINE_ENUM_END()
 
 /// Defines a scoped enum. See `Enum` for more details.
