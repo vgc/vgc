@@ -144,7 +144,7 @@ struct IsRegisteredEnum : std::false_type {};
 template<typename TEnum>
 struct IsRegisteredEnum<
     TEnum,
-    RequiresValid<decltype(initEnumTypeInfo_((detail::EnumTypeInfo<TEnum>*)(0)))>>
+    RequiresValid<decltype(registerEnum_((detail::EnumTypeInfo<TEnum>*)(0)))>>
     : std::true_type {};
 
 /// Checks whether `TEnum` is an enumeration type that has been registered
@@ -172,7 +172,7 @@ const EnumTypeInfo<TEnum>* getOrCreateEnumTypeInfo() {
         auto info = new EnumTypeInfo<TEnum>(typeId); // leaks intentionally
         if constexpr (isRegisteredEnum<TEnum>) {
             info->isRegistered = true;
-            initEnumTypeInfo_(info); // found via ADL
+            registerEnum_(info); // found via ADL
         }
         return info;
     });
@@ -667,12 +667,12 @@ std::optional<TEnum> enumFromShortName(std::string_view shortName) {
 /// ```
 ///
 #define VGC_DECLARE_ENUM(TEnum)                                                          \
-    void initEnumTypeInfo_(::vgc::core::detail::EnumTypeInfo<TEnum>* info);
+    void registerEnum_(::vgc::core::detail::EnumTypeInfo<TEnum>* info);
 
 /// Starts the definition of a scoped enum. See `Enum` for more details.
 ///
 #define VGC_DEFINE_ENUM_BEGIN(TEnum)                                                     \
-    void initEnumTypeInfo_(::vgc::core::detail::EnumTypeInfo<TEnum>* info) {             \
+    void registerEnum_(::vgc::core::detail::EnumTypeInfo<TEnum>* info) {                 \
         using TEnum_ = TEnum;
 
 /// Defines an enumerator of a scoped enum. See `Enum` for more details.
