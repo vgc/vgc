@@ -32,6 +32,10 @@ ModuleManagerPtr ModuleManager::create() {
     return core::createObject<ModuleManager>();
 }
 
+void ModuleManager::onDestroyed() {
+    modules_.clear();
+}
+
 // Inserts (ModuleType, ModulePtr()) in the map, or retrieve the existing
 // ModulePtr if the ModuleType was already in the map.
 //
