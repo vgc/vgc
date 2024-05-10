@@ -672,7 +672,7 @@ std::optional<TEnum> enumFromShortName(std::string_view shortName) {
 /// Starts the definition of a scoped enum. See `Enum` for more details.
 ///
 #define VGC_DEFINE_ENUM_BEGIN(TEnum)                                                     \
-    void registerEnum_(::vgc::core::detail::EnumTypeInfo<TEnum>* info) {             \
+    void registerEnum_(::vgc::core::detail::EnumTypeInfo<TEnum>* info) {                 \
         using TEnum_ = TEnum;
 
 /// Defines an enumerator of a scoped enum. See `Enum` for more details.
