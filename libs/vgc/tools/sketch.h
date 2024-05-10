@@ -403,19 +403,13 @@ protected:
 public:
     static SketchModulePtr create(const ui::ModuleContext& context);
 
-    SketchFitMethod fitMethod() const {
-        return fitMethod_;
-    }
-
-    VGC_SIGNAL(fitMethodChanged)
+    SketchFitMethod fitMethod() const;
 
 private:
-    void onCycleSketchFitMethod_();
-    VGC_SLOT(onCycleSketchFitMethod_)
+    void onFitMethodChanged_();
+    VGC_SLOT(onFitMethodChanged_)
 
-    void recomputeEdgesWithFitMethod_();
-
-    SketchFitMethod fitMethod_ = SketchFitMethod::IndexGaussianSmoothing;
+    void reFitExistingEdges_();
 };
 
 /// \class vgc::tools::SketchTool
