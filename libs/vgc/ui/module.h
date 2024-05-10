@@ -133,6 +133,8 @@ private:
     std::mutex mapMutex_; // Prevent inserting concurrently in the map
     std::unordered_map<core::ObjectType, Value_> modules_;
 
+    void onDestroyed() override;
+
     struct GetOrInsertInfo_ {
         Value_& value;
         bool inserted;
