@@ -33,6 +33,7 @@
 #include <vgc/ui/boolsettingedit.h>
 #include <vgc/ui/column.h>
 #include <vgc/ui/cursor.h>
+#include <vgc/ui/enumsettingedit.h>
 #include <vgc/ui/numbersettingedit.h>
 #include <vgc/ui/settings.h>
 #include <vgc/ui/window.h>
@@ -83,6 +84,24 @@ ui::BoolSetting* autoFill() {
     return setting.get();
 }
 
+ui::EnumSetting* sketchFitMethod() {
+    static ui::EnumSettingSharedPtr setting = ui::EnumSetting::create(
+        ui::settings::session(),
+        "tools.sketch.experimental.sketchFitMethod",
+        "Sketch Fit Method",
+        SketchFitMethod::IndexGaussianSmoothing);
+    return setting.get();
+}
+
+ui::BoolSetting* reFitExistingEdges() {
+    static ui::BoolSettingPtr setting = ui::BoolSetting::create(
+        ui::settings::session(),
+        "tools.sketch.experimental.reFitExistingEdges",
+        "Re-Fit Existing Edges",
+        false);
+    return setting.get();
+}
+
 } // namespace options_
 
 namespace {
@@ -95,55 +114,33 @@ bool isAutoFillEnabled() {
 
 VGC_DEFINE_ENUM( //
     SketchFitMethod,
-    (NoFit, "NoFit"),
-    (IndexGaussianSmoothing, "IndexGaussianSmoothing"),
-    (DouglasPeucker, "DouglasPeucker"))
-
-namespace commands {
-
-using ui::Key;
-using ui::Shortcut;
-using ui::modifierkeys::ctrl;
-using ui::modifierkeys::mod;
-using ui::modifierkeys::shift;
-
-VGC_UI_DEFINE_WINDOW_COMMAND( //
-    cycleSketchFitMethod,
-    "tools.sketch.cycleSketchFitMethod",
-    "Cycle Sketch Fit Method",
-    Shortcut(mod, Key::F));
-
-} // namespace commands
+    (NoFit, "No Fit"),
+    (IndexGaussianSmoothing, "Index-Based Gaussian Smoothing"),
+    (DouglasPeucker, "Douglas-Peucker"))
 
 SketchModule::SketchModule(CreateKey key, const ui::ModuleContext& context)
     : Module(key, context) {
 
-    using namespace commands;
-    ui::ModuleActionCreator c(this);
-    c.setMenu(nullptr);
+    if (auto module = context.importModule<canvas::ExperimentalModule>().lock()) {
+        module->addWidget(*ui::EnumSettingEdit::create(options_::sketchFitMethod()));
+        module->addWidget(*ui::BoolSettingEdit::create(options_::reFitExistingEdges()));
+    }
 
-    c.addAction(cycleSketchFitMethod(), onCycleSketchFitMethod_Slot());
+    options_::sketchFitMethod()->valueChanged().connect(onFitMethodChanged_Slot());
 }
 
 SketchModulePtr SketchModule::create(const ui::ModuleContext& context) {
     return core::createObject<SketchModule>(context);
 }
 
-void SketchModule::onCycleSketchFitMethod_() {
+SketchFitMethod SketchModule::fitMethod() const {
+    return options_::sketchFitMethod()->value().get<SketchFitMethod>();
+}
 
-    Int8 n = 3;
-    Int8 i = core::toUnderlying(fitMethod_);
-    i = (i + 1) % n;
-    fitMethod_ = static_cast<SketchFitMethod>(i);
-
-    VGC_INFO(
-        LogVgcToolsSketch,
-        "Switched Sketch Fit Method to: {}",
-        core::EnumValue(fitMethod_).prettyName());
-
-    recomputeEdgesWithFitMethod_();
-
-    fitMethodChanged().emit();
+void SketchModule::onFitMethodChanged_() {
+    if (options_::reFitExistingEdges()->value()) {
+        reFitExistingEdges_();
+    }
 }
 
 namespace {
@@ -271,7 +268,7 @@ void updateEdgeGeometry(const SketchPointBuffer& points, workspace::Element* ite
 
 } // namespace
 
-void SketchModule::recomputeEdgesWithFitMethod_() {
+void SketchModule::reFitExistingEdges_() {
 
     // Get the workspace.
     //
@@ -298,7 +295,7 @@ void SketchModule::recomputeEdgesWithFitMethod_() {
     auto postTransformPass = makePostTransformPass(fitMethod());
 
     // Create undo group
-    static core::StringId undoGroupName("Change Fit Method");
+    static core::StringId undoGroupName("Re-Fit Existing Edges");
     core::UndoGroupWeakPtr undoGroup_;
     if (core::History* history = workspace->history()) {
         undoGroup_ = history->createUndoGroup(undoGroupName);
