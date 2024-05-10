@@ -23,15 +23,15 @@ namespace detail {
 EnumTypeInfo_::EnumTypeInfo_(TypeId id)
     : typeId(id) {
 
-    unknownItemShortName = "Unknown_";
-    unknownItemShortName.append(typeId.name());
+    unknownValueShortName = "Unknown_";
+    unknownValueShortName.append(typeId.name());
 
-    unknownItemPrettyName = "Unknown ";
-    unknownItemPrettyName.append(typeId.name());
+    unknownValuePrettyName = "Unknown ";
+    unknownValuePrettyName.append(typeId.name());
 
-    unknownItemFullName = typeId.fullName();
-    unknownItemFullName.append("::");
-    unknownItemFullName.append(unknownItemShortName);
+    unknownValueFullName = typeId.fullName();
+    unknownValueFullName.append("::");
+    unknownValueFullName.append(unknownValueShortName);
 }
 
 EnumTypeInfo_::~EnumTypeInfo_() {

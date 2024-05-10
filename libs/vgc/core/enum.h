@@ -63,9 +63,9 @@ public:
     core::TypeId typeId;
     bool isRegistered = false;
 
-    std::string unknownItemFullName;   // "vgc::ui::Key::Unknown_Key"
-    std::string unknownItemShortName;  // "Unknown_Key"
-    std::string unknownItemPrettyName; // "Unknown Key"
+    std::string unknownValueFullName;   // "vgc::ui::Key::Unknown_Key"
+    std::string unknownValueShortName;  // "Unknown_Key"
+    std::string unknownValuePrettyName; // "Unknown Key"
 
     // This is where the actual per-enumerator data is stored. We allocate each
     // EnumValueInfo separately on the heap to ensure that it has a stable
@@ -592,7 +592,7 @@ std::optional<TEnum> enumFromShortName(std::string_view shortName) {
 
 /// \brief Provides runtime introspection for a given enum type
 ///
-/// In order to support iteration over items of an enum type, and support
+/// In order to support iteration over values of an enum type, and support
 /// conversion from an enum integer value to a string (and vice-versa), any
 /// enum type can be *registered* using the `VGC_DECLARE_ENUM` and
 /// `VGC_DEFINE_ENUM` macros, as such:
@@ -627,20 +627,20 @@ std::optional<TEnum> enumFromShortName(std::string_view shortName) {
 /// ```
 ///
 /// Note that due to compiler limits (maximum number of macro arguments
-/// allowed), `VGC_DEFINE_ENUM` only supports up to 122 enum items. If you
+/// allowed), `VGC_DEFINE_ENUM` only supports up to 122 enum values. If you
 /// need more, you can use the following long-form version, which is a little
-/// more verbose but doesn't have limits on the number of enum items:
+/// more verbose but doesn't have limits on the number of enum values:
 ///
 /// ```cpp
 /// VGC_DEFINE_ENUM_BEGIN(MyEnum)
-///     VGC_ENUM_ITEM(Value1, "Value 1")
-///     VGC_ENUM_ITEM(Value2, "Value 2")
+///     VGC_ENUM_VALUE(Value1, "Value 1")
+///     VGC_ENUM_VALUE(Value2, "Value 2")
 ///     ...
-///     VGC_ENUM_ITEM(ValueN, "Value N")
+///     VGC_ENUM_VALUE(ValueN, "Value N")
 /// VGC_DEFINE_ENUM_END()
 /// ```
 ///
-/// Once registered, you can use the following functions to iterate over items
+/// Once registered, you can use the following functions to iterate over values
 /// or convert integer values from/to strings.
 ///
 /// Examples:
@@ -677,7 +677,7 @@ std::optional<TEnum> enumFromShortName(std::string_view shortName) {
 
 /// Defines an enumerator of a scoped enum. See `Enum` for more details.
 ///
-#define VGC_ENUM_ITEM(name, prettyName)                                                  \
+#define VGC_ENUM_VALUE(name, prettyName)                                                 \
         info->addValue(TEnum_::name, VGC_PP_STR(name), prettyName);
 
 /// Ends the definition of a scoped enum. See `Enum` for more details.
@@ -685,14 +685,14 @@ std::optional<TEnum> enumFromShortName(std::string_view shortName) {
 #define VGC_DEFINE_ENUM_END()                                                            \
     }
 
-#define VGC_ENUM_ITEM_(x, t)                                                             \
-    VGC_ENUM_ITEM(                                                                       \
+#define VGC_ENUM_VALUE_(x, t)                                                            \
+    VGC_ENUM_VALUE(                                                                      \
         VGC_PP_EXPAND(VGC_PP_PAIR_FIRST t),                                              \
         VGC_PP_EXPAND(VGC_PP_PAIR_SECOND t))
 
 #define VGC_DEFINE_ENUM_X_(Enum, ...)                                                    \
     VGC_DEFINE_ENUM_BEGIN(Enum)                                                          \
-        VGC_PP_EXPAND(VGC_PP_FOREACH_X(VGC_ENUM_ITEM_, Enum, __VA_ARGS__))               \
+        VGC_PP_EXPAND(VGC_PP_FOREACH_X(VGC_ENUM_VALUE_, Enum, __VA_ARGS__))              \
     VGC_DEFINE_ENUM_END()
 
 /// Defines a scoped enum. See `Enum` for more details.
