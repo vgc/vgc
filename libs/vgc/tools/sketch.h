@@ -614,8 +614,6 @@ protected:
     geometry::Vec2f lastImmediateCursorPos_ = {};
     geometry::Vec2d minimalLatencySnappedCursor_ = {};
 
-    graphics::GeometryViewPtr mouseInputGeometry_;
-
     // Assumes canvas() is non-null.
     void startCurve_(ui::MouseEvent* event);
     void continueCurve_(ui::MouseEvent* event);

@@ -1075,19 +1075,48 @@ void Sketch::onResize() {
     reload_ = true;
 }
 
+namespace {
+
+// The "minimal latency tip" is an extension of the sketched edge drawn as an
+// overlay to decrease the perceived lag between the mouse cursor and the
+// sketched edge.
+//
+// It is basically a straight line between the edge endpoint (as set in the DOM
+// when processing the mouse event) and the current mouse position given by
+// ui::globalCursorPosition() at the time of drawing, which typically is a
+// "more recent" mouse position than the one provided in the last mouse event.
+//
+// This is an experimental feature which is currently disabled since it doesn't
+// properly support outline-only display mode, or objects above the sketched
+// edge, or constraining the sketch edge to be a single line segment. It also
+// sometimes doesn't look good and is a bit distracting due to being a straight
+// line.
+//
+// We might want to enable it after some polishing, most likely only shown as
+// an "outline" so that it doesn't look bad when there are objects above the
+// sketched edge, if if the sketched edge has some effect applied to it (e.g.,
+// blur).
+//
+constexpr bool isMinimalLatencyTipEnabled = false;
+
+} // namespace
+
 void Sketch::onPaintCreate(graphics::Engine* engine) {
     SuperClass::onPaintCreate(engine);
-    using namespace graphics;
-    minimalLatencyStrokeGeometry_ =
-        engine->createDynamicTriangleStripView(BuiltinGeometryLayout::XY_iRGBA);
-    mouseInputGeometry_ =
-        engine->createDynamicTriangleStripView(BuiltinGeometryLayout::XYDxDy_iXYRotWRGBA);
+    if (isMinimalLatencyTipEnabled) {
+        minimalLatencyStrokeGeometry_ = engine->createDynamicTriangleStripView(
+            graphics::BuiltinGeometryLayout::XY_iRGBA);
+    }
     reload_ = true;
 }
 
 void Sketch::onPaintDraw(graphics::Engine* engine, ui::PaintOptions options) {
 
     SuperClass::onPaintDraw(engine, options);
+
+    if (!isMinimalLatencyTipEnabled) {
+        return;
+    }
 
     using namespace graphics;
     namespace gs = graphics::strings;
@@ -1099,9 +1128,6 @@ void Sketch::onPaintDraw(graphics::Engine* engine, ui::PaintOptions options) {
     auto workspace = context.workspace();
     auto canvas = context.canvas();
 
-    // Draw temporary tip of curve between mouse event position and actual current cursor
-    // position to reduce visual lag.
-    //
     ui::Window* w = window();
     bool cursorMoved = false;
     if (isSketching_ && w) {
@@ -1161,13 +1187,6 @@ void Sketch::onPaintDraw(graphics::Engine* engine, ui::PaintOptions options) {
                 // thick strokes (lots of flickering between [-90°, 90°] angles
                 // due to mouse inputs being integer pixels)
                 //
-                // TODO: improve visualization of the tip. It might make more
-                // sense to only draw curve outlines as thin overlay lines,
-                // since we draw tip as an overlay anyway, that is, not at the
-                // same depth as the actual curve, and without any effects
-                // (blur, layer opacity, etc.), so the tip as currently drawn
-                // may look very different from the actual curve anyway.
-                //
                 if (tipDir.length() > width) {
 
                     geometry::Vec2d tipNormal = tipDir.orthogonalized().normalized();
@@ -1215,7 +1234,9 @@ void Sketch::onPaintDraw(graphics::Engine* engine, ui::PaintOptions options) {
 
 void Sketch::onPaintDestroy(graphics::Engine* engine) {
     SuperClass::onPaintDestroy(engine);
-    minimalLatencyStrokeGeometry_.reset();
+    if (isMinimalLatencyTipEnabled) {
+        minimalLatencyStrokeGeometry_.reset();
+    }
 }
 
 const SketchPointBuffer& Sketch::postTransformPassesResult_() const {
