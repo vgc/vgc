@@ -331,12 +331,13 @@ void SketchModule::reFitExistingEdges_() {
 }
 
 void SketchPointsProcessingPass::updateCumulativeChordalDistances() {
+
     Int n = numPoints();
     if (n == 0) {
         return;
     }
 
-    Int start = std::max<Int>(numStablePoints(), 1);
+    Int start = std::max<Int>(lastNumStablePoints_, 1);
     const SketchPoint* p1 = &getPoint(start - 1);
     double s = p1->s();
     for (Int i = start; i < n; ++i) {
@@ -345,6 +346,8 @@ void SketchPointsProcessingPass::updateCumulativeChordalDistances() {
         p2.setS(s);
         p1 = &p2;
     }
+
+    areCumulativeChordalDistancesUpdated_ = true;
 }
 
 namespace detail {
@@ -387,7 +390,6 @@ Int TransformPass::update_(const SketchPointBuffer& input, Int lastNumStableInpu
     // Add all other points (some of which are now stable, some of which are
     // still unstable).
     //
-
     for (auto it = inputPoints.begin() + oldNumStablePoints; //
          it != inputPoints.end();
          ++it) {

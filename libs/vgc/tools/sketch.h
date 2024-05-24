@@ -228,13 +228,19 @@ public:
     }
 
     void updateResultFrom(const SketchPointBuffer& input) {
+        areCumulativeChordalDistancesUpdated_ = false;
         Int numStablePoints = update_(input, lastNumStableInputPoints_);
+        if (!areCumulativeChordalDistancesUpdated_) {
+            updateCumulativeChordalDistances();
+        }
         buffer_.setNumStablePoints(numStablePoints);
+        lastNumStablePoints_ = numStablePoints;
         lastNumStableInputPoints_ = input.numStablePoints();
     }
 
     void reset() {
         buffer_.clear();
+        lastNumStablePoints_ = 0;
         lastNumStableInputPoints_ = 0;
         reset_();
     }
@@ -295,18 +301,37 @@ protected:
         buffer_.extend(first, last);
     }
 
+    // Updates the cumulative chordal distances (`SketchPoint::s()`) of all
+    // points after the last stable point.
+    //
+    // This is automatically called after `update_()`, unless you manually call
+    // it yourself in `update_()`. Calling it yourself is therefore only needed
+    // if part of your algorithm (e.g., computing the widths) requires them.
+    //
     void updateCumulativeChordalDistances();
 
 protected:
-    // Must return the new number of stable result points.
-    // This number must not be less than its previous value.
+    // This is the main function that subclasses should implement. It should update
+    // its own `buffer` based on the new `input`.
+    //
+    // The current number of input stable points is `input.numStablePoints()`.
+    //
+    // The last number of input stable points is `lastNumStableInputPoints`.
+    //
+    // The last number of output stable points is `this->numStablePoints()`.
+    //
+    // This function should return the number of output stable points after
+    // this pass. This number must not be less than its previous value.
+    //
     virtual Int update_(const SketchPointBuffer& input, Int lastNumStableInputPoints) = 0;
 
     virtual void reset_() = 0;
 
 private:
     SketchPointBuffer buffer_;
+    Int lastNumStablePoints_ = 0;
     Int lastNumStableInputPoints_ = 0;
+    bool areCumulativeChordalDistancesUpdated_ = false;
 };
 
 namespace detail {
