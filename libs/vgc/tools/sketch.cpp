@@ -1760,9 +1760,10 @@ void Sketch::continueCurve_(ui::MouseEvent* event) {
         return;
     }
 
+    dom::Element* domStartVertex = document->elementFromInternalId(startVertexItemId_);
     dom::Element* domEndVertex = document->elementFromInternalId(endVertexItemId_);
     dom::Element* domEdge = document->elementFromInternalId(edgeItemId_);
-    if (!domEndVertex || !domEdge) {
+    if (!domStartVertex || !domEndVertex || !domEdge) {
         return;
     }
 
@@ -1795,7 +1796,12 @@ void Sketch::continueCurve_(ui::MouseEvent* event) {
     // TODO: auto cut algorithm
 
     // Update DOM and workspace
+    //
     namespace ds = dom::strings;
+    if (!snapStartPosition_) {
+        // Unless start-snapped, processing passes may have modified the start point
+        domStartVertex->setAttribute(ds::position, pendingPositions_.first());
+    }
     domEndVertex->setAttribute(ds::position, pendingPositions_.last());
     domEdge->setAttribute(ds::positions, pendingPositions_);
     domEdge->setAttribute(ds::widths, pendingWidths_);
