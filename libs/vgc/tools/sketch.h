@@ -24,378 +24,13 @@
 #include <vgc/dom/element.h>
 #include <vgc/geometry/vec2d.h>
 #include <vgc/tools/api.h>
+#include <vgc/tools/sketchpasses.h>
 #include <vgc/ui/command.h>
 #include <vgc/ui/cursor.h>
 #include <vgc/ui/module.h>
 #include <vgc/workspace/workspace.h>
 
 namespace vgc::tools {
-
-VGC_DECLARE_OBJECT(Sketch);
-
-class VGC_TOOLS_API SketchPoint {
-public:
-    constexpr SketchPoint() noexcept
-        : position_()
-        , pressure_(0)
-        , timestamp_(0)
-        , width_(0)
-        , s_(0) {
-    }
-
-    VGC_WARNING_PUSH
-    VGC_WARNING_MSVC_DISABLE(26495) // member variable uninitialized
-    SketchPoint(core::NoInit) noexcept
-        : position_(core::noInit) {
-    }
-    VGC_WARNING_POP
-
-    SketchPoint(
-        const geometry::Vec2d& position,
-        double pressure,
-        double timestamp,
-        double width,
-        double s = 0) noexcept
-
-        : position_(position)
-        , pressure_(pressure)
-        , timestamp_(timestamp)
-        , width_(width)
-        , s_(s) {
-    }
-
-    const geometry::Vec2d& position() const {
-        return position_;
-    }
-
-    void setPosition(const geometry::Vec2d& position) {
-        position_ = position;
-    }
-
-    double pressure() const {
-        return pressure_;
-    }
-
-    void setPressure(double pressure) {
-        pressure_ = pressure;
-    }
-
-    double timestamp() const {
-        return timestamp_;
-    }
-
-    void setTimestamp(double timestamp) {
-        timestamp_ = timestamp;
-    }
-
-    bool hasTimestamp() const {
-        return timestamp_ != 0;
-    }
-
-    double width() const {
-        return width_;
-    }
-
-    void setWidth(double width) {
-        width_ = width;
-    }
-
-    /// Returns the cumulative chordal distance from the first point to this point.
-    double s() const {
-        return s_;
-    }
-
-    void setS(double s) {
-        s_ = s;
-    }
-
-    void offsetS(double offset) {
-        s_ += offset;
-    }
-
-private:
-    geometry::Vec2d position_;
-    double pressure_;
-    double timestamp_;
-    double width_;
-    double s_;
-};
-
-using SketchPointArray = core::Array<SketchPoint>;
-
-class VGC_TOOLS_API SketchPointBuffer {
-public:
-    SketchPointBuffer() noexcept = default;
-
-    const SketchPoint& operator[](Int i) const {
-        return points_[i];
-    }
-
-    SketchPoint& getRef(Int i) {
-        if (i < numStablePoints_) {
-            throw core::LogicError(
-                "getRef(): cannot get a non-const reference to a stable point.");
-        }
-        return points_[i];
-    }
-
-    core::Span<SketchPoint> unstablePoints() {
-        return core::Span<SketchPoint>(points_.begin() + numStablePoints_, points_.end());
-    }
-
-    const SketchPointArray& data() const {
-        return points_;
-    }
-
-    SketchPointArray::const_iterator begin() const {
-        return points_.begin();
-    }
-
-    SketchPointArray::const_iterator end() const {
-        return points_.end();
-    }
-
-    Int length() const {
-        return points_.length();
-    }
-
-    void reserve(Int count) {
-        return points_.reserve(count);
-    }
-
-    void resize(Int count) {
-        if (count < numStablePoints_) {
-            throw core::LogicError("resize(): cannot decrease number of stable points.");
-        }
-        return points_.resize(count);
-    }
-
-    void clear() {
-        points_.clear();
-        numStablePoints_ = 0;
-    }
-
-    Int numStablePoints() const {
-        return numStablePoints_;
-    }
-
-    void setNumStablePoints(Int numStablePoints) {
-        if (numStablePoints < numStablePoints_) {
-            throw core::LogicError(
-                "setNumStablePoints(): cannot decrease number of stable points.");
-        }
-        else if (numStablePoints > points_.length()) {
-            throw core::LogicError("setNumStablePoints(): number of stable points cannot "
-                                   "be greater than number of points.");
-        }
-        numStablePoints_ = numStablePoints;
-    }
-
-    SketchPoint& append(const SketchPoint& point) {
-        points_.append(point);
-        return points_.last();
-    }
-
-    SketchPoint& emplaceLast(
-        const geometry::Vec2d& position,
-        double pressure,
-        double timestamp,
-        double width,
-        double s = 0) {
-
-        return points_.emplaceLast(position, pressure, timestamp, width, s);
-    }
-
-    template<typename InputIt, VGC_REQUIRES(core::isInputIterator<InputIt>)>
-    void extend(InputIt first, InputIt last) {
-        points_.extend(first, last);
-    }
-
-private:
-    SketchPointArray points_;
-    Int numStablePoints_ = 0;
-};
-
-class VGC_TOOLS_API SketchPointsProcessingPass {
-protected:
-    SketchPointsProcessingPass() noexcept = default;
-
-public:
-    virtual ~SketchPointsProcessingPass() = default;
-
-    void updateResultFrom(const SketchPointsProcessingPass& input) {
-        updateResultFrom(input.buffer());
-    }
-
-    void updateResultFrom(const SketchPointBuffer& input) {
-        areCumulativeChordalDistancesUpdated_ = false;
-        Int numStablePoints = update_(input, lastNumStableInputPoints_);
-        if (!areCumulativeChordalDistancesUpdated_) {
-            updateCumulativeChordalDistances();
-        }
-        buffer_.setNumStablePoints(numStablePoints);
-        lastNumStablePoints_ = numStablePoints;
-        lastNumStableInputPoints_ = input.numStablePoints();
-    }
-
-    void reset() {
-        buffer_.clear();
-        lastNumStablePoints_ = 0;
-        lastNumStableInputPoints_ = 0;
-        reset_();
-    }
-
-    const SketchPointBuffer& buffer() const {
-        return buffer_;
-    }
-
-protected:
-    const SketchPoint& getPoint(Int i) {
-        return buffer_[i];
-    }
-
-    SketchPoint& getPointRef(Int i) {
-        return buffer_.getRef(i);
-    }
-
-    core::Span<SketchPoint> unstablePoints() {
-        return buffer_.unstablePoints();
-    }
-
-    const SketchPointArray& points() const {
-        return buffer_.data();
-    }
-
-    Int numPoints() const {
-        return buffer_.length();
-    }
-
-    void reservePoints(Int count) {
-        return buffer_.reserve(count);
-    }
-
-    void resizePoints(Int count) {
-        return buffer_.resize(count);
-    }
-
-    Int numStablePoints() const {
-        return buffer_.numStablePoints();
-    }
-
-    void appendPoint(const SketchPoint& point) {
-        buffer_.append(point);
-    }
-
-    void emplaceLastPoint(
-        const geometry::Vec2d& position,
-        double pressure,
-        double timestamp,
-        double width,
-        double s = 0) {
-
-        buffer_.emplaceLast(position, pressure, timestamp, width, s);
-    }
-
-    template<typename InputIt, VGC_REQUIRES(core::isInputIterator<InputIt>)>
-    void extendPoints(InputIt first, InputIt last) {
-        buffer_.extend(first, last);
-    }
-
-    // Updates the cumulative chordal distances (`SketchPoint::s()`) of all
-    // points after the last stable point.
-    //
-    // This is automatically called after `update_()`, unless you manually call
-    // it yourself in `update_()`. Calling it yourself is therefore only needed
-    // if part of your algorithm (e.g., computing the widths) requires them.
-    //
-    void updateCumulativeChordalDistances();
-
-protected:
-    // This is the main function that subclasses should implement. It should update
-    // its own `buffer` based on the new `input`.
-    //
-    // The current number of input stable points is `input.numStablePoints()`.
-    //
-    // The last number of input stable points is `lastNumStableInputPoints`.
-    //
-    // The last number of output stable points is `this->numStablePoints()`.
-    //
-    // This function should return the number of output stable points after
-    // this pass. This number must not be less than its previous value.
-    //
-    virtual Int update_(const SketchPointBuffer& input, Int lastNumStableInputPoints) = 0;
-
-    virtual void reset_() = 0;
-
-private:
-    SketchPointBuffer buffer_;
-    Int lastNumStablePoints_ = 0;
-    Int lastNumStableInputPoints_ = 0;
-    bool areCumulativeChordalDistancesUpdated_ = false;
-};
-
-namespace detail {
-
-class VGC_TOOLS_API EmptyPass : public SketchPointsProcessingPass {
-public:
-    EmptyPass() noexcept = default;
-
-protected:
-    Int update_(const SketchPointBuffer& input, Int lastNumStableInputPoints) override;
-
-    void reset_() override;
-};
-
-class VGC_TOOLS_API TransformPass : public SketchPointsProcessingPass {
-public:
-    TransformPass() noexcept = default;
-
-    const geometry::Mat3d& transformMatrix() const {
-        return transform_;
-    }
-
-    void setTransformMatrix(const geometry::Mat3d& transform) {
-        transform_ = transform;
-    }
-
-    geometry::Vec2d transform(const geometry::Vec2d& v) {
-        return transform_.transform(v);
-    }
-
-    geometry::Vec2d transformAffine(const geometry::Vec2d& v) {
-        return transform_.transformAffine(v);
-    }
-
-protected:
-    Int update_(const SketchPointBuffer& input, Int lastNumStableInputPoints) override;
-
-    void reset_() override;
-
-private:
-    geometry::Mat3d transform_;
-};
-
-class VGC_TOOLS_API SmoothingPass : public SketchPointsProcessingPass {
-public:
-    SmoothingPass() noexcept = default;
-
-protected:
-    Int update_(const SketchPointBuffer& input, Int lastNumStableInputPoints) override;
-
-    void reset_() override;
-};
-
-class VGC_TOOLS_API DouglasPeuckerPass : public SketchPointsProcessingPass {
-public:
-    DouglasPeuckerPass() noexcept = default;
-
-protected:
-    Int update_(const SketchPointBuffer& input, Int lastNumStableInputPoints) override;
-
-    void reset_() override;
-};
-
-} // namespace detail
 
 enum class SketchFitMethod : Int8 {
     NoFit,                  // Raw input points (RP) are used as control points (CP)
@@ -436,6 +71,8 @@ private:
 
     void reFitExistingEdges_();
 };
+
+VGC_DECLARE_OBJECT(Sketch);
 
 /// \class vgc::tools::SketchTool
 /// \brief A CanvasTool that implements sketching strokes.
@@ -541,7 +178,7 @@ protected:
     // transform step, that is, all processing that relies on positions in
     // canvas coordinates space rather than positions in workspace coordinates.
     //
-    detail::EmptyPass preTransformPass_;
+    EmptyPass preTransformPass_;
 
     // Transformation.
     //
@@ -549,7 +186,7 @@ protected:
     // workspace/group coordinates. Note that we assume the view matrix does
     // not change while sketching the stroke.
     //
-    detail::TransformPass transformPass_;
+    TransformPass transformPass_;
 
     // Pre-transform processing.
     //
@@ -557,7 +194,7 @@ protected:
     // and before snapping is applied.
     //
     std::optional<SketchFitMethod> lastFitMethod_;
-    std::unique_ptr<SketchPointsProcessingPass> postTransformPass_;
+    std::unique_ptr<SketchPass> postTransformPass_;
     const SketchPointBuffer& postTransformPassesResult_() const;
 
     // Pending Clean Input

@@ -17,6 +17,9 @@ vgc_add_library(tools
         sculpt.h
         select.h
         sketch.h
+        sketchpoint.h
+        sketchpass.h
+        sketchpasses.h
         strings.h
         topology.h
         transform.h
@@ -32,6 +35,8 @@ vgc_add_library(tools
         sculpt.cpp
         select.cpp
         sketch.cpp
+        sketchpass.cpp
+        sketchpasses.cpp
         strings.cpp
         topology.cpp
         transform.cpp
