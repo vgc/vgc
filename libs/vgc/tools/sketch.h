@@ -45,6 +45,9 @@ enum class SketchFitMethod : Int8 {
 
     // Outputs a single line segment from the first to the last input point.
     SingleLineSegmentWithFixedEndpoints,
+
+    // Fits a single line segment through the input point.
+    SingleLineSegmentWithFreeEndpoints,
 };
 
 VGC_TOOLS_API
