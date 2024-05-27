@@ -33,9 +33,18 @@
 namespace vgc::tools {
 
 enum class SketchFitMethod : Int8 {
-    NoFit,                  // Raw input points (RP) are used as control points (CP)
-    IndexGaussianSmoothing, // A gaussian smoothing is applied to RP
-    DouglasPeucker,         // Douglas-Peucker algorithm
+    // The input points are used as is as control points.
+    NoFit,
+
+    // A gaussian smoothing is applied to the input points.
+    IndexGaussianSmoothing,
+
+    // The Douglas-Peucker algorithm is used to discard some of the input
+    // points.
+    DouglasPeucker,
+
+    // Outputs a single line segment from the first to the last input point.
+    SingleLineSegmentWithFixedEndpoints,
 };
 
 VGC_TOOLS_API
