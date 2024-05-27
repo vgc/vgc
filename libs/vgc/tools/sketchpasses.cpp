@@ -521,4 +521,23 @@ Int DouglasPeuckerPass::doUpdateFrom(
     return numStablePoints;
 }
 
+Int SingleLineSegmentWithFixedEndpointsPass::doUpdateFrom(
+    const SketchPointBuffer& input,
+    Int lastNumStableInputPoints) {
+
+    VGC_UNUSED(lastNumStableInputPoints);
+
+    SketchPointArray inputPoints = input.data();
+    if (!inputPoints.isEmpty()) {
+        resizePoints(2);
+        SketchPoint& p0 = getPointRef(0);
+        SketchPoint& p1 = getPointRef(1);
+        p0 = inputPoints.first();
+        p1 = inputPoints.last();
+    }
+
+    // No stable points
+    return 0;
+}
+
 } // namespace vgc::tools
