@@ -21,19 +21,17 @@ namespace vgc::tools {
 void SketchPass::reset() {
     buffer_.clear();
     lastNumStablePoints_ = 0;
-    lastNumStableInputPoints_ = 0;
     doReset();
 }
 
 void SketchPass::updateFrom(const SketchPointBuffer& input) {
     areCumulativeChordalDistancesUpdated_ = false;
-    Int numStablePoints = doUpdateFrom(input, lastNumStableInputPoints_);
+    Int numStablePoints = doUpdateFrom(input);
     if (!areCumulativeChordalDistancesUpdated_) {
         updateCumulativeChordalDistances();
     }
     buffer_.setNumStablePoints(numStablePoints);
     lastNumStablePoints_ = numStablePoints;
-    lastNumStableInputPoints_ = input.numStablePoints();
 }
 
 void SketchPass::updateCumulativeChordalDistances() {
