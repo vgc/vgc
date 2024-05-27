@@ -20,11 +20,8 @@
 
 namespace vgc::tools {
 
-Int EmptyPass::doUpdateFrom(
-    const SketchPointBuffer& input,
-    Int lastNumStableInputPoints) {
+Int EmptyPass::doUpdateFrom(const SketchPointBuffer& input) {
 
-    VGC_UNUSED(lastNumStableInputPoints);
     const SketchPointArray& inputPoints = input.data();
 
     // Remove all previously unstable points.
@@ -43,11 +40,8 @@ Int EmptyPass::doUpdateFrom(
     return newNumStablePoints;
 }
 
-Int TransformPass::doUpdateFrom(
-    const SketchPointBuffer& input,
-    Int lastNumStableInputPoints) {
+Int TransformPass::doUpdateFrom(const SketchPointBuffer& input) {
 
-    VGC_UNUSED(lastNumStableInputPoints);
     const SketchPointArray& inputPoints = input.data();
 
     // Remove all previously unstable points.
@@ -260,11 +254,7 @@ void applyWidthRoughnessLimitor(
 
 } // namespace
 
-Int SmoothingPass::doUpdateFrom(
-    const SketchPointBuffer& input,
-    Int lastNumStableInputPoints) {
-
-    VGC_UNUSED(lastNumStableInputPoints);
+Int SmoothingPass::doUpdateFrom(const SketchPointBuffer& input) {
 
     const SketchPointArray& inputPoints = input.data();
     Int numPoints = inputPoints.length();
@@ -488,11 +478,7 @@ Int douglasPeucker(
 
 } // namespace
 
-Int DouglasPeuckerPass::doUpdateFrom(
-    const SketchPointBuffer& input,
-    Int lastNumStableInputPoints) {
-
-    VGC_UNUSED(lastNumStableInputPoints);
+Int DouglasPeuckerPass::doUpdateFrom(const SketchPointBuffer& input) {
 
     // A copy required to make a mutable span, which the Douglas-Peuckert
     // algorithm needs (it modifies the points slightly).
@@ -522,10 +508,7 @@ Int DouglasPeuckerPass::doUpdateFrom(
 }
 
 Int SingleLineSegmentWithFixedEndpointsPass::doUpdateFrom(
-    const SketchPointBuffer& input,
-    Int lastNumStableInputPoints) {
-
-    VGC_UNUSED(lastNumStableInputPoints);
+    const SketchPointBuffer& input) {
 
     SketchPointArray inputPoints = input.data();
     if (!inputPoints.isEmpty()) {

@@ -304,8 +304,7 @@ protected:
     // This function should return the number of output stable points after
     // this pass. This number must not be less than its previous value.
     //
-    virtual Int
-    doUpdateFrom(const SketchPointBuffer& input, Int lastNumStableInputPoints) = 0;
+    virtual Int doUpdateFrom(const SketchPointBuffer& input) = 0;
 
     /// This method should be reimplemented by subclasses if they store
     /// additional state that needs to be reinitialized before processing a new
@@ -318,7 +317,6 @@ protected:
 private:
     SketchPointBuffer buffer_;
     Int lastNumStablePoints_ = 0;
-    Int lastNumStableInputPoints_ = 0;
     bool areCumulativeChordalDistancesUpdated_ = false;
 };
 
