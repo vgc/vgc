@@ -115,7 +115,8 @@ VGC_DEFINE_ENUM( //
     (NoFit, "No Fit"),
     (IndexGaussianSmoothing, "Index-Based Gaussian Smoothing"),
     (DouglasPeucker, "Douglas-Peucker"),
-    (SingleLineSegmentWithFixedEndpoints, "Single Line Segment (Fixed Endpoints)"))
+    (SingleLineSegmentWithFixedEndpoints, "Single Line Segment (Fixed Endpoints)"),
+    (SingleLineSegmentWithFreeEndpoints, "Single Line Segment (Free Endpoints)"))
 
 SketchModule::SketchModule(CreateKey key, const ui::ModuleContext& context)
     : Module(key, context) {
@@ -178,6 +179,8 @@ std::unique_ptr<SketchPass> makePostTransformPass(SketchFitMethod fitMethod) {
         return std::make_unique<DouglasPeuckerPass>();
     case SketchFitMethod::SingleLineSegmentWithFixedEndpoints:
         return std::make_unique<SingleLineSegmentWithFixedEndpointsPass>();
+    case SketchFitMethod::SingleLineSegmentWithFreeEndpoints:
+        return std::make_unique<SingleLineSegmentWithFreeEndpointsPass>();
     }
     return std::make_unique<EmptyPass>();
 }

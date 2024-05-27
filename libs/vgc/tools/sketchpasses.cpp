@@ -510,7 +510,7 @@ Int DouglasPeuckerPass::doUpdateFrom(const SketchPointBuffer& input) {
 Int SingleLineSegmentWithFixedEndpointsPass::doUpdateFrom(
     const SketchPointBuffer& input) {
 
-    SketchPointArray inputPoints = input.data();
+    const SketchPointArray& inputPoints = input.data();
     if (!inputPoints.isEmpty()) {
         resizePoints(2);
         SketchPoint& p0 = getPointRef(0);
@@ -521,6 +521,138 @@ Int SingleLineSegmentWithFixedEndpointsPass::doUpdateFrom(
 
     // No stable points
     return 0;
+}
+
+// This basically implements:
+//
+// [1] Graphics Gems 5: The Best Least-Squares Line Fit (Alciatore and Miranda 1995)
+//
+// The chapter above provides a proof that the line minimizing the squared
+// orthogonal distances to the input points goes through the centroid, and
+// derives a closed form formula for the direction of the line.
+//
+// I believe this is equivalent to computing the first principal component of
+// the data after centering it around the centroid (see PCA / SVD methods).
+//
+Int SingleLineSegmentWithFreeEndpointsPass::doUpdateFrom(const SketchPointBuffer& input) {
+
+    const SketchPointArray& inputPoints = input.data();
+    Int numPoints = inputPoints.length();
+    if (numPoints == 0) {
+        return 0;
+    }
+
+    resizePoints(2);
+    SketchPoint& p0 = getPointRef(0);
+    SketchPoint& p1 = getPointRef(1);
+    p0 = inputPoints.first();
+    p1 = inputPoints.last();
+    if (numPoints <= 2) {
+        return 0;
+    }
+
+    // Compute centroid
+    geometry::Vec2d centroid;
+    for (const SketchPoint& p : inputPoints) {
+        centroid += p.position();
+    }
+    centroid /= core::narrow_cast<double>(numPoints);
+
+    // Compute a = sum(xi² - yi²) and b = sum(2 xi yi)
+    //
+    // These can be interpreted as the coefficients of a complex number z = a + ib
+    // such that sqrt(z) is parallel to the best fit line. See:
+    //
+    // [2] https://en.wikipedia.org/wiki/Deming_regression#Orthogonal_regression
+    //
+    double a = 0;
+    double b = 0;
+    for (const SketchPoint& p : inputPoints) {
+        geometry::Vec2d q = p.position() - centroid;
+        a += q.x() * q.x() - q.y() * q.y();
+        b += q.x() * q.y();
+    }
+    b *= 2;
+
+    // Compute coefficients of the best fit line as Ax + By + C = 0
+    //
+    // Note: if b = 0, then the best fit line is perfectly horizontal or
+    // vertical, and [1] actually fails to handle/discuss the vertical case.
+    //
+    // Example 1: input points = (1, 0), (-1, 0)
+    // The equation provided in [1] gives:
+    // a = 2       b = 0
+    // A = b = 0   B = -a - sqrt(a² + b²) = -4    => OK (horizontal line)
+    //
+    // Example 1: input points = (0, 1), (0, -1)
+    // The equation provided in [1] gives:
+    // a = -2      b = 0
+    // A = b = 0   B = -a - sqrt(a² + b²) = 0     => WRONG (we need A != 0)
+    //
+    // The vertical case corresponds to the special case "z is a negative real
+    // number" when computing the square root of a complex number via the
+    // method in https://math.stackexchange.com/a/44500, which is essentially
+    // the geometric interpretation of the equations provided in [1].
+    //
+    double A = 1;
+    double B = 0;
+    if (b == 0) { // XXX or |b| < eps * |a| ? What's a good eps?
+        if (a < 0) {
+            // Intuition: sum(xi²) < sum(yi²) => vertical line
+            A = 1;
+            B = 0;
+        }
+        else {
+            // Intuition: sum(xi²) > sum(yi²) => horizontal line
+            A = 0;
+            B = 1;
+        }
+        // Note: if b == 0 AND a == 0, this means there is a circular symmetry:
+        // all lines passing through the centroid are equally good/bad.
+    }
+    else {
+        A = b;
+        B = -(a + std::sqrt(a * a + b * b));
+    }
+    // Note: C = - A * centroid.x() + B * centroid.y(), but we do not need it.
+
+    // Find points further away from centroid along the line, and project them
+    // on the line to define out two output points
+    //
+    // Note: the normal / direction vector is non-null since we know that
+    // (A, B) is either (1, 0), (0, 1), or (b, ...) with b != 0
+    //
+    geometry::Vec2d d(-B, A);
+    double vMin = core::DoubleInfinity;
+    double vMax = -core::DoubleInfinity;
+    for (const SketchPoint& p : inputPoints) {
+        geometry::Vec2d q = p.position() - centroid;
+        double v = q.dot(d);
+        if (v < vMin) {
+            vMin = v;
+        }
+        if (v > vMax) {
+            vMax = v;
+        }
+    }
+    double l2inv = 1.0 / d.squaredLength();
+    geometry::Vec2d pMin = centroid + l2inv * vMin * d;
+    geometry::Vec2d pMax = centroid + l2inv * vMax * d;
+    double p0pMin2 = (p0.position() - pMin).squaredLength();
+    double p0pMax2 = (p0.position() - pMax).squaredLength();
+    if (p0pMin2 < p0pMax2) {
+        // p0 closer to pMin than pMax
+        p0.setPosition(pMin);
+        p1.setPosition(pMax);
+    }
+    else {
+        p0.setPosition(pMax);
+        p1.setPosition(pMin);
+    }
+
+    return 0;
+
+    // TODO: better width than using the width of first and last point?
 }
 
 } // namespace vgc::tools

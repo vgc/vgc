@@ -68,6 +68,11 @@ protected:
     Int doUpdateFrom(const SketchPointBuffer& input) override;
 };
 
+class VGC_TOOLS_API SingleLineSegmentWithFreeEndpointsPass : public SketchPass {
+protected:
+    Int doUpdateFrom(const SketchPointBuffer& input) override;
+};
+
 } // namespace vgc::tools
 
 #endif // VGC_TOOLS_SKETCHPASSES_H
