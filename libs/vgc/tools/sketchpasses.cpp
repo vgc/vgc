@@ -44,8 +44,6 @@ void TransformPass::doUpdateFrom(
     const SketchPointBuffer& input,
     SketchPointBuffer& output) {
 
-    const SketchPointArray& inputPoints = input.data();
-
     // Remove all previously unstable points.
     //
     Int oldNumStablePoints = output.numStablePoints();
