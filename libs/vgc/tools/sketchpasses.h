@@ -25,7 +25,7 @@ namespace vgc::tools {
 
 class VGC_TOOLS_API EmptyPass : public SketchPass {
 protected:
-    Int doUpdateFrom(const SketchPointBuffer& input) override;
+    void doUpdateFrom(const SketchPointBuffer& input, SketchPointBuffer& output) override;
 };
 
 class VGC_TOOLS_API TransformPass : public SketchPass {
@@ -47,7 +47,7 @@ public:
     }
 
 protected:
-    Int doUpdateFrom(const SketchPointBuffer& input) override;
+    void doUpdateFrom(const SketchPointBuffer& input, SketchPointBuffer& output) override;
 
 private:
     geometry::Mat3d transform_;
@@ -55,22 +55,22 @@ private:
 
 class VGC_TOOLS_API SmoothingPass : public SketchPass {
 protected:
-    Int doUpdateFrom(const SketchPointBuffer& input) override;
+    void doUpdateFrom(const SketchPointBuffer& input, SketchPointBuffer& output) override;
 };
 
 class VGC_TOOLS_API DouglasPeuckerPass : public SketchPass {
 protected:
-    Int doUpdateFrom(const SketchPointBuffer& input) override;
+    void doUpdateFrom(const SketchPointBuffer& input, SketchPointBuffer& output) override;
 };
 
 class VGC_TOOLS_API SingleLineSegmentWithFixedEndpointsPass : public SketchPass {
 protected:
-    Int doUpdateFrom(const SketchPointBuffer& input) override;
+    void doUpdateFrom(const SketchPointBuffer& input, SketchPointBuffer& output) override;
 };
 
 class VGC_TOOLS_API SingleLineSegmentWithFreeEndpointsPass : public SketchPass {
 protected:
-    Int doUpdateFrom(const SketchPointBuffer& input) override;
+    void doUpdateFrom(const SketchPointBuffer& input, SketchPointBuffer& output) override;
 };
 
 } // namespace vgc::tools

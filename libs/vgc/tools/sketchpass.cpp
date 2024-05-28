@@ -18,40 +18,30 @@
 
 namespace vgc::tools {
 
+void SketchPointBuffer::updateChordLengths() {
+
+    // Get all the unstable points, except the first if it doesn't have a previous point
+    auto points = unstablePoints();
+    if (numStablePoints() == 0 && !points.isEmpty()) {
+        points = points.subspan(1);
+    }
+
+    // Compute chord-lengths
+    for (SketchPoint& p2 : points) {
+        const SketchPoint& p1 = *(&p2 - 1);
+        double ds = (p2.position() - p1.position()).length();
+        p2.setS(p1.s() + ds);
+    }
+}
+
 void SketchPass::reset() {
-    buffer_.clear();
-    lastNumStablePoints_ = 0;
+    output_.reset();
     doReset();
 }
 
 void SketchPass::updateFrom(const SketchPointBuffer& input) {
-    areCumulativeChordalDistancesUpdated_ = false;
-    Int numStablePoints = doUpdateFrom(input);
-    if (!areCumulativeChordalDistancesUpdated_) {
-        updateCumulativeChordalDistances();
-    }
-    buffer_.setNumStablePoints(numStablePoints);
-    lastNumStablePoints_ = numStablePoints;
-}
-
-void SketchPass::updateCumulativeChordalDistances() {
-
-    Int n = numPoints();
-    if (n == 0) {
-        return;
-    }
-
-    Int start = std::max<Int>(lastNumStablePoints_, 1);
-    const SketchPoint* p1 = &getPoint(start - 1);
-    double s = p1->s();
-    for (Int i = start; i < n; ++i) {
-        SketchPoint& p2 = getPointRef(i);
-        s += (p2.position() - p1->position()).length();
-        p2.setS(s);
-        p1 = &p2;
-    }
-
-    areCumulativeChordalDistancesUpdated_ = true;
+    SketchPointBuffer& output = output_;
+    doUpdateFrom(input, output);
 }
 
 void SketchPass::doReset() {

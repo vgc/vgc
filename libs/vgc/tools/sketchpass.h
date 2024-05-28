@@ -50,15 +50,29 @@ public:
     ///
     SketchPointBuffer() noexcept = default;
 
-    /// Resets this `SketchPointBuffer` to its initial state with no points
-    /// (but preserving capacity).
+    /// Removes all the points in this `SketchPointBuffer`.
+    ///
+    /// Throws an exception if `numStablePoints() > 0`.
+    ///
+    /// \sa `reset()`.
+    ///
+    void clear() {
+        resize(0);
+    }
+
+    /// Resets this `SketchPointBuffer` to its initial state with
+    /// `numStablePoints() == 0` and `length() == 0`.
     ///
     /// This is the only method modifying the stable part of this
     /// `SketchPointBuffer`. You must not call it when implementing a
     /// `SketchPass`, as it would break the invariant that stable points are
     /// not modified or removed during a pass update.
     ///
-    void clear() {
+    /// This function preserves the capacity of the underlying array.
+    ///
+    /// \sa `clear()`.
+    ///
+    void reset() {
         points_.clear();
         numStablePoints_ = 0;
     }
@@ -69,14 +83,14 @@ public:
         return points_[i];
     }
 
-    /// Returns the `SketchPoint` at index `i` as a immutable reference.
+    /// Returns the `SketchPoint` at index `i` as a mutable reference.
     ///
     /// Throws an exception if `i` refers to a stable point.
     ///
-    SketchPoint& getRef(Int i) {
+    SketchPoint& at(Int i) {
         if (i < numStablePoints_) {
             throw core::LogicError(
-                "getRef(): cannot get a non-const reference to a stable point.");
+                "at(): cannot get a non-const reference to a stable point.");
         }
         return points_[i];
     }
@@ -103,6 +117,22 @@ public:
     ///
     SketchPointArray::const_iterator end() const {
         return points_.end();
+    }
+
+    /// Returns an immutable reference to the first point.
+    ///
+    /// Throws `IndexError` if there are no points in this `SketchPointBuffer`.
+    ///
+    const SketchPoint& first() const {
+        return points_.first();
+    }
+
+    /// Returns an immutable reference to the last point.
+    ///
+    /// Throws `IndexError` if there are no points in this `SketchPointBuffer`.
+    ///
+    const SketchPoint& last() const {
+        return points_.last();
     }
 
     /// Returns the number of points in this `SketchPointBuffer`.
@@ -178,6 +208,11 @@ public:
         points_.extend(first, last);
     }
 
+    // Updates `p.s()` of all unstable points by computing their values
+    // as cumulative chord lengths.
+    //
+    void updateChordLengths();
+
 private:
     SketchPointArray points_;
     Int numStablePoints_ = 0;
@@ -209,102 +244,35 @@ public:
     ///
     void reset();
 
-    /// Updates the output `buffer()` based on the given `input`.
+    /// Updates the `output()` buffer of this pass based on the given `input`
+    /// buffer.
     ///
     /// This calls `doUpdateFrom()` which subclass should reimplement.
     ///
     void updateFrom(const SketchPointBuffer& input);
 
-    /// \overload
-    void updateFrom(const SketchPass& input) {
-        updateFrom(input.buffer());
+    /// Updates the `output()` buffer of this pass based on the `output()`
+    /// buffer of the given `previousPass`.
+    ///
+    /// This is equivalent to `updateFrom(previousPass.output())`.
+    ///
+    void updateFrom(const SketchPass& previousPass) {
+        updateFrom(previousPass.output());
     }
 
     /// Returns the output buffer that this pass computes during its
     /// `doUpdateFrom()` implementation.
     ///
-    const SketchPointBuffer& buffer() const {
-        return buffer_;
+    const SketchPointBuffer& output() const {
+        return output_;
     }
 
 protected:
-    // The methods below are available for subclasses in their
-    // implementation of `doUpdateFrom()`.
-
-    const SketchPoint& getPoint(Int i) {
-        return buffer_[i];
-    }
-
-    SketchPoint& getPointRef(Int i) {
-        return buffer_.getRef(i);
-    }
-
-    core::Span<SketchPoint> unstablePoints() {
-        return buffer_.unstablePoints();
-    }
-
-    const SketchPointArray& points() const {
-        return buffer_.data();
-    }
-
-    Int numPoints() const {
-        return buffer_.length();
-    }
-
-    void reservePoints(Int count) {
-        return buffer_.reserve(count);
-    }
-
-    void resizePoints(Int count) {
-        return buffer_.resize(count);
-    }
-
-    Int numStablePoints() const {
-        return buffer_.numStablePoints();
-    }
-
-    void appendPoint(const SketchPoint& point) {
-        buffer_.append(point);
-    }
-
-    void emplaceLastPoint(
-        const geometry::Vec2d& position,
-        double pressure,
-        double timestamp,
-        double width,
-        double s = 0) {
-
-        buffer_.emplaceLast(position, pressure, timestamp, width, s);
-    }
-
-    template<typename InputIt, VGC_REQUIRES(core::isInputIterator<InputIt>)>
-    void extendPoints(InputIt first, InputIt last) {
-        buffer_.extend(first, last);
-    }
-
-    // Updates the cumulative chordal distances (`SketchPoint::s()`) of all
-    // points after the last stable point.
-    //
-    // This is automatically called after `update_()`, unless you manually call
-    // it yourself in `update_()`. Calling it yourself is therefore only needed
-    // if part of your algorithm (e.g., computing the widths) requires them.
-    //
-    void updateCumulativeChordalDistances();
-
-protected:
-    // This is the main function that subclasses should implement. It should update
-    // its own `buffer` based on the new `input`.
-    //
-    // The current number of input stable points is `input.numStablePoints()`.
-    //
-    // The last number of input stable points is `lastNumStableInputPoints`.
-    //
-    // The last number of output stable points is `this->numStablePoints()`.
-    //
-    // This function should return the number of output stable points after
-    // this pass. This number must not be less than its previous value.
-    //
-    virtual Int doUpdateFrom(const SketchPointBuffer& input) = 0;
+    /// This is the main function that subclasses should implement. It should update
+    /// the `output` buffer based on the new `input`.
+    ///
+    virtual void
+    doUpdateFrom(const SketchPointBuffer& input, SketchPointBuffer& output) = 0;
 
     /// This method should be reimplemented by subclasses if they store
     /// additional state that needs to be reinitialized before processing a new
@@ -315,9 +283,7 @@ protected:
     virtual void doReset();
 
 private:
-    SketchPointBuffer buffer_;
-    Int lastNumStablePoints_ = 0;
-    bool areCumulativeChordalDistancesUpdated_ = false;
+    SketchPointBuffer output_;
 };
 
 } // namespace vgc::tools
