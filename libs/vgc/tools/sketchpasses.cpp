@@ -20,51 +20,51 @@
 
 namespace vgc::tools {
 
-Int EmptyPass::doUpdateFrom(const SketchPointBuffer& input) {
-
-    const SketchPointArray& inputPoints = input.data();
+void EmptyPass::doUpdateFrom(const SketchPointBuffer& input, SketchPointBuffer& output) {
 
     // Remove all previously unstable points.
     //
-    Int oldNumStablePoints = this->numStablePoints();
-    resizePoints(oldNumStablePoints);
+    Int oldNumStablePoints = output.numStablePoints();
+    output.resize(oldNumStablePoints);
 
     // Add all other points (some of which are now stable, some of which are
     // still unstable).
     //
-    extendPoints(inputPoints.begin() + oldNumStablePoints, inputPoints.end());
+    output.extend(input.begin() + oldNumStablePoints, input.end());
 
     // Set the new number of stable points as being the same as the input.
     //
-    Int newNumStablePoints = input.numStablePoints();
-    return newNumStablePoints;
+    output.setNumStablePoints(input.numStablePoints());
+
+    // Note: there is no need to compute the output chord lengths in the
+    // EmptyPass since they are the same as the input chord length.
 }
 
-Int TransformPass::doUpdateFrom(const SketchPointBuffer& input) {
-
-    const SketchPointArray& inputPoints = input.data();
+void TransformPass::doUpdateFrom(
+    const SketchPointBuffer& input,
+    SketchPointBuffer& output) {
 
     // Remove all previously unstable points.
     //
-    Int oldNumStablePoints = this->numStablePoints();
-    resizePoints(oldNumStablePoints);
+    Int oldNumStablePoints = output.numStablePoints();
+    output.resize(oldNumStablePoints);
 
     // Add all other points (some of which are now stable, some of which are
     // still unstable).
     //
-    for (auto it = inputPoints.begin() + oldNumStablePoints; //
-         it != inputPoints.end();
-         ++it) {
-
+    for (auto it = input.begin() + oldNumStablePoints; it != input.end(); ++it) {
         SketchPoint p = *it;
         p.setPosition(transformAffine(p.position()));
-        appendPoint(p);
+        output.append(p);
     }
+
+    // Updates chord lengths.
+    //
+    output.updateChordLengths();
 
     // Set the new number of stable points as being the same as the input.
     //
-    Int newNumStablePoints = input.numStablePoints();
-    return newNumStablePoints;
+    output.setNumStablePoints(input.numStablePoints());
 }
 
 namespace {
@@ -254,19 +254,21 @@ void applyWidthRoughnessLimitor(
 
 } // namespace
 
-Int SmoothingPass::doUpdateFrom(const SketchPointBuffer& input) {
+void SmoothingPass::doUpdateFrom(
+    const SketchPointBuffer& input,
+    SketchPointBuffer& output) {
 
     const SketchPointArray& inputPoints = input.data();
     Int numPoints = inputPoints.length();
-    Int numStablePoints = this->numStablePoints();
-    if (numPoints == numStablePoints) {
-        return numPoints;
+    Int oldNumStablePoints = output.numStablePoints();
+    if (numPoints == oldNumStablePoints) {
+        return;
     }
 
     // Keep our stable points, fill the rest with the input points.
-    Int unstableIndexStart = numStablePoints;
-    resizePoints(numStablePoints);
-    extendPoints(inputPoints.begin() + unstableIndexStart, inputPoints.end());
+    Int unstableIndexStart = oldNumStablePoints;
+    output.resize(oldNumStablePoints);
+    output.extend(input.begin() + unstableIndexStart, input.end());
 
     Int instabilityDelta = 0;
 
@@ -277,7 +279,7 @@ Int SmoothingPass::doUpdateFrom(const SketchPointBuffer& input) {
         if (pointsSmoothingLevel == 1) {
             iStart = std::max<Int>(1, iStart);
             for (Int i = iStart; i < numPoints - 1; ++i) {
-                getPointRef(i).setPosition(                                  //
+                output.at(i).setPosition(                                    //
                     (1 / 4.0) * inputPoints.getUnchecked(i - 1).position() + //
                     (2 / 4.0) * inputPoints.getUnchecked(i + 0).position() + //
                     (1 / 4.0) * inputPoints.getUnchecked(i + 1).position());
@@ -285,14 +287,14 @@ Int SmoothingPass::doUpdateFrom(const SketchPointBuffer& input) {
         }
         else if (pointsSmoothingLevel == 2) {
             if (iStart <= 1) {
-                getPointRef(1).setPosition(                              //
+                output.at(1).setPosition(                                //
                     (1 / 4.0) * inputPoints.getUnchecked(0).position() + //
                     (2 / 4.0) * inputPoints.getUnchecked(1).position() + //
                     (1 / 4.0) * inputPoints.getUnchecked(2).position());
                 iStart = 2;
             }
             for (Int i = iStart; i < numPoints - 2; ++i) {
-                getPointRef(i).setPosition(                                   //
+                output.at(i).setPosition(                                     //
                     (1 / 16.0) * inputPoints.getUnchecked(i - 2).position() + //
                     (4 / 16.0) * inputPoints.getUnchecked(i - 1).position() + //
                     (6 / 16.0) * inputPoints.getUnchecked(i + 0).position() + //
@@ -301,7 +303,7 @@ Int SmoothingPass::doUpdateFrom(const SketchPointBuffer& input) {
             }
             if (numPoints - 2 >= iStart) {
                 Int i = numPoints - 2;
-                getPointRef(i).setPosition(                                  //
+                output.at(i).setPosition(                                    //
                     (1 / 4.0) * inputPoints.getUnchecked(i - 1).position() + //
                     (2 / 4.0) * inputPoints.getUnchecked(i + 0).position() + //
                     (1 / 4.0) * inputPoints.getUnchecked(i + 1).position());
@@ -335,24 +337,28 @@ Int SmoothingPass::doUpdateFrom(const SketchPointBuffer& input) {
                     value += coeffs[k] * inputPoints[j].width();
                 }
             }
-            getPointRef(i).setWidth(value / sumCoeffs);
+            output.at(i).setWidth(value / sumCoeffs);
         }
         instabilityDelta = std::max<Int>(instabilityDelta, widthSmoothingLevel);
     }
 
-    // compute chordal lengths
-    updateCumulativeChordalDistances();
+    // compute chord lengths
+    output.updateChordLengths();
 
     // Width limitor
     constexpr double widthRoughness = 0.8;
     constexpr Int roughnessLimitorWindowSize = 3;
     const SketchPoint* lastStablePoint =
-        numStablePoints == 0 ? nullptr : &getPoint(numStablePoints - 1);
+        oldNumStablePoints == 0 ? nullptr : &output[oldNumStablePoints - 1];
     applyWidthRoughnessLimitor(
-        widthRoughness, roughnessLimitorWindowSize, lastStablePoint, unstablePoints());
+        widthRoughness,
+        roughnessLimitorWindowSize,
+        lastStablePoint,
+        output.unstablePoints());
     instabilityDelta += roughnessLimitorWindowSize;
 
-    return std::max<Int>(0, input.numStablePoints() - instabilityDelta);
+    output.setNumStablePoints(
+        std::max<Int>(0, input.numStablePoints() - instabilityDelta));
 }
 
 namespace {
@@ -478,9 +484,11 @@ Int douglasPeucker(
 
 } // namespace
 
-Int DouglasPeuckerPass::doUpdateFrom(const SketchPointBuffer& input) {
+void DouglasPeuckerPass::doUpdateFrom(
+    const SketchPointBuffer& input,
+    SketchPointBuffer& output) {
 
-    // A copy required to make a mutable span, which the Douglas-Peuckert
+    // A copy is required to make a mutable span, which the Douglas-Peuckert
     // algorithm needs (it modifies the points slightly).
     //
     SketchPointArray inputPoints = input.data();
@@ -495,33 +503,63 @@ Int DouglasPeuckerPass::doUpdateFrom(const SketchPointBuffer& input) {
     douglasPeucker(span, indices, intervalStart, thresholdCoefficient);
 
     Int numSimplifiedPoints = indices.length();
-    resizePoints(numSimplifiedPoints);
+    output.resize(numSimplifiedPoints);
     for (Int i = 0; i < numSimplifiedPoints; ++i) {
-        getPointRef(i) = inputPoints[indices[i]];
+        output.at(i) = inputPoints[indices[i]];
     }
 
+    output.updateChordLengths();
+
     // For now, for simplicity, we do not provide any stable points guarantees
-    // and simply recompute the Douglas-Peuckert algorithm from scratch{
+    // and simply recompute the Douglas-Peuckert algorithm from scratch.
     //
-    Int numStablePoints = 0;
-    return numStablePoints;
+    output.setNumStablePoints(0);
 }
 
-Int SingleLineSegmentWithFixedEndpointsPass::doUpdateFrom(
-    const SketchPointBuffer& input) {
+void SingleLineSegmentWithFixedEndpointsPass::doUpdateFrom(
+    const SketchPointBuffer& input,
+    SketchPointBuffer& output) {
 
     const SketchPointArray& inputPoints = input.data();
     if (!inputPoints.isEmpty()) {
-        resizePoints(2);
-        SketchPoint& p0 = getPointRef(0);
-        SketchPoint& p1 = getPointRef(1);
-        p0 = inputPoints.first();
-        p1 = inputPoints.last();
+        output.resize(2);
+        if (output.numStablePoints() == 0) {
+            output.at(0) = inputPoints.first();
+        }
+        output.at(1) = inputPoints.last();
+        output.updateChordLengths();
+        output.setNumStablePoints(input.numStablePoints() > 0 ? 1 : 0);
     }
-
-    // No stable points
-    return 0;
 }
+
+namespace {
+
+// When fitting a curve with free endpoints, this handles the case where the
+// input has only two points or less, in which case the output should simply be
+// a line (or an empty array).
+//
+bool handleSmallInputWithFreeEndpoints(
+    const SketchPointBuffer& input,
+    SketchPointBuffer& output) {
+
+    Int numInputPoints = input.length();
+    if (numInputPoints == 0) {
+        return true;
+    }
+    else if (numInputPoints <= 2) {
+        output.resize(2);
+        output.at(0) = input.first();
+        output.at(1) = input.last();
+        output.updateChordLengths();
+        output.setNumStablePoints(0);
+        return true;
+    }
+    else {
+        return false;
+    }
+}
+
+} // namespace
 
 // This basically implements:
 //
@@ -534,26 +572,18 @@ Int SingleLineSegmentWithFixedEndpointsPass::doUpdateFrom(
 // I believe this is equivalent to computing the first principal component of
 // the data after centering it around the centroid (see PCA / SVD methods).
 //
-Int SingleLineSegmentWithFreeEndpointsPass::doUpdateFrom(const SketchPointBuffer& input) {
+void SingleLineSegmentWithFreeEndpointsPass::doUpdateFrom(
+    const SketchPointBuffer& input,
+    SketchPointBuffer& output) {
 
-    const SketchPointArray& inputPoints = input.data();
-    Int numPoints = inputPoints.length();
-    if (numPoints == 0) {
-        return 0;
-    }
-
-    resizePoints(2);
-    SketchPoint& p0 = getPointRef(0);
-    SketchPoint& p1 = getPointRef(1);
-    p0 = inputPoints.first();
-    p1 = inputPoints.last();
-    if (numPoints <= 2) {
-        return 0;
+    if (handleSmallInputWithFreeEndpoints(input, output)) {
+        return;
     }
 
     // Compute centroid
+    Int numPoints = input.length();
     geometry::Vec2d centroid;
-    for (const SketchPoint& p : inputPoints) {
+    for (const SketchPoint& p : input) {
         centroid += p.position();
     }
     centroid /= core::narrow_cast<double>(numPoints);
@@ -567,7 +597,7 @@ Int SingleLineSegmentWithFreeEndpointsPass::doUpdateFrom(const SketchPointBuffer
     //
     double a = 0;
     double b = 0;
-    for (const SketchPoint& p : inputPoints) {
+    for (const SketchPoint& p : input) {
         geometry::Vec2d q = p.position() - centroid;
         a += q.x() * q.x() - q.y() * q.y();
         b += q.x() * q.y();
@@ -616,8 +646,17 @@ Int SingleLineSegmentWithFreeEndpointsPass::doUpdateFrom(const SketchPointBuffer
     }
     // Note: C = - A * centroid.x() + B * centroid.y(), but we do not need it.
 
+    // Initialize the output from the first and last input points.
+    // This ensures that we already have the width and timestamps correct.
+    //
+    output.resize(2);
+    SketchPoint& p0 = output.at(0);
+    SketchPoint& p1 = output.at(1);
+    output.at(0) = input.first();
+    output.at(1) = input.last();
+
     // Find points further away from centroid along the line, and project them
-    // on the line to define out two output points
+    // on the line to define the two output positions
     //
     // Note: the normal / direction vector is non-null since we know that
     // (A, B) is either (1, 0), (0, 1), or (b, ...) with b != 0
@@ -625,7 +664,7 @@ Int SingleLineSegmentWithFreeEndpointsPass::doUpdateFrom(const SketchPointBuffer
     geometry::Vec2d d(-B, A);
     double vMin = core::DoubleInfinity;
     double vMax = -core::DoubleInfinity;
-    for (const SketchPoint& p : inputPoints) {
+    for (const SketchPoint& p : input) {
         geometry::Vec2d q = p.position() - centroid;
         double v = q.dot(d);
         if (v < vMin) {
@@ -638,10 +677,7 @@ Int SingleLineSegmentWithFreeEndpointsPass::doUpdateFrom(const SketchPointBuffer
     double l2inv = 1.0 / d.squaredLength();
     geometry::Vec2d pMin = centroid + l2inv * vMin * d;
     geometry::Vec2d pMax = centroid + l2inv * vMax * d;
-    double p0pMin2 = (p0.position() - pMin).squaredLength();
-    double p0pMax2 = (p0.position() - pMax).squaredLength();
-    if (p0pMin2 < p0pMax2) {
-        // p0 closer to pMin than pMax
+    if ((p1.position() - p0.position()).dot(d) > 0) {
         p0.setPosition(pMin);
         p1.setPosition(pMax);
     }
@@ -650,7 +686,8 @@ Int SingleLineSegmentWithFreeEndpointsPass::doUpdateFrom(const SketchPointBuffer
         p1.setPosition(pMin);
     }
 
-    return 0;
+    output.updateChordLengths();
+    output.setNumStablePoints(0);
 
     // TODO: better width than using the width of first and last point?
 }

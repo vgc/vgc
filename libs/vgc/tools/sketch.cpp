@@ -230,7 +230,7 @@ bool setFromSavedInputPoints(
     transformMatrix = *transform;
 
     // Sets the input points
-    inputPoints.clear();
+    inputPoints.reset();
     for (Int i = 0; i < n; ++i) {
         inputPoints.emplaceLast(
             (*positions)[i],
@@ -323,7 +323,7 @@ void SketchModule::reFitExistingEdges_() {
             postTransformPass->updateFrom(transformPass);
 
             // Save result to DOM
-            updateEdgeGeometry(postTransformPass->buffer(), item);
+            updateEdgeGeometry(postTransformPass->output(), item);
         }
     });
     workspace->sync();
@@ -697,7 +697,7 @@ void Sketch::onPaintDestroy(graphics::Engine* engine) {
 }
 
 const SketchPointBuffer& Sketch::postTransformPassesResult_() const {
-    return postTransformPass_->buffer();
+    return postTransformPass_->output();
 }
 
 core::ConstSpan<SketchPoint> Sketch::cleanInputPoints_() const {
@@ -1047,10 +1047,10 @@ vacomplex::KeyEdge* toKeyEdge(workspace::Workspace* workspace, core::Id itemId) 
 
 void Sketch::startCurve_(ui::MouseEvent* event) {
 
-    // Clear the points now. We don't to it on finishCurve_() for
+    // Resets the input points now. We don't to it on finishCurve_() for
     // debugging purposes.
     //
-    inputPoints_.clear();
+    inputPoints_.reset();
 
     // Fast return if missing required context
     auto context = contextLock();
