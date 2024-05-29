@@ -72,6 +72,7 @@ TypenameMacros:
 WhitespaceSensitiveMacros:
   - VGC_PP_STR
   - VGC_PP_CAT
+  - VGC_WARNING_GCC_DISABLE
 MacroBlockBegin: "^VGC_.*_BEGIN$"
 MacroBlockEnd: "^VGC_.*_END$"
 ...

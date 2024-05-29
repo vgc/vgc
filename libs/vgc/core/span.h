@@ -645,9 +645,15 @@ public:
                     offset,
                     count));
             }
+            VGC_WARNING_PUSH
+            // clang-format off
+            // See: https://github.com/vgc/vgc/issues/1781
+            VGC_WARNING_GCC_DISABLE(strict-overflow)
+            // clang-format on
             if (count > len - offset) {
                 throwRangeNotInRange_(offset, offset + count);
             }
+            VGC_WARNING_POP
         }
         return Span<T, dynamicExtent>(
             data() + offset,

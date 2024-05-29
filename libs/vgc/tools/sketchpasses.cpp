@@ -18,6 +18,8 @@
 
 #include <array>
 
+#include <vgc/geometry/bezier.h>
+
 namespace vgc::tools {
 
 void EmptyPass::doUpdateFrom(const SketchPointBuffer& input, SketchPointBuffer& output) {
@@ -516,42 +518,74 @@ void DouglasPeuckerPass::doUpdateFrom(
     output.setNumStablePoints(0);
 }
 
-void SingleLineSegmentWithFixedEndpointsPass::doUpdateFrom(
+namespace {
+
+// Sets the output to be a line segment from first to last input point,
+// assuming the first output point is stable as soon as the first input point
+// is stable too.
+//
+void setLineSegmentWithFixedEndpoints(
     const SketchPointBuffer& input,
     SketchPointBuffer& output) {
 
-    const SketchPointArray& inputPoints = input.data();
-    if (!inputPoints.isEmpty()) {
+    if (!input.isEmpty()) {
         output.resize(2);
         if (output.numStablePoints() == 0) {
-            output.at(0) = inputPoints.first();
+            output.at(0) = input.first();
         }
-        output.at(1) = inputPoints.last();
+        output.at(1) = input.last();
         output.updateChordLengths();
         output.setNumStablePoints(input.numStablePoints() > 0 ? 1 : 0);
     }
 }
 
-namespace {
-
-// When fitting a curve with free endpoints, this handles the case where the
-// input has only two points or less, in which case the output should simply be
-// a line (or an empty array).
+// Sets the output to be a line segment from first to last input point,
+// assuming the first output point is never stable.
 //
-bool handleSmallInputWithFreeEndpoints(
+void setLineSegmentWithFreeEndpoints(
     const SketchPointBuffer& input,
     SketchPointBuffer& output) {
 
-    Int numInputPoints = input.length();
-    if (numInputPoints == 0) {
-        return true;
-    }
-    else if (numInputPoints <= 2) {
+    if (!input.isEmpty()) {
         output.resize(2);
         output.at(0) = input.first();
         output.at(1) = input.last();
         output.updateChordLengths();
         output.setNumStablePoints(0);
+    }
+}
+
+// When fitting a curve with fixed endpoints, this handles the case where the
+// input is "small" (only two points or less), in which case the output should
+// simply be a line (or an empty array).
+//
+// Returns whether the input was indeed small and therefore handled.
+//
+bool handleSmallInputWithFixedEndpoints(
+    const SketchPointBuffer& input,
+    SketchPointBuffer& output) {
+
+    if (input.length() <= 2) {
+        setLineSegmentWithFixedEndpoints(input, output);
+        return true;
+    }
+    else {
+        return false;
+    }
+}
+
+// When fitting a curve with free endpoints, this handles the case where the
+// input is "small" (only two points or less), in which case the output should
+// simply be a line (or an empty array).
+//
+// Returns whether the input was indeed small and therefore handled.
+//
+bool handleSmallInputWithFreeEndpoints(
+    const SketchPointBuffer& input,
+    SketchPointBuffer& output) {
+
+    if (input.length() <= 2) {
+        setLineSegmentWithFreeEndpoints(input, output);
         return true;
     }
     else {
@@ -560,6 +594,13 @@ bool handleSmallInputWithFreeEndpoints(
 }
 
 } // namespace
+
+void SingleLineSegmentWithFixedEndpointsPass::doUpdateFrom(
+    const SketchPointBuffer& input,
+    SketchPointBuffer& output) {
+
+    setLineSegmentWithFixedEndpoints(input, output);
+}
 
 // This basically implements:
 //
@@ -690,6 +731,130 @@ void SingleLineSegmentWithFreeEndpointsPass::doUpdateFrom(
     output.setNumStablePoints(0);
 
     // TODO: better width than using the width of first and last point?
+}
+
+// Input:  n points P0, ..., Pn-1
+//
+// Output: Quadratic Bezier control points (B0, B1, B2) that minimizes:
+//
+//   E = sum || B(ui) - Pi ||²
+//
+// where:
+//
+//   B(u) = (1 - u)² B0 + 2(1 - u)u B1 + u² B2
+//
+//   B0 = P0 is known
+//   B1 = (x, y) is the variable that we solve for
+//   B2 = Pn-1 is known
+//
+//   ui = si / sn-1 (normalized chord-lengths of the input points)
+//
+// How is it solved?
+//
+// The minimum of E is reached when dE/dx = 0 and dE/dy = 0
+//
+// dE/dx = sum d/dx(|| B(ui) - Pi ||²)
+//       = sum 2 (B(ui) - Pi) ⋅ d/dx(B(ui) - Pi)    (dot product)
+//
+// d/dx(B(ui) - Pi) = d/dx(B(ui)) - d/dx(Pi)
+//                  = d/dx(B(ui))              (since Pi is a constant)
+//                  = (1 - ui)² d(B0)/dx + 2(1 - ui)ui d(B1)/dx + ui² d(B2)/dx
+//                              ^^^^^^^^               ^^^^^^^^       ^^^^^^^^
+//                              = (0, 0)               = (1, 0)       = (0, 0)
+//
+// So with the notations:
+//   a0i = (1 - ui)²
+//   a1i = 2(1 - ui)ui
+//   a2i = ui²
+//
+// We have:
+//
+// d/dx(B(ui) - Pi) = (a1i, 0)
+//
+// And in the dot product (B(ui) - Pi) ⋅ d/dx(B(ui) - Pi), only the X-component
+// is non-null and we get:
+//
+// dE/dx = sum 2 (B(ui)x - Pix) a1i
+//       = sum 2 (a0i B0x + a1i x + a2i B2x - Pix) a1i
+//
+// Therefore,
+//
+// dE/dx = 0 <=> sum (a0i B0x + a1i x + a2i B2x - Pix) a1i = 0
+//           <=> x * sum (a1i²) = sum (Pix - a0i B0x - a2i B2x) a1i
+//
+// So we get x = sum (Pix - a0i B0x - a2i B2x) a1i / sum (a1i²)
+//
+// We get a similar result for y, so in the end:
+//
+// (x, y) = sum (Pi - a0i B0 - a2i B2) a1i / sum (a1i²)
+//
+void SingleQuadraticSegmentWithFixedEndpointsPass::doUpdateFrom(
+    const SketchPointBuffer& input,
+    SketchPointBuffer& output) {
+
+    if (handleSmallInputWithFixedEndpoints(input, output)) {
+        return;
+    }
+
+    geometry::Vec2d B0 = input.first().position();
+    geometry::Vec2d B2 = input.last().position();
+    double totalChordLength = input.last().s();
+    if (totalChordLength <= 0) {
+        setLineSegmentWithFixedEndpoints(input, output);
+        return;
+    }
+    double totalChordLengthInv = 1.0 / totalChordLength;
+
+    // Initialize numerator and denominator
+    geometry::Vec2d numerator;
+    double denominator = 0;
+
+    // Iterate over all points except the first and last and accumulate
+    // the terms in the numerator and denominator
+    Int n = input.length();
+    core::ConstSpan<SketchPoint> inputPoints = input.data();
+    for (const SketchPoint& p : inputPoints.subspan(1, n - 2)) {
+        double u = p.s() * totalChordLengthInv;
+        double v = 1 - u;
+        double a0 = v * v;
+        double a1 = 2 * v * u;
+        double a2 = u * u;
+        numerator += (p.position() - a0 * B0 - a2 * B2) * a1;
+        denominator += a1 * a1;
+    }
+
+    // Compute B1
+    if (denominator <= 0) {
+        setLineSegmentWithFixedEndpoints(input, output);
+        return;
+    }
+    geometry::Vec2d B1 = numerator / denominator;
+
+    // Output a few points along the quadratic.
+    //
+    // For now we simply use the same number (and approx location)
+    // as the input point to get their width.
+    //
+    // TODO: Also fit the width? Use fewer output points? How many?
+    //       We basically want to best represent a quadratic as
+    //       a Catmull-Rom Cubic Spline. Ideally, we'd simply want
+    //       to keep it as a quadratic but we do not have the architecture
+    //       for this yet
+    //
+    geometry::QuadraticBezier2d B(B0, B1, B2);
+    output.resize(1);
+    output.reserve(n);
+    if (output.numStablePoints() == 0) {
+        output.at(0) = input.first();
+    }
+    for (SketchPoint p : inputPoints.subspan(1, n - 2)) {
+        double u = p.s() * totalChordLengthInv;
+        p.setPosition(B.eval(u));
+        output.append(p);
+    }
+    output.append(input.last());
+    output.updateChordLengths();
+    output.setNumStablePoints(input.numStablePoints() > 0 ? 1 : 0);
 }
 
 } // namespace vgc::tools
