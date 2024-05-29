@@ -645,9 +645,12 @@ public:
                     offset,
                     count));
             }
+            VGC_WARNING_PUSH
+            VGC_WARNING_GCC_DISABLE(strict-overflow)
             if (count > len - offset) {
                 throwRangeNotInRange_(offset, offset + count);
             }
+            VGC_WARNING_POP
         }
         return Span<T, dynamicExtent>(
             data() + offset,
