@@ -48,6 +48,10 @@ enum class SketchFitMethod : Int8 {
 
     // Fits a single line segment through the input point.
     SingleLineSegmentWithFreeEndpoints,
+
+    // Fits a single quadratic segment through the input point,
+    // starting and ending exactly at the first and last input points.
+    SingleQuadraticSegmentWithFixedEndpoints,
 };
 
 VGC_TOOLS_API

@@ -73,6 +73,11 @@ protected:
     void doUpdateFrom(const SketchPointBuffer& input, SketchPointBuffer& output) override;
 };
 
+class VGC_TOOLS_API SingleQuadraticSegmentWithFixedEndpointsPass : public SketchPass {
+protected:
+    void doUpdateFrom(const SketchPointBuffer& input, SketchPointBuffer& output) override;
+};
+
 } // namespace vgc::tools
 
 #endif // VGC_TOOLS_SKETCHPASSES_H

@@ -141,6 +141,12 @@ public:
         return points_.length();
     }
 
+    /// Returns whether this `SketchPointBuffer` is empty.
+    ///
+    bool isEmpty() const {
+        return points_.isEmpty();
+    }
+
     /// Increases the capacity of `data()`.
     ///
     void reserve(Int numPoints) {
