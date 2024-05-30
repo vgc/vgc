@@ -76,6 +76,10 @@ protected:
 class VGC_TOOLS_API SingleQuadraticSegmentWithFixedEndpointsPass : public SketchPass {
 protected:
     void doUpdateFrom(const SketchPointBuffer& input, SketchPointBuffer& output) override;
+
+private:
+    geometry::Vec2dArray positions_;
+    core::DoubleArray params_;
 };
 
 } // namespace vgc::tools

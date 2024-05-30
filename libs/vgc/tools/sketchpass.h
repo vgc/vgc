@@ -95,6 +95,12 @@ public:
         return points_[i];
     }
 
+    /// Returns an immutable view on all points in this `SketchPointBuffer`.
+    ///
+    core::ConstSpan<SketchPoint> points() const {
+        return core::ConstSpan<SketchPoint>(points_);
+    }
+
     /// Returns the unstable subset of this `SketchPointBuffer`.
     ///
     core::Span<SketchPoint> unstablePoints() {
