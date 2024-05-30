@@ -18,6 +18,7 @@
 
 #include <array>
 
+#include <vgc/core/assert.h>
 #include <vgc/geometry/bezier.h>
 
 namespace vgc::tools {
@@ -733,7 +734,10 @@ void SingleLineSegmentWithFreeEndpointsPass::doUpdateFrom(
     // TODO: better width than using the width of first and last point?
 }
 
-// Input:  n points P0, ..., Pn-1
+namespace {
+
+// Input:  n positions P0, ..., Pn-1
+//         n params    u0, ..., un-1
 //
 // Output: Quadratic Bezier control points (B0, B1, B2) that minimizes:
 //
@@ -743,13 +747,11 @@ void SingleLineSegmentWithFreeEndpointsPass::doUpdateFrom(
 //
 //   B(u) = (1 - u)² B0 + 2(1 - u)u B1 + u² B2
 //
-//   B0 = P0 is known
+//   B0 = P0
 //   B1 = (x, y) is the variable that we solve for
-//   B2 = Pn-1 is known
+//   B2 = Pn-1
 //
-//   ui = si / sn-1 (normalized chord-lengths of the input points)
-//
-// How is it solved?
+// How do we solve for B1?
 //
 // The minimum of E is reached when dE/dx = 0 and dE/dy = 0
 //
@@ -788,6 +790,123 @@ void SingleLineSegmentWithFreeEndpointsPass::doUpdateFrom(
 //
 // (x, y) = sum (Pi - a0i B0 - a2i B2) a1i / sum (a1i²)
 //
+geometry::QuadraticBezier2d quadraticFitWithFixedEndpoints(
+    core::ConstSpan<geometry::Vec2d> positions,
+    core::ConstSpan<double> params) {
+
+    Int n = positions.length();
+    VGC_ASSERT(positions.length() == params.length());
+    VGC_ASSERT(n > 0);
+
+    const geometry::Vec2d& B0 = positions.first();
+    if (n == 1) {
+        return geometry::QuadraticBezier2d(B0, B0, B0);
+    }
+
+    const geometry::Vec2d& B2 = positions.last();
+    if (n == 2) {
+        // Line segment
+        return geometry::QuadraticBezier2d(B0, 0.5 * (B0 + B2), B2);
+    }
+
+    // Initialize numerator and denominator
+    geometry::Vec2d numerator;
+    double denominator = 0;
+
+    // Iterate over all points except the first and last and accumulate
+    // the terms in the numerator and denominator
+    for (Int i = 1; i < n - 1; ++i) {
+        geometry::Vec2d p = positions.getUnchecked(i);
+        double u = params.getUnchecked(i);
+        double v = 1 - u;
+        double a0 = v * v;
+        double a1 = 2 * v * u;
+        double a2 = u * u;
+        numerator += (p - a0 * B0 - a2 * B2) * a1;
+        denominator += a1 * a1;
+    }
+
+    // Compute B1
+    if (denominator > 0) {
+        geometry::Vec2d B1 = numerator / denominator;
+        return geometry::QuadraticBezier2d(B0, B1, B2);
+    }
+    else {
+        // This means that a1 = 0 for all i, so (ui = 0) or (ui = 1) for all i.
+        // It's basically bad input, and it's reasonable to fallback to a line segment.
+        return geometry::QuadraticBezier2d(B0, 0.5 * (B0 + B2), B2);
+    }
+}
+
+// For now, we use one Newton-Raphson step, which can be unstable and make it
+// worse if we are unlucky.
+//
+// Indeed, we are trying to find the root of a cubic, and if the current param
+// is near a maximum/minimum of the cubic, then the Newton-Raphson step may
+// send it very very far
+//
+//
+// ^
+// |
+// |        If we start here and intersect the tangent with the X axis
+// |           v
+// |     .  +  .
+// |   +          +         We end up here, which is worse than where we started
+// |                +                    v
+// +-----------------+-------------------------->
+//                    +
+//
+// In the future, we may want to actually solve the cubic to actually find the
+// real root. There are closed form solution, which may work well, but it might
+// actually be slower (due to evaluation sqrt and cubic root) than actually do
+// Newton-Raphson steps but in a more controlled way (ensure first that the
+// initial guess is in a "stable" interval, and actually converge with several
+// steps instead of only making one step.
+//
+void optimizeParameters(
+    const geometry::QuadraticBezier2d& bezier,
+    core::ConstSpan<geometry::Vec2d> positions,
+    core::Span<double> params) {
+
+    Int n = positions.length();
+    VGC_ASSERT(positions.length() == params.length());
+
+    // The second derivative of a quadratic does not actually depend on u, so
+    // we compute it outside the loop.
+    //
+    geometry::Vec2d b2 = bezier.evalSecondDerivative(0);
+
+    // For each parameter u, compute a better parameter by
+    // doing one Newton-Raphson iteration:
+    //
+    //   u = u - f(u) / f'(u)
+    //
+    // with:
+    //
+    //   f(u) = 0.5 * d/du || B(u) - P ||²
+    //        = (B(u) - P) ⋅ dB/du
+    //
+    //   f'(u) = dB/du ⋅ dB/du + (B(u) - P) ⋅ d²B/du
+    //
+    //
+    for (Int i = 1; i < n - 1; ++i) {
+        geometry::Vec2d p = positions.getUnchecked(i);
+        double& u = params.getUnchecked(i);
+        geometry::Vec2d b1;
+        geometry::Vec2d b0 = bezier.eval(u, b1);
+        double numerator = (b0 - p).dot(b1);
+        double denominator = b1.dot(b1) + (b0 - p).dot(b2);
+        if (std::abs(denominator) > 0) {
+            u = u - numerator / denominator;
+        }
+        // Enforce increasing u-parameters
+        double uBefore = params.getUnchecked(i - 1);
+        u = core::clamp(u, uBefore, 1.0);
+    }
+}
+
+} // namespace
+
 void SingleQuadraticSegmentWithFixedEndpointsPass::doUpdateFrom(
     const SketchPointBuffer& input,
     SketchPointBuffer& output) {
@@ -796,39 +915,37 @@ void SingleQuadraticSegmentWithFixedEndpointsPass::doUpdateFrom(
         return;
     }
 
-    geometry::Vec2d B0 = input.first().position();
-    geometry::Vec2d B2 = input.last().position();
+    // Copy positions and initialize u-parameters
+
+    Int n = input.length();
+    positions_.resize(0);
+    params_.resize(0);
+    positions_.reserve(n);
+    params_.reserve(n);
     double totalChordLength = input.last().s();
     if (totalChordLength <= 0) {
         setLineSegmentWithFixedEndpoints(input, output);
         return;
     }
     double totalChordLengthInv = 1.0 / totalChordLength;
-
-    // Initialize numerator and denominator
-    geometry::Vec2d numerator;
-    double denominator = 0;
-
-    // Iterate over all points except the first and last and accumulate
-    // the terms in the numerator and denominator
-    Int n = input.length();
-    core::ConstSpan<SketchPoint> inputPoints = input.data();
-    for (const SketchPoint& p : inputPoints.subspan(1, n - 2)) {
-        double u = p.s() * totalChordLengthInv;
-        double v = 1 - u;
-        double a0 = v * v;
-        double a1 = 2 * v * u;
-        double a2 = u * u;
-        numerator += (p.position() - a0 * B0 - a2 * B2) * a1;
-        denominator += a1 * a1;
+    for (const SketchPoint& p : input) {
+        positions_.append(p.position());
+        params_.append(p.s() * totalChordLengthInv);
     }
 
-    // Compute B1
-    if (denominator <= 0) {
-        setLineSegmentWithFixedEndpoints(input, output);
-        return;
+    // Compute initial bezier fit
+    geometry::QuadraticBezier2d bezier =
+        quadraticFitWithFixedEndpoints(positions_, params_);
+
+    // Improve fit by optimizing u-parameters
+    constexpr Int numIterations = 3;
+    for (Int i = 0; i < numIterations; ++i) {
+        optimizeParameters(bezier, positions_, params_);
+        bezier = quadraticFitWithFixedEndpoints(positions_, params_);
     }
-    geometry::Vec2d B1 = numerator / denominator;
+    // Note: if we need to measure the max distance from input points to the
+    // curve, we may want to call optimizeParameters one more time (without
+    // follow it by a fit)
 
     // Output a few points along the quadratic.
     //
@@ -841,15 +958,16 @@ void SingleQuadraticSegmentWithFixedEndpointsPass::doUpdateFrom(
     //       to keep it as a quadratic but we do not have the architecture
     //       for this yet
     //
-    geometry::QuadraticBezier2d B(B0, B1, B2);
     output.resize(1);
     output.reserve(n);
     if (output.numStablePoints() == 0) {
         output.at(0) = input.first();
     }
-    for (SketchPoint p : inputPoints.subspan(1, n - 2)) {
-        double u = p.s() * totalChordLengthInv;
-        p.setPosition(B.eval(u));
+    const SketchPointArray& inputData = input.data();
+    for (Int i = 1; i < n - 1; ++i) {
+        SketchPoint p = inputData.getUnchecked(i);
+        double u = params_.getUnchecked(i);
+        p.setPosition(bezier.eval(u));
         output.append(p);
     }
     output.append(input.last());
