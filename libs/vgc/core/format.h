@@ -42,10 +42,8 @@
 #include <string>
 #include <string_view>
 #include <type_traits>
-#include <unordered_map>
-#include <vector>
 
-#include <vgc/core/defs.h> // VGC_WARNING_[...]
+#include <vgc/core/defs.h> // VGC_WARNING_[...], VGC_FORCE_INLINE
 
 // Include <fmt/format.h>, suppressing the following warnings:
 //
@@ -81,23 +79,8 @@ namespace vgc::core {
 ///
 /// https://en.cppreference.com/w/cpp/io/c/fflush
 ///
-inline int flush(std::FILE* stream = stdout) {
+VGC_FORCE_INLINE int flush(std::FILE* stream = stdout) {
     return std::fflush(stream);
-}
-
-/// Prints formatted data to the given `std::FILE`.
-///
-/// ```cpp
-/// vgc::geometry::Vec2d v(12, 42);
-/// vgc::core::print(stderr, "position = {}", v);
-/// ```
-///
-/// This function uses the {fmt} library under the hood. For more info on the
-/// format syntax, see https://fmt.dev/latest/syntax.html
-///
-template<typename S, typename... Args>
-inline void print(std::FILE* f, const S& formatString, Args&&... args) {
-    fmt::vprint(f, formatString, fmt::make_args_checked<Args...>(formatString, args...));
 }
 
 /// Prints formatted data to `stdout`.
@@ -110,31 +93,48 @@ inline void print(std::FILE* f, const S& formatString, Args&&... args) {
 /// This function uses the {fmt} library under the hood. For more info on the
 /// format syntax, see https://fmt.dev/latest/syntax.html
 ///
-template<typename S, typename... Args>
-inline void print(const S& formatString, Args&&... args) {
-    fmt::vprint(formatString, fmt::make_args_checked<Args...>(formatString, args...));
+template<typename... T>
+VGC_FORCE_INLINE void print(fmt::format_string<T...> fmtString, T&&... args) {
+    fmt::print(fmtString, args...);
 }
 
-/// Prints formatted data to the given file `f`, adds a newline, and flushes.
+/// Prints formatted data to the given `std::FILE`.
 ///
-/// \sa print()
+/// ```cpp
+/// vgc::geometry::Vec2d v(12, 42);
+/// vgc::core::print(stderr, "position = {}", v);
+/// ```
 ///
-template<typename S, typename... Args>
-inline void println(std::FILE* f, const S& formatString, Args&&... args) {
-    fmt::vprint(f, formatString, fmt::make_args_checked<Args...>(formatString, args...));
-    std::fputc('\n', f);
-    vgc::core::flush(f);
+/// This function uses the {fmt} library under the hood. For more info on the
+/// format syntax, see https://fmt.dev/latest/syntax.html
+///
+template<typename... T>
+VGC_FORCE_INLINE void
+print(std::FILE* f, fmt::format_string<T...> fmtString, T&&... args) {
+    fmt::print(f, fmtString, args...);
 }
 
 /// Prints formatted data to `stdout`, adds a newline, and flushes.
 ///
-/// \sa print()
+/// \sa `print()`.
 ///
-template<typename S, typename... Args>
-inline void println(const S& formatString, Args&&... args) {
-    fmt::vprint(formatString, fmt::make_args_checked<Args...>(formatString, args...));
+template<typename... T>
+VGC_FORCE_INLINE void println(fmt::format_string<T...> fmtString, T&&... args) {
+    fmt::print(fmtString, args...);
     std::fputc('\n', stdout);
     vgc::core::flush(stdout);
+}
+
+/// Prints formatted data to the given file `f`, adds a newline, and flushes.
+///
+/// \sa `print()`.
+///
+template<typename... T>
+VGC_FORCE_INLINE void
+println(std::FILE* f, fmt::format_string<T...> fmtString, T&&... args) {
+    fmt::print(f, fmtString, args...);
+    std::fputc('\n', f);
+    vgc::core::flush(f);
 }
 
 /// Formats arguments and returns the result as a string.
@@ -147,12 +147,11 @@ inline void println(const S& formatString, Args&&... args) {
 /// This function uses the {fmt} library under the hood. For more info on the
 /// format syntax, https://fmt.dev/latest/syntax.html
 ///
-/// \sa formatTo()
+/// \sa `formatTo()`.
 ///
-
 template<typename... T>
 VGC_FORCE_INLINE std::string format(fmt::format_string<T...> fmtString, T&&... args) {
-    return fmt::vformat(fmtString, fmt::make_format_args(args...));
+    return fmt::format(fmtString, args...);
 }
 
 /// Formats arguments and appends the result to the given output iterator.
@@ -163,7 +162,7 @@ VGC_FORCE_INLINE std::string format(fmt::format_string<T...> fmtString, T&&... a
 /// vgc::core::formatTo(std::back_inserter(out), "{}", v);
 /// ```
 ///
-/// \sa format()
+/// \sa `format()`.
 ///
 template<
     typename OutputIt,
@@ -171,7 +170,7 @@ template<
     VGC_REQUIRES(fmt::detail::is_output_iterator<OutputIt, char>::value)>
 VGC_FORCE_INLINE OutputIt
 formatTo(OutputIt out, fmt::format_string<T...> fmtString, T&&... args) {
-    return fmt::vformat_to(out, fmtString, fmt::make_format_args(args...));
+    return fmt::format_to(out, fmtString, args...);
 }
 
 /// Copies the string `s` to the output iterator `out`.
