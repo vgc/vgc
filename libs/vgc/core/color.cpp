@@ -16,6 +16,8 @@
 
 #include <vgc/core/color.h>
 
+#include <unordered_map>
+
 namespace vgc::core {
 
 namespace {

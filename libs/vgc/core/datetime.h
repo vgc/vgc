@@ -171,7 +171,14 @@ struct fmt::formatter<vgc::core::DateTime> : fmt::formatter<std::tm> {
         std::tm calendarTime;
         switch (dateTime.mode()) {
         case vgc::core::TimeMode::Local:
+            // Since fmt 10.0.0, localtime(time_point) is only defined if the compiler
+            // supports C++20 time zones, see: https://github.com/fmtlib/fmt/pull/3230
+            // Otherwise, we need to manually convert from `time_point` to `time_t`.
+#if FMT_USE_LOCAL_TIME
             calendarTime = fmt::localtime(t);
+#else
+            calendarTime = fmt::localtime(std::chrono::system_clock::to_time_t(t));
+#endif
             break;
         case vgc::core::TimeMode::Utc:
             calendarTime = fmt::gmtime(t);
