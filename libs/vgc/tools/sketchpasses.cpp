@@ -863,7 +863,7 @@ geometry::QuadraticBezier2d quadraticFitWithFixedEndpoints(
 // initial guess is in a "stable" interval, and actually converge with several
 // steps instead of only making one step.
 //
-void optimizeParameters(
+[[maybe_unused]] void optimizeParameters1(
     const geometry::QuadraticBezier2d& bezier,
     core::ConstSpan<geometry::Vec2d> positions,
     core::Span<double> params) {
@@ -905,6 +905,67 @@ void optimizeParameters(
     }
 }
 
+// This version ignores the input params, and instead directly find which param
+// is the global minimum for each given position. This improves a lot the
+// results (but is slower) since it never gets stuck in a local extrema.
+
+[[maybe_unused]] void optimizeParameters2(
+    const geometry::QuadraticBezier2d& bezier,
+    core::ConstSpan<geometry::Vec2d> positions,
+    core::Span<double> params) {
+
+    Int n = positions.length();
+    VGC_ASSERT(positions.length() == params.length());
+
+    // Evaluate uniform samples along the Bezier curve
+    constexpr Int numUniformSamples = 256;
+    constexpr double du = 1.0 / (numUniformSamples - 1);
+    std::array<std::pair<double, geometry::Vec2d>, numUniformSamples> uniformSamples;
+    for (Int k = 0; k < numUniformSamples; k++) {
+        double u = du * k;
+        uniformSamples[k] = {u, bezier.eval(u)};
+    }
+
+    geometry::Vec2d b2 = bezier.evalSecondDerivative(0);
+
+    for (Int i = 1; i < n - 1; ++i) {
+        geometry::Vec2d p = positions.getUnchecked(i);
+
+        // Find closest point among uniform samples and corresponding u
+        double minDist = core::DoubleInfinity;
+        double u = 0;
+        for (auto [u_, q] : uniformSamples) {
+            double dist = (q - p).squaredLength();
+            if (dist < minDist) {
+                minDist = dist;
+                u = u_;
+            }
+        }
+
+        // Perform several Newton-Raphson iterations from there
+        const Int numIterations = 10;
+        for (Int j = 0; j < numIterations; ++j) {
+            geometry::Vec2d b1;
+            geometry::Vec2d b0 = bezier.eval(u, b1);
+            double numerator = (b0 - p).dot(b1);
+            double denominator = b1.dot(b1) + (b0 - p).dot(b2);
+            if (std::abs(denominator) > 0) {
+                u = u - numerator / denominator;
+            }
+            else {
+                break;
+            }
+        }
+
+        // Enforce increasing u-parameters
+        double uBefore = params.getUnchecked(i - 1);
+        u = core::clamp(u, uBefore, 1.0);
+
+        // Set the value in params
+        params.getUnchecked(i) = u;
+    }
+}
+
 } // namespace
 
 void SingleQuadraticSegmentWithFixedEndpointsPass::doUpdateFrom(
@@ -940,7 +1001,7 @@ void SingleQuadraticSegmentWithFixedEndpointsPass::doUpdateFrom(
     // Improve fit by optimizing u-parameters
     constexpr Int numIterations = 3;
     for (Int i = 0; i < numIterations; ++i) {
-        optimizeParameters(bezier, positions_, params_);
+        optimizeParameters2(bezier, positions_, params_);
         bezier = quadraticFitWithFixedEndpoints(positions_, params_);
     }
     // Note: if we need to measure the max distance from input points to the
