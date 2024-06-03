@@ -1000,18 +1000,18 @@ geometry::QuadraticBezier2d quadraticFitWithFixedEndpoints(
 
 [[maybe_unused]] void setOutputAsUniformParams(
     const geometry::QuadraticBezier2d& bezier,
-    Int numOutputPoints,
+    Int numOutputSegments,
     core::ConstSpan<double> params,
     const SketchPointBuffer& input,
     SketchPointBuffer& output) {
 
     Int n = input.length();
     VGC_ASSERT(params.length() == input.length());
-    VGC_ASSERT(numOutputPoints >= 2);
+    VGC_ASSERT(numOutputSegments >= 1);
     VGC_ASSERT(params.first() == 0.0);
     VGC_ASSERT(params.last() == 1.0);
 
-    double du = 1.0 / (numOutputPoints - 1);
+    double du = 1.0 / numOutputSegments;
 
     Int i = 0; // Invariant: 0 <= i < n-1 (so both i and i+1 are valid points)
     output.resize(1);
@@ -1020,7 +1020,7 @@ geometry::QuadraticBezier2d quadraticFitWithFixedEndpoints(
         output.at(0) = input.first();
     }
     const SketchPointArray& inputData = input.data();
-    for (Int j = 1; j < numOutputPoints - 1; ++j) {
+    for (Int j = 1; j < numOutputSegments; ++j) {
 
         // The parameter of the output sample
         double u = j * du;
@@ -1097,14 +1097,13 @@ void SingleQuadraticSegmentWithFixedEndpointsPass::doUpdateFrom(
     params_.last() = 1;
 
     // Compute initial bezier fit
-    geometry::QuadraticBezier2d initialBezier =
+    geometry::QuadraticBezier2d bezier =
         quadraticFitWithFixedEndpoints(positions_, params_);
 
-    optimizeParameters2(initialBezier, positions_, params_);
+    optimizeParameters2(bezier, positions_, params_);
 
     // Improve fit based on optimized u-parameters
     constexpr Int numIterations = 3;
-    geometry::QuadraticBezier2d bezier = initialBezier;
     for (Int k = 0; k < numIterations; ++k) {
         bezier = quadraticFitWithFixedEndpoints(positions_, params_);
         optimizeParameters2(bezier, positions_, params_);
@@ -1116,8 +1115,8 @@ void SingleQuadraticSegmentWithFixedEndpointsPass::doUpdateFrom(
         setOutputAsMovedInputPoints(bezier, params_, input, output);
     }
     else {
-        constexpr Int numOutputPoints = 5;
-        setOutputAsUniformParams(bezier, numOutputPoints, params_, input, output);
+        constexpr Int numOutputSegments = 8;
+        setOutputAsUniformParams(bezier, numOutputSegments, params_, input, output);
     }
 
     output.updateChordLengths();
