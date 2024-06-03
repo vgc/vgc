@@ -51,7 +51,7 @@ public:
 
     /// Creates a `SketchPoint` initialized with the given values.
     ///
-    SketchPoint(
+    constexpr SketchPoint(
         const geometry::Vec2d& position,
         double pressure,
         double timestamp,
@@ -67,64 +67,205 @@ public:
 
     /// Returns the position of this `SketchPoint`.
     ///
-    const geometry::Vec2d& position() const {
+    constexpr const geometry::Vec2d& position() const {
         return position_;
     }
 
     /// Sets the position of this `SketchPoint`.
     ///
-    void setPosition(const geometry::Vec2d& position) {
+    constexpr void setPosition(const geometry::Vec2d& position) {
         position_ = position;
     }
 
     /// Returns the pressure of this `SketchPoint`.
     ///
-    double pressure() const {
+    constexpr double pressure() const {
         return pressure_;
     }
 
     /// Sets the pressure of this `SketchPoint`.
     ///
-    void setPressure(double pressure) {
+    constexpr void setPressure(double pressure) {
         pressure_ = pressure;
     }
 
     /// Returns the timestamp of this `SketchPoint`.
     ///
-    double timestamp() const {
+    constexpr double timestamp() const {
         return timestamp_;
     }
 
     /// Sets the timestamp of this `SketchPoint`.
     ///
-    void setTimestamp(double timestamp) {
+    constexpr void setTimestamp(double timestamp) {
         timestamp_ = timestamp;
     }
 
     /// Returns the width of this `SketchPoint`.
     ///
-    double width() const {
+    constexpr double width() const {
         return width_;
     }
 
     /// Sets the width of this `SketchPoint`.
     ///
-    void setWidth(double width) {
+    constexpr void setWidth(double width) {
         width_ = width;
     }
 
     /// Returns the cumulative chordal distance from the first point to this
     /// point.
     ///
-    double s() const {
+    constexpr double s() const {
         return s_;
     }
 
     /// Sets the cumulative chordal distance from the first point to this
     /// point.
     ///
-    void setS(double s) {
+    constexpr void setS(double s) {
         s_ = s;
+    }
+
+    /// Adds in-place `other` to this `SketchPoint`.
+    ///
+    constexpr SketchPoint& operator+=(const SketchPoint& other) {
+        position_ += other.position_;
+        pressure_ += other.pressure_;
+        timestamp_ += other.timestamp_;
+        width_ += other.width_;
+        s_ += other.s_;
+        return *this;
+    }
+
+    /// Returns the addition of the two points `p1` and `p2`.
+    ///
+    /// This adds all components (position, pressure, timestamp, width, and s),
+    /// which is useful to compute linear combinations, e.g.: `0.5 * (p1 + p2)`
+    ///
+    friend constexpr SketchPoint operator+(const SketchPoint& p1, const SketchPoint& p2) {
+        return SketchPoint(p1) += p2;
+    }
+
+    /// Returns a copy of this `SketchPoint` (unary plus operator).
+    ///
+    constexpr SketchPoint operator+() const {
+        return *this;
+    }
+
+    /// Substracts in-place `other` from this `SketchPoint`.
+    ///
+    constexpr SketchPoint& operator-=(const SketchPoint& other) {
+        position_ -= other.position_;
+        pressure_ -= other.pressure_;
+        timestamp_ -= other.timestamp_;
+        width_ -= other.width_;
+        s_ -= other.s_;
+        return *this;
+    }
+
+    /// Returns the substraction of `p1` and `p2`.
+    ///
+    friend constexpr SketchPoint operator-(const SketchPoint& p1, const SketchPoint& p2) {
+        return SketchPoint(p1) -= p2;
+    }
+
+    /// Returns the opposite of this `SketchPoint` (unary minus operator).
+    ///
+    constexpr SketchPoint operator-() const {
+        return SketchPoint(-position_, -pressure_, -timestamp_, -width_, -s_);
+    }
+
+    /// Multiplies in-place this `SketchPoint` by the scalar `s`.
+    ///
+    constexpr SketchPoint& operator*=(double s) {
+        position_ *= s;
+        pressure_ *= s;
+        timestamp_ *= s;
+        width_ *= s;
+        s_ *= s;
+        return *this;
+    }
+
+    /// Returns the multiplication of this `SketchPoint` by the scalar `s`.
+    ///
+    constexpr SketchPoint operator*(double s) const {
+        return SketchPoint(*this) *= s;
+    }
+
+    /// Returns the multiplication of the scalar `s` with the vector `v`.
+    ///
+    /// This multiplies all components (position, pressure, timestamp, width, and s),
+    /// which is useful to compute linear combinations, e.g.: `0.5 * (p1 + p2)`
+    ///
+    friend constexpr SketchPoint operator*(double s, const SketchPoint& p) {
+        return p * s;
+    }
+
+    /// Divides in-place this `SketchPoint` by the scalar `s`.
+    ///
+    constexpr SketchPoint& operator/=(double s) {
+        position_ /= s;
+        pressure_ /= s;
+        timestamp_ /= s;
+        width_ /= s;
+        s_ /= s;
+        return *this;
+    }
+
+    /// Returns the division of this `SketchPoint` by the scalar `s`.
+    ///
+    constexpr SketchPoint operator/(double s) const {
+        return SketchPoint(*this) /= s;
+    }
+
+    /// Returns whether `p1` and `p2` are equal, that is, if all their
+    /// components are equal (position, pressure, timestamp, width, and s).
+    ///
+    friend constexpr bool operator==(const SketchPoint& p1, const SketchPoint& p2) {
+        return p1.position_ == p2.position_      //
+               && p1.pressure_ == p2.pressure_   //
+               && p1.timestamp_ == p2.timestamp_ //
+               && p1.width_ == p2.width_         //
+               && p1.s_ == p2.s_;
+    }
+
+    /// Returns whether `p1` and `p2` are different.
+    ///
+    friend constexpr bool operator!=(const SketchPoint& p1, const SketchPoint& p2) {
+        return !(p1 == p2);
+    }
+
+    /// Compares the timestamps of `p1` and `p2`.
+    ///
+    /// Note that because `<` compares only the timestamps, while `==` tests for equality
+    /// of all components (position, pressure, timestamp, width, and s), the following
+    /// can all be true at the same time:
+    ///
+    /// - !(p1 < p2)
+    /// - !(p2 < p1)
+    /// - p1 != p2
+    ///
+    friend constexpr bool operator<(const SketchPoint& p1, const SketchPoint& p2) {
+        return p1.timestamp_ < p2.timestamp_;
+    }
+
+    /// Compares the timestamps of `p1` and `p2`.
+    ///
+    friend constexpr bool operator<=(const SketchPoint& p1, const SketchPoint& p2) {
+        return !(p2 < p1);
+    }
+
+    /// Compares the timestamps of `p1` and `p2`.
+    ///
+    friend constexpr bool operator>(const SketchPoint& p1, const SketchPoint& p2) {
+        return p2 < p1;
+    }
+
+    /// Compares the timestamps of `p1` and `p2`.
+    ///
+    friend constexpr bool operator>=(const SketchPoint& p1, const SketchPoint& p2) {
+        return !(p1 < p2);
     }
 
 private:
