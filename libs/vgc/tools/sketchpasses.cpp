@@ -966,6 +966,103 @@ geometry::QuadraticBezier2d quadraticFitWithFixedEndpoints(
     }
 }
 
+// Using this method at the end of a fit pass make it possible
+// to visualize the computed parameters by simply taking the input
+// points, and moving them to bezier(params[i]).
+//
+// You may want to call optimizeParameters() beforehand if you wish
+// to visualize the output of optimizeParameters(), or not call it
+// if you prefer to visualize the output of the least-squares fit.
+//
+[[maybe_unused]] void setOutputAsMovedInputPoints(
+    const geometry::QuadraticBezier2d& bezier,
+    core::ConstSpan<double> params,
+    const SketchPointBuffer& input,
+    SketchPointBuffer& output) {
+
+    Int n = input.length();
+    VGC_ASSERT(params.length() == input.length());
+
+    output.resize(1);
+    output.reserve(n);
+    if (output.numStablePoints() == 0) {
+        output.at(0) = input.first();
+    }
+    const SketchPointArray& inputData = input.data();
+    for (Int i = 1; i < n - 1; ++i) {
+        SketchPoint p = inputData.getUnchecked(i);
+        double u = params.getUnchecked(i);
+        p.setPosition(bezier.eval(u));
+        output.append(p);
+    }
+    output.append(input.last());
+}
+
+[[maybe_unused]] void setOutputAsUniformParams(
+    const geometry::QuadraticBezier2d& bezier,
+    Int numOutputPoints,
+    core::ConstSpan<double> params,
+    const SketchPointBuffer& input,
+    SketchPointBuffer& output) {
+
+    Int n = input.length();
+    VGC_ASSERT(params.length() == input.length());
+    VGC_ASSERT(numOutputPoints >= 2);
+    VGC_ASSERT(params.first() == 0.0);
+    VGC_ASSERT(params.last() == 1.0);
+
+    double du = 1.0 / (numOutputPoints - 1);
+
+    Int i = 0; // Invariant: 0 <= i < n-1 (so both i and i+1 are valid points)
+    output.resize(1);
+    output.reserve(n);
+    if (output.numStablePoints() == 0) {
+        output.at(0) = input.first();
+    }
+    const SketchPointArray& inputData = input.data();
+    for (Int j = 1; j < numOutputPoints - 1; ++j) {
+
+        // The parameter of the output sample
+        double u = j * du;
+
+        // Find pair (i, i+1) of input points such that params[i] <= u < params[i+1].
+        //
+        // Note that since:
+        //
+        // - 0 < u < 1
+        // - params.first() == 0
+        // - params.last() == 1
+        // - params[k] <= params[k+1] for all k in [0..n-2]
+        //
+        // It is always possible to find such pair and preserve the invariant
+        // i < n-1, since once we reach i = n-2, then the while condition is
+        // always false since u < 1 and params[i+1] = params[n-1] = 1 so
+        // u < params[i+1].
+        //
+        while (u >= params.getUnchecked(i + 1)) {
+            ++i;
+            VGC_ASSERT(i + 1 < n);
+        }
+
+        // Output point at bezier.eval(u), with all other params linearly
+        // interpolated between input[i] and input[i+1]
+        //
+        // TODO: For the width/pressure, it would probably be better to take
+        // the average of all input points between param `(j - 0.5) * du` and
+        // param `(j + 0.5) * du`.
+        //
+        const SketchPoint p0 = inputData.getUnchecked(i);
+        const SketchPoint p1 = inputData.getUnchecked(i + 1);
+        double u0 = params.getUnchecked(i);
+        double u1 = params.getUnchecked(i + 1);
+        VGC_ASSERT(u0 < u1);
+        SketchPoint p = core::fastLerp(p0, p1, (u - u0) / (u1 - u0));
+        p.setPosition(bezier.eval(u));
+        output.append(p);
+    }
+    output.append(input.last());
+}
+
 } // namespace
 
 void SingleQuadraticSegmentWithFixedEndpointsPass::doUpdateFrom(
@@ -983,7 +1080,8 @@ void SingleQuadraticSegmentWithFixedEndpointsPass::doUpdateFrom(
     params_.resize(0);
     positions_.reserve(n);
     params_.reserve(n);
-    double totalChordLength = input.last().s();
+    double s0 = input.first().s();
+    double totalChordLength = input.last().s() - s0;
     if (totalChordLength <= 0) {
         setLineSegmentWithFixedEndpoints(input, output);
         return;
@@ -991,47 +1089,37 @@ void SingleQuadraticSegmentWithFixedEndpointsPass::doUpdateFrom(
     double totalChordLengthInv = 1.0 / totalChordLength;
     for (const SketchPoint& p : input) {
         positions_.append(p.position());
-        params_.append(p.s() * totalChordLengthInv);
+        params_.append((p.s() - s0) * totalChordLengthInv);
     }
+    // Ensure first and last are exact 0 and 1 (could not be due to numerical errors).
+    // We need this as precondition for setOutputAsUniformParams().
+    params_.first() = 0;
+    params_.last() = 1;
 
     // Compute initial bezier fit
-    geometry::QuadraticBezier2d bezier =
+    geometry::QuadraticBezier2d initialBezier =
         quadraticFitWithFixedEndpoints(positions_, params_);
 
-    // Improve fit by optimizing u-parameters
-    constexpr Int numIterations = 3;
-    for (Int i = 0; i < numIterations; ++i) {
-        optimizeParameters2(bezier, positions_, params_);
-        bezier = quadraticFitWithFixedEndpoints(positions_, params_);
-    }
-    // Note: if we need to measure the max distance from input points to the
-    // curve, we may want to call optimizeParameters one more time (without
-    // follow it by a fit)
+    optimizeParameters2(initialBezier, positions_, params_);
 
-    // Output a few points along the quadratic.
-    //
-    // For now we simply use the same number (and approx location)
-    // as the input point to get their width.
-    //
-    // TODO: Also fit the width? Use fewer output points? How many?
-    //       We basically want to best represent a quadratic as
-    //       a Catmull-Rom Cubic Spline. Ideally, we'd simply want
-    //       to keep it as a quadratic but we do not have the architecture
-    //       for this yet
-    //
-    output.resize(1);
-    output.reserve(n);
-    if (output.numStablePoints() == 0) {
-        output.at(0) = input.first();
+    // Improve fit based on optimized u-parameters
+    constexpr Int numIterations = 3;
+    geometry::QuadraticBezier2d bezier = initialBezier;
+    for (Int k = 0; k < numIterations; ++k) {
+        bezier = quadraticFitWithFixedEndpoints(positions_, params_);
+        optimizeParameters2(bezier, positions_, params_);
     }
-    const SketchPointArray& inputData = input.data();
-    for (Int i = 1; i < n - 1; ++i) {
-        SketchPoint p = inputData.getUnchecked(i);
-        double u = params_.getUnchecked(i);
-        p.setPosition(bezier.eval(u));
-        output.append(p);
+
+    // Compute output from fit
+    constexpr bool outputAsMovedInputPoint = false;
+    if (outputAsMovedInputPoint) {
+        setOutputAsMovedInputPoints(bezier, params_, input, output);
     }
-    output.append(input.last());
+    else {
+        constexpr Int numOutputPoints = 5;
+        setOutputAsUniformParams(bezier, numOutputPoints, params_, input, output);
+    }
+
     output.updateChordLengths();
     output.setNumStablePoints(input.numStablePoints() > 0 ? 1 : 0);
 }
