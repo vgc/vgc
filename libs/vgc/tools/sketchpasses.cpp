@@ -1013,10 +1013,16 @@ geometry::QuadraticBezier2d quadraticFitWithFixedEndpoints(
 //
 //  f'(u) = 0  =>   u1, u2 = (-6ab ± sqrt(D))/12a²
 //                  with D = (6ab)² - 4*6a²*(b²+2(c-P)a)
+//                         = 36(ab)(ab) - 24a²(b²+2(c-P)a)
+//                         = D1 + D2 * (c-P)a
+//                  with h = ab/2 = a.dot(b/2) = a.dot(B1 - B0)
+//                      D1 = 104h² - 24a²b²
+//                      D2 = - 48a²
 //
 // The inflexion point of f (= its point of rotational symmetry) is:
 //
 //  f''(u) = 0  =>  u = -ab / 2a²
+//                    = -h / a²
 //
 // Note how the inflexion point does not depend on P! In fact, it can be proven
 // that it corresponds to the maximum of curvature of B.
@@ -1034,12 +1040,27 @@ geometry::QuadraticBezier2d quadraticFitWithFixedEndpoints(
     const geometry::Vec2d& B0 = bezier.controlPoints()[0];
     const geometry::Vec2d& B1 = bezier.controlPoints()[1];
     const geometry::Vec2d& B2 = bezier.controlPoints()[2];
-    geometry::Vec2d a = B0 - 2 * B1 + B2;
-    geometry::Vec2d b = 2 * (B1 - B0);
+    VGC_DEBUG_TMP("Bezier = {} {} {}", B0, B1, B2);
+
+    geometry::Vec2d B0B1 = B1 - B0;
+    geometry::Vec2d B1B2 = B2 - B1;
+
+    geometry::Vec2d a = B1B2 - B0B1;
+    //geometry::Vec2d b = 2 * B0B1;
     geometry::Vec2d c = B0;
 
     double a2 = a.dot(a);
-    if (a2 <= 0) {
+    double h = a.dot(B0B1); // == half of a.dot(b)
+
+    VGC_DEBUG_TMP_EXPR(a);
+    //VGC_DEBUG_TMP_EXPR(b);
+    VGC_DEBUG_TMP_EXPR(c);
+    VGC_DEBUG_TMP_EXPR(a2);
+    VGC_DEBUG_TMP_EXPR(h);
+
+    constexpr double eps = 1e-6;
+    if (a2 < eps * std::abs(h)) {
+        VGC_DEBUG_TMP("Linear case")
         // => B0 - 2 B1 + B2 = 0 => B1 = 0.5 * (B0 + B1) => line segment
         //
         // In this case, since B(u) is actually a linear function, the initial
@@ -1049,23 +1070,37 @@ geometry::QuadraticBezier2d quadraticFitWithFixedEndpoints(
         geometry::Vec2d B0B2 = B2 - B0;
         double l2 = B0B2.squaredLength();
         if (l2 <= 0) {
-            // The segment is reduced to a point: we just keep the params as is.
+            // Segment reduced to point: cannot project, so we keep params as is.
+            VGC_DEBUG_TMP("Segment reduced to point");
             return;
+        }
+        for (Int i = 1; i < n - 1; ++i) {
+            geometry::Vec2d p = positions.getUnchecked(i);
+            if (l2 < eps * std::abs((p - B0).dot(B0B2))) {
+                // Segment basically reduced to a point (compared to ||B0-P||).
+                // Projecting would be numerically instable, so we keep params as is.
+                VGC_DEBUG_TMP("Segment too small compared to P[{}] = {}", i, p);
+                return;
+            }
         }
         double l2Inv = 1.0 / l2;
         for (Int i = 1; i < n - 1; ++i) {
             geometry::Vec2d p = positions.getUnchecked(i);
             double u = (p - B0).dot(B0B2) * l2Inv;
             params.getUnchecked(i) = u;
+            VGC_DEBUG_TMP("");
+            VGC_DEBUG_TMP_EXPR(i);
+            VGC_DEBUG_TMP_EXPR(p);
+            VGC_DEBUG_TMP_EXPR(u);
         }
         return;
     }
-    double b2 = b.dot(b);
-    double ab = a.dot(b);
-    double abab = ab * ab; // Note: this is different from a2 * b2
 
+    double b2 = 4 * B0B1.dot(B0B1);
+    double D1 = 104 * h * h - 24 * a2 * b2;
+    double D2 = -48 * a2;
     double a2Inv = 1.0 / a2;
-    double uInflexion = -0.5 * ab * a2Inv;
+    double uInflexion = -h * a2Inv;
     geometry::Vec2d der2 = 2 * a; // second derivative of B
 
     // Lambda that evaluates f(u) for point P.
@@ -1111,12 +1146,14 @@ geometry::QuadraticBezier2d quadraticFitWithFixedEndpoints(
 
     for (Int i = 1; i < n - 1; ++i) {
         geometry::Vec2d p = positions.getUnchecked(i);
-        double D = 36 * abab - 24 * a2 * (b2 + 2 * (c - p).dot(a));
+        double D = D1 + D2 * (c - p).dot(a);
 
         double uBefore = params.getUnchecked(i);
         double u = 0;
         //params.getUnchecked(i - 1);
+        VGC_DEBUG_TMP("");
         VGC_DEBUG_TMP_EXPR(i);
+        VGC_DEBUG_TMP_EXPR(p);
         VGC_DEBUG_TMP_EXPR(uBefore);
         VGC_DEBUG_TMP_EXPR(uInflexion);
         VGC_DEBUG_TMP_EXPR(D);
@@ -1333,7 +1370,7 @@ void SingleQuadraticSegmentWithFixedEndpointsPass::doUpdateFrom(
     optimizeParameters3(bezier, positions_, params_);
 
     // Improve fit based on optimized u-parameters
-    constexpr Int numIterations = 0;
+    constexpr Int numIterations = 3;
     for (Int k = 0; k < numIterations; ++k) {
         bezier = quadraticFitWithFixedEndpoints(positions_, params_);
         optimizeParameters3(bezier, positions_, params_);
