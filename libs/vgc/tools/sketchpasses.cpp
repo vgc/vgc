@@ -20,6 +20,7 @@
 
 #include <vgc/core/assert.h>
 #include <vgc/geometry/bezier.h>
+#include <vgc/tools/logcategories.h>
 
 namespace vgc::tools {
 
@@ -966,6 +967,237 @@ geometry::QuadraticBezier2d quadraticFitWithFixedEndpoints(
     }
 }
 
+// This version accurately detects the case where there are two local
+// minima, and accurately computes the most appropriate one.
+//
+// It does not attempt to keep u-parameters increasing, since the results are
+// already really good even when keeping potential switch-backs.
+//
+// Some explanations of the methods and notations:
+//
+// B(u) = (1-u)² B0 + 2(1-u)u B1 + u² B2
+//      = au² + bu + c
+//
+// with:
+//  a = B0 - 2 B1 + B2
+//  b = -2 B0 + 2 B1
+//  c = B0
+//
+// therefore:
+//  B'(u) = 2au + b
+//  B''(u) = 2a
+//
+// We want to find the local minima of || B(u) - P || for each input point P.
+//
+// These satisfy:
+//   f(u) = 0
+//   f'(u) >= 0
+//
+// with:
+//   f(u) = 0.5 * d/du || B(u) - P ||²
+//        = (B(u) - P) B'(u)
+//        = 2a²u³ + 3abu² + (b²+2(c-P)a)u + (c-P)b
+//
+//   f'(u)  = 6a²u² + 6abu + (b²+2(c-P)a)
+//   f''(u) = 12a²u + 6ab
+//
+// (where all vector-vector products are dot products)
+//
+// So f is a cubic polynomial with a positive u³ term.
+// It has either one of two real solutions satisfying:
+//
+//   f(u) = 0
+//   f'(u) >= 0
+//
+// The local extrema (if D >= 0) of f are:
+//
+//  f'(u) = 0  =>   u1, u2 = (-6ab ± sqrt(D))/12a²
+//                  with D = (6ab)² - 4*6a²*(b²+2(c-P)a)
+//                         = 36(ab)(ab) - 24a²(b²+2(c-P)a)
+//                         = D1 + D2 * (c-P)a
+//                  with h = ab/2 = a.dot(b/2) = a.dot(B1 - B0)
+//                      D1 = 144h² - 24a²b²
+//                      D2 = -48a²
+//
+// The inflexion point of f (= its point of rotational symmetry) is:
+//
+//  f''(u) = 0  =>  u = -ab / 2a²
+//                    = -h / a²
+//
+// Note how the inflexion point does not depend on P! In fact, it can be proven
+// that it corresponds to the maximum of curvature of B.
+//
+[[maybe_unused]] void optimizeParameters3(
+    const geometry::QuadraticBezier2d& bezier,
+    core::ConstSpan<geometry::Vec2d> positions,
+    core::Span<double> params) {
+
+    Int n = positions.length();
+    VGC_ASSERT(positions.length() == params.length());
+
+    const geometry::Vec2d& B0 = bezier.controlPoints()[0];
+    const geometry::Vec2d& B1 = bezier.controlPoints()[1];
+    const geometry::Vec2d& B2 = bezier.controlPoints()[2];
+
+    geometry::Vec2d B0B1 = B1 - B0;
+    geometry::Vec2d B1B2 = B2 - B1;
+
+    geometry::Vec2d a = B1B2 - B0B1;
+    //geometry::Vec2d b = 2 * B0B1;
+    geometry::Vec2d c = B0;
+
+    double a2 = a.dot(a);
+    double h = a.dot(B0B1); // == half of a.dot(b)
+
+    constexpr double eps = 1e-6;
+    if (a2 <= eps * std::abs(h)) { // Important: `<=` handles case (a2 == 0 && h == 0)
+        // => B0 - 2 B1 + B2 = 0 => B1 = 0.5 * (B0 + B1) => line segment
+        //
+        // In this case, since B(u) is actually a linear function, the initial
+        // parameters should already be pretty good, but we still improve them
+        // anyway by computing the projection to the line segment.
+        //
+        geometry::Vec2d B0B2 = B2 - B0;
+        double l2 = B0B2.squaredLength();
+        if (l2 <= 0) {
+            // Segment reduced to point: cannot project, so we keep params as is.
+            return;
+        }
+        for (Int i = 1; i < n - 1; ++i) {
+            geometry::Vec2d p = positions.getUnchecked(i);
+            if (l2 <= eps * std::abs((p - B0).dot(B0B2))) {
+                // Segment basically reduced to a point (compared to ||B0-P||).
+                // Projecting would be numerically instable, so we keep params as is.
+                return;
+            }
+        }
+        double l2Inv = 1.0 / l2;
+        for (Int i = 1; i < n - 1; ++i) {
+            geometry::Vec2d p = positions.getUnchecked(i);
+            double u = (p - B0).dot(B0B2) * l2Inv;
+            params.getUnchecked(i) = u;
+        }
+        return;
+    }
+
+    double b2 = 4 * B0B1.dot(B0B1);
+    double D1 = 144 * h * h - 24 * a2 * b2;
+    double D2 = -48 * a2;
+    double a2Inv = 1.0 / a2;
+    double uInflexion = -h * a2Inv;
+    geometry::Vec2d der2 = 2 * a; // second derivative of B
+
+    // Lambda that evaluates f(u) for point P.
+    //
+    auto f = [=](double u, const geometry::Vec2d& p) {
+        geometry::Vec2d der;
+        geometry::Vec2d pos = bezier.eval(u, der);
+        return (pos - p).dot(der);
+    };
+
+    // Lambda that computes Newton-Raphson iteration starting at u, and returns
+    // the final result.
+    //
+    auto newtonRaphson = [=](double u, const geometry::Vec2d& p) {
+        const Int maxIterations = 32;
+        const double resolution = 1e-8;
+        for (Int j = 0; j < maxIterations; ++j) {
+            geometry::Vec2d der;
+            geometry::Vec2d pos = bezier.eval(u, der);
+            double numerator = (pos - p).dot(der);
+            double denominator = der.dot(der) + (pos - p).dot(der2);
+            double lastU = u;
+            if (std::abs(denominator) > 0) {
+                u = u - numerator / denominator;
+            }
+            else {
+                // This is not supposed to happen since we enforce the initial
+                // guess to be in stable interval where f'(u) > 0 in the whole
+                // interval. If this happens anyway (numerical error?), we try
+                // to recover by simply adding a small perturbation to u.
+                //
+                VGC_WARNING(
+                    LogVgcToolsSketch, "Null derivative in Newton-Raphson iteration.");
+                u += 0.1;
+            }
+            if (std::abs(lastU - u) < resolution) {
+                break;
+            }
+            lastU = u;
+        }
+        return u;
+    };
+
+    for (Int i = 1; i < n - 1; ++i) {
+        geometry::Vec2d p = positions.getUnchecked(i);
+        double D = D1 + D2 * (c - p).dot(a);
+        double u = 0;
+        if (D <= 0) {
+            // If D == 0:                         If D < 0:
+            //
+            // f'(uInflexion) = 0                 f'(u) > 0 everywhere
+            // f'(u) > 0 everywhere else
+            //
+            //            |                               |
+            //           /                               /
+            //      .-o-'                               o  uInflexion
+            //     /  uInflexion                      /
+            //    |                                  |
+            //
+            // There is exactly one solution.
+            //
+            double A = f(uInflexion, p);
+            if (A == 0) {
+                u = uInflexion;
+            }
+            else if (A > 0) {
+                u = newtonRaphson(uInflexion - 1, p); // (-inf, uInflexion) is stable
+            }
+            else {
+                u = newtonRaphson(uInflexion + 1, p); // (uInflexion, inf) is stable
+            }
+        }
+        else {
+            //  uExtrema1
+            //     v
+            //   .--.  uInflexion
+            //  '    o
+            //        .__.'
+            //         ^
+            //      uExtrema2
+            //
+            double offset = (1.0 / 12.0) * std::sqrt(D) * a2Inv;
+            double uExtrema1 = uInflexion - offset;
+            double uExtrema2 = uInflexion + offset;
+            if (f(uExtrema2, p) > 0) {               // no solution in (uExtrema1, inf)
+                u = newtonRaphson(uExtrema1 - 1, p); // (-inf, uExtrema1) is stable
+            }
+            else if (f(uExtrema1, p) < 0) {          // no solution in (-inf, uExtrema2)
+                u = newtonRaphson(uExtrema2 + 1, p); // (uExtrema2, inf) is stable
+            }
+            else {
+                // There is one solution in (-inf, uExtrema1) and one in
+                // (uExtrema2, inf).
+                //
+                // We pick the one that preserves which side of uInflexion we
+                // are. This choice is very stable and leads to good results
+                // because uInflexion does not depend on P, and input points
+                // that are close to uInflexion are typically in the case where
+                // there is only one solution anyway (D < 0).
+                //
+                double oldU = params.getUnchecked(i);
+                if (oldU < uInflexion) {
+                    u = newtonRaphson(uExtrema1 - 1, p);
+                }
+                else {
+                    u = newtonRaphson(uExtrema2 + 1, p);
+                }
+            }
+        }
+        params.getUnchecked(i) = u;
+    }
+}
+
 // Using this method at the end of a fit pass make it possible
 // to visualize the computed parameters by simply taking the input
 // points, and moving them to bezier(params[i]).
@@ -1100,13 +1332,13 @@ void SingleQuadraticSegmentWithFixedEndpointsPass::doUpdateFrom(
     geometry::QuadraticBezier2d bezier =
         quadraticFitWithFixedEndpoints(positions_, params_);
 
-    optimizeParameters2(bezier, positions_, params_);
+    optimizeParameters3(bezier, positions_, params_);
 
     // Improve fit based on optimized u-parameters
     constexpr Int numIterations = 3;
     for (Int k = 0; k < numIterations; ++k) {
         bezier = quadraticFitWithFixedEndpoints(positions_, params_);
-        optimizeParameters2(bezier, positions_, params_);
+        optimizeParameters3(bezier, positions_, params_);
     }
 
     // Compute output from fit
