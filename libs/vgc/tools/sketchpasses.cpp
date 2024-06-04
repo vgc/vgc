@@ -1032,15 +1032,12 @@ geometry::QuadraticBezier2d quadraticFitWithFixedEndpoints(
     core::ConstSpan<geometry::Vec2d> positions,
     core::Span<double> params) {
 
-    VGC_DEBUG_TMP("--------------------------------------------------");
-
     Int n = positions.length();
     VGC_ASSERT(positions.length() == params.length());
 
     const geometry::Vec2d& B0 = bezier.controlPoints()[0];
     const geometry::Vec2d& B1 = bezier.controlPoints()[1];
     const geometry::Vec2d& B2 = bezier.controlPoints()[2];
-    VGC_DEBUG_TMP("Bezier = {} {} {}", B0, B1, B2);
 
     geometry::Vec2d B0B1 = B1 - B0;
     geometry::Vec2d B1B2 = B2 - B1;
@@ -1052,15 +1049,8 @@ geometry::QuadraticBezier2d quadraticFitWithFixedEndpoints(
     double a2 = a.dot(a);
     double h = a.dot(B0B1); // == half of a.dot(b)
 
-    VGC_DEBUG_TMP_EXPR(a);
-    //VGC_DEBUG_TMP_EXPR(b);
-    VGC_DEBUG_TMP_EXPR(c);
-    VGC_DEBUG_TMP_EXPR(a2);
-    VGC_DEBUG_TMP_EXPR(h);
-
     constexpr double eps = 1e-6;
     if (a2 < eps * std::abs(h)) {
-        VGC_DEBUG_TMP("Linear case")
         // => B0 - 2 B1 + B2 = 0 => B1 = 0.5 * (B0 + B1) => line segment
         //
         // In this case, since B(u) is actually a linear function, the initial
@@ -1071,7 +1061,6 @@ geometry::QuadraticBezier2d quadraticFitWithFixedEndpoints(
         double l2 = B0B2.squaredLength();
         if (l2 <= 0) {
             // Segment reduced to point: cannot project, so we keep params as is.
-            VGC_DEBUG_TMP("Segment reduced to point");
             return;
         }
         for (Int i = 1; i < n - 1; ++i) {
@@ -1079,7 +1068,6 @@ geometry::QuadraticBezier2d quadraticFitWithFixedEndpoints(
             if (l2 < eps * std::abs((p - B0).dot(B0B2))) {
                 // Segment basically reduced to a point (compared to ||B0-P||).
                 // Projecting would be numerically instable, so we keep params as is.
-                VGC_DEBUG_TMP("Segment too small compared to P[{}] = {}", i, p);
                 return;
             }
         }
@@ -1088,10 +1076,6 @@ geometry::QuadraticBezier2d quadraticFitWithFixedEndpoints(
             geometry::Vec2d p = positions.getUnchecked(i);
             double u = (p - B0).dot(B0B2) * l2Inv;
             params.getUnchecked(i) = u;
-            VGC_DEBUG_TMP("");
-            VGC_DEBUG_TMP_EXPR(i);
-            VGC_DEBUG_TMP_EXPR(p);
-            VGC_DEBUG_TMP_EXPR(u);
         }
         return;
     }
@@ -1147,17 +1131,7 @@ geometry::QuadraticBezier2d quadraticFitWithFixedEndpoints(
     for (Int i = 1; i < n - 1; ++i) {
         geometry::Vec2d p = positions.getUnchecked(i);
         double D = D1 + D2 * (c - p).dot(a);
-
-        double uBefore = params.getUnchecked(i);
         double u = 0;
-        //params.getUnchecked(i - 1);
-        VGC_DEBUG_TMP("");
-        VGC_DEBUG_TMP_EXPR(i);
-        VGC_DEBUG_TMP_EXPR(p);
-        VGC_DEBUG_TMP_EXPR(uBefore);
-        VGC_DEBUG_TMP_EXPR(uInflexion);
-        VGC_DEBUG_TMP_EXPR(D);
-
         if (D <= 0) {
             // If D == 0:                         If D < 0:
             //
@@ -1173,7 +1147,6 @@ geometry::QuadraticBezier2d quadraticFitWithFixedEndpoints(
             // There is exactly one solution.
             //
             double A = f(uInflexion, p);
-            VGC_DEBUG_TMP_EXPR(A);
             if (A == 0) {
                 u = uInflexion;
             }
@@ -1196,15 +1169,11 @@ geometry::QuadraticBezier2d quadraticFitWithFixedEndpoints(
             double offset = (1.0 / 12.0) * std::sqrt(D) * a2Inv;
             double uExtrema1 = uInflexion - offset;
             double uExtrema2 = uInflexion + offset;
-            VGC_DEBUG_TMP_EXPR(uExtrema1);
-            VGC_DEBUG_TMP_EXPR(uExtrema2);
             if (f(uExtrema2, p) > 0) {               // no solution in (uExtrema1, inf)
                 u = newtonRaphson(uExtrema1 - 1, p); // (-inf, uExtrema1) is stable
-                VGC_DEBUG_TMP("f(uExtrema2, p) > 0");
             }
             else if (f(uExtrema1, p) < 0) {          // no solution in (-inf, uExtrema2)
                 u = newtonRaphson(uExtrema2 + 1, p); // (uExtrema2, inf) is stable
-                VGC_DEBUG_TMP("f(uExtrema1, p) < 0");
             }
             else {
                 // There is one solution in (-inf, uExtrema1) and one in
@@ -1215,20 +1184,16 @@ geometry::QuadraticBezier2d quadraticFitWithFixedEndpoints(
                 // because uInflexion does not depend on P, and input points
                 // that are close to uInflexion are typically in the case where
                 // there is only one solution anyway (D < 0).
-
-                if (uBefore < uInflexion) {
-                    VGC_DEBUG_TMP("Two solutions: choosing first.");
+                //
+                double oldU = params.getUnchecked(i);
+                if (oldU < uInflexion) {
                     u = newtonRaphson(uExtrema1 - 1, p);
                 }
                 else {
-                    VGC_DEBUG_TMP("Two solutions: choosing second.");
                     u = newtonRaphson(uExtrema2 + 1, p);
                 }
             }
         }
-        VGC_DEBUG_TMP_EXPR(u);
-
-        // Set the value in params
         params.getUnchecked(i) = u;
     }
 }
@@ -1377,7 +1342,7 @@ void SingleQuadraticSegmentWithFixedEndpointsPass::doUpdateFrom(
     }
 
     // Compute output from fit
-    constexpr bool outputAsMovedInputPoint = true;
+    constexpr bool outputAsMovedInputPoint = false;
     if (outputAsMovedInputPoint) {
         setOutputAsMovedInputPoints(bezier, params_, input, output);
     }
