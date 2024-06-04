@@ -1016,7 +1016,7 @@ geometry::QuadraticBezier2d quadraticFitWithFixedEndpoints(
 //                         = 36(ab)(ab) - 24a²(b²+2(c-P)a)
 //                         = D1 + D2 * (c-P)a
 //                  with h = ab/2 = a.dot(b/2) = a.dot(B1 - B0)
-//                      D1 = 104h² - 24a²b²
+//                      D1 = 144h² - 24a²b²
 //                      D2 = - 48a²
 //
 // The inflexion point of f (= its point of rotational symmetry) is:
@@ -1097,7 +1097,7 @@ geometry::QuadraticBezier2d quadraticFitWithFixedEndpoints(
     }
 
     double b2 = 4 * B0B1.dot(B0B1);
-    double D1 = 104 * h * h - 24 * a2 * b2;
+    double D1 = 144 * h * h - 24 * a2 * b2;
     double D2 = -48 * a2;
     double a2Inv = 1.0 / a2;
     double uInflexion = -h * a2Inv;
