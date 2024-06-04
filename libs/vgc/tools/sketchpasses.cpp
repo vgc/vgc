@@ -970,7 +970,7 @@ geometry::QuadraticBezier2d quadraticFitWithFixedEndpoints(
 // This version accurately detects the case where there are two local
 // minima, and accurately computes the most appropriate one.
 //
-// It does not attemps to keep u-parameters increasing, since the results are
+// It does not attempt to keep u-parameters increasing, since the results are
 // already really good even when keeping potential switch-backs.
 //
 // Some explanations of the methods and notations:
@@ -1017,7 +1017,7 @@ geometry::QuadraticBezier2d quadraticFitWithFixedEndpoints(
 //                         = D1 + D2 * (c-P)a
 //                  with h = ab/2 = a.dot(b/2) = a.dot(B1 - B0)
 //                      D1 = 144h² - 24a²b²
-//                      D2 = - 48a²
+//                      D2 = -48a²
 //
 // The inflexion point of f (= its point of rotational symmetry) is:
 //
