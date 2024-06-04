@@ -1050,7 +1050,7 @@ geometry::QuadraticBezier2d quadraticFitWithFixedEndpoints(
     double h = a.dot(B0B1); // == half of a.dot(b)
 
     constexpr double eps = 1e-6;
-    if (a2 < eps * std::abs(h)) {
+    if (a2 <= eps * std::abs(h)) { // Important: `<=` handles case (a2 == 0 && h == 0)
         // => B0 - 2 B1 + B2 = 0 => B1 = 0.5 * (B0 + B1) => line segment
         //
         // In this case, since B(u) is actually a linear function, the initial
@@ -1065,7 +1065,7 @@ geometry::QuadraticBezier2d quadraticFitWithFixedEndpoints(
         }
         for (Int i = 1; i < n - 1; ++i) {
             geometry::Vec2d p = positions.getUnchecked(i);
-            if (l2 < eps * std::abs((p - B0).dot(B0B2))) {
+            if (l2 <= eps * std::abs((p - B0).dot(B0B2))) {
                 // Segment basically reduced to a point (compared to ||B0-P||).
                 // Projecting would be numerically instable, so we keep params as is.
                 return;
