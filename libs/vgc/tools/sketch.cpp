@@ -171,7 +171,7 @@ double roundInput(double x) {
     return core::roundToSignificantDigits(x, 7);
 }
 
-std::unique_ptr<SketchPass> makePostTransformPass(SketchFitMethod fitMethod) {
+std::unique_ptr<SketchPass> makePreTransformPass(SketchFitMethod fitMethod) {
     switch (fitMethod) {
     case SketchFitMethod::NoFit:
         return std::make_unique<EmptyPass>();
@@ -186,6 +186,11 @@ std::unique_ptr<SketchPass> makePostTransformPass(SketchFitMethod fitMethod) {
     case SketchFitMethod::SingleQuadraticSegmentWithFixedEndpoints:
         return std::make_unique<SingleQuadraticSegmentWithFixedEndpointsPass>();
     }
+    return std::make_unique<EmptyPass>();
+}
+
+std::unique_ptr<SketchPass> makePostTransformPass(SketchFitMethod fitMethod) {
+    VGC_UNUSED(fitMethod);
     return std::make_unique<EmptyPass>();
 }
 
@@ -297,7 +302,7 @@ void SketchModule::reFitExistingEdges_() {
     // post-processing step to make these match.
     //
     SketchPointBuffer inputPoints;
-    EmptyPass preTransformPass;
+    auto preTransformPass = makePreTransformPass(fitMethod());
     TransformPass transformPass;
     auto postTransformPass = makePostTransformPass(fitMethod());
 
@@ -316,14 +321,14 @@ void SketchModule::reFitExistingEdges_() {
         if (setFromSavedInputPoints(inputPoints, transform, item)) {
 
             // Setup passes
-            preTransformPass.reset();
+            preTransformPass->reset();
             transformPass.reset();
             transformPass.setTransformMatrix(transform);
             postTransformPass->reset();
 
             // Apply passes
-            preTransformPass.updateFrom(inputPoints);
-            transformPass.updateFrom(preTransformPass);
+            preTransformPass->updateFrom(inputPoints);
+            transformPass.updateFrom(*preTransformPass);
             postTransformPass->updateFrom(transformPass);
 
             // Save result to DOM
@@ -1157,6 +1162,7 @@ void Sketch::startCurve_(ui::MouseEvent* event) {
     }
     if (!lastFitMethod_ || *lastFitMethod_ != fitMethod) {
         lastFitMethod_ = fitMethod;
+        preTransformPass_ = makePreTransformPass(fitMethod);
         postTransformPass_ = makePostTransformPass(fitMethod);
     }
 
@@ -1258,12 +1264,13 @@ void Sketch::continueCurve_(ui::MouseEvent* event) {
         roundInput(pressure),
         roundInput(event->timestamp() - startTime_),
         roundInput(pressurePenWidth(pressure)));
+    inputPoints_.updateChordLengths();
     inputPoints_.setNumStablePoints(inputPoints_.length());
 
     // Apply all processing steps
 
-    preTransformPass_.updateFrom(inputPoints_);
-    transformPass_.updateFrom(preTransformPass_);
+    preTransformPass_->updateFrom(inputPoints_);
+    transformPass_.updateFrom(*preTransformPass_);
     postTransformPass_->updateFrom(transformPass_);
 
     updatePendingPositions_();
@@ -1416,7 +1423,7 @@ void Sketch::resetData_() {
     //inputPoints_.clear();
 
     // pre-transform passes
-    preTransformPass_.reset();
+    preTransformPass_->reset();
 
     // transform
     transformPass_.reset();
