@@ -280,12 +280,6 @@ public:
     }
 
 protected:
-    /// This is the main function that subclasses should implement. It should update
-    /// the `output` buffer based on the new `input`.
-    ///
-    virtual void
-    doUpdateFrom(const SketchPointBuffer& input, SketchPointBuffer& output) = 0;
-
     /// This method should be reimplemented by subclasses if they store
     /// additional state that needs to be reinitialized before processing a new
     /// input from scratch.
@@ -293,6 +287,12 @@ protected:
     /// The default implementation does nothing.
     ///
     virtual void doReset();
+
+    /// This is the main function that subclasses should implement. It should update
+    /// the `output` buffer based on the new `input`.
+    ///
+    virtual void
+    doUpdateFrom(const SketchPointBuffer& input, SketchPointBuffer& output) = 0;
 
 private:
     SketchPointBuffer output_;

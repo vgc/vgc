@@ -73,15 +73,51 @@ protected:
     void doUpdateFrom(const SketchPointBuffer& input, SketchPointBuffer& output) override;
 };
 
+namespace detail {
+
+// Buffer used to minimize dynamic allocations across multiple fits.
+//
+struct FitBuffer {
+    geometry::Vec2dArray positions;
+    core::DoubleArray params;
+};
+
+// Info about the mapping between input points and output points
+// of one of the fit part of a recursive fit.
+//
+struct FitInfo {
+    Int lastInputIndex;
+    Int lastOutputIndex;
+};
+
+} // namespace detail
+
 class VGC_TOOLS_API SingleQuadraticSegmentWithFixedEndpointsPass : public SketchPass {
 protected:
     void doUpdateFrom(const SketchPointBuffer& input, SketchPointBuffer& output) override;
 
 private:
-    geometry::Vec2dArray positions_;
-    core::DoubleArray params_;
+    detail::FitBuffer buffer_;
+};
+
+class VGC_TOOLS_API QuadraticSplinePass : public SketchPass {
+protected:
+    void doUpdateFrom(const SketchPointBuffer& input, SketchPointBuffer& output) override;
+    void doReset() override;
+
+private:
+    core::Array<detail::FitInfo> info_;
+    detail::FitBuffer buffer_;
 };
 
 } // namespace vgc::tools
+
+template<>
+struct fmt::formatter<vgc::tools::detail::FitInfo> : fmt::formatter<vgc::Int> {
+    template<typename FormatContext>
+    auto format(const vgc::tools::detail::FitInfo& i, FormatContext& ctx) {
+        return format_to(ctx.out(), "({}, {})", i.lastInputIndex, i.lastOutputIndex);
+    }
+};
 
 #endif // VGC_TOOLS_SKETCHPASSES_H

@@ -46,12 +46,15 @@ enum class SketchFitMethod : Int8 {
     // Outputs a single line segment from the first to the last input point.
     SingleLineSegmentWithFixedEndpoints,
 
-    // Fits a single line segment through the input point.
+    // Fits a single line segment through the input points.
     SingleLineSegmentWithFreeEndpoints,
 
-    // Fits a single quadratic segment through the input point,
+    // Fits a single quadratic segment through the input points,
     // starting and ending exactly at the first and last input points.
     SingleQuadraticSegmentWithFixedEndpoints,
+
+    // Fits a sequence of quadratic segments through the input points.
+    QuadraticSpline,
 };
 
 VGC_TOOLS_API

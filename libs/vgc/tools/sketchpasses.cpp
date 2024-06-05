@@ -839,12 +839,12 @@ geometry::QuadraticBezier2d quadraticFitWithFixedEndpoints(
     }
 }
 
-// For now, we use one Newton-Raphson step, which can be unstable and make it
-// worse if we are unlucky.
+// This version simply uses one Newton-Raphson step, which can be unstable and
+// make it worse if we are unlucky.
 //
 // Indeed, we are trying to find the root of a cubic, and if the current param
 // is near a maximum/minimum of the cubic, then the Newton-Raphson step may
-// send it very very far
+// send it very far.
 //
 //
 // ^
@@ -857,12 +857,10 @@ geometry::QuadraticBezier2d quadraticFitWithFixedEndpoints(
 // +-----------------+-------------------------->
 //                    +
 //
-// In the future, we may want to actually solve the cubic to actually find the
-// real root. There are closed form solution, which may work well, but it might
-// actually be slower (due to evaluation sqrt and cubic root) than actually do
-// Newton-Raphson steps but in a more controlled way (ensure first that the
-// initial guess is in a "stable" interval, and actually converge with several
-// steps instead of only making one step.
+// Other versions (optimizeParameters2() and optimizeParameters3()) are more
+// accurate solvers that actually find solutions minimizing || B(u) - P ||, via
+// global search or closed form analysis followed by multiple Newton-Raphson
+// steps.
 //
 [[maybe_unused]] void optimizeParameters1(
     const geometry::QuadraticBezier2d& bezier,
@@ -927,7 +925,7 @@ geometry::QuadraticBezier2d quadraticFitWithFixedEndpoints(
         uniformSamples[k] = {u, bezier.eval(u)};
     }
 
-    geometry::Vec2d b2 = bezier.evalSecondDerivative(0);
+    geometry::Vec2d b2 = bezier.secondDerivative();
 
     for (Int i = 1; i < n - 1; ++i) {
         geometry::Vec2d p = positions.getUnchecked(i);
@@ -1035,29 +1033,29 @@ geometry::QuadraticBezier2d quadraticFitWithFixedEndpoints(
     Int n = positions.length();
     VGC_ASSERT(positions.length() == params.length());
 
-    const geometry::Vec2d& B0 = bezier.controlPoints()[0];
-    const geometry::Vec2d& B1 = bezier.controlPoints()[1];
-    const geometry::Vec2d& B2 = bezier.controlPoints()[2];
+    const geometry::Vec2d& B0 = bezier.p0();
+    const geometry::Vec2d& B1 = bezier.p1();
+    const geometry::Vec2d& B2 = bezier.p2();
 
     geometry::Vec2d B0B1 = B1 - B0;
     geometry::Vec2d B1B2 = B2 - B1;
+    geometry::Vec2d B0B2 = B2 - B0;
 
     geometry::Vec2d a = B1B2 - B0B1;
     //geometry::Vec2d b = 2 * B0B1;
     geometry::Vec2d c = B0;
 
-    double a2 = a.dot(a);
-    double h = a.dot(B0B1); // == half of a.dot(b)
+    double a2 = a.squaredLength();
+    double B0B22 = B0B2.squaredLength();
 
-    constexpr double eps = 1e-6;
-    if (a2 <= eps * std::abs(h)) { // Important: `<=` handles case (a2 == 0 && h == 0)
+    constexpr double eps = 1e-12;
+    if (a2 <= eps * B0B22) { // Important: `<=` handles case (a2 == 0 && B0B22 == 0)
         // => B0 - 2 B1 + B2 = 0 => B1 = 0.5 * (B0 + B1) => line segment
         //
         // In this case, since B(u) is actually a linear function, the initial
         // parameters should already be pretty good, but we still improve them
         // anyway by computing the projection to the line segment.
         //
-        geometry::Vec2d B0B2 = B2 - B0;
         double l2 = B0B2.squaredLength();
         if (l2 <= 0) {
             // Segment reduced to point: cannot project, so we keep params as is.
@@ -1080,12 +1078,13 @@ geometry::QuadraticBezier2d quadraticFitWithFixedEndpoints(
         return;
     }
 
+    double h = a.dot(B0B1);
     double b2 = 4 * B0B1.dot(B0B1);
     double D1 = 144 * h * h - 24 * a2 * b2;
     double D2 = -48 * a2;
     double a2Inv = 1.0 / a2;
     double uInflexion = -h * a2Inv;
-    geometry::Vec2d der2 = 2 * a; // second derivative of B
+    geometry::Vec2d der2 = 2 * a; // == bezier.secondDerivative()
 
     // Lambda that evaluates f(u) for point P.
     //
@@ -1230,27 +1229,33 @@ geometry::QuadraticBezier2d quadraticFitWithFixedEndpoints(
     output.append(input.last());
 }
 
-[[maybe_unused]] void setOutputAsUniformParams(
+void addToOutputAsUniformParams(
     const geometry::QuadraticBezier2d& bezier,
     Int numOutputSegments,
     core::ConstSpan<double> params,
     const SketchPointBuffer& input,
+    Int firstIndex,
+    Int lastIndex,
     SketchPointBuffer& output) {
 
-    Int n = input.length();
-    VGC_ASSERT(params.length() == input.length());
+    VGC_ASSERT(firstIndex >= 0);
+    VGC_ASSERT(firstIndex < input.length());
+    VGC_ASSERT(lastIndex >= 0);
+    VGC_ASSERT(lastIndex < input.length());
+
+    Int n = lastIndex - firstIndex + 1;
+    VGC_ASSERT(n > 0);
+    VGC_ASSERT(params.length() == n);
     VGC_ASSERT(numOutputSegments >= 1);
     VGC_ASSERT(params.first() == 0.0);
     VGC_ASSERT(params.last() == 1.0);
 
     double du = 1.0 / numOutputSegments;
 
+    // Note: we do not add a point at u=0 since it is expected to already be
+    // present in the output (last point of previous Bézier)
+
     Int i = 0; // Invariant: 0 <= i < n-1 (so both i and i+1 are valid points)
-    output.resize(1);
-    output.reserve(n);
-    if (output.numStablePoints() == 0) {
-        output.at(0) = input.first();
-    }
     const SketchPointArray& inputData = input.data();
     for (Int j = 1; j < numOutputSegments; ++j) {
 
@@ -1283,8 +1288,8 @@ geometry::QuadraticBezier2d quadraticFitWithFixedEndpoints(
         // the average of all input points between param `(j - 0.5) * du` and
         // param `(j + 0.5) * du`.
         //
-        const SketchPoint p0 = inputData.getUnchecked(i);
-        const SketchPoint p1 = inputData.getUnchecked(i + 1);
+        const SketchPoint p0 = inputData.getUnchecked(firstIndex + i);
+        const SketchPoint p1 = inputData.getUnchecked(firstIndex + i + 1);
         double u0 = params.getUnchecked(i);
         double u1 = params.getUnchecked(i + 1);
         VGC_ASSERT(u0 < u1);
@@ -1292,7 +1297,106 @@ geometry::QuadraticBezier2d quadraticFitWithFixedEndpoints(
         p.setPosition(bezier.eval(u));
         output.append(p);
     }
-    output.append(input.last());
+    output.append(inputData.getUnchecked(lastIndex));
+}
+
+[[maybe_unused]] void setOutputAsUniformParams(
+    const geometry::QuadraticBezier2d& bezier,
+    Int numOutputSegments,
+    core::ConstSpan<double> params,
+    const SketchPointBuffer& input,
+    SketchPointBuffer& output) {
+
+    output.resize(1);
+    if (output.numStablePoints() == 0) {
+        output.at(0) = input.first();
+    }
+    Int firstIndex = 0;
+    Int lastIndex = input.length() - 1;
+    addToOutputAsUniformParams(
+        bezier, numOutputSegments, params, input, firstIndex, lastIndex, output);
+}
+
+// Computes the best quadratic fit for the `input` points between the
+// `firstIndex` and `lastIndex`.
+//
+// After calling this function, positions is set to a copy of the input
+// positions, and params is set to the parameters mapping the input points to
+// the quadratic Bézier.
+//
+geometry::QuadraticBezier2d quadraticFitWithFixedEndpoints(
+    const SketchPointBuffer& input,
+    Int firstIndex,
+    Int lastIndex,
+    geometry::Vec2dArray& positions,
+    core::DoubleArray& params) {
+
+    VGC_DEBUG_TMP(
+        "quadraticFitWithFixedEndpoints(firstIndex={}, lastIndex={})",
+        firstIndex,
+        lastIndex);
+
+    VGC_ASSERT(firstIndex >= 0);
+    VGC_ASSERT(firstIndex < input.length());
+    VGC_ASSERT(lastIndex >= 0);
+    VGC_ASSERT(lastIndex < input.length());
+
+    Int n = lastIndex - firstIndex + 1;
+    VGC_ASSERT(n > 0);
+
+    // Copy input positions and initialize params as normalized chord-length.
+    positions.resize(0);
+    params.resize(0);
+    positions.reserve(n);
+    params.reserve(n);
+    const SketchPointArray& points = input.data();
+    double s0 = points.getUnchecked(firstIndex).s();
+    double totalChordLength = points.getUnchecked(lastIndex).s() - s0;
+    double totalChordLengthInv = 0;
+    if (totalChordLength > 0) {
+        totalChordLengthInv = 1.0 / totalChordLength;
+    }
+    for (Int i = firstIndex; i <= lastIndex; ++i) {
+        const SketchPoint& p = points.getUnchecked(i);
+        positions.append(p.position());
+        params.append((p.s() - s0) * totalChordLengthInv);
+    }
+
+    // Ensure first and last parameters are exactly 0 and 1, which we need as
+    // precondition for setOutputAsUniformParams(). This might not already be
+    // the case due to numerical errors, or in the degenerate case where
+    // totalChordLength == 0.
+    //
+    params.first() = 0;
+    params.last() = 1;
+
+    // Handle trivial or degenerate cases
+    const geometry::Vec2d& pFirst = positions.first();
+    if (n == 1) {
+        return geometry::QuadraticBezier2d::point(pFirst);
+    }
+    const geometry::Vec2d& pLast = positions.last();
+    if (n == 2 || totalChordLengthInv == 0) {
+        return geometry::QuadraticBezier2d::lineSegment(pFirst, pLast);
+    }
+
+    // Iteratively compute best fit with progressively better params
+    geometry::QuadraticBezier2d bezier;
+    constexpr Int numIterations = 4;
+    for (Int k = 0; k < numIterations; ++k) {
+        bezier = quadraticFitWithFixedEndpoints(positions, params);
+        optimizeParameters3(bezier, positions, params);
+    }
+    return bezier;
+}
+
+geometry::QuadraticBezier2d quadraticFitWithFixedEndpoints(
+    const SketchPointBuffer& input,
+    geometry::Vec2dArray& positions,
+    core::DoubleArray& params) {
+
+    return quadraticFitWithFixedEndpoints(
+        input, 0, input.length() - 1, positions, params);
 }
 
 } // namespace
@@ -1305,54 +1409,208 @@ void SingleQuadraticSegmentWithFixedEndpointsPass::doUpdateFrom(
         return;
     }
 
-    // Copy positions and initialize u-parameters
-
-    Int n = input.length();
-    positions_.resize(0);
-    params_.resize(0);
-    positions_.reserve(n);
-    params_.reserve(n);
-    double s0 = input.first().s();
-    double totalChordLength = input.last().s() - s0;
-    if (totalChordLength <= 0) {
-        setLineSegmentWithFixedEndpoints(input, output);
-        return;
-    }
-    double totalChordLengthInv = 1.0 / totalChordLength;
-    for (const SketchPoint& p : input) {
-        positions_.append(p.position());
-        params_.append((p.s() - s0) * totalChordLengthInv);
-    }
-    // Ensure first and last are exact 0 and 1 (could not be due to numerical errors).
-    // We need this as precondition for setOutputAsUniformParams().
-    params_.first() = 0;
-    params_.last() = 1;
-
-    // Compute initial bezier fit
+    // Compute best quadratic fit
     geometry::QuadraticBezier2d bezier =
-        quadraticFitWithFixedEndpoints(positions_, params_);
-
-    optimizeParameters3(bezier, positions_, params_);
-
-    // Improve fit based on optimized u-parameters
-    constexpr Int numIterations = 3;
-    for (Int k = 0; k < numIterations; ++k) {
-        bezier = quadraticFitWithFixedEndpoints(positions_, params_);
-        optimizeParameters3(bezier, positions_, params_);
-    }
+        quadraticFitWithFixedEndpoints(input, buffer_.positions, buffer_.params);
 
     // Compute output from fit
     constexpr bool outputAsMovedInputPoint = false;
     if (outputAsMovedInputPoint) {
-        setOutputAsMovedInputPoints(bezier, params_, input, output);
+        setOutputAsMovedInputPoints(bezier, buffer_.params, input, output);
     }
     else {
         constexpr Int numOutputSegments = 8;
-        setOutputAsUniformParams(bezier, numOutputSegments, params_, input, output);
+        setOutputAsUniformParams(
+            bezier, numOutputSegments, buffer_.params, input, output);
     }
 
     output.updateChordLengths();
     output.setNumStablePoints(input.numStablePoints() > 0 ? 1 : 0);
+}
+
+namespace {
+
+// Computes the largest distance squared between the input position and its
+// corresponding point on the Bézier curve, excluding the endpoints.
+//
+// Returns this distance squared and the smallest index for which it is reached.
+//
+// Returns (distance = -1, index=0) if n <= 2, that is, if there are no interior
+// points.
+//
+std::pair<double, Int> maxDistanceSquared(
+    const geometry::QuadraticBezier2d& bezier,
+    core::ConstSpan<geometry::Vec2d> positions,
+    core::Span<double> params) {
+
+    VGC_ASSERT(positions.length() == params.length());
+    Int n = positions.length();
+
+    double distance = -1;
+    double index = 0;
+    for (Int i = 1; i < n - 1; ++i) {
+        const geometry::Vec2d& p = positions.getUnchecked(i);
+        double u = params.getUnchecked(i);
+        double d = (p - bezier.eval(u)).squaredLength();
+        if (d > distance) {
+            distance = d;
+            index = i;
+        }
+    }
+    return {distance, index};
+}
+
+struct RecursiveQuadraticFitData {
+    const SketchPointBuffer& input;
+    Int numOutputPointsPerBezier;
+    SketchPointBuffer& output;
+    geometry::Vec2dArray& positions;
+    core::DoubleArray& params;
+    core::Array<detail::FitInfo>& info;
+};
+
+void recursiveQuadraticFit(
+    RecursiveQuadraticFitData& d,
+    Int firstInputIndex,
+    Int lastInputIndex) {
+
+    VGC_DEBUG_TMP(
+        "recursiveQuadraticFit(firstInputIndex={}, lastInputIndex={})",
+        firstInputIndex,
+        lastInputIndex);
+
+    // Compute best quadratic fit of unstable points
+    geometry::QuadraticBezier2d bezier = quadraticFitWithFixedEndpoints(
+        d.input, firstInputIndex, lastInputIndex, d.positions, d.params);
+
+    // Check whether the fit is good enough
+    constexpr double threshold = 10;
+    auto [distance, index] = maxDistanceSquared(bezier, d.positions, d.params);
+    VGC_DEBUG_TMP_EXPR(distance);
+    VGC_DEBUG_TMP_EXPR(index);
+
+    if (distance < threshold) {
+
+        // Note: if lastInputIndex == firstInputIndex + 1, then the condition
+        // above is always true (distance == -1), which acts as a base case for
+        // the recursion, guaranteeing that it terminates.
+
+        addToOutputAsUniformParams(
+            bezier,
+            d.numOutputPointsPerBezier,
+            d.params,
+            d.input,
+            firstInputIndex,
+            lastInputIndex,
+            d.output);
+        Int lastOutputIndex = d.output.length() - 1;
+        detail::FitInfo info{lastInputIndex, lastOutputIndex};
+        d.info.append(info);
+        VGC_DEBUG_TMP("Adding fit {}", info);
+    }
+    else {
+        // We can try different recursive strategies here:
+        //
+        // 1. Pick the index corresponding to the furthest input point.
+        //    This is probably best for non-interactive uses.
+        //
+        // 2. Pick the index just before the current lastInputIndex. This may
+        //    work in interactive case where input points are added one by one,
+        //    and therefore if this iteration is a "bad fit", it usually means
+        //    that stopping one point before was actually a good fit. This might
+        //    minimize the amount of "changes" (flickering?) that the user can
+        //    see.
+        //
+        // 3. Pick half-way between firstInputIndex and lastInputIndex.
+        //    This might minimize the size difference between adjacent
+        //    Bézier curves.
+        //
+        //
+        // --- Stategy 1 ----
+        // Convert from index in `positions` to index in `input`
+        //index += firstInputIndex;
+        //
+        // --- Stategy 2 ----
+        //index = lastInputIndex - 1;
+        //
+        // --- Stategy 3 ----
+        index = (firstInputIndex + lastInputIndex) / 2;
+
+        recursiveQuadraticFit(d, firstInputIndex, index);
+        recursiveQuadraticFit(d, index, lastInputIndex);
+    }
+}
+
+} // namespace
+
+void QuadraticSplinePass::doReset() {
+    info_.clear();
+}
+
+void QuadraticSplinePass::doUpdateFrom(
+    const SketchPointBuffer& input,
+    SketchPointBuffer& output) {
+
+    VGC_DEBUG_TMP("-------------------------------------------------------------------");
+    VGC_DEBUG_TMP(
+        "doUpdateFrom(input.length()={}, output.length()={})",
+        input.length(),
+        output.length());
+
+    if (handleSmallInputWithFixedEndpoints(input, output)) {
+        return;
+    }
+
+    // Remove all previously unstable output points and Bézier fits.
+    //
+    Int oldNumStablePoints = output.numStablePoints();
+    output.resize(oldNumStablePoints);
+    while (!info_.isEmpty() && info_.last().lastOutputIndex >= oldNumStablePoints) {
+        info_.pop();
+    }
+    VGC_ASSERT(info_.isEmpty() || info_.last().lastOutputIndex == oldNumStablePoints - 1);
+    VGC_DEBUG_TMP_EXPR(oldNumStablePoints);
+    VGC_DEBUG_TMP("info after removing unstable: {}", info_);
+
+    // Add the first output point unless it was already stable
+    if (oldNumStablePoints == 0) {
+        output.append(input.first());
+    }
+
+    constexpr Int numOutputPointsPerBezier = 8;
+    RecursiveQuadraticFitData data = {
+        input,
+        numOutputPointsPerBezier,
+        output,
+        buffer_.positions,
+        buffer_.params,
+        info_};
+    Int firstIndex = info_.isEmpty() ? 0 : info_.last().lastInputIndex;
+    Int lastIndex = input.length() - 1;
+    if (lastIndex > firstIndex) {
+        recursiveQuadraticFit(data, firstIndex, lastIndex);
+    }
+
+    output.updateChordLengths();
+
+    // Determine the new number of stable output points and Bézier fits, by
+    // iterating backward over all Bézier fits.
+    //
+    // We start at i = numFits - 2 because the last fit is always considered
+    // unstable, even if all the input points were stable.
+    //
+    Int newNumStablePoints = 0;
+    if (input.numStablePoints() > 0) {
+        newNumStablePoints = 1;
+    }
+    for (Int i = info_.length() - 2; i >= 0; --i) {
+        const detail::FitInfo& info = info_.getUnchecked(i);
+        if (info.lastInputIndex < input.numStablePoints()) {
+            newNumStablePoints = info.lastOutputIndex + 1;
+            break;
+        }
+    }
+    output.setNumStablePoints(newNumStablePoints);
 }
 
 } // namespace vgc::tools
