@@ -183,6 +183,7 @@ protected:
     core::ConnectionHandle drawCurveUndoGroupConnectionHandle_ = {};
 
     double startTime_ = 0;
+    std::optional<SketchFitMethod> lastFitMethod_;
 
     // Raw input in widget space (pixels).
     //
@@ -194,7 +195,7 @@ protected:
     // transform step, that is, all processing that relies on positions in
     // canvas coordinates space rather than positions in workspace coordinates.
     //
-    EmptyPass preTransformPass_;
+    std::unique_ptr<SketchPass> preTransformPass_;
 
     // Transformation.
     //
@@ -209,7 +210,6 @@ protected:
     // Everything that we want to occur after the transformation step,
     // and before snapping is applied.
     //
-    std::optional<SketchFitMethod> lastFitMethod_;
     std::unique_ptr<SketchPass> postTransformPass_;
     const SketchPointBuffer& postTransformPassesResult_() const;
 
