@@ -1706,7 +1706,7 @@ void recursiveQuadraticFit(
     RecursiveQuadraticFitData& d,
     Int firstInputIndex,
     Int lastInputIndex,
-    bool splitLastGoodFitOnce = true) {
+    bool splitLastGoodFitOnce = false) {
 
     VGC_DEBUG_TMP(
         "recursiveQuadraticFit(firstInputIndex={}, lastInputIndex={})",
@@ -1727,12 +1727,35 @@ void recursiveQuadraticFit(
     }
 
     // Check whether the fit is good enough
-    constexpr double threshold = 100;
+    constexpr double distanceThreshold = 4;
     auto [distance, index] = maxDistanceSquared(bezier, d.positions, d.params);
     VGC_DEBUG_TMP_EXPR(distance);
     VGC_DEBUG_TMP_EXPR(index);
 
-    bool isGoodFit = distance < threshold;
+    // Quadratic with high curvature (compared to B0-B2 length) are
+    // undesirable. Basically, we only allow "flat-ish" quadratic,
+    // since parabola are otherwise not that pretty and most likely
+    // not really what the user wants.
+    //
+    // If there are very few input points to fit, we disable this since in
+    // these cases, we still prefer a less flat parabola fitting more points.
+    //
+    constexpr double flatnessThreshold = 1;
+    bool enableFlatnessThreshold = lastInputIndex - firstInputIndex > 5;
+    double flatness = core::DoubleInfinity;
+    if (enableFlatnessThreshold) {
+        double der2 = bezier.secondDerivative().squaredLength();
+        double l2 = (bezier.p2() - bezier.p0()).squaredLength();
+        if (der2 > 0) {
+            flatness = l2 / der2;
+        }
+        else {
+            // Perfectly flat => flatness = core::DoubleInfinity;
+        }
+    }
+    VGC_DEBUG_TMP_EXPR(flatness);
+
+    bool isGoodFit = (distance < distanceThreshold) && (flatness > flatnessThreshold);
     bool cannotSplit = (distance == -1);
     if (cannotSplit || (isGoodFit && !splitLastGoodFitOnce)) {
         addToOutputAsUniformParams(
@@ -1776,7 +1799,7 @@ void recursiveQuadraticFit(
         //index = lastInputIndex - 1;
         //
         // --- Stategy 3/4 ----
-        Int ratio = 2; // 2 means half-way; 3 means 2/3 towards lastIndex, etc.
+        Int ratio = 3; // 2 means half-way; 3 means 2/3 towards lastIndex, etc.
         index = (firstInputIndex + (ratio - 1) * lastInputIndex) / ratio;
 
         recursiveQuadraticFit(d, firstInputIndex, index, false);
@@ -1834,7 +1857,7 @@ void QuadraticSplinePass::doUpdateFrom(
     Int firstIndex = info_.isEmpty() ? 0 : info_.last().lastInputIndex;
     Int lastIndex = input.length() - 1;
     if (lastIndex > firstIndex) {
-        recursiveQuadraticFit(data, firstIndex, lastIndex);
+        recursiveQuadraticFit(data, firstIndex, lastIndex, splitLastGoodFitOnce);
     }
 
     output.updateChordLengths();
