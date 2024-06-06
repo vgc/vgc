@@ -1484,7 +1484,7 @@ void recursiveQuadraticFit(
         d.input, firstInputIndex, lastInputIndex, d.positions, d.params);
 
     // Check whether the fit is good enough
-    constexpr double threshold = 10;
+    constexpr double threshold = 2;
     auto [distance, index] = maxDistanceSquared(bezier, d.positions, d.params);
     VGC_DEBUG_TMP_EXPR(distance);
     VGC_DEBUG_TMP_EXPR(index);
@@ -1525,6 +1525,8 @@ void recursiveQuadraticFit(
         //    This might minimize the size difference between adjacent
         //    Bézier curves.
         //
+        // 4. Pick more than half-way, e.g., 3/4, etc.
+        //
         //
         // --- Stategy 1 ----
         // Convert from index in `positions` to index in `input`
@@ -1533,8 +1535,9 @@ void recursiveQuadraticFit(
         // --- Stategy 2 ----
         //index = lastInputIndex - 1;
         //
-        // --- Stategy 3 ----
-        index = (firstInputIndex + lastInputIndex) / 2;
+        // --- Stategy 3/4 ----
+        Int ratio = 4; // 2 means half-way; 3 means 2/3 towards lastIndex, etc.
+        index = (firstInputIndex + (ratio - 1) * lastInputIndex) / ratio;
 
         recursiveQuadraticFit(d, firstInputIndex, index);
         recursiveQuadraticFit(d, index, lastInputIndex);
