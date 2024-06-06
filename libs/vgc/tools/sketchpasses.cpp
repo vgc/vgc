@@ -1705,7 +1705,8 @@ struct RecursiveQuadraticFitData {
 void recursiveQuadraticFit(
     RecursiveQuadraticFitData& d,
     Int firstInputIndex,
-    Int lastInputIndex) {
+    Int lastInputIndex,
+    bool splitLastGoodFitOnce = true) {
 
     VGC_DEBUG_TMP(
         "recursiveQuadraticFit(firstInputIndex={}, lastInputIndex={})",
@@ -1726,17 +1727,14 @@ void recursiveQuadraticFit(
     }
 
     // Check whether the fit is good enough
-    constexpr double threshold = 2;
+    constexpr double threshold = 100;
     auto [distance, index] = maxDistanceSquared(bezier, d.positions, d.params);
     VGC_DEBUG_TMP_EXPR(distance);
     VGC_DEBUG_TMP_EXPR(index);
 
-    if (distance < threshold) {
-
-        // Note: if lastInputIndex == firstInputIndex + 1, then the condition
-        // above is always true (distance == -1), which acts as a base case for
-        // the recursion, guaranteeing that it terminates.
-
+    bool isGoodFit = distance < threshold;
+    bool cannotSplit = (distance == -1);
+    if (cannotSplit || (isGoodFit && !splitLastGoodFitOnce)) {
         addToOutputAsUniformParams(
             bezier,
             d.numOutputPointsPerBezier,
@@ -1778,11 +1776,12 @@ void recursiveQuadraticFit(
         //index = lastInputIndex - 1;
         //
         // --- Stategy 3/4 ----
-        Int ratio = 4; // 2 means half-way; 3 means 2/3 towards lastIndex, etc.
+        Int ratio = 2; // 2 means half-way; 3 means 2/3 towards lastIndex, etc.
         index = (firstInputIndex + (ratio - 1) * lastInputIndex) / ratio;
 
-        recursiveQuadraticFit(d, firstInputIndex, index);
-        recursiveQuadraticFit(d, index, lastInputIndex);
+        recursiveQuadraticFit(d, firstInputIndex, index, false);
+        recursiveQuadraticFit(
+            d, index, lastInputIndex, splitLastGoodFitOnce && !isGoodFit);
     }
 }
 
@@ -1805,6 +1804,8 @@ void QuadraticSplinePass::doUpdateFrom(
     if (handleSmallInputWithFixedEndpoints(input, output)) {
         return;
     }
+
+    constexpr bool splitLastGoodFitOnce = true;
 
     // Remove all previously unstable output points and Bézier fits.
     //
@@ -1841,14 +1842,17 @@ void QuadraticSplinePass::doUpdateFrom(
     // Determine the new number of stable output points and Bézier fits, by
     // iterating backward over all Bézier fits.
     //
-    // We start at i = numFits - 2 because the last fit is always considered
-    // unstable, even if all the input points were stable.
+    // We start at i = numFits - 2 (or -3) because the last fit (or the last
+    // two fits) is always considered unstable, even if all the input points
+    // were stable.
     //
     Int newNumStablePoints = 0;
     if (input.numStablePoints() > 0) {
         newNumStablePoints = 1;
     }
-    for (Int i = info_.length() - 2; i >= 0; --i) {
+    Int firstPossiblyStableFit =
+        splitLastGoodFitOnce ? info_.length() - 3 : info_.length() - 2;
+    for (Int i = firstPossiblyStableFit; i >= 0; --i) {
         const detail::FitInfo& info = info_.getUnchecked(i);
         if (info.lastInputIndex < input.numStablePoints()) {
             newNumStablePoints = info.lastOutputIndex + 1;
