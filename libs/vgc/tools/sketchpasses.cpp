@@ -789,7 +789,9 @@ namespace {
 //
 // We get a similar result for y, so in the end:
 //
-// (x, y) = sum (Pi - a0i B0 - a2i B2) a1i / sum (a1i²)
+//          sum (Pi - a0i B0 - a2i B2) a1i
+// (x, y) = ------------------------------
+//                  sum (a1i²)
 //
 geometry::QuadraticBezier2d quadraticFitWithFixedEndpoints(
     core::ConstSpan<geometry::Vec2d> positions,
@@ -801,13 +803,12 @@ geometry::QuadraticBezier2d quadraticFitWithFixedEndpoints(
 
     const geometry::Vec2d& B0 = positions.first();
     if (n == 1) {
-        return geometry::QuadraticBezier2d(B0, B0, B0);
+        return geometry::QuadraticBezier2d::point(B0);
     }
 
     const geometry::Vec2d& B2 = positions.last();
     if (n == 2) {
-        // Line segment
-        return geometry::QuadraticBezier2d(B0, 0.5 * (B0 + B2), B2);
+        return geometry::QuadraticBezier2d::lineSegment(B0, B2);
     }
 
     // Initialize numerator and denominator
@@ -835,8 +836,186 @@ geometry::QuadraticBezier2d quadraticFitWithFixedEndpoints(
     else {
         // This means that a1 = 0 for all i, so (ui = 0) or (ui = 1) for all i.
         // It's basically bad input, and it's reasonable to fallback to a line segment.
-        return geometry::QuadraticBezier2d(B0, 0.5 * (B0 + B2), B2);
+        return geometry::QuadraticBezier2d::lineSegment(B0, B2);
     }
+}
+
+// Handles case n == 2 of quadraticFitWithFixedEndpointsAndStartTangent().
+//
+// We solve for B1 = B0 + aT with B1 on the bissection of B0-B2
+//
+//          o B1
+//         /|
+//        / |
+//      _/  |
+//    T /|  |
+//     /    |
+// B0 o-----+-----o B2
+//          C
+//
+// Since B1 = B0 + aT, we have:
+//
+//     (B1 - B0) ⋅ (B2 - B0) = aT ⋅ (B2 - B0)
+//
+// But we also have:
+//
+//     (B1 - B0) ⋅ (B2 - B0) = (B1 - C + C - B0) ⋅ (B2 - B0)
+//                           = (B1 - C) ⋅ (B2 - B0) + (C - B0) ⋅ (B2 - B0)
+//                             ^^^^^^^^^^^^^^^^^^^^   ^^^^^^^^^^^^^^^^^^^^
+//                                      0             0.5 (B2 - B0) ⋅ (B2 - B0)
+//
+//         || B2 - B0 ||²    numerator
+//    a  = --------------- = ---------
+//         2 T ⋅ (B2 - B0)   denominator
+//
+// But in order to avoid shooting to the star when T ⋅ (B2 - B0) is close to zero,
+// we also enforce || aT || <= || B2 - B0 || so that we only output "reasonable"
+// Bézier curves. This means:
+//
+//                                   a² || T ||² <= || B2 - B0 ||²
+//                         (numerator)² || T ||² <= (denominator)² || B2 - B0 ||²
+//                       || B2 - B0 ||² || T ||² <= (denominator)²
+//
+//
+// Also, we want a >= 0, otherwise we would switch direction at B0 and
+// the spline wouldn't be G1-continuous. So if a < 0, we do like when T
+// is nearly perpendicular and simply use || aT || = || B2- B0 ||.
+//
+geometry::QuadraticBezier2d quadraticFitWithFixedEndpointsAndStartTangent_n2(
+    const geometry::Vec2d& B0,
+    const geometry::Vec2d& B2,
+    const geometry::Vec2d& startTangent,
+    double t2) {
+
+    VGC_ASSERT(t2 > 0);
+
+    geometry::Vec2d B0B2 = B2 - B0;
+    double l2 = B0B2.squaredLength();
+    if (l2 == 0) {
+        // Special case B0 == B2
+        return geometry::QuadraticBezier2d::point(B0);
+    }
+    double numerator = l2;
+    double denominator = 2 * startTangent.dot(B0B2);
+    if (denominator <= 0 || denominator * denominator <= l2 * t2) {
+        // This handles all of these special cases:
+        // 1. denominator == 0 (T perpendicular to B0-B2)
+        // 2. denominator < 0  (T and (B2 - B0) facing opposite directions)
+        // 3. || aT || >= || B2 - B0 || if we were using a = numerator / denominator
+        //
+        geometry::Vec2d B1 = B0 + l2 / t2 * startTangent;
+        return geometry::QuadraticBezier2d(B0, B1, B2);
+    }
+    double a = numerator / denominator;
+    geometry::Vec2d B1 = B0 + a * startTangent;
+    return geometry::QuadraticBezier2d(B0, B1, B2);
+}
+
+// Input:  n positions P0, ..., Pn-1
+//         n params    u0, ..., un-1
+//         start tangent T
+//
+// Output: Quadratic Bezier control points (B0, B1, B2) that minimizes:
+//
+//   E = sum || B(ui) - Pi ||²
+//
+// where:
+//
+//   B(u) = (1 - u)² B0 + 2(1 - u)u B1 + u² B2
+//
+//   B0 = P0
+//   B1 = P0 + a T, where a is the variable that we solve for
+//   B2 = Pn-1
+//
+// With a similar method than quadraticFitWithFixedEndpoints() (without the
+// given start tangent), we can develop dE/da using the fact that dB1/da = T,
+// which gives the following closed form solution of dE/da = 0:
+//
+//     sum (Pi - (a0i + a1i) B0 - a2i B2) ⋅ a1i T
+// a = ------------------------------------------
+//                  T ⋅ T sum(a1i²)
+//
+geometry::QuadraticBezier2d quadraticFitWithFixedEndpointsAndStartTangent(
+    core::ConstSpan<geometry::Vec2d> positions,
+    core::ConstSpan<double> params,
+    const geometry::Vec2d& startTangent) {
+
+    Int n = positions.length();
+    VGC_ASSERT(positions.length() == params.length());
+    VGC_ASSERT(n > 0);
+
+    const geometry::Vec2d& B0 = positions.first();
+    if (n == 1) {
+        return geometry::QuadraticBezier2d::point(B0);
+    }
+
+    const geometry::Vec2d& B2 = positions.last();
+    double t2 = startTangent.squaredLength();
+    if (t2 == 0) {
+        // Special case T == 0
+        return geometry::QuadraticBezier2d::lineSegment(B0, B2);
+    }
+
+    if (n == 2) {
+        return quadraticFitWithFixedEndpointsAndStartTangent_n2(B0, B2, startTangent, t2);
+    }
+
+    // Initialize numerator and denominator
+    double numerator = 0;
+    double denominator = 0;
+
+    // Iterate over all points except the first and last and accumulate
+    // the terms in the numerator and denominator
+    //
+    //     sum (Pi - (a0i + a1i) B0 - a2i B2) ⋅ a1i T
+    // a = ------------------------------------------
+    //                  T ⋅ T sum(a1i²)
+    //
+    double B0T = B0.dot(startTangent);
+    double B2T = B2.dot(startTangent);
+    for (Int i = 1; i < n - 1; ++i) {
+        geometry::Vec2d p = positions.getUnchecked(i);
+        double u = params.getUnchecked(i);
+        double v = 1 - u;
+        double a0 = v * v;
+        double a1 = 2 * v * u;
+        double a2 = u * u;
+        numerator += a1 * (p.dot(startTangent) - (a0 + a1) * B0T - a2 * B2T);
+        denominator += a1 * a1;
+    }
+    denominator *= t2;
+
+    // Compute B1
+    if (denominator <= 0) {
+        // This means that a1 = 0 for all i, so (ui = 0) or (ui = 1) for all i.
+        // So it's like if the only information we have is B0, B2, and T.
+        return quadraticFitWithFixedEndpointsAndStartTangent_n2(B0, B2, startTangent, t2);
+    }
+
+    double a = numerator / denominator;
+    if (a <= 0) {
+        // If a < 0, this means that the best fit is to go to the opposite
+        // direction of T, but we don't want that. The best fit with a >= 0
+        // would be a = 0 (since E(a) is a quadratic reaching its minimum
+        // at a < 0), but we don't want that either as it would still not
+        // be G1-continuous. So we arbitrarily output the Bézier satisfying
+        // || B1 - B0 || = 0.1 * || B2 - B0 || in the direction of T.
+        //
+        geometry::Vec2d B0B2 = B2 - B0;
+        double l2 = B0B2.squaredLength();
+        if (l2 == 0) {
+            // Special case B0 == B2
+            return geometry::QuadraticBezier2d::point(B0);
+        }
+        constexpr double ratio = 0.1;
+        geometry::Vec2d B1 = B0 + 0.1 * l2 / t2 * startTangent;
+        return geometry::QuadraticBezier2d(B0, B1, B2);
+    }
+
+    // XXX: Do we also want to enforce || B1 - B0 || >= 0.1 * || B2 - B0 ||?
+    //
+    geometry::Vec2d B1 = B0 + a * startTangent;
+    return geometry::QuadraticBezier2d(B0, B1, B2);
 }
 
 // This version simply uses one Newton-Raphson step, which can be unstable and
@@ -1317,24 +1496,14 @@ void addToOutputAsUniformParams(
         bezier, numOutputSegments, params, input, firstIndex, lastIndex, output);
 }
 
-// Computes the best quadratic fit for the `input` points between the
-// `firstIndex` and `lastIndex`.
+// Helper function for handling the base case of fits with or without tangents
 //
-// After calling this function, positions is set to a copy of the input
-// positions, and params is set to the parameters mapping the input points to
-// the quadratic Bézier.
-//
-geometry::QuadraticBezier2d quadraticFitWithFixedEndpoints(
+std::optional<geometry::QuadraticBezier2d> quadraticFitCommon_(
     const SketchPointBuffer& input,
     Int firstIndex,
     Int lastIndex,
     geometry::Vec2dArray& positions,
     core::DoubleArray& params) {
-
-    VGC_DEBUG_TMP(
-        "quadraticFitWithFixedEndpoints(firstIndex={}, lastIndex={})",
-        firstIndex,
-        lastIndex);
 
     VGC_ASSERT(firstIndex >= 0);
     VGC_ASSERT(firstIndex < input.length());
@@ -1380,6 +1549,32 @@ geometry::QuadraticBezier2d quadraticFitWithFixedEndpoints(
         return geometry::QuadraticBezier2d::lineSegment(pFirst, pLast);
     }
 
+    return std::nullopt;
+}
+
+// Computes the best quadratic fit for the `input` points between the
+// `firstIndex` and `lastIndex`.
+//
+// After calling this function, positions is set to a copy of the input
+// positions, and params is set to the parameters mapping the input points to
+// the quadratic Bézier.
+//
+geometry::QuadraticBezier2d quadraticFitWithFixedEndpoints(
+    const SketchPointBuffer& input,
+    Int firstIndex,
+    Int lastIndex,
+    geometry::Vec2dArray& positions,
+    core::DoubleArray& params) {
+
+    VGC_DEBUG_TMP(
+        "quadraticFitWithFixedEndpoints(firstIndex={}, lastIndex={})",
+        firstIndex,
+        lastIndex);
+
+    if (auto res = quadraticFitCommon_(input, firstIndex, lastIndex, positions, params)) {
+        return *res;
+    }
+
     // Iteratively compute best fit with progressively better params
     geometry::QuadraticBezier2d bezier;
     constexpr Int numIterations = 4;
@@ -1397,6 +1592,44 @@ geometry::QuadraticBezier2d quadraticFitWithFixedEndpoints(
 
     return quadraticFitWithFixedEndpoints(
         input, 0, input.length() - 1, positions, params);
+}
+
+geometry::QuadraticBezier2d quadraticFitWithFixedEndpointsAndStartTangent(
+    const SketchPointBuffer& input,
+    Int firstIndex,
+    Int lastIndex,
+    geometry::Vec2dArray& positions,
+    core::DoubleArray& params,
+    const geometry::Vec2d& startTangent) {
+
+    VGC_DEBUG_TMP(
+        "quadraticFitWithFixedEndpointsAndStartTangent(firstIndex={}, lastIndex={})",
+        firstIndex,
+        lastIndex);
+
+    if (auto res = quadraticFitCommon_(input, firstIndex, lastIndex, positions, params)) {
+        return *res;
+    }
+
+    // Iteratively compute best fit with progressively better params
+    geometry::QuadraticBezier2d bezier;
+    constexpr Int numIterations = 4;
+    for (Int k = 0; k < numIterations; ++k) {
+        bezier = quadraticFitWithFixedEndpointsAndStartTangent(
+            positions, params, startTangent);
+        optimizeParameters3(bezier, positions, params);
+    }
+    return bezier;
+}
+
+geometry::QuadraticBezier2d quadraticFitWithFixedEndpointsAndStartTangent(
+    const SketchPointBuffer& input,
+    geometry::Vec2dArray& positions,
+    core::DoubleArray& params,
+    const geometry::Vec2d& startTangent) {
+
+    return quadraticFitWithFixedEndpointsAndStartTangent(
+        input, 0, input.length() - 1, positions, params, startTangent);
 }
 
 } // namespace
@@ -1480,8 +1713,17 @@ void recursiveQuadraticFit(
         lastInputIndex);
 
     // Compute best quadratic fit of unstable points
-    geometry::QuadraticBezier2d bezier = quadraticFitWithFixedEndpoints(
-        d.input, firstInputIndex, lastInputIndex, d.positions, d.params);
+    geometry::QuadraticBezier2d bezier;
+    if (d.info.isEmpty()) {
+        bezier = quadraticFitWithFixedEndpoints(
+            d.input, firstInputIndex, lastInputIndex, d.positions, d.params);
+    }
+    else {
+        const geometry::QuadraticBezier2d& lastBezier = d.info.last().bezier;
+        geometry::Vec2d t = lastBezier.p2() - lastBezier.p1();
+        bezier = quadraticFitWithFixedEndpointsAndStartTangent(
+            d.input, firstInputIndex, lastInputIndex, d.positions, d.params, t);
+    }
 
     // Check whether the fit is good enough
     constexpr double threshold = 2;
@@ -1504,7 +1746,7 @@ void recursiveQuadraticFit(
             lastInputIndex,
             d.output);
         Int lastOutputIndex = d.output.length() - 1;
-        detail::FitInfo info{lastInputIndex, lastOutputIndex};
+        detail::FitInfo info{lastInputIndex, lastOutputIndex, bezier};
         d.info.append(info);
         VGC_DEBUG_TMP("Adding fit {}", info);
     }

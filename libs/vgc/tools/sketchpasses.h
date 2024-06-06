@@ -17,6 +17,7 @@
 #ifndef VGC_TOOLS_SKETCHPASSES_H
 #define VGC_TOOLS_SKETCHPASSES_H
 
+#include <vgc/geometry/bezier.h>
 #include <vgc/geometry/mat3d.h>
 #include <vgc/tools/api.h>
 #include <vgc/tools/sketchpass.h>
@@ -88,6 +89,7 @@ struct FitBuffer {
 struct FitInfo {
     Int lastInputIndex;
     Int lastOutputIndex;
+    geometry::QuadraticBezier2d bezier;
 };
 
 } // namespace detail
