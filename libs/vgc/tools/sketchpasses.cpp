@@ -17,6 +17,7 @@
 #include <vgc/tools/sketchpasses.h>
 
 #include <array>
+#include <optional>
 
 #include <vgc/core/assert.h>
 #include <vgc/geometry/bezier.h>
@@ -1008,7 +1009,7 @@ geometry::QuadraticBezier2d quadraticFitWithFixedEndpointsAndStartTangent(
             return geometry::QuadraticBezier2d::point(B0);
         }
         constexpr double ratio = 0.1;
-        geometry::Vec2d B1 = B0 + 0.1 * l2 / t2 * startTangent;
+        geometry::Vec2d B1 = B0 + ratio * l2 / t2 * startTangent;
         return geometry::QuadraticBezier2d(B0, B1, B2);
     }
 
@@ -1622,7 +1623,8 @@ geometry::QuadraticBezier2d quadraticFitWithFixedEndpointsAndStartTangent(
     return bezier;
 }
 
-geometry::QuadraticBezier2d quadraticFitWithFixedEndpointsAndStartTangent(
+[[maybe_unused]] geometry::QuadraticBezier2d
+quadraticFitWithFixedEndpointsAndStartTangent(
     const SketchPointBuffer& input,
     geometry::Vec2dArray& positions,
     core::DoubleArray& params,
