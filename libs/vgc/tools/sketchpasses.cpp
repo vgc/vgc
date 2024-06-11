@@ -1696,8 +1696,8 @@ std::pair<double, Int> maxDistanceSquared(
 }
 
 struct RecursiveQuadraticFitData {
+    const experimental::SplineFitSettings& settings;
     const SketchPointBuffer& input;
-    Int numOutputPointsPerBezier;
     SketchPointBuffer& output;
     geometry::Vec2dArray& positions;
     core::DoubleArray& params;
@@ -1708,14 +1708,20 @@ void recursiveQuadraticFit(
     RecursiveQuadraticFitData& d,
     Int firstInputIndex,
     Int lastInputIndex,
-    bool splitLastGoodFitOnce = false) {
+    bool splitLastGoodFitOnce) {
 
     VGC_DEBUG_TMP(
         "recursiveQuadraticFit(firstInputIndex={}, lastInputIndex={})",
         firstInputIndex,
         lastInputIndex);
 
-    // Compute best quadratic fit of unstable points
+    // Compute the best quadratic fit of the input points between
+    // `firstInputIndex` and `lastInputIndex` (included).
+    //
+    // If a quadratic fit has already been computed for the previous points,
+    // then we use its end tangent as our start tangent to enforce
+    // G1-continuity.
+    //
     geometry::QuadraticBezier2d bezier;
     if (d.info.isEmpty()) {
         bezier = quadraticFitWithFixedEndpoints(
@@ -1728,41 +1734,66 @@ void recursiveQuadraticFit(
             d.input, firstInputIndex, lastInputIndex, d.positions, d.params, t);
     }
 
-    // Check whether the fit is good enough
-    constexpr double distanceThreshold = 4;
-    auto [distance, index] = maxDistanceSquared(bezier, d.positions, d.params);
-    VGC_DEBUG_TMP_EXPR(distance);
+    // Compute the max distance squared between the input points and the Bézier fit,
+    // and check whether it is within the chosen threshold.
+    //
+    double distanceThreshold = d.settings.distanceThreshold;
+    double distanceSquaredThreshold = distanceThreshold * distanceThreshold;
+    auto [distanceSquared, index] = maxDistanceSquared(bezier, d.positions, d.params);
+    bool isWithinDistance = distanceSquared <= distanceSquaredThreshold;
+    VGC_DEBUG_TMP_EXPR(isWithinDistance);
+    VGC_DEBUG_TMP_EXPR(distanceSquared);
     VGC_DEBUG_TMP_EXPR(index);
 
-    // Quadratic with high curvature (compared to B0-B2 length) are
-    // undesirable. Basically, we only allow "flat-ish" quadratic,
-    // since parabola are otherwise not that pretty and most likely
-    // not really what the user wants.
+    // Determine whether we should use the flatness threshold.
     //
-    // If there are very few input points to fit, we disable this since in
-    // these cases, we still prefer a less flat parabola fitting more points.
+    Int numInputPoints = lastInputIndex - firstInputIndex + 1;
+    double flatnessThreshold = d.settings.flatnessThreshold;
+    bool enableFlatnessThreshold =
+        (flatnessThreshold >= 0)
+        && (numInputPoints > d.settings.flatnessThresholdMinPoints);
+    VGC_DEBUG_TMP_EXPR(enableFlatnessThreshold);
+
+    // If enabled, compute the square of the flatness, and compare it with the
+    // square of the flatness threshold. Alternatively, we could directly
+    // define the flatness to be the square of the current flatness, but then
+    // choosing a flatness threshold would be less intuitive since the scale
+    // would be quadratic instead of linear.
     //
-    constexpr double flatnessThreshold = 1;
-    bool enableFlatnessThreshold = lastInputIndex - firstInputIndex > 5;
-    double flatness = core::DoubleInfinity;
+    //                             o        --> 2x taller means 2x less flat
+    //         o
+    //   o           o       o           o
+    //
+    //   B0 = (0, 0)         B0 = (0, 0)
+    //   B1 = (2, 1)         B1 = (2, 2)
+    //   B2 = (4, 0)         B2 = (4, 0)
+    //   flatness  = 1       flatness  = 0.5
+    //   flatness² = 1       flatness² = 0.25
+    //
+    bool isWithinFlatness = true;
     if (enableFlatnessThreshold) {
+        double flatnessSquaredThreshold = flatnessThreshold * flatnessThreshold;
+        double flatnessSquared = core::DoubleInfinity;
+        flatnessThreshold *= flatnessThreshold;
         double der2 = bezier.secondDerivative().squaredLength();
         double l2 = (bezier.p2() - bezier.p0()).squaredLength();
         if (der2 > 0) {
-            flatness = l2 / der2;
+            flatnessSquared = l2 / der2;
         }
         else {
-            // Perfectly flat => flatness = core::DoubleInfinity;
+            // Perfectly flat => flatnessSquared = core::DoubleInfinity;
         }
+        isWithinFlatness = flatnessSquared >= flatnessSquaredThreshold;
+        VGC_DEBUG_TMP_EXPR(isWithinFlatness);
+        VGC_DEBUG_TMP_EXPR(flatnessSquared);
     }
-    VGC_DEBUG_TMP_EXPR(flatness);
 
-    bool isGoodFit = (distance < distanceThreshold) && (flatness > flatnessThreshold);
-    bool cannotSplit = (distance == -1);
+    bool isGoodFit = isWithinDistance && isWithinFlatness;
+    bool cannotSplit = (distanceSquared == -1);
     if (cannotSplit || (isGoodFit && !splitLastGoodFitOnce)) {
         addToOutputAsUniformParams(
             bezier,
-            d.numOutputPointsPerBezier,
+            d.settings.numOutputPointsPerBezier,
             d.params,
             d.input,
             firstInputIndex,
@@ -1774,43 +1805,47 @@ void recursiveQuadraticFit(
         VGC_DEBUG_TMP("Adding fit {}", info);
     }
     else {
-        // We can try different recursive strategies here:
-        //
-        // 1. Pick the index corresponding to the furthest input point.
-        //    This is probably best for non-interactive uses.
-        //
-        // 2. Pick the index just before the current lastInputIndex. This may
-        //    work in interactive case where input points are added one by one,
-        //    and therefore if this iteration is a "bad fit", it usually means
-        //    that stopping one point before was actually a good fit. This might
-        //    minimize the amount of "changes" (flickering?) that the user can
-        //    see.
-        //
-        // 3. Pick half-way between firstInputIndex and lastInputIndex.
-        //    This might minimize the size difference between adjacent
-        //    Bézier curves.
-        //
-        // 4. Pick more than half-way, e.g., 3/4, etc.
-        //
-        //
-        // --- Stategy 1 ----
-        // Convert from index in `positions` to index in `input`
-        //index += firstInputIndex;
-        //
-        // --- Stategy 2 ----
-        //index = lastInputIndex - 1;
-        //
-        // --- Stategy 3/4 ----
-        Int ratio = 3; // 2 means half-way; 3 means 2/3 towards lastIndex, etc.
-        index = (firstInputIndex + (ratio - 1) * lastInputIndex) / ratio;
+        // Compute where to split based on the chosen SplitStategy
+        Int splitIndex = 0;
+        using SplitStrategy = experimental::SplineFitSplitStrategy;
+        switch (d.settings.splitStrategy) {
+        case SplitStrategy::Furthest:
+            // Convert from index in `positions` to index in `input`
+            splitIndex = firstInputIndex + index;
+            break;
+        case SplitStrategy::SecondLast:
+            splitIndex = lastInputIndex - 1;
+            break;
+        case SplitStrategy::IndexRatio:
+            splitIndex = core::ifloor<Int>(core::fastLerp<double>(
+                firstInputIndex, lastInputIndex, d.settings.indexRatio));
+            if (splitIndex <= firstInputIndex + 1) {
+                splitIndex = firstInputIndex + 1;
+            }
+            if (splitIndex >= lastInputIndex - 1) {
+                splitIndex = lastInputIndex - 1;
+            }
+            break;
+        }
 
-        recursiveQuadraticFit(d, firstInputIndex, index, false);
-        recursiveQuadraticFit(
-            d, index, lastInputIndex, splitLastGoodFitOnce && !isGoodFit);
+        // Recursively call two fits on both sides of the split index
+        bool newSplitLastGoodFitOnce = splitLastGoodFitOnce && !isGoodFit;
+        recursiveQuadraticFit(d, firstInputIndex, splitIndex, false);
+        recursiveQuadraticFit(d, splitIndex, lastInputIndex, newSplitLastGoodFitOnce);
     }
 }
 
 } // namespace
+
+QuadraticSplinePass::QuadraticSplinePass()
+    : SketchPass()
+    , settings_() {
+}
+
+QuadraticSplinePass::QuadraticSplinePass(const experimental::SplineFitSettings& settings)
+    : SketchPass()
+    , settings_(settings) {
+}
 
 void QuadraticSplinePass::doReset() {
     info_.clear();
@@ -1830,8 +1865,6 @@ void QuadraticSplinePass::doUpdateFrom(
         return;
     }
 
-    constexpr bool splitLastGoodFitOnce = true;
-
     // Remove all previously unstable output points and Bézier fits.
     //
     Int oldNumStablePoints = output.numStablePoints();
@@ -1848,16 +1881,11 @@ void QuadraticSplinePass::doUpdateFrom(
         output.append(input.first());
     }
 
-    constexpr Int numOutputPointsPerBezier = 8;
     RecursiveQuadraticFitData data = {
-        input,
-        numOutputPointsPerBezier,
-        output,
-        buffer_.positions,
-        buffer_.params,
-        info_};
+        settings_, input, output, buffer_.positions, buffer_.params, info_};
     Int firstIndex = info_.isEmpty() ? 0 : info_.last().lastInputIndex;
     Int lastIndex = input.length() - 1;
+    bool splitLastGoodFitOnce = settings_.splitLastGoodFitOnce;
     if (lastIndex > firstIndex) {
         recursiveQuadraticFit(data, firstIndex, lastIndex, splitLastGoodFitOnce);
     }
