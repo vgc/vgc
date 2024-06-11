@@ -1672,7 +1672,7 @@ std::pair<double, Int> maxDistanceSquared(
     Int n = positions.length();
 
     double distance = -1;
-    double index = 0;
+    Int index = 0;
     for (Int i = 1; i < n - 1; ++i) {
         const geometry::Vec2d& p = positions.getUnchecked(i);
         double u = params.getUnchecked(i);
@@ -1795,8 +1795,10 @@ void recursiveQuadraticFit(
             splitIndex = lastInputIndex - 1;
             break;
         case SplitStrategy::IndexRatio:
-            splitIndex = core::ifloor<Int>(core::fastLerp<double>(
-                firstInputIndex, lastInputIndex, d.settings.indexRatio));
+            splitIndex = core::ifloor<Int>(core::fastLerp(
+                core::narrow_cast<double>(firstInputIndex),
+                core::narrow_cast<double>(lastInputIndex),
+                d.settings.indexRatio));
             if (splitIndex <= firstInputIndex + 1) {
                 splitIndex = firstInputIndex + 1;
             }
