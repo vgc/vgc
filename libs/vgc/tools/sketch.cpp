@@ -246,8 +246,8 @@ bool setFromSavedInputPoints(
             (*pressures)[i],
             (*timestamps)[i],
             roundInput(pressurePenWidth((*pressures)[i], *penWidth)));
-        inputPoints.setNumStablePoints(inputPoints.length());
     }
+    inputPoints.updateChordLengths();
     inputPoints.setNumStablePoints(inputPoints.length());
 
     return true;
