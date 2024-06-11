@@ -1567,11 +1567,6 @@ geometry::QuadraticBezier2d quadraticFitWithFixedEndpoints(
     geometry::Vec2dArray& positions,
     core::DoubleArray& params) {
 
-    VGC_DEBUG_TMP(
-        "quadraticFitWithFixedEndpoints(firstIndex={}, lastIndex={})",
-        firstIndex,
-        lastIndex);
-
     if (auto res = quadraticFitCommon_(input, firstIndex, lastIndex, positions, params)) {
         return *res;
     }
@@ -1602,11 +1597,6 @@ geometry::QuadraticBezier2d quadraticFitWithFixedEndpointsAndStartTangent(
     geometry::Vec2dArray& positions,
     core::DoubleArray& params,
     const geometry::Vec2d& startTangent) {
-
-    VGC_DEBUG_TMP(
-        "quadraticFitWithFixedEndpointsAndStartTangent(firstIndex={}, lastIndex={})",
-        firstIndex,
-        lastIndex);
 
     if (auto res = quadraticFitCommon_(input, firstIndex, lastIndex, positions, params)) {
         return *res;
@@ -1710,11 +1700,6 @@ void recursiveQuadraticFit(
     Int lastInputIndex,
     bool splitLastGoodFitOnce) {
 
-    VGC_DEBUG_TMP(
-        "recursiveQuadraticFit(firstInputIndex={}, lastInputIndex={})",
-        firstInputIndex,
-        lastInputIndex);
-
     // Compute the best quadratic fit of the input points between
     // `firstInputIndex` and `lastInputIndex` (included).
     //
@@ -1741,9 +1726,6 @@ void recursiveQuadraticFit(
     double distanceSquaredThreshold = distanceThreshold * distanceThreshold;
     auto [distanceSquared, index] = maxDistanceSquared(bezier, d.positions, d.params);
     bool isWithinDistance = distanceSquared <= distanceSquaredThreshold;
-    VGC_DEBUG_TMP_EXPR(isWithinDistance);
-    VGC_DEBUG_TMP_EXPR(distanceSquared);
-    VGC_DEBUG_TMP_EXPR(index);
 
     // Determine whether we should use the flatness threshold.
     //
@@ -1752,7 +1734,6 @@ void recursiveQuadraticFit(
     bool enableFlatnessThreshold =
         (flatnessThreshold >= 0)
         && (numInputPoints > d.settings.flatnessThresholdMinPoints);
-    VGC_DEBUG_TMP_EXPR(enableFlatnessThreshold);
 
     // If enabled, compute the square of the flatness, and compare it with the
     // square of the flatness threshold. Alternatively, we could directly
@@ -1784,8 +1765,6 @@ void recursiveQuadraticFit(
             // Perfectly flat => flatnessSquared = core::DoubleInfinity;
         }
         isWithinFlatness = flatnessSquared >= flatnessSquaredThreshold;
-        VGC_DEBUG_TMP_EXPR(isWithinFlatness);
-        VGC_DEBUG_TMP_EXPR(flatnessSquared);
     }
 
     bool isGoodFit = isWithinDistance && isWithinFlatness;
@@ -1802,7 +1781,6 @@ void recursiveQuadraticFit(
         Int lastOutputIndex = d.output.length() - 1;
         detail::FitInfo info{lastInputIndex, lastOutputIndex, bezier};
         d.info.append(info);
-        VGC_DEBUG_TMP("Adding fit {}", info);
     }
     else {
         // Compute where to split based on the chosen SplitStategy
@@ -1855,12 +1833,6 @@ void QuadraticSplinePass::doUpdateFrom(
     const SketchPointBuffer& input,
     SketchPointBuffer& output) {
 
-    VGC_DEBUG_TMP("-------------------------------------------------------------------");
-    VGC_DEBUG_TMP(
-        "doUpdateFrom(input.length()={}, output.length()={})",
-        input.length(),
-        output.length());
-
     if (handleSmallInputWithFixedEndpoints(input, output)) {
         return;
     }
@@ -1873,8 +1845,6 @@ void QuadraticSplinePass::doUpdateFrom(
         info_.pop();
     }
     VGC_ASSERT(info_.isEmpty() || info_.last().lastOutputIndex == oldNumStablePoints - 1);
-    VGC_DEBUG_TMP_EXPR(oldNumStablePoints);
-    VGC_DEBUG_TMP("info after removing unstable: {}", info_);
 
     // Add the first output point unless it was already stable
     if (oldNumStablePoints == 0) {
