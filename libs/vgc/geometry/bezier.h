@@ -256,7 +256,7 @@ T quadraticBezierDerivative(const T& p0, const T& p1, const T& p2, Scalar u) {
 ///
 template<typename T>
 T quadraticBezierSecondDerivative(const T& p0, const T& p1, const T& p2) {
-    return 2 * (p0 - 2 * p1 + p2);
+    return 2 * ((p2 - p1) - (p1 - p0));
 }
 
 template<typename T, typename Scalar>
@@ -273,50 +273,132 @@ T quadraticBezierCasteljau(
     return bezierCasteljau(controlPoints, u, der);
 }
 
+/// \class QuadraticBezier
+/// \brief A Bézier curve of degree 2.
+///
 template<typename T, typename Scalar>
 class QuadraticBezier {
 public:
-    // Initialized with null control points.
+    /// Creates a zero-initialized quadratic Bézier.
+    ///
     QuadraticBezier() noexcept = default;
 
     VGC_WARNING_PUSH
     VGC_WARNING_MSVC_DISABLE(26495) // member variable uninitialized
-    /// Uninitialized construction.
+    /// Creates an uninitialized quadratic Bézier.
     ///
     QuadraticBezier(core::NoInit) noexcept
         : controlPoints_{core::noInit, core::noInit, core::noInit} {
     }
     VGC_WARNING_POP
 
+    /// Creates a quadratic Bézier with the given `controlPoints`.
+    ///
     QuadraticBezier(core::ConstSpan<T, 3> controlPoints) noexcept
         : QuadraticBezier(controlPoints[0], controlPoints[1], controlPoints[2]) {
     }
 
+    /// Creates a quadratic Bézier with the three given control points.
+    ///
     QuadraticBezier(const T& cp0, const T& cp1, const T& cp2) noexcept
         : controlPoints_{cp0, cp1, cp2} {
     }
 
+    /// Creates a quadratic Bézier reduced to the single point `p`.
+    ///
+    /// This is equivalent to: `QuadraticBezier(p, p, p)`.
+    ///
+    static QuadraticBezier point(const T& p) noexcept {
+        return QuadraticBezier(p, p, p);
+    }
+
+    /// Creates a quadratic Bézier representing the line segment from point `a`
+    /// to point `b`.
+    ///
+    /// This is equivalent to: `QuadraticBezier(a, 0.5 * (a + b), b)`.
+    ///
+    static QuadraticBezier lineSegment(const T& a, const T& b) noexcept {
+        constexpr Scalar half = 0.5f;
+        return QuadraticBezier(a, half * (a + b), b);
+    }
+
+    /// Returns whether this quadratic Bézier is close to being a linearly
+    /// parameterized line segment, within the given relative tolerance.
+    ///
+    bool isLineSegment(Scalar relTolSquared = 1e-12f) {
+        geometry::Vec2d a = (p2() - p1()) - (p1() - p0()); // = 0 when p1 = (p0+p2)/2
+        geometry::Vec2d b = p2() - p0();
+        return a.squaredLength() <= relTolSquared * b.squaredLength();
+        // Note: using `<=` rather than `<` is important to
+        // handle the case where both a and b are null vectors.
+    }
+
+    /// Returns the three control points of this quadratic Bézier.
+    ///
     const std::array<T, 3>& controlPoints() const {
         return controlPoints_;
     }
 
+    /// Returns the first control point of this quadratic Bézier.
+    ///
+    const T& p0() const {
+        return controlPoints()[0];
+    }
+
+    /// Returns the second control point of this quadratic Bézier.
+    ///
+    const T& p1() const {
+        return controlPoints()[1];
+    }
+
+    /// Returns the third control point of this quadratic Bézier.
+    ///
+    const T& p2() const {
+        return controlPoints()[2];
+    }
+
+    /// Returns the evaluation of this Bézier at parameter `u`.
+    ///
     T eval(Scalar u) const {
         return quadraticBezierCasteljau<T, Scalar>(controlPoints_, u);
     }
 
+    /// Returns the evaluation of this Bézier curve at parameter `u`, and
+    /// modifies `derivative` to become the derivative of this Bézier curve at
+    /// parameter `u`
+    ///
+    /// This is faster than calling `eval(u)` and `evalDerivative(u)`
+    /// separately.
+    ///
     T eval(Scalar u, T& derivative) const {
         return quadraticBezierCasteljau<T, Scalar>(controlPoints_, u, derivative);
     }
 
+    /// Returns the derivative of this Bézier curve at parameter `u`.
+    ///
     T evalDerivative(Scalar u) const {
         return quadraticBezierDerivative(
             controlPoints_[0], controlPoints_[1], controlPoints_[2], u);
     }
 
+    /// Returns the second derivative of this Bézier curve at parameter `u`.
+    ///
+    /// This is actually a constant that does not depend on `u`. This function
+    /// is only provided for consistency with `CubicBezier` to facilitate use
+    /// in template code.
+    ///
+    /// Prefer using `secondDerivative()` when possible.
+    ///
     T evalSecondDerivative(Scalar u) const {
         VGC_UNUSED(u);
-        return quadraticBezierSecondDerivative(
-            controlPoints_[0], controlPoints_[1], controlPoints_[2]);
+        return secondDerivative();
+    }
+
+    /// Returns the second derivative of this Bézier curve, which is a
+    /// constant.
+    ///
+    T secondDerivative() const {
+        return quadraticBezierSecondDerivative(p0(), p1(), p2());
     }
 
 private:
