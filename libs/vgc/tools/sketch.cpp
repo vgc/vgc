@@ -119,7 +119,8 @@ VGC_DEFINE_ENUM( //
     (SingleLineSegmentWithFreeEndpoints, "Single Line Segment (Free Endpoints)"),
     (SingleQuadraticSegmentWithFixedEndpoints,
      "Single Quadratic Segment (Fixed Endpoints)"),
-    (QuadraticSpline, "Quadratic Spline"))
+    (QuadraticSpline, "Quadratic Spline"),
+    (QuadraticBlend, "Quadratic Blend"))
 
 SketchModule::SketchModule(CreateKey key, const ui::ModuleContext& context)
     : Module(key, context) {
@@ -188,6 +189,8 @@ std::unique_ptr<SketchPass> makePreTransformPass(SketchFitMethod fitMethod) {
         return std::make_unique<SingleQuadraticSegmentWithFixedEndpointsPass>();
     case SketchFitMethod::QuadraticSpline:
         return std::make_unique<QuadraticSplinePass>();
+    case SketchFitMethod::QuadraticBlend:
+        return std::make_unique<QuadraticBlendPass>();
     }
     return std::make_unique<EmptyPass>();
 }

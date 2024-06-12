@@ -1691,7 +1691,7 @@ struct RecursiveQuadraticFitData {
     SketchPointBuffer& output;
     geometry::Vec2dArray& positions;
     core::DoubleArray& params;
-    core::Array<detail::FitInfo>& info;
+    core::Array<detail::SplineFitInfo>& info;
 };
 
 void recursiveQuadraticFit(
@@ -1779,7 +1779,7 @@ void recursiveQuadraticFit(
             lastInputIndex,
             d.output);
         Int lastOutputIndex = d.output.length() - 1;
-        detail::FitInfo info{lastInputIndex, lastOutputIndex, bezier};
+        detail::SplineFitInfo info{lastInputIndex, lastOutputIndex, bezier};
         d.info.append(info);
     }
     else {
@@ -1878,7 +1878,246 @@ void QuadraticSplinePass::doUpdateFrom(
     Int firstPossiblyStableFit =
         splitLastGoodFitOnce ? info_.length() - 3 : info_.length() - 2;
     for (Int i = firstPossiblyStableFit; i >= 0; --i) {
-        const detail::FitInfo& info = info_.getUnchecked(i);
+        const detail::SplineFitInfo& info = info_.getUnchecked(i);
+        if (info.lastInputIndex < input.numStablePoints()) {
+            newNumStablePoints = info.lastOutputIndex + 1;
+            break;
+        }
+    }
+    output.setNumStablePoints(newNumStablePoints);
+}
+
+namespace {
+
+struct RecursiveQuadraticBlendData {
+    const experimental::BlendFitSettings& settings;
+    const SketchPointBuffer& input;
+    SketchPointBuffer& output;
+    geometry::Vec2dArray& positions;
+    core::DoubleArray& params;
+    core::Array<detail::BlendFitInfo>& info;
+};
+
+void recursiveQuadraticBlend(
+    RecursiveQuadraticBlendData& d,
+    Int firstInputIndex,
+    Int lastInputIndex,
+    bool splitLastGoodFitOnce) {
+
+    VGC_UNUSED(splitLastGoodFitOnce);
+
+    // XXX For now we just do one fit, consider it good
+
+    // Compute the best quadratic fit of the input points between
+    // `firstInputIndex` and `lastInputIndex` (included).
+    //
+    geometry::QuadraticBezier2d bezier;
+    // if (d.info.isEmpty()) {
+    bezier = quadraticFitWithFixedEndpoints(
+        d.input, firstInputIndex, lastInputIndex, d.positions, d.params);
+    // }
+    // else {
+    //     const geometry::QuadraticBezier2d& lastBezier = d.info.last().bezier;
+    //     geometry::Vec2d t = lastBezier.p2() - lastBezier.p1();
+    //     bezier = quadraticFitWithFixedEndpointsAndStartTangent(
+    //         d.input, firstInputIndex, lastInputIndex, d.positions, d.params, t);
+    // }
+
+    Int firstOutputIndex = d.output.length() - 1;
+    addToOutputAsUniformParams(
+        bezier,
+        d.settings.numOutputPointsPerBezier,
+        d.params,
+        d.input,
+        firstInputIndex,
+        lastInputIndex,
+        d.output);
+    Int lastOutputIndex = d.output.length() - 1;
+    detail::BlendFitInfo info{
+        firstInputIndex, lastInputIndex, firstOutputIndex, lastOutputIndex, bezier};
+    d.info.append(info);
+
+    /*
+    // Compute the best quadratic fit of the input points between
+    // `firstInputIndex` and `lastInputIndex` (included).
+    //
+    // If a quadratic fit has already been computed for the previous points,
+    // then we use its end tangent as our start tangent to enforce
+    // G1-continuity.
+    //
+    geometry::QuadraticBezier2d bezier;
+    if (d.info.isEmpty()) {
+        bezier = quadraticFitWithFixedEndpoints(
+            d.input, firstInputIndex, lastInputIndex, d.positions, d.params);
+    }
+    else {
+        const geometry::QuadraticBezier2d& lastBezier = d.info.last().bezier;
+        geometry::Vec2d t = lastBezier.p2() - lastBezier.p1();
+        bezier = quadraticFitWithFixedEndpointsAndStartTangent(
+            d.input, firstInputIndex, lastInputIndex, d.positions, d.params, t);
+    }
+    
+    // Compute the max distance squared between the input points and the Bézier fit,
+    // and check whether it is within the chosen threshold.
+    //
+    double distanceThreshold = d.settings.distanceThreshold;
+    double distanceSquaredThreshold = distanceThreshold * distanceThreshold;
+    auto [distanceSquared, index] = maxDistanceSquared(bezier, d.positions, d.params);
+    bool isWithinDistance = distanceSquared <= distanceSquaredThreshold;
+    
+    // Determine whether we should use the flatness threshold.
+    //
+    Int numInputPoints = lastInputIndex - firstInputIndex + 1;
+    double flatnessThreshold = d.settings.flatnessThreshold;
+    bool enableFlatnessThreshold =
+        (flatnessThreshold >= 0)
+        && (numInputPoints > d.settings.flatnessThresholdMinPoints);
+    
+    // If enabled, compute the square of the flatness, and compare it with the
+    // square of the flatness threshold. Alternatively, we could directly
+    // define the flatness to be the square of the current flatness, but then
+    // choosing a flatness threshold would be less intuitive since the scale
+    // would be quadratic instead of linear.
+    //
+    //                             o        --> 2x taller means 2x less flat
+    //         o
+    //   o           o       o           o
+    //
+    //   B0 = (0, 0)         B0 = (0, 0)
+    //   B1 = (2, 1)         B1 = (2, 2)
+    //   B2 = (4, 0)         B2 = (4, 0)
+    //   flatness  = 1       flatness  = 0.5
+    //   flatness² = 1       flatness² = 0.25
+    //
+    bool isWithinFlatness = true;
+    if (enableFlatnessThreshold) {
+        double flatnessSquaredThreshold = flatnessThreshold * flatnessThreshold;
+        double flatnessSquared = core::DoubleInfinity;
+        flatnessThreshold *= flatnessThreshold;
+        double der2 = bezier.secondDerivative().squaredLength();
+        double l2 = (bezier.p2() - bezier.p0()).squaredLength();
+        if (der2 > 0) {
+            flatnessSquared = l2 / der2;
+        }
+        else {
+            // Perfectly flat => flatnessSquared = core::DoubleInfinity;
+        }
+        isWithinFlatness = flatnessSquared >= flatnessSquaredThreshold;
+    }
+    
+    bool isGoodFit = isWithinDistance && isWithinFlatness;
+    bool cannotSplit = (distanceSquared == -1);
+    if (cannotSplit || (isGoodFit && !splitLastGoodFitOnce)) {
+        addToOutputAsUniformParams(
+            bezier,
+            d.settings.numOutputPointsPerBezier,
+            d.params,
+            d.input,
+            firstInputIndex,
+            lastInputIndex,
+            d.output);
+        Int lastOutputIndex = d.output.length() - 1;
+        detail::SplineFitInfo info{lastInputIndex, lastOutputIndex, bezier};
+        d.info.append(info);
+    }
+    else {
+        // Compute where to split based on the chosen SplitStategy
+        Int splitIndex = 0;
+        using SplitStrategy = experimental::SplineFitSplitStrategy;
+        switch (d.settings.splitStrategy) {
+        case SplitStrategy::Furthest:
+            // Convert from index in `positions` to index in `input`
+            splitIndex = firstInputIndex + index;
+            break;
+        case SplitStrategy::SecondLast:
+            splitIndex = lastInputIndex - 1;
+            break;
+        case SplitStrategy::IndexRatio:
+            splitIndex = core::ifloor<Int>(core::fastLerp(
+                core::narrow_cast<double>(firstInputIndex),
+                core::narrow_cast<double>(lastInputIndex),
+                d.settings.indexRatio));
+            if (splitIndex <= firstInputIndex + 1) {
+                splitIndex = firstInputIndex + 1;
+            }
+            if (splitIndex >= lastInputIndex - 1) {
+                splitIndex = lastInputIndex - 1;
+            }
+            break;
+        }
+        
+        // Recursively call two fits on both sides of the split index
+        bool newSplitLastGoodFitOnce = splitLastGoodFitOnce && !isGoodFit;
+        recursiveQuadraticFit(d, firstInputIndex, splitIndex, false);
+        recursiveQuadraticFit(d, splitIndex, lastInputIndex, newSplitLastGoodFitOnce);
+    }
+*/
+}
+
+} // namespace
+
+QuadraticBlendPass::QuadraticBlendPass()
+    : SketchPass()
+    , settings_() {
+}
+
+QuadraticBlendPass::QuadraticBlendPass(const experimental::BlendFitSettings& settings)
+    : SketchPass()
+    , settings_(settings) {
+}
+
+void QuadraticBlendPass::doReset() {
+    info_.clear();
+}
+
+void QuadraticBlendPass::doUpdateFrom(
+    const SketchPointBuffer& input,
+    SketchPointBuffer& output) {
+
+    if (handleSmallInputWithFixedEndpoints(input, output)) {
+        return;
+    }
+
+    // Remove all previously unstable output points and Bézier fits.
+    //
+    Int oldNumStablePoints = output.numStablePoints();
+    output.resize(oldNumStablePoints);
+    while (!info_.isEmpty() && info_.last().lastOutputIndex >= oldNumStablePoints) {
+        info_.pop();
+    }
+    VGC_ASSERT(info_.isEmpty() || info_.last().lastOutputIndex == oldNumStablePoints - 1);
+
+    // Add the first output point unless it was already stable
+    if (oldNumStablePoints == 0) {
+        output.append(input.first());
+    }
+
+    RecursiveQuadraticBlendData data = {
+        settings_, input, output, buffer_.positions, buffer_.params, info_};
+    Int firstIndex = info_.isEmpty() ? 0 : info_.last().lastInputIndex;
+    Int lastIndex = input.length() - 1;
+    bool splitLastGoodFitOnce = settings_.splitLastGoodFitOnce;
+    if (lastIndex > firstIndex) {
+        recursiveQuadraticBlend(data, firstIndex, lastIndex, splitLastGoodFitOnce);
+    }
+
+    output.updateChordLengths();
+
+    // Determine the new number of stable output points and Bézier fits, by
+    // iterating backward over all Bézier fits.
+    //
+    // We start at i = numFits - 2 (or -3) because the last fit (or the last
+    // two fits) is always considered unstable, even if all the input points
+    // were stable.
+    //
+    Int newNumStablePoints = 0;
+    if (input.numStablePoints() > 0) {
+        newNumStablePoints = 1;
+    }
+    Int firstPossiblyStableFit =
+        splitLastGoodFitOnce ? info_.length() - 3 : info_.length() - 2;
+    for (Int i = firstPossiblyStableFit; i >= 0; --i) {
+        const detail::BlendFitInfo& info = info_.getUnchecked(i);
         if (info.lastInputIndex < input.numStablePoints()) {
             newNumStablePoints = info.lastOutputIndex + 1;
             break;

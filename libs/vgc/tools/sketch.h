@@ -55,6 +55,9 @@ enum class SketchFitMethod : Int8 {
 
     // Fits a sequence of quadratic segments through the input points.
     QuadraticSpline,
+
+    // Blends overlapping local quadratic fits together.
+    QuadraticBlend,
 };
 
 VGC_TOOLS_API
