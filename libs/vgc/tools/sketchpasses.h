@@ -250,7 +250,7 @@ struct BlendFitSettings {
     /// The distance is expressed in the same unit as the input points
     /// coordinates, which is typically screen physical pixels.
     ///
-    double distanceThreshold = 1.8;
+    double distanceThreshold = 1.2;
 
     /// Whether to always pre-emptively split the last good fit into two fits.
     ///
@@ -261,7 +261,7 @@ struct BlendFitSettings {
     /// It is recommended to set this to false if `splitStrategy` is
     /// `SecondLast`.
     ///
-    bool splitLastGoodFitOnce = true;
+    bool splitLastGoodFitOnce = false;
 
     /// How "flat" should a quadratic Bézier segment be in order to be considered
     /// a good fit. It is computed as the ratio between the length of (B2-B0) and the
@@ -294,7 +294,7 @@ struct BlendFitSettings {
 
     /// The ratio to use when `splitStrategy` is `IndexRatio`.
     ///
-    double indexRatio = 0.67;
+    double indexRatio = 0.75;
 };
 
 } // namespace experimental
@@ -350,6 +350,9 @@ private:
     experimental::BlendFitSettings settings_;
     core::Array<detail::BlendFitInfo> info_;
     detail::FitBuffer buffer_;
+
+    // more buffers
+    core::DoubleArray lastGoodParams;
 };
 
 } // namespace vgc::tools
