@@ -399,10 +399,10 @@ void VacKeyEdge::onPaintDraw(
     if (shouldPaintStroke && !graphics.strokeGeometry()) {
         hasNewStrokeGraphics = true;
 
-        graphics.setStrokeGeometry(engine->createDynamicTriangleStripView(
-            BuiltinGeometryLayout::XYUV_iRGBA, IndexFormat::UInt32));
-        graphics.setJoinGeometry(engine->createDynamicTriangleStripView(
-            BuiltinGeometryLayout::XYUV_iRGBA, IndexFormat::UInt32));
+        auto layout = BuiltinGeometryLayout::XYUV_iRGBA;
+        auto indexFormat = IndexFormat::UInt32;
+        graphics.setStrokeGeometry(engine->createTriangleStrip(layout, indexFormat));
+        graphics.setJoinGeometry(engine->createTriangleStrip(layout, indexFormat));
 
         geometry::Vec2fArray strokeVertices;
         core::Array<UInt32> strokeIndices;
@@ -451,28 +451,30 @@ void VacKeyEdge::onPaintDraw(
 
     if (needsCenterlineGeometry && !graphics.centerlineGeometry()) {
         hasNewCenterlineGraphics = true;
-        graphics.setCenterlineGeometry(engine->createDynamicTriangleStripView(
-            BuiltinGeometryLayout::XYDxDy_iXYRotWRGBA));
 
+        auto layout = BuiltinGeometryLayout::XYDxDy_iXYRotWRGBA;
+
+        // Create buffers and geometry view for centerline
+        graphics.setCenterlineGeometry(engine->createTriangleStrip(layout));
+
+        // Create buffers and geometry views for offset lines
         if (shouldPaintOffsetLine0) {
-            graphics.setOffsetLineGeometry(
-                0,
-                engine->createDynamicTriangleStripView(
-                    BuiltinGeometryLayout::XYDxDy_iXYRotWRGBA));
+            graphics.setOffsetLineGeometry(0, engine->createTriangleStrip(layout));
         }
         if (shouldPaintOffsetLine1) {
-            graphics.setOffsetLineGeometry(
-                1,
-                engine->createDynamicTriangleStripView(
-                    BuiltinGeometryLayout::XYDxDy_iXYRotWRGBA));
+            graphics.setOffsetLineGeometry(1, engine->createTriangleStrip(layout));
         }
 
+        // Create geometry view for the selection. It shares its main vertex
+        // buffer (XYDxDy data) with the centerline, but has its own instance
+        // buffer (XYRotWRGBA data) so that it can be drawn with a different
+        // color and width.
+        //
         GeometryViewCreateInfo createInfo = {};
-        createInfo.setBuiltinGeometryLayout(BuiltinGeometryLayout::XYDxDy_iXYRotWRGBA);
+        createInfo.setBuiltinGeometryLayout(layout);
         createInfo.setPrimitiveType(PrimitiveType::TriangleStrip);
         createInfo.setVertexBuffer(0, graphics.centerlineGeometry()->vertexBuffer(0));
-        BufferPtr selectionInstanceBuffer = engine->createVertexBuffer(0);
-        createInfo.setVertexBuffer(1, selectionInstanceBuffer);
+        createInfo.setVertexBuffer(1, engine->createVertexBuffer());
         graphics.setSelectionGeometry(engine->createGeometryView(createInfo));
 
         // X, Y, Rot, Width, R, G, B, A
@@ -509,20 +511,18 @@ void VacKeyEdge::onPaintDraw(
             for (const geometry::StrokeSample2d& s : preJoinSamples) {
                 geometry::Vec2f p = geometry::Vec2f(s.position());
                 geometry::Vec2f n = geometry::Vec2f(s.normal());
-                // clang-format off
                 lineVertices.emplaceLast(p.x(), p.y(), -n.x(), -n.y());
-                lineVertices.emplaceLast(p.x(), p.y(),  n.x(),  n.y());
+                lineVertices.emplaceLast(p.x(), p.y(), n.x(), n.y());
                 if (shouldPaintOffsetLine0) {
                     geometry::Vec2f p0 = geometry::Vec2f(s.offsetPoint(0));
                     offsetLine0Vertices.emplaceLast(p0.x(), p0.y(), -n.x(), -n.y());
-                    offsetLine0Vertices.emplaceLast(p0.x(), p0.y(),  n.x(),  n.y());
+                    offsetLine0Vertices.emplaceLast(p0.x(), p0.y(), n.x(), n.y());
                 }
                 if (shouldPaintOffsetLine1) {
                     geometry::Vec2f p1 = geometry::Vec2f(s.offsetPoint(1));
                     offsetLine1Vertices.emplaceLast(p1.x(), p1.y(), -n.x(), -n.y());
-                    offsetLine1Vertices.emplaceLast(p1.x(), p1.y(),  n.x(),  n.y());
+                    offsetLine1Vertices.emplaceLast(p1.x(), p1.y(), n.x(), n.y());
                 }
-                // clang-format on
             }
             {
                 // end cap

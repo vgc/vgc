@@ -940,8 +940,7 @@ void ColorPaletteSelector::setContinuous(bool isContinuous) {
 
 void ColorPaletteSelector::onPaintCreate(graphics::Engine* engine) {
     SuperClass::onPaintCreate(engine);
-    triangles_ =
-        engine->createDynamicTriangleListView(graphics::BuiltinGeometryLayout::XYRGB);
+    triangles_ = engine->createTriangleList(graphics::BuiltinGeometryLayout::XYRGB);
 }
 
 namespace {
@@ -2495,8 +2494,7 @@ void ColorPreview::onResize() {
 
 void ColorPreview::onPaintCreate(graphics::Engine* engine) {
     SuperClass::onPaintCreate(engine);
-    triangles_ =
-        engine->createDynamicTriangleListView(graphics::BuiltinGeometryLayout::XYRGB);
+    triangles_ = engine->createTriangleList(graphics::BuiltinGeometryLayout::XYRGB);
 }
 
 void ColorPreview::onPaintDraw(graphics::Engine* engine, ui::PaintOptions options) {
@@ -2681,8 +2679,7 @@ void ColorListView::onResize() {
 
 void ColorListView::onPaintCreate(graphics::Engine* engine) {
     SuperClass::onPaintCreate(engine);
-    triangles_ =
-        engine->createDynamicTriangleListView(graphics::BuiltinGeometryLayout::XYRGB);
+    triangles_ = engine->createTriangleList(graphics::BuiltinGeometryLayout::XYRGB);
 }
 
 namespace {

@@ -49,8 +49,7 @@ void ImageBox::onResize() {
 
 void ImageBox::onPaintCreate(graphics::Engine* engine) {
     SuperClass::onPaintCreate(engine);
-    quad_ =
-        engine->createDynamicTriangleStripView(graphics::BuiltinGeometryLayout::XYUVRGBA);
+    quad_ = engine->createTriangleStrip(graphics::BuiltinGeometryLayout::XYUVRGBA);
 }
 
 void ImageBox::onPaintDraw(graphics::Engine* engine, PaintOptions options) {

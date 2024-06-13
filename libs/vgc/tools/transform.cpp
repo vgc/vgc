@@ -1132,14 +1132,14 @@ void TransformBox::onPaintCreate(graphics::Engine* engine) {
     //cornersGeometry_ = graphics::detail::createScreenSpaceSquare(
     //    engine, geometry::Vec2f(), 2.f, core::Color());
     for (Int i = 0; i < 4; ++i) {
-        cornerGeometry_[i] = engine->createDynamicGeometryView(
+        cornerGeometry_[i] = engine->createGeometry(
             graphics::PrimitiveType::TriangleStrip,
             graphics::BuiltinGeometryLayout::XYDxDy_iXYRotWRGBA);
     }
 
     pivotCircleGeometry_ = graphics::detail::createCircleWithScreenSpaceThickness(
         engine, 1.f, core::Color(), 15);
-    pivotCross0Geometry_ = engine->createDynamicGeometryView(
+    pivotCross0Geometry_ = engine->createGeometry(
         graphics::PrimitiveType::TriangleStrip,
         graphics::BuiltinGeometryLayout::XYDxDy_iXYRotWRGBA);
     geometry::Vec2fArray cross0Vertices = {
@@ -1154,7 +1154,7 @@ void TransformBox::onPaintCreate(graphics::Engine* engine) {
     };
     engine->updateBufferData(
         pivotCross0Geometry_->vertexBuffer(0), std::move(cross0Vertices));
-    pivotCross1Geometry_ = engine->createDynamicGeometryView(
+    pivotCross1Geometry_ = engine->createGeometry(
         graphics::PrimitiveType::TriangleStrip,
         graphics::BuiltinGeometryLayout::XYDxDy_iXYRotWRGBA);
     geometry::Vec2fArray cross1Vertices = {

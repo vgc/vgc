@@ -216,21 +216,37 @@ public:
         return info_.vertexBuffers();
     }
 
-    const BufferPtr& vertexBuffer(Int i) const {
-        return info_.vertexBuffer(i);
+    const BufferPtr& vertexBuffer(Int bufferIndex) const {
+        return info_.vertexBuffer(bufferIndex);
+    }
+
+    const BufferPtr& vertexBuffer() const {
+        return info_.vertexBuffer(0);
+    }
+
+    const BufferPtr& instanceBuffer() const {
+        return info_.vertexBuffer(1);
     }
 
     const VertexBufferStridesArray& strides() const {
         return info_.strides();
     }
 
+    Int stride(Int bufferIndex) const {
+        return info_.strides()[bufferIndex];
+    }
+
     const VertexBufferOffsetsArray& offsets() const {
         return info_.offsets();
     }
 
+    Int offset(Int bufferIndex) const {
+        return info_.offsets()[bufferIndex];
+    }
+
     Int numIndices() const {
         IndexFormat format = indexFormat();
-        const BufferPtr& buffer = info_.indexBuffer();
+        const BufferPtr& buffer = indexBuffer();
         if (!buffer || format == IndexFormat::None) {
             return 0;
         }
@@ -239,22 +255,20 @@ public:
     }
 
     Int numVertices() const {
-        const BufferPtr& buffer = info_.vertexBuffers()[0];
+        const BufferPtr& buffer = vertexBuffer(0);
         if (!buffer) {
             return 0;
         }
-        Int elementSize = info_.strides()[0];
-        return (elementSize > 0) ? buffer->lengthInBytes() / elementSize : 1;
-        // elementSize == 0 is a really special case of void vertex that enables
+        Int bytesPerVertex = stride(0);
+        return (bytesPerVertex > 0) ? buffer->lengthInBytes() / bytesPerVertex : 1;
+        // Note: bytesPerVertex == 0 is a special case of void vertex that enables
         // shader invocation without input geometry.
     }
 
     Int numInstances() const {
-        Int instanceElementSize = info_.strides()[1];
-        const BufferPtr& buffer = info_.vertexBuffers()[1];
-        return (instanceElementSize > 0 && buffer)
-                   ? buffer->lengthInBytes() / instanceElementSize
-                   : 0;
+        const BufferPtr& buffer = vertexBuffer(1);
+        Int bytesPerInst = stride(1);
+        return (bytesPerInst > 0 && buffer) ? buffer->lengthInBytes() / bytesPerInst : 0;
     }
 
 protected:

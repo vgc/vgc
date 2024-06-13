@@ -107,13 +107,12 @@ FramebufferPtr Engine::createFramebuffer(const ImageViewPtr& colorImageView) {
     return framebuffer;
 }
 
-BufferPtr
-Engine::createBuffer(const BufferCreateInfo& createInfo, Int initialLengthInBytes) {
+BufferPtr Engine::createBuffer(const BufferCreateInfo& createInfo, Int lengthInBytes) {
 
-    if (initialLengthInBytes < 0) {
+    if (lengthInBytes < 0) {
         throw core::NegativeIntegerError(core::format(
-            "Negative initialLengthInBytes ({}) provided to Engine::createBuffer().",
-            initialLengthInBytes));
+            "Negative lengthInBytes ({}) provided to Engine::createBuffer().",
+            lengthInBytes));
     }
 
     // sanitize create info
@@ -121,93 +120,68 @@ Engine::createBuffer(const BufferCreateInfo& createInfo, Int initialLengthInByte
     sanitize_(sanitizedCreateInfo);
 
     BufferPtr buffer = constructBuffer_(sanitizedCreateInfo);
-    buffer->lengthInBytes_ = initialLengthInBytes;
+    buffer->lengthInBytes_ = lengthInBytes;
 
     struct CommandParameters {
         BufferPtr buffer;
-        Int initialLengthInBytes;
+        Int lengthInBytes;
     };
     queueLambdaCommandWithParameters_<CommandParameters>(
         "initBufferZeroed",
         [](Engine* engine, const CommandParameters& p) {
-            engine->initBuffer_(p.buffer.get(), nullptr, p.initialLengthInBytes);
+            engine->initBuffer_(p.buffer.get(), nullptr, p.lengthInBytes);
         },
         buffer,
-        initialLengthInBytes);
+        lengthInBytes);
     return buffer;
 }
 
-BufferPtr Engine::createVertexBuffer(Int initialLengthInBytes) {
-
-    if (initialLengthInBytes < 0) {
-        throw core::NegativeIntegerError(core::format(
-            "Negative initialLengthInBytes ({}) provided to "
-            "Engine::createVertexBuffer().",
-            initialLengthInBytes));
-    }
-
-    BufferCreateInfo createInfo = BufferCreateInfo(BindFlag::VertexBuffer, true);
-    return createBuffer(createInfo, initialLengthInBytes);
+BufferPtr Engine::createVertexBuffer(bool isDynamic) {
+    BufferCreateInfo createInfo(BindFlag::VertexBuffer, isDynamic);
+    return createBuffer(createInfo);
 }
 
-BufferPtr Engine::createIndexBuffer(IndexFormat indexFormat, Int initialIndexCount) {
-    if (initialIndexCount < 0) {
-        throw core::NegativeIntegerError(core::format(
-            "Negative initialIndexCount ({}) provided to Engine::createIndexBuffer().",
-            initialIndexCount));
-    }
-
-    size_t indexSize = 0;
-    switch (indexFormat) {
-    case IndexFormat::UInt16:
-        indexSize = sizeof(uint16_t);
-        break;
-    case IndexFormat::UInt32:
-        indexSize = sizeof(uint32_t);
-        break;
-    default:
-        throw core::LogicError(
-            "Engine::createIndexBuffer(): invalid IndexFormat enum value.");
-    }
-
-    BufferCreateInfo createInfo = BufferCreateInfo(BindFlag::IndexBuffer, true);
-    return createBuffer(createInfo, initialIndexCount * indexSize);
+BufferPtr Engine::createIndexBuffer(bool isDynamic) {
+    BufferCreateInfo createInfo(BindFlag::IndexBuffer, isDynamic);
+    return createBuffer(createInfo);
 }
 
-GeometryViewPtr Engine::createDynamicGeometryView(
+GeometryViewPtr Engine::createGeometryView(const GeometryViewCreateInfo& createInfo) {
+
+    GeometryViewCreateInfo sanitizedCreateInfo = createInfo;
+    sanitize_(sanitizedCreateInfo);
+
+    GeometryViewPtr geometryView = constructGeometryView_(sanitizedCreateInfo);
+    queueLambdaCommandWithParameters_<GeometryViewPtr>(
+        "initGeometryView",
+        [](Engine* engine, const GeometryViewPtr& p) {
+            engine->initGeometryView_(p.get());
+        },
+        geometryView);
+    return geometryView;
+}
+
+GeometryViewPtr Engine::createGeometry(
     PrimitiveType primitiveType,
     BuiltinGeometryLayout vertexLayout,
-    IndexFormat indexFormat) {
+    IndexFormat indexFormat,
+    bool isDynamic) {
 
-    BufferPtr vertexBuffer = createVertexBuffer(0);
+    BufferPtr vertexBuffer = createVertexBuffer(isDynamic);
     GeometryViewCreateInfo createInfo = {};
     createInfo.setBuiltinGeometryLayout(vertexLayout);
     createInfo.setPrimitiveType(primitiveType);
     createInfo.setVertexBuffer(0, vertexBuffer);
     if (vertexLayout >= BuiltinGeometryLayout::XY_iRGBA) {
-        BufferPtr instanceBuffer = createVertexBuffer(0);
+        BufferPtr instanceBuffer = createVertexBuffer(isDynamic);
         createInfo.setVertexBuffer(1, instanceBuffer);
     }
     if (indexFormat != IndexFormat::None) {
-        BufferPtr indexBuffer = createIndexBuffer(indexFormat, 0);
+        BufferPtr indexBuffer = createIndexBuffer(isDynamic);
         createInfo.setIndexBuffer(indexBuffer);
         createInfo.setIndexFormat(indexFormat);
     }
     return createGeometryView(createInfo);
-}
-
-GeometryViewPtr Engine::createDynamicTriangleListView(
-    BuiltinGeometryLayout vertexLayout,
-    IndexFormat indexFormat) {
-    return createDynamicGeometryView(
-        PrimitiveType::TriangleList, vertexLayout, indexFormat);
-}
-
-GeometryViewPtr Engine::createDynamicTriangleStripView(
-    BuiltinGeometryLayout vertexLayout,
-    IndexFormat indexFormat) {
-    return createDynamicGeometryView(
-        PrimitiveType::TriangleStrip, vertexLayout, indexFormat);
 }
 
 ImagePtr Engine::createImage(const ImageCreateInfo& createInfo) {
@@ -238,8 +212,7 @@ ImagePtr Engine::createImage(const ImageCreateInfo& createInfo) {
     return image;
 }
 
-ImagePtr
-Engine::createImage(const ImageCreateInfo& createInfo, core::Array<char> initialData) {
+ImagePtr Engine::createImage(const ImageCreateInfo& createInfo, core::Array<char> data) {
 
     // sanitize create info
     ImageCreateInfo sanitizedCreateInfo = createInfo;
@@ -259,16 +232,16 @@ Engine::createImage(const ImageCreateInfo& createInfo, core::Array<char> initial
     // queue init
     struct CommandParameters {
         ImagePtr image;
-        core::Array<char> initialData;
+        core::Array<char> data;
     };
     queueLambdaCommandWithParameters_<CommandParameters>(
         "initImage",
         [](Engine* engine, const CommandParameters& p) {
-            core::Span<const char> m0 = {p.initialData.data(), p.initialData.length()};
+            core::Span<const char> m0 = {p.data.data(), p.data.length()};
             engine->initImage_(p.image.get(), &m0, 1);
         },
         image,
-        std::move(initialData));
+        std::move(data));
     return image;
 }
 
@@ -348,21 +321,6 @@ SamplerStatePtr Engine::createSamplerState(const SamplerStateCreateInfo& createI
         },
         samplerState);
     return samplerState;
-}
-
-GeometryViewPtr Engine::createGeometryView(const GeometryViewCreateInfo& createInfo) {
-
-    GeometryViewCreateInfo sanitizedCreateInfo = createInfo;
-    sanitize_(sanitizedCreateInfo);
-
-    GeometryViewPtr geometryView = constructGeometryView_(sanitizedCreateInfo);
-    queueLambdaCommandWithParameters_<GeometryViewPtr>(
-        "initGeometryView",
-        [](Engine* engine, const GeometryViewPtr& p) {
-            engine->initGeometryView_(p.get());
-        },
-        geometryView);
-    return geometryView;
 }
 
 BlendStatePtr Engine::createBlendState(const BlendStateCreateInfo& createInfo) {

@@ -169,7 +169,7 @@ void PaintBucket::onMouseLeave() {
 void PaintBucket::onPaintCreate(graphics::Engine* engine) {
     using Layout = graphics::BuiltinGeometryLayout;
     SuperClass::onPaintCreate(engine);
-    faceCandidateFillGeometry_ = engine->createDynamicTriangleListView(Layout::XY_iRGBA);
+    faceCandidateFillGeometry_ = engine->createTriangleList(Layout::XY_iRGBA);
 }
 
 void PaintBucket::onPaintDraw(graphics::Engine* engine, ui::PaintOptions options) {
@@ -183,11 +183,11 @@ void PaintBucket::onPaintDraw(graphics::Engine* engine, ui::PaintOptions options
     if (hasFaceCandidate_() && faceCandidateFillGeometry_) {
         core::Color c = color();
         if (isFaceCandidateGraphicsDirty_) {
-            engine->updateBufferData(
-                faceCandidateFillGeometry_->vertexBuffer(0), //
+            engine->updateVertexBufferData(
+                faceCandidateFillGeometry_, //
                 faceCandidateTriangles_);
-            engine->updateBufferData(
-                faceCandidateFillGeometry_->vertexBuffer(1), //
+            engine->updateInstanceBufferData(
+                faceCandidateFillGeometry_, //
                 core::Array<float>({c.r(), c.g(), c.b(), 1}));
             isFaceCandidateGraphicsDirty_ = false;
         }

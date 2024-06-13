@@ -50,7 +50,7 @@ class VGC_GRAPHICS_API BufferCreateInfo {
 public:
     constexpr BufferCreateInfo() noexcept = default;
 
-    constexpr BufferCreateInfo(BindFlags bindFlags, bool isDynamic) noexcept
+    constexpr BufferCreateInfo(BindFlags bindFlags, bool isDynamic = true) noexcept
         : usage_(isDynamic ? Usage::Dynamic : Usage::Immutable)
         , bindFlags_(bindFlags)
         , cpuAccessFlags_(isDynamic ? CpuAccessFlag::Write : CpuAccessFlag::None) {
@@ -118,8 +118,9 @@ protected:
         }
         if (bindFlags & BindFlag::ConstantBuffer) {
             if (bindFlags != BindFlag::ConstantBuffer) {
-                throw core::LogicError("BindFlags::UniformBuffer cannot be combined with "
-                                       "any other bind flag");
+                throw core::LogicError(
+                    "BindFlags::ConstantBuffer cannot be combined with "
+                    "any other bind flag");
             }
         }
     }

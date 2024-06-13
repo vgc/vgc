@@ -737,8 +737,7 @@ void PanelArea::updateChildrenGeometry() {
 
 void PanelArea::onPaintCreate(graphics::Engine* engine) {
     SuperClass::onPaintCreate(engine);
-    triangles_ =
-        engine->createDynamicTriangleListView(graphics::BuiltinGeometryLayout::XYRGB);
+    triangles_ = engine->createTriangleList(graphics::BuiltinGeometryLayout::XYRGB);
 }
 
 void PanelArea::onPaintDraw(graphics::Engine* engine, PaintOptions options) {

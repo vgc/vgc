@@ -130,8 +130,7 @@ void LineEdit::onResize() {
 
 void LineEdit::onPaintCreate(graphics::Engine* engine) {
     SuperClass::onPaintCreate(engine);
-    triangles_ =
-        engine->createDynamicTriangleListView(graphics::BuiltinGeometryLayout::XYRGB);
+    triangles_ = engine->createTriangleList(graphics::BuiltinGeometryLayout::XYRGB);
 }
 
 void LineEdit::onPaintDraw(graphics::Engine* engine, PaintOptions options) {
