@@ -261,12 +261,12 @@ public:
         }
         Int bytesPerVertex = stride(0);
         return (bytesPerVertex > 0) ? buffer->lengthInBytes() / bytesPerVertex : 1;
-        // Note: stride == 0 is a special case of void vertex that enables
+        // Note: bytesPerVertex == 0 is a special case of void vertex that enables
         // shader invocation without input geometry.
     }
 
     Int numInstances() const {
-        const BufferPtr& buffer = vertexBuffers()[1];
+        const BufferPtr& buffer = vertexBuffer(1);
         Int bytesPerInst = stride(1);
         return (bytesPerInst > 0 && buffer) ? buffer->lengthInBytes() / bytesPerInst : 0;
     }
