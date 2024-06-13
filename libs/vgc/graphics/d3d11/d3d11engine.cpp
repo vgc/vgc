@@ -1138,7 +1138,7 @@ BufferPtr D3d11Engine::constructBuffer_(const BufferCreateInfo& createInfo) {
     if (bindFlags & BindFlag::ConstantBuffer) {
         desc.BindFlags |= D3D11_BIND_FLAG::D3D11_BIND_CONSTANT_BUFFER;
         if (bindFlags != BindFlag::ConstantBuffer) {
-            throw core::LogicError("D3d11Buffer: BindFlag::UniformBuffer cannot be "
+            throw core::LogicError("D3d11Buffer: BindFlag::ConstantBuffer cannot be "
                                    "combined with any other bind flag.");
         }
     }
@@ -1817,6 +1817,7 @@ void D3d11Engine::setStageConstantBuffers_(
     Int startIndex,
     Int count,
     ShaderStage shaderStage) {
+
     const Int stageIdx = core::toUnderlying(shaderStage);
     StageConstantBufferArray& boundConstantBufferArray =
         boundConstantBufferArrays_[core::toUnderlying(shaderStage)];

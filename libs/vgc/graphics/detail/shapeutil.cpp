@@ -38,7 +38,7 @@ void updateScreenSpaceInstance(
         const float rot = isRotationEnabled ? 1.f : 0.f;
         core::FloatArray instanceData(
             {position.x(), position.y(), rot, dispS, c.r(), c.g(), c.b(), c.a()});
-        engine->updateBufferData(geometry->vertexBuffer(1), std::move(instanceData));
+        engine->updateInstanceBufferData(geometry, std::move(instanceData));
     }
 }
 
@@ -261,7 +261,7 @@ void updateRectangleWithScreenSpaceThickness(
         // XYDxDy
         geometry::Vec4fArray vertices =
             createRectangleWithScreenSpaceThicknessVertexData(rect);
-        engine->updateBufferData(geometry->vertexBuffer(0), std::move(vertices));
+        engine->updateVertexBufferData(geometry, std::move(vertices));
     }
 }
 

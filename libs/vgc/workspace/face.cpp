@@ -186,7 +186,7 @@ void VacKeyFace::onPaintDraw(
         hasNewFillGraphics = true;
 
         graphics.setFillGeometry(
-            engine->createDynamicTriangleListView(BuiltinGeometryLayout::XY_iRGBA));
+            engine->createTriangleList(BuiltinGeometryLayout::XY_iRGBA));
 
         engine->updateBufferData(
             graphics.fillGeometry()->vertexBuffer(0), //

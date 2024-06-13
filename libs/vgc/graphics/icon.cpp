@@ -57,7 +57,7 @@ struct Batch {
     ColorSpec colorSpec;
     core::FloatArray vertices;
 
-    // Data that needs to be recreatesd on Engine change
+    // Data that needs to be recreated on Engine change
     BufferPtr instanceBuffer;
     GeometryViewPtr geometryView;
 };

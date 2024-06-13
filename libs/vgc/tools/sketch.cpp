@@ -555,7 +555,7 @@ constexpr bool isMinimalLatencyTipEnabled = false;
 void Sketch::onPaintCreate(graphics::Engine* engine) {
     SuperClass::onPaintCreate(engine);
     if (isMinimalLatencyTipEnabled) {
-        minimalLatencyStrokeGeometry_ = engine->createDynamicTriangleStripView(
+        minimalLatencyStrokeGeometry_ = engine->createTriangleStrip(
             graphics::BuiltinGeometryLayout::XY_iRGBA);
     }
     reload_ = true;

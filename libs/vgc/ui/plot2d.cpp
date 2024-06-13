@@ -112,14 +112,10 @@ void Plot2d::onResize() {
 
 void Plot2d::onPaintCreate(graphics::Engine* engine) {
     SuperClass::onPaintCreate(engine);
-    plotGeom_ =
-        engine->createDynamicTriangleListView(graphics::BuiltinGeometryLayout::XYRGB);
-    plotTextGeom_ =
-        engine->createDynamicTriangleListView(graphics::BuiltinGeometryLayout::XYRGB);
-    hintBgGeom_ =
-        engine->createDynamicTriangleListView(graphics::BuiltinGeometryLayout::XYRGB);
-    hintTextGeom_ =
-        engine->createDynamicTriangleListView(graphics::BuiltinGeometryLayout::XYRGB);
+    plotGeom_ = engine->createTriangleList(graphics::BuiltinGeometryLayout::XYRGB);
+    plotTextGeom_ = engine->createTriangleList(graphics::BuiltinGeometryLayout::XYRGB);
+    hintBgGeom_ = engine->createTriangleList(graphics::BuiltinGeometryLayout::XYRGB);
+    hintTextGeom_ = engine->createTriangleList(graphics::BuiltinGeometryLayout::XYRGB);
 }
 
 void Plot2d::onPaintDraw(graphics::Engine* engine, PaintOptions options) {

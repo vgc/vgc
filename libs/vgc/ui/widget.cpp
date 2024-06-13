@@ -535,7 +535,7 @@ void Widget::paint(graphics::Engine* engine, PaintOptions options) {
 
 void Widget::onPaintCreate(graphics::Engine* engine) {
     auto layout = graphics::BuiltinGeometryLayout::XYRGB;
-    triangles_ = engine->createDynamicTriangleListView(layout);
+    triangles_ = engine->createTriangleList(layout);
 }
 
 void Widget::onPaintPrepare(graphics::Engine* engine, PaintOptions options) {

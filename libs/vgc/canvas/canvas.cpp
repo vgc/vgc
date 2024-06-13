@@ -579,7 +579,7 @@ void Canvas::onPaintCreate(graphics::Engine* engine) {
     fillRS_ = engine->createRasterizerState(createInfo);
     createInfo.setFillMode(FillMode::Wireframe);
     wireframeRS_ = engine->createRasterizerState(createInfo);
-    bgGeometry_ = engine->createDynamicTriangleStripView(BuiltinGeometryLayout::XYRGB);
+    bgGeometry_ = engine->createTriangleStrip(BuiltinGeometryLayout::XYRGB);
 
     reload_ = true;
 }
@@ -647,7 +647,7 @@ void doPaintInputSketchPoints(
     // Create the graphics resource
     //
     if (!geometryView) {
-        geometryView = engine->createDynamicTriangleStripView(
+        geometryView = engine->createTriangleStrip(
             graphics::BuiltinGeometryLayout::XYDxDy_iXYRotWRGBA);
     }
 
@@ -711,8 +711,8 @@ void doPaintInputSketchPoints(
         //                     X           Y        Rot   W    R    G    B    A
     }
 
-    engine->updateBufferData(geometryView->vertexBuffer(0), std::move(sharedInstData));
-    engine->updateBufferData(geometryView->vertexBuffer(1), std::move(perInstData));
+    engine->updateVertexBufferData(geometryView, std::move(sharedInstData));
+    engine->updateInstanceBufferData(geometryView, std::move(perInstData));
 
     engine->setProgram(graphics::BuiltinProgram::ScreenSpaceDisplacement);
     engine->drawInstanced(geometryView);

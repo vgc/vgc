@@ -178,73 +178,159 @@ protected:
     void onDestroyed() override;
 
 public:
+    // Note: all public methods should be called from the user thread.
+
+    /// Returns the `WindowSwapChainFormat` of this engine.
+    ///
     const WindowSwapChainFormat& windowSwapChainFormat() const {
         return createInfo_.windowSwapChainFormat();
     }
 
+    /// Returns whether multithreading is enabled for this engine.
+    ///
     bool isMultithreadingEnabled() const {
         return createInfo_.isMultithreadingEnabled();
     }
-
-    // !! public methods should be called on user thread !!
 
     /// Creates a swap chain for the given window.
     ///
     SwapChainPtr createSwapChain(const SwapChainCreateInfo& desc);
 
+    /// Creates a framebuffer bound to the given `colorImageView`.
+    ///
     FramebufferPtr createFramebuffer(const ImageViewPtr& colorImageView);
 
-    BufferPtr createBuffer(const BufferCreateInfo& createInfo, Int initialLengthInBytes);
+    /// Creates an empty buffer.
+    ///
+    BufferPtr createBuffer(const BufferCreateInfo& createInfo) {
+        return createBuffer(createInfo, 0);
+    }
 
+    /// Creates an zero-initialized buffer with the given length.
+    ///
+    BufferPtr createBuffer(const BufferCreateInfo& createInfo, Int lengthInBytes);
+
+    /// Creates a buffer initialized with the given `data`.
+    ///
     template<typename T>
-    BufferPtr
-    createBuffer(const BufferCreateInfo& createInfo, core::Array<T> initialData);
+    BufferPtr createBuffer(const BufferCreateInfo& createInfo, core::Array<T> data);
 
-    BufferPtr createVertexBuffer(Int initialLengthInBytes);
+    /// Creates an empty vertex buffer.
+    ///
+    /// A "vertex buffer" is simply a `Buffer` whose `BindFlag` is set to `VertexBuffer`.
+    ///
+    /// If `isDynamic` is `true` (the default), then its `Usage` is set to
+    /// `Dynamic`, otherwise it is set to `Immutable`.
+    ///
+    BufferPtr createVertexBuffer(bool isDynamic = true);
 
+    /// Creates a vertex buffer initialized with the given `data`.
+    ///
+    /// See `createVertexBuffer(bool)` for more details.
+    ///
     template<typename T>
-    BufferPtr createVertexBuffer(core::Array<T> initialData, bool isDynamic);
+    BufferPtr createVertexBuffer(core::Array<T> data, bool isDynamic = true);
 
-    BufferPtr createIndexBuffer(IndexFormat indexFormat, Int initialIndexCount);
+    /// Creates an empty index buffer.
+    ///
+    /// An "index buffer" is simply a `Buffer` whose `BindFlag` is set to `IndexBuffer`.
+    ///
+    /// If `isDynamic` is `true` (the default), then its `Usage` is set to
+    /// `Dynamic`, otherwise it is set to `Immutable`.
+    ///
+    // XXX: Wouldn't it be more type safe to have the IndexFormat stored
+    // directly in the Buffer, rather than just in the GeometryView? In which
+    // case we should add an IndexFormat argument to this function.
+    //
+    BufferPtr createIndexBuffer(bool isDynamic = true);
 
+    /// Creates a vertex buffer initialized with the given `data`.
+    ///
+    /// See `createIndexBuffer(bool)` for more details.
+    ///
     template<IndexFormat Format>
     BufferPtr
-    createIndexBuffer(core::Array<IndexFormatType<Format>> initialData, bool isDynamic);
+    createIndexBuffer(core::Array<IndexFormatType<Format>> data, bool isDynamic = true);
 
-    GeometryViewPtr createDynamicGeometryView(
+    /// Creates a `GeometryView`.
+    ///
+    GeometryViewPtr createGeometryView(const GeometryViewCreateInfo& createInfo);
+
+    /// Creates all vertex and index buffers required for the given
+    /// `primitiveType`, `vertexLayout`, and `indexFormat`, then creates and
+    /// returns a `GeometryView` bound to these buffers.
+    ///
+    /// \sa `createVertexBuffer()`, `createIndexBuffer()`, `createGeometryView()`.
+    ///
+    GeometryViewPtr createGeometry(
         PrimitiveType primitiveType,
         BuiltinGeometryLayout vertexLayout,
-        IndexFormat indexFormat = IndexFormat::None);
+        IndexFormat indexFormat = IndexFormat::None,
+        bool isDynamic = true);
 
-    GeometryViewPtr createDynamicTriangleListView(
+    /// Creates all vertex and index buffers required for a triangle list, then
+    /// creates and returns a `GeometryView` bound to these buffers.
+    ///
+    /// \sa `createGeometry()`, `PrimitiveType::TriangleList`.
+    ///
+    GeometryViewPtr createTriangleList(
         BuiltinGeometryLayout vertexLayout,
-        IndexFormat indexFormat = IndexFormat::None);
-    GeometryViewPtr createDynamicTriangleStripView(
-        BuiltinGeometryLayout vertexLayout,
-        IndexFormat indexFormat = IndexFormat::None);
+        IndexFormat indexFormat = IndexFormat::None,
+        bool isDynamic = true) {
 
+        auto primitiveType = PrimitiveType::TriangleList;
+        return createGeometry(primitiveType, vertexLayout, indexFormat, isDynamic);
+    }
+
+    /// Creates all vertex and index buffers required for a triangle list, then
+    /// creates and returns a `GeometryView` bound to these buffers.
+    ///
+    /// \sa `createGeometry()`, `PrimitiveType::TriangleStrip`.
+    ///
+    GeometryViewPtr createTriangleStrip(
+        BuiltinGeometryLayout vertexLayout,
+        IndexFormat indexFormat = IndexFormat::None,
+        bool isDynamic = true) {
+
+        auto primitiveType = PrimitiveType::TriangleStrip;
+        return createGeometry(primitiveType, vertexLayout, indexFormat, isDynamic);
+    }
+
+    /// Creates an `Image`.
+    ///
     ImagePtr createImage(const ImageCreateInfo& createInfo);
 
-    ImagePtr
-    createImage(const ImageCreateInfo& createInfo, core::Array<char> initialData);
+    /// Creates an `Image` initialized with the given `data`.
+    ///
+    ImagePtr createImage(const ImageCreateInfo& createInfo, core::Array<char> data);
 
+    /// Creates an `ImageView`.
+    ///
     ImageViewPtr
     createImageView(const ImageViewCreateInfo& createInfo, const ImagePtr& image);
 
+    /// Creates an `Image` initialized with the given data.
+    ///
     ImageViewPtr createImageView(
         const ImageViewCreateInfo& createInfo,
         const BufferPtr& buffer,
         PixelFormat format,
         Int numElements);
 
+    /// Generates the mipmaps for a given `imageView`.
+    ///
     void generateMips(const ImageViewPtr& imageView);
 
+    /// Creates a `SamplerState`.
+    ///
     SamplerStatePtr createSamplerState(const SamplerStateCreateInfo& createInfo);
 
-    GeometryViewPtr createGeometryView(const GeometryViewCreateInfo& createInfo);
-
+    /// Creates a `BlendState`.
+    ///
     BlendStatePtr createBlendState(const BlendStateCreateInfo& createInfo);
 
+    /// Creates a `RasterizerState`.
+    ///
     RasterizerStatePtr createRasterizerState(const RasterizerStateCreateInfo& createInfo);
 
     /// Sets the framebuffer to be drawn to.
@@ -385,18 +471,43 @@ public:
 
     void onWindowResize(const SwapChainPtr& swapChain, Int width, Int height);
 
+    /// Loads `data` to the given `buffer`.
+    ///
     template<typename T>
     void updateBufferData(const BufferPtr& buffer, core::Array<T> data);
 
+    /// Loads `data` to a vertex buffer of the given `geometry`.
+    ///
     template<typename T>
-    void updateVertexBufferData(const GeometryViewPtr& geometry, core::Array<T> data);
+    void updateVertexBufferData(
+        const GeometryViewPtr& geometry,
+        Int bufferIndex,
+        core::Array<T> data);
 
+    /// Loads `data` to the main vertex buffer of the given `geometry`.
+    ///
+    template<typename T>
+    void updateVertexBufferData(const GeometryViewPtr& geometry, core::Array<T> data) {
+        updateVertexBufferData(geometry, 0, std::move(data));
+    }
+
+    /// Loads `data` to the instance buffer of the given `geometry`.
+    ///
+    template<typename T>
+    void updateInstanceBufferData(const GeometryViewPtr& geometry, core::Array<T> data) {
+        updateVertexBufferData(geometry, 1, std::move(data));
+    }
+
+    /// Draw the given `geometry`.
+    ///
     void draw(
         const GeometryViewPtr& geometry,
         Int numIndices = -1,
         Int startIndex = 0,
         Int baseVertex = 0);
 
+    /// Draw the given `geometry` using instancing.
+    ///
     void drawInstanced(
         const GeometryViewPtr& geometry,
         Int numIndices = -1,
@@ -425,6 +536,8 @@ public:
     ///
     void flushWait();
 
+    /// Returns the time when the engine was started.
+    ///
     std::chrono::steady_clock::time_point engineStartTime() const {
         return engineStartTime_;
     }
@@ -808,7 +921,7 @@ private:
             return false;
         }
         if (resource->registry_ != resourceRegistry_) {
-            VGC_ERROR(LogVgcGraphics, "Trying to use a resource from an other engine");
+            VGC_ERROR(LogVgcGraphics, "Trying to use a resource from another engine");
             return false;
         }
         return true;
@@ -888,38 +1001,36 @@ Engine::setPresentCallback(std::function<void(UInt64 /*timestamp*/)>&& presentCa
 
 template<typename T>
 inline BufferPtr
-Engine::createBuffer(const BufferCreateInfo& createInfo, core::Array<T> initialData) {
+Engine::createBuffer(const BufferCreateInfo& createInfo, core::Array<T> data) {
     BufferPtr buffer(constructBuffer_(createInfo));
-    buffer->lengthInBytes_ = initialData.length() * sizeof(T);
+    buffer->lengthInBytes_ = data.length() * sizeof(T);
 
     struct CommandParameters {
         BufferPtr buffer;
-        core::Array<T> initialData;
+        core::Array<T> data;
     };
     queueLambdaCommandWithParameters_<CommandParameters>(
         "initBuffer",
         [](Engine* engine, const CommandParameters& p) {
             engine->initBuffer_(
-                p.buffer.get(), p.initialData.data(), p.initialData.length() * sizeof(T));
+                p.buffer.get(), p.data.data(), p.data.length() * sizeof(T));
         },
         buffer,
-        std::move(initialData));
+        std::move(data));
     return buffer;
 }
 
 template<typename T>
-inline BufferPtr Engine::createVertexBuffer(core::Array<T> initialData, bool isDynamic) {
-    BufferCreateInfo createInfo = BufferCreateInfo(BindFlag::VertexBuffer, isDynamic);
-    return createBuffer(createInfo, std::move(initialData));
+inline BufferPtr Engine::createVertexBuffer(core::Array<T> data, bool isDynamic) {
+    BufferCreateInfo createInfo(BindFlag::VertexBuffer, isDynamic);
+    return createBuffer(createInfo, std::move(data));
 }
 
 template<IndexFormat Format>
-inline BufferPtr Engine::createIndexBuffer(
-    core::Array<IndexFormatType<Format>> initialData,
-    bool isDynamic) {
-
-    BufferCreateInfo createInfo = BufferCreateInfo(BindFlag::IndexBuffer, isDynamic);
-    return createBuffer(createInfo, std::move(initialData));
+inline BufferPtr
+Engine::createIndexBuffer(core::Array<IndexFormatType<Format>> data, bool isDynamic) {
+    BufferCreateInfo createInfo(BindFlag::IndexBuffer, isDynamic);
+    return createBuffer(createInfo, std::move(data));
 }
 
 template<typename T>
@@ -932,6 +1043,11 @@ inline void Engine::updateBufferData(const BufferPtr& buffer, core::Array<T> dat
     if (!(buf->cpuAccessFlags() & CpuAccessFlag::Write)) {
         VGC_ERROR(LogVgcGraphics, "Cpu does not have write access on buffer.");
     }
+
+    // TODO: If buffer is an index buffer, check that its IndexFormat matches
+    // the index type `T`? How to do this, given that IndexFormat is not in the
+    // Buffer info, but in the GeometryView info? Should we move it to the
+    // buffer info? Or only check in updateIndexBufferData(geometry)?
 
     buf->lengthInBytes_ = data.length() * sizeof(T);
 
@@ -950,13 +1066,16 @@ inline void Engine::updateBufferData(const BufferPtr& buffer, core::Array<T> dat
 }
 
 template<typename T>
-inline void
-Engine::updateVertexBufferData(const GeometryViewPtr& geometry, core::Array<T> data) {
+inline void Engine::updateVertexBufferData(
+    const GeometryViewPtr& geometry,
+    Int bufferIndex,
+    core::Array<T> data) {
+
     GeometryView* geom = geometry.get();
     if (!checkResourceIsValid_(geom)) {
         return;
     }
-    updateBufferData(geom->vertexBuffer(0), std::move(data));
+    updateBufferData(geom->vertexBuffer(bufferIndex), std::move(data));
 }
 
 inline Int Engine::flush() {
