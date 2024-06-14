@@ -18,6 +18,7 @@
 #define VGC_TOOLS_SKETCHPASS_H
 
 #include <vgc/core/span.h>
+#include <vgc/geometry/mat3d.h>
 #include <vgc/tools/api.h>
 #include <vgc/tools/sketchpoint.h>
 
@@ -279,6 +280,32 @@ public:
         return output_;
     }
 
+    /// Returns the transform matrix from view coordinates to scene coordinate
+    /// for the currently processed points.
+    ///
+    const geometry::Mat3d& transformMatrix() const {
+        return transform_;
+    }
+
+    /// Sets the transform matrix.
+    ///
+    void setTransformMatrix(const geometry::Mat3d& transform) {
+        transform_ = transform;
+    }
+
+    /// Transforms `v` using the `transformMatrix()`.
+    ///
+    geometry::Vec2d transform(const geometry::Vec2d& v) {
+        return transform_.transform(v);
+    }
+
+    /// Transforms `v` using the `transformMatrix()` interpreted as a 2D affine
+    /// transformation, that is, ignoring the projective components.
+    ///
+    geometry::Vec2d transformAffine(const geometry::Vec2d& v) {
+        return transform_.transformAffine(v);
+    }
+
 protected:
     /// This method should be reimplemented by subclasses if they store
     /// additional state that needs to be reinitialized before processing a new
@@ -296,7 +323,15 @@ protected:
 
 private:
     SketchPointBuffer output_;
+    geometry::Mat3d transform_;
 };
+
+#define VGC_TOOLS_DEBUG_SKETCH_PASS 1
+
+#if VGC_TOOLS_DEBUG_SKETCH_PASS
+
+#else
+#endif
 
 } // namespace vgc::tools
 

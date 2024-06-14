@@ -18,7 +18,6 @@
 #define VGC_TOOLS_SKETCHPASSES_H
 
 #include <vgc/geometry/bezier.h>
-#include <vgc/geometry/mat3d.h>
 #include <vgc/tools/api.h>
 #include <vgc/tools/sketchpass.h>
 
@@ -30,28 +29,8 @@ protected:
 };
 
 class VGC_TOOLS_API TransformPass : public SketchPass {
-public:
-    const geometry::Mat3d& transformMatrix() const {
-        return transform_;
-    }
-
-    void setTransformMatrix(const geometry::Mat3d& transform) {
-        transform_ = transform;
-    }
-
-    geometry::Vec2d transform(const geometry::Vec2d& v) {
-        return transform_.transform(v);
-    }
-
-    geometry::Vec2d transformAffine(const geometry::Vec2d& v) {
-        return transform_.transformAffine(v);
-    }
-
 protected:
     void doUpdateFrom(const SketchPointBuffer& input, SketchPointBuffer& output) override;
-
-private:
-    geometry::Mat3d transform_;
 };
 
 class VGC_TOOLS_API SmoothingPass : public SketchPass {

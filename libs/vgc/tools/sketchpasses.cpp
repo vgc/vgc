@@ -23,6 +23,9 @@
 #include <vgc/geometry/bezier.h>
 #include <vgc/tools/logcategories.h>
 
+#include <vgc/canvas/debugdraw.h>
+#include <vgc/core/colors.h>
+
 namespace vgc::tools {
 
 void EmptyPass::doUpdateFrom(const SketchPointBuffer& input, SketchPointBuffer& output) {
@@ -1889,6 +1892,21 @@ void QuadraticSplinePass::doUpdateFrom(
 
 namespace {
 
+core::StringId debugDrawId("QuadraticBlend");
+
+void debugDraw(const geometry::Mat3d& transform, canvas::DebugDrawFunction function) {
+    auto viewMatrix = geometry::Mat4f::fromTransform(transform);
+    canvas::debugDraw(debugDrawId, [function, viewMatrix](graphics::Engine* engine) {
+        engine->pushViewMatrix(engine->viewMatrix() * viewMatrix);
+        function(engine);
+        engine->popViewMatrix();
+    });
+}
+
+void debugDrawClear() {
+    canvas::debugDrawClear(debugDrawId);
+}
+
 struct QuadraticBlendData {
     const experimental::BlendFitSettings& settings;
     const SketchPointBuffer& input;
@@ -2015,6 +2033,50 @@ bool quadraticBlendFitAndCheck(QuadraticBlendData& d, Int& furthestIndex) {
     */
 }
 
+void debugDraw(
+    const geometry::Mat3d& transform,
+    const geometry::QuadraticBezier2d& bezier) {
+
+    using namespace graphics;
+    using namespace geometry;
+
+    GeometryViewPtr geometry;
+
+    debugDraw(transform, [geometry, bezier](graphics::Engine* engine) mutable {
+        if (!geometry) {
+            // Create vertex data
+            constexpr Int numSegments = 100;
+            constexpr double du = 1.0 / numSegments;
+            Vec2fArray vertData;
+            for (Int i = 0; i <= numSegments; ++i) {
+                double u = i * du;
+                Vec2d derivative;
+                Vec2d position = bezier.eval(u, derivative);
+                Vec2f normal(derivative.normalized().orthogonalized());
+                vertData.append(Vec2f(position));
+                vertData.append(normal);
+                vertData.append(Vec2f(position));
+                vertData.append(-normal);
+            }
+
+            // Create instance data
+            core::Color c = core::colors::red;
+            float screenSpaceWidth = 2.0f;
+            float hw = screenSpaceWidth * 0.5f;
+            core::FloatArray instData = {0.f, 0.f, 1.f, hw, c.r(), c.g(), c.b(), c.a()};
+
+            // Transfer to GPU
+            auto layout = BuiltinGeometryLayout::XYDxDy_iXYRotWRGBA;
+            geometry = engine->createTriangleStrip(layout);
+            engine->updateVertexBufferData(geometry, std::move(vertData));
+            engine->updateInstanceBufferData(geometry, std::move(instData));
+        }
+        // Draw
+        engine->setProgram(graphics::BuiltinProgram::ScreenSpaceDisplacement);
+        engine->draw(geometry);
+    });
+}
+
 void addLastGoodFit(
     QuadraticBlendData& d,
     const geometry::QuadraticBezier2d& bezier,
@@ -2022,12 +2084,9 @@ void addLastGoodFit(
 
     const SketchPointArray& inputData = d.input.data();
 
-    // Add it twice for debugging
-    d.output.append(inputData.getUnchecked(d.firstInputIndex));
-    d.output.append(inputData.getUnchecked(d.firstInputIndex));
-
     Int lastGoodFirstInputIndex = d.firstInputIndex;
     Int lastGoodLastInputIndex = d.lastInputIndex - 1;
+    Int firstOutputIndex = d.output.length();
     addToOutputAsUniformParams(
         bezier,
         d.settings.numOutputPointsPerBezier,
@@ -2036,6 +2095,13 @@ void addLastGoodFit(
         lastGoodFirstInputIndex,
         lastGoodLastInputIndex,
         d.output);
+    Int lastOutputIndex = d.output.length() - 1;
+    d.info.append(detail::BlendFitInfo{
+        lastGoodFirstInputIndex,
+        lastGoodLastInputIndex,
+        firstOutputIndex,
+        lastOutputIndex,
+        d.bezier});
 
     Int numInputPoints = lastGoodLastInputIndex - lastGoodFirstInputIndex + 1;
     std::string whitespace(lastGoodFirstInputIndex, ' ');
@@ -2045,14 +2111,8 @@ void addLastGoodFit(
     //     "addLastGoodFit(firstInputIndex={}, lastInputIndex={})",
     //     lastGoodFirstInputIndex,
     //     lastGoodLastInputIndex);
-
-    // Duplicate last and add (0, 0) twice for debugging
-    SketchPoint nullPoint = inputData.getUnchecked(0);
-    nullPoint.setPosition({});
-    d.output.append(d.output.last());
-    d.output.append(nullPoint);
-    d.output.append(nullPoint);
 }
+
 } // namespace
 
 QuadraticBlendPass::QuadraticBlendPass()
@@ -2174,6 +2234,11 @@ void QuadraticBlendPass::doUpdateFrom(
         recursiveQuadraticBlend(data, firstIndex, lastIndex, splitLastGoodFitOnce);
     }
 */
+
+    debugDrawClear();
+    for (const auto& info : info_) {
+        debugDraw(transformMatrix(), info.bezier);
+    }
 
     output.updateChordLengths();
 

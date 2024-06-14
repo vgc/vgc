@@ -23,6 +23,7 @@
 #include <vgc/canvas/documentmanager.h>
 #include <vgc/canvas/experimental.h>
 #include <vgc/core/arithmetic.h> // roundToSignificantDigits
+#include <vgc/core/colors.h>
 #include <vgc/core/profile.h>
 #include <vgc/core/stringid.h>
 #include <vgc/geometry/curve.h>
@@ -1171,6 +1172,8 @@ void Sketch::startCurve_(ui::MouseEvent* event) {
         preTransformPass_ = makePreTransformPass(fitMethod);
         postTransformPass_ = makePostTransformPass(fitMethod);
     }
+    preTransformPass_->setTransformMatrix(transformPass_.transformMatrix());
+    postTransformPass_->setTransformMatrix(transformPass_.transformMatrix());
 
     // Append start point to geometry
     continueCurve_(event);
@@ -1274,7 +1277,6 @@ void Sketch::continueCurve_(ui::MouseEvent* event) {
     inputPoints_.setNumStablePoints(inputPoints_.length());
 
     // Apply all processing steps
-
     preTransformPass_->updateFrom(inputPoints_);
     transformPass_.updateFrom(*preTransformPass_);
     postTransformPass_->updateFrom(transformPass_);
