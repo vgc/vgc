@@ -17,8 +17,6 @@
 #ifndef VGC_CANVAS_CANVAS_H
 #define VGC_CANVAS_CANVAS_H
 
-#include <variant>
-
 #include <vgc/canvas/api.h>
 #include <vgc/canvas/displaymode.h>
 #include <vgc/core/array.h>

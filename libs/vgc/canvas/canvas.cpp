@@ -20,6 +20,7 @@
 #include <QCursor>
 #include <QPainter>
 
+#include <vgc/canvas/debugdraw.h>
 #include <vgc/canvas/experimental.h>
 #include <vgc/canvas/strings.h>
 #include <vgc/canvas/workspaceselection.h>
@@ -918,6 +919,15 @@ void Canvas::onPaintDraw(graphics::Engine* engine, ui::PaintOptions options) {
                         }
                     }
                 });
+        }
+    }
+
+    // Call DebugDraw callbacks if any.
+    //
+    if (!detail::debugDraws().isEmpty()) {
+        auto locked = detail::lockDebugDraws();
+        for (const auto& x : detail::debugDraws()) {
+            x.function(engine);
         }
     }
 

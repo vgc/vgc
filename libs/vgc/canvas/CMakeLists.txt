@@ -8,6 +8,7 @@ vgc_add_library(canvas
         canvas.h
         canvasmanager.h
         canvastool.h
+        debugdraw.h
         displaymode.h
         documentmanager.h
         experimental.h
@@ -22,6 +23,7 @@ vgc_add_library(canvas
         canvas.cpp
         canvasmanager.cpp
         canvastool.cpp
+        debugdraw.cpp
         displaymode.cpp
         documentmanager.cpp
         experimental.cpp
