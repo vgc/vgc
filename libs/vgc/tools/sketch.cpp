@@ -329,9 +329,11 @@ void SketchModule::reFitExistingEdges_() {
 
             // Setup passes
             preTransformPass->reset();
+            preTransformPass->setTransformMatrix(transform);
             transformPass.reset();
             transformPass.setTransformMatrix(transform);
             postTransformPass->reset();
+            postTransformPass->setTransformMatrix(transform);
 
             // Apply passes
             preTransformPass->updateFrom(inputPoints);
