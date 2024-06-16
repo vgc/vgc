@@ -2101,7 +2101,7 @@ void addLastGoodFit(
         lastGoodLastInputIndex,
         firstOutputIndex,
         lastOutputIndex,
-        d.bezier});
+        bezier});
 
     Int numInputPoints = lastGoodLastInputIndex - lastGoodFirstInputIndex + 1;
     std::string whitespace(lastGoodFirstInputIndex, ' ');
