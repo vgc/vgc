@@ -1697,6 +1697,35 @@ struct RecursiveQuadraticFitData {
     core::Array<detail::SplineFitInfo>& info;
 };
 
+using experimental::SplineFitSplitStrategy;
+
+Int getSplitIndex(
+    SplineFitSplitStrategy strategy,
+    Int firstIndex,
+    Int lastIndex,
+    Int furthestIndex,
+    double indexRatio) {
+
+    Int splitIndex = firstIndex;
+    switch (strategy) {
+    case SplineFitSplitStrategy::Furthest:
+        splitIndex = furthestIndex;
+        break;
+    case SplineFitSplitStrategy::SecondLast:
+        splitIndex = lastIndex - 1;
+        break;
+    case SplineFitSplitStrategy::ThirdLast:
+        splitIndex = lastIndex - 2;
+        break;
+    case SplineFitSplitStrategy::IndexRatio:
+        splitIndex = core::ifloor<Int>(core::fastLerp(
+            core::narrow_cast<double>(firstIndex),
+            core::narrow_cast<double>(lastIndex),
+            indexRatio));
+    }
+    return core::clamp(splitIndex, firstIndex + 1, lastIndex - 1);
+}
+
 void recursiveQuadraticFit(
     RecursiveQuadraticFitData& d,
     Int firstInputIndex,
@@ -1728,6 +1757,7 @@ void recursiveQuadraticFit(
     double distanceThreshold = d.settings.distanceThreshold;
     double distanceSquaredThreshold = distanceThreshold * distanceThreshold;
     auto [distanceSquared, index] = maxDistanceSquared(bezier, d.positions, d.params);
+    Int furthestIndex = index + firstInputIndex; // Convert to [0..numInputPoints-1]
     bool isWithinDistance = distanceSquared <= distanceSquaredThreshold;
 
     // Determine whether we should use the flatness threshold.
@@ -1787,29 +1817,12 @@ void recursiveQuadraticFit(
     }
     else {
         // Compute where to split based on the chosen SplitStategy
-        Int splitIndex = 0;
-        using SplitStrategy = experimental::SplineFitSplitStrategy;
-        switch (d.settings.splitStrategy) {
-        case SplitStrategy::Furthest:
-            // Convert from index in `positions` to index in `input`
-            splitIndex = firstInputIndex + index;
-            break;
-        case SplitStrategy::SecondLast:
-            splitIndex = lastInputIndex - 1;
-            break;
-        case SplitStrategy::IndexRatio:
-            splitIndex = core::ifloor<Int>(core::fastLerp(
-                core::narrow_cast<double>(firstInputIndex),
-                core::narrow_cast<double>(lastInputIndex),
-                d.settings.indexRatio));
-            if (splitIndex <= firstInputIndex + 1) {
-                splitIndex = firstInputIndex + 1;
-            }
-            if (splitIndex >= lastInputIndex - 1) {
-                splitIndex = lastInputIndex - 1;
-            }
-            break;
-        }
+        Int splitIndex = getSplitIndex(
+            d.settings.splitStrategy,
+            firstInputIndex,
+            lastInputIndex,
+            furthestIndex,
+            d.settings.indexRatio);
 
         // Recursively call two fits on both sides of the split index
         bool newSplitLastGoodFitOnce = splitLastGoodFitOnce && !isGoodFit;
@@ -2158,6 +2171,9 @@ void QuadraticBlendPass::doUpdateFrom(
         output.append(input.first());
     }
 
+    const SketchPointArray& inputData = input.data();
+    Int numInputPoints = input.length();
+
     QuadraticBlendData d = {
         settings_,
         input,
@@ -2166,12 +2182,9 @@ void QuadraticBlendPass::doUpdateFrom(
         buffer_.params,
         info_,
         geometry::QuadraticBezier2d(),
-        0, // firstInputIndex
-        1  // lastInputIndex
+        0,                                                      // firstInputIndex
+        (std::min)(d.settings.minFitPoints, numInputPoints - 1) // lastInputIndex
     };
-
-    const SketchPointArray& inputData = input.data();
-    Int numInputPoints = input.length();
 
     bool splitLastGoodFitOnce = settings_.splitLastGoodFitOnce;
 
@@ -2197,28 +2210,14 @@ void QuadraticBlendPass::doUpdateFrom(
             Int lastGoodFirstInputIndex = d.firstInputIndex;
             Int lastGoodLastInputIndex = d.lastInputIndex - 1;
 
-            Int splitIndex = 0;
-            using SplitStrategy = experimental::SplineFitSplitStrategy;
-            switch (d.settings.splitStrategy) {
-            case SplitStrategy::Furthest:
-                splitIndex = lastGoodFurthestIndex;
-                break;
-            case SplitStrategy::SecondLast:
-                splitIndex = lastGoodLastInputIndex - 1;
-                break;
-            case SplitStrategy::IndexRatio:
-                splitIndex = core::ifloor<Int>(core::fastLerp(
-                    core::narrow_cast<double>(lastGoodFirstInputIndex),
-                    core::narrow_cast<double>(lastGoodLastInputIndex),
-                    d.settings.indexRatio));
-                if (splitIndex <= lastGoodFirstInputIndex + 1) {
-                    splitIndex = lastGoodFirstInputIndex + 1;
-                }
-                if (splitIndex >= lastGoodLastInputIndex - 1) {
-                    splitIndex = lastGoodLastInputIndex - 1;
-                }
-                break;
-            }
+            // Compute where to split based on the chosen SplitStategy
+            Int splitIndex = getSplitIndex(
+                d.settings.splitStrategy,
+                lastGoodFirstInputIndex,
+                lastGoodLastInputIndex,
+                lastGoodFurthestIndex,
+                d.settings.indexRatio);
+
             d.firstInputIndex = splitIndex;
             isFirstFitAttempt = true;
             // Note: we intentionally do not increment lastInputIndex

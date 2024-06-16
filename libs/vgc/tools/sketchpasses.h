@@ -84,7 +84,8 @@ enum class SplineFitSplitStrategy {
     ///
     Furthest,
 
-    /// Split at the input point which is just before the last input point of the current fit.
+    /// Split at the input point which is just before the last input point of
+    /// the current fit.
     ///
     /// This can be a good choice in interactive use cases where input points
     /// are added one by one, since in this case, having a bad fit for the input
@@ -96,6 +97,14 @@ enum class SplineFitSplitStrategy {
     /// possibly resulting in a slightly worse final result.
     ///
     SecondLast,
+
+    /// Split at the input point which is two points before the last input point
+    /// of the current fit.
+    ///
+    /// This is similar to SecondLast but is sometimes preferrable as it gives
+    /// a bit more overlap between the local fits.
+    ///
+    ThirdLast,
 
     /// Split at a given ratio in terms number of points.
     ///
@@ -269,11 +278,27 @@ struct BlendFitSettings {
 
     /// Where to split a Bézier segment that isn't a good-enough fit.
     ///
-    SplineFitSplitStrategy splitStrategy = SplineFitSplitStrategy::IndexRatio;
+    SplineFitSplitStrategy splitStrategy = SplineFitSplitStrategy::ThirdLast;
 
     /// The ratio to use when `splitStrategy` is `IndexRatio`.
     ///
     double indexRatio = 0.75;
+
+    /// The minimal number of input points used for each local fit. If the
+    /// input has fewer points than this, then the output consists of a single
+    /// fit.
+    ///
+    // TODO: minFitLength for minimal arc-length per local fit?
+    //
+    Int minFitPoints = 5;
+
+    /// The maximal number of input points used for each local fit. If the
+    /// input has fewer points than this, then the output consists of a single
+    /// fit.
+    ///
+    // TODO: maxFitLength for minimal arc-length per local fit?
+    //
+    Int maxFitPoints = 5;
 };
 
 } // namespace experimental
