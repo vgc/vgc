@@ -2106,11 +2106,12 @@ void addLastGoodFit(
     Int numInputPoints = lastGoodLastInputIndex - lastGoodFirstInputIndex + 1;
     std::string whitespace(lastGoodFirstInputIndex, ' ');
     std::string dashes(numInputPoints, '-');
-    VGC_DEBUG_TMP(whitespace + dashes);
-    // VGC_DEBUG_TMP(
-    //     "addLastGoodFit(firstInputIndex={}, lastInputIndex={})",
-    //     lastGoodFirstInputIndex,
-    //     lastGoodLastInputIndex);
+    std::string text = core::format( //
+        " {}-{} ({})",
+        lastGoodFirstInputIndex,
+        lastGoodLastInputIndex,
+        numInputPoints);
+    VGC_DEBUG_TMP(whitespace + dashes + text);
 }
 
 } // namespace
