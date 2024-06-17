@@ -2182,13 +2182,37 @@ void QuadraticBlendPass::doUpdateFrom(
         buffer_.params,
         info_,
         geometry::QuadraticBezier2d(),
-        0,                                                      // firstInputIndex
-        (std::min)(d.settings.minFitPoints, numInputPoints - 1) // lastInputIndex
+        0,                                                          // firstInputIndex
+        (std::min)(d.settings.minFitPoints - 1, numInputPoints - 1) // lastInputIndex
     };
 
     bool splitLastGoodFitOnce = settings_.splitLastGoodFitOnce;
 
-    // Remember last good fit
+    // The general idea of the algorithm is:
+    //
+    // 1. Initialize i1 to 0
+    //
+    //    (in code, i1 = QuadraticBlendData::firstInputIndex)
+    //
+    // 2. Compute the largest i2 such that [i1..i2] (and all [i1..j] for
+    //    i1 < j < i2) can be well-approximated by a Bézier.
+    //
+    //    (in code, i2 = QuadraticBlendData::lastInputIndex)
+    //
+    // 3. Add (i1, i2, bestFit([i1..i2])) to the list of output fits
+    //
+    //    (in code, its added to an Array<BlendFitInfo>)
+    //
+    // 4. Compute a splitIndex between i1 and i2 (see SplitStrategy)
+    //    and set i1 = splitIndex
+    //
+    // 5. Go to step 2 and repeat until i2 = numInputPoints - 1.
+    //
+    // Note that the above is for the generic "adaptive" algorithm, and in
+    // practice, further contraints can be set. For example, one may want to
+    // force all output fits to have a fixed number of input point (e.g., 5),
+    // in which case computing i2 is trivial: i2 = i1 + numDesiredPoints - 1.
+    //
     bool isFirstFitAttempt = true;
     geometry::QuadraticBezier2d lastGoodFit;
     int lastGoodFurthestIndex = 0;
@@ -2196,7 +2220,10 @@ void QuadraticBlendPass::doUpdateFrom(
 
     while (d.lastInputIndex < numInputPoints) {
         Int furthestIndex;
-        bool isGoodFit = quadraticBlendFitAndCheck(d, furthestIndex);
+        Int numFitPoints = d.lastInputIndex - d.firstInputIndex + 1;
+        bool exceedsMax = numFitPoints > d.settings.maxFitPoints;
+        bool isGoodFit = exceedsMax ? false : quadraticBlendFitAndCheck(d, furthestIndex);
+        VGC_ASSERT(!(exceedsMax && isFirstFitAttempt));
         if (isGoodFit || isFirstFitAttempt) {
             lastGoodFit = d.bezier;
             lastGoodParams = d.params;
@@ -2211,6 +2238,21 @@ void QuadraticBlendPass::doUpdateFrom(
             Int lastGoodLastInputIndex = d.lastInputIndex - 1;
 
             // Compute where to split based on the chosen SplitStategy
+            //
+            // Note: we intentionally compute the split index based on the
+            // last good fit, not the last bad fit. This makes sense because:
+            //
+            // - A bad fit might mean no fit was computed at all, because there
+            //   was more fit points than settings.maxFitPoint
+            //
+            // - A bad fit might mean that the fit completely failed due to
+            //   degenerate input, and therefore there is no appropriate furthest
+            //   index
+            //
+            // - The `SecondLast` and `ThirdLast` strategy really makes more
+            //   sense with respect to the last good fit, so that it means a
+            //   desired overlap between the output fits.
+            //
             Int splitIndex = getSplitIndex(
                 d.settings.splitStrategy,
                 lastGoodFirstInputIndex,
@@ -2219,8 +2261,8 @@ void QuadraticBlendPass::doUpdateFrom(
                 d.settings.indexRatio);
 
             d.firstInputIndex = splitIndex;
+            d.lastInputIndex = d.firstInputIndex + d.settings.minFitPoints - 1;
             isFirstFitAttempt = true;
-            // Note: we intentionally do not increment lastInputIndex
         }
     }
     if (!isFirstFitAttempt) {
