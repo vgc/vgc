@@ -313,6 +313,7 @@ struct BlendFitInfo {
     Int lastInputIndex;
     Int firstOutputIndex;
     Int lastOutputIndex;
+    Int furthestIndex;
     geometry::QuadraticBezier2d bezier;
 };
 

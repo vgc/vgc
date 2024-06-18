@@ -1932,9 +1932,9 @@ struct QuadraticBlendData {
     Int lastInputIndex;
 };
 
+// Perform one fit and returns whether it is good or not
+//
 bool quadraticBlendFitAndCheck(QuadraticBlendData& d, Int& furthestIndex) {
-
-    // XXX For now we just do one fit, consider it good
 
     // Compute the best quadratic fit of the input points between
     // `firstInputIndex` and `lastInputIndex` (included).
@@ -1996,54 +1996,6 @@ bool quadraticBlendFitAndCheck(QuadraticBlendData& d, Int& furthestIndex) {
 
     bool isGoodFit = isWithinDistance && isWithinFlatness;
     return isGoodFit;
-
-    /*
-    bool cannotSplit = (distanceSquared == -1);
-    if (cannotSplit || (isGoodFit && !splitLastGoodFitOnce)) {
-        addToOutputAsUniformParams(
-            bezier,
-            d.settings.numOutputPointsPerBezier,
-            d.params,
-            d.input,
-            firstInputIndex,
-            lastInputIndex,
-            d.output);
-        Int lastOutputIndex = d.output.length() - 1;
-        detail::SplineFitInfo info{lastInputIndex, lastOutputIndex, bezier};
-        d.info.append(info);
-    }
-    else {
-        // Compute where to split based on the chosen SplitStategy
-        Int splitIndex = 0;
-        using SplitStrategy = experimental::SplineFitSplitStrategy;
-        switch (d.settings.splitStrategy) {
-        case SplitStrategy::Furthest:
-            // Convert from index in `positions` to index in `input`
-            splitIndex = firstInputIndex + index;
-            break;
-        case SplitStrategy::SecondLast:
-            splitIndex = lastInputIndex - 1;
-            break;
-        case SplitStrategy::IndexRatio:
-            splitIndex = core::ifloor<Int>(core::fastLerp(
-                core::narrow_cast<double>(firstInputIndex),
-                core::narrow_cast<double>(lastInputIndex),
-                d.settings.indexRatio));
-            if (splitIndex <= firstInputIndex + 1) {
-                splitIndex = firstInputIndex + 1;
-            }
-            if (splitIndex >= lastInputIndex - 1) {
-                splitIndex = lastInputIndex - 1;
-            }
-            break;
-        }
-
-        // Recursively call two fits on both sides of the split index
-        bool newSplitLastGoodFitOnce = splitLastGoodFitOnce && !isGoodFit;
-        recursiveQuadraticFit(d, firstInputIndex, splitIndex, false);
-        recursiveQuadraticFit(d, splitIndex, lastInputIndex, newSplitLastGoodFitOnce);
-    }
-    */
 }
 
 void debugDraw(
@@ -2093,37 +2045,39 @@ void debugDraw(
 void addLastGoodFit(
     QuadraticBlendData& d,
     const geometry::QuadraticBezier2d& bezier,
-    const core::DoubleArray& params) {
+    const core::DoubleArray& params,
+    Int firstInputIndex,
+    Int lastInputIndex,
+    Int furthestIndex) {
 
     const SketchPointArray& inputData = d.input.data();
 
-    Int lastGoodFirstInputIndex = d.firstInputIndex;
-    Int lastGoodLastInputIndex = d.lastInputIndex - 1;
     Int firstOutputIndex = d.output.length();
     addToOutputAsUniformParams(
         bezier,
         d.settings.numOutputPointsPerBezier,
         params,
         d.input,
-        lastGoodFirstInputIndex,
-        lastGoodLastInputIndex,
+        firstInputIndex,
+        lastInputIndex,
         d.output);
     Int lastOutputIndex = d.output.length() - 1;
     d.info.append(detail::BlendFitInfo{
-        lastGoodFirstInputIndex,
-        lastGoodLastInputIndex,
+        firstInputIndex,
+        lastInputIndex,
         firstOutputIndex,
         lastOutputIndex,
+        furthestIndex,
         bezier});
 
-    Int numInputPoints = lastGoodLastInputIndex - lastGoodFirstInputIndex + 1;
-    std::string whitespace(lastGoodFirstInputIndex, ' ');
-    std::string dashes(numInputPoints, '-');
+    Int numFitPoints = lastInputIndex - firstInputIndex + 1;
+    std::string whitespace(firstInputIndex, ' ');
+    std::string dashes(numFitPoints, '-');
     std::string text = core::format( //
         " {}-{} ({})",
-        lastGoodFirstInputIndex,
-        lastGoodLastInputIndex,
-        numInputPoints);
+        firstInputIndex,
+        lastInputIndex,
+        numFitPoints);
     VGC_DEBUG_TMP(whitespace + dashes + text);
 }
 
@@ -2182,8 +2136,8 @@ void QuadraticBlendPass::doUpdateFrom(
         buffer_.params,
         info_,
         geometry::QuadraticBezier2d(),
-        0,                                                          // firstInputIndex
-        (std::min)(d.settings.minFitPoints - 1, numInputPoints - 1) // lastInputIndex
+        0, // firstInputIndex
+        0  // lastInputIndex
     };
 
     bool splitLastGoodFitOnce = settings_.splitLastGoodFitOnce;
@@ -2213,69 +2167,86 @@ void QuadraticBlendPass::doUpdateFrom(
     // force all output fits to have a fixed number of input point (e.g., 5),
     // in which case computing i2 is trivial: i2 = i1 + numDesiredPoints - 1.
     //
-    bool isFirstFitAttempt = true;
-    geometry::QuadraticBezier2d lastGoodFit;
-    int lastGoodFurthestIndex = 0;
-    lastGoodParams.reserve(numInputPoints);
 
-    while (d.lastInputIndex < numInputPoints) {
-        Int furthestIndex;
-        Int numFitPoints = d.lastInputIndex - d.firstInputIndex + 1;
-        bool exceedsMax = numFitPoints > d.settings.maxFitPoints;
-        bool isGoodFit = exceedsMax ? false : quadraticBlendFitAndCheck(d, furthestIndex);
-        VGC_ASSERT(!(exceedsMax && isFirstFitAttempt));
-        if (isGoodFit || isFirstFitAttempt) {
-            lastGoodFit = d.bezier;
-            lastGoodParams = d.params;
-            lastGoodFurthestIndex = furthestIndex;
-            isFirstFitAttempt = false;
-            ++d.lastInputIndex;
+    // While some input points have still not been processed
+    while (info_.isEmpty() || info_.last().lastInputIndex != numInputPoints - 1) {
+
+        // Determine i1
+        if (info_.isEmpty()) {
+            d.firstInputIndex = 0;
         }
         else {
-            addLastGoodFit(d, lastGoodFit, lastGoodParams);
-
-            Int lastGoodFirstInputIndex = d.firstInputIndex;
-            Int lastGoodLastInputIndex = d.lastInputIndex - 1;
-
-            // Compute where to split based on the chosen SplitStategy
-            //
-            // Note: we intentionally compute the split index based on the
-            // last good fit, not the last bad fit. This makes sense because:
-            //
-            // - A bad fit might mean no fit was computed at all, because there
-            //   was more fit points than settings.maxFitPoint
-            //
-            // - A bad fit might mean that the fit completely failed due to
-            //   degenerate input, and therefore there is no appropriate furthest
-            //   index
-            //
-            // - The `SecondLast` and `ThirdLast` strategy really makes more
-            //   sense with respect to the last good fit, so that it means a
-            //   desired overlap between the output fits.
-            //
-            Int splitIndex = getSplitIndex(
+            const detail::BlendFitInfo& lastFit = info_.last();
+            d.firstInputIndex = getSplitIndex(
                 d.settings.splitStrategy,
-                lastGoodFirstInputIndex,
-                lastGoodLastInputIndex,
-                lastGoodFurthestIndex,
+                lastFit.firstInputIndex,
+                lastFit.lastInputIndex,
+                lastFit.furthestIndex,
                 d.settings.indexRatio);
+        }
 
-            d.firstInputIndex = splitIndex;
-            d.lastInputIndex = d.firstInputIndex + d.settings.minFitPoints - 1;
-            isFirstFitAttempt = true;
+        // Determine minimum and max value of i2 based on min/max settings
+        VGC_ASSERT(d.settings.minFitPoints > 1);
+        VGC_ASSERT(d.settings.maxFitPoints >= d.settings.minFitPoints);
+        Int i2Min = d.firstInputIndex + d.settings.minFitPoints - 1;
+        if (!info_.isEmpty() && i2Min <= info_.last().lastInputIndex) {
+            i2Min = info_.last().lastInputIndex + 1;
+        }
+        Int i2Max = d.firstInputIndex + d.settings.maxFitPoints - 1;
+        if (i2Max > numInputPoints - 1) {
+            i2Max = numInputPoints - 1;
+        }
+
+        // Handle special case where we need to go lower than the min
+        // at the end of the stroke, because there isn't enough input points.
+        // Example with minFitPoints = maxFitPoints = 5 and splitStrategy = SecondLast
+        //
+        // Input points:  ........ (8)
+        // Output fits:   ----- (5)
+        //                  ----- (5)
+        //                    ---- (4) <- cannot use 5, exceptionally
+        //
+        i2Min = (std::min)(i2Min, i2Max);
+
+        // Compute bestFit([i1..i2]) and increase i2 until a bad fit is found,
+        // or i2 has reached its maxValue. Add the last good fit (or only fit,
+        // if even the first fit was bad) to the output.
+        //
+        bool isFirstFitAttempt = true;
+        geometry::QuadraticBezier2d lastGoodFit;
+        Int lastGoodFirstInputIndex = 0; // TODO: move these into a struct
+        Int lastGoodLastInputIndex = 0;  // passed to quadraticBlendFitAndCheck()
+        Int lastGoodFurthestIndex = 0;   //
+        for (Int i2 = i2Min; i2 <= i2Max; ++i2) {
+            d.lastInputIndex = i2;
+            VGC_ASSERT(d.lastInputIndex < numInputPoints);
+            VGC_ASSERT(d.lastInputIndex <= i2Max);
+            Int furthestIndex;
+            bool isGoodFit = quadraticBlendFitAndCheck(d, furthestIndex);
+            if (isGoodFit || isFirstFitAttempt) {
+                lastGoodFit = d.bezier;
+                lastGoodParams = d.params;
+                lastGoodFirstInputIndex = d.firstInputIndex;
+                lastGoodLastInputIndex = d.lastInputIndex;
+                lastGoodFurthestIndex = furthestIndex;
+                isFirstFitAttempt = false;
+            }
+            if (isGoodFit && d.lastInputIndex < i2Max) {
+                ++d.lastInputIndex;
+                continue;
+            }
+            else {
+                addLastGoodFit(
+                    d,
+                    lastGoodFit,
+                    lastGoodParams,
+                    lastGoodFirstInputIndex,
+                    lastGoodLastInputIndex,
+                    lastGoodFurthestIndex);
+                break;
+            }
         }
     }
-    if (!isFirstFitAttempt) {
-        addLastGoodFit(d, lastGoodFit, lastGoodParams);
-    }
-
-    /*
-    Int firstIndex = info_.isEmpty() ? 0 : info_.last().lastInputIndex;
-    Int lastIndex = input.length() - 1;
-    if (lastIndex > firstIndex) {
-        recursiveQuadraticBlend(data, firstIndex, lastIndex, splitLastGoodFitOnce);
-    }
-*/
 
     debugDrawClear();
     for (const auto& info : info_) {
