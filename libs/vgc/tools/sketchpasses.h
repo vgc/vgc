@@ -240,6 +240,7 @@ struct BlendFitSettings {
     ///
     double distanceThreshold = 1.2;
 
+    /*
     /// Whether to always pre-emptively split the last good fit into two fits.
     ///
     /// This tends to reduce flickering when sketching, since when a new input
@@ -250,6 +251,7 @@ struct BlendFitSettings {
     /// `SecondLast`.
     ///
     bool splitLastGoodFitOnce = false;
+    */
 
     /// How "flat" should a quadratic Bézier segment be in order to be considered
     /// a good fit. It is computed as the ratio between the length of (B2-B0) and the
@@ -309,12 +311,19 @@ namespace detail {
 // of one of the fit part of a recursive fit.
 //
 struct BlendFitInfo {
-    Int firstInputIndex;
-    Int lastInputIndex;
-    Int firstOutputIndex;
-    Int lastOutputIndex;
-    Int furthestIndex;
+
+    // Input points
+    Int firstInputIndex = 0;
+    Int lastInputIndex = 0;
+
+    // Best fit
     geometry::QuadraticBezier2d bezier;
+    Int furthestIndex = 0;
+    bool isGoodFit = false;
+
+    // Mapping with output points
+    Int firstOutputIndex = 0;
+    Int lastOutputIndex = 0;
 };
 
 } // namespace detail
@@ -353,7 +362,7 @@ protected:
 
 private:
     experimental::BlendFitSettings settings_;
-    core::Array<detail::BlendFitInfo> info_;
+    core::Array<detail::BlendFitInfo> fits_;
     detail::FitBuffer buffer_;
 
     // more buffers
