@@ -1666,7 +1666,44 @@ void SingleQuadraticSegmentWithFixedEndpointsPass::doUpdateFrom(
     output.setNumStablePoints(input.numStablePoints() > 0 ? 1 : 0);
 }
 
+namespace experimental {
+
+Int FitSplitStrategy::getSplitIndex( //
+    Int firstIndex,
+    Int lastIndex,
+    Int furthestIndex) const {
+
+    Int splitIndex = firstIndex;
+    switch (type()) {
+    case FitSplitType::Furthest:
+        splitIndex = furthestIndex;
+        break;
+    case FitSplitType::RelativeToStart:
+        splitIndex = firstIndex + offset();
+        break;
+    case FitSplitType::RelativeToEnd:
+        splitIndex = lastIndex - offset();
+        break;
+    case FitSplitType::IndexRatio:
+        splitIndex = core::ifloor<Int>(core::fastLerp(
+            core::narrow_cast<double>(firstIndex),
+            core::narrow_cast<double>(lastIndex),
+            ratio()));
+    }
+    return core::clamp(splitIndex, firstIndex + 1, lastIndex - 1);
+}
+
+} // namespace experimental
+
 namespace {
+
+Int getSplitIndex(
+    const experimental::FitSplitStrategy& strategy,
+    const detail::BlendFitInfo& fit) {
+
+    return strategy.getSplitIndex(
+        fit.firstInputIndex, fit.lastInputIndex, fit.furthestIndex);
+}
 
 // Computes the largest distance squared between the input position and its
 // corresponding point on the Bézier curve, excluding the endpoints.
@@ -1713,44 +1750,6 @@ struct RecursiveQuadraticFitData {
     core::DoubleArray& params;
     core::Array<detail::SplineFitInfo>& info;
 };
-
-using experimental::SplineFitSplitStrategy;
-
-Int getSplitIndex(
-    SplineFitSplitStrategy strategy,
-    double indexRatio,
-    Int firstIndex,
-    Int lastIndex,
-    Int furthestIndex) {
-
-    Int splitIndex = firstIndex;
-    switch (strategy) {
-    case SplineFitSplitStrategy::Furthest:
-        splitIndex = furthestIndex;
-        break;
-    case SplineFitSplitStrategy::SecondLast:
-        splitIndex = lastIndex - 1;
-        break;
-    case SplineFitSplitStrategy::ThirdLast:
-        splitIndex = lastIndex - 2;
-        break;
-    case SplineFitSplitStrategy::IndexRatio:
-        splitIndex = core::ifloor<Int>(core::fastLerp(
-            core::narrow_cast<double>(firstIndex),
-            core::narrow_cast<double>(lastIndex),
-            indexRatio));
-    }
-    return core::clamp(splitIndex, firstIndex + 1, lastIndex - 1);
-}
-
-Int getSplitIndex(
-    SplineFitSplitStrategy strategy,
-    double indexRatio,
-    const detail::BlendFitInfo& fit) {
-
-    return getSplitIndex(
-        strategy, indexRatio, fit.firstInputIndex, fit.lastInputIndex, fit.furthestIndex);
-}
 
 void recursiveQuadraticFit(
     RecursiveQuadraticFitData& d,
@@ -1843,12 +1842,8 @@ void recursiveQuadraticFit(
     }
     else {
         // Compute where to split based on the chosen SplitStategy
-        Int splitIndex = getSplitIndex(
-            d.settings.splitStrategy,
-            d.settings.indexRatio,
-            firstInputIndex,
-            lastInputIndex,
-            furthestIndex);
+        Int splitIndex = d.settings.splitStrategy.getSplitIndex(
+            firstInputIndex, lastInputIndex, furthestIndex);
 
         // Recursively call two fits on both sides of the split index
         bool newSplitLastGoodFitOnce = splitLastGoodFitOnce && !isGoodFit;
@@ -2143,7 +2138,7 @@ void QuadraticBlendPass::doUpdateFrom(
         Int i1 = 0;
         if (!fits_.isEmpty()) {
             const detail::BlendFitInfo& lastFit = fits_.last();
-            i1 = getSplitIndex(settings_.splitStrategy, settings_.indexRatio, lastFit);
+            i1 = getSplitIndex(settings_.splitStrategy, lastFit);
         }
 
         // Determine minimum and max value of i2 based on min/max settings
@@ -2192,10 +2187,11 @@ void QuadraticBlendPass::doUpdateFrom(
         std::string whitespace(fit.firstInputIndex, ' ');
         std::string dashes(numFitPoints, '-');
         std::string text = core::format( //
-            " {}-{} ({})",
+            " {}-{} ({}){}",
             fit.firstInputIndex,
             fit.lastInputIndex,
-            numFitPoints);
+            numFitPoints,
+            fit.isGoodFit ? "" : "*");
         VGC_DEBUG_TMP(whitespace + dashes + text);
         debugDraw(transformMatrix(), fit.bezier);
     }
@@ -2204,7 +2200,7 @@ void QuadraticBlendPass::doUpdateFrom(
 
     // Compute a uniform sampling of the blend between the output fits.
     //
-    constexpr double ds = 3;
+    constexpr double ds = 0.5;
     double sMax = input.last().s();
     Int numInteriorSamples = core::ifloor<Int>(sMax / ds - 0.5);
     Int j1 = 0; // Index of first fit that contains s in its interior

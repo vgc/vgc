@@ -76,7 +76,7 @@ namespace experimental {
 
 /// Where to split a Bézier segment that isn't a good-enough fit.
 ///
-enum class SplineFitSplitStrategy {
+enum class FitSplitType {
 
     /// Split at the input point which is the furthest away from the best fit.
     ///
@@ -84,8 +84,15 @@ enum class SplineFitSplitStrategy {
     ///
     Furthest,
 
-    /// Split at the input point which is just before the last input point of
-    /// the current fit.
+    /// Split at an index relative to the start point of the current fit.
+    ///
+    /// This is useful for use with fixed-sized window, e.g., if you want
+    /// to exaustively compute all overlapping fits of a given size, you
+    /// can use RelativeToStart with an offset of 1.
+    ///
+    RelativeToStart,
+
+    /// Split at an index relative to the end point of the current fit.
     ///
     /// This can be a good choice in interactive use cases where input points
     /// are added one by one, since in this case, having a bad fit for the input
@@ -96,15 +103,7 @@ enum class SplineFitSplitStrategy {
     /// the best (since after splitting, the fit is *barely* a good fit),
     /// possibly resulting in a slightly worse final result.
     ///
-    SecondLast,
-
-    /// Split at the input point which is two points before the last input point
-    /// of the current fit.
-    ///
-    /// This is similar to SecondLast but is sometimes preferrable as it gives
-    /// a bit more overlap between the local fits.
-    ///
-    ThirdLast,
+    RelativeToEnd,
 
     /// Split at a given ratio in terms number of points.
     ///
@@ -114,6 +113,66 @@ enum class SplineFitSplitStrategy {
     /// final results.
     ///
     IndexRatio
+};
+
+class FitSplitStrategy {
+public:
+    /// Creates a split strategy of type `Furthest`.
+    ///
+    static constexpr FitSplitStrategy furthest() {
+        return FitSplitStrategy(FitSplitType::Furthest);
+    }
+
+    /// Creates a split strategy of type `RelativeToStart`.
+    ///
+    static constexpr FitSplitStrategy relativeToStart(Int offset) {
+        return FitSplitStrategy(FitSplitType::RelativeToStart, offset);
+    }
+
+    /// Creates a split strategy of type `RelativeToEnd`.
+    ///
+    static constexpr FitSplitStrategy relativeToEnd(Int offset) {
+        return FitSplitStrategy(FitSplitType::RelativeToEnd, offset);
+    }
+
+    /// Creates a split strategy of type `IndexRatio`.
+    ///
+    static constexpr FitSplitStrategy indexRatio(double ratio) {
+        return FitSplitStrategy(FitSplitType::IndexRatio, 0, ratio);
+    }
+
+    /// The type of the split strategy.
+    ///
+    FitSplitType type() const {
+        return type_;
+    }
+
+    /// The offset to use when `type()` is `RelativeToStart` or `RelativeToEnd`.
+    ///
+    Int offset() const {
+        return offset_;
+    }
+
+    /// The ratio to use when `type()` is `IndexRatio`.
+    ///
+    double ratio() const {
+        return ratio_;
+    }
+
+    /// Returns the split index based on this split strategy.
+    ///
+    Int getSplitIndex(Int firstIndex, Int lastIndex, Int furthestIndex) const;
+
+private:
+    FitSplitType type_;
+    Int offset_;
+    double ratio_;
+
+    constexpr FitSplitStrategy(FitSplitType type, Int offset = 0, double ratio = 0.5)
+        : type_(type)
+        , offset_(offset)
+        , ratio_(ratio) {
+    }
 };
 
 struct SplineFitSettings {
@@ -169,11 +228,7 @@ struct SplineFitSettings {
 
     /// Where to split a Bézier segment that isn't a good-enough fit.
     ///
-    SplineFitSplitStrategy splitStrategy = SplineFitSplitStrategy::IndexRatio;
-
-    /// The ratio to use when `splitStrategy` is `IndexRatio`.
-    ///
-    double indexRatio = 0.67;
+    FitSplitStrategy splitStrategy = FitSplitStrategy::indexRatio(0.67);
 };
 
 } // namespace experimental
@@ -280,11 +335,7 @@ struct BlendFitSettings {
 
     /// Where to split a Bézier segment that isn't a good-enough fit.
     ///
-    SplineFitSplitStrategy splitStrategy = SplineFitSplitStrategy::ThirdLast;
-
-    /// The ratio to use when `splitStrategy` is `IndexRatio`.
-    ///
-    double indexRatio = 0.75;
+    FitSplitStrategy splitStrategy = FitSplitStrategy::indexRatio(0.4);
 
     /// The minimal number of input points used for each local fit. If the
     /// input has fewer points than this, then the output consists of a single
@@ -300,7 +351,7 @@ struct BlendFitSettings {
     ///
     // TODO: maxFitLength for minimal arc-length per local fit?
     //
-    Int maxFitPoints = 5;
+    Int maxFitPoints = 50;
 };
 
 } // namespace experimental
