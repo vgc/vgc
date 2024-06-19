@@ -2141,10 +2141,62 @@ void QuadraticBlendPass::doUpdateFrom(
             i1 = getSplitIndex(settings_.splitStrategy, lastFit);
         }
 
-        // Determine minimum and max value of i2 based on min/max settings
+        // Determine minimum and maximum value of i2 based on min/max settings.
+        //
+        // In our experience, results are usually better when allowing
+        // consecutive fits to share their last input point, otherwise:
+        //
+        // 1. In would make it impossible in some cases to reach back `minFitPoints`
+        //    depending on `indexRatio`. For example, if `minFitPoints = 5` and
+        //    `indexRatio = 0.25`, then once we reach 8 fit points (i2 = i1 + 7),
+        //     then the next fit would have the following constraints:
+        //       i1_next = splitIndex(i1, i2, 0.25) = i1 + floor(7*0.25) = i1 + 1
+        //       i2_next >= i2 + 1 (since we would not allow i2_next = i2)
+        //     So: i2_next - i1_next >= i2 - i1 = 7
+        //     Which means that we can never go below 8 fit points anymore.
+        //     To make it possible to go back down to 5 fit points, one would have to
+        //     choose `indexRatio >= 2/5`, which may not be desirable. To go back down
+        //     to 3 fit points, one would have to choose `indexRatio >= 2/3`
+        //
+        // 2. More generally, it would make it impossible to decrease
+        //    numFitPoints fast enough from a large value to a small value, which
+        //    is necessary when transitionning from a low-curvature to a
+        //    high-curvature part of the curve, such as a sharp turn after a long
+        //    straight line. Therefore, the algorithm would be forced to include
+        //    in its output bad fits that go over the turn and cannot be well
+        //    approximated by a quadratic.
+        //
+        // However, while we allow i2_next == i2, we enforce i1_next >= i1 + 1
+        // (see implementation of getSplitIndex()), which is necessary to
+        // ensure that the algorithm terminates. This makes the output somewhat
+        // asymmetrical, but it makes sense given the "forward-oriented" nature
+        // of the algorithm (running it with the input points reversed would
+        // give a different result anyway, even if we didn't allow fits to
+        // share their end point)
+        //
+        // An alternative way to solve problems 1. and 2. while not allowing
+        // fits to share their end point might be to implement a more complex
+        // SplitStrategy that behaves differently for small numbers and large
+        // numbers or fit points, or a more complex algorithm that actually
+        // searches for the best i1_next based on the quality of fits (like we
+        // do for i2_next), instead of just directly setting the value of
+        // i1_next based on a simple formula from i1 and i2.
+        //
+        // Finally, note that since i1 is determined via a simple formula
+        // (e.g., i1_next = i1 + floor((i2-i1)*0.25)), while i2 is determined
+        // as the largest possible index that still allows for a good fit, then
+        // this allows going instantly from a small number of fit points to a
+        // large number of fit points, but not the other way around. This is
+        // also asymmetrical, and it might be worth exploring other methdods
+        // to make this more symmetrical, such as limiting `i2_next - i1_next`
+        // to not be more than some factor of `i2 - i1`, or determining i1 in a
+        // more complex way than just the simple formula.
+        //
+        constexpr bool allowSharedLastInputIndex = true;
+        constexpr Int i2MinOffset = allowSharedLastInputIndex ? 0 : 1;
         Int i2Min = i1 + settings_.minFitPoints - 1;
-        if (!fits_.isEmpty() && i2Min <= fits_.last().lastInputIndex) {
-            i2Min = fits_.last().lastInputIndex + 1;
+        if (!fits_.isEmpty() && i2Min < fits_.last().lastInputIndex + i2MinOffset) {
+            i2Min = fits_.last().lastInputIndex + i2MinOffset;
         }
         Int i2Max = i1 + settings_.maxFitPoints - 1;
         if (i2Max > numInputPoints - 1) {

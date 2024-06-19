@@ -335,7 +335,7 @@ struct BlendFitSettings {
 
     /// Where to split a Bézier segment that isn't a good-enough fit.
     ///
-    FitSplitStrategy splitStrategy = FitSplitStrategy::indexRatio(0.4);
+    FitSplitStrategy splitStrategy = FitSplitStrategy::indexRatio(0.25);
 
     /// The minimal number of input points used for each local fit. If the
     /// input has fewer points than this, then the output consists of a single
