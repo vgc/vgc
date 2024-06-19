@@ -316,6 +316,10 @@ struct BlendFitInfo {
     Int firstInputIndex = 0;
     Int lastInputIndex = 0;
 
+    // Chord-length of first and last input points
+    double s1 = 0;
+    double s2 = 0;
+
     // Best fit
     geometry::QuadraticBezier2d bezier;
     Int furthestIndex = 0;

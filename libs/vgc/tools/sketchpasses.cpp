@@ -1959,6 +1959,8 @@ detail::BlendFitInfo computeBestFit(
     detail::BlendFitInfo res;
     res.firstInputIndex = i1;
     res.lastInputIndex = i2;
+    res.s1 = input[i1].s();
+    res.s2 = input[i2].s();
 
     // Compute the best quadratic fit of the input points between
     // `firstInputIndex` and `lastInputIndex` (included).
@@ -2197,6 +2199,57 @@ void QuadraticBlendPass::doUpdateFrom(
         VGC_DEBUG_TMP(whitespace + dashes + text);
         debugDraw(transformMatrix(), fit.bezier);
     }
+
+    const SketchPointArray& inputData = input.data();
+
+    // Compute a uniform sampling of the blend between the output fits.
+    //
+    constexpr double ds = 3;
+    double sMax = input.last().s();
+    Int numInteriorSamples = core::ifloor<Int>(sMax / ds - 0.5);
+    Int j1 = 0; // Index of first fit that contains s in its interior
+    Int j2 = 0; // Index of last fit that contains s in its interior
+    Int k = 0;  // Index of last pair of input points (k, k+1) s.t. input[k].s() < s
+    Int jMax = fits_.length() - 1;
+    Int kMax = numInputPoints - 2;
+    for (Int i = 0; i < numInteriorSamples; ++i) {
+        double s = (i + 1) * ds;
+        while (j1 < jMax && fits_[j1].s2 <= s) {
+            ++j1;
+        }
+        while (j2 < jMax && fits_[j2 + 1].s1 < s) {
+            ++j2;
+        }
+        while (k < kMax && input[k + 1].s() < s) {
+            ++k;
+        }
+        VGC_ASSERT(j1 <= j2);
+
+        // Init output sketch point as linear interpolation of input point pair.
+        // This takes care of setting an appropriate pressure/width/timestamp.
+        const SketchPoint p1 = inputData.getUnchecked(k);
+        const SketchPoint p2 = inputData.getUnchecked(k + 1);
+        double s1 = p1.s();
+        double s2 = p2.s();
+        SketchPoint p = core::fastLerp(p1, p2, (s - s1) / (s2 - s1));
+
+        // Compute weighted average of local fits
+        geometry::Vec2d position;
+        double totalWeight = 0;
+        for (Int j = j1; j <= j2; ++j) {
+            const detail::BlendFitInfo& fit = fits_[j];
+            double u = (s - fit.s1) / (fit.s2 - fit.s1);
+            double t = 2 * u - 1;
+            double weight = (1 - t) * (1 - t) * (1 + t) * (1 + t);
+            totalWeight += weight;
+            position += weight * fit.bezier.eval(u);
+        }
+        position /= totalWeight;
+
+        p.setPosition(position);
+        output.append(p);
+    }
+    output.append(input.last());
 
     output.updateChordLengths();
 
