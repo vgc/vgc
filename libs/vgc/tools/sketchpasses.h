@@ -90,6 +90,10 @@ enum class FitSplitType {
     /// to exaustively compute all overlapping fits of a given size, you
     /// can use RelativeToStart with an offset of 1.
     ///
+    /// Using RelativeToStart with an offset of 0 has the special meaning to
+    /// allow a fit to start at the same point than the previous fit, as long
+    /// as the fit ends strictly after the previous fit and is a good fit.
+    ///
     RelativeToStart,
 
     /// Split at an index relative to the end point of the current fit.
@@ -335,7 +339,7 @@ struct BlendFitSettings {
 
     /// Where to split a Bézier segment that isn't a good-enough fit.
     ///
-    FitSplitStrategy splitStrategy = FitSplitStrategy::indexRatio(0.25);
+    FitSplitStrategy splitStrategy = FitSplitStrategy::relativeToStart(0);
 
     /// The minimal number of input points used for each local fit. If the
     /// input has fewer points than this, then the output consists of a single

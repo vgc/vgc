@@ -1690,7 +1690,7 @@ Int FitSplitStrategy::getSplitIndex( //
             core::narrow_cast<double>(lastIndex),
             ratio()));
     }
-    return core::clamp(splitIndex, firstIndex + 1, lastIndex - 1);
+    return core::clamp(splitIndex, firstIndex, lastIndex);
 }
 
 } // namespace experimental
@@ -2113,6 +2113,13 @@ void QuadraticBlendPass::doUpdateFrom(
         output.append(input.first());
     }
 
+    // Convenient aliases
+    using experimental::FitSplitStrategy;
+    using experimental::FitSplitType;
+    const FitSplitStrategy& splitStrategy = settings_.splitStrategy;
+    bool isRelativeToStart = splitStrategy.type() == FitSplitType::RelativeToStart;
+    Int splitOffset = settings_.splitStrategy.offset();
+
     // The general idea of the algorithm is:
     //
     // 1. Initialize i1 to 0
@@ -2131,8 +2138,28 @@ void QuadraticBlendPass::doUpdateFrom(
     // e.g, force all output fits to have a fixed number of input point.
     //
 
-    // While some input points have still not been processed
-    while (fits_.isEmpty() || fits_.last().lastInputIndex != numInputPoints - 1) {
+    // While:
+    // - Some input points have still not been processed, or
+    // - We're reached the last input point but we want to continue with smaller fits
+    //
+    auto keepShrinking = [&]() {
+        if (!isRelativeToStart) {
+            return false;
+            // XXX: would it make sense to return true in some case with indexRatio too?
+        }
+        Int i1 = fits_.last().firstInputIndex;
+        Int i2 = fits_.last().lastInputIndex;
+        Int numFitPoints = i2 - i1 + 1;
+        if (splitOffset == 0) {
+            return numFitPoints > settings_.minFitPoints;
+        }
+        else {
+            return numFitPoints > settings_.minFitPoints + splitOffset - 1;
+        }
+    };
+    while (fits_.isEmpty()                                      // we haven't started yet
+           || fits_.last().lastInputIndex != numInputPoints - 1 // last point not reached
+           || (keepShrinking())) {
 
         // Determine i1
         Int i1 = 0;
@@ -2194,6 +2221,9 @@ void QuadraticBlendPass::doUpdateFrom(
         //
         constexpr bool allowSharedLastInputIndex = true;
         constexpr Int i2MinOffset = allowSharedLastInputIndex ? 0 : 1;
+        Int i2MaxOffset = isRelativeToStart                          //
+                              ? settings_.splitStrategy.offset() + 1 // +1 allows growth
+                              : core::IntMax;
         Int i2Min = i1 + settings_.minFitPoints - 1;
         if (!fits_.isEmpty() && i2Min < fits_.last().lastInputIndex + i2MinOffset) {
             i2Min = fits_.last().lastInputIndex + i2MinOffset;
@@ -2202,10 +2232,25 @@ void QuadraticBlendPass::doUpdateFrom(
         if (i2Max > numInputPoints - 1) {
             i2Max = numInputPoints - 1;
         }
+        if (fits_.isEmpty()) {
+            // If there is a maximum offset between an i2 and the next i2, then
+            // we want the first output fit to have numFitPoints <= minFitPoints,
+            // and progressively grow from there.
+            if (i2MaxOffset < core::IntMax) {
+                if (i2Max > settings_.minFitPoints - 1) {
+                    i2Max = settings_.minFitPoints - 1;
+                }
+            }
+        }
+        else {
+            if (i2Max > fits_.last().lastInputIndex + i2MaxOffset) {
+                i2Max = fits_.last().lastInputIndex + i2MaxOffset;
+            }
+        }
 
-        // Handle special case where we need to go lower than the min
-        // at the end of the stroke, because there isn't enough input points.
-        // Example with minFitPoints = maxFitPoints = 5 and splitStrategy = SecondLast
+        // Handle special case where we need to go lower than the min at the end
+        // of the stroke, because there isn't enough input points. Example with
+        // minFitPoints = maxFitPoints = 5 and splitStrategy = relativeToStart(2):
         //
         // Input points:  ........ (8)
         // Output fits:   ----- (5)
@@ -2213,6 +2258,60 @@ void QuadraticBlendPass::doUpdateFrom(
         //                    ---- (4) <- cannot use 5, exceptionally
         //
         i2Min = (std::min)(i2Min, i2Max);
+
+        // Handle relativeToStart(0) special case.
+        //
+        if (isRelativeToStart && settings_.splitStrategy.offset() == 0) {
+
+            if (fits_.isEmpty()) {
+                // i1 == 0
+                // i2Max == min(minFitPoints - 1,  numInputPoints - 1)
+                detail::BlendFitInfo fit =
+                    computeBestFit(input, i1, i2Max, settings_, buffer_);
+                fits_.append(fit);
+            }
+            else {
+                // i1 == fits_.last().firstInputIndex
+                Int i2 = fits_.last().lastInputIndex;
+                if (i2 == numInputPoints - 1) {
+                    detail::BlendFitInfo fit3 =
+                        computeBestFit(input, i1 + 1, i2, settings_, buffer_);
+                    fits_.append(fit3);
+                }
+                else {
+                    if (i2 - i1 + 1 == settings_.maxFitPoints) {
+                        if (i2 - i1 + 1 == settings_.minFitPoints) {
+                            detail::BlendFitInfo fit2 =
+                                computeBestFit(input, i1 + 1, i2 + 1, settings_, buffer_);
+                            fits_.append(fit2);
+                        }
+                        else {
+                            detail::BlendFitInfo fit3 =
+                                computeBestFit(input, i1 + 1, i2, settings_, buffer_);
+                            fits_.append(fit3);
+                        }
+                    }
+                    else {
+                        detail::BlendFitInfo fit =
+                            computeBestFit(input, i1, i2 + 1, settings_, buffer_);
+                        if (fit.isGoodFit) {
+                            fits_.append(fit);
+                        }
+                        else if (i2 - i1 + 1 == settings_.minFitPoints) {
+                            detail::BlendFitInfo fit2 =
+                                computeBestFit(input, i1 + 1, i2 + 1, settings_, buffer_);
+                            fits_.append(fit2);
+                        }
+                        else {
+                            detail::BlendFitInfo fit3 =
+                                computeBestFit(input, i1 + 1, i2, settings_, buffer_);
+                            fits_.append(fit3);
+                        }
+                    }
+                }
+            }
+            continue;
+        }
 
         // Compute bestFit([i1..i2]) and increase i2 until a bad fit is found,
         // or i2 has reached its maxValue. Add the last good fit (or only fit,
