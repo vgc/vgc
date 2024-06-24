@@ -28,6 +28,12 @@
 
 namespace vgc::tools {
 
+namespace {
+
+constexpr bool enableDebugFits = true;
+
+}
+
 void EmptyPass::doUpdateFrom(const SketchPointBuffer& input, SketchPointBuffer& output) {
 
     // Remove all previously unstable points.
@@ -2061,6 +2067,409 @@ void debugDraw(
     });
 }
 
+// This is the special case of Progressive Blend when the split strategy is
+// RelativeToStart with an index offset of zero.
+//
+void computeDenseProgressiveBlendFits(
+    const SketchPointBuffer& input,
+    const experimental::BlendFitSettings& settings_,
+    core::Array<detail::BlendFitInfo>& fits_,
+    detail::FitBuffer& buffer_) {
+
+    // Convenient aliases
+    using experimental::FitSplitStrategy;
+    using experimental::FitSplitType;
+    const FitSplitStrategy& splitStrategy = settings_.splitStrategy;
+    bool isRelativeToStart = splitStrategy.type() == FitSplitType::RelativeToStart;
+    Int splitOffset = settings_.splitStrategy.offset();
+    Int minFitPoints = settings_.minFitPoints;
+    Int maxFitPoints = settings_.maxFitPoints;
+    Int numInputPoints = input.length();
+
+    // Check that we're in the "dense" case
+    VGC_ASSERT(isRelativeToStart && splitOffset == 0);
+
+    // Compute first fit.
+    //
+    if (fits_.isEmpty()) {
+        Int i1 = 0;
+        Int i2 = (std::min)(minFitPoints - 1, numInputPoints - 1);
+        detail::BlendFitInfo fit = computeBestFit(input, i1, i2, settings_, buffer_);
+        fits_.append(fit);
+    }
+
+    // Compute subsequent fits.
+    //
+    auto finished = [&]() {
+        Int i1 = fits_.last().firstInputIndex;
+        Int i2 = fits_.last().lastInputIndex;
+        Int numFitPoints = i2 - i1 + 1;
+        return i2 == numInputPoints - 1 && numFitPoints <= minFitPoints;
+    };
+    while (!finished()) {
+        Int i1 = fits_.last().firstInputIndex;
+        Int i2 = fits_.last().lastInputIndex;
+        if (i2 == numInputPoints - 1) {
+            // Reached last input point => shrink fit by one point
+            detail::BlendFitInfo fit =
+                computeBestFit(input, i1 + 1, i2, settings_, buffer_);
+            fits_.append(fit);
+        }
+        else if (i2 - i1 + 1 == maxFitPoints) {
+            if (i2 - i1 + 1 == minFitPoints) {
+                // Fixed fit size => move fit by one point
+                detail::BlendFitInfo fit =
+                    computeBestFit(input, i1 + 1, i2 + 1, settings_, buffer_);
+                fits_.append(fit);
+            }
+            else {
+                // Reached maxFitPoints => shrink fit by one point
+                detail::BlendFitInfo fit =
+                    computeBestFit(input, i1 + 1, i2, settings_, buffer_);
+                fits_.append(fit);
+            }
+        }
+        else {
+            // Growing is allowed => grow fit by one point and test if good.
+            // If good, keep it. Otherwise, either shrink or move by one point
+            detail::BlendFitInfo fit =
+                computeBestFit(input, i1, i2 + 1, settings_, buffer_);
+            if (fit.isGoodFit) {
+                fits_.append(fit);
+            }
+            else if (i2 - i1 + 1 == minFitPoints) {
+                detail::BlendFitInfo fit2 =
+                    computeBestFit(input, i1 + 1, i2 + 1, settings_, buffer_);
+                fits_.append(fit2);
+            }
+            else {
+                detail::BlendFitInfo fit3 =
+                    computeBestFit(input, i1 + 1, i2, settings_, buffer_);
+                fits_.append(fit3);
+            }
+        }
+    }
+}
+
+// Determine minimum and maximum value of i2 based on Progressive Blend settings
+//
+// In our experience, results are usually better when allowing
+// consecutive fits to share their last input point, otherwise:
+//
+// 1. In would make it impossible in some cases to reach back `minFitPoints`
+//    depending on `indexRatio`. For example, if `minFitPoints = 5` and
+//    `indexRatio = 0.25`, then once we reach 8 fit points (i2 = i1 + 7),
+//     then the next fit would have the following constraints:
+//       i1_next = splitIndex(i1, i2, 0.25) = i1 + floor(7*0.25) = i1 + 1
+//       i2_next >= i2 + 1 (since we would not allow i2_next = i2)
+//     So: i2_next - i1_next >= i2 - i1 = 7
+//     Which means that we can never go below 8 fit points anymore.
+//     To make it possible to go back down to 5 fit points, one would have to
+//     choose `indexRatio >= 2/5`, which may not be desirable. To go back down
+//     to 3 fit points, one would have to choose `indexRatio >= 2/3`
+//
+// 2. More generally, it would make it impossible to decrease
+//    numFitPoints fast enough from a large value to a small value, which
+//    is necessary when transitionning from a low-curvature to a
+//    high-curvature part of the curve, such as a sharp turn after a long
+//    straight line. Therefore, the algorithm would be forced to include
+//    in its output bad fits that go over the turn and cannot be well
+//    approximated by a quadratic.
+//
+// However, while we allow i2_next == i2, we enforce i1_next >= i1 + 1
+// (see implementation of getSplitIndex()), which is necessary to
+// ensure that the algorithm terminates. This makes the output somewhat
+// asymmetrical, but it makes sense given the "forward-oriented" nature
+// of the algorithm (running it with the input points reversed would
+// give a different result anyway, even if we didn't allow fits to
+// share their end point)
+//
+// An alternative way to solve problems 1. and 2. while not allowing
+// fits to share their end point might be to implement a more complex
+// SplitStrategy that behaves differently for small numbers and large
+// numbers or fit points, or a more complex algorithm that actually
+// searches for the best i1_next based on the quality of fits (like we
+// do for i2_next), instead of just directly setting the value of
+// i1_next based on a simple formula from i1 and i2.
+//
+// Finally, note that since i1 is determined via a simple formula
+// (e.g., i1_next = i1 + floor((i2-i1)*0.25)), while i2 is determined
+// as the largest possible index that still allows for a good fit, then
+// this allows going instantly from a small number of fit points to a
+// large number of fit points, but not the other way around. This is
+// also asymmetrical, and it might be worth exploring other methdods
+// to make this more symmetrical, such as limiting `i2_next - i1_next`
+// to not be more than some factor of `i2 - i1`, or determining i1 in a
+// more complex way than just the simple formula.
+//
+std::pair<Int, Int> getProgressiveBlendIndexRange(
+    const SketchPointBuffer& input,
+    const core::Array<detail::BlendFitInfo>& fits_,
+    const experimental::BlendFitSettings& settings_,
+    Int i1) {
+
+    Int numInputPoints = input.length();
+
+    using experimental::FitSplitStrategy;
+    using experimental::FitSplitType;
+    const FitSplitStrategy& splitStrategy = settings_.splitStrategy;
+    bool isRelativeToStart = splitStrategy.type() == FitSplitType::RelativeToStart;
+    Int splitOffset = settings_.splitStrategy.offset();
+
+    constexpr bool allowSharedLastInputIndex = true;
+    constexpr Int i2MinOffset = allowSharedLastInputIndex ? 0 : 1;
+    Int i2MaxOffset = isRelativeToStart     //
+                          ? splitOffset + 1 // +1 allows growth
+                          : core::IntMax;
+    Int i2Min = i1 + settings_.minFitPoints - 1;
+    if (!fits_.isEmpty() && i2Min < fits_.last().lastInputIndex + i2MinOffset) {
+        i2Min = fits_.last().lastInputIndex + i2MinOffset;
+    }
+    Int i2Max = i1 + settings_.maxFitPoints - 1;
+    if (i2Max > numInputPoints - 1) {
+        i2Max = numInputPoints - 1;
+    }
+    if (fits_.isEmpty()) {
+        // If there is a maximum offset between an i2 and the next i2, then
+        // we want the first output fit to have numFitPoints <= minFitPoints,
+        // and progressively grow from there.
+        if (i2MaxOffset < core::IntMax) {
+            if (i2Max > settings_.minFitPoints - 1) {
+                i2Max = settings_.minFitPoints - 1;
+            }
+        }
+    }
+    else {
+        if (i2Max > fits_.last().lastInputIndex + i2MaxOffset) {
+            i2Max = fits_.last().lastInputIndex + i2MaxOffset;
+        }
+    }
+
+    // Handle special case where we need to go lower than the min at the end
+    // of the stroke, because there isn't enough input points. Example with
+    // minFitPoints = maxFitPoints = 5 and splitStrategy = relativeToStart(2):
+    //
+    // Input points:  ........ (8)
+    // Output fits:   ----- (5)
+    //                  ----- (5)
+    //                    ---- (4) <- cannot use 5, exceptionally
+    //
+    i2Min = (std::min)(i2Min, i2Max);
+
+    return std::make_pair(i2Min, i2Max);
+}
+
+// The general idea of the algorithm is:
+//
+// 1. Initialize i1 to 0
+//
+// 2. Compute the largest i2 such that [i1..i2] (and all [i1..j] for
+//    i1 < j < i2) can be well-approximated by a Bézier.
+//
+// 3. Add (i1, i2, bestFit([i1..i2])) to the list of output fits
+//
+// 4. Compute a splitIndex between i1 and i2 (see SplitStrategy)
+//    and set i1 = splitIndex
+//
+// 5. Go to step 2 and repeat until i2 = numInputPoints - 1.
+//
+// In practice, further contraints can be set to fine-tune the behavior,
+// e.g, force all output fits to have a fixed number of input point.
+//
+// The terminology "sparse" refers to the fact that the next i1 is computed via
+// the SpitStrategy, therefore the output fits look like:
+//
+// Input points: .........
+// Output fits:  ----
+//                  ----
+//                     ---
+//
+// Rather than:
+//
+// Input points: .........
+// Output fits:  ----
+//               -----
+//               ------
+//                -----
+//                 ----
+//                 -----
+//                 ------
+//                 -------
+//                  ------
+//                   -----
+//                    ----
+//
+void computeSparseProgressiveBlendFits(
+    const SketchPointBuffer& input,
+    const experimental::BlendFitSettings& settings_,
+    core::Array<detail::BlendFitInfo>& fits_,
+    detail::FitBuffer& buffer_) {
+
+    // Convenient aliases
+    using experimental::FitSplitStrategy;
+    using experimental::FitSplitType;
+    const FitSplitStrategy& splitStrategy = settings_.splitStrategy;
+    bool isRelativeToStart = splitStrategy.type() == FitSplitType::RelativeToStart;
+    Int splitOffset = settings_.splitStrategy.offset();
+    Int numInputPoints = input.length();
+
+    // Check that we're not in the "dense" case
+    VGC_ASSERT(!(isRelativeToStart && splitOffset == 0));
+
+    auto keepShrinking = [&]() {
+        if (!isRelativeToStart) {
+            return false;
+            // XXX: would it make sense to return true in some case with indexRatio too?
+        }
+        Int i1 = fits_.last().firstInputIndex;
+        Int i2 = fits_.last().lastInputIndex;
+        Int numFitPoints = i2 - i1 + 1;
+        if (splitOffset == 0) {
+            return numFitPoints > settings_.minFitPoints;
+        }
+        else {
+            return numFitPoints > settings_.minFitPoints + splitOffset - 1;
+        }
+    };
+    while (fits_.isEmpty()                                      // we haven't started yet
+           || fits_.last().lastInputIndex != numInputPoints - 1 // last point not reached
+           || (keepShrinking())) {
+
+        // Determine i1
+        Int i1 = 0;
+        if (!fits_.isEmpty()) {
+            const detail::BlendFitInfo& lastFit = fits_.last();
+            i1 = getSplitIndex(settings_.splitStrategy, lastFit);
+        }
+
+        // Determine i2 min/max range
+        auto [i2Min, i2Max] = getProgressiveBlendIndexRange(input, fits_, settings_, i1);
+
+        // Compute bestFit([i1..i2]) and increase i2 until a bad fit is found,
+        // or i2 has reached its maxValue. Add the last good fit (or only fit,
+        // if even the first fit was bad) to the output.
+        //
+        bool isFirstFitAttempt = true;
+        detail::BlendFitInfo lastGoodFit;
+        for (Int i2 = i2Min; i2 <= i2Max; ++i2) {
+            detail::BlendFitInfo fit = computeBestFit(input, i1, i2, settings_, buffer_);
+            if (fit.isGoodFit || isFirstFitAttempt) {
+                lastGoodFit = fit;
+                isFirstFitAttempt = false;
+            }
+            if (i2 == i2Max || !fit.isGoodFit) {
+                fits_.append(lastGoodFit);
+                break;
+            }
+        }
+    }
+}
+
+void computeProgressiveBlendFits(
+    const SketchPointBuffer& input,
+    const experimental::BlendFitSettings& settings,
+    core::Array<detail::BlendFitInfo>& fits,
+    detail::FitBuffer& buffer) {
+
+    using experimental::FitSplitStrategy;
+    using experimental::FitSplitType;
+    const FitSplitStrategy& splitStrategy = settings.splitStrategy;
+    bool isRelativeToStart = splitStrategy.type() == FitSplitType::RelativeToStart;
+    bool isDense = isRelativeToStart && splitStrategy.offset() == 0;
+
+    if (isDense) {
+        computeDenseProgressiveBlendFits(input, settings, fits, buffer);
+    }
+    else {
+        computeSparseProgressiveBlendFits(input, settings, fits, buffer);
+    }
+}
+
+void computeBlendBetweenFits(
+    const SketchPointBuffer& input,
+    const experimental::BlendFitSettings& settings,
+    const core::Array<detail::BlendFitInfo>& fits,
+    SketchPointBuffer& output) {
+
+    VGC_UNUSED(settings);
+
+    const SketchPointArray& inputData = input.data();
+    Int numInputPoints = input.length();
+
+    constexpr double ds = 0.5;
+    double sMax = input.last().s();
+    Int numInteriorSamples = core::ifloor<Int>(sMax / ds - 0.5);
+    Int j1 = 0; // Index of first fit that contains s in its interior
+    Int j2 = 0; // Index of last fit that contains s in its interior
+    Int k = 0;  // Index of last pair of input points (k, k+1) s.t. input[k].s() < s
+    Int jMax = fits.length() - 1;
+    Int kMax = numInputPoints - 2;
+    for (Int i = 0; i < numInteriorSamples; ++i) {
+        double s = (i + 1) * ds;
+        while (j1 < jMax && fits[j1].s2 <= s) {
+            ++j1;
+        }
+        while (j2 < jMax && fits[j2 + 1].s1 < s) {
+            ++j2;
+        }
+        while (k < kMax && input[k + 1].s() < s) {
+            ++k;
+        }
+        VGC_ASSERT(j1 <= j2);
+
+        // Init output sketch point as linear interpolation of input point pair.
+        // This takes care of setting an appropriate pressure/width/timestamp.
+        const SketchPoint p1 = inputData.getUnchecked(k);
+        const SketchPoint p2 = inputData.getUnchecked(k + 1);
+        double s1 = p1.s();
+        double s2 = p2.s();
+        SketchPoint p = core::fastLerp(p1, p2, (s - s1) / (s2 - s1));
+
+        // Compute weighted average of local fits
+        geometry::Vec2d position;
+        double totalWeight = 0;
+        for (Int j = j1; j <= j2; ++j) {
+            const detail::BlendFitInfo& fit = fits[j];
+            double u = (s - fit.s1) / (fit.s2 - fit.s1);
+            double t = 2 * u - 1;
+            double weight = (1 - t) * (1 - t) * (1 + t) * (1 + t);
+            totalWeight += weight;
+            position += weight * fit.bezier.eval(u);
+        }
+        position /= totalWeight;
+
+        p.setPosition(position);
+        output.append(p);
+    }
+    output.append(input.last());
+}
+
+void debugFits(
+    const core::Array<detail::BlendFitInfo>& fits,
+    const geometry::Mat3d& transform) {
+
+    if (!enableDebugFits) {
+        return;
+    }
+
+    std::string str = "\n";
+    debugDrawClear();
+    for (const auto& fit : fits) {
+        Int numFitPoints = fit.lastInputIndex - fit.firstInputIndex + 1;
+        std::string whitespace(fit.firstInputIndex, ' ');
+        std::string dashes(numFitPoints, '-');
+        std::string text = core::format( //
+            " {}-{} ({}){}",
+            fit.firstInputIndex,
+            fit.lastInputIndex,
+            numFitPoints,
+            fit.isGoodFit ? "" : "*");
+        str += whitespace + dashes + text + '\n';
+        debugDraw(transform, fit.bezier);
+    }
+    VGC_DEBUG(LogVgcToolsSketch, str);
+}
+
 } // namespace
 
 QuadraticBlendPass::QuadraticBlendPass()
@@ -2113,290 +2522,14 @@ void QuadraticBlendPass::doUpdateFrom(
         output.append(input.first());
     }
 
-    // Convenient aliases
-    using experimental::FitSplitStrategy;
-    using experimental::FitSplitType;
-    const FitSplitStrategy& splitStrategy = settings_.splitStrategy;
-    bool isRelativeToStart = splitStrategy.type() == FitSplitType::RelativeToStart;
-    Int splitOffset = settings_.splitStrategy.offset();
-
-    // The general idea of the algorithm is:
+    // Compute overlapping Bézier fits from the input point
     //
-    // 1. Initialize i1 to 0
+    computeProgressiveBlendFits(input, settings_, fits_, buffer_);
+    debugFits(fits_, transformMatrix());
+
+    // Compute a uniform sampling of the blend between the Bézier fits.
     //
-    // 2. Compute the largest i2 such that [i1..i2] (and all [i1..j] for
-    //    i1 < j < i2) can be well-approximated by a Bézier.
-    //
-    // 3. Add (i1, i2, bestFit([i1..i2])) to the list of output fits
-    //
-    // 4. Compute a splitIndex between i1 and i2 (see SplitStrategy)
-    //    and set i1 = splitIndex
-    //
-    // 5. Go to step 2 and repeat until i2 = numInputPoints - 1.
-    //
-    // In practice, further contraints can be set to fine-tune the behavior,
-    // e.g, force all output fits to have a fixed number of input point.
-    //
-
-    // While:
-    // - Some input points have still not been processed, or
-    // - We're reached the last input point but we want to continue with smaller fits
-    //
-    auto keepShrinking = [&]() {
-        if (!isRelativeToStart) {
-            return false;
-            // XXX: would it make sense to return true in some case with indexRatio too?
-        }
-        Int i1 = fits_.last().firstInputIndex;
-        Int i2 = fits_.last().lastInputIndex;
-        Int numFitPoints = i2 - i1 + 1;
-        if (splitOffset == 0) {
-            return numFitPoints > settings_.minFitPoints;
-        }
-        else {
-            return numFitPoints > settings_.minFitPoints + splitOffset - 1;
-        }
-    };
-    while (fits_.isEmpty()                                      // we haven't started yet
-           || fits_.last().lastInputIndex != numInputPoints - 1 // last point not reached
-           || (keepShrinking())) {
-
-        // Determine i1
-        Int i1 = 0;
-        if (!fits_.isEmpty()) {
-            const detail::BlendFitInfo& lastFit = fits_.last();
-            i1 = getSplitIndex(settings_.splitStrategy, lastFit);
-        }
-
-        // Determine minimum and maximum value of i2 based on min/max settings.
-        //
-        // In our experience, results are usually better when allowing
-        // consecutive fits to share their last input point, otherwise:
-        //
-        // 1. In would make it impossible in some cases to reach back `minFitPoints`
-        //    depending on `indexRatio`. For example, if `minFitPoints = 5` and
-        //    `indexRatio = 0.25`, then once we reach 8 fit points (i2 = i1 + 7),
-        //     then the next fit would have the following constraints:
-        //       i1_next = splitIndex(i1, i2, 0.25) = i1 + floor(7*0.25) = i1 + 1
-        //       i2_next >= i2 + 1 (since we would not allow i2_next = i2)
-        //     So: i2_next - i1_next >= i2 - i1 = 7
-        //     Which means that we can never go below 8 fit points anymore.
-        //     To make it possible to go back down to 5 fit points, one would have to
-        //     choose `indexRatio >= 2/5`, which may not be desirable. To go back down
-        //     to 3 fit points, one would have to choose `indexRatio >= 2/3`
-        //
-        // 2. More generally, it would make it impossible to decrease
-        //    numFitPoints fast enough from a large value to a small value, which
-        //    is necessary when transitionning from a low-curvature to a
-        //    high-curvature part of the curve, such as a sharp turn after a long
-        //    straight line. Therefore, the algorithm would be forced to include
-        //    in its output bad fits that go over the turn and cannot be well
-        //    approximated by a quadratic.
-        //
-        // However, while we allow i2_next == i2, we enforce i1_next >= i1 + 1
-        // (see implementation of getSplitIndex()), which is necessary to
-        // ensure that the algorithm terminates. This makes the output somewhat
-        // asymmetrical, but it makes sense given the "forward-oriented" nature
-        // of the algorithm (running it with the input points reversed would
-        // give a different result anyway, even if we didn't allow fits to
-        // share their end point)
-        //
-        // An alternative way to solve problems 1. and 2. while not allowing
-        // fits to share their end point might be to implement a more complex
-        // SplitStrategy that behaves differently for small numbers and large
-        // numbers or fit points, or a more complex algorithm that actually
-        // searches for the best i1_next based on the quality of fits (like we
-        // do for i2_next), instead of just directly setting the value of
-        // i1_next based on a simple formula from i1 and i2.
-        //
-        // Finally, note that since i1 is determined via a simple formula
-        // (e.g., i1_next = i1 + floor((i2-i1)*0.25)), while i2 is determined
-        // as the largest possible index that still allows for a good fit, then
-        // this allows going instantly from a small number of fit points to a
-        // large number of fit points, but not the other way around. This is
-        // also asymmetrical, and it might be worth exploring other methdods
-        // to make this more symmetrical, such as limiting `i2_next - i1_next`
-        // to not be more than some factor of `i2 - i1`, or determining i1 in a
-        // more complex way than just the simple formula.
-        //
-        constexpr bool allowSharedLastInputIndex = true;
-        constexpr Int i2MinOffset = allowSharedLastInputIndex ? 0 : 1;
-        Int i2MaxOffset = isRelativeToStart                          //
-                              ? settings_.splitStrategy.offset() + 1 // +1 allows growth
-                              : core::IntMax;
-        Int i2Min = i1 + settings_.minFitPoints - 1;
-        if (!fits_.isEmpty() && i2Min < fits_.last().lastInputIndex + i2MinOffset) {
-            i2Min = fits_.last().lastInputIndex + i2MinOffset;
-        }
-        Int i2Max = i1 + settings_.maxFitPoints - 1;
-        if (i2Max > numInputPoints - 1) {
-            i2Max = numInputPoints - 1;
-        }
-        if (fits_.isEmpty()) {
-            // If there is a maximum offset between an i2 and the next i2, then
-            // we want the first output fit to have numFitPoints <= minFitPoints,
-            // and progressively grow from there.
-            if (i2MaxOffset < core::IntMax) {
-                if (i2Max > settings_.minFitPoints - 1) {
-                    i2Max = settings_.minFitPoints - 1;
-                }
-            }
-        }
-        else {
-            if (i2Max > fits_.last().lastInputIndex + i2MaxOffset) {
-                i2Max = fits_.last().lastInputIndex + i2MaxOffset;
-            }
-        }
-
-        // Handle special case where we need to go lower than the min at the end
-        // of the stroke, because there isn't enough input points. Example with
-        // minFitPoints = maxFitPoints = 5 and splitStrategy = relativeToStart(2):
-        //
-        // Input points:  ........ (8)
-        // Output fits:   ----- (5)
-        //                  ----- (5)
-        //                    ---- (4) <- cannot use 5, exceptionally
-        //
-        i2Min = (std::min)(i2Min, i2Max);
-
-        // Handle relativeToStart(0) special case.
-        //
-        if (isRelativeToStart && settings_.splitStrategy.offset() == 0) {
-
-            if (fits_.isEmpty()) {
-                // i1 == 0
-                // i2Max == min(minFitPoints - 1,  numInputPoints - 1)
-                detail::BlendFitInfo fit =
-                    computeBestFit(input, i1, i2Max, settings_, buffer_);
-                fits_.append(fit);
-            }
-            else {
-                // i1 == fits_.last().firstInputIndex
-                Int i2 = fits_.last().lastInputIndex;
-                if (i2 == numInputPoints - 1) {
-                    detail::BlendFitInfo fit3 =
-                        computeBestFit(input, i1 + 1, i2, settings_, buffer_);
-                    fits_.append(fit3);
-                }
-                else {
-                    if (i2 - i1 + 1 == settings_.maxFitPoints) {
-                        if (i2 - i1 + 1 == settings_.minFitPoints) {
-                            detail::BlendFitInfo fit2 =
-                                computeBestFit(input, i1 + 1, i2 + 1, settings_, buffer_);
-                            fits_.append(fit2);
-                        }
-                        else {
-                            detail::BlendFitInfo fit3 =
-                                computeBestFit(input, i1 + 1, i2, settings_, buffer_);
-                            fits_.append(fit3);
-                        }
-                    }
-                    else {
-                        detail::BlendFitInfo fit =
-                            computeBestFit(input, i1, i2 + 1, settings_, buffer_);
-                        if (fit.isGoodFit) {
-                            fits_.append(fit);
-                        }
-                        else if (i2 - i1 + 1 == settings_.minFitPoints) {
-                            detail::BlendFitInfo fit2 =
-                                computeBestFit(input, i1 + 1, i2 + 1, settings_, buffer_);
-                            fits_.append(fit2);
-                        }
-                        else {
-                            detail::BlendFitInfo fit3 =
-                                computeBestFit(input, i1 + 1, i2, settings_, buffer_);
-                            fits_.append(fit3);
-                        }
-                    }
-                }
-            }
-            continue;
-        }
-
-        // Compute bestFit([i1..i2]) and increase i2 until a bad fit is found,
-        // or i2 has reached its maxValue. Add the last good fit (or only fit,
-        // if even the first fit was bad) to the output.
-        //
-        bool isFirstFitAttempt = true;
-        detail::BlendFitInfo lastGoodFit;
-        for (Int i2 = i2Min; i2 <= i2Max; ++i2) {
-            detail::BlendFitInfo fit = computeBestFit(input, i1, i2, settings_, buffer_);
-            if (fit.isGoodFit || isFirstFitAttempt) {
-                lastGoodFit = fit;
-                isFirstFitAttempt = false;
-            }
-            if (i2 == i2Max || !fit.isGoodFit) {
-                fits_.append(lastGoodFit);
-                break;
-            }
-        }
-    }
-
-    debugDrawClear();
-    for (const auto& fit : fits_) {
-        Int numFitPoints = fit.lastInputIndex - fit.firstInputIndex + 1;
-        std::string whitespace(fit.firstInputIndex, ' ');
-        std::string dashes(numFitPoints, '-');
-        std::string text = core::format( //
-            " {}-{} ({}){}",
-            fit.firstInputIndex,
-            fit.lastInputIndex,
-            numFitPoints,
-            fit.isGoodFit ? "" : "*");
-        VGC_DEBUG_TMP(whitespace + dashes + text);
-        debugDraw(transformMatrix(), fit.bezier);
-    }
-
-    const SketchPointArray& inputData = input.data();
-
-    // Compute a uniform sampling of the blend between the output fits.
-    //
-    constexpr double ds = 0.5;
-    double sMax = input.last().s();
-    Int numInteriorSamples = core::ifloor<Int>(sMax / ds - 0.5);
-    Int j1 = 0; // Index of first fit that contains s in its interior
-    Int j2 = 0; // Index of last fit that contains s in its interior
-    Int k = 0;  // Index of last pair of input points (k, k+1) s.t. input[k].s() < s
-    Int jMax = fits_.length() - 1;
-    Int kMax = numInputPoints - 2;
-    for (Int i = 0; i < numInteriorSamples; ++i) {
-        double s = (i + 1) * ds;
-        while (j1 < jMax && fits_[j1].s2 <= s) {
-            ++j1;
-        }
-        while (j2 < jMax && fits_[j2 + 1].s1 < s) {
-            ++j2;
-        }
-        while (k < kMax && input[k + 1].s() < s) {
-            ++k;
-        }
-        VGC_ASSERT(j1 <= j2);
-
-        // Init output sketch point as linear interpolation of input point pair.
-        // This takes care of setting an appropriate pressure/width/timestamp.
-        const SketchPoint p1 = inputData.getUnchecked(k);
-        const SketchPoint p2 = inputData.getUnchecked(k + 1);
-        double s1 = p1.s();
-        double s2 = p2.s();
-        SketchPoint p = core::fastLerp(p1, p2, (s - s1) / (s2 - s1));
-
-        // Compute weighted average of local fits
-        geometry::Vec2d position;
-        double totalWeight = 0;
-        for (Int j = j1; j <= j2; ++j) {
-            const detail::BlendFitInfo& fit = fits_[j];
-            double u = (s - fit.s1) / (fit.s2 - fit.s1);
-            double t = 2 * u - 1;
-            double weight = (1 - t) * (1 - t) * (1 + t) * (1 + t);
-            totalWeight += weight;
-            position += weight * fit.bezier.eval(u);
-        }
-        position /= totalWeight;
-
-        p.setPosition(position);
-        output.append(p);
-    }
-    output.append(input.last());
+    computeBlendBetweenFits(input, settings_, fits_, output);
 
     output.updateChordLengths();
 
