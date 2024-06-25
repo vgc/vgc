@@ -23,6 +23,7 @@
 #include <vgc/core/assert.h>
 #include <vgc/core/colors.h>
 #include <vgc/geometry/bezier.h>
+#include <vgc/geometry/catmullrom.h>
 #include <vgc/tools/logcategories.h>
 
 #include <vgc/core/profile.h>
@@ -2429,6 +2430,128 @@ void computeProgressiveBlendFits(
         newNumStableFits);
 }
 
+// Improve width by using Catmull-Rom interpolation instead linear by part.
+// This prevents ugly C1-discontinuities of the width.
+//
+// For the first/last input point pair, there is no previous/next input
+// point, so we duplicate the first/last point.
+//
+[[maybe_unused]] void improveWidths1( //
+    const SketchPointBuffer& input,
+    Int k,
+    double u,
+    SketchPoint& p) {
+
+    const SketchPoint& p1 = input[k];
+    const SketchPoint& p2 = input[k + 1];
+    bool hasPrev = (k - 1) >= 0;
+    bool hasNext = (k + 2) < input.length();
+    double w0 = hasPrev ? input[k - 1].width() : p1.width();
+    double w3 = hasNext ? input[k + 2].width() : p2.width();
+    const std::array<double, 4> widths = {w0, p1.width(), p2.width(), w3};
+    geometry::CubicBezier1d widthBezier =
+        geometry::uniformCatmullRomToBezier<double>(widths);
+    p.setWidth(widthBezier.eval(u));
+}
+
+// Improve width by using Catmull-Rom interpolation instead linear by part.
+// This prevents ugly C1-discontinuities of the width.
+//
+// For the first/last input point pair, there is no previous/next input
+// point, so we invent a width via some basic extrapolation.
+//
+// Example for k = 0 with input.length() >= 3:
+//
+//            o w3 = input[2].width()
+//           /
+//          o w2   = input[1].width()
+//         /
+//        o w1     = input[0].width()
+//       /
+//      o w0       = w1 + (w1 - w2) = symmetry of w2 relative to w1
+//
+[[maybe_unused]] void improveWidths2( //
+    const SketchPointBuffer& input,
+    Int k,
+    double u,
+    SketchPoint& p) {
+
+    const SketchPoint& p1 = input[k];
+    const SketchPoint& p2 = input[k + 1];
+    bool hasPrev = (k - 1) >= 0;
+    bool hasNext = (k + 2) < input.length();
+    double w0 = hasPrev ? input[k - 1].width() : 2 * p1.width() - p2.width();
+    double w3 = hasNext ? input[k + 2].width() : 2 * p2.width() - p1.width();
+    const std::array<double, 4> widths = {w0, p1.width(), p2.width(), w3};
+    geometry::CubicBezier1d widthBezier =
+        geometry::uniformCatmullRomToBezier<double>(widths);
+    p.setWidth(widthBezier.eval(u));
+}
+
+// Similar to improveWidths3 but with some extra fine-tuning of the tangents
+// taking into account distance between control points.
+//
+// This is similar to what
+// we do in CatmullRomSplineStroke2d::computeSegmentHalfwidthsCubicBezier(),
+// but not exactly the same since ds/du is not the same, as we have a blend
+// of Bézier instead of a single Bézier. For simplicity, we assume that s(u)
+// is linear along
+// is linear
+//
+[[maybe_unused]] void improveWidths3( //
+    const SketchPointBuffer& input,
+    Int k,
+    double u,
+    SketchPoint& p) {
+
+    const SketchPoint& p1 = input[k];
+    const SketchPoint& p2 = input[k + 1];
+
+    bool hasPrev = (k - 1) >= 0;
+    bool hasNext = (k + 2) < input.length();
+
+    double w1 = p1.width();
+    double w2 = p2.width();
+    double w0 = hasPrev ? input[k - 1].width() : 2 * w1 - w2;
+    double w3 = hasNext ? input[k + 2].width() : 2 * w2 - w1;
+
+    // Lengths between control points
+    double d12 = (p2.position() - p1.position()).length();
+    double d01 = hasPrev ? (p1.position() - input[k - 1].position()).length() : d12;
+    double d23 = hasNext ? (p2.position() - input[k + 2].position()).length() : d12;
+
+    double d012 = d01 + d12;
+    double d123 = d12 + d23;
+
+    // Fallback to other method in case we would otherwise have a division by zero
+    if (!(d012 > 0 && d123 > 0)) {
+        improveWidths2(input, k, u, p);
+        return;
+    }
+
+    // desired dw/ds at start/end
+    double dw_ds_1 = (w2 - w0) / d012;
+    double dw_ds_2 = (w3 - w1) / d123;
+
+    // Compute an approximation of 1/3 of ds/du at the start/end of the cubic Bézier
+    //
+    // TODO: Can we do something more accurate by actually evaluating ds/du just before/after
+    // the input points? Alternatively, could we enforce that ds/du is linear between
+    // control points by evaluating the Bézier in arc-length rather than in u-space?
+    //
+    double ds_du_1 = d12 / 3.0;
+    double ds_du_2 = ds_du_1;
+
+    // Compute the knots of the width cubic Bézier, knowing that:
+    //   kw1 - kw0 = 1/3 of dw/du at start;
+    //   kw3 - kw2 = 1/3 of dw/du at end
+    double kw1 = w1 + dw_ds_1 * ds_du_1;
+    double kw2 = w2 - dw_ds_2 * ds_du_2;
+
+    geometry::CubicBezier1d widthBezier(w1, kw1, kw2, w2);
+    p.setWidth(widthBezier.eval(u));
+}
+
 void computeBlendBetweenFits(
     const SketchPointBuffer& input,
     const experimental::BlendFitSettings& settings,
@@ -2479,12 +2602,16 @@ void computeBlendBetweenFits(
         VGC_ASSERT(j1 <= j2);
 
         // Init output sketch point as linear interpolation of input point pair.
-        // This takes care of setting an appropriate pressure/width/timestamp.
+        // This provides initial values for pressure/width/timestamp/position.
         const SketchPoint& p1 = input[k];
         const SketchPoint& p2 = input[k + 1];
         double s1 = p1.s();
         double s2 = p2.s();
-        SketchPoint p = core::fastLerp(p1, p2, (s - s1) / (s2 - s1));
+        double v = (s - s1) / (s2 - s1);
+        SketchPoint p = core::fastLerp(p1, p2, v);
+
+        // Improve width by using Catmull-Rom instead of linear interpolation
+        improveWidths3(input, k, v, p);
 
         // Compute position as weighted average of local fits
         geometry::Vec2d position;

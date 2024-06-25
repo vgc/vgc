@@ -63,6 +63,20 @@ void catmullRomToBezier(
 
 } // namespace detail
 
+/// Overload of `uniformCatmullRomToBezier` expecting a pointer to a contiguous sequence
+/// of 4 control points in input and output.
+///
+template<typename T>
+void uniformCatmullRomToBezier(const T* inFourPoints, T* outFourPoints) {
+    constexpr double k = 1.0 / 6; // = 1/6 up to double precision
+    T p1 = inFourPoints[1] + k * (inFourPoints[2] - inFourPoints[0]);
+    T p2 = inFourPoints[2] - k * (inFourPoints[3] - inFourPoints[1]);
+    outFourPoints[0] = inFourPoints[1]; // These two lines must be done first in order
+    outFourPoints[3] = inFourPoints[2]; // to support inFourPoints == outFourPoints
+    outFourPoints[1] = p1;
+    outFourPoints[2] = p2;
+}
+
 /// Convert four uniform Catmull-Rom control points into the four cubic Bézier
 /// control points corresponding to the same cubic curve. The formula is the
 /// following:
@@ -149,20 +163,6 @@ void uniformCatmullRomToBezier(
     b1 = c1 + k * (c2 - c0);
     b2 = c2 - k * (c3 - c1);
     b3 = c2;
-}
-
-/// Overload of `uniformCatmullRomToBezier` expecting a pointer to a contiguous sequence
-/// of 4 control points in input and output.
-///
-template<typename T>
-void uniformCatmullRomToBezier(const T* inFourPoints, T* outFourPoints) {
-    constexpr double k = 1.0 / 6; // = 1/6 up to double precision
-    T p1 = inFourPoints[1] + k * (inFourPoints[2] - inFourPoints[0]);
-    T p2 = inFourPoints[2] - k * (inFourPoints[3] - inFourPoints[1]);
-    outFourPoints[0] = inFourPoints[1]; // These two lines must be done first in order
-    outFourPoints[3] = inFourPoints[2]; // to support inFourPoints == outFourPoints
-    outFourPoints[1] = p1;
-    outFourPoints[2] = p2;
 }
 
 /// Variant of `uniformCatmullRomToBezier` that caps the tangents
