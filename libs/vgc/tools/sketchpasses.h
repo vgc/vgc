@@ -379,10 +379,6 @@ struct BlendFitInfo {
     geometry::QuadraticBezier2d bezier;
     Int furthestIndex = 0;
     bool isGoodFit = false;
-
-    // Mapping with output points
-    Int firstOutputIndex = 0;
-    Int lastOutputIndex = 0;
 };
 
 } // namespace detail
@@ -394,12 +390,7 @@ struct fmt::formatter<vgc::tools::detail::BlendFitInfo> : fmt::formatter<vgc::In
     template<typename FormatContext>
     auto format(const vgc::tools::detail::BlendFitInfo& i, FormatContext& ctx) {
         return format_to(
-            ctx.out(),
-            "(inFirst={}, inLast={}, outFirst={}, outLast={})",
-            i.firstInputIndex,
-            i.lastInputIndex,
-            i.firstOutputIndex,
-            i.lastOutputIndex);
+            ctx.out(), "(i1={}, i2={})", i.firstInputIndex, i.lastInputIndex);
     }
 };
 
@@ -423,6 +414,7 @@ private:
     experimental::BlendFitSettings settings_;
     core::Array<detail::BlendFitInfo> fits_;
     detail::FitBuffer buffer_;
+    Int numStableFits_ = 0;
 
     // more buffers
     core::DoubleArray lastGoodParams;

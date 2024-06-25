@@ -19,18 +19,19 @@
 #include <array>
 #include <optional>
 
+#include <vgc/canvas/debugdraw.h>
 #include <vgc/core/assert.h>
+#include <vgc/core/colors.h>
 #include <vgc/geometry/bezier.h>
 #include <vgc/tools/logcategories.h>
 
-#include <vgc/canvas/debugdraw.h>
-#include <vgc/core/colors.h>
+#include <vgc/core/profile.h>
 
 namespace vgc::tools {
 
 namespace {
 
-constexpr bool enableDebugFits = true;
+constexpr bool enableDebugFits = false;
 
 }
 
@@ -2370,32 +2371,87 @@ void computeProgressiveBlendFits(
     const SketchPointBuffer& input,
     const experimental::BlendFitSettings& settings,
     core::Array<detail::BlendFitInfo>& fits,
+    Int& numStableFits,
     detail::FitBuffer& buffer) {
 
+    VGC_PROFILE_FUNCTION
+
+    // Remove all previously unstable fits.
+    //
+    Int oldNumStableFits = numStableFits;
+    fits.resize(oldNumStableFits);
+
+    // Compute new fits.
+    //
     using experimental::FitSplitStrategy;
     using experimental::FitSplitType;
     const FitSplitStrategy& splitStrategy = settings.splitStrategy;
     bool isRelativeToStart = splitStrategy.type() == FitSplitType::RelativeToStart;
     bool isDense = isRelativeToStart && splitStrategy.offset() == 0;
-
     if (isDense) {
         computeDenseProgressiveBlendFits(input, settings, fits, buffer);
     }
     else {
         computeSparseProgressiveBlendFits(input, settings, fits, buffer);
     }
+
+    // Determine the new number of stable fits. Note that the last fit is
+    // always considered unstable, even if all the input points were stable.
+    //
+    // A fit is considered stable if its `lastInputIndex` is a stable input
+    // point, and if the input point just after is also stable. Indeed, if the
+    // input point just after is allowed to change, then maybe the fit could
+    // grow to include this point, which means that the fit is unstable.
+    //
+    Int firstUnstableFit = fits.length() - 1;
+    auto isUnstableInputPoint = [&](Int k) { //
+        return k >= input.numStablePoints();
+    };
+    auto isUnstableFit = [&](Int j) {
+        return isUnstableInputPoint(fits[j].lastInputIndex + 1);
+    };
+    while (firstUnstableFit > 0 && isUnstableFit(firstUnstableFit - 1)) {
+        --firstUnstableFit;
+    }
+    Int newNumStableFits = std::max<Int>(0, firstUnstableFit);
+
+    // Update cached value for numStableFits.
+
+    numStableFits = newNumStableFits;
+
+    VGC_DEBUG_TMP("num stable input points = {}", input.numStablePoints());
+
+    VGC_DEBUG_TMP(
+        "old stable fits = {}, added fits = {}, total = {}, new stable fits = {}",
+        oldNumStableFits,
+        fits.length() - oldNumStableFits,
+        fits.length(),
+        newNumStableFits);
 }
 
 void computeBlendBetweenFits(
     const SketchPointBuffer& input,
     const experimental::BlendFitSettings& settings,
     const core::Array<detail::BlendFitInfo>& fits,
+    Int numStableFits,
     SketchPointBuffer& output) {
+
+    VGC_PROFILE_FUNCTION
 
     VGC_UNUSED(settings);
 
-    const SketchPointArray& inputData = input.data();
-    Int numInputPoints = input.length();
+    // Remove previously unstable points
+    Int oldNumStableOutputPoints = output.numStablePoints();
+    Int newNumStableOutputPoints = oldNumStableOutputPoints;
+    output.resize(oldNumStableOutputPoints);
+
+    // Add the first output point unless it was already stable
+    if (oldNumStableOutputPoints == 0) {
+        output.append(input.first());
+        if (input.numStablePoints() > 0) {
+            newNumStableOutputPoints = 1;
+        }
+    }
 
     constexpr double ds = 0.5;
     double sMax = input.last().s();
@@ -2404,9 +2460,13 @@ void computeBlendBetweenFits(
     Int j2 = 0; // Index of last fit that contains s in its interior
     Int k = 0;  // Index of last pair of input points (k, k+1) s.t. input[k].s() < s
     Int jMax = fits.length() - 1;
-    Int kMax = numInputPoints - 2;
-    for (Int i = 0; i < numInteriorSamples; ++i) {
-        double s = (i + 1) * ds;
+    Int kMax = input.length() - 2;
+    for (Int i = output.length(); i <= numInteriorSamples; ++i) {
+
+        // Compute the s param corresponding to this output point
+        double s = i * ds;
+
+        // Compute the range of fits and pair of input points containing s
         while (j1 < jMax && fits[j1].s2 <= s) {
             ++j1;
         }
@@ -2420,13 +2480,13 @@ void computeBlendBetweenFits(
 
         // Init output sketch point as linear interpolation of input point pair.
         // This takes care of setting an appropriate pressure/width/timestamp.
-        const SketchPoint p1 = inputData.getUnchecked(k);
-        const SketchPoint p2 = inputData.getUnchecked(k + 1);
+        const SketchPoint& p1 = input[k];
+        const SketchPoint& p2 = input[k + 1];
         double s1 = p1.s();
         double s2 = p2.s();
         SketchPoint p = core::fastLerp(p1, p2, (s - s1) / (s2 - s1));
 
-        // Compute weighted average of local fits
+        // Compute position as weighted average of local fits
         geometry::Vec2d position;
         double totalWeight = 0;
         for (Int j = j1; j <= j2; ++j) {
@@ -2438,11 +2498,33 @@ void computeBlendBetweenFits(
             position += weight * fit.bezier.eval(u);
         }
         position /= totalWeight;
-
         p.setPosition(position);
+
+        // Append output point
         output.append(p);
+
+        // Determine whether the output point is stable, that is,
+        // only influenced by stable fits.
+        if (j2 < numStableFits) {
+            newNumStableOutputPoints = i + 1;
+        }
     }
+
+    // Add the last output point.
+    // Note: the last output point is never stable.
     output.append(input.last());
+
+    // Update chord-lengths and number of stable output points.
+    output.updateChordLengths();
+    output.setNumStablePoints(newNumStableOutputPoints);
+
+    VGC_DEBUG_TMP(
+        "old stable output points = {}, added output points = {}, total = {}, new stable "
+        "output points = {}",
+        oldNumStableOutputPoints,
+        output.length() - oldNumStableOutputPoints,
+        output.length(),
+        newNumStableOutputPoints);
 }
 
 void debugFits(
@@ -2455,17 +2537,21 @@ void debugFits(
 
     std::string str = "\n";
     debugDrawClear();
+    Int i = 0;
     for (const auto& fit : fits) {
         Int numFitPoints = fit.lastInputIndex - fit.firstInputIndex + 1;
         std::string whitespace(fit.firstInputIndex, ' ');
         std::string dashes(numFitPoints, '-');
-        std::string text = core::format( //
-            " {}-{} ({}){}",
+        str += core::format( //
+            "[{:>3}] {}{} {}-{} ({}){}\n",
+            i,
+            whitespace,
+            dashes,
             fit.firstInputIndex,
             fit.lastInputIndex,
             numFitPoints,
             fit.isGoodFit ? "" : "*");
-        str += whitespace + dashes + text + '\n';
+        ++i;
         debugDraw(transform, fit.bezier);
     }
     VGC_DEBUG(LogVgcToolsSketch, str);
@@ -2490,6 +2576,7 @@ QuadraticBlendPass::QuadraticBlendPass(const experimental::BlendFitSettings& set
 
 void QuadraticBlendPass::doReset() {
     fits_.clear();
+    numStableFits_ = 0;
 }
 
 void QuadraticBlendPass::doUpdateFrom(
@@ -2497,64 +2584,23 @@ void QuadraticBlendPass::doUpdateFrom(
     SketchPointBuffer& output) {
 
     Int numInputPoints = input.length();
-
-    VGC_DEBUG_TMP("###################################################");
     VGC_DEBUG_TMP("doUpdateFrom(numInputPoints={})", numInputPoints);
+
+    VGC_PROFILE_FUNCTION
 
     if (handleSmallInputWithFixedEndpoints(input, output)) {
         return;
     }
     VGC_ASSERT(numInputPoints > 2);
 
-    // XXX For now, we recompute everything from scratch each time
-
-    // Remove all previously unstable output points and Bézier fits.
-    //
-    Int oldNumStablePoints = output.numStablePoints();
-    output.resize(oldNumStablePoints);
-    //while (!info_.isEmpty() && info_.last().lastOutputIndex >= oldNumStablePoints) {
-    //    info_.pop();
-    //}
-    //VGC_ASSERT(info_.isEmpty() || info_.last().lastOutputIndex == oldNumStablePoints - 1);
-    fits_.clear();
-
-    // Add the first output point unless it was already stable
-    if (oldNumStablePoints == 0) {
-        output.append(input.first());
-    }
-
     // Compute overlapping Bézier fits from the input point
     //
-    computeProgressiveBlendFits(input, settings_, fits_, buffer_);
+    computeProgressiveBlendFits(input, settings_, fits_, numStableFits_, buffer_);
     debugFits(fits_, transformMatrix());
 
     // Compute a uniform sampling of the blend between the Bézier fits.
     //
-    computeBlendBetweenFits(input, settings_, fits_, output);
-
-    output.updateChordLengths();
-
-    // Determine the new number of stable output points and Bézier fits, by
-    // iterating backward over all Bézier fits.
-    //
-    // We start at i = numFits - 2 (or -3) because the last fit (or the last
-    // two fits) is always considered unstable, even if all the input points
-    // were stable.
-    //
-    Int newNumStablePoints = 0;
-    if (input.numStablePoints() > 0) {
-        newNumStablePoints = 1;
-    }
-    // Int firstPossiblyStableFit =
-    //     splitLastGoodFitOnce ? info_.length() - 3 : info_.length() - 2;
-    // for (Int i = firstPossiblyStableFit; i >= 0; --i) {
-    //     const detail::BlendFitInfo& info = info_.getUnchecked(i);
-    //     if (info.lastInputIndex < input.numStablePoints()) {
-    //         newNumStablePoints = info.lastOutputIndex + 1;
-    //         break;
-    //     }
-    // }
-    output.setNumStablePoints(newNumStablePoints);
+    computeBlendBetweenFits(input, settings_, fits_, numStableFits_, output);
 }
 
 } // namespace vgc::tools
