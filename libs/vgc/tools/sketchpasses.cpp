@@ -2218,9 +2218,10 @@ std::pair<Int, Int> getProgressiveBlendIndexRange(
 
     constexpr bool allowSharedLastInputIndex = true;
     constexpr Int i2MinOffset = allowSharedLastInputIndex ? 0 : 1;
-    Int i2MaxOffset = isRelativeToStart     //
-                          ? splitOffset + 1 // +1 allows growth
-                          : core::IntMax;
+    std::optional<Int> i2MaxOffset = std::nullopt;
+    if (isRelativeToStart) {
+        i2MaxOffset = splitOffset + 1; // +1 allows growing
+    }
     Int i2Min = i1 + settings_.minFitPoints - 1;
     if (!fits_.isEmpty() && i2Min < fits_.last().lastInputIndex + i2MinOffset) {
         i2Min = fits_.last().lastInputIndex + i2MinOffset;
@@ -2229,19 +2230,19 @@ std::pair<Int, Int> getProgressiveBlendIndexRange(
     if (i2Max > numInputPoints - 1) {
         i2Max = numInputPoints - 1;
     }
-    if (fits_.isEmpty()) {
-        // If there is a maximum offset between an i2 and the next i2, then
-        // we want the first output fit to have numFitPoints <= minFitPoints,
-        // and progressively grow from there.
-        if (i2MaxOffset < core::IntMax) {
+    if (i2MaxOffset) {
+        // If there is a maximum offset between an i2 and the next i2
+        if (fits_.isEmpty()) {
+            // then we want the first output fit to have numFitPoints <= minFitPoints
             if (i2Max > settings_.minFitPoints - 1) {
                 i2Max = settings_.minFitPoints - 1;
             }
         }
-    }
-    else {
-        if (i2Max > fits_.last().lastInputIndex + i2MaxOffset) {
-            i2Max = fits_.last().lastInputIndex + i2MaxOffset;
+        else {
+            // and subsequent fits to progressively grow from there.
+            if (i2Max > fits_.last().lastInputIndex + *i2MaxOffset) {
+                i2Max = fits_.last().lastInputIndex + *i2MaxOffset;
+            }
         }
     }
 
