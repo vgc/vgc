@@ -32,7 +32,7 @@ namespace vgc::tools {
 
 namespace {
 
-constexpr bool enableDebugFits = false;
+constexpr bool enableDebugFits = true;
 
 }
 
@@ -2078,6 +2078,24 @@ void computeDenseProgressiveBlendFits(
     core::Array<detail::BlendFitInfo>& fits_,
     detail::FitBuffer& buffer_) {
 
+    // When growing the fit is not possible (or would be a bad fit), then we
+    // can either shrink the fit, or move it by one point.
+    //
+    // Option 1 (shrink):
+    //
+    //   ------
+    //    -----
+    //
+    // Option 2 (move):
+    //
+    //   ------
+    //    ------
+    //
+    // If `preferMoveThanShrink` is true, then we prefer moving it (as long as
+    // doing so results in a good fit). Otherwise, we always shrink.
+    //
+    constexpr bool preferMoveThanShrink = true;
+
     // Convenient aliases
     using experimental::FitSplitStrategy;
     using experimental::FitSplitType;
@@ -2100,54 +2118,86 @@ void computeDenseProgressiveBlendFits(
         fits_.append(fit);
     }
 
-    // Compute subsequent fits.
-    //
+    // Lambda to move the fit by one point:
+    // Last fit: -----
+    // New fit:   -----
+    auto move = [&](Int i1, Int i2) {
+        detail::BlendFitInfo fit =
+            computeBestFit(input, i1 + 1, i2 + 1, settings_, buffer_);
+        fits_.append(fit);
+    };
+
+    // Lambda to shink the fit by one point:
+    // Last fit: -----
+    // New fit:   ----
+    auto shrink = [&](Int i1, Int i2) {
+        detail::BlendFitInfo fit = computeBestFit(input, i1 + 1, i2, settings_, buffer_);
+        fits_.append(fit);
+    };
+
+    // Lambda to move or shrink the fit by one point:
+    // Last fit: -----
+    // New fit:   ----- (if preferMoveThanShrink is true and it is a good fit)
+    // New fit:   ----  (if preferMoveThanShrink is false or moving is a bad fit)
+    auto moveOrShrink = [&](Int i1, Int i2) {
+        if (preferMoveThanShrink) {
+            detail::BlendFitInfo fitIfMoved =
+                computeBestFit(input, i1 + 1, i2 + 1, settings_, buffer_);
+            if (fitIfMoved.isGoodFit) {
+                fits_.append(fitIfMoved);
+            }
+            else {
+                shrink(i1, i2);
+            }
+        }
+        else {
+            shrink(i1, i2);
+        }
+    };
+
+    // Lambda to test if there are still fits to be computed
     auto finished = [&]() {
         Int i1 = fits_.last().firstInputIndex;
         Int i2 = fits_.last().lastInputIndex;
         Int numFitPoints = i2 - i1 + 1;
         return i2 == numInputPoints - 1 && numFitPoints <= minFitPoints;
     };
+
+    // Compute subsequent fits.
+    //
     while (!finished()) {
         Int i1 = fits_.last().firstInputIndex;
         Int i2 = fits_.last().lastInputIndex;
         if (i2 == numInputPoints - 1) {
-            // Reached last input point => shrink fit by one point
-            detail::BlendFitInfo fit =
-                computeBestFit(input, i1 + 1, i2, settings_, buffer_);
-            fits_.append(fit);
+            // Reached last input point => cannot grow or move
+            shrink(i1, i2);
         }
         else if (i2 - i1 + 1 == maxFitPoints) {
             if (i2 - i1 + 1 == minFitPoints) {
-                // Fixed fit size => move fit by one point
-                detail::BlendFitInfo fit =
-                    computeBestFit(input, i1 + 1, i2 + 1, settings_, buffer_);
-                fits_.append(fit);
+                // Fixed fit size => cannot grow or shrink
+                move(i1, i2);
             }
             else {
-                // Reached maxFitPoints => shrink fit by one point
-                detail::BlendFitInfo fit =
-                    computeBestFit(input, i1 + 1, i2, settings_, buffer_);
-                fits_.append(fit);
+                // Reached maxFitPoints => cannot grow
+                moveOrShrink(i1, i2);
             }
         }
         else {
-            // Growing is allowed => grow fit by one point and test if good.
+            // Growing is possible => grow by one point and test if good.
             // If good, keep it. Otherwise, either shrink or move by one point
-            detail::BlendFitInfo fit =
+            detail::BlendFitInfo fitIfGrown =
                 computeBestFit(input, i1, i2 + 1, settings_, buffer_);
-            if (fit.isGoodFit) {
-                fits_.append(fit);
+            if (fitIfGrown.isGoodFit) {
+                // Growing is possible and good => grow
+                fits_.append(fitIfGrown);
             }
             else if (i2 - i1 + 1 == minFitPoints) {
-                detail::BlendFitInfo fit2 =
-                    computeBestFit(input, i1 + 1, i2 + 1, settings_, buffer_);
-                fits_.append(fit2);
+                // Growing is bad and cannot shrink => move
+                move(i1, i2);
             }
             else {
-                detail::BlendFitInfo fit3 =
-                    computeBestFit(input, i1 + 1, i2, settings_, buffer_);
-                fits_.append(fit3);
+                // Growing is bad and both shrink or move are possible
+                moveOrShrink(i1, i2);
             }
         }
     }
