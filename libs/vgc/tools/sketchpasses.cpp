@@ -2613,7 +2613,80 @@ void computeBlendBetweenFits(
         // Improve width by using Catmull-Rom instead of linear interpolation
         improveWidths3(input, k, v, p);
 
-        // Compute position as weighted average of local fits
+        // Compute position as weighted average of local fits.
+        //
+        // For now we evaluate each fit at the Bézier u-param:
+        //
+        //   u = (s - fit.s1) / (fit.s2 - fit.s1)
+        //
+        // This is not great since Bézier u-param is not linear in
+        // arclength, so we may end up averaging parts of fits that
+        // are actually far from each others:
+        //
+        //        s:  0              5              10             15
+        //    input:  +              +              +              +
+        //  fits[0]:  .    .   .  . ... .  .   .    .
+        //  fits[1]:                 .    .   .  . ... .  .   .    .
+        //            ^              ^              ^              ^
+        //        input[0].s     input[1].s     input[2].s     input[2].s
+        //        fits[0].s1                    fits[0].s2
+        //                       fits[1].s1                    fits[1].s2
+        //
+        // In the viz above, fits are sampled at u = 0, 0.1, ..., 0.9, 1.0,
+        // with ||dp/du|| being greater at the ends of the Bézier rather than
+        // the middle, which is typical of 2D quadratic Béziers:
+        //
+        //   y   x = y^2
+        //         = 0 1  4    9      16       25
+        //  -5                                 .
+        //  -4                        .
+        //  -3                 .
+        //  -2            .
+        //  -1         .
+        //   0        .
+        //   1         .
+        //   2            .
+        //   3                 .
+        //   4                        .
+        //   5                                 .
+        //
+        // So if we evaluate for example at s = 7, we actually average the two
+        // following samples:
+        //
+        //        s:  0              5     7        10             15
+        //    input:  +              +              +              +
+        //  fits[0]:  .    .   .  . ... .  .   .    .
+        //  fits[1]:                 .  | .   .  . ... .  .   .    .
+        //                              |     |
+        //                              |     |
+        //                fits[0].eval(u0)   fits[1].eval(u1)
+        //          with u0 = (7-0)/(10-0)   with u1 = (7-5)/(15-10)
+        //                  = 0.7                    = 0.2
+        //         (8th sample of fits[0])   (3rd sample of fits[1])
+        //
+        // We can see that it doesn't make so much sense to average these, and it
+        // would have instead been better to average values like so:
+        //
+        //        s:  0              5     7        10             15
+        //    input:  +              +              +              +
+        //  fits[0]:  .    .   .  . ... .  .   .    .
+        //  fits[1]:                 .    .|  .  . ... .  .   .    .
+        //                                 |
+        //
+        //                fits[0].eval(u0)   fits[1].eval(u1)
+        //                  with u0 ~= 0.8   with u1 ~= 0.125
+        //         (9th sample of fits[0])   (1/4 between 2nd and 3rd sample of fits[1])
+        //
+        // Such better values for u could be computed via an approximation of
+        // the inverse of s(u), but it isn't cheap.
+        //
+        // Finally, an orthogonal way to improve which u value to use could be
+        // to take into account, for each input point k and each fit j
+        // (overlapping k), what u-param does the input point k has respective
+        // to the fit j (these values have already been computed in the
+        // FitBuffer, but then discarded). These values indeed provide some
+        // kind of correspondence mapping between the overlapping fits.
+        //
         geometry::Vec2d position;
         double totalWeight = 0;
         for (Int j = j1; j <= j2; ++j) {
