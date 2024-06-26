@@ -2098,7 +2098,14 @@ void computeDenseProgressiveBlendFits(
 
     // Whether the first and last fit should have a size of minFitPoints.
     //
-    constexpr bool smallStart = true;
+    constexpr bool smallStart = false;
+
+    // When smallStart is false, starting is the largest good fit is not always
+    // a good idea, since this means that there wouldn't be a lot of fits to
+    // blend with. This variable makes it possible to at least have a certain
+    // number of fits, whenever possible.
+    //
+    constexpr Int numStartFits = 5;
 
     // Convenient aliases
     using experimental::FitSplitStrategy;
@@ -2121,15 +2128,21 @@ void computeDenseProgressiveBlendFits(
         detail::BlendFitInfo fit = computeBestFit(input, i1, i2Min, settings_, buffer_);
         if (!smallStart) {
             Int i2Max = (std::min)(maxFitPoints - 1, numInputPoints - 1);
+            Int i2Fit = i2Min;
             for (Int i2 = i2Min + 1; i2 <= i2Max; ++i2) {
                 detail::BlendFitInfo largerFit =
                     computeBestFit(input, i1, i2, settings_, buffer_);
                 if (largerFit.isGoodFit) {
                     fit = largerFit;
+                    i2Fit = i2;
                 }
                 else {
                     break;
                 }
+            }
+            Int i2 = (std::max)(i2Min, i2Fit - numStartFits + 1);
+            if (i2 != i2Fit) {
+                fit = computeBestFit(input, i1, i2, settings_, buffer_);
             }
         }
         fits_.append(fit);
@@ -2175,14 +2188,7 @@ void computeDenseProgressiveBlendFits(
     // Lambda to test if there are still fits to be computed
     auto finished = [&]() {
         Int i2 = fits_.last().lastInputIndex;
-        if (smallStart) {
-            Int i1 = fits_.last().firstInputIndex;
-            Int numFitPoints = i2 - i1 + 1;
-            return i2 == numInputPoints - 1 && numFitPoints <= minFitPoints;
-        }
-        else {
-            return i2 == numInputPoints - 1;
-        }
+        return i2 == numInputPoints - 1;
     };
 
     // Compute subsequent fits.
@@ -2223,6 +2229,21 @@ void computeDenseProgressiveBlendFits(
                 moveOrShrink(i1, i2);
             }
         }
+    }
+
+    // Compute the last fits all sharing the last input point.
+    //
+    Int i1 = fits_.last().firstInputIndex;
+    Int i2 = fits_.last().lastInputIndex;
+    VGC_ASSERT(i2 == numInputPoints - 1);
+    Int i1Min = i1 + 1;
+    Int i1Max = i2 - minFitPoints + 1; // if i1Max < i1Min, empty loop below
+    if (!smallStart) {
+        i1Max = (std::min)(i1Max, i1 + numStartFits - 1);
+    }
+    for (i1 = i1Min; i1 <= i1Max; ++i1) {
+        detail::BlendFitInfo fit = computeBestFit(input, i1, i2, settings_, buffer_);
+        fits_.append(fit);
     }
 }
 
@@ -2472,10 +2493,29 @@ void computeProgressiveBlendFits(
     // Determine the new number of stable fits. Note that the last fit is
     // always considered unstable, even if all the input points were stable.
     //
-    // A fit is considered stable if its `lastInputIndex` is a stable input
-    // point, and if the input point just after is also stable. Indeed, if the
-    // input point just after is allowed to change, then maybe the fit could
-    // grow to include this point, which means that the fit is unstable.
+    // A fit can only be considered stable if its `lastInputIndex` is a stable
+    // input point, and if the input point just after is also stable. Indeed,
+    // if the input point just after is allowed to change, then maybe the fit
+    // could grow to include this point, which means that the fit is unstable.
+    //
+    // Also, any fit sharing the same `firstInputIndex` as an unstable fit is
+    // also considered unstable. This is important for the dense blend case,
+    // where a given number of fits (`numStartFits`) can shared the first/last
+    // input point, making all of them unstable together.
+    //
+    // For example, with the following fits:
+    //
+    // [  0] ----- 0-4 (5)
+    // [  1] ------ 0-5 (6)
+    // [  2] ------- 0-6 (7)
+    // [  3] -------- 0-7 (8)
+    // [  4] --------- 0-8 (9)
+    // [  5]  -------- 1-8 (8)
+    // [  6]   ------- 2-8 (7)
+    // [  7]    ------ 3-8 (6)
+    // [  8]     ----- 4-8 (5)
+    //
+    // All of them should be considered unstable.
     //
     Int firstUnstableFit = fits.length() - 1;
     auto isUnstableInputPoint = [&](Int k) { //
@@ -2484,7 +2524,13 @@ void computeProgressiveBlendFits(
     auto isUnstableFit = [&](Int j) {
         return isUnstableInputPoint(fits[j].lastInputIndex + 1);
     };
+    auto startsLikePrevious = [&](Int j) {
+        return fits[j - 1].firstInputIndex == fits[j].firstInputIndex;
+    };
     while (firstUnstableFit > 0 && isUnstableFit(firstUnstableFit - 1)) {
+        --firstUnstableFit;
+    }
+    while (firstUnstableFit > 0 && startsLikePrevious(firstUnstableFit)) {
         --firstUnstableFit;
     }
     Int newNumStableFits = std::max<Int>(0, firstUnstableFit);
