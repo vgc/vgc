@@ -2096,6 +2096,10 @@ void computeDenseProgressiveBlendFits(
     //
     constexpr bool preferMoveThanShrink = true;
 
+    // Whether the first and last fit should have a size of minFitPoints.
+    //
+    constexpr bool smallStart = true;
+
     // Convenient aliases
     using experimental::FitSplitStrategy;
     using experimental::FitSplitType;
@@ -2113,8 +2117,21 @@ void computeDenseProgressiveBlendFits(
     //
     if (fits_.isEmpty()) {
         Int i1 = 0;
-        Int i2 = (std::min)(minFitPoints - 1, numInputPoints - 1);
-        detail::BlendFitInfo fit = computeBestFit(input, i1, i2, settings_, buffer_);
+        Int i2Min = (std::min)(minFitPoints - 1, numInputPoints - 1);
+        detail::BlendFitInfo fit = computeBestFit(input, i1, i2Min, settings_, buffer_);
+        if (!smallStart) {
+            Int i2Max = (std::min)(maxFitPoints - 1, numInputPoints - 1);
+            for (Int i2 = i2Min + 1; i2 <= i2Max; ++i2) {
+                detail::BlendFitInfo largerFit =
+                    computeBestFit(input, i1, i2, settings_, buffer_);
+                if (largerFit.isGoodFit) {
+                    fit = largerFit;
+                }
+                else {
+                    break;
+                }
+            }
+        }
         fits_.append(fit);
     }
 
@@ -2157,10 +2174,15 @@ void computeDenseProgressiveBlendFits(
 
     // Lambda to test if there are still fits to be computed
     auto finished = [&]() {
-        Int i1 = fits_.last().firstInputIndex;
         Int i2 = fits_.last().lastInputIndex;
-        Int numFitPoints = i2 - i1 + 1;
-        return i2 == numInputPoints - 1 && numFitPoints <= minFitPoints;
+        if (smallStart) {
+            Int i1 = fits_.last().firstInputIndex;
+            Int numFitPoints = i2 - i1 + 1;
+            return i2 == numInputPoints - 1 && numFitPoints <= minFitPoints;
+        }
+        else {
+            return i2 == numInputPoints - 1;
+        }
     };
 
     // Compute subsequent fits.
@@ -2170,6 +2192,7 @@ void computeDenseProgressiveBlendFits(
         Int i2 = fits_.last().lastInputIndex;
         if (i2 == numInputPoints - 1) {
             // Reached last input point => cannot grow or move
+            // Note: this is only possible if smallStart is true.
             shrink(i1, i2);
         }
         else if (i2 - i1 + 1 == maxFitPoints) {
