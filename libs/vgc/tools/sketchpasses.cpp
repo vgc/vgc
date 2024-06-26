@@ -2444,14 +2444,19 @@ void computeProgressiveBlendFits(
 
     const SketchPoint& p1 = input[k];
     const SketchPoint& p2 = input[k + 1];
+
     bool hasPrev = (k - 1) >= 0;
     bool hasNext = (k + 2) < input.length();
-    double w0 = hasPrev ? input[k - 1].width() : p1.width();
-    double w3 = hasNext ? input[k + 2].width() : p2.width();
-    const std::array<double, 4> widths = {w0, p1.width(), p2.width(), w3};
-    geometry::CubicBezier1d widthBezier =
-        geometry::uniformCatmullRomToBezier<double>(widths);
-    p.setWidth(widthBezier.eval(u));
+
+    double w1 = p1.width();
+    double w2 = p2.width();
+    double w0 = hasPrev ? input[k - 1].width() : w1;
+    double w3 = hasNext ? input[k + 2].width() : w2;
+
+    std::array<double, 4> widths = {w0, w1, w2, w3};
+    geometry::CubicBezier1d bezier = geometry::uniformCatmullRomToBezier<double>(widths);
+
+    p.setWidth(bezier.eval(u));
 }
 
 // Improve width by using Catmull-Rom interpolation instead linear by part.
@@ -2478,25 +2483,24 @@ void computeProgressiveBlendFits(
 
     const SketchPoint& p1 = input[k];
     const SketchPoint& p2 = input[k + 1];
+
     bool hasPrev = (k - 1) >= 0;
     bool hasNext = (k + 2) < input.length();
-    double w0 = hasPrev ? input[k - 1].width() : 2 * p1.width() - p2.width();
-    double w3 = hasNext ? input[k + 2].width() : 2 * p2.width() - p1.width();
-    const std::array<double, 4> widths = {w0, p1.width(), p2.width(), w3};
-    geometry::CubicBezier1d widthBezier =
-        geometry::uniformCatmullRomToBezier<double>(widths);
-    p.setWidth(widthBezier.eval(u));
+
+    double w1 = p1.width();
+    double w2 = p2.width();
+    double w0 = hasPrev ? input[k - 1].width() : w1 + (w1 - w2);
+    double w3 = hasNext ? input[k + 2].width() : w2 + (w2 - w1);
+
+    std::array<double, 4> widths = {w0, w1, w2, w3};
+    geometry::CubicBezier1d bezier = geometry::uniformCatmullRomToBezier<double>(widths);
+
+    p.setWidth(bezier.eval(u));
 }
 
-// Similar to improveWidths3 but with some extra fine-tuning of the tangents
-// taking into account distance between control points.
-//
-// This is similar to what
-// we do in CatmullRomSplineStroke2d::computeSegmentHalfwidthsCubicBezier(),
-// but not exactly the same since ds/du is not the same, as we have a blend
-// of Bézier instead of a single Bézier. For simplicity, we assume that s(u)
-// is linear along
-// is linear
+// Use the same extrapolated widths as improveWidths2 for the first/last input
+// point, but in addition uses the distance between input points to provide
+// better tangents.
 //
 [[maybe_unused]] void improveWidths3( //
     const SketchPointBuffer& input,
@@ -2512,43 +2516,63 @@ void computeProgressiveBlendFits(
 
     double w1 = p1.width();
     double w2 = p2.width();
-    double w0 = hasPrev ? input[k - 1].width() : 2 * w1 - w2;
-    double w3 = hasNext ? input[k + 2].width() : 2 * w2 - w1;
+    double w0 = hasPrev ? input[k - 1].width() : w1 + (w1 - w2);
+    double w3 = hasNext ? input[k + 2].width() : w2 + (w2 - w1);
 
-    // Lengths between control points
-    double d12 = (p2.position() - p1.position()).length();
-    double d01 = hasPrev ? (p1.position() - input[k - 1].position()).length() : d12;
-    double d23 = hasNext ? (p2.position() - input[k + 2].position()).length() : d12;
-
+    // Distances between input points (chord-lengths)
+    double d12 = p2.s() - p1.s();
+    double d01 = hasPrev ? (p1.s() - input[k - 1].s()) : d12;
+    double d23 = hasNext ? (input[k + 2].s() - p2.s()) : d12;
     double d012 = d01 + d12;
     double d123 = d12 + d23;
 
-    // Fallback to other method in case we would otherwise have a division by zero
+    // Fallback to uniform if we would otherwise have a division by zero
     if (!(d012 > 0 && d123 > 0)) {
-        improveWidths2(input, k, u, p);
+        std::array<double, 4> widths = {w0, w1, w2, w3};
+        geometry::CubicBezier1d bezier =
+            geometry::uniformCatmullRomToBezier<double>(widths);
+        p.setWidth(bezier.eval(u));
         return;
     }
 
-    // desired dw/ds at start/end
+    // Desired dw/ds at the start/end of the Bézier, using a simple heuristic
     double dw_ds_1 = (w2 - w0) / d012;
     double dw_ds_2 = (w3 - w1) / d123;
 
-    // Compute an approximation of 1/3 of ds/du at the start/end of the cubic Bézier
+    // Compute an approximation of ds/du at the start/end of the Bézier blend
+    // between p1 and p2.
     //
-    // TODO: Can we do something more accurate by actually evaluating ds/du just before/after
-    // the input points? Alternatively, could we enforce that ds/du is linear between
-    // control points by evaluating the Bézier in arc-length rather than in u-space?
+    // TODO: Can we do something more accurate by actually evaluating ds/du
+    // just before/after the input points? Alternatively, could we enforce that
+    // ds/du is linear between control points by evaluating the Bézier in
+    // arc-length rather than in u-space? Also, maybe we could compute all
+    // output widths after all output positions have already been computed, and
+    // updateChordLenghts() was called, so that we have better length
+    // information, instead of using the input chord lengths.
     //
-    double ds_du_1 = d12 / 3.0;
-    double ds_du_2 = ds_du_1;
+    double ds_du_1 = d12;
+    double ds_du_2 = d12;
 
-    // Compute the knots of the width cubic Bézier, knowing that:
-    //   kw1 - kw0 = 1/3 of dw/du at start;
-    //   kw3 - kw2 = 1/3 of dw/du at end
-    double kw1 = w1 + dw_ds_1 * ds_du_1;
-    double kw2 = w2 - dw_ds_2 * ds_du_2;
+    // Compute the knots of the width cubic Bézier satisfying our desired dw/ds
+    // at the start/end of the Bézier.
+    //
+    // This uses the following property of a cubic Bézier:
+    //
+    //  dB/du(0) = 3 * (B1 - B0)
+    //  dB/du(1) = 3 * (B3 - B2)
+    //
+    // Therefore we have:
+    //
+    //  B1 = B0 + 1/3 * dB/du(0) = B0 + 1/3 * dB/ds(0) * ds/du(0)
+    //  B2 = B3 - 1/3 * dB/du(1) = B3 - 1/3 * dB/ds(1) * ds/du(1)
+    //
+    constexpr double oneThird = 1.0 / 3.0;
+    double kw0 = w1;
+    double kw1 = w1 + oneThird * dw_ds_1 * ds_du_1;
+    double kw2 = w2 - oneThird * dw_ds_2 * ds_du_2;
+    double kw3 = w2;
 
-    geometry::CubicBezier1d widthBezier(w1, kw1, kw2, w2);
+    geometry::CubicBezier1d widthBezier(kw0, kw1, kw2, kw3);
     p.setWidth(widthBezier.eval(u));
 }
 
