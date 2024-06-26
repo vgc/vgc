@@ -2196,12 +2196,7 @@ void computeDenseProgressiveBlendFits(
     while (!finished()) {
         Int i1 = fits_.last().firstInputIndex;
         Int i2 = fits_.last().lastInputIndex;
-        if (i2 == numInputPoints - 1) {
-            // Reached last input point => cannot grow or move
-            // Note: this is only possible if smallStart is true.
-            shrink(i1, i2);
-        }
-        else if (i2 - i1 + 1 == maxFitPoints) {
+        if (i2 - i1 + 1 == maxFitPoints) {
             if (i2 - i1 + 1 == minFitPoints) {
                 // Fixed fit size => cannot grow or shrink
                 move(i1, i2);
