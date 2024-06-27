@@ -19,11 +19,20 @@
 #include <array>
 #include <optional>
 
+#include <vgc/canvas/debugdraw.h>
 #include <vgc/core/assert.h>
+#include <vgc/core/colors.h>
 #include <vgc/geometry/bezier.h>
+#include <vgc/geometry/catmullrom.h>
 #include <vgc/tools/logcategories.h>
 
 namespace vgc::tools {
+
+namespace {
+
+constexpr bool enableDebugFits = false;
+
+}
 
 void EmptyPass::doUpdateFrom(const SketchPointBuffer& input, SketchPointBuffer& output) {
 
@@ -1583,6 +1592,16 @@ geometry::QuadraticBezier2d quadraticFitWithFixedEndpoints(
 
 geometry::QuadraticBezier2d quadraticFitWithFixedEndpoints(
     const SketchPointBuffer& input,
+    Int firstIndex,
+    Int lastIndex,
+    detail::FitBuffer& buffer) {
+
+    return quadraticFitWithFixedEndpoints(
+        input, firstIndex, lastIndex, buffer.positions, buffer.params);
+}
+
+geometry::QuadraticBezier2d quadraticFitWithFixedEndpoints(
+    const SketchPointBuffer& input,
     geometry::Vec2dArray& positions,
     core::DoubleArray& params) {
 
@@ -1653,7 +1672,44 @@ void SingleQuadraticSegmentWithFixedEndpointsPass::doUpdateFrom(
     output.setNumStablePoints(input.numStablePoints() > 0 ? 1 : 0);
 }
 
+namespace experimental {
+
+Int FitSplitStrategy::getSplitIndex( //
+    Int firstIndex,
+    Int lastIndex,
+    Int furthestIndex) const {
+
+    Int splitIndex = firstIndex;
+    switch (type()) {
+    case FitSplitType::Furthest:
+        splitIndex = furthestIndex;
+        break;
+    case FitSplitType::RelativeToStart:
+        splitIndex = firstIndex + offset();
+        break;
+    case FitSplitType::RelativeToEnd:
+        splitIndex = lastIndex - offset();
+        break;
+    case FitSplitType::IndexRatio:
+        splitIndex = core::ifloor<Int>(core::fastLerp(
+            core::narrow_cast<double>(firstIndex),
+            core::narrow_cast<double>(lastIndex),
+            ratio()));
+    }
+    return core::clamp(splitIndex, firstIndex, lastIndex);
+}
+
+} // namespace experimental
+
 namespace {
+
+Int getSplitIndex(
+    const experimental::FitSplitStrategy& strategy,
+    const detail::BlendFitInfo& fit) {
+
+    return strategy.getSplitIndex(
+        fit.firstInputIndex, fit.lastInputIndex, fit.furthestIndex);
+}
 
 // Computes the largest distance squared between the input position and its
 // corresponding point on the Bézier curve, excluding the endpoints.
@@ -1666,7 +1722,7 @@ namespace {
 std::pair<double, Int> maxDistanceSquared(
     const geometry::QuadraticBezier2d& bezier,
     core::ConstSpan<geometry::Vec2d> positions,
-    core::Span<double> params) {
+    core::ConstSpan<double> params) {
 
     VGC_ASSERT(positions.length() == params.length());
     Int n = positions.length();
@@ -1685,13 +1741,20 @@ std::pair<double, Int> maxDistanceSquared(
     return {distance, index};
 }
 
+std::pair<double, Int> maxDistanceSquared(
+    const geometry::QuadraticBezier2d& bezier,
+    const detail::FitBuffer& buffer) {
+
+    return maxDistanceSquared(bezier, buffer.positions, buffer.params);
+}
+
 struct RecursiveQuadraticFitData {
     const experimental::SplineFitSettings& settings;
     const SketchPointBuffer& input;
     SketchPointBuffer& output;
     geometry::Vec2dArray& positions;
     core::DoubleArray& params;
-    core::Array<detail::FitInfo>& info;
+    core::Array<detail::SplineFitInfo>& info;
 };
 
 void recursiveQuadraticFit(
@@ -1725,6 +1788,7 @@ void recursiveQuadraticFit(
     double distanceThreshold = d.settings.distanceThreshold;
     double distanceSquaredThreshold = distanceThreshold * distanceThreshold;
     auto [distanceSquared, index] = maxDistanceSquared(bezier, d.positions, d.params);
+    Int furthestIndex = index + firstInputIndex; // Convert to [0..numInputPoints-1]
     bool isWithinDistance = distanceSquared <= distanceSquaredThreshold;
 
     // Determine whether we should use the flatness threshold.
@@ -1779,34 +1843,13 @@ void recursiveQuadraticFit(
             lastInputIndex,
             d.output);
         Int lastOutputIndex = d.output.length() - 1;
-        detail::FitInfo info{lastInputIndex, lastOutputIndex, bezier};
+        detail::SplineFitInfo info{lastInputIndex, lastOutputIndex, bezier};
         d.info.append(info);
     }
     else {
         // Compute where to split based on the chosen SplitStategy
-        Int splitIndex = 0;
-        using SplitStrategy = experimental::SplineFitSplitStrategy;
-        switch (d.settings.splitStrategy) {
-        case SplitStrategy::Furthest:
-            // Convert from index in `positions` to index in `input`
-            splitIndex = firstInputIndex + index;
-            break;
-        case SplitStrategy::SecondLast:
-            splitIndex = lastInputIndex - 1;
-            break;
-        case SplitStrategy::IndexRatio:
-            splitIndex = core::ifloor<Int>(core::fastLerp(
-                core::narrow_cast<double>(firstInputIndex),
-                core::narrow_cast<double>(lastInputIndex),
-                d.settings.indexRatio));
-            if (splitIndex <= firstInputIndex + 1) {
-                splitIndex = firstInputIndex + 1;
-            }
-            if (splitIndex >= lastInputIndex - 1) {
-                splitIndex = lastInputIndex - 1;
-            }
-            break;
-        }
+        Int splitIndex = d.settings.splitStrategy.getSplitIndex(
+            firstInputIndex, lastInputIndex, furthestIndex);
 
         // Recursively call two fits on both sides of the split index
         bool newSplitLastGoodFitOnce = splitLastGoodFitOnce && !isGoodFit;
@@ -1878,13 +1921,1021 @@ void QuadraticSplinePass::doUpdateFrom(
     Int firstPossiblyStableFit =
         splitLastGoodFitOnce ? info_.length() - 3 : info_.length() - 2;
     for (Int i = firstPossiblyStableFit; i >= 0; --i) {
-        const detail::FitInfo& info = info_.getUnchecked(i);
+        const detail::SplineFitInfo& info = info_.getUnchecked(i);
         if (info.lastInputIndex < input.numStablePoints()) {
             newNumStablePoints = info.lastOutputIndex + 1;
             break;
         }
     }
     output.setNumStablePoints(newNumStablePoints);
+}
+
+namespace {
+
+core::StringId debugDrawId("QuadraticBlend");
+
+void debugDraw(const geometry::Mat3d& transform, canvas::DebugDrawFunction function) {
+    auto viewMatrix = geometry::Mat4f::fromTransform(transform);
+    canvas::debugDraw(debugDrawId, [function, viewMatrix](graphics::Engine* engine) {
+        engine->pushViewMatrix(engine->viewMatrix() * viewMatrix);
+        function(engine);
+        engine->popViewMatrix();
+    });
+}
+
+void debugDrawClear() {
+    canvas::debugDrawClear(debugDrawId);
+}
+
+// Computes the best quadratic fit of input points between index
+// `firstInputIndex` and `lastInputIndex` (included).
+//
+detail::BlendFitInfo computeBestFit(
+    const SketchPointBuffer& input,
+    Int i1,
+    Int i2,
+    const experimental::BlendFitSettings& settings,
+    detail::FitBuffer& buffer) {
+
+    detail::BlendFitInfo res;
+    res.firstInputIndex = i1;
+    res.lastInputIndex = i2;
+    res.s1 = input[i1].s();
+    res.s2 = input[i2].s();
+
+    // Compute the best quadratic fit of the input points between
+    // `firstInputIndex` and `lastInputIndex` (included).
+    //
+    res.bezier = quadraticFitWithFixedEndpoints(input, i1, i2, buffer);
+
+    // Compute the max distance squared between the input points and the Bézier fit,
+    // and check whether it is within the chosen threshold.
+    //
+    double distanceThreshold = settings.distanceThreshold;
+    double distanceSquaredThreshold = distanceThreshold * distanceThreshold;
+    auto [distanceSquared, index] = maxDistanceSquared(res.bezier, buffer);
+    bool isWithinDistance = distanceSquared <= distanceSquaredThreshold;
+
+    // Convert furthest index from index in `positions` to index in `input`.
+    //
+    res.furthestIndex = index + i1;
+
+    // Determine whether we should use the flatness threshold.
+    //
+    Int numFitPoints = i2 - i1 + 1;
+    double flatnessThreshold = settings.flatnessThreshold;
+    bool enableFlatnessThreshold =
+        (flatnessThreshold >= 0) && (numFitPoints > settings.flatnessThresholdMinPoints);
+
+    // If enabled, compute the square of the flatness, and compare it with the
+    // square of the flatness threshold. Alternatively, we could directly
+    // define the flatness to be the square of the current flatness, but then
+    // choosing a flatness threshold would be less intuitive since the scale
+    // would be quadratic instead of linear.
+    //
+    //                             o        --> 2x taller means 2x less flat
+    //         o
+    //   o           o       o           o
+    //
+    //   B0 = (0, 0)         B0 = (0, 0)
+    //   B1 = (2, 1)         B1 = (2, 2)
+    //   B2 = (4, 0)         B2 = (4, 0)
+    //   flatness  = 1       flatness  = 0.5
+    //   flatness² = 1       flatness² = 0.25
+    //
+    bool isWithinFlatness = true;
+    if (enableFlatnessThreshold) {
+        double flatnessSquaredThreshold = flatnessThreshold * flatnessThreshold;
+        double flatnessSquared = core::DoubleInfinity;
+        flatnessThreshold *= flatnessThreshold;
+        double der2 = res.bezier.secondDerivative().squaredLength();
+        double l2 = (res.bezier.p2() - res.bezier.p0()).squaredLength();
+        if (der2 > 0) {
+            flatnessSquared = l2 / der2;
+        }
+        else {
+            // Perfectly flat => flatnessSquared = core::DoubleInfinity;
+        }
+        isWithinFlatness = flatnessSquared >= flatnessSquaredThreshold;
+    }
+
+    res.isGoodFit = isWithinDistance && isWithinFlatness;
+    return res;
+}
+
+void debugDraw(
+    const geometry::Mat3d& transform,
+    const geometry::QuadraticBezier2d& bezier) {
+
+    using namespace graphics;
+    using namespace geometry;
+
+    GeometryViewPtr geometry;
+
+    debugDraw(transform, [geometry, bezier](graphics::Engine* engine) mutable {
+        if (!geometry) {
+            // Create vertex data
+            constexpr Int numSegments = 100;
+            constexpr double du = 1.0 / numSegments;
+            Vec2fArray vertData;
+            for (Int i = 0; i <= numSegments; ++i) {
+                double u = i * du;
+                Vec2d derivative;
+                Vec2d position = bezier.eval(u, derivative);
+                Vec2f normal(derivative.normalized().orthogonalized());
+                vertData.append(Vec2f(position));
+                vertData.append(normal);
+                vertData.append(Vec2f(position));
+                vertData.append(-normal);
+            }
+
+            // Create instance data
+            core::Color c = core::colors::red;
+            float screenSpaceWidth = 2.0f;
+            float hw = screenSpaceWidth * 0.5f;
+            core::FloatArray instData = {0.f, 0.f, 1.f, hw, c.r(), c.g(), c.b(), c.a()};
+
+            // Transfer to GPU
+            auto layout = BuiltinGeometryLayout::XYDxDy_iXYRotWRGBA;
+            geometry = engine->createTriangleStrip(layout);
+            engine->updateVertexBufferData(geometry, std::move(vertData));
+            engine->updateInstanceBufferData(geometry, std::move(instData));
+        }
+        // Draw
+        engine->setProgram(graphics::BuiltinProgram::ScreenSpaceDisplacement);
+        engine->draw(geometry);
+    });
+}
+
+// This implements the "Dense" type of blend fit.
+//
+void computeDenseBlendFits(
+    const SketchPointBuffer& input,
+    const experimental::BlendFitSettings& settings_,
+    core::Array<detail::BlendFitInfo>& fits_,
+    detail::FitBuffer& buffer_) {
+
+    // When growing the fit is not possible (or would be a bad fit), then we
+    // can either shrink the fit, or move it by one point.
+    //
+    // Option 1 (shrink):
+    //
+    //   ------
+    //    -----
+    //
+    // Option 2 (move):
+    //
+    //   ------
+    //    ------
+    //
+    // If `preferMoveThanShrink` is true, then we prefer moving it (as long as
+    // doing so results in a good fit). Otherwise, we always shrink.
+    //
+    constexpr bool preferMoveThanShrink = true;
+
+    // Convenient aliases
+    Int minFitPoints = settings_.minFitPoints;
+    Int maxFitPoints = settings_.maxFitPoints;
+    Int numStartFits = settings_.numStartFits;
+    Int numInputPoints = input.length();
+
+    // Compute first fit.
+    //
+    // We first compute the largest i2 in [i2Min, i2Max] such that [0, i2] is a
+    // good fit and all [0, j] for j in [i2Min, i2] are good fits, then use the
+    // range [i1, max(i2Min, i2 - numStartFits + 1)] as first fit.
+    //
+    // Note: the `if (numStartFits < i2Max - i2Min + 1)` condition is an
+    // optimization: if false, we know that max(i2Min, i2 - numStartFits + 1)
+    // is equal to i2Min for all i2 in [i2Min, i2Max], so there is no need to
+    // compute such larger i2.
+    //
+    if (fits_.isEmpty()) {
+        Int i1 = 0;
+        Int i2Min = (std::min)(minFitPoints - 1, numInputPoints - 1);
+        Int i2Max = (std::min)(maxFitPoints - 1, numInputPoints - 1);
+        Int i2 = i2Min;
+        if (numStartFits < i2Max - i2Min + 1) { // Note: false if numStartFits = IntMax
+            for (i2 = i2Min; i2 <= i2Max; ++i2) {
+                detail::BlendFitInfo fit =
+                    computeBestFit(input, i1, i2, settings_, buffer_);
+                if (!fit.isGoodFit) {
+                    --i2;
+                    break;
+                }
+            }
+            i2 = (std::max)(i2Min, i2 - numStartFits + 1);
+        }
+        detail::BlendFitInfo fit = computeBestFit(input, i1, i2, settings_, buffer_);
+        fits_.append(fit);
+    }
+
+    // Lambda to move the fit by one point:
+    // Last fit: -----
+    // New fit:   -----
+    auto move = [&](Int i1, Int i2) {
+        detail::BlendFitInfo fit =
+            computeBestFit(input, i1 + 1, i2 + 1, settings_, buffer_);
+        fits_.append(fit);
+    };
+
+    // Lambda to shink the fit by one point:
+    // Last fit: -----
+    // New fit:   ----
+    auto shrink = [&](Int i1, Int i2) {
+        detail::BlendFitInfo fit = computeBestFit(input, i1 + 1, i2, settings_, buffer_);
+        fits_.append(fit);
+    };
+
+    // Lambda to move or shrink the fit by one point:
+    // Last fit: -----
+    // New fit:   ----- (if preferMoveThanShrink is true and it is a good fit)
+    // New fit:   ----  (if preferMoveThanShrink is false or moving is a bad fit)
+    auto moveOrShrink = [&](Int i1, Int i2) {
+        if (preferMoveThanShrink) {
+            detail::BlendFitInfo fitIfMoved =
+                computeBestFit(input, i1 + 1, i2 + 1, settings_, buffer_);
+            if (fitIfMoved.isGoodFit) {
+                fits_.append(fitIfMoved);
+            }
+            else {
+                shrink(i1, i2);
+            }
+        }
+        else {
+            shrink(i1, i2);
+        }
+    };
+
+    // Lambda to test if there are still fits to be computed
+    auto finished = [&]() {
+        Int i2 = fits_.last().lastInputIndex;
+        return i2 == numInputPoints - 1;
+    };
+
+    // Compute subsequent fits.
+    //
+    while (!finished()) {
+        Int i1 = fits_.last().firstInputIndex;
+        Int i2 = fits_.last().lastInputIndex;
+        if (i2 - i1 + 1 == maxFitPoints) {
+            if (i2 - i1 + 1 == minFitPoints) {
+                // Fixed fit size => cannot grow or shrink
+                move(i1, i2);
+            }
+            else {
+                // Reached maxFitPoints => cannot grow
+                moveOrShrink(i1, i2);
+            }
+        }
+        else {
+            // Growing is possible => grow by one point and test if good.
+            // If good, keep it. Otherwise, either shrink or move by one point
+            detail::BlendFitInfo fitIfGrown =
+                computeBestFit(input, i1, i2 + 1, settings_, buffer_);
+            if (fitIfGrown.isGoodFit) {
+                // Growing is possible and good => grow
+                fits_.append(fitIfGrown);
+            }
+            else if (i2 - i1 + 1 == minFitPoints) {
+                // Growing is bad and cannot shrink => move
+                move(i1, i2);
+            }
+            else {
+                // Growing is bad and both shrink or move are possible
+                moveOrShrink(i1, i2);
+            }
+        }
+    }
+
+    // Compute the last fits all sharing the last input point.
+    //
+    Int i1 = fits_.last().firstInputIndex;
+    Int i2 = fits_.last().lastInputIndex;
+    VGC_ASSERT(i2 == numInputPoints - 1);
+    Int i1Min = i1 + 1;
+    Int i1Max = i2 - minFitPoints + 1;
+    if (numStartFits < i1Max - i1 + 1) { // Note: false if numStartFits = IntMax
+        i1Max = i1 + numStartFits - 1;
+    }
+    for (i1 = i1Min; i1 <= i1Max; ++i1) { // Note: empty loop if i1Max < i1Min
+        detail::BlendFitInfo fit = computeBestFit(input, i1, i2, settings_, buffer_);
+        fits_.append(fit);
+    }
+}
+
+// Determine minimum and maximum value of i2 based on Sparse Blend settings.
+//
+// In our experience, results are usually better when allowing
+// consecutive fits to share their last input point, otherwise:
+//
+// 1. In would make it impossible in some cases to reach back `minFitPoints`
+//    depending on `indexRatio`. For example, if `minFitPoints = 5` and
+//    `indexRatio = 0.25`, then once we reach 8 fit points (i2 = i1 + 7),
+//     then the next fit would have the following constraints:
+//       i1_next = splitIndex(i1, i2, 0.25) = i1 + floor(7*0.25) = i1 + 1
+//       i2_next >= i2 + 1 (since we would not allow i2_next = i2)
+//     So: i2_next - i1_next >= i2 - i1 = 7
+//     Which means that we can never go below 8 fit points anymore.
+//     To make it possible to go back down to 5 fit points, one would have to
+//     choose `indexRatio >= 2/5`, which may not be desirable. To go back down
+//     to 3 fit points, one would have to choose `indexRatio >= 2/3`
+//
+// 2. More generally, it would make it impossible to decrease
+//    numFitPoints fast enough from a large value to a small value, which
+//    is necessary when transitionning from a low-curvature to a
+//    high-curvature part of the curve, such as a sharp turn after a long
+//    straight line. Therefore, the algorithm would be forced to include
+//    in its output bad fits that go over the turn and cannot be well
+//    approximated by a quadratic.
+//
+// However, note that typically we always have i1_next >= i1 + 1
+// (see implementation of getSplitIndex()), which is necessary to
+// ensure that the algorithm terminates. This makes the output somewhat
+// asymmetrical, but it makes sense given the "forward-oriented" nature
+// of the algorithm (running it with the input points reversed would
+// give a different result anyway, even if we didn't allow fits to
+// share their end point)
+//
+// An alternative way to solve problems 1. and 2. while not allowing
+// fits to share their end point might be to implement a more complex
+// SplitStrategy that behaves differently for small numbers and large
+// numbers or fit points, or a more complex algorithm that actually
+// searches for the best i1_next based on the quality of fits (like we
+// do for i2_next), instead of just directly setting the value of
+// i1_next based on a simple formula from i1 and i2.
+//
+// Finally, note that since i1 is determined via a simple formula
+// (e.g., i1_next = i1 + floor((i2-i1)*0.25)), while i2 is determined
+// as the largest possible index that still allows for a good fit, then
+// this allows going instantly from a small number of fit points to a
+// large number of fit points, but not the other way around.
+//
+// The above problem is one reason why results can often be better when using
+// the Dense approach, which does not have this issue.
+//
+// Fundamentally, this issue highlights once again the fact that the algorithm
+// is no symmetrical, and it might be worth exploring other methdods to make
+// this more symmetrical, such as limiting `i2_next - i1_next` to not be more
+// than some factor of `i2 - i1`, or determining i1 in a more complex way than
+// just the simple formula. Such limits are already implemented in the simple
+// case where FitSplitType is RelativeToStart, in which case we do not allow
+// i2 to grow more than splitOffset + 1 (see i2MaxOffset)
+//
+// A completely different way to achieve symmetrical results would be to
+// compute the local fits independently from each other, e.g., for each input
+// point i, compute the largest k such that [i - k, i + k] is a good fit.
+// However, this would require some special case handling when consecutive fits
+// do no satisfy fit1.i1 <= fit2.i1 and fit1.i2 <= fit2.i2, which is currently
+// an assumption of the computeBlendBetweenFits() function.
+//
+std::pair<Int, Int> getSparseBlendIndexRange(
+    const SketchPointBuffer& input,
+    const core::Array<detail::BlendFitInfo>& fits_,
+    const experimental::BlendFitSettings& settings_,
+    Int i1) {
+
+    Int numInputPoints = input.length();
+
+    using experimental::FitSplitStrategy;
+    using experimental::FitSplitType;
+    const FitSplitStrategy& splitStrategy = settings_.splitStrategy;
+    bool isRelativeToStart = splitStrategy.type() == FitSplitType::RelativeToStart;
+    Int splitOffset = settings_.splitStrategy.offset();
+
+    constexpr bool allowSharedLastInputIndex = true;
+    constexpr Int i2MinOffset = allowSharedLastInputIndex ? 0 : 1;
+    std::optional<Int> i2MaxOffset = std::nullopt;
+    if (isRelativeToStart) {
+        i2MaxOffset = splitOffset + 1; // +1 allows growing
+    }
+    Int i2Min = i1 + settings_.minFitPoints - 1;
+    if (!fits_.isEmpty() && i2Min < fits_.last().lastInputIndex + i2MinOffset) {
+        i2Min = fits_.last().lastInputIndex + i2MinOffset;
+    }
+    Int i2Max = i1 + settings_.maxFitPoints - 1;
+    if (i2Max > numInputPoints - 1) {
+        i2Max = numInputPoints - 1;
+    }
+    if (i2MaxOffset) {
+        // If there is a maximum offset between an i2 and the next i2
+        if (fits_.isEmpty()) {
+            // then we want the first output fit to have numFitPoints <= minFitPoints
+            //
+            // XXX: Do we really want that? For example, we later implemented
+            // computeDenseBlendFits(), which has the ability for
+            // the first fit to either start at minFitPoints (like here), or be
+            // as large as possible, or be as large as possible while enforcing
+            // that a given number of fits share the first input point (see
+            // numStartFits). The latter strategy seems to improve the results
+            // for the dense case, but it may also apply to the sparse case.
+            //
+            if (i2Max > settings_.minFitPoints - 1) {
+                i2Max = settings_.minFitPoints - 1;
+            }
+        }
+        else {
+            // and subsequent fits to progressively grow from there.
+            if (i2Max > fits_.last().lastInputIndex + *i2MaxOffset) {
+                i2Max = fits_.last().lastInputIndex + *i2MaxOffset;
+            }
+        }
+    }
+
+    // Handle special case where we need to go lower than the min at the end
+    // of the stroke, because there isn't enough input points. Example with
+    // minFitPoints = maxFitPoints = 5 and splitStrategy = relativeToStart(2):
+    //
+    // Input points:  ........ (8)
+    // Output fits:   ----- (5)
+    //                  ----- (5)
+    //                    ---- (4) <- cannot use 5, exceptionally
+    //
+    i2Min = (std::min)(i2Min, i2Max);
+
+    return std::make_pair(i2Min, i2Max);
+}
+
+// The general idea of the algorithm is:
+//
+// 1. Initialize i1 to 0
+//
+// 2. Compute the largest i2 such that [i1..i2] (and all [i1..j] for
+//    i1 < j < i2) can be well-approximated by a Bézier.
+//
+// 3. Add (i1, i2, bestFit([i1..i2])) to the list of output fits
+//
+// 4. Compute a splitIndex between i1 and i2 (see SplitStrategy)
+//    and set i1 = splitIndex
+//
+// 5. Go to step 2 and repeat until i2 = numInputPoints - 1.
+//
+// In practice, further contraints can be set to fine-tune the behavior,
+// e.g, force all output fits to have a fixed number of input point.
+//
+// The terminology "sparse" refers to the fact that the next i1 is computed via
+// the SplitStrategy, therefore the output fits look like:
+//
+// Input points: .........
+// Output fits:  ----
+//                  ----
+//                     ---
+//
+// Rather than:
+//
+// Input points: .........
+// Output fits:  ----
+//               -----
+//               ------
+//                -----
+//                 ----
+//                 -----
+//                 ------
+//                 -------
+//                  ------
+//                   -----
+//                    ----
+//
+void computeSparseBlendFits(
+    const SketchPointBuffer& input,
+    const experimental::BlendFitSettings& settings_,
+    core::Array<detail::BlendFitInfo>& fits_,
+    detail::FitBuffer& buffer_) {
+
+    // Convenient aliases
+    using experimental::FitSplitStrategy;
+    using experimental::FitSplitType;
+    const FitSplitStrategy& splitStrategy = settings_.splitStrategy;
+    bool isRelativeToStart = splitStrategy.type() == FitSplitType::RelativeToStart;
+    Int splitOffset = settings_.splitStrategy.offset();
+    Int numInputPoints = input.length();
+
+    // Using relativeToStart(0) would cause the loop to not terminate. If one
+    // wants to allow sharing first input indices between consecutive local
+    // fits, it makes more sense to use the Dense mode.
+    VGC_ASSERT(splitStrategy != FitSplitStrategy::relativeToStart(0));
+
+    // Lambda to test if there are still fits to be computed
+    auto finished = [&]() {
+        if (fits_.isEmpty()) {
+            // We need at least one fit, so we're not done if there is none
+            return false;
+        }
+        Int i2 = fits_.last().lastInputIndex;
+        if (i2 != numInputPoints - 1) {
+            // We need the last fit to reach the last input point
+            return false;
+        }
+        if (isRelativeToStart) {
+            // Test if we should "keep shrinking" the last fit by adding
+            // smaller fits that share the last input index.
+            Int i1 = fits_.last().firstInputIndex;
+            Int numFitPoints = i2 - i1 + 1;
+            return numFitPoints <= settings_.minFitPoints + splitOffset - 1;
+        }
+        else {
+            return true;
+            // XXX: would it make sense to return false in some case with
+            // indexRatio too? Or perhaps it would be cleaner to handle the
+            // "isEmpty" and "keep shrinking" and  cases in different loops, as in
+            // computeDenseBlendFits()?
+        }
+    };
+
+    while (!finished()) {
+
+        // Determine i1
+        Int i1 = 0;
+        if (!fits_.isEmpty()) {
+            const detail::BlendFitInfo& lastFit = fits_.last();
+            i1 = getSplitIndex(settings_.splitStrategy, lastFit);
+        }
+
+        // Determine i2 min/max range
+        auto [i2Min, i2Max] = getSparseBlendIndexRange(input, fits_, settings_, i1);
+
+        // Compute bestFit([i1..i2]) and increase i2 until a bad fit is found,
+        // or i2 has reached its maxValue. Add the last good fit (or only fit,
+        // if even the first fit was bad) to the output.
+        //
+        bool isFirstFitAttempt = true;
+        detail::BlendFitInfo lastGoodFit;
+        for (Int i2 = i2Min; i2 <= i2Max; ++i2) {
+            detail::BlendFitInfo fit = computeBestFit(input, i1, i2, settings_, buffer_);
+            if (fit.isGoodFit || isFirstFitAttempt) {
+                lastGoodFit = fit;
+                isFirstFitAttempt = false;
+            }
+            if (i2 == i2Max || !fit.isGoodFit) {
+                fits_.append(lastGoodFit);
+                break;
+            }
+        }
+    }
+}
+
+void computeBlendFits(
+    const SketchPointBuffer& input,
+    const experimental::BlendFitSettings& settings,
+    core::Array<detail::BlendFitInfo>& fits,
+    Int& numStableFits,
+    detail::FitBuffer& buffer) {
+
+    // Remove all previously unstable fits.
+    //
+    Int oldNumStableFits = numStableFits;
+    fits.resize(oldNumStableFits);
+
+    // Compute new fits.
+    //
+    if (settings.type == experimental::BlendFitType::Dense) {
+        computeDenseBlendFits(input, settings, fits, buffer);
+    }
+    else {
+        computeSparseBlendFits(input, settings, fits, buffer);
+    }
+
+    // Determine the new number of stable fits. Note that the last fit is
+    // always considered unstable, even if all the input points were stable.
+    //
+    // A fit can only be considered stable if its `lastInputIndex` is a stable
+    // input point, and if the input point just after is also stable. Indeed,
+    // if the input point just after is allowed to change, then maybe the fit
+    // could grow to include this point, which means that the fit is unstable.
+    //
+    // Also, any fit sharing the same `firstInputIndex` as an unstable fit is
+    // also considered unstable. This is important for the dense blend case,
+    // where a given number of fits (`numStartFits`) can share their first/last
+    // input point, making all of them unstable together.
+    //
+    // For example, with the following where fitting the whole input is good:
+    //
+    // [  0] ----- 0-4 (5)
+    // [  1] ------ 0-5 (6)
+    // [  2] ------- 0-6 (7)
+    // [  3] -------- 0-7 (8)
+    // [  4] --------- 0-8 (9)
+    // [  5]  -------- 1-8 (8)
+    // [  6]   ------- 2-8 (7)
+    // [  7]    ------ 3-8 (6)
+    // [  8]     ----- 4-8 (5)
+    //
+    // All of the fits should be considered unstable, since for example with
+    // `numStartFits == 5`, the next iteration might be:
+    //
+    // [  0] ------ 0-5 (6)
+    // [  1] ------- 0-6 (7)
+    // [  2] -------- 0-7 (8)
+    // [  3] --------- 0-8 (9)
+    // [  4] ---------- 0-9 (10)
+    // [  5]  --------- 1-9 (9)
+    // [  6]   -------- 2-9 (8)
+    // [  7]    ------- 3-9 (7)
+    // [  8]     ------ 4-9 (6)
+    //
+    Int firstUnstableFit = fits.length() - 1;
+    auto isUnstableInputPoint = [&](Int k) { //
+        return k >= input.numStablePoints();
+    };
+    auto isUnstableFit = [&](Int j) {
+        return isUnstableInputPoint(fits[j].lastInputIndex + 1);
+    };
+    auto startsLikePrevious = [&](Int j) {
+        return fits[j - 1].firstInputIndex == fits[j].firstInputIndex;
+    };
+    while (firstUnstableFit > 0 && isUnstableFit(firstUnstableFit - 1)) {
+        --firstUnstableFit;
+    }
+    while (firstUnstableFit > 0 && startsLikePrevious(firstUnstableFit)) {
+        --firstUnstableFit;
+    }
+    Int newNumStableFits = std::max<Int>(0, firstUnstableFit);
+
+    // Update cached value for numStableFits.
+
+    numStableFits = newNumStableFits;
+}
+
+// Improve width by using Catmull-Rom interpolation instead linear by part.
+// This prevents ugly C1-discontinuities of the width.
+//
+// For the first/last input point pair, there is no previous/next input
+// point, so we duplicate the first/last point.
+//
+[[maybe_unused]] void improveWidths1( //
+    const SketchPointBuffer& input,
+    Int k,
+    double u,
+    SketchPoint& p) {
+
+    const SketchPoint& p1 = input[k];
+    const SketchPoint& p2 = input[k + 1];
+
+    bool hasPrev = (k - 1) >= 0;
+    bool hasNext = (k + 2) < input.length();
+
+    double w1 = p1.width();
+    double w2 = p2.width();
+    double w0 = hasPrev ? input[k - 1].width() : w1;
+    double w3 = hasNext ? input[k + 2].width() : w2;
+
+    std::array<double, 4> widths = {w0, w1, w2, w3};
+    geometry::CubicBezier1d bezier = geometry::uniformCatmullRomToBezier<double>(widths);
+
+    p.setWidth(bezier.eval(u));
+}
+
+// Improve width by using Catmull-Rom interpolation instead linear by part.
+// This prevents ugly C1-discontinuities of the width.
+//
+// For the first/last input point pair, there is no previous/next input
+// point, so we invent a width via some basic extrapolation.
+//
+// Example for k = 0 with input.length() >= 3:
+//
+//            o w3 = input[2].width()
+//           /
+//          o w2   = input[1].width()
+//         /
+//        o w1     = input[0].width()
+//       /
+//      o w0       = w1 + (w1 - w2) = symmetry of w2 relative to w1
+//
+[[maybe_unused]] void improveWidths2( //
+    const SketchPointBuffer& input,
+    Int k,
+    double u,
+    SketchPoint& p) {
+
+    const SketchPoint& p1 = input[k];
+    const SketchPoint& p2 = input[k + 1];
+
+    bool hasPrev = (k - 1) >= 0;
+    bool hasNext = (k + 2) < input.length();
+
+    double w1 = p1.width();
+    double w2 = p2.width();
+    double w0 = hasPrev ? input[k - 1].width() : w1 + (w1 - w2);
+    double w3 = hasNext ? input[k + 2].width() : w2 + (w2 - w1);
+
+    std::array<double, 4> widths = {w0, w1, w2, w3};
+    geometry::CubicBezier1d bezier = geometry::uniformCatmullRomToBezier<double>(widths);
+
+    p.setWidth(bezier.eval(u));
+}
+
+// Use the same extrapolated widths as improveWidths2 for the first/last input
+// point, but in addition uses the distance between input points to provide
+// better tangents.
+//
+[[maybe_unused]] void improveWidths3( //
+    const SketchPointBuffer& input,
+    Int k,
+    double u,
+    SketchPoint& p) {
+
+    const SketchPoint& p1 = input[k];
+    const SketchPoint& p2 = input[k + 1];
+
+    bool hasPrev = (k - 1) >= 0;
+    bool hasNext = (k + 2) < input.length();
+
+    double w1 = p1.width();
+    double w2 = p2.width();
+    double w0 = hasPrev ? input[k - 1].width() : w1 + (w1 - w2);
+    double w3 = hasNext ? input[k + 2].width() : w2 + (w2 - w1);
+
+    // Distances between input points (chord-lengths)
+    double d12 = p2.s() - p1.s();
+    double d01 = hasPrev ? (p1.s() - input[k - 1].s()) : d12;
+    double d23 = hasNext ? (input[k + 2].s() - p2.s()) : d12;
+    double d012 = d01 + d12;
+    double d123 = d12 + d23;
+
+    // Fallback to uniform if we would otherwise have a division by zero
+    if (!(d012 > 0 && d123 > 0)) {
+        std::array<double, 4> widths = {w0, w1, w2, w3};
+        geometry::CubicBezier1d bezier =
+            geometry::uniformCatmullRomToBezier<double>(widths);
+        p.setWidth(bezier.eval(u));
+        return;
+    }
+
+    // Desired dw/ds at the start/end of the Bézier, using a simple heuristic
+    double dw_ds_1 = (w2 - w0) / d012;
+    double dw_ds_2 = (w3 - w1) / d123;
+
+    // Compute an approximation of ds/du at the start/end of the Bézier blend
+    // between p1 and p2.
+    //
+    // TODO: Can we do something more accurate by actually evaluating ds/du
+    // just before/after the input points? Alternatively, could we enforce that
+    // ds/du is linear between control points by evaluating the Bézier in
+    // arc-length rather than in u-space? Also, maybe we could compute all
+    // output widths after all output positions have already been computed, and
+    // updateChordLenghts() was called, so that we have better length
+    // information, instead of using the input chord lengths.
+    //
+    double ds_du_1 = d12;
+    double ds_du_2 = d12;
+
+    // Compute the knots of the width cubic Bézier satisfying our desired dw/ds
+    // at the start/end of the Bézier.
+    //
+    // This uses the following property of a cubic Bézier:
+    //
+    //  dB/du(0) = 3 * (B1 - B0)
+    //  dB/du(1) = 3 * (B3 - B2)
+    //
+    // Therefore we have:
+    //
+    //  B1 = B0 + 1/3 * dB/du(0) = B0 + 1/3 * dB/ds(0) * ds/du(0)
+    //  B2 = B3 - 1/3 * dB/du(1) = B3 - 1/3 * dB/ds(1) * ds/du(1)
+    //
+    constexpr double oneThird = 1.0 / 3.0;
+    double kw0 = w1;
+    double kw1 = w1 + oneThird * dw_ds_1 * ds_du_1;
+    double kw2 = w2 - oneThird * dw_ds_2 * ds_du_2;
+    double kw3 = w2;
+
+    geometry::CubicBezier1d widthBezier(kw0, kw1, kw2, kw3);
+    p.setWidth(widthBezier.eval(u));
+}
+
+void computeBlendBetweenFits(
+    const SketchPointBuffer& input,
+    const experimental::BlendFitSettings& settings,
+    const core::Array<detail::BlendFitInfo>& fits,
+    Int numStableFits,
+    SketchPointBuffer& output) {
+
+    // Remove previously unstable points
+    Int oldNumStableOutputPoints = output.numStablePoints();
+    Int newNumStableOutputPoints = oldNumStableOutputPoints;
+    output.resize(oldNumStableOutputPoints);
+
+    // Add the first output point unless it was already stable
+    if (oldNumStableOutputPoints == 0) {
+        output.append(input.first());
+        if (input.numStablePoints() > 0) {
+            newNumStableOutputPoints = 1;
+        }
+    }
+
+    double ds = settings.ds;
+    double sMax = input.last().s();
+    Int numInteriorSamples = core::ifloor<Int>(sMax / ds - 0.5);
+    Int j1 = 0; // Index of first fit that contains s in its interior
+    Int j2 = 0; // Index of last fit that contains s in its interior
+    Int k = 0;  // Index of last pair of input points (k, k+1) s.t. input[k].s() < s
+    Int jMax = fits.length() - 1;
+    Int kMax = input.length() - 2;
+    for (Int i = output.length(); i <= numInteriorSamples; ++i) {
+
+        // Compute the s param corresponding to this output point
+        double s = i * ds;
+
+        // Compute the range of fits and pair of input points containing s
+        while (j1 < jMax && fits[j1].s2 <= s) {
+            ++j1;
+        }
+        while (j2 < jMax && fits[j2 + 1].s1 < s) {
+            ++j2;
+        }
+        while (k < kMax && input[k + 1].s() < s) {
+            ++k;
+        }
+        VGC_ASSERT(j1 <= j2);
+
+        // Init output sketch point as linear interpolation of input point pair.
+        // This provides initial values for pressure/width/timestamp/position.
+        const SketchPoint& p1 = input[k];
+        const SketchPoint& p2 = input[k + 1];
+        double s1 = p1.s();
+        double s2 = p2.s();
+        double v = (s - s1) / (s2 - s1);
+        SketchPoint p = core::fastLerp(p1, p2, v);
+
+        // Improve width by using Catmull-Rom instead of linear interpolation
+        improveWidths3(input, k, v, p);
+
+        // Compute position as weighted average of local fits.
+        //
+        // For now we evaluate each fit at the Bézier u-param:
+        //
+        //   u = (s - fit.s1) / (fit.s2 - fit.s1)
+        //
+        // This is not great since Bézier u-param is not linear in
+        // arclength, so we may end up averaging parts of fits that
+        // are actually far from each others:
+        //
+        //        s:  0              5              10             15
+        //    input:  +              +              +              +
+        //  fits[0]:  .    .   .  . ... .  .   .    .
+        //  fits[1]:                 .    .   .  . ... .  .   .    .
+        //            ^              ^              ^              ^
+        //        input[0].s     input[1].s     input[2].s     input[2].s
+        //        fits[0].s1                    fits[0].s2
+        //                       fits[1].s1                    fits[1].s2
+        //
+        // In the viz above, fits are sampled at u = 0, 0.1, ..., 0.9, 1.0,
+        // with ||dp/du|| being greater at the ends of the Bézier rather than
+        // the middle, which is typical of 2D quadratic Béziers:
+        //
+        //   y   x = y^2
+        //         = 0 1  4    9      16       25
+        //  -5                                 .
+        //  -4                        .
+        //  -3                 .
+        //  -2            .
+        //  -1         .
+        //   0        .
+        //   1         .
+        //   2            .
+        //   3                 .
+        //   4                        .
+        //   5                                 .
+        //
+        // So if we evaluate for example at s = 7, we actually average the two
+        // following samples:
+        //
+        //        s:  0              5     7        10             15
+        //    input:  +              +              +              +
+        //  fits[0]:  .    .   .  . ... .  .   .    .
+        //  fits[1]:                 .  | .   .  . ... .  .   .    .
+        //                              |     |
+        //                              |     |
+        //                fits[0].eval(u0)   fits[1].eval(u1)
+        //          with u0 = (7-0)/(10-0)   with u1 = (7-5)/(15-10)
+        //                  = 0.7                    = 0.2
+        //         (8th sample of fits[0])   (3rd sample of fits[1])
+        //
+        // We can see that it doesn't make so much sense to average these, and it
+        // would have instead been better to average values like so:
+        //
+        //        s:  0              5     7        10             15
+        //    input:  +              +              +              +
+        //  fits[0]:  .    .   .  . ... .  .   .    .
+        //  fits[1]:                 .    .|  .  . ... .  .   .    .
+        //                                 |
+        //
+        //                fits[0].eval(u0)   fits[1].eval(u1)
+        //                  with u0 ~= 0.8   with u1 ~= 0.125
+        //         (9th sample of fits[0])   (1/4 between 2nd and 3rd sample of fits[1])
+        //
+        // Such better values for u could be computed via an approximation of
+        // the inverse of s(u), but it isn't cheap.
+        //
+        // Finally, an orthogonal way to improve which u value to use could be
+        // to take into account, for each input point k and each fit j
+        // (overlapping k), what u-param does the input point k has respective
+        // to the fit j (these values have already been computed in the
+        // FitBuffer, but then discarded). These values indeed provide some
+        // kind of correspondence mapping between the overlapping fits.
+        //
+        geometry::Vec2d position;
+        double totalWeight = 0;
+        for (Int j = j1; j <= j2; ++j) {
+            const detail::BlendFitInfo& fit = fits[j];
+            double u = (s - fit.s1) / (fit.s2 - fit.s1);
+            double t = 2 * u - 1;
+            double weight = (1 - t) * (1 - t) * (1 + t) * (1 + t);
+            totalWeight += weight;
+            position += weight * fit.bezier.eval(u);
+        }
+        position /= totalWeight;
+        p.setPosition(position);
+
+        // Append output point
+        output.append(p);
+
+        // Determine whether the output point is stable, that is,
+        // only influenced by stable fits.
+        if (j2 < numStableFits) {
+            newNumStableOutputPoints = i + 1;
+        }
+    }
+
+    // Add the last output point.
+    // Note: the last output point is never stable.
+    output.append(input.last());
+
+    // Update chord-lengths and number of stable output points.
+    output.updateChordLengths();
+    output.setNumStablePoints(newNumStableOutputPoints);
+}
+
+void debugFits(
+    const core::Array<detail::BlendFitInfo>& fits,
+    const geometry::Mat3d& transform) {
+
+    if (!enableDebugFits) {
+        return;
+    }
+
+    std::string str = "\n";
+    debugDrawClear();
+    Int i = 0;
+    for (const auto& fit : fits) {
+        Int numFitPoints = fit.lastInputIndex - fit.firstInputIndex + 1;
+        std::string whitespace(fit.firstInputIndex, ' ');
+        std::string dashes(numFitPoints, '-');
+        str += core::format( //
+            "[{:>3}] {}{} {}-{} ({}){}\n",
+            i,
+            whitespace,
+            dashes,
+            fit.firstInputIndex,
+            fit.lastInputIndex,
+            numFitPoints,
+            fit.isGoodFit ? "" : "*");
+        ++i;
+        debugDraw(transform, fit.bezier);
+    }
+    VGC_DEBUG(LogVgcToolsSketch, str);
+}
+
+} // namespace
+
+QuadraticBlendPass::QuadraticBlendPass()
+    : SketchPass()
+    , settings_() {
+}
+
+QuadraticBlendPass::QuadraticBlendPass(const experimental::BlendFitSettings& settings)
+    : SketchPass()
+    , settings_(settings) {
+
+    // Ensure settings have safe values.
+    // XXX: sanitize instead of throw?
+    VGC_ASSERT(settings_.minFitPoints > 1);
+    VGC_ASSERT(settings_.maxFitPoints >= settings_.minFitPoints);
+}
+
+void QuadraticBlendPass::doReset() {
+    fits_.clear();
+    numStableFits_ = 0;
+}
+
+void QuadraticBlendPass::doUpdateFrom(
+    const SketchPointBuffer& input,
+    SketchPointBuffer& output) {
+
+    Int numInputPoints = input.length();
+
+    if (handleSmallInputWithFixedEndpoints(input, output)) {
+        return;
+    }
+    VGC_ASSERT(numInputPoints > 2);
+
+    // Compute overlapping Bézier fits from the input point
+    //
+    computeBlendFits(input, settings_, fits_, numStableFits_, buffer_);
+    debugFits(fits_, transformMatrix());
+
+    // Compute a uniform sampling of the blend between the Bézier fits.
+    //
+    computeBlendBetweenFits(input, settings_, fits_, numStableFits_, output);
 }
 
 } // namespace vgc::tools

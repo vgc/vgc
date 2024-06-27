@@ -119,7 +119,8 @@ VGC_DEFINE_ENUM( //
     (SingleLineSegmentWithFreeEndpoints, "Single Line Segment (Free Endpoints)"),
     (SingleQuadraticSegmentWithFixedEndpoints,
      "Single Quadratic Segment (Fixed Endpoints)"),
-    (QuadraticSpline, "Quadratic Spline"))
+    (QuadraticSpline, "Quadratic Spline"),
+    (QuadraticBlend, "Quadratic Blend"))
 
 SketchModule::SketchModule(CreateKey key, const ui::ModuleContext& context)
     : Module(key, context) {
@@ -188,6 +189,8 @@ std::unique_ptr<SketchPass> makePreTransformPass(SketchFitMethod fitMethod) {
         return std::make_unique<SingleQuadraticSegmentWithFixedEndpointsPass>();
     case SketchFitMethod::QuadraticSpline:
         return std::make_unique<QuadraticSplinePass>();
+    case SketchFitMethod::QuadraticBlend:
+        return std::make_unique<QuadraticBlendPass>();
     }
     return std::make_unique<EmptyPass>();
 }
@@ -325,9 +328,11 @@ void SketchModule::reFitExistingEdges_() {
 
             // Setup passes
             preTransformPass->reset();
+            preTransformPass->setTransformMatrix(transform);
             transformPass.reset();
             transformPass.setTransformMatrix(transform);
             postTransformPass->reset();
+            postTransformPass->setTransformMatrix(transform);
 
             // Apply passes
             preTransformPass->updateFrom(inputPoints);
@@ -1168,6 +1173,8 @@ void Sketch::startCurve_(ui::MouseEvent* event) {
         preTransformPass_ = makePreTransformPass(fitMethod);
         postTransformPass_ = makePostTransformPass(fitMethod);
     }
+    preTransformPass_->setTransformMatrix(transformPass_.transformMatrix());
+    postTransformPass_->setTransformMatrix(transformPass_.transformMatrix());
 
     // Append start point to geometry
     continueCurve_(event);
@@ -1271,7 +1278,6 @@ void Sketch::continueCurve_(ui::MouseEvent* event) {
     inputPoints_.setNumStablePoints(inputPoints_.length());
 
     // Apply all processing steps
-
     preTransformPass_->updateFrom(inputPoints_);
     transformPass_.updateFrom(*preTransformPass_);
     postTransformPass_->updateFrom(transformPass_);
