@@ -23,7 +23,6 @@
 #include <vgc/canvas/documentmanager.h>
 #include <vgc/canvas/experimental.h>
 #include <vgc/core/arithmetic.h> // roundToSignificantDigits
-#include <vgc/core/colors.h>
 #include <vgc/core/profile.h>
 #include <vgc/core/stringid.h>
 #include <vgc/geometry/curve.h>
