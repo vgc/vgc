@@ -327,6 +327,12 @@ struct BlendFitSettings {
     /// The distance is expressed in the same unit as the input points
     /// coordinates, which is typically screen physical pixels.
     ///
+    /// A value around 1.2 tends to work well for input rounded to integer
+    /// pixel values (typically mouse input) as it is large enough to smooth
+    /// out quantization artifacts. A smaller value (e.g., 0.5) can be used
+    /// when the input has sub-pixel precision, resulting in a more precise
+    /// output preserving more detail.
+    ///
     double distanceThreshold = 1.2;
 
     /// How "flat" should a quadratic Bézier segment be in order to be considered
