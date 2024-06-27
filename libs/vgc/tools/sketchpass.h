@@ -326,13 +326,6 @@ private:
     geometry::Mat3d transform_;
 };
 
-#define VGC_TOOLS_DEBUG_SKETCH_PASS 1
-
-#if VGC_TOOLS_DEBUG_SKETCH_PASS
-
-#else
-#endif
-
 } // namespace vgc::tools
 
 #endif // VGC_TOOLS_SKETCHPASS_H
