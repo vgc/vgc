@@ -383,6 +383,29 @@ struct BlendFitSettings {
     ///
     Int maxFitPoints = 50;
 
+    // This is only used if `type` is `Dense`.
+    //
+    // Having the first fit be the largest possible good fit is usually not a
+    // good idea for dense fits, since this means that there would only be a
+    // single fit covering the first input point, and a possibly unaesthetic
+    // transition between the first and second fit (which would start at the
+    // second input point). The same reasoning also applies at the end of the
+    // curve.
+    //
+    // This setting solves this problem by enforcing that the first input point
+    // and the last input point are covered by at least a certain number of
+    // fits, whenever possible. A value of at least 3 typically reduce
+    // flickering and makes the curve ends look smoother.
+    //
+    // It is also possible to set numStartFits = IntMax to enforce that the
+    // first and last fit always have a size equal to `minFitPoints` (or equal
+    // to the number of input points, whichever is smaller), but this is
+    // usually not recommended since using small fits is prone to overfitting,
+    // which also tends to cause flickering and cause curve ends to be less
+    // smooth than the middle of the curve.
+    //
+    Int numStartFits = 5;
+
     /// The target arclength distance between samples that is used when
     /// computing the blend between local fits as a uniform sampling.
     ///

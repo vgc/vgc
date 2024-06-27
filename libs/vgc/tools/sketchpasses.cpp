@@ -2095,47 +2095,40 @@ void computeDenseBlendFits(
     //
     constexpr bool preferMoveThanShrink = true;
 
-    // Whether the first and last fit should have a size of minFitPoints.
-    //
-    constexpr bool smallStart = false;
-
-    // When smallStart is false, starting at the largest good fit is not always
-    // a good idea, since this means that there wouldn't be a lot of fits to
-    // blend with. This variable makes it possible to at least have a certain
-    // number of fits, whenever possible.
-    //
-    constexpr Int numStartFits = 5;
-
     // Convenient aliases
     Int minFitPoints = settings_.minFitPoints;
     Int maxFitPoints = settings_.maxFitPoints;
+    Int numStartFits = settings_.numStartFits;
     Int numInputPoints = input.length();
 
     // Compute first fit.
     //
+    // We first compute the largest i2 in [i2Min, i2Max] such that [0, i2] is a
+    // good fit and all [0, j] for j in [i2Min, i2] are good fits, then use the
+    // range [i1, max(i2Min, i2 - numStartFits + 1)] as first fit.
+    //
+    // Note: the `if (numStartFits < i2Max - i2Min + 1)` condition is an
+    // optimization: if false, we know that max(i2Min, i2 - numStartFits + 1)
+    // is equal to i2Min for all i2 in [i2Min, i2Max], so there is no need to
+    // compute such larger i2.
+    //
     if (fits_.isEmpty()) {
         Int i1 = 0;
         Int i2Min = (std::min)(minFitPoints - 1, numInputPoints - 1);
-        detail::BlendFitInfo fit = computeBestFit(input, i1, i2Min, settings_, buffer_);
-        if (!smallStart) {
-            Int i2Max = (std::min)(maxFitPoints - 1, numInputPoints - 1);
-            Int i2Fit = i2Min;
-            for (Int i2 = i2Min + 1; i2 <= i2Max; ++i2) {
-                detail::BlendFitInfo largerFit =
+        Int i2Max = (std::min)(maxFitPoints - 1, numInputPoints - 1);
+        Int i2 = i2Min;
+        if (numStartFits < i2Max - i2Min + 1) { // Note: false if numStartFits = IntMax
+            for (i2 = i2Min; i2 <= i2Max; ++i2) {
+                detail::BlendFitInfo fit =
                     computeBestFit(input, i1, i2, settings_, buffer_);
-                if (largerFit.isGoodFit) {
-                    fit = largerFit;
-                    i2Fit = i2;
-                }
-                else {
+                if (!fit.isGoodFit) {
+                    --i2;
                     break;
                 }
             }
-            Int i2 = (std::max)(i2Min, i2Fit - numStartFits + 1);
-            if (i2 != i2Fit) {
-                fit = computeBestFit(input, i1, i2, settings_, buffer_);
-            }
+            i2 = (std::max)(i2Min, i2 - numStartFits + 1);
         }
+        detail::BlendFitInfo fit = computeBestFit(input, i1, i2, settings_, buffer_);
         fits_.append(fit);
     }
 
@@ -2223,11 +2216,11 @@ void computeDenseBlendFits(
     Int i2 = fits_.last().lastInputIndex;
     VGC_ASSERT(i2 == numInputPoints - 1);
     Int i1Min = i1 + 1;
-    Int i1Max = i2 - minFitPoints + 1; // if i1Max < i1Min, empty loop below
-    if (!smallStart) {
-        i1Max = (std::min)(i1Max, i1 + numStartFits - 1);
+    Int i1Max = i2 - minFitPoints + 1;
+    if (numStartFits < i1Max - i1 + 1) { // Note: false if numStartFits = IntMax
+        i1Max = i1 + numStartFits - 1;
     }
-    for (i1 = i1Min; i1 <= i1Max; ++i1) {
+    for (i1 = i1Min; i1 <= i1Max; ++i1) { // Note: empty loop if i1Max < i1Min
         detail::BlendFitInfo fit = computeBestFit(input, i1, i2, settings_, buffer_);
         fits_.append(fit);
     }
