@@ -26,13 +26,11 @@
 #include <vgc/geometry/catmullrom.h>
 #include <vgc/tools/logcategories.h>
 
-#include <vgc/core/profile.h>
-
 namespace vgc::tools {
 
 namespace {
 
-constexpr bool enableDebugFits = true;
+constexpr bool enableDebugFits = false;
 
 }
 
@@ -2483,8 +2481,6 @@ void computeBlendFits(
     Int& numStableFits,
     detail::FitBuffer& buffer) {
 
-    VGC_PROFILE_FUNCTION
-
     // Remove all previously unstable fits.
     //
     Int oldNumStableFits = numStableFits;
@@ -2563,15 +2559,6 @@ void computeBlendFits(
     // Update cached value for numStableFits.
 
     numStableFits = newNumStableFits;
-
-    VGC_DEBUG_TMP("num stable input points = {}", input.numStablePoints());
-
-    VGC_DEBUG_TMP(
-        "old stable fits = {}, added fits = {}, total = {}, new stable fits = {}",
-        oldNumStableFits,
-        fits.length() - oldNumStableFits,
-        fits.length(),
-        newNumStableFits);
 }
 
 // Improve width by using Catmull-Rom interpolation instead linear by part.
@@ -2727,8 +2714,6 @@ void computeBlendBetweenFits(
     Int numStableFits,
     SketchPointBuffer& output) {
 
-    VGC_PROFILE_FUNCTION
-
     // Remove previously unstable points
     Int oldNumStableOutputPoints = output.numStablePoints();
     Int newNumStableOutputPoints = oldNumStableOutputPoints;
@@ -2883,14 +2868,6 @@ void computeBlendBetweenFits(
     // Update chord-lengths and number of stable output points.
     output.updateChordLengths();
     output.setNumStablePoints(newNumStableOutputPoints);
-
-    VGC_DEBUG_TMP(
-        "old stable output points = {}, added output points = {}, total = {}, new stable "
-        "output points = {}",
-        oldNumStableOutputPoints,
-        output.length() - oldNumStableOutputPoints,
-        output.length(),
-        newNumStableOutputPoints);
 }
 
 void debugFits(
@@ -2950,9 +2927,6 @@ void QuadraticBlendPass::doUpdateFrom(
     SketchPointBuffer& output) {
 
     Int numInputPoints = input.length();
-    VGC_DEBUG_TMP("doUpdateFrom(numInputPoints={})", numInputPoints);
-
-    VGC_PROFILE_FUNCTION
 
     if (handleSmallInputWithFixedEndpoints(input, output)) {
         return;
