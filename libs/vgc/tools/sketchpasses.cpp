@@ -2374,7 +2374,7 @@ std::pair<Int, Int> getSparseBlendIndexRange(
 // e.g, force all output fits to have a fixed number of input point.
 //
 // The terminology "sparse" refers to the fact that the next i1 is computed via
-// the SpitStrategy, therefore the output fits look like:
+// the SplitStrategy, therefore the output fits look like:
 //
 // Input points: .........
 // Output fits:  ----
