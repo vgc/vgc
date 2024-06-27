@@ -286,11 +286,6 @@ namespace experimental {
 
 struct BlendFitSettings {
 
-    /// The number of output points (excluding the first) to generate
-    /// for each quadratic Bézier segment in the spline.
-    ///
-    Int numOutputPointsPerBezier = 8;
-
     /// How far from a Bézier fit are the input points allowed to be
     /// for the fit to be considered a good fit.
     ///
@@ -298,19 +293,6 @@ struct BlendFitSettings {
     /// coordinates, which is typically screen physical pixels.
     ///
     double distanceThreshold = 1.2;
-
-    /*
-    /// Whether to always pre-emptively split the last good fit into two fits.
-    ///
-    /// This tends to reduce flickering when sketching, since when a new input
-    /// point is added, if the last fit now needs to be split, the new result
-    /// will be more similar to the previous result.
-    ///
-    /// It is recommended to set this to false if `splitStrategy` is
-    /// `SecondLast`.
-    ///
-    bool splitLastGoodFitOnce = false;
-    */
 
     /// How "flat" should a quadratic Bézier segment be in order to be considered
     /// a good fit. It is computed as the ratio between the length of (B2-B0) and the
@@ -345,17 +327,25 @@ struct BlendFitSettings {
     /// input has fewer points than this, then the output consists of a single
     /// fit.
     ///
-    // TODO: minFitLength for minimal arc-length per local fit?
-    //
+    /// Using a value of 4 or greater is recommended to avoid overfitting
+    /// (there always exists a quadratic going exactly through 3 given points).
+    ///
     Int minFitPoints = 5;
 
     /// The maximal number of input points used for each local fit. If the
-    /// input has fewer points than this, then the output consists of a single
-    /// fit.
+    /// input has more points than this, then several local fits are used even
+    /// if the whole input can be well-approximated by a single fit.
     ///
-    // TODO: maxFitLength for minimal arc-length per local fit?
-    //
+    /// This ensures that the unstable part of the curve stays under a
+    /// reasonable size, improving performance and locality (each input point
+    /// should not affect input points that are far away).
+    ///
     Int maxFitPoints = 50;
+
+    /// The target arclength distance between samples that is used when
+    /// computing the blend between local fits as a uniform sampling.
+    ///
+    double ds = 3.0;
 };
 
 } // namespace experimental

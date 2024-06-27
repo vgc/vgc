@@ -2100,7 +2100,7 @@ void computeDenseProgressiveBlendFits(
     //
     constexpr bool smallStart = false;
 
-    // When smallStart is false, starting is the largest good fit is not always
+    // When smallStart is false, starting at the largest good fit is not always
     // a good idea, since this means that there wouldn't be a lot of fits to
     // blend with. This variable makes it possible to at least have a certain
     // number of fits, whenever possible.
@@ -2267,7 +2267,7 @@ void computeDenseProgressiveBlendFits(
 //    in its output bad fits that go over the turn and cannot be well
 //    approximated by a quadratic.
 //
-// However, while we allow i2_next == i2, we enforce i1_next >= i1 + 1
+// However, note that typically we always have i1_next >= i1 + 1
 // (see implementation of getSplitIndex()), which is necessary to
 // ensure that the algorithm terminates. This makes the output somewhat
 // asymmetrical, but it makes sense given the "forward-oriented" nature
@@ -2287,11 +2287,25 @@ void computeDenseProgressiveBlendFits(
 // (e.g., i1_next = i1 + floor((i2-i1)*0.25)), while i2 is determined
 // as the largest possible index that still allows for a good fit, then
 // this allows going instantly from a small number of fit points to a
-// large number of fit points, but not the other way around. This is
-// also asymmetrical, and it might be worth exploring other methdods
-// to make this more symmetrical, such as limiting `i2_next - i1_next`
-// to not be more than some factor of `i2 - i1`, or determining i1 in a
-// more complex way than just the simple formula.
+// large number of fit points, but not the other way around.
+//
+// The above problem is one reason why results tend to be better when
+// using the DenseProgressive approach, which does not have this issue.
+//
+// Fundamentally, this issue highlights once again the fact that the algorithm
+// is no symmetrical, and it might be worth exploring other methdods to make
+// this more symmetrical, such as limiting `i2_next - i1_next` to not be more
+// than some factor of `i2 - i1`, or determining i1 in a more complex way than
+// just the simple formula. Such limits are already implemented in the simple
+// case where FitSplitType is RelativeToStart, in which case we do not allow
+// i2 to grow more than splitOffset + 1 (see i2MaxOffset)
+//
+// A completely different way to achieve symmetrical results would be to
+// compute the local fits independently from each other, e.g., for each input
+// point i, compute the largest k such that [i - k, i + k] is a good fit.
+// However, this would require some special case handling when consecutive fits
+// do no satisfy fit1.i1 <= fit2.i1 and fit1.i2 <= fit2.i2, which is currently
+// an assumption of the computeBlendBetweenFits() function.
 //
 std::pair<Int, Int> getProgressiveBlendIndexRange(
     const SketchPointBuffer& input,
@@ -2325,6 +2339,15 @@ std::pair<Int, Int> getProgressiveBlendIndexRange(
         // If there is a maximum offset between an i2 and the next i2
         if (fits_.isEmpty()) {
             // then we want the first output fit to have numFitPoints <= minFitPoints
+            //
+            // XXX: Do we really want that? For example, we later implemented
+            // computeDenseProgressiveBlendFits(), which has the ability for
+            // the first fit to either start at minFitPoints (like here), or be
+            // as large as possible, or be as large as possible while enforcing
+            // that a given number of fits share the first input point (see
+            // numStartFits). The latter strategy seems to improve the results
+            // for the dense case, but it may also apply to the sparse case.
+            //
             if (i2Max > settings_.minFitPoints - 1) {
                 i2Max = settings_.minFitPoints - 1;
             }
@@ -2699,8 +2722,6 @@ void computeBlendBetweenFits(
 
     VGC_PROFILE_FUNCTION
 
-    VGC_UNUSED(settings);
-
     // Remove previously unstable points
     Int oldNumStableOutputPoints = output.numStablePoints();
     Int newNumStableOutputPoints = oldNumStableOutputPoints;
@@ -2714,7 +2735,7 @@ void computeBlendBetweenFits(
         }
     }
 
-    constexpr double ds = 0.5;
+    double ds = settings.ds;
     double sMax = input.last().s();
     Int numInteriorSamples = core::ifloor<Int>(sMax / ds - 0.5);
     Int j1 = 0; // Index of first fit that contains s in its interior
