@@ -2488,11 +2488,6 @@ void computeBlendFits(
 
     // Compute new fits.
     //
-    using experimental::FitSplitStrategy;
-    using experimental::FitSplitType;
-    const FitSplitStrategy& splitStrategy = settings.splitStrategy;
-    bool isRelativeToStart = splitStrategy.type() == FitSplitType::RelativeToStart;
-    bool isDense = isRelativeToStart && splitStrategy.offset() == 0;
     if (settings.type == experimental::BlendFitType::Dense) {
         computeDenseBlendFits(input, settings, fits, buffer);
     }
