@@ -80,41 +80,39 @@ enum class FitSplitType {
 
     /// Split at the input point which is the furthest away from the best fit.
     ///
-    /// This is usually a good choice for non-interactive use cases.
+    /// This can be a good choice for non-interactive use cases.
     ///
     Furthest,
 
     /// Split at an index relative to the start point of the current fit.
     ///
-    /// This is useful for use with fixed-sized window, e.g., if you want
-    /// to exaustively compute all overlapping fits of a given size, you
-    /// can use RelativeToStart with an offset of 1.
-    ///
-    /// Using RelativeToStart with an offset of 0 has the special meaning to
-    /// allow a fit to start at the same point than the previous fit, as long
-    /// as the fit ends strictly after the previous fit and is a good fit.
+    /// This can be a good choice for spline fits when you want most of the
+    /// previous fit to be refitted, or for blend fits when you want to have a
+    /// lot of overlap between fits, but not as much as when using a dense
+    /// blend fit.
     ///
     RelativeToStart,
 
     /// Split at an index relative to the end point of the current fit.
     ///
-    /// This can be a good choice in interactive use cases where input points
-    /// are added one by one, since in this case, having a bad fit for the input
-    /// points [j, ... n] typically means that [j, ... n-1] will be a good fit
-    /// (otherwise it would have already been split before). Therefore, this
-    /// tends to minimize the amount of "changes" (flickering) that the user can
-    /// see. The tradeoff is that the end tangent of the new fit might not be
-    /// the best (since after splitting, the fit is *barely* a good fit),
-    /// possibly resulting in a slightly worse final result.
+    /// This can be a good choice for spline fits in interactive use cases
+    /// where input points are added one by one, since in this case, having a
+    /// bad fit for the input points [j, ... n] typically means that [j, ...
+    /// n-1] will be a good fit (otherwise it would have already been split
+    /// before). Therefore, this tends to minimize the amount of "changes"
+    /// (flickering) that the user can see. The tradeoff is that the end
+    /// tangent of the new fit might not be the best (since after splitting,
+    /// the fit is *barely* a good fit), possibly resulting in a slightly worse
+    /// final result.
     ///
     RelativeToEnd,
 
     /// Split at a given ratio in terms number of points.
     ///
-    /// For example, using an `indexRatio` of 0.5, it will use half of the input
-    /// points for a first fit, and the other half for a second fit. This tends
-    /// to be a good compromise between minimizing flickering and providing good
-    /// final results.
+    /// For example, using an `indexRatio` of 0.5, it will use half of the
+    /// input points for a first fit, and the other half for a second fit. This
+    /// tends to be a good compromise between minimizing flickering and
+    /// providing good final results.
     ///
     IndexRatio
 };
@@ -167,6 +165,20 @@ public:
     ///
     Int getSplitIndex(Int firstIndex, Int lastIndex, Int furthestIndex) const;
 
+    /// Returns whether two `FitSplitStrategy` are equal.
+    ///
+    bool operator==(const FitSplitStrategy& other) const {
+        return type_ == other.type_        //
+               && offset_ == other.offset_ //
+               && ratio_ == other.ratio_;
+    }
+
+    /// Returns two `FitSplitStrategy` are different.
+    ///
+    bool operator!=(const FitSplitStrategy& other) const {
+        return !(*this == other);
+    }
+
 private:
     FitSplitType type_;
     Int offset_;
@@ -180,11 +192,6 @@ private:
 };
 
 struct SplineFitSettings {
-
-    /// The number of output points (excluding the first) to generate
-    /// for each quadratic Bézier segment in the spline.
-    ///
-    Int numOutputPointsPerBezier = 8;
 
     /// How far from a Bézier fit are the input points allowed to be
     /// for the fit to be considered a good fit.
@@ -233,6 +240,11 @@ struct SplineFitSettings {
     /// Where to split a Bézier segment that isn't a good-enough fit.
     ///
     FitSplitStrategy splitStrategy = FitSplitStrategy::indexRatio(0.67);
+
+    /// The number of output points (excluding the first) to generate
+    /// for each quadratic Bézier segment in the spline.
+    ///
+    Int numOutputPointsPerBezier = 8;
 };
 
 } // namespace experimental
@@ -284,6 +296,29 @@ private:
 
 namespace experimental {
 
+enum class BlendFitType {
+
+    /// Use a dense number of local fits, where two consecutive local fits have
+    /// their first input index (and last input index) differ by no more than
+    /// by one.
+    ///
+    /// With this type of blend fit, the `FitSplitStrategy` setting is ignored.
+    ///
+    Dense,
+
+    /// Use a sparse number of local fits, where two consecutive local fits can
+    /// have their first input index (and last input index) differ by more than
+    /// by one.
+    ///
+    /// The offset between one local fit to the next is controlled by the
+    /// `FitSplitStrategy` setting.
+    ///
+    Sparse
+
+    // Future work: Bidirectional?
+    // See comment in .cpp/getSparseBlendIndexRange()
+};
+
 struct BlendFitSettings {
 
     /// How far from a Bézier fit are the input points allowed to be
@@ -319,9 +354,15 @@ struct BlendFitSettings {
     ///
     Int flatnessThresholdMinPoints = 4;
 
+    /// The type of blend fit.
+    ///
+    BlendFitType type = BlendFitType::Dense;
+
     /// Where to split a Bézier segment that isn't a good-enough fit.
     ///
-    FitSplitStrategy splitStrategy = FitSplitStrategy::relativeToStart(0);
+    /// This is only used if `type` is `Sparse`.
+    ///
+    FitSplitStrategy splitStrategy = FitSplitStrategy::indexRatio(0.25);
 
     /// The minimal number of input points used for each local fit. If the
     /// input has fewer points than this, then the output consists of a single

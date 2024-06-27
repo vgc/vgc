@@ -2069,10 +2069,9 @@ void debugDraw(
     });
 }
 
-// This is the special case of Progressive Blend when the split strategy is
-// RelativeToStart with an index offset of zero.
+// This implements the "Dense" type of blend fit.
 //
-void computeDenseProgressiveBlendFits(
+void computeDenseBlendFits(
     const SketchPointBuffer& input,
     const experimental::BlendFitSettings& settings_,
     core::Array<detail::BlendFitInfo>& fits_,
@@ -2108,17 +2107,9 @@ void computeDenseProgressiveBlendFits(
     constexpr Int numStartFits = 5;
 
     // Convenient aliases
-    using experimental::FitSplitStrategy;
-    using experimental::FitSplitType;
-    const FitSplitStrategy& splitStrategy = settings_.splitStrategy;
-    bool isRelativeToStart = splitStrategy.type() == FitSplitType::RelativeToStart;
-    Int splitOffset = settings_.splitStrategy.offset();
     Int minFitPoints = settings_.minFitPoints;
     Int maxFitPoints = settings_.maxFitPoints;
     Int numInputPoints = input.length();
-
-    // Check that we're in the "dense" case
-    VGC_ASSERT(isRelativeToStart && splitOffset == 0);
 
     // Compute first fit.
     //
@@ -2242,7 +2233,7 @@ void computeDenseProgressiveBlendFits(
     }
 }
 
-// Determine minimum and maximum value of i2 based on Progressive Blend settings
+// Determine minimum and maximum value of i2 based on Sparse Blend settings.
 //
 // In our experience, results are usually better when allowing
 // consecutive fits to share their last input point, otherwise:
@@ -2289,8 +2280,8 @@ void computeDenseProgressiveBlendFits(
 // this allows going instantly from a small number of fit points to a
 // large number of fit points, but not the other way around.
 //
-// The above problem is one reason why results tend to be better when
-// using the DenseProgressive approach, which does not have this issue.
+// The above problem is one reason why results can often be better when using
+// the Dense approach, which does not have this issue.
 //
 // Fundamentally, this issue highlights once again the fact that the algorithm
 // is no symmetrical, and it might be worth exploring other methdods to make
@@ -2307,7 +2298,7 @@ void computeDenseProgressiveBlendFits(
 // do no satisfy fit1.i1 <= fit2.i1 and fit1.i2 <= fit2.i2, which is currently
 // an assumption of the computeBlendBetweenFits() function.
 //
-std::pair<Int, Int> getProgressiveBlendIndexRange(
+std::pair<Int, Int> getSparseBlendIndexRange(
     const SketchPointBuffer& input,
     const core::Array<detail::BlendFitInfo>& fits_,
     const experimental::BlendFitSettings& settings_,
@@ -2341,7 +2332,7 @@ std::pair<Int, Int> getProgressiveBlendIndexRange(
             // then we want the first output fit to have numFitPoints <= minFitPoints
             //
             // XXX: Do we really want that? For example, we later implemented
-            // computeDenseProgressiveBlendFits(), which has the ability for
+            // computeDenseBlendFits(), which has the ability for
             // the first fit to either start at minFitPoints (like here), or be
             // as large as possible, or be as large as possible while enforcing
             // that a given number of fits share the first input point (see
@@ -2414,7 +2405,7 @@ std::pair<Int, Int> getProgressiveBlendIndexRange(
 //                   -----
 //                    ----
 //
-void computeSparseProgressiveBlendFits(
+void computeSparseBlendFits(
     const SketchPointBuffer& input,
     const experimental::BlendFitSettings& settings_,
     core::Array<detail::BlendFitInfo>& fits_,
@@ -2428,27 +2419,39 @@ void computeSparseProgressiveBlendFits(
     Int splitOffset = settings_.splitStrategy.offset();
     Int numInputPoints = input.length();
 
-    // Check that we're not in the "dense" case
-    VGC_ASSERT(!(isRelativeToStart && splitOffset == 0));
+    // Using relativeToStart(0) would cause the loop to not terminate. If one
+    // wants to allow sharing first input indices between consecutive local
+    // fits, it makes more sense to use the Dense mode.
+    VGC_ASSERT(splitStrategy != FitSplitStrategy::relativeToStart(0));
 
-    auto keepShrinking = [&]() {
-        if (!isRelativeToStart) {
+    // Lambda to test if there are still fits to be computed
+    auto finished = [&]() {
+        if (fits_.isEmpty()) {
+            // We need at least one fit, so we're not done if there is none
             return false;
-            // XXX: would it make sense to return true in some case with indexRatio too?
         }
-        Int i1 = fits_.last().firstInputIndex;
         Int i2 = fits_.last().lastInputIndex;
-        Int numFitPoints = i2 - i1 + 1;
-        if (splitOffset == 0) {
-            return numFitPoints > settings_.minFitPoints;
+        if (i2 != numInputPoints - 1) {
+            // We need the last fit to reach the last input point
+            return false;
+        }
+        if (isRelativeToStart) {
+            // Test if we should "keep shrinking" the last fit by adding
+            // smaller fits that share the last input index.
+            Int i1 = fits_.last().firstInputIndex;
+            Int numFitPoints = i2 - i1 + 1;
+            return numFitPoints <= settings_.minFitPoints + splitOffset - 1;
         }
         else {
-            return numFitPoints > settings_.minFitPoints + splitOffset - 1;
+            return true;
+            // XXX: would it make sense to return false in some case with
+            // indexRatio too? Or perhaps it would be cleaner to handle the
+            // "isEmpty" and "keep shrinking" and  cases in different loops, as in
+            // computeDenseBlendFits()?
         }
     };
-    while (fits_.isEmpty()                                      // we haven't started yet
-           || fits_.last().lastInputIndex != numInputPoints - 1 // last point not reached
-           || (keepShrinking())) {
+
+    while (!finished()) {
 
         // Determine i1
         Int i1 = 0;
@@ -2458,7 +2461,7 @@ void computeSparseProgressiveBlendFits(
         }
 
         // Determine i2 min/max range
-        auto [i2Min, i2Max] = getProgressiveBlendIndexRange(input, fits_, settings_, i1);
+        auto [i2Min, i2Max] = getSparseBlendIndexRange(input, fits_, settings_, i1);
 
         // Compute bestFit([i1..i2]) and increase i2 until a bad fit is found,
         // or i2 has reached its maxValue. Add the last good fit (or only fit,
@@ -2480,7 +2483,7 @@ void computeSparseProgressiveBlendFits(
     }
 }
 
-void computeProgressiveBlendFits(
+void computeBlendFits(
     const SketchPointBuffer& input,
     const experimental::BlendFitSettings& settings,
     core::Array<detail::BlendFitInfo>& fits,
@@ -2501,11 +2504,11 @@ void computeProgressiveBlendFits(
     const FitSplitStrategy& splitStrategy = settings.splitStrategy;
     bool isRelativeToStart = splitStrategy.type() == FitSplitType::RelativeToStart;
     bool isDense = isRelativeToStart && splitStrategy.offset() == 0;
-    if (isDense) {
-        computeDenseProgressiveBlendFits(input, settings, fits, buffer);
+    if (settings.type == experimental::BlendFitType::Dense) {
+        computeDenseBlendFits(input, settings, fits, buffer);
     }
     else {
-        computeSparseProgressiveBlendFits(input, settings, fits, buffer);
+        computeSparseBlendFits(input, settings, fits, buffer);
     }
 
     // Determine the new number of stable fits. Note that the last fit is
@@ -2518,10 +2521,10 @@ void computeProgressiveBlendFits(
     //
     // Also, any fit sharing the same `firstInputIndex` as an unstable fit is
     // also considered unstable. This is important for the dense blend case,
-    // where a given number of fits (`numStartFits`) can shared the first/last
+    // where a given number of fits (`numStartFits`) can share their first/last
     // input point, making all of them unstable together.
     //
-    // For example, with the following fits:
+    // For example, with the following where fitting the whole input is good:
     //
     // [  0] ----- 0-4 (5)
     // [  1] ------ 0-5 (6)
@@ -2533,7 +2536,18 @@ void computeProgressiveBlendFits(
     // [  7]    ------ 3-8 (6)
     // [  8]     ----- 4-8 (5)
     //
-    // All of them should be considered unstable.
+    // All of the fits should be considered unstable, since for example with
+    // `numStartFits == 5`, the next iteration might be:
+    //
+    // [  0] ------ 0-5 (6)
+    // [  1] ------- 0-6 (7)
+    // [  2] -------- 0-7 (8)
+    // [  3] --------- 0-8 (9)
+    // [  4] ---------- 0-9 (10)
+    // [  5]  --------- 1-9 (9)
+    // [  6]   -------- 2-9 (8)
+    // [  7]    ------- 3-9 (7)
+    // [  8]     ------ 4-9 (6)
     //
     Int firstUnstableFit = fits.length() - 1;
     auto isUnstableInputPoint = [&](Int k) { //
@@ -2954,7 +2968,7 @@ void QuadraticBlendPass::doUpdateFrom(
 
     // Compute overlapping Bézier fits from the input point
     //
-    computeProgressiveBlendFits(input, settings_, fits_, numStableFits_, buffer_);
+    computeBlendFits(input, settings_, fits_, numStableFits_, buffer_);
     debugFits(fits_, transformMatrix());
 
     // Compute a uniform sampling of the blend between the Bézier fits.
