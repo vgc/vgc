@@ -81,6 +81,144 @@ void TransformPass::doUpdateFrom(
     output.setNumStablePoints(input.numStablePoints());
 }
 
+RemoveDuplicatesPass::RemoveDuplicatesPass()
+    : SketchPass()
+    , settings_() {
+}
+
+RemoveDuplicatesPass::RemoveDuplicatesPass(const RemoveDuplicatesSettings& settings)
+    : SketchPass()
+    , settings_(settings) {
+}
+
+void RemoveDuplicatesPass::doReset() {
+    startInputIndex_ = 0;
+}
+
+// Each output point is the result of merging several input points:
+//
+// An output point j1 is stable if and only if:
+// - It has a next output point j2 = j1 + 1
+// - The first input point correponding to j2, which we call i2,
+//   is stable.
+//
+//                           i2
+//                stable     v
+//         /-----------------\
+// input:  .     .     ..    ...    .   ..    .
+// output: .     .     .     .      .   .     .
+//         \-----------/
+//             stable  ^     ^
+//                     j1    j2
+//
+//
+//                           i2
+//                stable     v
+//         /------------------\
+// input:  .     .     ..    ...    .   ..    .
+// output: .     .     .     .      .   .     .
+//         \-----------/
+//             stable  ^     ^
+//                     j1    j2
+//
+//
+//                           i2
+//                stable     v
+//         /-------------------\
+// input:  .     .     ..    ...    .   ..    .
+// output: .     .     .     .      .   .     .
+//         \-----------/
+//             stable  ^     ^
+//                     j1    j2
+//
+//
+//                                  i2
+//                stable            v
+//         /------------------------\
+// input:  .     .     ..    ...    .   ..    .
+// output: .     .     .     .      .   .     .
+//         \-----------------/
+//             stable        ^      ^
+//                           j1     j2
+//
+// We store i2 as startInputIndex_: this is the input index from which we
+// should start in the next update.
+//
+void RemoveDuplicatesPass::doUpdateFrom(
+    const SketchPointBuffer& input,
+    SketchPointBuffer& output) {
+
+    // Remove all previously unstable points.
+    //
+    Int oldNumStablePoints = output.numStablePoints();
+    output.resize(oldNumStablePoints);
+
+    // Add the first input point (if any) if not already in the output.
+    //
+    Int numInputPoints = input.length();
+    if (numInputPoints == 0) {
+        VGC_ASSERT(oldNumStablePoints == 0);
+        return;
+    }
+    Int i = startInputIndex_;
+    if (output.length() == 0) {
+        const SketchPoint& firstPoint = input.first();
+        output.append(firstPoint);
+        ++i;
+    }
+
+    // Add all other points.
+    //
+    double ds = settings_.distanceThreshold();
+    double ds2 = ds * ds;
+    if (ds < 0) {
+        // If ds is a negative value, we keep all input points.
+        // If ds == 0, we only remove points with exactly the same position
+        ds2 = -1;
+    }
+    Int newNumStablePoints = oldNumStablePoints;
+    const SketchPointArray& inputData = input.data();
+    const SketchPointArray& outputData = output.data();
+    for (; i < numInputPoints; ++i) {
+        Int j = outputData.length() - 1;
+        const SketchPoint& lastOutputPoint = outputData.getUnchecked(j);
+        const SketchPoint& inputPoint = inputData.getUnchecked(i);
+        if ((inputPoint.position() - lastOutputPoint.position()).squaredLength() > ds2) {
+            // Non-duplicate found => add it the the output.
+            // (Note: the condition above is always true if ds2 = -1.
+            output.append(inputPoint);
+            // Check whether adding this the output means that the previous
+            // output point it now stable
+            if (i < input.numStablePoints()) {
+                startInputIndex_ = i;
+                newNumStablePoints = j + 1;
+            }
+        }
+        else {
+            // Duplicate found. Get a mutable reference to the last output point.
+            SketchPoint& duplicate = output.at(j);
+
+            // Keep the largest pressure/width
+            if (inputPoint.pressure() > duplicate.pressure()) {
+                duplicate.setPressure(inputPoint.pressure());
+                duplicate.setWidth(inputPoint.width());
+            }
+        }
+    }
+
+    // Change the last output position/timestamp to be equal to the last input
+    // position. Since ensure that users see an updated curve even if the only
+    // added input point is a duplicate of the previous input point.
+    //
+    SketchPoint& lastOutputPoint = output.at(output.length() - 1);
+    const SketchPoint& lastInputPoint = input.last();
+    lastOutputPoint.setPosition(lastInputPoint.position());
+    lastOutputPoint.setTimestamp(lastInputPoint.timestamp());
+
+    output.updateChordLengths();
+    output.setNumStablePoints(newNumStablePoints);
+}
+
 namespace {
 
 // Returns the binomial coefficient C(n, k) for 0 <= k <= n.

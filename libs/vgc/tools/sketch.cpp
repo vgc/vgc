@@ -308,6 +308,7 @@ void SketchModule::reFitExistingEdges_() {
     // post-processing step to make these match.
     //
     SketchPointBuffer inputPoints;
+    RemoveDuplicatesPass removeDuplicatesPass;
     auto preTransformPass = makePreTransformPass(fitMethod());
     TransformPass transformPass;
     auto postTransformPass = makePostTransformPass(fitMethod());
@@ -327,6 +328,8 @@ void SketchModule::reFitExistingEdges_() {
         if (setFromSavedInputPoints(inputPoints, transform, item)) {
 
             // Setup passes
+            removeDuplicatesPass.reset();
+            removeDuplicatesPass.setTransformMatrix(transform);
             preTransformPass->reset();
             preTransformPass->setTransformMatrix(transform);
             transformPass.reset();
@@ -335,7 +338,8 @@ void SketchModule::reFitExistingEdges_() {
             postTransformPass->setTransformMatrix(transform);
 
             // Apply passes
-            preTransformPass->updateFrom(inputPoints);
+            removeDuplicatesPass.updateFrom(inputPoints);
+            preTransformPass->updateFrom(removeDuplicatesPass);
             transformPass.updateFrom(*preTransformPass);
             postTransformPass->updateFrom(transformPass);
 
@@ -1163,7 +1167,7 @@ void Sketch::startCurve_(ui::MouseEvent* event) {
     }
     edgeItemId_ = domEdge->internalId();
 
-    // Configure fit method
+    // Configure sketch passes
     SketchFitMethod fitMethod = SketchFitMethod::NoFit;
     if (auto module = sketchModule_.lock()) {
         fitMethod = module->fitMethod();
@@ -1173,6 +1177,7 @@ void Sketch::startCurve_(ui::MouseEvent* event) {
         preTransformPass_ = makePreTransformPass(fitMethod);
         postTransformPass_ = makePostTransformPass(fitMethod);
     }
+    removeDuplicatesPass_.setTransformMatrix(transformPass_.transformMatrix());
     preTransformPass_->setTransformMatrix(transformPass_.transformMatrix());
     postTransformPass_->setTransformMatrix(transformPass_.transformMatrix());
 
@@ -1278,7 +1283,8 @@ void Sketch::continueCurve_(ui::MouseEvent* event) {
     inputPoints_.setNumStablePoints(inputPoints_.length());
 
     // Apply all processing steps
-    preTransformPass_->updateFrom(inputPoints_);
+    removeDuplicatesPass_.updateFrom(inputPoints_);
+    preTransformPass_->updateFrom(removeDuplicatesPass_);
     transformPass_.updateFrom(*preTransformPass_);
     postTransformPass_->updateFrom(transformPass_);
 
@@ -1432,6 +1438,7 @@ void Sketch::resetData_() {
     //inputPoints_.clear();
 
     // pre-transform passes
+    removeDuplicatesPass_.reset();
     preTransformPass_->reset();
 
     // transform
