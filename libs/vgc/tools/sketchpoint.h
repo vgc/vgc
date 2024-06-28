@@ -280,4 +280,19 @@ using SketchPointArray = core::Array<SketchPoint>;
 
 } // namespace vgc::tools
 
+template<>
+struct fmt::formatter<vgc::tools::SketchPoint> : fmt::formatter<double> {
+    template<typename FormatContext>
+    auto format(const vgc::tools::SketchPoint& p, FormatContext& ctx) {
+        return format_to(
+            ctx.out(),
+            "(p={}, pr={} t={}, w={}, s={})",
+            p.position(),
+            p.pressure(),
+            p.timestamp(),
+            p.width(),
+            p.s());
+    }
+};
+
 #endif // VGC_TOOLS_SKETCHPOINT_H
