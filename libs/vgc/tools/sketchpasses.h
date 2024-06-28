@@ -23,14 +23,96 @@
 
 namespace vgc::tools {
 
+/// \class vgc::tools::EmptyPass
+/// \brief A sketch pass that does nothing: the output becomes equal to the input.
+///
 class VGC_TOOLS_API EmptyPass : public SketchPass {
 protected:
     void doUpdateFrom(const SketchPointBuffer& input, SketchPointBuffer& output) override;
 };
 
+/// \class vgc::tools::TransformPass
+/// \brief A sketch pass that applies its transformMatrix() to all points.
+///
 class VGC_TOOLS_API TransformPass : public SketchPass {
 protected:
     void doUpdateFrom(const SketchPointBuffer& input, SketchPointBuffer& output) override;
+};
+
+/// \class vgc::tools::RemoveDuplicatesSettings
+/// \brief Settings for the RemoveDuplicatesPass sketch pass
+///
+class VGC_TOOLS_API RemoveDuplicatesSettings {
+public:
+    /// Creates a `RemoveDuplicatesSettings` with default settings.
+    ///
+    RemoveDuplicatesSettings()
+        : distanceThreshold_(1.5) {
+    }
+
+    /// Creates a `RemoveDuplicatesSettings` with the given settings.
+    ///
+    explicit RemoveDuplicatesSettings(double distanceThreshold)
+        : distanceThreshold_(distanceThreshold) {
+    }
+
+    /// Returns the distance threshold below which points are considered duplicates.
+    ///
+    /// More precisely, two consecutive input points are consider to *not* be
+    /// duplicate if and only if their distance is strictly greater than the
+    /// threshold.
+    ///
+    /// A negative threshold can be used to preserve all input points, even if
+    /// exactly at the same position.
+    ///
+    /// A threshold of zero can be used to only consider as duplicate points
+    /// those that have exactly the same position.
+    ///
+    double distanceThreshold() const {
+        return distanceThreshold_;
+    };
+
+    /// Sets the distance threshold.
+    ///
+    void setDistanceThreshold(double distanceThreshold) {
+        distanceThreshold_ = distanceThreshold;
+    }
+
+private:
+    double distanceThreshold_;
+};
+
+/// \class vgc::tools::RemoveDuplicatesSettings
+/// \brief A sketch pass that removes duplicate points.
+///
+/// This sketch pass removes input points that are within
+/// `RemoveDuplicatesSettings::distanceThreshold()` of their previous point.
+///
+/// When input points are considered duplicates, then the corresponding output point
+/// has the following properties:
+///
+/// - Its position and timestamp is the same as the first duplicate input
+/// point, except for the very last output point, which has the same position
+/// and timestamp as the last input point. This ensures that the first and last
+/// output points have the same positions and timestamps as the first and last
+/// input points.
+///
+/// - Its pressure and width is the same as the duplicate input point that has
+/// the greater pressure. This more closely matches what the stroke would look
+/// like if the duplicates were not removed.
+///
+class VGC_TOOLS_API RemoveDuplicatesPass : public SketchPass {
+public:
+    RemoveDuplicatesPass();
+    explicit RemoveDuplicatesPass(const RemoveDuplicatesSettings& settings);
+
+protected:
+    void doReset() override;
+    void doUpdateFrom(const SketchPointBuffer& input, SketchPointBuffer& output) override;
+
+private:
+    RemoveDuplicatesSettings settings_;
+    Int startInputIndex_ = 0; // see comment in implementation
 };
 
 class VGC_TOOLS_API SmoothingPass : public SketchPass {

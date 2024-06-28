@@ -201,6 +201,7 @@ protected:
     // transform step, that is, all processing that relies on positions in
     // canvas coordinates space rather than positions in workspace coordinates.
     //
+    RemoveDuplicatesPass removeDuplicatesPass_;
     std::unique_ptr<SketchPass> preTransformPass_;
 
     // Transformation.
