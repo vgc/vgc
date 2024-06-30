@@ -88,18 +88,55 @@ private:
 /// This sketch pass removes input points that are within
 /// `RemoveDuplicatesSettings::distanceThreshold()` of their previous point.
 ///
-/// When input points are considered duplicates, then the corresponding output point
-/// has the following properties:
+/// When input points are considered duplicates, then the corresponding output
+/// point has the following properties:
 ///
 /// - Its position and timestamp is the same as the first duplicate input
-/// point, except for the very last output point, which has the same position
-/// and timestamp as the last input point. This ensures that the first and last
-/// output points have the same positions and timestamps as the first and last
-/// input points.
+/// point (except for the last output point, see below).
 ///
 /// - Its pressure and width is the same as the duplicate input point that has
 /// the greater pressure. This more closely matches what the stroke would look
 /// like if the duplicates were not removed.
+///
+/// If the output has at least two points ([..., p, q]), then the position and
+/// timestamp of the last output point q is the same as the input point r,
+/// among all input points merged into q, whose position is further away from
+/// the second-last output point p.
+///
+/// Example (distance threshold of 1):
+///
+/// ```
+/// Input:  [(0, 0), (0, 5), (0, 10), (0, 10.1), (0, 9.9)]
+/// Output: [(0, 0), (0, 5), (0, 10.1)]
+/// ```
+///
+/// Note that while this pass guarantees that the first output point has the
+/// same position as the first input point, it does NOT guarantee that the last
+/// output point has the same position as the last input point. Indeed, in the
+/// general case, this would be impossible to satisfy (at least not without
+/// inventing points) while also satisfying the distance threshold between all
+/// output points.
+///
+/// Example (distance threshold of 1):
+///
+/// ```
+/// Input:  [(0, 0), (0, 0.1)]
+/// Output:  [(0, 0)]
+/// ```
+///
+/// In the example above, we do not want the output to be `[(0, 0), (0, 0.1)]`,
+/// since the points would not satisfy the distance threshold between all
+/// output points.
+///
+/// Also consider the following example (distance threshold of 1):
+///
+/// ```
+/// Input:  [(0, 0), (0, 1.1), (0, 0.9)]
+/// Output:  [(0, 0), (0, 1.1)]
+/// ```
+///
+/// In the example above, we do not want the output to be `[(0, 0), (0, 0.9)]`
+/// since it would not satisfy the distance threshold either.
 ///
 class VGC_TOOLS_API RemoveDuplicatesPass : public SketchPass {
 public:

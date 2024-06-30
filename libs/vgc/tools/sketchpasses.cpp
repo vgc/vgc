@@ -95,6 +95,14 @@ void RemoveDuplicatesPass::doReset() {
     startInputIndex_ = 0;
 }
 
+namespace {
+
+double squaredDistance(const SketchPoint& p, const SketchPoint& q) {
+    return (q.position() - p.position()).squaredLength();
+}
+
+} // namespace
+
 // Each output point is the result of merging several input points:
 //
 // An output point j1 is stable if and only if:
@@ -182,16 +190,18 @@ void RemoveDuplicatesPass::doUpdateFrom(
         ds2 = -1;
     }
     Int newNumStablePoints = oldNumStablePoints;
+    Int lastNonDuplicateInputIndex = startInputIndex_;
     const SketchPointArray& inputData = input.data();
     const SketchPointArray& outputData = output.data();
     for (; i < numInputPoints; ++i) {
         Int j = outputData.length() - 1;
         const SketchPoint& lastOutputPoint = outputData.getUnchecked(j);
         const SketchPoint& inputPoint = inputData.getUnchecked(i);
-        if ((inputPoint.position() - lastOutputPoint.position()).squaredLength() > ds2) {
+        if (squaredDistance(inputPoint, lastOutputPoint) > ds2) {
             // Non-duplicate found => add it the the output.
             // (Note: the condition above is always true if ds2 = -1.
             output.append(inputPoint);
+            lastNonDuplicateInputIndex = i;
             // Check whether adding this the output means that the previous
             // output point it now stable
             if (i < input.numStablePoints()) {
@@ -211,14 +221,23 @@ void RemoveDuplicatesPass::doUpdateFrom(
         }
     }
 
-    // Change the last output position/timestamp to be equal to the last input
-    // position. Since ensure that users see an updated curve even if the only
-    // added input point is a duplicate of the previous input point.
+    // If the output has at least two points ([..., p, q]), change the position
+    // and timestamp of the last output point q to be the same as the input
+    // point r, among all input points merged into q, whose position is further
+    // away from the second-last output point p.
     //
-    SketchPoint& lastOutputPoint = output.at(output.length() - 1);
-    const SketchPoint& lastInputPoint = input.last();
-    lastOutputPoint.setPosition(lastInputPoint.position());
-    lastOutputPoint.setTimestamp(lastInputPoint.timestamp());
+    Int numOutputPoints = output.length();
+    if (numOutputPoints >= 2) {
+        const SketchPoint& p = outputData.getUnchecked(numOutputPoints - 2);
+        SketchPoint& q = output.at(numOutputPoints - 1);
+        for (i = numInputPoints - 1; i >= lastNonDuplicateInputIndex + 1; --i) {
+            const SketchPoint& r = inputData.getUnchecked(i);
+            if (squaredDistance(r, p) > squaredDistance(q, p)) {
+                q.setPosition(r.position());
+                q.setTimestamp(r.timestamp());
+            }
+        }
+    }
 
     output.updateChordLengths();
     output.setNumStablePoints(newNumStablePoints);
