@@ -173,31 +173,36 @@ double roundInput(double x) {
     return core::roundToSignificantDigits(x, 7);
 }
 
-std::unique_ptr<SketchPass> makePreTransformPass(SketchFitMethod fitMethod) {
+void setupPipeline(SketchPipeline& pipeline, SketchFitMethod fitMethod) {
+    pipeline.clear();
+    pipeline.addPass<RemoveDuplicatesPass>();
     switch (fitMethod) {
     case SketchFitMethod::NoFit:
-        return std::make_unique<EmptyPass>();
+        // Nothing
+        break;
     case SketchFitMethod::IndexGaussianSmoothing:
-        return std::make_unique<SmoothingPass>();
+        pipeline.addPass<SmoothingPass>();
+        break;
     case SketchFitMethod::DouglasPeucker:
-        return std::make_unique<DouglasPeuckerPass>();
+        pipeline.addPass<DouglasPeuckerPass>();
+        break;
     case SketchFitMethod::SingleLineSegmentWithFixedEndpoints:
-        return std::make_unique<SingleLineSegmentWithFixedEndpointsPass>();
+        pipeline.addPass<SingleLineSegmentWithFixedEndpointsPass>();
+        break;
     case SketchFitMethod::SingleLineSegmentWithFreeEndpoints:
-        return std::make_unique<SingleLineSegmentWithFreeEndpointsPass>();
+        pipeline.addPass<SingleLineSegmentWithFreeEndpointsPass>();
+        break;
     case SketchFitMethod::SingleQuadraticSegmentWithFixedEndpoints:
-        return std::make_unique<SingleQuadraticSegmentWithFixedEndpointsPass>();
+        pipeline.addPass<SingleQuadraticSegmentWithFixedEndpointsPass>();
+        break;
     case SketchFitMethod::QuadraticSpline:
-        return std::make_unique<QuadraticSplinePass>();
+        pipeline.addPass<QuadraticSplinePass>();
+        break;
     case SketchFitMethod::QuadraticBlend:
-        return std::make_unique<QuadraticBlendPass>();
+        pipeline.addPass<QuadraticBlendPass>();
+        break;
     }
-    return std::make_unique<EmptyPass>();
-}
-
-std::unique_ptr<SketchPass> makePostTransformPass(SketchFitMethod fitMethod) {
-    VGC_UNUSED(fitMethod);
-    return std::make_unique<EmptyPass>();
+    pipeline.addPass<TransformPass>();
 }
 
 // Sets the SketchPoint buffer and the transform matrix from saved input points.
@@ -298,7 +303,7 @@ void SketchModule::reFitExistingEdges_() {
         return;
     }
 
-    // Create processing passes.
+    // Create sketch passes.
     //
     // Note: the recomputation ignores any snapping that may have occured when
     // originally sketching the curve, since this info is not saved. However,
@@ -308,10 +313,8 @@ void SketchModule::reFitExistingEdges_() {
     // post-processing step to make these match.
     //
     SketchPointBuffer inputPoints;
-    RemoveDuplicatesPass removeDuplicatesPass;
-    auto preTransformPass = makePreTransformPass(fitMethod());
-    TransformPass transformPass;
-    auto postTransformPass = makePostTransformPass(fitMethod());
+    SketchPipeline pipeline;
+    setupPipeline(pipeline, fitMethod());
 
     // Create undo group
     static core::StringId undoGroupName("Re-Fit Existing Edges");
@@ -327,24 +330,13 @@ void SketchModule::reFitExistingEdges_() {
         geometry::Mat3d transform;
         if (setFromSavedInputPoints(inputPoints, transform, item)) {
 
-            // Setup passes
-            removeDuplicatesPass.reset();
-            removeDuplicatesPass.setTransformMatrix(transform);
-            preTransformPass->reset();
-            preTransformPass->setTransformMatrix(transform);
-            transformPass.reset();
-            transformPass.setTransformMatrix(transform);
-            postTransformPass->reset();
-            postTransformPass->setTransformMatrix(transform);
-
-            // Apply passes
-            removeDuplicatesPass.updateFrom(inputPoints);
-            preTransformPass->updateFrom(removeDuplicatesPass);
-            transformPass.updateFrom(*preTransformPass);
-            postTransformPass->updateFrom(transformPass);
+            // Setup and apply passes
+            pipeline.reset();
+            pipeline.setTransformMatrix(transform);
+            pipeline.updateFrom(inputPoints);
 
             // Save result to DOM
-            updateEdgeGeometry(postTransformPass->output(), item);
+            updateEdgeGeometry(pipeline.output(), item);
         }
     });
     workspace->sync();
@@ -717,18 +709,14 @@ void Sketch::onPaintDestroy(graphics::Engine* engine) {
     }
 }
 
-const SketchPointBuffer& Sketch::postTransformPassesResult_() const {
-    return postTransformPass_->output();
-}
-
 core::ConstSpan<SketchPoint> Sketch::cleanInputPoints_() const {
-    const SketchPointBuffer& allCleanInputPoints = postTransformPassesResult_();
+    const SketchPointBuffer& allCleanInputPoints = pipeline_.output();
     return core::ConstSpan<SketchPoint>(
         allCleanInputPoints.begin() + cleanInputStartIndex_, allCleanInputPoints.end());
 }
 
 Int Sketch::numStableCleanInputPoints_() const {
-    const SketchPointBuffer& allCleanInputPoints = postTransformPassesResult_();
+    const SketchPointBuffer& allCleanInputPoints = pipeline_.output();
     return allCleanInputPoints.numStablePoints() - cleanInputStartIndex_;
 }
 
@@ -749,7 +737,6 @@ geometry::Vec2d getSnapPosition(workspace::Element* snapVertex) {
 
 } // namespace
 
-// Assumes postTransformPassesResult_() points have computed arclengths.
 void Sketch::updateStartSnappedCleanInputPositions_() {
 
     core::ConstSpan<SketchPoint> cleanInputPoints = cleanInputPoints_();
@@ -953,7 +940,7 @@ void Sketch::updatePendingPositions_() {
 
 void Sketch::updatePendingWidths_() {
 
-    const SketchPointBuffer& cleanInputBuffer = postTransformPassesResult_();
+    const SketchPointBuffer& cleanInputBuffer = pipeline_.output();
     const SketchPointArray& cleanInputPoints = cleanInputBuffer.data();
     if (cleanInputPoints.isEmpty()) {
         return;
@@ -1116,11 +1103,11 @@ void Sketch::startCurve_(ui::MouseEvent* event) {
     startTime_ = event->timestamp();
 
     // Transform: Save inverse view matrix
-    transformPass_.setTransformMatrix(canvas->camera().viewMatrix().inverse());
+    pipeline_.setTransformMatrix(canvas->camera().viewMatrix().inverse());
 
     // Snapping: Compute start vertex to snap to
     workspace::Element* snapVertex = nullptr;
-    geometry::Vec2d startPosition = transformPass_.transformAffine(eventPos2d);
+    geometry::Vec2d startPosition = pipeline_.transformAffine(eventPos2d);
     if (isSnappingEnabled()) {
         snapVertex = computeSnapVertex_(startPosition, 0);
         if (snapVertex) {
@@ -1162,7 +1149,7 @@ void Sketch::startCurve_(ui::MouseEvent* event) {
     domEdge->setAttribute(ds::startvertex, domStartVertex->getPathFromId());
     domEdge->setAttribute(ds::endvertex, domEndVertex->getPathFromId());
     if (canvas::experimental::saveInputSketchPoints()) {
-        domEdge->setAttribute(ds::inputtransform, transformPass_.transformMatrix());
+        domEdge->setAttribute(ds::inputtransform, pipeline_.transformMatrix());
         domEdge->setAttribute(ds::inputpenwidth, options_::penWidth()->value());
     }
     edgeItemId_ = domEdge->internalId();
@@ -1174,12 +1161,8 @@ void Sketch::startCurve_(ui::MouseEvent* event) {
     }
     if (!lastFitMethod_ || *lastFitMethod_ != fitMethod) {
         lastFitMethod_ = fitMethod;
-        preTransformPass_ = makePreTransformPass(fitMethod);
-        postTransformPass_ = makePostTransformPass(fitMethod);
+        setupPipeline(pipeline_, fitMethod);
     }
-    removeDuplicatesPass_.setTransformMatrix(transformPass_.transformMatrix());
-    preTransformPass_->setTransformMatrix(transformPass_.transformMatrix());
-    postTransformPass_->setTransformMatrix(transformPass_.transformMatrix());
 
     // Append start point to geometry
     continueCurve_(event);
@@ -1282,11 +1265,8 @@ void Sketch::continueCurve_(ui::MouseEvent* event) {
     inputPoints_.updateChordLengths();
     inputPoints_.setNumStablePoints(inputPoints_.length());
 
-    // Apply all processing steps
-    removeDuplicatesPass_.updateFrom(inputPoints_);
-    preTransformPass_->updateFrom(removeDuplicatesPass_);
-    transformPass_.updateFrom(*preTransformPass_);
-    postTransformPass_->updateFrom(transformPass_);
+    // Apply all sketch passes
+    pipeline_.updateFrom(inputPoints_);
 
     updatePendingPositions_();
     updatePendingWidths_();
@@ -1437,15 +1417,8 @@ void Sketch::resetData_() {
     // for debugging purposes.
     //inputPoints_.clear();
 
-    // pre-transform passes
-    removeDuplicatesPass_.reset();
-    preTransformPass_->reset();
-
-    // transform
-    transformPass_.reset();
-
-    // post-transform passes
-    postTransformPass_->reset();
+    // sketch passes
+    pipeline_.reset();
 
     // pending clean input
     cleanInputStartIndex_ = 0;

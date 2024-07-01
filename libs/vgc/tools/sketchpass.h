@@ -17,6 +17,8 @@
 #ifndef VGC_TOOLS_SKETCHPASS_H
 #define VGC_TOOLS_SKETCHPASS_H
 
+#include <memory> // unique_ptr
+
 #include <vgc/core/span.h>
 #include <vgc/geometry/mat3d.h>
 #include <vgc/tools/api.h>
@@ -323,6 +325,122 @@ protected:
 
 private:
     SketchPointBuffer output_;
+    geometry::Mat3d transform_;
+};
+
+/// \class vgc::tools::SketchPipeline
+/// \brief A sequence of SketchPass objects to apply in succession.
+///
+class VGC_TOOLS_API SketchPipeline {
+public:
+    SketchPipeline(const SketchPipeline&) = delete;
+    SketchPipeline& operator=(const SketchPipeline&) = delete;
+
+    /// Creates an empty pipeline.
+    ///
+    SketchPipeline() {
+    }
+
+    /// Adds a `SketchPass` of type `TSketchPassClass` at the end of this pipeline.
+    ///
+    template<typename TSketchPassClass, typename... Args>
+    void addPass(Args&&... args) {
+        auto pass = std::make_unique<TSketchPassClass>(std::forward<Args>(args)...);
+        pass->setTransformMatrix(transformMatrix());
+        passes_.append(std::move(pass));
+    }
+
+    /// Removes all sketch passes in this pipeline.
+    ///
+    void clear() {
+        passes_.clear();
+    }
+
+    /// Returns the number of sketch passes in this pipeline.
+    ///
+    Int numPasses() const {
+        return passes_.length();
+    }
+
+    /// Returns the i-th sketch pass in this pipeline as a mutable reference.
+    ///
+    /// The returned reference is invalidated if the pass is removed
+    /// from this pipeline (e.g., if `clear()` is called).
+    ///
+    // XXX: Use ObjPtr to make this safer and easier to bind in Python?
+    //
+    SketchPass& operator[](Int i) {
+        return *passes_[i];
+    }
+
+    /// Returns the i-th sketch pass in this pipeline as a non-mutable reference.
+    ///
+    /// The returned reference is invalidated if the pass is removed
+    /// from this pipeline (e.g., if `clear()` is called).
+    ///
+    const SketchPass& operator[](Int i) const {
+        return *passes_[i];
+    }
+
+    /// Resets all sketch passes in this pipeline
+    ///
+    void reset();
+
+    /// Updates the `output()` buffer of this pipeline based on the given
+    /// `input` buffer, by calling in succession all `SketchPass::updateFrom()`
+    /// functions of the sketch passes in this pipeline.
+    ///
+    void updateFrom(const SketchPointBuffer& input);
+
+    /// Updates the `output()` buffer of this pipeline based on the `output()`
+    /// buffer of the given `previousPass`.
+    ///
+    /// This is equivalent to `updateFrom(previousPass.output())`.
+    ///
+    void updateFrom(const SketchPass& previousPass) {
+        updateFrom(previousPass.output());
+    }
+
+    /// Returns the output buffer of the last pass in this pipeline.
+    ///
+    /// Throws `IndexError` if `numPasses()` is zero.
+    ///
+    /// The returned reference is invalidated if the owning pass is removed
+    /// from this pipeline (e.g., if `clear()` is called).
+    ///
+    const SketchPointBuffer& output() const {
+        return passes_.last()->output();
+    }
+
+    /// Returns the transform matrix from view coordinates to scene coordinate
+    /// for the currently processed points.
+    ///
+    const geometry::Mat3d& transformMatrix() const {
+        return transform_;
+    }
+
+    /// Sets the transform matrix of this pipeline and of all its sketch passes.
+    ///
+    void setTransformMatrix(const geometry::Mat3d& transform);
+
+    /// Transforms `v` using the `transformMatrix()`.
+    ///
+    geometry::Vec2d transform(const geometry::Vec2d& v) {
+        return transform_.transform(v);
+    }
+
+    /// Transforms `v` using the `transformMatrix()` interpreted as a 2D affine
+    /// transformation, that is, ignoring the projective components.
+    ///
+    geometry::Vec2d transformAffine(const geometry::Vec2d& v) {
+        return transform_.transformAffine(v);
+    }
+
+private:
+    using SketchPassPtr = std::unique_ptr<SketchPass>;
+    using SketchPassArray = core::Array<SketchPassPtr>;
+
+    SketchPassArray passes_;
     geometry::Mat3d transform_;
 };
 

@@ -47,4 +47,25 @@ void SketchPass::updateFrom(const SketchPointBuffer& input) {
 void SketchPass::doReset() {
 }
 
+void SketchPipeline::reset() {
+    for (auto& pass : passes_) {
+        pass->reset();
+    }
+}
+
+void SketchPipeline::updateFrom(const SketchPointBuffer& input) {
+    const SketchPointBuffer* previous = &input;
+    for (auto& pass : passes_) {
+        pass->updateFrom(*previous);
+        previous = &pass->output();
+    }
+}
+
+void SketchPipeline::setTransformMatrix(const geometry::Mat3d& transform) {
+    transform_ = transform;
+    for (auto& pass : passes_) {
+        pass->setTransformMatrix(transform);
+    }
+}
+
 } // namespace vgc::tools
