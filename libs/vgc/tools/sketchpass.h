@@ -333,6 +333,9 @@ private:
 ///
 class VGC_TOOLS_API SketchPipeline {
 public:
+    SketchPipeline(const SketchPipeline&) = delete;
+    SketchPipeline& operator=(const SketchPipeline&) = delete;
+
     /// Creates an empty pipeline.
     ///
     SketchPipeline() {
