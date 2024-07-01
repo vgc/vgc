@@ -191,36 +191,21 @@ protected:
     double startTime_ = 0;
     std::optional<SketchFitMethod> lastFitMethod_;
 
-    // Raw input in widget space (pixels).
-    //
+    // Raw input in widget space (pixels)
     SketchPointBuffer inputPoints_;
 
-    // Pre-transform processing.
-    //
-    // In this step, we apply any processing that we'd like to do before the
-    // transform step, that is, all processing that relies on positions in
-    // canvas coordinates space rather than positions in workspace coordinates.
-    //
-    RemoveDuplicatesPass removeDuplicatesPass_;
-    std::unique_ptr<SketchPass> preTransformPass_;
-
-    // Transformation.
-    //
-    // This step applies the transformation from canvas coordinates to
-    // workspace/group coordinates. Note that we assume the view matrix does
-    // not change while sketching the stroke.
-    //
-    TransformPass transformPass_;
-
-    // Pre-transform processing.
-    //
-    // Everything that we want to occur after the transformation step,
-    // and before snapping is applied.
-    //
-    std::unique_ptr<SketchPass> postTransformPass_;
-    const SketchPointBuffer& postTransformPassesResult_() const;
+    // Sequence of sketch passes to apply to the input
+    SketchPipeline pipeline_;
 
     // Pending Clean Input
+    //
+    // TODO:
+    // - Update terminology.
+    // - "Clean" should probably be renamed "PreSnapped".
+    // - Make snapping a SketchPass?
+    // - Is cleanInputStartPointOverride_ still necessary?
+    //  (it was implemented before SketchPipeline)
+    //
     Int cleanInputStartIndex_ = 0;
     std::optional<SketchPoint> cleanInputStartPointOverride_;
 
