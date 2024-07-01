@@ -146,7 +146,7 @@ SketchPreprocessing SketchModule::preprocessing() const {
 
 void SketchModule::onPreprocessingChanged_() {
     if (options_::reProcessExistingEdges()->value()) {
-        reFitExistingEdges_();
+        reProcessExistingEdges_();
     }
 }
 
@@ -297,7 +297,7 @@ void updateEdgeGeometry(const SketchPointBuffer& points, workspace::Element* ite
 
 } // namespace
 
-void SketchModule::reFitExistingEdges_() {
+void SketchModule::reProcessExistingEdges_() {
 
     // Get the workspace.
     //

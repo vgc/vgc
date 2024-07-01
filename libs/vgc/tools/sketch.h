@@ -87,7 +87,7 @@ private:
     void onPreprocessingChanged_();
     VGC_SLOT(onPreprocessingChanged_)
 
-    void reFitExistingEdges_();
+    void reProcessExistingEdges_();
 };
 
 VGC_DECLARE_OBJECT(Sketch);
