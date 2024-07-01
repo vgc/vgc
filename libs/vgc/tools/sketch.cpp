@@ -82,20 +82,20 @@ ui::BoolSetting* autoFill() {
     return setting.get();
 }
 
-ui::EnumSetting* sketchFitMethod() {
+ui::EnumSetting* sketchPreprocessing() {
     static ui::EnumSettingSharedPtr setting = ui::EnumSetting::create(
         ui::settings::session(),
-        "tools.sketch.experimental.sketchFitMethod",
-        "Sketch Fit Method",
-        SketchFitMethod::IndexGaussianSmoothing);
+        "tools.sketch.experimental.sketchPreprocessing",
+        "Sketch Preprocessing",
+        SketchPreprocessing::Default);
     return setting.get();
 }
 
-ui::BoolSetting* reFitExistingEdges() {
+ui::BoolSetting* reProcessExistingEdges() {
     static ui::BoolSettingPtr setting = ui::BoolSetting::create(
         ui::settings::session(),
-        "tools.sketch.experimental.reFitExistingEdges",
-        "Re-Fit Existing Edges",
+        "tools.sketch.experimental.reProcessExistingEdges",
+        "Re-Process Existing Edges",
         false);
     return setting.get();
 }
@@ -111,8 +111,9 @@ bool isAutoFillEnabled() {
 } // namespace
 
 VGC_DEFINE_ENUM( //
-    SketchFitMethod,
-    (NoFit, "No Fit"),
+    SketchPreprocessing,
+    (Default, "Default (Quadratic Blend)"),
+    (NoPreprocessing, "No Preprocessing"),
     (IndexGaussianSmoothing, "Index-Based Gaussian Smoothing"),
     (DouglasPeucker, "Douglas-Peucker"),
     (SingleLineSegmentWithFixedEndpoints, "Single Line Segment (Fixed Endpoints)"),
@@ -126,24 +127,26 @@ SketchModule::SketchModule(CreateKey key, const ui::ModuleContext& context)
     : Module(key, context) {
 
     if (auto module = context.importModule<canvas::ExperimentalModule>().lock()) {
-        module->addWidget(*ui::EnumSettingEdit::create(options_::sketchFitMethod()));
-        module->addWidget(*ui::BoolSettingEdit::create(options_::reFitExistingEdges()));
+        module->addWidget(*ui::EnumSettingEdit::create(options_::sketchPreprocessing()));
+        module->addWidget(
+            *ui::BoolSettingEdit::create(options_::reProcessExistingEdges()));
     }
 
-    options_::sketchFitMethod()->valueChanged().connect(onFitMethodChanged_Slot());
+    options_::sketchPreprocessing()->valueChanged().connect(
+        onPreprocessingChanged_Slot());
 }
 
 SketchModulePtr SketchModule::create(const ui::ModuleContext& context) {
     return core::createObject<SketchModule>(context);
 }
 
-SketchFitMethod SketchModule::fitMethod() const {
-    return options_::sketchFitMethod()->value().get<SketchFitMethod>();
+SketchPreprocessing SketchModule::preprocessing() const {
+    return options_::sketchPreprocessing()->value().get<SketchPreprocessing>();
 }
 
-void SketchModule::onFitMethodChanged_() {
-    if (options_::reFitExistingEdges()->value()) {
-        reFitExistingEdges_();
+void SketchModule::onPreprocessingChanged_() {
+    if (options_::reProcessExistingEdges()->value()) {
+        reProcessExistingEdges_();
     }
 }
 
@@ -173,32 +176,35 @@ double roundInput(double x) {
     return core::roundToSignificantDigits(x, 7);
 }
 
-void setupPipeline(SketchPipeline& pipeline, SketchFitMethod fitMethod) {
+void setupPipeline(SketchPipeline& pipeline, SketchPreprocessing preprocessing) {
     pipeline.clear();
     pipeline.addPass<RemoveDuplicatesPass>();
-    switch (fitMethod) {
-    case SketchFitMethod::NoFit:
+    switch (preprocessing) {
+    case SketchPreprocessing::Default:
+        pipeline.addPass<QuadraticBlendPass>();
+        break;
+    case SketchPreprocessing::NoPreprocessing:
         // Nothing
         break;
-    case SketchFitMethod::IndexGaussianSmoothing:
+    case SketchPreprocessing::IndexGaussianSmoothing:
         pipeline.addPass<SmoothingPass>();
         break;
-    case SketchFitMethod::DouglasPeucker:
+    case SketchPreprocessing::DouglasPeucker:
         pipeline.addPass<DouglasPeuckerPass>();
         break;
-    case SketchFitMethod::SingleLineSegmentWithFixedEndpoints:
+    case SketchPreprocessing::SingleLineSegmentWithFixedEndpoints:
         pipeline.addPass<SingleLineSegmentWithFixedEndpointsPass>();
         break;
-    case SketchFitMethod::SingleLineSegmentWithFreeEndpoints:
+    case SketchPreprocessing::SingleLineSegmentWithFreeEndpoints:
         pipeline.addPass<SingleLineSegmentWithFreeEndpointsPass>();
         break;
-    case SketchFitMethod::SingleQuadraticSegmentWithFixedEndpoints:
+    case SketchPreprocessing::SingleQuadraticSegmentWithFixedEndpoints:
         pipeline.addPass<SingleQuadraticSegmentWithFixedEndpointsPass>();
         break;
-    case SketchFitMethod::QuadraticSpline:
+    case SketchPreprocessing::QuadraticSpline:
         pipeline.addPass<QuadraticSplinePass>();
         break;
-    case SketchFitMethod::QuadraticBlend:
+    case SketchPreprocessing::QuadraticBlend:
         pipeline.addPass<QuadraticBlendPass>();
         break;
     }
@@ -291,7 +297,7 @@ void updateEdgeGeometry(const SketchPointBuffer& points, workspace::Element* ite
 
 } // namespace
 
-void SketchModule::reFitExistingEdges_() {
+void SketchModule::reProcessExistingEdges_() {
 
     // Get the workspace.
     //
@@ -314,7 +320,7 @@ void SketchModule::reFitExistingEdges_() {
     //
     SketchPointBuffer inputPoints;
     SketchPipeline pipeline;
-    setupPipeline(pipeline, fitMethod());
+    setupPipeline(pipeline, preprocessing());
 
     // Create undo group
     static core::StringId undoGroupName("Re-Fit Existing Edges");
@@ -1155,13 +1161,13 @@ void Sketch::startCurve_(ui::MouseEvent* event) {
     edgeItemId_ = domEdge->internalId();
 
     // Configure sketch passes
-    SketchFitMethod fitMethod = SketchFitMethod::NoFit;
+    SketchPreprocessing preprocessing = SketchPreprocessing::Default;
     if (auto module = sketchModule_.lock()) {
-        fitMethod = module->fitMethod();
+        preprocessing = module->preprocessing();
     }
-    if (!lastFitMethod_ || *lastFitMethod_ != fitMethod) {
-        lastFitMethod_ = fitMethod;
-        setupPipeline(pipeline_, fitMethod);
+    if (!lastPreprocessing_ || *lastPreprocessing_ != preprocessing) {
+        lastPreprocessing_ = preprocessing;
+        setupPipeline(pipeline_, preprocessing);
     }
 
     // Append start point to geometry

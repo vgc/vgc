@@ -32,9 +32,12 @@
 
 namespace vgc::tools {
 
-enum class SketchFitMethod : Int8 {
+enum class SketchPreprocessing : Int8 {
+    // Use the default sketch preprocessing method
+    Default,
+
     // The input points are used as is as control points.
-    NoFit,
+    NoPreprocessing,
 
     // A gaussian smoothing is applied to the input points.
     IndexGaussianSmoothing,
@@ -61,14 +64,7 @@ enum class SketchFitMethod : Int8 {
 };
 
 VGC_TOOLS_API
-VGC_DECLARE_ENUM(SketchFitMethod)
-
-namespace commands {
-
-VGC_TOOLS_API
-VGC_UI_DECLARE_COMMAND(cycleSketchFitMethod)
-
-} // namespace commands
+VGC_DECLARE_ENUM(SketchPreprocessing)
 
 VGC_DECLARE_OBJECT(SketchModule);
 
@@ -85,13 +81,13 @@ protected:
 public:
     static SketchModulePtr create(const ui::ModuleContext& context);
 
-    SketchFitMethod fitMethod() const;
+    SketchPreprocessing preprocessing() const;
 
 private:
-    void onFitMethodChanged_();
-    VGC_SLOT(onFitMethodChanged_)
+    void onPreprocessingChanged_();
+    VGC_SLOT(onPreprocessingChanged_)
 
-    void reFitExistingEdges_();
+    void reProcessExistingEdges_();
 };
 
 VGC_DECLARE_OBJECT(Sketch);
@@ -189,7 +185,7 @@ protected:
     core::ConnectionHandle drawCurveUndoGroupConnectionHandle_ = {};
 
     double startTime_ = 0;
-    std::optional<SketchFitMethod> lastFitMethod_;
+    std::optional<SketchPreprocessing> lastPreprocessing_;
 
     // Raw input in widget space (pixels)
     SketchPointBuffer inputPoints_;
