@@ -155,6 +155,9 @@ private:
 class VGC_TOOLS_API SmoothingPass : public SketchPass {
 protected:
     void doUpdateFrom(const SketchPointBuffer& input, SketchPointBuffer& output) override;
+
+private:
+    core::DoubleArray widthsBuffer_;
 };
 
 class VGC_TOOLS_API DouglasPeuckerPass : public SketchPass {

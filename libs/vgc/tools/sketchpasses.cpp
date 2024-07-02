@@ -414,6 +414,60 @@ double cubicEaseInOut(double t) {
     return -2 * t * t2 + 3 * t2;
 }
 
+// Fixup first/last width: on many tablets, they tend to go back to zero or
+// very small values way too fast. So we limit them to not be smaller than a
+// linear interpolation of the previous two values.
+//
+void fixupStartEndWidths(core::DoubleArray& widths, Int unstableIndexStart) {
+    Int numPoints = widths.length();
+    double minWidthRatio = 1.0;
+    if (numPoints < 2) {
+        // Nothing to do
+    }
+    else if (numPoints == 2) {
+        double w0 = widths.getUnchecked(0);
+        double w1 = widths.getUnchecked(1);
+        if (w0 < minWidthRatio * w1) {
+            w0 = minWidthRatio * w1;
+        }
+        else if (w1 < minWidthRatio * w0) {
+            w1 = minWidthRatio * w0;
+        }
+        if (unstableIndexStart == 0) {
+            widths.getUnchecked(0) = w0;
+            widths.getUnchecked(1) = w1;
+        }
+        else if (unstableIndexStart < numPoints) {
+            widths.getUnchecked(1) = w1;
+        }
+    }
+    else {
+        // Fixup start point
+        if (unstableIndexStart == 0) {
+            double w0 = widths.getUnchecked(0);
+            double w1 = widths.getUnchecked(1);
+            double w2 = widths.getUnchecked(2);
+            double w0Min = minWidthRatio * (std::min)(w1, w1 + (w1 - w2));
+            if (w0 < w0Min) {
+                widths.getUnchecked(0) = w0Min;
+            }
+        }
+        // Fixup end point
+        if (unstableIndexStart < numPoints) {
+            Int i0 = numPoints - 1;
+            Int i1 = numPoints - 2;
+            Int i2 = numPoints - 3;
+            double w0 = widths.getUnchecked(i0);
+            double w1 = widths.getUnchecked(i1);
+            double w2 = widths.getUnchecked(i2);
+            double w0Min = minWidthRatio * (std::min)(w1, w1 + (w1 - w2));
+            if (w0 < w0Min) {
+                widths.getUnchecked(i0) = w0Min;
+            }
+        }
+    }
+}
+
 } // namespace
 
 void SmoothingPass::doUpdateFrom(
@@ -455,18 +509,18 @@ void SmoothingPass::doUpdateFrom(
 
             // Compute weighted average
             double du = 1.0 / (l + 1);
-            geometry::Vec2d sumPositions = inputPoints[i].position();
+            geometry::Vec2d sumPositions = inputPoints.getUnchecked(i).position();
             double sumWeights = 1;
             for (Int j = jMin; j < i; ++j) {
                 double u = 1.0 - (i - j) * du;
                 double weight = cubicEaseInOut(u);
-                sumPositions += weight * inputPoints[j].position();
+                sumPositions += weight * inputPoints.getUnchecked(j).position();
                 sumWeights += weight;
             }
             for (Int j = i + 1; j <= jMax; ++j) {
                 double u = 1.0 - (j - i) * du;
                 double weight = cubicEaseInOut(u);
-                sumPositions += weight * inputPoints[j].position();
+                sumPositions += weight * inputPoints.getUnchecked(j).position();
                 sumWeights += weight;
             }
             output.at(i).setPosition(sumPositions / sumWeights);
@@ -474,30 +528,57 @@ void SmoothingPass::doUpdateFrom(
         instabilityDelta = std::max<Int>(instabilityDelta, pointsSmoothingLevel);
     }
 
+    // Fixup start/end widths
+    widthsBuffer_.clear();
+    for (const auto& p : input) {
+        widthsBuffer_.append(p.width());
+    }
+    fixupStartEndWidths(widthsBuffer_, unstableIndexStart);
+
     // Smooth width.
     //
     // This is different as smoothing points since we don't need to keep
     // the first/last width unchanged.
     //
-    Int widthSmoothingLevel = 2;
+    // Note that while using a level larger than the number of points is
+    // possible, it tends to create flickering for small strokes, due to the
+    // last few points having much smaller width, and being taken into account
+    // "too much", reducing the width of the first points.
+    //
+    //   Before adding        After adding
+    //   the last point:      the last point:
+    //
+    //    -----------
+    //   |           |        --------------
+    //  |             |      |              |
+    //   |           |        --------------
+    //    ------------
+    //
+    // This could be solved by using something smarter than averaged-based
+    // smoothing, e.g., quadratic fitting.
+    //
+    Int widthSmoothingLevel = 10;
+    if (widthSmoothingLevel > numPoints) {
+        widthSmoothingLevel = numPoints;
+    }
     if (widthSmoothingLevel > 0) {
         double du = 1.0 / (widthSmoothingLevel + 1);
         for (Int i = unstableIndexStart; i < numPoints; ++i) {
-            double oldWidth = inputPoints[i].width();
+            double oldWidth = widthsBuffer_.getUnchecked(i);
             double sumWidths = oldWidth;
             double sumWeights = 1;
             Int jMin = std::max<Int>(i - widthSmoothingLevel, 0);
             for (Int j = jMin; j < i; ++j) {
                 double u = 1.0 - (i - j) * du;
                 double weight = cubicEaseInOut(u);
-                sumWidths += weight * inputPoints[j].width();
+                sumWidths += weight * widthsBuffer_.getUnchecked(j);
                 sumWeights += weight;
             }
             Int jMax = std::min<Int>(i + widthSmoothingLevel, numPoints - 1);
             for (Int j = i + 1; j <= jMax; ++j) {
                 double u = 1.0 - (j - i) * du;
                 double weight = cubicEaseInOut(u);
-                sumWidths += weight * inputPoints[j].width();
+                sumWidths += weight * widthsBuffer_.getUnchecked(j);
                 sumWeights += weight;
             }
             // Set the value only if different enough from the input,to prevent
