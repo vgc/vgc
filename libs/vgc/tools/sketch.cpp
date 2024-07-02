@@ -208,6 +208,7 @@ void setupPipeline(SketchPipeline& pipeline, SketchPreprocessing preprocessing) 
         pipeline.addPass<QuadraticBlendPass>();
         break;
     }
+    pipeline.addPass<SmoothingPass>();
     pipeline.addPass<TransformPass>();
 }
 
