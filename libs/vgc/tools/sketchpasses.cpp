@@ -425,8 +425,8 @@ void fixupStartEndWidths(core::DoubleArray& widths, Int unstableIndexStart) {
         // Nothing to do
     }
     else if (numPoints == 2) {
-        double w0 = widths[0];
-        double w1 = widths[1];
+        double w0 = widths.getUnchecked(0);
+        double w1 = widths.getUnchecked(1);
         if (w0 < minWidthRatio * w1) {
             w0 = minWidthRatio * w1;
         }
@@ -434,22 +434,22 @@ void fixupStartEndWidths(core::DoubleArray& widths, Int unstableIndexStart) {
             w1 = minWidthRatio * w0;
         }
         if (unstableIndexStart == 0) {
-            widths[0] = w0;
-            widths[1] = w1;
+            widths.getUnchecked(0) = w0;
+            widths.getUnchecked(1) = w1;
         }
         else if (unstableIndexStart < numPoints) {
-            widths[1] = w1;
+            widths.getUnchecked(1) = w1;
         }
     }
     else {
         // Fixup start point
         if (unstableIndexStart == 0) {
-            double w0 = widths[0];
-            double w1 = widths[1];
-            double w2 = widths[2];
+            double w0 = widths.getUnchecked(0);
+            double w1 = widths.getUnchecked(1);
+            double w2 = widths.getUnchecked(2);
             double w0Min = minWidthRatio * (std::min)(w1, w1 + (w1 - w2));
             if (w0 < w0Min) {
-                widths[0] = w0Min;
+                widths.getUnchecked(0) = w0Min;
             }
         }
         // Fixup end point
@@ -457,12 +457,12 @@ void fixupStartEndWidths(core::DoubleArray& widths, Int unstableIndexStart) {
             Int i0 = numPoints - 1;
             Int i1 = numPoints - 2;
             Int i2 = numPoints - 3;
-            double w0 = widths[i0];
-            double w1 = widths[i1];
-            double w2 = widths[i2];
+            double w0 = widths.getUnchecked(i0);
+            double w1 = widths.getUnchecked(i1);
+            double w2 = widths.getUnchecked(i2);
             double w0Min = minWidthRatio * (std::min)(w1, w1 + (w1 - w2));
             if (w0 < w0Min) {
-                widths[i0] = w0Min;
+                widths.getUnchecked(i0) = w0Min;
             }
         }
     }
@@ -509,18 +509,18 @@ void SmoothingPass::doUpdateFrom(
 
             // Compute weighted average
             double du = 1.0 / (l + 1);
-            geometry::Vec2d sumPositions = inputPoints[i].position();
+            geometry::Vec2d sumPositions = inputPoints.getUnchecked(i).position();
             double sumWeights = 1;
             for (Int j = jMin; j < i; ++j) {
                 double u = 1.0 - (i - j) * du;
                 double weight = cubicEaseInOut(u);
-                sumPositions += weight * inputPoints[j].position();
+                sumPositions += weight * inputPoints.getUnchecked(j).position();
                 sumWeights += weight;
             }
             for (Int j = i + 1; j <= jMax; ++j) {
                 double u = 1.0 - (j - i) * du;
                 double weight = cubicEaseInOut(u);
-                sumPositions += weight * inputPoints[j].position();
+                sumPositions += weight * inputPoints.getUnchecked(j).position();
                 sumWeights += weight;
             }
             output.at(i).setPosition(sumPositions / sumWeights);
@@ -564,21 +564,21 @@ void SmoothingPass::doUpdateFrom(
     if (widthSmoothingLevel > 0) {
         double du = 1.0 / (widthSmoothingLevel + 1);
         for (Int i = unstableIndexStart; i < numPoints; ++i) {
-            double oldWidth = widthsBuffer_[i];
+            double oldWidth = widthsBuffer_.getUnchecked(i);
             double sumWidths = oldWidth;
             double sumWeights = 1;
             Int jMin = std::max<Int>(i - widthSmoothingLevel, 0);
             for (Int j = jMin; j < i; ++j) {
                 double u = 1.0 - (i - j) * du;
                 double weight = cubicEaseInOut(u);
-                sumWidths += weight * widthsBuffer_[j];
+                sumWidths += weight * widthsBuffer_.getUnchecked(j);
                 sumWeights += weight;
             }
             Int jMax = std::min<Int>(i + widthSmoothingLevel, numPoints - 1);
             for (Int j = i + 1; j <= jMax; ++j) {
                 double u = 1.0 - (j - i) * du;
                 double weight = cubicEaseInOut(u);
-                sumWidths += weight * widthsBuffer_[j];
+                sumWidths += weight * widthsBuffer_.getUnchecked(j);
                 sumWeights += weight;
             }
             // Set the value only if different enough from the input,to prevent
