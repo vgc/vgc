@@ -245,32 +245,6 @@ void RemoveDuplicatesPass::doUpdateFrom(
 
 namespace {
 
-// Returns the binomial coefficient C(n, k) for 0 <= k <= n.
-//
-// The returned array is of size n + 1.
-//
-// These are computed using the Pascal's triangle:
-//
-//  C(0, k) =       1
-//  C(1, k) =      1 1
-//  C(2, k) =     1 2 1
-//  C(3, k) =    1 3 3 1
-//  C(4, k) =   1 4 6 4 1
-//
-template<size_t n>
-constexpr std::array<Int, n + 1> binomialCoefficients() {
-    std::array<Int, n + 1> res{}; // Value-initialization required for constexprness.
-    res[0] = 1;
-    for (size_t m = 1; m <= n; ++m) {
-        // Compute C(m, k) coefficients from C(m-1, k) coefficients
-        res[m] = 1;
-        for (size_t k = m - 1; k >= 1; --k) {
-            res[k] = res[k] + res[k - 1];
-        }
-    }
-    return res;
-}
-
 bool clampMin_(double k, SketchPoint& p, const SketchPoint& minLimitor, double ds) {
     double minWidth = minLimitor.width() - k * ds;
     if (p.width() < minWidth) {
@@ -428,6 +402,18 @@ void applyWidthRoughnessLimitor(
     }
 }
 
+// cubicEaseInOut(t)
+//       ^
+//     1 |   .-
+//       |_.´
+//     0 +------> t
+//       0    1
+//
+double cubicEaseInOut(double t) {
+    double t2 = t * t;
+    return -2 * t * t2 + 3 * t2;
+}
+
 } // namespace
 
 void SmoothingPass::doUpdateFrom(
@@ -450,70 +436,76 @@ void SmoothingPass::doUpdateFrom(
 
     Int pointsSmoothingLevel = 2;
     if (pointsSmoothingLevel > 0 && numPoints >= 3) {
-        // Apply gaussian smoothing.
-        Int iStart = unstableIndexStart;
-        if (pointsSmoothingLevel == 1) {
-            iStart = std::max<Int>(1, iStart);
-            for (Int i = iStart; i < numPoints - 1; ++i) {
-                output.at(i).setPosition(                                    //
-                    (1 / 4.0) * inputPoints.getUnchecked(i - 1).position() + //
-                    (2 / 4.0) * inputPoints.getUnchecked(i + 0).position() + //
-                    (1 / 4.0) * inputPoints.getUnchecked(i + 1).position());
+        Int iMin = std::max<Int>(1, unstableIndexStart); // Do not move first point
+        Int iMax = numPoints - 2;                        // Do not move last point
+        for (Int i = iMin; i <= iMax; ++i) {
+
+            // Reduce window size to ensure it stays within the index range
+            Int l = pointsSmoothingLevel;
+            if (i - l < 0) {
+                l = i;
             }
+            if (i + l > numPoints - 1) {
+                l = numPoints - 1 - i;
+            }
+            VGC_ASSERT(l > 0);
+            Int jMin = i - l;
+            Int jMax = i + l;
+            VGC_ASSERT(jMin >= 0 && jMax <= numPoints - 1);
+
+            // Compute weighted average
+            double du = 1.0 / (l + 1);
+            geometry::Vec2d sumPositions = inputPoints[i].position();
+            double sumWeights = 1;
+            for (Int j = jMin; j < i; ++j) {
+                double u = 1.0 - (i - j) * du;
+                double weight = cubicEaseInOut(u);
+                sumPositions += weight * inputPoints[j].position();
+                sumWeights += weight;
+            }
+            for (Int j = i + 1; j <= jMax; ++j) {
+                double u = 1.0 - (j - i) * du;
+                double weight = cubicEaseInOut(u);
+                sumPositions += weight * inputPoints[j].position();
+                sumWeights += weight;
+            }
+            output.at(i).setPosition(sumPositions / sumWeights);
         }
-        else if (pointsSmoothingLevel == 2) {
-            if (iStart <= 1) {
-                output.at(1).setPosition(                                //
-                    (1 / 4.0) * inputPoints.getUnchecked(0).position() + //
-                    (2 / 4.0) * inputPoints.getUnchecked(1).position() + //
-                    (1 / 4.0) * inputPoints.getUnchecked(2).position());
-                iStart = 2;
-            }
-            for (Int i = iStart; i < numPoints - 2; ++i) {
-                output.at(i).setPosition(                                     //
-                    (1 / 16.0) * inputPoints.getUnchecked(i - 2).position() + //
-                    (4 / 16.0) * inputPoints.getUnchecked(i - 1).position() + //
-                    (6 / 16.0) * inputPoints.getUnchecked(i + 0).position() + //
-                    (4 / 16.0) * inputPoints.getUnchecked(i + 1).position() + //
-                    (1 / 16.0) * inputPoints.getUnchecked(i + 2).position());
-            }
-            if (numPoints - 2 >= iStart) {
-                Int i = numPoints - 2;
-                output.at(i).setPosition(                                    //
-                    (1 / 4.0) * inputPoints.getUnchecked(i - 1).position() + //
-                    (2 / 4.0) * inputPoints.getUnchecked(i + 0).position() + //
-                    (1 / 4.0) * inputPoints.getUnchecked(i + 1).position());
-            }
-        }
+        instabilityDelta = std::max<Int>(instabilityDelta, pointsSmoothingLevel);
     }
-    instabilityDelta = std::max<Int>(instabilityDelta, pointsSmoothingLevel);
 
     // Smooth width.
     //
     // This is different as smoothing points since we don't need to keep
     // the first/last width unchanged.
     //
-    constexpr size_t widthSmoothingLevel = 2;
-    if constexpr (widthSmoothingLevel != 0) {
-
-        // Get binomial coefficients
-        constexpr Int l = widthSmoothingLevel;
-        constexpr Int m = 2 * widthSmoothingLevel + 1;
-        constexpr std::array<Int, m> coeffs =
-            binomialCoefficients<2 * widthSmoothingLevel>();
-
-        // Apply convolution with coefficients
+    Int widthSmoothingLevel = 2;
+    if (widthSmoothingLevel > 0) {
+        double du = 1.0 / (widthSmoothingLevel + 1);
         for (Int i = unstableIndexStart; i < numPoints; ++i) {
-            double value = {};
-            double sumCoeffs = 0;
-            Int j = i - l;
-            for (Int k = 0; k < m; ++k, ++j) {
-                if (0 <= j && j < numPoints) {
-                    sumCoeffs += coeffs[k];
-                    value += coeffs[k] * inputPoints[j].width();
-                }
+            double oldWidth = inputPoints[i].width();
+            double sumWidths = oldWidth;
+            double sumWeights = 1;
+            Int jMin = std::max<Int>(i - widthSmoothingLevel, 0);
+            for (Int j = jMin; j < i; ++j) {
+                double u = 1.0 - (i - j) * du;
+                double weight = cubicEaseInOut(u);
+                sumWidths += weight * inputPoints[j].width();
+                sumWeights += weight;
             }
-            output.at(i).setWidth(value / sumCoeffs);
+            Int jMax = std::min<Int>(i + widthSmoothingLevel, numPoints - 1);
+            for (Int j = i + 1; j <= jMax; ++j) {
+                double u = 1.0 - (j - i) * du;
+                double weight = cubicEaseInOut(u);
+                sumWidths += weight * inputPoints[j].width();
+                sumWeights += weight;
+            }
+            // Set the value only if different enough from the input,to prevent
+            // rounding errors to appear when the width is actually constant.
+            double newWidth = sumWidths / sumWeights;
+            if (!core::isClose(newWidth, oldWidth)) {
+                output.at(i).setWidth(newWidth);
+            }
         }
         instabilityDelta = std::max<Int>(instabilityDelta, widthSmoothingLevel);
     }
@@ -522,8 +514,8 @@ void SmoothingPass::doUpdateFrom(
     output.updateChordLengths();
 
     // Width limitor
-    constexpr double widthRoughness = 0.8;
-    constexpr Int roughnessLimitorWindowSize = 3;
+    double widthRoughness = 0.8;
+    Int roughnessLimitorWindowSize = 3;
     const SketchPoint* lastStablePoint =
         oldNumStablePoints == 0 ? nullptr : &output[oldNumStablePoints - 1];
     applyWidthRoughnessLimitor(
