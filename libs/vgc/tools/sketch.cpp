@@ -1025,6 +1025,16 @@ void Sketch::appendVertexInfo_(const geometry::Vec2d& position, core::Id itemId)
     vi.itemId = itemId;
 }
 
+void Sketch::updateVertexInfo_(const geometry::Vec2d& position, core::Id itemId) {
+    // Reverse iteration because currently, the updated itemId is always last
+    for (auto it = vertexInfos_.rbegin(); it != vertexInfos_.rend(); ++it) {
+        if (it->itemId == itemId) {
+            it->position = position;
+            break;
+        }
+    }
+}
+
 Sketch::EdgeInfo* Sketch::searchEdgeInfo_(core::Id itemId) {
     for (Sketch::EdgeInfo& ei : edgeInfos_) {
         if (ei.itemId == itemId) {
@@ -1175,8 +1185,10 @@ void Sketch::startCurve_(ui::MouseEvent* event) {
     continueCurve_(event);
     workspace->sync(); // required for toKeyEdge() below
 
-    // Append start vertex to snap/cut info
-    appendVertexInfo_(startPosition, startVertexItemId_);
+    // Append new start vertex (if any) to snap/cut info
+    if (!snapStartPosition_) {
+        appendVertexInfo_(startPosition, startVertexItemId_);
+    }
 
     if (vacomplex::KeyEdge* keyEdge = toKeyEdge(workspace.get(), edgeItemId_)) {
 
@@ -1286,6 +1298,7 @@ void Sketch::continueCurve_(ui::MouseEvent* event) {
     if (!snapStartPosition_) {
         // Unless start-snapped, processing passes may have modified the start point
         domStartVertex->setAttribute(ds::position, pendingPositions_.first());
+        updateVertexInfo_(pendingPositions_.first(), startVertexItemId_);
     }
     domEndVertex->setAttribute(ds::position, pendingPositions_.last());
     domEdge->setAttribute(ds::positions, pendingPositions_);
