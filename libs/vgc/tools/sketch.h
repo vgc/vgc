@@ -260,6 +260,7 @@ protected:
 
     VertexInfo* searchVertexInfo_(core::Id itemId);
     void appendVertexInfo_(const geometry::Vec2d& position, core::Id itemId);
+    void updateVertexInfo_(const geometry::Vec2d& position, core::Id itemId);
 
     EdgeInfo* searchEdgeInfo_(core::Id itemId);
     // void appendEdgeInfo_(); when adding a vertex on cut.
