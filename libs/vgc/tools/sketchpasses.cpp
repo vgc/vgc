@@ -435,7 +435,7 @@ double cubicEaseInOut(double t) {
 // very small values way too fast. So we limit them to not be smaller than a
 // linear interpolation of the previous two values.
 //
-void fixupStartEndWidths(core::DoubleArray& widths, Int unstableIndexStart) {
+void improveEndWidths(core::DoubleArray& widths, Int unstableIndexStart) {
     Int numPoints = widths.length();
     double minWidthRatio = 1.0;
     if (numPoints < 2) {
@@ -452,9 +452,8 @@ void fixupStartEndWidths(core::DoubleArray& widths, Int unstableIndexStart) {
         }
         if (unstableIndexStart == 0) {
             widths.getUnchecked(0) = w0;
-            widths.getUnchecked(1) = w1;
         }
-        else if (unstableIndexStart < numPoints) {
+        if (unstableIndexStart < numPoints) {
             widths.getUnchecked(1) = w1;
         }
     }
@@ -487,6 +486,20 @@ void fixupStartEndWidths(core::DoubleArray& widths, Int unstableIndexStart) {
 
 } // namespace
 
+SmoothingPass::SmoothingPass()
+    : SketchPass() {
+}
+
+SmoothingPass::SmoothingPass(const SmoothingSettings& settings)
+    : SketchPass()
+    , settings_(settings) {
+}
+
+void SmoothingPass::setSettings(const SmoothingSettings& settings) {
+    checkCanChangeSettings(*this);
+    settings_ = settings;
+}
+
 void SmoothingPass::doUpdateFrom(
     const SketchPointBuffer& input,
     SketchPointBuffer& output) {
@@ -505,7 +518,7 @@ void SmoothingPass::doUpdateFrom(
 
     Int instabilityDelta = 0;
 
-    Int pointsSmoothingLevel = 2;
+    Int pointsSmoothingLevel = settings_.lineSmoothing();
     if (pointsSmoothingLevel > 0 && numPoints >= 3) {
         Int iMin = std::max<Int>(1, unstableIndexStart); // Do not move first point
         Int iMax = numPoints - 2;                        // Do not move last point
@@ -545,12 +558,45 @@ void SmoothingPass::doUpdateFrom(
         instabilityDelta = std::max<Int>(instabilityDelta, pointsSmoothingLevel);
     }
 
-    // Fixup start/end widths
+    // Copy widths to a temporary buffer so that the smooth pass can use as input
+    // the result of the improveEndWidths() method.
+    //
     widthsBuffer_.clear();
     for (const auto& p : input) {
         widthsBuffer_.append(p.width());
     }
-    fixupStartEndWidths(widthsBuffer_, unstableIndexStart);
+
+    // Improve the first/last widths.
+    //
+    Int widthInstabilityDelta = 0;
+    if (settings_.improveEndWidths()) {
+        improveEndWidths(widthsBuffer_, unstableIndexStart);
+
+        // If width smoothing is disabled, copy the change to the output now
+        if (settings_.widthSmoothing() <= 0 && numPoints > 0) {
+            if (unstableIndexStart == 0) {
+                output.at(0).setWidth(widthsBuffer_[0]);
+            }
+            if (unstableIndexStart < numPoints) {
+                output.at(numPoints - 1).setWidth(widthsBuffer_[numPoints - 1]);
+            }
+        }
+
+        // Instability caused by the first point: unless the first 3 input
+        // points are stable, then the first output point is not stable.
+        if (input.numStablePoints() < 3) {
+            widthInstabilityDelta =
+                std::max<Int>(widthInstabilityDelta, input.numStablePoints());
+        }
+
+        // Instability caused by the last point: no effect if the last input
+        // was already unstable, otherwise adds an instability of 1 since
+        // the output "improved last width" might get its original width back
+        // if a new input point is added.
+        if (input.numStablePoints() == numPoints) {
+            widthInstabilityDelta += 1;
+        }
+    }
 
     // Smooth width.
     //
@@ -574,7 +620,8 @@ void SmoothingPass::doUpdateFrom(
     // This could be solved by using something smarter than averaged-based
     // smoothing, e.g., quadratic fitting.
     //
-    Int widthSmoothingLevel = 10;
+
+    Int widthSmoothingLevel = settings_.widthSmoothing();
     if (widthSmoothingLevel > numPoints) {
         widthSmoothingLevel = numPoints;
     }
@@ -605,14 +652,15 @@ void SmoothingPass::doUpdateFrom(
                 output.at(i).setWidth(newWidth);
             }
         }
-        instabilityDelta = std::max<Int>(instabilityDelta, widthSmoothingLevel);
+        widthInstabilityDelta += widthSmoothingLevel;
     }
+    instabilityDelta = std::max<Int>(instabilityDelta, widthInstabilityDelta);
 
     // compute chord lengths
     output.updateChordLengths();
 
     // Width limitor
-    double widthRoughness = 0.8;
+    double widthRoughness = settings_.widthSlopeLimit();
     Int roughnessLimitorWindowSize = 3;
     const SketchPoint* lastStablePoint =
         oldNumStablePoints == 0 ? nullptr : &output[oldNumStablePoints - 1];

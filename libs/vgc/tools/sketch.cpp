@@ -40,11 +40,35 @@
 
 namespace vgc::tools {
 
+namespace {
+
 namespace options_ {
 
 ui::NumberSetting* penWidth() {
     static ui::NumberSettingPtr setting = createDecimalNumberSetting(
         ui::settings::session(), "tools.sketch.penWidth", "Pen Width", 5, 0, 1000);
+    return setting.get();
+}
+
+ui::NumberSetting* lineSmoothing() {
+    static ui::NumberSettingPtr setting = createIntegerNumberSetting(
+        ui::settings::session(),
+        "tools.sketch.experimental.lineSmoothing",
+        "Line Smoothing",
+        2,
+        0,
+        1000);
+    return setting.get();
+}
+
+ui::NumberSetting* widthSmoothing() {
+    static ui::NumberSettingPtr setting = createIntegerNumberSetting(
+        ui::settings::session(),
+        "tools.sketch.widthSmoothing",
+        "Width Smoothing",
+        10,
+        0,
+        1000);
     return setting.get();
 }
 
@@ -104,6 +128,28 @@ ui::EnumSetting* sketchPreprocessing() {
     return setting.get();
 }
 
+ui::NumberSetting* widthSlopeLimit() {
+    static ui::NumberSettingPtr setting = createDecimalNumberSetting(
+        ui::settings::session(),
+        "tools.sketch.experimental.widthSlopeLimit",
+        "Width Slope Limit",
+        0.8,  // default
+        0,    // min
+        1000, // max
+        10,   // numDecimals
+        0.1); // step
+    return setting.get();
+}
+
+ui::BoolSetting* improveEndWidths() {
+    static ui::BoolSettingPtr setting = ui::BoolSetting::create(
+        ui::settings::session(),
+        "tools.sketch.experimental.improveEndWidths",
+        "Improve End Widths",
+        true);
+    return setting.get();
+}
+
 ui::BoolSetting* reProcessExistingEdges() {
     static ui::BoolSettingPtr setting = ui::BoolSetting::create(
         ui::settings::session(),
@@ -114,8 +160,6 @@ ui::BoolSetting* reProcessExistingEdges() {
 }
 
 } // namespace options_
-
-namespace {
 
 bool isAutoFillEnabled() {
     return options_::autoFill()->value();
@@ -142,12 +186,19 @@ SketchModule::SketchModule(CreateKey key, const ui::ModuleContext& context)
     if (auto module = context.importModule<canvas::ExperimentalModule>().lock()) {
         module->addWidget(*ui::NumberSettingEdit::create(options_::duplicateThreshold()));
         module->addWidget(*ui::EnumSettingEdit::create(options_::sketchPreprocessing()));
+        module->addWidget(*ui::NumberSettingEdit::create(options_::lineSmoothing()));
+        module->addWidget(*ui::NumberSettingEdit::create(options_::widthSlopeLimit()));
+        module->addWidget(*ui::BoolSettingEdit::create(options_::improveEndWidths()));
         module->addWidget(
             *ui::BoolSettingEdit::create(options_::reProcessExistingEdges()));
     }
 
     options_::duplicateThreshold()->valueChanged().connect(onProcessingChanged_Slot());
     options_::sketchPreprocessing()->valueChanged().connect(onProcessingChanged_Slot());
+    options_::lineSmoothing()->valueChanged().connect(onProcessingChanged_Slot());
+    options_::widthSmoothing()->valueChanged().connect(onProcessingChanged_Slot());
+    options_::widthSlopeLimit()->valueChanged().connect(onProcessingChanged_Slot());
+    options_::improveEndWidths()->valueChanged().connect(onProcessingChanged_Slot());
 }
 
 SketchModulePtr SketchModule::create(const ui::ModuleContext& context) {
@@ -220,7 +271,13 @@ void SketchModule::setupPipeline(SketchPipeline& pipeline) {
     }
 
     // Smoothing
-    replaceOrAdd<SmoothingPass>(pipeline, i++);
+    SmoothingPass& sp = replaceOrAdd<SmoothingPass>(pipeline, i++);
+    SmoothingSettings sps;
+    sps.setLineSmoothing(options_::lineSmoothing()->intValue());
+    sps.setWidthSmoothing(options_::widthSmoothing()->intValue());
+    sps.setWidthSlopeLimit(options_::widthSlopeLimit()->value());
+    sps.setImproveEndWidths(options_::improveEndWidths()->value());
+    sp.setSettings(sps);
 
     // Transform from Widget to Scene coordinates
     replaceOrAdd<TransformPass>(pipeline, i++);
@@ -432,6 +489,7 @@ void Sketch::setSnappingEnabled(bool enabled) {
 ui::WidgetPtr Sketch::doCreateOptionsWidget() const {
     ui::WidgetPtr res = ui::Column::create();
     res->createChild<ui::NumberSettingEdit>(options_::penWidth());
+    res->createChild<ui::NumberSettingEdit>(options_::widthSmoothing());
     res->createChild<ui::BoolSettingEdit>(options_::snapping());
     res->createChild<ui::NumberSettingEdit>(options_::snapDistance());
     res->createChild<ui::NumberSettingEdit>(options_::snapFalloff());
