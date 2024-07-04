@@ -67,6 +67,12 @@ public:
     ///
     double value() const;
 
+    /// Returns the current value rounded to the nearest integer.
+    ///
+    Int intValue() const {
+        return core::round_cast<Int>(value());
+    }
+
     /// Sets the value of this `NumberSetting`.
     ///
     /// Note that after calling this function, `value()` may not be equal to

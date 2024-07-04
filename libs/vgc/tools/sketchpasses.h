@@ -46,8 +46,7 @@ class VGC_TOOLS_API RemoveDuplicatesSettings {
 public:
     /// Creates a `RemoveDuplicatesSettings` with default settings.
     ///
-    RemoveDuplicatesSettings()
-        : distanceThreshold_(1.5) {
+    RemoveDuplicatesSettings() {
     }
 
     /// Creates a `RemoveDuplicatesSettings` with the given settings.
@@ -79,7 +78,7 @@ public:
     }
 
 private:
-    double distanceThreshold_;
+    double distanceThreshold_ = 1.5;
 };
 
 /// \class vgc::tools::RemoveDuplicatesSettings
@@ -160,11 +159,95 @@ private:
     Int startInputIndex_ = 0; // see comment in implementation
 };
 
+/// \class vgc::tools::SmoothingSettings
+/// \brief Settings for the SmoothingPass
+///
+class VGC_TOOLS_API SmoothingSettings {
+public:
+    /// Creates a `SmoothingSettings` with default settings.
+    ///
+    SmoothingSettings() {
+    }
+
+    /// How many neighbor samples (on each side) are used to smooth the
+    /// centerline of the stroke.
+    ///
+    Int lineSmoothing() const {
+        return lineSmoothing_;
+    };
+
+    /// Set the `lineSmoothing()` value.
+    ///
+    void setLineSmoothing(Int lineSmoothing) {
+        lineSmoothing_ = lineSmoothing;
+    };
+
+    /// How many neighbor samples (on each side) are used to smooth the
+    /// width of the stroke.
+    ///
+    Int widthSmoothing() const {
+        return widthSmoothing_;
+    };
+
+    /// Set the `widthSmoothing()` value.
+    ///
+    void setWidthSmoothing(Int widthSmoothing) {
+        widthSmoothing_ = widthSmoothing;
+    };
+
+    /// How much is the width allow to change relative to the
+    /// distance between points.
+    ///
+    double widthSlopeLimit() const {
+        return widthSlopeLimit_;
+    };
+
+    /// Set the `widthSlopeLimit()` value.
+    ///
+    void setWidthSlopeLimit(double widthSlopeLimit) {
+        widthSlopeLimit_ = widthSlopeLimit;
+    };
+
+    // With many tablet, the width of the first and last sample tends to be
+    // exactly zero or a very small value, often causing undesirable results.
+    // If this setting is true, they will be modified to not be smaller than a
+    // linear interpolation of the two neighbor values.
+    //
+    bool improveEndWidths() const {
+        return improveEndWidths_;
+    }
+
+    /// Set the `improveEndWidths()` value.
+    ///
+    void setImproveEndWidths(bool improveEndWidths) {
+        improveEndWidths_ = improveEndWidths;
+    };
+
+private:
+    Int lineSmoothing_ = 2;
+    Int widthSmoothing_ = 10;
+    double widthSlopeLimit_ = 0.8;
+    bool improveEndWidths_ = true;
+};
+
 class VGC_TOOLS_API SmoothingPass : public SketchPass {
+public:
+    SmoothingPass();
+    explicit SmoothingPass(const SmoothingSettings& settings);
+
+    /// Changes the settings for this pass.
+    ///
+    /// Throws `LogicError` if `output().numStablePoints()` is not zero,
+    /// as settings can affect the number of stable points and therefore should not
+    /// be called while points are being processed.
+    ///
+    void setSettings(const SmoothingSettings& settings);
+
 protected:
     void doUpdateFrom(const SketchPointBuffer& input, SketchPointBuffer& output) override;
 
 private:
+    SmoothingSettings settings_;
     core::DoubleArray widthsBuffer_;
 };
 
