@@ -81,11 +81,18 @@ protected:
 public:
     static SketchModulePtr create(const ui::ModuleContext& context);
 
+    /// Updates the given pipeline to match the current sketch processing
+    /// parameters.
+    ///
+    void setupPipeline(SketchPipeline& pipeline);
+
     SketchPreprocessing preprocessing() const;
 
 private:
-    void onPreprocessingChanged_();
-    VGC_SLOT(onPreprocessingChanged_)
+    SketchPipeline pipeline_;
+
+    void onProcessingChanged_();
+    VGC_SLOT(onProcessingChanged_)
 
     void reProcessExistingEdges_();
 };
@@ -185,7 +192,6 @@ protected:
     core::ConnectionHandle drawCurveUndoGroupConnectionHandle_ = {};
 
     double startTime_ = 0;
-    std::optional<SketchPreprocessing> lastPreprocessing_;
 
     // Raw input in widget space (pixels)
     SketchPointBuffer inputPoints_;

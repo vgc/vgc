@@ -97,6 +97,23 @@ void RemoveDuplicatesPass::doReset() {
 
 namespace {
 
+void checkCanChangeSettings(const SketchPass& pass) {
+    if (pass.output().numStablePoints() > 0) {
+        throw core::LogicError( //
+            "Cannot change settings of a sketch pass "
+            "while points are still being processed.");
+    }
+}
+
+} // namespace
+
+void RemoveDuplicatesPass::setSettings(const RemoveDuplicatesSettings& settings) {
+    checkCanChangeSettings(*this);
+    settings_ = settings;
+}
+
+namespace {
+
 double squaredDistance(const SketchPoint& p, const SketchPoint& q) {
     return (q.position() - p.position()).squaredLength();
 }
