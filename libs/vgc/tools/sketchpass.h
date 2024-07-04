@@ -343,11 +343,51 @@ public:
 
     /// Adds a `SketchPass` of type `TSketchPassClass` at the end of this pipeline.
     ///
+    /// Returns a reference to the pass.
+    ///
     template<typename TSketchPassClass, typename... Args>
-    void addPass(Args&&... args) {
+    TSketchPassClass& addPass(Args&&... args) {
         auto pass = std::make_unique<TSketchPassClass>(std::forward<Args>(args)...);
+        TSketchPassClass* rawPtr = pass.get();
         pass->setTransformMatrix(transformMatrix());
         passes_.append(std::move(pass));
+        return *rawPtr;
+    }
+
+    /// Removes the pass at index `i` and replaces it by a new pass of type
+    /// `TSketchPassClass`.
+    ///
+    /// Returns a reference to the pass.
+    ///
+    /// Throws `IndexError` if `i` is out of range `[0, numPasses() - 1]`.
+    ///
+    template<typename TSketchPassClass, typename... Args>
+    TSketchPassClass& replacePass(Int i, Args&&... args) {
+        auto pass = std::make_unique<TSketchPassClass>(std::forward<Args>(args)...);
+        TSketchPassClass* rawPtr = pass.get();
+        pass->setTransformMatrix(transformMatrix());
+        passes_[i] = std::move(pass);
+        return *rawPtr;
+    }
+
+    /// Removes the pass at index `i`.
+    ///
+    /// Throws `IndexError` if `i` is out of range `[0, numPasses() - 1]`.
+    ///
+    void removePass(Int i) {
+        passes_.removeAt(i);
+    }
+
+    /// Removes the pass at index `i` and all subsequent passes, if any.
+    ///
+    /// Throws `IndexError` if `i` is negative.
+    ///
+    /// Does nothing if `i >= numPasses()`.
+    ///
+    void removePassesFrom(Int i) {
+        if (i < numPasses()) {
+            passes_.resize(i);
+        }
     }
 
     /// Removes all sketch passes in this pipeline.
@@ -362,10 +402,27 @@ public:
         return passes_.length();
     }
 
+    /// Checks whether the pass at index `i` is of type `TSketchPassClass`.
+    ///
+    /// Returns false if `i` is out of range `[0, numPasses() - 1]`.
+    ///
+    template<typename TSketchPassClass>
+    bool isPass(Int i) {
+        if (i >= 0 && i < numPasses()) {
+            TSketchPassClass* p = dynamic_cast<TSketchPassClass*>(passes_[i].get());
+            return p != nullptr;
+        }
+        else {
+            return false;
+        }
+    }
+
     /// Returns the i-th sketch pass in this pipeline as a mutable reference.
     ///
     /// The returned reference is invalidated if the pass is removed
     /// from this pipeline (e.g., if `clear()` is called).
+    ///
+    /// Throws `IndexError` if `i` is out of range `[0, numPasses() - 1]`.
     ///
     // XXX: Use ObjPtr to make this safer and easier to bind in Python?
     //
@@ -377,6 +434,8 @@ public:
     ///
     /// The returned reference is invalidated if the pass is removed
     /// from this pipeline (e.g., if `clear()` is called).
+    ///
+    /// Throws `IndexError` if `i` is out of range `[0, numPasses() - 1]`.
     ///
     const SketchPass& operator[](Int i) const {
         return *passes_[i];

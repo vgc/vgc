@@ -143,6 +143,14 @@ public:
     RemoveDuplicatesPass();
     explicit RemoveDuplicatesPass(const RemoveDuplicatesSettings& settings);
 
+    /// Changes the settings for this pass.
+    ///
+    /// Throws `LogicError` if `output().numStablePoints()` is not zero,
+    /// as settings can affect the number of stable points and therefore should not
+    /// be called while points are being processed.
+    ///
+    void setSettings(const RemoveDuplicatesSettings& settings);
+
 protected:
     void doReset() override;
     void doUpdateFrom(const SketchPointBuffer& input, SketchPointBuffer& output) override;

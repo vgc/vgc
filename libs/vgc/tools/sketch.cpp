@@ -82,6 +82,19 @@ ui::BoolSetting* autoFill() {
     return setting.get();
 }
 
+ui::NumberSetting* duplicateThreshold() {
+    static ui::NumberSettingPtr setting = createDecimalNumberSetting(
+        ui::settings::session(),
+        "tools.sketch.experimental.duplicateThreshold",
+        "Duplicate Threshold",
+        1.5,  // default
+        0,    // min
+        1000, // max
+        10,   // numDecimals
+        0.1); // step
+    return setting.get();
+}
+
 ui::EnumSetting* sketchPreprocessing() {
     static ui::EnumSettingSharedPtr setting = ui::EnumSetting::create(
         ui::settings::session(),
@@ -127,24 +140,100 @@ SketchModule::SketchModule(CreateKey key, const ui::ModuleContext& context)
     : Module(key, context) {
 
     if (auto module = context.importModule<canvas::ExperimentalModule>().lock()) {
+        module->addWidget(*ui::NumberSettingEdit::create(options_::duplicateThreshold()));
         module->addWidget(*ui::EnumSettingEdit::create(options_::sketchPreprocessing()));
         module->addWidget(
             *ui::BoolSettingEdit::create(options_::reProcessExistingEdges()));
     }
 
-    options_::sketchPreprocessing()->valueChanged().connect(
-        onPreprocessingChanged_Slot());
+    options_::duplicateThreshold()->valueChanged().connect(onProcessingChanged_Slot());
+    options_::sketchPreprocessing()->valueChanged().connect(onProcessingChanged_Slot());
 }
 
 SketchModulePtr SketchModule::create(const ui::ModuleContext& context) {
     return core::createObject<SketchModule>(context);
 }
 
+namespace {
+
+template<typename TSketchPassClass>
+TSketchPassClass& replaceOrAdd(SketchPipeline& pipeline, Int i) {
+    if (i < pipeline.numPasses()) {
+        if (!pipeline.isPass<TSketchPassClass>(i)) {
+            return pipeline.replacePass<TSketchPassClass>(i);
+        }
+        else {
+            return static_cast<TSketchPassClass&>(pipeline[i]);
+        }
+    }
+    else {
+        return pipeline.addPass<TSketchPassClass>();
+    }
+}
+
+} // namespace
+
+void SketchModule::setupPipeline(SketchPipeline& pipeline) {
+
+    // Ensures that changing settings of sketch passes is allowed
+    pipeline.reset();
+
+    // Convenient index to track which sketch pass we are setting up
+    Int i = 0;
+
+    // Remove duplicates
+    RemoveDuplicatesPass& rd = replaceOrAdd<RemoveDuplicatesPass>(pipeline, i++);
+    RemoveDuplicatesSettings rds(options_::duplicateThreshold()->value());
+    rd.setSettings(rds);
+
+    // Preprocessing
+    switch (preprocessing()) {
+    case SketchPreprocessing::Default:
+        replaceOrAdd<QuadraticBlendPass>(pipeline, i++);
+        break;
+    case SketchPreprocessing::NoPreprocessing:
+        // We add an empty pass rather than not adding a pass
+        // to keep the memory cache of following passes
+        replaceOrAdd<EmptyPass>(pipeline, i++);
+        break;
+    case SketchPreprocessing::IndexGaussianSmoothing:
+        replaceOrAdd<SmoothingPass>(pipeline, i++);
+        break;
+    case SketchPreprocessing::DouglasPeucker:
+        replaceOrAdd<DouglasPeuckerPass>(pipeline, i++);
+        break;
+    case SketchPreprocessing::SingleLineSegmentWithFixedEndpoints:
+        replaceOrAdd<SingleLineSegmentWithFixedEndpointsPass>(pipeline, i++);
+        break;
+    case SketchPreprocessing::SingleLineSegmentWithFreeEndpoints:
+        replaceOrAdd<SingleLineSegmentWithFreeEndpointsPass>(pipeline, i++);
+        break;
+    case SketchPreprocessing::SingleQuadraticSegmentWithFixedEndpoints:
+        replaceOrAdd<SingleQuadraticSegmentWithFixedEndpointsPass>(pipeline, i++);
+        break;
+    case SketchPreprocessing::QuadraticSpline:
+        replaceOrAdd<QuadraticSplinePass>(pipeline, i++);
+        break;
+    case SketchPreprocessing::QuadraticBlend:
+        replaceOrAdd<QuadraticBlendPass>(pipeline, i++);
+        break;
+    }
+
+    // Smoothing
+    replaceOrAdd<SmoothingPass>(pipeline, i++);
+
+    // Transform from Widget to Scene coordinates
+    replaceOrAdd<TransformPass>(pipeline, i++);
+
+    // Remove any remaining pass
+    pipeline.removePassesFrom(i);
+}
+
 SketchPreprocessing SketchModule::preprocessing() const {
     return options_::sketchPreprocessing()->value().get<SketchPreprocessing>();
 }
 
-void SketchModule::onPreprocessingChanged_() {
+void SketchModule::onProcessingChanged_() {
     if (options_::reProcessExistingEdges()->value()) {
         reProcessExistingEdges_();
     }
@@ -174,42 +263,6 @@ double pressurePenWidth(double pressure) {
 //
 double roundInput(double x) {
     return core::roundToSignificantDigits(x, 7);
-}
-
-void setupPipeline(SketchPipeline& pipeline, SketchPreprocessing preprocessing) {
-    pipeline.clear();
-    pipeline.addPass<RemoveDuplicatesPass>();
-    switch (preprocessing) {
-    case SketchPreprocessing::Default:
-        pipeline.addPass<QuadraticBlendPass>();
-        break;
-    case SketchPreprocessing::NoPreprocessing:
-        // Nothing
-        break;
-    case SketchPreprocessing::IndexGaussianSmoothing:
-        pipeline.addPass<SmoothingPass>();
-        break;
-    case SketchPreprocessing::DouglasPeucker:
-        pipeline.addPass<DouglasPeuckerPass>();
-        break;
-    case SketchPreprocessing::SingleLineSegmentWithFixedEndpoints:
-        pipeline.addPass<SingleLineSegmentWithFixedEndpointsPass>();
-        break;
-    case SketchPreprocessing::SingleLineSegmentWithFreeEndpoints:
-        pipeline.addPass<SingleLineSegmentWithFreeEndpointsPass>();
-        break;
-    case SketchPreprocessing::SingleQuadraticSegmentWithFixedEndpoints:
-        pipeline.addPass<SingleQuadraticSegmentWithFixedEndpointsPass>();
-        break;
-    case SketchPreprocessing::QuadraticSpline:
-        pipeline.addPass<QuadraticSplinePass>();
-        break;
-    case SketchPreprocessing::QuadraticBlend:
-        pipeline.addPass<QuadraticBlendPass>();
-        break;
-    }
-    pipeline.addPass<SmoothingPass>();
-    pipeline.addPass<TransformPass>();
 }
 
 // Sets the SketchPoint buffer and the transform matrix from saved input points.
@@ -320,8 +373,7 @@ void SketchModule::reProcessExistingEdges_() {
     // post-processing step to make these match.
     //
     SketchPointBuffer inputPoints;
-    SketchPipeline pipeline;
-    setupPipeline(pipeline, preprocessing());
+    setupPipeline(pipeline_);
 
     // Create undo group
     static core::StringId undoGroupName("Re-Fit Existing Edges");
@@ -338,12 +390,12 @@ void SketchModule::reProcessExistingEdges_() {
         if (setFromSavedInputPoints(inputPoints, transform, item)) {
 
             // Setup and apply passes
-            pipeline.reset();
-            pipeline.setTransformMatrix(transform);
-            pipeline.updateFrom(inputPoints);
+            pipeline_.reset();
+            pipeline_.setTransformMatrix(transform);
+            pipeline_.updateFrom(inputPoints);
 
             // Save result to DOM
-            updateEdgeGeometry(pipeline.output(), item);
+            updateEdgeGeometry(pipeline_.output(), item);
         }
     });
     workspace->sync();
@@ -1172,13 +1224,8 @@ void Sketch::startCurve_(ui::MouseEvent* event) {
     edgeItemId_ = domEdge->internalId();
 
     // Configure sketch passes
-    SketchPreprocessing preprocessing = SketchPreprocessing::Default;
     if (auto module = sketchModule_.lock()) {
-        preprocessing = module->preprocessing();
-    }
-    if (!lastPreprocessing_ || *lastPreprocessing_ != preprocessing) {
-        lastPreprocessing_ = preprocessing;
-        setupPipeline(pipeline_, preprocessing);
+        module->setupPipeline(pipeline_);
     }
 
     // Append start point to geometry
