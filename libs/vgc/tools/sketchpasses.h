@@ -251,9 +251,49 @@ private:
     core::DoubleArray widthsBuffer_;
 };
 
+/// \class vgc::tools::DouglasPeuckerSettings
+/// \brief Settings for the DouglasPeuckerPass
+///
+class VGC_TOOLS_API DouglasPeuckerSettings {
+public:
+    /// Creates a `DouglasPeuckerSettings` with default settings.
+    ///
+    DouglasPeuckerSettings() {
+    }
+
+    /// How much to offset each selected sample towards the line segment of the
+    /// previous iteration, as a ratio of the computed threshold (see
+    /// implementation notes).
+    ///
+    double offset() const {
+        return offset_;
+    };
+
+    /// Set the `offset()` value.
+    ///
+    void setOffset(double offset) {
+        offset_ = offset;
+    };
+
+private:
+    double offset_ = 0.8;
+};
+
 class VGC_TOOLS_API DouglasPeuckerPass : public SketchPass {
+public:
+    /// Changes the settings for this pass.
+    ///
+    /// Throws `LogicError` if `output().numStablePoints()` is not zero,
+    /// as settings can affect the number of stable points and therefore should not
+    /// be called while points are being processed.
+    ///
+    void setSettings(const DouglasPeuckerSettings& settings);
+
 protected:
     void doUpdateFrom(const SketchPointBuffer& input, SketchPointBuffer& output) override;
+
+private:
+    DouglasPeuckerSettings settings_;
 };
 
 class VGC_TOOLS_API SingleLineSegmentWithFixedEndpointsPass : public SketchPass {

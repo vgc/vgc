@@ -141,6 +141,19 @@ ui::NumberSetting* samplingLength() {
     return setting.get();
 }
 
+ui::NumberSetting* douglasPeuckerOffset() {
+    static ui::NumberSettingPtr setting = createDecimalNumberSetting(
+        ui::settings::session(),
+        "tools.sketch.experimental.douglasPeuckerOffset",
+        "Douglas-Peucker Offset",
+        0.8,   // default
+        -1000, // min
+        1000,  // max
+        10,    // numDecimals
+        0.1);  // step
+    return setting.get();
+}
+
 ui::NumberSetting* widthSlopeLimit() {
     static ui::NumberSettingPtr setting = createDecimalNumberSetting(
         ui::settings::session(),
@@ -194,6 +207,20 @@ VGC_DEFINE_ENUM( //
     (QuadraticSpline, "Quadratic Spline"),
     (QuadraticBlend, "Quadratic Blend"))
 
+namespace {
+
+void addPreprocessingSetting(
+    canvas::ExperimentalModule& module,
+    core::Array<ui::WidgetWeakPtr>& settings,
+    ui::NumberSetting* setting) {
+
+    auto edit = ui::NumberSettingEdit::create(setting);
+    settings.append(edit);
+    module.addWidget(*edit);
+}
+
+} // namespace
+
 SketchModule::SketchModule(CreateKey key, const ui::ModuleContext& context)
     : Module(key, context) {
 
@@ -203,11 +230,22 @@ SketchModule::SketchModule(CreateKey key, const ui::ModuleContext& context)
     using ui::NumberSettingEdit;
 
     if (auto module = context.importModule<canvas::ExperimentalModule>().lock()) {
+
         module->addWidget(*NumberSettingEdit::create(duplicateThreshold()));
         module->addWidget(*EnumSettingEdit::create(sketchPreprocessing()));
-        auto samplingLengthEdit = NumberSettingEdit::create(samplingLength());
-        samplingLengthEdit_ = samplingLengthEdit;
-        module->addWidget(*samplingLengthEdit);
+
+        // Douglas Peucker settings
+        {
+            auto& settings = preprocessingSettings_[SketchPreprocessing::DouglasPeucker];
+            addPreprocessingSetting(*module, settings, douglasPeuckerOffset());
+        }
+
+        // Quadratic Blend settings
+        {
+            auto& settings = preprocessingSettings_[SketchPreprocessing::QuadraticBlend];
+            addPreprocessingSetting(*module, settings, samplingLength());
+        }
+
         module->addWidget(*NumberSettingEdit::create(lineSmoothing()));
         module->addWidget(*NumberSettingEdit::create(widthSlopeLimit()));
         module->addWidget(*BoolSettingEdit::create(improveEndWidths()));
@@ -220,6 +258,7 @@ SketchModule::SketchModule(CreateKey key, const ui::ModuleContext& context)
     duplicateThreshold()->valueChanged().connect(onProcessingChanged_Slot());
     sketchPreprocessing()->valueChanged().connect(onProcessingChanged_Slot());
     sketchPreprocessing()->valueChanged().connect(onPreprocessingChanged_Slot());
+    douglasPeuckerOffset()->valueChanged().connect(onProcessingChanged_Slot());
     samplingLength()->valueChanged().connect(onProcessingChanged_Slot());
     lineSmoothing()->valueChanged().connect(onProcessingChanged_Slot());
     widthSmoothing()->valueChanged().connect(onProcessingChanged_Slot());
@@ -276,9 +315,13 @@ void SketchModule::setupPipeline(SketchPipeline& pipeline) {
         // to keep the memory cache of following passes
         replaceOrAdd<EmptyPass>(pipeline, i++);
         break;
-    case SketchPreprocessing::DouglasPeucker:
-        replaceOrAdd<DouglasPeuckerPass>(pipeline, i++);
+    case SketchPreprocessing::DouglasPeucker: {
+        DouglasPeuckerPass& pass = replaceOrAdd<DouglasPeuckerPass>(pipeline, i++);
+        DouglasPeuckerSettings settings;
+        settings.setOffset(options_::douglasPeuckerOffset()->value());
+        pass.setSettings(settings);
         break;
+    }
     case SketchPreprocessing::SingleLineSegmentWithFixedEndpoints:
         replaceOrAdd<SingleLineSegmentWithFixedEndpointsPass>(pipeline, i++);
         break;
@@ -329,12 +372,21 @@ SketchPreprocessing SketchModule::preprocessing() const {
 }
 
 void SketchModule::onPreprocessingChanged_() {
-    if (auto samplingLengthEdit = samplingLengthEdit_.lock()) {
-        if (preprocessing() == SketchPreprocessing::QuadraticBlend) {
-            samplingLengthEdit->show();
+    SketchPreprocessing preprocessing = this->preprocessing();
+    for (const auto& [key, widgetWeakPtrArray] : preprocessingSettings_) {
+        if (key == preprocessing) {
+            for (const auto& widget_ : widgetWeakPtrArray) {
+                if (auto widget = widget_.lock()) {
+                    widget->show();
+                }
+            }
         }
         else {
-            samplingLengthEdit->hide();
+            for (const auto& widget_ : widgetWeakPtrArray) {
+                if (auto widget = widget_.lock()) {
+                    widget->hide();
+                }
+            }
         }
     }
 }

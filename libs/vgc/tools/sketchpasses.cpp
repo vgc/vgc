@@ -707,16 +707,18 @@ namespace {
 // If the current segment does not pass the test, then the farthest samples is
 // selected for the next iteration.
 //
-// In some variants of this algorithm, we may also slighly move the position of
-// selected samples towards the segment AB (e.g., by 0.75 * threshold), which
-// seems to empirically give nicer results in some circumstances.
+// Finally, it is possible to provide an `offset` to the algorithm. This is
+// used to slightly move the position of selected samples towards the segment
+// AB (by offset * threshold), which tends to give nicer results with an offset
+// value of around 0.8.
 //
 Int douglasPeucker(
     core::Span<SketchPoint> points,
     core::IntArray& indices,
     Int intervalStart,
     double thresholdCoefficient,
-    double tolerance = 1e-10) {
+    double offset,
+    double tolerance = 0) {
 
     Int i = intervalStart;
     Int endIndex = indices[i + 1];
@@ -784,7 +786,7 @@ Int douglasPeucker(
                     n = -n;
                 }
                 // TODO: scale delta based on some data to prevent shrinkage?
-                double delta = 0.8 * threshold;
+                double delta = offset * threshold;
                 SketchPoint& p = points[farthestPointIndex];
                 p.setPosition(p.position() - delta * n);
             }
@@ -797,6 +799,11 @@ Int douglasPeucker(
 }
 
 } // namespace
+
+void DouglasPeuckerPass::setSettings(const DouglasPeuckerSettings& settings) {
+    checkCanChangeSettings(*this);
+    settings_ = settings;
+}
 
 void DouglasPeuckerPass::doUpdateFrom(
     const SketchPointBuffer& input,
@@ -814,7 +821,8 @@ void DouglasPeuckerPass::doUpdateFrom(
 
     core::Span<SketchPoint> span = inputPoints;
     double thresholdCoefficient = 1.0;
-    douglasPeucker(span, indices, intervalStart, thresholdCoefficient);
+    douglasPeucker(
+        span, indices, intervalStart, thresholdCoefficient, settings_.offset());
 
     Int numSimplifiedPoints = indices.length();
     output.resize(numSimplifiedPoints);
