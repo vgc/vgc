@@ -128,6 +128,19 @@ ui::EnumSetting* sketchPreprocessing() {
     return setting.get();
 }
 
+ui::NumberSetting* samplingLength() {
+    static ui::NumberSettingPtr setting = createDecimalNumberSetting(
+        ui::settings::session(),
+        "tools.sketch.experimental.samplingLength",
+        "Sampling Length",
+        3.0,  // default
+        0.1,  // min
+        1000, // max
+        10,   // numDecimals
+        0.1); // step
+    return setting.get();
+}
+
 ui::NumberSetting* widthSlopeLimit() {
     static ui::NumberSettingPtr setting = createDecimalNumberSetting(
         ui::settings::session(),
@@ -165,6 +178,8 @@ bool isAutoFillEnabled() {
     return options_::autoFill()->value();
 }
 
+SketchPreprocessing defaultPreprocessing = SketchPreprocessing::QuadraticBlend;
+
 } // namespace
 
 VGC_DEFINE_ENUM( //
@@ -182,22 +197,34 @@ VGC_DEFINE_ENUM( //
 SketchModule::SketchModule(CreateKey key, const ui::ModuleContext& context)
     : Module(key, context) {
 
+    using namespace options_;
+    using ui::BoolSettingEdit;
+    using ui::EnumSettingEdit;
+    using ui::NumberSettingEdit;
+
     if (auto module = context.importModule<canvas::ExperimentalModule>().lock()) {
-        module->addWidget(*ui::NumberSettingEdit::create(options_::duplicateThreshold()));
-        module->addWidget(*ui::EnumSettingEdit::create(options_::sketchPreprocessing()));
-        module->addWidget(*ui::NumberSettingEdit::create(options_::lineSmoothing()));
-        module->addWidget(*ui::NumberSettingEdit::create(options_::widthSlopeLimit()));
-        module->addWidget(*ui::BoolSettingEdit::create(options_::improveEndWidths()));
-        module->addWidget(
-            *ui::BoolSettingEdit::create(options_::reProcessExistingEdges()));
+        module->addWidget(*NumberSettingEdit::create(duplicateThreshold()));
+        module->addWidget(*EnumSettingEdit::create(sketchPreprocessing()));
+        auto samplingLengthEdit = NumberSettingEdit::create(samplingLength());
+        samplingLengthEdit_ = samplingLengthEdit;
+        module->addWidget(*samplingLengthEdit);
+        module->addWidget(*NumberSettingEdit::create(lineSmoothing()));
+        module->addWidget(*NumberSettingEdit::create(widthSlopeLimit()));
+        module->addWidget(*BoolSettingEdit::create(improveEndWidths()));
+        module->addWidget(*BoolSettingEdit::create(reProcessExistingEdges()));
+
+        // Show/hide conditionnal widgets
+        onPreprocessingChanged_();
     }
 
-    options_::duplicateThreshold()->valueChanged().connect(onProcessingChanged_Slot());
-    options_::sketchPreprocessing()->valueChanged().connect(onProcessingChanged_Slot());
-    options_::lineSmoothing()->valueChanged().connect(onProcessingChanged_Slot());
-    options_::widthSmoothing()->valueChanged().connect(onProcessingChanged_Slot());
-    options_::widthSlopeLimit()->valueChanged().connect(onProcessingChanged_Slot());
-    options_::improveEndWidths()->valueChanged().connect(onProcessingChanged_Slot());
+    duplicateThreshold()->valueChanged().connect(onProcessingChanged_Slot());
+    sketchPreprocessing()->valueChanged().connect(onProcessingChanged_Slot());
+    sketchPreprocessing()->valueChanged().connect(onPreprocessingChanged_Slot());
+    samplingLength()->valueChanged().connect(onProcessingChanged_Slot());
+    lineSmoothing()->valueChanged().connect(onProcessingChanged_Slot());
+    widthSmoothing()->valueChanged().connect(onProcessingChanged_Slot());
+    widthSlopeLimit()->valueChanged().connect(onProcessingChanged_Slot());
+    improveEndWidths()->valueChanged().connect(onProcessingChanged_Slot());
 }
 
 SketchModulePtr SketchModule::create(const ui::ModuleContext& context) {
@@ -232,14 +259,17 @@ void SketchModule::setupPipeline(SketchPipeline& pipeline) {
     Int i = 0;
 
     // Remove duplicates
-    RemoveDuplicatesPass& rd = replaceOrAdd<RemoveDuplicatesPass>(pipeline, i++);
-    RemoveDuplicatesSettings rds(options_::duplicateThreshold()->value());
-    rd.setSettings(rds);
+    {
+        RemoveDuplicatesPass& pass = replaceOrAdd<RemoveDuplicatesPass>(pipeline, i++);
+        RemoveDuplicatesSettings settings;
+        settings.setDistanceThreshold(options_::duplicateThreshold()->value());
+        pass.setSettings(settings);
+    }
 
     // Preprocessing
     switch (preprocessing()) {
     case SketchPreprocessing::Default:
-        replaceOrAdd<QuadraticBlendPass>(pipeline, i++);
+        // Cannot happen, see implementation of preprocessing()
         break;
     case SketchPreprocessing::NoPreprocessing:
         // We add an empty pass rather than not adding a pass
@@ -261,19 +291,25 @@ void SketchModule::setupPipeline(SketchPipeline& pipeline) {
     case SketchPreprocessing::QuadraticSpline:
         replaceOrAdd<QuadraticSplinePass>(pipeline, i++);
         break;
-    case SketchPreprocessing::QuadraticBlend:
-        replaceOrAdd<QuadraticBlendPass>(pipeline, i++);
+    case SketchPreprocessing::QuadraticBlend: {
+        QuadraticBlendPass& pass = replaceOrAdd<QuadraticBlendPass>(pipeline, i++);
+        experimental::BlendFitSettings settings;
+        settings.ds = options_::samplingLength()->value();
+        pass.setSettings(settings);
         break;
+    }
     }
 
     // Smoothing
-    SmoothingPass& sp = replaceOrAdd<SmoothingPass>(pipeline, i++);
-    SmoothingSettings sps;
-    sps.setLineSmoothing(options_::lineSmoothing()->intValue());
-    sps.setWidthSmoothing(options_::widthSmoothing()->intValue());
-    sps.setWidthSlopeLimit(options_::widthSlopeLimit()->value());
-    sps.setImproveEndWidths(options_::improveEndWidths()->value());
-    sp.setSettings(sps);
+    {
+        SmoothingPass& pass = replaceOrAdd<SmoothingPass>(pipeline, i++);
+        SmoothingSettings settings;
+        settings.setLineSmoothing(options_::lineSmoothing()->intValue());
+        settings.setWidthSmoothing(options_::widthSmoothing()->intValue());
+        settings.setWidthSlopeLimit(options_::widthSlopeLimit()->value());
+        settings.setImproveEndWidths(options_::improveEndWidths()->value());
+        pass.setSettings(settings);
+    }
 
     // Transform from Widget to Scene coordinates
     replaceOrAdd<TransformPass>(pipeline, i++);
@@ -283,10 +319,28 @@ void SketchModule::setupPipeline(SketchPipeline& pipeline) {
 }
 
 SketchPreprocessing SketchModule::preprocessing() const {
-    return options_::sketchPreprocessing()->value().get<SketchPreprocessing>();
+    auto res = options_::sketchPreprocessing()->value().get<SketchPreprocessing>();
+    if (res == SketchPreprocessing::Default) {
+        return defaultPreprocessing;
+    }
+    else {
+        return res;
+    }
+}
+
+void SketchModule::onPreprocessingChanged_() {
+    if (auto samplingLengthEdit = samplingLengthEdit_.lock()) {
+        if (preprocessing() == SketchPreprocessing::QuadraticBlend) {
+            samplingLengthEdit->show();
+        }
+        else {
+            samplingLengthEdit->hide();
+        }
+    }
 }
 
 void SketchModule::onProcessingChanged_() {
+
     if (options_::reProcessExistingEdges()->value()) {
         reProcessExistingEdges_();
     }

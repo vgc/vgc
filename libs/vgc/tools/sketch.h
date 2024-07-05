@@ -88,6 +88,11 @@ public:
 private:
     SketchPipeline pipeline_;
 
+    ui::WidgetWeakPtr samplingLengthEdit_;
+
+    void onPreprocessingChanged_();
+    VGC_SLOT(onPreprocessingChanged_)
+
     void onProcessingChanged_();
     VGC_SLOT(onProcessingChanged_)
 
