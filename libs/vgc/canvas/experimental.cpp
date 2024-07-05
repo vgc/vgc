@@ -89,6 +89,8 @@ ExperimentalPanel::ExperimentalPanel(CreateKey key, const ui::PanelContext& cont
         }
         module->widgetAdded().connect(onModuleWidgetAdded_Slot());
     }
+
+    aboutToBeDestroyed().connect(onAboutToBeDestroyed_Slot());
 }
 
 ExperimentalPanelPtr ExperimentalPanel::create(const ui::PanelContext& context) {
@@ -98,6 +100,21 @@ ExperimentalPanelPtr ExperimentalPanel::create(const ui::PanelContext& context) 
 void ExperimentalPanel::onModuleWidgetAdded_(ui::Widget& widget) {
     if (auto layout = layout_.lock()) {
         layout->addChild(&widget);
+    }
+}
+
+// Work around the current behavior of Object: upon destruction, it recursively
+// destroys its children, even if their sharedCount is not zero. This is
+// because historically, we didn't have the distinction between shared/weak
+// ptr: an ObjPtr to a root object was considered a shared ptr, while an ObjPtr
+// to a child object was considered a weak ptr. We are transitionning away from
+// this model, but it takes time.
+//
+void ExperimentalPanel::onAboutToBeDestroyed_() {
+    if (auto layout = layout_.lock()) {
+        while (layout->lastChild()) {
+            layout->lastChild()->reparent(nullptr);
+        }
     }
 }
 
