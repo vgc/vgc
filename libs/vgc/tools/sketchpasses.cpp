@@ -3212,6 +3212,11 @@ QuadraticBlendPass::QuadraticBlendPass(const experimental::BlendFitSettings& set
     VGC_ASSERT(settings_.maxFitPoints >= settings_.minFitPoints);
 }
 
+void QuadraticBlendPass::setSettings(const experimental::BlendFitSettings& settings) {
+    checkCanChangeSettings(*this);
+    settings_ = settings;
+}
+
 void QuadraticBlendPass::doReset() {
     fits_.clear();
     numStableFits_ = 0;
