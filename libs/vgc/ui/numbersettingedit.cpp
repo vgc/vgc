@@ -28,10 +28,10 @@ NumberSettingEdit::NumberSettingEdit(CreateKey key, NumberSettingPtr setting)
     addStyleClass(strings::NumberSettingEdit);
 
     numberEdit_ = createChild<NumberEdit>();
+    numberEdit_->setPrecision(setting->precision()); // must be before min/max
     numberEdit_->setStep(setting->step());
     numberEdit_->setMinimum(setting->minimum());
     numberEdit_->setMaximum(setting->maximum());
-    numberEdit_->setPrecision(setting->precision());
     numberEdit_->setValue(setting->value());
     numberEdit_->valueChanged().connect(onNumberEditValueChangedSlot_());
 
