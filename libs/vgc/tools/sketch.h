@@ -39,9 +39,6 @@ enum class SketchPreprocessing : Int8 {
     // The input points are used as is as control points.
     NoPreprocessing,
 
-    // A gaussian smoothing is applied to the input points.
-    IndexGaussianSmoothing,
-
     // The Douglas-Peucker algorithm is used to discard some of the input
     // points.
     DouglasPeucker,

@@ -171,7 +171,6 @@ VGC_DEFINE_ENUM( //
     SketchPreprocessing,
     (Default, "Default (Quadratic Blend)"),
     (NoPreprocessing, "No Preprocessing"),
-    (IndexGaussianSmoothing, "Index-Based Gaussian Smoothing"),
     (DouglasPeucker, "Douglas-Peucker"),
     (SingleLineSegmentWithFixedEndpoints, "Single Line Segment (Fixed Endpoints)"),
     (SingleLineSegmentWithFreeEndpoints, "Single Line Segment (Free Endpoints)"),
@@ -246,9 +245,6 @@ void SketchModule::setupPipeline(SketchPipeline& pipeline) {
         // We add an empty pass rather than not adding a pass
         // to keep the memory cache of following passes
         replaceOrAdd<EmptyPass>(pipeline, i++);
-        break;
-    case SketchPreprocessing::IndexGaussianSmoothing:
-        replaceOrAdd<SmoothingPass>(pipeline, i++);
         break;
     case SketchPreprocessing::DouglasPeucker:
         replaceOrAdd<DouglasPeuckerPass>(pipeline, i++);
