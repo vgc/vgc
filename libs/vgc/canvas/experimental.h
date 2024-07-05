@@ -93,6 +93,9 @@ private:
 
     void onModuleWidgetAdded_(ui::Widget& widget);
     VGC_SLOT(onModuleWidgetAdded_)
+
+    void onAboutToBeDestroyed_();
+    VGC_SLOT(onAboutToBeDestroyed_)
 };
 
 } // namespace vgc::canvas
