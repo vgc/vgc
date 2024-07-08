@@ -17,6 +17,8 @@
 #ifndef VGC_TOOLS_SKETCH_H
 #define VGC_TOOLS_SKETCH_H
 
+#include <map>
+
 #include <vgc/canvas/canvastool.h>
 #include <vgc/core/array.h>
 #include <vgc/core/color.h>
@@ -88,7 +90,7 @@ public:
 private:
     SketchPipeline pipeline_;
 
-    ui::WidgetWeakPtr samplingLengthEdit_;
+    std::map<SketchPreprocessing, core::Array<ui::WidgetWeakPtr>> preprocessingSettings_;
 
     void onPreprocessingChanged_();
     VGC_SLOT(onPreprocessingChanged_)
