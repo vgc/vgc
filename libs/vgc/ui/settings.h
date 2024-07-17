@@ -261,6 +261,16 @@ private:
     std::string filePath_;
 };
 
+VGC_DECLARE_OBJECT(NumberSetting);
+
+namespace settings {
+
+/// User-specified scale to be applied to all UI components.
+///
+VGC_UI_API ui::NumberSetting& scale();
+
+} // namespace settings
+
 } // namespace vgc::ui
 
 #endif // VGC_UI_SETTINGS_H

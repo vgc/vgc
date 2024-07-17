@@ -221,6 +221,7 @@ private:
     bool skipNextMouseMove_ = false;
     geometry::Vec2f mousePositionOnMousePress_;
     float deltaPositionX_ = 0;
+    style::Metrics metricsOnMousePress_;
 
     // Text mode
     void setTextFromValue_();

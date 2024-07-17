@@ -18,7 +18,9 @@
 
 #include <vgc/ui/boolsettingedit.h>
 #include <vgc/ui/column.h>
+#include <vgc/ui/numbersettingedit.h>
 #include <vgc/ui/panelcontext.h>
+#include <vgc/ui/settings.h>
 #include <vgc/ui/strings.h>
 
 namespace vgc::canvas {
@@ -55,6 +57,7 @@ ui::BoolSetting& showInputSketchPoints() {
 ExperimentalModule::ExperimentalModule(CreateKey key, const ui::ModuleContext& context)
     : Module(key, context) {
 
+    addWidget(*ui::NumberSettingEdit::create(&ui::settings::scale()));
     addWidget(*ui::BoolSettingEdit::create(&experimental::saveInputSketchPoints()));
     addWidget(*ui::BoolSettingEdit::create(&experimental::showInputSketchPoints()));
 }

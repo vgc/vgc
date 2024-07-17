@@ -32,6 +32,7 @@
 #include <vgc/ui/cursor.h>
 #include <vgc/ui/logcategories.h>
 #include <vgc/ui/module.h>
+#include <vgc/ui/numbersetting.h>
 #include <vgc/ui/qtutil.h>
 
 #include <vgc/ui/detail/qopenglengine.h>
@@ -143,6 +144,9 @@ Window::Window(CreateKey key, const WidgetPtr& widget)
     widget_->widgetAddedToTree().connect(onWidgetAddedToTreeSlot_());
     widget_->widgetRemovedFromTree().connect(onWidgetRemovedFromTreeSlot_());
     application()->moduleCreated().connect(onModuleCreatedSlot_());
+
+    uiScale_ = static_cast<float>(ui::settings::scale().value());
+    ui::settings::scale().valueChanged().connect(onScaleChangedSlot_());
 
     widget_->window_ = this;
 
@@ -622,7 +626,7 @@ QVariant Window::inputMethodQuery(Qt::InputMethodQuery query) {
 
 bool Window::updateScreenScaleRatio_() {
 
-    // Update DPI scaling info. Examples of hiDpi configurations:
+    // Update OS-provided DPI scaling info. Examples of hiDpi configurations:
     //
     //                     macOS     Windows    Kubuntu/X11
     //                    (Retina)   at 125%     at 125%
@@ -645,7 +649,7 @@ bool Window::updateScreenScaleRatio_() {
     devicePixelRatio_ = static_cast<float>(devicePixelRatio());
 
     // Compute suitable screen scale ratio based on queried info
-    float s = logicalDotsPerInch_ * devicePixelRatio_ / detail::baseLogicalDpi;
+    float s = uiScale_ * logicalDotsPerInch_ * devicePixelRatio_ / detail::baseLogicalDpi;
 
     // Update style metrics if changed
     if (screenScaleRatio_ != s) {
@@ -1333,6 +1337,12 @@ void Window::onModuleCreated_(Module* module) {
     for (Action& action : module->actions()) {
         addShortcut_(&action);
     }
+}
+
+void Window::onScaleChanged_() {
+    uiScale_ = static_cast<float>(ui::settings::scale().value());
+    updateScreenScaleRatio_();
+    requestUpdate();
 }
 
 } // namespace vgc::ui

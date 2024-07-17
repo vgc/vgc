@@ -23,6 +23,7 @@
 #include <QStandardPaths>
 
 #include <vgc/ui/logcategories.h>
+#include <vgc/ui/numbersetting.h>
 #include <vgc/ui/qtutil.h>
 
 namespace vgc::ui {
@@ -262,5 +263,29 @@ Settings::getOrSetStringValue(std::string_view key, std::string_view fallback) {
 void Settings::onDestroyed() {
     writeToFile();
 }
+
+namespace settings {
+
+// Note: using a minimum less than 0.5 would be dangerous, since users might
+// otherwise accidentally drag the "UI Scale" number edit to a low value and
+// not be able to find it again to increase it back to a more reasonable value.
+// Similarly, while a large maximum is sometimes useful (e.g., debug font
+// rendering), a value too large can also make it impossible to find/edit the
+// "UI Scale" setting.
+//
+ui::NumberSetting& scale() {
+    static ui::NumberSettingPtr setting = createDecimalNumberSetting(
+        ui::settings::preferences(),
+        "ui.scale",
+        "UI Scale",
+        1.0,   // default
+        0.5,   // min
+        4,     // max
+        10,    // num decimals
+        0.01); // step
+    return *setting;
+}
+
+} // namespace settings
 
 } // namespace vgc::ui

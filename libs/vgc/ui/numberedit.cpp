@@ -190,7 +190,7 @@ bool NumberEdit::onMouseMove(MouseMoveEvent* event) {
 
     using namespace style::literals;
     constexpr style::Length lengthPerStep = 4_dp;
-    float pxPerStep = lengthPerStep.toPx(styleMetrics());
+    float pxPerStep = lengthPerStep.toPx(metricsOnMousePress_);
 
     if (std::abs(deltaPositionX_) > pxPerStep) {
         isDragEpsilonReached_ = true;
@@ -252,7 +252,11 @@ bool NumberEdit::onMousePress(MousePressEvent* event) {
         isDragInfiniteMode_ = false;
     }
 
-    // Initialize dragging
+    // Initialize dragging.
+    //
+    // Note that saving the metrics on press is important in case they change
+    // during dragging, e.g., if the current NumberEdit is "UI Scale".
+    //
     if (isDragInfiniteMode_) {
         mousePositionOnMousePress_ = globalCursorPosition();
         deltaPositionX_ = 0;
@@ -262,6 +266,7 @@ bool NumberEdit::onMousePress(MousePressEvent* event) {
     else {
         mousePositionOnMousePress_ = event->position();
     }
+    metricsOnMousePress_ = styleMetrics();
 
     return true;
 }
