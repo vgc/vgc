@@ -285,6 +285,7 @@ private:
     float logicalDotsPerInch_ = detail::baseLogicalDpi;
     float devicePixelRatio_ = 1.0;
     float screenScaleRatio_ = 1.0;
+    float uiScale_ = 1.0;
 
     graphics::EnginePtr engine_;
     graphics::SwapChainPtr swapChain_;
@@ -339,6 +340,7 @@ private:
     void onActionRemoved_(Action* action);
     void onActionAboutToBeDestroyed_(Object* object);
     void onModuleCreated_(Module* module);
+    void onScaleChanged_();
 
     VGC_SLOT(onRepaintRequestedSlot_, onRepaintRequested_);
     VGC_SLOT(onMouseCaptureStartedSlot_, onMouseCaptureStarted_);
@@ -353,6 +355,7 @@ private:
     VGC_SLOT(onActionRemovedSlot_, onActionRemoved_);
     VGC_SLOT(onActionAboutToBeDestroyedSlot_, onActionAboutToBeDestroyed_);
     VGC_SLOT(onModuleCreatedSlot_, onModuleCreated_);
+    VGC_SLOT(onScaleChangedSlot_, onScaleChanged_);
 
     Int debugIndent_ = 0;
     core::Stopwatch debugStopwatch_;
