@@ -27,6 +27,7 @@
 #include <vgc/core/stringid.h>
 #include <vgc/geometry/curve.h>
 #include <vgc/graphics/strings.h>
+#include <vgc/tools/autocut.h>
 #include <vgc/tools/logcategories.h>
 #include <vgc/ui/boolsettingedit.h>
 #include <vgc/ui/column.h>
@@ -97,6 +98,12 @@ ui::NumberSetting* snapFalloff() {
         100,
         0,
         1000);
+    return setting.get();
+}
+
+ui::BoolSetting* autoCut() {
+    static ui::BoolSettingPtr setting = ui::BoolSetting::create(
+        ui::settings::session(), "tools.sketch.autoCut", "Auto-Cut", false);
     return setting.get();
 }
 
@@ -186,6 +193,10 @@ ui::BoolSetting* reProcessExistingEdges() {
 }
 
 } // namespace options_
+
+bool isAutoCutEnabled() {
+    return options_::autoCut()->value();
+}
 
 bool isAutoFillEnabled() {
     return options_::autoFill()->value();
@@ -595,6 +606,7 @@ ui::WidgetPtr Sketch::doCreateOptionsWidget() const {
     res->createChild<ui::BoolSettingEdit>(options_::snapping());
     res->createChild<ui::NumberSettingEdit>(options_::snapDistance());
     res->createChild<ui::NumberSettingEdit>(options_::snapFalloff());
+    res->createChild<ui::BoolSettingEdit>(options_::autoCut());
     res->createChild<ui::BoolSettingEdit>(options_::autoFill());
     return res;
 }
@@ -1627,6 +1639,11 @@ void Sketch::finishCurve_(ui::MouseEvent* event) {
                 }
             }
         }
+    }
+
+    if (isAutoCutEnabled()) {
+        AutoCutParams params;
+        autoCut(params);
     }
 
     resetData_();
