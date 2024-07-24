@@ -460,16 +460,8 @@ void FontLibrary::onDestroyed() {
 namespace {
 
 std::string getDefaultFontPath() {
-
-    std::string fontPath = core::resourcePath("graphics/fonts/Roboto/Roboto-Regular.ttf");
-
-#ifdef VGC_OS_MACOS
-    std::string appleFont = "/Library/Fonts/SF-Pro-Text-Medium.otf";
-    if (core::fileExists(appleFont)) {
-        fontPath = appleFont;
-    }
-#endif
-
+    std::string fontPath =
+        core::resourcePath("graphics/fonts/Inter/static/Inter-Medium.ttf");
     return fontPath;
 }
 

@@ -29,9 +29,13 @@ from vgc.graphics import (
     SizedGlyph
 )
 
+# The "Glyph Name" for the character 'A' with different fonts
+aGlyphName_MostFonts = "A"
+aGlyphName_Inter = "uni0041"
+aGlyphName = aGlyphName_Inter
 
 def someFontPath():
-    return resourcePath("graphics/fonts/SourceSansPro/TTF/SourceSansPro-Regular.ttf")
+    return resourcePath("graphics/fonts/Inter/static/Inter-Medium.ttf")
 
 
 def someFont(library):
@@ -100,7 +104,7 @@ class TestFont(unittest.TestCase):
         library = FontLibrary()
         font = someFont(library)
         glyph = font.getGlyphFromCodePoint(0x41)
-        self.assertEqual(glyph.name, "A")
+        self.assertEqual(glyph.name, aGlyphName)
 
     def testGetGlyphFromCodePointZero(self):
         library = FontLibrary()
@@ -114,7 +118,7 @@ class TestFont(unittest.TestCase):
         index = font.getGlyphIndexFromCodePoint(0x41)
         glyph = font.getGlyphFromIndex(index)
         self.assertEqual(glyph.index, index)
-        self.assertEqual(glyph.name, "A")
+        self.assertEqual(glyph.name, aGlyphName)
 
     def testGetGlyphFromIndexZero(self):
         library = FontLibrary()
@@ -160,7 +164,7 @@ class TestGlyph(unittest.TestCase):
         library = FontLibrary()
         font = someFont(library)
         glyph = someGlyph(font)
-        self.assertEqual(glyph.name, "A")
+        self.assertEqual(glyph.name, aGlyphName)
 
 
 class TestSizedFont(unittest.TestCase):
@@ -199,7 +203,7 @@ class TestSizedFont(unittest.TestCase):
         font = someFont(library)
         sizedFont = someSizedFont(font)
         self.assertGreater(sizedFont.descent, -5)
-        self.assertLess(sizedFont.descent, -4)
+        self.assertLess(sizedFont.descent, -3)
 
     def testHeight(self):
         library = FontLibrary()
@@ -213,7 +217,7 @@ class TestSizedFont(unittest.TestCase):
         font = someFont(library)
         sizedFont = someSizedFont(font)
         sizedGlyph = sizedFont.getSizedGlyphFromCodePoint(0x41)
-        self.assertEqual(sizedGlyph.name, "A")
+        self.assertEqual(sizedGlyph.name, aGlyphName)
 
     def testGetGlyphFromCodePointZero(self):
         library = FontLibrary()
@@ -229,7 +233,7 @@ class TestSizedFont(unittest.TestCase):
         index = sizedFont.getGlyphIndexFromCodePoint(0x41)
         sizedGlyph = sizedFont.getSizedGlyphFromIndex(index)
         self.assertEqual(sizedGlyph.index, index)
-        self.assertEqual(sizedGlyph.name, "A")
+        self.assertEqual(sizedGlyph.name, aGlyphName)
 
     def testGetGlyphFromIndexZero(self):
         library = FontLibrary()
@@ -284,7 +288,7 @@ class TestSizedGlyph(unittest.TestCase):
         font = someFont(library)
         sizedFont = someSizedFont(font)
         sizedGlyph = someSizedGlyph(sizedFont)
-        self.assertEqual(sizedGlyph.name, "A")
+        self.assertEqual(sizedGlyph.name, aGlyphName)
 
 if __name__ == '__main__':
     unittest.main()

@@ -61,21 +61,18 @@ vgc_add_library(graphics
         detail/shapeutil.cpp
 
     RESOURCE_FILES
-        fonts/SourceSansPro/LICENSE.md
-        fonts/SourceSansPro/TTF/SourceSansPro-Regular.ttf # Kept for test_font.py
-        fonts/Roboto/LICENSE.txt
-        fonts/Roboto/Roboto-BlackItalic.ttf
-        fonts/Roboto/Roboto-Black.ttf
-        fonts/Roboto/Roboto-BoldItalic.ttf
-        fonts/Roboto/Roboto-Bold.ttf
-        fonts/Roboto/Roboto-Italic.ttf
-        fonts/Roboto/Roboto-LightItalic.ttf
-        fonts/Roboto/Roboto-Light.ttf
-        fonts/Roboto/Roboto-MediumItalic.ttf
-        fonts/Roboto/Roboto-Medium.ttf
-        fonts/Roboto/Roboto-Regular.ttf
-        fonts/Roboto/Roboto-ThinItalic.ttf
-        fonts/Roboto/Roboto-Thin.ttf
+        fonts/Inter/Inter-VariableFont_slnt,wght.ttf
+        fonts/Inter/OFL.txt
+        fonts/Inter/README.txt
+        fonts/Inter/static/Inter-Black.ttf
+        fonts/Inter/static/Inter-Bold.ttf
+        fonts/Inter/static/Inter-ExtraBold.ttf
+        fonts/Inter/static/Inter-ExtraLight.ttf
+        fonts/Inter/static/Inter-Light.ttf
+        fonts/Inter/static/Inter-Medium.ttf
+        fonts/Inter/static/Inter-Regular.ttf
+        fonts/Inter/static/Inter-SemiBold.ttf
+        fonts/Inter/static/Inter-Thin.ttf
         shaders/d3d11/screen_space_displacement.v.hlsl
         shaders/d3d11/simple.f.hlsl
         shaders/d3d11/simple.v.hlsl
