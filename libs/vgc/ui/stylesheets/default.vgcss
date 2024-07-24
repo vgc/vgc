@@ -599,7 +599,7 @@
 }
 
 .settings .SettingEdit > .Label {
-    horizontal-stretch: 1;
+    horizontal-stretch: 2;
     preferred-width: 80dp;
     text-horizontal-align: left;
 }
@@ -607,11 +607,11 @@
 .settings .NumberSettingEdit > .NumberEdit {
     horizontal-stretch: 1;
     min-width: 10dp;
-    preferred-width: 40dp;
+    preferred-width: 30dp;
 }
 
 .settings .EnumSettingEdit > .ComboBox {
-    horizontal-stretch: 1;
+    horizontal-stretch: 3;
     min-width: 30dp;
     preferred-width: 80dp;
 }
