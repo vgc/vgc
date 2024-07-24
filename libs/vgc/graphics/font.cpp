@@ -460,7 +460,8 @@ void FontLibrary::onDestroyed() {
 namespace {
 
 std::string getDefaultFontPath() {
-    std::string fontPath = core::resourcePath("graphics/fonts/Inter/static/Inter-Medium.ttf");
+    std::string fontPath =
+        core::resourcePath("graphics/fonts/Inter/static/Inter-Medium.ttf");
     return fontPath;
 }
 
