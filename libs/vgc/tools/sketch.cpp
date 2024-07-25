@@ -1642,8 +1642,10 @@ void Sketch::finishCurve_(ui::MouseEvent* event) {
     }
 
     if (isAutoCutEnabled()) {
-        AutoCutParams params;
-        autoCut(params);
+        if (vacomplex::KeyEdge* keyEdge = toKeyEdge(workspace.get(), edgeItemId_)) {
+            AutoCutParams params;
+            autoCut(keyEdge, params);
+        }
     }
 
     resetData_();
