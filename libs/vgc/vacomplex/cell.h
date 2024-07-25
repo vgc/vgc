@@ -392,10 +392,9 @@ protected:
     Node(core::Id id, CellType cellType) noexcept;
 
 public:
-    virtual ~Node();
+    VGC_DISABLE_COPY_AND_MOVE(Node);
 
-    Node(const Node&) = delete;
-    Node& operator=(const Node&) = delete;
+    virtual ~Node();
 
     Node* previousSibling() const {
         return TreeChildBase::previousSibling();

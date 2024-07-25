@@ -25,10 +25,10 @@ namespace vgc::core::detail {
 
 class VGC_CORE_API ScopeProfiler {
 public:
+    VGC_DISABLE_COPY_AND_MOVE(ScopeProfiler);
+
     ScopeProfiler(const char* name);
     ~ScopeProfiler();
-    ScopeProfiler(const ScopeProfiler&) = delete;
-    ScopeProfiler& operator=(const ScopeProfiler&) = delete;
 
 private:
     const char* name_;

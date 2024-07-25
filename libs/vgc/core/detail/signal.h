@@ -600,10 +600,9 @@ private:
         Int numInboundConnections = 0;
     };
 
-    SignalHub(const SignalHub&) = delete;
-    SignalHub& operator=(const SignalHub&) = delete;
-
 public:
+    VGC_DISABLE_COPY_AND_MOVE(SignalHub);
+
     explicit SignalHub(Object* owner)
         : owner_(owner) {
     }
@@ -899,9 +898,7 @@ protected:
     }
 
 public:
-    // Non-Copyable
-    SlotRef(const SlotRef&) = delete;
-    SlotRef& operator=(const SlotRef&) = delete;
+    VGC_DISABLE_COPY_AND_MOVE(SlotRef);
 
     static FunctionId id() {
         return FunctionIdSingleton<TObjectMethodTag>::get();
@@ -1003,9 +1000,7 @@ protected:
     }
 
 public:
-    // Non-Copyable
-    SignalRef(const SignalRef&) = delete;
-    SignalRef& operator=(const SignalRef&) = delete;
+    VGC_DISABLE_COPY_AND_MOVE(SignalRef);
 
     // Returns a unique identifier that represents this signal.
     static SignalId id() {

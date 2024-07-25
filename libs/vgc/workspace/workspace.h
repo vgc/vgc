@@ -41,21 +41,19 @@ struct VacElementLists;
 
 class ScopedUndoGroup {
 public:
+    VGC_DISABLE_COPY(ScopedUndoGroup);
+
     ScopedUndoGroup() = default;
 
     explicit ScopedUndoGroup(core::UndoGroup* undoGroup)
         : undoGroup_(undoGroup) {
     }
 
-    // non-copyable
-    ScopedUndoGroup(const ScopedUndoGroup&) = delete;
-    ScopedUndoGroup& operator=(const ScopedUndoGroup&) = delete;
-
-    // movable
     ScopedUndoGroup(ScopedUndoGroup&& other) {
         undoGroup_ = other.undoGroup_;
         other.undoGroup_ = nullptr;
     }
+
     ScopedUndoGroup& operator=(ScopedUndoGroup&& other) {
         if (this != &other) {
             undoGroup_ = other.undoGroup_;

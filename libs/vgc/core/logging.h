@@ -102,9 +102,9 @@ VGC_FORCE_INLINE void log(StringId categoryName, LogLevel level, StringId string
 ///
 class VGC_CORE_API LogCategoryBase {
 public:
+    VGC_DISABLE_COPY_AND_MOVE(LogCategoryBase);
+
     virtual ~LogCategoryBase() = default;
-    LogCategoryBase(const LogCategoryBase&) = delete;
-    LogCategoryBase& operator=(const LogCategoryBase&) = delete;
 
     StringId name() const {
         return name_;

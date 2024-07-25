@@ -159,8 +159,7 @@ private:
     ModuleContext(ModuleManager* moduleManager);
 
 public:
-    ModuleContext(const ModuleContext&) = delete;
-    ModuleContext& operator=(const ModuleContext&) = delete;
+    VGC_DISABLE_COPY_AND_MOVE(ModuleContext);
 
     /// Returns the module manager related to this module context.
     ///

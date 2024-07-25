@@ -60,6 +60,8 @@ struct EnumValueInfo {
 //
 class VGC_CORE_API EnumTypeInfo_ {
 public:
+    VGC_DISABLE_COPY_AND_MOVE(EnumTypeInfo_);
+
     core::TypeId typeId;
     bool isRegistered = false;
 
@@ -92,11 +94,6 @@ public:
 
     EnumTypeInfo_(TypeId id);
     virtual ~EnumTypeInfo_() = 0;
-
-    // EnumTypeInfo_ is non-copyable (because it stores unique_ptrs).
-    // We need to explicitly mark it non-copyable otherwise it doesn't compile on MSVC.
-    EnumTypeInfo_(const EnumTypeInfo_&) = delete;
-    EnumTypeInfo_& operator=(const EnumTypeInfo_&) = delete;
 
     // Returns the index corresponding to the given enum value, if any.
     //
