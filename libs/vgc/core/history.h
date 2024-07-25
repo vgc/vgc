@@ -111,9 +111,7 @@ protected:
     UndoGroup(CreateKey key, StringId name, History* history);
 
 public:
-    // non-copyable
-    UndoGroup(const UndoGroup&) = delete;
-    UndoGroup& operator=(const UndoGroup&) = delete;
+    VGC_DISABLE_COPY_AND_MOVE(UndoGroup);
 
     /// Returns the name of this group, given at construction.
     ///

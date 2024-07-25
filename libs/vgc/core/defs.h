@@ -114,17 +114,29 @@
 #endif
 
 /// \def VGC_WARNING_PUSH
+///
 /// Makes a "push" to the stack of compiler warning options.
+///
+/// Example:
+///
+/// ```cpp
+/// VGC_WARNING_PUSH
+/// VGC_WARNING_MSVC_DISABLE(26495) // member variable uninitialized
+/// QuadraticBezier(core::NoInit) noexcept
+///     : controlPoints_{core::noInit, core::noInit, core::noInit} {
+/// }
+/// VGC_WARNING_POP
+/// ```
 ///
 /// \def VGC_WARNING_POP
 /// Makes a "pop" to the stack of compiler warning options.
 ///
 /// \def VGC_WARNING_GCC_DISABLE
-/// Disable a specific GCC or Clang warning. This should typically be surrounded
+/// Disables a specific GCC or Clang warning. This should typically be surrounded
 /// by `VGC_WARNING_PUSH` and `VGC_WARNING_POP`.
 ///
 /// \def VGC_WARNING_MSVC_DISABLE
-/// Disable a specific MSVC warning. This should typically be surrounded
+/// Disables a specific MSVC warning. This should typically be surrounded
 /// by `VGC_WARNING_PUSH` and `VGC_WARNING_POP`.
 ///
 #if defined(VGC_COMPILER_CLANG) || defined(VGC_COMPILER_GCC)
@@ -275,5 +287,89 @@
 #else
 #    define VGC_PRETTY_FUNCTION __FUNCTION__
 #endif
+
+/// \def VGC_DISABLE_COPY
+///
+/// Disables copy-construction and copy-assignment for the given class.
+///
+/// ```cpp
+/// class Foo {
+/// public:
+///     VGC_DISABLE_COPY(Foo);
+/// };
+/// ```
+///
+/// `VGC_DISABLE_COPY(Foo);` is equivalent to:
+///
+/// ```cpp
+/// Foo(const Foo&) = delete;
+/// Foo& operator=(const Foo&) = delete;
+/// ```
+///
+/// Note that this also implicitly disables move-construction and
+/// move-assignment, unless explicitly defined or defaulted. In order to
+/// clarify intent, we recommend not relying on this and instead:
+///
+/// 1. Use `VGC_DISABLE_COPY_AND_MOVE`, or
+///
+/// 2. Use `VGC_DISABLE_COPY` and explicitly define or default
+///    move-construction and move-assignment.
+///
+/// \sa `VGC_DISABLE_MOVE`, `VGC_DISABLE_COPY_AND_MOVE`.
+///
+#define VGC_DISABLE_COPY(ClassName)                                                      \
+    ClassName(const ClassName&) = delete;                                                \
+    ClassName& operator=(const ClassName&) = delete
+
+/// \def VGC_DISABLE_MOVE
+///
+/// Disables move-construction and move-assignment for the given class.
+///
+/// ```cpp
+/// class Foo {
+/// public:
+///     VGC_DISABLE_MOVE(Foo);
+/// };
+/// ```
+///
+/// `VGC_DISABLE_MOVE(Foo);` is equivalent to:
+///
+/// ```cpp
+/// Foo(Foo&&) = delete;
+/// Foo& operator=(Foo&&) = delete;
+/// ```
+///
+/// \sa `VGC_DISABLE_MOVE`, `VGC_DISABLE_COPY_AND_MOVE`.
+///
+#define VGC_DISABLE_MOVE(ClassName)                                                      \
+    ClassName(ClassName&&) = delete;                                                     \
+    ClassName& operator=(ClassName&&) = delete
+
+/// \def VGC_DISABLE_COPY_AND_MOVE
+///
+/// Disables copy-construction, copy-assignment, move-construction, and
+/// move-assignment for the given class.
+///
+/// ```cpp
+/// class Foo {
+/// public:
+///     VGC_DISABLE_COPY_AND_MOVE(Foo);
+/// };
+/// ```
+///
+/// `VGC_DISABLE_COPY_AND_MOVE(Foo);` is equivalent to:
+///
+/// ```cpp
+/// Foo(const Foo&) = delete;
+/// Foo& operator=(const Foo&) = delete;
+/// Foo(Foo&&) = delete;
+/// Foo& operator=(Foo&&) = delete;
+/// ```
+///
+/// \sa `VGC_DISABLE_COPY`, `VGC_DISABLE_MOVE`.
+///
+#define VGC_DISABLE_COPY_AND_MOVE(ClassName)                                             \
+    VGC_DISABLE_COPY(ClassName);                                                         \
+    VGC_DISABLE_MOVE(ClassName)
 
 #endif // VGC_CORE_DEFS_H

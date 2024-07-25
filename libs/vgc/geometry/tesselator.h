@@ -31,6 +31,8 @@ namespace vgc::geometry {
 ///
 class VGC_GEOMETRY_API Tesselator {
 public:
+    VGC_DISABLE_COPY_AND_MOVE(Tesselator);
+
     /// Creates a `Tesselator`.
     ///
     Tesselator();
@@ -38,12 +40,6 @@ public:
     /// Destroys the `Tesselator`.
     ///
     ~Tesselator();
-
-    // Disable move and copy
-    Tesselator(const Tesselator&) = delete;
-    Tesselator(Tesselator&&) = delete;
-    Tesselator& operator=(const Tesselator&) = delete;
-    Tesselator& operator=(Tesselator&&) = delete;
 
     /// Adds a contour to the polygon being tesselated.
     ///

@@ -81,6 +81,9 @@ namespace detail {
 
 class ValueData {
 public:
+    // Owner must use the appropriate function pointers to copy
+    VGC_DISABLE_COPY(ValueData);
+
     ValueData() = default;
     ~ValueData() = default;
 
@@ -96,10 +99,6 @@ public:
         }
         return *this;
     }
-
-    // Owner must use the appropriate function pointers to copy
-    ValueData(const ValueData&) = delete;
-    ValueData& operator=(const ValueData&) = delete;
 
     template<typename T>
     ValueData(T&& x)

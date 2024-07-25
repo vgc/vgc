@@ -131,8 +131,7 @@ protected:
     static_assert(uninitializedCountValue_ < 0);
 
 public:
-    Resource(const Resource&) = delete;
-    Resource& operator=(const Resource&) = delete;
+    VGC_DISABLE_COPY_AND_MOVE(Resource);
 
     // XXX needed ?
     //template<typename T>

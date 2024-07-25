@@ -44,9 +44,9 @@ private:
     DocumentColorPaletteSaver(const core::Array<core::Color>& colors, dom::Document* doc);
 
 public:
+    VGC_DISABLE_COPY_AND_MOVE(DocumentColorPaletteSaver);
+
     ~DocumentColorPaletteSaver();
-    DocumentColorPaletteSaver(const DocumentColorPaletteSaver&) = delete;
-    DocumentColorPaletteSaver& operator=(const DocumentColorPaletteSaver&) = delete;
 
 private:
     friend DocumentColorPalette;

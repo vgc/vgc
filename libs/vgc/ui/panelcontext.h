@@ -32,8 +32,7 @@ private:
     PanelContext(ModuleManagerWeakPtr moduleManager);
 
 public:
-    PanelContext(const PanelContext&) = delete;
-    PanelContext& operator=(const PanelContext&) = delete;
+    VGC_DISABLE_COPY_AND_MOVE(PanelContext);
 
     /// Returns the module manager related to this PanelContext.
     ///

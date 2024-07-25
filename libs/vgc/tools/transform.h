@@ -65,11 +65,10 @@ struct VGC_TOOLS_API KeyEdgeTransformData {
 
 class VGC_TOOLS_API TopologyAwareTransformer {
 public:
+    VGC_DISABLE_COPY_AND_MOVE(TopologyAwareTransformer);
+
     TopologyAwareTransformer() noexcept = default;
     ~TopologyAwareTransformer();
-
-    TopologyAwareTransformer(const TopologyAwareTransformer&) = delete;
-    TopologyAwareTransformer& operator=(const TopologyAwareTransformer&) = delete;
 
     void setElements(
         workspace::WorkspaceWeakPtr workspace,

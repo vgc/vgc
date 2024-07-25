@@ -333,8 +333,7 @@ private:
 ///
 class VGC_TOOLS_API SketchPipeline {
 public:
-    SketchPipeline(const SketchPipeline&) = delete;
-    SketchPipeline& operator=(const SketchPipeline&) = delete;
+    VGC_DISABLE_COPY_AND_MOVE(SketchPipeline);
 
     /// Creates an empty pipeline.
     ///

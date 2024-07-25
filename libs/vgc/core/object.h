@@ -1141,14 +1141,9 @@ class VGC_CORE_API Object {
 public:
     using ThisClass = Object;
 
-private:
-    // Disable move and copy
-    Object(const Object&) = delete;
-    Object(Object&&) = delete;
-    Object& operator=(const Object&) = delete;
-    Object& operator=(Object&&) = delete;
-
 public:
+    VGC_DISABLE_COPY_AND_MOVE(Object);
+
     /// Returns the `ObjectType` of an `Object` subclass via a static method
     /// call, that is, not requiring an instance of the subclass.
     ///
