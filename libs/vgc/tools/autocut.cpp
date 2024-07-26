@@ -17,15 +17,28 @@
 #include <vgc/tools/autocut.h>
 
 #include <vgc/core/array.h>
+#include <vgc/geometry/intersect.h>
 #include <vgc/vacomplex/cell.h>
-
-using vgc::vacomplex::KeyEdge;
-using vgc::vacomplex::KeyFace;
-using vgc::vacomplex::KeyVertex;
+#include <vgc/vacomplex/keyedge.h>
+#include <vgc/vacomplex/operations.h>
 
 namespace vgc::tools {
 
-void autoCut(KeyEdge* edge, const AutoCutParams& params) {
+void autoCut(vacomplex::KeyEdge* edge, const AutoCutParams& params) {
+    vacomplex::Group* group = edge->parentGroup();
+    geometry::Polyline2d polyline = edge->strokeSampling().centerline();
+    Int n = polyline.length();
+    for (Int i = 0; i < n - 1; ++i) {
+        for (Int j = i + 2; j < n - 1; ++j) {
+            const geometry::Vec2d& a1 = polyline[i];
+            const geometry::Vec2d& b1 = polyline[i + 1];
+            const geometry::Vec2d& a2 = polyline[j];
+            const geometry::Vec2d& b2 = polyline[j + 1];
+            if (auto intersection = geometry::fastSegmentIntersection(a1, b1, a2, b2)) {
+                vacomplex::ops::createKeyVertex(intersection->position(), group);
+            }
+        }
+    }
 }
 
 } // namespace vgc::tools
