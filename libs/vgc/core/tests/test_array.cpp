@@ -237,6 +237,24 @@ TEST(TestArray, Construct) {
     EXPECT_NO_THROW(TestObj::doPostTestChecks());
 }
 
+TEST(TestArray, ConstructTransform) {
+    std::vector<double> v = {1.2, 2.8, 3.1};
+    {
+        vgc::core::Array<Int> a(v.begin(), v.end(), [](double x) { //
+            return 2 * vgc::core::ifloor<Int>(x);
+        });
+        vgc::core::Array<Int> b = {2, 4, 6};
+        EXPECT_EQ(a, b);
+    }
+    {
+        vgc::core::Array<Int> a(v, [](double x) { //
+            return 2 * vgc::core::ifloor<Int>(x);
+        });
+        vgc::core::Array<Int> b = {2, 4, 6};
+        EXPECT_EQ(a, b);
+    }
+}
+
 TEST(TestArray, CopyAndMove) {
     Array<int> b = {10, 42, 3, 4};
     {

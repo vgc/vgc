@@ -402,6 +402,28 @@ public:
         rangeConstruct_(first, last);
     }
 
+    /// Creates an `Array` initialized from the elements in the range given by
+    /// the input iterators `first` (inclusive) and `last` (exclusive), with
+    /// the given unary operation `op` applied to each input element.
+    ///
+    /// The behavior is undefined if [`first`, `last`) isn't a valid range.
+    ///
+    /// Throws `LengthError` if the length of the given range is greater than
+    /// `maxLength()`.
+    ///
+    /// ```
+    /// std::vector<double> v = {1.2, 2.8, 3.1};
+    /// vgc::core::Array<Int> a(v.begin(), v.end(), [](double x) {
+    ///     return vgc::core::ifloor<Int>(x);
+    /// });
+    /// ```
+    ///
+    template<typename InputIt, typename UnaryOp, VGC_REQUIRES(isInputIterator<InputIt>)>
+    Array(InputIt first, InputIt last, UnaryOp op) {
+        resizeNoInit(std::distance(first, last));
+        std::transform(first, last, begin(), op);
+    }
+
     /// Creates an `Array` initialized from the elements in `range`.
     ///
     /// The behavior is undefined if [`range.begin()`, `range.end()`) isn't a
@@ -418,6 +440,25 @@ public:
     template<typename Range, VGC_REQUIRES(isRange<Range>)>
     explicit Array(const Range& range) {
         rangeConstruct_(range.begin(), range.end());
+    }
+
+    /// Creates an `Array` initialized from the elements in `range` with the
+    /// given unary operation `op` applied to each input element.
+    ///
+    /// The behavior is undefined if [`range.begin()`, `range.end()`) isn't a
+    /// valid range.
+    ///
+    /// Throws `LengthError` if the length of `range` is greater than
+    /// `maxLength()`.
+    ///
+    /// ```
+    /// std::vector<double> v = {1.2, 2.8, 3.1};
+    /// vgc::core::Array<Int> a(v, [](double x) { return vgc::core::ifloor<Int>(x); });
+    /// ```
+    ///
+    template<typename Range, typename UnaryOp, VGC_REQUIRES(isRange<Range>)>
+    explicit Array(const Range& range, UnaryOp op)
+        : Array(range.begin(), range.end(), op) {
     }
 
     /// Creates an `Array` initialized by the values given in the initializer
