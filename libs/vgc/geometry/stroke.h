@@ -27,6 +27,7 @@
 #include <vgc/geometry/api.h>
 #include <vgc/geometry/curve.h>
 #include <vgc/geometry/mat3d.h>
+#include <vgc/geometry/polyline2d.h>
 #include <vgc/geometry/rect2d.h>
 #include <vgc/geometry/vec2d.h>
 
@@ -396,6 +397,10 @@ public:
 
     StrokeSample2dArray stealSamples() {
         return std::move(samples_);
+    }
+
+    Polyline2d centerline() const {
+        return Polyline2d(samples_, [](const auto& sample) { return sample.position(); });
     }
 
     const Rect2d& centerlineBoundingBox() const {
