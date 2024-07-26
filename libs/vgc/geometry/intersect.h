@@ -94,7 +94,7 @@ private:
     double t2_;
 };
 
-/// Returns the intersection point, if any, between the segments `(a1, a2)` and `(b1, b2)`.
+/// Returns the intersection point, if any, between the segments `(a1, b1)` and `(a2, b2)`.
 ///
 /// It is a fast variant that considers collinear overlaps as non
 /// intersecting.
@@ -124,7 +124,7 @@ inline std::optional<Segment2dPointIntersection> fastSegmentIntersection(
     return std::nullopt;
 }
 
-/// Returns whether the segments `(a1, a2)` and `(b1, b2)` intersect
+/// Returns whether the segments `(a1, b1)` and `(a2, b2)` intersect
 /// excluding `a2` and `b2`.
 ///
 /// It is a fast variant that considers collinear overlaps as non
