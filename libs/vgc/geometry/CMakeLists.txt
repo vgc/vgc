@@ -28,6 +28,10 @@ vgc_add_library(geometry
         mat3f.h
         mat4d.h
         mat4f.h
+        polyline.h
+        polyline2.h
+        polyline2d.h
+        polyline2f.h
         range1d.h
         range1f.h
         rangealign.h
