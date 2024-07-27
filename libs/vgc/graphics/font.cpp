@@ -459,10 +459,19 @@ void FontLibrary::onDestroyed() {
 
 namespace {
 
+// Typically, native Windows/Linux apps render fonts using subpixel
+// antialiasing, while native macOS apps do not. Therefore, fonts in native
+// apps tend to appear more bold/blurry on macOS than on Windows/Linux.
+// Currently, VGC does not support subpixel antialiasing, so as a workaround we
+// simply use a thinner font on Windows/Linux than on macOS, which gives a
+// result closer to what users expect on each platform.
+//
 std::string getDefaultFontPath() {
-    std::string fontPath =
-        core::resourcePath("graphics/fonts/Inter/static/Inter-Medium.ttf");
-    return fontPath;
+#ifdef VGC_OS_MACOS
+    return core::resourcePath("graphics/fonts/Inter/static/Inter-Medium.ttf");
+#else
+    return core::resourcePath("graphics/fonts/Inter/static/Inter-Regular.ttf");
+#endif
 }
 
 FontLibraryPtr createGlobalFontLibrary() {
