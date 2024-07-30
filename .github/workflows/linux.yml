@@ -1,4 +1,4 @@
-name: Linux Build
+name: Linux
 
 on: [push, pull_request]
 
@@ -12,6 +12,7 @@ env:
 
 jobs:
   build:
+    name: Build
     runs-on: ubuntu-latest
     container: vgcsoftware/vgc-ci-ubuntu-18.04:2023-03-08.0
 

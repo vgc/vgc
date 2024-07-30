@@ -1,4 +1,4 @@
-name: macOS Build
+name: macOS
 
 on: [push, pull_request]
 
@@ -15,6 +15,7 @@ defaults:
 
 jobs:
   build:
+    name: Build
     runs-on: macos-12
 
     steps:
