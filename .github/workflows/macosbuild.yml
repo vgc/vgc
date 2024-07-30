@@ -18,7 +18,7 @@ jobs:
     runs-on: macos-12
 
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v4
       with:
         # We need to fetch more than one commit to get the correct build name
         fetch-depth: 100
