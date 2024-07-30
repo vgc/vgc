@@ -86,30 +86,35 @@ jobs:
         setup-python: false
 
     - name: Install other dependencies
-      working-directory: ${{runner.workspace}}
+      working-directory: ${{github.workspace}}
       run: |
         brew install freetype
         brew install harfbuzz
         pip install dmgbuild
 
     - name: Configure
-      working-directory: ${{runner.workspace}}
+      working-directory: ${{github.workspace}}
       run: |
         mkdir build
         cd build
         cmake --version
-        cmake "$GITHUB_WORKSPACE" -DCMAKE_BUILD_TYPE="$BUILD_TYPE" -DVGC_COMMIT_BRANCH="$COMMIT_BRANCH" -DPython_ROOT_DIR="$pythonLocation" -DQt5_DIR="${{runner.workspace}}/Qt/$QT_VERSION/clang_64/lib/cmake/Qt5" -DVGC_PEDANTIC=ON -DVGC_WERROR=ON
+        cmake .. \
+          -DCMAKE_BUILD_TYPE="$BUILD_TYPE" \
+          -DVGC_COMMIT_BRANCH="$COMMIT_BRANCH" \
+          -DPython_ROOT_DIR="$pythonLocation" \
+          -DQt5_DIR="$GITHUB_WORKSPACE/Qt/$QT_VERSION/clang_64/lib/cmake/Qt5" \
+          -DVGC_PEDANTIC=ON -DVGC_WERROR=ON
 
     - name: Build
-      working-directory: ${{runner.workspace}}/build
+      working-directory: ${{github.workspace}}/build
       run: cmake --build . --parallel $PARALLEL_JOBS
 
     - name: Test
-      working-directory: ${{runner.workspace}}/build
+      working-directory: ${{github.workspace}}/build
       run: cmake --build . --target check --parallel $PARALLEL_JOBS
 
     - name: Deploy
-      working-directory: ${{runner.workspace}}/build
+      working-directory: ${{github.workspace}}/build
       env:
         VGC_GITHUB_KEY: ${{secrets.VGC_GITHUB_KEY}}
       run: cmake --build . --target deploy --parallel $PARALLEL_JOBS

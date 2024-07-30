@@ -33,7 +33,7 @@ jobs:
                archive_format: 'zip',
             });
             var fs = require('fs');
-            fs.writeFileSync('${{github.workspace}}/clang_format_artifacts.zip', Buffer.from(download.data));
+            fs.writeFileSync('$GITHUB_WORKSPACE/clang_format_artifacts.zip', Buffer.from(download.data));
       - run: unzip clang_format_artifacts.zip
 
       - name: Comment on PR

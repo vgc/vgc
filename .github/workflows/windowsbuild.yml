@@ -99,7 +99,7 @@ jobs:
     - name: Configure vckpg
       working-directory: ${{github.workspace}}
       run: |
-        PARENT="${{github.workspace}}"
+        PARENT="$GITHUB_WORKSPACE"
         echo "VCPKG_ROOT_PARENT=$PARENT" >> $GITHUB_ENV
         echo "VCPKG_ROOT=$PARENT/vcpkg" >> $GITHUB_ENV
         echo "VCPKG_TOOLCHAIN_FILE=$PARENT/vcpkg/scripts/buildsystems/vcpkg.cmake" >> $GITHUB_ENV
@@ -128,7 +128,7 @@ jobs:
       working-directory: ${{env.VCPKG_ROOT}}
       run: |
         # Delete manifest file, otherwise, we cannot manually install packages
-        rm "${{github.workspace}}/vcpkg.json"
+        rm "$GITHUB_WORKSPACE/vcpkg.json"
 
         # Create custom triplet that only compile binaries with the given VCPKG_BUILD_TYPE
         mkdir "$VCPKG_OVERLAY_TRIPLETS"
