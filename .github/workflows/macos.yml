@@ -115,7 +115,18 @@ jobs:
       run: cmake --build . --target check --parallel $PARALLEL_JOBS
 
     - name: Deploy
+      id: deploy
       working-directory: ${{github.workspace}}/build
       env:
         VGC_GITHUB_KEY: ${{secrets.VGC_GITHUB_KEY}}
-      run: cmake --build . --target deploy --parallel $PARALLEL_JOBS
+      run: |
+        cmake --build . --target deploy --parallel $PARALLEL_JOBS
+        versionName=VGC-$(awk -F "=" '/versionName/ {print $2}' $BUILD_TYPE/resources/core/version.txt)
+        versionName=$(echo $versionName | tr " " "-")
+        echo "version-name=$versionName" >> "$GITHUB_OUTPUT"
+
+    - name: Upload Artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        path: build/deploy/${{env.BUILD_TYPE}}/VGC*.dmg
+        name: ${{steps.deploy.outputs.version-name}}-macOS

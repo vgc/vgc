@@ -15,6 +15,9 @@ jobs:
     name: Build
     runs-on: ubuntu-latest
     container: vgcsoftware/vgc-ci-ubuntu-18.04:2023-03-08.0
+    outputs:
+      version-name: ${{steps.deploy.outputs.version-name}}
+      artifacts-cache-key: ${{steps.artifacts.outputs.cache-key}}
 
     steps:
 
@@ -115,8 +118,75 @@ jobs:
       run: cmake --build . --target check --parallel $PARALLEL_JOBS
 
     - name: Deploy
+      id: deploy
       working-directory: ${{github.workspace}}/build
       env:
         VGC_GITHUB_KEY: ${{secrets.VGC_GITHUB_KEY}}
       run: |
         cmake --build . --target deploy --parallel $PARALLEL_JOBS
+        versionName=VGC-$(awk -F "=" '/versionName/ {print $2}' $BUILD_TYPE/resources/core/version.txt)
+        versionName=$(echo $versionName | tr " " "-")
+        echo "version-name=$versionName" >> "$GITHUB_OUTPUT"
+
+    - name: Prepare Artifacts
+      id: artifacts
+      working-directory: ${{github.workspace}}
+      run: |
+          mkdir artifacts
+          cp build/deploy/$BUILD_TYPE/vgc*.AppImage artifacts
+          cackeKey=${{steps.deploy.outputs.version-name}}-$GITHUB_RUN_ID-artifacts
+          echo "cache-key=$cackeKey" >> "$GITHUB_OUTPUT"
+
+    # We cannot use upload-artifact@v4 on Ubuntu 18.04 as it requires Node 20.
+    #
+    # We cannot use upload-artifact@v3 as it is deprecated and will be removed on Nov 30, 2024:
+    #
+    # https://github.blog/changelog/2024-04-16-deprecation-notice-v3-of-the-artifact-actions/
+    #
+    # Therefore with use GitHub cache instead of GitHub artifacts, and in a subsequent job
+    # using ubuntu-latest, we retrieve the cache and upload it using upload-artifact@v4.
+    #
+    # We cannot use cache@v4 on Ubuntu 18.04 as it requires Node 20.
+    #
+    # We cannot use the latest cache@v3 (as of 3.3.3) as it is buggy and does not
+    # properly support enableCrossOsArchive and fail-on-cache-miss anymore.
+    #
+    # Therefore, we use cache@v3.2.4, which is the first version supporting both
+    # enableCrossOsArchive and fail-on-cache-miss.
+    #
+    # Note that we do need `enableCrossOsArchive` otherwise the ubuntu:18.04
+    # Docker image and the ubuntu-latest image are considered different and
+    # do not share cache, that is, theyhave a different "cache version", see:
+    #
+    # - https://github.com/actions/cache/blob/main/tips-and-workarounds.md#cross-os-cache
+    # - https://github.com/marketplace/actions/cache#cache-version
+    #
+    - name: Save Artifacts
+      uses: actions/cache/save@v3.2.4
+      if: always() # If we re-run the job, we want to override the cache
+      with:
+        path: artifacts
+        key: ${{steps.artifacts.outputs.cache-key}}
+        enableCrossOsArchive: true
+
+  # This is a separate job running on ubuntu-latest to be able to use upload-artifact@v4
+  #
+  upload-artifacts:
+    name: Upload Artifacts
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+
+    - name: Restore Artifacts
+      uses: actions/cache/restore@v3.2.4
+      with:
+        path: artifacts
+        key: ${{needs.build.outputs.artifacts-cache-key}}
+        enableCrossOsArchive: true
+        fail-on-cache-miss: true
+
+    - name: Upload Artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        path: artifacts
+        name: ${{needs.build.outputs.version-name}}-Linux

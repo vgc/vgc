@@ -186,6 +186,7 @@ jobs:
       run: cmake --build . --target check
 
     - name: Deploy
+      id: deploy
       working-directory: ${{github.workspace}}/build
       env:
         VGC_GITHUB_KEY: ${{secrets.VGC_GITHUB_KEY}}
@@ -197,3 +198,12 @@ jobs:
       run: |
         [ ! -z "$AZURE_EV_KEY_VAULT_URI" ] && dotnet tool install --global AzureSignTool --version 4.0.1
         cmake --build . --target deploy
+        versionName=VGC-$(awk -F "=" '/versionName/ {print $2}' $BUILD_TYPE/resources/core/version.txt)
+        versionName=$(echo $versionName | tr " " "-")
+        echo "version-name=$versionName" >> "$GITHUB_OUTPUT"
+
+    - name: Upload Artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        path: build/deploy/${{env.BUILD_TYPE}}/VGC*.exe
+        name: ${{steps.deploy.outputs.version-name}}-Windows
