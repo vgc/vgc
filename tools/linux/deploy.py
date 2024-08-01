@@ -573,4 +573,4 @@ if __name__ == "__main__":
         "files": [str(file) for file in filesToUpload]
     }
     infoFile = deployDir / "info.json"
-    infoFile.write_text(json.dumps(info).encode("utf-8"))
+    infoFile.write_text(json.dumps(info))
