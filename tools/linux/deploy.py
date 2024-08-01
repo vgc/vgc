@@ -615,18 +615,18 @@ if __name__ == "__main__":
             for attempt in range(1, numAttempts + 1):
                 try:
                     if attempt == 1:
-                        print_(f"Uploading {file}...")
+                        print_(f"Uploading info for {file}...")
                         time.sleep(3) # helps the server by waiting a bit between files
                     else:
                         print_(f"Attempt {attempt}/{numAttempts}...")
-                    response = post_multipart(
+                    response = post_json(
                         urlencode(url, {
                             "key": key,
                             "pr": pr,
-                            "releaseId": releaseId
-                        }), {}, {
-                            "file": file
-                        })
+                            "releaseId": releaseId,
+                            "externalUrl": f"https://example.com/{file.name}"
+                        }), {
+                    })
                 except Exception as error:
                     print_(f"Failed: {type(error)}: {error}")
                     if attempt < numAttempts:
@@ -634,10 +634,10 @@ if __name__ == "__main__":
                         print_(f"Waiting for {waitTime} seconds before re-attempting.")
                         time.sleep(waitTime)
                     else:
-                        print_(f"All attempts failed: the file was not uploaded.")
+                        print_(f"All attempts failed: the file info was not uploaded.")
                         allFilesUploaded = False
                 else:
                     print_(" Done.")
                     break
         if not allFilesUploaded:
-            raise Exception("Some files were not uploaded due to errors.")
+            raise Exception("Some files info were not uploaded due to errors.")
