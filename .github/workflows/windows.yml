@@ -206,4 +206,4 @@ jobs:
       uses: actions/upload-artifact@v4
       with:
         path: build/deploy/${{env.BUILD_TYPE}}/*.exe
-        name: ${{steps.deploy.outputs.version-name}}
+        name: ${{steps.deploy.outputs.version-name}}-Windows

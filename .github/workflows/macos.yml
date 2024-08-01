@@ -129,4 +129,4 @@ jobs:
       uses: actions/upload-artifact@v4
       with:
         path: build/deploy/${{env.BUILD_TYPE}}/*.dmg
-        name: ${{steps.deploy.outputs.version-name}}
+        name: ${{steps.deploy.outputs.version-name}}-macOS
