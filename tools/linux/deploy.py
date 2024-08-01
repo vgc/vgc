@@ -611,6 +611,7 @@ if __name__ == "__main__":
         releaseId = response["releaseId"]
         allFilesUploaded = True
         for file in filesToUpload:
+            filename = file.name
             numAttempts = 5
             for attempt in range(1, numAttempts + 1):
                 try:
@@ -624,7 +625,8 @@ if __name__ == "__main__":
                             "key": key,
                             "pr": pr,
                             "releaseId": releaseId,
-                            "externalUrl": f"https://example.com/{file.name}"
+                            "filename": filename,
+                            "externalUrl": f"https://example.com/{filename}"
                         }), {
                     })
                 except Exception as error:
