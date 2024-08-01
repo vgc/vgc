@@ -128,5 +128,5 @@ jobs:
     - name: Upload Artifacts
       uses: actions/upload-artifact@v4
       with:
-        path: build/deploy/${{env.BUILD_TYPE}}/*.dmg
+        path: build/deploy/${{env.BUILD_TYPE}}/VGC*.dmg
         name: ${{steps.deploy.outputs.version-name}}-macOS
