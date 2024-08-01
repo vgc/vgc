@@ -570,7 +570,7 @@ if __name__ == "__main__":
             "commitIndex": commitIndex,
             "commitMessage": commitMessage
         },
-        "files": [str(file) for file in filesToUpload]
+        "files": [file.name for file in filesToUpload]
     }
     infoFile = deployDir / "info.json"
     infoFile.write_text(json.dumps(info))
