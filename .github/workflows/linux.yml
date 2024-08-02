@@ -22,9 +22,8 @@ jobs:
       if: github.event_name == 'pull_request'
       run: |
         echo "credentials<<EOF" >> $GITHUB_OUTPUT
-        echo "$(curl 'https://api.vgc.io/azure-credentials?scope=releases-prs')" >> $GITHUB_OUTPUT
+        curl "https://api.vgc.io/azure-credentials?scope=releases-prs" >> $GITHUB_OUTPUT
         echo "EOF" >> $GITHUB_OUTPUT
-        echo "$GITHUB_OUTPUT"
 
     - name: Test
       run: |
