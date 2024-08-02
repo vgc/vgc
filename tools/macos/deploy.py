@@ -612,7 +612,6 @@ def post_json(url, data):
     request.method = 'POST'
     request.add_header('Content-Type', 'application/json; charset=utf-8')
     request.add_header("Connection", "close")
-    response = urllib.request.urlopen(request, databytes)
     with urllib.request.urlopen(request, databytes) as response:
         encoding = response.info().get_param("charset") or "utf-8"
         return json.loads(response.read().decode(encoding))
