@@ -26,21 +26,6 @@ jobs:
     - name: Add GitHub workspace to Git safe directories
       run: git config --global --add safe.directory `pwd`
 
-    - name: Get PR Azure Credentials 1
-      run: |
-        apt-get update
-        apt-get install -y curl
-        echo "AZURE_CREDENTIALS_RELEASES_PRS<<EOF" >> $GITHUB_ENV
-        echo "$(curl 'https://api.vgc.io/azure-credentials?scope=releases-prs')" >> $GITHUB_ENV
-        echo "EOF" >> $GITHUB_ENV
-        echo "$(wget 'https://api.vgc.io/azure-credentials?scope=releases-prs')"
-
-    - name: Get PR Azure Credentials 2
-      run: |
-        echo "$AZURE_CREDENTIALS_RELEASES_PRS"
-        echo "{{env.AZURE_CREDENTIALS_RELEASES_PRS}}"
-
-
     # By default, actions/checkout will only check out the last commit. For
     # pull requests, this is a temporary merge commit used to test integration
     # against the master branch. Therefore, in order to get the actual commit
@@ -212,6 +197,15 @@ jobs:
       with:
         path: artifacts
         name: ${{needs.build.outputs.version-name}}-Linux
+
+    - name: Get Azure Credentials
+      if: github.event_name == 'pull_request'
+      run: |
+        apt-get update
+        apt-get install -y curl
+        echo "AZURE_CREDENTIALS_RELEASES_PRS<<EOF" >> $GITHUB_ENV
+        echo "$(curl 'https://api.vgc.io/azure-credentials?scope=releases-prs')" >> $GITHUB_ENV
+        echo "EOF" >> $GITHUB_ENV
 
     - name: Log in with Azure
       if: github.event_name == 'pull_request'
