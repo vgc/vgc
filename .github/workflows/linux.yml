@@ -21,11 +21,10 @@ jobs:
       id: get-azure-credentials-pr
       if: github.event_name == 'pull_request'
       run: |
-        sudo apt-get update
-        sudo apt-get install -y curl
         echo "credentials<<EOF" >> $GITHUB_OUTPUT
         echo "$(curl 'https://api.vgc.io/azure-credentials?scope=releases-prs')" >> $GITHUB_OUTPUT
         echo "EOF" >> $GITHUB_OUTPUT
+        cat $GITHUB_OUTPUT
 
     - name: Test
       run: |
