@@ -28,7 +28,7 @@ jobs:
 
     - name: Get PR Azure Credentials 1
       run: |
-        apt-get install curl
+        apt-get install -y curl
         echo "AZURE_CREDENTIALS_RELEASES_PRS<<EOF" >> $GITHUB_ENV
         echo "$(curl 'https://api.vgc.io/azure-credentials?scope=releases-prs')" >> $GITHUB_ENV
         echo "EOF" >> $GITHUB_ENV
