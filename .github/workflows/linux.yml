@@ -11,6 +11,29 @@ env:
   # https://github.blog/changelog/2024-03-07-github-actions-all-actions-will-run-on-node20-instead-of-node16-by-default/
 
 jobs:
+
+  test:
+    name: Test
+    runs-on: ubuntu-latest
+    steps:
+
+    - name: Get Azure Credentials
+      if: github.event_name == 'pull_request'
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y curl
+        echo "AZURE_CREDENTIALS_RELEASES_PRS<<EOF" >> $GITHUB_ENV
+        echo "$(curl 'https://api.vgc.io/azure-credentials?scope=releases-prs')" >> $GITHUB_ENV
+        echo "EOF" >> $GITHUB_ENV
+
+    - name: Log in with Azure
+      if: github.event_name == 'pull_request'
+      uses: azure/login@v2
+      with:
+        creds: ${{ env.AZURE_CREDENTIALS_RELEASES_PRS }}
+
+
+
   build:
     name: Build
     runs-on: ubuntu-latest
