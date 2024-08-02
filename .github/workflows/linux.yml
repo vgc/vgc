@@ -198,6 +198,25 @@ jobs:
         path: artifacts
         name: ${{needs.build.outputs.version-name}}-Linux
 
+    - name: Log in with Azure
+      if: github.event_name == 'pull_request'
+      uses: azure/login@v2
+      with:
+        creds: '${{ env.AZURE_CREDENTIALS_RELEASES_PRS }}'
+
+    - name: Upload to Azure
+      if: github.event_name == 'pull_request'
+      uses: azure/cli@v2
+      with:
+        azcliversion: latest
+        inlineScript: |
+          az storage blob upload-batch \
+            --account-name vgcreleases \
+            --destination prs \
+            --destination-path ${{needs.build.outputs.version-name}} \
+            --source artifacts \
+            --auth-mode login
+
     - name: Upload Deploy Info to VGC Website
       working-directory: ${{github.workspace}}
       run: |
