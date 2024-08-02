@@ -179,6 +179,12 @@ jobs:
     needs: build
     steps:
 
+    # Note: this must be done before cache/restore, otherwise checkout deletes the cache
+    - uses: actions/checkout@v4
+      with:
+        fetch-depth: 1
+        submodules: false # We only need tools/upload_deploy_info.py
+
     - name: Restore Artifacts
       uses: actions/cache/restore@v3.2.4
       with:
@@ -193,38 +199,11 @@ jobs:
         path: artifacts
         name: ${{needs.build.outputs.version-name}}-Linux
 
-    - name: Test 1
-      run: |
-        pwd
-        ls
-
-    - name: Test 2
-      working-directory: ${{github.workspace}}
-      run: |
-        pwd
-        ls
-
-    # Using depth of 1 and no submodules, since we only need tools/upload_deploy_info.py
-    - uses: actions/checkout@v4
-      with:
-        fetch-depth: 1
-        submodules: false
-
-    - name: Test 3
-      run: |
-        pwd
-        ls
-
-    - name: Test 4
-      working-directory: ${{github.workspace}}
-      run: |
-        pwd
-        ls
-
     - name: Upload Deploy Info to VGC Website
+      working-directory: ${{github.workspace}}
       run: |
         pwd
         ls
         ls artifacts
         cat artifacts/info.json
-        python3 $GITHUB_WORKSPACE/tools/upload_deploy_info.py artifacts/info.json
+        python3 tools/upload_deploy_info.py artifacts/info.json
