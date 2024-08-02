@@ -28,13 +28,13 @@ jobs:
 
     - name: Test
       run: |
-        echo '${{steps.get-azure-credentials-pr.output.credentials}}'
+        echo '${{steps.get-azure-credentials-pr.outputs.credentials}}'
 
     - name: Log in with Azure
       if: github.event_name == 'pull_request'
       uses: azure/login@v2
       with:
-        creds: '${{steps.get-azure-credentials-pr.output.credentials}}'
+        creds: '${{steps.get-azure-credentials-pr.outputs.credentials}}'
 
 
 
