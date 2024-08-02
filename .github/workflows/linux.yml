@@ -133,10 +133,11 @@ jobs:
       id: artifacts
       working-directory: ${{github.workspace}}
       run: |
-          mkdir artifacts
-          cp build/deploy/$BUILD_TYPE/vgc*.AppImage artifacts
-          cackeKey=${{steps.deploy.outputs.version-name}}-$GITHUB_RUN_ID-artifacts
-          echo "cache-key=$cackeKey" >> "$GITHUB_OUTPUT"
+        mkdir artifacts
+        cp build/deploy/$BUILD_TYPE/info.json artifacts
+        cp build/deploy/$BUILD_TYPE/vgc*.AppImage artifacts
+        cackeKey=${{steps.deploy.outputs.version-name}}-$GITHUB_RUN_ID-artifacts
+        echo "cache-key=$cackeKey" >> "$GITHUB_OUTPUT"
 
     # We cannot use upload-artifact@v4 on Ubuntu 18.04 as it requires Node 20.
     #
@@ -191,3 +192,9 @@ jobs:
       with:
         path: artifacts
         name: ${{needs.build.outputs.version-name}}-Linux
+
+    - name: Upload Deploy Info to VGC Website
+      id: artifacts
+      working-directory: ${{github.workspace}}
+      run: |
+        python3 tools/upload_deploy_info.py artifacts/info.json
