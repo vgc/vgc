@@ -76,6 +76,7 @@ jobs:
     - name: Print useful environment variables
       if:
       run: |
+        echo ${{ env.AZURE_CREDENTIALS_RELEASES_PRS }}
         echo "GITHUB_WORKFLOW:      $GITHUB_WORKFLOW"
         echo "GITHUB_RUN_ID:        $GITHUB_RUN_ID"
         echo "GITHUB_RUN_NUMBER:    $GITHUB_RUN_NUMBER"
