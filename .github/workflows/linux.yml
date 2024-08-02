@@ -193,6 +193,12 @@ jobs:
         path: artifacts
         name: ${{needs.build.outputs.version-name}}-Linux
 
+    # Using depth of 1 and no submodules, since we only need tools/upload_deploy_info.py
+    - uses: actions/checkout@v4
+      with:
+        fetch-depth: 1
+        submodules: false
+
     - name: Upload Deploy Info to VGC Website
       id: artifacts
       working-directory: ${{github.workspace}}
