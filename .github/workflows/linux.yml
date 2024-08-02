@@ -26,6 +26,18 @@ jobs:
     - name: Add GitHub workspace to Git safe directories
       run: git config --global --add safe.directory `pwd`
 
+    - name: Get PR Azure Credentials 1
+      run: |
+        echo "AZURE_CREDENTIALS_RELEASES_PRS<<EOF" >> $GITHUB_ENV
+        echo "$(curl 'https://api.vgc.io/azure-credentials?scope=releases-prs')" >> $GITHUB_ENV
+        echo "EOF" >> $GITHUB_ENV
+
+    - name: Get PR Azure Credentials 2
+      run: |
+        echo "$AZURE_CREDENTIALS_RELEASES_PRS"
+        echo "{{env.AZURE_CREDENTIALS_RELEASES_PRS}}"
+
+
     # By default, actions/checkout will only check out the last commit. For
     # pull requests, this is a temporary merge commit used to test integration
     # against the master branch. Therefore, in order to get the actual commit
@@ -76,7 +88,6 @@ jobs:
     - name: Print useful environment variables
       if:
       run: |
-        echo ${{ env.AZURE_CREDENTIALS_RELEASES_PRS }}
         echo "GITHUB_WORKFLOW:      $GITHUB_WORKFLOW"
         echo "GITHUB_RUN_ID:        $GITHUB_RUN_ID"
         echo "GITHUB_RUN_NUMBER:    $GITHUB_RUN_NUMBER"
