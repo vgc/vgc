@@ -107,7 +107,9 @@ def main(args):
     deployDir = file.parent
 
     # Parse JSON file
-    info = json.loads(file.read_text())
+    infoText = file.read_text()
+    print_(f"{file.name} = {infoText}")
+    info = json.loads(infoText)
     version = info['version']
     files = info['files']
 

@@ -1193,5 +1193,7 @@ if __name__ == "__main__":
         },
         "files": [file.name for file in filesToUpload]
     }
+    infoText = json.dumps(info)
     infoFile = deployDir / "info.json"
-    infoFile.write_text(json.dumps(info))
+    infoFile.write_text(infoText)
+    print_(f"{infoFile.name} = {infoText}")

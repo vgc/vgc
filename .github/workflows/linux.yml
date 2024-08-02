@@ -124,7 +124,6 @@ jobs:
         VGC_GITHUB_KEY: ${{secrets.VGC_GITHUB_KEY}}
       run: |
         cmake --build . --target deploy --parallel $PARALLEL_JOBS
-        cat deploy/$BUILD_TYPE/info.json
         versionName=VGC-$(awk -F "=" '/versionName/ {print $2}' $BUILD_TYPE/resources/core/version.txt)
         versionName=$(echo $versionName | tr " " "-")
         echo "version-name=$versionName" >> "$GITHUB_OUTPUT"
@@ -202,8 +201,4 @@ jobs:
     - name: Upload Deploy Info to VGC Website
       working-directory: ${{github.workspace}}
       run: |
-        pwd
-        ls
-        ls artifacts
-        cat artifacts/info.json
         python3 tools/upload_deploy_info.py artifacts/info.json
