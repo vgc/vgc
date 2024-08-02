@@ -1133,50 +1133,11 @@ if __name__ == "__main__":
         filesToUpload.append(dmgFile)
         print(" File size: " + str(dmgFile.stat().st_size) + "B", flush=True)
 
-
-
-    # Upload artifacts if this is a Travis of GitHub Action build.
+    # Write deploy info to info.json file.
     #
-    # We check for TRAVIS_REPO_SLUG rather than simply TRAVIS to prevent users
-    # from mistakenly attempting to upload artifacts to our VGC servers if they
-    # fork VGC and setup their own Travis builds.
-    #
-    # We have other security measures in place to prevent intentional harm from
-    # malicious users.
-    #
-    # Note that VGC_TRAVIS_KEY is a secure environment variable not defined
-    # for pull requests.
-    #
-    upload = False
-    if os.getenv("TRAVIS_REPO_SLUG") == "vgc/vgc":
-        upload = True
-        key = os.getenv("VGC_TRAVIS_KEY", default="")
-        pr = os.getenv("TRAVIS_PULL_REQUEST", default="false")
-        url = "https://webhooks.vgc.io/travis"
-        commitMessage = os.getenv("TRAVIS_COMMIT_MESSAGE")
-    elif os.getenv("GITHUB_REPOSITORY") == "vgc/vgc":
-        eventName = os.getenv("GITHUB_EVENT_NAME")
-        url = "https://webhooks.vgc.io/github"
-        commitMessage = os.getenv("COMMIT_MESSAGE")
-        if eventName == "pull_request":
-            upload = True
-            key = ""
-            ref = os.getenv("GITHUB_REF") # Example: refs/pull/461/merge
-            pr = ref.split('/')[2]        # Example: 461
-        elif eventName == "push":
-            upload = True
-            key = os.getenv("VGC_GITHUB_KEY")
-            assert key, "Missing key: cannot upload artifact"
-            pr = "false"
-        else:
-            upload = False
-    if upload:
-        print_("Uploading commit metadata...")
-        response = post_json(
-            urlencode(url, {
-                "key": key,
-                "pr": pr
-            }), {
+    commitMessage = os.getenv("COMMIT_MESSAGE")
+    info = {
+        "version": {
             "versionType": versionType,
             "versionMajor": versionMajor,
             "versionMinor": versionMinor,
@@ -1188,38 +1149,8 @@ if __name__ == "__main__":
             "commitTime": commitTime,
             "commitIndex": commitIndex,
             "commitMessage": commitMessage
-        })
-        print_(" Done.")
-        releaseId = response["releaseId"]
-        allFilesUploaded = True
-        for file in filesToUpload:
-            numAttempts = 5
-            for attempt in range(1, numAttempts + 1):
-                try:
-                    if attempt == 1:
-                        print_(f"Uploading {file}...")
-                        time.sleep(3) # helps the server by waiting a bit between files
-                    else:
-                        print_(f"Attempt {attempt}/{numAttempts}...")
-                    response = post_multipart(
-                        urlencode(url, {
-                            "key": key,
-                            "pr": pr,
-                            "releaseId": releaseId
-                        }), {}, {
-                            "file": file
-                        })
-                except Exception as error:
-                    print_(f"Failed: {type(error)}: {error}")
-                    if attempt < numAttempts:
-                        waitTime = 5 * (2 ** attempt)
-                        print_(f"Waiting for {waitTime} seconds before re-attempting.")
-                        time.sleep(waitTime)
-                    else:
-                        print_(f"All attempts failed: the file was not uploaded.")
-                        allFilesUploaded = False
-                else:
-                    print_(" Done.")
-                    break
-        if not allFilesUploaded:
-            raise Exception("Some files were not uploaded due to errors.")
+        },
+        "files": [file.name for file in filesToUpload]
+    }
+    infoFile = deployDir / "info.json"
+    infoFile.write_text(json.dumps(info))
