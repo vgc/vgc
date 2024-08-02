@@ -25,15 +25,11 @@ jobs:
         curl "https://api.vgc.io/azure-credentials?scope=releases-prs" >> $GITHUB_OUTPUT
         echo "EOF" >> $GITHUB_OUTPUT
 
-    - name: Test
-      run: |
-        echo '${{steps.get-azure-credentials-pr.outputs.credentials}}'
-
     - name: Log in with Azure
       if: github.event_name == 'pull_request'
       uses: azure/login@v2
       with:
-        creds: '${{steps.get-azure-credentials-pr.outputs.credentials}}'
+        creds: ${{steps.get-azure-credentials-pr.outputs.credentials}}
 
 
 
