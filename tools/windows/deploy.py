@@ -1172,6 +1172,8 @@ if __name__ == "__main__":
         # TODO: also create a ZIP for portable installation (like Blender
         # does), with updates disabled.
 
+    filesToUpload = list(deployDir.glob('VGC*.exe'))
+
     # Write deploy info to info.json file.
     #
     commitMessage = os.getenv("COMMIT_MESSAGE")
