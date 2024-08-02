@@ -211,7 +211,7 @@ jobs:
       if: github.event_name == 'pull_request'
       uses: azure/login@v2
       with:
-        creds: '${{ env.AZURE_CREDENTIALS_RELEASES_PRS }}'
+        creds: ${{ env.AZURE_CREDENTIALS_RELEASES_PRS }}
 
     - name: Upload to Azure
       if: github.event_name == 'pull_request'
