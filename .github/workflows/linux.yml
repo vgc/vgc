@@ -237,29 +237,42 @@ jobs:
     - name: Move info.json
       run: mv artifacts/info.json .
 
-    - name: Get Azure Credentials
-      id: get-azure-credentials-pr
-      if: github.event_name == 'pull_request'
+    - name: Get Azure Info
+      id: get-azure-info
       run: |
-        echo "credentials<<EOF" >> $GITHUB_OUTPUT
-        curl "https://api.vgc.io/azure-credentials?scope=releases-prs" >> $GITHUB_OUTPUT
+        if [ $GITHUB_EVENT_NAME == 'pull_request' ]; then \
+            echo "credentials<<EOF" >> $GITHUB_OUTPUT \
+            curl "https://api.vgc.io/azure-credentials?scope=releases-prs" >> $GITHUB_OUTPUT \
+            echo "EOF" >> $GITHUB_OUTPUT \
+            echo "destination=prs" >> "$GITHUB_OUTPUT" \
+        elif [ $GITHUB_EVENT_NAME == 'push' ]; \
+            echo "credentials<<EOF" >> $GITHUB_OUTPUT \
+            echo "${{ secrets.AZURE_CREDENTIALS_RELEASES }}" >> $GITHUB_OUTPUT \
+            echo "EOF" >> $GITHUB_OUTPUT \
+            echo "destination=alpha" >> "$GITHUB_OUTPUT" \
+        fi
+
+    # Test that syntax for adding secrets to step output seems ok 
+    - name: Get Azure Info 2
+      id: get-azure-info2
+      run: |
+        echo "credentials2<<EOF" >> $GITHUB_OUTPUT \
+        echo "${{ steps.get-azure-info.outputs.credentials }}" >> $GITHUB_OUTPUT \
         echo "EOF" >> $GITHUB_OUTPUT
 
     - name: Log in with Azure
-      if: github.event_name == 'pull_request'
       uses: azure/login@v2
       with:
-        creds: ${{steps.get-azure-credentials-pr.outputs.credentials}}
+        creds: ${{steps.get-azure-info2.outputs.credentials2}}
 
     - name: Upload to Azure
-      if: github.event_name == 'pull_request'
       uses: azure/cli@v2
       with:
         azcliversion: latest
         inlineScript: |
           az storage blob upload-batch \
             --account-name vgcreleases \
-            --destination prs \
+            --destination ${{steps.get-azure-info.outputs.destination}} \
             --destination-path ${{needs.upload-artifacts.outputs.version-name}} \
             --source artifacts \
             --auth-mode login
