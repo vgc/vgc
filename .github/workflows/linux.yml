@@ -11,53 +11,8 @@ env:
   # https://github.blog/changelog/2024-03-07-github-actions-all-actions-will-run-on-node20-instead-of-node16-by-default/
 
 jobs:
-
-
-  test-multiline:
-    name: Test multiline output
-    runs-on: ubuntu-latest
-    steps:
-
-    - name: Output 1
-      id: out1
-      env:
-        FOO1: |
-          {
-            "foo1"="bar1"
-          }
-      run: |
-        echo "foo2<<EOF" >> $GITHUB_OUTPUT;
-        echo "{" >> $GITHUB_OUTPUT;
-        echo '  "foo2"="bar2"' >> $GITHUB_OUTPUT;
-        echo '}' >> $GITHUB_OUTPUT;
-        echo "EOF" >> $GITHUB_OUTPUT
-
-        echo "foo3<<EOF" >> $GITHUB_OUTPUT;
-        echo "$FOO1" >> $GITHUB_OUTPUT;
-        echo "EOF" >> $GITHUB_OUTPUT
-
-    - name: Output 2
-      id: out2
-      env:
-        FOO4: ${{ steps.out1.outputs.foo2 }}
-        FOO5: ${{ steps.out1.outputs.foo3 }}
-      run: |
-        echo "foo6<<EOF" >> $GITHUB_OUTPUT;
-        echo "$FOO4" >> $GITHUB_OUTPUT;
-        echo "EOF" >> $GITHUB_OUTPUT
-        echo "foo7<<EOF" >> $GITHUB_OUTPUT;
-        echo "$FOO5" >> $GITHUB_OUTPUT;
-        echo "EOF" >> $GITHUB_OUTPUT
-
-    # Test that syntax for adding secrets to step output seems ok 
-    - name: Print
-      run: |
-        echo ${{ steps.out2.outputs.myvar }}
-
-
   build:
     name: Build
-    needs: test-multiline
     runs-on: ubuntu-latest
     container: vgcsoftware/vgc-ci-ubuntu-18.04:2023-03-08.0
     outputs:
@@ -270,6 +225,8 @@ jobs:
 
     - name: Get Azure Info
       id: get-azure-info
+      env:
+        AZURE_CREDENTIALS_RELEASES: ${{ secrets.AZURE_CREDENTIALS_RELEASES }}
       run: |
         if [ $GITHUB_EVENT_NAME == 'pull_request' ]; then \
           echo "credentials<<EOF" >> $GITHUB_OUTPUT; \
@@ -278,23 +235,15 @@ jobs:
           echo "destination=prs" >> "$GITHUB_OUTPUT"; \
         elif [ $GITHUB_EVENT_NAME == 'push' ]; then \
           echo "credentials<<EOF" >> $GITHUB_OUTPUT; \
-          echo "${{ secrets.AZURE_CREDENTIALS_RELEASES }}" >> $GITHUB_OUTPUT; \
+          echo "$AZURE_CREDENTIALS_RELEASES" >> $GITHUB_OUTPUT; \
           echo "EOF" >> $GITHUB_OUTPUT; \
           echo "destination=alpha" >> "$GITHUB_OUTPUT"; \
         fi
 
-    # Test that syntax for adding secrets to step output seems ok 
-    - name: Get Azure Info 2
-      id: get-azure-info2
-      run: |
-        echo "credentials2<<EOF" >> $GITHUB_OUTPUT \
-        echo "${{ steps.get-azure-info.outputs.credentials }}" >> $GITHUB_OUTPUT \
-        echo "EOF" >> $GITHUB_OUTPUT
-
     - name: Log in with Azure
       uses: azure/login@v2
       with:
-        creds: ${{steps.get-azure-info2.outputs.credentials2}}
+        creds: ${{steps.get-azure-info.outputs.credentials}}
 
     - name: Upload to Azure
       uses: azure/cli@v2
