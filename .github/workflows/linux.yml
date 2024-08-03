@@ -20,18 +20,33 @@ jobs:
 
     - name: Output 1
       id: out1
+      env:
+        FOO1: |
+          {
+            "foo1"="bar1"
+          }
       run: |
-        echo "myvar<<EOF" >> $GITHUB_OUTPUT;
+        echo "foo2<<EOF" >> $GITHUB_OUTPUT;
         echo "{" >> $GITHUB_OUTPUT;
-        echo '  "foo"="bar"' >> $GITHUB_OUTPUT;
+        echo '  "foo2"="bar2"' >> $GITHUB_OUTPUT;
         echo '}' >> $GITHUB_OUTPUT;
+        echo "EOF" >> $GITHUB_OUTPUT
+
+        echo "foo3<<EOF" >> $GITHUB_OUTPUT;
+        echo "$FOO1" >> $GITHUB_OUTPUT;
         echo "EOF" >> $GITHUB_OUTPUT
 
     - name: Output 2
       id: out2
+      env:
+        FOO4: ${{ steps.out1.outputs.foo2 }}
+        FOO5: ${{ steps.out1.outputs.foo3 }}
       run: |
-        echo "myvar<<EOF" >> $GITHUB_OUTPUT;
-        echo ${{ steps.out1.outputs.myvar }} >> $GITHUB_OUTPUT;
+        echo "foo6<<EOF" >> $GITHUB_OUTPUT;
+        echo "$FOO4" >> $GITHUB_OUTPUT;
+        echo "EOF" >> $GITHUB_OUTPUT
+        echo "foo7<<EOF" >> $GITHUB_OUTPUT;
+        echo "$FOO5" >> $GITHUB_OUTPUT;
         echo "EOF" >> $GITHUB_OUTPUT
 
     # Test that syntax for adding secrets to step output seems ok 
