@@ -17,6 +17,7 @@ jobs:
     container: vgcsoftware/vgc-ci-ubuntu-18.04:2023-03-08.0
     outputs:
       version-name: ${{steps.deploy.outputs.version-name}}
+      artifacts-name: ${{steps.artifacts.outputs.name}}
       artifacts-cache-key: ${{steps.artifacts.outputs.cache-key}}
 
     steps:
@@ -135,7 +136,9 @@ jobs:
         mkdir artifacts
         cp build/deploy/$BUILD_TYPE/info.json artifacts
         cp build/deploy/$BUILD_TYPE/vgc*.AppImage artifacts
+        name=${{steps.deploy.outputs.version-name}}-Linux
         cackeKey=${{steps.deploy.outputs.version-name}}-$GITHUB_RUN_ID-artifacts
+        echo "name=$name" >> "$GITHUB_OUTPUT"
         echo "cache-key=$cackeKey" >> "$GITHUB_OUTPUT"
 
     # We cannot use upload-artifact@v4 on Ubuntu 18.04 as it requires Node 20.
@@ -162,7 +165,7 @@ jobs:
     # - https://github.com/actions/cache/blob/main/tips-and-workarounds.md#cross-os-cache
     # - https://github.com/marketplace/actions/cache#cache-version
     #
-    - name: Save Artifacts
+    - name: Cache Artifacts
       uses: actions/cache/save@v3.2.4
       if: always() # If we re-run the job, we want to override the cache
       with:
@@ -176,15 +179,13 @@ jobs:
     name: Upload Artifacts
     runs-on: ubuntu-latest
     needs: build
+    outputs:
+      version-name: ${{needs.build.outputs.version-name}}
+      artifacts-name: ${{needs.build.outputs.artifacts-name}}
+
     steps:
 
-    # Note: this must be done before cache/restore, otherwise checkout deletes the cache
-    - uses: actions/checkout@v4
-      with:
-        fetch-depth: 1
-        submodules: false # We only need tools/upload_deploy_info.py
-
-    - name: Restore Artifacts
+    - name: Restore Cached Artifacts
       uses: actions/cache/restore@v3.2.4
       with:
         path: artifacts
@@ -196,7 +197,41 @@ jobs:
       uses: actions/upload-artifact@v4
       with:
         path: artifacts
-        name: ${{needs.build.outputs.version-name}}-Linux
+        name: ${{needs.build.outputs.artifacts-name}}
+
+  upload-vgc:
+    name: Upload (vgc/vgctest)
+    runs-on: ubuntu-latest
+    needs: upload-artifacts
+    if: ${{ github.repository == 'vgc/vgctest' }}
+    steps:
+
+    # Note: this must be done before cache/restore,
+    # otherwise checkout deletes the dowloaded artifacts
+    - uses: actions/checkout@v4
+      with:
+        fetch-depth: 1
+        submodules: false # We only need tools/upload_deploy_info.py
+
+  upload-vgc:
+    name: Upload (vgc/vgc)
+    runs-on: ubuntu-latest
+    needs: upload-artifacts
+    if: ${{ github.repository == 'vgc/vgc' }}
+    steps:
+
+    # Note: this must be done before cache/restore,
+    # otherwise checkout deletes the dowloaded artifacts
+    - uses: actions/checkout@v4
+      with:
+        fetch-depth: 1
+        submodules: false # We only need tools/upload_deploy_info.py
+
+    - name: Download Artifacts
+      uses: actions/download-artifact@v4
+      with:
+        path: artifacts
+        name: ${{needs.upload-artifacts.outputs.artifacts-name}}
 
     - name: Get Azure Credentials
       id: get-azure-credentials-pr
