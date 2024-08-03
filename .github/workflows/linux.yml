@@ -265,6 +265,6 @@ jobs:
             --auth-mode login
 
     - name: Upload Deploy Info to VGC Website
-      working-directory: ${{github.workspace}}
       run: |
+        mv info.json artifacts
         python3 tools/upload_deploy_info.py artifacts/info.json
