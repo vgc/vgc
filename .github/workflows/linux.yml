@@ -233,6 +233,10 @@ jobs:
         path: artifacts
         name: ${{needs.upload-artifacts.outputs.artifacts-name}}
 
+    # The file info.json is specific to this platform/workflow and shouldn't be uploaded
+    - name: Move info.json
+      run: mv artifacts/info.json .
+
     - name: Get Azure Credentials
       id: get-azure-credentials-pr
       if: github.event_name == 'pull_request'
