@@ -199,7 +199,7 @@ jobs:
         path: artifacts
         name: ${{needs.build.outputs.artifacts-name}}
 
-  upload-vgc:
+  upload-vgc-test:
     name: Upload (vgc/vgctest)
     runs-on: ubuntu-latest
     needs: upload-artifacts
