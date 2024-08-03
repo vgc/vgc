@@ -11,8 +11,38 @@ env:
   # https://github.blog/changelog/2024-03-07-github-actions-all-actions-will-run-on-node20-instead-of-node16-by-default/
 
 jobs:
+
+
+  test-multiline:
+    name: Test multiline output
+    runs-on: ubuntu-latest
+    steps:
+
+    - name: Output 1
+      id: out1
+      run: |
+        echo "myvar<<EOF" >> $GITHUB_OUTPUT;
+        echo "{" >> $GITHUB_OUTPUT;
+        echo '  "foo"="bar"' >> $GITHUB_OUTPUT;
+        echo '}' >> $GITHUB_OUTPUT;
+        echo "EOF" >> $GITHUB_OUTPUT
+
+    - name: Output 2
+      id: out2
+      run: |
+        echo "myvar<<EOF" >> $GITHUB_OUTPUT;
+        echo "${{ steps.out1.outputs.myvar }}" >> $GITHUB_OUTPUT;
+        echo "EOF" >> $GITHUB_OUTPUT
+
+    # Test that syntax for adding secrets to step output seems ok 
+    - name: Print
+      run: |
+        echo "${{ steps.out2.outputs.myvar }}"
+
+
   build:
     name: Build
+    needs: test-multiline
     runs-on: ubuntu-latest
     container: vgcsoftware/vgc-ci-ubuntu-18.04:2023-03-08.0
     outputs:
