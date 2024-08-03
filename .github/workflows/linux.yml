@@ -260,7 +260,7 @@ jobs:
           az storage blob upload-batch \
             --account-name vgcreleases \
             --destination prs \
-            --destination-path ${{needs.build.outputs.version-name}} \
+            --destination-path ${{needs.upload-artifacts.outputs.version-name}} \
             --source artifacts \
             --auth-mode login
 
