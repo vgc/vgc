@@ -31,13 +31,13 @@ jobs:
       id: out2
       run: |
         echo "myvar<<EOF" >> $GITHUB_OUTPUT;
-        echo "${{ steps.out1.outputs.myvar }}" >> $GITHUB_OUTPUT;
+        echo ${{ steps.out1.outputs.myvar }} >> $GITHUB_OUTPUT;
         echo "EOF" >> $GITHUB_OUTPUT
 
     # Test that syntax for adding secrets to step output seems ok 
     - name: Print
       run: |
-        echo "${{ steps.out2.outputs.myvar }}"
+        echo ${{ steps.out2.outputs.myvar }}
 
 
   build:
