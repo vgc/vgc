@@ -70,6 +70,9 @@ def post_json(url, urlargs, jsondata):
 
 def github_upload(version, files, uploadUrl):
 
+    if uploadUrl[-1] != '/':
+        uploadUrl += '/'
+
     urlargs = {}
     eventName = os.getenv("GITHUB_EVENT_NAME")
 
@@ -96,7 +99,7 @@ def github_upload(version, files, uploadUrl):
     urlargs['releaseId'] = response["releaseId"]
     for filename in files:
         urlargs['filename'] = filename
-        urlargs['externalUrl'] = f"{uploadUrl}/{filename}"
+        urlargs['externalUrl'] = uploadUrl + urllib.parse.quote(filename)
         post_json(url, urlargs, {})
 
     # TODO: Improve API so we can do a single request with version + files + uploadUrl,
