@@ -132,12 +132,14 @@ jobs:
     - name: Prepare Artifacts
       id: artifacts
       working-directory: ${{github.workspace}}
+      env:
+        VERSION_NAME: ${{steps.deploy.outputs.version-name}}
       run: |
         mkdir artifacts
         cp build/deploy/$BUILD_TYPE/info.json artifacts
         cp build/deploy/$BUILD_TYPE/vgc*.AppImage artifacts
-        name=${{steps.deploy.outputs.version-name}}-Linux
-        cackeKey=${{steps.deploy.outputs.version-name}}-$GITHUB_RUN_ID-artifacts
+        name=$VERSION_NAME-Linux
+        cackeKey=$VERSION_NAME-$GITHUB_RUN_ID-artifacts
         echo "name=$name" >> "$GITHUB_OUTPUT"
         echo "cache-key=$cackeKey" >> "$GITHUB_OUTPUT"
 
@@ -200,7 +202,7 @@ jobs:
         name: ${{needs.build.outputs.artifacts-name}}
 
   upload-vgc:
-    name: Upload (vgc/vgc)
+    name: Upload
     runs-on: ubuntu-latest
     needs: upload-artifacts
     if: ${{ github.repository == 'vgc/vgc' }}
@@ -226,7 +228,8 @@ jobs:
     - name: Get Azure Info
       id: get-azure-info
       env:
-        AZURE_CREDENTIALS_RELEASES: ${{ secrets.AZURE_CREDENTIALS_RELEASES }}
+        AZURE_CREDENTIALS_RELEASES: ${{secrets.AZURE_CREDENTIALS_RELEASES}}
+        VERSION_NAME: ${{needs.upload-artifacts.outputs.version-name}}
       run: |
         if [ $GITHUB_EVENT_NAME == 'pull_request' ]; then \
           echo "credentials<<EOF" >> $GITHUB_OUTPUT; \
@@ -239,6 +242,7 @@ jobs:
           echo "EOF" >> $GITHUB_OUTPUT; \
           echo "destination=alpha" >> "$GITHUB_OUTPUT"; \
         fi
+        echo "version-name=$VERSION_NAME" >> "$GITHUB_OUTPUT"
 
     - name: Log in with Azure
       uses: azure/login@v2
@@ -247,17 +251,26 @@ jobs:
 
     - name: Upload to Azure
       uses: azure/cli@v2
+      env:
+        DESTINATION: ${{steps.get-azure-info.outputs.destination}}
+        VERSION_NAME: ${{steps.get-azure-info.outputs.version-name}}
       with:
         azcliversion: latest
         inlineScript: |
           az storage blob upload-batch \
             --account-name vgcreleases \
-            --destination ${{steps.get-azure-info.outputs.destination}} \
-            --destination-path ${{needs.upload-artifacts.outputs.version-name}} \
+            --destination $DESTINATION \
+            --destination-path $VERSION_NAME \
             --source artifacts \
             --auth-mode login
 
     - name: Upload Deploy Info to VGC Website
+      env:
+        DESTINATION: ${{steps.get-azure-info.outputs.destination}}
+        VERSION_NAME: ${{steps.get-azure-info.outputs.version-name}}
+        STORAGE_URL: https://vgcreleases.blob.core.windows.net
       run: |
         mv info.json artifacts
-        python3 tools/upload_deploy_info.py artifacts/info.json
+        python3 tools/upload_deploy_info.py \
+          artifacts/info.json \
+          "$STORAGE_URL/$DESTINATION/$VERSION_NAME"

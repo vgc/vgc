@@ -68,7 +68,7 @@ def post_json(url, urlargs, jsondata):
         return responsedata
 
 
-def github_upload(version, files):
+def github_upload(version, files, uploadUrl):
 
     urlargs = {}
     eventName = os.getenv("GITHUB_EVENT_NAME")
@@ -96,8 +96,11 @@ def github_upload(version, files):
     urlargs['releaseId'] = response["releaseId"]
     for filename in files:
         urlargs['filename'] = filename
-        urlargs['externalUrl'] = f"https://example.com/{filename}"
+        urlargs['externalUrl'] = f"{uploadUrl}/{filename}"
         post_json(url, urlargs, {})
+
+    # TODO: Improve API so we can do a single request with version + files + uploadUrl,
+    #       instead of one request per uploaded file
 
 
 def main(args):
@@ -115,13 +118,14 @@ def main(args):
 
     # Upload deploy info
     if os.getenv("GITHUB_REPOSITORY") == "vgc/vgc":
-        github_upload(version, files)
+        github_upload(version, files, args.url)
     else:
         print_("Skipping upload as this does not appear to be an official VGC repository.")
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("file", help="path to the info.json file")
+    parser.add_argument("file", help="Path to the info.json file.")
+    parser.add_argument("url", help="Root URL where the files where uploaded.")
     args = parser.parse_args()
     main(args)
