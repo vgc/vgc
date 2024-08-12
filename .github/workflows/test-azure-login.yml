@@ -1,0 +1,38 @@
+name: Linux
+
+on: [push, pull_request]
+
+env:
+  BUILD_TYPE: Release
+  QT_VERSION: 5.12.5
+  PARALLEL_JOBS: 5
+  ACTIONS_ALLOW_USE_UNSECURE_NODE_VERSION: true
+  # https://github.com/vgc/vgc/issues/1804
+  # https://github.blog/changelog/2024-03-07-github-actions-all-actions-will-run-on-node20-instead-of-node16-by-default/
+
+jobs:
+  upload-vgc:
+    name: Upload
+    runs-on: ubuntu-latest
+    if: ${{ github.repository == 'vgc/vgc' }}
+    steps:
+
+    - name: Get Azure Info
+      id: get-azure-info
+      env:
+        AZURE_CREDENTIALS_RELEASES: ${{secrets.AZURE_CREDENTIALS_RELEASES}}
+      run: |
+        if [ $GITHUB_EVENT_NAME == 'pull_request' ]; then \
+          echo "credentials<<EOF" >> $GITHUB_OUTPUT; \
+          echo "$AZURE_CREDENTIALS_RELEASES" >> $GITHUB_OUTPUT; \
+          echo "EOF" >> $GITHUB_OUTPUT; \
+        elif [ $GITHUB_EVENT_NAME == 'push' ]; then \
+          echo "credentials<<EOF" >> $GITHUB_OUTPUT; \
+          echo "$AZURE_CREDENTIALS_RELEASES" >> $GITHUB_OUTPUT; \
+          echo "EOF" >> $GITHUB_OUTPUT; \
+        fi
+
+    - name: Log in with Azure
+      uses: azure/login@v2
+      with:
+        creds: ${{steps.get-azure-info.outputs.credentials}}
