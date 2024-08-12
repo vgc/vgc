@@ -1,4 +1,4 @@
-name: Linux
+name: Test Azure Login
 
 on: [push, pull_request]
 
@@ -12,10 +12,15 @@ env:
 
 jobs:
   upload-vgc:
-    name: Upload
+    name: Test
     runs-on: ubuntu-latest
     if: ${{ github.repository == 'vgc/vgc' }}
     steps:
+
+    - name: Log in with Azure 1
+      uses: azure/login@v2
+      with:
+        creds: ${{secrets.AZURE_CREDENTIALS_RELEASES}}
 
     - name: Get Azure Info
       id: get-azure-info
@@ -32,7 +37,7 @@ jobs:
           echo "EOF" >> $GITHUB_OUTPUT; \
         fi
 
-    - name: Log in with Azure
+    - name: Log in with Azure 2
       uses: azure/login@v2
       with:
         creds: ${{steps.get-azure-info.outputs.credentials}}
