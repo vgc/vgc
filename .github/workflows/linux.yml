@@ -121,8 +121,6 @@ jobs:
     - name: Deploy
       id: deploy
       working-directory: ${{github.workspace}}/build
-      env:
-        VGC_GITHUB_KEY: ${{secrets.VGC_GITHUB_KEY}}
       run: |
         cmake --build . --target deploy --parallel $PARALLEL_JOBS
         versionName=VGC-$(awk -F "=" '/versionName/ {print $2}' $BUILD_TYPE/resources/core/version.txt)
@@ -229,11 +227,12 @@ jobs:
       id: get-azure-info
       env:
         AZURE_CREDENTIALS_RELEASES: ${{secrets.AZURE_CREDENTIALS_RELEASES}}
-        VERSION_NAME: ${{needs.upload-artifacts.outputs.version-name}}
+        VERSION_NAME: ${{needs.build.outputs.version-name}}
       run: |
         if [ $GITHUB_EVENT_NAME == 'pull_request' ]; then \
           echo "credentials<<EOF" >> $GITHUB_OUTPUT; \
-          curl "https://api.vgc.io/azure-credentials?scope=releases-prs" >> $GITHUB_OUTPUT; \
+          SCOPE="releases-prs"; \
+          curl "https://api.vgc.io/azure-credentials?scope=$SCOPE" >> $GITHUB_OUTPUT; \
           echo "EOF" >> $GITHUB_OUTPUT; \
           echo "destination=prs" >> "$GITHUB_OUTPUT"; \
         elif [ $GITHUB_EVENT_NAME == 'push' ]; then \
@@ -266,6 +265,7 @@ jobs:
 
     - name: Upload Deploy Info to VGC Website
       env:
+        VGC_GITHUB_KEY: ${{secrets.VGC_GITHUB_KEY}}
         DESTINATION: ${{steps.get-azure-info.outputs.destination}}
         VERSION_NAME: ${{steps.get-azure-info.outputs.version-name}}
         STORAGE_URL: https://vgcreleases.blob.core.windows.net

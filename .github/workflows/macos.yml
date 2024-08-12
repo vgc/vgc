@@ -17,6 +17,9 @@ jobs:
   build:
     name: Build
     runs-on: macos-12
+    outputs:
+      version-name: ${{steps.deploy.outputs.version-name}}
+      artifacts-name: ${{steps.artifacts.outputs.name}}
 
     steps:
     - uses: actions/checkout@v4
@@ -117,16 +120,102 @@ jobs:
     - name: Deploy
       id: deploy
       working-directory: ${{github.workspace}}/build
-      env:
-        VGC_GITHUB_KEY: ${{secrets.VGC_GITHUB_KEY}}
       run: |
         cmake --build . --target deploy --parallel $PARALLEL_JOBS
         versionName=VGC-$(awk -F "=" '/versionName/ {print $2}' $BUILD_TYPE/resources/core/version.txt)
         versionName=$(echo $versionName | tr " " "-")
         echo "version-name=$versionName" >> "$GITHUB_OUTPUT"
 
+    - name: Prepare Artifacts
+      id: artifacts
+      working-directory: ${{github.workspace}}
+      env:
+        VERSION_NAME: ${{steps.deploy.outputs.version-name}}
+      run: |
+        mkdir artifacts
+        cp build/deploy/$BUILD_TYPE/info.json artifacts
+        cp build/deploy/$BUILD_TYPE/VGC*.dmg artifacts
+        name=$VERSION_NAME-macOS
+        echo "name=$name" >> "$GITHUB_OUTPUT"
+
     - name: Upload Artifacts
       uses: actions/upload-artifact@v4
       with:
-        path: build/deploy/${{env.BUILD_TYPE}}/VGC*.dmg
-        name: ${{steps.deploy.outputs.version-name}}-macOS
+        path: artifacts
+        name: ${{steps.artifacts.outputs.name}}
+
+  upload-vgc:
+    name: Upload
+    runs-on: ubuntu-latest
+    needs: build
+    if: ${{ github.repository == 'vgc/vgc' }}
+    steps:
+
+    # Note: this must be done before cache/restore,
+    # otherwise checkout deletes the dowloaded artifacts
+    - uses: actions/checkout@v4
+      with:
+        fetch-depth: 1
+        submodules: false # We only need tools/upload_deploy_info.py
+
+    - name: Download Artifacts
+      uses: actions/download-artifact@v4
+      with:
+        path: artifacts
+        name: ${{needs.build.outputs.artifacts-name}}
+
+    # The file info.json is specific to this platform/workflow and shouldn't be uploaded
+    - name: Move info.json
+      run: mv artifacts/info.json .
+
+    - name: Get Azure Info
+      id: get-azure-info
+      env:
+        AZURE_CREDENTIALS_RELEASES: ${{secrets.AZURE_CREDENTIALS_RELEASES}}
+        VERSION_NAME: ${{needs.build.outputs.version-name}}
+      run: |
+        if [ $GITHUB_EVENT_NAME == 'pull_request' ]; then \
+          echo "credentials<<EOF" >> $GITHUB_OUTPUT; \
+          SCOPE="releases-prs"; \
+          curl "https://api.vgc.io/azure-credentials?scope=$SCOPE" >> $GITHUB_OUTPUT; \
+          echo "EOF" >> $GITHUB_OUTPUT; \
+          echo "destination=prs" >> "$GITHUB_OUTPUT"; \
+        elif [ $GITHUB_EVENT_NAME == 'push' ]; then \
+          echo "credentials<<EOF" >> $GITHUB_OUTPUT; \
+          echo "$AZURE_CREDENTIALS_RELEASES" >> $GITHUB_OUTPUT; \
+          echo "EOF" >> $GITHUB_OUTPUT; \
+          echo "destination=alpha" >> "$GITHUB_OUTPUT"; \
+        fi
+        echo "version-name=$VERSION_NAME" >> "$GITHUB_OUTPUT"
+
+    - name: Log in with Azure
+      uses: azure/login@v2
+      with:
+        creds: ${{steps.get-azure-info.outputs.credentials}}
+
+    - name: Upload to Azure
+      uses: azure/cli@v2
+      env:
+        DESTINATION: ${{steps.get-azure-info.outputs.destination}}
+        VERSION_NAME: ${{steps.get-azure-info.outputs.version-name}}
+      with:
+        azcliversion: latest
+        inlineScript: |
+          az storage blob upload-batch \
+            --account-name vgcreleases \
+            --destination $DESTINATION \
+            --destination-path $VERSION_NAME \
+            --source artifacts \
+            --auth-mode login
+
+    - name: Upload Deploy Info to VGC Website
+      env:
+        VGC_GITHUB_KEY: ${{secrets.VGC_GITHUB_KEY}}
+        DESTINATION: ${{steps.get-azure-info.outputs.destination}}
+        VERSION_NAME: ${{steps.get-azure-info.outputs.version-name}}
+        STORAGE_URL: https://vgcreleases.blob.core.windows.net
+      run: |
+        mv info.json artifacts
+        python3 tools/upload_deploy_info.py \
+          artifacts/info.json \
+          "$STORAGE_URL/$DESTINATION/$VERSION_NAME"
