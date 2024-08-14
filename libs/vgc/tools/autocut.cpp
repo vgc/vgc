@@ -26,15 +26,22 @@ namespace vgc::tools {
 
 void autoCut(vacomplex::KeyEdge* edge, const AutoCutParams& params) {
     vacomplex::Group* group = edge->parentGroup();
-    geometry::Polyline2d polyline = edge->strokeSampling().centerline();
-    Int n = polyline.length();
+    const geometry::StrokeSampling2d& sampling = edge->strokeSampling();
+    const geometry::StrokeSample2dArray& samples = sampling.samples();
+    //geometry::Polyline2d polyline = edge->strokeSampling().centerline();
+    Int n = samples.length();
     for (Int i = 0; i < n - 1; ++i) {
         for (Int j = i + 2; j < n - 1; ++j) {
-            const geometry::Vec2d& a1 = polyline[i];
-            const geometry::Vec2d& b1 = polyline[i + 1];
-            const geometry::Vec2d& a2 = polyline[j];
-            const geometry::Vec2d& b2 = polyline[j + 1];
-            if (auto intersection = geometry::fastSegmentIntersection(a1, b1, a2, b2)) {
+            const geometry::Vec2d& a1 = samples[i].position();
+            const geometry::Vec2d& b1 = samples[i + 1].position();
+            const geometry::Vec2d& a2 = samples[j].position();
+            const geometry::Vec2d& b2 = samples[j + 1].position();
+            if (auto intersection = fastSegmentIntersection(a1, b1, a2, b2)) {
+                // TODO:
+                // const geometry::CurveParameter& p1 = samples[i].parameter();
+                // const geometry::CurveParameter& q1 = samples[i + 1].parameter();
+                // const geometry::CurveParameter& p2 = samples[j].parameter();
+                // const geometry::CurveParameter& q2 = samples[j + 1].parameter();
                 vacomplex::ops::createKeyVertex(intersection->position(), group);
             }
         }
