@@ -26,6 +26,12 @@ void KeyPath::reverse() {
     }
 }
 
+KeyPath KeyPath::reversed() const {
+    KeyPath result = *this;
+    result.reverse();
+    return result;
+}
+
 namespace {
 
 geometry::Vec2dArray sampleCenterline_(const core::Array<KeyHalfedge>& halfedges) {
