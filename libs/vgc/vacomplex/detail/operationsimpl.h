@@ -154,7 +154,7 @@ public:
         KeyVertex* kv,
         core::Array<std::pair<core::Id, core::Array<KeyEdge*>>>& ungluedKeyEdges);
 
-    CutEdgeResult cutEdge(KeyEdge* ke, const geometry::CurveParameter& parameter);
+    CutEdgeResult cutEdge(KeyEdge* ke, core::Array<geometry::CurveParameter> parameters);
 
     CutFaceResult cutGlueFace(
         KeyFace* kf,
@@ -288,6 +288,11 @@ private:
     // for all the cells in the given `cycle`.
     //
     void addToBoundary_(FaceCell* face, const KeyCycle& cycle);
+
+    // Convenient helper that calls addToBoundary_(face, cell)
+    // for all the cells in the given `path`.
+    //
+    void addToBoundary_(FaceCell* face, const KeyPath& path);
 
     void substituteVertex_(KeyVertex* oldVertex, KeyVertex* newVertex);
 
