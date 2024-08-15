@@ -61,6 +61,8 @@ public:
 
     void reverse();
 
+    KeyPath reversed() const;
+
     void append(const KeyHalfedge& khe) {
         halfedges_.append(khe);
         singleVertex_ = nullptr;
