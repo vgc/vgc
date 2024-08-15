@@ -31,44 +31,38 @@
 
 namespace vgc::vacomplex {
 
+/// \class vgc::vacomples::CutEdgeResult
+/// \brief Information about the result of a cutEdge() operation.
+///
 class VGC_VACOMPLEX_API CutEdgeResult {
 public:
-    constexpr CutEdgeResult() noexcept = default;
-
-    CutEdgeResult(KeyEdge* edge1, KeyVertex* vertex, KeyEdge* edge2) noexcept
-        : vertex_(vertex)
-        , edge1_(edge1)
-        , edge2_(edge2) {
+    /// Constructs a `CutEdgeResult` storing the given new `edges`.
+    ///
+    CutEdgeResult(core::Array<KeyEdge*> edges) noexcept
+        : edges_(std::move(edges)) {
     }
 
+    /// Returns the ordered sequence of new edges that the cut produced.
+    ///
+    const core::Array<KeyEdge*> edges() const {
+        return edges_;
+    }
+
+    /// Returns the first new vertex that the cut produced.
+    ///
+    /// This is equivalent to `edges().first()->endVertex()`.
+    ///
+    /// This method is useful in the common case where the `cutEdge()`
+    /// operation was called with a single `CurveParameter` (e.g., cutting an
+    /// open edge into two open edges), in which case it returns the unique new
+    /// vertex corresponding to the cut.
+    ///
     KeyVertex* vertex() const {
-        return vertex_;
-    }
-
-    void setVertex(KeyVertex* vertex) {
-        vertex_ = vertex;
-    }
-
-    KeyEdge* edge1() const {
-        return edge1_;
-    }
-
-    void setEdge1(KeyEdge* edge1) {
-        edge1_ = edge1;
-    }
-
-    KeyEdge* edge2() const {
-        return edge2_;
-    }
-
-    void setEdge2(KeyEdge* edge2) {
-        edge2_ = edge2;
+        return edges().first()->endVertex();
     }
 
 private:
-    KeyVertex* vertex_ = nullptr;
-    KeyEdge* edge1_ = nullptr;
-    KeyEdge* edge2_ = nullptr;
+    core::Array<KeyEdge*> edges_;
 };
 
 class VGC_VACOMPLEX_API CutFaceResult {

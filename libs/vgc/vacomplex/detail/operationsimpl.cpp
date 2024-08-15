@@ -1239,7 +1239,7 @@ Operations::cutEdge(KeyEdge* ke, const geometry::CurveParameter& parameter) {
         // Delete old edge
         hardDelete(ke);
 
-        return CutEdgeResult(newKe, newKv, newKe);
+        return CutEdgeResult({newKe});
     }
     else {
         KeyEdgeData newKeData1 = KeyEdgeData::fromSlice(
@@ -1298,7 +1298,7 @@ Operations::cutEdge(KeyEdge* ke, const geometry::CurveParameter& parameter) {
         // Delete old edge
         hardDelete(ke);
 
-        return CutEdgeResult(newKe1, newKv, newKe2);
+        return CutEdgeResult({newKe1, newKe2});
     }
 }
 
