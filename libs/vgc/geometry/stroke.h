@@ -596,6 +596,34 @@ public:
         return (isClosed_ || n == 0) ? n : n - 1;
     }
 
+    /// Returns the curve parameter corresponding to the start of the stroke.
+    ///
+    /// This is equivalent to `CurveParameter(0, 0)`.
+    ///
+    /// \sa `endParameter()`.
+    ///
+    CurveParameter startParameter() const {
+        return CurveParameter(0, 0);
+    }
+
+    /// Returns the curve parameter corresponding to the end of the stroke.
+    ///
+    /// This is equal to `CurveParameter(numSegments() - 1, 1)` if
+    /// `numSegments()` is non-null, otherwise it is equal to
+    /// `CurveParameter(0, 0)`.
+    ///
+    /// \sa `startParameter()`.
+    ///
+    CurveParameter endParameter() const {
+        Int n = numSegments();
+        if (n > 0) {
+            return CurveParameter(n - 1, 1);
+        }
+        else {
+            return CurveParameter(0, 0);
+        }
+    }
+
     /// Returns whether the stroke segment at `segmentIndex` has a length of 0.
     ///
     /// Throws `IndexError` if `segmentIndex` is not in the range
@@ -605,7 +633,19 @@ public:
         return isZeroLengthSegment_(segmentIndex);
     }
 
-    /// Returns the centerline end positions of the stroke.
+    /// Returns the start position of the stroke centerline.
+    ///
+    Vec2d startPosition() const {
+        return endPositions_()[0];
+    }
+
+    /// Returns the end position of the stroke centerline.
+    ///
+    Vec2d endPosition() const {
+        return endPositions_()[1];
+    }
+
+    /// Returns both the start and end positions of the stroke.
     ///
     std::array<Vec2d, 2> endPositions() const {
         return endPositions_();
