@@ -1208,98 +1208,131 @@ core::Array<KeyVertex*> Operations::unglueKeyVertices(
 }
 
 CutEdgeResult
-Operations::cutEdge(KeyEdge* ke, const geometry::CurveParameter& parameter) {
+Operations::cutEdge(KeyEdge* ke, core::Array<geometry::CurveParameter> parameters) {
 
-    const geometry::AbstractStroke2d* oldStroke = ke->data().stroke();
+    Int n = parameters.length();
+    if (n == 0) {
+        return CutEdgeResult({});
+    }
 
+    KeyEdgeData& oldData = ke->data();
+    const geometry::AbstractStroke2d* oldStroke = oldData.stroke();
+    Group* parentGroup = ke->parentGroup();
+    Node* nextSibling = ke->nextSibling();
+    core::AnimTime time = ke->time();
+
+    // Sort the parameters in increasing order.
+    // Note that this is why we take parameters by value instead of by const ref.
+    //
+    core::sort(parameters);
+
+    // Create the new vertices and edges.
+    //
+    core::Array<KeyEdge*> newEdges;
     if (ke->isClosed()) {
-        KeyEdgeData newKeData =
-            KeyEdgeData::fromSlice(ke->data(), parameter, parameter, 1);
 
-        geometry::Vec2d vertexPos = newKeData.stroke()->endPositions()[0];
-
-        KeyVertex* newKv =
-            createKeyVertex(vertexPos, ke->parentGroup(), ke->nextSibling(), ke->time());
-
-        KeyEdge* newKe =
-            createKeyOpenEdge(newKv, newKv, std::move(newKeData), ke->parentGroup(), ke);
-
-        // Substitute all usages of old edge by new edge
-        KeyHalfedge oldKhe(ke, true);
-        KeyHalfedge newKhe(newKe, true);
-        substituteEdge_(oldKhe, newKhe);
-
-        // Since substitute expects end vertices to be the same,
-        // it didn't add our targetKv to its star's boundary.
-        // So we do it manually here.
-        for (Cell* cell : newKe->star()) {
-            addToBoundary_(cell, newKv);
+        // Create the KeyEdgeData
+        core::Array<KeyEdgeData> newEdgesData;
+        newEdgesData.reserve(n);
+        geometry::CurveParameter p1 = parameters.last();
+        bool areAllParametersEqual = (parameters.first() == parameters.last());
+        Int numWraps = areAllParametersEqual ? 1 : 0;
+        for (const geometry::CurveParameter& p2 : parameters) {
+            newEdgesData.append(KeyEdgeData::fromSlice(oldData, p1, p2, numWraps));
+            p1 = p2;
+            numWraps = 0;
         }
 
-        // Delete old edge
-        hardDelete(ke);
+        // Create the new vertices
+        core::Array<KeyVertex*> newVertices;
+        newVertices.reserve(n);
+        for (const KeyEdgeData& data : newEdgesData) {
+            geometry::Vec2d position = data.stroke()->endPosition();
+            KeyVertex* v = createKeyVertex(position, parentGroup, nextSibling, time);
+            newVertices.append(v);
+        }
 
-        return CutEdgeResult({newKe});
+        // Create the new edges
+        newEdges.reserve(n);
+        KeyVertex* v1 = newVertices.last();
+        for (Int i = 0; i < n; ++i) {
+            KeyEdgeData& data = newEdgesData.getUnchecked(i);
+            KeyVertex* v2 = newVertices.getUnchecked(i);
+            KeyEdge* e = createKeyOpenEdge(v1, v2, std::move(data), parentGroup, ke);
+            newEdges.append(e);
+            v1 = v2;
+        }
     }
     else {
-        KeyEdgeData newKeData1 = KeyEdgeData::fromSlice(
-            ke->data(), geometry::CurveParameter(0, 0), parameter, 0);
+        newEdges.reserve(n + 1);
+        Int numWraps = 0;
 
-        KeyEdgeData newKeData2 = KeyEdgeData::fromSlice(
-            ke->data(),
-            parameter,
-            geometry::CurveParameter(oldStroke->numSegments() - 1, 1),
-            0);
-
-        geometry::Vec2d vertexPos = newKeData2.stroke()->endPositions()[0];
-
-        KeyVertex* newKv =
-            createKeyVertex(vertexPos, ke->parentGroup(), ke->nextSibling(), ke->time());
-
-        KeyEdge* newKe1 = createKeyOpenEdge(
-            ke->startVertex(), newKv, std::move(newKeData1), ke->parentGroup(), ke);
-        KeyEdge* newKe2 = createKeyOpenEdge(
-            newKv, ke->endVertex(), std::move(newKeData2), ke->parentGroup(), ke);
-
-        // Substitute all usages of ke by (newKe1, newKe2) in incident faces.
-        //
-        for (Cell* starCell : ke->star().copy()) {
-            KeyFace* kf = starCell->toKeyFace();
-            if (!kf) {
-                continue;
-            }
-            for (KeyCycle& cycle : kf->cycles_) {
-                if (cycle.steinerVertex()) {
-                    continue;
-                }
-                core::Array<KeyHalfedge>& cycleKhes = cycle.halfedges_;
-                for (auto it = cycleKhes.begin(); it != cycleKhes.end(); ++it) {
-                    KeyHalfedge& khe = *it;
-                    if (khe.edge() == ke) {
-                        if (khe.direction()) {
-                            khe.setEdge(newKe1);
-                            it = cycleKhes.emplace(it + 1, newKe2, true);
-                        }
-                        else {
-                            khe.setEdge(newKe2);
-                            it = cycleKhes.emplace(it + 1, newKe1, false);
-                        }
-                    }
-                }
-                VGC_ASSERT(cycle.isValid());
-            }
-
-            removeFromBoundary_(kf, ke);
-            addToBoundary_(kf, newKe1);
-            addToBoundary_(kf, newKe2);
-            addToBoundary_(kf, newKv);
+        // Create the new vertices and the first n new edges
+        geometry::CurveParameter p1 = oldStroke->startParameter();
+        KeyVertex* v1 = ke->startVertex();
+        for (const geometry::CurveParameter& p2 : parameters) {
+            KeyEdgeData data = KeyEdgeData::fromSlice(oldData, p1, p2, numWraps);
+            geometry::Vec2d position = data.stroke()->endPosition();
+            KeyVertex* v2 = createKeyVertex(position, parentGroup, nextSibling, time);
+            KeyEdge* e = createKeyOpenEdge(v1, v2, std::move(data), parentGroup, ke);
+            newEdges.append(e);
+            p1 = p2;
+            v1 = v2;
         }
 
-        // Delete old edge
-        hardDelete(ke);
-
-        return CutEdgeResult({newKe1, newKe2});
+        // Create the last edge
+        geometry::CurveParameter p2 = oldStroke->endParameter();
+        KeyVertex* v2 = ke->endVertex();
+        KeyEdgeData data = KeyEdgeData::fromSlice(oldData, p1, p2, numWraps);
+        KeyEdge* e = createKeyOpenEdge(v1, v2, std::move(data), parentGroup, ke);
+        newEdges.append(e);
     }
+
+    // Express the sequence of new edges as a KeyPath and its reversed path.
+    //
+    KeyPath path(core::Array<KeyHalfedge>(newEdges, [](const auto& edge) { //
+        return KeyHalfedge(edge, true);
+    }));
+    KeyPath reversedPath = path.reversed();
+
+    // Substitute all usages of ke by the new edges in incident faces.
+    // We need to take a copy of the star since it is modified during the iteration.
+    //
+    for (Cell* starCell : ke->star().copy()) {
+        KeyFace* kf = starCell->toKeyFace();
+        if (!kf) {
+            continue;
+        }
+        for (KeyCycle& cycle : kf->cycles_) {
+            if (cycle.steinerVertex()) {
+                continue;
+            }
+            core::Array<KeyHalfedge>& halfedges = cycle.halfedges_;
+            for (auto it = halfedges.begin(); it != halfedges.end(); ++it) {
+                KeyHalfedge& halfedge = *it;
+                if (halfedge.edge() == ke) {
+                    it = halfedges.erase(it);
+                    if (halfedge.direction()) {
+                        it = halfedges.insert(it, path.halfedges());
+                    }
+                    else {
+                        it = halfedges.insert(it, reversedPath.halfedges());
+                    }
+                    // Make `it` point to the last inserted element rather than the first
+                    it += newEdges.length() - 1;
+                }
+            }
+            VGC_ASSERT(cycle.isValid());
+        }
+
+        removeFromBoundary_(kf, ke);
+        addToBoundary_(kf, path);
+    }
+
+    // Delete old edge
+    hardDelete(ke);
+
+    return CutEdgeResult(std::move(newEdges));
 }
 
 void Operations::cutGlueFaceWithVertex(KeyFace* kf, KeyVertex* kv) {
@@ -2810,6 +2843,19 @@ void Operations::addToBoundary_(FaceCell* face, const KeyCycle& cycle) {
     else {
         // Non-simple cycle
         for (const KeyHalfedge& halfedge : cycle.halfedges()) {
+            addToBoundary_(face, halfedge.edge());
+            addToBoundary_(face, halfedge.endVertex());
+        }
+    }
+}
+
+void Operations::addToBoundary_(FaceCell* face, const KeyPath& path) {
+    if (path.singleVertex()) {
+        addToBoundary_(face, path.singleVertex());
+    }
+    else {
+        addToBoundary_(face, path.halfedges().first().startVertex());
+        for (const KeyHalfedge& halfedge : path.halfedges()) {
             addToBoundary_(face, halfedge.edge());
             addToBoundary_(face, halfedge.endVertex());
         }

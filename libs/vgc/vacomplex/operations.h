@@ -259,11 +259,46 @@ core::Array<KeyVertex*> unglueKeyVertices(
 //       In other winding rules, the result may or may not be similar so it has
 //       to be checked for the given geometric data (can be done using a planar graph).
 
+/// Cuts the given edge into multiple new edges by creating `n` new vertices at
+/// the given curve `parameters` (with `n = parameters.length()`).
+///
+/// This does nothing if `n == 0`.
+///
+/// If the edge was initially open, then `n + 1` new open edges are created.
+/// For example, if only one parameter is given, this splits the open edge into
+/// two open edges.
+///
+/// If the edge was initially closed, then `n` new open edges are created. For
+/// example, if only one parameter is given, this turns the closed edge into an
+/// open edge.
+///
+/// Unless `n == 0`, the given edge is destroyed during this operation and
+/// therefore shouldn't be used afterwards.
+///
+/// \sa `cutEdge(KeyEdge*, const geometry::CurveParameter&)`
+///
 VGC_VACOMPLEX_API
-CutEdgeResult cutEdge(KeyEdge* ke, const geometry::CurveParameter& parameter);
+CutEdgeResult cutEdge(KeyEdge* ke, core::Array<geometry::CurveParameter> parameters);
 
+/// Cuts the given edge by creating a vertex at the given curve `parameter`.
+///
+/// This is equivalent to:
+///
+/// ```
+/// cutEdge(ke, core::Array<geometry::CurveParameter>{parameter})
+/// ````
+///
+/// The given edge is destroyed during this operation and therefore shouldn't
+/// be used afterwards.
+///
+/// \sa `cutEdge(KeyEdge*, core::Array<geometry::CurveParameter>)`
+///
 VGC_VACOMPLEX_API
-CutFaceResult cutGlueFace(
+inline CutEdgeResult cutEdge(KeyEdge* ke, const geometry::CurveParameter& parameter) {
+    return cutEdge(ke, core::Array<geometry::CurveParameter>{parameter});
+}
+
+VGC_VACOMPLEX_API CutFaceResult cutGlueFace(
     KeyFace* kf,
     const KeyEdge* ke,
     OneCycleCutPolicy oneCycleCutPolicy = OneCycleCutPolicy::Auto,
