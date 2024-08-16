@@ -407,7 +407,7 @@ private:
 };
 
 /// \class vgc::geometry::SampledCurveParameter
-/// \brief An parametric location of a point between two curve samples.
+/// \brief A parametric location of a point between two curve samples.
 ///
 /// For performance or simplicity reasons, it is often necessary to approximate
 /// a curve by a polyline that linearly interpolates samples along the curve.
