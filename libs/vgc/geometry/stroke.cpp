@@ -708,36 +708,15 @@ closestCenterlineLocation(const StrokeSample2dArray& samples, const Vec2d& posit
                     double ty = p1p2Dir.det(p1p);
                     d = std::abs(ty);
                     if (d < minDist) {
-                        Int segIdx1 = it1->segmentIndex();
-                        Int segIdx2 = it2->segmentIndex();
-                        bool isInvalidSamplePair = false;
-                        double u2 = 0;
-                        if (segIdx1 == segIdx2) {
-                            u2 = it2->u();
-                        }
-                        else if ((segIdx1 + 1 == segIdx2) && (it2->u() == 0)) {
-                            u2 = 1.;
-                        }
-                        else {
-                            isInvalidSamplePair = true;
-                            VGC_WARNING(
-                                LogVgcGeometry,
-                                "closestCenterlineLocation(): consecutive samples s1 and "
-                                "s2 do not respect the constraint (s1.segmentIndex() == "
-                                "s2.segmentIndex()) nor (s1.segmentIndex() + 1 == "
-                                "s2.segmentIndex()) && s2.u() == 0");
-                        }
-                        if (!isInvalidSamplePair) {
-                            double t = tx / l;
-                            Vec2d pos = core::fastLerp(p1, p2, t);
-                            result.setLocation(
-                                SampledCurveLocation(it1->parameter(), u2, t));
-                            result.setPosition(pos);
-                            minDist = d;
-                            if (d == 0) {
-                                // (p on segment) => no better result can be found.
-                                return result;
-                            }
+                        double t = tx / l;
+                        CurveParameter param1 = it1->parameter();
+                        CurveParameter param2 = it2->parameter();
+                        result.setLocation(SampledCurveLocation(param1, param2, t));
+                        result.setPosition(core::fastLerp(p1, p2, t));
+                        minDist = d;
+                        if (d == 0) {
+                            // (p on segment) => no better result can be found.
+                            return result;
                         }
                     }
                 }
