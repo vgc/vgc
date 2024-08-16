@@ -179,8 +179,7 @@ protected:
 
     StrokeBoundaryInfo computeBoundaryInfo_() const override = 0;
 
-    CurveParameter
-    resolveSampledLocation_(const SampledCurveLocation& location) const override;
+    CurveParameter resolveParameter_(const SampledCurveParameter& param) const override;
 
     void translate_(const geometry::Vec2d& delta) override;
 

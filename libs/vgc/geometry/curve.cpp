@@ -137,7 +137,7 @@ CurveSamplingParameters::CurveSamplingParameters(CurveSamplingQuality quality)
     cosMaxAngle_ = std::cos(maxAngle_);
 }
 
-SampledCurveLocation::SampledCurveLocation(
+SampledCurveParameter::SampledCurveParameter(
     const CurveParameter& p1,
     const CurveParameter& p2,
     double lerpParameter)
@@ -157,7 +157,7 @@ SampledCurveLocation::SampledCurveLocation(
     }
     else {
         throw core::LogicError("Non-consecutive curve parameters given to "
-                               "SampledCurveLocation constructor.");
+                               "SampledCurveParameter constructor.");
     }
 }
 

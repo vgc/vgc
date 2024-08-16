@@ -22,7 +22,6 @@
 #include <vgc/core/enum.h>
 #include <vgc/core/span.h>
 #include <vgc/geometry/api.h>
-#include <vgc/geometry/detail/internalkey.h>
 #include <vgc/geometry/vec2d.h>
 
 namespace vgc::geometry {
@@ -407,50 +406,50 @@ private:
     double u_; // parameter in stroke segment.
 };
 
-/// \class vgc::geometry::SampledCurveLocation
-/// \brief The implicit parametric location of a point between two samples.
+/// \class vgc::geometry::SampledCurveParameter
+/// \brief A parametric location of a point between two curve samples.
 ///
 /// For performance or simplicity reasons, it is often necessary to approximate
 /// a curve by a polyline that linearly interpolates samples along the curve.
 ///
-/// The class `SampledCurveLocation` allows you to express a location along
-/// such linear appoximation of a curve, that can later be refined, for example
-/// via `AbstractStroke2d::resolveSampledLocation()`.
+/// The class `SampledCurveParameter` allows you to express a location along
+/// such linear appoximation of a curve, that can later be resolved to a
+/// `CurveParameter` via `AbstractStroke2d::resolveParameter()`.
 ///
-class VGC_GEOMETRY_API SampledCurveLocation {
+class VGC_GEOMETRY_API SampledCurveParameter {
 public:
-    /// Constructs a zero-initialized `SampledCurveLocation`, that is,
+    /// Constructs a zero-initialized `SampledCurveParameter`, that is,
     /// corresponding to the start of the curve.
     ///
-    constexpr SampledCurveLocation() noexcept
+    constexpr SampledCurveParameter() noexcept
         : segmentIndex_(0)
         , u1_(0.)
         , u2_(0.)
         , lerpParameter_(0.) {
     }
 
-    /// Constructs an uninitialized `SampledCurveLocation`.
+    /// Constructs an uninitialized `SampledCurveParameter`.
     ///
     VGC_WARNING_PUSH
     VGC_WARNING_MSVC_DISABLE(26495) // member variable uninitialized
-    SampledCurveLocation(core::NoInit) noexcept {
+    SampledCurveParameter(core::NoInit) noexcept {
     }
     VGC_WARNING_POP
 
-    /// Constructs a `SampledCurveLocation` corresponding to the location at
-    /// exactly the given `CurveParameter`.
+    /// Constructs a `SampledCurveParameter` corresponding to an exact
+    /// `CurveParameter`.
     ///
-    explicit SampledCurveLocation(const CurveParameter& p1) noexcept
-        : segmentIndex_(p1.segmentIndex())
-        , u1_(p1.u())
-        , u2_(p1.u())
+    explicit SampledCurveParameter(const CurveParameter& p) noexcept
+        : segmentIndex_(p.segmentIndex())
+        , u1_(p.u())
+        , u2_(p.u())
         , lerpParameter_(0.) {
     }
 
-    /// Constructs a `SampledCurveLocation` corresponding to a linear interpolation
+    /// Constructs a `SampledCurveParameter` corresponding to a linear interpolation
     /// between the curve parameters `(segmentIndex, u1)` and `(segmentIndex, u2)`.
     ///
-    SampledCurveLocation(
+    SampledCurveParameter(
         Int segmentIndex,
         double u1,
         double u2,
@@ -462,11 +461,11 @@ public:
         , lerpParameter_(lerpParameter) {
     }
 
-    /// Constructs a `SampledCurveLocation` corresponding to a linear
+    /// Constructs a `SampledCurveParameter` corresponding to a linear
     /// interpolation between the curve parameters `p1` and `p2`, where `p2 =
     /// (p1.segmentIndex, u2)`.
     ///
-    SampledCurveLocation(
+    SampledCurveParameter(
         const CurveParameter& p1,
         double u2,
         double lerpParameter) noexcept
@@ -477,7 +476,7 @@ public:
         , lerpParameter_(lerpParameter) {
     }
 
-    /// Constructs a `SampledCurveLocation` corresponding to a linear
+    /// Constructs a `SampledCurveParameter` corresponding to a linear
     /// interpolation between the curve parameters `p1` and `p2`.
     ///
     /// In order for this to be meaningful, `p1` and `p2` should be
@@ -488,12 +487,12 @@ public:
     ///
     /// If not, a `LogicError` exception is thrown.
     ///
-    // XXX: Change SampledCurveLocation so that it directly stores (p1, p2, lerpParam)?
+    // XXX: Change SampledCurveParameter so that it directly stores (p1, p2, lerpParam)?
     //      This would make it more expressive and simple to use, at the cost:
     //      - Larger size (5 scalar values instead of 4)
-    //      - Harder to implement `AbstractStroke2d::resolveSampledLocation()`
+    //      - Harder to implement `AbstractStroke2d::resolveParameter()`
     //
-    SampledCurveLocation(
+    SampledCurveParameter(
         const CurveParameter& p1,
         const CurveParameter& p2,
         double lerpParameter);
@@ -543,18 +542,18 @@ public:
     }
 
     friend bool
-    operator==(const SampledCurveLocation& lhs, const SampledCurveLocation& rhs) {
+    operator==(const SampledCurveParameter& lhs, const SampledCurveParameter& rhs) {
         return lhs.segmentIndex_ == rhs.segmentIndex_ && lhs.u1_ == rhs.u1_
                && lhs.u2_ == rhs.u2_ && lhs.lerpParameter_ == rhs.lerpParameter_;
     }
 
     friend bool
-    operator!=(const SampledCurveLocation& lhs, const SampledCurveLocation& rhs) {
+    operator!=(const SampledCurveParameter& lhs, const SampledCurveParameter& rhs) {
         return !(lhs == rhs);
     }
 
     friend bool
-    operator<(const SampledCurveLocation& lhs, const SampledCurveLocation& rhs) {
+    operator<(const SampledCurveParameter& lhs, const SampledCurveParameter& rhs) {
         if (lhs.segmentIndex_ != rhs.segmentIndex_) {
             return lhs.segmentIndex_ < rhs.segmentIndex_;
         }

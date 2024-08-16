@@ -873,14 +873,11 @@ public:
                     const geometry::AbstractStroke2d* stroke = ke->data().stroke();
                     auto sampling = stroke->computeSampling(
                         geometry::CurveSamplingQuality::AdaptiveHigh);
-                    // find closest location on curve
-                    geometry::SampledCurveLocation closestLoc =
-                        geometry::closestCenterlineLocation(
-                            sampling.samples(), cursorPositionInWorkspace)
-                            .location();
-                    // convert to curve parameter
-                    geometry::CurveParameter param =
-                        stroke->resolveSampledLocation(closestLoc);
+                    // find closest point on curve
+                    geometry::SampledCurveProjection proj = projectToCenterline(
+                        sampling.samples(), cursorPositionInWorkspace);
+                    geometry::SampledCurveParameter sParam = proj.parameter();
+                    geometry::CurveParameter param = stroke->resolveParameter(sParam);
                     // do the cut
                     auto result = vacomplex::ops::cutEdge(ke, param);
                     // select resulting vertex

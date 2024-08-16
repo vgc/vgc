@@ -215,14 +215,14 @@ std::array<Vec2d, 2> AbstractInterpolatingStroke2d::endPositions_() const {
     }
 }
 
-CurveParameter AbstractInterpolatingStroke2d::resolveSampledLocation_(
-    const SampledCurveLocation& location) const {
+CurveParameter AbstractInterpolatingStroke2d::resolveParameter_(
+    const SampledCurveParameter& param) const {
 
     // Currently does a coarse approximation, as if speed were constant between samples.
     // TODO: later, resolve according to given tolerance/precision.
     return CurveParameter(
-        location.segmentIndex(),
-        core::fastLerp(location.u1(), location.u2(), location.lerpParameter()));
+        param.segmentIndex(),
+        core::fastLerp(param.u1(), param.u2(), param.lerpParameter()));
 }
 
 void AbstractInterpolatingStroke2d::translate_(const Vec2d& delta) {

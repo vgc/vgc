@@ -809,7 +809,9 @@ public:
 
     StrokeSampling2d computeSampling(const CurveSamplingParameters& params) const;
 
-    CurveParameter resolveSampledLocation(const SampledCurveLocation& location) const;
+    /// Computes the `CurveParameter` that best corresponds to the given `SampledCurveParameter`.
+    ///
+    CurveParameter resolveParameter(const SampledCurveParameter& param) const;
 
     /// Expects delta in object space.
     ///
@@ -1006,9 +1008,8 @@ protected:
 
     virtual StrokeBoundaryInfo computeBoundaryInfo_() const = 0;
 
-    // Assumes location is lerp'd.
-    virtual CurveParameter
-    resolveSampledLocation_(const SampledCurveLocation& location) const = 0;
+    // Assumes p is lerp'd.
+    virtual CurveParameter resolveParameter_(const SampledCurveParameter& p) const = 0;
 
     virtual void translate_(const Vec2d& delta) = 0;
 
@@ -1071,41 +1072,38 @@ private:
 
     StrokeSample2d sampleKnot_(Int knotIndex) const;
 
-    bool fixEvalLocation_(Int& segmentIndex, double& u) const;
+    bool fixEvalParameter_(Int& segmentIndex, double& u) const;
 };
 
-// WIP
-
-class VGC_GEOMETRY_API SampledCurveClosestLocationResult {
+class VGC_GEOMETRY_API SampledCurveProjection {
 public:
-    constexpr SampledCurveClosestLocationResult(detail::InternalKey) noexcept
-        : location_()
+    constexpr SampledCurveProjection() noexcept
+        : parameter_()
         , position_() {
     }
 
     VGC_WARNING_PUSH
     VGC_WARNING_MSVC_DISABLE(26495) // member variable uninitialized
-    SampledCurveClosestLocationResult(detail::InternalKey, core::NoInit) noexcept
-        : location_(core::noInit)
+    SampledCurveProjection(core::NoInit) noexcept
+        : parameter_(core::noInit)
         , position_(core::noInit) {
     }
     VGC_WARNING_POP
 
-    SampledCurveClosestLocationResult(
-        detail::InternalKey,
-        const SampledCurveLocation& location,
+    SampledCurveProjection(
+        const SampledCurveParameter& parameter,
         const Vec2d& position) noexcept
 
-        : location_(location)
+        : parameter_(parameter)
         , position_(position) {
     }
 
-    const SampledCurveLocation& location() const {
-        return location_;
+    const SampledCurveParameter& parameter() const {
+        return parameter_;
     }
 
-    void setLocation(const SampledCurveLocation& location) {
-        location_ = location;
+    void setParameter(const SampledCurveParameter& parameter) {
+        parameter_ = parameter;
     }
 
     const Vec2d& position() const {
@@ -1117,13 +1115,20 @@ public:
     }
 
 private:
-    SampledCurveLocation location_;
+    SampledCurveParameter parameter_;
     geometry::Vec2d position_;
 };
 
+/// Projects the given `position` onto the polyline defined by linearly
+/// interpolating the center position of the given `samples`.
+///
+/// In other words, this computes which point on the polyline is closest to the
+/// given `position`, including all the points that are in the
+/// segment between two consecutive samples.
+///
 VGC_GEOMETRY_API
-SampledCurveClosestLocationResult
-closestCenterlineLocation(const StrokeSample2dArray& samples, const Vec2d& position);
+SampledCurveProjection
+projectToCenterline(const StrokeSample2dArray& samples, const Vec2d& position);
 
 } // namespace vgc::geometry
 
