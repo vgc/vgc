@@ -285,7 +285,7 @@ OptionalInt indexOfFirstNonZeroLengthSegmentAfterKnot_(
 } // namespace
 
 Vec2d AbstractStroke2d::evalCenterline(Int segmentIndex, double u) const {
-    if (fixEvalLocation_(segmentIndex, u)) {
+    if (fixEvalParameter_(segmentIndex, u)) {
         return evalNonZeroCenterline(segmentIndex, u);
     }
     else {
@@ -297,7 +297,7 @@ Vec2d AbstractStroke2d::evalCenterline(Int segmentIndex, double u) const {
 Vec2d AbstractStroke2d::evalCenterline(Int segmentIndex, double u, Vec2d& derivative)
     const {
 
-    if (fixEvalLocation_(segmentIndex, u)) {
+    if (fixEvalParameter_(segmentIndex, u)) {
         return evalNonZeroCenterline(segmentIndex, u, derivative);
     }
     else {
@@ -308,7 +308,7 @@ Vec2d AbstractStroke2d::evalCenterline(Int segmentIndex, double u, Vec2d& deriva
 }
 
 StrokeSample2d AbstractStroke2d::eval(Int segmentIndex, double u, double& speed) const {
-    if (fixEvalLocation_(segmentIndex, u)) {
+    if (fixEvalParameter_(segmentIndex, u)) {
         return evalNonZero(segmentIndex, u, speed);
     }
     else {
@@ -549,31 +549,31 @@ AbstractStroke2d::computeSampling(const geometry::CurveSamplingParameters& param
 }
 
 CurveParameter
-AbstractStroke2d::resolveSampledLocation(const SampledCurveLocation& location) const {
+AbstractStroke2d::resolveParameter(const SampledCurveParameter& param) const {
     const Int numSegments = this->numSegments();
-    if (location.segmentIndex() < 0) {
+    if (param.segmentIndex() < 0) {
         return CurveParameter(0, 0);
     }
-    else if (location.segmentIndex() > numSegments - 1) {
+    else if (param.segmentIndex() > numSegments - 1) {
         return CurveParameter(numSegments - 1, 1);
     }
-    else if (!location.isLerped()) {
-        return CurveParameter(location.segmentIndex(), core::clamp(location.u1(), 0, 1));
+    else if (!param.isLerped()) {
+        return CurveParameter(param.segmentIndex(), core::clamp(param.u1(), 0, 1));
     }
     else {
-        SampledCurveLocation sanitizedLocation(
-            location.segmentIndex(),
-            core::clamp(location.u1(), 0, 1),
-            core::clamp(location.u2(), 0, 1),
-            core::clamp(location.lerpParameter(), 0, 1));
-        return resolveSampledLocation_(location);
+        SampledCurveParameter sanitizedParam(
+            param.segmentIndex(),
+            core::clamp(param.u1(), 0, 1),
+            core::clamp(param.u2(), 0, 1),
+            core::clamp(param.lerpParameter(), 0, 1));
+        return resolveParameter_(sanitizedParam);
     }
 }
 
 namespace {
 
-CurveParameter sanitizeCurveParameter(const CurveParameter& p, Int numSegments) {
-    Int segmentIndex = p.segmentIndex();
+CurveParameter sanitizeCurveParameter(const CurveParameter& param, Int numSegments) {
+    Int segmentIndex = param.segmentIndex();
     if (segmentIndex < 0) {
         return CurveParameter(0, 0);
     }
@@ -581,7 +581,7 @@ CurveParameter sanitizeCurveParameter(const CurveParameter& p, Int numSegments) 
         return CurveParameter(numSegments - 1, 1);
     }
     else {
-        return CurveParameter(segmentIndex, core::clamp(p.u(), 0, 1));
+        return CurveParameter(segmentIndex, core::clamp(param.u(), 0, 1));
     }
 }
 
@@ -641,7 +641,7 @@ StrokeSample2d AbstractStroke2d::sampleKnot_(Int index) const {
     return zeroLengthStrokeSample();
 }
 
-bool AbstractStroke2d::fixEvalLocation_(Int& segmentIndex, double& u) const {
+bool AbstractStroke2d::fixEvalParameter_(Int& segmentIndex, double& u) const {
 
     if (isZeroLengthSegment(segmentIndex)) {
 
@@ -680,10 +680,10 @@ bool AbstractStroke2d::fixEvalLocation_(Int& segmentIndex, double& u) const {
     }
 }
 
-SampledCurveClosestLocationResult
-closestCenterlineLocation(const StrokeSample2dArray& samples, const Vec2d& position) {
+SampledCurveProjection
+projectToCenterline(const StrokeSample2dArray& samples, const Vec2d& position) {
 
-    SampledCurveClosestLocationResult result(detail::internalKey);
+    SampledCurveProjection result;
 
     if (samples.isEmpty()) {
         return result;
@@ -711,7 +711,7 @@ closestCenterlineLocation(const StrokeSample2dArray& samples, const Vec2d& posit
                         double t = tx / l;
                         CurveParameter param1 = it1->parameter();
                         CurveParameter param2 = it2->parameter();
-                        result.setLocation(SampledCurveLocation(param1, param2, t));
+                        result.setParameter(SampledCurveParameter(param1, param2, t));
                         result.setPosition(core::fastLerp(p1, p2, t));
                         minDist = d;
                         if (d == 0) {
@@ -721,7 +721,7 @@ closestCenterlineLocation(const StrokeSample2dArray& samples, const Vec2d& posit
                     }
                 }
                 else if (d < minDist && tx < 0) {
-                    result.setLocation(SampledCurveLocation(it1->parameter()));
+                    result.setParameter(SampledCurveParameter(it1->parameter()));
                     result.setPosition(p1);
                     minDist = d;
                 }
@@ -729,7 +729,7 @@ closestCenterlineLocation(const StrokeSample2dArray& samples, const Vec2d& posit
         }
         else {
             // (p == sample) => no better result can be found.
-            result.setLocation(SampledCurveLocation(it1->parameter()));
+            result.setParameter(SampledCurveParameter(it1->parameter()));
             result.setPosition(p1);
             minDist = d;
             return result;
@@ -742,7 +742,7 @@ closestCenterlineLocation(const StrokeSample2dArray& samples, const Vec2d& posit
     Vec2d qp = position - q;
     double d = qp.length();
     if (d < minDist) {
-        result.setLocation(SampledCurveLocation(lastSample.parameter()));
+        result.setParameter(SampledCurveParameter(lastSample.parameter()));
         result.setPosition(q);
     }
 
@@ -750,29 +750,3 @@ closestCenterlineLocation(const StrokeSample2dArray& samples, const Vec2d& posit
 }
 
 } // namespace vgc::geometry
-
-/*
-############################# Implementation notes #############################
-
-[1]
-
-In the future, we may want to extend the StrokeView2d class with:
-    - more curve type (e.g., bezier, bspline, nurbs, ellipticalarc. etc.)
-    - variable color
-    - variable custom attributes (e.g., that can be passed to shaders)
-    - dimension other than 2? Probably not: That may be a separate type of
-      curve
-
-Supporting other types of curves in the future is why we use a
-std::vector<double> of size 2*n instead of a std::vector<Vec2d> of size n.
-Indeed, other types of curve may need additional data, such as knot values,
-homogeneous coordinates, etc.
-
-A "cleaner" approach with more type-safety would be to have different
-classes for different types of curves. Unfortunately, this has other
-drawbacks, in particular, switching from one curve type to the other
-dynamically would be harder. Also, it is quite useful to have a continuous
-array of doubles that can directly be passed to C-style functions, such as
-OpenGL, etc.
-
-*/
