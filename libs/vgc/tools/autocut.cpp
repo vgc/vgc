@@ -24,11 +24,31 @@
 
 namespace vgc::tools {
 
+namespace {
+
+// TODO
+struct IntersectionInfo {
+    geometry::CurveParameter param;
+    Int index;
+
+    bool operator<(const IntersectionInfo& other) const {
+        return param < other.param;
+    }
+};
+
+} // namespace
+
 void autoCut(vacomplex::KeyEdge* edge, const AutoCutParams& params) {
-    vacomplex::Group* group = edge->parentGroup();
+    const geometry::AbstractStroke2d* stroke = edge->stroke();
     const geometry::StrokeSampling2d& sampling = edge->strokeSampling();
     const geometry::StrokeSample2dArray& samples = sampling.samples();
-    //geometry::Polyline2d polyline = edge->strokeSampling().centerline();
+
+    //Int intersectionIndex = 0;
+    //core::Array<IntersectionInfo> selfIntersections;
+
+    core::Array<geometry::CurveParameter> selfIntersections;
+    geometry::CurveParameter startParam = stroke->startParameter();
+    geometry::CurveParameter endParam = stroke->endParameter();
     Int n = samples.length();
     for (Int i = 0; i < n - 1; ++i) {
         for (Int j = i + 2; j < n - 1; ++j) {
@@ -37,15 +57,27 @@ void autoCut(vacomplex::KeyEdge* edge, const AutoCutParams& params) {
             const geometry::Vec2d& a2 = samples[j].position();
             const geometry::Vec2d& b2 = samples[j + 1].position();
             if (auto intersection = fastSegmentIntersection(a1, b1, a2, b2)) {
-                // TODO:
-                // const geometry::CurveParameter& p1 = samples[i].parameter();
-                // const geometry::CurveParameter& q1 = samples[i + 1].parameter();
-                // const geometry::CurveParameter& p2 = samples[j].parameter();
-                // const geometry::CurveParameter& q2 = samples[j + 1].parameter();
-                vacomplex::ops::createKeyVertex(intersection->position(), group);
+                const geometry::CurveParameter& p1 = samples[i].parameter();
+                const geometry::CurveParameter& q1 = samples[i + 1].parameter();
+                const geometry::CurveParameter& p2 = samples[j].parameter();
+                const geometry::CurveParameter& q2 = samples[j + 1].parameter();
+
+                geometry::SampledCurveParameter sParam1(p1, q1, intersection->t1());
+                geometry::SampledCurveParameter sParam2(p2, q2, intersection->t2());
+                geometry::CurveParameter param1 = stroke->resolveParameter(sParam1);
+                geometry::CurveParameter param2 = stroke->resolveParameter(sParam2);
+
+                if (param1 != startParam) {
+                    selfIntersections.append(param1);
+                }
+                if (param2 != endParam) {
+                    selfIntersections.append(param2);
+                }
             }
         }
     }
+
+    vacomplex::ops::cutEdge(edge, selfIntersections);
 }
 
 } // namespace vgc::tools
