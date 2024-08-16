@@ -65,6 +65,10 @@ public:
 
     bool snapGeometry();
 
+    const geometry::AbstractStroke2d* stroke() const {
+        return data_.stroke();
+    }
+
     geometry::CurveSamplingQuality strokeSamplingQuality() const {
         return data_.samplingQuality();
     }
