@@ -279,7 +279,17 @@ std::unique_ptr<AbstractStroke2d> AbstractInterpolatingStroke2d::subStroke_(
     bool isStrictlyPositiveRange = p1 < p2;
     bool isPositiveRange = !(p2 < p1);
 
-    if (!isStrictlyPositiveRange && (numWraps == 0)) {
+    Int numCrossOrigin = 0;
+    if (isClosed()) {
+        if (isStrictlyPositiveRange) {
+            numCrossOrigin = numWraps;
+        }
+        else {
+            numCrossOrigin = numWraps + 1;
+        }
+    }
+
+    if (!isStrictlyPositiveRange && (numCrossOrigin == 0)) {
         std::array<Vec2d, 1> points = {s1.position()};
         newStroke->setPositions(points);
         newStroke->setConstantWidth(s1.width());
