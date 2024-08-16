@@ -711,10 +711,8 @@ closestCenterlineLocation(const StrokeSample2dArray& samples, const Vec2d& posit
                         double t = tx / l;
                         CurveParameter param1 = it1->parameter();
                         CurveParameter param2 = it2->parameter();
-                        SampledCurveLocation location(param1, param2, t);
-                        Vec2d position = core::fastLerp(p1, p2, t);
-                        result.setLocation(location);
-                        result.setPosition(position);
+                        result.setLocation(SampledCurveLocation(param1, param2, t));
+                        result.setPosition(core::fastLerp(p1, p2, t));
                         minDist = d;
                         if (d == 0) {
                             // (p on segment) => no better result can be found.
