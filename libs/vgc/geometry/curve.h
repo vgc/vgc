@@ -410,8 +410,18 @@ private:
 /// \class vgc::geometry::SampledCurveLocation
 /// \brief The implicit parametric location of a point between two samples.
 ///
+/// For performance or simplicity reasons, it is often necessary to approximate
+/// a curve by a polyline that linearly interpolates samples along the curve.
+///
+/// The class `SampledCurveLocation` allows you to express a location along
+/// such linear appoximation of a curve, that can later be refined, for example
+/// via `AbstractStroke2d::resolveSampledLocation()`.
+///
 class VGC_GEOMETRY_API SampledCurveLocation {
 public:
+    /// Constructs a zero-initialized `SampledCurveLocation`, that is,
+    /// corresponding to the start of the curve.
+    ///
     constexpr SampledCurveLocation() noexcept
         : segmentIndex_(0)
         , u1_(0.)
@@ -419,19 +429,27 @@ public:
         , lerpParameter_(0.) {
     }
 
+    /// Constructs an uninitialized `SampledCurveLocation`.
+    ///
     VGC_WARNING_PUSH
     VGC_WARNING_MSVC_DISABLE(26495) // member variable uninitialized
     SampledCurveLocation(core::NoInit) noexcept {
     }
     VGC_WARNING_POP
 
-    explicit SampledCurveLocation(const CurveParameter& sampleParameter1) noexcept
-        : segmentIndex_(sampleParameter1.segmentIndex())
-        , u1_(sampleParameter1.u())
-        , u2_(sampleParameter1.u())
+    /// Constructs a `SampledCurveLocation` corresponding to the location at
+    /// exactly the given `CurveParameter`.
+    ///
+    explicit SampledCurveLocation(const CurveParameter& p1) noexcept
+        : segmentIndex_(p1.segmentIndex())
+        , u1_(p1.u())
+        , u2_(p1.u())
         , lerpParameter_(0.) {
     }
 
+    /// Constructs a `SampledCurveLocation` corresponding to a linear interpolation
+    /// between the curve parameters `(segmentIndex, u1)` and `(segmentIndex, u2)`.
+    ///
     SampledCurveLocation(
         Int segmentIndex,
         double u1,
@@ -444,16 +462,41 @@ public:
         , lerpParameter_(lerpParameter) {
     }
 
+    /// Constructs a `SampledCurveLocation` corresponding to a linear
+    /// interpolation between the curve parameters `p1` and `p2`, where `p2 =
+    /// (p1.segmentIndex, u2)`.
+    ///
     SampledCurveLocation(
-        const CurveParameter& sampleParameter1,
+        const CurveParameter& p1,
         double u2,
         double lerpParameter) noexcept
 
-        : segmentIndex_(sampleParameter1.segmentIndex())
-        , u1_(sampleParameter1.u())
+        : segmentIndex_(p1.segmentIndex())
+        , u1_(p1.u())
         , u2_(u2)
         , lerpParameter_(lerpParameter) {
     }
+
+    /// Constructs a `SampledCurveLocation` corresponding to a linear
+    /// interpolation between the curve parameters `p1` and `p2`.
+    ///
+    /// In order for this to be meaningful, `p1` and `p2` should be
+    /// "consecutive samples", that is:
+    ///
+    /// - `p2.segmentIndex() == p1.segmentIndex()`, or
+    /// - `p2.segmentIndex() == p1.segmentIndex() + 1` and `p2.u() == 0`.
+    ///
+    /// If not, a `LogicError` exception is thrown.
+    ///
+    // XXX: Change SampledCurveLocation so that it directly stores (p1, p2, lerpParam)?
+    //      This would make it more expressive and simple to use, at the cost:
+    //      - Larger size (5 scalar values instead of 4)
+    //      - Harder to implement `AbstractStroke2d::resolveSampledLocation()`
+    //
+    SampledCurveLocation(
+        const CurveParameter& p1,
+        const CurveParameter& p2,
+        double lerpParameter);
 
     Int segmentIndex() const {
         return segmentIndex_;
