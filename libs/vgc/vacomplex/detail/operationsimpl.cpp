@@ -1339,10 +1339,10 @@ Operations::cutEdge(KeyEdge* ke, core::ConstSpan<geometry::CurveParameter> param
             }
             core::Array<KeyHalfedge>& halfedges = cycle.halfedges_;
             for (auto it = halfedges.begin(); it != halfedges.end(); ++it) {
-                KeyHalfedge& halfedge = *it;
-                if (halfedge.edge() == ke) {
+                if (it->edge() == ke) {
+                    bool direction = it->direction();
                     it = halfedges.erase(it);
-                    if (halfedge.direction()) {
+                    if (direction) {
                         it = halfedges.insert(it, path.halfedges());
                     }
                     else {
