@@ -24,39 +24,28 @@
 
 namespace vgc::tools {
 
-namespace {
-
-// TODO
-struct IntersectionInfo {
-    geometry::CurveParameter param;
-    Int index;
-
-    bool operator<(const IntersectionInfo& other) const {
-        return param < other.param;
-    }
-};
-
-} // namespace
-
 void autoCut(vacomplex::KeyEdge* edge, const AutoCutParams& params) {
     const geometry::AbstractStroke2d* stroke = edge->stroke();
     const geometry::StrokeSampling2d& sampling = edge->strokeSampling();
     const geometry::StrokeSample2dArray& samples = sampling.samples();
 
-    //Int intersectionIndex = 0;
-    //core::Array<IntersectionInfo> selfIntersections;
-
     core::Array<geometry::CurveParameter> selfIntersections;
-    geometry::CurveParameter startParam = stroke->startParameter();
-    geometry::CurveParameter endParam = stroke->endParameter();
+    //geometry::CurveParameter startParam = stroke->startParameter();
+    //geometry::CurveParameter endParam = stroke->endParameter();
     Int n = samples.length();
     for (Int i = 0; i < n - 1; ++i) {
-        for (Int j = i + 2; j < n - 1; ++j) {
+        Int jEnd = n - 1;
+        if (edge->isClosed() && i == 0) {
+            jEnd = n - 2;
+        }
+        for (Int j = i + 2; j < jEnd; ++j) {
+
             const geometry::Vec2d& a1 = samples[i].position();
             const geometry::Vec2d& b1 = samples[i + 1].position();
             const geometry::Vec2d& a2 = samples[j].position();
             const geometry::Vec2d& b2 = samples[j + 1].position();
             if (auto intersection = fastSegmentIntersection(a1, b1, a2, b2)) {
+
                 const geometry::CurveParameter& p1 = samples[i].parameter();
                 const geometry::CurveParameter& q1 = samples[i + 1].parameter();
                 const geometry::CurveParameter& p2 = samples[j].parameter();
@@ -67,17 +56,27 @@ void autoCut(vacomplex::KeyEdge* edge, const AutoCutParams& params) {
                 geometry::CurveParameter param1 = stroke->resolveParameter(sParam1);
                 geometry::CurveParameter param2 = stroke->resolveParameter(sParam2);
 
-                if (param1 != startParam) {
-                    selfIntersections.append(param1);
-                }
-                if (param2 != endParam) {
-                    selfIntersections.append(param2);
-                }
+                selfIntersections.append(param1);
+                selfIntersections.append(param2);
+
+                // TODO: handle special case when params are exactly equal to
+                // startParam/endParam for open edges? What if some params are
+                // exactly equal? Do we still want to cut twice?
             }
         }
     }
 
-    vacomplex::ops::cutEdge(edge, selfIntersections);
+    // Cut the edge
+    vacomplex::CutEdgeResult cutEdgeRes =
+        vacomplex::ops::cutEdge(edge, selfIntersections);
+
+    // Glue the new vertices two by two
+    for (Int i = 0; i < selfIntersections.length() - 1; i += 2) {
+        std::array<vacomplex::KeyVertex*, 2> vertices = {
+            cutEdgeRes.vertices()[i], //
+            cutEdgeRes.vertices()[i + 1]};
+        vacomplex::ops::glueKeyVertices(vertices, vertices[0]->position());
+    }
 }
 
 } // namespace vgc::tools
