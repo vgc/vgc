@@ -157,7 +157,7 @@ struct GlueInfo {
 
 } // namespace
 
-void autoCut(vacomplex::KeyEdge* edge, const AutoCutParams& params) {
+void autoCut(vacomplex::KeyEdge* edge1, const AutoCutParams& params) {
 
     std::unordered_map<vacomplex::KeyEdge*, CutInfo> cutInfos;
     core::Array<GlueInfo> glueInfos;
@@ -165,21 +165,20 @@ void autoCut(vacomplex::KeyEdge* edge, const AutoCutParams& params) {
     // Compute self-intersections.
     //
     if (params.cutItself()) {
-        auto intersections = computeSelfIntersections(edge);
-        CurveParameterArray& cutParams = cutInfos[edge].params;
+        auto intersections = computeSelfIntersections(edge1);
+        CurveParameterArray& cutParams = cutInfos[edge1].params;
         cutParams.reserve(intersections.length() * 2);
         for (const IntersectionParameters& intersection : intersections) {
             Int n = cutParams.length();
             cutParams.append(intersection.param1);
             cutParams.append(intersection.param2);
-            glueInfos.append(GlueInfo{edge, n, edge, n + 1});
+            glueInfos.append(GlueInfo{edge1, n, edge1, n + 1});
         }
     }
 
     // Compute intersections with other edges.
     //
     if (params.cutEdges()) {
-        vacomplex::KeyEdge* edge1 = edge;
         for (vacomplex::Node* node : *edge1->parentGroup()) {
             if (vacomplex::Cell* cell = node->toCell()) {
                 if (vacomplex::KeyEdge* edge2 = cell->toKeyEdge()) {
