@@ -36,9 +36,14 @@ namespace vgc::vacomplex {
 ///
 class VGC_VACOMPLEX_API CutEdgeResult {
 public:
+    /// Construct an empty `CutEdgeResult`.
+    ///
+    CutEdgeResult() {
+    }
+
     /// Constructs a `CutEdgeResult` storing the given new `vertices` and `edges`.
     ///
-    CutEdgeResult(core::Array<KeyVertex*> vertices, core::Array<KeyEdge*> edges) noexcept
+    CutEdgeResult(core::Array<KeyVertex*> vertices, core::Array<KeyEdge*> edges)
         : vertices_(std::move(vertices))
         , edges_(std::move(edges)) {
     }
