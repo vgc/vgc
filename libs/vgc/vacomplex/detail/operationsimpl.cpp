@@ -1377,7 +1377,7 @@ Operations::cutEdge(KeyEdge* ke, core::ConstSpan<geometry::CurveParameter> param
         outputVertices[inputIndex] = newVertices[i];
     }
 
-    return CutEdgeResult(outputVertices, newEdges);
+    return CutEdgeResult(std::move(outputVertices), std::move(newEdges));
 }
 
 void Operations::cutGlueFaceWithVertex(KeyFace* kf, KeyVertex* kv) {
