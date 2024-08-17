@@ -426,12 +426,12 @@ core::Array<KeyVertex*> unglueKeyVertices(
     return ops.unglueKeyVertices(kv, ungluedKeyEdges);
 }
 
-CutEdgeResult cutEdge(KeyEdge* ke, core::Array<geometry::CurveParameter> parameters) {
+CutEdgeResult cutEdge(KeyEdge* ke, core::ConstSpan<geometry::CurveParameter> parameters) {
     if (!ke) {
         throw LogicError("cutEdge: ke is nullptr.");
     }
     detail::Operations ops(ke->complex());
-    return ops.cutEdge(ke, std::move(parameters));
+    return ops.cutEdge(ke, parameters);
 }
 
 namespace {
