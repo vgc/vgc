@@ -154,7 +154,8 @@ public:
         KeyVertex* kv,
         core::Array<std::pair<core::Id, core::Array<KeyEdge*>>>& ungluedKeyEdges);
 
-    CutEdgeResult cutEdge(KeyEdge* ke, core::Array<geometry::CurveParameter> parameters);
+    CutEdgeResult
+    cutEdge(KeyEdge* ke, core::ConstSpan<geometry::CurveParameter> parameters);
 
     CutFaceResult cutGlueFace(
         KeyFace* kf,

@@ -36,13 +36,26 @@ namespace vgc::vacomplex {
 ///
 class VGC_VACOMPLEX_API CutEdgeResult {
 public:
-    /// Constructs a `CutEdgeResult` storing the given new `edges`.
+    /// Constructs a `CutEdgeResult` storing the given new `vertices` and `edges`.
     ///
-    CutEdgeResult(core::Array<KeyEdge*> edges) noexcept
-        : edges_(std::move(edges)) {
+    CutEdgeResult(core::Array<KeyVertex*> vertices, core::Array<KeyEdge*> edges) noexcept
+        : vertices_(std::move(vertices))
+        , edges_(std::move(edges)) {
     }
 
-    /// Returns the ordered sequence of new edges that the cut produced.
+    /// Returns the new vertices that the cut produced, in the same order as the
+    /// sequence of `CurveParameter` given to `cutEdge()`.
+    ///
+    const core::Array<KeyVertex*> vertices() const {
+        return vertices_;
+    }
+
+    /// Returns the new edges that the cut produced, ordered as a path in the
+    /// same direction as the original edge.
+    ///
+    /// This order is not the same as `vertices()` unless the sequence of
+    /// `CurveParameter` given to `cutEdge()` was already sorted in increasing
+    /// order.
     ///
     const core::Array<KeyEdge*> edges() const {
         return edges_;
@@ -50,18 +63,22 @@ public:
 
     /// Returns the first new vertex that the cut produced.
     ///
-    /// This is equivalent to `edges().first()->endVertex()`.
+    /// This is equivalent to `vertices().first()`.
     ///
     /// This method is useful in the common case where the `cutEdge()`
     /// operation was called with a single `CurveParameter` (e.g., cutting an
     /// open edge into two open edges), in which case it returns the unique new
     /// vertex corresponding to the cut.
     ///
+    /// Throws `IndexError` if the cut produced no vertex, that is, if no
+    /// `CurveParameter` was given to `cutEdge()`.
+    ///
     KeyVertex* vertex() const {
-        return edges().first()->endVertex();
+        return vertices().first();
     }
 
 private:
+    core::Array<KeyVertex*> vertices_;
     core::Array<KeyEdge*> edges_;
 };
 
@@ -278,7 +295,7 @@ core::Array<KeyVertex*> unglueKeyVertices(
 /// \sa `cutEdge(KeyEdge*, const geometry::CurveParameter&)`
 ///
 VGC_VACOMPLEX_API
-CutEdgeResult cutEdge(KeyEdge* ke, core::Array<geometry::CurveParameter> parameters);
+CutEdgeResult cutEdge(KeyEdge* ke, core::ConstSpan<geometry::CurveParameter> parameters);
 
 /// Cuts the given edge by creating a vertex at the given curve `parameter`.
 ///

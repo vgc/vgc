@@ -1207,12 +1207,40 @@ core::Array<KeyVertex*> Operations::unglueKeyVertices(
     return result;
 }
 
-CutEdgeResult
-Operations::cutEdge(KeyEdge* ke, core::Array<geometry::CurveParameter> parameters) {
+namespace {
 
-    Int n = parameters.length();
+struct IndexedCurveParameter {
+    geometry::CurveParameter param;
+    Int index;
+
+    bool operator<(const IndexedCurveParameter& other) const {
+        return param < other.param;
+    }
+
+    // Implicit conversion to CurveParameter
+    operator geometry::CurveParameter() const {
+        return param;
+    }
+};
+
+core::Array<IndexedCurveParameter>
+sortParameters(core::ConstSpan<geometry::CurveParameter> parameters) {
+    Int index = 0;
+    core::Array<IndexedCurveParameter> res(parameters, [&index](const auto& param) {
+        return IndexedCurveParameter{param, index++};
+    });
+    core::sort(res);
+    return res;
+}
+
+} // namespace
+
+CutEdgeResult
+Operations::cutEdge(KeyEdge* ke, core::ConstSpan<geometry::CurveParameter> parameters_) {
+
+    Int n = parameters_.length();
     if (n == 0) {
-        return CutEdgeResult({});
+        return CutEdgeResult({}, {});
     }
 
     KeyEdgeData& oldData = ke->data();
@@ -1221,31 +1249,32 @@ Operations::cutEdge(KeyEdge* ke, core::Array<geometry::CurveParameter> parameter
     Node* nextSibling = ke->nextSibling();
     core::AnimTime time = ke->time();
 
-    // Sort the parameters in increasing order.
-    // Note that this is why we take parameters by value instead of by const ref.
+    // Create a copy and sort parameters in increasing geometric order, while
+    // preserving the info of their original index before sorting.
     //
-    core::sort(parameters);
+    core::Array<IndexedCurveParameter> parameters = sortParameters(parameters_);
 
-    // Create the new vertices and edges.
+    // Create the new vertices and edges (geometry-sorted).
     //
+    core::Array<KeyVertex*> newVertices;
     core::Array<KeyEdge*> newEdges;
+    newVertices.reserve(n);
     if (ke->isClosed()) {
 
         // Create the KeyEdgeData
         core::Array<KeyEdgeData> newEdgesData;
         newEdgesData.reserve(n);
         geometry::CurveParameter p1 = parameters.last();
-        bool areAllParametersEqual = (parameters.first() == parameters.last());
+        bool areAllParametersEqual =
+            (parameters.first().param == parameters.last().param);
         Int numWraps = areAllParametersEqual ? 1 : 0;
-        for (const geometry::CurveParameter& p2 : parameters) {
+        for (geometry::CurveParameter p2 : parameters) {
             newEdgesData.append(KeyEdgeData::fromSlice(oldData, p1, p2, numWraps));
             p1 = p2;
             numWraps = 0;
         }
 
         // Create the new vertices
-        core::Array<KeyVertex*> newVertices;
-        newVertices.reserve(n);
         for (const KeyEdgeData& data : newEdgesData) {
             geometry::Vec2d position = data.stroke()->endPosition();
             KeyVertex* v = createKeyVertex(position, parentGroup, nextSibling, time);
@@ -1270,11 +1299,12 @@ Operations::cutEdge(KeyEdge* ke, core::Array<geometry::CurveParameter> parameter
         // Create the new vertices and the first n new edges
         geometry::CurveParameter p1 = oldStroke->startParameter();
         KeyVertex* v1 = ke->startVertex();
-        for (const geometry::CurveParameter& p2 : parameters) {
+        for (geometry::CurveParameter p2 : parameters) {
             KeyEdgeData data = KeyEdgeData::fromSlice(oldData, p1, p2, numWraps);
             geometry::Vec2d position = data.stroke()->endPosition();
             KeyVertex* v2 = createKeyVertex(position, parentGroup, nextSibling, time);
             KeyEdge* e = createKeyOpenEdge(v1, v2, std::move(data), parentGroup, ke);
+            newVertices.append(v2);
             newEdges.append(e);
             p1 = p2;
             v1 = v2;
@@ -1332,7 +1362,22 @@ Operations::cutEdge(KeyEdge* ke, core::Array<geometry::CurveParameter> parameter
     // Delete old edge
     hardDelete(ke);
 
-    return CutEdgeResult(std::move(newEdges));
+    // Apply permutation so that the output vertices are in the same order as
+    // the input CurveParameters.
+    //
+    // Note: for simplicity, we do this by using a separate array. If we later
+    // want to avoid the extra memory allocation, there exist more complex
+    // algorithms that can do this in-place.
+    //
+    VGC_ASSERT(newVertices.length() == n);
+    VGC_ASSERT(parameters.length() == n);
+    core::Array<KeyVertex*> outputVertices(n);
+    for (Int i = 0; i < n; ++i) {
+        Int inputIndex = parameters[i].index;
+        outputVertices[inputIndex] = newVertices[i];
+    }
+
+    return CutEdgeResult(outputVertices, newEdges);
 }
 
 void Operations::cutGlueFaceWithVertex(KeyFace* kf, KeyVertex* kv) {
