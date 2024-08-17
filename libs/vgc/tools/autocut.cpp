@@ -24,12 +24,15 @@
 
 namespace vgc::tools {
 
-void autoCut(vacomplex::KeyEdge* edge, const AutoCutParams& params) {
+namespace {
+
+core::Array<geometry::CurveParameter> computeSelfIntersections(vacomplex::KeyEdge* edge) {
+
     const geometry::AbstractStroke2d* stroke = edge->stroke();
     const geometry::StrokeSampling2d& sampling = edge->strokeSampling();
     const geometry::StrokeSample2dArray& samples = sampling.samples();
+    core::Array<geometry::CurveParameter> res;
 
-    core::Array<geometry::CurveParameter> selfIntersections;
     //geometry::CurveParameter startParam = stroke->startParameter();
     //geometry::CurveParameter endParam = stroke->endParameter();
     Int n = samples.length();
@@ -56,8 +59,8 @@ void autoCut(vacomplex::KeyEdge* edge, const AutoCutParams& params) {
                 geometry::CurveParameter param1 = stroke->resolveParameter(sParam1);
                 geometry::CurveParameter param2 = stroke->resolveParameter(sParam2);
 
-                selfIntersections.append(param1);
-                selfIntersections.append(param2);
+                res.append(param1);
+                res.append(param2);
 
                 // TODO: handle special case when params are exactly equal to
                 // startParam/endParam for open edges? What if some params are
@@ -65,12 +68,27 @@ void autoCut(vacomplex::KeyEdge* edge, const AutoCutParams& params) {
             }
         }
     }
+    return res;
+}
 
-    // Cut the edge
+} // namespace
+
+void autoCut(vacomplex::KeyEdge* edge, const AutoCutParams& params) {
+
+    // Compute self-intersections.
+    //
+    core::Array<geometry::CurveParameter> selfIntersections;
+    if (params.cutItself()) {
+        selfIntersections = computeSelfIntersections(edge);
+    }
+
+    // Cut the edge.
+    //
     vacomplex::CutEdgeResult cutEdgeRes =
         vacomplex::ops::cutEdge(edge, selfIntersections);
 
-    // Glue the new vertices two by two
+    // Glue the new vertices two by two.
+    //
     for (Int i = 0; i < selfIntersections.length() - 1; i += 2) {
         std::array<vacomplex::KeyVertex*, 2> vertices = {
             cutEdgeRes.vertices()[i], //
