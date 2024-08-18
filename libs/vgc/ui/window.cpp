@@ -240,7 +240,10 @@ void Window::enterEvent(QEvent* event) {
 void Window::leaveEvent(QEvent* event) {
     entered_ = false;
     bool hasMouseCaptor = widget_ && widget_->mouseCaptor();
-    if (pressedMouseButtons_ == MouseButton::None && !hasMouseCaptor) {
+    if (pressedMouseButtons_ == MouseButton::None     //
+        && pressedTabletButtons_ == MouseButton::None //
+        && !hasMouseCaptor) {
+
         if (widget_) { // no need to check for !hasMouseCaptor: already done
             event->setAccepted(widget_->setHovered(false));
         }
