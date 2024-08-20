@@ -86,7 +86,7 @@ core::Array<IntersectionParameters> computeSelfIntersections(vacomplex::KeyEdge*
 }
 
 core::Array<IntersectionParameters>
-computeIntersections(vacomplex::KeyEdge* edge1, vacomplex::KeyEdge* edge2) {
+computeEdgeIntersections(vacomplex::KeyEdge* edge1, vacomplex::KeyEdge* edge2) {
 
     if (!edge1->boundingBox().intersects(edge2->boundingBox())) {
         return {};
@@ -155,71 +155,131 @@ struct GlueInfo {
     Int index2;
 };
 
-} // namespace
+using CutInfoMap = std::unordered_map<vacomplex::KeyEdge*, CutInfo>;
+using GlueInfoArray = core::Array<GlueInfo>;
 
-void autoCut(vacomplex::KeyEdge* edge1, const AutoCutParams& params) {
+void computeSelfIntersections(
+    vacomplex::KeyEdge* edge,
+    CutInfoMap& cutInfos,
+    GlueInfoArray& glueInfos) {
 
-    std::unordered_map<vacomplex::KeyEdge*, CutInfo> cutInfos;
-    core::Array<GlueInfo> glueInfos;
+    auto intersections = computeSelfIntersections(edge);
 
-    // Compute self-intersections.
+    // Fast-return if no interesction. This is important so that
+    // cutInfos[edge1] is only created if there is actually an intersection.
     //
-    if (params.cutItself()) {
-        auto intersections = computeSelfIntersections(edge1);
-        CurveParameterArray& cutParams = cutInfos[edge1].params;
-        cutParams.reserve(intersections.length() * 2);
-        for (const IntersectionParameters& intersection : intersections) {
-            Int n = cutParams.length();
-            cutParams.append(intersection.param1);
-            cutParams.append(intersection.param2);
-            glueInfos.append(GlueInfo{edge1, n, edge1, n + 1});
-        }
+    if (intersections.isEmpty()) {
+        return;
     }
 
-    // Compute intersections with other edges.
+    CurveParameterArray& cutParams = cutInfos[edge].params;
+    cutParams.reserve(intersections.length() * 2);
+    for (const IntersectionParameters& intersection : intersections) {
+        Int n = cutParams.length();
+        cutParams.append(intersection.param1);
+        cutParams.append(intersection.param2);
+        glueInfos.append(GlueInfo{edge, n, edge, n + 1});
+    }
+}
+
+void computeEdgeIntersections(
+    vacomplex::KeyEdge* edge1,
+    vacomplex::KeyEdge* edge2,
+    CutInfoMap& cutInfos,
+    GlueInfoArray& glueInfos) {
+
+    if (edge2 == edge1) {
+        return;
+    }
+
+    auto intersections = computeEdgeIntersections(edge1, edge2);
+    if (intersections.isEmpty()) {
+        return;
+    }
+
+    // Get references to the cut parameters we want to append to.
     //
-    if (params.cutEdges()) {
-        for (vacomplex::Node* node : *edge1->parentGroup()) {
-            if (vacomplex::Cell* cell = node->toCell()) {
-                if (vacomplex::KeyEdge* edge2 = cell->toKeyEdge()) {
-                    if (edge2 != edge1) {
-                        auto intersections = computeIntersections(edge1, edge2);
-                        if (intersections.isEmpty()) {
-                            continue;
-                        }
-                        CurveParameterArray& cutParams1 = cutInfos[edge1].params;
-                        CurveParameterArray& cutParams2 = cutInfos[edge2].params;
-                        cutParams1.reserve(cutParams1.length() + intersections.length());
-                        cutParams2.reserve(cutParams2.length() + intersections.length());
-                        for (const IntersectionParameters& intersection : intersections) {
-                            Int n1 = cutParams1.length();
-                            Int n2 = cutParams2.length();
-                            cutParams1.append(intersection.param1);
-                            cutParams2.append(intersection.param2);
-                            glueInfos.append(GlueInfo{edge1, n1, edge2, n2});
-                        }
-                    }
-                }
+    // Note that we CANNOT just do:
+    //   CurveParameterArray& cutParams1 = cutInfos[edge1].params;
+    //   CurveParameterArray& cutParams2 = cutInfos[edge2].params;
+    //
+    // Because cutInfos[edge2] might insert a new CutInfo, possibly causing a
+    // re-hashing and invalidating cutParams1.
+    //
+    auto cutInfo1 = cutInfos.find(edge1);
+    if (cutInfo1 == cutInfos.end()) {
+        cutInfo1 = cutInfos.insert(std::make_pair(edge1, CutInfo{})).first;
+    }
+    auto cutInfo2 = cutInfos.find(edge2);
+    if (cutInfo2 == cutInfos.end()) {
+        cutInfo2 = cutInfos.insert(std::make_pair(edge2, CutInfo{})).first;
+        cutInfo1 = cutInfos.find(edge1);
+    }
+    VGC_ASSERT(cutInfo1 != cutInfos.end());
+    VGC_ASSERT(cutInfo2 != cutInfos.end());
+    CurveParameterArray& cutParams1 = cutInfo1->second.params;
+    CurveParameterArray& cutParams2 = cutInfo2->second.params;
+
+    // Compute and append intersections
+    cutParams1.reserve(cutParams1.length() + intersections.length());
+    cutParams2.reserve(cutParams2.length() + intersections.length());
+    for (const IntersectionParameters& intersection : intersections) {
+        Int n1 = cutParams1.length();
+        Int n2 = cutParams2.length();
+        cutParams1.append(intersection.param1);
+        cutParams2.append(intersection.param2);
+        glueInfos.append(GlueInfo{edge1, n1, edge2, n2});
+    }
+}
+
+void computeEdgeIntersections(
+    vacomplex::KeyEdge* edge1,
+    CutInfoMap& cutInfos,
+    GlueInfoArray& glueInfos) {
+
+    for (vacomplex::Node* node : *edge1->parentGroup()) {
+        if (vacomplex::Cell* cell = node->toCell()) {
+            if (vacomplex::KeyEdge* edge2 = cell->toKeyEdge()) {
+                computeEdgeIntersections(edge1, edge2, cutInfos, glueInfos);
             }
         }
     }
+}
 
-    // Cut the edges.
-    //
+void cutEdges(CutInfoMap& cutInfos) {
     for (auto& [edge, cutInfo] : cutInfos) {
         cutInfo.res = vacomplex::ops::cutEdge(edge, cutInfo.params);
     }
+}
 
-    // Glue the new vertices.
-    //
+void glueVertices(const CutInfoMap& cutInfos, const GlueInfoArray& glueInfos) {
     for (const GlueInfo& glueInfo : glueInfos) {
-        const CutInfo& cutInfo1 = cutInfos[glueInfo.edge1];
-        const CutInfo& cutInfo2 = cutInfos[glueInfo.edge2];
+        const CutInfo& cutInfo1 = cutInfos.at(glueInfo.edge1);
+        const CutInfo& cutInfo2 = cutInfos.at(glueInfo.edge2);
         std::array<vacomplex::KeyVertex*, 2> vertices = {
             cutInfo1.res.vertices()[glueInfo.index1], //
             cutInfo2.res.vertices()[glueInfo.index2]};
         vacomplex::ops::glueKeyVertices(vertices, vertices[0]->position());
     }
+}
+
+} // namespace
+
+void autoCut(vacomplex::KeyEdge* edge, const AutoCutParams& params) {
+
+    // Compute info about interesections
+    CutInfoMap cutInfos;
+    GlueInfoArray glueInfos;
+    if (params.cutItself()) {
+        computeSelfIntersections(edge, cutInfos, glueInfos);
+    }
+    if (params.cutEdges()) {
+        computeEdgeIntersections(edge, cutInfos, glueInfos);
+    }
+
+    // Cut edges at given CurveParameters and glue vertices two-by-two
+    cutEdges(cutInfos);
+    glueVertices(cutInfos, glueInfos);
 }
 
 } // namespace vgc::tools
