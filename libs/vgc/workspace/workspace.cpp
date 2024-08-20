@@ -588,15 +588,6 @@ bool Workspace::cutGlueFace(core::ConstSpan<core::Id> elementIds) {
         return false;
     }
 
-    if (!targetKe->isClosed()) {
-        if (!targetKf->boundary().contains(targetKe->startVertex())) {
-            return false;
-        }
-        if (!targetKf->boundary().contains(targetKe->endVertex())) {
-            return false;
-        }
-    }
-
     // Open history group
     static core::StringId opName("workspace.cutGlueFace");
     detail::ScopedUndoGroup undoGroup = createScopedUndoGroup_(opName);

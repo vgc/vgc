@@ -1381,6 +1381,7 @@ Operations::cutEdge(KeyEdge* ke, core::ConstSpan<geometry::CurveParameter> param
 }
 
 void Operations::cutGlueFaceWithVertex(KeyFace* kf, KeyVertex* kv) {
+    // Append last so that it does not invalidate existing KeyFaceVertexUsageIndex
     kf->cycles_.append(KeyCycle(kv));
     addToBoundary_(kf, kv);
 }
@@ -1392,6 +1393,36 @@ KeyVertex* Operations::cutFaceWithVertex(KeyFace* kf, const geometry::Vec2d& pos
     return newKv;
 }
 
+namespace {
+
+core::Array<KeyFaceVertexUsageIndex>
+getVertexIndexCandidates(KeyFace* kf, KeyVertex* kv1) {
+    core::Array<KeyFaceVertexUsageIndex> res;
+    Int i = 0;
+    for (const auto& cycle : kf->cycles()) {
+        KeyVertex* sv = cycle.steinerVertex();
+        if (sv) {
+            if (sv == kv1) {
+                res.emplaceLast(i, 0);
+            }
+        }
+        else {
+            Int j = 0;
+            for (const auto& h : cycle.halfedges()) {
+                KeyVertex* kv = h.startVertex();
+                if (kv == kv1) {
+                    res.emplaceLast(i, j);
+                }
+                ++j;
+            }
+        }
+        ++i;
+    }
+    return res;
+}
+
+} // namespace
+
 CutFaceResult Operations::cutGlueFace(
     KeyFace* kf,
     const KeyEdge* ke,
@@ -1399,37 +1430,29 @@ CutFaceResult Operations::cutGlueFace(
     TwoCycleCutPolicy twoCycleCutPolicy) {
 
     if (!ke->isClosed()) {
+
+        // Get candidate vertex-usages for the cut
         KeyVertex* startVertex = ke->startVertex();
         KeyVertex* endVertex = ke->endVertex();
+        core::Array<KeyFaceVertexUsageIndex> startIndexCandidates =
+            getVertexIndexCandidates(kf, startVertex);
+        core::Array<KeyFaceVertexUsageIndex> endIndexCandidates =
+            getVertexIndexCandidates(kf, endVertex);
 
-        core::Array<KeyFaceVertexUsageIndex> startIndexCandidates;
-        core::Array<KeyFaceVertexUsageIndex> endIndexCandidates;
-
-        Int i = 0;
-        for (const auto& cycle : kf->cycles()) {
-            KeyVertex* sv = cycle.steinerVertex();
-            if (sv) {
-                if (sv == startVertex) {
-                    startIndexCandidates.emplaceLast(i, 0);
-                }
-                if (sv == endVertex) {
-                    endIndexCandidates.emplaceLast(i, 0);
-                }
-            }
-            else {
-                Int j = 0;
-                for (const auto& h : cycle.halfedges()) {
-                    KeyVertex* kv = h.startVertex();
-                    if (kv == startVertex) {
-                        startIndexCandidates.emplaceLast(i, j);
-                    }
-                    if (kv == endVertex) {
-                        endIndexCandidates.emplaceLast(i, j);
-                    }
-                    ++j;
-                }
-            }
-            ++i;
+        // If the start and/or end vertex is not already in the boundary of the
+        // face, cut the face with the vertex. Note that this does not
+        // invalidate pre-existing KeyFaceVertexUsageIndex, as the new vertex
+        // is appended as a new Steiner cycle after existing cycles.
+        //
+        if (startIndexCandidates.isEmpty()) {
+            cutGlueFaceWithVertex(kf, startVertex);
+            startIndexCandidates = getVertexIndexCandidates(kf, startVertex);
+            VGC_ASSERT(!startIndexCandidates.isEmpty());
+        }
+        if (endIndexCandidates.isEmpty()) {
+            cutGlueFaceWithVertex(kf, endVertex);
+            endIndexCandidates = getVertexIndexCandidates(kf, endVertex);
+            VGC_ASSERT(!endIndexCandidates.isEmpty());
         }
 
         // TODO: find best usages

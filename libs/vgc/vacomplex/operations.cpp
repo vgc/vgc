@@ -449,14 +449,6 @@ void checkCutGlueFaceArguments(const KeyFace* kf, const KeyEdge* ke) {
     if (kf->time() != ke->time()) {
         throw LogicError("cutGlueFace: kf and ke are from different times.");
     }
-    if (!ke->isClosed()) {
-        if (!kf->boundary().contains(ke->startVertex())) {
-            throw LogicError("cutGlueFace: ke's start vertex is not in kf's boundary.");
-        }
-        if (!kf->boundary().contains(ke->endVertex())) {
-            throw LogicError("cutGlueFace: ke's end vertex is not in kf's boundary.");
-        }
-    }
 }
 
 void checkCutGlueFaceArguments(const KeyFace* kf, const KeyHalfedge& khe) {
@@ -472,14 +464,6 @@ void checkCutGlueFaceArguments(const KeyFace* kf, const KeyHalfedge& khe) {
     }
     if (kf->time() != ke->time()) {
         throw LogicError("cutGlueFace: kf and khe are from different times.");
-    }
-    if (!ke->isClosed()) {
-        if (!kf->boundary().contains(khe.startVertex())) {
-            throw LogicError("cutGlueFace: khe's start vertex is not in kf's boundary.");
-        }
-        if (!kf->boundary().contains(khe.endVertex())) {
-            throw LogicError("cutGlueFace: khe's end vertex is not in kf's boundary.");
-        }
     }
 }
 
@@ -565,15 +549,15 @@ void checkCutFaceWithOpenEdgeArguments(
     if (!kf) {
         throw LogicError("cutFaceWithOpenEdge: kf is nullptr.");
     }
+    if (!startVertex) {
+        throw LogicError("cutFaceWithOpenEdge: startVertex is nullptr.");
+    }
+    if (!endVertex) {
+        throw LogicError("cutFaceWithOpenEdge: endVertex is nullptr.");
+    }
     if (data.isClosed()) {
         throw LogicError("cutFaceWithOpenEdge: geometry is closed, overload taking "
                          "end vertices as argument is not allowed.");
-    }
-    if (!kf->boundary().contains(startVertex)) {
-        throw LogicError("cutFaceWithOpenEdge: startVertex is not in kf boundary.");
-    }
-    if (!kf->boundary().contains(endVertex)) {
-        throw LogicError("cutFaceWithOpenEdge: endVertex is not in kf boundary.");
     }
 }
 
