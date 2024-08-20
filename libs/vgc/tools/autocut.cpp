@@ -267,7 +267,7 @@ void glueVertices(const CutInfoMap& cutInfos, const GlueInfoArray& glueInfos) {
 
 void autoCut(vacomplex::KeyEdge* edge, const AutoCutParams& params) {
 
-    // Compute info about interesections
+    // Compute info about intersections
     CutInfoMap cutInfos;
     GlueInfoArray glueInfos;
     if (params.cutItself()) {
