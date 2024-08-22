@@ -93,10 +93,6 @@ void wrap_triangle(py::module& m, const std::string& name) {
         .def_property("b", &This::b, py::overload_cast<const Vec2x&>(&This::setB))
         .def_property("c", &This::c, py::overload_cast<const Vec2x&>(&This::setC))
 
-        .def("setA", py::overload_cast<T, T>(&This::setA))
-        .def("setB", py::overload_cast<T, T>(&This::setB))
-        .def("setC", py::overload_cast<T, T>(&This::setC))
-
         .def(py::self += py::self)
         .def(py::self + py::self)
         .def(+py::self)

@@ -317,16 +317,14 @@ using Triangle2dConstSpan = StrideSpan<const double, const Triangle2d>;
 /// \sa `vgc::core::zero<T>()`.
 ///
 inline void setZero(Triangle2d& t) {
-    t[0] = Vec2d();
-    t[1] = Vec2d();
-    t[2] = Vec2d();
+    t = Triangle2d();
 }
 
 /// Writes the given `Triangle2d` to the output stream.
 ///
 template<typename OStream>
 void write(OStream& out, const Triangle2d& t) {
-    write(out, '[', t[0], ", ", t[1], ", ", t[2], ']');
+    write(out, '(', t[0], ", ", t[1], ", ", t[2], ')');
 }
 
 /// Reads a `Triangle2d` from the input stream, and stores it in the given output
@@ -336,13 +334,13 @@ void write(OStream& out, const Triangle2d& t) {
 ///
 template<typename IStream>
 void readTo(Triangle2d& t, IStream& in) {
-    skipWhitespacesAndExpectedCharacter(in, '[');
+    skipWhitespacesAndExpectedCharacter(in, '(');
     readTo(t[0], in);
     skipWhitespacesAndExpectedCharacter(in, ',');
     readTo(t[1], in);
     skipWhitespacesAndExpectedCharacter(in, ',');
     readTo(t[2], in);
-    skipWhitespacesAndExpectedCharacter(in, ']');
+    skipWhitespacesAndExpectedCharacter(in, ')');
 }
 
 } // namespace vgc::geometry
@@ -359,7 +357,7 @@ struct fmt::formatter<vgc::geometry::Triangle2d> {
     }
     template<typename FormatContext>
     auto format(const vgc::geometry::Triangle2d& t, FormatContext& ctx) {
-        return format_to(ctx.out(), "[{}, {}, {}]", t[0], t[1], t[2]);
+        return format_to(ctx.out(), "({}, {}, {})", t[0], t[1], t[2]);
     }
 };
 
