@@ -918,6 +918,25 @@ struct IsForwardIterator<T, Requires<
 template<typename T>
 inline constexpr bool isForwardIterator = IsForwardIterator<T>::value;
 
+/// Type trait for `isInputRange<T>`.
+///
+template<typename T, typename SFINAE = void>
+struct IsInputRange : std::false_type {};
+
+template<typename T>
+struct IsInputRange<T, Requires<
+        isInputIterator<decltype(std::declval<T>().begin())>
+        && isInputIterator<decltype(std::declval<T>().end())>>>
+    : std::true_type {};
+
+/// Checks whether `T` satisfies the concept of input range, that is, whether
+/// it has `T::begin()` and `T::end()` and they return input iterators.
+///
+/// \sa `IsInputRange<T>`, `isInputIterator<T>`, `isRange<T>`.
+///
+template<typename T>
+inline constexpr bool isInputRange = IsInputRange<T>::value;
+
 /// Type trait for `isRange<T>`.
 ///
 template<typename T, typename SFINAE = void>
@@ -932,7 +951,7 @@ struct IsRange<T, Requires<
 /// Checks whether `T` satisfies the concept of range, that is, whether it has
 /// `T::begin()` and `T::end()` and they return forward iterators.
 ///
-/// \sa `IsRange<T>`, `isForwardIterator<T>`.
+/// \sa `IsRange<T>`, `isForwardIterator<T>`, `isInputRange<T>`.
 ///
 template<typename T>
 inline constexpr bool isRange = IsRange<T>::value;
