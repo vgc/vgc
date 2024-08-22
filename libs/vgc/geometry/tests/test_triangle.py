@@ -23,7 +23,7 @@ from vgc.geometry import Triangle2d, Triangle2f, Vec2d, Vec2f
 Triangle2Types = [Triangle2d, Triangle2f]
 Triangle2Vec2Types = [(Triangle2d, Vec2d), (Triangle2f, Vec2f)]
 
-class TestVec2(unittest.TestCase):
+class TestTriangle2(unittest.TestCase):
 
     def testDefaultConstructor(self):
         for Triangle2 in Triangle2Types:
