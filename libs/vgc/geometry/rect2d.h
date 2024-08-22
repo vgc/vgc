@@ -25,6 +25,7 @@
 #include <algorithm> // minmax
 
 #include <vgc/core/array.h>
+#include <vgc/core/templateutil.h>
 #include <vgc/geometry/api.h>
 #include <vgc/geometry/vec2d.h>
 
@@ -187,6 +188,32 @@ public:
         double x, double y, double width, double height) noexcept {
 
         return Rect2d(x, y, x + width, y + height);
+    }
+
+    /// Computes the bounding box of the given `points`.
+    /// 
+    /// This function can be called for any range type `Range` whose elements
+    /// are implicitly convertible to `Vec2d`.
+    ///
+    template<typename Range, VGC_REQUIRES(core::isInputRange<Range>)>
+    static constexpr Rect2d computeBoundingBox(const Range& points) {
+        Rect2d res = Rect2d::empty;
+        for (const auto& point : points) {
+            res.uniteWith(point);
+        }
+        return res;
+    }
+
+    /// Computes the bounding box of the points obtained by applying the
+    /// `getPoint` unary operator to all the elements in the given `range`.
+    /// 
+    template<typename Range, typename UnaryOp, VGC_REQUIRES(core::isInputRange<Range>)>
+    static constexpr Rect2d computeBoundingBox(const Range& range, UnaryOp getPoint) {
+        Rect2d res = Rect2d::empty;
+        for (const auto& element : range) {
+            res.uniteWith(getPoint(element));
+        }
+        return res;
     }
 
     /// The empty `Rect2d` defined by `Rect2d(inf, inf, -inf, -inf)` where

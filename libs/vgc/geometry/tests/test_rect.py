@@ -17,10 +17,11 @@
 # limitations under the License.
 
 import unittest
-from vgc.geometry import Vec2d, Vec2f, Rect2d, Rect2f
+from vgc.geometry import Vec2d, Vec2f, Vec2dArray, Vec2fArray, Rect2d, Rect2f
 
 Rect2Types = [Rect2d, Rect2f]
 Rect2Vec2Types = [(Rect2d, Vec2d), (Rect2f, Vec2f)]
+Rect2Vec2ArrayTypes = [(Rect2d, Vec2d, Vec2dArray), (Rect2f, Vec2f, Vec2fArray)]
 
 
 class TestRect(unittest.TestCase):
@@ -127,6 +128,15 @@ class TestRect(unittest.TestCase):
             self.assertEqual(r.x, 5)
             self.assertEqual(s.x, 1)
             self.assertNotEqual(r, s)
+
+    def testComputeBoundingBox(self):
+        for Rect2, Vec2, Vec2Array in Rect2Vec2ArrayTypes:
+            points = [(1, 2), (3, 4), (5, 6)]
+            r1 = Rect2.computeBoundingBox(points)
+            self.assertEqual(r1, Rect2(1, 2, 5, 6))
+            pointsArray = Vec2Array(points)
+            r2 = Rect2.computeBoundingBox(pointsArray)
+            self.assertEqual(r2, Rect2(1, 2, 5, 6))
 
     def testEmpty(self):
         for Rect2 in Rect2Types:

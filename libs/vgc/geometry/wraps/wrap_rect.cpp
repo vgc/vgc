@@ -75,6 +75,19 @@ void wrap_rect(py::module& m, const std::string& name, T relTol) {
             "position"_a,
             "size"_a)
 
+        .def(
+            "computeBoundingBox",
+            [](const vgc::core::Array<Vec2x>& points) -> This {
+                return This::computeBoundingBox(points);
+            })
+
+        .def(
+            "computeBoundingBox",
+            [](py::iterable points) -> This {
+                return This::computeBoundingBox(
+                    points, [](const auto& p) { return py::cast<Vec2x>(p); });
+            })
+
         .def_property_readonly_static(
             "empty", [](py::object) -> This { return This::empty; })
         .def("isEmpty", &This::isEmpty)
