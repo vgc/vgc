@@ -274,7 +274,7 @@ public:
     }
 
 private:
-    std::array<Vec2f, 2> data_;
+    Vec2f data_[2];
 };
 
 /// Alias for `vgc::core::Array<vgc::geometry::Segment2f>`.
