@@ -421,10 +421,8 @@ private:
     Rect2d centerlineBoundingBox_ = Rect2d::empty;
 
     void computeCenterlineBoundingBox() {
-        centerlineBoundingBox_ = Rect2d::empty;
-        for (const StrokeSample2d& cs : samples_) {
-            centerlineBoundingBox_.uniteWith(cs.position());
-        }
+        centerlineBoundingBox_ = Rect2d::computeBoundingBox(
+            samples_, [](const StrokeSample2d& s) { return s.position(); });
     }
 };
 

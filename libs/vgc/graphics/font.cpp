@@ -388,7 +388,7 @@ public:
     Glyph* glyph;
     geometry::Curves2d outline;
     core::FloatArray triangles;
-    geometry::Rect2f boundingBox = geometry::Rect2f::empty;
+    geometry::Rect2f boundingBox;
 
     SizedGlyphImpl(Glyph* glyph, FT_GlyphSlot slot)
         : glyph(glyph) {
@@ -403,10 +403,8 @@ public:
         geometry::FillStyle fillStyle(geometry::WindingRule::NonZero);
         auto params = geometry::Curves2dSampleParams::semiAdaptive(1.0);
         outline.fill(triangles, fillStyle, params);
-        for (const geometry::Vec2f& point :
-             geometry::Vec2fConstSpan(triangles.data(), triangles.length() / 2, 2)) {
-            boundingBox.uniteWith(point);
-        }
+        boundingBox = geometry::Rect2f::computeBoundingBox(
+            geometry::Vec2fConstSpan(triangles.data(), triangles.length() / 2, 2));
     }
 };
 
