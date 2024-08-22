@@ -420,8 +420,7 @@ public:
     ///
     template<typename InputIt, typename UnaryOp, VGC_REQUIRES(isInputIterator<InputIt>)>
     Array(InputIt first, InputIt last, UnaryOp op) {
-        resizeNoInit(std::distance(first, last));
-        std::transform(first, last, begin(), op);
+        rangeConstruct_(first, last, op);
     }
 
     /// Creates an `Array` initialized from the elements in `range`.
@@ -437,7 +436,7 @@ public:
     /// vgc::core::Array<double> a(l); // Copy the list as an Array
     /// ```
     ///
-    template<typename Range, VGC_REQUIRES(isRange<Range>)>
+    template<typename Range, VGC_REQUIRES(isInputRange<Range>)>
     explicit Array(const Range& range) {
         rangeConstruct_(range.begin(), range.end());
     }
@@ -456,9 +455,9 @@ public:
     /// vgc::core::Array<Int> a(v, [](double x) { return vgc::core::ifloor<Int>(x); });
     /// ```
     ///
-    template<typename Range, typename UnaryOp, VGC_REQUIRES(isRange<Range>)>
-    explicit Array(const Range& range, UnaryOp op)
-        : Array(range.begin(), range.end(), op) {
+    template<typename Range, typename UnaryOp, VGC_REQUIRES(isInputRange<Range>)>
+    explicit Array(const Range& range, UnaryOp op) {
+        rangeConstruct_(range.begin(), range.end(), op);
     }
 
     /// Creates an `Array` initialized by the values given in the initializer
@@ -2108,6 +2107,28 @@ private:
         else {
             while (first != last) {
                 emplaceLast_(*first++);
+            }
+        }
+    }
+
+    template<typename InputIt, typename UnaryOp>
+    void rangeConstruct_(InputIt first, InputIt last, UnaryOp op) {
+        using iterator_category =
+            typename std::iterator_traits<InputIt>::iterator_category;
+
+        if constexpr (std::is_base_of_v<std::forward_iterator_tag, iterator_category>) {
+            const auto dist = std::distance(first, last);
+            if (dist != 0) {
+                checkLengthForInit_(dist);
+                const Int newLen = static_cast<Int>(dist);
+                allocateStorage_(newLen);
+                std::transform(first, last, data_, op);
+                length_ = newLen;
+            }
+        }
+        else {
+            while (first != last) {
+                emplaceLast_(op(*first++));
             }
         }
     }
