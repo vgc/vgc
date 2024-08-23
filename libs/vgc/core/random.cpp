@@ -27,7 +27,7 @@ thread_local std::random_device randomDevice_;
 
 namespace vgc::core::detail {
 
-UInt32 hardwareRandom() {
+UInt32 generateRandomInteger() {
     return randomDevice_();
 }
 
