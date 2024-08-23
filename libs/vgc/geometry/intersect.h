@@ -53,6 +53,36 @@ inline bool fastSegmentIntersects(
     return false;
 }
 
+/// Returns whether the segments `(a1, b1)` and `(a2, b2)` intersect
+/// excluding `a2` and `b2`.
+///
+/// It is a fast variant that considers collinear overlaps as non
+/// intersecting.
+///
+inline bool fastSemiOpenSegmentIntersects(
+    const geometry::Vec2d& a1,
+    const geometry::Vec2d& b1,
+    const geometry::Vec2d& a2,
+    const geometry::Vec2d& b2) {
+
+    geometry::Vec2d d1 = (b1 - a1);
+    geometry::Vec2d d2 = (b2 - a2);
+
+    // Solve 2x2 system using Cramer's rule.
+    double delta = d1.det(d2);
+    if (std::abs(delta) > core::epsilon) {
+        geometry::Vec2d a1a2 = a2 - a1;
+        double inv_delta = 1 / delta;
+        double t1 = a1a2.det(d2) * inv_delta;
+        double t2 = a1a2.det(d1) * inv_delta;
+        if (t1 >= 0. && t1 < 1. && t2 >= 0. && t2 < 1.) {
+            return true;
+        }
+    }
+
+    return false;
+}
+
 /// \class vgc::geometry::Segment2dPointIntersection
 /// \brief Stores data about the intersection point between two 2D segments
 ///
@@ -124,13 +154,88 @@ inline std::optional<Segment2dPointIntersection> fastSegmentIntersection(
     return std::nullopt;
 }
 
-/// Returns whether the segments `(a1, b1)` and `(a2, b2)` intersect
-/// excluding `a2` and `b2`.
+enum class SegmentIntersectionType : UInt8 {
+    Empty,
+    Point,
+    Segment
+};
+
+class Segment2dIntersection {
+public:
+    Segment2dIntersection()
+        : type_(SegmentIntersectionType::Empty) {
+    }
+
+    Segment2dIntersection(const geometry::Vec2d& p, double t1, double t2)
+        : p1_(p)
+        , p2_(p)
+        , s1_(t1)
+        , t1_(t1)
+        , s2_(t2)
+        , t2_(t2)
+        , type_(SegmentIntersectionType::Point) {
+    }
+
+    Segment2dIntersection(
+        const geometry::Vec2d& p1,
+        const geometry::Vec2d& p2,
+        double s1,
+        double t1,
+        double s2,
+        double t2)
+
+        : p1_(p1)
+        , p2_(p2)
+        , s1_(s1)
+        , t1_(t1)
+        , s2_(s2)
+        , t2_(t2)
+        , type_(SegmentIntersectionType::Segment) {
+    }
+
+    SegmentIntersectionType type() const {
+        return type_;
+    }
+
+    const geometry::Vec2d& p1() const {
+        return p1_;
+    }
+
+    const geometry::Vec2d& p2() const {
+        return p2_;
+    }
+
+    double s1() const {
+        return s1_;
+    }
+
+    double t1() const {
+        return t1_;
+    }
+
+    double s2() const {
+        return s2_;
+    }
+
+    double t2() const {
+        return t2_;
+    }
+
+private:
+    geometry::Vec2d p1_ = core::noInit;
+    geometry::Vec2d p2_ = core::noInit;
+    double s1_; // no-init
+    double t1_; // no-init
+    double s2_; // no-init
+    double t2_; // no-init
+    SegmentIntersectionType type_;
+};
+
+/// Returns the intersection between the segments `(a1, b1)` and `(a2, b2)`.
 ///
-/// It is a fast variant that considers collinear overlaps as non
-/// intersecting.
+/// TODO: Actually handle Segment case
 ///
-inline bool fastSemiOpenSegmentIntersects(
+inline Segment2dIntersection segmentIntersection(
     const geometry::Vec2d& a1,
     const geometry::Vec2d& b1,
     const geometry::Vec2d& a2,
@@ -141,17 +246,38 @@ inline bool fastSemiOpenSegmentIntersects(
 
     // Solve 2x2 system using Cramer's rule.
     double delta = d1.det(d2);
-    if (std::abs(delta) > core::epsilon) {
+    if (std::abs(delta) > 0) {
+        if (a1 == a2) {
+            return Segment2dIntersection(a1, 0, 0);
+        }
+        else if (b1 == b2) {
+            return Segment2dIntersection(b1, 1, 1);
+        }
+        else if (a1 == b2) {
+            return Segment2dIntersection(a1, 0, 1);
+        }
+        else if (a2 == b1) {
+            return Segment2dIntersection(a1, 1, 0);
+        }
         geometry::Vec2d a1a2 = a2 - a1;
         double inv_delta = 1 / delta;
         double t1 = a1a2.det(d2) * inv_delta;
         double t2 = a1a2.det(d1) * inv_delta;
-        if (t1 >= 0. && t1 < 1. && t2 >= 0. && t2 < 1.) {
-            return true;
+        if (t1 >= 0. && t1 <= 1. && t2 >= 0. && t2 <= 1.) {
+            geometry::Vec2d p = core::fastLerp(a1, b1, t1);
+            return Segment2dIntersection(p, t1, t2);
+        }
+        else {
+            return Segment2dIntersection();
         }
     }
-
-    return false;
+    else {
+        // Collinear => either empty intersection of segment intersection
+        // For now we return a dummy segment intersection so that we can
+        // at least detect this.
+        // TODO: actually compute the segment or empty intersection.
+        return Segment2dIntersection(a1, a1, 0, 0, 0, 0);
+    }
 }
 
 } // namespace vgc::geometry
