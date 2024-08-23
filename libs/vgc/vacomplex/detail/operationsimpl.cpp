@@ -16,11 +16,12 @@
 
 #include <vgc/vacomplex/detail/operationsimpl.h>
 
-#include <algorithm> // std::reverse
+#include <algorithm> // reverse, unique
 #include <unordered_set>
 
 #include <vgc/core/algorithms.h> // sort
 #include <vgc/core/array.h>
+#include <vgc/core/random.h> // sort
 #include <vgc/geometry/intersect.h>
 #include <vgc/vacomplex/algorithms.h>
 #include <vgc/vacomplex/exceptions.h>
@@ -1550,6 +1551,305 @@ KeyPath rotatedCycleHalfedges_(const KeyCycle& cycle, Int newStart) {
     return KeyPath(std::move(result));
 };
 
+/// Returns a length that can be considered negligible relative to the size of
+/// the given polylines.
+///
+double getEpsilon(geometry::Vec2dArray& polyline1, geometry::Vec2dArray& polyline2) {
+    geometry::Rect2d bb1 = geometry::Rect2d::computeBoundingBox(polyline1);
+    geometry::Rect2d bb2 = geometry::Rect2d::computeBoundingBox(polyline2);
+    double magnitude = bb1.width() + bb1.height() + bb2.width() + bb2.height();
+    return 1e-10 * magnitude;
+}
+
+void removeDuplicates(geometry::Vec2dArray& polyline, double epsilon = 0) {
+    double eps2 = epsilon * epsilon;
+    auto last = std::unique(
+        polyline.begin(),
+        polyline.end(),
+        [eps2](const geometry::Vec2d& v1, const geometry::Vec2d& v2) {
+            return (v1 - v2).squaredLength() <= eps2;
+        });
+    polyline.erase(last, polyline.cend());
+}
+
+// Removes any common non-zero-length common subset at the end of the given polylines:
+//
+//               INPUT     OUTPUT
+//
+//                   x-x         x
+//                  /           /
+// polyline1:  x---x       x---x
+//
+//                 x---x       x-x
+//                /           /
+// polyline2:  x-x         x-x
+//
+// Post-condition:
+// - one of the polyline is empty, or
+// - the distance between the last points of the polylines is greater than epsilon, or
+// - the last points of the polyline are equal and the distance between the
+//   second-last point (if any) of each polyline to the last segment of the other polyline is greater than epsilon
+//
+void trimSharedEnd(
+    geometry::Vec2dArray& polyline1,
+    geometry::Vec2dArray& polyline2,
+    double epsilon = 0) {
+
+    Int n1 = polyline1.length();
+    Int n2 = polyline2.length();
+    if (n1 == 0 || n2 == 0) {
+        return;
+    }
+    double eps2 = epsilon * epsilon;
+    if ((polyline1[n1 - 1] - polyline2[n2 - 1]).squaredLength() > eps2) {
+        return;
+    }
+    polyline1.last() = polyline2.last();
+
+    while (n1 >= 2 && n2 >= 2) {
+
+        // Get the last segment AB of each polyline
+        geometry::Vec2d& a1 = polyline1[n1 - 1];
+        geometry::Vec2d& a2 = polyline2[n2 - 1];
+        geometry::Vec2d& b1 = polyline1[n1 - 2];
+        geometry::Vec2d& b2 = polyline2[n2 - 2];
+        VGC_ASSERT(a1 == a2);
+        const geometry::Vec2d& a = a1;
+
+        // Assuming AB1 is smaller than AB2, we want to compute whether
+        // B1 is within the epsilon-sized capsule around AB2:
+        //
+        //   .--------------------.
+        //  .   A              B2  .
+        //  |   o--------------o   |  ^
+        //  `                      '  | eps
+        //   `--------------------'   v
+        //                     <--->
+        //                      eps
+
+        // Test whether B1 and B2 are within epsilon of each other.
+        // In this case, we consider the two segments equal.
+        //
+        //   .--------------.-----.
+        //  .   A          .   B2  .       A             B1,B2
+        //  |   o----------|---o B1|  =>   o--------------o
+        //  `              `     o '
+        //   `--------------`-----'
+        //
+        if ((b1 - b2).squaredLength() <= eps2) {
+            b1 = b2;
+            --n1;
+            --n2;
+            continue;
+        }
+
+        // Test whether B1 (or B2) is within epsilon of A.
+        // In this case, we consider it equal to A.
+        //
+        //   .----.---------.-----.
+        //  .   A  .       .   B2  .      A,B1            B2
+        //  |B1 o--|-------|---o   |  =>   o--------------o
+        //  ` o    '       `       '
+        //   `----'---------`-----'
+        //
+        geometry::Vec2d ab1 = b1 - a;
+        geometry::Vec2d ab2 = b2 - a;
+        double l1Squared = ab1.squaredLength();
+        double l2Squared = ab2.squaredLength();
+        if (l1Squared <= eps2 || l2Squared <= eps2) {
+            if (l1Squared <= eps2) {
+                b1 = a;
+                --n1;
+            }
+            if (l2Squared <= eps2) {
+                b2 = a;
+                --n2;
+            }
+            continue;
+        }
+
+        // We now know that A, B1, and B2 are all separated by at least epsilon.
+
+        // Fast return if AB1 and AB2 point to opposite directions.
+        //
+        //     /|
+        //  B1 /|
+        //  o  /| A            B2
+        //     /o--------------o
+        //     /|
+        //
+        double dot = ab1.dot(ab2);
+        if (dot < 0) {
+            break;
+        }
+
+        // Let AB1 be the shorter of the two.
+        // This means that we now know that B1 is somewhere in this space:
+        //
+        //  /|       B1     |/
+        //  /|       o      |/
+        //  /| A          B2|/
+        //  /o--------------o/
+        //  /|              |/
+        //
+        if (l1Squared > l2Squared) {
+            std::swap(ab1, ab2);
+            std::swap(l1Squared, l2Squared);
+        }
+
+        // Project B1 to AB2 line
+        //
+        //         B1
+        //         o
+        //  A      |h     B2
+        //  o------o------o
+        //         C
+        //
+        geometry::Vec2d ac = dot / l2Squared * ab2;
+        geometry::Vec2d cb1 = ab1 - ac;
+        double hSquared = cb1.squaredLength();
+
+        // If B1 is within epsilon of AB2, replace A1 and B1
+        // by C and keep iterating. Otherwise, we're done.
+        //
+        if (hSquared <= eps2) {
+            geometry::Vec2d c = a + ac;
+            a1 = c;
+            a2 = c;
+            continue;
+        }
+        else {
+            break;
+        }
+    }
+
+    polyline1.resize(n1);
+    polyline2.resize(n2);
+}
+
+// Determine an appropriate OneCycleCutPolicy based on geometric heuristics.
+//
+// Example:
+//
+//        o---->----o     path1: from v1 to v2 going
+//        |         |            through the "top" part
+//        o--o v1   o v2
+//        |         |     path2: from v2 to v1 going
+//        o----<----o            through the "bottom" part
+//
+OneCycleCutPolicy computeOneCycleCutPolicy(const KeyPath& path1, const KeyPath& path2) {
+
+    if (path1.halfedges().isEmpty() || path2.halfedges().isEmpty()) {
+        return OneCycleCutPolicy::Disk;
+    }
+
+    // Sample paths as polylines and remove almost-duplicates samples.
+    //
+    geometry::Vec2dArray poly1 = path1.sampleCenterline();
+    geometry::Vec2dArray poly2 = path2.sampleCenterline();
+    double eps = getEpsilon(poly1, poly2);
+    double minSegmentLength = 100 * eps;
+    removeDuplicates(poly1, minSegmentLength);
+    removeDuplicates(poly2, minSegmentLength);
+    if (poly1.isEmpty() || poly2.isEmpty()) {
+        return OneCycleCutPolicy::Disk;
+    }
+
+    // It's actually easier to work with path2 reversed for this algorithm, so
+    // that they both start at the same vertex and end at the same vertex.
+    //
+    //           path1
+    //        o---->----o
+    //        |         |
+    //        o--o v1   o v2
+    //        |         |
+    //        o---->----o
+    //           path2
+    //
+    std::reverse(poly2.begin(), poly2.end());
+
+    // Enforce that they do start and end at the same position. Normally, this
+    // is already the case initially, but the duplicate removal step may have
+    // changed that.
+    //
+    poly1.first() = poly2.first();
+    poly1.last() = poly2.last();
+
+    // Trim the common start/end between the polylines
+    trimSharedEnd(poly1, poly2, eps);
+    std::reverse(poly1.begin(), poly1.end());
+    std::reverse(poly2.begin(), poly2.end());
+    trimSharedEnd(poly1, poly2, eps);
+
+    // Apply random perturbation until there are no special cases
+    UInt32 seed = 0;
+    core::PseudoRandomUniform<double> rng(-0.1 * eps, 0.1 * eps, seed);
+    Int numAttempts = 0;
+    Int maxNumAttempts = 10;
+    Int numIntersections = 0;
+    bool tryAgain = true;
+    while (tryAgain && ++numAttempts <= maxNumAttempts) {
+
+        // Apply random perturbations.
+        //
+        // In case of shared edges, this means that the two paths will cross
+        // many times (around half the number of shared segments), but the
+        // number of intersection will be guaranteed to be even.
+        //
+        for (Int i = 1; i + 1 < poly1.length(); ++i) {
+            poly1.getUnchecked(i) += geometry::Vec2d(rng(), rng());
+        }
+        for (Int j = 1; j + 1 < poly2.length(); ++j) {
+            poly2.getUnchecked(j) += geometry::Vec2d(rng(), rng());
+        }
+
+        // Count the number of intersections.
+        //
+        tryAgain = false;
+        Int n1 = poly1.length();
+        Int n2 = poly2.length();
+        for (Int i = 0; i < n1 - 1; ++i) {
+            Int jStart = (i == 0) ? 1 : 0;              // don't count shared start point
+            Int jEnd = (i == n1 - 2) ? n2 - 2 : n2 - 1; // don't count shared end point
+            for (Int j = jStart; j < jEnd; ++j) {
+                geometry::Segment2dIntersection inter = geometry::segmentIntersection(
+                    poly1[i], poly1[i + 1], poly2[j], poly2[j + 1]);
+
+                using SIT = geometry::SegmentIntersectionType;
+                switch (inter.type()) {
+                case SIT::Empty:
+                    // nothing to do
+                    break;
+
+                case SIT::Point:
+                    // TODO: what if the intersection is near the beginning or end?
+                    // how to avoid double counting, or missing both due to numerical errors?
+                    ++numIntersections;
+                    break;
+
+                case SIT::Segment:
+                    // our heuristic cannot work in this case, so let's try again.
+                    tryAgain = true;
+
+                    // Exit out of the two nested loops
+                    i = poly1.length();
+                    j = poly2.length();
+
+                    // Fallback to Disk if maxNumAttempts reached
+                    numIntersections = 0;
+                }
+            }
+        }
+    }
+
+    if (numIntersections % 2 == 1) {
+        return OneCycleCutPolicy::Mobius;
+    }
+    else {
+        return OneCycleCutPolicy::Disk;
+    }
+}
+
 } // namespace
 
 CutFaceResult Operations::cutGlueFace(
@@ -1563,6 +1863,9 @@ CutFaceResult Operations::cutGlueFace(
     Int cycleIndex1 = startIndex.cycleIndex();
     Int cycleIndex2 = endIndex.cycleIndex();
 
+    // Get precision for numerical errors
+    kf->boundingBox();
+
     if (cycleIndex1 == cycleIndex2) {
         // One-cycle cut case
 
@@ -1575,33 +1878,8 @@ CutFaceResult Operations::cutGlueFace(
             subPath_(cycle, startIndex.componentIndex(), endIndex.componentIndex());
 
         if (oneCycleCutPolicy == OneCycleCutPolicy::Auto) {
-
-            // Default fallback policy.
-            oneCycleCutPolicy = OneCycleCutPolicy::Disk;
-
-            // XXX: improve method of identifying best policy.
-            //      identify punctured torus case ?
-            if (!path1.halfedges().isEmpty() && !path2.halfedges().isEmpty()) {
-                geometry::Vec2dArray poly1 = path1.sampleCenterline();
-                geometry::Vec2dArray poly2 = path2.sampleCenterline();
-
-                Int count = 0;
-                for (Int i = 1; i + 2 < poly1.length(); ++i) {
-                    for (Int j = 1; j + 2 < poly2.length(); ++j) {
-                        if (geometry::fastSemiOpenSegmentIntersects(
-                                poly1[i], poly1[i + 1], poly2[j], poly2[j + 1])) {
-                            ++count;
-                        }
-                    }
-                }
-
-                if (count % 2 == 1) {
-                    oneCycleCutPolicy = OneCycleCutPolicy::Mobius;
-                }
-            }
+            oneCycleCutPolicy = computeOneCycleCutPolicy(path1, path2);
         }
-
-        VGC_ASSERT(oneCycleCutPolicy != OneCycleCutPolicy::Auto);
 
         switch (oneCycleCutPolicy) {
         case OneCycleCutPolicy::Auto:
