@@ -169,6 +169,12 @@ public:
         return false;
     }
 
+    // XXX: numLoops instead of `loopIfEmptyRange`?
+    KeyPath subPath(Int first, Int last, bool loopIfEmptyRange = false) const;
+
+    // XXX: Why not returning a Cycle rather than a Path?
+    KeyPath rotated(Int newStart) const;
+
     void debugPrint(core::StringWriter& out) const;
 
 private:

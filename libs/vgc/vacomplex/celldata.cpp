@@ -17,7 +17,7 @@
 #include <vgc/vacomplex/celldata.h>
 
 #include <vgc/vacomplex/complex.h>
-#include <vgc/vacomplex/detail/operationsimpl.h>
+#include <vgc/vacomplex/detail/operations.h>
 
 namespace vgc::vacomplex {
 

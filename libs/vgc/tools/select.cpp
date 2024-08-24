@@ -34,7 +34,7 @@
 #include <vgc/ui/menu.h>
 #include <vgc/ui/standardmenus.h>
 #include <vgc/vacomplex/cell.h>
-#include <vgc/vacomplex/detail/operationsimpl.h>
+#include <vgc/vacomplex/detail/operations.h>
 #include <vgc/workspace/colors.h>
 #include <vgc/workspace/face.h>
 #include <vgc/workspace/workspace.h>

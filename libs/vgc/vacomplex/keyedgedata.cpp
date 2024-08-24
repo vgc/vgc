@@ -16,7 +16,7 @@
 
 #include <vgc/vacomplex/keyedgedata.h>
 
-#include <vgc/vacomplex/detail/operationsimpl.h>
+#include <vgc/vacomplex/detail/operations.h>
 #include <vgc/vacomplex/keyedge.h>
 #include <vgc/vacomplex/logcategories.h>
 

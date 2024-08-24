@@ -28,7 +28,7 @@
 #include <vgc/graphics/detail/shapeutil.h>
 #include <vgc/graphics/strings.h>
 #include <vgc/vacomplex/complex.h>
-#include <vgc/vacomplex/detail/operationsimpl.h>
+#include <vgc/vacomplex/detail/operations.h>
 #include <vgc/workspace/colors.h>
 
 namespace vgc::tools {

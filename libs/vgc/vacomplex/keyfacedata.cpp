@@ -16,7 +16,7 @@
 
 #include <vgc/vacomplex/keyfacedata.h>
 
-#include <vgc/vacomplex/detail/operationsimpl.h>
+#include <vgc/vacomplex/detail/operations.h>
 #include <vgc/vacomplex/keyface.h>
 
 namespace vgc::vacomplex {
