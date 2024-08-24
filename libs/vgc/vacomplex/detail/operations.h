@@ -25,9 +25,7 @@
 #include <vgc/vacomplex/keyedgedata.h>
 #include <vgc/vacomplex/operations.h>
 
-namespace vgc::vacomplex {
-
-namespace detail {
+namespace vgc::vacomplex::detail {
 
 // Note: this struct cannot be publicized as is, as we first need to generalize
 // it in the presence of inbetween vertices.
@@ -52,6 +50,12 @@ struct UncutAtKeyEdgeResult {
 
 class VGC_VACOMPLEX_API Operations {
 private:
+    Complex* complex_ = nullptr;
+
+    friend vacomplex::CellProperties;
+    friend vacomplex::CellData;
+    friend vacomplex::KeyEdgeData;
+
     using GroupChildrenIterator = Group;
     //using GroupChildrenConstIterator = decltype(Group::children_)::const_iterator;
 
@@ -72,6 +76,58 @@ public:
         return complex_;
     }
 
+    //-------------------------------------------------------------------------
+    //                Methods implemented in notify.cpp
+    //-------------------------------------------------------------------------
+
+private:
+    void onNodeCreated_(Node* node);
+    void onNodeDestroyed_(core::Id nodeId);
+    void onNodeInserted_(Node* node, Node* oldParent, NodeInsertionType insertionType);
+    void onNodeModified_(Node* node, NodeModificationFlags diffFlags);
+    void onNodePropertyModified_(Node* node, core::StringId name);
+    void onBoundaryChanged_(Cell* boundedCell, Cell* boundingCell);
+    void onGeometryChanged_(Cell* cell);
+
+    //-------------------------------------------------------------------------
+    //                Methods implemented in boundary.cpp
+    //-------------------------------------------------------------------------
+
+private:
+    // Adds or remove the `boundingCell` to the boundary of the `boundedCell`.
+    //
+    // This updates both boundingCell->star_ and boundedCell->boundary_ and
+    // sets the appropriate ModifiedNode flags.
+    //
+    // Throw a LogicError if either `boundingCell` or `boundedCell` is null.
+    //
+    void addToBoundary_(Cell* boundedCell, Cell* boundingCell);
+    void removeFromBoundary_(Cell* boundedCell, Cell* boundingCell);
+
+    // Convenient helper that calls addToBoundary_(face, cell)
+    // for all the cells in the given `cycle`.
+    //
+    void addToBoundary_(FaceCell* face, const KeyCycle& cycle);
+
+    // Convenient helper that calls addToBoundary_(face, cell)
+    // for all the cells in the given `path`.
+    //
+    void addToBoundary_(FaceCell* face, const KeyPath& path);
+
+    //-------------------------------------------------------------------------
+    //                Methods implemented in create.cpp
+    //-------------------------------------------------------------------------
+
+private:
+    // Creates a new node and inserts it to the complex.
+    template<class T, typename... Args>
+    T* createNode_(Args&&... args);
+
+    // Creates a new node at the given location.
+    template<class T, typename... Args>
+    T* createNodeAt_(Group* parentGroup, Node* nextSibling, Args&&... args);
+
+public:
     Group* createRootGroup();
 
     // Assumes `nextSibling` is either `nullptr` or a child of `parentGroup`.
@@ -119,15 +175,59 @@ public:
     //
     void addCycleToFace(KeyFace* kf, KeyCycle cycle);
 
+    void setKeyVertexPosition(KeyVertex* kv, const geometry::Vec2d& pos);
+
+    //-------------------------------------------------------------------------
+    //                Methods implemented in delete.cpp
+    //-------------------------------------------------------------------------
+
+private:
+    template<typename TNodeRange>
+    void deleteWithDependents_(
+        TNodeRange nodes,
+        bool deleteIsolatedVertices = false,
+        bool tryRepairingStarCells = true);
+
+    void delete_(
+        std::unordered_set<Node*> descendants,
+        bool deleteIsolatedVertices = false,
+        bool tryRepairingStarCells = true);
+
+    // Assumes node has no children.
+    void destroyChildlessNode_(Node* node);
+
+    // Assumes that all descendants of all `nodes` are also in `nodes`.
+    void destroyNodes_(core::ConstSpan<Node*> nodes);
+
+public:
     void hardDelete(core::ConstSpan<Node*> nodes, bool deleteIsolatedVertices = false);
 
     void hardDelete(Node* node, bool deleteIsolatedVertices = false);
 
     void softDelete(core::ConstSpan<Node*> nodes, bool deleteIsolatedVertices = false);
 
+    //-------------------------------------------------------------------------
+    //                Methods implemented in simplify.cpp
+    //-------------------------------------------------------------------------
+
+public:
     core::Array<KeyCell*>
     simplify(core::Span<KeyVertex*> kvs, core::Span<KeyEdge*> kes, bool smoothJoins);
 
+    //-------------------------------------------------------------------------
+    //                Methods implemented in glue.cpp
+    //-------------------------------------------------------------------------
+
+private:
+    // Substitutes open with open or closed with closed.
+    void substituteVertex_(KeyVertex* oldVertex, KeyVertex* newVertex);
+    void substituteEdge_(const KeyHalfedge& oldHalfedge, const KeyHalfedge& newHalfedge);
+    KeyEdge* glueKeyOpenEdges_(core::ConstSpan<KeyHalfedge> khes);
+    KeyEdge* glueKeyClosedEdges_(
+        core::ConstSpan<KeyHalfedge> khes,
+        core::ConstSpan<double> uOffsets);
+
+public:
     KeyVertex*
     glueKeyVertices(core::Span<KeyVertex*> kvs, const geometry::Vec2d& position);
 
@@ -148,12 +248,26 @@ public:
     //
     KeyEdge* glueKeyClosedEdges(core::ConstSpan<KeyEdge*> kes);
 
+    //-------------------------------------------------------------------------
+    //                Methods implemented in unglue.cpp
+    //-------------------------------------------------------------------------
+
+private:
+    Int countUses_(KeyVertex* kv);
+    Int countUses_(KeyEdge* ke);
+
+public:
     core::Array<KeyEdge*> unglueKeyEdges(KeyEdge* ke);
 
     core::Array<KeyVertex*> unglueKeyVertices(
         KeyVertex* kv,
         core::Array<std::pair<core::Id, core::Array<KeyEdge*>>>& ungluedKeyEdges);
 
+    //-------------------------------------------------------------------------
+    //                Methods implemented in cut.cpp
+    //-------------------------------------------------------------------------
+
+public:
     CutEdgeResult
     cutEdge(KeyEdge* ke, core::ConstSpan<geometry::CurveParameter> parameters);
 
@@ -196,120 +310,11 @@ public:
 
     KeyVertex* cutFaceWithVertex(KeyFace* kf, const geometry::Vec2d& position);
 
-    UncutAtKeyVertexResult uncutAtKeyVertex(KeyVertex* kv, bool smoothJoin);
-
-    UncutAtKeyEdgeResult uncutAtKeyEdge(KeyEdge* ke);
-
-    void moveToGroup(Node* node, Group* parentGroup, Node* nextSibling = nullptr);
-    void moveBelowBoundary(Node* node);
-
-    void setKeyVertexPosition(KeyVertex* kv, const geometry::Vec2d& pos);
+    //-------------------------------------------------------------------------
+    //                Methods implemented in uncut.cpp
+    //-------------------------------------------------------------------------
 
 private:
-    Complex* complex_ = nullptr;
-
-    void onNodeCreated_(Node* node);
-    void onNodeDestroyed_(core::Id nodeId);
-    void onNodeInserted_(Node* node, Node* oldParent, NodeInsertionType insertionType);
-    void onNodeModified_(Node* node, NodeModificationFlags diffFlags);
-    void onNodePropertyModified_(Node* node, core::StringId name);
-
-    // Creates a new node and inserts it to the complex.
-    //
-    // Note: we cannot use make_unique due to the non-public constructor,
-    // which is why we have to use `new` here.
-    //
-    template<class T, typename... Args>
-    T* createNode_(Args&&... args) {
-        core::Id id = core::genId();
-        T* node = new T(id, std::forward<Args>(args)...);
-        std::unique_ptr<T> nodePtr(node);
-        Complex::NodePtrMap& nodes = complex()->nodes_;
-        bool emplaced = nodes.try_emplace(id, std::move(nodePtr)).second;
-        if (!emplaced) {
-            throw LogicError("Id collision error.");
-        }
-        onNodeCreated_(node);
-        return node;
-    }
-
-    // Creates a new node at the given location.
-    //
-    template<class T, typename... Args>
-    T* createNodeAt_(Group* parentGroup, Node* nextSibling, Args&&... args) {
-
-        T* node = createNode_<T>(std::forward<Args>(args)...);
-        moveToGroup(node, parentGroup, nextSibling);
-        return node;
-    }
-
-    void insertNodeBeforeSibling_(Node* node, Node* nextSibling);
-    void insertNodeAfterSibling_(Node* node, Node* previousSibling);
-    void insertNodeAsFirstChild_(Node* node, Group* parent);
-    void insertNodeAsLastChild_(Node* node, Group* parent);
-
-    static Node* findTopMost(core::ConstSpan<Node*> nodes);
-    static Node* findBottomMost(core::ConstSpan<Node*> nodes);
-
-    template<typename TNodeRange>
-    void deleteWithDependents_(
-        TNodeRange nodes,
-        bool deleteIsolatedVertices = false,
-        bool tryRepairingStarCells = true);
-
-    void delete_(
-        std::unordered_set<Node*> descendants,
-        bool deleteIsolatedVertices = false,
-        bool tryRepairingStarCells = true);
-
-    // Assumes node has no children.
-    void destroyChildlessNode_(Node* node);
-
-    // Assumes that all descendants of all `nodes` are also in `nodes`.
-    void destroyNodes_(core::ConstSpan<Node*> nodes);
-
-    friend vacomplex::CellProperties;
-    friend vacomplex::CellData;
-    friend vacomplex::KeyEdgeData;
-
-    void onGeometryChanged_(Cell* cell);
-
-    // Adds or remove the `boundingCell` to the boundary of the `boundedCell`.
-    //
-    // This updates both boundingCell->star_ and boundedCell->boundary_ and
-    // sets the appropriate ModifiedNode flags.
-    //
-    // Throw a LogicError if either `boundingCell` or `boundedCell` is null.
-    //
-    void addToBoundary_(Cell* boundedCell, Cell* boundingCell);
-    void removeFromBoundary_(Cell* boundedCell, Cell* boundingCell);
-    void onBoundaryChanged_(Cell* boundedCell, Cell* boundingCell);
-
-    // Convenient helper that calls addToBoundary_(face, cell)
-    // for all the cells in the given `cycle`.
-    //
-    void addToBoundary_(FaceCell* face, const KeyCycle& cycle);
-
-    // Convenient helper that calls addToBoundary_(face, cell)
-    // for all the cells in the given `path`.
-    //
-    void addToBoundary_(FaceCell* face, const KeyPath& path);
-
-    void substituteVertex_(KeyVertex* oldVertex, KeyVertex* newVertex);
-
-    // Substitutes open with open or closed with closed.
-    //
-    void substituteEdge_(const KeyHalfedge& oldHalfedge, const KeyHalfedge& newHalfedge);
-
-    KeyEdge* glueKeyOpenEdges_(core::ConstSpan<KeyHalfedge> khes);
-
-    KeyEdge* glueKeyClosedEdges_(
-        core::ConstSpan<KeyHalfedge> khes,
-        core::ConstSpan<double> uOffsets);
-
-    static KeyPath
-    subPath_(const KeyCycle& cycle, Int first, Int last, bool loopIfEmptyRange = false);
-
     struct UncutAtKeyVertexInfo_ {
         KeyFace* kf = nullptr;
         Int cycleIndex = 0;
@@ -332,14 +337,29 @@ private:
 
     UncutAtKeyEdgeInfo_ prepareUncutAtKeyEdge_(KeyEdge* ke);
 
-    Int countSteinerUses_(KeyVertex* kv);
+public:
+    UncutAtKeyVertexResult uncutAtKeyVertex(KeyVertex* kv, bool smoothJoin);
 
-    Int countUses_(KeyVertex* kv);
-    Int countUses_(KeyEdge* ke);
+    UncutAtKeyEdgeResult uncutAtKeyEdge(KeyEdge* ke);
+
+    //-------------------------------------------------------------------------
+    //                Methods implemented in move.cpp
+    //-------------------------------------------------------------------------
+
+private:
+    void insertNodeBeforeSibling_(Node* node, Node* nextSibling);
+    void insertNodeAfterSibling_(Node* node, Node* previousSibling);
+    void insertNodeAsFirstChild_(Node* node, Group* parent);
+    void insertNodeAsLastChild_(Node* node, Group* parent);
+
+public:
+    void moveToGroup(Node* node, Group* parentGroup, Node* nextSibling = nullptr);
+    void moveBelowBoundary(Node* node);
+
+    static Node* findTopMost(core::ConstSpan<Node*> nodes);
+    static Node* findBottomMost(core::ConstSpan<Node*> nodes);
 };
 
-} // namespace detail
-
-} // namespace vgc::vacomplex
+} // namespace vgc::vacomplex::detail
 
 #endif // VGC_VACOMPLEX_DETAIL_OPERATIONS_H

@@ -17,7 +17,7 @@
 #include <vgc/vacomplex/cellproperty.h>
 
 #include <vgc/vacomplex/complex.h>
-#include <vgc/vacomplex/detail/operationsimpl.h>
+#include <vgc/vacomplex/detail/operations.h>
 #include <vgc/vacomplex/keyedgedata.h>
 #include <vgc/vacomplex/keyfacedata.h>
 

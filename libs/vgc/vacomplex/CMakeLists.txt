@@ -25,7 +25,7 @@ vgc_add_library(vacomplex
         operations.h
         transform.h
 
-        detail/operationsimpl.h
+        detail/operations.h
 
     CPP_SOURCE_FILES
         algorithms.cpp
@@ -49,5 +49,15 @@ vgc_add_library(vacomplex
         operations.cpp
         transform.cpp
 
-        detail/operationsimpl.cpp
+        detail/boundary.cpp
+        detail/create.cpp
+        detail/cut.cpp
+        detail/delete.cpp
+        detail/glue.cpp
+        detail/move.cpp
+        detail/notify.cpp
+        detail/operations.cpp
+        detail/simplify.cpp
+        detail/uncut.cpp
+        detail/unglue.cpp
 )

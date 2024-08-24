@@ -18,7 +18,7 @@
 
 #include <vgc/vacomplex/logcategories.h>
 
-#include <vgc/vacomplex/detail/operationsimpl.h>
+#include <vgc/vacomplex/detail/operations.h>
 
 namespace vgc::vacomplex {
 

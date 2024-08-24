@@ -251,6 +251,39 @@ double KeyCycle::interiorContainedRatio(
     return interiorContainedRatio(samples, windingRule);
 }
 
+KeyPath KeyCycle::subPath(Int first, Int last, bool loopIfEmptyRange) const {
+    if (steinerVertex()) {
+        return KeyPath(steinerVertex());
+    }
+    Int n = halfedges_.length();
+    first = ((first % n) + n) % n;
+    last = ((last % n) + n) % n;
+    if (first == last) {
+        if (loopIfEmptyRange) {
+            return rotated(first);
+        }
+        else {
+            KeyVertex* singleVertex = halfedges_[first].startVertex();
+            return KeyPath(singleVertex);
+        }
+    }
+    else {
+        core::Array<KeyHalfedge> newHalfedges;
+        for (Int i = first; i != last; i = (i + 1) % n) {
+            newHalfedges.append(halfedges_[i]);
+        }
+        return KeyPath(std::move(newHalfedges));
+    }
+}
+
+KeyPath KeyCycle::rotated(Int newStart) const {
+    core::Array<KeyHalfedge> result;
+    result.reserve(halfedges_.length());
+    result.extend(halfedges_.begin() + newStart, halfedges_.end());
+    result.extend(halfedges_.begin(), halfedges_.begin() + newStart);
+    return KeyPath(std::move(result));
+};
+
 // TODO: implement KeyCycleType to make the switch below more readable/convenient
 
 void KeyCycle::debugPrint(core::StringWriter& out) const {
