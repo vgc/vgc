@@ -343,6 +343,14 @@ public:
     UncutAtKeyEdgeResult uncutAtKeyEdge(KeyEdge* ke);
 
     //-------------------------------------------------------------------------
+    //                Methods implemented in intersect.cpp
+    //-------------------------------------------------------------------------
+
+public:
+    // Assumes edge and group are non-null
+    void intersectInGroup(KeyEdge* edge, Group* group, const IntersectSettings& settings);
+
+    //-------------------------------------------------------------------------
     //                Methods implemented in move.cpp
     //-------------------------------------------------------------------------
 

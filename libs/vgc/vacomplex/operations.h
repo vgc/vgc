@@ -148,6 +148,66 @@ enum class TwoCycleCutPolicy {
 VGC_VACOMPLEX_API
 VGC_DECLARE_ENUM(TwoCycleCutPolicy)
 
+/// \class vgc::vacomplex::IntersectSettings
+/// \brief Settings for intersect operations.
+///
+class VGC_VACOMPLEX_API IntersectSettings {
+public:
+    /// Returns the tolerance to use for intersection tests.
+    ///
+    double tolerance() const {
+        return tolerance_;
+    }
+
+    /// Sets the value for `tolerance()`.
+    ///
+    void setTolerance(double value) {
+        tolerance_ = value;
+    }
+
+    /// Whether to compute self-intersections.
+    ///
+    bool selfIntersect() const {
+        return selfIntersect_;
+    }
+
+    /// Sets the value for `selfIntersect()`.
+    ///
+    void setSelfIntersect(bool value) {
+        selfIntersect_ = value;
+    }
+
+    /// Whether to compute intersections with other edges.
+    ///
+    bool intersectEdges() const {
+        return intersectEdges_;
+    }
+
+    /// Sets the value for `intersectEdges()`.
+    ///
+    void setIntersectEdges(bool value) {
+        intersectEdges_ = value;
+    }
+
+    /// Whether to compute intersections with other faces.
+    ///
+    bool intersectFaces() const {
+        return intersectFaces_;
+    }
+
+    /// Sets the value for `intersectEdges()`.
+    ///
+    void setIntersectFaces(bool value) {
+        intersectFaces_ = value;
+    }
+
+private:
+    double tolerance_ = 1.e-6;
+    bool selfIntersect_ = true;
+    bool intersectEdges_ = true;
+    bool intersectFaces_ = true;
+};
+
 /// \class vgc::vacomplex::ScopedOperationsGroup
 /// \brief Encloses multiple operations as one group for performance.
 ///
@@ -440,6 +500,24 @@ Cell* uncutAtKeyVertex(KeyVertex* kv, bool smoothJoin);
 //
 VGC_VACOMPLEX_API
 Cell* uncutAtKeyEdge(KeyEdge* ke);
+
+/// Computes the geometric intersection between the given `edge` and the cells
+/// in the parent group of `edge`, and cut them accordingly.
+///
+VGC_VACOMPLEX_API
+void intersectInGroup(KeyEdge* edge, const IntersectSettings& settings = {});
+
+/// Computes the geometric intersection between the given `edge` and the cells
+/// in the given `group`, and cut them accordingly.
+///
+/// If `group` is null (the default), then the group is assumed to be the
+/// parent group of the `edge`.
+///
+VGC_VACOMPLEX_API
+void intersectInGroup(
+    KeyEdge* edge,
+    Group* group,
+    const IntersectSettings& settings = {});
 
 /// Throws `NotAChildError` if `nextSibling` is not a child of `parentGroup` or `nullptr`.
 // XXX should check if node belongs to same VAC.
