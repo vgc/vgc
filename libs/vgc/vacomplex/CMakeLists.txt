@@ -54,6 +54,7 @@ vgc_add_library(vacomplex
         detail/cut.cpp
         detail/delete.cpp
         detail/glue.cpp
+        detail/intersect.cpp
         detail/move.cpp
         detail/notify.cpp
         detail/operations.cpp

@@ -14,15 +14,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <vgc/tools/autocut.h>
+#include <vgc/vacomplex/detail/operations.h>
 
-#include <vgc/core/array.h>
 #include <vgc/geometry/intersect.h>
-#include <vgc/vacomplex/cell.h>
-#include <vgc/vacomplex/keyedge.h>
-#include <vgc/vacomplex/operations.h>
 
-namespace vgc::tools {
+namespace vgc::vacomplex::detail {
 
 namespace {
 
@@ -31,7 +27,7 @@ struct IntersectionParameters {
     geometry::CurveParameter param2;
 };
 
-bool isStartOrEnd(vacomplex::KeyEdge* edge, const geometry::CurveParameter& param) {
+bool isStartOrEnd(KeyEdge* edge, const geometry::CurveParameter& param) {
     if (edge->isClosed()) {
         return false;
     }
@@ -41,7 +37,7 @@ bool isStartOrEnd(vacomplex::KeyEdge* edge, const geometry::CurveParameter& para
     }
 }
 
-core::Array<IntersectionParameters> computeSelfIntersections(vacomplex::KeyEdge* edge) {
+core::Array<IntersectionParameters> computeSelfIntersections(KeyEdge* edge) {
 
     const geometry::AbstractStroke2d* stroke = edge->stroke();
     const geometry::StrokeSampling2d& sampling = edge->strokeSampling();
@@ -86,7 +82,7 @@ core::Array<IntersectionParameters> computeSelfIntersections(vacomplex::KeyEdge*
 }
 
 core::Array<IntersectionParameters>
-computeEdgeIntersections(vacomplex::KeyEdge* edge1, vacomplex::KeyEdge* edge2) {
+computeEdgeIntersections(KeyEdge* edge1, KeyEdge* edge2) {
 
     if (!edge1->boundingBox().intersects(edge2->boundingBox())) {
         return {};
@@ -142,24 +138,24 @@ using CurveParameterArray = core::Array<geometry::CurveParameter>;
 //
 struct CutInfo {
     CurveParameterArray params;
-    vacomplex::CutEdgeResult res;
+    CutEdgeResult res;
 };
 
 // Stores the information that the `index1` cut vertex of `edge1` should be
 // glued with the `index2` cut vertex of `edge2`.
 //
 struct GlueInfo {
-    vacomplex::KeyEdge* edge1;
+    KeyEdge* edge1;
     Int index1;
-    vacomplex::KeyEdge* edge2;
+    KeyEdge* edge2;
     Int index2;
 };
 
-using CutInfoMap = std::unordered_map<vacomplex::KeyEdge*, CutInfo>;
+using CutInfoMap = std::unordered_map<KeyEdge*, CutInfo>;
 using GlueInfoArray = core::Array<GlueInfo>;
 
 void computeSelfIntersections(
-    vacomplex::KeyEdge* edge,
+    KeyEdge* edge,
     CutInfoMap& cutInfos,
     GlueInfoArray& glueInfos) {
 
@@ -183,8 +179,8 @@ void computeSelfIntersections(
 }
 
 void computeEdgeIntersections(
-    vacomplex::KeyEdge* edge1,
-    vacomplex::KeyEdge* edge2,
+    KeyEdge* edge1,
+    KeyEdge* edge2,
     CutInfoMap& cutInfos,
     GlueInfoArray& glueInfos) {
 
@@ -233,13 +229,14 @@ void computeEdgeIntersections(
 }
 
 void computeEdgeIntersections(
-    vacomplex::KeyEdge* edge1,
+    KeyEdge* edge1,
+    Group* group,
     CutInfoMap& cutInfos,
     GlueInfoArray& glueInfos) {
 
-    for (vacomplex::Node* node : *edge1->parentGroup()) {
-        if (vacomplex::Cell* cell = node->toCell()) {
-            if (vacomplex::KeyEdge* edge2 = cell->toKeyEdge()) {
+    for (Node* node : *group) {
+        if (Cell* cell = node->toCell()) {
+            if (KeyEdge* edge2 = cell->toKeyEdge()) {
                 computeEdgeIntersections(edge1, edge2, cutInfos, glueInfos);
             }
         }
@@ -248,7 +245,7 @@ void computeEdgeIntersections(
 
 void cutEdges(CutInfoMap& cutInfos) {
     for (auto& [edge, cutInfo] : cutInfos) {
-        cutInfo.res = vacomplex::ops::cutEdge(edge, cutInfo.params);
+        cutInfo.res = ops::cutEdge(edge, cutInfo.params);
     }
 }
 
@@ -256,25 +253,28 @@ void glueVertices(const CutInfoMap& cutInfos, const GlueInfoArray& glueInfos) {
     for (const GlueInfo& glueInfo : glueInfos) {
         const CutInfo& cutInfo1 = cutInfos.at(glueInfo.edge1);
         const CutInfo& cutInfo2 = cutInfos.at(glueInfo.edge2);
-        std::array<vacomplex::KeyVertex*, 2> vertices = {
+        std::array<KeyVertex*, 2> vertices = {
             cutInfo1.res.vertices()[glueInfo.index1], //
             cutInfo2.res.vertices()[glueInfo.index2]};
-        vacomplex::ops::glueKeyVertices(vertices, vertices[0]->position());
+        ops::glueKeyVertices(vertices, vertices[0]->position());
     }
 }
 
 } // namespace
 
-void autoCut(vacomplex::KeyEdge* edge, const AutoCutParams& params) {
+void Operations::intersectInGroup(
+    KeyEdge* edge,
+    Group* group,
+    const IntersectSettings& settings) {
 
     // Compute info about intersections
     CutInfoMap cutInfos;
     GlueInfoArray glueInfos;
-    if (params.cutItself()) {
+    if (settings.selfIntersect()) {
         computeSelfIntersections(edge, cutInfos, glueInfos);
     }
-    if (params.cutEdges()) {
-        computeEdgeIntersections(edge, cutInfos, glueInfos);
+    if (settings.intersectEdges()) {
+        computeEdgeIntersections(edge, group, cutInfos, glueInfos);
     }
 
     // Cut edges at given CurveParameters and glue vertices two-by-two
@@ -282,4 +282,4 @@ void autoCut(vacomplex::KeyEdge* edge, const AutoCutParams& params) {
     glueVertices(cutInfos, glueInfos);
 }
 
-} // namespace vgc::tools
+} // namespace vgc::vacomplex::detail

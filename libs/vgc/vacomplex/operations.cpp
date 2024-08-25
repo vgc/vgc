@@ -669,6 +669,28 @@ Cell* uncutAtKeyEdge(KeyEdge* ke) {
     }
 }
 
+void intersectInGroup(KeyEdge* edge, const IntersectSettings& settings) {
+    if (!edge) {
+        throw LogicError("IntersectInGroup: edge is nullptr.");
+    }
+    Group* group = edge->parentGroup();
+    if (!group) {
+        throw LogicError("IntersectInGroup: edge has no parent group.");
+    }
+    intersectInGroup(edge, group, settings);
+}
+
+void intersectInGroup(KeyEdge* edge, Group* group, const IntersectSettings& settings) {
+    if (!edge) {
+        throw LogicError("IntersectInGroup: edge is nullptr.");
+    }
+    if (!group) {
+        throw LogicError("IntersectInGroup: group is nullptr.");
+    }
+    detail::Operations ops(edge->complex());
+    ops.intersectInGroup(edge, group, settings);
+}
+
 void moveToGroup(Node* node, Group* parentGroup, Node* nextSibling) {
     if (!node) {
         throw LogicError("moveToGroup: node is nullptr.");

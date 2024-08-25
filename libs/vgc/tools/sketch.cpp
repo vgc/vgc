@@ -27,7 +27,6 @@
 #include <vgc/core/stringid.h>
 #include <vgc/geometry/curve.h>
 #include <vgc/graphics/strings.h>
-#include <vgc/tools/autocut.h>
 #include <vgc/tools/logcategories.h>
 #include <vgc/ui/boolsettingedit.h>
 #include <vgc/ui/column.h>
@@ -36,6 +35,7 @@
 #include <vgc/ui/numbersettingedit.h>
 #include <vgc/ui/settings.h>
 #include <vgc/ui/window.h>
+#include <vgc/vacomplex/operations.h>
 #include <vgc/workspace/edge.h>
 #include <vgc/workspace/strings.h>
 
@@ -101,9 +101,9 @@ ui::NumberSetting* snapFalloff() {
     return setting.get();
 }
 
-ui::BoolSetting* autoCut() {
+ui::BoolSetting* autoIntersect() {
     static ui::BoolSettingPtr setting = ui::BoolSetting::create(
-        ui::settings::session(), "tools.sketch.autoCut", "Auto-Cut", false);
+        ui::settings::session(), "tools.sketch.autoIntersect", "Auto-Intersect", false);
     return setting.get();
 }
 
@@ -194,8 +194,8 @@ ui::BoolSetting* reProcessExistingEdges() {
 
 } // namespace options_
 
-bool isAutoCutEnabled() {
-    return options_::autoCut()->value();
+bool isAutoIntersectEnabled() {
+    return options_::autoIntersect()->value();
 }
 
 bool isAutoFillEnabled() {
@@ -606,7 +606,7 @@ ui::WidgetPtr Sketch::doCreateOptionsWidget() const {
     res->createChild<ui::BoolSettingEdit>(options_::snapping());
     res->createChild<ui::NumberSettingEdit>(options_::snapDistance());
     res->createChild<ui::NumberSettingEdit>(options_::snapFalloff());
-    res->createChild<ui::BoolSettingEdit>(options_::autoCut());
+    res->createChild<ui::BoolSettingEdit>(options_::autoIntersect());
     res->createChild<ui::BoolSettingEdit>(options_::autoFill());
     return res;
 }
@@ -1641,11 +1641,10 @@ void Sketch::finishCurve_(ui::MouseEvent* event) {
         }
     }
 
-    if (isAutoCutEnabled()) {
+    if (isAutoIntersectEnabled()) {
         workspace->sync();
         if (vacomplex::KeyEdge* keyEdge = toKeyEdge(workspace.get(), edgeItemId_)) {
-            AutoCutParams params;
-            autoCut(keyEdge, params);
+            vacomplex::ops::intersectInGroup(keyEdge);
         }
     }
 
