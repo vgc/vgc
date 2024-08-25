@@ -260,6 +260,105 @@ void glueVertices(const CutInfoMap& cutInfos, const GlueInfoArray& glueInfos) {
     }
 }
 
+std::optional<geometry::Vec2d> getInteriorPosition(KeyEdge* edge) {
+    const geometry::StrokeSample2dArray& samples = edge->strokeSamples();
+    Int n = samples.length();
+    if (n < 2) {
+        return std::nullopt;
+    }
+    else if (n == 2) {
+        const geometry::StrokeSample2d& s0 = samples[0];
+        const geometry::StrokeSample2d& s1 = samples[1];
+        return 0.5 * (s0.position() + s1.position());
+    }
+    else { // n > 2
+        Int i = n / 2;
+        VGC_ASSERT(i > 0);
+        VGC_ASSERT(i < n - 1);
+        return samples.getUnchecked(i).position();
+
+        // Proof of the above asserts:
+        // (using math notation, that is, '/' means real division)
+        //
+        // We have:
+        // [1]  i = floor(n/2)
+        // [2]  For all k, k - 1 <= floor(k) <= k
+        // [3]  n > 2
+        // [3'] -n < -2
+        //
+        // Therefore:
+        //
+        // i =  floor(n/2)  [1]
+        //   >= n/2 - 1     [2]
+        //   >  2/2 - 1     [3]
+        //   =  0
+        //
+        // i =  floor(n/2)  [1]
+        //   <= n/2         [2]
+        //   =  n - n/2
+        //   <  n - 2/2     [3']
+        //   =  n - 1
+    }
+}
+
+// Cut with `edge` all faces that are in the given `group`.
+//
+// We do this by computing, for each new `edge` along `edge1`, the set of
+// faces that are overlapping `edge`.
+//
+// To do this, we can arbitrarily pick any position on the edge, and
+// compute which faces contain that position. Indeed, this set of faces is
+// (typically) invariant of the chosen position on the edge, since `edge1`
+// was already cut at all intersections with other edges.
+//
+// A special case where the above is not true is if a face belongs to the
+// same group as `edge1`, but its boundary edges do not (in which case they
+// were not cut). We do not yet handle this case properly. One possible
+// solution might be, in the previous step (cut edges), to also include in
+// the set of intersected edges all the edges that are in the boundary of
+// faces in the same group as `edge1`.
+//
+// Another special case is if AutoCutParams::cutFaces() is true but
+// AutoCutParams::cutEdges() is false. I can only see this make sense for
+// example to draw a closed "hole" in a face. But it is unclear what these
+// settings should do in the other cases. We do not handle it in a special way
+// for now, so results may be unexpected with these settings.
+//
+// For now, similarly to how we cut all edges regardless of whether they
+// are obscured by faces or above `edge1`, we cut all faces regardless of
+// whether they are obscured by other faces of above `edge1`. In the
+// future, we might add a setting to take into account such obscured
+// edges/faces, and only cut the top-most elements below `edge1`.
+// Unfortunately, this is a bit difficult and ill-defined in cases where
+// the group is non-planar.
+//
+void cutFaces(Group* group, KeyEdge* edge) {
+
+    auto position = getInteriorPosition(edge);
+    if (!position) {
+        return;
+    }
+
+    // Find which faces should be cut. This must be done before any cutting,
+    // since cutting modifies the group's children.
+    //
+    core::Array<KeyFace*> facesToCut;
+    for (Node* node : *group) {
+        if (Cell* cell = node->toCell()) {
+            if (KeyFace* face = cell->toKeyFace()) {
+                if (face->interiorContains(*position)) {
+                    facesToCut.append(face);
+                }
+            }
+        }
+    }
+
+    // Cut the faces
+    for (KeyFace* face : facesToCut) {
+        ops::cutGlueFace(face, edge);
+    }
+}
+
 } // namespace
 
 void Operations::intersectInGroup(
@@ -277,9 +376,29 @@ void Operations::intersectInGroup(
         computeEdgeIntersections(edge, group, cutInfos, glueInfos);
     }
 
+    // Determine whether the edge should actually be cut
+    const CutInfo* edgeCutInfo = nullptr;
+    const auto it = cutInfos.find(edge);
+    if (it != cutInfos.end()) {
+        edge = nullptr; // `edge` will be destoyed by cutEdges()
+        edgeCutInfo = &it->second;
+    }
+
     // Cut edges at given CurveParameters and glue vertices two-by-two
     cutEdges(cutInfos);
     glueVertices(cutInfos, glueInfos);
+
+    // Cut faces
+    if (settings.intersectFaces()) {
+        if (edgeCutInfo) {
+            for (const auto& newEdge : edgeCutInfo->res.edges()) {
+                cutFaces(group, newEdge);
+            }
+        }
+        else if (edge) {
+            cutFaces(group, edge);
+        }
+    }
 }
 
 } // namespace vgc::vacomplex::detail
