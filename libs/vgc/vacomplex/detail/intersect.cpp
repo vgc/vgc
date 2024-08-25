@@ -260,7 +260,7 @@ void glueVertices(const CutInfoMap& cutInfos, const GlueInfoArray& glueInfos) {
     }
 }
 
-std::optional<geometry::Vec2d> getInteriorPosition(vacomplex::KeyEdge* edge) {
+std::optional<geometry::Vec2d> getInteriorPosition(KeyEdge* edge) {
     const geometry::StrokeSample2dArray& samples = edge->strokeSamples();
     Int n = samples.length();
     if (n < 2) {
@@ -272,7 +272,7 @@ std::optional<geometry::Vec2d> getInteriorPosition(vacomplex::KeyEdge* edge) {
         return 0.5 * (s0.position() + s1.position());
     }
     else { // n > 2
-        Int i = samples.length() / 2;
+        Int i = n / 2;
         VGC_ASSERT(i > 0);
         VGC_ASSERT(i < n - 1);
         return samples.getUnchecked(i).position();
@@ -332,7 +332,7 @@ std::optional<geometry::Vec2d> getInteriorPosition(vacomplex::KeyEdge* edge) {
 // Unfortunately, this is a bit difficult and ill-defined in cases where
 // the group is non-planar.
 //
-void cutFaces(vacomplex::Group* group, vacomplex::KeyEdge* edge) {
+void cutFaces(Group* group, KeyEdge* edge) {
 
     auto position = getInteriorPosition(edge);
     if (!position) {
@@ -342,10 +342,10 @@ void cutFaces(vacomplex::Group* group, vacomplex::KeyEdge* edge) {
     // Find which faces should be cut. This must be done before any cutting,
     // since cutting modifies the group's children.
     //
-    core::Array<vacomplex::KeyFace*> facesToCut;
-    for (vacomplex::Node* node : *group) {
-        if (vacomplex::Cell* cell = node->toCell()) {
-            if (vacomplex::KeyFace* face = cell->toKeyFace()) {
+    core::Array<KeyFace*> facesToCut;
+    for (Node* node : *group) {
+        if (Cell* cell = node->toCell()) {
+            if (KeyFace* face = cell->toKeyFace()) {
                 if (face->interiorContains(*position)) {
                     facesToCut.append(face);
                 }
@@ -354,8 +354,8 @@ void cutFaces(vacomplex::Group* group, vacomplex::KeyEdge* edge) {
     }
 
     // Cut the faces
-    for (vacomplex::KeyFace* face : facesToCut) {
-        vacomplex::ops::cutGlueFace(face, edge);
+    for (KeyFace* face : facesToCut) {
+        ops::cutGlueFace(face, edge);
     }
 }
 
