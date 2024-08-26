@@ -1,4 +1,4 @@
-// Copyright 2022 The VGC Developers
+// Copyright 2023 The VGC Developers
 // See the COPYRIGHT file at the top-level directory of this distribution
 // and at https://github.com/vgc/vgc/blob/master/COPYRIGHT
 //
@@ -14,6 +14,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#include <vgc/vacomplex/detail/cut.h>
 #include <vgc/vacomplex/detail/operations.h>
 
 #include <algorithm> // reverse
@@ -22,7 +23,24 @@
 #include <vgc/core/random.h>
 #include <vgc/geometry/intersect.h>
 
-namespace vgc::vacomplex::detail {
+namespace vgc::vacomplex {
+
+VGC_DEFINE_ENUM( //
+    OneCycleCutPolicy,
+    (Auto, "Auto"),
+    (Disk, "Disk"),
+    (Mobius, "Mobius"),
+    (Torus, "Torus"))
+
+VGC_DEFINE_ENUM( //
+    TwoCycleCutPolicy,
+    (Auto, "Auto"),
+    (ReverseNone, "ReverseNone"),
+    (ReverseStart, "ReverseStart"),
+    (ReverseEnd, "ReverseEnd"),
+    (ReverseBoth, "ReverseBoth"))
+
+namespace detail {
 
 namespace {
 
@@ -1031,4 +1049,6 @@ KeyVertex* Operations::cutFaceWithVertex(KeyFace* kf, const geometry::Vec2d& pos
     return newKv;
 }
 
-} // namespace vgc::vacomplex::detail
+} // namespace detail
+
+} // namespace vgc::vacomplex

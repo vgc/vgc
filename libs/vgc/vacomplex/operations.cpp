@@ -20,21 +20,6 @@
 
 namespace vgc::vacomplex {
 
-VGC_DEFINE_ENUM( //
-    OneCycleCutPolicy,
-    (Auto, "Auto"),
-    (Disk, "Disk"),
-    (Mobius, "Mobius"),
-    (Torus, "Torus"))
-
-VGC_DEFINE_ENUM( //
-    TwoCycleCutPolicy,
-    (Auto, "Auto"),
-    (ReverseNone, "ReverseNone"),
-    (ReverseStart, "ReverseStart"),
-    (ReverseEnd, "ReverseEnd"),
-    (ReverseBoth, "ReverseBoth"))
-
 ScopedOperationsGroup::ScopedOperationsGroup(Complex* complex)
     : group_(std::make_unique<detail::Operations>(complex)) {
 }
