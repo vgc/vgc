@@ -602,6 +602,7 @@ bool Workspace::cutGlueFace(core::ConstSpan<core::Id> elementIds) {
 
 core::Array<core::Id>
 Workspace::simplify(core::ConstSpan<core::Id> elementIds, bool smoothJoins) {
+
     core::Array<core::Id> result;
 
     core::Array<vacomplex::KeyVertex*> kvs;
@@ -668,6 +669,66 @@ Workspace::simplify(core::ConstSpan<core::Id> elementIds, bool smoothJoins) {
     }
 
     // TODO: filter out resulting ids that are no longer alive (lost in concatenation)
+
+    sync();
+
+    return result;
+}
+
+core::Array<core::Id>
+Workspace::intersectWithGroup(core::ConstSpan<core::Id> elementIds) {
+
+    core::Array<core::Id> result;
+
+    // Add all edges from elements to `kes`, and the rest to `result`
+    core::Array<vacomplex::KeyEdge*> kes;
+    for (core::Id id : elementIds) {
+        workspace::Element* element = find(id);
+        if (!element) {
+            result.append(id);
+            continue;
+        }
+        vacomplex::Node* node = element->vacNode();
+        if (!node || !node->isCell()) {
+            result.append(id);
+            continue;
+        }
+        vacomplex::Cell* cell = node->toCellUnchecked();
+        switch (cell->cellType()) {
+        case vacomplex::CellType::KeyEdge: {
+            kes.append(cell->toKeyEdgeUnchecked());
+            break;
+        }
+        default:
+            result.append(id);
+            break;
+        }
+    }
+
+    if (kes.isEmpty()) {
+        return result;
+    }
+
+    // Open history group
+    static core::StringId opName("workspace.intersectWithGroup");
+    detail::ScopedUndoGroup undoGroup = createScopedUndoGroup_(opName);
+
+    // Perform the intersection
+    vacomplex::IntersectResult r = vacomplex::ops::intersectWithGroup(kes);
+
+    // Add all output cells of the intersection to the result
+    for (vacomplex::Cell* c : r.outputKeyVertices()) {
+        Element* e = this->findVacElement(c);
+        if (e) {
+            result.append(e->id());
+        }
+    }
+    for (vacomplex::Cell* c : r.outputKeyEdges()) {
+        Element* e = this->findVacElement(c);
+        if (e) {
+            result.append(e->id());
+        }
+    }
 
     sync();
 

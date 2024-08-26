@@ -378,6 +378,15 @@ public:
     core::Array<core::Id>
     simplify(core::ConstSpan<core::Id> elementIds, bool smoothJoins);
 
+    /// Computes the geometric intersection between the given `elementIds` and
+    /// all the objects in their parent group, then cut them accordingly.
+    ///
+    /// This currently only works for selected edges.
+    ///
+    /// Returns the new objects resulting from cutting the given `elementIds`.
+    ///
+    core::Array<core::Id> intersectWithGroup(core::ConstSpan<core::Id> elementIds);
+
     /// Makes a copy of the given elements in the form of a new document (see
     /// `copy()` for details), then deletes the elements and return the new
     /// document.
