@@ -83,6 +83,59 @@ void sort(Container& c, Compare comp) {
     std::sort(c.begin(), c.end(), comp);
 }
 
+/// Pseudo-removes consecutive duplicates in the container `c`.
+///
+/// This is done by moving elements such that after calling this function, the
+/// range `[c.begin(), res)` does not contain consecutive duplicates, and the
+/// range `[res, c.end())` is undefined, where `res` is the iterator returned
+/// by this function.
+///
+/// This is equivalent to `std::unique(c.begin(), c.end())`.
+///
+/// A call to this function should typically be followed by a call to
+/// `c.erase(res, c.end())` method to actually remove the elements.
+///
+/// \sa `removeConsecutiveDuplicates()`.
+///
+template<typename Container>
+[[nodiscard]] auto unique(Container& c) {
+    return std::unique(c.begin(), c.end());
+}
+
+/// Same as `unique(c)` but using the given binary predicate instead of
+/// `operator==`.
+///
+template<typename Container, typename BinaryPred>
+[[nodiscard]] auto unique(Container& c, BinaryPred p) {
+    return std::unique(c.begin(), c.end(), p);
+}
+
+/// Removes consecutive duplicates in the container `c`.
+///
+/// This is equivalent to:
+///
+/// ```
+/// auto last = unique(c);
+/// c.erase(last, c.cend());
+/// ```
+///
+/// \sa `unique()`.
+///
+template<typename Container>
+void removeConsecutiveDuplicates(Container& c) {
+    auto last = unique(c);
+    c.erase(last, c.cend());
+}
+
+/// Same as `removeConsecutiveDuplicates(c)` but using the given binary
+/// predicate instead of `operator==`.
+///
+template<typename Container, typename BinaryPred>
+void removeConsecutiveDuplicates(Container& c, BinaryPred p) {
+    auto last = unique(c, p);
+    c.erase(last, c.cend());
+}
+
 /// Returns the vector index corresponding to the given vector iterator `it`,
 /// or `-1` if `pos == v.end()`.
 ///

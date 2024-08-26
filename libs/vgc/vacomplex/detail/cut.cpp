@@ -16,9 +16,9 @@
 
 #include <vgc/vacomplex/detail/operations.h>
 
-#include <algorithm> // reverse, unique
+#include <algorithm> // reverse
 
-#include <vgc/core/algorithms.h> // sort
+#include <vgc/core/algorithms.h> // sort, removeConsecutiveDuplicates
 #include <vgc/core/random.h>
 #include <vgc/geometry/intersect.h>
 
@@ -357,13 +357,11 @@ double getEpsilon(geometry::Vec2dArray& polyline1, geometry::Vec2dArray& polylin
 
 void removeDuplicates(geometry::Vec2dArray& polyline, double epsilon = 0) {
     double eps2 = epsilon * epsilon;
-    auto last = std::unique(
-        polyline.begin(),
-        polyline.end(),
+    core::removeConsecutiveDuplicates(
+        polyline, //
         [eps2](const geometry::Vec2d& v1, const geometry::Vec2d& v2) {
             return (v1 - v2).squaredLength() <= eps2;
         });
-    polyline.erase(last, polyline.cend());
 }
 
 // Removes any common non-zero-length common subset at the end of the given polylines:
