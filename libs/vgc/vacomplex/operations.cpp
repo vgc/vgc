@@ -720,8 +720,8 @@ IntersectResult intersectWithGroup(
             groupToEdges[edge->parentGroup()].append(edge);
         }
         std::map<Complex*, core::Array<Group*>> complexToGroups;
-        for (const auto& [group, edges] : groupToEdges) {
-            VGC_UNUSED(edges);
+        for (const auto& [group, edges_] : groupToEdges) {
+            VGC_UNUSED(edges_);
             complexToGroups[group->complex()].append(group);
         }
         for (const auto& [complex, groups] : complexToGroups) {
