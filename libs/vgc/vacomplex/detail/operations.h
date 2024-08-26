@@ -347,8 +347,11 @@ public:
     //-------------------------------------------------------------------------
 
 public:
-    // Assumes edge and group are non-null
-    void intersectInGroup(KeyEdge* edge, Group* group, const IntersectSettings& settings);
+    // Assumes group is non-null, all edges are non-null, and no edge appears twice.
+    IntersectResult intersectWithGroup(
+        core::ConstSpan<KeyEdge*> edges,
+        Group* group,
+        const IntersectSettings& settings);
 
     //-------------------------------------------------------------------------
     //                Methods implemented in move.cpp

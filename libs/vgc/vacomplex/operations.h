@@ -30,68 +30,9 @@
 #include <vgc/vacomplex/keyvertex.h>
 
 #include <vgc/vacomplex/detail/cut.h>
+#include <vgc/vacomplex/detail/intersect.h>
 
 namespace vgc::vacomplex {
-
-/// \class vgc::vacomplex::IntersectSettings
-/// \brief Settings for intersect operations.
-///
-class VGC_VACOMPLEX_API IntersectSettings {
-public:
-    /// Returns the tolerance to use for intersection tests.
-    ///
-    double tolerance() const {
-        return tolerance_;
-    }
-
-    /// Sets the value for `tolerance()`.
-    ///
-    void setTolerance(double value) {
-        tolerance_ = value;
-    }
-
-    /// Whether to compute self-intersections.
-    ///
-    bool selfIntersect() const {
-        return selfIntersect_;
-    }
-
-    /// Sets the value for `selfIntersect()`.
-    ///
-    void setSelfIntersect(bool value) {
-        selfIntersect_ = value;
-    }
-
-    /// Whether to compute intersections with other edges.
-    ///
-    bool intersectEdges() const {
-        return intersectEdges_;
-    }
-
-    /// Sets the value for `intersectEdges()`.
-    ///
-    void setIntersectEdges(bool value) {
-        intersectEdges_ = value;
-    }
-
-    /// Whether to compute intersections with other faces.
-    ///
-    bool intersectFaces() const {
-        return intersectFaces_;
-    }
-
-    /// Sets the value for `intersectEdges()`.
-    ///
-    void setIntersectFaces(bool value) {
-        intersectFaces_ = value;
-    }
-
-private:
-    double tolerance_ = 1.e-6;
-    bool selfIntersect_ = true;
-    bool intersectEdges_ = true;
-    bool intersectFaces_ = true;
-};
 
 /// \class vgc::vacomplex::ScopedOperationsGroup
 /// \brief Encloses multiple operations as one group for performance.
@@ -390,7 +331,7 @@ Cell* uncutAtKeyEdge(KeyEdge* ke);
 /// in the parent group of `edge`, and cut them accordingly.
 ///
 VGC_VACOMPLEX_API
-void intersectInGroup(KeyEdge* edge, const IntersectSettings& settings = {});
+IntersectResult intersectWithGroup(KeyEdge* edge, const IntersectSettings& settings = {});
 
 /// Computes the geometric intersection between the given `edge` and the cells
 /// in the given `group`, and cut them accordingly.
@@ -399,9 +340,15 @@ void intersectInGroup(KeyEdge* edge, const IntersectSettings& settings = {});
 /// parent group of the `edge`.
 ///
 VGC_VACOMPLEX_API
-void intersectInGroup(
-    KeyEdge* edge,
-    Group* group,
+IntersectResult
+intersectWithGroup(KeyEdge* edge, Group* group, const IntersectSettings& settings = {});
+
+/// Computes the geometric intersection between the given `edges` and the cells
+/// in their respective parent groups, and cut them accordingly.
+///
+VGC_VACOMPLEX_API
+IntersectResult intersectWithGroup(
+    core::ConstSpan<KeyEdge*> edges,
     const IntersectSettings& settings = {});
 
 /// Throws `NotAChildError` if `nextSibling` is not a child of `parentGroup` or `nullptr`.

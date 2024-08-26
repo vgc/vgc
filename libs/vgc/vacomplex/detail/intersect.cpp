@@ -18,7 +18,9 @@
 
 #include <vgc/geometry/intersect.h>
 
-namespace vgc::vacomplex::detail {
+namespace vgc::vacomplex {
+
+namespace detail {
 
 namespace {
 
@@ -131,33 +133,10 @@ computeEdgeIntersections(KeyEdge* edge1, KeyEdge* edge2) {
     return res;
 }
 
-using CurveParameterArray = core::Array<geometry::CurveParameter>;
-
-// Stores at what params should a given edge be cut, as well as the result of
-// the cut operation.
-//
-struct CutInfo {
-    CurveParameterArray params;
-    CutEdgeResult res;
-};
-
-// Stores the information that the `index1` cut vertex of `edge1` should be
-// glued with the `index2` cut vertex of `edge2`.
-//
-struct GlueInfo {
-    KeyEdge* edge1;
-    Int index1;
-    KeyEdge* edge2;
-    Int index2;
-};
-
-using CutInfoMap = std::unordered_map<KeyEdge*, CutInfo>;
-using GlueInfoArray = core::Array<GlueInfo>;
-
 void computeSelfIntersections(
     KeyEdge* edge,
-    CutInfoMap& cutInfos,
-    GlueInfoArray& glueInfos) {
+    IntersectCutInfoMap& cutInfos,
+    IntersectGlueInfoArray& glueInfos) {
 
     auto intersections = computeSelfIntersections(edge);
 
@@ -174,15 +153,15 @@ void computeSelfIntersections(
         Int n = cutParams.length();
         cutParams.append(intersection.param1);
         cutParams.append(intersection.param2);
-        glueInfos.append(GlueInfo{edge, n, edge, n + 1});
+        glueInfos.append(IntersectGlueInfo{edge, n, edge, n + 1});
     }
 }
 
 void computeEdgeIntersections(
     KeyEdge* edge1,
     KeyEdge* edge2,
-    CutInfoMap& cutInfos,
-    GlueInfoArray& glueInfos) {
+    IntersectCutInfoMap& cutInfos,
+    IntersectGlueInfoArray& glueInfos) {
 
     if (edge2 == edge1) {
         return;
@@ -204,11 +183,11 @@ void computeEdgeIntersections(
     //
     auto cutInfo1 = cutInfos.find(edge1);
     if (cutInfo1 == cutInfos.end()) {
-        cutInfo1 = cutInfos.insert(std::make_pair(edge1, CutInfo{})).first;
+        cutInfo1 = cutInfos.insert(std::make_pair(edge1, IntersectCutInfo{})).first;
     }
     auto cutInfo2 = cutInfos.find(edge2);
     if (cutInfo2 == cutInfos.end()) {
-        cutInfo2 = cutInfos.insert(std::make_pair(edge2, CutInfo{})).first;
+        cutInfo2 = cutInfos.insert(std::make_pair(edge2, IntersectCutInfo{})).first;
         cutInfo1 = cutInfos.find(edge1);
     }
     VGC_ASSERT(cutInfo1 != cutInfos.end());
@@ -224,15 +203,15 @@ void computeEdgeIntersections(
         Int n2 = cutParams2.length();
         cutParams1.append(intersection.param1);
         cutParams2.append(intersection.param2);
-        glueInfos.append(GlueInfo{edge1, n1, edge2, n2});
+        glueInfos.append(IntersectGlueInfo{edge1, n1, edge2, n2});
     }
 }
 
 void computeEdgeIntersections(
     KeyEdge* edge1,
     Group* group,
-    CutInfoMap& cutInfos,
-    GlueInfoArray& glueInfos) {
+    IntersectCutInfoMap& cutInfos,
+    IntersectGlueInfoArray& glueInfos) {
 
     for (Node* node : *group) {
         if (Cell* cell = node->toCell()) {
@@ -243,20 +222,25 @@ void computeEdgeIntersections(
     }
 }
 
-void cutEdges(CutInfoMap& cutInfos) {
+void cutEdges(IntersectCutInfoMap& cutInfos) {
     for (auto& [edge, cutInfo] : cutInfos) {
         cutInfo.res = ops::cutEdge(edge, cutInfo.params);
     }
 }
 
-void glueVertices(const CutInfoMap& cutInfos, const GlueInfoArray& glueInfos) {
-    for (const GlueInfo& glueInfo : glueInfos) {
-        const CutInfo& cutInfo1 = cutInfos.at(glueInfo.edge1);
-        const CutInfo& cutInfo2 = cutInfos.at(glueInfo.edge2);
+void glueVertices(
+    core::Array<KeyVertex*>& outputKeyVertices,
+    const IntersectCutInfoMap& cutInfos,
+    const IntersectGlueInfoArray& glueInfos) {
+
+    for (const IntersectGlueInfo& glueInfo : glueInfos) {
+        const IntersectCutInfo& cutInfo1 = cutInfos.at(glueInfo.edge1);
+        const IntersectCutInfo& cutInfo2 = cutInfos.at(glueInfo.edge2);
         std::array<KeyVertex*, 2> vertices = {
             cutInfo1.res.vertices()[glueInfo.index1], //
             cutInfo2.res.vertices()[glueInfo.index2]};
-        ops::glueKeyVertices(vertices, vertices[0]->position());
+        KeyVertex* v = ops::glueKeyVertices(vertices, vertices[0]->position());
+        outputKeyVertices.append(v);
     }
 }
 
@@ -346,6 +330,9 @@ void cutFaces(Group* group, KeyEdge* edge) {
     for (Node* node : *group) {
         if (Cell* cell = node->toCell()) {
             if (KeyFace* face = cell->toKeyFace()) {
+                if (face->boundary().contains(edge)) {
+                    continue;
+                }
                 if (face->interiorContains(*position)) {
                     facesToCut.append(face);
                 }
@@ -361,44 +348,53 @@ void cutFaces(Group* group, KeyEdge* edge) {
 
 } // namespace
 
-void Operations::intersectInGroup(
-    KeyEdge* edge,
+IntersectResult Operations::intersectWithGroup(
+    core::ConstSpan<KeyEdge*> edges,
     Group* group,
     const IntersectSettings& settings) {
 
     // Compute info about intersections
-    CutInfoMap cutInfos;
-    GlueInfoArray glueInfos;
+    IntersectResult res;
+    IntersectCutInfoMap& cutInfos = res.cutInfos_;
+    IntersectGlueInfoArray glueInfos = res.glueInfos_;
     if (settings.selfIntersect()) {
-        computeSelfIntersections(edge, cutInfos, glueInfos);
+        for (KeyEdge* edge : edges) {
+            computeSelfIntersections(edge, cutInfos, glueInfos);
+        }
     }
     if (settings.intersectEdges()) {
-        computeEdgeIntersections(edge, group, cutInfos, glueInfos);
-    }
-
-    // Determine whether the edge should actually be cut
-    const CutInfo* edgeCutInfo = nullptr;
-    const auto it = cutInfos.find(edge);
-    if (it != cutInfos.end()) {
-        edge = nullptr; // `edge` will be destoyed by cutEdges()
-        edgeCutInfo = &it->second;
+        for (const auto& edge : edges) {
+            computeEdgeIntersections(edge, group, cutInfos, glueInfos);
+        }
     }
 
     // Cut edges at given CurveParameters and glue vertices two-by-two
     cutEdges(cutInfos);
-    glueVertices(cutInfos, glueInfos);
+    glueVertices(res.outputKeyVertices_, cutInfos, glueInfos);
 
-    // Cut faces
+    // Cut faces and add edges to output
     if (settings.intersectFaces()) {
-        if (edgeCutInfo) {
-            for (const auto& newEdge : edgeCutInfo->res.edges()) {
-                cutFaces(group, newEdge);
+        for (KeyEdge* edge : edges) {
+            const auto it = cutInfos.find(edge);
+            if (it == cutInfos.end()) {
+                // The edge wasn't cut
+                cutFaces(group, edge);
+                res.outputKeyEdges_.append(edge);
+            }
+            else {
+                // The edge was cut into multiple new edges
+                const IntersectCutInfo& edgeCutInfo = it->second;
+                for (KeyEdge* newEdge : edgeCutInfo.res.edges()) {
+                    cutFaces(group, newEdge);
+                    res.outputKeyEdges_.append(newEdge);
+                }
             }
         }
-        else if (edge) {
-            cutFaces(group, edge);
-        }
     }
+
+    return res;
 }
 
-} // namespace vgc::vacomplex::detail
+} // namespace detail
+
+} // namespace vgc::vacomplex
