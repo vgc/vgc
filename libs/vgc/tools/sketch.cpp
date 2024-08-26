@@ -1644,7 +1644,7 @@ void Sketch::finishCurve_(ui::MouseEvent* event) {
     if (isAutoIntersectEnabled()) {
         workspace->sync();
         if (vacomplex::KeyEdge* keyEdge = toKeyEdge(workspace.get(), edgeItemId_)) {
-            vacomplex::ops::intersectInGroup(keyEdge);
+            vacomplex::ops::intersectWithGroup(keyEdge);
         }
     }
 

@@ -26,6 +26,7 @@ vgc_add_library(vacomplex
         transform.h
 
         detail/cut.h
+        detail/intersect.h
         detail/operations.h
 
     CPP_SOURCE_FILES

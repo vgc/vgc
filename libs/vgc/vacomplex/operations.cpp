@@ -654,7 +654,7 @@ Cell* uncutAtKeyEdge(KeyEdge* ke) {
     }
 }
 
-void intersectInGroup(KeyEdge* edge, const IntersectSettings& settings) {
+IntersectResult intersectWithGroup(KeyEdge* edge, const IntersectSettings& settings) {
     if (!edge) {
         throw LogicError("IntersectInGroup: edge is nullptr.");
     }
@@ -662,18 +662,83 @@ void intersectInGroup(KeyEdge* edge, const IntersectSettings& settings) {
     if (!group) {
         throw LogicError("IntersectInGroup: edge has no parent group.");
     }
-    intersectInGroup(edge, group, settings);
+    return intersectWithGroup(edge, group, settings);
 }
 
-void intersectInGroup(KeyEdge* edge, Group* group, const IntersectSettings& settings) {
+IntersectResult
+intersectWithGroup(KeyEdge* edge, Group* group, const IntersectSettings& settings) {
     if (!edge) {
         throw LogicError("IntersectInGroup: edge is nullptr.");
     }
     if (!group) {
         throw LogicError("IntersectInGroup: group is nullptr.");
     }
+    core::ConstSpan<KeyEdge*, 1> edges(&edge, 1);
     detail::Operations ops(edge->complex());
-    ops.intersectInGroup(edge, group, settings);
+    return ops.intersectWithGroup(edges, group, settings);
+}
+
+IntersectResult intersectWithGroup(
+    core::ConstSpan<KeyEdge*> unsortedEdges,
+    const IntersectSettings& settings) {
+
+    if (unsortedEdges.isEmpty()) {
+        return {};
+    }
+
+    // Remove duplicate edges
+    core::Array<KeyEdge*> edges(unsortedEdges);
+    core::sort(edges);
+    core::removeConsecutiveDuplicates(edges);
+
+    // Check that all edges are non-null and have a parent group. Also
+    // determine whether they all belong to the same group or not.
+    //
+    Group* firstGroup = edges.first()->parentGroup();
+    bool splitIntoGroups = false;
+    for (KeyEdge* edge : edges) {
+        if (!edge) {
+            throw LogicError("IntersectInGroup: edge is nullptr.");
+        }
+        Group* group = edge->parentGroup();
+        if (!group) {
+            throw LogicError("IntersectInGroup: edge has no parent group.");
+        }
+        if (group != firstGroup) {
+            splitIntoGroups = true;
+        }
+    }
+
+    // Apply operator group by group. Note that groups may belong to separate
+    // complexes, so we instanciate a separate Operations per complex.
+    //
+    if (splitIntoGroups) {
+        core::Array<KeyVertex*> outputKeyVertices;
+        core::Array<KeyEdge*> outputKeyEdges;
+        std::map<Group*, core::Array<KeyEdge*>> groupToEdges;
+        for (KeyEdge* edge : edges) {
+            groupToEdges[edge->parentGroup()].append(edge);
+        }
+        std::map<Complex*, core::Array<Group*>> complexToGroups;
+        for (const auto& [group, edges_] : groupToEdges) {
+            VGC_UNUSED(edges_);
+            complexToGroups[group->complex()].append(group);
+        }
+        for (const auto& [complex, groups] : complexToGroups) {
+            detail::Operations ops(complex);
+            for (const auto& group : groups) {
+                IntersectResult res =
+                    ops.intersectWithGroup(groupToEdges[group], group, settings);
+                outputKeyVertices.extend(res.outputKeyVertices());
+                outputKeyEdges.extend(res.outputKeyEdges());
+            }
+        }
+        return IntersectResult(std::move(outputKeyVertices), std::move(outputKeyEdges));
+    }
+    else {
+        detail::Operations ops(firstGroup->complex());
+        return ops.intersectWithGroup(edges, firstGroup, settings);
+    }
 }
 
 void moveToGroup(Node* node, Group* parentGroup, Node* nextSibling) {
