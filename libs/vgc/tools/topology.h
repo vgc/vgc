@@ -45,6 +45,9 @@ VGC_TOOLS_API
 VGC_UI_DECLARE_COMMAND(simplify)
 
 VGC_TOOLS_API
+VGC_UI_DECLARE_COMMAND(intersectWithGroup)
+
+VGC_TOOLS_API
 VGC_UI_DECLARE_COMMAND(cutFaceWithEdge)
 
 // Mouse click commands
@@ -88,6 +91,9 @@ private:
 
     void onSimplify_();
     VGC_SLOT(onSimplify_)
+
+    void onIntersectWithGroup_();
+    VGC_SLOT(onIntersectWithGroup_)
 
     void onCutFaceWithEdge_();
     VGC_SLOT(onCutFaceWithEdge_)

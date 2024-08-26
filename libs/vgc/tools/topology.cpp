@@ -33,6 +33,7 @@ using ui::MouseButton;
 using ui::Shortcut;
 using ui::modifierkeys::alt;
 using ui::modifierkeys::ctrl;
+using ui::modifierkeys::shift;
 
 namespace {
 
@@ -86,6 +87,12 @@ VGC_UI_DEFINE_WINDOW_COMMAND( //
     Shortcut(alt, Key::S));
 
 VGC_UI_DEFINE_WINDOW_COMMAND( //
+    intersectWithGroup,
+    "tools.topology.intersectWithGroup",
+    "Intersect With Group",
+    Shortcut(alt | shift, Key::I));
+
+VGC_UI_DEFINE_WINDOW_COMMAND( //
     cutFaceWithEdge,
     "tools.topology.cutFaceWithEdge",
     "Cut Face With Edge",
@@ -126,6 +133,7 @@ TopologyModule::TopologyModule(CreateKey key, const ui::ModuleContext& context)
     c.addAction(glue(), onGlue_Slot());
     c.addAction(explode(), onExplode_Slot());
     c.addAction(simplify(), onSimplify_Slot());
+    c.addAction(intersectWithGroup(), onIntersectWithGroup_Slot());
     c.addAction(cutFaceWithEdge(), onCutFaceWithEdge_Slot());
 }
 
@@ -240,6 +248,15 @@ void TopologyModule::onSimplify_() {
         core::Array<core::Id> uncutIds =
             context.workspace()->simplify(context.itemIds(), smoothJoins);
         context.workspaceSelection()->setItemIds(std::move(uncutIds));
+    }
+}
+
+void TopologyModule::onIntersectWithGroup_() {
+    if (auto context =
+            TopologyContextLock(documentManager_, commands::intersectWithGroup())) {
+        core::Array<core::Id> newIds =
+            context.workspace()->intersectWithGroup(context.itemIds());
+        context.workspaceSelection()->setItemIds(std::move(newIds));
     }
 }
 
