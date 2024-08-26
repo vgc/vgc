@@ -93,7 +93,10 @@ void sort(Container& c, Compare comp) {
 /// This is equivalent to `std::unique(c.begin(), c.end())`.
 ///
 /// A call to this function should typically be followed by a call to
-/// `c.erase(res, c.end())` method to actually remove the elements.
+/// `c.erase(res, c.end())` to actually remove the elements.
+///
+/// For convenience, you can instead use `removeConsecutiveDuplicates()` which
+/// calls both `std::unique()` and `c.erase()`.
 ///
 /// \sa `removeConsecutiveDuplicates()`.
 ///
