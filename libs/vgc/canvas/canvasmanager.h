@@ -55,6 +55,9 @@ VGC_CANVAS_API
 VGC_UI_DECLARE_COMMAND(wireframe)
 
 VGC_CANVAS_API
+VGC_UI_DECLARE_COMMAND(objectIds)
+
+VGC_CANVAS_API
 VGC_UI_DECLARE_COMMAND(adaptiveSampling)
 
 VGC_CANVAS_API
@@ -147,6 +150,9 @@ private:
 
     void onWireframe_();
     VGC_SLOT(onWireframe_);
+
+    void onObjectIds_();
+    VGC_SLOT(onObjectIds_);
 
     void onAdaptiveSampling_();
     VGC_SLOT(onAdaptiveSampling_);

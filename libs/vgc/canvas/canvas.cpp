@@ -25,6 +25,7 @@
 #include <vgc/canvas/strings.h>
 #include <vgc/canvas/workspaceselection.h>
 #include <vgc/core/array.h>
+#include <vgc/core/colors.h>
 #include <vgc/core/history.h>
 #include <vgc/core/paths.h>
 #include <vgc/core/stopwatch.h>
@@ -707,6 +708,168 @@ void doPaintInputSketchPoints(
     engine->drawInstanced(geometryView);
 }
 
+graphics::SizedFontWeakPtr getObjectIdFont_() {
+    graphics::FontLibraryWeakPtr lib_ = graphics::fontLibrary();
+    if (auto lib = lib_.lock()) {
+        graphics::FontWeakPtr font_ = lib->defaultFont();
+        if (auto font = font_.lock()) {
+            return font->getSizedFont({14, graphics::FontHinting::Native});
+        }
+    }
+    return nullptr;
+}
+
+graphics::SizedFontWeakPtr getObjectIdFont() {
+    static graphics::SizedFontWeakPtr font = getObjectIdFont_();
+    return font;
+}
+
+geometry::Vec2d getVertexObjectIdAnchor(vacomplex::VertexCell* vertex, core::AnimTime t) {
+    return vertex->position(t);
+}
+
+geometry::Vec2d getEdgeObjectIdAnchor(vacomplex::EdgeCell* edge, core::AnimTime t) {
+    auto sampling = edge->strokeSamplingShared(t);
+    const geometry::StrokeSample2dArray& samples = sampling->samples();
+    if (samples.length() == 0) {
+        return {};
+    }
+    double halfS = 0.5 * samples.last().s();
+    auto comp = [](const geometry::StrokeSample2d& sample, double s) {
+        return sample.s() < s;
+    };
+    auto it2 = std::lower_bound(samples.begin(), samples.end(), halfS, comp);
+    if (it2 == samples.end()) {
+        // no sample is after halfS
+        return samples.last().position();
+    }
+    else if (it2 == samples.begin()) {
+        // the first sample is after halfS
+        return samples.first().position();
+    }
+    else {
+        // it2 if the first sample after halfS
+        auto it1 = it2 - 1;
+        geometry::Vec2d pos1 = it1->position();
+        geometry::Vec2d pos2 = it2->position();
+        double s1 = it1->s();
+        double s2 = it2->s();
+        double ds = s2 - s1;
+        if (ds > 0) {
+            return core::fastLerp(pos1, pos2, (halfS - s1) / (s2 - s1));
+        }
+        else {
+            return it1->position();
+        }
+    }
+}
+
+void drawObjectId(
+    graphics::Engine* engine,
+    detail::ObjectIdMap& objectIds,
+    std::optional<graphics::ShapedText>& shapedText,
+    const geometry::Mat4f& oldViewMatrix,
+    workspace::Element* e) {
+
+    if (!e) {
+        return;
+    }
+
+    // For now, we only show IDs of VacElements.
+    // We may want to extend this in the future.
+    workspace::VacElement* ve = e->toVacElement();
+    if (!ve) {
+        return;
+    }
+
+    // For now, we don't show IDs of groups.
+    vacomplex::Cell* cell = ve->vacCell();
+    if (!cell) {
+        return;
+    }
+
+    dom::Element* element = e->domElement();
+    if (!element) {
+        return;
+    }
+
+    core::StringId id = element->id();
+    if (id.isEmpty()) {
+        return;
+    }
+
+    // Create the GeometryViewPtr corresponding to the ID if it doesn't already
+    // exist in the `objectIds` cache.
+    //
+    auto it = objectIds.find(id);
+    if (it == objectIds.end()) {
+        if (!shapedText) {
+            if (auto font = getObjectIdFont().lock()) {
+                shapedText = graphics::ShapedText(font.get(), "");
+            }
+        }
+        if (shapedText) {
+            shapedText->setText(id);
+            graphics::GeometryViewPtr triangles =
+                engine->createTriangleList(graphics::BuiltinGeometryLayout::XYRGB);
+            core::FloatArray a;
+            geometry::Vec2f origin(0, 0);
+            core::Color c = core::colors::black;
+            shapedText->fill(a, origin, c.r(), c.g(), c.b());
+            engine->updateVertexBufferData(triangles, std::move(a));
+            it = objectIds.insert_or_assign(id, triangles).first;
+        }
+    }
+
+    // If we successfully retrieved or created the GeometryViewPtr,
+    // draw it at the appropriate location.
+    //
+    if (it != objectIds.end()) {
+
+        // Compute location where to draw the object ID.
+        // XXX: Should we add `anchor(t)` as a virtual method of cell?
+        core::AnimTime t;
+        geometry::Vec2d anchor;
+        if (auto vertex = cell->toVertexCell()) {
+            anchor = getVertexObjectIdAnchor(vertex, t);
+        }
+        else if (auto edge = cell->toEdgeCell()) {
+            anchor = getEdgeObjectIdAnchor(edge, t);
+        }
+        else {
+            geometry::Rect2d bb = e->boundingBox(t);
+            anchor = 0.5 * (bb.pMin() + bb.pMax());
+        }
+
+        // Actually draw the ID
+        geometry::Vec2f anchorf(anchor);
+        geometry::Vec2f offset(5, -5);
+        geometry::Vec2f pos = oldViewMatrix.transformAffine(anchorf) + offset;
+        geometry::Mat4f viewMatrix = geometry::Mat4f::identity;
+        viewMatrix.translate(pos);
+        engine->setViewMatrix(viewMatrix);
+        engine->draw(it->second);
+    }
+}
+
+void drawObjectIds(
+    graphics::Engine* engine,
+    detail::ObjectIdMap& objectIds,
+    workspace::Workspace& workspace) {
+
+    std::optional<graphics::ShapedText> shapedText;
+    engine->setProgram(graphics::BuiltinProgram::Simple);
+    geometry::Mat4f oldViewMatrix = engine->viewMatrix();
+    engine->pushViewMatrix();
+    workspace.visitDepthFirstPreOrder( //
+        [engine, &objectIds, &shapedText, &oldViewMatrix](
+            workspace::Element* e, Int depth) {
+            VGC_UNUSED(depth);
+            drawObjectId(engine, objectIds, shapedText, oldViewMatrix, e);
+        });
+    engine->popViewMatrix();
+}
+
 } // namespace
 
 // Note: In this override, we intentionally not call SuperClass::onPaintDraw()
@@ -909,6 +1072,13 @@ void Canvas::onPaintDraw(graphics::Engine* engine, ui::PaintOptions options) {
                         }
                     }
                 });
+        }
+
+        // Draw Object IDs
+        //
+        if (viewSettings().showObjectIds()) {
+            engine->setRasterizerState(fillRS_);
+            drawObjectIds(engine, objectIds_, *workspace);
         }
     }
 
