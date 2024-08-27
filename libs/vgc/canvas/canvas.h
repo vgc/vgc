@@ -18,7 +18,7 @@
 #define VGC_CANVAS_CANVAS_H
 
 #include <vgc/canvas/api.h>
-#include <vgc/canvas/displaymode.h>
+#include <vgc/canvas/viewsettings.h>
 #include <vgc/core/array.h>
 #include <vgc/core/color.h>
 #include <vgc/core/object.h>
@@ -138,15 +138,15 @@ public:
     ///
     VGC_SIGNAL(workspaceSelectionChanged)
 
-    /// Returns the current display mode.
+    /// Returns the current view settings of this canvas.
     ///
-    DisplayMode displayMode() const {
-        return displayMode_;
+    const ViewSettings& viewSettings() const {
+        return viewSettings_;
     }
 
-    /// Sets the current display mode.
+    /// Changes the view settings of this canvas.
     ///
-    void setDisplayMode(DisplayMode displayMode);
+    void setViewSettings(const ViewSettings& viewSettings);
 
     /// Creates and manages new performance logs as children of the given \p
     /// parent.
@@ -203,29 +203,6 @@ public:
         const geometry::Vec2d& b,
         CoordinateSpace coordinateSpace = CoordinateSpace::Widget) const;
 
-    // TODO: Use enums and/or specific class such as WireframeMode,
-    // ControlPointVisibility, CanvasSettings, etc?
-
-    /// Returns whether the wireframe mode is enabled.
-    ///
-    bool isWireframeMode() const {
-        return isWireframeMode_;
-    }
-
-    /// Sets whether the wireframe mode is enabled.
-    ///
-    void setWireframeMode(bool isWireframeMode);
-
-    /// Returns whether the control points of all curves are visible.
-    ///
-    bool areControlPointsVisible() const {
-        return areControlPointsVisible_;
-    }
-
-    /// Sets whether the wireframe mode is enabled.
-    ///
-    void setControlPointsVisible(bool areControlPointsVisible);
-
 protected:
     // Reimplementation of Widget virtual methods
     bool onMouseMove(ui::MouseMoveEvent* event) override;
@@ -265,7 +242,7 @@ private:
     core::Array<workspace::Element*> selectedElements_() const;
 
     // View Settings
-    DisplayMode displayMode_ = DisplayMode::Normal;
+    ViewSettings viewSettings_;
 
     // Moving camera
     bool isPanning_ = false;
@@ -312,12 +289,8 @@ private:
         ui::MouseButton::None; // value of event->button at press
 
     // Wireframe mode
-    bool isWireframeMode_ = false;
     graphics::RasterizerStatePtr fillRS_;
     graphics::RasterizerStatePtr wireframeRS_;
-
-    // Show control points
-    bool areControlPointsVisible_ = false;
 
     // Show input sketch points
     mutable graphics::GeometryViewPtr inputSketchPointsGeometry_;

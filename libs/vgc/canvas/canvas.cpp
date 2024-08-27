@@ -99,9 +99,9 @@ void Canvas::setWorkspaceSelection(WorkspaceSelectionWeakPtr newWorkspaceSelecti
     workspaceSelectionReplaced().emit();
 }
 
-void Canvas::setDisplayMode(DisplayMode displayMode) {
-    if (displayMode_ != displayMode) {
-        displayMode_ = displayMode;
+void Canvas::setViewSettings(const ViewSettings& viewSettings) {
+    if (viewSettings_ != viewSettings) {
+        viewSettings_ = viewSettings;
         requestRepaint();
     }
 }
@@ -147,8 +147,9 @@ core::Array<SelectionCandidate> Canvas::computeSelectionCandidatesAboveOrAt(
         worldTol /= camera().zoom();
     }
 
-    bool isMeshEnabled = (displayMode_ != DisplayMode::OutlineOnly);
-    bool isOutlineEnabled = (displayMode_ != DisplayMode::Normal);
+    DisplayMode displayMode = viewSettings().displayMode();
+    bool isMeshEnabled = (displayMode != DisplayMode::OutlineOnly);
+    bool isOutlineEnabled = (displayMode != DisplayMode::Normal);
 
     if (auto workspace = workspace_.lock()) {
         bool skip = itemId > 0;
@@ -234,7 +235,8 @@ core::Array<core::Id> Canvas::computeRectangleSelectionCandidates(
 
     core::Array<core::Id> result;
 
-    bool isMeshEnabled = (displayMode_ != DisplayMode::OutlineOnly);
+    DisplayMode displayMode = viewSettings().displayMode();
+    bool isMeshEnabled = (displayMode != DisplayMode::OutlineOnly);
 
     if (auto workspace = workspace_.lock()) {
 
@@ -271,20 +273,6 @@ core::Array<core::Id> Canvas::computeRectangleSelectionCandidates(
     }
 
     return result;
-}
-
-void Canvas::setWireframeMode(bool isWireframeMode) {
-    if (isWireframeMode_ != isWireframeMode) {
-        isWireframeMode_ = isWireframeMode;
-        requestRepaint();
-    }
-}
-
-void Canvas::setControlPointsVisible(bool areControlPointsVisible) {
-    if (areControlPointsVisible_ != areControlPointsVisible) {
-        areControlPointsVisible_ = areControlPointsVisible;
-        requestRepaint();
-    }
 }
 
 void Canvas::onWorkspaceChanged_() {
@@ -769,9 +757,11 @@ void Canvas::onPaintDraw(graphics::Engine* engine, ui::PaintOptions options) {
     if (auto workspace = workspace_.lock()) {
         workspace->sync();
         //VGC_PROFILE_SCOPE("Canvas:WorkspaceVisit");
-
-        bool isMeshEnabled = (displayMode_ != DisplayMode::OutlineOnly);
-        bool isOutlineEnabled = (displayMode_ != DisplayMode::Normal);
+        DisplayMode displayMode = viewSettings().displayMode();
+        bool isMeshEnabled = (displayMode != DisplayMode::OutlineOnly);
+        bool isOutlineEnabled = (displayMode != DisplayMode::Normal);
+        bool areControlPointsVisible = viewSettings().areControlPointsVisible();
+        bool isWireframeMode = viewSettings().isWireframeMode();
         bool showInputSketchPoints = experimental::showInputSketchPoints().value();
 
         // Draw Normal.
@@ -801,8 +791,8 @@ void Canvas::onPaintDraw(graphics::Engine* engine, ui::PaintOptions options) {
         // they will be drawn in the Outline pass anyway.
         //
         if (isMeshEnabled) {
-            bool drawControlPoints = areControlPointsVisible_ && !isOutlineEnabled;
-            if (isWireframeMode_) {
+            bool drawControlPoints = areControlPointsVisible && !isOutlineEnabled;
+            if (isWireframeMode) {
                 drawSubpass(engine, wireframeRS_, *workspace, PaintOption::Normal);
                 if (drawControlPoints) {
                     drawSubpass(engine, fillRS_, *workspace, PaintOption::Editing);
@@ -852,7 +842,7 @@ void Canvas::onPaintDraw(graphics::Engine* engine, ui::PaintOptions options) {
         //
         if (isOutlineEnabled) {
             workspace::PaintOptions paintOptions = PaintOption::Outline;
-            if (areControlPointsVisible_) {
+            if (areControlPointsVisible) {
                 paintOptions.set(PaintOption::Editing);
             }
             drawSubpass(engine, fillRS_, *workspace, paintOptions);
@@ -865,12 +855,12 @@ void Canvas::onPaintDraw(graphics::Engine* engine, ui::PaintOptions options) {
             if (isOutlineEnabled) {
                 paintOptions.set(workspace::PaintOption::Outline);
             }
-            if (areControlPointsVisible_) {
+            if (areControlPointsVisible) {
                 paintOptions.set(PaintOption::Editing);
             }
             engine->setRasterizerState(fillRS_);
             bool areNonSelectedVerticesVisible =
-                isOutlineEnabled || areControlPointsVisible_;
+                isOutlineEnabled || areControlPointsVisible;
             workspace->visitDepthFirst(
                 [](workspace::Element* e, Int depth) {
                     VGC_UNUSED(e);
