@@ -191,10 +191,12 @@ void CanvasManager::onCurrentWorkspaceReplaced_() {
 
 void CanvasManager::switchToDisplayMode_(CanvasWeakPtr canvas_, DisplayMode mode) {
     if (auto canvas = canvas_.lock()) {
-        DisplayMode previousDisplayMode = canvas->displayMode();
+        DisplayMode previousDisplayMode = canvas->viewSettings().displayMode();
         if (previousDisplayMode != mode) {
+            ViewSettings settings = canvas->viewSettings();
             previousDisplayModes_[canvas_] = previousDisplayMode;
-            canvas->setDisplayMode(mode);
+            settings.setDisplayMode(mode);
+            canvas->setViewSettings(settings);
         }
     }
 }
@@ -223,7 +225,8 @@ void CanvasManager::onToggleLastTwoDisplayModes_() {
 
 void CanvasManager::onCycleDisplayModes_() {
     if (auto canvas = activeCanvas().lock()) {
-        switch (canvas->displayMode()) {
+        DisplayMode displayMode = canvas->viewSettings().displayMode();
+        switch (displayMode) {
         case DisplayMode::Normal:
             switchToDisplayMode_(canvas, DisplayMode::OutlineOverlay);
             break;
@@ -342,13 +345,17 @@ void CanvasManager::onFitViewToDocument_() {
 
 void CanvasManager::onControlPoints_() {
     if (auto canvas = activeCanvas().lock()) {
-        canvas->setControlPointsVisible(!canvas->areControlPointsVisible());
+        ViewSettings settings = canvas->viewSettings();
+        settings.setControlPointsVisible(!settings.areControlPointsVisible());
+        canvas->setViewSettings(settings);
     }
 }
 
 void CanvasManager::onWireframe_() {
     if (auto canvas = activeCanvas().lock()) {
-        canvas->setWireframeMode(!canvas->isWireframeMode());
+        ViewSettings settings = canvas->viewSettings();
+        settings.setWireframeMode(!settings.isWireframeMode());
+        canvas->setViewSettings(settings);
     }
 }
 
