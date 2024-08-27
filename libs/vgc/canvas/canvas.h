@@ -69,6 +69,12 @@ private:
     Int priority_;
 };
 
+namespace detail {
+
+using ObjectIdMap = std::unordered_map<core::StringId, graphics::GeometryViewPtr>;
+
+}
+
 /// \class vgc::canvas::Canvas
 /// \brief A document canvas widget.
 ///
@@ -291,6 +297,9 @@ private:
     // Wireframe mode
     graphics::RasterizerStatePtr fillRS_;
     graphics::RasterizerStatePtr wireframeRS_;
+
+    // Object IDs
+    detail::ObjectIdMap objectIds_;
 
     // Show input sketch points
     mutable graphics::GeometryViewPtr inputSketchPointsGeometry_;

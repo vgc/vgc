@@ -80,12 +80,29 @@ public:
         areControlPointsVisible_ = areControlPointsVisible;
     }
 
+    /// Returns whether the IDs of objects should be displayed.
+    ///
+    /// The default value is `false`.
+    ///
+    /// \sa `setShowObjectIds()`.
+    ///
+    bool showObjectIds() const {
+        return showObjectIds_;
+    }
+
+    /// Changes the value of `showVertexId()`.
+    ///
+    void setShowObjectIds(bool value) {
+        showObjectIds_ = value;
+    }
+
     /// Returns whether the two view settings are equal.
     ///
     friend bool operator==(const ViewSettings& s1, const ViewSettings& s2) {
         return s1.displayMode_ == s2.displayMode_
                && s1.isWireframeMode_ == s2.isWireframeMode_
-               && s1.areControlPointsVisible_ == s2.areControlPointsVisible_;
+               && s1.areControlPointsVisible_ == s2.areControlPointsVisible_
+               && s1.showObjectIds_ == s2.showObjectIds_;
     }
 
     /// Returns whether the two view settings are different.
@@ -98,6 +115,7 @@ private:
     DisplayMode displayMode_ = DisplayMode::Normal;
     bool isWireframeMode_ = false;
     bool areControlPointsVisible_ = false;
+    bool showObjectIds_ = false;
 };
 
 } // namespace vgc::canvas

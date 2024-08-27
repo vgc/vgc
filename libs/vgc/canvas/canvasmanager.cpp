@@ -88,6 +88,12 @@ VGC_UI_DEFINE_WINDOW_COMMAND( //
     Shortcut(alt, Key::W));
 
 VGC_UI_DEFINE_WINDOW_COMMAND( //
+    objectIds,
+    "canvas.objectIds",
+    "Show/Hide Object IDs",
+    Shortcut(alt, Key::O));
+
+VGC_UI_DEFINE_WINDOW_COMMAND( //
     adaptiveSampling,
     "canvas.adaptiveSampling",
     "Toggle Adaptive Sampling",
@@ -145,6 +151,7 @@ CanvasManager::CanvasManager(CreateKey key, const ui::ModuleContext& context)
     c.addSeparator();
     c.addAction(controlPoints(), onControlPoints_Slot());
     c.addAction(wireframe(), onWireframe_Slot());
+    c.addAction(objectIds(), onObjectIds_Slot());
 
     c.addSeparator();
     c.addAction(adaptiveSampling(), onAdaptiveSampling_Slot());
@@ -355,6 +362,14 @@ void CanvasManager::onWireframe_() {
     if (auto canvas = activeCanvas().lock()) {
         ViewSettings settings = canvas->viewSettings();
         settings.setWireframeMode(!settings.isWireframeMode());
+        canvas->setViewSettings(settings);
+    }
+}
+
+void CanvasManager::onObjectIds_() {
+    if (auto canvas = activeCanvas().lock()) {
+        ViewSettings settings = canvas->viewSettings();
+        settings.setShowObjectIds(!settings.showObjectIds());
         canvas->setViewSettings(settings);
     }
 }
