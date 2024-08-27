@@ -743,9 +743,7 @@ bool Engine::beginFrame(const SwapChainPtr& swapChain, FrameKind kind) {
     // do this unconditionally since the swapchain size may have changed.
     queueLambdaCommandWithParameters_<SwapChainPtr>(
         "setSwapChain",
-        [](Engine* engine, const SwapChainPtr& swapChain) {
-            engine->setSwapChain_(swapChain);
-        },
+        [](Engine* engine, const SwapChainPtr& sc) { engine->setSwapChain_(sc); },
         swapChain);
 
     if (kind != FrameKind::QWidget) {

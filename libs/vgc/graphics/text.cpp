@@ -665,8 +665,8 @@ void ShapedText::fill(core::FloatArray& data,
 Int ShapedText::positionFromByte(Int byteIndex) const {
     auto first = impl_->positions.cbegin();
     auto last = impl_->positions.cend();
-    auto comp = [](const ShapedTextPositionInfo& info, Int byteIndex) {
-        return info.byteIndex() < byteIndex;
+    auto comp = [](const ShapedTextPositionInfo& info, Int byteIndex0) {
+        return info.byteIndex() < byteIndex0;
     };
     auto it = std::lower_bound(first, last, byteIndex, comp);
     if (it == last) {
@@ -705,8 +705,8 @@ std::pair<Int, Int> ShapedText::positionPairFromPoint(
     float x = point[0];
     auto first = impl_->positions.cbegin();
     auto last = impl_->positions.cend();
-    auto comp = [](const ShapedTextPositionInfo& info, float x) {
-        return info.advance()[0] < x;
+    auto comp = [](const ShapedTextPositionInfo& info, float x0) {
+        return info.advance()[0] < x0;
     };
     auto it = std::lower_bound(first, last, x, comp);
 
