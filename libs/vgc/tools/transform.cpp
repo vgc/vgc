@@ -282,14 +282,14 @@ public:
         //
         geometry::Vec2d pivotPosition = box->pivotPoint_;
         auto getManipPosition = [](geometry::Rect2d rect,
-                                   geometry::Vec2d cursorPosition,
+                                   geometry::Vec2d cursorPosition0,
                                    Int index) -> geometry::Vec2d {
             Int cornerIndex = index / 2;
             geometry::Vec2d res = rect.corner(cornerIndex);
             if (index % 2 == 1) {
                 geometry::Vec2d otherCorner = rect.corner((cornerIndex + 1) % 4);
                 geometry::Vec2d dir = (otherCorner - res).normalized();
-                res += dir * dir.dot(cursorPosition - res);
+                res += dir * dir.dot(cursorPosition0 - res);
             }
             return res;
         };

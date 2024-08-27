@@ -104,27 +104,31 @@ std::unique_ptr<vacomplex::CellProperty> CellStyle::fromConcatStep_(
     return result;
 }
 
+namespace {
+
+double computeArea(core::FloatArray& triangles) {
+    Int n = triangles.length() / 2;
+    auto points = reinterpret_cast<geometry::Vec2f*>(triangles.data());
+    double result = 0;
+    for (Int i = 0; i < n - 2; i += 3) {
+        geometry::Vec2f& a = points[i];
+        geometry::Vec2f& b = points[i + 1];
+        geometry::Vec2f& c = points[i + 2];
+        float det = a[0] * (b[1] - c[1]) + //
+                    b[0] * (c[1] - a[1]) + //
+                    c[0] * (a[1] - b[1]);
+        result += 0.5f * det;
+    }
+    return result;
+};
+
+} // namespace
+
 std::unique_ptr<vacomplex::CellProperty> CellStyle::fromConcatStep_(
     const vacomplex::KeyFaceData& kfd1,
     const vacomplex::KeyFaceData& kfd2) const {
 
     core::FloatArray triangles;
-
-    auto computeArea = [](core::FloatArray& triangles) -> double {
-        Int n = triangles.length() / 2;
-        auto points = reinterpret_cast<geometry::Vec2f*>(triangles.data());
-        double result = 0;
-        for (Int i = 0; i < n - 2; i += 3) {
-            geometry::Vec2f& a = points[i];
-            geometry::Vec2f& b = points[i + 1];
-            geometry::Vec2f& c = points[i + 2];
-            float det = a[0] * (b[1] - c[1]) + //
-                        b[0] * (c[1] - a[1]) + //
-                        c[0] * (a[1] - b[1]);
-            result += 0.5f * det;
-        }
-        return result;
-    };
 
     const CellStyle* s1 = nullptr;
     double l1 = 0;
