@@ -18,7 +18,7 @@
 
 import unittest
 
-from vgc.geometry import Segment2d, Segment2f, Vec2d, Vec2f
+from vgc.geometry import Segment2d, Segment2f, Vec2d, Vec2f, SegmentIntersectionType
 
 Segment2Types = [Segment2d, Segment2f]
 Segment2Vec2Types = [(Segment2d, Vec2d), (Segment2f, Vec2f)]
@@ -106,6 +106,86 @@ class TestSegment2(unittest.TestCase):
             self.assertTrue(s.isDegenerate())
             s = Segment2((1, 2), (3, 4))
             self.assertFalse(s.isDegenerate())
+
+    def testIntersect(self):
+        for Segment2, Vec2 in Segment2Vec2Types:
+
+            a = Vec2(-0.3, -0.2)
+            b = Vec2(1.7, 1.4)
+            c = Vec2(0.2, 1.6)
+            d = Vec2(1.2, -0.4)
+
+            e = Vec2(0.5, 0.2)
+            f = Vec2(0.5, 0.4)
+            g = Vec2(0.5, 0.6)
+            h = Vec2(1.1, 0.4)
+
+            # Point-intersection in the middle
+            # TODO: improve tests by actually testing intersection values
+
+            i = Segment2(a, b).intersect(Segment2(c, d))
+            self.assertEqual(i.type, SegmentIntersectionType.Point)
+
+            i = Segment2(a, b).intersect(Segment2(d, c))
+            self.assertEqual(i.type, SegmentIntersectionType.Point)
+
+            i = Segment2(b, a).intersect(Segment2(c, d))
+            self.assertEqual(i.type, SegmentIntersectionType.Point)
+
+            i = Segment2(b, a).intersect(Segment2(d, c))
+            self.assertEqual(i.type, SegmentIntersectionType.Point)
+
+            # Non-intersecting collinear segments
+            # TODO: support this case. Currently, is is incorrectly returned as Segment.
+
+            # Segment intersection
+            # TODO: properly support and test this case. Currently, it is indeed returned
+            # as Segment, but with dummy points and params.
+            # TODO: test strict sub-segment, starting at one of the endpoint or not.
+
+            i = Segment2(a, c).intersect(Segment2(a, c))
+            self.assertEqual(i.type, SegmentIntersectionType.Segment)
+
+            i = Segment2(c, a).intersect(Segment2(c, a))
+            self.assertEqual(i.type, SegmentIntersectionType.Segment)
+
+            i = Segment2(a, c).intersect(Segment2(c, a))
+            self.assertEqual(i.type, SegmentIntersectionType.Segment)
+
+            i = Segment2(c, a).intersect(Segment2(a, c))
+            self.assertEqual(i.type, SegmentIntersectionType.Segment)
+
+            # Intersection between two segment endpoints
+
+            i = Segment2(a, c).intersect(Segment2(a, d))
+            self.assertEqual(i.type, SegmentIntersectionType.Point)
+            self.assertEqual(i.p, a)
+            self.assertEqual(i.t1, 0)
+            self.assertEqual(i.t2, 0)
+
+            i = Segment2(a, c).intersect(Segment2(d, a))
+            self.assertEqual(i.type, SegmentIntersectionType.Point)
+            self.assertEqual(i.p, a)
+            self.assertEqual(i.t1, 0)
+            self.assertEqual(i.t2, 1)
+
+            i = Segment2(c, a).intersect(Segment2(a, d))
+            self.assertEqual(i.type, SegmentIntersectionType.Point)
+            self.assertEqual(i.p, a)
+            self.assertEqual(i.t1, 1)
+            self.assertEqual(i.t2, 0)
+
+            i = Segment2(c, a).intersect(Segment2(d, a))
+            self.assertEqual(i.type, SegmentIntersectionType.Point)
+            self.assertEqual(i.p, a)
+            self.assertEqual(i.t1, 1)
+            self.assertEqual(i.t2, 1)
+
+            # Intersection between segment endpoint and segment interior
+            # TODO: improve tests by actually testing intersection values
+
+            i = Segment2(e, g).intersect(Segment2(f, h))
+            self.assertEqual(i.type, SegmentIntersectionType.Point)
 
 
 if __name__ == '__main__':

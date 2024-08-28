@@ -21,7 +21,8 @@
 
 #include <vgc/core/algorithms.h> // sort, removeConsecutiveDuplicates
 #include <vgc/core/random.h>
-#include <vgc/geometry/intersect.h>
+
+#include <vgc/geometry/segment2d.h> // segmentIntersect
 
 namespace vgc::vacomplex {
 
@@ -622,7 +623,7 @@ OneCycleCutPolicy computeOneCycleCutPolicy(const KeyPath& path1, const KeyPath& 
             Int jStart = (i == 0) ? 1 : 0;              // don't count shared start point
             Int jEnd = (i == n1 - 2) ? n2 - 2 : n2 - 1; // don't count shared end point
             for (Int j = jStart; j < jEnd; ++j) {
-                geometry::Segment2dIntersection inter = geometry::segmentIntersection(
+                geometry::Segment2dIntersection inter = geometry::segmentIntersect(
                     poly1[i], poly1[i + 1], poly2[j], poly2[j + 1]);
 
                 using SIT = geometry::SegmentIntersectionType;

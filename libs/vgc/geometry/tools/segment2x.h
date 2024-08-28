@@ -23,11 +23,150 @@
 #define VGC_GEOMETRY_SEGMENT2X_H
 
 #include <vgc/geometry/api.h>
+#include <vgc/geometry/segment.h>
 #include "vec2x.h"
 
 namespace vgc::geometry {
 
-/// \class vgc::core::Segment2x
+/// \class vgc::geometry::Segment2xIntersection
+/// \brief Stores information about the intersection between two Segment2x.
+///
+class VGC_GEOMETRY_API Segment2xIntersection {
+public:
+    /// Creates an empty intersection.
+    ///  
+    Segment2xIntersection()
+        : type_(SegmentIntersectionType::Empty) {
+    }
+
+    /// Creates a point intersection at the given position and parameters.
+    ///  
+    Segment2xIntersection(const Vec2x& p, float t1, float t2)
+        : p_(p)
+        , q_(p)
+        , s1_(t1)
+        , t1_(t1)
+        , s2_(t2)
+        , t2_(t2)
+        , type_(SegmentIntersectionType::Point) {
+    }
+
+    /// Creates a segment intersection at the given positions and parameters.
+    ///
+    Segment2xIntersection(
+        const Vec2x& p,
+        const Vec2x& q,
+        float s1,
+        float t1,
+        float s2,
+        float t2)
+
+        : p_(p)
+        , q_(q)
+        , s1_(s1)
+        , t1_(t1)
+        , s2_(s2)
+        , t2_(t2)
+        , type_(SegmentIntersectionType::Segment) {
+    }
+
+    /// Returns the type of the intersection, that is, whether the intersection
+    /// is empty, a point, or a segment.
+    ///  
+    SegmentIntersectionType type() const {
+        return type_;
+    }
+
+    /// Returns the "start" position of the intersection.
+    /// 
+    /// If `type()` is `Empty`, this value is undefined.
+    ///
+    /// If `type()` is `Point`, this is the intersection point, and `p() == q()`.
+    ///
+    /// If `type()` is `Segment`, this is the start of the shared sub-segment.
+    /// 
+    const Vec2x& p() const {
+        return p_;
+    }
+
+    /// Returns the "end" position of the intersection.
+    /// 
+    /// If `type()` is `Empty`, this value is undefined.
+    ///
+    /// If `type()` is `Point`, this is the intersection point, and `p() == q()`.
+    ///
+    /// If `type()` is `Segment`, this is the end of the shared sub-segment.
+    /// 
+    const Vec2x& q() const {
+        return q_;
+    }
+
+    /// Returns the parameter `t` along the first segment `(a1, b1)` such that
+    /// `p()` is approximately equal to `lerp(a1, b1, t)`.
+    ///
+    /// If `type()` is `Empty`, this value is undefined.
+    ///
+    /// If `type()` is `Point`, `s1() == t1()`.
+    ///
+    float s1() const {
+        return s1_;
+    }
+
+    /// Returns the parameter `t` along the first segment `(a1, b1)` such that
+    /// `q()` is approximately equal to `lerp(a1, b1, t)`.
+    ///
+    /// If `type()` is `Empty`, this value is undefined.
+    ///
+    /// If `type()` is `Point`, `s1() == t1()`.
+    ///
+    float t1() const {
+        return t1_;
+    }
+
+    /// Returns the parameter `t` along the second segment `(a2, b2)` such that
+    /// `p()` is approximately equal to `lerp(a2, b2, t)`.
+    ///
+    /// If `type()` is `Empty`, this value is undefined.
+    ///
+    /// If `type()` is `Point`, `s2() == t2()`.
+    ///
+    float s2() const {
+        return s2_;
+    }
+
+    /// Returns the parameter `t` along the second segment `(a2, b2)` such that
+    /// `q()` is approximately equal to `lerp(a2, b2, t)`.
+    ///
+    /// If `type()` is `Empty`, this value is undefined.
+    ///
+    /// If `type()` is `Point`, `s2() == t2()`.
+    ///
+    float t2() const {
+        return t2_;
+    }
+
+private:
+    Vec2x p_ = core::noInit;
+    Vec2x q_ = core::noInit;
+    float s1_; // no-init
+    float t1_; // no-init
+    float s2_; // no-init
+    float t2_; // no-init
+    SegmentIntersectionType type_;
+};
+
+/// Computes the intersection between the segment [a1, b1] and the segment [a2, b2].
+///
+/// \sa `Segment2x::intersect()`.
+/// 
+VGC_GEOMETRY_API
+Segment2xIntersection segmentIntersect(
+    const Vec2x& a1,
+    const Vec2x& b1,
+    const Vec2x& a2,
+    const Vec2x& b2);
+
+/// \class vgc::geometry::Segment2x
 /// \brief 2D line segment using %scalar-type-description%.
 ///
 /// This class represents a 2D line segment using %scalar-type-description%.
@@ -36,10 +175,10 @@ namespace vgc::geometry {
 /// point `b()`. This is ideal for storage as it takes a minimal amount of
 /// memory.
 /// 
-/// However, many operations involving segments (such as projections and
-/// intersections) require computing the length of the segment and/or the unit
-/// vector `(b() - a()).normalized()`. The class `NormalizedSegment2x` also
-/// stores this extra information and is ideal for computation tasks.
+/// However, some operations involving segments may require computing the
+/// length of the segment and/or the unit vector `(b() - a()).normalized()`.
+/// The class `NormalizedSegment2x` also stores this extra information and 
+/// may be preferred in some cases.
 /// 
 /// You can convert a `Segment2x` to a `NormalizedSegment2x` by calling the
 /// `normalized()` method.
@@ -50,6 +189,7 @@ class Segment2x {
 public:
     using ScalarType = float;
     static constexpr Int dimension = 2;
+    using IntersectionType = Segment2xIntersection;
 
     VGC_WARNING_PUSH
     VGC_WARNING_MSVC_DISABLE(26495) // member variable uninitialized
@@ -181,6 +321,14 @@ public:
         return NormalizedSegment2x(*this);
     }
 */
+
+    /// Computes the intersection between this segment and the `other` segment.
+    ///
+    /// \sa `geometry::segmentIntersect()`.
+    /// 
+    Segment2xIntersection intersect(const Segment2x& other) {
+        return segmentIntersect(a(), b(), other.a(), other.b());
+    }
 
     /// Adds in-place the points of `other` to the points of this `Segment2x`.
     ///
