@@ -2,7 +2,7 @@ name: Clang-Format Comment
 
 on:
   workflow_run:
-    workflows: ["Clang-Format Check"]
+    workflows: ["Clang-Format"]
     types:
       - completed
 
