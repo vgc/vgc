@@ -1,4 +1,4 @@
-// Copyright 2023 The VGC Developers
+// Copyright 2024 The VGC Developers
 // See the COPYRIGHT file at the top-level directory of this distribution
 // and at https://github.com/vgc/vgc/blob/master/COPYRIGHT
 //
@@ -14,27 +14,14 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <vgc/geometry/intersect.h>
-#include <vgc/geometry/vec2d.h>
+#include <vgc/geometry/segment.h>
 
-#include <vgc/core/wraps/class.h>
-#include <vgc/core/wraps/common.h>
+namespace vgc::geometry {
 
-void wrap_intersect(py::module& m) {
+VGC_DEFINE_ENUM(
+    SegmentIntersectionType,
+    (Empty, "Empty"),
+    (Point, "Point"),
+    (Segment, "Segment"))
 
-    m.def(
-        "fastSegmentIntersects",
-        &vgc::geometry::fastSegmentIntersects,
-        "a1"_a,
-        "a2"_a,
-        "b1"_a,
-        "b2"_a);
-
-    m.def(
-        "fastSemiOpenSegmentIntersects",
-        &vgc::geometry::fastSemiOpenSegmentIntersects,
-        "a1"_a,
-        "a2"_a,
-        "b1"_a,
-        "b2"_a);
-}
+} // namespace vgc::geometry
