@@ -24,6 +24,7 @@ namespace {
 
 using NamedColorMap = std::unordered_map<std::string_view, Color>;
 
+
 NamedColorMap generateNamedColorMap() {
     return {
         {"aliceblue", Color::fromRgb8(240, 248, 255)},
