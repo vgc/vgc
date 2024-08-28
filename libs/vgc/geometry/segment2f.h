@@ -146,8 +146,8 @@ public:
     }
 
 private:
-    geometry::Vec2f p_ = core::noInit;
-    geometry::Vec2f q_ = core::noInit;
+    Vec2f p_ = core::noInit;
+    Vec2f q_ = core::noInit;
     float s1_; // no-init
     float t1_; // no-init
     float s2_; // no-init
@@ -326,7 +326,7 @@ public:
     ///
     /// \sa `geometry::segmentIntersect()`.
     /// 
-    Segment2fIntersection intersect(const geometry::Segment2f& other) {
+    Segment2fIntersection intersect(const Segment2f& other) {
         return segmentIntersect(a(), b(), other.a(), other.b());
     }
 
