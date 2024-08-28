@@ -59,15 +59,21 @@ core::Array<IntersectionParameters> computeSelfIntersections(KeyEdge* edge) {
             const geometry::Vec2d& b1 = samples[i + 1].position();
             const geometry::Vec2d& a2 = samples[j].position();
             const geometry::Vec2d& b2 = samples[j + 1].position();
-            if (auto intersection = fastSegmentIntersection(a1, b1, a2, b2)) {
+
+            geometry::Segment2dIntersection intersection =
+                segmentIntersection(a1, b1, a2, b2);
+
+            // XXX: What to do if it intersect along a segment?
+            //      Apply pertubations to the whole edge and try again?
+            if (intersection.type() == geometry::SegmentIntersectionType::Point) {
 
                 const geometry::CurveParameter& p1 = samples[i].parameter();
                 const geometry::CurveParameter& q1 = samples[i + 1].parameter();
                 const geometry::CurveParameter& p2 = samples[j].parameter();
                 const geometry::CurveParameter& q2 = samples[j + 1].parameter();
 
-                geometry::SampledCurveParameter sParam1(p1, q1, intersection->t1());
-                geometry::SampledCurveParameter sParam2(p2, q2, intersection->t2());
+                geometry::SampledCurveParameter sParam1(p1, q1, intersection.t1());
+                geometry::SampledCurveParameter sParam2(p2, q2, intersection.t2());
                 geometry::CurveParameter param1 = stroke->resolveParameter(sParam1);
                 geometry::CurveParameter param2 = stroke->resolveParameter(sParam2);
 
@@ -109,15 +115,21 @@ computeEdgeIntersections(KeyEdge* edge1, KeyEdge* edge2) {
             const geometry::Vec2d& b1 = samples1[i1 + 1].position();
             const geometry::Vec2d& a2 = samples2[i2].position();
             const geometry::Vec2d& b2 = samples2[i2 + 1].position();
-            if (auto intersection = fastSegmentIntersection(a1, b1, a2, b2)) {
+
+            geometry::Segment2dIntersection intersection =
+                segmentIntersection(a1, b1, a2, b2);
+
+            // XXX: What to do if it intersect along a segment?
+            //      Apply pertubations to the whole edge and try again?
+            if (intersection.type() == geometry::SegmentIntersectionType::Point) {
 
                 const geometry::CurveParameter& p1 = samples1[i1].parameter();
                 const geometry::CurveParameter& q1 = samples1[i1 + 1].parameter();
                 const geometry::CurveParameter& p2 = samples2[i2].parameter();
                 const geometry::CurveParameter& q2 = samples2[i2 + 1].parameter();
 
-                geometry::SampledCurveParameter sParam1(p1, q1, intersection->t1());
-                geometry::SampledCurveParameter sParam2(p2, q2, intersection->t2());
+                geometry::SampledCurveParameter sParam1(p1, q1, intersection.t1());
+                geometry::SampledCurveParameter sParam2(p2, q2, intersection.t2());
                 geometry::CurveParameter param1 = stroke1->resolveParameter(sParam1);
                 geometry::CurveParameter param2 = stroke2->resolveParameter(sParam2);
 
