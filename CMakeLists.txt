@@ -110,7 +110,7 @@ if (CMAKE_CXX_COMPILER_ID MATCHES "GNU")
 elseif(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
     set(VGC_COMPILER_WARNING_FLAGS -Wfloat-conversion)
     set(VGC_COMPILER_WARNING_DEFINITIONS "")
-    set(VGC_PEDANTIC_COMPILE_FLAGS -Wall -Wextra)
+    set(VGC_PEDANTIC_COMPILE_FLAGS -Wall -Wextra -Wshadow)
     set(VGC_WERROR_FLAG -Werror)
 elseif(MSVC)
     # /wd4251: class 'Foo' needs to have dll-interface to be used by clients of class 'Bar'

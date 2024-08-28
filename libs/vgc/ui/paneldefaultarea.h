@@ -25,7 +25,7 @@ namespace vgc::ui {
 /// \enum vgc::ui::PanelDefaultArea
 /// \brief Specifies where a Panel should be opened by default.
 ///
-enum PanelDefaultArea {
+enum class PanelDefaultArea {
     Left,
     Right
 };
