@@ -762,6 +762,20 @@ T zero() {
     return res;
 }
 
+/// Returns -1 if `x` is negative, 0 if `x` equals zero, and 1 if `x` is positive.
+///
+template<typename T, VGC_REQUIRES(std::is_signed_v<T>)>
+constexpr Int8 sign(T x) {
+    return (T(0) < x) - (x < T(0));
+}
+
+/// Returns 0 if `x` is zero and 1 if `x` is positive.
+///
+template<typename T, VGC_REQUIRES(std::is_unsigned_v<T>)>
+constexpr Int8 sign(T x) {
+    return T(0) < x;
+}
+
 namespace detail {
 
 // Computes the difference `a - b`, but where two infinities of the same sign

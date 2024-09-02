@@ -19,6 +19,28 @@
 
 using namespace vgc;
 
+TEST(TestArithmetic, Sign) {
+    EXPECT_EQ(core::sign(-0.0f), 0);
+    EXPECT_EQ(core::sign(+0.0f), 0);
+    EXPECT_EQ(core::sign(-2.0f), -1);
+    EXPECT_EQ(core::sign(+2.0f), 1);
+
+    EXPECT_EQ(core::sign(-0.0), 0);
+    EXPECT_EQ(core::sign(+0.0), 0);
+    EXPECT_EQ(core::sign(-2.0), -1);
+    EXPECT_EQ(core::sign(+2.0), 1);
+
+    EXPECT_EQ(core::sign(-0), 0);
+    EXPECT_EQ(core::sign(+0), 0);
+    EXPECT_EQ(core::sign(-2), -1);
+    EXPECT_EQ(core::sign(+2), 1);
+
+    EXPECT_EQ(core::sign(-0u), 0);
+    EXPECT_EQ(core::sign(+0), 0);
+    EXPECT_EQ(core::sign(-2u), 1); // Wrap around
+    EXPECT_EQ(core::sign(+2u), 1);
+}
+
 TEST(TestArithmetic, NarrowCastDoubleToFloat) {
     EXPECT_EQ(core::narrow_cast<float>(-2.0), -2.0f);
     EXPECT_EQ(core::narrow_cast<float>(-1.75), -1.75f);
