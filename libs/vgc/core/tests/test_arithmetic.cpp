@@ -35,10 +35,15 @@ TEST(TestArithmetic, Sign) {
     EXPECT_EQ(core::sign(-2), -1);
     EXPECT_EQ(core::sign(+2), 1);
 
-    EXPECT_EQ(core::sign(-0u), 0);
-    EXPECT_EQ(core::sign(+0), 0);
-    EXPECT_EQ(core::sign(-2u), 1); // Wrap around
+    EXPECT_EQ(core::sign(+0u), 0);
     EXPECT_EQ(core::sign(+2u), 1);
+
+    // Unary minus operator applied to unsigned type, result still unsigned
+    VGC_WARNING_PUSH
+    VGC_WARNING_MSVC_DISABLE(4146)
+    EXPECT_EQ(core::sign(-0u), 0);
+    EXPECT_EQ(core::sign(-2u), 1);
+    VGC_WARNING_POP
 }
 
 TEST(TestArithmetic, NarrowCastDoubleToFloat) {
