@@ -393,99 +393,129 @@ Segment2xIntersection intersectBothXOrdered_(
     float a1Side = -a2b2.det(a1a2);
     float b1Side = a2b2.det(a2b1);
 
-    // Determine how many of the four points are collinear with the two points
-    // of the other segment.
+    // Convert to sign since multiplying two non-zero floats may give zero.
+    // Also, this leads to better jump-less assembly on some compilers.
     //
-    // Note: the code below should be jumpless on most platforms.
-    //
-    Int8 numCollinears = static_cast<Int8>(a2Side == 0)   //
-                         + static_cast<Int8>(b2Side == 0) //
-                         + static_cast<Int8>(a1Side == 0) //
-                         + static_cast<Int8>(b1Side == 0);
+    Int8 a2Sign = core::sign(a2Side);
+    Int8 b2Sign = core::sign(b2Side);
+    Int8 a1Sign = core::sign(a1Side);
+    Int8 b1Sign = core::sign(b1Side);
 
-    if (numCollinears == 0) {
-        // All points are different and no three points are collinear.
-        // Solve 2x2 system using Cramer's rule. Note that we intentionally do
-        // not precompute `1 / delta` as it would be slightly less acurrate.
+    if (a2Sign * b2Sign < 0 && a1Sign * b1Sign < 0) {
+
+        // => The segments intersect in a non-special case configuration
+        //
+        // We just have to solve for the intersection parameters.
+        //
+        // Note that we intentionally do not rely on:
+        //
+        //   (A)  t1 >= 0 && t1 <= 1 && t2 >= 0 && t2 <= 1
+        //
+        // to check whether the segments intersect, but instead rely on:
+        //
+        //   (B)  a2Sign * b2Sign < 0 && a1Sign * b1Sign < 0
+        //
+        // Mathematically, these two are equivalent, but due to floating point
+        // numerical errors, (A) and (B) may not in fact be equal. When this
+        // intersection test is part of a larger algorithm (e.g., line-sweep),
+        // using the sign predicates (B) rather than the result of the
+        // parameter solve (A) improves correctness of the algorithm by having
+        // separate computations be consistent with each other.
+        //
+        // Related: Boissonnat and Preparata 2000,
+        //          Robust Plane Sweep for Intersecting Segments
+        //
         float delta = a1b1.det(a2b2); // depends on all four points, see [2]
         if (std::abs(delta) > 0) {
             float t1 = a1Side / delta;
             float t2 = -a2Side / delta;
-            // TODO: do not rely on values returned by t1/t2 to know if there
-            // is an intersection, but instead rely on orientation predicates
-            // for consistency. See:
-            // [Boissonnat and Preparata 2000] Robust Plane Sweep for Intersecting Segments
-            // Maybe just:
-            // if (a2Side * b2Side < 0 && a1Side * b1Side < 0) ?
-            if (t1 >= 0 && t1 <= 1 && t2 >= 0 && t2 <= 1) {
-                Vec2x p = core::fastLerp(a1, b1, t1);
-                return pointInter<swapS, swap1, swap2>(p, t1, t2);
-            }
-            else {
-                return {};
-            }
+            t1 = core::clamp(t1, 0, 1);
+            t2 = core::clamp(t2, 0, 1);
+            Vec2x p = core::fastLerp(a1, b1, t1);
+            return pointInter<swapS, swap1, swap2>(p, t1, t2);
         }
         else {
-            // a1b1 and a2b2 are parallel. Since we know that no three
-            // points are collinear, this means that they don't intersect.
+            // This is mathematically impossible. However, due to floating point errors,
+            // it may or may not be possible. In case it does occur, we consider
+            // this to mean that all four points are collinear, despite
+            // all signs (a1Sign, etc.) being non-zero.
+            //
+            return {}; // TODO: all collinear case
+        }
+    }
+    else {
+        Int8 numCollinears = static_cast<Int8>(a2Sign == 0)   //
+                             + static_cast<Int8>(b2Sign == 0) //
+                             + static_cast<Int8>(a1Sign == 0) //
+                             + static_cast<Int8>(b1Sign == 0);
+
+        if (numCollinears == 0) {
+
+            // => a2Sign * b2Sign > 0 || a1Sign * b1Sign > 0  (see (B))
+            //
+            // => At least one of the two segments lies entirely on one of the
+            // two halfplanes defined by the other segment, so the segments do
+            // not intersect.
+
             return {};
         }
-    }
-    else if (numCollinears == 1) {
-        // [2] One may be tempted to handle this case the same way as
-        // `numCollinears == 0`. Unfortunately, due to numerical errors, this
-        // would sometimes miss the intersection (or not report it as an exact
-        // endpoint intersection), due to s1 or t1 or s2 or t2 being near but
-        // not exactly equal to 0 or 1. The current implementation is more
-        // acurrate and consistent across multiple computations, as it does not
-        // rely on the position of the other endpoint of the segment that has
-        // one endpoint collinear with the other segment.
-        //
-        // TODO: Use Y-coord for better accuracy for almost-vertical segments?
-        //
-        // Preconditions:
-        //   a1x < b1x
-        //   a2x < b2x
-        //   a1x <= a2x <= b1x
-        //
-        if (a2Side == 0) {
-            //          x b2             x b2          x b2
-            //         /      OR        /       OR    /
-            // x------x            x---x---x         x------x
-            // a1   a2,b1          a1  a2  b1      a1,a2    b1
+        else if (numCollinears == 1) {
+
+            // => Three points are collinear, one is not collinear.
             //
-            float t1 = (a2.x() - a1.x()) / (b1.x() - a1.x()); // [2] b2-independent
-            return pointInter<swapS, swap1, swap2>(a2, t1, 0);
-            // t1 is guaranteed to be 0 <= t1 <= 1
-            // t1 is guaranteed to be exactly 0 or 1 if a2x equal to a1x or b1x
-            // (!) t1 is NOT guaranteed to be 0 < t1 < 1 if a2x not equal to a1x or b1x
-        }
-        else if (b2Side == 0) {
-            if (b2.x() > a2.x()) {
-                // a1     b1
-                // x------x x b2
-                //         /
-                //        x a2
-                return {};
+            // [2] In this case, we make sure that the result does not rely on
+            // the position of the non-collinear point, improving consistency
+            // when this intersection test is part of a larger algorithm.
+            //
+            // TODO: Use Y-coord for better accuracy for almost-vertical segments?
+            //
+            // Preconditions:
+            //   a1x < b1x
+            //   a2x < b2x
+            //   a1x <= a2x <= b1x
+            //
+            if (a2Side == 0) {
+                //          x b2             x b2          x b2
+                //         /      OR        /       OR    /
+                // x------x            x---x---x         x------x
+                // a1   a2,b1          a1  a2  b1      a1,a2    b1
+                //
+                float t1 = (a2.x() - a1.x()) / (b1.x() - a1.x()); // b2-independent
+                return pointInter<swapS, swap1, swap2>(a2, t1, 0);
+                // t1 is guaranteed to be 0 <= t1 <= 1
+                // t1 is guaranteed to be exactly 0 or 1 if a2x equal to a1x or b1x
+                // (!) t1 is NOT guaranteed to be 0 < t1 < 1 if a2x not equal to a1x or b1x
+            }
+            else if (b2Side == 0) {
+                if (b2.x() > a2.x()) {
+                    // a1     b1
+                    // x------x x b2
+                    //         /
+                    //        x a2
+                    return {};
+                }
+                else {
+                    // a1   b2,b1        a1  b2  b1
+                    // x------x          x---x---x
+                    //       /     OR       /
+                    //      x a2           x a2
+                    //
+                    // Note: a1x <= a2x and a2x < b2x so a1x < b2x
+                    //
+                    float t1 = (b2.x() - a1.x()) / (b1.x() - a1.x()); // a2-independent
+                    return pointInter<swapS, swap1, swap2>(b2, t1, 1);
+                    // t1 is guaranteed to be 0 < t1 <= 1
+                    // t1 is guaranteed to be exactly 1 if b2x equal b1x
+                    // (!) t1 is NOT guaranteed to be t1 < 1 if b2x not equal to b1x
+                }
             }
             else {
-                // a1   b2,b1        a1  b2  b1
-                // x------x          x---x---x
-                //       /     OR       /
-                //      x a2           x a2
-                //
-                // Note: a1x <= a2x and a2x < b2x so a1x < b2x
-                //
-                float t1 = (b2.x() - a1.x()) / (b1.x() - a1.x()); // [2] a2-independent
-                return pointInter<swapS, swap1, swap2>(b2, t1, 1);
-                // t1 is guaranteed to be 0 < t1 <= 1
-                // t1 is guaranteed to be exactly 1 if b2x equal b1x
-                // (!) t1 is NOT guaranteed to be t1 < 1 if b2x not equal to b1x
+                // TODO
             }
         }
-    }
-    else { //numCollinears >= 2
-        // TODO: code when they are all collinear.
+        else { //numCollinears >= 2
+            // TODO: code when they are all collinear.
+        }
     }
 }
 
