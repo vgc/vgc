@@ -388,22 +388,46 @@ Segment2xIntersection intersectBothXOrdered_(
     Vec2x a1a2 = a2 - a1;
     Vec2x a1b2 = b2 - a1;
     Vec2x a2b1 = b1 - a2;
+    float a1Side = -a2b2.det(a1a2); // == a2b2.det(a2a1)
+    float b1Side = a2b2.det(a2b1);
     float a2Side = a1b1.det(a1a2);
     float b2Side = a1b1.det(a1b2);
-    float a1Side = -a2b2.det(a1a2);
-    float b1Side = a2b2.det(a2b1);
 
     // Convert to sign since multiplying two non-zero floats may give zero.
     // Also, this leads to better jump-less assembly on some compilers.
     //
-    Int8 a2Sign = core::sign(a2Side);
-    Int8 b2Sign = core::sign(b2Side);
+    // Total of 3^4 = 81 combinations of possible sign values
+    //
     Int8 a1Sign = core::sign(a1Side);
     Int8 b1Sign = core::sign(b1Side);
+    Int8 a2Sign = core::sign(a2Side);
+    Int8 b2Sign = core::sign(b2Side);
 
-    if (a2Sign * b2Sign < 0 && a1Sign * b1Sign < 0) {
+    // Whether each segment:
+    // - has its endpoints on opposite sides of the other segment's line (cross == -1),
+    // - has one or both its endpoints on the other segment's line (cross == 0),
+    // - has its endpoints on the same side of the other segment's line (cross == 1)
+    //
+    // Total of 3^2 = 9 combinations of possible cross values
+    //
+    Int8 s1Cross = a1Sign * b1Sign;
+    Int8 s2Cross = a2Sign * b2Sign;
 
-        // => The segments intersect in a non-special case configuration
+    if (s1Cross > 0 || s2Cross > 0) {
+
+        //  => The segments do not intersect
+        //
+        // (32 configurations of sign values)
+        // (5 configurations of cross values)
+        //
+        return {};
+    }
+    else if (s1Cross < 0 && s2Cross < 0) {
+
+        // => The segments intersect in their interior
+        //
+        // (4 configurations of sign values)
+        // (1 configuration of cross values)
         //
         // We just have to solve for the intersection parameters.
         //
@@ -443,23 +467,22 @@ Segment2xIntersection intersectBothXOrdered_(
             return {}; // TODO: all collinear case
         }
     }
-    else {
+    else { // s1Cross <= 0 && s2Cross <= 0 && (s1Cross == 0 || s2Cross == 0)
+
+        // => The segments intersect in a special case configuration
+        //
+        // (45 configurations of sign values)
+        // (3 configuration of cross values)
+        //
+
         Int8 numCollinears = static_cast<Int8>(a2Sign == 0)   //
                              + static_cast<Int8>(b2Sign == 0) //
                              + static_cast<Int8>(a1Sign == 0) //
                              + static_cast<Int8>(b1Sign == 0);
 
-        if (numCollinears == 0) {
+        VGC_ASSERT(numCollinears > 0);
 
-            // => a2Sign * b2Sign > 0 || a1Sign * b1Sign > 0  (see (B))
-            //
-            // => At least one of the two segments lies entirely on one of the
-            // two halfplanes defined by the other segment, so the segments do
-            // not intersect.
-
-            return {};
-        }
-        else if (numCollinears == 1) {
+        if (numCollinears == 1) {
 
             // => Three points are collinear, one is not collinear.
             //
@@ -474,7 +497,7 @@ Segment2xIntersection intersectBothXOrdered_(
             //   a2x < b2x
             //   a1x <= a2x <= b1x
             //
-            if (a2Side == 0) {
+            if (a2Sign == 0) {
                 //          x b2             x b2          x b2
                 //         /      OR        /       OR    /
                 // x------x            x---x---x         x------x
@@ -486,7 +509,7 @@ Segment2xIntersection intersectBothXOrdered_(
                 // t1 is guaranteed to be exactly 0 or 1 if a2x equal to a1x or b1x
                 // (!) t1 is NOT guaranteed to be 0 < t1 < 1 if a2x not equal to a1x or b1x
             }
-            else if (b2Side == 0) {
+            else if (b2Sign == 0) {
                 if (b2.x() > a2.x()) {
                     // a1     b1
                     // x------x x b2
@@ -509,12 +532,62 @@ Segment2xIntersection intersectBothXOrdered_(
                     // (!) t1 is NOT guaranteed to be t1 < 1 if b2x not equal to b1x
                 }
             }
-            else {
-                // TODO
+            else if (a1Sign == 0) {
+                // TODO: The only cases would be:
+                //
+                //     x b2
+                //    /         OR
+                //   x a2              x b2
+                //                    /
+                // x------x          x------x
+                // a1     b1       a1,a2   b1
+                //
+                // But the latter already should have already been handled above, does it?
+                // So I suppose we can directly return no intersection?
+                return {};
+            }
+            else { // b1Sign == 0
+                // TODO.
             }
         }
-        else { //numCollinears >= 2
-            // TODO: code when they are all collinear.
+        else if (numCollinears == 2) {
+            float invEps = 1e5f; // TODO: choose better epsilon
+            if (a1Sign == 0 && b1Sign == 0) {
+                // TODO: consider all four points as collinear
+            }
+            else if (a2Sign == 0 && b2Sign == 0) {
+                // TODO: consider all four points as collinear
+            }
+            else if (a1Sign == 0 && a2Sign == 0) {
+                // Mathematically, this would mean that a1 == a2 and that the
+                // four points are not collinear (otherwise numCollinear == 4).
+                //
+                // But due to numerical errors, this can in fact either mean
+                // that a1 is really close to a2, or that all four points are
+                // nearly collinear (and a1 can be far from a2).
+                //
+                // Therefore, we need some epsilon-testing to lift the ambiguity
+                //
+                float a1a2Magnified = a1a2.x() * invEps;
+                if (a1a2Magnified < a1b1.x() || a1a2Magnified < a2b2.x()) {
+                    return pointInter<swapS, swap1, swap2>(a1, 0, 0);
+                }
+                else {
+                    // TODO: consider all four points as collinear
+                }
+            }
+            else if (a1Sign == 0 && b2Sign == 0) {
+                // TODO: similar as above
+            }
+            else if (a2Sign == 0 && b1Sign == 0) {
+                // TODO: similar as above
+            }
+            else { // (a2Sign == 0 && b2Sign == 0)
+                // TODO: similar as above
+            }
+        }
+        else { // numCollinears >= 3
+            // TODO: consider all four points as collinear
         }
     }
 }
