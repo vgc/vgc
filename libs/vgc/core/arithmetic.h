@@ -764,16 +764,14 @@ T zero() {
 
 /// Returns -1 if `x` is negative, 0 if `x` equals zero, and 1 if `x` is positive.
 ///
-template<typename T, VGC_REQUIRES(std::is_signed_v<T>)>
+template<typename T>
 constexpr Int8 sign(T x) {
-    return (T(0) < x) - (x < T(0));
-}
-
-/// Returns 0 if `x` is zero and 1 if `x` is positive.
-///
-template<typename T, VGC_REQUIRES(std::is_unsigned_v<T>)>
-constexpr Int8 sign(T x) {
-    return T(0) < x;
+    if constexpr (std::is_unsigned_v<T>) {
+        return T(0) < x;
+    }
+    else {
+        return (T(0) < x) - (x < T(0));
+    }
 }
 
 namespace detail {
