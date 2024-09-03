@@ -721,13 +721,105 @@ intersectXOrdered(const Vec2x& a1, const Vec2x& b1, const Vec2x& a2, const Vec2x
     }
 }
 
-// ----------- WIP below ----
-// (everything above is ok I think)
-
-// Assumes a1x == b1x and a2x < b2x
+// Assumes a1x < b1x
+// Assumes a1x <= a2x == b2x <= b1x
+// Assumes a2y == b2y
+template<bool swapS, bool swap1, bool swap2>
 Segment2xIntersection
-intersectOneVert(const Vec2x& a1, const Vec2x& b1, const Vec2x& a2, const Vec2x& b2) {
-    // TODO
+intersectXOrderedWithPoint(const Vec2x& a1, const Vec2x& b1, const Vec2x& a2) {
+    Vec2x a1b1 = b1 - a1;
+    Vec2x a1a2 = a2 - a1;
+    float a2Side = a1b1.det(a1a2);
+    if (a2Side == 0) {
+        float t1 = (a2.x() - a1.x()) / (b1.x() - a1.x());
+        return pointInter<swapS, swap1, swap2>(a2, t1, 0);
+    }
+    else {
+        return {};
+    }
+}
+
+// Assumes a1x < b1x
+// Assumes a1x <= a2x == b2x <= b1x
+// Assumes a2y < b2y
+template<bool swapS, bool swap1, bool swap2>
+Segment2xIntersection intersectXOrderedWithVerticalYOrdered(
+    const Vec2x& a1,
+    const Vec2x& b1,
+    const Vec2x& a2,
+    const Vec2x& b2) {
+
+    float a2y = a2.y();
+    float b2y = b2.y();
+
+    // See intersectXOrdered() for details
+    Vec2x a1b1 = b1 - a1;
+    Vec2x a1a2 = a2 - a1;
+    Vec2x a1b2 = b2 - a1;
+    float a2Side = a1b1.det(a1a2);
+    float b2Side = a1b1.det(a1b2);
+    Int8 a2Sign = core::sign(a2Side);
+    Int8 b2Sign = core::sign(b2Side);
+    Int8 s2Cross = a2Sign * b2Sign;
+
+    if (s2Cross > 0) {
+        return {};
+    }
+
+    float t1 = (a2.x() - a1.x()) / (b1.x() - a1.x()); // Guaranteed 0 <= t1 <= 1
+    if (s2Cross < 0) {
+        Vec2x p = core::fastLerp(a1, b1, t1);
+        float t2 = (p.y() - a2y) / (b2y - a2y);
+        t2 = core::clamp(t2, 0, 1);
+        return pointInter<swapS, swap1, swap2>(p, t1, t2);
+    }
+    else { // s2Cross == 0
+        if (a2Sign == 0) {
+            return pointInter<swapS, swap1, swap2>(a2, t1, 0);
+        }
+        else { // b2Sign == 0
+            return pointInter<swapS, swap1, swap2>(b2, t1, 1);
+        }
+    }
+}
+
+// Assumes a1x < b1x and a2x == b2x
+template<bool swapS, bool swap1, bool swap2>
+Segment2xIntersection intersectXOrderedWithVertical(
+    const Vec2x& a1,
+    const Vec2x& b1,
+    const Vec2x& a2,
+    const Vec2x& b2) {
+
+    // X-coordinate of vertical a2b2 segment
+    float x2 = a2.x(); // == b2.x()
+
+    // Fast return if vertical segment not in range
+    if (b1.x() < x2) {
+        // a1     b1 x b2
+        // x------x  |
+        //           x a2
+        return {};
+    }
+    if (x2 < a1.x()) {
+        // b2 x a1     b1
+        //    | x------x
+        // a2 x
+        return {};
+    }
+
+    // Other cases
+    if (a2.y() < b2.y()) {
+        return intersectXOrderedWithVerticalYOrdered<swapS, swap1, swap2>(a1, b1, a2, b2);
+    }
+    else if (a2.y() > b2.y()) {
+        constexpr bool swp1_ = swapS ? true : swap1;
+        constexpr bool swp2_ = swapS ? swap2 : true;
+        return intersectXOrderedWithVerticalYOrdered<swapS, swp1_, swp2_>(a1, b1, b2, a2);
+    }
+    else {
+        return intersectXOrderedWithPoint<swapS, swap1, swap2>(a1, b1, a2);
+    }
 }
 
 } // namespace
@@ -754,7 +846,7 @@ Segment2xIntersection segmentIntersect(
             return intersectXOrdered<A1B1, B2A2>(a1, b1, b2, a2);
         }
         else {
-            //return intersectOneXOrderedWithVertical<S1S2, A1B1>(a1, b1, a2, b2);
+            return intersectXOrderedWithVertical<S1S2, A1B1, A2B2>(a1, b1, a2, b2);
         }
     }
     else if (a1.x() > b1.x()) {
@@ -765,17 +857,15 @@ Segment2xIntersection segmentIntersect(
             return intersectXOrdered<B1A1, B2A2>(b1, a1, b2, a2);
         }
         else {
-            //return intersectOneXOrderedWithVertical<S1S2, B1A1>(b1, a1, a2, b2);
+            return intersectXOrderedWithVertical<S1S2, B1A1, A2B2>(b1, a1, a2, b2);
         }
     }
     else {
         if (a2.x() < b2.x()) {
-            // XXX: do we need 2 or 3 template params for this?
-            //return intersectOneXOrderedWithVertical<S2S1, A2B2>(a2, b2, a1, b1);
+            return intersectXOrderedWithVertical<S2S1, A1B1, A2B2>(a2, b2, a1, b1);
         }
         else if (a2.x() > b2.x()) {
-            //reversedSegment2 = true;
-            //res = intersectOneVert(a1, b1, b2, a2);
+            return intersectXOrderedWithVertical<S2S1, A1B1, B2A2>(a2, b2, a1, b1);
         }
         else {
             return intersectVertical(a1, b1, a2, b2);
