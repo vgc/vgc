@@ -81,7 +81,7 @@ segInter(const Vec2x& p, const Vec2x& q, float s1, float t1, float s2, float t2)
 // Assumes a1y < b1y and a2y < b2y ("each segment is y-ordered")
 // Assumes a1y <= a2y ("segments are y-ordered with each other")
 template<bool swapS, bool swap1, bool swap2>
-[[maybe_unused]] Segment2xIntersection intersectBothVerticalYOrdered_v1(
+[[maybe_unused]] Segment2xIntersection intersectVerticalYOrdered_v1(
     const Vec2x& a1_,
     const Vec2x& b1_,
     const Vec2x& a2_,
@@ -165,7 +165,7 @@ template<bool swapS, bool swap1, bool swap2>
 // TODO: benchmarks between v1 and v2
 //
 template<bool swapS, bool swap1, bool swap2>
-[[maybe_unused]] Segment2xIntersection intersectBothVerticalYOrdered_v2(
+[[maybe_unused]] Segment2xIntersection intersectVerticalYOrdered_v2(
     const Vec2x& a1_,
     const Vec2x& b1_,
     const Vec2x& a2_,
@@ -184,6 +184,56 @@ template<bool swapS, bool swap1, bool swap2>
         return {};
     }
     else if (b1 == a2) {
+        // x------x
+        //        x------x
+        return pointInter<swapS, swap1, swap2>(b1_, 1, 0);
+    }
+    else if (b1 < b2) { // a2 < b1 < b2
+        // x------x     OR   x------x
+        // x--------x          x------x
+        float s1 = (a2 - a1) / (b1 - a1); // Guaranteed 0 if a1 == a2
+        float t2 = (b1 - a2) / (b2 - a2); // (!) NOT guaranteed 0 < t2 < 1 [1]
+        return segInter<swapS, swap1, swap2>(a2_, b1_, s1, 1, 0, t2);
+    }
+    else {
+        // x------x   OR   x------x   OR   x------x   OR   x------x
+        // x------x        x----x            x----x          x--x
+        float s1 = (a2 - a1) / (b1 - a1); // Guaranteed 0 if a1 == a2
+        float t1 = (b2 - a1) / (b1 - a1); // Guaranteed 1 if b1 == b2
+        return segInter<swapS, swap1, swap2>(a2_, b2_, s1, t1, 0, 1);
+        // See comment on v1 why we don't precompute `1 / (b1 - a1)`
+    }
+}
+
+// Assumes a1x < b1x and a2x < b2x ("each segment is x-ordered")
+// Assumes a1x <= a2x ("segments are x-ordered with each other")
+// Assumes all four points are collinear.
+// Assumes that the intersection is not null.
+//
+// TODO: Use Y-coord for better accuracy for almost-vertical segments?
+//
+template<bool swapS, bool swap1, bool swap2>
+[[maybe_unused]] Segment2xIntersection intersectCollinearXOrdered_(
+    const Vec2x& a1_,
+    const Vec2x& b1_,
+    const Vec2x& a2_,
+    const Vec2x& b2_) {
+
+    float a1 = a1_.x();
+    float b1 = b1_.x();
+    float a2 = a2_.x();
+    float b2 = b2_.x();
+
+    // The following case is already handled by the caller:
+    //
+    // if (b1 < a2) {
+    //     // a1     b1
+    //     // x------x  a2     b2
+    //     //           x------x
+    //     return {};
+    // }
+
+    if (b1 == a2) {
         // x------x
         //        x------x
         return pointInter<swapS, swap1, swap2>(b1_, 1, 0);
@@ -236,7 +286,7 @@ template<bool swapS, bool swap1, bool swap2>
 // result by `1.0 - core::nextbefore(1.0)` when t is equal to 0 or 1 but we
 // know that it isn't an exact intersection. Unfortunately, this would make the
 // implementation more complex, slower, and it isn't even clear that it is best
-// for client code, since it arbritrarily introduces small inaccuraces in the
+// for client code, since it arbritrarily introduces small inaccuracies in the
 // returned parameters.
 //
 // Therefore, we choose not to provide the guarantee `0 < t < 1` when the
@@ -248,27 +298,25 @@ template<bool swapS, bool swap1, bool swap2>
 // Assumes a1x == b1x == a2x == b2x
 // Assumes a1y < b1y and a2y < b2y
 template<bool swap1, bool swap2>
-Segment2xIntersection intersectBothVerticalYOrdered(
+Segment2xIntersection intersectVerticalYOrdered(
     const Vec2x& a1,
     const Vec2x& b1,
     const Vec2x& a2,
     const Vec2x& b2) {
 
     if (a2.y() < a1.y()) {
-        return intersectBothVerticalYOrdered_v2<S2S1, swap1, swap2>(a2, b2, a1, b1);
+        return intersectVerticalYOrdered_v2<S2S1, swap1, swap2>(a2, b2, a1, b1);
     }
     else {
-        return intersectBothVerticalYOrdered_v2<S1S2, swap1, swap2>(a1, b1, a2, b2);
+        return intersectVerticalYOrdered_v2<S1S2, swap1, swap2>(a1, b1, a2, b2);
     }
 }
 
 // Assumes a1x == b1x == a2x == b2x
 // Assumes a1y < b1y
 template<bool swapS, bool swap1, bool swap2>
-Segment2xIntersection intersectOneVerticalYOrderedWithPoint(
-    const Vec2x& a1_,
-    const Vec2x& b1_,
-    const Vec2x& a2_) {
+Segment2xIntersection
+intersectVerticalYOrderedWithPoint(const Vec2x& a1_, const Vec2x& b1_, const Vec2x& a2_) {
 
     float a1 = a1_.y();
     float b1 = b1_.y();
@@ -291,43 +339,40 @@ Segment2xIntersection intersectOneVerticalYOrderedWithPoint(
 }
 
 // Assumes a1x == b1x and a2x == b2x
-Segment2xIntersection intersectBothVertical(
-    const Vec2x& a1,
-    const Vec2x& b1,
-    const Vec2x& a2,
-    const Vec2x& b2) {
+Segment2xIntersection
+intersectVertical(const Vec2x& a1, const Vec2x& b1, const Vec2x& a2, const Vec2x& b2) {
 
     if (a1.x() != a2.x()) {
         return {};
     }
     else if (a1.y() < b1.y()) {
         if (a2.y() < b2.y()) {
-            return intersectBothVerticalYOrdered<A1B1, A2B2>(a1, b1, a2, b2);
+            return intersectVerticalYOrdered<A1B1, A2B2>(a1, b1, a2, b2);
         }
         else if (a2.y() > b2.y()) {
-            return intersectBothVerticalYOrdered<A1B1, B2A2>(a1, b1, b2, a2);
+            return intersectVerticalYOrdered<A1B1, B2A2>(a1, b1, b2, a2);
         }
         else {
-            return intersectOneVerticalYOrderedWithPoint<S1S2, A1B1, A2B2>(a1, b1, a2);
+            return intersectVerticalYOrderedWithPoint<S1S2, A1B1, A2B2>(a1, b1, a2);
         }
     }
     else if (a1.y() > b1.y()) {
         if (a2.y() < b2.y()) {
-            return intersectBothVerticalYOrdered<B1A1, A2B2>(b1, a1, a2, b2);
+            return intersectVerticalYOrdered<B1A1, A2B2>(b1, a1, a2, b2);
         }
         else if (a2.y() > b2.y()) {
-            return intersectBothVerticalYOrdered<B1A1, B2A2>(b1, a1, b2, a2);
+            return intersectVerticalYOrdered<B1A1, B2A2>(b1, a1, b2, a2);
         }
         else {
-            return intersectOneVerticalYOrderedWithPoint<S1S2, B1A1, A2B2>(a1, b1, a2);
+            return intersectVerticalYOrderedWithPoint<S1S2, B1A1, A2B2>(a1, b1, a2);
         }
     }
     else {
         if (a2.y() < b2.y()) {
-            return intersectOneVerticalYOrderedWithPoint<S2S1, A1B1, A2B2>(a2, b2, a1);
+            return intersectVerticalYOrderedWithPoint<S2S1, A1B1, A2B2>(a2, b2, a1);
         }
         else if (a2.y() > b2.y()) {
-            return intersectOneVerticalYOrderedWithPoint<S2S1, A1B1, B2A2>(b2, a2, a1);
+            return intersectVerticalYOrderedWithPoint<S2S1, A1B1, B2A2>(b2, a2, a1);
         }
         else {
             // Both segments are points and have the same X
@@ -341,25 +386,13 @@ Segment2xIntersection intersectBothVertical(
     }
 }
 
-// ----------- WIP below ----
-// (everything above is ok I think)
-
-// Assumes a1x == b1x and a2x < b2x
-Segment2xIntersection
-intersectOneVert(const Vec2x& a1, const Vec2x& b1, const Vec2x& a2, const Vec2x& b2) {
-    // TODO
-}
-
 // Assumes a1x < b1x and a2x < b2x and a1x <= a2x
 //
 // In particular, this means a1 != b1 and a2 != b2.
 //
 template<bool swapS, bool swap1, bool swap2>
-Segment2xIntersection intersectBothXOrdered_(
-    const Vec2x& a1,
-    const Vec2x& b1,
-    const Vec2x& a2,
-    const Vec2x& b2) {
+Segment2xIntersection
+intersectXOrdered_(const Vec2x& a1, const Vec2x& b1, const Vec2x& a2, const Vec2x& b2) {
 
     // Fast return if the x-range of the segments do not intersect.
     //
@@ -377,11 +410,15 @@ Segment2xIntersection intersectBothXOrdered_(
     // - which side of the (a1, b1) line each point a2 and b2 are, and
     // - which side of the (a2, b2) line each point a1 and b1 are
     //
-    // Mathematically, if two of those determinants are zero, then all four of
-    // them are zero. But due to numerical errors, this may not be the case.
-    // For robustness and consistency across multiple computations involving
-    // shared endpoints, we always compute all four of them, and consider the
-    // four points to be collinear as soon as two of them are zero.
+    // Mathematically, if:
+    // - three of those determinants are zero, or
+    // - both a1Side and b1Side are zero, or
+    // - both a2Side and b2Side are zero
+    //
+    // then all four of them are zero. But due to numerical errors, this may
+    // not be the case. For robustness and consistency across multiple
+    // computations involving shared endpoints, we always compute all four of
+    // them, and determine the type of the intersection based on those.
     //
     Vec2x a1b1 = b1 - a1;
     Vec2x a2b2 = b2 - a2;
@@ -394,7 +431,7 @@ Segment2xIntersection intersectBothXOrdered_(
     float b2Side = a1b1.det(a1b2);
 
     // Convert to sign since multiplying two non-zero floats may give zero.
-    // Also, this leads to better jump-less assembly on some compilers.
+    // Also, this leads to better branchless assembly on some compilers.
     //
     // Total of 3^4 = 81 combinations of possible sign values
     //
@@ -439,12 +476,12 @@ Segment2xIntersection intersectBothXOrdered_(
         //
         //   (B)  a2Sign * b2Sign < 0 && a1Sign * b1Sign < 0
         //
-        // Mathematically, these two are equivalent, but due to floating point
-        // numerical errors, (A) and (B) may not in fact be equal. When this
-        // intersection test is part of a larger algorithm (e.g., line-sweep),
-        // using the sign predicates (B) rather than the result of the
-        // parameter solve (A) improves correctness of the algorithm by having
-        // separate computations be consistent with each other.
+        // Mathematically, these two are equivalent, but due to numerical
+        // errors, (A) and (B) may not in fact be equal. When this intersection
+        // test is part of a larger algorithm (e.g., line-sweep), using the
+        // sign predicates (B) rather than the result of the parameter solve
+        // (A) improves correctness of the algorithm by having separate
+        // computations be consistent with each other.
         //
         // Related: Boissonnat and Preparata 2000,
         //          Robust Plane Sweep for Intersecting Segments
@@ -459,12 +496,13 @@ Segment2xIntersection intersectBothXOrdered_(
             return pointInter<swapS, swap1, swap2>(p, t1, t2);
         }
         else {
-            // This is mathematically impossible. However, due to floating point errors,
-            // it may or may not be possible. In case it does occur, we consider
-            // this to mean that all four points are collinear, despite
-            // all signs (a1Sign, etc.) being non-zero.
+            // Mathematically, this shouldn't be possible. However, due to
+            // numerical errors, it may or may not be possible. In case it does
+            // occur, we consider this to mean that all four points are
+            // collinear, despite all signs (a1Sign, etc.) being non-zero.
+            // This shares similarity with case [4] below.
             //
-            return {}; // TODO: all collinear case
+            return intersectCollinearXOrdered_<swapS, swap1, swap2>(a1, b1, a2, b2);
         }
     }
     else { // s1Cross <= 0 && s2Cross <= 0 && (s1Cross == 0 || s2Cross == 0)
@@ -474,7 +512,6 @@ Segment2xIntersection intersectBothXOrdered_(
         // (45 configurations of sign values)
         // (3 configuration of cross values)
         //
-
         Int8 numCollinears = static_cast<Int8>(a2Sign == 0)   //
                              + static_cast<Int8>(b2Sign == 0) //
                              + static_cast<Int8>(a1Sign == 0) //
@@ -485,6 +522,8 @@ Segment2xIntersection intersectBothXOrdered_(
         if (numCollinears == 1) {
 
             // => Three points are collinear, one is not collinear.
+            //
+            // (16 configurations of sign values: 4 in each of the if below)
             //
             // [2] In this case, we make sure that the result does not rely on
             // the position of the non-collinear point, improving consistency
@@ -502,6 +541,9 @@ Segment2xIntersection intersectBothXOrdered_(
                 //         /      OR        /       OR    /
                 // x------x            x---x---x         x------x
                 // a1   a2,b1          a1  a2  b1      a1,a2    b1
+                //
+                // Note: a2 != a1 and a2 != b1 (since a1Sign != 0 and b1Sign != 0),
+                //       but possibly a2x == a1x or a2x == a1x due to numerical errors.
                 //
                 float t1 = (a2.x() - a1.x()) / (b1.x() - a1.x()); // b2-independent
                 return pointInter<swapS, swap1, swap2>(a2, t1, 0);
@@ -533,7 +575,7 @@ Segment2xIntersection intersectBothXOrdered_(
                 }
             }
             else if (a1Sign == 0) {
-                // TODO: The only cases would be:
+                // The only cases would be:
                 //
                 //     x b2
                 //    /         OR
@@ -542,74 +584,159 @@ Segment2xIntersection intersectBothXOrdered_(
                 // x------x          x------x
                 // a1     b1       a1,a2   b1
                 //
-                // But the latter already should have already been handled above, does it?
-                // So I suppose we can directly return no intersection?
+                // But the latter would have already been handled by the other cases,
+                // we we can directly conclude that there is no intersection.
+                //
                 return {};
             }
             else { // b1Sign == 0
-                // TODO.
+                if (b2.x() < b1.x()) {
+                    // a1     b1
+                    // x------x
+                    //
+                    //      x b2
+                    //     /
+                    //    x a2
+                    //
+                    return {};
+                }
+                else {
+                    //                            x b2               x b2
+                    // a1    b1,b2       a1      /          a1      /
+                    // x------x     OR   x------x b1   OR   x------x
+                    //       /                 /            a1   a2,b1
+                    //      x a2              x a2
+                    //
+                    float t2 = (b1.x() - a2.x()) / (b2.x() - a2.x()); // a1-independent
+                    return pointInter<swapS, swap1, swap2>(b1, 1, t2);
+                }
             }
         }
         else if (numCollinears == 2) {
-            float invEps = 1e5f; // TODO: choose better epsilon
             if (a1Sign == 0 && b1Sign == 0) {
-                // TODO: consider all four points as collinear
+                // (2 configurations of sign values)
+                //
+                // [3] Mathematically, this means both a1 and b1 are on a2b2
+                // line, so all four points are collinear, so a2Sign and b2Sign
+                // should also be equal to zero, but are not due due numerical
+                // errors.
+                //
+                // This is likely caused by a situation that looks like the
+                // following, where there are more numerical on a2Side and
+                // b2Side since a1b1 << a2b2:
+                //
+                // a2                                  x b1                 b2
+                // x--------------------------------------------------------x
+                //                          x a1
+                //
+                return intersectCollinearXOrdered_<swapS, swap1, swap2>(a1, b1, a2, b2);
             }
             else if (a2Sign == 0 && b2Sign == 0) {
-                // TODO: consider all four points as collinear
+                // (2 configurations of sign values)
+                // Similar as [3]
+                return intersectCollinearXOrdered_<swapS, swap1, swap2>(a1, b1, a2, b2);
             }
             else if (a1Sign == 0 && a2Sign == 0) {
-                // Mathematically, this would mean that a1 == a2 and that the
-                // four points are not collinear (otherwise numCollinear == 4).
+                // (4 configurations of sign values)
+                //
+                // [4] Mathematically, this means that a1 == a2 and that the
+                // four points are not collinear (since numCollinears != 4).
                 //
                 // But due to numerical errors, this can in fact either mean
                 // that a1 is really close to a2, or that all four points are
                 // nearly collinear (and a1 can be far from a2).
                 //
-                // Therefore, we need some epsilon-testing to lift the ambiguity
+                // We use the following test to leave the ambiguity, where we
+                // intentionally consider that if both d2 and delta are zero,
+                // then this means that a1 == a2 but the four points are non
+                // collinear, since the former can be evaluated exactly, while
+                // the latter is subject to numerical errors.
                 //
-                float a1a2Magnified = a1a2.x() * invEps;
-                if (a1a2Magnified < a1b1.x() || a1a2Magnified < a2b2.x()) {
+                float d2 = a1a2.squaredLength(); // 0 if a1 == a2
+                float delta = a1b1.det(a2b2);    // 0 if a1b1 parallel to a2b2
+                if (d2 <= std::abs(delta)) {
                     return pointInter<swapS, swap1, swap2>(a1, 0, 0);
                 }
                 else {
-                    // TODO: consider all four points as collinear
+                    return intersectCollinearXOrdered_<swapS, swap1, swap2>(
+                        a1, b1, a2, b2);
                 }
             }
             else if (a1Sign == 0 && b2Sign == 0) {
-                // TODO: similar as above
+                // (4 configurations of sign values)
+                // Similar as [4]
+                float d2 = a1b2.squaredLength();
+                float delta = a1b1.det(a2b2);
+                if (d2 <= std::abs(delta)) {
+                    return pointInter<swapS, swap1, swap2>(a1, 0, 1);
+                }
+                else {
+                    return intersectCollinearXOrdered_<swapS, swap1, swap2>(
+                        a1, b1, a2, b2);
+                }
             }
             else if (a2Sign == 0 && b1Sign == 0) {
-                // TODO: similar as above
+                // (4 configurations of sign values)
+                // Similar as [4]
+                float d2 = a2b1.squaredLength();
+                float delta = a1b1.det(a2b2);
+                if (d2 <= std::abs(delta)) {
+                    return pointInter<swapS, swap1, swap2>(a2, 1, 0);
+                }
+                else {
+                    return intersectCollinearXOrdered_<swapS, swap1, swap2>(
+                        a1, b1, a2, b2);
+                }
             }
             else { // (a2Sign == 0 && b2Sign == 0)
-                // TODO: similar as above
+                // (4 configurations of sign values)
+                // Similar as [4]
+                float d2 = a2b2.squaredLength();
+                float delta = a1b1.det(a2b2);
+                if (d2 <= std::abs(delta)) {
+                    return pointInter<swapS, swap1, swap2>(a2, 1, 1);
+                }
+                else {
+                    return intersectCollinearXOrdered_<swapS, swap1, swap2>(
+                        a1, b1, a2, b2);
+                }
             }
         }
         else { // numCollinears >= 3
-            // TODO: consider all four points as collinear
+            // (9 configurations of sign values)
+            return intersectCollinearXOrdered_<swapS, swap1, swap2>(a1, b1, a2, b2);
         }
     }
 }
 
 // Assumes a1x < b1x and a2x < b2x
 template<bool swap1, bool swap2>
-Segment2xIntersection intersectBothXOrdered(
-    const Vec2x& a1,
-    const Vec2x& b1,
-    const Vec2x& a2,
-    const Vec2x& b2) {
-
+Segment2xIntersection
+intersectXOrdered(const Vec2x& a1, const Vec2x& b1, const Vec2x& a2, const Vec2x& b2) {
     if (a2.x() < a1.x()) {
-        return intersectBothXOrdered_<S2S1, swap1, swap2>(a2, b2, a1, b1);
+        return intersectXOrdered_<S2S1, swap1, swap2>(a2, b2, a1, b1);
     }
     else {
-        return intersectBothXOrdered_<S1S2, swap1, swap2>(a1, b1, a2, b2);
+        return intersectXOrdered_<S1S2, swap1, swap2>(a1, b1, a2, b2);
     }
+}
+
+// ----------- WIP below ----
+// (everything above is ok I think)
+
+// Assumes a1x == b1x and a2x < b2x
+Segment2xIntersection
+intersectOneVert(const Vec2x& a1, const Vec2x& b1, const Vec2x& a2, const Vec2x& b2) {
+    // TODO
 }
 
 } // namespace
 
+// Possible ideas for performance improvements:
+// - Use sign function?
+// - Make the x-ordering branchless with a jump table?
+// - Make code non-templated to be more friendly to branch predictor?
+//
 Segment2xIntersection segmentIntersect(
     const Vec2x& a1,
     const Vec2x& b1,
@@ -618,16 +745,13 @@ Segment2xIntersection segmentIntersect(
 
     // Order a1b1 and a2b2 by increasing X coordinates.
     // This is very important for robustness, see note below.
-    // XXX: Can we do this branchless with a jump table / function pointers?
-    // Would branch predictor in intersectBothXOrdered_ work better if
-    // if wasn't templated, i.e., there would be only one function and
-    // therefore only one "if" branch?
+    //
     if (a1.x() < b1.x()) {
         if (a2.x() < b2.x()) {
-            return intersectBothXOrdered<A1B1, A2B2>(a1, b1, a2, b2);
+            return intersectXOrdered<A1B1, A2B2>(a1, b1, a2, b2);
         }
         else if (a2.x() > b2.x()) {
-            return intersectBothXOrdered<A1B1, B2A2>(a1, b1, b2, a2);
+            return intersectXOrdered<A1B1, B2A2>(a1, b1, b2, a2);
         }
         else {
             //return intersectOneXOrderedWithVertical<S1S2, A1B1>(a1, b1, a2, b2);
@@ -635,10 +759,10 @@ Segment2xIntersection segmentIntersect(
     }
     else if (a1.x() > b1.x()) {
         if (a2.x() < b2.x()) {
-            return intersectBothXOrdered<B1A1, A2B2>(b1, a1, a2, b2);
+            return intersectXOrdered<B1A1, A2B2>(b1, a1, a2, b2);
         }
         else if (a2.x() > b2.x()) {
-            return intersectBothXOrdered<B1A1, B2A2>(b1, a1, b2, a2);
+            return intersectXOrdered<B1A1, B2A2>(b1, a1, b2, a2);
         }
         else {
             //return intersectOneXOrderedWithVertical<S1S2, B1A1>(b1, a1, a2, b2);
@@ -654,7 +778,7 @@ Segment2xIntersection segmentIntersect(
             //res = intersectOneVert(a1, b1, b2, a2);
         }
         else {
-            return intersectBothVertical(a1, b1, a2, b2);
+            return intersectVertical(a1, b1, a2, b2);
         }
     }
 }
