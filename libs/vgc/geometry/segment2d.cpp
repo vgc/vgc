@@ -816,8 +816,8 @@ Segment2dIntersection intersectXOrderedWithVertical(
         return intersectXOrderedWithVerticalYOrdered<swapS, swap1, swap2>(a1, b1, a2, b2);
     }
     else if (a2.y() > b2.y()) {
-        constexpr bool swp1_ = swapS ? true : swap1;
-        constexpr bool swp2_ = swapS ? swap2 : true;
+        constexpr bool swp1_ = swapS ? B1A1 : swap1;
+        constexpr bool swp2_ = swapS ? swap2 : B2A2;
         return intersectXOrderedWithVerticalYOrdered<swapS, swp1_, swp2_>(a1, b1, b2, a2);
     }
     else {
@@ -868,7 +868,7 @@ Segment2dIntersection segmentIntersect(
             return intersectXOrderedWithVertical<S2S1, A1B1, A2B2>(a2, b2, a1, b1);
         }
         else if (a2.x() > b2.x()) {
-            return intersectXOrderedWithVertical<S2S1, A1B1, B2A2>(a2, b2, a1, b1);
+            return intersectXOrderedWithVertical<S2S1, A1B1, B2A2>(b2, a2, a1, b1);
         }
         else {
             return intersectVertical(a1, b1, a2, b2);
