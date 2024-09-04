@@ -18,10 +18,15 @@
 
 import unittest
 
-from vgc.geometry import Segment2d, Segment2f, Vec2d, Vec2f, SegmentIntersectionType
+from vgc.geometry import (
+    Segment2d, Segment2f, Vec2d, Vec2f,
+    Segment2fIntersection, Segment2dIntersection, SegmentIntersectionType)
 
 Segment2Types = [Segment2d, Segment2f]
 Segment2Vec2Types = [(Segment2d, Vec2d), (Segment2f, Vec2f)]
+Segment2IntersectionTypes = [
+    (Segment2d, Segment2dIntersection),
+    (Segment2f, Segment2fIntersection)]
 
 class TestSegment2(unittest.TestCase):
 
@@ -108,6 +113,25 @@ class TestSegment2(unittest.TestCase):
             self.assertFalse(s.isDegenerate())
 
     def testIntersect(self):
+
+        # First two are the input segments (a1, b1) and (a2, b2)
+        # Then either:
+        # - nothing (if no expected intersection)
+        # - the expected intersection point and t1, t2 parameters
+        # - the expected intersection segment and s1, t1, s2, t2 parameters
+        #
+        # All the segments are given x-ordered or vertical y-ordered (see implementation).
+        # Note that for most of these, we are using values which are exactly representable
+        # as floats.
+        #
+        intersectData = [
+            # Non-intersecting general
+            [(1, 1), (3, 5), (2, 2), (4, 1)],
+
+            # Intersecting at point general
+            [(1, 1), (5, 9), (2, 6), (10, 10), (4, 7), 0.75, 0.25]]
+
+
         for Segment2, Vec2 in Segment2Vec2Types:
 
             a = Vec2(-0.3, -0.2)
@@ -194,6 +218,13 @@ class TestSegment2(unittest.TestCase):
 
             i = Segment2(e, g).intersect(Segment2(f, h))
             self.assertEqual(i.type, SegmentIntersectionType.Point)
+
+        for Segment2, Segment2Intersection in Segment2IntersectionTypes:
+            for d in intersectData:
+                i = Segment2(d[0], d[1]).intersect(Segment2(d[2], d[3]))
+                expected = Segment2Intersection(*d[4:])
+                self.assertEqual(i, expected)
+
 
 
 if __name__ == '__main__':

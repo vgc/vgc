@@ -75,7 +75,9 @@ void wrap_segment(py::module& m, const std::string& name) {
         .def_property_readonly("s1", &Inter2x::s1)
         .def_property_readonly("t1", &Inter2x::t1)
         .def_property_readonly("s2", &Inter2x::s2)
-        .def_property_readonly("t2", &Inter2x::t2);
+        .def_property_readonly("t2", &Inter2x::t2)
+        .def(py::self == py::self)
+        .def(py::self != py::self);
 
     m.def(
         "segmentIntersect",

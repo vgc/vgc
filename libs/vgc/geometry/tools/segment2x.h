@@ -145,6 +145,33 @@ public:
         return t2_;
     }
 
+    /// Returns whether `i1` and `i2` are equal.
+    ///
+    friend constexpr bool operator==(const Segment2xIntersection& i1, const Segment2xIntersection& i2) {
+        if (i1.type_ != i2.type_) {
+            return false;
+        }
+        switch (i1.type_) {
+        case SegmentIntersectionType::Empty:
+            return true;
+        case SegmentIntersectionType::Point:
+        case SegmentIntersectionType::Segment:
+            return i1.p_ == i2.p_
+                && i1.q_ == i2.q_
+                && i1.s1_ == i2.s1_
+                && i1.t1_ == i2.t1_
+                && i1.s2_ == i2.s2_
+                && i1.t2_ == i2.t2_;
+        }
+        return false;
+    }
+
+    /// Returns whether `s1` and `s2` are different.
+    ///
+    friend constexpr bool operator!=(const Segment2xIntersection& i1, const Segment2xIntersection& i2) {
+        return !(i1 == i2);
+    }
+
 private:
     Vec2x p_ = core::noInit;
     Vec2x q_ = core::noInit;
