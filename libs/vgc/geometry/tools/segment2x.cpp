@@ -50,10 +50,13 @@ VGC_FORCE_INLINE float param(float t) {
     }
 }
 
+// swapS == true means "the two segments were swapped for the computation"
+// swap1 == true means "the segment that was originally first had its endpoints swapped"
+// swap2 == true means "the segment that was originally second had its endpoints swapped"
 template<bool swapS, bool swap1, bool swap2>
 VGC_FORCE_INLINE Segment2xIntersection pointInter(const Vec2x& p, float t1, float t2) {
     if constexpr (swapS) {
-        return Segment2xIntersection(p, param<swap2>(t2), param<swap1>(t1));
+        return Segment2xIntersection(p, param<swap1>(t2), param<swap2>(t1));
     }
     else {
         return Segment2xIntersection(p, param<swap1>(t1), param<swap2>(t2));
@@ -69,7 +72,7 @@ VGC_FORCE_INLINE Segment2xIntersection
 segInter(const Vec2x& p, const Vec2x& q, float s1, float t1, float s2, float t2) {
     if constexpr (swapS) {
         return Segment2xIntersection(
-            p, q, param<swap2>(s2), param<swap2>(t2), param<swap1>(s1), param<swap1>(t1));
+            p, q, param<swap1>(s2), param<swap1>(t2), param<swap2>(s1), param<swap2>(t1));
     }
     else {
         return Segment2xIntersection(
