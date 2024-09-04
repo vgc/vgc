@@ -115,13 +115,7 @@ class TestSegment2(unittest.TestCase):
             c = Vec2(0.2, 1.6)
             d = Vec2(1.2, -0.4)
 
-            e = Vec2(0.5, 0.2)
-            f = Vec2(0.5, 0.4)
-            g = Vec2(0.5, 0.6)
-            h = Vec2(1.1, 0.4)
-
             # Point-intersection in the middle
-            # TODO: improve tests by actually testing intersection values
 
             i = Segment2(a, b).intersect(Segment2(c, d))
             self.assertEqual(i.type, SegmentIntersectionType.Point)
@@ -136,12 +130,11 @@ class TestSegment2(unittest.TestCase):
             self.assertEqual(i.type, SegmentIntersectionType.Point)
 
             # Non-intersecting collinear segments
-            # TODO: support this case. Currently, is is incorrectly returned as Segment.
+
+            i = Segment2((1, 1), (2, 1)).intersect(Segment2((1, 2), (2, 2)))
+            self.assertEqual(i.type, SegmentIntersectionType.Empty)
 
             # Segment intersection
-            # TODO: properly support and test this case. Currently, it is indeed returned
-            # as Segment, but with dummy points and params.
-            # TODO: test strict sub-segment, starting at one of the endpoint or not.
 
             i = Segment2(a, c).intersect(Segment2(a, c))
             self.assertEqual(i.type, SegmentIntersectionType.Segment)
@@ -153,6 +146,20 @@ class TestSegment2(unittest.TestCase):
             self.assertEqual(i.type, SegmentIntersectionType.Segment)
 
             i = Segment2(c, a).intersect(Segment2(a, c))
+            self.assertEqual(i.type, SegmentIntersectionType.Segment)
+
+            e = Vec2(0.5, 0.2)
+            f = Vec2(0.5, 0.4)
+            g = Vec2(0.5, 0.6)
+            k = Vec2(0.5, 0.8)
+
+            i = Segment2(e, k).intersect(Segment2(f, g))
+            self.assertEqual(i.type, SegmentIntersectionType.Segment)
+
+            i = Segment2(e, k).intersect(Segment2(e, f))
+            self.assertEqual(i.type, SegmentIntersectionType.Segment)
+
+            i = Segment2(e, g).intersect(Segment2(f, k))
             self.assertEqual(i.type, SegmentIntersectionType.Segment)
 
             # Intersection between two segment endpoints
@@ -182,7 +189,8 @@ class TestSegment2(unittest.TestCase):
             self.assertEqual(i.t2, 1)
 
             # Intersection between segment endpoint and segment interior
-            # TODO: improve tests by actually testing intersection values
+
+            h = Vec2(1.1, 0.4)
 
             i = Segment2(e, g).intersect(Segment2(f, h))
             self.assertEqual(i.type, SegmentIntersectionType.Point)
