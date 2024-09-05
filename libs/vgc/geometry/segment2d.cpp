@@ -555,30 +555,36 @@ intersectXOrdered_(const Vec2d& a1, const Vec2d& b1, const Vec2d& a2, const Vec2
                 // (!) t1 is NOT guaranteed to be 0 < t1 < 1 if a2x not equal to a1x or b1x
             }
             else if (b2Sign == 0) {
-                if (b2.x() > a2.x()) {
-                    // a1     b1
-                    // x------x x b2
-                    //         /
-                    //        x a2
-                    return {};
-                }
-                else {
-                    // a1   b2,b1        a1  b2  b1
-                    // x------x          x---x---x
-                    //       /     OR       /
-                    //      x a2           x a2
-                    //
-                    // Note: a1x <= a2x and a2x < b2x so a1x < b2x
-                    //
-                    double t1 = (b2.x() - a1.x()) / (b1.x() - a1.x()); // a2-independent
-                    return pointInter<swapS, swap1, swap2>(b2, t1, 1);
-                    // t1 is guaranteed to be 0 < t1 <= 1
-                    // t1 is guaranteed to be exactly 1 if b2x equal b1x
-                    // (!) t1 is NOT guaranteed to be t1 < 1 if b2x not equal to b1x
-                }
+                // a1   b2,b1        a1  b2  b1
+                // x------x          x---x---x
+                //       /     OR       /
+                //      x a2           x a2
+                //
+                // Note: a1x <= a2x and a2x < b2x so a1x < b2x
+                //
+                // Note: the following is in theory impossible
+                // otherwise we'd have s1Cross > 0:
+                //
+                // a1     b1
+                // x------x x b2
+                //         /
+                //        x a2
+                //
+                // But perhaps it is still possible to have b2x very slighly
+                // larger than b1x due to numerical errors? Since we haven't
+                // proven it that numerical errors causing this are impossible,
+                // for now we clamp t1 to 1.
+                //
+                double t1 = (b2.x() - a1.x()) / (b1.x() - a1.x()); // a2-independent
+                t1 = std::min<double>(t1, 1);
+                return pointInter<swapS, swap1, swap2>(b2, t1, 1);
+                // t1 is guaranteed to be 0 < t1 <= 1
+                // t1 is guaranteed to be exactly 1 if b2x equal b1x
+                // (!) t1 is NOT guaranteed to be t1 < 1 if b2x not equal to b1x
             }
             else if (a1Sign == 0) {
-                // The only cases would be:
+                // This means a1 on a2b2 line, and since a1x <= a2x and a2x < b2x,
+                // the only cases are:
                 //
                 //     x b2
                 //    /         OR
@@ -587,32 +593,59 @@ intersectXOrdered_(const Vec2d& a1, const Vec2d& b1, const Vec2d& a2, const Vec2
                 // x------x          x------x
                 // a1     b1       a1,a2   b1
                 //
-                // But the latter would have already been handled by the other cases,
-                // we we can directly conclude that there is no intersection.
+                // In theory the first case is already rejected by a2Cross > 0,
+                // and the second case means numCollinear == 2. However, due
+                // to numerical errors, maybe this might happen and we return
+                // the only solution compatible with sign predicates, which
+                // corresponds to the second case.
                 //
-                return {};
+                // One may wonder whether a situation like the following could
+                // go here due to numerical errors?
+                //
+                //  x b2 = (a1x + eps', C')
+                //  |
+                //  |
+                //  x------x
+                //  |a1    b1
+                //  |
+                //  x a2 = (a1x + eps, -C)
+                //
+                // We haven't proven that it's impossible neither found an
+                // example, but in any case, this means we would have to do:
+                //
+                // double t2 = (a1x - a2x) / (b2x - a2x)
+                //            -----------   -----------
+                //               <= 0         > 0
+                //
+                // which still results in t2 = 0 after clamping.
+                //
+                return pointInter<swapS, swap1, swap2>(a1, 0, 0);
             }
             else { // b1Sign == 0
-                if (b2.x() < b1.x()) {
-                    // a1     b1
-                    // x------x
-                    //
-                    //      x b2
-                    //     /
-                    //    x a2
-                    //
-                    return {};
-                }
-                else {
-                    //                            x b2               x b2
-                    // a1    b1,b2       a1      /          a1      /
-                    // x------x     OR   x------x b1   OR   x------x
-                    //       /                 /            a1   a2,b1
-                    //      x a2              x a2
-                    //
-                    double t2 = (b1.x() - a2.x()) / (b2.x() - a2.x()); // a1-independent
-                    return pointInter<swapS, swap1, swap2>(b1, 1, t2);
-                }
+                //                            x b2               x b2
+                // a1    b1,b2       a1      /          a1      /
+                // x------x     OR   x------x b1   OR   x------x
+                //       /                 /            a1   a2,b1
+                //      x a2              x a2
+                //
+                // Similarly to b2Sign == 0, the case below should have
+                // already been rejected by s2Cross > 0, and the first and
+                // third case above is in theory impossible as it means
+                // numCollinear == 2 but might be possible due to numerical
+                // errors.
+                //
+                // a1     b1
+                // x------x
+                //
+                //      x b2
+                //     /
+                //    x a2
+                //
+                // Note: a2x <= b1x (see fast return: x-ranges must intersect)
+                //
+                double t2 = (b1.x() - a2.x()) / (b2.x() - a2.x()); // a1-independent
+                t2 = std::min<double>(t2, 1);
+                return pointInter<swapS, swap1, swap2>(b1, 1, t2);
             }
         }
         else if (numCollinears == 2) {
