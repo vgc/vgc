@@ -112,25 +112,15 @@ class TestSegment2(unittest.TestCase):
             s = Segment2((1, 2), (3, 4))
             self.assertFalse(s.isDegenerate())
 
+    def assertIntersectEqual(self, s1, s2, expected):
+        res = s1.intersect(s2)
+        if res != expected:
+            raise AssertionError(
+                f"Intersecting s1={s1} with s2={s2}.\n"
+                f"        Output: {res}.\n"
+                f"      Expected: {expected}.")
+
     def testIntersect(self):
-
-        # First two are the input segments (a1, b1) and (a2, b2)
-        # Then either:
-        # - nothing (if no expected intersection)
-        # - the expected intersection point and t1, t2 parameters
-        # - the expected intersection segment and s1, t1, s2, t2 parameters
-        #
-        # All the segments are given x-ordered or vertical y-ordered (see implementation).
-        # Note that for most of these, we are using values which are exactly representable
-        # as floats.
-        #
-        intersectData = [
-            # Non-intersecting general
-            [(1, 1), (3, 5), (2, 2), (4, 1)],
-
-            # Intersecting at point general
-            [(1, 1), (5, 9), (2, 6), (10, 10), (4, 7), 0.75, 0.25]]
-
 
         for Segment2, Vec2 in Segment2Vec2Types:
 
@@ -219,12 +209,80 @@ class TestSegment2(unittest.TestCase):
             i = Segment2(e, g).intersect(Segment2(f, h))
             self.assertEqual(i.type, SegmentIntersectionType.Point)
 
+        # First two are the input segments (a1, b1) and (a2, b2)
+        # Then either:
+        # - nothing (if no expected intersection)
+        # - the expected intersection point and t1, t2 parameters
+        # - the expected intersection segment and s1, t1, s2, t2 parameters
+        #
+        # All the segments are given x-ordered or vertical y-ordered (see implementation).
+        # Note that for most of these, we are using values which are exactly representable
+        # as floats.
+        #
+        intersectData = [
+            # X-Ordered non-interesecting (fast return: x-range doesn't intersect)
+            [(1, 1), (3, 5), (4, 2), (6, 3)],
+
+            # X-Ordered non-intersecting (s1Cross > 0 || s2Cross > 0)
+            # Note: the subcase a2Sign == 0 may be impossible as it would fast-return
+            #       due to a2x > b1x. but perhaps numerical errors might make it possible.
+            #       No proof of impossibility or counter-example found yet.
+            [(1, 1), (3, 5), (2, 2), (4, 1)],  # s1Cross < 0, s2Cross > 0 (perpendicular)
+            [(1, 1), (3, 5), (2, 4), (3, 6)],  # s1Cross > 0, s2Cross > 0 (parallel)
+            [(1, 1), (3, 5), (2, 6), (4, 6)],  # s1Cross > 0, s2Cross < 0
+            [(1, 1), (3, 5), (2, 6), (4, 7)],  # s1Cross > 0, s2Cross == 0 (b2Sign == 0)
+            [(1, 1), (5, 9), (4, 5), (6, 11)], # s1Cross > 0, s2Cross == 0 (b2Sign == 0)
+            [(1, 1), (3, 5), (2, 2), (4, 4)],  # s1Cross == 0, s2Cross > 0 (a1Sign == 0)
+            [(1, 1), (4, 6), (2, 2), (3, 4)],  # s1Cross == 0, s2Cross > 0 (b1Sign == 0)
+
+            # X-Ordered intersecting at interior point (s1Cross < 0 && s2Cross < 0)
+            [(1, 1), (5, 9), (2, 6), (10, 10), (4, 7), 0.75, 0.25],
+
+            # X-Ordered, numCollinear, a2Sign == 0
+            [(1, 1), (5, 9), (4, 7), (6, 8), (4, 7), 0.75, 0],
+            [(1, 1), (5, 9), (2, 3), (3, 7), (2, 3), 0.25, 0],
+
+            # X-Ordered, numCollinear, b2Sign == 0
+            [(1, 1), (5, 9), (3, 4), (4, 7), (4, 7), 0.75, 1],
+
+            # X-Ordered, numCollinear, a1Sign == 0
+            # Could not find an example of that, neither prove that it's impossible
+
+            # X-Ordered, numCollinear, b1Sign == 0
+            [(1, 1), (3, 3), (2, 1), (6, 9), (3, 3), 1, 0.25],
+
+            ]
+
         for Segment2, Segment2Intersection in Segment2IntersectionTypes:
             for d in intersectData:
-                i = Segment2(d[0], d[1]).intersect(Segment2(d[2], d[3]))
-                expected = Segment2Intersection(*d[4:])
-                self.assertEqual(i, expected)
-
+                for swapS in [False, True]:
+                    for swap1 in [False, True]:
+                        for swap2 in [False, True]:
+                            s1 = Segment2(d[0], d[1])
+                            s2 = Segment2(d[2], d[3])
+                            args = d[4:]
+                            if swap1:
+                                s1 = Segment2(s1.b, s1.a)
+                                if len(args) == 3:
+                                    args[1] = 1 - args[1] # t1
+                                if len(args) == 6:
+                                    args[2] = 1 - args[2] # s1
+                                    args[3] = 1 - args[3] # t1
+                            if swap2:
+                                s2 = Segment2(s2.b, s2.a)
+                                if len(args) == 3:
+                                    args[2] = 1 - args[2] # t2
+                                if len(args) == 6:
+                                    args[4] = 1 - args[4] # s2
+                                    args[5] = 1 - args[5] # t2
+                            if swapS:
+                                s1, s2 = s2, s1
+                                if len(args) == 3:
+                                    args[1], args[2] = args[2], args[1]
+                                if len(args) == 6:
+                                    args[2:4], args[4:6] = args[4:6], args[2:4]
+                            expected = Segment2Intersection(*args)
+                            self.assertIntersectEqual(s1, s2, expected)
 
 
 if __name__ == '__main__':
