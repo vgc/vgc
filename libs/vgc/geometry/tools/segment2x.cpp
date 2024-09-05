@@ -866,11 +866,8 @@ Segment2xIntersection intersectXOrderedWithVertical(
 // - Make the x-ordering branchless with a jump table?
 // - Make code non-templated to be more friendly to branch predictor?
 //
-Segment2xIntersection segmentIntersect(
-    const Vec2x& a1,
-    const Vec2x& b1,
-    const Vec2x& a2,
-    const Vec2x& b2) {
+Segment2xIntersection
+segmentIntersect(const Vec2x& a1, const Vec2x& b1, const Vec2x& a2, const Vec2x& b2) {
 
     // Order a1b1 and a2b2 by increasing X coordinates.
     // This is very important for robustness, see note below.
