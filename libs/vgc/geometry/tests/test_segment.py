@@ -238,18 +238,57 @@ class TestSegment2(unittest.TestCase):
             # X-Ordered intersecting at interior point (s1Cross < 0 && s2Cross < 0)
             [(1, 1), (5, 9), (2, 6), (10, 10), (4, 7), 0.75, 0.25],
 
-            # X-Ordered, numCollinear, a2Sign == 0
+            # X-Ordered, numCollinears == 1, a2Sign == 0
             [(1, 1), (5, 9), (4, 7), (6, 8), (4, 7), 0.75, 0],
             [(1, 1), (5, 9), (2, 3), (3, 7), (2, 3), 0.25, 0],
 
-            # X-Ordered, numCollinear, b2Sign == 0
+            # X-Ordered, numCollinears == 1, b2Sign == 0
             [(1, 1), (5, 9), (3, 4), (4, 7), (4, 7), 0.75, 1],
 
-            # X-Ordered, numCollinear, a1Sign == 0
-            # Could not find an example of that, neither prove that it's impossible
+            # X-Ordered, numCollinears == 1, a1Sign == 0
+            # Haven't yet found an example of that, or proved that it's impossible
 
-            # X-Ordered, numCollinear, b1Sign == 0
+            # X-Ordered, numCollinears == 1, b1Sign == 0
             [(1, 1), (3, 3), (2, 1), (6, 9), (3, 3), 1, 0.25],
+
+            # X-Ordered, numCollinears == 2, a1Sign == b1Sign == 0
+            # Haven't yet found an example of that, or proved that it's impossible
+
+            # X-Ordered, numCollinears == 2, a2Sign == b2Sign == 0
+            # Haven't yet found an example of that, or proved that it's impossible
+
+            # X-Ordered, numCollinears == 2, a1Sign == a2Sign == 0, a1 == a2
+            # Haven't yet found an example without a1 == a2, or proved that it's impossible
+            [(1, 1), (3, 4), (1, 1), (2, 3), (1, 1), 0, 0],
+            [(1, 1), (3, 4), (1, 1), (2, 4), (1, 1), 0, 0],
+            [(1, 1), (3, 4), (1, 1), (2, 5), (1, 1), 0, 0],
+            [(1, 1), (3, 4), (1, 1), (3, 5), (1, 1), 0, 0],
+            [(1, 1), (3, 4), (1, 1), (4, 5), (1, 1), 0, 0],
+            [(1, 1), (3, 4), (1, 1), (4, 4), (1, 1), 0, 0],
+            [(1, 1), (3, 4), (1, 1), (4, 3), (1, 1), 0, 0],
+            [(1, 1), (3, 4), (1, 1), (4, 1), (1, 1), 0, 0],
+            [(1, 1), (3, 4), (1, 1), (4, 0), (1, 1), 0, 0],
+            [(1, 1), (3, 4), (1, 1), (2, 0), (1, 1), 0, 0],
+            [(1, 1), (3, 4), (1, 1), (2, 1), (1, 1), 0, 0],
+            [(1, 1), (3, 4), (1, 1), (2, 2), (1, 1), 0, 0],
+
+            # X-Ordered, numCollinears == 2, a1Sign == b2Sign == 0
+            # Haven't yet found an example of that, or proved that it's impossible
+
+            # X-Ordered, numCollinears == 2, a2Sign == b1Sign == 0, a2 == b1
+            # Haven't yet found an example without a2 == b1, or proved that it's impossible
+            [(1, 1), (3, 4), (3, 4), (4, 5), (3, 4), 1, 0],
+
+            # X-Ordered, numCollinears == 2, b1Sign == b2Sign == 0, b1 == b2
+            # Haven't yet found an example without b1 == b2, or proved that it's impossible
+            [(1, 1), (3, 4), (1, 2), (3, 4), (3, 4), 1, 1],
+
+
+
+
+
+            # a1 == b2 with one vertical
+            [(1, 1), (3, 4), (1, 0), (1, 1), (1, 1), 0, 1],
 
             ]
 

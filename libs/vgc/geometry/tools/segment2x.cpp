@@ -654,16 +654,17 @@ intersectXOrdered_(const Vec2x& a1, const Vec2x& b1, const Vec2x& a2, const Vec2
                 //
                 // [3] Mathematically, this means both a1 and b1 are on a2b2
                 // line, so all four points are collinear, so a2Sign and b2Sign
-                // should also be equal to zero, but are not due due numerical
+                // should also be equal to zero, but are not due to numerical
                 // errors.
                 //
-                // This is likely caused by a situation that looks like the
-                // following, where there are more numerical on a2Side and
-                // b2Side since a1b1 << a2b2:
+                // Although we haven't yet found an example of this case, we
+                // believe it might be possible in situations that look like
+                // the following, where large size disparities between a1b1 and
+                // a2b2 make numerical errors more likely.
                 //
-                // a2                                  x b1                 b2
+                // a1                                  x b2                 b1
                 // x--------------------------------------------------------x
-                //                          x a1
+                //                          x a2
                 //
                 return intersectCollinearXOrdered_<swapS, swap1, swap2>(a1, b1, a2, b2);
             }
@@ -711,26 +712,26 @@ intersectXOrdered_(const Vec2x& a1, const Vec2x& b1, const Vec2x& a2, const Vec2
                         a1, b1, a2, b2);
                 }
             }
-            else if (a2Sign == 0 && b1Sign == 0) {
+            else if (b1Sign == 0 && a2Sign == 0) {
                 // (4 configurations of sign values)
                 // Similar as [4]
                 float d2 = a2b1.squaredLength();
                 float delta = a1b1.det(a2b2);
                 if (d2 <= std::abs(delta)) {
-                    return pointInter<swapS, swap1, swap2>(a2, 1, 0);
+                    return pointInter<swapS, swap1, swap2>(b1, 1, 0);
                 }
                 else {
                     return intersectCollinearXOrdered_<swapS, swap1, swap2>(
                         a1, b1, a2, b2);
                 }
             }
-            else { // (a2Sign == 0 && b2Sign == 0)
+            else { // (b1Sign == 0 && b2Sign == 0)
                 // (4 configurations of sign values)
                 // Similar as [4]
-                float d2 = a2b2.squaredLength();
+                float d2 = (b2 - b1).squaredLength();
                 float delta = a1b1.det(a2b2);
                 if (d2 <= std::abs(delta)) {
-                    return pointInter<swapS, swap1, swap2>(a2, 1, 1);
+                    return pointInter<swapS, swap1, swap2>(b1, 1, 1);
                 }
                 else {
                     return intersectCollinearXOrdered_<swapS, swap1, swap2>(
