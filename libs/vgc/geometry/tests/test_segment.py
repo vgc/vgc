@@ -297,6 +297,26 @@ class TestSegment2(unittest.TestCase):
             # Haven't yet found an example without b1 == b2, or proved that it's impossible
             [(1, 1), (3, 4), (1, 2), (3, 4), (3, 4), 1, 1],
 
+            # X-Ordered, numCollinears == 3
+            # Haven't yet found an example, or proved that it's impossible
+
+            # X-Ordered, numCollinears == 4, non-interesecting
+            # Note that this is in fact fast-rejected between doing the collinear test
+            [(1, 1), (5, 9), (6, 11), (7, 13)],
+
+            # X-Ordered, numCollinears == 4, b1 == a2
+            [(1, 1), (5, 9), (5, 9), (6, 11), (5, 9), 1, 0],
+
+            # X-Ordered, numCollinears == 4, b1 < b2
+            [(1, 1), (5, 9), (4, 7), (8, 15), (4, 7), (5, 9), 0.75, 1, 0, 0.25],
+            [(1, 1), (2, 3), (1, 1), (5, 9), (1, 1), (2, 3), 0, 1, 0, 0.25],
+
+            # X-Ordered, numCollinears == 4, b1 >= b2
+            [(1, 1), (5, 9), (1, 1), (5, 9), (1, 1), (5, 9), 0, 1, 0, 1],
+            [(1, 1), (5, 9), (1, 1), (2, 3), (1, 1), (2, 3), 0, 0.25, 0, 1],
+            [(1, 1), (5, 9), (2, 3), (5, 9), (2, 3), (5, 9), 0.25, 1, 0, 1],
+            [(1, 1), (5, 9), (2, 3), (4, 7), (2, 3), (4, 7), 0.25, 0.75, 0, 1],
+
 
 
 
