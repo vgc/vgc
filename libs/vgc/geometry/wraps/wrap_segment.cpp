@@ -77,7 +77,8 @@ void wrap_segment(py::module& m, const std::string& name) {
         .def_property_readonly("s2", &Inter2x::s2)
         .def_property_readonly("t2", &Inter2x::t2)
         .def(py::self == py::self)
-        .def(py::self != py::self);
+        .def(py::self != py::self)
+        .def("__repr__", [](const Inter2x& i) { return vgc::core::toString(i); });
 
     m.def(
         "segmentIntersect",

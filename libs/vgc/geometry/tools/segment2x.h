@@ -182,6 +182,48 @@ private:
     SegmentIntersectionType type_;
 };
 
+} // namespace vgc::geometry
+
+// see https://fmt.dev/latest/api.html#formatting-user-defined-types
+template<>
+struct fmt::formatter<vgc::geometry::Segment2xIntersection> {
+    constexpr auto parse(format_parse_context& ctx) {
+        auto it = ctx.begin(), end = ctx.end();
+        if (it != end && *it != '}') {
+            throw format_error("invalid format");
+        }
+        return it;
+    }
+    template<typename FormatContext>
+    auto format(const vgc::geometry::Segment2xIntersection& i, FormatContext& ctx) {
+        switch (i.type()) {
+        case vgc::geometry::SegmentIntersectionType::Empty:
+            return format_to(ctx.out(), "{{}}");
+        case vgc::geometry::SegmentIntersectionType::Point:
+            return format_to(ctx.out(), "{{p={}, t1={}, t2={}}}", i.p(), i.t1(), i.t2());
+        case vgc::geometry::SegmentIntersectionType::Segment:
+            return format_to(
+                ctx.out(),
+                "{{p={}, q={}, s1={}, t1={}, s2={}, t2={}}}",
+                i.p(),
+                i.q(),
+                i.s1(),
+                i.t1(),
+                i.s2(),
+                i.t2());
+        }
+        return ctx.out();
+    }
+};
+
+namespace vgc::geometry {
+
+template<typename OStream>
+void write(OStream& out, const Segment2xIntersection& i) {
+    std::string s = core::format("{}", i);
+    write(out, s);
+}
+
 /// Computes the intersection between the segment [a1, b1] and the segment [a2, b2].
 ///
 /// \sa `Segment2x::intersect()`.
