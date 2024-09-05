@@ -18,10 +18,29 @@
 
 import unittest
 
-from vgc.geometry import Segment2d, Segment2f, Vec2d, Vec2f, SegmentIntersectionType
+from vgc.geometry import (
+    Segment2d, Segment2f, Vec2d, Vec2f,
+    Segment2fIntersection, Segment2dIntersection, SegmentIntersectionType)
 
 Segment2Types = [Segment2d, Segment2f]
 Segment2Vec2Types = [(Segment2d, Vec2d), (Segment2f, Vec2f)]
+Segment2IntersectionTypes = [
+    (Segment2d, Segment2dIntersection),
+    (Segment2f, Segment2fIntersection)]
+
+def swapVecXY(vec):
+    if type(vec) is tuple:
+        vec = vec[1], vec[0]
+    else:
+        vec.x, vec.y = vec.y, vec.x
+
+# Tuples are immutable, so this cannot be done in-place
+def swapTupleXY(t):
+    return t[1], t[0]
+
+def swapSegmentXY(segment):
+    swapVecXY(segment.a)
+    swapVecXY(segment.b)
 
 class TestSegment2(unittest.TestCase):
 
@@ -107,7 +126,16 @@ class TestSegment2(unittest.TestCase):
             s = Segment2((1, 2), (3, 4))
             self.assertFalse(s.isDegenerate())
 
+    def assertIntersectEqual(self, s1, s2, expected):
+        res = s1.intersect(s2)
+        if res != expected:
+            raise AssertionError(
+                f"Intersecting s1={s1} with s2={s2}.\n"
+                f"        Output: {res}.\n"
+                f"      Expected: {expected}.")
+
     def testIntersect(self):
+
         for Segment2, Vec2 in Segment2Vec2Types:
 
             a = Vec2(-0.3, -0.2)
@@ -115,13 +143,7 @@ class TestSegment2(unittest.TestCase):
             c = Vec2(0.2, 1.6)
             d = Vec2(1.2, -0.4)
 
-            e = Vec2(0.5, 0.2)
-            f = Vec2(0.5, 0.4)
-            g = Vec2(0.5, 0.6)
-            h = Vec2(1.1, 0.4)
-
             # Point-intersection in the middle
-            # TODO: improve tests by actually testing intersection values
 
             i = Segment2(a, b).intersect(Segment2(c, d))
             self.assertEqual(i.type, SegmentIntersectionType.Point)
@@ -136,12 +158,11 @@ class TestSegment2(unittest.TestCase):
             self.assertEqual(i.type, SegmentIntersectionType.Point)
 
             # Non-intersecting collinear segments
-            # TODO: support this case. Currently, is is incorrectly returned as Segment.
+
+            i = Segment2((1, 1), (2, 1)).intersect(Segment2((1, 2), (2, 2)))
+            self.assertEqual(i.type, SegmentIntersectionType.Empty)
 
             # Segment intersection
-            # TODO: properly support and test this case. Currently, it is indeed returned
-            # as Segment, but with dummy points and params.
-            # TODO: test strict sub-segment, starting at one of the endpoint or not.
 
             i = Segment2(a, c).intersect(Segment2(a, c))
             self.assertEqual(i.type, SegmentIntersectionType.Segment)
@@ -153,6 +174,20 @@ class TestSegment2(unittest.TestCase):
             self.assertEqual(i.type, SegmentIntersectionType.Segment)
 
             i = Segment2(c, a).intersect(Segment2(a, c))
+            self.assertEqual(i.type, SegmentIntersectionType.Segment)
+
+            e = Vec2(0.5, 0.2)
+            f = Vec2(0.5, 0.4)
+            g = Vec2(0.5, 0.6)
+            k = Vec2(0.5, 0.8)
+
+            i = Segment2(e, k).intersect(Segment2(f, g))
+            self.assertEqual(i.type, SegmentIntersectionType.Segment)
+
+            i = Segment2(e, k).intersect(Segment2(e, f))
+            self.assertEqual(i.type, SegmentIntersectionType.Segment)
+
+            i = Segment2(e, g).intersect(Segment2(f, k))
             self.assertEqual(i.type, SegmentIntersectionType.Segment)
 
             # Intersection between two segment endpoints
@@ -182,10 +217,201 @@ class TestSegment2(unittest.TestCase):
             self.assertEqual(i.t2, 1)
 
             # Intersection between segment endpoint and segment interior
-            # TODO: improve tests by actually testing intersection values
+
+            h = Vec2(1.1, 0.4)
 
             i = Segment2(e, g).intersect(Segment2(f, h))
             self.assertEqual(i.type, SegmentIntersectionType.Point)
+
+        # First two are the input segments (a1, b1) and (a2, b2)
+        # Then either:
+        # - nothing (if no expected intersection)
+        # - the expected intersection point and t1, t2 parameters
+        # - the expected intersection segment and s1, t1, s2, t2 parameters
+        #
+        # All the segments are given x-ordered or vertical y-ordered (see implementation).
+        # Note that for most of these, we are using values which are exactly representable
+        # as floats.
+        #
+        intersectData = [
+            # X-Ordered non-interesecting (fast return: x-range doesn't intersect)
+            [(1, 1), (3, 5), (4, 2), (6, 3)],
+
+            # X-Ordered non-intersecting (s1Cross > 0 || s2Cross > 0)
+            # Note: the subcase a2Sign == 0 may be impossible as it would fast-return
+            #       due to a2x > b1x. but perhaps numerical errors might make it possible.
+            #       No proof of impossibility or counter-example found yet.
+            [(1, 1), (3, 5), (2, 2), (4, 1)],  # s1Cross < 0, s2Cross > 0 (perpendicular)
+            [(1, 1), (3, 5), (2, 4), (3, 6)],  # s1Cross > 0, s2Cross > 0 (parallel)
+            [(1, 1), (3, 5), (2, 6), (4, 6)],  # s1Cross > 0, s2Cross < 0
+            [(1, 1), (3, 5), (2, 6), (4, 7)],  # s1Cross > 0, s2Cross == 0 (b2Sign == 0)
+            [(1, 1), (5, 9), (4, 5), (6, 11)], # s1Cross > 0, s2Cross == 0 (b2Sign == 0)
+            [(1, 1), (3, 5), (2, 2), (4, 4)],  # s1Cross == 0, s2Cross > 0 (a1Sign == 0)
+            [(1, 1), (4, 6), (2, 2), (3, 4)],  # s1Cross == 0, s2Cross > 0 (b1Sign == 0)
+
+            # X-Ordered intersecting at interior point (s1Cross < 0 && s2Cross < 0)
+            [(1, 1), (5, 9), (2, 6), (10, 10), (4, 7), 0.75, 0.25],
+
+            # X-Ordered, numCollinears == 1, a2Sign == 0
+            [(1, 1), (5, 9), (4, 7), (6, 8), (4, 7), 0.75, 0],
+            [(1, 1), (5, 9), (2, 3), (3, 7), (2, 3), 0.25, 0],
+
+            # X-Ordered, numCollinears == 1, b2Sign == 0
+            [(1, 1), (5, 9), (3, 4), (4, 7), (4, 7), 0.75, 1],
+
+            # X-Ordered, numCollinears == 1, a1Sign == 0
+            # Haven't yet found an example of that, or proved that it's impossible
+
+            # X-Ordered, numCollinears == 1, b1Sign == 0
+            [(1, 1), (3, 3), (2, 1), (6, 9), (3, 3), 1, 0.25],
+
+            # X-Ordered, numCollinears == 2, a1Sign == b1Sign == 0
+            # Haven't yet found an example of that, or proved that it's impossible
+
+            # X-Ordered, numCollinears == 2, a2Sign == b2Sign == 0
+            # Haven't yet found an example of that, or proved that it's impossible
+
+            # X-Ordered, numCollinears == 2, a1Sign == a2Sign == 0, a1 == a2
+            # Haven't yet found an example without a1 == a2, or proved that it's impossible
+            [(1, 1), (3, 4), (1, 1), (2, 3), (1, 1), 0, 0],
+            [(1, 1), (3, 4), (1, 1), (2, 4), (1, 1), 0, 0],
+            [(1, 1), (3, 4), (1, 1), (2, 5), (1, 1), 0, 0],
+            [(1, 1), (3, 4), (1, 1), (3, 5), (1, 1), 0, 0],
+            [(1, 1), (3, 4), (1, 1), (4, 5), (1, 1), 0, 0],
+            [(1, 1), (3, 4), (1, 1), (4, 4), (1, 1), 0, 0],
+            [(1, 1), (3, 4), (1, 1), (4, 3), (1, 1), 0, 0],
+            [(1, 1), (3, 4), (1, 1), (4, 1), (1, 1), 0, 0],
+            [(1, 1), (3, 4), (1, 1), (4, 0), (1, 1), 0, 0],
+            [(1, 1), (3, 4), (1, 1), (2, 0), (1, 1), 0, 0],
+            [(1, 1), (3, 4), (1, 1), (2, 1), (1, 1), 0, 0],
+            [(1, 1), (3, 4), (1, 1), (2, 2), (1, 1), 0, 0],
+
+            # X-Ordered, numCollinears == 2, a1Sign == b2Sign == 0
+            # Haven't yet found an example of that, or proved that it's impossible
+
+            # X-Ordered, numCollinears == 2, a2Sign == b1Sign == 0, a2 == b1
+            # Haven't yet found an example without a2 == b1, or proved that it's impossible
+            [(1, 1), (3, 4), (3, 4), (4, 5), (3, 4), 1, 0],
+
+            # X-Ordered, numCollinears == 2, b1Sign == b2Sign == 0, b1 == b2
+            # Haven't yet found an example without b1 == b2, or proved that it's impossible
+            [(1, 1), (3, 4), (1, 2), (3, 4), (3, 4), 1, 1],
+
+            # X-Ordered, numCollinears == 3
+            # Haven't yet found an example, or proved that it's impossible
+
+            # X-Ordered, numCollinears == 4, non-interesecting
+            # Note that this is in fact fast-rejected before doing the collinear test
+            [(1, 1), (5, 9), (6, 11), (7, 13)],
+
+            # X-Ordered, numCollinears == 4, b1 == a2
+            [(1, 1), (5, 9), (5, 9), (6, 11), (5, 9), 1, 0],
+
+            # X-Ordered, numCollinears == 4, b1 < b2
+            [(1, 1), (5, 9), (4, 7), (8, 15), (4, 7), (5, 9), 0.75, 1, 0, 0.25],
+            [(1, 1), (2, 3), (1, 1), (5, 9), (1, 1), (2, 3), 0, 1, 0, 0.25],
+
+            # X-Ordered, numCollinears == 4, b1 >= b2
+            [(1, 1), (5, 9), (1, 1), (5, 9), (1, 1), (5, 9), 0, 1, 0, 1],
+            [(1, 1), (5, 9), (1, 1), (2, 3), (1, 1), (2, 3), 0, 0.25, 0, 1],
+            [(1, 1), (5, 9), (2, 3), (5, 9), (2, 3), (5, 9), 0.25, 1, 0, 1],
+            [(1, 1), (5, 9), (2, 3), (4, 7), (2, 3), (4, 7), 0.25, 0.75, 0, 1],
+
+            # X-Ordered with vertical y-ordered
+            [(1, 1), (5, 9), (0, 2), (0, 8)],
+            [(1, 1), (5, 9), (1, 2), (1, 8)],
+            [(1, 1), (5, 9), (2, 2), (2, 8), (2, 3), 0.25, 1/6],
+            [(1, 1), (5, 9), (2, 4), (2, 8)],
+            [(1, 1), (5, 9), (5, 2), (5, 8)],
+            [(1, 1), (5, 9), (6, 2), (6, 8)],
+            [(1, 1), (5, 9), (0, 0), (0, 8)],
+            [(1, 1), (5, 9), (1, 0), (1, 8), (1, 1), 0, 0.125],
+            [(1, 1), (5, 9), (2, 0), (2, 8), (2, 3), 0.25, 0.375],
+            [(1, 1), (5, 9), (5, 6), (5, 10), (5, 9), 1, 0.75],
+            [(1, 1), (5, 9), (1, 1), (1, 3), (1, 1), 0, 0],
+            [(1, 1), (5, 9), (1, 0), (1, 1), (1, 1), 0, 1],
+            [(1, 1), (5, 9), (5, 9), (5, 10), (5, 9), 1, 0],
+            [(1, 1), (5, 9), (5, 8), (5, 9), (5, 9), 1, 1],
+
+            # X-Ordered with point
+            [(1, 1), (5, 9), (0, 3), (0, 3)],
+            [(1, 1), (5, 9), (1, 3), (1, 3)],
+            [(1, 1), (5, 9), (2, 3), (2, 3), (2, 3), 0.25, 0],
+            [(1, 1), (5, 9), (4, 3), (4, 3)],
+            [(1, 1), (5, 9), (5, 3), (5, 3)],
+            [(1, 1), (5, 9), (6, 3), (6, 3)],
+            [(1, 1), (5, 9), (1, 1), (1, 1), (1, 1), 0, 0],
+            [(1, 1), (5, 9), (5, 9), (5, 9), (5, 9), 1, 0],
+
+            # Vertical non-collinear
+            [(1, 1), (1, 5), (2, 3), (2, 8)], # y-ordered
+            [(1, 1), (1, 5), (2, 3), (2, 3)], # y-ordered with point
+            [(1, 1), (1, 1), (2, 3), (2, 3)], # two points
+
+            # Vertical collinear, y-ordered
+            [(1, 1), (1, 5), (1, 6), (1, 10)],
+            [(1, 1), (1, 5), (1, 5), (1, 9), (1, 5), 1, 0],
+            [(1, 1), (1, 5), (1, 4), (1, 8), (1, 4), (1, 5), 0.75, 1, 0, 0.25],
+            [(1, 1), (1, 5), (1, 1), (1, 17), (1, 1), (1, 5), 0, 1, 0, 0.25],
+            [(1, 1), (1, 5), (1, 1), (1, 5), (1, 1), (1, 5), 0, 1, 0, 1],
+            [(1, 1), (1, 5), (1, 1), (1, 4), (1, 1), (1, 4), 0, 0.75, 0, 1],
+            [(1, 1), (1, 5), (1, 2), (1, 5), (1, 2), (1, 5), 0.25, 1, 0, 1],
+            [(1, 1), (1, 5), (1, 2), (1, 4), (1, 2), (1, 4), 0.25, 0.75, 0, 1],
+
+            # Vertical collinear, y-ordered with point
+            [(1, 1), (1, 5), (1, 6), (1, 6)],
+            [(1, 1), (1, 5), (1, 5), (1, 5), (1, 5), 1, 0],
+            [(1, 1), (1, 5), (1, 4), (1, 4), (1, 4), 0.75, 0],
+            [(1, 1), (1, 5), (1, 1), (1, 1), (1, 1), 0, 0],
+            [(1, 1), (1, 5), (1, 0), (1, 0)],
+
+            # Vertical collinear, two points
+            [(1, 1), (1, 1), (1, 2), (1, 2)],
+            [(1, 1), (1, 1), (1, 1), (1, 1), (1, 1), 0, 0],
+
+            ]
+
+        for Segment2, Segment2Intersection in Segment2IntersectionTypes:
+            for d in intersectData:
+                for swapS in [False, True]:
+                    for swap1 in [False, True]:
+                        for swap2 in [False, True]:
+                            for swapXY in [False, True]:
+                                s1 = Segment2(d[0], d[1])
+                                s2 = Segment2(d[2], d[3])
+                                args = d[4:]
+                                if swap1:
+                                    s1 = Segment2(s1.b, s1.a)
+                                    if s1.a != s1.b:
+                                        if len(args) == 3:
+                                            args[1] = 1 - args[1] # t1
+                                        if len(args) == 6:
+                                            args[2] = 1 - args[2] # s1
+                                            args[3] = 1 - args[3] # t1
+                                if swap2:
+                                    s2 = Segment2(s2.b, s2.a)
+                                    if s2.a != s2.b:
+                                        if len(args) == 3:
+                                            args[2] = 1 - args[2] # t2
+                                        if len(args) == 6:
+                                            args[4] = 1 - args[4] # s2
+                                            args[5] = 1 - args[5] # t2
+                                if swapS:
+                                    s1, s2 = s2, s1
+                                    if len(args) == 3:
+                                        args[1], args[2] = args[2], args[1]
+                                    if len(args) == 6:
+                                        args[2:4], args[4:6] = args[4:6], args[2:4]
+                                if swapXY:
+                                    swapSegmentXY(s1)
+                                    swapSegmentXY(s2)
+                                    if len(args) == 3:
+                                        args[0] = swapTupleXY(args[0])
+                                    if len(args) == 6:
+                                        args[0] = swapTupleXY(args[0])
+                                        args[1] = swapTupleXY(args[1])
+                                expected = Segment2Intersection(*args)
+                                self.assertIntersectEqual(s1, s2, expected)
 
 
 if __name__ == '__main__':
