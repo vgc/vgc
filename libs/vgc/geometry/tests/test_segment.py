@@ -28,6 +28,20 @@ Segment2IntersectionTypes = [
     (Segment2d, Segment2dIntersection),
     (Segment2f, Segment2fIntersection)]
 
+def swapVecXY(vec):
+    if type(vec) is tuple:
+        vec = vec[1], vec[0]
+    else:
+        vec.x, vec.y = vec.y, vec.x
+
+# Tuples are immutable, so this cannot be done in-place
+def swapTupleXY(t):
+    return t[1], t[0]
+
+def swapSegmentXY(segment):
+    swapVecXY(segment.a)
+    swapVecXY(segment.b)
+
 class TestSegment2(unittest.TestCase):
 
     def testDefaultConstructor(self):
@@ -297,31 +311,40 @@ class TestSegment2(unittest.TestCase):
                 for swapS in [False, True]:
                     for swap1 in [False, True]:
                         for swap2 in [False, True]:
-                            s1 = Segment2(d[0], d[1])
-                            s2 = Segment2(d[2], d[3])
-                            args = d[4:]
-                            if swap1:
-                                s1 = Segment2(s1.b, s1.a)
-                                if len(args) == 3:
-                                    args[1] = 1 - args[1] # t1
-                                if len(args) == 6:
-                                    args[2] = 1 - args[2] # s1
-                                    args[3] = 1 - args[3] # t1
-                            if swap2:
-                                s2 = Segment2(s2.b, s2.a)
-                                if len(args) == 3:
-                                    args[2] = 1 - args[2] # t2
-                                if len(args) == 6:
-                                    args[4] = 1 - args[4] # s2
-                                    args[5] = 1 - args[5] # t2
-                            if swapS:
-                                s1, s2 = s2, s1
-                                if len(args) == 3:
-                                    args[1], args[2] = args[2], args[1]
-                                if len(args) == 6:
-                                    args[2:4], args[4:6] = args[4:6], args[2:4]
-                            expected = Segment2Intersection(*args)
-                            self.assertIntersectEqual(s1, s2, expected)
+                            for swapXY in [False, True]:
+                                s1 = Segment2(d[0], d[1])
+                                s2 = Segment2(d[2], d[3])
+                                args = d[4:]
+                                if swap1:
+                                    s1 = Segment2(s1.b, s1.a)
+                                    if len(args) == 3:
+                                        args[1] = 1 - args[1] # t1
+                                    if len(args) == 6:
+                                        args[2] = 1 - args[2] # s1
+                                        args[3] = 1 - args[3] # t1
+                                if swap2:
+                                    s2 = Segment2(s2.b, s2.a)
+                                    if len(args) == 3:
+                                        args[2] = 1 - args[2] # t2
+                                    if len(args) == 6:
+                                        args[4] = 1 - args[4] # s2
+                                        args[5] = 1 - args[5] # t2
+                                if swapS:
+                                    s1, s2 = s2, s1
+                                    if len(args) == 3:
+                                        args[1], args[2] = args[2], args[1]
+                                    if len(args) == 6:
+                                        args[2:4], args[4:6] = args[4:6], args[2:4]
+                                if swapXY:
+                                    swapSegmentXY(s1)
+                                    swapSegmentXY(s2)
+                                    if len(args) == 3:
+                                        args[0] = swapTupleXY(args[0])
+                                    if len(args) == 6:
+                                        args[0] = swapTupleXY(args[0])
+                                        args[1] = swapTupleXY(args[1])
+                                expected = Segment2Intersection(*args)
+                                self.assertIntersectEqual(s1, s2, expected)
 
 
 if __name__ == '__main__':
