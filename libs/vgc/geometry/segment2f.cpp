@@ -367,7 +367,7 @@ intersectVertical(const Vec2f& a1, const Vec2f& b1, const Vec2f& a2, const Vec2f
             return intersectVerticalYOrdered<B1A1, B2A2>(b1, a1, b2, a2);
         }
         else {
-            return intersectVerticalYOrderedWithPoint<S1S2, B1A1, A2B2>(a1, b1, a2);
+            return intersectVerticalYOrderedWithPoint<S1S2, B1A1, A2B2>(b1, a1, a2);
         }
     }
     else {

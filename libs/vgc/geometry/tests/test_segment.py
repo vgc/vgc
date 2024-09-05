@@ -301,7 +301,7 @@ class TestSegment2(unittest.TestCase):
             # Haven't yet found an example, or proved that it's impossible
 
             # X-Ordered, numCollinears == 4, non-interesecting
-            # Note that this is in fact fast-rejected between doing the collinear test
+            # Note that this is in fact fast-rejected before doing the collinear test
             [(1, 1), (5, 9), (6, 11), (7, 13)],
 
             # X-Ordered, numCollinears == 4, b1 == a2
@@ -342,6 +342,32 @@ class TestSegment2(unittest.TestCase):
             [(1, 1), (5, 9), (6, 3), (6, 3)],
             [(1, 1), (5, 9), (1, 1), (1, 1), (1, 1), 0, 0],
             [(1, 1), (5, 9), (5, 9), (5, 9), (5, 9), 1, 0],
+
+            # Vertical non-collinear
+            [(1, 1), (1, 5), (2, 3), (2, 8)], # y-ordered
+            [(1, 1), (1, 5), (2, 3), (2, 3)], # y-ordered with point
+            [(1, 1), (1, 1), (2, 3), (2, 3)], # two points
+
+            # Vertical collinear, y-ordered
+            [(1, 1), (1, 5), (1, 6), (1, 10)],
+            [(1, 1), (1, 5), (1, 5), (1, 9), (1, 5), 1, 0],
+            [(1, 1), (1, 5), (1, 4), (1, 8), (1, 4), (1, 5), 0.75, 1, 0, 0.25],
+            [(1, 1), (1, 5), (1, 1), (1, 17), (1, 1), (1, 5), 0, 1, 0, 0.25],
+            [(1, 1), (1, 5), (1, 1), (1, 5), (1, 1), (1, 5), 0, 1, 0, 1],
+            [(1, 1), (1, 5), (1, 1), (1, 4), (1, 1), (1, 4), 0, 0.75, 0, 1],
+            [(1, 1), (1, 5), (1, 2), (1, 5), (1, 2), (1, 5), 0.25, 1, 0, 1],
+            [(1, 1), (1, 5), (1, 2), (1, 4), (1, 2), (1, 4), 0.25, 0.75, 0, 1],
+
+            # Vertical collinear, y-ordered with point
+            [(1, 1), (1, 5), (1, 6), (1, 6)],
+            [(1, 1), (1, 5), (1, 5), (1, 5), (1, 5), 1, 0],
+            [(1, 1), (1, 5), (1, 4), (1, 4), (1, 4), 0.75, 0],
+            [(1, 1), (1, 5), (1, 1), (1, 1), (1, 1), 0, 0],
+            [(1, 1), (1, 5), (1, 0), (1, 0)],
+
+            # Vertical collinear, two points
+            [(1, 1), (1, 1), (1, 2), (1, 2)],
+            [(1, 1), (1, 1), (1, 1), (1, 1), (1, 1), 0, 0],
 
             ]
 
