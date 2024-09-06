@@ -49,12 +49,6 @@ void ComplexDiff::onNodeDestroyed_(core::Id nodeId) {
 }
 
 void ComplexDiff::onNodeModified_(Node* node, NodeModificationFlags flags) {
-    for (Int i = 0; i < createdNodes_.length(); ++i) {
-        if (createdNodes_[i].node() == node) {
-            // swallow node diffs when node is new
-            return;
-        }
-    }
     for (ModifiedNodeInfo& modifiedNodeInfo : modifiedNodes_) {
         if (modifiedNodeInfo.node() == node) {
             modifiedNodeInfo.addFlags(flags);
@@ -62,15 +56,16 @@ void ComplexDiff::onNodeModified_(Node* node, NodeModificationFlags flags) {
         }
     }
     modifiedNodes_.append(ModifiedNodeInfo(node, flags));
+
+    // [1] Note: a previous version of this function only added the modified
+    // flags if the node wasn't in createdNodes_. However, this prevented edges
+    // to have their updateGeometryFromBoundary() called if as part of the same
+    // Operations, the edge was created then its end vertex's position changed
+    // (e.g., from glue()). Therefore, we now always add the modified flags,
+    // even if this means that a node can be both "created" and "modified".
 }
 
 void ComplexDiff::onNodePropertyModified_(Node* node, core::StringId name) {
-    for (Int i = 0; i < createdNodes_.length(); ++i) {
-        if (createdNodes_[i].node() == node) {
-            // swallow node diffs when node is new
-            return;
-        }
-    }
     for (ModifiedNodeInfo& modifiedNodeInfo : modifiedNodes_) {
         if (modifiedNodeInfo.node() == node) {
             modifiedNodeInfo.addModifiedProperty(name);
@@ -80,6 +75,8 @@ void ComplexDiff::onNodePropertyModified_(Node* node, core::StringId name) {
     ModifiedNodeInfo modifiedNodeInfo(node);
     modifiedNodeInfo.addModifiedProperty(name);
     modifiedNodes_.append(std::move(modifiedNodeInfo));
+
+    // Also see: note [1]
 }
 
 void ComplexDiff::onNodeInserted_(
