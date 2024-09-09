@@ -31,7 +31,8 @@ class VGC_GEOMETRY_API SegmentIntersector {
 public:
     /// Creates a `SegmentIntersector`.
     ///
-    SegmentIntersector();
+    SegmentIntersector() {
+    }
 
     /// Adds a segment.
     ///
@@ -44,16 +45,45 @@ public:
 
     /// Adds a polyline.
     ///
-    void addPolyline(core::ConstSpan<Vec2d> polyline) {
-        Int numSegmentsInPolyline = polyline.length() - 1;
-        if (numSegmentsInPolyline > 0) {
-            Int firstSegmentIndex = positions_.length();
-            positions_.extend(polyline);
-            segments_.reserve(segments_.length() + numSegmentsInPolyline);
-            for (Int i = 0; i < numSegmentsInPolyline; ++i) {
-                segments_.append(firstSegmentIndex + i);
+    template<typename InputIt, VGC_REQUIRES(core::isInputIterator<InputIt>)>
+    void addPolyline(InputIt first, InputIt last) {
+        auto identity = [](const Vec2d& v) { return v; };
+        addPolyline(first, last, identity);
+    }
+
+    template<
+        typename InputIt,
+        typename UnaryOp,
+        VGC_REQUIRES(core::isInputIterator<InputIt>)>
+    void addPolyline(InputIt first, InputIt last, UnaryOp op) {
+
+        // Check that there is at least on segment (i.e., at least two positions)
+        // before adding anything
+        InputIt it = first;
+        if (it != last) {
+            Vec2d firstPosition = op(*first);
+            ++it;
+            if (it != last) {
+
+                // Add all the positions and segments
+                positions_.append(firstPosition);
+                while (it != last) {
+                    positions_.append(op(*it));
+                    segments_.append(positions_.length() - 2);
+                    ++it;
+                }
             }
         }
+    }
+
+    template<typename Range, VGC_REQUIRES(core::isInputRange<Range>)>
+    void addPolyline(const Range& range) {
+        addPolyline(range.begin(), range.end());
+    }
+
+    template<typename Range, typename UnaryOp, VGC_REQUIRES(core::isInputRange<Range>)>
+    void addPolyline(const Range& range, UnaryOp op) {
+        addPolyline(range.begin(), range.end(), op);
     }
 
     /// Computes the intersections.
