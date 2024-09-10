@@ -39,6 +39,7 @@ vgc_add_library(core
         profile.h
         python.h
         random.h
+        ranges.h
         sharedconst.h
         span.h
         stopwatch.h
