@@ -329,8 +329,6 @@ void Document::save(const std::string& filePath, const XmlFormattingStyle& style
 
 DocumentPtr Document::copy(core::ConstSpan<Node*> nodes) {
 
-    static_assert(core::isRange<core::Span<Node*>>);
-
     struct NodeAndDepth {
         NodeAndDepth(Node* node)
             : node(node)

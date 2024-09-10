@@ -913,7 +913,7 @@ struct IsForwardIterator<T, Requires<
 
 /// Checks whether `T` satisfies the concept of forward iterator.
 ///
-/// \sa `IsForwardIterator<T>`, `isInputIterator<T>`, `isRange<T>`.
+/// \sa `IsForwardIterator<T>`, `isInputIterator<T>`, `isForwardRange<T>`.
 ///
 template<typename T>
 inline constexpr bool isForwardIterator = IsForwardIterator<T>::value;
@@ -932,29 +932,29 @@ struct IsInputRange<T, Requires<
 /// Checks whether `T` satisfies the concept of input range, that is, whether
 /// it has `T::begin()` and `T::end()` and they return input iterators.
 ///
-/// \sa `IsInputRange<T>`, `isInputIterator<T>`, `isRange<T>`.
+/// \sa `IsInputRange<T>`, `isInputIterator<T>`, `isForwardRange<T>`.
 ///
 template<typename T>
 inline constexpr bool isInputRange = IsInputRange<T>::value;
 
-/// Type trait for `isRange<T>`.
+/// Type trait for `isForwardRange<T>`.
 ///
 template<typename T, typename SFINAE = void>
-struct IsRange : std::false_type {};
+struct IsForwardRange : std::false_type {};
 
 template<typename T>
-struct IsRange<T, Requires<
+struct IsForwardRange<T, Requires<
         isForwardIterator<decltype(std::declval<T>().begin())>
         && isForwardIterator<decltype(std::declval<T>().end())>>>
     : std::true_type {};
 
-/// Checks whether `T` satisfies the concept of range, that is, whether it has
-/// `T::begin()` and `T::end()` and they return forward iterators.
+/// Checks whether `T` satisfies the concept of forward range, that is, whether
+/// it has `T::begin()` and `T::end()` and they return forward iterators.
 ///
-/// \sa `IsRange<T>`, `isForwardIterator<T>`, `isInputRange<T>`.
+/// \sa `IsForwardRange<T>`, `isForwardIterator<T>`, `isInputRange<T>`.
 ///
 template<typename T>
-inline constexpr bool isRange = IsRange<T>::value;
+inline constexpr bool isForwardRange = IsForwardRange<T>::value;
 
 } // namespace vgc::core
 

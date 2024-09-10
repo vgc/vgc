@@ -672,7 +672,7 @@ public:
     /// a.assign(l); // Make the existing array a copy of the list
     /// ```
     ///
-    template<typename Range, VGC_REQUIRES(isRange<Range>)>
+    template<typename Range, VGC_REQUIRES(isInputRange<Range>)>
     void assign(const Range& range) {
         assignRange_(range.begin(), range.end());
     }
@@ -1614,7 +1614,7 @@ public:
     /// Throws `LengthError` if the resulting number of elements would exceed
     /// `maxLength()`.
     ///
-    template<typename Range, VGC_REQUIRES(isRange<Range>)>
+    template<typename Range, VGC_REQUIRES(isInputRange<Range>)>
     void extend(const Range& range) {
         insertRange_(length(), range.begin(), range.end());
     }
@@ -1672,7 +1672,7 @@ public:
     ///
     /// Throws `LengthError` if the resulting number of elements would exceed `maxLength()`.
     ///
-    template<typename Range, VGC_REQUIRES(isRange<Range>)>
+    template<typename Range, VGC_REQUIRES(isInputRange<Range>)>
     void preextend(const Range& range) {
         insertRange_(0, range.begin(), range.end());
     }
