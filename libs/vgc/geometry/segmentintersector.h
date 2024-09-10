@@ -18,6 +18,7 @@
 #define VGC_GEOMETRY_SEGMENTINTERSECTOR_H
 
 #include <vgc/core/array.h>
+#include <vgc/core/ranges.h>
 #include <vgc/core/span.h>
 #include <vgc/geometry/api.h>
 #include <vgc/geometry/vec2d.h>
@@ -45,37 +46,6 @@ public:
 
     /// Adds a polyline.
     ///
-    template<typename InputIt, VGC_REQUIRES(core::isInputIterator<InputIt>)>
-    void addPolyline(InputIt first, InputIt last) {
-        auto identity = [](const Vec2d& v) { return v; };
-        addPolyline(first, last, identity);
-    }
-
-    template<
-        typename InputIt,
-        typename UnaryOp,
-        VGC_REQUIRES(core::isInputIterator<InputIt>)>
-    void addPolyline(InputIt first, InputIt last, UnaryOp op) {
-
-        // Check that there is at least on segment (i.e., at least two positions)
-        // before adding anything
-        InputIt it = first;
-        if (it != last) {
-            Vec2d firstPosition = op(*first);
-            ++it;
-            if (it != last) {
-
-                // Add all the positions and segments
-                positions_.append(firstPosition);
-                while (it != last) {
-                    positions_.append(op(*it));
-                    segments_.append(positions_.length() - 2);
-                    ++it;
-                }
-            }
-        }
-    }
-
     template<typename Range, VGC_REQUIRES(core::isInputRange<Range>)>
     void addPolyline(const Range& range) {
         addPolyline(range.begin(), range.end());
@@ -83,7 +53,32 @@ public:
 
     template<typename Range, typename UnaryOp, VGC_REQUIRES(core::isInputRange<Range>)>
     void addPolyline(const Range& range, UnaryOp op) {
-        addPolyline(range.begin(), range.end(), op);
+
+        // Do nothing if the range does not contain at least two elements.
+        if (core::isEmpty(range)) {
+            return;
+        }
+        Vec2d firstPosition = op(*range.begin());
+        auto otherPositions = core::drop(range, 1);
+        if (core::isEmpty(otherPositions)) {
+            return;
+        }
+
+        // Reserve memory if it is possible to know in advance
+        // the number of elements in the range.
+        if constexpr (core::isForwardRange<Range>) {
+            auto numPositions = range.end() - range.begin();
+            auto numSegments = numPositions - 1;
+            positions_.reserve(positions_.size() + numPositions);
+            positions_.reserve(segments_.size() + numSegments);
+        }
+
+        // Add all the positions and segments
+        positions_.append(firstPosition);
+        for (const auto& value : otherPositions) {
+            positions_.append(op(value));
+            segments_.append(positions_.length() - 2);
+        }
     }
 
     /// Computes the intersections.
