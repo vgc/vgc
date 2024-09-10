@@ -14,6 +14,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#include <vgc/geometry/segment.h>
 #include <vgc/geometry/segment2d.h>
 #include <vgc/geometry/segment2f.h>
 #include <vgc/geometry/vec.h>
@@ -22,28 +23,13 @@
 #include <vgc/core/wraps/common.h>
 #include <vgc/geometry/wraps/vec.h>
 
+using vgc::geometry::Segment;
 using vgc::geometry::Segment2d;
 using vgc::geometry::Segment2f;
 using vgc::geometry::SegmentIntersectionType;
 using vgc::geometry::Vec;
 
 namespace {
-
-template<typename T>
-struct Segment2_ {};
-
-template<>
-struct Segment2_<float> {
-    using type = Segment2f;
-};
-
-template<>
-struct Segment2_<double> {
-    using type = Segment2d;
-};
-
-template<typename T>
-using Segment2 = typename Segment2_<T>::type;
 
 void wrap_segmentIntersectionType(py::module& m) {
     py::enum_<SegmentIntersectionType>(m, "SegmentIntersectionType")
@@ -58,7 +44,7 @@ void wrap_segment(py::module& m, const std::string& name) {
     // Fix https://github.com/pybind/pybind11/issues/1893
     auto self2 = py::self;
 
-    using Segment2x = Segment2<T>;
+    using Segment2x = Segment<2, T>;
     using Vec2x = Vec<2, T>;
     using Inter2x = typename Segment2x::IntersectionType;
 

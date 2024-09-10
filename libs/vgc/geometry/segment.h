@@ -22,6 +22,7 @@
 
 #include <vgc/core/arithmetic.h>
 #include <vgc/core/enum.h>
+#include <vgc/core/templateutil.h>
 #include <vgc/geometry/api.h>
 
 namespace vgc::geometry {
@@ -37,6 +38,57 @@ enum class SegmentIntersectionType : UInt8 {
 
 VGC_GEOMETRY_API
 VGC_DECLARE_ENUM(SegmentIntersectionType)
+
+class Segment2f;
+class Segment2d;
+
+namespace detail {
+
+// clang-format off
+
+template<int dimension, typename T> struct Segment_ {};
+template<> struct Segment_<2, float>  { using type = Segment2f; };
+template<> struct Segment_<2, double> { using type = Segment2d; };
+
+// clang-format on
+
+} // namespace detail
+
+/// Alias template for `Segment` classes.
+///
+/// ```
+/// vgc::geometry::Segment<2, float>; // alias for vgc::geometry::Segment2f
+/// ```
+///
+/// Note that `Segment` is not a class template, and `Segment2f` is not a class
+/// template instanciation of `Segment`. It is the other way around:
+/// `Segment2f` is a "regular" class (not defined from a template), and
+/// `Segment<2, float>` is defined as an alias to `Segment2f`.
+///
+/// This design has the advantage to be slightly more flexible and also
+/// generates shorter symbol names, which is useful for debugging (e.g.,
+/// shorter error messages) and may potentially speed up dynamic linking.
+///
+template<int dimension, typename T>
+using Segment = typename detail::Segment_<dimension, T>::type;
+
+/// Type trait for `isSegment<T>`.
+///
+template<typename T, typename SFINAE = void>
+struct IsSegment : std::false_type {};
+
+template<typename T>
+struct IsSegment<
+    T,
+    core::Requires<std::is_same_v<T, Segment<T::dimension, typename T::ScalarType>>>>
+    : std::true_type {};
+
+/// Checks whether `T` is a `vgc::geometry::Segment` type.
+///
+/// \sa `IsSegment<T>`
+///
+template<typename T>
+inline constexpr bool isSegment = IsSegment<T>::value;
 
 } // namespace vgc::geometry
 
