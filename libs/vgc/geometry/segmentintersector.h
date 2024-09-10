@@ -21,23 +21,69 @@
 #include <vgc/core/ranges.h>
 #include <vgc/core/span.h>
 #include <vgc/geometry/api.h>
-#include <vgc/geometry/vec2d.h>
+#include <vgc/geometry/segment.h>
+#include <vgc/geometry/vec.h>
 
 namespace vgc::geometry {
 
 /// \class SegmentIntersector
 /// \brief Computes all intersections between a set of line segments.
 ///
+template<typename Scalar>
 class VGC_GEOMETRY_API SegmentIntersector {
 public:
+    static constexpr Int dimension = 2;
+    using ScalarType = Scalar;
+
+    using Segment2 = Segment<2, ScalarType>;
+    using Vec2 = Vec<2, Scalar>;
+
+    using PositionIndex = Int;
+    using SegmentIndex = Int;
+    using SegmentIndexPair = std::pair<SegmentIndex, SegmentIndex>;
+    using PointIntersectionIndex = Int;
+
+    // When two or more segments intersect at a point, then for each involved
+    // segment we store its corresponding intersection parameter.
+    //
+    struct PointIntersectionContribution {
+        Int pointIntersectionIndex;
+        Int segmentIndex;
+        Scalar param;
+    };
+
+    struct PointIntersection {
+        Vec2 position;
+        core::Array<PointIntersectionContribution> contributions;
+        // TODO Use SmallArray<2, PointIntersectionContribution>, since most
+        // intersections are expected to only involve 2 segments. Or if we
+        // really want to avoid any memory allocation via pre-reserved
+        // arrays, we could use a custom allocator or pairs of indices
+        // into another array.
+    };
+
     /// Creates a `SegmentIntersector`.
     ///
     SegmentIntersector() {
     }
 
+    /// Re-initializes this `SegmentIntersector` to its initial state, but
+    /// keeping reserved memory for future use.
+    ///
+    /// It is typically faster to clear an existing `SegmentIntersector` and
+    /// re-use it, rather than instanciating a new `SegmentIntersector`, since
+    /// the former would minimize the number of dynamic memory allocations.
+    ///
+    void clear() {
+        positions_.clear();
+        segments_.clear();
+        pointIntersections_.clear();
+        pointIntersectionContributions_.clear();
+    }
+
     /// Adds a segment.
     ///
-    void addSegment(const Vec2d& a, const Vec2d& b) {
+    void addSegment(const Vec2& a, const Vec2& b) {
         Int segmentIndex = positions_.length();
         positions_.append(a);
         positions_.append(b);
@@ -58,7 +104,7 @@ public:
         if (core::isEmpty(range)) {
             return;
         }
-        Vec2d firstPosition = op(*range.begin());
+        Vec2 firstPosition = op(*range.begin());
         auto otherPositions = core::drop(range, 1);
         if (core::isEmpty(otherPositions)) {
             return;
@@ -81,13 +127,16 @@ public:
         }
     }
 
-    /// Computes the intersections.
+    /// Computes the intersections based on the provided input segments.
     ///
-    void intersect();
+    void computeIntersections() {
+    }
 
 private:
-    core::Array<Vec2d> positions_; // stores segment positions
-    core::Array<Int> segments_;    // stores start index of segments
+    // Input
+
+    core::Array<Vec2> positions_;         // stores segment positions
+    core::Array<PositionIndex> segments_; // stores start index of segments
 
     // Example:
     //
@@ -97,24 +146,24 @@ private:
     // => positions_ = [(1, 2), (3, 4), (5, 6), (7, 8), (9, 10)]
     //    segments_ = [0, 2, 3]
 
-    struct Segment_ {
-        Vec2d a;
-        Vec2d b;
-    };
-
-    inline Int numSegments_() const {
+    Int numSegments_() const {
         return segments_.length();
     }
 
-    inline Segment_ segment_(Int i) {
+    Segment2 getSegment_(SegmentIndex i) {
 #ifdef VGC_DEBUG_BUILD
-        Int j = segments_[i];
+        PositionIndex j = segments_[i];
         return {positions_[j], positions_[j + 1]};
 #else
-        Int j = segments_.getUnchecked(i);
+        PositionIndex j = segments_.getUnchecked(i);
         return {positions_.getUnchecked(j), positions_.getUnchecked(j + 1)};
 #endif
     }
+
+    // Output
+
+    core::Array<PointIntersection> pointIntersections_;
+    core::Array<PointIntersectionContribution> pointIntersectionContributions_;
 };
 
 } // namespace vgc::geometry

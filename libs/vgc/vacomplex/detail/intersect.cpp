@@ -17,7 +17,7 @@
 #include <vgc/vacomplex/detail/operations.h>
 
 #include <vgc/geometry/segment2.h> // segmentIntersect
-#include <vgc/geometry/segmentintersector.h>
+#include <vgc/geometry/segmentintersector2d.h>
 
 namespace vgc::vacomplex {
 
@@ -49,7 +49,7 @@ core::Array<IntersectionParameters> computeSelfIntersections(KeyEdge* edge) {
     // TODO: case of closed edge
     // TODO: support segments intersecting along a sub-segment.
 
-    geometry::SegmentIntersector intersector;
+    geometry::SegmentIntersector2d intersector;
     intersector.addPolyline(
         samples, [](const auto& sample) { return sample.position(); });
 

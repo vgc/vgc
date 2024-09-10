@@ -14,8 +14,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <vgc/geometry/segmentintersector.h>
+#include <vgc/geometry/segmentintersector2d.h>
 
 namespace vgc::geometry {
+
+// Explicit template instanciation.
+// This avoids compiling it in each compilation unit that uses it.
+template class SegmentIntersector<double>;
 
 } // namespace vgc::geometry
