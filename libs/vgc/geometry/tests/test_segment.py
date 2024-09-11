@@ -126,6 +126,106 @@ class TestSegment2(unittest.TestCase):
             s = Segment2((1, 2), (3, 4))
             self.assertFalse(s.isDegenerate())
 
+    def assertEqual_(self, s1, s2):
+
+        self.assertEqual(s1, s2)
+        self.assertLessEqual(s1, s2)
+        self.assertGreaterEqual(s1, s2)
+
+        self.assertEqual(s2, s1)
+        self.assertLessEqual(s2, s1)
+        self.assertGreaterEqual(s2, s1)
+
+        self.assertTrue(s1 == s2)
+        self.assertFalse(s1 != s2)
+        self.assertFalse(s1 < s2)
+        self.assertTrue(s1 <= s2)
+        self.assertFalse(s1 > s2)
+        self.assertTrue(s1 >= s2)
+
+        self.assertTrue(s2 == s1)
+        self.assertFalse(s2 != s1)
+        self.assertFalse(s2 < s1)
+        self.assertTrue(s2 <= s1)
+        self.assertFalse(s2 > s1)
+        self.assertTrue(s2 >= s1)
+
+    def assertLess_(self, s1, s2):
+
+        self.assertNotEqual(s1, s2)
+        self.assertLess(s1, s2)
+        self.assertLessEqual(s1, s2)
+        self.assertGreater(s2, s1)
+        self.assertGreaterEqual(s2, s1)
+
+        self.assertFalse(s1 == s2)
+        self.assertTrue(s1 != s2)
+        self.assertTrue(s1 < s2)
+        self.assertTrue(s1 <= s2)
+        self.assertFalse(s1 > s2)
+        self.assertFalse(s1 >= s2)
+
+        self.assertFalse(s2 == s1)
+        self.assertTrue(s2 != s1)
+        self.assertFalse(s2 < s1)
+        self.assertFalse(s2 <= s1)
+        self.assertTrue(s2 > s1)
+        self.assertTrue(s2 >= s1)
+
+    def testComparisonOperators(self):
+        for Segment2 in Segment2Types:
+
+            s2 = Segment2((1, 3), (5, 7))
+            self.assertEqual_(s2, s2)
+
+            # ax differ
+            s1 = Segment2((0, 3), (5, 7))
+            s3 = Segment2((2, 3), (5, 7))
+            self.assertLess_(s1, s2)
+            self.assertLess_(s2, s3)
+            for ay in range(10):
+                for bx in range(10):
+                    for by in range(10):
+                        s1.a.y = ay
+                        s1.b.x = bx
+                        s1.b.y = by
+                        s3.a.y = ay
+                        s3.b.x = bx
+                        s3.b.y = by
+                        self.assertLess_(s1, s2)
+                        self.assertLess_(s2, s3)
+
+            # ax equal, ay differ
+            s1 = Segment2((1, 2), (5, 7))
+            s3 = Segment2((1, 4), (5, 7))
+            self.assertLess_(s1, s2)
+            self.assertLess_(s2, s3)
+            for bx in range(10):
+                for by in range(10):
+                    s1.b.x = bx
+                    s1.b.y = by
+                    s3.b.x = bx
+                    s3.b.y = by
+                    self.assertLess_(s1, s2)
+                    self.assertLess_(s2, s3)
+
+            # ax, ay equal, bx differ
+            s1 = Segment2((1, 3), (4, 7))
+            s3 = Segment2((1, 3), (6, 7))
+            self.assertLess_(s1, s2)
+            self.assertLess_(s2, s3)
+            for by in range(10):
+                s1.b.y = by
+                s3.b.y = by
+                self.assertLess_(s1, s2)
+                self.assertLess_(s2, s3)
+
+            # ax, ay, bx equal, by differ
+            s1 = Segment2((1, 3), (5, 6))
+            s3 = Segment2((1, 3), (5, 8))
+            self.assertLess_(s1, s2)
+            self.assertLess_(s2, s3)
+
     def assertIntersectEqual(self, s1, s2, expected):
         res = s1.intersect(s2)
         if res != expected:

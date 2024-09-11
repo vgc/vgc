@@ -120,6 +120,10 @@ void wrap_segment(py::module& m, const std::string& name) {
         .def(py::self / T())
         .def(py::self == py::self)
         .def(py::self != py::self)
+        .def(py::self < py::self)
+        .def(py::self <= py::self)
+        .def(py::self > py::self)
+        .def(py::self >= py::self)
 
         .def("isDegenerate", &Segment2x::isDegenerate)
 
