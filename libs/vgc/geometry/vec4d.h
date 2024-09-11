@@ -261,8 +261,7 @@ public:
             || v1.data_[3] != v2.data_[3];
     }
 
-    /// Compares `v1` and `v2` using the lexicographic
-    /// order.
+    /// Compares `v1` and `v2` using lexicographic order on (x, y, z, w).
     ///
     friend constexpr bool operator<(const Vec4d& v1, const Vec4d& v2) {
         return (v1.data_[0] < v2.data_[0]) || (
@@ -280,22 +279,19 @@ public:
                );
     }
 
-    /// Compares `v1` and `v2` using the lexicographic
-    /// order.
+    /// Compares `v1` and `v2` using lexicographic order on (x, y, z, w).
     ///
     friend constexpr bool operator<=(const Vec4d& v1, const Vec4d& v2) {
         return !(v2 < v1);
     }
 
-    /// Compares the `v1` and `v2` using the lexicographic
-    /// order.
+    /// Compares `v1` and `v2` using lexicographic order on (x, y, z, w).
     ///
     friend constexpr bool operator>(const Vec4d& v1, const Vec4d& v2) {
         return v2 < v1;
     }
 
-    /// Compares `v1` and `v2` using the lexicographic
-    /// order.
+    /// Compares `v1` and `v2` using lexicographic order on (x, y, z, w).
     ///
     friend constexpr bool operator>=(const Vec4d& v1, const Vec4d& v2) {
         return !(v1 < v2);
