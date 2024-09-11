@@ -490,6 +490,36 @@ public:
             || s1.data_[1] != s2.data_[1];
     }
 
+    /// Compares `s1` and `s2` using lexicographic order on (ax, ay, bx, by),
+    /// that is, lexicographic order on (a, b) where points are themselves
+    /// compared using lexicographic order on (x, y).
+    ///
+    /// This order is often useful for plane-sweep algorithms.
+    /// 
+    friend constexpr bool operator<(const Segment2x& s1, const Segment2x& s2) {
+        return ( (s1.data_[0] < s2.data_[0]) ||
+               (!(s2.data_[0] < s1.data_[0]) &&
+               ( (s1.data_[1] < s2.data_[1]))));
+    }
+
+    /// Compares `s1` and `s2` using lexicographic order on (ax, ay, bx, by).
+    ///
+    friend constexpr bool operator<=(const Segment2x& s1, const Segment2x& s2) {
+        return !(s2 < s1);
+    }
+
+    /// Compares `s1` and `s2` using lexicographic order on (ax, ay, bx, by).
+    ///
+    friend constexpr bool operator>(const Segment2x& s1, const Segment2x& s2) {
+        return s2 < s1;
+    }
+
+    /// Compares `s1` and `s2` using lexicographic order on (ax, ay, bx, by).
+    ///
+    friend constexpr bool operator>=(const Segment2x& s1, const Segment2x& s2) {
+        return !(s1 < s2);
+    }
+
 private:
     Vec2x data_[2];
 };
