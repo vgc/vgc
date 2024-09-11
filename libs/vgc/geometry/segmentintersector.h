@@ -17,7 +17,10 @@
 #ifndef VGC_GEOMETRY_SEGMENTINTERSECTOR_H
 #define VGC_GEOMETRY_SEGMENTINTERSECTOR_H
 
+#include <queue>
+
 #include <vgc/core/array.h>
+#include <vgc/core/assert.h>
 #include <vgc/core/ranges.h>
 #include <vgc/core/span.h>
 #include <vgc/geometry/api.h>
@@ -38,7 +41,6 @@ public:
     using Segment2 = Segment<2, ScalarType>;
     using Vec2 = Vec<2, Scalar>;
 
-    using PositionIndex = Int;
     using SegmentIndex = Int;
     using SegmentIndexPair = std::pair<SegmentIndex, SegmentIndex>;
     using PointIntersectionIndex = Int;
@@ -75,8 +77,15 @@ public:
     /// the former would minimize the number of dynamic memory allocations.
     ///
     void clear() {
-        positions_.clear();
+        // Input
+        polylines_.clear();
         segments_.clear();
+        isReversed_.clear();
+
+        // Intermediate data
+        // Note: the eventQueue is already empty.
+
+        // Output
         pointIntersections_.clear();
         pointIntersectionContributions_.clear();
     }
@@ -84,10 +93,7 @@ public:
     /// Adds a segment.
     ///
     void addSegment(const Vec2& a, const Vec2& b) {
-        Int segmentIndex = positions_.length();
-        positions_.append(a);
-        positions_.append(b);
-        segments_.append(segmentIndex);
+        addSegment_(a, b);
     }
 
     /// Adds a polyline.
@@ -104,61 +110,191 @@ public:
         if (core::isEmpty(range)) {
             return;
         }
-        Vec2 firstPosition = op(*range.begin());
-        auto otherPositions = core::drop(range, 1);
-        if (core::isEmpty(otherPositions)) {
+        Vec2 startPosition = op(*range.begin());
+        auto endPositions = core::drop(range, 1);
+        if (core::isEmpty(endPositions)) {
             return;
         }
 
-        // Reserve memory if it is possible to know in advance
-        // the number of elements in the range.
+        // Reserve memory if the number of segments can be known in advance.
         if constexpr (core::isForwardRange<Range>) {
-            auto numPositions = range.end() - range.begin();
-            auto numSegments = numPositions - 1;
-            positions_.reserve(positions_.size() + numPositions);
-            positions_.reserve(segments_.size() + numSegments);
+            auto numSegmentsInPolyline = endPositions.end() - endPositions.begin();
+            auto numSegments = segments_.size() + numSegmentsInPolyline;
+            segments_.reserve(numSegments);
+            isReversed_.reserve(numSegments);
         }
 
-        // Add all the positions and segments
-        positions_.append(firstPosition);
-        for (const auto& value : otherPositions) {
-            positions_.append(op(value));
-            segments_.append(positions_.length() - 2);
+        // Add the segments
+        SegmentIndex polylineBegin = segments_.length();
+        for (const auto& endPosition_ : endPositions) {
+            Vec2 endPosition = op(endPosition_);
+            addSegment_(startPosition, endPosition);
+            startPosition = endPosition;
         }
+        SegmentIndex polylineEnd = segments_.length();
+        polylines_.emplaceLast(polylineBegin, polylineEnd);
     }
 
     /// Computes the intersections based on the provided input segments.
     ///
     void computeIntersections() {
+
+        // Insert all segment left and right points in the event queue. If both
+        // endpoints of the segment have the same x-coord, the "left" point is
+        // considered to be the one with the smaller y-coord.
+        //
+        VGC_ASSERT(eventQueue_.empty());
+        Int numSegments = segments_.length();
+        for (Int i = 0; i < numSegments; ++i) {
+            const Segment2& segment = segments_.getUnchecked(i);
+            eventQueue_.push(Event{EventType::LeftPoint, segment.a(), i});
+            eventQueue_.push(Event{EventType::RightPoint, segment.b(), i});
+        }
+
+        // Initialize the list of segments intersecting the sweep line.
+        //
+        // Invariants:
+        // - Any segment in sweepSegments_ is also in the eventQueue_
+        //   as either RightPoint or Intersection (or both).
+        // - Any segment that is in the eventQueue as LeftPoint is not (and
+        //   has never been) in sweepSegments_.
+        //
+        sweepSegments_.clear();
+
+        // Process all events.
+        //
+        while (!eventQueue_.empty()) {
+
+            // Get the next event and all events sharing the same position
+            Event firstEvent = eventQueue_.top();
+            eventQueue_.pop();
+            Vec2 position = firstEvent.position;
+            sweepEvents_.clear();
+            sweepEvents_.append(firstEvent);
+            while (!eventQueue_.empty() && eventQueue_.top().position == position) {
+                sweepEvents_.append(eventQueue_.top());
+                eventQueue_.pop();
+            }
+
+            // Classify events into LeftPoint, RightPoint, Intersection
+            auto it1 = sweepEvents_.begin();
+            auto it4 = sweepEvents_.end();
+            auto it2 = sweepEvents_.find(
+                [](const Event& event) { return event.type > EventType::LeftPoint; });
+            auto it3 = sweepEvents_.find(
+                [](const Event& event) { return event.type > EventType::RightPoint; });
+            // auto compEventType = [](const Event& event, EventType type) {
+            //     return event.type < type;
+            // };
+            // auto it2 = std::upper_bound(it1, it4, EventType::LeftPoint, compEventType);
+            // auto it3 = std::upper_bound(it2, it4, EventType::RightPoint, compEventType);
+            core::ConstSpan<Event> leftEvents(it1, it2);
+            core::ConstSpan<Event> rightEvents(it2, it3);
+            core::ConstSpan<Event> interEvents(it3, it4);
+
+            // TODO: if sweepEvents_ has more than one event, report as intersection.
+
+            // Invariant: all segments in rightEvents and interEvents are adjacent
+            // in sweepSegments_.
+
+            // Find where in sweepSegments are the segments in rightEvents and interEvents.
+            //
+            // Geometric invariant: they are all consecutive in sweepSegments.
+            // But since this might be subject to numerical errors, we do not
+            // rely on this.
+            //
+            auto sweepSegmentsIt = sweepSegments_.begin();
+            for (const Event& event : rightEvents) {
+                sweepSegmentsIt = removeFromSweepSegments_(event.segmentIndex);
+            }
+            for (const Event& event : interEvents) {
+                sweepSegmentsIt = removeFromSweepSegments_(event.segmentIndex);
+            }
+
+            // Add the interEvents and rightEvents to sweepSegments.
+            // TODO: add them sorted by angle.
+            for (const Event& event : interEvents) {
+                sweepSegmentsIt =
+                    sweepSegments_.insert(sweepSegmentsIt, event.segmentIndex);
+            }
+            for (const Event& event : leftEvents) {
+                sweepSegmentsIt =
+                    sweepSegments_.insert(sweepSegmentsIt, event.segmentIndex);
+            }
+
+            // TODO: compute intersections between newly added segments and their
+            // neighbors in sweepSegments, and add them as Intersection event if
+            // any.
+
+            VGC_DEBUG_TMP_EXPR(sweepSegments_);
+        }
+    }
+
+private:
+    // TODO: I think this could be done in constant time by using a (flat)
+    // linked list for sweepSegments_, and store in each event a handle to the
+    // corresponding sweepSegments_ node.
+    //
+    core::Array<SegmentIndex>::iterator removeFromSweepSegments_(SegmentIndex i) {
+        auto it = sweepSegments_.find(i);
+        VGC_ASSERT(it != sweepSegments_.end());
+        return sweepSegments_.erase(it);
     }
 
 private:
     // Input
 
-    core::Array<Vec2> positions_;         // stores segment positions
-    core::Array<PositionIndex> segments_; // stores start index of segments
+    core::Array<SegmentIndexPair> polylines_;
+    core::Array<Segment2> segments_;
+    core::Array<bool> isReversed_;
 
-    // Example:
-    //
-    // addSegment((1, 2), (3, 4))
-    // addPolyline([(5, 6), (7, 8), (9, 10)])
-    //
-    // => positions_ = [(1, 2), (3, 4), (5, 6), (7, 8), (9, 10)]
-    //    segments_ = [0, 2, 3]
-
-    Int numSegments_() const {
-        return segments_.length();
+    // Add segment ensuring a <= b order.
+    void addSegment_(const Vec2& a, const Vec2& b) {
+        if (b < a) {
+            segments_.emplaceLast(b, a);
+            isReversed_.append(true);
+        }
+        else {
+            segments_.emplaceLast(a, b);
+            isReversed_.append(false);
+        }
     }
 
-    Segment2 getSegment_(SegmentIndex i) {
-#ifdef VGC_DEBUG_BUILD
-        PositionIndex j = segments_[i];
-        return {positions_[j], positions_[j + 1]};
-#else
-        PositionIndex j = segments_.getUnchecked(i);
-        return {positions_.getUnchecked(j), positions_.getUnchecked(j + 1)};
-#endif
-    }
+    // Intermediate data
+
+    enum class EventType : UInt8 {
+        LeftPoint = 0,
+        RightPoint = 1,
+        Intersection = 2,
+    };
+
+    struct Event {
+        EventType type;
+        Vec2 position;
+        SegmentIndex segmentIndex;
+
+        friend bool operator<(const Event& e1, const Event& e2) {
+            return e1.position < e2.position
+                   || (e1.position == e2.position
+                       && core::toUnderlying(e1.type) < core::toUnderlying(e2.type));
+        }
+
+        friend bool operator>(const Event& e1, const Event& e2) {
+            return e2 < e1;
+        }
+    };
+
+    std::priority_queue<Event, std::vector<Event>, std::greater<Event>> eventQueue_;
+
+    // The segments that intersect the sweep line, ordered by increasing
+    // y-coords of their intersection with the sweep line.
+    //
+    core::Array<SegmentIndex> sweepSegments_;
+
+    // The list of all events that correspond to the same position while
+    // processing the next event.
+    //
+    core::Array<Event> sweepEvents_;
 
     // Output
 

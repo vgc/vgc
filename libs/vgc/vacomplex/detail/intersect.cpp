@@ -52,6 +52,7 @@ core::Array<IntersectionParameters> computeSelfIntersections(KeyEdge* edge) {
     geometry::SegmentIntersector2d intersector;
     intersector.addPolyline(
         samples, [](const auto& sample) { return sample.position(); });
+    intersector.computeIntersections();
 
     core::Array<IntersectionParameters> res;
 
