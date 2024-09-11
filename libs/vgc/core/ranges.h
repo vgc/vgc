@@ -70,7 +70,7 @@ private:
 ///
 template<typename TRange>
 bool isEmpty(TRange&& range) {
-    return range.begin() != range.end();
+    return range.begin() == range.end();
 }
 
 /// Returns a subrange of the given `range` with the first `n` elements
