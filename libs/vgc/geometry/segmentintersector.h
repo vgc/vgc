@@ -30,20 +30,169 @@
 #include <vgc/geometry/segment.h>
 #include <vgc/geometry/vec.h>
 
-namespace vgc::geometry::detail::segmentintersector {
+namespace vgc::geometry {
+
+namespace detail::segmentintersector {
 
 using SegmentIndex = Int;
+using PointIntersectionIndex = Int;
+using SegmentIndexPair = std::pair<SegmentIndex, SegmentIndex>;
 
 enum class EventType : UInt8 {
-    LeftPoint = 0,
-    RightPoint = 1,
+    Left = 0,
+    Right = 1,
     Intersection = 2,
 };
 
+template<typename T>
+struct InputData;
+
+template<typename T>
+struct AlgorithmData;
+
+template<typename T>
+struct OutputData;
+
+} // namespace detail::segmentintersector
+
+/// \class SegmentIntersector
+/// \brief Computes all intersections between a set of line segments.
+///
 template<typename Scalar>
+class VGC_GEOMETRY_API SegmentIntersector {
+public:
+    static constexpr Int dimension = 2;
+    using ScalarType = Scalar;
+
+    using Segment2 = Segment<2, Scalar>;
+    using Vec2 = Vec<2, Scalar>;
+
+    using SegmentIndex = detail::segmentintersector::SegmentIndex;
+    using SegmentIndexPair = detail::segmentintersector::SegmentIndexPair;
+    using PointIntersectionIndex = detail::segmentintersector::PointIntersectionIndex;
+
+    /// When two or more segments intersect at a point, then for each involved
+    /// segment we store its corresponding intersection parameter.
+    ///
+    struct PointIntersectionInfo {
+        Int pointIntersectionIndex;
+        Int segmentIndex;
+        Scalar param;
+    };
+
+    /// Stores the position of an intersection point, together with the
+    /// information of which segments are intersecting at that position.
+    ///
+    // TODO: Minimize memory allocations via SmallArray<2, Info>?
+    // Indeed, most intersections are expected to only involve 2 segments.
+    // Alternatively, we could use a custom allocator or pairs of indices
+    // into another array.
+    //
+    struct PointIntersection {
+        Vec2 position;
+        core::Array<PointIntersectionInfo> infos;
+    };
+
+    /// Creates a `SegmentIntersector`.
+    ///
+    SegmentIntersector() {
+    }
+
+    /// Re-initializes this `SegmentIntersector` to its initial state, but
+    /// keeping reserved memory for future use.
+    ///
+    /// It is typically faster to clear an existing `SegmentIntersector` and
+    /// re-use it, rather than instanciating a new `SegmentIntersector`, since
+    /// the former would minimize the number of dynamic memory allocations.
+    ///
+    void clear() {
+        input_.clear();
+        algorithm_.clear();
+        output_.clear();
+    }
+
+    /// Adds a segment.
+    ///
+    void addSegment(const Vec2& a, const Vec2& b);
+
+    /// Adds a polyline.
+    ///
+    template<typename Range, VGC_REQUIRES(core::isInputRange<Range>)>
+    void addPolyline(const Range& range) {
+        addPolyline(range.begin(), range.end(), core::identity);
+    }
+
+    /// Adds a polyline.
+    ///
+    template<typename Range, typename UnaryOp, VGC_REQUIRES(core::isInputRange<Range>)>
+    void addPolyline(const Range& range, UnaryOp op);
+
+    /// Computes the intersections between the input segments and polylines.
+    ///
+    void computeIntersections();
+
+    /// Returns the computed point intersections.
+    ///
+    const core::Array<PointIntersection>& pointIntersections() const {
+        return output_.pointIntersections;
+    };
+
+private:
+    detail::segmentintersector::InputData<Scalar> input_;
+    detail::segmentintersector::AlgorithmData<Scalar> algorithm_;
+    detail::segmentintersector::OutputData<Scalar> output_;
+};
+
+namespace detail::segmentintersector {
+
+// We implement here a variant of the Bentley-Ottmann algorithm.
+//
+// References:
+//
+// - [Wiki] https://en.wikipedia.org/wiki/Bentley%E2%80%93Ottmann_algorithm
+// - [BentleyOttmann] Algorithms for Reporting and Counting Geometric Intersections (1979)
+// - [BoissonatPreparata] Robust Plane Sweep for Intersecting Segments (2000)
+// - [deBerg] Computational Geometry, Algorithms and Applications, Third Edition (2008)
+// - [Mount] CMSC-754 Computational Geometry Lecture Notes (2012)
+//
+// In all the comments, we assume a right-handed coordinate system:
+//
+//           above / top
+//
+//             ^ y
+//    left     |           right
+//             |
+//             +-----> x
+//
+//           below / bottom
+//
+// The sweep line is vertical and moves from left to right.
+//
+// The sweep segments (record of which segments are intersecting the sweep line
+// at any given time in the algorithm, sometimes called the "status structure")
+// are sorted in ascending y-coord, that is, from bottom to top, with respect
+// to the position where they intersect the sweep line.
+
+// Convenient aliases to public types
+
+template<typename T>
+using PointIntersection = typename SegmentIntersector<T>::PointIntersection;
+
+template<typename T>
+using PointIntersectionInfo = typename SegmentIntersector<T>::PointIntersectionInfo;
+
+template<typename T>
+using Vec2 = Vec<2, T>;
+
+template<typename T>
+using Segment2 = Segment<2, T>;
+
+// Private data types
+
+template<typename T>
 struct Event {
     EventType type;
-    Vec<2, Scalar> position;
+    Vec2<T> position;
     SegmentIndex segmentIndex;
 
     friend bool operator<(const Event& e1, const Event& e2) {
@@ -57,7 +206,628 @@ struct Event {
     }
 };
 
-} // namespace vgc::geometry::detail::segmentintersector
+template<typename T>
+struct InputData {
+    core::Array<SegmentIndexPair> polylines;
+    core::Array<Segment2<T>> segments;
+    core::Array<T> segmentSlopes;
+    core::Array<bool> isReversed;
+
+    void clear() {
+        polylines.clear();
+        segments.clear();
+        segmentSlopes.clear();
+        isReversed.clear();
+    }
+};
+
+template<typename T>
+struct OutputData {
+    core::Array<PointIntersection<T>> pointIntersections;
+
+    void clear() {
+        pointIntersections.clear();
+    }
+};
+
+template<typename T>
+struct AlgorithmData {
+
+    // The event queue.
+    //
+    using EventQueue = std::priority_queue< //
+        Event<T>,
+        std::vector<Event<T>>,
+        std::greater<Event<T>>>;
+    EventQueue eventQueue;
+
+    // The segments that intersect the sweep line, ordered by increasing
+    // y-coords of their intersection with the sweep line.
+    //
+    core::Array<SegmentIndex> sweepSegments;
+
+    // The new segments that must be added (or removed and re-added) to
+    // sweepSegments_ when handling an event.
+    //
+    core::Array<SegmentIndex> outgoingSegments;
+
+    // The list of all events that correspond to the same position while
+    // processing the next event.
+    //
+    core::Array<Event<T>> sweepEvents;
+
+    void clear() {
+        VGC_ASSERT(eventQueue.empty()); // priority_queue has no clear() method
+        sweepSegments.clear();
+        outgoingSegments.clear();
+        sweepEvents.clear();
+    }
+};
+
+// The slope is used to determine segment ordering in sweep segments when
+// several segments are outgoing at an intersection position. It is
+// intentionally equal to infinity for vertical segments.
+//
+template<typename T>
+T computeSlope(const Vec2<T>& a, const Vec2<T>& b) {
+    if (b.x() == a.x()) {
+        return core::infinity<T>;
+        // Note: positive infinity since we know b.y() >= a.y()
+        // If b.y() == a.y(), the segment is degenerate and
+        // the slope will be ignored anyway.
+    }
+    else {
+        return (b.y() - a.y()) / (b.x() - a.x());
+    }
+}
+
+// Add segment ensuring a <= b order.
+template<typename T>
+void addSegment(InputData<T>& in, const Vec2<T>& a, const Vec2<T>& b) {
+    if (b < a) {
+        in.segments.emplaceLast(b, a);
+        in.segmentSlopes.append(computeSlope<T>(b, a));
+        in.isReversed.append(true);
+    }
+    else {
+        in.segments.emplaceLast(a, b);
+        in.segmentSlopes.append(computeSlope<T>(a, b));
+        in.isReversed.append(false);
+    }
+
+    // [1] We need to fully qualify computeSlope<T> because otherwise the
+    // template arg couldn't be deduced, since Vec2f/Vec2d are not actually
+    // template instanciations of Vec2. This might be reason enough to abandon
+    // the current python-generated Vec2f/Vec2d, and use proper C++ templates
+    // instead, despite longer symbol names. Also, we basically cannot have
+    // auto-completion for these types here: we can autocomplete on `in.<tab>`,
+    // but not on `a.<tab>`.
+}
+
+template<
+    typename T,
+    typename Range,
+    typename UnaryOp,
+    VGC_REQUIRES(core::isInputRange<Range>)>
+void addPolyline(InputData<T>& in, const Range& range, UnaryOp op) {
+
+    // Do nothing if the range does not contain at least two elements.
+    if (core::isEmpty(range)) {
+        return;
+    }
+    Vec2<T> startPosition = op(*range.begin());
+    auto endPositions = core::drop(range, 1);
+    if (core::isEmpty(endPositions)) {
+        return;
+    }
+
+    // Reserve memory if the number of segments can be known in advance.
+    if constexpr (core::isForwardRange<Range>) {
+        auto numSegmentsInPolyline = endPositions.end() - endPositions.begin();
+        auto numSegments = in.segments.size() + numSegmentsInPolyline;
+        in.segments.reserve(numSegments);
+        in.isReversed.reserve(numSegments);
+    }
+
+    // Add the segments
+    SegmentIndex polylineBegin = in.segments.length();
+    for (const auto& endPosition_ : endPositions) {
+        Vec2<T> endPosition = op(endPosition_);
+        addSegment(in, startPosition, endPosition);
+        startPosition = endPosition;
+    }
+    SegmentIndex polylineEnd = in.segments.length();
+    in.polylines.emplaceLast(polylineBegin, polylineEnd);
+}
+
+template<typename T>
+Int8 detSign(const Vec2<T>& a, const Vec2<T>& b) {
+    // In some cases, a.det(a) (i.e., a.x() * b.y() -  b.x() * a.y())
+    // does not exactly return 0 even when a == b. The implementation
+    // below provides more accurate results.
+    T s = a.x() * b.y();
+    T t = b.x() * a.y();
+    return static_cast<Int8>(t < s) - static_cast<Int8>(s < t);
+}
+
+template<typename T>
+bool isDetPositive(const Vec2<T>& a, const Vec2<T>& b) {
+    T s = a.x() * b.y();
+    T t = b.x() * a.y();
+    return t < s;
+}
+
+template<typename T>
+bool isDetNegative(const Vec2<T>& a, const Vec2<T>& b) {
+    T s = a.x() * b.y();
+    T t = b.x() * a.y();
+    return s < t;
+}
+
+template<typename T>
+Int8 orientation(const Vec2<T>& a, const Vec2<T>& b, const Vec2<T>& c) {
+    return detSign<T>(b - a, c - a);
+}
+
+template<typename T>
+bool isOrientationPositive(const Vec2<T>& a, const Vec2<T>& b, const Vec2<T>& c) {
+    return isDetPositive<T>(b - a, c - a);
+}
+
+template<typename T>
+bool isOrientationNegative(const Vec2<T>& a, const Vec2<T>& b, const Vec2<T>& c) {
+    return isDetNegative<T>(b - a, c - a);
+}
+
+// Insert the left endpoint and right endpoint of all segments into the
+// event queue. If both endpoints have the same x-coord (i.e., the
+// segment is vertical), the "left" endpoint is considered to be the
+// one with the smaller y-coord.
+//
+// If both endpoints are equal (i.e., the segment is degenerate, reduced to a
+// point), the order is irrelevant. Both Left and Right events will
+// be retrieved and processed at the same time.
+//
+template<typename T>
+void initializeEventQueue(InputData<T>& in, AlgorithmData<T>& alg) {
+    VGC_ASSERT(alg.eventQueue.empty()); // priority_queue has no clear() method
+    Int numSegments = in.segments.length();
+    for (Int i = 0; i < numSegments; ++i) {
+        const Segment2<T>& segment = in.segments.getUnchecked(i);
+        alg.eventQueue.push(Event<T>{EventType::Left, segment.a(), i});
+        alg.eventQueue.push(Event<T>{EventType::Right, segment.b(), i});
+    }
+}
+
+// Initialize the list of segments intersecting the sweep line (the
+// "sweep segments").
+//
+// Invariants:
+//
+// - Any segment in the eventQueue_ as Left event is not (and has
+//   never been) in sweepSegments_.
+//
+// - Any segment in the eventQueue_ as Left event is also in the
+//   eventQueue_ as Right event, but is not in the eventQueue_ as
+//   Intersection event.
+//
+// - Any segment in the eventQueue_ as Intersection event is also in the
+//   eventQueue_ as Right event, but is not in the eventQueue_ as
+//   LefPoint event.
+//
+// - Any segment in sweepSegments_ is also in the eventQueue_
+//   as exactly one Right event, and possibly one or several
+//   Intersection events.
+//
+// - There are no duplicates in sweepSegments_.
+//
+template<typename T>
+void initializeSweepSegments(AlgorithmData<T>& alg) {
+    alg.sweepSegments.clear();
+}
+
+// Get the next event and all events sharing the same position. We call these
+// the "sweep events".
+//
+// Note that our algorithm uses an std::priority_queue for our event queue,
+// which uses a very efficient and cache-friendly vector-based heap, but this
+// doesn't support checking whether an event is already in the event queue, or
+// removing events from the queue. Therefore, this means that unlike usual
+// descriptions of Bentley-Ottmann, we can end up with duplicates in the queue.
+//
+// [Wiki] and [Mount] use the approach of removing intersection events
+// when segments become non-adjacent. See for example [Mount, p25]:
+//
+// > Observe that our algorithm is very careful about storing intersection
+// > events only for adjacent elements in the priority queue. For example,
+// > consider two segments s and s' that intersect at a segment p, such that,
+// > when the two are initially added to the sweep-line status, they are
+// > adjacent. Therefore, the intersection point p is added to event queue (see
+// > Fig. 23). As intervening segments are seen between them, they successfully
+// > become non-adjacent and then adjacent again. Because our algorithm is
+// > careful about deleting intersections between non-adjacent entries in the
+// > sweep-line status, the event p is repeated deleted and reinserted. If we
+// > had not done this, we would have many duplicate events in the queue.
+//
+// [deBerg] uses the approach of not removing intersection events, but
+// at least checking the content of the queue before insertion to avoid
+// inserting twice the same intersection. See example [deBerg, p25, p27]:
+//
+// > We do not use a heap to implement the event queue, because we have to
+// > be able to test whether a given event is already present in Q.
+//
+// > FindNewEvent(sl, sr, p):
+// >   if: sl and sr intersect below the sweep line, or on it and to the
+// >       right of the current event point p, and the intersection is not
+// >       yet present as an event in Q.
+// >   then: Insert the intersection point as an event into Q.
+//
+// Our approach is to not avoid duplicates and simply handle them when
+// processing the event. We believe it does not change the asymptotic
+// complexity of the algorithm (hypothesis: the total number of duplicates
+// encountered during the algorithm is less than the number of segments), and
+// that using a fast heap may in practice make the algorithm faster.
+//
+template<typename T>
+Vec2<T> getNextEvent(AlgorithmData<T>& alg) {
+    Event firstEvent = alg.eventQueue.top();
+    alg.eventQueue.pop();
+    Vec2<T> position = firstEvent.position;
+    alg.sweepEvents.clear();
+    alg.sweepEvents.append(firstEvent);
+    while (!alg.eventQueue.empty() && alg.eventQueue.top().position == position) {
+        alg.sweepEvents.append(alg.eventQueue.top());
+        alg.eventQueue.pop();
+    }
+
+    VGC_DEBUG_TMP("----------------------------------");
+    VGC_DEBUG_TMP("Sweep segments before event: {}", alg.sweepSegments);
+    VGC_DEBUG_TMP("Handling position : {}", position);
+
+    return position;
+}
+
+template<typename T>
+struct PartitionedSweepEvents {
+    using Iterator = typename core::Array<Event<T>>::iterator;
+
+    Iterator it1;
+    Iterator it2;
+    Iterator it3;
+    Iterator it4;
+
+    // Left events
+    core::ConstSpan<Event<T>> left() const {
+        return {it1, it2};
+    }
+
+    // Right events
+    core::ConstSpan<Event<T>> right() const {
+        return {it2, it3};
+    }
+
+    // Intersection events
+    core::ConstSpan<Event<T>> intersection() const {
+        return {it3, it4};
+    }
+};
+
+// Classify events into Left, Right, Intersection.
+//
+// This implementation works because the event type is part of the priority,
+// with Left < Right < Intersection.
+//
+// Invariants:
+// - res.left() does not contain duplicates
+// - res.right() does not contain duplicates
+//
+// However, res.intersection() may contain duplicates, since two segments s1
+// and s2 may become neighbors in alg.sweepSegments (adding their intersection
+// to the queue), then not neighbor anymore, then neighbor again (re-adding
+// their intersection to the queue). See [Mount, p26, Fig23].
+//
+template<typename T>
+PartitionedSweepEvents<T> partitionSweepEvents(AlgorithmData<T>& alg) {
+    PartitionedSweepEvents<T> res;
+    res.it1 = alg.sweepEvents.begin();
+    res.it4 = alg.sweepEvents.end();
+    res.it2 = std::find_if(res.it1, res.it4, [](const Event<T>& event) {
+        return event.type > EventType::Left; // find first event not Left
+    });
+    res.it3 = std::find_if(res.it2, res.it4, [](const Event<T>& event) {
+        return event.type > EventType::Right; // find first event not Left or Right
+    });
+
+    VGC_DEBUG_TMP("Sweep events: {}", alg.sweepEvents);
+    VGC_DEBUG_TMP("  Left events: {}", res.left());
+    VGC_DEBUG_TMP("  Right events: {}", res.right());
+    VGC_DEBUG_TMP("  Intersection events: {}", res.intersection());
+
+    return res;
+}
+
+// Function object that determines whether a position is above or below a given
+// segment index.
+//
+// Typically, we prefer to use a lambda for these things, but in this case we
+// cannot because it is used for equal_range which will call both `i < p` and
+// `p < i`, and `i` and `p` are of different types, so the function object
+// needs to have two call operators.
+//
+template<typename T>
+struct ComparePositionWithSegment {
+    core::Array<Segment2<T>>& segments;
+
+    // Returns whether seg[i] < p: "is p above the segment?"
+    bool operator()(SegmentIndex i, const Vec2<T>& p) {
+        const Segment2<T>& seg = segments.getUnchecked(i);
+        return isOrientationPositive<T>(seg.a(), seg.b(), p);
+    }
+
+    // Returns whether p < seg[i]: "is p below the segment?"
+    bool operator()(const Vec2<T>& p, SegmentIndex i) {
+        const Segment2<T>& seg = segments.getUnchecked(i);
+        return isOrientationNegative<T>(seg.a(), seg.b(), p);
+    }
+};
+
+struct PartitionedSweepSegments {
+    using Iterator = core::Array<SegmentIndex>::iterator;
+
+    Iterator it1;
+    Iterator it2;
+    Iterator it3;
+    Iterator it4;
+
+    // Segments in the sweep line that are below the event position
+    core::ConstSpan<SegmentIndex> below() const {
+        return {it1, it2};
+    }
+
+    // Segments in the sweep line that contain the event position
+    core::ConstSpan<SegmentIndex> contain() const {
+        return {it2, it3};
+    }
+
+    // Segments in the sweep line that are above the event position
+    core::ConstSpan<SegmentIndex> above() const {
+        return {it3, it4};
+    }
+};
+
+// Find all segments in alg.sweepSegments that contain `position`
+// either in their interior or as an endpoint. Some of these may
+// already be in the events above (e.g., if there is an
+// Intersection event), but some may not, e.g., if there is a
+// T-junction at the `position`.
+//
+// This basically partition alg.sweepSegments into three spans:
+// - the segments that are below the position
+// - the segment that contain the position
+// - the segment that are above the position
+//
+// Note that all segments in interEvents should in theory be found
+// in alg.sweepSegments as containing the position, but in practice
+// may not due to numerical errors. More precisely, after computing
+// the intersection p between two, because of rounding errors, it
+// is possible that p is not considered exactly on each of the
+// segments.
+//
+template<typename T>
+PartitionedSweepSegments partitionSweepSegments(
+    InputData<T>& in,
+    AlgorithmData<T>& alg,
+    const Vec2<T>& position,
+    const PartitionedSweepEvents<T>& pEvents) {
+
+    ComparePositionWithSegment<T> comp{in.segments};
+    PartitionedSweepSegments res;
+    res.it1 = alg.sweepSegments.begin();
+    res.it4 = alg.sweepSegments.end();
+    std::tie(res.it2, res.it3) = std::equal_range(res.it1, res.it4, position, comp);
+
+    // In theory, the segments in pEvents.intersection() are supposed to all be
+    // in res.contain(), but in practice may not be due to numerical errors.
+    //
+    // We fix this here by extending the range of segments to make sure that it
+    // includes all intersection events. At a side effect, this may add other
+    // segments, but this is fine since these segments where also within
+    // numerical errors of containing the position.
+    //
+    // Note that the segments in pEvents.right() are guaranteed to be in
+    // res.contain(), since their right endpoint is guaranteed to be exactly
+    // equal to position. Unless the segments were not truly "partitioned" as
+    // per the definition of equal_range, see:
+    //
+    // https://en.cppreference.com/w/cpp/algorithm/equal_range
+    // https://en.cppreference.com/w/cpp/algorithm#Requirements
+    //
+    // TODO: check in debug build whether the segments are partitioned via
+    // std::is_partitioned()? Note that this would make the algorithm
+    // not O((n+k)log(n)) anymore in the worst case.
+    //
+    // Note: the code below makes the algorithm O(n²) if all segments intersect
+    // at the same point. This should be rare, but we could make it n log(n)
+    // again by first sorting pEvents.intersection() and res.contain() by
+    // segment index and using std::set_difference. But this is going to make
+    // the algorithm slower in the typical case when there are just 2
+    // intersection events. A solution might be to use sorting only if we
+    // detect intersectionEvents.length() > SomeThreshold.
+    //
+    for (const Event<T>& event : pEvents.intersection()) {
+        if (!res.contain().contains(event.segmentIndex)) {
+            // TODO: Make this long-term log. It's very unlikely but we might
+            // be interested to know about it if it does happen, for example
+            // to add it in a test suite.
+            VGC_DEBUG_TMP(
+                "Segment from event {} was not partitioned as containing position {}.",
+                event,
+                position);
+            // TODO: extend search from neighbor instead of using linear-time find
+            auto it = alg.sweepSegments.find(event.segmentIndex);
+            if (it != alg.sweepSegments.end()) {
+                if (it >= res.it3) {
+                    res.it3 = it + 1;
+                }
+                else if (it < res.it2) {
+                    res.it2 = it;
+                }
+            }
+            else {
+                // TODO: Make this long-term warning in release, and throw in debug.
+                // That's a serious bug in the algorithm, but hard to prove that
+                // it cannot happen, due to numerical errors.
+                VGC_DEBUG_TMP(
+                    "Segment from event {} not found in sweep segments.", event);
+            }
+        }
+    }
+
+    VGC_DEBUG_TMP("Sweep segments below position:      {}", res.below());
+    VGC_DEBUG_TMP("Sweep segments containing position: {}", res.contain());
+    VGC_DEBUG_TMP("Sweep segments above position:      {}", res.above());
+
+    return res;
+}
+
+// Find which segments are outgoing at the position. These will
+// be used as replacement for the current containSegments.
+//
+template<typename T>
+void computeOutgoingSegments(
+    InputData<T>& in,
+    AlgorithmData<T>& alg,
+    const Vec2<T>& position,
+    const PartitionedSweepEvents<T>& pEvents,
+    const PartitionedSweepSegments& pSegments) {
+
+    // It is guaranteed to have no duplicates since alg.sweepSegments does
+    // not have duplicates (hence its subspan containSegments does not
+    // have duplicate either) and all the segments in pEvents.left() have
+    // never been added to the event queue yet.
+    //
+    alg.outgoingSegments.clear();
+    for (SegmentIndex i : pSegments.contain()) {
+        const Segment2<T>& segment = in.segments.getUnchecked(i);
+        if (segment.b() != position) {
+            alg.outgoingSegments.append(i);
+        }
+        else {
+            // This means that the segment is a Right event
+            // and we will therefore remove it from alg.sweepSegments
+        }
+    }
+    for (const Event<T>& event : pEvents.left()) {
+        SegmentIndex i = event.segmentIndex;
+        const Segment2<T>& segment = in.segments.getUnchecked(i);
+        if (!segment.isDegenerate()) {
+            alg.outgoingSegments.append(i);
+        }
+        else {
+            // This means the segment was reduced to a point
+            // and was both a Left
+            // and Right event. We never add it to alg.sweepSegments.
+            //
+            // TODO: correcly report intersections between degenerate
+            // segments and other segments, including when two degenerate
+            // segments are equal, we should report them as intersecting.
+        }
+    }
+
+    // Sort outgoing segments by increasing slope, which correspond to their
+    // y-order on the sweep line after it moves just after the current
+    // position.
+    //
+    core::sort(
+        alg.outgoingSegments,
+        [&slopes = in.segmentSlopes](SegmentIndex i1, SegmentIndex i2) {
+            return slopes.getUnchecked(i1) < slopes.getUnchecked(i2);
+        });
+}
+
+template<typename T>
+void processNextEvent(InputData<T>& in, AlgorithmData<T>& alg, OutputData<T>& out) {
+
+    // Pop the next event from the event queue, as well as all subsequent
+    // events sharing the same position. Store them in alg.sweepEvents.
+    Vec2<T> position = getNextEvent(alg);
+
+    // Partition the events into Left, Right, and Intersection events.
+    PartitionedSweepEvents pEvents = partitionSweepEvents(alg);
+
+    // Partition the sweep segments into those that are below, above, or
+    // contain the event position. We guarantee that segments corresponding
+    // to Intersection events are within pSegments.contain().
+    PartitionedSweepSegments pSegments =
+        partitionSweepSegments(in, alg, position, pEvents);
+
+    // Report intersections. This includes:
+    // - Cases where two segments meet at their endpoint:
+    //   - 2+ Left events, or
+    //   - 2+ Right events, or
+    //   - 1+ Left and 1+ Left events
+    // - Cases where two segments intersect in their interior
+    //   - 2+ Intersection events, and
+    //   - 2+ segments in pSegments.contain()
+    // - Cases where a segment ends in the interior of another segment (T-junction):
+    //   - 1+ Left events or 1+ Right events, and
+    //   - 2+ segments in pSegments.contain()
+    //
+    // Note that the segments in pEvents.right() and pEvents.intersection()
+    // are all in pSegments.contain(), but the segments in pEvents.left()
+    // are not, since they have not yet been added to the sweep segments.
+    //
+    /*
+    if (pSegments.contain().length() + pEvents.left() >= 2) {
+        // TODO: set proper value for contributions
+        core::Array<PointIntersectionContribution> contributions;
+        pointIntersections_.append(PointIntersection{position, contributions});
+    }
+    */
+
+    // Compute which segments are outgoing at the given position
+    computeOutgoingSegments(in, alg, position, pEvents, pSegments);
+
+    // Remove ingoing segments and add outgoing segments.
+    // This invalidates iterators and spans stored in pSegments.
+    auto it = alg.sweepSegments.erase(pSegments.it2, pSegments.it3);
+    alg.sweepSegments.insert(it, alg.outgoingSegments);
+
+    // TODO: compute intersections between newly added segments and their
+    // neighbors in sweepSegments, and add them as Intersection event if
+    // any.
+
+    VGC_DEBUG_TMP("Sweep segments after event: {}", alg.sweepSegments);
+}
+
+template<typename T>
+void computeIntersections(InputData<T>& in, AlgorithmData<T>& alg, OutputData<T>& out) {
+    initializeEventQueue(in, alg);
+    initializeSweepSegments(alg);
+    while (!alg.eventQueue.empty()) {
+        processNextEvent(in, alg, out);
+    }
+}
+
+} // namespace detail::segmentintersector
+
+template<typename T>
+void SegmentIntersector<T>::addSegment(const Vec2& a, const Vec2& b) {
+    detail::segmentintersector::addSegment(input_, a, b);
+}
+
+template<typename T>
+template<typename Range, typename UnaryOp, VGC_REQUIRES_DEF(core::isInputRange<Range>)>
+void SegmentIntersector<T>::addPolyline(const Range& range, UnaryOp op) {
+    detail::segmentintersector::addPolyline(input_, range, op);
+}
+
+template<typename T>
+void SegmentIntersector<T>::computeIntersections() {
+    detail::segmentintersector::computeIntersections(input_, algorithm_, output_);
+}
+
+} // namespace vgc::geometry
 
 template<>
 struct fmt::formatter<vgc::geometry::detail::segmentintersector::EventType>
@@ -68,13 +838,14 @@ struct fmt::formatter<vgc::geometry::detail::segmentintersector::EventType>
     template<typename FormatContext>
     auto format(const EventType& eventType, FormatContext& ctx) {
         switch (eventType) {
-        case EventType::LeftPoint:
-            return format_to(ctx.out(), "LeftPoint");
-        case EventType::RightPoint:
-            return format_to(ctx.out(), "RightPoint");
+        case EventType::Left:
+            return format_to(ctx.out(), "Left");
+        case EventType::Right:
+            return format_to(ctx.out(), "Right");
         case EventType::Intersection:
             return format_to(ctx.out(), "Intersection");
         }
+        return ctx.out();
     }
 };
 
@@ -95,521 +866,5 @@ struct fmt::formatter<vgc::geometry::detail::segmentintersector::Event<Scalar>>
             e.segmentIndex);
     }
 };
-
-namespace vgc::geometry {
-
-/// \class SegmentIntersector
-/// \brief Computes all intersections between a set of line segments.
-///
-template<typename Scalar>
-class VGC_GEOMETRY_API SegmentIntersector {
-public:
-    static constexpr Int dimension = 2;
-    using ScalarType = Scalar;
-
-    using Segment2 = Segment<2, ScalarType>;
-    using Vec2 = Vec<2, Scalar>;
-
-    using SegmentIndex = detail::segmentintersector::SegmentIndex;
-    using SegmentIndexPair = std::pair<SegmentIndex, SegmentIndex>;
-    using PointIntersectionIndex = Int;
-
-    // When two or more segments intersect at a point, then for each involved
-    // segment we store its corresponding intersection parameter.
-    //
-    struct PointIntersectionContribution {
-        Int pointIntersectionIndex;
-        Int segmentIndex;
-        Scalar param;
-    };
-
-    struct PointIntersection {
-        Vec2 position;
-        core::Array<PointIntersectionContribution> contributions;
-        // TODO Use SmallArray<2, PointIntersectionContribution>, since most
-        // intersections are expected to only involve 2 segments. Or if we
-        // really want to avoid any memory allocation via pre-reserved
-        // arrays, we could use a custom allocator or pairs of indices
-        // into another array.
-    };
-
-    /// Creates a `SegmentIntersector`.
-    ///
-    SegmentIntersector() {
-    }
-
-    /// Re-initializes this `SegmentIntersector` to its initial state, but
-    /// keeping reserved memory for future use.
-    ///
-    /// It is typically faster to clear an existing `SegmentIntersector` and
-    /// re-use it, rather than instanciating a new `SegmentIntersector`, since
-    /// the former would minimize the number of dynamic memory allocations.
-    ///
-    void clear() {
-        // Input
-        polylines_.clear();
-        segments_.clear();
-        segmentSlopes_.clear();
-        isReversed_.clear();
-
-        // Intermediate data
-        // Note: the eventQueue is already empty.
-
-        // Output
-        pointIntersections_.clear();
-        pointIntersectionContributions_.clear();
-    }
-
-private:
-    // The slope is used to determine segment order in sweepSegments_ when
-    // several segments are outgoing at an intersection position. It is
-    // intentionally equal to infinity for vertical segments.
-    //
-    static Scalar computeSlope_(const Vec2& a, const Vec2& b) {
-        if (b.x() == a.x()) {
-            return core::infinity<Scalar>;
-            // Note: positive infinity since we know b.y() >= a.y()
-            // If b.y() == a.y(), the segment is degenerate and
-            // the slope will be ignored anyway.
-        }
-        else {
-            return (b.y() - a.y()) / (b.x() - a.x());
-        }
-    }
-
-    // Add segment ensuring a <= b order.
-    void addSegment_(const Vec2& a, const Vec2& b) {
-        if (b < a) {
-            segments_.emplaceLast(b, a);
-            segmentSlopes_.append(computeSlope_(b, a));
-            isReversed_.append(true);
-        }
-        else {
-            segments_.emplaceLast(a, b);
-            segmentSlopes_.append(computeSlope_(a, b));
-            isReversed_.append(false);
-        }
-    }
-
-public:
-    /// Adds a segment.
-    ///
-    void addSegment(const Vec2& a, const Vec2& b) {
-        addSegment_(a, b);
-    }
-
-    /// Adds a polyline.
-    ///
-    template<typename Range, VGC_REQUIRES(core::isInputRange<Range>)>
-    void addPolyline(const Range& range) {
-        addPolyline(range.begin(), range.end());
-    }
-
-    template<typename Range, typename UnaryOp, VGC_REQUIRES(core::isInputRange<Range>)>
-    void addPolyline(const Range& range, UnaryOp op) {
-
-        // Do nothing if the range does not contain at least two elements.
-        if (core::isEmpty(range)) {
-            return;
-        }
-        Vec2 startPosition = op(*range.begin());
-        auto endPositions = core::drop(range, 1);
-        if (core::isEmpty(endPositions)) {
-            return;
-        }
-
-        // Reserve memory if the number of segments can be known in advance.
-        if constexpr (core::isForwardRange<Range>) {
-            auto numSegmentsInPolyline = endPositions.end() - endPositions.begin();
-            auto numSegments = segments_.size() + numSegmentsInPolyline;
-            segments_.reserve(numSegments);
-            isReversed_.reserve(numSegments);
-        }
-
-        // Add the segments
-        SegmentIndex polylineBegin = segments_.length();
-        for (const auto& endPosition_ : endPositions) {
-            Vec2 endPosition = op(endPosition_);
-            addSegment_(startPosition, endPosition);
-            startPosition = endPosition;
-        }
-        SegmentIndex polylineEnd = segments_.length();
-        polylines_.emplaceLast(polylineBegin, polylineEnd);
-    }
-
-    /// Computes the intersections based on the provided input segments.
-    ///
-    void computeIntersections() {
-
-        // This implements a variant of the Bentley-Ottmann algorithm, see:
-        //
-        // https://en.wikipedia.org/wiki/Bentley%E2%80%93Ottmann_algorithm
-        //
-        // In the comments below, we assume a right-handed coordinate system:
-        //
-        //           above / top
-        //
-        //             ^ y
-        //    left     |           right
-        //             |
-        //             +-----> x
-        //
-        //           below / bottom
-        //
-        // The sweep line is vertical and moves from left to right.
-        //
-        // The sweep segments (record of which segments are intersecting the
-        // sweep line at any given time in the algorithm) are sorted in
-        // ascending y-coord, that is, from bottom to top, with respect to the
-        // position where they intersect the sweep line.
-
-        // Insert the left endpoint and right endpoint of all segments into the
-        // event queue. If both endpoints have the same x-coord (i.e., the
-        // segment is vertical), the "left" endpoint is considered to be the
-        // one with the smaller y-coord. If both endpoints are equal (i.e., the
-        // segment is degenerate, reduced to a point), the order is irrelevant.
-        //
-        VGC_ASSERT(eventQueue_.empty());
-        Int numSegments = segments_.length();
-        for (Int i = 0; i < numSegments; ++i) {
-            const Segment2& segment = segments_.getUnchecked(i);
-            eventQueue_.push(Event{EventType::LeftPoint, segment.a(), i});
-            eventQueue_.push(Event{EventType::RightPoint, segment.b(), i});
-        }
-
-        // Initialize the list of segments intersecting the sweep line (the
-        // "sweep segments").
-        //
-        // Invariants:
-        //
-        // - Any segment in the eventQueue_ as LeftPoint event is not (and has
-        //   never been) in sweepSegments_.
-        //
-        // - Any segment in the eventQueue_ as LeftPoint event is also in the
-        //   eventQueue_ as RightPoint event, but is not in the eventQueue_ as
-        //   Intersection event.
-        //
-        // - Any segment in the eventQueue_ as Intersection event is also in the
-        //   eventQueue_ as RightPoint event, but is not in the eventQueue_ as
-        //   LefPoint event.
-        //
-        // - Any segment in sweepSegments_ is also in the eventQueue_
-        //   as exactly one RightPoint event, and possibly one or several
-        //   Intersection events.
-        //
-        // - There are no duplicates in sweepSegments_.
-        //
-        sweepSegments_.clear();
-
-        // Process all events.
-        //
-        while (!eventQueue_.empty()) {
-
-            VGC_DEBUG_TMP("----------------------------------");
-
-            VGC_DEBUG_TMP("Sweep segments before event: {}", sweepSegments_);
-
-            // Get the next event and all events sharing the same position. We
-            // call these the "sweep events".
-            //
-            // Note that in some variants of Bentley-Ottmann, the event queue
-            // never contains two events for the same position. In our case, we
-            // do keep duplicates in the queue, since std::priority_queue does
-            // not support checking for the content of the queue. We could use
-            // a separate unordered_set for this, but it isn't necessary, as
-            // handling duplicate events is not a problem.
-            //
-            // Also, in some variants, Intersection events are removed from the
-            // queue upon handling of a LeftPoint event:
-            //
-            //      |
-            // x----------------- s1
-            //      |
-            //      |
-            //      x-- s3 added as new segment =>
-            //      |   - remove from queue potential intersection between s1 and s2.
-            //      |   - add to queue potential intersection between s1 and s3.
-            //      |   - add to queue potential intersection between s2 and s3.
-            //      |
-            //   x--------------- s2
-            //      |
-            //      |
-            //    sweep line
-            //
-            // We do not do that either. One reason is
-
-            //
-            Event firstEvent = eventQueue_.top();
-            eventQueue_.pop();
-            Vec2 position = firstEvent.position;
-            sweepEvents_.clear();
-            sweepEvents_.append(firstEvent);
-            while (!eventQueue_.empty() && eventQueue_.top().position == position) {
-                sweepEvents_.append(eventQueue_.top());
-                eventQueue_.pop();
-            }
-
-            VGC_DEBUG_TMP("Handling position : {}", position);
-
-            // Classify events into LeftPoint, RightPoint, Intersection
-            // The following code works because the event type is part of the priority,
-            // with LeftPoint < RightPoint < Intersection.
-            auto seIt1 = sweepEvents_.begin();
-            auto seIt4 = sweepEvents_.end();
-            auto seIt2 = sweepEvents_.find(
-                [](const Event& event) { return event.type > EventType::LeftPoint; });
-            auto seIt3 = sweepEvents_.find(
-                [](const Event& event) { return event.type > EventType::RightPoint; });
-            core::ConstSpan<Event> leftEvents(seIt1, seIt2);  // segments to add
-            core::ConstSpan<Event> rightEvents(seIt2, seIt3); // segments to remove
-            core::ConstSpan<Event> interEvents(seIt3, seIt4); // segments to keep
-
-            // Invariants:
-            // - leftEvents does not contain duplicates
-            // - rightEvents does not contain duplicates
-            //
-            // However, interEvents may contain duplicate, since two segments
-            // s1 and s2 may become neighbors in sweepSegments_ (adding their
-            // intersection to the queue), then not neighbor anymore, then
-            // neighbor again (re-adding their intersection to the queue)
-
-            VGC_DEBUG_TMP("Sweep events: {}", sweepEvents_);
-            VGC_DEBUG_TMP("  LeftPoint events: {}", leftEvents);
-            VGC_DEBUG_TMP("  RightPoint events: {}", rightEvents);
-            VGC_DEBUG_TMP("  Intersection events: {}", interEvents);
-
-            // Find all segments in sweepSegments_ that contain `position`
-            // either in their interior or as an endpoint. Some of these may
-            // already be in the events above (e.g., if there is an
-            // Intersection event), but some may not, e.g., if there is a
-            // T-junction at the `position`.
-            //
-            // This basically partition sweepSegments_ into three spans:
-            // - the segments that are below the position
-            // - the segment that contain the position
-            // - the segment that are above the position
-            //
-            // Note that all segments in interEvents should in theory be found
-            // in sweepSegments_ as containing the position, but in practice
-            // may not due to numerical errors. More precisely, after computing
-            // the intersection p between two, because of rounding errors, it
-            // is possible that p is not considered exactly on each of the
-            // segments.
-            //
-            struct SsComp {
-                // Cannot use a lambda since equal_range will call both
-                // i < p and p < i, and i and p are of different types.
-
-                core::Array<Segment2>& segments;
-
-                // Returns whether seg[i] < p: "is p above the segment?"
-                bool operator()(SegmentIndex i, Vec2 p) {
-                    const Segment2& seg = segments.getUnchecked(i);
-                    return isOrientationPositive_(seg.a(), seg.b(), p);
-                }
-
-                // Returns whether p < seg[i]: "is p below the segment?"
-                bool operator()(Vec2 p, SegmentIndex i) {
-                    const Segment2& seg = segments.getUnchecked(i);
-                    return isOrientationNegative_(seg.a(), seg.b(), p);
-                }
-            };
-            SsComp ssComp{segments_};
-
-            auto ssIt1 = sweepSegments_.begin();
-            auto ssIt4 = sweepSegments_.end();
-            auto [ssIt2, ssIt3] = std::equal_range(ssIt1, ssIt4, position, ssComp);
-
-            core::ConstSpan<SegmentIndex> belowSegments(ssIt1, ssIt2);
-            core::ConstSpan<SegmentIndex> containSegments(ssIt2, ssIt3);
-            core::ConstSpan<SegmentIndex> aboveSegments(ssIt3, ssIt4);
-
-            VGC_DEBUG_TMP("Sweep segments below position:      {}", belowSegments);
-            VGC_DEBUG_TMP("Sweep segments containing position: {}", containSegments);
-            VGC_DEBUG_TMP("Sweep segments above position:      {}", aboveSegments);
-
-            // The segments in interEvents are supposed to all be in
-            // containSegments, but may not due to numerical errors. We fix
-            // this here.
-            //
-            // Note that the segments in rightEvents are guaranteed to be in
-            // containSegments, since their right endpoint is guaranteed to be
-            // exactly equal to position. Unless the segments were not truly
-            // "partitioned" as per the definition of equal_range, see:
-            //
-            // https://en.cppreference.com/w/cpp/algorithm/equal_range
-            // https://en.cppreference.com/w/cpp/algorithm#Requirements
-            //
-            bool containSegmentsChanged = false;
-            for (const Event& event : interEvents) {
-                if (!containSegments.contains(event.segmentIndex)) {
-                    VGC_DEBUG_TMP("{} not in containSegments", event);
-                    // TODO: extend search from neighbor instead of using linear-time find
-                    auto ssIt = sweepSegments_.find(event.segmentIndex);
-                    if (ssIt != sweepSegments_.end()) {
-                        if (ssIt >= ssIt3) {
-                            ssIt3 = ssIt + 1;
-                            containSegments = core::ConstSpan<SegmentIndex>(ssIt2, ssIt3);
-                            aboveSegments = core::ConstSpan<SegmentIndex>(ssIt3, ssIt4);
-                            containSegmentsChanged = true;
-                        }
-                        else if (ssIt < ssIt2) {
-                            ssIt2 = ssIt;
-                            belowSegments = core::ConstSpan<SegmentIndex>(ssIt1, ssIt2);
-                            containSegments = core::ConstSpan<SegmentIndex>(ssIt2, ssIt3);
-                            containSegmentsChanged = true;
-                        }
-                    }
-                }
-            }
-            if (containSegmentsChanged) {
-                VGC_DEBUG_TMP("Sweep segments below position:      {}", belowSegments);
-                VGC_DEBUG_TMP("Sweep segments containing position: {}", containSegments);
-                VGC_DEBUG_TMP("Sweep segments above position:      {}", aboveSegments);
-            }
-
-            // TODO: if sweepEvents_ has more than one event, report as intersection.
-
-            // Find which segments are outgoing at the position. These will
-            // be used as replacement for the current containSegments.
-            //
-            // It is guaranteed to have no duplicates since sweepSegments_ does
-            // not have duplicates (hence its subspan containSegments does not
-            // have duplicate either) and all the segments in leftEvents have
-            // never been added to the event queue yet.
-            //
-            outgoingSegments_.clear();
-            for (SegmentIndex i : containSegments) {
-                const Segment2& segment = segments_.getUnchecked(i);
-                if (segment.b() != position) {
-                    outgoingSegments_.append(i);
-                }
-                else {
-                    // This means that the segment is a RightPoint event
-                    // and we will therefore remove it from sweepSegments_
-                }
-            }
-            for (const Event& event : leftEvents) {
-                SegmentIndex i = event.segmentIndex;
-                const Segment2& segment = segments_.getUnchecked(i);
-                if (!segment.isDegenerate()) {
-                    outgoingSegments_.append(i);
-                }
-                else {
-                    // This means the segment was reduced to a point
-                    // and was both a LeftPoint
-                    // and RightPoint event. We never add it to sweepSegments_.
-                    //
-                    // TODO: correcly report intersections between degenerate
-                    // segments and other segments, including when two degenerate
-                    // segments are equal, we should report them as intersecting.
-                }
-            }
-
-            // Sort outgoing segments by increasing angle
-            const auto& slopes = segmentSlopes_; // needed for lambda capture
-            core::sort(
-                outgoingSegments_,                            //
-                [&slopes](SegmentIndex i1, SegmentIndex i2) { //
-                    return slopes.getUnchecked(i1) < slopes.getUnchecked(i2);
-                });
-
-            // Remove ingoing segments and add outgoing segments.
-            // This invalidates previous spans.
-            auto ssIt = sweepSegments_.erase(ssIt2, ssIt3);
-            sweepSegments_.insert(ssIt, outgoingSegments_);
-
-            // TODO: compute intersections between newly added segments and their
-            // neighbors in sweepSegments, and add them as Intersection event if
-            // any.
-
-            VGC_DEBUG_TMP("Sweep segments after event: {}", sweepSegments_);
-        }
-    }
-
-private:
-    // TODO: I think this could be done in constant time by using a (flat)
-    // linked list for sweepSegments_, and store in each event a handle to the
-    // corresponding sweepSegments_ node.
-    //
-    core::Array<SegmentIndex>::iterator removeFromSweepSegments_(SegmentIndex i) {
-        auto it = sweepSegments_.find(i);
-        VGC_ASSERT(it != sweepSegments_.end());
-        return sweepSegments_.erase(it);
-    }
-
-    static Int8 detSign_(const Vec2& a, const Vec2& b) {
-        // In some cases, a.det(a) (i.e., a.x() * b.y() -  b.x() * a.y())
-        // does not exactly return 0 even when a == b. The implementation
-        // below provides more accurate results.
-        Scalar s = a.x() * b.y();
-        Scalar t = b.x() * a.y();
-        return static_cast<Int8>(t < s) - static_cast<Int8>(s < t);
-    }
-
-    static bool isDetPositive_(const Vec2& a, const Vec2& b) {
-        Scalar s = a.x() * b.y();
-        Scalar t = b.x() * a.y();
-        return t < s;
-    }
-
-    static bool isDetNegative_(const Vec2& a, const Vec2& b) {
-        Scalar s = a.x() * b.y();
-        Scalar t = b.x() * a.y();
-        return s < t;
-    }
-
-    static Int8 orientation_(const Vec2& a, const Vec2& b, const Vec2& c) {
-        return detSign_(b - a, c - a);
-    }
-
-    static bool isOrientationPositive_(const Vec2& a, const Vec2& b, const Vec2& c) {
-        return isDetPositive_(b - a, c - a);
-    }
-
-    static bool isOrientationNegative_(const Vec2& a, const Vec2& b, const Vec2& c) {
-        return isDetNegative_(b - a, c - a);
-    }
-
-private:
-    // Input.
-    //
-    core::Array<SegmentIndexPair> polylines_;
-    core::Array<Segment2> segments_;
-    core::Array<Scalar> segmentSlopes_;
-    core::Array<bool> isReversed_;
-
-    // The event queue.
-    //
-    using Event = detail::segmentintersector::Event<Scalar>;
-    using EventType = detail::segmentintersector::EventType;
-    using EventQueue = std::priority_queue< //
-        Event,
-        std::vector<Event>,
-        std::greater<Event>>;
-    EventQueue eventQueue_;
-
-    // The segments that intersect the sweep line, ordered by increasing
-    // y-coords of their intersection with the sweep line.
-    //
-    core::Array<SegmentIndex> sweepSegments_;
-
-    // The new segments that must be added (or removed and re-added) to
-    // sweepSegments_ when handling an event.
-    //
-    core::Array<SegmentIndex> outgoingSegments_;
-
-    // The list of all events that correspond to the same position while
-    // processing the next event.
-    //
-    core::Array<Event> sweepEvents_;
-
-    // Output.
-    //
-    core::Array<PointIntersection> pointIntersections_;
-    core::Array<PointIntersectionContribution> pointIntersectionContributions_;
-};
-
-} // namespace vgc::geometry
 
 #endif // VGC_GEOMETRY_SEGMENTINTERSECTOR_H
