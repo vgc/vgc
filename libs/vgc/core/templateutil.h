@@ -146,6 +146,7 @@ struct Identity {
         std::forward<U>(x);
     }
 };
+
 /// Function object whose operator() returns its argument unchanged.
 ///
 inline constexpr Identity identity = {};
@@ -229,10 +230,27 @@ using RemoveCVRef = std::remove_cv_t<std::remove_reference_t<T>>;
 /// inline constexpr bool isSignedInteger = IsSignedInteger<T>::value;
 /// ```
 ///
-/// \sa `RequiresValid<...>`.
+/// \sa `RequiresValid<...>`,
+///     `VGC_REQUIRES`, `VGC_REQUIRES_DEF`,
+///     `VGC_REQUIRES_VALID`, `VGC_REQUIRES_VALID_DEF`.
 ///
 template<bool B>
 using Requires = std::enable_if_t<B>;
+
+/// If any of the given template arguments are ill-formed, then `RequiresValid<...>`
+/// is also ill-formed. Otherwise, `RequiresValid<...>` is an alias for `void`.
+///
+/// This can be used to define SFINAE-based requirements in template
+/// overloads/specializations.
+///
+/// `RequiresValid<...>` is equivalent to `std::void_t<...>`.
+///
+/// \sa `Requires<bool>`,
+///     `VGC_REQUIRES`, `VGC_REQUIRES_DEF`,
+///     `VGC_REQUIRES_VALID`, `VGC_REQUIRES_VALID_DEF`.
+///
+template<typename... Ts>
+using RequiresValid = MakeVoid<Ts...>;
 
 /// Defines SFINAE-based requirements for function template overloads.
 ///
@@ -243,8 +261,34 @@ using Requires = std::enable_if_t<B>;
 /// }
 /// ```
 ///
+/// When the function declaration and definition are not in the same place,
+/// then the declaration should use `VGC_REQUIRES` and the definition should
+/// use `VGC_REQUIRES_DEF`.
+///
+/// \sa `VGC_REQUIRES_DEF`, `VGC_REQUIRES_VALID`, `VGC_REQUIRES_VALID_DEF`,
+///     `Requires<bool>`, `RequiresValid<...>`.
+///
 #define VGC_REQUIRES(...) std::enable_if_t<(__VA_ARGS__), int> = 0
-#define VGC_FORWARDED_REQUIRES(...) std::enable_if_t<(__VA_ARGS__), int>
+
+/// Defines SFINAE-based requirements for the definition of a function template
+/// that was previously declared.
+///
+/// ```cpp
+/// struct Foo {
+///     template<typename T, VGC_REQUIRES(std::is_integral_v<T>)>
+///     void bar(T x);
+/// }
+/// 
+/// template<typename T, VGC_REQUIRES_DEF(std::is_integral_v<T>)>
+/// void Foo::bar(T x) {
+///     // ...
+/// }
+/// ```
+///
+/// \sa `VGC_REQUIRES`, `VGC_REQUIRES_VALID`, `VGC_REQUIRES_VALID_DEF`,
+///     `Requires<bool>`, `RequiresValid<...>`.
+///
+#define VGC_REQUIRES_DEF(...) std::enable_if_t<(__VA_ARGS__), int>
 
 /// Defines SFINAE-based requirements for function template overloads.
 ///
@@ -255,18 +299,34 @@ using Requires = std::enable_if_t<B>;
 /// }
 /// ```
 ///
+/// When the function declaration and definition are not in the same place,
+/// then the declaration should use `VGC_REQUIRES_VALID` and the definition
+/// should use `VGC_REQUIRES_VALID_DEF`.
+///
+/// \sa `VGC_REQUIRES`, `VGC_REQUIRES_DEF`, `VGC_REQUIRES_VALID_DEF`,
+///     `Requires<bool>`, `RequiresValid<...>`.
+///
 #define VGC_REQUIRES_VALID(...) ::vgc::core::MakeInt<__VA_ARGS__> = 0
 
-/// If any of the given template arguments are ill-formed, then `RequiresValid<...>`
-/// is also ill-formed. Otherwise, `RequiresValid<...>` is an alias for `void`.
+/// Defines SFINAE-based requirements for the definition of a function template
+/// that was previously declared.
 ///
-/// This can be used to define SFINAE-based requirements in template
-/// overloads/specializations.
+/// ```cpp
+/// struct Foo {
+///     template<typename T, VGC_REQUIRES_VALID(T::iterator, T::value_type)>
+///     void bar(T x);
+/// }
+/// 
+/// template<typename T, VGC_REQUIRES_VALID_DEF(T::iterator, T::value_type)>
+/// void Foo::bar(T x) {
+///     // ...
+/// }
+/// ```
 ///
-/// `RequiresValid<...>` is equivalent to `std::void_t<...>`.
+/// \sa `VGC_REQUIRES`, `VGC_REQUIRES_DEF`, `VGC_REQUIRES_VALID`,
+///     `Requires<bool>`, `RequiresValid<...>`.
 ///
-template<typename... Ts>
-using RequiresValid = MakeVoid<Ts...>;
+#define VGC_REQUIRES_VALID_DEF(...) ::vgc::core::MakeInt<__VA_ARGS__>
 
 namespace detail {
 

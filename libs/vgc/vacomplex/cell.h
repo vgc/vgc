@@ -1272,7 +1272,7 @@ constexpr Cell* CellProxy<T>::cell() {
 // As an alternative, you can always write:
 //     `cell->toKeyVertexUnchecked()`
 //
-template<typename To, typename From, VGC_FORWARDED_REQUIRES((isCell<To> && isCell<From>))>
+template<typename To, typename From, VGC_REQUIRES_DEF((isCell<To> && isCell<From>))>
 constexpr To* static_cell_cast(From* p) {
 
     // Check const to non-const
@@ -1350,7 +1350,7 @@ constexpr To* static_cell_cast(From* p) {
 }
 
 // Note: with C++20, ADL will work with explicitly instanciated template functions.
-template<typename To, typename From, VGC_FORWARDED_REQUIRES((isCell<To> && isCell<From>))>
+template<typename To, typename From, VGC_REQUIRES_DEF((isCell<To> && isCell<From>))>
 constexpr To* dynamic_cell_cast(From* p) {
 
     // Check const to non-const
