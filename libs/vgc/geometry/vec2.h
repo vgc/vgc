@@ -86,6 +86,18 @@ public:
         : data_{static_cast<T>(other[0]), static_cast<T>(other[1])} {
     }
 
+    /// Returns a pointer to the underlying array of components.
+    ///
+    const T* data() const {
+        return data_;
+    }
+
+    /// Returns a pointer to the underlying array of components.
+    ///
+    T* data() {
+        return data_;
+    }
+
     /// Accesses the `i`-th coordinate of this vector.
     ///
     constexpr const T& operator[](Int i) const {
