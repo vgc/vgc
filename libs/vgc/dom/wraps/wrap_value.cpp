@@ -26,7 +26,7 @@
 // Supported types as Value
 #include <vgc/core/color.h>
 #include <vgc/dom/path.h>
-#include <vgc/geometry/vec2d.h>
+#include <vgc/geometry/vec2.h>
 
 template<typename T>
 void defineValueComparisonMethods(vgc::core::wraps::Class<vgc::dom::Value>& c) {

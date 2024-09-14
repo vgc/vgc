@@ -28,7 +28,7 @@
 #include <vgc/geometry/api.h>
 #include <vgc/geometry/mat.h>
 #include <vgc/geometry/stride.h>
-#include "vec2x.h"
+#include <vgc/geometry/vec2.h>
 
 namespace vgc::geometry {
 

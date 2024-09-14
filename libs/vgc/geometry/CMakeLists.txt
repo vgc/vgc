@@ -49,12 +49,9 @@ vgc_add_library(geometry
         triangle2d.h
         triangle2f.h
         vec.h
-        vec2d.h
-        vec2f.h
-        vec3d.h
-        vec3f.h
-        vec4d.h
-        vec4f.h
+        vec2.h
+        vec3.h
+        vec4.h
         windingrule.h
         yuksel.h
 
@@ -89,12 +86,6 @@ vgc_add_library(geometry
         tesselator.cpp
         triangle2d.cpp
         triangle2f.cpp
-        vec2d.cpp
-        vec2f.cpp
-        vec3d.cpp
-        vec3f.cpp
-        vec4d.cpp
-        vec4f.cpp
         windingrule.cpp
         yuksel.cpp
 

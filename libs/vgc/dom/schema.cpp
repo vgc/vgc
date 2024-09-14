@@ -24,7 +24,7 @@
 #include <vgc/dom/noneor.h>
 #include <vgc/dom/path.h>
 #include <vgc/geometry/mat3d.h>
-#include <vgc/geometry/vec2d.h>
+#include <vgc/geometry/vec2.h>
 
 namespace vgc::dom {
 

@@ -21,7 +21,7 @@
 
 #include <vgc/core/array.h>
 #include <vgc/core/stopwatch.h>
-#include <vgc/geometry/vec2f.h>
+#include <vgc/geometry/vec2.h>
 #include <vgc/graphics/engine.h>
 #include <vgc/ui/widget.h>
 

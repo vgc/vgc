@@ -22,8 +22,7 @@
 #include <vgc/core/templateutil.h>
 #include <vgc/core/typeid.h>
 #include <vgc/core/wraps/common.h>
-#include <vgc/geometry/vec2d.h>
-#include <vgc/geometry/vec2f.h>
+#include <vgc/geometry/vec.h>
 
 namespace vgc::geometry::wraps {
 

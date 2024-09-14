@@ -18,7 +18,7 @@
 #define VGC_GEOMETRY_POLYLINE2F_H
 
 #include <vgc/geometry/polyline2.h>
-#include <vgc/geometry/vec2f.h>
+#include <vgc/geometry/vec2.h>
 
 namespace vgc::geometry {
 

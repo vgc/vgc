@@ -36,8 +36,8 @@
 #include <vgc/core/paths.h>
 #include <vgc/geometry/mat4d.h>
 #include <vgc/geometry/mat4f.h>
-#include <vgc/geometry/vec2d.h>
-#include <vgc/geometry/vec2f.h>
+#include <vgc/geometry/vec2.h>
+#include <vgc/geometry/vec2.h>
 #include <vgc/graphics/engine.h>
 #include <vgc/ui/api.h>
 

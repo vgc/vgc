@@ -20,7 +20,7 @@
 #include <string>
 #include <string_view>
 
-#include <vgc/geometry/vec2f.h>
+#include <vgc/geometry/vec2.h>
 #include <vgc/graphics/richtext.h>
 #include <vgc/ui/flex.h>
 #include <vgc/ui/label.h>

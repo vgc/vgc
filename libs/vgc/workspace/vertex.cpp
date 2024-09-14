@@ -17,8 +17,8 @@
 #include <vgc/workspace/vertex.h>
 
 #include <vgc/geometry/bezier.h>
-#include <vgc/geometry/vec2d.h>
-#include <vgc/geometry/vec3d.h>
+#include <vgc/geometry/vec2.h>
+#include <vgc/geometry/vec3.h>
 #include <vgc/graphics/detail/shapeutil.h>
 #include <vgc/workspace/colors.h>
 #include <vgc/workspace/edge.h>

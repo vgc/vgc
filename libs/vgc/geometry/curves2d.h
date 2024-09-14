@@ -22,7 +22,7 @@
 #include <vgc/geometry/curvecommand.h>
 #include <vgc/geometry/fillstyle.h>
 #include <vgc/geometry/strokestyle.h>
-#include <vgc/geometry/vec2d.h>
+#include <vgc/geometry/vec2.h>
 #include <vgc/geometry/windingrule.h>
 
 namespace vgc::geometry {

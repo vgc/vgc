@@ -20,7 +20,7 @@
 #include <vgc/canvas/canvastool.h>
 #include <vgc/core/array.h>
 #include <vgc/core/color.h>
-#include <vgc/geometry/vec2d.h>
+#include <vgc/geometry/vec2.h>
 #include <vgc/graphics/geometryview.h>
 #include <vgc/tools/api.h>
 #include <vgc/vacomplex/keycycle.h>

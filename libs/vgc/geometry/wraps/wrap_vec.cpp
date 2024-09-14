@@ -15,12 +15,9 @@
 // limitations under the License.
 
 #include <vgc/core/format.h>
-#include <vgc/geometry/vec2d.h>
-#include <vgc/geometry/vec2f.h>
-#include <vgc/geometry/vec3d.h>
-#include <vgc/geometry/vec3f.h>
-#include <vgc/geometry/vec4d.h>
-#include <vgc/geometry/vec4f.h>
+#include <vgc/geometry/vec2.h>
+#include <vgc/geometry/vec3.h>
+#include <vgc/geometry/vec4.h>
 
 #include <vgc/core/wraps/array.h>
 #include <vgc/core/wraps/class.h>
@@ -30,16 +27,8 @@
 namespace {
 
 template<typename T>
-constexpr T relTol_();
-
-template<>
-constexpr float relTol_() {
-    return 1e-5f;
-}
-
-template<>
-constexpr double relTol_() {
-    return 1e-9;
+constexpr T relTol_() {
+    return vgc::core::defaultRelativeTolerance<T>;
 }
 
 template<typename TVec>

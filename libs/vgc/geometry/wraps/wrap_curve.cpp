@@ -15,7 +15,7 @@
 // limitations under the License.
 
 #include <vgc/geometry/curve.h>
-#include <vgc/geometry/vec2d.h>
+#include <vgc/geometry/vec2.h>
 
 #include <vgc/core/wraps/class.h>
 #include <vgc/core/wraps/common.h>

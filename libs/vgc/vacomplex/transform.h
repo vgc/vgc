@@ -20,7 +20,7 @@
 #include <vgc/core/array.h>
 #include <vgc/geometry/mat3d.h>
 #include <vgc/geometry/range1d.h>
-#include <vgc/geometry/vec2d.h>
+#include <vgc/geometry/vec2.h>
 
 namespace vgc::vacomplex {
 

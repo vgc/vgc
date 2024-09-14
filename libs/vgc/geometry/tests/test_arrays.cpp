@@ -16,7 +16,7 @@
 
 #include <gtest/gtest.h>
 #include <vgc/core/stopwatch.h>
-#include <vgc/geometry/vec2d.h>
+#include <vgc/geometry/vec2.h>
 
 using vgc::Int;
 using vgc::core::Stopwatch;

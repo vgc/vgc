@@ -24,7 +24,7 @@
 #include <vgc/canvas/canvastool.h>
 #include <vgc/core/array.h>
 #include <vgc/core/id.h>
-#include <vgc/geometry/vec2f.h>
+#include <vgc/geometry/vec2.h>
 #include <vgc/tools/api.h>
 #include <vgc/ui/cursor.h>
 #include <vgc/vacomplex/keyedgedata.h>

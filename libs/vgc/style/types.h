@@ -21,7 +21,7 @@
 
 #include <vgc/core/arithmetic.h>
 
-#include <vgc/geometry/vec2f.h>
+#include <vgc/geometry/vec2.h>
 
 #include <vgc/style/api.h>
 #include <vgc/style/metrics.h>

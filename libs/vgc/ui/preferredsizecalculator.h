@@ -18,7 +18,7 @@
 #define VGC_UI_PREFERREDSIZECALCULATOR_H
 
 #include <vgc/core/stringid.h>
-#include <vgc/geometry/vec2f.h>
+#include <vgc/geometry/vec2.h>
 #include <vgc/style/metrics.h>
 #include <vgc/style/types.h>
 #include <vgc/ui/api.h>

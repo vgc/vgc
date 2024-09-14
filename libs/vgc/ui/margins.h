@@ -18,7 +18,7 @@
 #define VGC_UI_MARGINS_H
 
 #include <vgc/geometry/rect2f.h>
-#include <vgc/geometry/vec4f.h>
+#include <vgc/geometry/vec4.h>
 #include <vgc/ui/api.h>
 
 namespace vgc::ui {

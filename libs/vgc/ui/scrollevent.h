@@ -17,7 +17,7 @@
 #ifndef VGC_UI_SCROLLEVENT_H
 #define VGC_UI_SCROLLEVENT_H
 
-#include <vgc/geometry/vec2f.h>
+#include <vgc/geometry/vec2.h>
 #include <vgc/ui/mouseevent.h>
 
 namespace vgc::ui {

@@ -23,8 +23,8 @@
 #include <vgc/geometry/mat2d.h>
 #include <vgc/geometry/mat2f.h>
 #include <vgc/geometry/vec.h>
-#include <vgc/geometry/vec2d.h>
-#include <vgc/geometry/vec2f.h>
+#include <vgc/geometry/vec2.h>
+#include <vgc/geometry/vec2.h>
 
 namespace vgc::geometry {
 

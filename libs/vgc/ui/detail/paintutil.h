@@ -24,7 +24,7 @@
 #include <vgc/core/stringid.h>
 #include <vgc/geometry/rect2f.h>
 #include <vgc/geometry/triangle2f.h>
-#include <vgc/geometry/vec2f.h>
+#include <vgc/geometry/vec2.h>
 #include <vgc/graphics/text.h>
 #include <vgc/style/types.h>
 #include <vgc/ui/api.h>

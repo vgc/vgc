@@ -18,7 +18,7 @@
 
 #include <string>
 
-#include <vgc/geometry/vec2f.h>
+#include <vgc/geometry/vec2.h>
 #include <vgc/ui/cursor.h>
 #include <vgc/ui/window.h>
 

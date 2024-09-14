@@ -18,7 +18,7 @@
 #define VGC_GRAPHICS_DETAIL_SHAPEUTIL_H
 
 #include <vgc/core/color.h>
-#include <vgc/geometry/vec2f.h>
+#include <vgc/geometry/vec2.h>
 #include <vgc/graphics/api.h>
 #include <vgc/graphics/engine.h>
 

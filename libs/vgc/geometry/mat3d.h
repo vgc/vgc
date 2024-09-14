@@ -28,8 +28,8 @@
 #include <vgc/geometry/api.h>
 #include <vgc/geometry/mat.h>
 #include <vgc/geometry/stride.h>
-#include <vgc/geometry/vec2d.h>
-#include <vgc/geometry/vec3d.h>
+#include <vgc/geometry/vec2.h>
+#include <vgc/geometry/vec3.h>
 
 namespace vgc::geometry {
 
