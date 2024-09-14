@@ -21,7 +21,6 @@
 #include <vgc/core/span.h>
 #include <vgc/geometry/api.h>
 #include <vgc/geometry/vec2.h>
-#include <vgc/geometry/vec2.h>
 #include <vgc/geometry/windingrule.h>
 
 namespace vgc::geometry {

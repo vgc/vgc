@@ -21,7 +21,6 @@
 #include <vgc/core/array.h>
 #include <vgc/dom/element.h>
 #include <vgc/geometry/vec2.h>
-#include <vgc/geometry/vec2.h>
 #include <vgc/geometry/vec4.h>
 #include <vgc/graphics/engine.h>
 #include <vgc/vacomplex/complex.h>
