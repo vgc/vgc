@@ -28,7 +28,7 @@
 #include <vgc/geometry/curve.h>
 #include <vgc/geometry/mat3.h>
 #include <vgc/geometry/polyline2d.h>
-#include <vgc/geometry/rect2d.h>
+#include <vgc/geometry/rect2.h>
 #include <vgc/geometry/vec2.h>
 
 namespace vgc::geometry {

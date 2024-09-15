@@ -24,9 +24,9 @@ namespace {
 template<typename T>
 void wrap_range(py::module& m, const std::string& name) {
 
-    T relTol = vgc::core::defaultRelativeTolerance<T>;
-
     using This = vgc::geometry::Range1<T>;
+
+    constexpr T relTol = vgc::core::defaultRelativeTolerance<T>;
 
     vgc::core::wraps::Class<This>(m, name.c_str())
 

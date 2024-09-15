@@ -31,8 +31,7 @@ vgc_add_library(geometry
         range1.h
         rangealign.h
         rangeanchor.h
-        rect2d.h
-        rect2f.h
+        rect2.h
         rectalign.h
         rectanchor.h
         segment.h
@@ -62,8 +61,6 @@ vgc_add_library(geometry
         logcategories.cpp
         rangealign.cpp
         rangeanchor.cpp
-        rect2d.cpp
-        rect2f.cpp
         rectalign.cpp
         rectanchor.cpp
         segment.cpp

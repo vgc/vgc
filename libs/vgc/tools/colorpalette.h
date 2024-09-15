@@ -17,7 +17,7 @@
 #ifndef VGC_TOOLS_COLORPALETTE_H
 #define VGC_TOOLS_COLORPALETTE_H
 
-#include <vgc/geometry/rect2f.h>
+#include <vgc/geometry/rect2.h>
 #include <vgc/tools/api.h>
 #include <vgc/ui/button.h>
 #include <vgc/ui/column.h>

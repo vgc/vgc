@@ -21,7 +21,7 @@
 #include <utility>
 
 #include <vgc/core/arithmetic.h>
-#include <vgc/geometry/rect2d.h>
+#include <vgc/geometry/rect2.h>
 #include <vgc/geometry/stroke.h>
 #include <vgc/vacomplex/api.h>
 #include <vgc/vacomplex/cell.h>
