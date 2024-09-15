@@ -25,8 +25,8 @@
 #include <vgc/core/object.h>
 #include <vgc/core/templateutil.h>
 #include <vgc/geometry/curve.h>
-#include <vgc/geometry/mat2d.h>
-#include <vgc/geometry/mat3d.h>
+#include <vgc/geometry/mat2.h>
+#include <vgc/geometry/mat3.h>
 #include <vgc/geometry/range1d.h>
 #include <vgc/geometry/rect2d.h>
 #include <vgc/geometry/vec2.h>

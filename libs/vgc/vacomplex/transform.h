@@ -18,7 +18,7 @@
 #define VGC_VACOMPLEX_TRANSFORM_H
 
 #include <vgc/core/array.h>
-#include <vgc/geometry/mat3d.h>
+#include <vgc/geometry/mat3.h>
 #include <vgc/geometry/range1d.h>
 #include <vgc/geometry/vec2.h>
 

@@ -20,8 +20,7 @@
 #include <vgc/core/span.h>
 #include <vgc/geometry/api.h>
 #include <vgc/geometry/mat.h>
-#include <vgc/geometry/mat2d.h>
-#include <vgc/geometry/mat2f.h>
+#include <vgc/geometry/mat2.h>
 #include <vgc/geometry/vec.h>
 #include <vgc/geometry/vec2.h>
 

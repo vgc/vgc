@@ -17,8 +17,7 @@
 #include <vgc/tools/sculpt.h>
 
 #include <vgc/canvas/canvas.h>
-#include <vgc/geometry/mat4d.h>
-#include <vgc/geometry/mat4f.h>
+#include <vgc/geometry/mat4.h>
 #include <vgc/graphics/detail/shapeutil.h>
 #include <vgc/graphics/strings.h>
 #include <vgc/ui/column.h>

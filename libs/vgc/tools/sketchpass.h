@@ -20,7 +20,7 @@
 #include <memory> // unique_ptr
 
 #include <vgc/core/span.h>
-#include <vgc/geometry/mat3d.h>
+#include <vgc/geometry/mat3.h>
 #include <vgc/tools/api.h>
 #include <vgc/tools/sketchpoint.h>
 

@@ -18,7 +18,7 @@
 #define VGC_GRAPHICS_PIPELINESTATE_H
 
 #include <vgc/core/arithmetic.h>
-#include <vgc/geometry/mat4f.h>
+#include <vgc/geometry/mat4.h>
 #include <vgc/graphics/batch.h>
 #include <vgc/graphics/buffer.h>
 #include <vgc/graphics/enums.h>

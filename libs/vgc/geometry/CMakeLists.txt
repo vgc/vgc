@@ -21,12 +21,9 @@ vgc_add_library(geometry
         interpolatingstroke.h
         logcategories.h
         mat.h
-        mat2d.h
-        mat2f.h
-        mat3d.h
-        mat3f.h
-        mat4d.h
-        mat4f.h
+        mat2.h
+        mat3.h
+        mat4.h
         polyline.h
         polyline2.h
         polyline2d.h
@@ -64,12 +61,6 @@ vgc_add_library(geometry
         fillstyle.cpp
         interpolatingstroke.cpp
         logcategories.cpp
-        mat2d.cpp
-        mat2f.cpp
-        mat3d.cpp
-        mat3f.cpp
-        mat4d.cpp
-        mat4f.cpp
         range1d.cpp
         range1f.cpp
         rangealign.cpp

@@ -22,7 +22,7 @@
 #include <vgc/core/colors.h>
 #include <vgc/core/format.h>
 #include <vgc/core/parse.h>
-#include <vgc/geometry/mat3f.h>
+#include <vgc/geometry/mat3.h>
 #include <vgc/graphics/strings.h>
 #include <vgc/style/strings.h>
 #include <vgc/tools/currentcolor.h>

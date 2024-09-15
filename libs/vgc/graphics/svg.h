@@ -22,7 +22,7 @@
 #include <vgc/core/color.h>
 #include <vgc/geometry/curves2d.h>
 #include <vgc/geometry/fillstyle.h>
-#include <vgc/geometry/mat3d.h>
+#include <vgc/geometry/mat3.h>
 #include <vgc/geometry/rect2d.h>
 #include <vgc/geometry/strokestyle.h>
 #include <vgc/graphics/api.h>

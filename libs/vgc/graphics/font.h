@@ -24,7 +24,7 @@
 #include <vgc/core/enum.h>
 #include <vgc/core/innercore.h>
 #include <vgc/geometry/curves2d.h>
-#include <vgc/geometry/mat3f.h>
+#include <vgc/geometry/mat3.h>
 #include <vgc/geometry/rect2f.h>
 #include <vgc/geometry/vec2.h>
 #include <vgc/graphics/api.h>
