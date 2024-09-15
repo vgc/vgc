@@ -26,11 +26,6 @@
 
 namespace {
 
-template<typename T>
-constexpr T relTol_() {
-    return vgc::core::defaultRelativeTolerance<T>;
-}
-
 template<typename TVec>
 TVec normalizedOrThrow(const TVec& v) {
     bool isNormalizable;
@@ -204,7 +199,7 @@ void wrap_vec(py::module& m, const std::string& name) {
     }
 
     // Tests for almost-equality
-    constexpr T relTol = relTol_<T>();
+    constexpr T relTol = vgc::core::defaultRelativeTolerance<T>;
     cvec.def("isClose", &TVec::isClose, "b"_a, "relTol"_a = relTol, "absTol"_a = 0)
         .def("allClose", &TVec::allClose, "b"_a, "relTol"_a = relTol, "absTol"_a = 0)
         .def("isNear", &TVec::isNear, "b"_a, "absTol"_a)

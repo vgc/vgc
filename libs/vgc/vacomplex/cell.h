@@ -27,7 +27,7 @@
 #include <vgc/geometry/curve.h>
 #include <vgc/geometry/mat2.h>
 #include <vgc/geometry/mat3.h>
-#include <vgc/geometry/range1d.h>
+#include <vgc/geometry/range1.h>
 #include <vgc/geometry/rect2d.h>
 #include <vgc/geometry/vec2.h>
 #include <vgc/vacomplex/api.h>

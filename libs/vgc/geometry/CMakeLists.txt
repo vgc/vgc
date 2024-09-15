@@ -28,8 +28,7 @@ vgc_add_library(geometry
         polyline2.h
         polyline2d.h
         polyline2f.h
-        range1d.h
-        range1f.h
+        range1.h
         rangealign.h
         rangeanchor.h
         rect2d.h
@@ -61,8 +60,6 @@ vgc_add_library(geometry
         fillstyle.cpp
         interpolatingstroke.cpp
         logcategories.cpp
-        range1d.cpp
-        range1f.cpp
         rangealign.cpp
         rangeanchor.cpp
         rect2d.cpp
