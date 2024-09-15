@@ -32,7 +32,6 @@
 #include <vgc/core/color.h>
 #include <vgc/core/object.h>
 #include <vgc/geometry/mat4.h>
-#include <vgc/geometry/mat4.h>
 #include <vgc/geometry/vec2.h>
 #include <vgc/ui/api.h>
 #include <vgc/ui/modifierkey.h>
