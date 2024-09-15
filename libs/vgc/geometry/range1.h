@@ -426,7 +426,7 @@ private:
 // static-constexpr-member-of-same-type-as-class-being-defined
 //
 template<typename T>
-inline constexpr Range1<T> Range1<T>::empty =
+inline constexpr Range1<T> Range1<T>::empty = //
     Range1<T>(core::infinity<T>, -core::infinity<T>);
 
 /// Alias for `Range1<float>`.
