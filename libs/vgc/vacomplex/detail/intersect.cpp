@@ -16,7 +16,7 @@
 
 #include <vgc/vacomplex/detail/operations.h>
 
-#include <vgc/geometry/segment2d.h> // segmentIntersect
+#include <vgc/geometry/segment2.h> // segmentIntersect
 
 namespace vgc::vacomplex {
 
@@ -60,7 +60,7 @@ core::Array<IntersectionParameters> computeSelfIntersections(KeyEdge* edge) {
             const geometry::Vec2d& a2 = samples[j].position();
             const geometry::Vec2d& b2 = samples[j + 1].position();
 
-            geometry::Segment2dIntersection intersection =
+            geometry::SegmentIntersection2d intersection =
                 segmentIntersect(a1, b1, a2, b2);
 
             // XXX: What to do if it intersect along a segment?
@@ -116,7 +116,7 @@ computeEdgeIntersections(KeyEdge* edge1, KeyEdge* edge2) {
             const geometry::Vec2d& a2 = samples2[i2].position();
             const geometry::Vec2d& b2 = samples2[i2 + 1].position();
 
-            geometry::Segment2dIntersection intersection =
+            geometry::SegmentIntersection2d intersection =
                 segmentIntersect(a1, b1, a2, b2);
 
             // XXX: What to do if it intersect along a segment?

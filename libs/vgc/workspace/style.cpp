@@ -16,8 +16,8 @@
 
 #include <vgc/workspace/style.h>
 
-#include <vgc/geometry/mat3f.h>
-#include <vgc/geometry/vec2f.h>
+#include <vgc/geometry/mat3.h>
+#include <vgc/geometry/vec2.h>
 #include <vgc/vacomplex/keyedgedata.h>
 #include <vgc/vacomplex/keyface.h>
 #include <vgc/vacomplex/keyfacedata.h>

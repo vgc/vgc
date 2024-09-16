@@ -17,7 +17,7 @@
 #ifndef VGC_GRAPHICS_ICON_H
 #define VGC_GRAPHICS_ICON_H
 
-#include <vgc/geometry/vec2f.h>
+#include <vgc/geometry/vec2.h>
 #include <vgc/graphics/api.h>
 #include <vgc/graphics/engine.h>
 #include <vgc/style/stylableobject.h>

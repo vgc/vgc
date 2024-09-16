@@ -19,7 +19,7 @@
 #include <vgc/core/span.h>
 #include <vgc/geometry/catmullrom.h>
 #include <vgc/geometry/stroke.h>
-#include <vgc/geometry/triangle2d.h>
+#include <vgc/geometry/triangle2.h>
 #include <vgc/graphics/detail/shapeutil.h>
 #include <vgc/workspace/colors.h>
 #include <vgc/workspace/strings.h>

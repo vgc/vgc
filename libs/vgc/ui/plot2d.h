@@ -19,8 +19,8 @@
 
 #include <vgc/core/array.h>
 #include <vgc/core/color.h>
-#include <vgc/geometry/rect2f.h>
-#include <vgc/geometry/vec2d.h>
+#include <vgc/geometry/rect2.h>
+#include <vgc/geometry/vec2.h>
 #include <vgc/graphics/richtext.h>
 #include <vgc/ui/widget.h>
 

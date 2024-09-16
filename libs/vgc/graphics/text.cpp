@@ -24,7 +24,7 @@
 
 #include <QTextBoundaryFinder>
 
-#include <vgc/geometry/vec2f.h>
+#include <vgc/geometry/vec2.h>
 
 namespace vgc::graphics {
 

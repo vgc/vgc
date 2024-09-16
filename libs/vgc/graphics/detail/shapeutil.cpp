@@ -16,7 +16,7 @@
 
 #include <vgc/graphics/detail/shapeutil.h>
 
-#include <vgc/geometry/vec4f.h>
+#include <vgc/geometry/vec4.h>
 
 namespace vgc::graphics::detail {
 

@@ -24,11 +24,11 @@
 #include <vgc/core/array.h>
 #include <vgc/core/color.h>
 #include <vgc/dom/element.h>
-#include <vgc/geometry/rect2d.h>
+#include <vgc/geometry/rect2.h>
 #include <vgc/geometry/stroke.h>
-#include <vgc/geometry/vec2f.h>
-#include <vgc/geometry/vec3f.h>
-#include <vgc/geometry/vec4f.h>
+#include <vgc/geometry/vec2.h>
+#include <vgc/geometry/vec3.h>
+#include <vgc/geometry/vec4.h>
 #include <vgc/graphics/engine.h>
 #include <vgc/graphics/geometryview.h>
 #include <vgc/vacomplex/complex.h>

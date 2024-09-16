@@ -36,9 +36,9 @@
 #include <vgc/core/innercore.h>
 #include <vgc/core/span.h>
 #include <vgc/core/templateutil.h>
-#include <vgc/geometry/mat4f.h>
-#include <vgc/geometry/rect2f.h>
-#include <vgc/geometry/vec4f.h>
+#include <vgc/geometry/mat4.h>
+#include <vgc/geometry/rect2.h>
+#include <vgc/geometry/vec4.h>
 #include <vgc/graphics/api.h>
 #include <vgc/graphics/batch.h>
 #include <vgc/graphics/blendstate.h>

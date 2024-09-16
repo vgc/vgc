@@ -24,7 +24,7 @@
 #include <vgc/core/color.h>
 #include <vgc/core/history.h>
 #include <vgc/dom/element.h>
-#include <vgc/geometry/vec2d.h>
+#include <vgc/geometry/vec2.h>
 #include <vgc/tools/api.h>
 #include <vgc/tools/sketchpasses.h>
 #include <vgc/ui/command.h>

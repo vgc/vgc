@@ -20,7 +20,7 @@
 #include <QCursor>
 
 #include <vgc/core/color.h>
-#include <vgc/geometry/vec2f.h>
+#include <vgc/geometry/vec2.h>
 #include <vgc/ui/api.h>
 
 namespace vgc::ui {

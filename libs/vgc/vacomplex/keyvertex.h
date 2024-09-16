@@ -17,7 +17,7 @@
 #ifndef VGC_VACOMPLEX_KEYVERTEX_H
 #define VGC_VACOMPLEX_KEYVERTEX_H
 
-#include <vgc/geometry/vec2d.h>
+#include <vgc/geometry/vec2.h>
 #include <vgc/vacomplex/api.h>
 #include <vgc/vacomplex/cell.h>
 #include <vgc/vacomplex/keyhalfedge.h>

@@ -18,7 +18,7 @@
 #define VGC_TOOLS_SKETCHPOINT_H
 
 #include <vgc/core/array.h>
-#include <vgc/geometry/vec2d.h>
+#include <vgc/geometry/vec2.h>
 #include <vgc/tools/api.h>
 
 namespace vgc::tools {

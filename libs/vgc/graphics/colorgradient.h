@@ -18,7 +18,7 @@
 #define VGC_GRAPHICS_COLORGRADIENT_H
 
 #include <vgc/core/arithmetic.h>
-#include <vgc/geometry/vec4f.h>
+#include <vgc/geometry/vec4.h>
 #include <vgc/graphics/api.h>
 
 namespace vgc::graphics {

@@ -1,4 +1,4 @@
-// Copyright 2022 The VGC Developers
+// Copyright 2024 The VGC Developers
 // See the COPYRIGHT file at the top-level directory of this distribution
 // and at https://github.com/vgc/vgc/blob/master/COPYRIGHT
 //
@@ -14,13 +14,26 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// This file was automatically generated, please do not edit directly.
-// Instead, edit tools/triangle2x.cpp then run tools/generate.py.
+#include <vgc/geometry/segment2.h>
 
-// clang-format off
-
-#include <vgc/geometry/triangle2f.h>
+#include <vgc/geometry/detail/segmentintersect.h>
 
 namespace vgc::geometry {
+
+template<typename T>
+SegmentIntersection2<T> segmentIntersect(
+    const Vec2<T>& a1,
+    const Vec2<T>& b1,
+    const Vec2<T>& a2,
+    const Vec2<T>& b2) {
+
+    return detail::segmentintersect::intersect(a1, b1, a2, b2);
+}
+
+template SegmentIntersection2f
+segmentIntersect(const Vec2f&, const Vec2f&, const Vec2f&, const Vec2f&);
+
+template SegmentIntersection2d
+segmentIntersect(const Vec2d&, const Vec2d&, const Vec2d&, const Vec2d&);
 
 } // namespace vgc::geometry

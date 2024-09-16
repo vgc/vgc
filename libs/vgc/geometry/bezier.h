@@ -19,7 +19,7 @@
 
 #include <vgc/core/span.h>
 #include <vgc/geometry/api.h>
-#include <vgc/geometry/vec2d.h>
+#include <vgc/geometry/vec2.h>
 
 namespace vgc::geometry {
 

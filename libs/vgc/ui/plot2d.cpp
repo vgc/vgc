@@ -17,7 +17,7 @@
 #include <vgc/ui/plot2d.h>
 
 #include <vgc/core/array.h>
-#include <vgc/geometry/rect2f.h>
+#include <vgc/geometry/rect2.h>
 #include <vgc/graphics/strings.h>
 #include <vgc/style/strings.h>
 #include <vgc/ui/logcategories.h>

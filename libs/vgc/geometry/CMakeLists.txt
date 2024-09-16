@@ -21,42 +21,34 @@ vgc_add_library(geometry
         interpolatingstroke.h
         logcategories.h
         mat.h
-        mat2d.h
-        mat2f.h
-        mat3d.h
-        mat3f.h
-        mat4d.h
-        mat4f.h
+        mat2.h
+        mat3.h
+        mat4.h
         polyline.h
         polyline2.h
         polyline2d.h
         polyline2f.h
-        range1d.h
-        range1f.h
+        range1.h
         rangealign.h
         rangeanchor.h
-        rect2d.h
-        rect2f.h
+        rect2.h
         rectalign.h
         rectanchor.h
         segment.h
-        segment2d.h
-        segment2f.h
+        segment2.h
         stride.h
         stroke.h
         strokestyle.h
         tesselator.h
-        triangle2d.h
-        triangle2f.h
+        triangle2.h
         vec.h
-        vec2d.h
-        vec2f.h
-        vec3d.h
-        vec3f.h
-        vec4d.h
-        vec4f.h
+        vec2.h
+        vec3.h
+        vec4.h
         windingrule.h
         yuksel.h
+
+        detail/segmentintersect.h
 
     CPP_SOURCE_FILES
         camera2d.cpp
@@ -67,34 +59,15 @@ vgc_add_library(geometry
         fillstyle.cpp
         interpolatingstroke.cpp
         logcategories.cpp
-        mat2d.cpp
-        mat2f.cpp
-        mat3d.cpp
-        mat3f.cpp
-        mat4d.cpp
-        mat4f.cpp
-        range1d.cpp
-        range1f.cpp
         rangealign.cpp
         rangeanchor.cpp
-        rect2d.cpp
-        rect2f.cpp
         rectalign.cpp
         rectanchor.cpp
         segment.cpp
-        segment2d.cpp
-        segment2f.cpp
+        segment2.cpp
         stroke.cpp
         strokestyle.cpp
         tesselator.cpp
-        triangle2d.cpp
-        triangle2f.cpp
-        vec2d.cpp
-        vec2f.cpp
-        vec3d.cpp
-        vec3f.cpp
-        vec4d.cpp
-        vec4f.cpp
         windingrule.cpp
         yuksel.cpp
 

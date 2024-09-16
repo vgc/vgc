@@ -17,7 +17,7 @@
 #ifndef VGC_UI_MOUSEEVENT_H
 #define VGC_UI_MOUSEEVENT_H
 
-#include <vgc/geometry/vec2f.h>
+#include <vgc/geometry/vec2.h>
 #include <vgc/ui/event.h>
 #include <vgc/ui/mousebutton.h>
 

@@ -27,8 +27,8 @@
 #include <vgc/core/array.h>
 #include <vgc/core/innercore.h>
 #include <vgc/core/stringid.h>
-#include <vgc/geometry/rect2f.h>
-#include <vgc/geometry/vec2f.h>
+#include <vgc/geometry/rect2.h>
+#include <vgc/geometry/vec2.h>
 #include <vgc/graphics/engine.h>
 #include <vgc/style/stylableobject.h>
 #include <vgc/style/types.h>

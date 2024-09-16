@@ -23,8 +23,8 @@
 #include <vgc/core/format.h>
 #include <vgc/core/span.h>
 #include <vgc/geometry/logcategories.h>
-#include <vgc/geometry/mat3d.h>
-#include <vgc/geometry/vec2d.h>
+#include <vgc/geometry/mat3.h>
+#include <vgc/geometry/vec2.h>
 
 namespace vgc::geometry {
 

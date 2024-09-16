@@ -18,8 +18,8 @@
 #define VGC_GEOMETRY_CAMERA2D_H
 
 #include <vgc/geometry/api.h>
-#include <vgc/geometry/mat3d.h>
-#include <vgc/geometry/vec2d.h>
+#include <vgc/geometry/mat3.h>
+#include <vgc/geometry/vec2.h>
 
 namespace vgc::geometry {
 

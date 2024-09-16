@@ -15,18 +15,12 @@
 // limitations under the License.
 
 #include <vgc/geometry/mat.h>
-#include <vgc/geometry/mat2d.h>
-#include <vgc/geometry/mat2f.h>
-#include <vgc/geometry/mat3d.h>
-#include <vgc/geometry/mat3f.h>
-#include <vgc/geometry/mat4d.h>
-#include <vgc/geometry/mat4f.h>
-#include <vgc/geometry/vec2d.h>
-#include <vgc/geometry/vec2f.h>
-#include <vgc/geometry/vec3d.h>
-#include <vgc/geometry/vec3f.h>
-#include <vgc/geometry/vec4d.h>
-#include <vgc/geometry/vec4f.h>
+#include <vgc/geometry/mat2.h>
+#include <vgc/geometry/mat3.h>
+#include <vgc/geometry/mat4.h>
+#include <vgc/geometry/vec2.h>
+#include <vgc/geometry/vec3.h>
+#include <vgc/geometry/vec4.h>
 
 #include <vgc/core/wraps/class.h>
 #include <vgc/core/wraps/common.h>

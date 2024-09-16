@@ -15,12 +15,9 @@
 // limitations under the License.
 
 #include <vgc/core/format.h>
-#include <vgc/geometry/vec2d.h>
-#include <vgc/geometry/vec2f.h>
-#include <vgc/geometry/vec3d.h>
-#include <vgc/geometry/vec3f.h>
-#include <vgc/geometry/vec4d.h>
-#include <vgc/geometry/vec4f.h>
+#include <vgc/geometry/vec2.h>
+#include <vgc/geometry/vec3.h>
+#include <vgc/geometry/vec4.h>
 
 #include <vgc/core/wraps/array.h>
 #include <vgc/core/wraps/class.h>
@@ -28,19 +25,6 @@
 #include <vgc/geometry/wraps/vec.h>
 
 namespace {
-
-template<typename T>
-constexpr T relTol_();
-
-template<>
-constexpr float relTol_() {
-    return 1e-5f;
-}
-
-template<>
-constexpr double relTol_() {
-    return 1e-9;
-}
 
 template<typename TVec>
 TVec normalizedOrThrow(const TVec& v) {
@@ -215,7 +199,7 @@ void wrap_vec(py::module& m, const std::string& name) {
     }
 
     // Tests for almost-equality
-    constexpr T relTol = relTol_<T>();
+    constexpr T relTol = vgc::core::defaultRelativeTolerance<T>;
     cvec.def("isClose", &TVec::isClose, "b"_a, "relTol"_a = relTol, "absTol"_a = 0)
         .def("allClose", &TVec::allClose, "b"_a, "relTol"_a = relTol, "absTol"_a = 0)
         .def("isNear", &TVec::isNear, "b"_a, "absTol"_a)

@@ -19,7 +19,7 @@
 #include <vgc/core/colors.h>
 #include <vgc/core/stringutil.h> // startsWith, endsWith, trimmed, split
 #include <vgc/core/xml.h>
-#include <vgc/geometry/mat3d.h>
+#include <vgc/geometry/mat3.h>
 #include <vgc/graphics/logcategories.h>
 
 namespace vgc::graphics {

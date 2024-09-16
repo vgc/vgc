@@ -19,7 +19,7 @@
 #include <vgc/geometry/arc.h>
 #include <vgc/geometry/bezier.h>
 #include <vgc/geometry/curve.h>
-#include <vgc/geometry/mat2d.h>
+#include <vgc/geometry/mat2.h>
 #include <vgc/geometry/tesselator.h>
 
 namespace vgc::geometry {

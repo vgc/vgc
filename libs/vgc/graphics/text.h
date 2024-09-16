@@ -21,7 +21,7 @@
 
 #include <vgc/core/flags.h>
 #include <vgc/core/innercore.h>
-#include <vgc/geometry/rect2f.h>
+#include <vgc/geometry/rect2.h>
 #include <vgc/graphics/api.h>
 #include <vgc/graphics/font.h>
 

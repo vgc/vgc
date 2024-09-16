@@ -816,22 +816,51 @@ bool isNear(T a, T b, T absTol) {
 
 } // namespace detail
 
-/// Returns whether two float values are almost equal within some relative
-/// tolerance. For example, set `relTol` to `0.05f` for testing if two values
-/// are almost equal within a 5% tolerance.
+/// The type trait `DefaultRelativeTolerance<T>` defines a public data member
+/// `DefaultRelativeTolerance<T>::value` equal to the default value to use as
+/// relative tolerance for `isClose()` functions.
+///
+/// \sa `defaultRelativeTolerance<T>`.
+///
+template<typename T>
+struct DefaultRelativeTolerance;
+
+template<>
+struct DefaultRelativeTolerance<float> {
+    static constexpr float value = 1e-5f;
+};
+
+template<>
+struct DefaultRelativeTolerance<double> {
+    static constexpr double value = 1e-9;
+};
+
+/// The type trait `DefaultRelativeTolerance` define the default value
+/// to use as relative tolerance for `isClose()` functions.
+///
+/// Default value to use as relative tolerance for `isClose()` functions.
+///
+/// \sa `DefaultRelativeTolerance<T>`.
+///
+template<typename T>
+inline constexpr T defaultRelativeTolerance = DefaultRelativeTolerance<T>::value;
+
+/// Returns whether two floating point values are almost equal within some
+/// relative tolerance. For example, set `relTol` to `0.05` for testing if two
+/// values are almost equal within a 5% tolerance.
 ///
 /// ```cpp
 /// float relTol = 0.05f;
 ///
-/// vgc::core::isClose(101.0f,  103.0f,  relTol); // true: 103.0  <= 101.0  + 5%
-/// vgc::core::isClose(1.01f,   1.03f,   relTol); // true: 1.03   <= 1.01   + 5%
-/// vgc::core::isClose(0.0101f, 0.0103f, relTol); // true: 0.0103 <= 0.0101 + 5%
+/// isClose(101.0f,  103.0f,  relTol); // true: 103.0  <= 101.0  + 5%
+/// isClose(1.01f,   1.03f,   relTol); // true: 1.03   <= 1.01   + 5%
+/// isClose(0.0101f, 0.0103f, relTol); // true: 0.0103 <= 0.0101 + 5%
 ///
-/// vgc::core::isClose(101.0f,  108.0f,  relTol); // false: 108.0  > 101.0  + 5%
-/// vgc::core::isClose(1.01f,   1.08f,   relTol); // false: 1.08   > 1.01   + 5%
-/// vgc::core::isClose(0.0101f, 0.0108f, relTol); // false: 0.0108 > 0.0101 + 5%
+/// isClose(101.0f,  108.0f,  relTol); // false: 108.0  > 101.0  + 5%
+/// isClose(1.01f,   1.08f,   relTol); // false: 1.08   > 1.01   + 5%
+/// isClose(0.0101f, 0.0108f, relTol); // false: 0.0108 > 0.0101 + 5%
 ///
-/// vgc::core::isClose(1e-50f, 0.0f, relTol); // false: 1e-50f > 0.0 + 5%
+/// isClose(1e-50f, 0.0f, relTol); // false: 1e-50f > 0.0 + 5%
 /// ```
 ///
 /// If you need an absolute tolerance (which is especially important if one the
@@ -841,15 +870,15 @@ bool isNear(T a, T b, T absTol) {
 /// ```cpp
 /// float absTol = 0.05f;
 ///
-/// vgc::core::isNear(101.0f,  103.0f,  absTol); // false: 103.0  - 101.0  >  0.05
-/// vgc::core::isNear(1.01f,   1.03f,   absTol); // true:  1.03   - 1.01   <= 0.05
-/// vgc::core::isNear(0.0101f, 0.0103f, absTol); // true:  0.0103 - 0.0101 <= 0.05
+/// isNear(101.0f,  103.0f,  absTol); // false: 103.0  - 101.0  >  0.05
+/// isNear(1.01f,   1.03f,   absTol); // true:  1.03   - 1.01   <= 0.05
+/// isNear(0.0101f, 0.0103f, absTol); // true:  0.0103 - 0.0101 <= 0.05
 ///
-/// vgc::core::isNear(101.0f,  108.0f,  absTol); // false: 108.0  - 101.0  >  0.05
-/// vgc::core::isNear(1.01f,   1.08f,   absTol); // false: 1.08   - 1.01   >  0.05
-/// vgc::core::isNear(0.0101f, 0.0108f, absTol); // true:  0.0108 - 0.0101 <= 0.05
+/// isNear(101.0f,  108.0f,  absTol); // false: 108.0  - 101.0  >  0.05
+/// isNear(1.01f,   1.08f,   absTol); // false: 1.08   - 1.01   >  0.05
+/// isNear(0.0101f, 0.0108f, absTol); // true:  0.0108 - 0.0101 <= 0.05
 ///
-/// vgc::core::isNear(1e-50f, 0.0f, relTol); // true:  1e-50 - 0.0 <= 0.05
+/// isNear(1e-50f, 0.0f, relTol); // true:  1e-50 - 0.0 <= 0.05
 /// ```
 ///
 /// If you need both a relative and an absolute tolerance (which should rarely
@@ -860,23 +889,29 @@ bool isNear(T a, T b, T absTol) {
 /// float relTol = 0.05f;
 /// float absTol = 0.05f;
 ///
-/// vgc::core::isClose(101.0f,  103.0f,  relTol, absTol); // true: 103.0  <= 101.0  + 5%
-/// vgc::core::isClose(1.01f,   1.03f,   relTol, absTol); // true: 1.03   <= 1.01   + 5%
-/// vgc::core::isClose(0.0101f, 0.0103f, relTol, absTol); // true: 0.0103 <= 0.0101 + 5%
+/// isClose(101.0f,  103.0f,  relTol, absTol); // true: 103.0  <= 101.0  + 5%
+/// isClose(1.01f,   1.03f,   relTol, absTol); // true: 1.03   <= 1.01   + 5%
+/// isClose(0.0101f, 0.0103f, relTol, absTol); // true: 0.0103 <= 0.0101 + 5%
 ///
-/// vgc::core::isClose(101.0f,  108.0f,  relTol, absTol); // false: difference is > 5% and > 0.05
-/// vgc::core::isClose(1.01f,   1.08f,   relTol, absTol); // false: difference is > 5% and > 0.05
-/// vgc::core::isClose(0.0101f, 0.0108f, relTol, absTol); // true:  0.0108 - 0.0101 <= 0.05
+/// isClose(101.0f,  108.0f,  relTol, absTol); // false: difference is > 5% and > 0.05
+/// isClose(1.01f,   1.08f,   relTol, absTol); // false: difference is > 5% and > 0.05
+/// isClose(0.0101f, 0.0108f, relTol, absTol); // true:  0.0108 - 0.0101 <= 0.05
 ///
-/// vgc::core::isClose(1e-50f, 0.0f, relTol, absTol); // true:  1e-50 - 0.0 <= 0.05
+/// isClose(1e-50f, 0.0f, relTol, absTol); // true:  1e-50 - 0.0 <= 0.05
 /// ```
 ///
-/// The default `relTol` is `1e-5f`, which tests whether the two values are
-/// equal within about 5 decimal significant digits (floats have a precision of
-/// approximately 7 decimal digits). If you provide your own `relTol`, it must
-/// be strictly positive, otherwise the behavior is undefined.
+/// The default `relTol` for `float` is `1e-5f`, which tests whether the two
+/// values are equal within about 5 decimal significant digits (floats have a
+/// precision of approximately 7 decimal digits).
 ///
-/// If you need to test for exact equality, you can use `isNear(a, b, 0.0f)`,
+/// The default `relTol` for `double` is `1e-9`, which tests whether the two
+/// values are equal within about 9 decimal significant digits (doubles have a
+/// precision of approximately 15 decimal digits).
+///
+/// If you provide your own `relTol`, it must be strictly positive, otherwise
+/// the behavior is undefined.
+///
+/// If you need to test for exact equality, you can use `isNear(a, b, 0)`,
 /// which safely accepts a tolerance of exactly zero.
 ///
 /// Note how `isClose()` is appropriate for comparing whether non-zero values
@@ -901,35 +936,27 @@ bool isNear(T a, T b, T absTol) {
 /// This function has the same behavior as the builtin Python function
 /// `math.isclose()`.
 ///
-VGC_CORE_API
-inline bool isClose(float a, float b, float relTol = 1e-5f, float absTol = 0.0f) {
+template<typename T, VGC_REQUIRES(std::is_floating_point_v<T>)>
+bool isClose(
+    T a,
+    TypeIdentity<T> b,
+    TypeIdentity<T> relTol = defaultRelativeTolerance<T>,
+    TypeIdentity<T> absTol = 0) {
+
     return detail::isClose(a, b, relTol, absTol);
 }
 
-/// Returns whether two double values are almost equal within some relative
-/// tolerance. Please see the documentation of the `float` overload for
-/// details.
-///
-/// Note that this overload has a default `relTol` of `1e-9`, which tests
-/// whether the two values are equal within about 9 decimal significant digits
-/// (doubles have a precision of approximately 15 decimal digits).
-///
-VGC_CORE_API
-inline bool isClose(double a, double b, double relTol = 1e-9, double absTol = 0.0) {
-    return detail::isClose(a, b, relTol, absTol);
-}
-
-/// Returns whether the absolute difference between two float values is within
-/// the given tolerance.
+/// Returns whether the absolute difference between two floating point values
+/// is within the given tolerance.
 ///
 /// ```cpp
 /// float absTol = 0.05f;
-/// vgc::core::isNear(42.00f, 42.04f,  absTol); // true
-/// vgc::core::isNear(42.00f, 42.06f,  absTol); // false
+/// isNear(42.00f, 42.04f, absTol); // true
+/// isNear(42.00f, 42.06f, absTol); // false
 /// ```
 ///
 /// The given `absTol` must be positive, otherwise the behavior is undefined.
-/// If you need to test for exact equality, you can use `isNear(a, b, 0.0f)`.
+/// If you need to test for exact equality, you can use `isNear(a, b, 0)`.
 ///
 /// There is no default value for `absTol`, because the appropriate tolerance
 /// is specific to each use case, and there is no "one size fits all" value.
@@ -952,17 +979,8 @@ inline bool isClose(double a, double b, double relTol = 1e-9, double absTol = 0.
 /// abs(a-b) <= absTol;
 /// ```
 ///
-VGC_CORE_API
-inline bool isNear(float a, float b, float absTol) {
-    return detail::isNear(a, b, absTol);
-}
-
-/// Returns whether the absolute difference between two double values is within
-/// the given tolerance. Please see the documentation of the `float` overload
-/// for details.
-///
-VGC_CORE_API
-inline bool isNear(double a, double b, double absTol) {
+template<typename T, VGC_REQUIRES(std::is_floating_point_v<T>)>
+bool isNear(T a, TypeIdentity<T> b, TypeIdentity<T> absTol) {
     return detail::isNear(a, b, absTol);
 }
 

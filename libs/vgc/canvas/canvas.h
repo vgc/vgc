@@ -24,7 +24,7 @@
 #include <vgc/core/object.h>
 #include <vgc/core/performancelog.h>
 #include <vgc/geometry/camera2d.h>
-#include <vgc/geometry/vec2d.h>
+#include <vgc/geometry/vec2.h>
 #include <vgc/ui/cursor.h>
 #include <vgc/ui/widget.h>
 #include <vgc/workspace/edge.h>

@@ -14,8 +14,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <vgc/geometry/rect2d.h>
-#include <vgc/geometry/rect2f.h>
+#include <vgc/geometry/rect2.h>
 
 #include <vgc/core/wraps/class.h>
 #include <vgc/core/wraps/common.h>
@@ -23,42 +22,12 @@
 namespace {
 
 template<typename T>
-struct Rect2_ {};
+void wrap_rect(py::module& m, const std::string& name) {
 
-template<>
-struct Rect2_<float> {
-    using type = vgc::geometry::Rect2f;
-};
+    using This = vgc::geometry::Rect2<T>;
+    using Vec2x = vgc::geometry::Vec2<T>;
 
-template<>
-struct Rect2_<double> {
-    using type = vgc::geometry::Rect2d;
-};
-
-template<typename T>
-using Rect2 = typename Rect2_<T>::type;
-
-template<typename T>
-struct Vec2_ {};
-
-template<>
-struct Vec2_<float> {
-    using type = vgc::geometry::Vec2f;
-};
-
-template<>
-struct Vec2_<double> {
-    using type = vgc::geometry::Vec2d;
-};
-
-template<typename T>
-using Vec2 = typename Vec2_<T>::type;
-
-template<typename T>
-void wrap_rect(py::module& m, const std::string& name, T relTol) {
-
-    using This = Rect2<T>;
-    using Vec2x = Vec2<T>;
+    constexpr T relTol = vgc::core::defaultRelativeTolerance<T>;
 
     vgc::core::wraps::Class<This>(m, name.c_str())
 
@@ -144,6 +113,6 @@ void wrap_rect(py::module& m, const std::string& name, T relTol) {
 } // namespace
 
 void wrap_rect(py::module& m) {
-    wrap_rect<double>(m, "Rect2d", 1e-9);
-    wrap_rect<float>(m, "Rect2f", 1e-5f);
+    wrap_rect<double>(m, "Rect2d");
+    wrap_rect<float>(m, "Rect2f");
 }

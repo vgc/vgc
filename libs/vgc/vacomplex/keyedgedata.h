@@ -23,7 +23,7 @@
 
 #include <vgc/core/arithmetic.h>
 #include <vgc/core/assert.h>
-#include <vgc/geometry/mat3d.h>
+#include <vgc/geometry/mat3.h>
 #include <vgc/geometry/stroke.h>
 #include <vgc/vacomplex/api.h>
 #include <vgc/vacomplex/celldata.h>

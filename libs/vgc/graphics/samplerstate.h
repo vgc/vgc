@@ -20,7 +20,7 @@
 #include <array>
 
 #include <vgc/core/arithmetic.h>
-#include <vgc/geometry/vec4f.h>
+#include <vgc/geometry/vec4.h>
 #include <vgc/graphics/api.h>
 #include <vgc/graphics/enums.h>
 #include <vgc/graphics/resource.h>

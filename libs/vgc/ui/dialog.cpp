@@ -16,7 +16,7 @@
 
 #include <vgc/ui/dialog.h>
 
-#include <vgc/geometry/range1f.h>
+#include <vgc/geometry/range1.h>
 #include <vgc/style/strings.h>
 #include <vgc/ui/cursor.h>
 #include <vgc/ui/overlayarea.h>

@@ -14,8 +14,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <vgc/geometry/range1d.h>
-#include <vgc/geometry/range1f.h>
+#include <vgc/geometry/range1.h>
 
 #include <vgc/core/wraps/class.h>
 #include <vgc/core/wraps/common.h>
@@ -23,25 +22,11 @@
 namespace {
 
 template<typename T>
-struct Range1_ {};
+void wrap_range(py::module& m, const std::string& name) {
 
-template<>
-struct Range1_<float> {
-    using type = vgc::geometry::Range1f;
-};
+    using This = vgc::geometry::Range1<T>;
 
-template<>
-struct Range1_<double> {
-    using type = vgc::geometry::Range1d;
-};
-
-template<typename T>
-using Range1 = typename Range1_<T>::type;
-
-template<typename T>
-void wrap_range(py::module& m, const std::string& name, T relTol) {
-
-    using This = Range1<T>;
+    constexpr T relTol = vgc::core::defaultRelativeTolerance<T>;
 
     vgc::core::wraps::Class<This>(m, name.c_str())
 
@@ -91,6 +76,6 @@ void wrap_range(py::module& m, const std::string& name, T relTol) {
 } // namespace
 
 void wrap_range(py::module& m) {
-    wrap_range<double>(m, "Range1d", 1e-9);
-    wrap_range<float>(m, "Range1f", 1e-5f);
+    wrap_range<double>(m, "Range1d");
+    wrap_range<float>(m, "Range1f");
 }
