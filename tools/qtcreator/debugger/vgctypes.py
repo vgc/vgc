@@ -147,15 +147,25 @@ def qdump__vgc__core__StringId(d, value):
     d.putType("vgc::core::StringId")
 
 
-def qdump__vgc__geometry__Vec2f(d, value):
+def qdump__vgc__geometry__Vec2(d, value):
     x = value["data_"][0].value()
     y = value["data_"][1].value()
     d.putValue(f"({x}, {y})")
     d.putPlainChildren(value)
 
 
-def qdump__vgc__geometry__Vec2d(d, value):
+def qdump__vgc__geometry__Vec3(d, value):
     x = value["data_"][0].value()
     y = value["data_"][1].value()
-    d.putValue(f"({x}, {y})")
+    z = value["data_"][2].value()
+    d.putValue(f"({x}, {y}, {z})")
+    d.putPlainChildren(value)
+
+
+def qdump__vgc__geometry__Vec4(d, value):
+    x = value["data_"][0].value()
+    y = value["data_"][1].value()
+    z = value["data_"][2].value()
+    w = value["data_"][3].value()
+    d.putValue(f"({x}, {y}, {z}, {w})")
     d.putPlainChildren(value)
