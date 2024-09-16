@@ -230,7 +230,7 @@ void write(OStream& out, const SegmentIntersection2<T>& i) {
 /// \sa `Segment2d::intersect()`.
 ///
 template<typename T>
-VGC_GEOMETRY_API SegmentIntersection2<T> segmentIntersect(
+SegmentIntersection2<T> segmentIntersect(
     const Vec2<T>& a1,
     const Vec2<T>& b1,
     const Vec2<T>& a2,
@@ -240,17 +240,11 @@ VGC_GEOMETRY_API SegmentIntersection2<T> segmentIntersect(
 // include and compile detail/segmentintersect.h in all translation units that
 // include segment2.h.
 //
-extern template SegmentIntersection2f segmentIntersect<float>(
-    const Vec2f& a1,
-    const Vec2f& b1,
-    const Vec2f& a2,
-    const Vec2f& b2);
+extern template VGC_GEOMETRY_API SegmentIntersection2f
+segmentIntersect(const Vec2f&, const Vec2f&, const Vec2f&, const Vec2f&);
 
-extern template SegmentIntersection2d segmentIntersect<double>(
-    const Vec2d& a1,
-    const Vec2d& b1,
-    const Vec2d& a2,
-    const Vec2d& b2);
+extern template VGC_GEOMETRY_API SegmentIntersection2d
+segmentIntersect(const Vec2d&, const Vec2d&, const Vec2d&, const Vec2d&);
 
 /// \class vgc::geometry::Segment2
 /// \brief Represents a 2D line segment.

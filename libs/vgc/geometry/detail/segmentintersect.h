@@ -14,6 +14,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#ifndef VGC_GEOMETRY_DETAIL_SEGMENTINTERSECT_H
+#define VGC_GEOMETRY_DETAIL_SEGMENTINTERSECT_H
+
 #include <vgc/geometry/vec2.h>
 
 #include <vgc/core/assert.h>
@@ -971,3 +974,5 @@ intersect(const Vec2<T>& a1, const Vec2<T>& b1, const Vec2<T>& a2, const Vec2<T>
 } // namespace detail::segmentintersect
 
 } // namespace vgc::geometry
+
+#endif // VGC_GEOMETRY_DETAIL_SEGMENTINTERSECT_H
