@@ -29,6 +29,9 @@ namespace vgc::geometry {
 template<typename T>
 class SegmentIntersection2 {
 public:
+    using ScalarType = T;
+    static constexpr Int dimension = 2;
+
     /// Creates an empty intersection.
     ///
     constexpr SegmentIntersection2() noexcept

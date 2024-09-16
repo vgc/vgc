@@ -19,23 +19,25 @@
 
 #include <vgc/core/array.h>
 #include <vgc/geometry/api.h>
+#include <vgc/geometry/traits.h>
 
 namespace vgc::geometry {
 
 /// \class vgc::geometry::Polyline
 /// \brief Stores a sequence of points representing a polyline.
 ///
-/// The `Polyline<TPoint>` class extends `core::Array<TPoint>` with helper
+/// The `Polyline<Point>` class extends `core::Array<Point>` with helper
 /// methods that are useful when the list of points represent a polyline.
 ///
 /// Note that since its base class does not have a virtual destructor, it is
 /// undefined behavior to destroy this class via a pointer to its base class.
 ///
-template<typename TPoint>
-class Polyline : public core::Array<TPoint> {
+template<typename Point>
+class Polyline : public core::Array<Point> {
 public:
-    using ScalarType = decltype(TPoint()[0]);
-    using BaseType = core::Array<TPoint>;
+    using ScalarType = scalarType<Point>;
+    static constexpr Int dimension = geometry::dimension<Point>;
+    using BaseType = core::Array<Point>;
 
     // Forward all constructors
     using BaseType::BaseType;

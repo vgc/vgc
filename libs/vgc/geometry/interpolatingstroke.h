@@ -35,6 +35,9 @@ enum class CurveSegmentType : UInt8 {
 
 class FreehandStrokePoint {
 public:
+    using ScalarType = double;
+    static constexpr Int dimension = 2;
+
     VGC_WARNING_PUSH
     VGC_WARNING_MSVC_DISABLE(26495) // member variable uninitialized
     FreehandStrokePoint(core::NoInit)

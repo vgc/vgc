@@ -104,6 +104,8 @@ enum class AttributeVariability {
 
 class VGC_GEOMETRY_API DistanceToCurve {
 public:
+    using ScalarType = double;
+
     DistanceToCurve() noexcept = default;
 
     DistanceToCurve(
@@ -272,6 +274,8 @@ distanceToCurve(const core::Array<TSample>& samples, const Vec2d& position) {
 ///
 class VGC_GEOMETRY_API CurveSamplingParameters {
 public:
+    using ScalarType = double;
+
     CurveSamplingParameters() = default;
 
     CurveSamplingParameters(CurveSamplingQuality quality);
@@ -354,6 +358,8 @@ private:
 ///
 class VGC_GEOMETRY_API CurveParameter {
 public:
+    using ScalarType = double;
+
     constexpr CurveParameter() noexcept
         : segmentIndex_(-1)
         , u_(-1.0) {
@@ -418,6 +424,8 @@ private:
 ///
 class VGC_GEOMETRY_API SampledCurveParameter {
 public:
+    using ScalarType = double;
+
     /// Constructs a zero-initialized `SampledCurveParameter`, that is,
     /// corresponding to the start of the curve.
     ///
@@ -582,6 +590,9 @@ namespace detail {
 ///
 class VGC_GEOMETRY_API AbstractCurve2d {
 public:
+    using ScalarType = double;
+    static constexpr Int dimension = 2;
+
     virtual ~AbstractCurve2d() = default;
 
     /// Returns whether the curve is closed.

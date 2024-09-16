@@ -19,7 +19,10 @@
 
 #include <vgc/core/span.h>
 #include <vgc/geometry/api.h>
+#include <vgc/geometry/traits.h>
 #include <vgc/geometry/vec2.h>
+#include <vgc/geometry/vec3.h>
+#include <vgc/geometry/vec4.h>
 
 namespace vgc::geometry {
 
@@ -41,7 +44,7 @@ static_assert(deCasteljauTreeSize<3> == 3 + 2 + 1);
 
 } // namespace detail
 
-template<typename T, typename Scalar, size_t degree_>
+template<typename Point, typename T, size_t degree_>
 class DeCasteljauTree {
 public:
     static constexpr size_t degree = degree_;
@@ -57,8 +60,8 @@ public:
     // values are stored as [Q0, Q1, Q2, R0, R1, S0]
     //
 
-    void compute(core::Span<const T, degree + 1> controlPoints, const Scalar u) {
-        //const Scalar oneMinusU = Scalar(1) - u;
+    void compute(core::Span<const Point, degree + 1> controlPoints, const T u) {
+        //const T oneMinusU = T(1) - u;
         for (size_t i = 0; i < degree; ++i) {
             //values_[i] = oneMinusU * controlPoints[i] + u * controlPoints[i + 1];
             values_[i] = controlPoints[i] + u * (controlPoints[i + 1] - controlPoints[i]);
@@ -68,7 +71,7 @@ public:
         }
     }
 
-    void computeMiddle(core::Span<const T, degree + 1> controlPoints) {
+    void computeMiddle(core::Span<const Point, degree + 1> controlPoints) {
         for (size_t i = 0; i < degree; ++i) {
             values_[i] = 0.5 * (controlPoints[i] + controlPoints[i + 1]);
         }
@@ -77,35 +80,35 @@ public:
         }
     }
 
-    const T& value() {
+    const Point& value() {
         if constexpr (degree >= 1) {
             return values_[size - 1];
         }
         else {
-            static T zero = {};
+            static Point zero = {};
             return zero;
         }
     }
 
-    T derivative() {
+    Point derivative() {
         if constexpr (degree >= 2) {
             constexpr size_t i = levelOffset_<degree - 1>;
-            constexpr Scalar n = static_cast<Scalar>(degree);
+            constexpr T n = static_cast<T>(degree);
             return n * (values_[i + 1] - values_[i]);
         }
         else {
-            return T();
+            return Point();
         }
     }
 
-    T secondDerivative() {
+    Point secondDerivative() {
         if constexpr (degree >= 3) {
             constexpr size_t i = levelOffset_<degree - 2>;
-            constexpr Scalar n = static_cast<Scalar>(degree);
+            constexpr T n = static_cast<T>(degree);
             return n * (n - 1) * (values_[i + 2] - 2 * values_[i + 1] + values_[i]);
         }
         else {
-            return T();
+            return Point();
         }
     }
 
@@ -113,7 +116,7 @@ public:
         size_t level,
         size_t d_ = degree,
         VGC_REQUIRES(level >= 1 && (level <= degree + 1) && d_ >= 1)>
-    const T& firstValueOfLevel() {
+    const Point& firstValueOfLevel() {
         return values_[levelOffset_<level>];
     }
 
@@ -121,7 +124,7 @@ public:
         size_t level,
         size_t d_ = degree,
         VGC_REQUIRES(level >= 1 && (level <= degree + 1) && d_ >= 1)>
-    const T& lastValueOfLevel() {
+    const Point& lastValueOfLevel() {
         return values_[levelOffset_<level> + levelSize_<level> - 1];
     }
 
@@ -139,7 +142,7 @@ private:
         size_t level,
         size_t maxLevel = degree,
         VGC_REQUIRES(level >= 2 && level <= degree && maxLevel <= degree)>
-    void computeRec(const Scalar u) {
+    void computeRec(const T u) {
         constexpr size_t a = levelOffset_<level - 1>;
         constexpr size_t b = levelOffset_<level>;
         for (size_t i = 0; i < levelSize_<level>; ++i) {
@@ -166,46 +169,46 @@ private:
         }
     }
 
-    std::array<T, size> values_;
+    std::array<Point, size> values_;
 };
 
 /// Returns the control points of the Bezier that evaluates to the derivative
 /// of the Bezier defined by the given `controlPoints`.
 ///
-template<Int n, typename T, typename Scalar, VGC_REQUIRES(n >= 2)>
+template<Int n, typename Point, typename T, VGC_REQUIRES(n >= 2)>
 void bezierDerivativeBezier(
-    core::Span<const T, n> controlPoints,
-    core::Span<T, n - 1>& derControlPoints) {
+    core::Span<const Point, n> controlPoints,
+    core::Span<Point, n - 1>& derControlPoints) {
 
     for (Int i = 0; i < n - 1; ++i) {
         derControlPoints[i] = (n - 1) * (controlPoints[i + 1] - controlPoints[i]);
     }
 }
 
-template<Int n, typename T, typename Scalar, VGC_REQUIRES(n >= 2)>
-T bezierCasteljau(core::Span<const T, n> controlPoints, Scalar u) {
-    DeCasteljauTree<T, Scalar, static_cast<size_t>(n - 1)> tree = {};
+template<Int n, typename Point, typename T, VGC_REQUIRES(n >= 2)>
+Point bezierCasteljau(core::Span<const Point, n> controlPoints, T u) {
+    DeCasteljauTree<Point, T, static_cast<size_t>(n - 1)> tree = {};
     tree.compute(controlPoints, u);
     return tree.value();
 }
 
-template<Int n, typename T, typename Scalar, VGC_REQUIRES(n >= 2)>
-T bezierCasteljau(
-    core::Span<const T, n> controlPoints,
-    Scalar u,
-    core::TypeIdentity<T>& der) {
+template<Int n, typename Point, typename T, VGC_REQUIRES(n >= 2)>
+Point bezierCasteljau(
+    core::Span<const Point, n> controlPoints,
+    T u,
+    core::TypeIdentity<Point>& der) {
 
-    DeCasteljauTree<T, Scalar, static_cast<size_t>(n - 1)> tree = {};
+    DeCasteljauTree<Point, T, static_cast<size_t>(n - 1)> tree = {};
     tree.compute(controlPoints, u);
     der = tree.derivative();
     return tree.value();
 }
 
-template<Int n, typename T, typename Scalar, VGC_REQUIRES(n >= 2)>
-T bezierDerivativeCasteljau(core::Span<const T, n> controlPoints, Scalar u) {
-    core::Span<T, n - 1>& derivativeControlPoints(core::noInit);
+template<Int n, typename Point, typename T, VGC_REQUIRES(n >= 2)>
+Point bezierDerivativeCasteljau(core::Span<const Point, n> controlPoints, T u) {
+    core::Span<Point, n - 1>& derivativeControlPoints(core::noInit);
     bezierDerivativeBezier(controlPoints, derivativeControlPoints);
-    DeCasteljauTree<T, Scalar, static_cast<size_t>(n - 2)> tree = {};
+    DeCasteljauTree<Point, T, static_cast<size_t>(n - 2)> tree = {};
     tree.compute(derivativeControlPoints, u);
     return tree.value();
 }
@@ -222,13 +225,13 @@ T bezierDerivativeCasteljau(core::Span<const T, n> controlPoints, Scalar u) {
 ///
 /// \sa quadraticBezierDerivative()
 ///
-template<typename Scalar, typename T>
-T quadraticBezier(const T& p0, const T& p1, const T& p2, Scalar u) {
+template<typename Point, typename T>
+Point quadraticBezier(const Point& p0, const Point& p1, const Point& p2, T u) {
 
     // clang-format off
-    Scalar v  = 1 - u;
-    Scalar u2 = u * u;
-    Scalar v2 = v * v;
+    T v  = 1 - u;
+    T u2 = u * u;
+    T v2 = v * v;
 
     return    v2      * p0
         + 2 * v  * u  * p1
@@ -242,9 +245,9 @@ T quadraticBezier(const T& p0, const T& p1, const T& p2, Scalar u) {
 ///
 /// \sa quadraticBezier()
 ///
-template<typename Scalar, typename T>
-T quadraticBezierDerivative(const T& p0, const T& p1, const T& p2, Scalar u) {
-    Scalar v = 1 - u;
+template<typename Point, typename T>
+Point quadraticBezierDerivative(const Point& p0, const Point& p1, const Point& p2, T u) {
+    T v = 1 - u;
     return 2 * (v * (p1 - p0) + u * (p2 - p1));
 }
 
@@ -254,21 +257,21 @@ T quadraticBezierDerivative(const T& p0, const T& p1, const T& p2, Scalar u) {
 ///
 /// \sa quadraticBezier()
 ///
-template<typename T>
-T quadraticBezierSecondDerivative(const T& p0, const T& p1, const T& p2) {
+template<typename Point>
+Point quadraticBezierSecondDerivative(const Point& p0, const Point& p1, const Point& p2) {
     return 2 * ((p2 - p1) - (p1 - p0));
 }
 
-template<typename T, typename Scalar>
-T quadraticBezierCasteljau(core::Span<const T, 3> controlPoints, Scalar u) {
+template<typename Point, typename T>
+Point quadraticBezierCasteljau(core::Span<const Point, 3> controlPoints, T u) {
     return bezierCasteljau(controlPoints, u);
 }
 
-template<typename T, typename Scalar>
-T quadraticBezierCasteljau(
-    core::Span<const T, 3> controlPoints,
-    Scalar u,
-    core::TypeIdentity<T>& der) {
+template<typename Point, typename T>
+Point quadraticBezierCasteljau(
+    core::Span<const Point, 3> controlPoints,
+    T u,
+    core::TypeIdentity<Point>& der) {
 
     return bezierCasteljau(controlPoints, u, der);
 }
@@ -276,9 +279,12 @@ T quadraticBezierCasteljau(
 /// \class QuadraticBezier
 /// \brief A Bézier curve of degree 2.
 ///
-template<typename T, typename Scalar>
+template<typename Point, typename T = scalarType<Point>>
 class QuadraticBezier {
 public:
+    using ScalarType = T;
+    static constexpr Int dimension = geometry::dimension<Point>;
+
     /// Creates a zero-initialized quadratic Bézier.
     ///
     QuadraticBezier() noexcept = default;
@@ -294,13 +300,13 @@ public:
 
     /// Creates a quadratic Bézier with the given `controlPoints`.
     ///
-    QuadraticBezier(core::ConstSpan<T, 3> controlPoints) noexcept
+    QuadraticBezier(core::ConstSpan<Point, 3> controlPoints) noexcept
         : QuadraticBezier(controlPoints[0], controlPoints[1], controlPoints[2]) {
     }
 
     /// Creates a quadratic Bézier with the three given control points.
     ///
-    QuadraticBezier(const T& cp0, const T& cp1, const T& cp2) noexcept
+    QuadraticBezier(const Point& cp0, const Point& cp1, const Point& cp2) noexcept
         : controlPoints_{cp0, cp1, cp2} {
     }
 
@@ -308,7 +314,7 @@ public:
     ///
     /// This is equivalent to: `QuadraticBezier(p, p, p)`.
     ///
-    static QuadraticBezier point(const T& p) noexcept {
+    static QuadraticBezier point(const Point& p) noexcept {
         return QuadraticBezier(p, p, p);
     }
 
@@ -317,15 +323,18 @@ public:
     ///
     /// This is equivalent to: `QuadraticBezier(a, 0.5 * (a + b), b)`.
     ///
-    static QuadraticBezier lineSegment(const T& a, const T& b) noexcept {
-        constexpr Scalar half = 0.5f;
+    static QuadraticBezier lineSegment(const Point& a, const Point& b) noexcept {
+        constexpr T half = 0.5f;
         return QuadraticBezier(a, half * (a + b), b);
     }
 
     /// Returns whether this quadratic Bézier is close to being a linearly
     /// parameterized line segment, within the given relative tolerance.
     ///
-    bool isLineSegment(Scalar relTolSquared = 1e-12f) {
+    bool isLineSegment(
+        T relTolSquared = //
+        core::defaultRelativeTolerance<T> * core::defaultRelativeTolerance<T>) {
+
         geometry::Vec2d a = (p2() - p1()) - (p1() - p0()); // = 0 when p1 = (p0+p2)/2
         geometry::Vec2d b = p2() - p0();
         return a.squaredLength() <= relTolSquared * b.squaredLength();
@@ -335,32 +344,32 @@ public:
 
     /// Returns the three control points of this quadratic Bézier.
     ///
-    const std::array<T, 3>& controlPoints() const {
+    const std::array<Point, 3>& controlPoints() const {
         return controlPoints_;
     }
 
     /// Returns the first control point of this quadratic Bézier.
     ///
-    const T& p0() const {
+    const Point& p0() const {
         return controlPoints()[0];
     }
 
     /// Returns the second control point of this quadratic Bézier.
     ///
-    const T& p1() const {
+    const Point& p1() const {
         return controlPoints()[1];
     }
 
     /// Returns the third control point of this quadratic Bézier.
     ///
-    const T& p2() const {
+    const Point& p2() const {
         return controlPoints()[2];
     }
 
     /// Returns the evaluation of this Bézier at parameter `u`.
     ///
-    T eval(Scalar u) const {
-        return quadraticBezierCasteljau<T, Scalar>(controlPoints_, u);
+    Point eval(T u) const {
+        return quadraticBezierCasteljau<Point, T>(controlPoints_, u);
     }
 
     /// Returns the evaluation of this Bézier curve at parameter `u`, and
@@ -370,13 +379,13 @@ public:
     /// This is faster than calling `eval(u)` and `evalDerivative(u)`
     /// separately.
     ///
-    T eval(Scalar u, T& derivative) const {
-        return quadraticBezierCasteljau<T, Scalar>(controlPoints_, u, derivative);
+    Point eval(T u, Point& derivative) const {
+        return quadraticBezierCasteljau<Point, T>(controlPoints_, u, derivative);
     }
 
     /// Returns the derivative of this Bézier curve at parameter `u`.
     ///
-    T evalDerivative(Scalar u) const {
+    Point evalDerivative(T u) const {
         return quadraticBezierDerivative(
             controlPoints_[0], controlPoints_[1], controlPoints_[2], u);
     }
@@ -389,7 +398,7 @@ public:
     ///
     /// Prefer using `secondDerivative()` when possible.
     ///
-    T evalSecondDerivative(Scalar u) const {
+    Point evalSecondDerivative(T u) const {
         VGC_UNUSED(u);
         return secondDerivative();
     }
@@ -397,16 +406,25 @@ public:
     /// Returns the second derivative of this Bézier curve, which is a
     /// constant.
     ///
-    T secondDerivative() const {
+    Point secondDerivative() const {
         return quadraticBezierSecondDerivative(p0(), p1(), p2());
     }
 
 private:
-    std::array<T, 3> controlPoints_;
+    std::array<Point, 3> controlPoints_;
 };
 
-using QuadraticBezier2d = QuadraticBezier<Vec2d, double>;
-using QuadraticBezier1d = QuadraticBezier<double, double>;
+using QuadraticBezier1f = QuadraticBezier<float>;
+using QuadraticBezier1d = QuadraticBezier<double>;
+
+using QuadraticBezier2f = QuadraticBezier<Vec2f>;
+using QuadraticBezier2d = QuadraticBezier<Vec2d>;
+
+using QuadraticBezier3f = QuadraticBezier<Vec3f>;
+using QuadraticBezier3d = QuadraticBezier<Vec3d>;
+
+using QuadraticBezier4f = QuadraticBezier<Vec4f>;
+using QuadraticBezier4d = QuadraticBezier<Vec4d>;
 
 /// Returns the position at coordinate \p u of the cubic Bézier curve defined
 /// by the four control points \p p0, \p p1, \p p2, and \p p3.
@@ -420,15 +438,20 @@ using QuadraticBezier1d = QuadraticBezier<double, double>;
 ///
 /// \sa cubicBezierDerivative()
 ///
-template<typename Scalar, typename T>
-T cubicBezier(const T& p0, const T& p1, const T& p2, const T& p3, Scalar u) {
+template<typename Point, typename T>
+Point cubicBezier(
+    const Point& p0,
+    const Point& p1,
+    const Point& p2,
+    const Point& p3,
+    T u) {
 
     // clang-format off
-    Scalar v  = 1 - u;
-    Scalar u2 = u * u;
-    Scalar v2 = v * v;
-    Scalar u3 = u * u2;
-    Scalar v3 = v * v2;
+    T v  = 1 - u;
+    T u2 = u * u;
+    T v2 = v * v;
+    T u3 = u * u2;
+    T v3 = v * v2;
 
     return    v3      * p0
         + 3 * v2 * u  * p1
@@ -443,13 +466,18 @@ T cubicBezier(const T& p0, const T& p1, const T& p2, const T& p3, Scalar u) {
 ///
 /// \sa cubicBezier()
 ///
-template<typename Scalar, typename T>
-T cubicBezierDerivative(const T& p0, const T& p1, const T& p2, const T& p3, Scalar u) {
+template<typename Point, typename T>
+Point cubicBezierDerivative(
+    const Point& p0,
+    const Point& p1,
+    const Point& p2,
+    const Point& p3,
+    T u) {
 
     // clang-format off
-    Scalar v  = 1 - u;
-    Scalar u2 = u * u;
-    Scalar v2 = v * v;
+    T v  = 1 - u;
+    T u2 = u * u;
+    T v2 = v * v;
 
     return //
           3 * v2      * (p1 - p0)
@@ -461,11 +489,11 @@ T cubicBezierDerivative(const T& p0, const T& p1, const T& p2, const T& p3, Scal
 /// Overload of `cubicBezierDerivative` expecting a pointer to a contiguous
 /// sequence of 4 control points.
 ///
-template<typename Scalar, typename T>
-T cubicBezierDerivative(const T* fourPoints, Scalar u) {
+template<typename Point, typename T>
+Point cubicBezierDerivative(const Point* fourPoints, T u) {
 
     // expected to be inlined
-    return cubicBezierDerivative<Scalar, T>(
+    return cubicBezierDerivative<T, Point>(
         fourPoints[0], fourPoints[1], fourPoints[2], fourPoints[3], u);
 }
 
@@ -475,38 +503,41 @@ T cubicBezierDerivative(const T* fourPoints, Scalar u) {
 ///
 /// \sa cubicBezier()
 ///
-template<typename Scalar, typename T>
-T cubicBezierSecondDerivative(
-    const T& p0,
-    const T& p1,
-    const T& p2,
-    const T& p3,
-    Scalar u) {
+template<typename Point, typename T>
+Point cubicBezierSecondDerivative(
+    const Point& p0,
+    const Point& p1,
+    const Point& p2,
+    const Point& p3,
+    T u) {
 
-    Scalar v = 1 - u;
+    T v = 1 - u;
     return 6 * (v * (p2 - 2 * p1 + p0) + u * (p3 - 2 * p2 + p1));
 }
 
-template<typename T, typename Scalar>
-T cubicBezierCasteljau(core::Span<const T, 4> controlPoints, Scalar u) {
+template<typename Point, typename T>
+Point cubicBezierCasteljau(core::Span<const Point, 4> controlPoints, T u) {
     return bezierCasteljau(controlPoints, u);
 }
 
 /// Variant of `cubicBezier` expecting a pointer to a contiguous sequence
 /// of 4 control points and using Casteljau's algorithm.
 ///
-template<typename T, typename Scalar>
-T cubicBezierCasteljau(
-    core::Span<const T, 4> controlPoints,
-    Scalar u,
-    core::TypeIdentity<T>& der) {
+template<typename Point, typename T>
+Point cubicBezierCasteljau(
+    core::Span<const Point, 4> controlPoints,
+    T u,
+    core::TypeIdentity<Point>& der) {
 
     return bezierCasteljau(controlPoints, u, der);
 }
 
-template<typename T, typename Scalar>
+template<typename Point, typename T = scalarType<Point>>
 class CubicBezier {
 public:
+    using ScalarType = T;
+    static constexpr Int dimension = geometry::dimension<Point>;
+
     // Initialized with null control points.
     CubicBezier() noexcept = default;
 
@@ -519,63 +550,70 @@ public:
     }
     VGC_WARNING_POP
 
-    CubicBezier(core::ConstSpan<T, 4> controlPoints) noexcept
+    CubicBezier(core::ConstSpan<Point, 4> controlPoints) noexcept
+        // clang-format off
+        // (disagreement between versions)
         : CubicBezier(
             controlPoints[0],
             controlPoints[1],
             controlPoints[2],
             controlPoints[3]) {
+        // clang-format on
     }
 
-    CubicBezier(const T& cp0, const T& cp1, const T& cp2, const T& cp3) noexcept
+    CubicBezier(
+        const Point& cp0,
+        const Point& cp1,
+        const Point& cp2,
+        const Point& cp3) noexcept
         : controlPoints_{cp0, cp1, cp2, cp3} {
     }
 
-    const std::array<T, 4>& controlPoints() const {
+    const std::array<Point, 4>& controlPoints() const {
         return controlPoints_;
     }
 
-    const T& controlPoint0() {
+    const Point& controlPoint0() {
         return controlPoints_[0];
     }
 
-    void setControlPoint0(const T& cp) {
+    void setControlPoint0(const Point& cp) {
         controlPoints_[0] = cp;
     }
 
-    const T& controlPoint1() {
+    const Point& controlPoint1() {
         return controlPoints_[1];
     }
 
-    void setControlPoint1(const T& cp) {
+    void setControlPoint1(const Point& cp) {
         controlPoints_[1] = cp;
     }
 
-    const T& controlPoint2() {
+    const Point& controlPoint2() {
         return controlPoints_[2];
     }
 
-    void setControlPoint2(const T& cp) {
+    void setControlPoint2(const Point& cp) {
         controlPoints_[2] = cp;
     }
 
-    const T& controlPoint3() {
+    const Point& controlPoint3() {
         return controlPoints_[3];
     }
 
-    void setControlPoint3(const T& cp) {
+    void setControlPoint3(const Point& cp) {
         controlPoints_[3] = cp;
     }
 
-    T eval(Scalar u) const {
-        return cubicBezierCasteljau<T, Scalar>(controlPoints_, u);
+    Point eval(T u) const {
+        return cubicBezierCasteljau<Point, T>(controlPoints_, u);
     }
 
-    T eval(Scalar u, T& derivative) const {
-        return cubicBezierCasteljau<T, Scalar>(controlPoints_, u, derivative);
+    Point eval(T u, Point& derivative) const {
+        return cubicBezierCasteljau<Point, T>(controlPoints_, u, derivative);
     }
 
-    T evalDerivative(Scalar u) const {
+    Point evalDerivative(T u) const {
         return cubicBezierDerivative(
             controlPoints_[0],
             controlPoints_[1],
@@ -584,7 +622,7 @@ public:
             u);
     }
 
-    T evalSecondDerivative(Scalar u) const {
+    Point evalSecondDerivative(T u) const {
         return cubicBezierSecondDerivative(
             controlPoints_[0],
             controlPoints_[1],
@@ -594,11 +632,20 @@ public:
     }
 
 private:
-    std::array<T, 4> controlPoints_;
+    std::array<Point, 4> controlPoints_;
 };
 
-using CubicBezier2d = CubicBezier<Vec2d, double>;
-using CubicBezier1d = CubicBezier<double, double>;
+using CubicBezier1f = CubicBezier<float>;
+using CubicBezier1d = CubicBezier<double>;
+
+using CubicBezier2f = CubicBezier<Vec2f>;
+using CubicBezier2d = CubicBezier<Vec2d>;
+
+using CubicBezier3f = CubicBezier<Vec3f>;
+using CubicBezier3d = CubicBezier<Vec3d>;
+
+using CubicBezier4f = CubicBezier<Vec4f>;
+using CubicBezier4d = CubicBezier<Vec4d>;
 
 } // namespace vgc::geometry
 

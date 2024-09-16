@@ -18,26 +18,28 @@
 #define VGC_GEOMETRY_POLYLINE2_H
 
 #include <vgc/geometry/polyline.h>
+#include <vgc/geometry/vec2.h>
 
 namespace vgc::geometry {
 
 /// \class vgc::geometry::Polyline2
 /// \brief Stores a sequence of 2D points representing a polyline.
 ///
-/// The `Polyline2<TPoint>` class extends `Polyline<TPoint>` with methods
+/// The `Polyline2<Point>` class extends `Polyline<Point>` with methods
 /// specific to 2D polylines.
 ///
 /// Note that since its base class does not have a virtual destructor, it is
 /// undefined behavior to destroy this class via a pointer to its base class.
 ///
-template<typename TPoint>
-class Polyline2 : public Polyline<TPoint> {
+template<typename Point>
+class Polyline2 : public Polyline<Point> {
 public:
-    static constexpr Int dimension = 2;
-
     // Forward all constructors
-    using Polyline<TPoint>::Polyline;
+    using Polyline<Point>::Polyline;
 };
+
+using Polyline2f = Polyline2<Vec2f>;
+using Polyline2d = Polyline2<Vec2d>;
 
 } // namespace vgc::geometry
 

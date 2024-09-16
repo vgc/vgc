@@ -27,7 +27,7 @@
 #include <vgc/geometry/api.h>
 #include <vgc/geometry/curve.h>
 #include <vgc/geometry/mat3.h>
-#include <vgc/geometry/polyline2d.h>
+#include <vgc/geometry/polyline2.h>
 #include <vgc/geometry/rect2.h>
 #include <vgc/geometry/vec2.h>
 
@@ -38,6 +38,9 @@ namespace vgc::geometry {
 ///
 class VGC_GEOMETRY_API StrokeSample2d {
 public:
+    using ScalarType = double;
+    static constexpr Int dimension = 2;
+
     constexpr StrokeSample2d() noexcept
         : tangent_(0, 1)
         , parameter_(-1, 0)
@@ -82,14 +85,12 @@ public:
         double u = 0,
         double s = 0) noexcept
 
-        : StrokeSample2d(
-            position,
-            tangent,
-            normal,
-            Vec2d(halfwidth, halfwidth),
-            segmentIndex,
-            u,
-            s) {
+        : position_(position)
+        , tangent_(tangent)
+        , normal_(normal)
+        , halfwidths_(halfwidth, halfwidth)
+        , parameter_(segmentIndex, u)
+        , s_(s) {
     }
 
     const Vec2d& position() const {
@@ -317,6 +318,9 @@ private:
 
 class VGC_GEOMETRY_API StrokeEndInfo {
 public:
+    using ScalarType = double;
+    static constexpr Int dimension = 2;
+
     StrokeEndInfo() noexcept = default;
 
     StrokeEndInfo(const Vec2d& position, const Vec2d& tangent, const Vec2d& halfwidths)
@@ -377,6 +381,9 @@ using StrokeBoundaryInfo = std::array<StrokeEndInfo, 2>;
 ///
 class VGC_GEOMETRY_API StrokeSampling2d {
 public:
+    using ScalarType = double;
+    static constexpr Int dimension = 2;
+
     StrokeSampling2d() noexcept = default;
 
     explicit StrokeSampling2d(const StrokeSample2dArray& samples)
@@ -429,6 +436,9 @@ private:
 namespace detail {
 
 struct StrokeSampleEx2d {
+    using ScalarType = double;
+    static constexpr Int dimension = 2;
+
     VGC_WARNING_PUSH
     VGC_WARNING_MSVC_DISABLE(26495) // member variable uninitialized
     StrokeSampleEx2d(core::NoInit) noexcept
@@ -470,6 +480,8 @@ bool shouldKeepNewSample(
 
 class AdaptiveStrokeSampler {
 public:
+    using ScalarType = double;
+
     // Evaluator signature must match:
     //   `StrokeSample2d(double u, double& speed)`
     //
@@ -541,6 +553,9 @@ protected:
     }
 
 public:
+    using ScalarType = double;
+    static constexpr Int dimension = 2;
+
     virtual ~AbstractStroke2d() = default;
 
     const StrokeModelInfo& modelInfo() const {
@@ -1075,6 +1090,9 @@ private:
 
 class VGC_GEOMETRY_API SampledCurveProjection {
 public:
+    using ScalarType = double;
+    static constexpr Int dimension = 2;
+
     constexpr SampledCurveProjection() noexcept
         : parameter_()
         , position_() {

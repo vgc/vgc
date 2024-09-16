@@ -17,11 +17,14 @@
 #ifndef VGC_GEOMETRY_BEZIERSPLINE_H
 #define VGC_GEOMETRY_BEZIERSPLINE_H
 
-#include <cassert>
-#include <cmath>
-#include <vector>
-#include <vgc/core/algorithms.h>
+#include <vgc/core/arithmetic.h>
+#include <vgc/core/array.h>
+#include <vgc/core/assert.h>
 #include <vgc/geometry/api.h>
+#include <vgc/geometry/traits.h>
+#include <vgc/geometry/vec2.h>
+#include <vgc/geometry/vec3.h>
+#include <vgc/geometry/vec4.h>
 
 namespace vgc::geometry {
 
@@ -33,7 +36,7 @@ namespace vgc::geometry {
 /// instead.
 ///
 /// All the Bezier control points (both knots and tangents) are stored
-/// contiguously into a single std::vector<T> of size 3n+1,
+/// contiguously into a single array of size 3n+1,
 /// where n is the number of cubic segments.
 ///
 /// For convenience, we allow clients to directly access and mutate the
@@ -42,6 +45,7 @@ namespace vgc::geometry {
 /// safety, BezierSpline handles this gracefully: it simply ignores the last
 /// few points if they are meaningless. Here is the relation between
 /// data().size(), numControlPoints(), and numSegments():
+///
 /// \verbatim
 /// data().size()    numControlPoints()     numSegments()
 ///      0                  0                   0
@@ -56,16 +60,12 @@ namespace vgc::geometry {
 ///      9                  7                   2
 /// \endverbatim
 ///
-/// Scalar must be float or double (default is double).
-/// The following operators on T must be implemented:
-/// \code
-/// T& operator+(const T&, const T&);
-/// T& operator*(Scalar, const T&);
-/// \endcode
-///
-template<typename T, typename Scalar = double>
+template<typename Point, typename T = scalarType<Point>>
 class BezierSpline {
 public:
+    using ScalarType = T;
+    static constexpr Int dimension = geometry::dimension<Point>;
+
     /// Creates an empty BezierSpline.
     ///
     BezierSpline() {
@@ -73,20 +73,20 @@ public:
 
     /// Accesses the underlying data.
     ///
-    const std::vector<T>& data() const {
+    const core::Array<Point>& data() const {
         return data_;
     }
 
     /// Mutates the underlying data.
     /// Clients should ensure that the size stays of the form 3n+1.
     ///
-    std::vector<T>& data() {
+    core::Array<Point>& data() {
         return data_;
     }
 
     /// Returns the number of cubic segments of the BezierSpline.
     ///
-    int numSegments() const {
+    Int numSegments() const {
         if (data_.size() > 0) {
             return (data_.size() - 1) / 3;
         }
@@ -99,7 +99,7 @@ public:
     /// This is smaller than data().size() in case data().size()
     /// is not of the form 3*n + 1.
     ///
-    int numControlPoints() const {
+    Int numControlPoints() const {
         return 1 + 3 * numSegments();
     }
 
@@ -114,29 +114,30 @@ public:
     /// the result in the optional output parameters \p pos and \p der.
     /// It is undefined behaviour to evaluate an empty spline.
     ///
-    void eval(Scalar u, T* pos = nullptr, T* der = nullptr) const {
-        assert(!isEmpty());
+    void eval(T u, Point* pos = nullptr, Point* der = nullptr) const {
+
+        VGC_ASSERT(numSegments() > 0);
 
         // Continuously map from [0, 1] to [0, n]
-        int n = numSegments();
+        Int n = numSegments();
         u *= n;
 
         // Get which segment to evaluate in [0 .. n-1]
-        int segmentIndex = core::clamp((int)std::floor(u), 0, n - 1);
+        Int segmentIndex = core::clamp(core::ifloor<Int>(u), 0, n - 1);
 
         // Get local parameterization
-        Scalar t = u - segmentIndex;
-        Scalar t2 = t * t;
-        Scalar t3 = t2 * t;
-        Scalar s = 1 - t;
-        Scalar s2 = s * s;
-        Scalar s3 = s2 * s;
+        T t = u - segmentIndex;
+        T t2 = t * t;
+        T t3 = t2 * t;
+        T s = 1 - t;
+        T s2 = s * s;
+        T s3 = s2 * s;
 
         // Get corresponding control points
-        const T& p0 = data_[segmentIndex];
-        const T& p1 = data_[segmentIndex + 1];
-        const T& p2 = data_[segmentIndex + 2];
-        const T& p3 = data_[segmentIndex + 3];
+        const Point& p0 = data_[segmentIndex];
+        const Point& p1 = data_[segmentIndex + 1];
+        const Point& p2 = data_[segmentIndex + 2];
+        const Point& p3 = data_[segmentIndex + 3];
 
         // Evaluate
         // clang-format off
@@ -159,7 +160,7 @@ public:
     /// For performance, use eval() if you need both the position
     /// and the derivative.
     ///
-    T position(Scalar u) const {
+    Point position(T u) const {
         T res;
         eval(u, &res);
         return res;
@@ -170,15 +171,27 @@ public:
     /// For performance, use eval() if you need both the position
     /// and the derivative.
     ///
-    T derivative(Scalar u) const {
+    Point derivative(T u) const {
         T res;
         eval(u, nullptr, &res);
         return res;
     }
 
 private:
-    std::vector<T> data_;
+    core::Array<Point> data_;
 };
+
+using BezierSpline1f = BezierSpline<float>;
+using BezierSpline1d = BezierSpline<double>;
+
+using BezierSpline2f = BezierSpline<Vec2f>;
+using BezierSpline2d = BezierSpline<Vec2d>;
+
+using BezierSpline3f = BezierSpline<Vec3f>;
+using BezierSpline3d = BezierSpline<Vec3d>;
+
+using BezierSpline4f = BezierSpline<Vec4f>;
+using BezierSpline4d = BezierSpline<Vec4d>;
 
 } // namespace vgc::geometry
 
