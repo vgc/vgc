@@ -332,8 +332,8 @@ public:
     /// parameterized line segment, within the given relative tolerance.
     ///
     bool isLineSegment(
-        T relTolSquared = core::defaultRelativeTolerance<T>
-                          * core::defaultRelativeTolerance<T>) {
+        T relTolSquared = //
+        core::defaultRelativeTolerance<T> * core::defaultRelativeTolerance<T>) {
 
         geometry::Vec2d a = (p2() - p1()) - (p1() - p0()); // = 0 when p1 = (p0+p2)/2
         geometry::Vec2d b = p2() - p0();
@@ -551,11 +551,14 @@ public:
     VGC_WARNING_POP
 
     CubicBezier(core::ConstSpan<Point, 4> controlPoints) noexcept
+        // clang-format off
+        // (disagreement between versions)
         : CubicBezier(
-              controlPoints[0],
-              controlPoints[1],
-              controlPoints[2],
-              controlPoints[3]) {
+            controlPoints[0],
+            controlPoints[1],
+            controlPoints[2],
+            controlPoints[3]) {
+        // clang-format on
     }
 
     CubicBezier(

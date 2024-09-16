@@ -227,10 +227,13 @@ public:
         TRangePositions&& positions,
         TRangeWidths&& widths)
 
+        // clang-format off
+        // (disagreement between versions)
         : AbstractInterpolatingStroke2d(
-              isClosed,
-              std::forward<TRangePositions>(positions),
-              std::forward<TRangeWidths>(widths)) {
+            isClosed,
+            std::forward<TRangePositions>(positions),
+            std::forward<TRangeWidths>(widths)) {
+        // clang-format on
     }
 
 protected:
