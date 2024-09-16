@@ -14,9 +14,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// This file was automatically generated, please do not edit directly.
-// Instead, edit tools/mat4x.h then run tools/generate.py.
-
 #ifndef VGC_GEOMETRY_MAT4_H
 #define VGC_GEOMETRY_MAT4_H
 
@@ -70,8 +67,6 @@ public:
     constexpr Mat4() noexcept
         : Mat4(0) {
     }
-
-    // clang-format off
 
     /// Creates a `Mat4` initialized with the given arguments.
     ///

@@ -14,9 +14,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// This file was automatically generated, please do not edit directly.
-// Instead, edit tools/vec2x.h then run tools/generate.py.
-
 #ifndef VGC_GEOMETRY_VEC_H
 #define VGC_GEOMETRY_VEC_H
 
