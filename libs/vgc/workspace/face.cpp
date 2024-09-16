@@ -18,7 +18,7 @@
 
 #include <vgc/core/span.h>
 #include <vgc/dom/detail/facecycles.h>
-#include <vgc/geometry/triangle2f.h>
+#include <vgc/geometry/triangle2.h>
 #include <vgc/workspace/colors.h>
 #include <vgc/workspace/edge.h>
 #include <vgc/workspace/strings.h>

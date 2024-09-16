@@ -14,8 +14,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <vgc/geometry/triangle2d.h>
-#include <vgc/geometry/triangle2f.h>
+#include <vgc/geometry/triangle2.h>
 
 #include <vgc/core/wraps/class.h>
 #include <vgc/core/wraps/common.h>
@@ -24,45 +23,13 @@
 namespace {
 
 template<typename T>
-struct Triangle2_ {};
-
-template<>
-struct Triangle2_<float> {
-    using type = vgc::geometry::Triangle2f;
-};
-
-template<>
-struct Triangle2_<double> {
-    using type = vgc::geometry::Triangle2d;
-};
-
-template<typename T>
-using Triangle2 = typename Triangle2_<T>::type;
-
-template<typename T>
-struct Vec2_ {};
-
-template<>
-struct Vec2_<float> {
-    using type = vgc::geometry::Vec2f;
-};
-
-template<>
-struct Vec2_<double> {
-    using type = vgc::geometry::Vec2d;
-};
-
-template<typename T>
-using Vec2 = typename Vec2_<T>::type;
-
-template<typename T>
 void wrap_triangle(py::module& m, const std::string& name) {
 
     // Fix https://github.com/pybind/pybind11/issues/1893
     auto self2 = py::self;
 
-    using This = Triangle2<T>;
-    using Vec2x = Vec2<T>;
+    using This = vgc::geometry::Triangle2<T>;
+    using Vec2x = vgc::geometry::Vec2<T>;
 
     vgc::core::wraps::Class<This>(m, name.c_str())
 

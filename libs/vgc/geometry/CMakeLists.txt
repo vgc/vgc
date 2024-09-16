@@ -41,8 +41,7 @@ vgc_add_library(geometry
         stroke.h
         strokestyle.h
         tesselator.h
-        triangle2d.h
-        triangle2f.h
+        triangle2.h
         vec.h
         vec2.h
         vec3.h
@@ -69,8 +68,6 @@ vgc_add_library(geometry
         stroke.cpp
         strokestyle.cpp
         tesselator.cpp
-        triangle2d.cpp
-        triangle2f.cpp
         windingrule.cpp
         yuksel.cpp
 
