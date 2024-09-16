@@ -15,19 +15,17 @@
 // limitations under the License.
 
 #include <vgc/geometry/segment.h>
-#include <vgc/geometry/segment2d.h>
-#include <vgc/geometry/segment2f.h>
+#include <vgc/geometry/segment2.h>
 #include <vgc/geometry/vec.h>
 
 #include <vgc/core/wraps/class.h>
 #include <vgc/core/wraps/common.h>
 #include <vgc/geometry/wraps/vec.h>
 
-using vgc::geometry::Segment;
-using vgc::geometry::Segment2d;
-using vgc::geometry::Segment2f;
+using vgc::geometry::Segment2;
+using vgc::geometry::SegmentIntersection2;
 using vgc::geometry::SegmentIntersectionType;
-using vgc::geometry::Vec;
+using vgc::geometry::Vec2;
 
 namespace {
 
@@ -44,9 +42,9 @@ void wrap_segment(py::module& m, const std::string& name) {
     // Fix https://github.com/pybind/pybind11/issues/1893
     auto self2 = py::self;
 
-    using Segment2x = Segment<2, T>;
-    using Vec2x = Vec<2, T>;
-    using Inter2x = typename Segment2x::IntersectionType;
+    using Segment2x = Segment2<T>;
+    using Vec2x = Vec2<T>;
+    using Inter2x = SegmentIntersection2<T>;
 
     // Wrap Segment2xIntersection.
     //
@@ -66,10 +64,7 @@ void wrap_segment(py::module& m, const std::string& name) {
         .def(py::self != py::self)
         .def("__repr__", [](const Inter2x& i) { return vgc::core::toString(i); });
 
-    m.def(
-        "segmentIntersect",
-        py::overload_cast<const Vec2x&, const Vec2x&, const Vec2x&, const Vec2x&>(
-            &vgc::geometry::segmentIntersect));
+    m.def("segmentIntersect", &vgc::geometry::segmentIntersect<T>);
 
     // Wrap Segment2x.
     //

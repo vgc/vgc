@@ -14,9 +14,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// This file was automatically generated, please do not edit directly.
-// Instead, edit tools/vec2x.h then run tools/generate.py.
-
 #ifndef VGC_GEOMETRY_SEGMENT_H
 #define VGC_GEOMETRY_SEGMENT_H
 
@@ -39,16 +36,18 @@ enum class SegmentIntersectionType : UInt8 {
 VGC_GEOMETRY_API
 VGC_DECLARE_ENUM(SegmentIntersectionType)
 
-class Segment2f;
-class Segment2d;
+template<typename T>
+class Segment2;
 
 namespace detail {
 
-// clang-format off
+template<int dimension, typename T>
+struct Segment_ {};
 
-template<int dimension, typename T> struct Segment_ {};
-template<> struct Segment_<2, float>  { using type = Segment2f; };
-template<> struct Segment_<2, double> { using type = Segment2d; };
+template<typename T>
+struct Segment_<2, T> {
+    using type = Segment2<T>;
+};
 
 // clang-format on
 
@@ -57,17 +56,11 @@ template<> struct Segment_<2, double> { using type = Segment2d; };
 /// Alias template for `Segment` classes.
 ///
 /// ```
-/// vgc::geometry::Segment<2, float>; // alias for vgc::geometry::Segment2f
+/// Segment<2, float>; // alias for Segment2f
 /// ```
 ///
-/// Note that `Segment` is not a class template, and `Segment2f` is not a class
-/// template instanciation of `Segment`. It is the other way around:
-/// `Segment2f` is a "regular" class (not defined from a template), and
-/// `Segment<2, float>` is defined as an alias to `Segment2f`.
-///
-/// This design has the advantage to be slightly more flexible and also
-/// generates shorter symbol names, which is useful for debugging (e.g.,
-/// shorter error messages) and may potentially speed up dynamic linking.
+/// Note that `Segment` is not a class template. It simply provides an alias to
+/// the appropriate class, such as `Segment2<float>`.
 ///
 template<int dimension, typename T>
 using Segment = typename detail::Segment_<dimension, T>::type;

@@ -14,16 +14,16 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// This file was automatically generated, please do not edit directly.
-// Instead, edit tools/segment2x.cpp then run tools/generate.py.
-
-#include <vgc/geometry/segment2f.h>
+#include <vgc/geometry/vec2.h>
 
 #include <vgc/core/assert.h>
 
 namespace vgc::geometry {
 
-namespace {
+template<typename T>
+class SegmentIntersection2;
+
+namespace detail::segmentintersect {
 
 // Possible values for the `swapS` template parameter.
 // Indicates whether the two segments were swapped.
@@ -40,8 +40,8 @@ constexpr bool B1A1 = true;
 constexpr bool A2B2 = false;
 constexpr bool B2A2 = true;
 
-template<bool swap>
-VGC_FORCE_INLINE float param(float t) {
+template<bool swap, typename T>
+VGC_FORCE_INLINE T param(T t) {
     if constexpr (swap) {
         return 1 - t;
     }
@@ -53,13 +53,17 @@ VGC_FORCE_INLINE float param(float t) {
 // swapS == true means "the two segments were swapped for the computation"
 // swap1 == true means "the segment that was originally first had its endpoints swapped"
 // swap2 == true means "the segment that was originally second had its endpoints swapped"
-template<bool swapS, bool swap1, bool swap2>
-VGC_FORCE_INLINE Segment2fIntersection pointInter(const Vec2f& p, float t1, float t2) {
+template<bool swapS, bool swap1, bool swap2, typename T>
+VGC_FORCE_INLINE SegmentIntersection2<T> pointInter(
+    const Vec2<T>& p, //
+    core::TypeIdentity<T> t1,
+    core::TypeIdentity<T> t2) {
+
     if constexpr (swapS) {
-        return Segment2fIntersection(p, param<swap1>(t2), param<swap2>(t1));
+        return SegmentIntersection2<T>(p, param<swap1>(t2), param<swap2>(t1));
     }
     else {
-        return Segment2fIntersection(p, param<swap1>(t1), param<swap2>(t2));
+        return SegmentIntersection2<T>(p, param<swap1>(t1), param<swap2>(t2));
     }
 }
 
@@ -67,15 +71,21 @@ VGC_FORCE_INLINE Segment2fIntersection pointInter(const Vec2f& p, float t1, floa
 // For now it's possible that we return both s1 > t1 and s2 > t2.
 // But should we guarantee s1 <= t1?
 // Or perhaps guarantee s1 <= t1 OR s2 <= t2?
-template<bool swapS, bool swap1, bool swap2>
-VGC_FORCE_INLINE Segment2fIntersection
-segInter(const Vec2f& p, const Vec2f& q, float s1, float t1, float s2, float t2) {
+template<bool swapS, bool swap1, bool swap2, typename T>
+VGC_FORCE_INLINE SegmentIntersection2<T> segInter(
+    const Vec2<T>& p,
+    const Vec2<T>& q,
+    core::TypeIdentity<T> s1,
+    core::TypeIdentity<T> t1,
+    core::TypeIdentity<T> s2,
+    core::TypeIdentity<T> t2) {
+
     if constexpr (swapS) {
-        return Segment2fIntersection(
+        return SegmentIntersection2<T>(
             p, q, param<swap1>(s2), param<swap1>(t2), param<swap2>(s1), param<swap2>(t1));
     }
     else {
-        return Segment2fIntersection(
+        return SegmentIntersection2<T>(
             p, q, param<swap1>(s1), param<swap1>(t1), param<swap2>(s2), param<swap2>(t2));
     }
 }
@@ -83,17 +93,17 @@ segInter(const Vec2f& p, const Vec2f& q, float s1, float t1, float s2, float t2)
 // Assumes a1x == b1x == a2x == b2x
 // Assumes a1y < b1y and a2y < b2y ("each segment is y-ordered")
 // Assumes a1y <= a2y ("segments are y-ordered with each other")
-template<bool swapS, bool swap1, bool swap2>
-[[maybe_unused]] Segment2fIntersection intersectVerticalYOrdered_v1(
-    const Vec2f& a1_,
-    const Vec2f& b1_,
-    const Vec2f& a2_,
-    const Vec2f& b2_) {
+template<bool swapS, bool swap1, bool swap2, typename T>
+[[maybe_unused]] SegmentIntersection2<T> intersectVerticalYOrdered_v1(
+    const Vec2<T>& a1_,
+    const Vec2<T>& b1_,
+    const Vec2<T>& a2_,
+    const Vec2<T>& b2_) {
 
-    float a1 = a1_.y();
-    float b1 = b1_.y();
-    float a2 = a2_.y();
-    float b2 = b2_.y();
+    T a1 = a1_.y();
+    T b1 = b1_.y();
+    T a2 = a2_.y();
+    T b2 = b2_.y();
 
     if (b1 < a2) {
         // -----------------------> Y axis
@@ -108,11 +118,11 @@ template<bool swapS, bool swap1, bool swap2>
         return pointInter<swapS, swap1, swap2>(b1_, 1, 0);
     }
     else if (a1 < a2) { // a1 < a2 < b1
-        float s1 = (a2 - a1) / (b1 - a1);
+        T s1 = (a2 - a1) / (b1 - a1);
         if (b2 < b1) {
             // x------x
             //    x--x
-            float t1 = (b2 - a1) / (b1 - a1);
+            T t1 = (b2 - a1) / (b1 - a1);
             return segInter<swapS, swap1, swap2>(a2_, b2_, s1, t1, 0, 1);
 
             // Note: we intentionally don't precompute `1 / (b1 - a1)`
@@ -126,7 +136,7 @@ template<bool swapS, bool swap1, bool swap2>
         else if (b2 > b1) {
             // x------x
             //    x-----x
-            float t2 = (b1 - a2) / (b2 - a2);
+            T t2 = (b1 - a2) / (b2 - a2);
             return segInter<swapS, swap1, swap2>(a2_, b1_, s1, 1, 0, t2);
         }
         else {
@@ -140,13 +150,13 @@ template<bool swapS, bool swap1, bool swap2>
         if (b2 < b1) {
             // x------x
             // x----x
-            float t1 = (b2 - a1) / (b1 - a1);
+            T t1 = (b2 - a1) / (b1 - a1);
             return segInter<swapS, swap1, swap2>(a2_, b2_, 0, t1, 0, 1);
         }
         else if (b2 > b1) {
             // x------x
             // x--------x
-            float t2 = (b1 - a2) / (b2 - a2);
+            T t2 = (b1 - a2) / (b2 - a2);
             return segInter<swapS, swap1, swap2>(a1_, b1_, 0, 1, 0, t2);
         }
         else {
@@ -161,23 +171,23 @@ template<bool swapS, bool swap1, bool swap2>
 // Assumes a1y < b1y and a2y < b2y ("each segment is y-ordered")
 // Assumes a1y <= a2y ("segments are y-ordered with each other")
 //
-// This version has less branching than v2 but more floating points operation
+// This version has less branching than v2 but more floating point operations
 // in some cases. It is unclear which is faster, and it might depend on the
 // platform (e.g., ARM vs. x86_64).
 //
 // TODO: benchmarks between v1 and v2
 //
-template<bool swapS, bool swap1, bool swap2>
-[[maybe_unused]] Segment2fIntersection intersectVerticalYOrdered_v2(
-    const Vec2f& a1_,
-    const Vec2f& b1_,
-    const Vec2f& a2_,
-    const Vec2f& b2_) {
+template<bool swapS, bool swap1, bool swap2, typename T>
+[[maybe_unused]] SegmentIntersection2<T> intersectVerticalYOrdered_v2(
+    const Vec2<T>& a1_,
+    const Vec2<T>& b1_,
+    const Vec2<T>& a2_,
+    const Vec2<T>& b2_) {
 
-    float a1 = a1_.y();
-    float b1 = b1_.y();
-    float a2 = a2_.y();
-    float b2 = b2_.y();
+    T a1 = a1_.y();
+    T b1 = b1_.y();
+    T a2 = a2_.y();
+    T b2 = b2_.y();
 
     if (b1 < a2) {
         // -----------------------> Y axis
@@ -194,15 +204,15 @@ template<bool swapS, bool swap1, bool swap2>
     else if (b1 < b2) { // a2 < b1 < b2
         // x------x     OR   x------x
         // x--------x          x------x
-        float s1 = (a2 - a1) / (b1 - a1); // Guaranteed 0 if a1 == a2
-        float t2 = (b1 - a2) / (b2 - a2); // (!) NOT guaranteed 0 < t2 < 1 [1]
+        T s1 = (a2 - a1) / (b1 - a1); // Guaranteed 0 if a1 == a2
+        T t2 = (b1 - a2) / (b2 - a2); // (!) NOT guaranteed 0 < t2 < 1 [1]
         return segInter<swapS, swap1, swap2>(a2_, b1_, s1, 1, 0, t2);
     }
     else {
         // x------x   OR   x------x   OR   x------x   OR   x------x
         // x------x        x----x            x----x          x--x
-        float s1 = (a2 - a1) / (b1 - a1); // Guaranteed 0 if a1 == a2
-        float t1 = (b2 - a1) / (b1 - a1); // Guaranteed 1 if b1 == b2
+        T s1 = (a2 - a1) / (b1 - a1); // Guaranteed 0 if a1 == a2
+        T t1 = (b2 - a1) / (b1 - a1); // Guaranteed 1 if b1 == b2
         return segInter<swapS, swap1, swap2>(a2_, b2_, s1, t1, 0, 1);
         // See comment on v1 why we don't precompute `1 / (b1 - a1)`
     }
@@ -215,17 +225,17 @@ template<bool swapS, bool swap1, bool swap2>
 //
 // TODO: Use Y-coord for better accuracy for almost-vertical segments?
 //
-template<bool swapS, bool swap1, bool swap2>
-[[maybe_unused]] Segment2fIntersection intersectCollinearXOrdered_(
-    const Vec2f& a1_,
-    const Vec2f& b1_,
-    const Vec2f& a2_,
-    const Vec2f& b2_) {
+template<bool swapS, bool swap1, bool swap2, typename T>
+[[maybe_unused]] SegmentIntersection2<T> intersectCollinearXOrdered_(
+    const Vec2<T>& a1_,
+    const Vec2<T>& b1_,
+    const Vec2<T>& a2_,
+    const Vec2<T>& b2_) {
 
-    float a1 = a1_.x();
-    float b1 = b1_.x();
-    float a2 = a2_.x();
-    float b2 = b2_.x();
+    T a1 = a1_.x();
+    T b1 = b1_.x();
+    T a2 = a2_.x();
+    T b2 = b2_.x();
 
     // The following case is already handled by the caller:
     //
@@ -244,15 +254,15 @@ template<bool swapS, bool swap1, bool swap2>
     else if (b1 < b2) { // a2 < b1 < b2
         // x------x     OR   x------x
         // x--------x          x------x
-        float s1 = (a2 - a1) / (b1 - a1); // Guaranteed 0 if a1 == a2
-        float t2 = (b1 - a2) / (b2 - a2); // (!) NOT guaranteed 0 < t2 < 1 [1]
+        T s1 = (a2 - a1) / (b1 - a1); // Guaranteed 0 if a1 == a2
+        T t2 = (b1 - a2) / (b2 - a2); // (!) NOT guaranteed 0 < t2 < 1 [1]
         return segInter<swapS, swap1, swap2>(a2_, b1_, s1, 1, 0, t2);
     }
     else {
         // x------x   OR   x------x   OR   x------x   OR   x------x
         // x------x        x----x            x----x          x--x
-        float s1 = (a2 - a1) / (b1 - a1); // Guaranteed 0 if a1 == a2
-        float t1 = (b2 - a1) / (b1 - a1); // Guaranteed 1 if b1 == b2
+        T s1 = (a2 - a1) / (b1 - a1); // Guaranteed 0 if a1 == a2
+        T t1 = (b2 - a1) / (b1 - a1); // Guaranteed 1 if b1 == b2
         return segInter<swapS, swap1, swap2>(a2_, b2_, s1, t1, 0, 1);
         // See comment on v1 why we don't precompute `1 / (b1 - a1)`
     }
@@ -300,12 +310,12 @@ template<bool swapS, bool swap1, bool swap2>
 
 // Assumes a1x == b1x == a2x == b2x
 // Assumes a1y < b1y and a2y < b2y
-template<bool swap1, bool swap2>
-Segment2fIntersection intersectVerticalYOrdered(
-    const Vec2f& a1,
-    const Vec2f& b1,
-    const Vec2f& a2,
-    const Vec2f& b2) {
+template<bool swap1, bool swap2, typename T>
+SegmentIntersection2<T> intersectVerticalYOrdered(
+    const Vec2<T>& a1,
+    const Vec2<T>& b1,
+    const Vec2<T>& a2,
+    const Vec2<T>& b2) {
 
     if (a2.y() < a1.y()) {
         return intersectVerticalYOrdered_v2<S2S1, swap1, swap2>(a2, b2, a1, b1);
@@ -317,13 +327,15 @@ Segment2fIntersection intersectVerticalYOrdered(
 
 // Assumes a1x == b1x == a2x == b2x
 // Assumes a1y < b1y
-template<bool swapS, bool swap1, bool swap2>
-Segment2fIntersection
-intersectVerticalYOrderedWithPoint(const Vec2f& a1_, const Vec2f& b1_, const Vec2f& a2_) {
+template<bool swapS, bool swap1, bool swap2, typename T>
+SegmentIntersection2<T> intersectVerticalYOrderedWithPoint(
+    const Vec2<T>& a1_,
+    const Vec2<T>& b1_,
+    const Vec2<T>& a2_) {
 
-    float a1 = a1_.y();
-    float b1 = b1_.y();
-    float a2 = a2_.y();
+    T a1 = a1_.y();
+    T b1 = b1_.y();
+    T a2 = a2_.y();
 
     if (a2 < a1 || b1 < a2) {
         //    a1    b1         a1    b1
@@ -334,7 +346,7 @@ intersectVerticalYOrderedWithPoint(const Vec2f& a1_, const Vec2f& b1_, const Vec
     else {
         // x-----x  OR  x-----x  OR  x-----x
         // x              x                x
-        float t1 = (a2 - a1) / (b1 - a1);
+        T t1 = (a2 - a1) / (b1 - a1);
         return pointInter<swapS, swap1, swap2>(a2_, t1, 0);
         // t1 is guaranteed to be exactly 0 or 1 if a2 equals a1 or b1
         // (!) t1 is NOT guaranteed to be 0 < t1 < 1 if not equal to a1 or b1
@@ -342,8 +354,12 @@ intersectVerticalYOrderedWithPoint(const Vec2f& a1_, const Vec2f& b1_, const Vec
 }
 
 // Assumes a1x == b1x and a2x == b2x
-Segment2fIntersection
-intersectVertical(const Vec2f& a1, const Vec2f& b1, const Vec2f& a2, const Vec2f& b2) {
+template<typename T>
+SegmentIntersection2<T> intersectVertical(
+    const Vec2<T>& a1,
+    const Vec2<T>& b1,
+    const Vec2<T>& a2,
+    const Vec2<T>& b2) {
 
     if (a1.x() != a2.x()) {
         return {};
@@ -393,9 +409,12 @@ intersectVertical(const Vec2f& a1, const Vec2f& b1, const Vec2f& a2, const Vec2f
 //
 // In particular, this means a1 != b1 and a2 != b2.
 //
-template<bool swapS, bool swap1, bool swap2>
-Segment2fIntersection
-intersectXOrdered_(const Vec2f& a1, const Vec2f& b1, const Vec2f& a2, const Vec2f& b2) {
+template<bool swapS, bool swap1, bool swap2, typename T>
+SegmentIntersection2<T> intersectXOrdered_(
+    const Vec2<T>& a1,
+    const Vec2<T>& b1,
+    const Vec2<T>& a2,
+    const Vec2<T>& b2) {
 
     // Fast return if the x-range of the segments do not intersect.
     //
@@ -423,17 +442,17 @@ intersectXOrdered_(const Vec2f& a1, const Vec2f& b1, const Vec2f& a2, const Vec2
     // computations involving shared endpoints, we always compute all four of
     // them, and determine the type of the intersection based on those.
     //
-    Vec2f a1b1 = b1 - a1;
-    Vec2f a2b2 = b2 - a2;
-    Vec2f a1a2 = a2 - a1;
-    Vec2f a1b2 = b2 - a1;
-    Vec2f a2b1 = b1 - a2;
-    float a1Side = -a2b2.det(a1a2); // == a2b2.det(a2a1)
-    float b1Side = a2b2.det(a2b1);
-    float a2Side = a1b1.det(a1a2);
-    float b2Side = a1b1.det(a1b2);
+    Vec2<T> a1b1 = b1 - a1;
+    Vec2<T> a2b2 = b2 - a2;
+    Vec2<T> a1a2 = a2 - a1;
+    Vec2<T> a1b2 = b2 - a1;
+    Vec2<T> a2b1 = b1 - a2;
+    T a1Side = -a2b2.det(a1a2); // == a2b2.det(a2a1)
+    T b1Side = a2b2.det(a2b1);
+    T a2Side = a1b1.det(a1a2);
+    T b2Side = a1b1.det(a1b2);
 
-    // Convert to sign since multiplying two non-zero floats may give zero.
+    // Convert to sign since multiplying two non-zero Ts may give zero.
     // Also, this leads to better branchless assembly on some compilers.
     //
     // Total of 3^4 = 81 combinations of possible sign values
@@ -489,13 +508,13 @@ intersectXOrdered_(const Vec2f& a1, const Vec2f& b1, const Vec2f& a2, const Vec2
         // Related: Boissonnat and Preparata 2000,
         //          Robust Plane Sweep for Intersecting Segments
         //
-        float delta = a1b1.det(a2b2); // depends on all four points, see [2]
+        T delta = a1b1.det(a2b2); // depends on all four points, see [2]
         if (std::abs(delta) > 0) {
-            float t1 = a1Side / delta;
-            float t2 = -a2Side / delta;
+            T t1 = a1Side / delta;
+            T t2 = -a2Side / delta;
             t1 = core::clamp(t1, 0, 1);
             t2 = core::clamp(t2, 0, 1);
-            Vec2f p = core::fastLerp(a1, b1, t1);
+            Vec2<T> p = core::fastLerp(a1, b1, t1);
             return pointInter<swapS, swap1, swap2>(p, t1, t2);
         }
         else {
@@ -548,7 +567,7 @@ intersectXOrdered_(const Vec2f& a1, const Vec2f& b1, const Vec2f& a2, const Vec2
                 // Note: a2 != a1 and a2 != b1 (since a1Sign != 0 and b1Sign != 0),
                 //       but possibly a2x == a1x or a2x == a1x due to numerical errors.
                 //
-                float t1 = (a2.x() - a1.x()) / (b1.x() - a1.x()); // b2-independent
+                T t1 = (a2.x() - a1.x()) / (b1.x() - a1.x()); // b2-independent
                 return pointInter<swapS, swap1, swap2>(a2, t1, 0);
                 // t1 is guaranteed to be 0 <= t1 <= 1
                 // t1 is guaranteed to be exactly 0 or 1 if a2x equal to a1x or b1x
@@ -575,8 +594,8 @@ intersectXOrdered_(const Vec2f& a1, const Vec2f& b1, const Vec2f& a2, const Vec2
                 // proven it that numerical errors causing this are impossible,
                 // for now we clamp t1 to 1.
                 //
-                float t1 = (b2.x() - a1.x()) / (b1.x() - a1.x()); // a2-independent
-                t1 = std::min<float>(t1, 1);
+                T t1 = (b2.x() - a1.x()) / (b1.x() - a1.x()); // a2-independent
+                t1 = std::min<T>(t1, 1);
                 return pointInter<swapS, swap1, swap2>(b2, t1, 1);
                 // t1 is guaranteed to be 0 < t1 <= 1
                 // t1 is guaranteed to be exactly 1 if b2x equal b1x
@@ -613,9 +632,9 @@ intersectXOrdered_(const Vec2f& a1, const Vec2f& b1, const Vec2f& a2, const Vec2
                 // We haven't proven that it's impossible neither found an
                 // example, but in any case, this means we would have to do:
                 //
-                // float t2 = (a1x - a2x) / (b2x - a2x)
-                //            -----------   -----------
-                //               <= 0         > 0
+                // T t2 = (a1x - a2x) / (b2x - a2x)
+                //        -----------   -----------
+                //           <= 0           > 0
                 //
                 // which still results in t2 = 0 after clamping.
                 //
@@ -643,8 +662,8 @@ intersectXOrdered_(const Vec2f& a1, const Vec2f& b1, const Vec2f& a2, const Vec2
                 //
                 // Note: a2x <= b1x (see fast return: x-ranges must intersect)
                 //
-                float t2 = (b1.x() - a2.x()) / (b2.x() - a2.x()); // a1-independent
-                t2 = std::min<float>(t2, 1);
+                T t2 = (b1.x() - a2.x()) / (b2.x() - a2.x()); // a1-independent
+                t2 = std::min<T>(t2, 1);
                 return pointInter<swapS, swap1, swap2>(b1, 1, t2);
             }
         }
@@ -689,8 +708,8 @@ intersectXOrdered_(const Vec2f& a1, const Vec2f& b1, const Vec2f& a2, const Vec2
                 // collinear, since the former can be evaluated exactly, while
                 // the latter is subject to numerical errors.
                 //
-                float d2 = a1a2.squaredLength(); // 0 if a1 == a2
-                float delta = a1b1.det(a2b2);    // 0 if a1b1 parallel to a2b2
+                T d2 = a1a2.squaredLength(); // 0 if a1 == a2
+                T delta = a1b1.det(a2b2);    // 0 if a1b1 parallel to a2b2
                 if (d2 <= std::abs(delta)) {
                     return pointInter<swapS, swap1, swap2>(a1, 0, 0);
                 }
@@ -702,8 +721,8 @@ intersectXOrdered_(const Vec2f& a1, const Vec2f& b1, const Vec2f& a2, const Vec2
             else if (a1Sign == 0 && b2Sign == 0) {
                 // (4 configurations of sign values)
                 // Similar as [4]
-                float d2 = a1b2.squaredLength();
-                float delta = a1b1.det(a2b2);
+                T d2 = a1b2.squaredLength();
+                T delta = a1b1.det(a2b2);
                 if (d2 <= std::abs(delta)) {
                     return pointInter<swapS, swap1, swap2>(a1, 0, 1);
                 }
@@ -715,8 +734,8 @@ intersectXOrdered_(const Vec2f& a1, const Vec2f& b1, const Vec2f& a2, const Vec2
             else if (b1Sign == 0 && a2Sign == 0) {
                 // (4 configurations of sign values)
                 // Similar as [4]
-                float d2 = a2b1.squaredLength();
-                float delta = a1b1.det(a2b2);
+                T d2 = a2b1.squaredLength();
+                T delta = a1b1.det(a2b2);
                 if (d2 <= std::abs(delta)) {
                     return pointInter<swapS, swap1, swap2>(b1, 1, 0);
                 }
@@ -728,8 +747,8 @@ intersectXOrdered_(const Vec2f& a1, const Vec2f& b1, const Vec2f& a2, const Vec2
             else { // (b1Sign == 0 && b2Sign == 0)
                 // (4 configurations of sign values)
                 // Similar as [4]
-                float d2 = (b2 - b1).squaredLength();
-                float delta = a1b1.det(a2b2);
+                T d2 = (b2 - b1).squaredLength();
+                T delta = a1b1.det(a2b2);
                 if (d2 <= std::abs(delta)) {
                     return pointInter<swapS, swap1, swap2>(b1, 1, 1);
                 }
@@ -747,9 +766,12 @@ intersectXOrdered_(const Vec2f& a1, const Vec2f& b1, const Vec2f& a2, const Vec2
 }
 
 // Assumes a1x < b1x and a2x < b2x
-template<bool swap1, bool swap2>
-Segment2fIntersection
-intersectXOrdered(const Vec2f& a1, const Vec2f& b1, const Vec2f& a2, const Vec2f& b2) {
+template<bool swap1, bool swap2, typename T>
+SegmentIntersection2<T> intersectXOrdered(
+    const Vec2<T>& a1,
+    const Vec2<T>& b1,
+    const Vec2<T>& a2,
+    const Vec2<T>& b2) {
     if (a2.x() < a1.x()) {
         return intersectXOrdered_<S2S1, swap1, swap2>(a2, b2, a1, b1);
     }
@@ -761,14 +783,14 @@ intersectXOrdered(const Vec2f& a1, const Vec2f& b1, const Vec2f& a2, const Vec2f
 // Assumes a1x < b1x
 // Assumes a1x <= a2x == b2x <= b1x
 // Assumes a2y == b2y
-template<bool swapS, bool swap1, bool swap2>
-Segment2fIntersection
-intersectXOrderedWithPoint(const Vec2f& a1, const Vec2f& b1, const Vec2f& a2) {
-    Vec2f a1b1 = b1 - a1;
-    Vec2f a1a2 = a2 - a1;
-    float a2Side = a1b1.det(a1a2);
+template<bool swapS, bool swap1, bool swap2, typename T>
+SegmentIntersection2<T>
+intersectXOrderedWithPoint(const Vec2<T>& a1, const Vec2<T>& b1, const Vec2<T>& a2) {
+    Vec2<T> a1b1 = b1 - a1;
+    Vec2<T> a1a2 = a2 - a1;
+    T a2Side = a1b1.det(a1a2);
     if (a2Side == 0) {
-        float t1 = (a2.x() - a1.x()) / (b1.x() - a1.x());
+        T t1 = (a2.x() - a1.x()) / (b1.x() - a1.x());
         return pointInter<swapS, swap1, swap2>(a2, t1, 0);
     }
     else {
@@ -779,22 +801,22 @@ intersectXOrderedWithPoint(const Vec2f& a1, const Vec2f& b1, const Vec2f& a2) {
 // Assumes a1x < b1x
 // Assumes a1x <= a2x == b2x <= b1x
 // Assumes a2y < b2y
-template<bool swapS, bool swap1, bool swap2>
-Segment2fIntersection intersectXOrderedWithVerticalYOrdered(
-    const Vec2f& a1,
-    const Vec2f& b1,
-    const Vec2f& a2,
-    const Vec2f& b2) {
+template<bool swapS, bool swap1, bool swap2, typename T>
+SegmentIntersection2<T> intersectXOrderedWithVerticalYOrdered(
+    const Vec2<T>& a1,
+    const Vec2<T>& b1,
+    const Vec2<T>& a2,
+    const Vec2<T>& b2) {
 
-    float a2y = a2.y();
-    float b2y = b2.y();
+    T a2y = a2.y();
+    T b2y = b2.y();
 
     // See intersectXOrdered() for details
-    Vec2f a1b1 = b1 - a1;
-    Vec2f a1a2 = a2 - a1;
-    Vec2f a1b2 = b2 - a1;
-    float a2Side = a1b1.det(a1a2);
-    float b2Side = a1b1.det(a1b2);
+    Vec2<T> a1b1 = b1 - a1;
+    Vec2<T> a1a2 = a2 - a1;
+    Vec2<T> a1b2 = b2 - a1;
+    T a2Side = a1b1.det(a1a2);
+    T b2Side = a1b1.det(a1b2);
     Int8 a2Sign = core::sign(a2Side);
     Int8 b2Sign = core::sign(b2Side);
     Int8 s2Cross = a2Sign * b2Sign;
@@ -803,10 +825,10 @@ Segment2fIntersection intersectXOrderedWithVerticalYOrdered(
         return {};
     }
 
-    float t1 = (a2.x() - a1.x()) / (b1.x() - a1.x()); // Guaranteed 0 <= t1 <= 1
+    T t1 = (a2.x() - a1.x()) / (b1.x() - a1.x()); // Guaranteed 0 <= t1 <= 1
     if (s2Cross < 0) {
-        Vec2f p = core::fastLerp(a1, b1, t1);
-        float t2 = (p.y() - a2y) / (b2y - a2y);
+        Vec2<T> p = core::fastLerp(a1, b1, t1);
+        T t2 = (p.y() - a2y) / (b2y - a2y);
         t2 = core::clamp(t2, 0, 1);
         return pointInter<swapS, swap1, swap2>(p, t1, t2);
     }
@@ -821,15 +843,15 @@ Segment2fIntersection intersectXOrderedWithVerticalYOrdered(
 }
 
 // Assumes a1x < b1x and a2x == b2x
-template<bool swapS, bool swap1, bool swap2>
-Segment2fIntersection intersectXOrderedWithVertical(
-    const Vec2f& a1,
-    const Vec2f& b1,
-    const Vec2f& a2,
-    const Vec2f& b2) {
+template<bool swapS, bool swap1, bool swap2, typename T>
+SegmentIntersection2<T> intersectXOrderedWithVertical(
+    const Vec2<T>& a1,
+    const Vec2<T>& b1,
+    const Vec2<T>& a2,
+    const Vec2<T>& b2) {
 
     // X-coordinate of vertical a2b2 segment
-    float x2 = a2.x(); // == b2.x()
+    T x2 = a2.x(); // == b2.x()
 
     // Fast return if vertical segment not in range
     if (b1.x() < x2) {
@@ -859,15 +881,14 @@ Segment2fIntersection intersectXOrderedWithVertical(
     }
 }
 
-} // namespace
-
 // Possible ideas for performance improvements:
 // - Use sign function?
 // - Make the x-ordering branchless with a jump table?
 // - Make code non-templated to be more friendly to branch predictor?
 //
-Segment2fIntersection
-segmentIntersect(const Vec2f& a1, const Vec2f& b1, const Vec2f& a2, const Vec2f& b2) {
+template<typename T>
+SegmentIntersection2<T>
+intersect(const Vec2<T>& a1, const Vec2<T>& b1, const Vec2<T>& a2, const Vec2<T>& b2) {
 
     // Order a1b1 and a2b2 by increasing X coordinates.
     // This is very important for robustness, see note below.
@@ -946,5 +967,7 @@ segmentIntersect(const Vec2f& a1, const Vec2f& b1, const Vec2f& a2, const Vec2f&
 // Always doing the computation with a < b means that we guarantee that the
 // results are consistent across multiple calls with segments sharing the
 // same endpoints but simply reversed.
+
+} // namespace detail::segmentintersect
 
 } // namespace vgc::geometry

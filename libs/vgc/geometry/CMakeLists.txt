@@ -35,8 +35,7 @@ vgc_add_library(geometry
         rectalign.h
         rectanchor.h
         segment.h
-        segment2d.h
-        segment2f.h
+        segment2.h
         stride.h
         stroke.h
         strokestyle.h
@@ -48,6 +47,8 @@ vgc_add_library(geometry
         vec4.h
         windingrule.h
         yuksel.h
+
+        detail/segmentintersect.h
 
     CPP_SOURCE_FILES
         camera2d.cpp
@@ -63,8 +64,7 @@ vgc_add_library(geometry
         rectalign.cpp
         rectanchor.cpp
         segment.cpp
-        segment2d.cpp
-        segment2f.cpp
+        segment2.cpp
         stroke.cpp
         strokestyle.cpp
         tesselator.cpp
