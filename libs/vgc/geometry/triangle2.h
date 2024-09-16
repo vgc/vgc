@@ -17,8 +17,6 @@
 // This file was automatically generated, please do not edit directly.
 // Instead, edit tools/triangle2x.h then run tools/generate.py.
 
-// clang-format off
-
 #ifndef VGC_GEOMETRY_TRIANGLE2_H
 #define VGC_GEOMETRY_TRIANGLE2_H
 
@@ -46,10 +44,7 @@ public:
     /// Creates an uninitialized `Triangle2`.
     ///
     Triangle2(core::NoInit) noexcept
-        : data_{
-            Vec2<T>(core::noInit),
-            Vec2<T>(core::noInit),
-            Vec2<T>(core::noInit)} {
+        : data_{Vec2<T>(core::noInit), Vec2<T>(core::noInit), Vec2<T>(core::noInit)} {
     }
     VGC_WARNING_POP
 
@@ -58,7 +53,6 @@ public:
     constexpr Triangle2() noexcept
         : data_{Vec2<T>(), Vec2<T>(), Vec2<T>()} {
     }
-
 
     /// Creates a `Triangle2` initialized with the given points.
     ///
@@ -219,17 +213,17 @@ public:
     /// Returns whether the triangles `t1` and `t2` are equal.
     ///
     friend constexpr bool operator==(const Triangle2& t1, const Triangle2& t2) {
-        return t1.data_[0] == t2.data_[0]
-            && t1.data_[1] == t2.data_[1]
-            && t1.data_[2] == t2.data_[2];
+        return t1.data_[0] == t2.data_[0]    //
+               && t1.data_[1] == t2.data_[1] //
+               && t1.data_[2] == t2.data_[2];
     }
 
     /// Returns whether the triangles `t1` and `t2` are different.
     ///
     friend constexpr bool operator!=(const Triangle2& t1, const Triangle2& t2) {
-        return t1.data_[0] != t2.data_[0]
-            || t1.data_[1] != t2.data_[1]
-            || t1.data_[2] != t2.data_[2];
+        return t1.data_[0] != t2.data_[0]    //
+               || t1.data_[1] != t2.data_[1] //
+               || t1.data_[2] != t2.data_[2];
     }
 
     /// Returns whether the given `point` is inside this triangle (borders
