@@ -40,6 +40,7 @@ vgc_add_library(geometry
         stroke.h
         strokestyle.h
         tesselator.h
+        traits.h
         triangle2.h
         vec.h
         vec2.h
