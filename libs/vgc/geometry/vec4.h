@@ -247,29 +247,28 @@ public:
         return Vec4(*this) /= s;
     }
 
-    // clang-format off
-    
     /// Returns whether `v1` and `v2` are equal.
     ///
     friend constexpr bool operator==(const Vec4& v1, const Vec4& v2) {
-        return v1.data_[0] == v2.data_[0]
-            && v1.data_[1] == v2.data_[1]
-            && v1.data_[2] == v2.data_[2]
-            && v1.data_[3] == v2.data_[3];
+        return v1.data_[0] == v2.data_[0]    //
+               && v1.data_[1] == v2.data_[1] //
+               && v1.data_[2] == v2.data_[2] //
+               && v1.data_[3] == v2.data_[3];
     }
 
     /// Returns whether `v1` and `v2` are different.
     ///
     friend constexpr bool operator!=(const Vec4& v1, const Vec4& v2) {
-        return v1.data_[0] != v2.data_[0]
-            || v1.data_[1] != v2.data_[1]
-            || v1.data_[2] != v2.data_[2]
-            || v1.data_[3] != v2.data_[3];
+        return v1.data_[0] != v2.data_[0]    //
+               || v1.data_[1] != v2.data_[1] //
+               || v1.data_[2] != v2.data_[2] //
+               || v1.data_[3] != v2.data_[3];
     }
 
     /// Compares `v1` and `v2` using lexicographic order on (x, y, z).
     ///
     friend constexpr bool operator<(const Vec4& v1, const Vec4& v2) {
+        // clang-format off
         return ( (v1.data_[0] < v2.data_[0]) ||
                (!(v2.data_[0] < v1.data_[0]) &&
                ( (v1.data_[1] < v2.data_[1]) ||
@@ -277,9 +276,8 @@ public:
                ( (v1.data_[2] < v2.data_[2]) ||
                (!(v2.data_[2] < v1.data_[2]) &&
                ( (v1.data_[3] < v2.data_[3]))))))));
+        // clang-format on
     }
-
-    // clang-format on
 
     /// Compares `v1` and `v2` using lexicographic order on (x, y, z, w).
     ///

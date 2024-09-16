@@ -208,31 +208,29 @@ public:
         return Vec2(*this) /= s;
     }
 
-    // clang-format off
-    
     /// Returns whether `v1` and `v2` are equal.
     ///
     friend constexpr bool operator==(const Vec2& v1, const Vec2& v2) {
-        return v1.data_[0] == v2.data_[0]
-            && v1.data_[1] == v2.data_[1];
+        return v1.data_[0] == v2.data_[0] //
+               && v1.data_[1] == v2.data_[1];
     }
 
     /// Returns whether `v1` and `v2` are different.
     ///
     friend constexpr bool operator!=(const Vec2& v1, const Vec2& v2) {
-        return v1.data_[0] != v2.data_[0]
-            || v1.data_[1] != v2.data_[1];
+        return v1.data_[0] != v2.data_[0] //
+               || v1.data_[1] != v2.data_[1];
     }
 
     /// Compares `v1` and `v2` using lexicographic order on (x, y).
     ///
     friend constexpr bool operator<(const Vec2& v1, const Vec2& v2) {
+        // clang-format off
         return ( (v1.data_[0] < v2.data_[0]) ||
                (!(v2.data_[0] < v1.data_[0]) &&
                ( (v1.data_[1] < v2.data_[1]))));
+        // clang-format on
     }
-
-    // clang-format on
 
     /// Compares `v1` and `v2` using lexicographic order on (x, y).
     ///
