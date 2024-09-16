@@ -75,6 +75,9 @@ class Curves2d;
 ///
 class VGC_GEOMETRY_API Curves2dCommandRef {
 public:
+    using ScalarType = double;
+    static constexpr Int dimension = 2;
+
     // Copy and move constructors
     Curves2dCommandRef(const Curves2dCommandRef&) = default;
     Curves2dCommandRef(Curves2dCommandRef&&) = default;
@@ -320,6 +323,8 @@ protected:
     }
 
 public:
+    using ScalarType = double;
+
     /// Creates a Curves2dSampleParams to be used for adaptive sampling.
     /// This sets `maxDistance()` to `0.0`.
     ///
@@ -392,6 +397,9 @@ private:
 ///
 class VGC_GEOMETRY_API Curves2d {
 public:
+    using ScalarType = double;
+    static constexpr Int dimension = 2;
+
     /// Construct an empty sequence of curves.
     ///
     Curves2d() {

@@ -10,8 +10,6 @@ vgc_add_library(geometry
         arc.h
         bezier.h
         bezierspline.h
-        bezierspline1d.h
-        bezierspline2d.h
         camera2d.h
         catmullrom.h
         curve.h
@@ -26,8 +24,6 @@ vgc_add_library(geometry
         mat4.h
         polyline.h
         polyline2.h
-        polyline2d.h
-        polyline2f.h
         range1.h
         rangealign.h
         rangeanchor.h
@@ -52,7 +48,6 @@ vgc_add_library(geometry
         detail/segmentintersect.h
 
     CPP_SOURCE_FILES
-        camera2d.cpp
         catmullrom.cpp
         curve.cpp
         curves2d.cpp

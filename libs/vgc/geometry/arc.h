@@ -26,22 +26,20 @@
 
 namespace vgc::geometry {
 
-/// \class EllipticalArc2
+/// \class vgc::geometry::EllipticalArc2
 /// \brief Represents an elliptical arc or a line segment (arc of inifinite radius).
 ///
-template<typename Scalar>
+template<typename T>
 class EllipticalArc2 {
 public:
+    using ScalarType = T;
     static constexpr Int dimension = 2;
-    using ScalarType = Scalar;
-    using Vec2Type = Vec<2, Scalar>;
-    using Mat2Type = Mat<2, Scalar>;
 
     /// Creates an `EllipticalArc2` actually representing the line segment from
     /// `startPosition` to `endPosition`.
     ///
     static EllipticalArc2
-    fromLineSegment(const Vec2Type& startPosition, const Vec2Type& endPosition) {
+    fromLineSegment(const Vec2<T>& startPosition, const Vec2<T>& endPosition) {
         return EllipticalArc2(startPosition, endPosition);
     }
 
@@ -50,11 +48,11 @@ public:
     /// (in radians).
     ///
     static EllipticalArc2 fromCenterParameters(
-        const Vec2Type& center,
-        const Vec2Type& xAxis,
-        const Vec2Type& yAxis,
-        ScalarType startAngle,
-        ScalarType endAngle) {
+        const Vec2<T>& center,
+        const Vec2<T>& xAxis,
+        const Vec2<T>& yAxis,
+        T startAngle,
+        T endAngle) {
 
         return EllipticalArc2(center, xAxis, yAxis, startAngle, endAngle);
     }
@@ -67,15 +65,15 @@ public:
     /// See: https://www.w3.org/TR/SVG11/paths.html#PathDataEllipticalArcCommands
     ///
     static EllipticalArc2 fromSvgParameters(
-        const Vec2Type& startPosition,
-        const Vec2Type& endPosition,
-        const Vec2Type& radii,
-        ScalarType xAxisRotation,
+        const Vec2<T>& startPosition,
+        const Vec2<T>& endPosition,
+        const Vec2<T>& radii,
+        T xAxisRotation,
         bool largeArcFlag,
         bool sweepFlag) {
 
         EllipticalArc2 res(startPosition, endPosition);
-        Vec2Type radii_(std::abs(radii.x()), std::abs(radii.y()));
+        Vec2<T> radii_(std::abs(radii.x()), std::abs(radii.y()));
         if (radii_.x() > 0 && radii_.y() > 0) {
             res.convertSvgToCenterParameters_(
                 startPosition,
@@ -88,83 +86,78 @@ public:
         return res;
     }
 
-    Vec2Type eval(ScalarType u) const {
+    Vec2<T> eval(T u) const {
         if (isLineSegment_) {
-            const Vec2Type& startPosition = center_;
-            const Vec2Type& deltaPosition = xAxis_;
+            const Vec2<T>& startPosition = center_;
+            const Vec2<T>& deltaPosition = xAxis_;
             return startPosition + u * deltaPosition;
         }
         else {
-            ScalarType angle = startAngle_ + u * deltaAngle_;
-            ScalarType cosAngle = std::cos(angle);
-            ScalarType sinAngle = std::sin(angle);
+            T angle = startAngle_ + u * deltaAngle_;
+            T cosAngle = std::cos(angle);
+            T sinAngle = std::sin(angle);
             return center_ + cosAngle * xAxis_ + sinAngle * yAxis_;
         }
     }
 
-    Vec2Type eval(ScalarType u, Vec2Type& derivative) const {
+    Vec2<T> eval(T u, Vec2<T>& derivative) const {
         if (isLineSegment_) {
-            const Vec2Type& startPosition = center_;
-            const Vec2Type& deltaPosition = xAxis_;
+            const Vec2<T>& startPosition = center_;
+            const Vec2<T>& deltaPosition = xAxis_;
             derivative = deltaPosition;
             return startPosition + u * deltaPosition;
         }
         else {
-            ScalarType angle = startAngle_ + u * deltaAngle_;
-            ScalarType cosAngle = std::cos(angle);
-            ScalarType sinAngle = std::sin(angle);
+            T angle = startAngle_ + u * deltaAngle_;
+            T cosAngle = std::cos(angle);
+            T sinAngle = std::sin(angle);
             derivative = deltaAngle_ * (-sinAngle * xAxis_ + cosAngle * yAxis_);
             return center_ + cosAngle * xAxis_ + sinAngle * yAxis_;
         }
     }
 
-    Vec2Type evalDerivative(ScalarType u) const {
+    Vec2<T> evalDerivative(T u) const {
         if (isLineSegment_) {
-            const Vec2Type& deltaPosition = xAxis_;
+            const Vec2<T>& deltaPosition = xAxis_;
             return deltaPosition;
         }
         else {
-            ScalarType angle = startAngle_ + u * deltaAngle_;
-            ScalarType cosAngle = std::cos(angle);
-            ScalarType sinAngle = std::sin(angle);
+            T angle = startAngle_ + u * deltaAngle_;
+            T cosAngle = std::cos(angle);
+            T sinAngle = std::sin(angle);
             return deltaAngle_ * (-sinAngle * xAxis_ + cosAngle * yAxis_);
         }
     }
 
-    Vec2Type evalSecondDerivative(ScalarType u) const {
+    Vec2<T> evalSecondDerivative(T u) const {
         if (isLineSegment_) {
-            return Vec2Type(0, 0);
+            return Vec2<T>(0, 0);
         }
         else {
-            ScalarType angle = startAngle_ + u * deltaAngle_;
-            ScalarType cosAngle = std::cos(angle);
-            ScalarType sinAngle = std::sin(angle);
+            T angle = startAngle_ + u * deltaAngle_;
+            T cosAngle = std::cos(angle);
+            T sinAngle = std::sin(angle);
             return -deltaAngle_ * deltaAngle_ * (cosAngle * xAxis_ + sinAngle * yAxis_);
         }
     }
 
 private:
     bool isLineSegment_;
-    Vec2Type center_; // used as start position if line segment
-    Vec2Type xAxis_;  // used as (end - start) vector if line segment
-    Vec2Type yAxis_;
-    ScalarType startAngle_;
-    ScalarType deltaAngle_;
+    Vec2<T> center_; // used as start position if line segment
+    Vec2<T> xAxis_;  // used as (end - start) vector if line segment
+    Vec2<T> yAxis_;
+    T startAngle_;
+    T deltaAngle_;
 
     // Line segment
-    EllipticalArc2(Vec2Type startPosition, Vec2Type endPosition)
+    EllipticalArc2(Vec2<T> startPosition, Vec2<T> endPosition)
         : isLineSegment_(true)
         , center_(startPosition)
         , xAxis_(endPosition - startPosition) {
     }
 
     // Center parameters
-    EllipticalArc2(
-        Vec2Type center,
-        Vec2Type xAxis,
-        Vec2Type yAxis,
-        ScalarType startAngle,
-        ScalarType endAngle)
+    EllipticalArc2(Vec2<T> center, Vec2<T> xAxis, Vec2<T> yAxis, T startAngle, T endAngle)
 
         : isLineSegment_(false)
         , center_(center)
@@ -177,30 +170,30 @@ private:
     // See https://www.w3.org/TR/SVG11/implnote.html#ArcImplementationNotes
     //
     void convertSvgToCenterParameters_(
-        const Vec2Type& startPosition,
-        const Vec2Type& endPosition,
-        const Vec2Type& radii,
-        ScalarType xAxisRotation,
+        const Vec2<T>& startPosition,
+        const Vec2<T>& endPosition,
+        const Vec2<T>& radii,
+        T xAxisRotation,
         bool largeArcFlag,
         bool sweepFlag) {
 
         isLineSegment_ = false;
-        ScalarType rx = radii.x();
-        ScalarType ry = radii.y();
+        T rx = radii.x();
+        T ry = radii.y();
 
         // Correction of out-of-range radii
-        ScalarType cosphi = std::cos(xAxisRotation);
-        ScalarType sinphi = std::sin(xAxisRotation);
-        ScalarType rx2 = rx * rx;
-        ScalarType ry2 = ry * ry;
-        Mat2Type rot(cosphi, -sinphi, sinphi, cosphi);
-        Mat2Type rotInv(cosphi, sinphi, -sinphi, cosphi);
-        Vec2Type p_ = rotInv * (0.5 * (startPosition - endPosition));
-        ScalarType px_2 = p_[0] * p_[0];
-        ScalarType py_2 = p_[1] * p_[1];
-        ScalarType d2 = px_2 / rx2 + py_2 / ry2;
+        T cosphi = std::cos(xAxisRotation);
+        T sinphi = std::sin(xAxisRotation);
+        T rx2 = rx * rx;
+        T ry2 = ry * ry;
+        Mat2<T> rot(cosphi, -sinphi, sinphi, cosphi);
+        Mat2<T> rotInv(cosphi, sinphi, -sinphi, cosphi);
+        Vec2<T> p_ = rotInv * (0.5 * (startPosition - endPosition));
+        T px_2 = p_[0] * p_[0];
+        T py_2 = p_[1] * p_[1];
+        T d2 = px_2 / rx2 + py_2 / ry2;
         if (d2 > 1) {
-            ScalarType d = std::sqrt(d2);
+            T d = std::sqrt(d2);
             rx *= d;
             ry *= d;
             rx2 = rx * rx;
@@ -208,30 +201,30 @@ private:
         }
 
         // Conversion from endpoint to center parameterization.
-        xAxis_ = Vec2Type(rx * cosphi, rx * sinphi);
-        yAxis_ = Vec2Type(-ry * sinphi, ry * cosphi);
-        ScalarType rx2py_2 = rx2 * py_2;
-        ScalarType ry2px_2 = ry2 * px_2;
-        ScalarType a2 = (rx2 * ry2 - rx2py_2 - ry2px_2) / (rx2py_2 + ry2px_2);
-        ScalarType a = std::sqrt(std::abs(a2));
+        xAxis_ = Vec2<T>(rx * cosphi, rx * sinphi);
+        yAxis_ = Vec2<T>(-ry * sinphi, ry * cosphi);
+        T rx2py_2 = rx2 * py_2;
+        T ry2px_2 = ry2 * px_2;
+        T a2 = (rx2 * ry2 - rx2py_2 - ry2px_2) / (rx2py_2 + ry2px_2);
+        T a = std::sqrt(std::abs(a2));
         if (largeArcFlag == sweepFlag) {
             a *= -1;
         }
-        Vec2Type c_(a * p_[1] * rx / ry, -a * p_[0] * ry / rx);
+        Vec2<T> c_(a * p_[1] * rx / ry, -a * p_[0] * ry / rx);
         center_ = rot * c_ + 0.5 * (startPosition + endPosition);
-        Vec2Type pc = p_ - c_;
-        Vec2Type mpc = -p_ - c_;
-        Vec2Type rInv(1 / rx, 1 / ry);
-        Vec2Type e1(1, 0);
-        Vec2Type e2(pc.x() * rInv.x(), pc.y() * rInv.y());
-        Vec2Type e3(mpc.x() * rInv.x(), mpc.y() * rInv.y());
+        Vec2<T> pc = p_ - c_;
+        Vec2<T> mpc = -p_ - c_;
+        Vec2<T> rInv(1 / rx, 1 / ry);
+        Vec2<T> e1(1, 0);
+        Vec2<T> e2(pc.x() * rInv.x(), pc.y() * rInv.y());
+        Vec2<T> e3(mpc.x() * rInv.x(), mpc.y() * rInv.y());
         startAngle_ = e1.angle(e2);
         deltaAngle_ = e2.angle(e3);
         if (sweepFlag == false && deltaAngle_ > 0) {
-            deltaAngle_ -= 2 * core::narrow_cast<ScalarType>(core::pi);
+            deltaAngle_ -= 2 * core::narrow_cast<T>(core::pi);
         }
         else if (sweepFlag == true && deltaAngle_ < 0) {
-            deltaAngle_ += 2 * core::narrow_cast<ScalarType>(core::pi);
+            deltaAngle_ += 2 * core::narrow_cast<T>(core::pi);
         }
     }
 };

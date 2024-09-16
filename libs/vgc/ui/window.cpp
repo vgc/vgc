@@ -25,7 +25,7 @@
 
 #include <vgc/core/paths.h>
 #include <vgc/core/profile.h>
-#include <vgc/geometry/camera2d.h>
+#include <vgc/geometry/camera2.h>
 #include <vgc/graphics/d3d11/d3d11engine.h>
 #include <vgc/graphics/text.h>
 #include <vgc/ui/application.h>

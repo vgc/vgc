@@ -27,31 +27,31 @@ namespace vgc::geometry {
 
 namespace detail {
 
-template<typename T>
+template<typename Point, typename T = scalarType<Point>>
 void catmullRomToBezier(
-    const T* points,
-    const double* dValues,
-    const double* daValues,
-    T* outPoints) {
+    const Point* points,
+    const T* dValues,
+    const T* daValues,
+    Point* outPoints) {
 
-    double d1 = dValues[0];
-    double d2 = dValues[1];
-    double d3 = dValues[2];
-    double d1a = daValues[0];
-    double d2a = daValues[1];
-    double d3a = daValues[2];
+    T d1 = dValues[0];
+    T d2 = dValues[1];
+    T d3 = dValues[2];
+    T d1a = daValues[0];
+    T d2a = daValues[1];
+    T d3a = daValues[2];
 
-    T p1 = points[1];
+    Point p1 = points[1];
     if (d1a > 0) {
-        double c1 = 2 * d1 + 3 * d1a * d2a + d2;
-        double c2 = 3 * d1a * (d1a + d2a);
+        T c1 = 2 * d1 + 3 * d1a * d2a + d2;
+        T c2 = 3 * d1a * (d1a + d2a);
         p1 = (d1 * points[2] - d2 * points[0] + c1 * points[1]) / c2;
     }
 
-    T p2 = points[2];
+    Point p2 = points[2];
     if (d3a > 0) {
-        double c1 = 2 * d3 + 3 * d2a * d3a + d2;
-        double c2 = 3 * d3a * (d2a + d3a);
+        T c1 = 2 * d3 + 3 * d2a * d3a + d2;
+        T c2 = 3 * d3a * (d2a + d3a);
         p2 = (d3 * points[1] - d2 * points[3] + c1 * points[2]) / c2;
     }
 
@@ -66,11 +66,11 @@ void catmullRomToBezier(
 /// Overload of `uniformCatmullRomToBezier` expecting a pointer to a contiguous sequence
 /// of 4 control points in input and output.
 ///
-template<typename T>
-void uniformCatmullRomToBezier(const T* inFourPoints, T* outFourPoints) {
-    constexpr double k = 1.0 / 6; // = 1/6 up to double precision
-    T p1 = inFourPoints[1] + k * (inFourPoints[2] - inFourPoints[0]);
-    T p2 = inFourPoints[2] - k * (inFourPoints[3] - inFourPoints[1]);
+template<typename Point, typename T = scalarType<Point>>
+void uniformCatmullRomToBezier(const Point* inFourPoints, Point* outFourPoints) {
+    constexpr T k = T(1) / 6; // = 1/6 up to T precision
+    Point p1 = inFourPoints[1] + k * (inFourPoints[2] - inFourPoints[0]);
+    Point p2 = inFourPoints[2] - k * (inFourPoints[3] - inFourPoints[1]);
     outFourPoints[0] = inFourPoints[1]; // These two lines must be done first in order
     outFourPoints[3] = inFourPoints[2]; // to support inFourPoints == outFourPoints
     outFourPoints[1] = p1;
@@ -138,27 +138,27 @@ void uniformCatmullRomToBezier(const T* inFourPoints, T* outFourPoints) {
 ///
 /// Which finishes the explanation why k = 1/6.
 ///
-template<typename T>
-CubicBezier<T, double> uniformCatmullRomToBezier(core::ConstSpan<T, 4> points) {
-    std::array<T, 4> controlPoints;
+template<typename Point, typename T = scalarType<Point>>
+CubicBezier<Point, T> uniformCatmullRomToBezier(core::ConstSpan<Point, 4> points) {
+    std::array<Point, 4> controlPoints;
     uniformCatmullRomToBezier(points.data(), controlPoints.data());
-    return CubicBezier<T, double>(controlPoints);
+    return CubicBezier<Point, T>(controlPoints);
 }
 
 /// Overload of `uniformCatmullRomToBezier` with in/out parameter per point.
 ///
-template<typename T>
+template<typename Point, typename T = scalarType<Point>>
 void uniformCatmullRomToBezier(
-    const T& c0,
-    const T& c1,
-    const T& c2,
-    const T& c3,
-    T& b0,
-    T& b1,
-    T& b2,
-    T& b3) {
+    const Point& c0,
+    const Point& c1,
+    const Point& c2,
+    const Point& c3,
+    Point& b0,
+    Point& b1,
+    Point& b2,
+    Point& b3) {
 
-    constexpr double k = 1.0 / 6; // = 1/6 up to double precision
+    constexpr T k = T(1) / 6; // = 1/6 up to T precision
     b0 = c1;
     b1 = c1 + k * (c2 - c0);
     b2 = c2 - k * (c3 - c1);
@@ -168,24 +168,24 @@ void uniformCatmullRomToBezier(
 /// Variant of `uniformCatmullRomToBezier` that caps the tangents
 /// to prevent p0p1 and p2p3 from intersecting.
 ///
-template<typename T>
-void uniformCatmullRomToBezierCapped(const T* inFourPoints, T* outFourPoints) {
-    constexpr double k = 1.0 / 6; // = 1/6 up to double precision
-    T t0 = inFourPoints[2] - inFourPoints[0];
-    T t1 = inFourPoints[3] - inFourPoints[1];
-    const double d0 = t0.length();
-    const double d1 = t1.length();
-    const double maxMagnitude = k * 2 * (inFourPoints[2] - inFourPoints[1]).length();
-    T tangent0 = {};
-    T tangent1 = {};
+template<typename Point, typename T = scalarType<Point>>
+void uniformCatmullRomToBezierCapped(const Point* inFourPoints, Point* outFourPoints) {
+    constexpr T k = T(1) / 6; // = 1/6 up to T precision
+    Point t0 = inFourPoints[2] - inFourPoints[0];
+    Point t1 = inFourPoints[3] - inFourPoints[1];
+    const T d0 = t0.length();
+    const T d1 = t1.length();
+    const T maxMagnitude = k * 2 * (inFourPoints[2] - inFourPoints[1]).length();
+    Point tangent0 = {};
+    Point tangent1 = {};
     if (d0 > 0) {
         tangent0 = (t0 / d0) * (std::min)(maxMagnitude, k * d0);
     }
     if (d1 > 0) {
         tangent1 = (t1 / d1) * (std::min)(maxMagnitude, k * d1);
     }
-    T pt0 = inFourPoints[1] + tangent0;
-    T pt1 = inFourPoints[2] - tangent1;
+    Point pt0 = inFourPoints[1] + tangent0;
+    Point pt1 = inFourPoints[2] - tangent1;
     outFourPoints[0] = inFourPoints[1]; // These two lines must be done first in order
     outFourPoints[3] = inFourPoints[2]; // to support inFourPoints == outFourPoints
     outFourPoints[1] = pt0;
@@ -200,58 +200,76 @@ void uniformCatmullRomToBezierCapped(const T* inFourPoints, T* outFourPoints) {
 ///
 /// Using chordal parameterization prevents cusps and loops.
 ///
-template<typename T>
-CubicBezier<T, double> centripetalCatmullRomToBezier(core::ConstSpan<T, 4> points) {
-
-    const T* points_ = points.data();
-    std::array<double, 3> lengths = {
+template<typename Point, typename T = scalarType<Point>>
+CubicBezier<Point, T> centripetalCatmullRomToBezier(core::ConstSpan<Point, 4> points) {
+    const Point* points_ = points.data();
+    std::array<T, 3> lengths = {
         (points_[1] - points_[0]).length(),
         (points_[2] - points_[1]).length(),
         (points_[3] - points_[2]).length()};
-
-    return centripetalCatmullRomToBezier<T>(points, lengths);
+    return centripetalCatmullRomToBezier<Point, T>(points, lengths);
 }
 
 /// Overload of `centripetalCatmullRomToBezier()` that accepts pre-computed lengths.
 ///
-template<typename T>
-CubicBezier<T, double> centripetalCatmullRomToBezier(
-    core::ConstSpan<T, 4> points,
-    core::ConstSpan<double, 3> lengths) {
+// Note: Without TypeIdentity, the following wouldn't compile:
+//
+// ```
+// std::array<Vec2d, 3> points;
+// std::array<double, 3> lengths;
+// auto res = centripetalCatmullRomToBezier<Vec2d>();
+// ```
+//
+// Because the compiler would try and fail to deduce `T` by
+// matching std::array<double, 3> to core::ConstSpan<T, 3>.
+//
+// So you would need to explicitly provide both template arguments which isn't
+// convenient:
+//
+// ```
+// auto res = centripetalCatmullRomToBezier<Vec2d, double>();
+// ```
+//
+// With TypeIdentity, the compiler doesn't even try to deduce T, and therefore
+// use the default value T = scalarType<Vec2d>, and once it knows T = double,
+// it can convert the std::array<double, 3> to core::ConstSpan<double, 3>.
+//
+template<typename Point, typename T = scalarType<Point>>
+CubicBezier<Point, T> centripetalCatmullRomToBezier(
+    core::ConstSpan<Point, 4> points,
+    core::ConstSpan<core::TypeIdentity<T>, 3> lengths) {
 
-    const double* l = lengths.data();
-    std::array<double, 3> sqrtLengths = {
-        std::sqrt(l[0]), std::sqrt(l[1]), std::sqrt(l[2])};
-
-    return centripetalCatmullRomToBezier<T>(points, lengths, sqrtLengths);
+    const T* l = lengths.data();
+    std::array<T, 3> sqrtLengths = {std::sqrt(l[0]), std::sqrt(l[1]), std::sqrt(l[2])};
+    return centripetalCatmullRomToBezier<Point, T>(points, lengths, sqrtLengths);
 }
 
 /// Overload of `centripetalCatmullRomToBezier()` that accepts pre-computed lengths
 /// and square roots of lengths.
 ///
-template<typename T>
-CubicBezier<T, double> centripetalCatmullRomToBezier(
-    core::ConstSpan<T, 4> points,
-    core::ConstSpan<double, 3> lengths,
-    core::ConstSpan<double, 3> sqrtLengths) {
+template<typename Point, typename T = scalarType<Point>>
+CubicBezier<Point, T> centripetalCatmullRomToBezier(
+    core::ConstSpan<Point, 4> points,
+    core::ConstSpan<core::TypeIdentity<T>, 3> lengths,
+    core::ConstSpan<core::TypeIdentity<T>, 3> sqrtLengths) {
 
-    std::array<T, 4> controlPoints;
-    centripetalCatmullRomToBezier(
+    std::array<Point, 4> controlPoints;
+    centripetalCatmullRomToBezier<Point, T>(
         points.data(), lengths.data(), sqrtLengths.data(), controlPoints.data());
-    return CubicBezier<T, double>(controlPoints);
+    return CubicBezier<Point, T>(controlPoints);
 }
 
 /// Overload of `centripetalCatmullRomToBezier()` that accepts pre-computed lengths
 /// and square roots of lengths, and returns the results via an output parameter.
 ///
-template<typename T>
+template<typename Point, typename T = scalarType<Point>>
 void centripetalCatmullRomToBezier(
-    const T* points,
-    const double* lengths,
-    const double* sqrtLengths,
-    T* outPoints) {
+    const Point* points,
+    const core::TypeIdentity<T>* lengths,
+    const core::TypeIdentity<T>* sqrtLengths,
+    Point* outPoints) {
 
-    return detail::catmullRomToBezier(points, lengths, sqrtLengths, outPoints);
+    return detail::catmullRomToBezier<Point, T>(points, lengths, sqrtLengths, outPoints);
 }
 
 /// Convert four control points of a Catmull-Rom with chordal paremetrization
@@ -263,57 +281,54 @@ void centripetalCatmullRomToBezier(
 /// Using chordal parameterization prevents sharp turns when two
 /// consecutive points are close together relative to their neighbors.
 ///
-template<typename T>
-CubicBezier<T, double> chordalCatmullRomToBezier(core::ConstSpan<T, 4> points) {
-
-    const T* points_ = points.data();
-    std::array<double, 3> lengths = {
+template<typename Point, typename T = scalarType<Point>>
+CubicBezier<Point, T> chordalCatmullRomToBezier(core::ConstSpan<Point, 4> points) {
+    const Point* points_ = points.data();
+    std::array<T, 3> lengths = {
         (points_[1] - points_[0]).length(),
         (points_[2] - points_[1]).length(),
         (points_[3] - points_[2]).length()};
-
-    return chordalCatmullRomToBezier<T>(points, lengths);
+    return chordalCatmullRomToBezier<Point, T>(points, lengths);
 }
 
 /// Overload of `chordalCatmullRomToBezier()` that accepts pre-computed lengths.
 ///
-template<typename T>
-CubicBezier<T, double> chordalCatmullRomToBezier(
-    core::ConstSpan<T, 4> points,
-    core::ConstSpan<double, 3> lengths) {
+template<typename Point, typename T = scalarType<Point>>
+CubicBezier<Point, T> chordalCatmullRomToBezier(
+    core::ConstSpan<Point, 4> points,
+    core::ConstSpan<core::TypeIdentity<T>, 3> lengths) {
 
-    const double* l = lengths.data();
-    std::array<double, 3> sqLengths = {l[0] * l[0], l[1] * l[1], l[2] * l[2]};
-
-    return chordalCatmullRomToBezier<T>(points, lengths, sqLengths);
+    const T* l = lengths.data();
+    std::array<T, 3> sqLengths = {l[0] * l[0], l[1] * l[1], l[2] * l[2]};
+    return chordalCatmullRomToBezier<Point, T>(points, lengths, sqLengths);
 }
 
 /// Overload of `chordalCatmullRomToBezier()` that accepts pre-computed lengths
 /// and squared lengths.
 ///
-template<typename T>
-CubicBezier<T, double> chordalCatmullRomToBezier(
-    core::ConstSpan<T, 4> points,
-    core::ConstSpan<double, 3> lengths,
-    core::ConstSpan<double, 3> sqLengths) {
+template<typename Point, typename T = scalarType<Point>>
+CubicBezier<Point, T> chordalCatmullRomToBezier(
+    core::ConstSpan<Point, 4> points,
+    core::ConstSpan<core::TypeIdentity<T>, 3> lengths,
+    core::ConstSpan<core::TypeIdentity<T>, 3> sqLengths) {
 
-    std::array<T, 4> controlPoints;
+    std::array<Point, 4> controlPoints;
     chordalCatmullRomToBezier(
         points.data(), lengths.data(), sqLengths.data(), controlPoints.data());
-    return CubicBezier<T, double>(controlPoints);
+    return CubicBezier<Point, T>(controlPoints);
 }
 
 /// Overload of `chordalCatmullRomToBezier()` that accepts pre-computed lengths
 /// and squared lengths, and returns the results via an output parameter.
 ///
-template<typename T>
+template<typename Point, typename T = scalarType<Point>>
 void chordalCatmullRomToBezier(
-    const T* points,
-    const double* lengths,
-    const double* sqLengths,
-    T* outPoints) {
+    const Point* points,
+    const core::TypeIdentity<T>* lengths,
+    const core::TypeIdentity<T>* sqLengths,
+    Point* outPoints) {
 
-    return detail::catmullRomToBezier(points, sqLengths, lengths, outPoints);
+    return detail::catmullRomToBezier<Point, T>(points, sqLengths, lengths, outPoints);
 }
 
 enum class CatmullRomSplineParameterization : UInt8 {
@@ -352,9 +367,9 @@ public:
         TRangeWidths&& widths)
 
         : AbstractInterpolatingStroke2d(
-            isClosed,
-            std::forward<TRangePositions>(positions),
-            std::forward<TRangeWidths>(widths))
+              isClosed,
+              std::forward<TRangePositions>(positions),
+              std::forward<TRangeWidths>(widths))
         , parameterization_(parameterization) {
     }
 

@@ -14,8 +14,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef VGC_GEOMETRY_CAMERA2D_H
-#define VGC_GEOMETRY_CAMERA2D_H
+#ifndef VGC_GEOMETRY_CAMERA2_H
+#define VGC_GEOMETRY_CAMERA2_H
 
 #include <vgc/geometry/api.h>
 #include <vgc/geometry/mat3.h>
@@ -23,11 +23,11 @@
 
 namespace vgc::geometry {
 
-/// \class vgc::geometry::Camera2d
-/// \brief 2D camera using double-precision floating points.
+/// \class vgc::geometry::Camera2
+/// \brief Stores parameters that can be used to navigate a 2D scene.
 ///
-/// This class is intended to be used for mouse navigation (e.g., pan,
-/// zoom, rotate) in a 2D viewer via intuitive controls.
+/// This class is intended to be used for mouse navigation (e.g., pan, zoom,
+/// rotate) in a 2D viewer via intuitive controls.
 ///
 /// A 2D camera is defined via the following properties:
 ///
@@ -41,7 +41,7 @@ namespace vgc::geometry {
 ///
 /// - rotation: angle, in radian, between world coordinates and view coordinates.
 ///   Example: if angle = pi/4, then objects appear rotated 45 degrees
-///   anti-clockwise.
+///   counter-clockwise.
 ///
 /// - viewportWidth: the width of the viewport, in pixels.
 ///
@@ -78,8 +78,9 @@ namespace vgc::geometry {
 /// - "View coordinates" refer to the coordinates of an object relative to the
 ///   viewport. For example, an object which appears exactly at the top-left
 ///   corner of the viewport has view coordinates equal to (0, 0). For
-///   consistency with Qt (i.e., widget coordinates), we use the convention that
-///   the viewport origin is top-left, and that the Y-axis is top-down:
+///   consistency with most UI frameworks (i.e., widget coordinates), we use the
+///   convention that the viewport origin is top-left, and that the Y-axis is
+///   top-down:
 ///
 ///   ```text
 ///         o---> X
@@ -96,7 +97,7 @@ namespace vgc::geometry {
 ///   viewport in pixels.
 ///
 /// In order to convert from world coordinates to view coordinates, one can
-/// use the viewMatrix() associated with the 2D camera:
+/// use the `viewMatrix()` associated with the 2D camera:
 ///
 /// ```cpp
 /// Vec2d viewCoords = camera.viewMatrix().transformAffine(worldCoords);
@@ -108,7 +109,7 @@ namespace vgc::geometry {
 /// Vec2d worldCoords = camera.viewMatrix().inverse().transformAffine(viewCoords);
 /// ```
 ///
-/// The projectionMatrix() is provided for conveninence when using OpenGL. It
+/// The `projectionMatrix()` is provided for conveninence when using OpenGL. It
 /// maps from view coordinates to NDC (normalized device coordinates), that is,
 /// the top-left corner of the viewport (0, 0) is mapped to (-1, -1), and the
 /// bottom
@@ -126,28 +127,38 @@ namespace vgc::geometry {
 /// represent a 2D transformation in homogeneous coordinates.
 ///
 /// In order to convert this 3x3 matrix `m` to a 4x4 matrix (3D transformation
-/// in homogeneous coordinates), you can use `Mat4d::fromTransform(m)`.
+/// in homogeneous coordinates), you can use `Mat4::fromTransform(m)`.
 ///
-class VGC_GEOMETRY_API Camera2d {
+template<typename T>
+class Camera2 {
 public:
+    using ScalarType = T;
+    static constexpr Int dimension = 2;
+
     /// Construct a 2D Camera centered at the world origin, without zoom or rotation.
     ///
-    Camera2d();
+    Camera2()
+        : center_(0, 0)
+        , zoom_(1)
+        , rotation_(0)
+        , viewportWidth_(1)
+        , viewportHeight_(1) {
+    }
 
     /// Returns the center of the camera. This is the 2D position, in world
     /// coordinates, which appears at the center of the viewport.
     ///
-    /// \sa setCenter()
+    /// \sa `setCenter()`.
     ///
-    const Vec2d& center() const {
+    const Vec2<T>& center() const {
         return center_;
     }
 
     /// Sets the center of the camera.
     ///
-    /// \sa center()
+    /// \sa `center()`.
     ///
-    void setCenter(const Vec2d& center) {
+    void setCenter(const Vec2<T>& center) {
         center_ = center;
     }
 
@@ -156,17 +167,17 @@ public:
     /// coordinates. Example: if zoom = 2, then an object which is 100-unit
     /// wide in world coordinates appears as 200 pixels on screen.
     ///
-    /// \sa setZoom()
+    /// \sa `setZoom()`.
     ///
-    double zoom() const {
+    T zoom() const {
         return zoom_;
     }
 
     /// Sets the zoom of the camera.
     ///
-    /// \sa zoom()
+    /// \sa `zoom()`.
     ///
-    void setZoom(double zoom) {
+    void setZoom(T zoom) {
         zoom_ = zoom;
     }
 
@@ -174,88 +185,123 @@ public:
     /// between world coordinates and view coordinates. Example: if angle =
     /// pi/4, then objects appear rotated 45 degrees anti-clockwise.
     ///
-    /// \sa setRotation()
+    /// \sa `setRotation()`.
     ///
-    double rotation() const {
+    T rotation() const {
         return rotation_;
     }
 
     /// Sets the rotation of the camera.
     ///
-    /// \sa rotation()
+    /// \sa `rotation()`.
     ///
-    void setRotation(double rotation) {
+    void setRotation(T rotation) {
         rotation_ = rotation;
     }
 
     /// Returns the width of the viewport, in pixels.
     ///
-    /// \sa setViewportWidth()
+    /// \sa `setViewportWidth()`.
     ///
-    double viewportWidth() const {
+    T viewportWidth() const {
         return viewportWidth_;
     }
 
     /// Sets the viewport width.
     ///
-    /// \sa viewportWidth()
+    /// \sa `viewportWidth()`.
     ///
-    void setViewportWidth(double width) {
+    void setViewportWidth(T width) {
         viewportWidth_ = width;
     }
 
     /// Returns the height of the viewport, in pixels.
     ///
-    /// \sa setViewportHeight()
+    /// \sa `setViewportHeight()`.
     ///
-    double viewportHeight() const {
+    T viewportHeight() const {
         return viewportHeight_;
     }
 
     /// Sets the viewport height.
     ///
-    /// \sa viewportHeight()
+    /// \sa `viewportHeight()`.
     ///
-    void setViewportHeight(double height) {
+    void setViewportHeight(T height) {
         viewportHeight_ = height;
     }
 
     /// Returns the width and height of the viewport, in pixels.
     ///
-    Vec2d viewportSize() const {
+    Vec2<T> viewportSize() const {
         return {viewportWidth_, viewportHeight_};
     }
 
     /// Sets the viewport size.
     ///
-    /// \sa viewportWidth(), viewportHeight()
+    /// \sa `viewportWidth()`, `viewportHeight()`.
     ///
-    void setViewportSize(double width, double height) {
+    void setViewportSize(T width, T height) {
         viewportWidth_ = width;
         viewportHeight_ = height;
     }
 
     /// \overload
-    void setViewportSize(const Vec2d& size) {
+    void setViewportSize(const Vec2<T>& size) {
         setViewportSize(size[0], size[1]);
     }
 
     /// Returns the 3x3 view matrix corresponding to the camera.
     ///
-    Mat3d viewMatrix() const;
+    Mat3<T> viewMatrix() const {
+        const T cx = center().x();
+        const T cy = center().y();
+        const T w = viewportWidth();
+        const T h = viewportHeight();
+        Mat3<T> res = Mat3<T>::identity;
+        res.translate(0.5 * w - cx, 0.5 * h - cy);
+        res.rotate(rotation());
+        res.scale(zoom());
+        return res;
+    }
 
     /// Returns the 3x3 projection matrix corresponding to the camera.
     ///
-    Mat3d projectionMatrix() const;
+    Mat3<T> projectionMatrix() const {
+        const T w = viewportWidth_;
+        const T h = viewportHeight_;
+        // clang-format off
+        return Mat3<T>(2/w, 0   , -1,
+                     0  , -2/h,  1,
+                     0  , 0   ,  1);
+        // clang-format on
+
+        // Notes:
+        //
+        // 1. In the second row of the matrix, we perform
+        //    the inversion of Y axis (SVG -> OpenGL conventions).
+        //
+        // 2. For a potential Camera3, it would look like:
+        //
+        //    return Mat4(2/w, 0   , 0      , -1         ,
+        //                0  , -2/h, 0      , 1          ,
+        //                0  , 0   , 2/(n-f), (n+f)/(n-f),
+        //                0  , 0   , 0      , 1          );
+        //
+        //    where n = nearPlane() and f = farPlane()
+    }
 
 private:
-    Vec2d center_;
-    double zoom_;
-    double rotation_;
-    double viewportWidth_;
-    double viewportHeight_;
+    Vec2<T> center_;
+    T zoom_;
+    T rotation_;
+    T viewportWidth_;
+    T viewportHeight_;
 };
+
+using Camera2f = Camera2<float>;
+using Camera2d = Camera2<double>;
 
 } // namespace vgc::geometry
 
-#endif // VGC_GEOMETRY_CAMERA2D_H
+#endif // VGC_GEOMETRY_CAMERA2_H
