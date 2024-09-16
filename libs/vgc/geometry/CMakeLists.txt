@@ -10,7 +10,7 @@ vgc_add_library(geometry
         arc.h
         bezier.h
         bezierspline.h
-        camera2d.h
+        camera2.h
         catmullrom.h
         curve.h
         curvecommand.h
