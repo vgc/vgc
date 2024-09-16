@@ -20,8 +20,6 @@
 #ifndef VGC_GEOMETRY_VEC_H
 #define VGC_GEOMETRY_VEC_H
 
-// clang-format off
-
 #include <vgc/core/templateutil.h>
 
 namespace vgc::geometry {
@@ -37,27 +35,36 @@ class Vec4;
 
 namespace detail {
 
-template<int dimension, typename T> struct Vec_ {};
-template<typename T> struct Vec_<2, T>  { using type = Vec2<T>; };
-template<typename T> struct Vec_<3, T>  { using type = Vec3<T>; };
-template<typename T> struct Vec_<4, T>  { using type = Vec4<T>; };
+template<int dimension, typename T>
+struct Vec_ {};
+
+template<typename T>
+struct Vec_<2, T> {
+    using type = Vec2<T>;
+};
+
+template<typename T>
+struct Vec_<3, T> {
+    using type = Vec3<T>;
+};
+
+template<typename T>
+struct Vec_<4, T> {
+    using type = Vec4<T>;
+};
 
 } // namespace detail
 
 /// Alias template for `Vec` classes.
 ///
 /// ```
-/// vgc::geometry::Vec<2, float>; // alias for vgc::geometry::Vec2f
+/// Vec<2, float>; // alias for Vec2f
 /// ```
 ///
-/// Note that `Vec` is not a class template, and `Vec2f` is not a class
-/// template instanciation of `Vec`. It is the other way around: `Vec2f` is a
-/// "regular" class (not defined from a template), and `Vec<2, float>` is
-/// defined as an alias to `Vec2f`.
-///
-/// This design has the advantage to be slightly more flexible and also
-/// generates shorter symbol names, which is useful for debugging (e.g.,
-/// shorter error messages) and may potentially speed up dynamic linking.
+/// Note that `Vec` is not a class template that `Vec2`, `Vec3`, and `Vec4`
+/// specialize. Instead, `Vec2`, `Vec3`, and `Vec4` are implemented as separate
+/// class templates, and `Vec<dim, T>` is simply an alias to the appropriate
+/// class `Vec2<T>`, `Vec3<T>`, or `Vec4<T>`.
 ///
 template<int dimension, typename T>
 using Vec = typename detail::Vec_<dimension, T>::type;
@@ -68,8 +75,9 @@ template<typename T, typename SFINAE = void>
 struct IsVec : std::false_type {};
 
 template<typename T>
-struct IsVec<T, core::Requires<
-        std::is_same_v<T, Vec<T::dimension, typename T::ScalarType>>>>
+struct IsVec<
+    T,
+    core::Requires<std::is_same_v<T, Vec<T::dimension, typename T::ScalarType>>>>
     : std::true_type {};
 
 /// Checks whether `T` is a `vgc::geometry::Vec` type.
