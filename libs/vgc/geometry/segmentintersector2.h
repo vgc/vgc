@@ -30,6 +30,9 @@
 #include <vgc/geometry/segment2.h>
 #include <vgc/geometry/vec2.h>
 
+#define VGC_DEBUG_TMP_INTER VGC_DEBUG_TMP
+#define VGC_DEBUG_TMP_INTER(...)
+
 namespace vgc::geometry {
 
 namespace detail::segmentintersector2 {
@@ -471,9 +474,9 @@ Vec2<T> getNextEvent(AlgorithmData<T>& alg) {
         alg.eventQueue.pop();
     }
 
-    VGC_DEBUG_TMP("----------------------------------");
-    VGC_DEBUG_TMP("Sweep segments before event: {}", alg.sweepSegments);
-    VGC_DEBUG_TMP("Handling position : {}", position);
+    VGC_DEBUG_TMP_INTER("----------------------------------");
+    VGC_DEBUG_TMP_INTER("Sweep segments before event: {}", alg.sweepSegments);
+    VGC_DEBUG_TMP_INTER("Handling position : {}", position);
 
     return position;
 }
@@ -529,10 +532,10 @@ PartitionedSweepEvents<T> partitionSweepEvents(AlgorithmData<T>& alg) {
         return event.type > EventType::Right; // find first event not Left or Right
     });
 
-    VGC_DEBUG_TMP("Sweep events: {}", alg.sweepEvents);
-    VGC_DEBUG_TMP("  Left events: {}", res.left());
-    VGC_DEBUG_TMP("  Right events: {}", res.right());
-    VGC_DEBUG_TMP("  Intersection events: {}", res.intersection());
+    VGC_DEBUG_TMP_INTER("Sweep events: {}", alg.sweepEvents);
+    VGC_DEBUG_TMP_INTER("  Left events: {}", res.left());
+    VGC_DEBUG_TMP_INTER("  Right events: {}", res.right());
+    VGC_DEBUG_TMP_INTER("  Intersection events: {}", res.intersection());
 
     return res;
 }
@@ -650,7 +653,7 @@ PartitionedSweepSegments partitionSweepSegments(
             // TODO: Make this long-term log. It's very unlikely but we might
             // be interested to know about it if it does happen, for example
             // to add it in a test suite.
-            VGC_DEBUG_TMP(
+            VGC_DEBUG_TMP_INTER(
                 "Segment from event {} was not partitioned as containing position {}.",
                 event,
                 position);
@@ -668,15 +671,15 @@ PartitionedSweepSegments partitionSweepSegments(
                 // TODO: Make this long-term warning in release, and throw in debug.
                 // That's a serious bug in the algorithm, but hard to prove that
                 // it cannot happen, due to numerical errors.
-                VGC_DEBUG_TMP(
+                VGC_DEBUG_TMP_INTER(
                     "Segment from event {} not found in sweep segments.", event);
             }
         }
     }
 
-    VGC_DEBUG_TMP("Sweep segments below position:      {}", res.below());
-    VGC_DEBUG_TMP("Sweep segments containing position: {}", res.contain());
-    VGC_DEBUG_TMP("Sweep segments above position:      {}", res.above());
+    VGC_DEBUG_TMP_INTER("Sweep segments below position:      {}", res.below());
+    VGC_DEBUG_TMP_INTER("Sweep segments containing position: {}", res.contain());
+    VGC_DEBUG_TMP_INTER("Sweep segments above position:      {}", res.above());
 
     return res;
 }
@@ -736,6 +739,65 @@ void computeOutgoingSegments(
         });
 }
 
+// Compute the intersection between the two given segments, and add it to the
+// event queue if this intersection is to the right of the sweep line, or
+// exactly on the sweep line and above the event position.
+//
+template<typename T>
+void findNewIntersection(
+    InputData<T>& in,
+    AlgorithmData<T>& alg,
+    const Vec2<T>& position,
+    SegmentIndex i1,
+    SegmentIndex i2) {
+
+    const Segment2<T>& s1 = in.segments[i1];
+    const Segment2<T>& s2 = in.segments[i2];
+    SegmentIntersection2<T> inter = s1.intersect(s2);
+    if (inter.type() == SegmentIntersectionType::Point) {
+        if (inter.p() > position) {
+            alg.eventQueue.push(Event<T>{EventType::Intersection, inter.p(), i1});
+            alg.eventQueue.push(Event<T>{EventType::Intersection, inter.p(), i2});
+        }
+    }
+    // TODO: SegmentIntersectionType::Segment
+}
+
+// Compute intersection between segments that have just become neighbors in
+// sweepSegments (as a result of sweepSegments being modified), and if they
+// intersect to the right of the sweep line, insert them in the event queue.
+//
+template<typename T>
+void findNewIntersections(
+    InputData<T>& in,
+    AlgorithmData<T>& alg,
+    const Vec2<T>& position,
+    core::Array<SegmentIndex>::iterator it) {
+
+    Int numSegmentsAdded = alg.outgoingSegments.length();
+    if (numSegmentsAdded == 0) {
+        // No segments were added to sweepSegments.
+        // Which means that some segments were removed (EventType::Right).
+        // If there are segments on both side of the event position,
+        // this means that they newly became neighbors.
+        if (it != alg.sweepSegments.begin() && it != alg.sweepSegments.end()) {
+            findNewIntersection(in, alg, position, *(it - 1), *it);
+        }
+    }
+    else {
+        // Segments were added to sweepSegments (including segments that
+        // were already in sweepSegments, but removed and re-added after sorting).
+        // `it` points to the first added segment.
+        if (it != alg.sweepSegments.begin()) {
+            findNewIntersection(in, alg, position, *(it - 1), *it);
+        }
+        it += numSegmentsAdded;
+        if (it != alg.sweepSegments.end()) {
+            findNewIntersection(in, alg, position, *(it - 1), *it);
+        }
+    }
+}
+
 template<typename T>
 void processNextEvent(InputData<T>& in, AlgorithmData<T>& alg, OutputData<T>& out) {
 
@@ -768,27 +830,27 @@ void processNextEvent(InputData<T>& in, AlgorithmData<T>& alg, OutputData<T>& ou
     // are all in pSegments.contain(), but the segments in pEvents.left()
     // are not, since they have not yet been added to the sweep segments.
     //
-    /*
-    if (pSegments.contain().length() + pEvents.left() >= 2) {
+    if (pSegments.contain().length() + pEvents.left().length() >= 2) {
         // TODO: set proper value for contributions
-        core::Array<PointIntersectionContribution> contributions;
-        pointIntersections_.append(PointIntersection{position, contributions});
+        core::Array<PointIntersectionInfo<T>> infos;
+        out.pointIntersections.append({position, infos});
     }
-    */
 
     // Compute which segments are outgoing at the given position
     computeOutgoingSegments(in, alg, position, pEvents, pSegments);
 
     // Remove ingoing segments and add outgoing segments.
-    // This invalidates iterators and spans stored in pSegments.
+    // This invalidates previous iterators and spans stored in pSegments.
+    // The new iterator `it` refers to either:
+    // - the first inserted segment if any, otherwise
+    // - the segment (or sentinel) just after the removed segments
     auto it = alg.sweepSegments.erase(pSegments.it2, pSegments.it3);
-    alg.sweepSegments.insert(it, alg.outgoingSegments);
+    it = alg.sweepSegments.insert(it, alg.outgoingSegments);
 
-    // TODO: compute intersections between newly added segments and their
-    // neighbors in sweepSegments, and add them as Intersection event if
-    // any.
+    // Add intersections between newly-neighbor segments to the event queue.
+    findNewIntersections(in, alg, position, it);
 
-    VGC_DEBUG_TMP("Sweep segments after event: {}", alg.sweepSegments);
+    VGC_DEBUG_TMP_INTER("Sweep segments after event: {}", alg.sweepSegments);
 }
 
 template<typename T>

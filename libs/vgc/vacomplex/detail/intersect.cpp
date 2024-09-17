@@ -19,6 +19,8 @@
 #include <vgc/geometry/segment2.h> // segmentIntersect
 #include <vgc/geometry/segmentintersector2.h>
 
+#include <vgc/core/profile.h>
+
 namespace vgc::vacomplex {
 
 namespace detail {
@@ -49,52 +51,70 @@ core::Array<IntersectionParameters> computeSelfIntersections(KeyEdge* edge) {
     // TODO: case of closed edge
     // TODO: support segments intersecting along a sub-segment.
 
-    geometry::SegmentIntersector2d intersector;
-    intersector.addPolyline(
-        samples, [](const auto& sample) { return sample.position(); });
-    intersector.computeIntersections();
-
     core::Array<IntersectionParameters> res;
+    res.reserve(10000);
+    {
+        VGC_PROFILE_SCOPE("Bentley-Ottmann")
 
-    Int n = samples.length();
-    for (Int i = 0; i < n - 1; ++i) {
-        Int jEnd = n - 1;
-        if (edge->isClosed() && i == 0) {
-            jEnd = n - 2;
+        geometry::SegmentIntersector2d intersector;
+        intersector.addPolyline(
+            samples, [](const auto& sample) { return sample.position(); });
+        intersector.computeIntersections();
+        for (const auto& inter : intersector.pointIntersections()) {
+            // TODO: convert to curve parameters
+            //ops::createKeyVertex(inter.position, edge->parentGroup());
+            geometry::CurveParameter p{};
+            res.append({p, p});
         }
-        for (Int j = i + 2; j < jEnd; ++j) {
+    }
+    VGC_DEBUG_TMP_EXPR(res.length());
 
-            const geometry::Vec2d& a1 = samples[i].position();
-            const geometry::Vec2d& b1 = samples[i + 1].position();
-            const geometry::Vec2d& a2 = samples[j].position();
-            const geometry::Vec2d& b2 = samples[j + 1].position();
+    res.clear();
+    {
+        VGC_PROFILE_SCOPE("Naive")
 
-            geometry::SegmentIntersection2d intersection =
-                segmentIntersect(a1, b1, a2, b2);
+        Int n = samples.length();
+        for (Int i = 0; i < n - 1; ++i) {
+            Int jEnd = n - 1;
+            if (edge->isClosed() && i == 0) {
+                jEnd = n - 2;
+            }
+            for (Int j = i + 2; j < jEnd; ++j) {
 
-            // XXX: What to do if it intersect along a segment?
-            //      Apply pertubations to the whole edge and try again?
-            if (intersection.type() == geometry::SegmentIntersectionType::Point) {
+                const geometry::Vec2d& a1 = samples[i].position();
+                const geometry::Vec2d& b1 = samples[i + 1].position();
+                const geometry::Vec2d& a2 = samples[j].position();
+                const geometry::Vec2d& b2 = samples[j + 1].position();
 
-                const geometry::CurveParameter& p1 = samples[i].parameter();
-                const geometry::CurveParameter& q1 = samples[i + 1].parameter();
-                const geometry::CurveParameter& p2 = samples[j].parameter();
-                const geometry::CurveParameter& q2 = samples[j + 1].parameter();
+                geometry::SegmentIntersection2d intersection =
+                    segmentIntersect(a1, b1, a2, b2);
 
-                geometry::SampledCurveParameter sParam1(p1, q1, intersection.t1());
-                geometry::SampledCurveParameter sParam2(p2, q2, intersection.t2());
-                geometry::CurveParameter param1 = stroke->resolveParameter(sParam1);
-                geometry::CurveParameter param2 = stroke->resolveParameter(sParam2);
+                // XXX: What to do if it intersect along a segment?
+                //      Apply pertubations to the whole edge and try again?
+                if (intersection.type() == geometry::SegmentIntersectionType::Point) {
 
-                if (!(isStartOrEnd(edge, param1) || isStartOrEnd(edge, param2))) {
-                    res.append(IntersectionParameters{param1, param2});
+                    const geometry::CurveParameter& p1 = samples[i].parameter();
+                    const geometry::CurveParameter& q1 = samples[i + 1].parameter();
+                    const geometry::CurveParameter& p2 = samples[j].parameter();
+                    const geometry::CurveParameter& q2 = samples[j + 1].parameter();
+
+                    geometry::SampledCurveParameter sParam1(p1, q1, intersection.t1());
+                    geometry::SampledCurveParameter sParam2(p2, q2, intersection.t2());
+                    geometry::CurveParameter param1 = stroke->resolveParameter(sParam1);
+                    geometry::CurveParameter param2 = stroke->resolveParameter(sParam2);
+
+                    if (!(isStartOrEnd(edge, param1) || isStartOrEnd(edge, param2))) {
+                        res.append(IntersectionParameters{param1, param2});
+                    }
+                    // TODO: handle special case when params are exactly equal to
+                    // startParam/endParam for open edges? What if some params are
+                    // exactly equal? Do we still want to cut twice?
                 }
-                // TODO: handle special case when params are exactly equal to
-                // startParam/endParam for open edges? What if some params are
-                // exactly equal? Do we still want to cut twice?
             }
         }
     }
+    VGC_DEBUG_TMP_EXPR(res.length());
+
     return res;
 }
 
@@ -383,6 +403,10 @@ IntersectResult Operations::intersectWithGroup(
             computeSelfIntersections(edge, cutInfos, glueInfos);
         }
     }
+
+    // TMP
+    return res;
+
     if (settings.intersectEdges()) {
         for (const auto& edge : edges) {
             computeEdgeIntersections(edge, group, cutInfos, glueInfos);
