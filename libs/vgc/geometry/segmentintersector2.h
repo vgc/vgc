@@ -253,6 +253,10 @@ struct AlgorithmData {
     //
     core::Array<SegmentIndex> sweepSegments;
 
+    // All segments that are intersecting at the current event.
+    //
+    core::Array<PointIntersectionInfo<T>> infos;
+
     // The new segments that must be added (or removed and re-added) to
     // sweepSegments_ when handling an event.
     //
@@ -697,6 +701,125 @@ PartitionedSweepSegments partitionSweepSegments(
     return res;
 }
 
+// Returns `1 - t` if the segment is reversed, otherwise returns `t`.
+template<typename T>
+T maybeReverseParam(InputData<T>& in, SegmentIndex i, core::TypeIdentity<T> t) {
+    return in.isReversed[i] ? (1 - t) : t;
+}
+
+// Computes the parameter in [0, 1] that corresponds to the given
+// position along the given segment
+template<typename T>
+T computeParam(InputData<T>& in, SegmentIndex i, const Vec2<T>& position) {
+    const Segment2<T>& segment = in.segments[i];
+    T dx = segment.bx() - segment.ax(); // >= 0
+    T dy = segment.by() - segment.ay();
+    if (std::abs(dy) > dx) {
+        return maybeReverseParam(in, i, (position.y() - segment.ay()) / dy);
+    }
+    else if (dx > 0) {
+        return maybeReverseParam(in, i, (position.x() - segment.ax()) / dx);
+    }
+    else {
+        return 0; // guaranteed not reversed
+    }
+}
+
+struct CompareSegmentIndexWithSecondInPair {
+    bool operator()(SegmentIndex i, const SegmentIndexPair& p) {
+        return i < p.second;
+    }
+    bool operator()(const SegmentIndexPair& p, SegmentIndex i) {
+        return p.second < i;
+    }
+};
+
+// Report intersections. This includes:
+// - Cases where two segments meet at their endpoint:
+//   - 2+ Left events, or
+//   - 2+ Right events, or
+//   - 1+ Left and 1+ Left events
+// - Cases where two segments intersect in their interior
+//   - 2+ Intersection events, and
+//   - 2+ segments in pSegments.contain()
+// - Cases where a segment ends in the interior of another segment (T-junction):
+//   - 1+ Left events or 1+ Right events, and
+//   - 2+ segments in pSegments.contain()
+//
+// Note that the segments in pEvents.right() and pEvents.intersection()
+// are all in pSegments.contain(), but the segments in pEvents.left()
+// are not, since they have not yet been added to the sweep segments.
+//
+template<typename T>
+void reportIntersections(
+    InputData<T>& in,
+    AlgorithmData<T>& alg,
+    OutputData<T>& out,
+    const Vec2<T>& position,
+    const PartitionedSweepEvents<T>& pEvents,
+    const PartitionedSweepSegments& pSegments) {
+
+    // Retrieve the list of segments that intersect at the event position. For
+    // now we initialize the param to 0 as there might no need to compute it
+    // due to fast returns when n <= 2.
+    //
+    Int interIndex = out.pointIntersections.length();
+    alg.infos.clear();
+    for (SegmentIndex i : pSegments.contain()) {
+        alg.infos.append(PointIntersectionInfo<T>{interIndex, i, 0});
+    }
+    for (const Event<T>& event : pEvents.left()) {
+        alg.infos.append(PointIntersectionInfo<T>{interIndex, event.segmentIndex, 0});
+    }
+
+    // There is no intersection if there is only one segment at the event
+    // position. This means we are at an isolated left endpoint or right
+    // endpoint of a segment.
+    //
+    if (alg.infos.length() <= 1) {
+        return;
+    }
+
+    // Discard the intersection if it only involve two segments, and they are
+    // consecutive segments of the same polyline, intersecting at their
+    // expected shared endpoint.
+    //
+    // Note that if there is another segment intersecting there as well,
+    // we do want to report the intersection.
+    //
+    if (alg.infos.length() == 2) {
+        // TODO: what if consecutive segments overlap along a subsegment?
+        SegmentIndex i1 = alg.infos.first().segmentIndex;
+        SegmentIndex i2 = alg.infos.last().segmentIndex;
+        if (i2 < i1) {
+            std::swap(i1, i2);
+        }
+        if (i2 == i1 + 1) {
+            auto it = std::upper_bound(
+                in.polylines.begin(),
+                in.polylines.end(),
+                i2,
+                CompareSegmentIndexWithSecondInPair{});
+            if (it != in.polylines.end()) {
+                // => there is a pair (j1, j2) with i2 < j2, and
+                //    `it` points to the first of such pair.
+                SegmentIndex j1 = it->first;
+                if (j1 <= i1) {
+                    // This means j1 <= i1 < i2 (= i1+1) < j2.
+                    // So this intersection is part of the polyline.
+                    return;
+                }
+            }
+        }
+    }
+
+    // Compute the parameters and report the intersection
+    for (PointIntersectionInfo<T>& info : alg.infos) {
+        info.param = computeParam(in, info.segmentIndex, position);
+    }
+    out.pointIntersections.append({position, alg.infos});
+}
+
 // Find which segments are outgoing at the position. These will
 // be used as replacement for the current containSegments.
 //
@@ -811,49 +934,6 @@ void findNewIntersections(
     }
 }
 
-// Returns `1 - t` if the segment is reversed, otherwise returns `t`.
-template<typename T>
-T maybeReverseParam(InputData<T>& in, SegmentIndex i, core::TypeIdentity<T> t) {
-    return in.isReversed[i] ? (1 - t) : t;
-}
-
-// Computes the parameter in [0, 1] that corresponds to the given
-// position along the given segment
-template<typename T>
-T computeParam(InputData<T>& in, SegmentIndex i, const Vec2<T>& position) {
-    const Segment2<T>& segment = in.segments[i];
-    T dx = segment.bx() - segment.ax(); // >= 0
-    T dy = segment.by() - segment.ay();
-    if (std::abs(dy) > dx) {
-        return maybeReverseParam(in, i, (position.y() - segment.ay()) / dy);
-    }
-    else if (dx > 0) {
-        return maybeReverseParam(in, i, (position.x() - segment.ax()) / dx);
-    }
-    else {
-        return 0; // guaranteed not reversed
-    }
-}
-
-template<typename T>
-PointIntersectionInfo<T> createPointIntersectionInfo(
-    InputData<T>& in,
-    PointIntersectionIndex interIndex,
-    SegmentIndex segmentIndex,
-    const Vec2<T>& position) {
-
-    return {interIndex, segmentIndex, computeParam(in, segmentIndex, position)};
-}
-
-template<typename T>
-PointIntersectionInfo<T> createLeftPointIntersectionInfo(
-    InputData<T>& in,
-    PointIntersectionIndex interIndex,
-    SegmentIndex segmentIndex) {
-
-    return {interIndex, segmentIndex, maybeReverseParam(in, segmentIndex, 0)};
-}
-
 template<typename T>
 void processNextEvent(InputData<T>& in, AlgorithmData<T>& alg, OutputData<T>& out) {
 
@@ -870,36 +950,8 @@ void processNextEvent(InputData<T>& in, AlgorithmData<T>& alg, OutputData<T>& ou
     PartitionedSweepSegments pSegments =
         partitionSweepSegments(in, alg, position, pEvents);
 
-    // Report intersections. This includes:
-    // - Cases where two segments meet at their endpoint:
-    //   - 2+ Left events, or
-    //   - 2+ Right events, or
-    //   - 1+ Left and 1+ Left events
-    // - Cases where two segments intersect in their interior
-    //   - 2+ Intersection events, and
-    //   - 2+ segments in pSegments.contain()
-    // - Cases where a segment ends in the interior of another segment (T-junction):
-    //   - 1+ Left events or 1+ Right events, and
-    //   - 2+ segments in pSegments.contain()
-    //
-    // Note that the segments in pEvents.right() and pEvents.intersection()
-    // are all in pSegments.contain(), but the segments in pEvents.left()
-    // are not, since they have not yet been added to the sweep segments.
-    //
-    Int numSegmentsAtPosition = pSegments.contain().length() + pEvents.left().length();
-    if (numSegmentsAtPosition >= 2) {
-        Int interIndex = out.pointIntersections.length();
-        core::Array<PointIntersectionInfo<T>> infos;
-        infos.reserve(numSegmentsAtPosition);
-        for (SegmentIndex i : pSegments.contain()) {
-            infos.append(createPointIntersectionInfo(in, interIndex, i, position));
-        }
-        for (const Event<T>& event : pEvents.left()) {
-            infos.append(
-                createLeftPointIntersectionInfo(in, interIndex, event.segmentIndex));
-        }
-        out.pointIntersections.append({position, infos});
-    }
+    // Report intersections
+    reportIntersections(in, alg, out, position, pEvents, pSegments);
 
     // Compute which segments are outgoing at the given position
     computeOutgoingSegments(in, alg, position, pEvents, pSegments);

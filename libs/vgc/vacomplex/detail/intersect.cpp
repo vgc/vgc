@@ -52,24 +52,47 @@ core::Array<IntersectionParameters> computeSelfIntersections(KeyEdge* edge) {
     // TODO: support segments intersecting along a sub-segment.
 
     core::Array<IntersectionParameters> res;
+    geometry::SegmentIntersector2d intersector;
     res.reserve(10000);
     {
         VGC_PROFILE_SCOPE("Bentley-Ottmann")
 
-        geometry::SegmentIntersector2d intersector;
         intersector.addPolyline(
             samples, [](const auto& sample) { return sample.position(); });
         intersector.computeIntersections();
         for (const auto& inter : intersector.pointIntersections()) {
-            // TODO: convert to curve parameters
-            //ops::createKeyVertex(inter.position, edge->parentGroup());
-            geometry::CurveParameter p{};
-            res.append({p, p});
+
+            if (inter.infos.length() == 2) { // XXX What if > 2?
+
+                Int i1 = inter.infos.first().segmentIndex;
+                Int i2 = inter.infos.last().segmentIndex;
+                const geometry::CurveParameter& p1 = samples[i1].parameter();
+                const geometry::CurveParameter& q1 = samples[i1 + 1].parameter();
+                const geometry::CurveParameter& p2 = samples[i2].parameter();
+                const geometry::CurveParameter& q2 = samples[i2 + 1].parameter();
+
+                double t1 = inter.infos.first().param;
+                double t2 = inter.infos.first().param;
+                geometry::SampledCurveParameter sParam1(p1, q1, t1);
+                geometry::SampledCurveParameter sParam2(p2, q2, t2);
+                geometry::CurveParameter param1 = stroke->resolveParameter(sParam1);
+                geometry::CurveParameter param2 = stroke->resolveParameter(sParam2);
+
+                if (!(isStartOrEnd(edge, param1) || isStartOrEnd(edge, param2))) {
+                    res.append(IntersectionParameters{param1, param2});
+                }
+                // TODO: handle special case when params are exactly equal to
+                // startParam/endParam for open edges? What if some params are
+                // exactly equal? Do we still want to cut twice?
+            }
         }
-        VGC_DEBUG_TMP_EXPR(intersector.pointIntersections());
     }
+    VGC_DEBUG_TMP_EXPR(intersector.pointIntersections());
     VGC_DEBUG_TMP_EXPR(res.length());
 
+    return res;
+
+    /*
     res.clear();
     {
         VGC_PROFILE_SCOPE("Naive")
@@ -117,6 +140,7 @@ core::Array<IntersectionParameters> computeSelfIntersections(KeyEdge* edge) {
     VGC_DEBUG_TMP_EXPR(res.length());
 
     return res;
+    */
 }
 
 core::Array<IntersectionParameters>
@@ -404,9 +428,6 @@ IntersectResult Operations::intersectWithGroup(
             computeSelfIntersections(edge, cutInfos, glueInfos);
         }
     }
-
-    // TMP
-    return res;
 
     if (settings.intersectEdges()) {
         for (const auto& edge : edges) {
