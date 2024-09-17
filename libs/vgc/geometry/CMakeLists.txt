@@ -31,10 +31,8 @@ vgc_add_library(geometry
         rectalign.h
         rectanchor.h
         segment.h
-        segmentintersector.h
-        segmentintersector2d.h
-        segmentintersector2f.h
         segment2.h
+        segmentintersector2.h
         stride.h
         stroke.h
         strokestyle.h
@@ -64,9 +62,7 @@ vgc_add_library(geometry
         rectanchor.cpp
         segment.cpp
         segment2.cpp
-        segmentintersector.cpp
-        segmentintersector2d.cpp
-        segmentintersector2f.cpp
+        segmentintersector2.cpp
         stroke.cpp
         strokestyle.cpp
         tesselator.cpp

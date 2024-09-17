@@ -17,7 +17,7 @@
 #include <vgc/vacomplex/detail/operations.h>
 
 #include <vgc/geometry/segment2.h> // segmentIntersect
-#include <vgc/geometry/segmentintersector2d.h>
+#include <vgc/geometry/segmentintersector2.h>
 
 namespace vgc::vacomplex {
 

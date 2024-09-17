@@ -14,8 +14,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef VGC_GEOMETRY_SEGMENTINTERSECTOR_H
-#define VGC_GEOMETRY_SEGMENTINTERSECTOR_H
+#ifndef VGC_GEOMETRY_SEGMENTINTERSECTOR2_H
+#define VGC_GEOMETRY_SEGMENTINTERSECTOR2_H
 
 #include <algorithm> // lower_bound, upper_bound, equal_range
 #include <queue>     // priority_queue
@@ -27,12 +27,12 @@
 #include <vgc/core/ranges.h>
 #include <vgc/core/span.h>
 #include <vgc/geometry/api.h>
-#include <vgc/geometry/segment.h>
-#include <vgc/geometry/vec.h>
+#include <vgc/geometry/segment2.h>
+#include <vgc/geometry/vec2.h>
 
 namespace vgc::geometry {
 
-namespace detail::segmentintersector {
+namespace detail::segmentintersector2 {
 
 using SegmentIndex = Int;
 using PointIntersectionIndex = Int;
@@ -53,23 +53,20 @@ struct AlgorithmData;
 template<typename T>
 struct OutputData;
 
-} // namespace detail::segmentintersector
+} // namespace detail::segmentintersector2
 
-/// \class SegmentIntersector
+/// \class SegmentIntersector2
 /// \brief Computes all intersections between a set of line segments.
 ///
-template<typename Scalar>
-class VGC_GEOMETRY_API SegmentIntersector {
+template<typename T>
+class VGC_GEOMETRY_API SegmentIntersector2 {
 public:
+    using ScalarType = T;
     static constexpr Int dimension = 2;
-    using ScalarType = Scalar;
 
-    using Segment2 = Segment<2, Scalar>;
-    using Vec2 = Vec<2, Scalar>;
-
-    using SegmentIndex = detail::segmentintersector::SegmentIndex;
-    using SegmentIndexPair = detail::segmentintersector::SegmentIndexPair;
-    using PointIntersectionIndex = detail::segmentintersector::PointIntersectionIndex;
+    using SegmentIndex = detail::segmentintersector2::SegmentIndex;
+    using SegmentIndexPair = detail::segmentintersector2::SegmentIndexPair;
+    using PointIntersectionIndex = detail::segmentintersector2::PointIntersectionIndex;
 
     /// When two or more segments intersect at a point, then for each involved
     /// segment we store its corresponding intersection parameter.
@@ -77,7 +74,7 @@ public:
     struct PointIntersectionInfo {
         Int pointIntersectionIndex;
         Int segmentIndex;
-        Scalar param;
+        T param;
     };
 
     /// Stores the position of an intersection point, together with the
@@ -89,20 +86,20 @@ public:
     // into another array.
     //
     struct PointIntersection {
-        Vec2 position;
+        Vec2<T> position;
         core::Array<PointIntersectionInfo> infos;
     };
 
-    /// Creates a `SegmentIntersector`.
+    /// Creates a `SegmentIntersector2`.
     ///
-    SegmentIntersector() {
+    SegmentIntersector2() {
     }
 
-    /// Re-initializes this `SegmentIntersector` to its initial state, but
+    /// Re-initializes this `SegmentIntersector2` to its initial state, but
     /// keeping reserved memory for future use.
     ///
-    /// It is typically faster to clear an existing `SegmentIntersector` and
-    /// re-use it, rather than instanciating a new `SegmentIntersector`, since
+    /// It is typically faster to clear an existing `SegmentIntersector2` and
+    /// re-use it, rather than instanciating a new `SegmentIntersector2`, since
     /// the former would minimize the number of dynamic memory allocations.
     ///
     void clear() {
@@ -113,7 +110,7 @@ public:
 
     /// Adds a segment.
     ///
-    void addSegment(const Vec2& a, const Vec2& b);
+    void addSegment(const Vec2<T>& a, const Vec2<T>& b);
 
     /// Adds a polyline.
     ///
@@ -138,12 +135,12 @@ public:
     };
 
 private:
-    detail::segmentintersector::InputData<Scalar> input_;
-    detail::segmentintersector::AlgorithmData<Scalar> algorithm_;
-    detail::segmentintersector::OutputData<Scalar> output_;
+    detail::segmentintersector2::InputData<T> input_;
+    detail::segmentintersector2::AlgorithmData<T> algorithm_;
+    detail::segmentintersector2::OutputData<T> output_;
 };
 
-namespace detail::segmentintersector {
+namespace detail::segmentintersector2 {
 
 // We implement here a variant of the Bentley-Ottmann algorithm.
 //
@@ -176,16 +173,10 @@ namespace detail::segmentintersector {
 // Convenient aliases to public types
 
 template<typename T>
-using PointIntersection = typename SegmentIntersector<T>::PointIntersection;
+using PointIntersection = typename SegmentIntersector2<T>::PointIntersection;
 
 template<typename T>
-using PointIntersectionInfo = typename SegmentIntersector<T>::PointIntersectionInfo;
-
-template<typename T>
-using Vec2 = Vec<2, T>;
-
-template<typename T>
-using Segment2 = Segment<2, T>;
+using PointIntersectionInfo = typename SegmentIntersector2<T>::PointIntersectionInfo;
 
 // Private data types
 
@@ -809,31 +800,37 @@ void computeIntersections(InputData<T>& in, AlgorithmData<T>& alg, OutputData<T>
     }
 }
 
-} // namespace detail::segmentintersector
+} // namespace detail::segmentintersector2
 
 template<typename T>
-void SegmentIntersector<T>::addSegment(const Vec2& a, const Vec2& b) {
-    detail::segmentintersector::addSegment(input_, a, b);
+void SegmentIntersector2<T>::addSegment(const Vec2<T>& a, const Vec2<T>& b) {
+    detail::segmentintersector2::addSegment(input_, a, b);
 }
 
 template<typename T>
 template<typename Range, typename UnaryOp, VGC_REQUIRES_DEF(core::isInputRange<Range>)>
-void SegmentIntersector<T>::addPolyline(const Range& range, UnaryOp op) {
-    detail::segmentintersector::addPolyline(input_, range, op);
+void SegmentIntersector2<T>::addPolyline(const Range& range, UnaryOp op) {
+    detail::segmentintersector2::addPolyline(input_, range, op);
 }
 
 template<typename T>
-void SegmentIntersector<T>::computeIntersections() {
-    detail::segmentintersector::computeIntersections(input_, algorithm_, output_);
+void SegmentIntersector2<T>::computeIntersections() {
+    detail::segmentintersector2::computeIntersections(input_, algorithm_, output_);
 }
+
+using SegmentIntersector2f = SegmentIntersector2<float>;
+extern template class SegmentIntersector2<float>;
+
+using SegmentIntersector2d = SegmentIntersector2<double>;
+extern template class SegmentIntersector2<double>;
 
 } // namespace vgc::geometry
 
 template<>
-struct fmt::formatter<vgc::geometry::detail::segmentintersector::EventType>
+struct fmt::formatter<vgc::geometry::detail::segmentintersector2::EventType>
     : fmt::formatter<std::string_view> {
 
-    using EventType = vgc::geometry::detail::segmentintersector::EventType;
+    using EventType = vgc::geometry::detail::segmentintersector2::EventType;
 
     template<typename FormatContext>
     auto format(const EventType& eventType, FormatContext& ctx) {
@@ -850,11 +847,11 @@ struct fmt::formatter<vgc::geometry::detail::segmentintersector::EventType>
 };
 
 template<typename Scalar>
-struct fmt::formatter<vgc::geometry::detail::segmentintersector::Event<Scalar>>
+struct fmt::formatter<vgc::geometry::detail::segmentintersector2::Event<Scalar>>
     : fmt::formatter<std::string_view> {
 
-    using EventType = vgc::geometry::detail::segmentintersector::EventType;
-    using Event = vgc::geometry::detail::segmentintersector::Event<Scalar>;
+    using EventType = vgc::geometry::detail::segmentintersector2::EventType;
+    using Event = vgc::geometry::detail::segmentintersector2::Event<Scalar>;
 
     template<typename FormatContext>
     auto format(const Event& e, FormatContext& ctx) {
@@ -867,4 +864,4 @@ struct fmt::formatter<vgc::geometry::detail::segmentintersector::Event<Scalar>>
     }
 };
 
-#endif // VGC_GEOMETRY_SEGMENTINTERSECTOR_H
+#endif // VGC_GEOMETRY_SEGMENTINTERSECTOR2_H
