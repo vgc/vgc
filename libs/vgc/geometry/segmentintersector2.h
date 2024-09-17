@@ -30,16 +30,56 @@
 #include <vgc/geometry/segment2.h>
 #include <vgc/geometry/vec2.h>
 
-#define VGC_DEBUG_TMP_INTER VGC_DEBUG_TMP
+//#define VGC_DEBUG_TMP_INTER VGC_DEBUG_TMP
 #define VGC_DEBUG_TMP_INTER(...)
 
 namespace vgc::geometry {
 
-namespace detail::segmentintersector2 {
+// Note: we use the namespace `segmentintersector2` for defining public classes
+// and aliases that are only relevant to SegmentIntersector2<T>. The reason for
+// defining them at namespace scope rather than nested in
+// SegmentIntersector2<T> is to make them accessible in code that doesn't have
+// to know (or cannot know) the template parameter `T`.
+//
+// For example, it would be impossible to specialize fmt::formatter for
+// PointIntersection if the latter was defined as a nested class of
+// SegmentIntersector2<T> rather than at namespace scope, because nested
+// classes of class templates are non-deductible in partial template
+// specializations.
+//
+// See: https://open-std.org/jtc1/sc22/wg21/docs/papers/2016/p0293r0.pdf
+//
+namespace segmentintersector2 {
 
 using SegmentIndex = Int;
 using PointIntersectionIndex = Int;
 using SegmentIndexPair = std::pair<SegmentIndex, SegmentIndex>;
+
+/// When two or more segments intersect at a point, then for each involved
+/// segment we store its corresponding intersection parameter.
+///
+template<typename T>
+struct PointIntersectionInfo {
+    Int pointIntersectionIndex;
+    Int segmentIndex;
+    T param;
+};
+
+/// Stores the position of an intersection point, together with the
+/// information of which segments are intersecting at that position.
+///
+// TODO: Minimize memory allocations via SmallArray<2, Info>?
+// Indeed, most intersections are expected to only involve 2 segments.
+// Alternatively, we could use a custom allocator or pairs of indices
+// into another array.
+//
+template<typename T>
+struct PointIntersection {
+    Vec2<T> position;
+    core::Array<PointIntersectionInfo<T>> infos;
+};
+
+namespace detail {
 
 enum class EventType : UInt8 {
     Left = 0,
@@ -56,7 +96,9 @@ struct AlgorithmData;
 template<typename T>
 struct OutputData;
 
-} // namespace detail::segmentintersector2
+} // namespace detail
+
+} // namespace segmentintersector2
 
 /// \class SegmentIntersector2
 /// \brief Computes all intersections between a set of line segments.
@@ -67,31 +109,12 @@ public:
     using ScalarType = T;
     static constexpr Int dimension = 2;
 
-    using SegmentIndex = detail::segmentintersector2::SegmentIndex;
-    using SegmentIndexPair = detail::segmentintersector2::SegmentIndexPair;
-    using PointIntersectionIndex = detail::segmentintersector2::PointIntersectionIndex;
+    using SegmentIndex = segmentintersector2::SegmentIndex;
+    using SegmentIndexPair = segmentintersector2::SegmentIndexPair;
+    using PointIntersectionIndex = segmentintersector2::PointIntersectionIndex;
 
-    /// When two or more segments intersect at a point, then for each involved
-    /// segment we store its corresponding intersection parameter.
-    ///
-    struct PointIntersectionInfo {
-        Int pointIntersectionIndex;
-        Int segmentIndex;
-        T param;
-    };
-
-    /// Stores the position of an intersection point, together with the
-    /// information of which segments are intersecting at that position.
-    ///
-    // TODO: Minimize memory allocations via SmallArray<2, Info>?
-    // Indeed, most intersections are expected to only involve 2 segments.
-    // Alternatively, we could use a custom allocator or pairs of indices
-    // into another array.
-    //
-    struct PointIntersection {
-        Vec2<T> position;
-        core::Array<PointIntersectionInfo> infos;
-    };
+    using PointIntersectionInfo = segmentintersector2::PointIntersectionInfo<T>;
+    using PointIntersection = segmentintersector2::PointIntersection<T>;
 
     /// Creates a `SegmentIntersector2`.
     ///
@@ -138,12 +161,12 @@ public:
     };
 
 private:
-    detail::segmentintersector2::InputData<T> input_;
-    detail::segmentintersector2::AlgorithmData<T> algorithm_;
-    detail::segmentintersector2::OutputData<T> output_;
+    segmentintersector2::detail::InputData<T> input_;
+    segmentintersector2::detail::AlgorithmData<T> algorithm_;
+    segmentintersector2::detail::OutputData<T> output_;
 };
 
-namespace detail::segmentintersector2 {
+namespace segmentintersector2::detail {
 
 // We implement here a variant of the Bentley-Ottmann algorithm.
 //
@@ -172,16 +195,6 @@ namespace detail::segmentintersector2 {
 // at any given time in the algorithm, sometimes called the "status structure")
 // are sorted in ascending y-coord, that is, from bottom to top, with respect
 // to the position where they intersect the sweep line.
-
-// Convenient aliases to public types
-
-template<typename T>
-using PointIntersection = typename SegmentIntersector2<T>::PointIntersection;
-
-template<typename T>
-using PointIntersectionInfo = typename SegmentIntersector2<T>::PointIntersectionInfo;
-
-// Private data types
 
 template<typename T>
 struct Event {
@@ -798,6 +811,49 @@ void findNewIntersections(
     }
 }
 
+// Returns `1 - t` if the segment is reversed, otherwise returns `t`.
+template<typename T>
+T maybeReverseParam(InputData<T>& in, SegmentIndex i, core::TypeIdentity<T> t) {
+    return in.isReversed[i] ? (1 - t) : t;
+}
+
+// Computes the parameter in [0, 1] that corresponds to the given
+// position along the given segment
+template<typename T>
+T computeParam(InputData<T>& in, SegmentIndex i, const Vec2<T>& position) {
+    const Segment2<T>& segment = in.segments[i];
+    T dx = segment.bx() - segment.ax(); // >= 0
+    T dy = segment.by() - segment.ay();
+    if (std::abs(dy) > dx) {
+        return maybeReverseParam(in, i, (position.y() - segment.ay()) / dy);
+    }
+    else if (dx > 0) {
+        return maybeReverseParam(in, i, (position.x() - segment.ax()) / dx);
+    }
+    else {
+        return 0; // guaranteed not reversed
+    }
+}
+
+template<typename T>
+PointIntersectionInfo<T> createPointIntersectionInfo(
+    InputData<T>& in,
+    PointIntersectionIndex interIndex,
+    SegmentIndex segmentIndex,
+    const Vec2<T>& position) {
+
+    return {interIndex, segmentIndex, computeParam(in, segmentIndex, position)};
+}
+
+template<typename T>
+PointIntersectionInfo<T> createLeftPointIntersectionInfo(
+    InputData<T>& in,
+    PointIntersectionIndex interIndex,
+    SegmentIndex segmentIndex) {
+
+    return {interIndex, segmentIndex, maybeReverseParam(in, segmentIndex, 0)};
+}
+
 template<typename T>
 void processNextEvent(InputData<T>& in, AlgorithmData<T>& alg, OutputData<T>& out) {
 
@@ -830,9 +886,18 @@ void processNextEvent(InputData<T>& in, AlgorithmData<T>& alg, OutputData<T>& ou
     // are all in pSegments.contain(), but the segments in pEvents.left()
     // are not, since they have not yet been added to the sweep segments.
     //
-    if (pSegments.contain().length() + pEvents.left().length() >= 2) {
-        // TODO: set proper value for contributions
+    Int numSegmentsAtPosition = pSegments.contain().length() + pEvents.left().length();
+    if (numSegmentsAtPosition >= 2) {
+        Int interIndex = out.pointIntersections.length();
         core::Array<PointIntersectionInfo<T>> infos;
+        infos.reserve(numSegmentsAtPosition);
+        for (SegmentIndex i : pSegments.contain()) {
+            infos.append(createPointIntersectionInfo(in, interIndex, i, position));
+        }
+        for (const Event<T>& event : pEvents.left()) {
+            infos.append(
+                createLeftPointIntersectionInfo(in, interIndex, event.segmentIndex));
+        }
         out.pointIntersections.append({position, infos});
     }
 
@@ -862,22 +927,35 @@ void computeIntersections(InputData<T>& in, AlgorithmData<T>& alg, OutputData<T>
     }
 }
 
-} // namespace detail::segmentintersector2
+// The following makes specialization of fmt::formatter possible for inner
+// types of template class. Indeed, the following wouldn't work:
+//
+//   template<typename T>
+//   struct fmt::formatter<typename Outer<T>::Inner> {...}
+//
+// See Clang -Wunusable-partial-specialization:
+// > class template partial specialization contains
+// > a template parameter that cannot be deduced
+//
+template<typename T, typename SFINAE = void>
+struct IsPointIntersectionInfo : std::false_type {};
+
+} // namespace segmentintersector2::detail
 
 template<typename T>
 void SegmentIntersector2<T>::addSegment(const Vec2<T>& a, const Vec2<T>& b) {
-    detail::segmentintersector2::addSegment(input_, a, b);
+    segmentintersector2::detail::addSegment(input_, a, b);
 }
 
 template<typename T>
 template<typename Range, typename UnaryOp, VGC_REQUIRES_DEF(core::isInputRange<Range>)>
 void SegmentIntersector2<T>::addPolyline(const Range& range, UnaryOp op) {
-    detail::segmentintersector2::addPolyline(input_, range, op);
+    segmentintersector2::detail::addPolyline(input_, range, op);
 }
 
 template<typename T>
 void SegmentIntersector2<T>::computeIntersections() {
-    detail::segmentintersector2::computeIntersections(input_, algorithm_, output_);
+    segmentintersector2::detail::computeIntersections(input_, algorithm_, output_);
 }
 
 using SegmentIntersector2f = SegmentIntersector2<float>;
@@ -888,11 +966,42 @@ extern template class SegmentIntersector2<double>;
 
 } // namespace vgc::geometry
 
-template<>
-struct fmt::formatter<vgc::geometry::detail::segmentintersector2::EventType>
+template<typename T>
+struct fmt::formatter<vgc::geometry::segmentintersector2::PointIntersectionInfo<T>>
     : fmt::formatter<std::string_view> {
 
-    using EventType = vgc::geometry::detail::segmentintersector2::EventType;
+    using PointIntersectionInfo =
+        vgc::geometry::segmentintersector2::PointIntersectionInfo<T>;
+
+    template<typename FormatContext>
+    auto format(const PointIntersectionInfo& info, FormatContext& ctx) {
+        return format_to(
+            ctx.out(),
+            "{{pointIntersectionIndex={}, segmentIndex={}, param={}}}",
+            info.pointIntersectionIndex,
+            info.segmentIndex,
+            info.param);
+    }
+};
+
+template<typename T>
+struct fmt::formatter<vgc::geometry::segmentintersector2::PointIntersection<T>>
+    : fmt::formatter<std::string_view> {
+
+    using PointIntersection = vgc::geometry::segmentintersector2::PointIntersection<T>;
+
+    template<typename FormatContext>
+    auto format(const PointIntersection& inter, FormatContext& ctx) {
+        return format_to(
+            ctx.out(), "{{position={}, infos={}}}", inter.position, inter.infos);
+    }
+};
+
+template<>
+struct fmt::formatter<vgc::geometry::segmentintersector2::detail::EventType>
+    : fmt::formatter<std::string_view> {
+
+    using EventType = vgc::geometry::segmentintersector2::detail::EventType;
 
     template<typename FormatContext>
     auto format(const EventType& eventType, FormatContext& ctx) {
@@ -908,21 +1017,20 @@ struct fmt::formatter<vgc::geometry::detail::segmentintersector2::EventType>
     }
 };
 
-template<typename Scalar>
-struct fmt::formatter<vgc::geometry::detail::segmentintersector2::Event<Scalar>>
+template<typename T>
+struct fmt::formatter<vgc::geometry::segmentintersector2::detail::Event<T>>
     : fmt::formatter<std::string_view> {
 
-    using EventType = vgc::geometry::detail::segmentintersector2::EventType;
-    using Event = vgc::geometry::detail::segmentintersector2::Event<Scalar>;
+    using Event = vgc::geometry::segmentintersector2::detail::Event<T>;
 
     template<typename FormatContext>
-    auto format(const Event& e, FormatContext& ctx) {
+    auto format(const Event& event, FormatContext& ctx) {
         return format_to(
             ctx.out(),
-            "{{type={}, position={}, segmentIndex={}",
-            e.type,
-            e.position,
-            e.segmentIndex);
+            "{{type={}, position={}, segmentIndex={}}}",
+            event.type,
+            event.position,
+            event.segmentIndex);
     }
 };
 

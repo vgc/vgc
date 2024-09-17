@@ -66,6 +66,7 @@ core::Array<IntersectionParameters> computeSelfIntersections(KeyEdge* edge) {
             geometry::CurveParameter p{};
             res.append({p, p});
         }
+        VGC_DEBUG_TMP_EXPR(intersector.pointIntersections());
     }
     VGC_DEBUG_TMP_EXPR(res.length());
 
