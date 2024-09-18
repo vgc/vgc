@@ -293,14 +293,15 @@ public:
         : data_{Vec2<T>(ax, ay), Vec2<T>(bx, by)} {
     }
 
-    /// Accesses the `i`-th point of this `Segment2`, where `i` must be either
-    /// `0` or `1`, corresponsing respectively to `a()` and `b()`.
+    /// Accesses the `i`-th point of this segment, where `i` must be either
+    /// `0` or `1`, corresponding respectively to `a()` and `b()`.
     ///
     constexpr const Vec2<T>& operator[](Int i) const {
         return data_[i];
     }
 
-    /// Mutates the `i`-th point of this `Triangle2d`.
+    /// Mutates the `i`-th point of this segment, where `i` must be either
+    /// `0` or `1`, corresponding respectively to `a()` and `b()`.
     ///
     constexpr Vec2<T>& operator[](Int i) {
         return data_[i];
@@ -389,7 +390,7 @@ public:
     ///
     /// \sa `geometry::segmentIntersect()`.
     ///
-    SegmentIntersection2<T> intersect(const Segment2& other) {
+    SegmentIntersection2<T> intersect(const Segment2& other) const {
         return segmentIntersect(a(), b(), other.a(), other.b());
     }
 
