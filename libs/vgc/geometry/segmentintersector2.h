@@ -27,6 +27,7 @@
 #include <vgc/core/ranges.h>
 #include <vgc/core/span.h>
 #include <vgc/geometry/api.h>
+#include <vgc/geometry/logcategories.h>
 #include <vgc/geometry/segment2.h>
 #include <vgc/geometry/vec2.h>
 
@@ -653,12 +654,8 @@ PartitionedSweepSegments partitionSweepSegments(
     // https://en.cppreference.com/w/cpp/algorithm/equal_range
     // https://en.cppreference.com/w/cpp/algorithm#Requirements
     //
-    // TODO: check in debug build whether the segments are partitioned via
-    // std::is_partitioned()? Note that this would make the algorithm
-    // not O((n+k)log(n)) anymore in the worst case.
-    //
     // Note: the code below makes the algorithm O(n²) if all segments intersect
-    // at the same point. This should be rare, but we could make it n log(n)
+    // at the same point. This should be rare, but we could make it (n+k)log(n)
     // again by first sorting pEvents.intersection() and res.contain() by
     // segment index and using std::set_difference. But this is going to make
     // the algorithm slower in the typical case when there are just 2
@@ -667,13 +664,17 @@ PartitionedSweepSegments partitionSweepSegments(
     //
     for (const Event<T>& event : pEvents.intersection()) {
         if (!res.contain().contains(event.segmentIndex)) {
-            // TODO: Make this long-term log. It's very unlikely but we might
-            // be interested to know about it if it does happen, for example
-            // to add it in a test suite.
-            VGC_DEBUG_TMP_INTER(
-                "Segment from event {} was not partitioned as containing position {}.",
+            // This frequently happens due to numerical errors. We only print
+            // them in debug builds as they can be useful to know, but are too
+            // noisy otherwise.
+#ifdef VGC_DEBUG_BUILD
+            VGC_DEBUG(
+                LogVgcGeometry,
+                "Segment {} from event {} was not partitioned as containing position {}.",
+                in.segments[event.segmentIndex],
                 event,
                 position);
+#endif
             // TODO: extend search from neighbor instead of using linear-time find
             auto it = alg.sweepSegments.find(event.segmentIndex);
             if (it != alg.sweepSegments.end()) {
@@ -685,11 +686,13 @@ PartitionedSweepSegments partitionSweepSegments(
                 }
             }
             else {
-                // TODO: Make this long-term warning in release, and throw in debug.
-                // That's a serious bug in the algorithm, but hard to prove that
-                // it cannot happen, due to numerical errors.
-                VGC_DEBUG_TMP_INTER(
-                    "Segment from event {} not found in sweep segments.", event);
+                // In theory this shouldn't happen. In practice, can it happen
+                // due to numerical errors? More analysis needed. For now we
+                // consider this a recoverable error.
+                VGC_ERROR(
+                    LogVgcGeometry,
+                    "Segment from event {} not found in sweep segments.",
+                    event);
             }
         }
     }
