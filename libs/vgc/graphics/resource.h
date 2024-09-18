@@ -146,7 +146,7 @@ protected:
 
     // Resources should only be destroyed by their registry.
     virtual ~Resource() {
-#ifdef VGC_DEBUG
+#ifdef VGC_DEBUG_BUILD
         if (!released_) {
             VGC_ERROR(
                 LogVgcGraphics, "A resource has not been released before destruction");
@@ -164,7 +164,7 @@ protected:
     // You must override it to release the actual underlying data and objects.
     //
     virtual void release_(Engine*) {
-#ifdef VGC_DEBUG
+#ifdef VGC_DEBUG_BUILD
         released_ = true;
 #endif
     }
@@ -181,7 +181,7 @@ private:
     }
 
     void incRef_() {
-#ifdef VGC_DEBUG
+#ifdef VGC_DEBUG_BUILD
         if (refCount_ <= 0) {
             throw core::LogicError("Resource: trying to take shared ownership of an "
                                    "already garbaged resource.");
@@ -199,11 +199,11 @@ private:
 
     ResourceRegistry* registry_;
     std::atomic<Int64> refCount_ = uninitializedCountValue_;
-#ifdef VGC_DEBUG
+#ifdef VGC_DEBUG_BUILD
     bool released_ = false;
 #endif
 
-    // If this assert does not pass, we can use a boolean..
+    // If this assert does not pass, we could use a boolean.
     static_assert(std::atomic<Int64>::is_always_lock_free);
 };
 
@@ -500,7 +500,7 @@ public:
         T* p = Base::get();
         if (p) {
             p->decRef_();
-#ifdef VGC_DEBUG
+#ifdef VGC_DEBUG_BUILD
             Base::set_(nullptr);
 #endif
         }
