@@ -72,7 +72,7 @@ core::Array<IntersectionParameters> computeSelfIntersections(KeyEdge* edge) {
                 const geometry::CurveParameter& q2 = samples[i2 + 1].parameter();
 
                 double t1 = inter.infos.first().param;
-                double t2 = inter.infos.first().param;
+                double t2 = inter.infos.last().param;
                 geometry::SampledCurveParameter sParam1(p1, q1, t1);
                 geometry::SampledCurveParameter sParam2(p2, q2, t2);
                 geometry::CurveParameter param1 = stroke->resolveParameter(sParam1);
