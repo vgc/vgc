@@ -46,6 +46,24 @@ TEST(TestArithmetic, Sign) {
     VGC_WARNING_POP
 }
 
+TEST(TestArithmetic, Modulo) {
+    EXPECT_EQ(core::modulo(36, 10), 6);
+    EXPECT_EQ(core::modulo(-36, 10), 4);
+    EXPECT_EQ(core::modulo(0, 10), 0);
+    EXPECT_EQ(core::modulo(36, -10), -4);
+    EXPECT_EQ(core::modulo(-36, -10), -6);
+    EXPECT_EQ(core::modulo(0, -10), 0);
+    EXPECT_THROW(core::modulo(36, 0), core::DivideByZeroError);
+    EXPECT_THROW(core::modulo(-36, 0), core::DivideByZeroError);
+    EXPECT_THROW(core::modulo(0, 0), core::DivideByZeroError);
+    EXPECT_EQ(36 % 10, 6);
+    EXPECT_EQ(-36 % 10, -6);
+    EXPECT_EQ(0 % 10, 0);
+    EXPECT_EQ(36 % -10, 6);
+    EXPECT_EQ(-36 % -10, -6);
+    EXPECT_EQ(0 % -10, 0);
+}
+
 TEST(TestArithmetic, NarrowCastDoubleToFloat) {
     EXPECT_EQ(core::narrow_cast<float>(-2.0), -2.0f);
     EXPECT_EQ(core::narrow_cast<float>(-1.75), -1.75f);

@@ -479,7 +479,7 @@ public:
         // Left samples
         for (Int k = 0; k < numSegments; ++k) {
             const SegmentData& segmentData = segmentData_.getUnchecked(k);
-            Int prevIndex = (k + numSegments - 1) % numSegments;
+            Int prevIndex = core::modulo(k - 1, numSegments);
             const SegmentData& prevSegmentData = segmentData_.getUnchecked(prevIndex);
             addLeftJoin_(prevSegmentData, segmentData);
             core::Span<Vec2d> samples = getLeftSamples(segmentData);
@@ -492,7 +492,7 @@ public:
         // Right samples
         for (Int k = numSegments - 1; k >= 0; --k) {
             const SegmentData& segmentData = segmentData_.getUnchecked(k);
-            Int nextIndex = (k + 1) % numSegments;
+            Int nextIndex = core::modulo(k + 1, numSegments);
             const SegmentData& nextSegmentData = segmentData_.getUnchecked(nextIndex);
             addRightJoin_(nextSegmentData, segmentData);
             core::Span<Vec2d> samples = getRightSamples(segmentData);

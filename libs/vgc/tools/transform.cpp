@@ -184,7 +184,7 @@ QCursor scalingCursor(double angle) {
     static std::array<QCursor, cursorCount> cursors =
         createRotatedCursors(drawScalingCursor);
     Int idx = static_cast<Int>(std::round(angle * cursorCount / (2 * core::pi)));
-    idx = (idx % cursorCount + cursorCount) % cursorCount;
+    idx = core::modulo(idx, cursorCount);
     return cursors[idx];
 }
 
@@ -192,7 +192,7 @@ QCursor rotationCursor(double angle) {
     static std::array<QCursor, cursorCount> cursors =
         createRotatedCursors(drawRotationCursor);
     Int idx = static_cast<Int>(std::round(angle * cursorCount / (2 * core::pi)));
-    idx = (idx % cursorCount + cursorCount) % cursorCount;
+    idx = core::modulo(idx, cursorCount);
     return cursors[idx];
 }
 

@@ -274,7 +274,7 @@ void ComboBox::onSelectPreviousItem_() {
             setIndex(n - 1);
         }
         else {
-            setIndex((i - 1 + n) % n);
+            setIndex(core::modulo(i - 1, n));
         }
     }
 }
@@ -287,7 +287,7 @@ void ComboBox::onSelectNextItem_() {
             setIndex(0);
         }
         else {
-            setIndex((i + 1) % n);
+            setIndex(core::modulo(i + 1, n));
         }
     }
 }

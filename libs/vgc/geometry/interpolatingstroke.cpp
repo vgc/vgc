@@ -17,7 +17,6 @@
 #include <vgc/geometry/interpolatingstroke.h>
 
 #include <algorithm> // std::copy
-#include <numeric>   // std::accumulate
 
 #include <vgc/core/algorithms.h>
 #include <vgc/core/format.h>
@@ -1565,7 +1564,7 @@ private:
     SculptPoint getInfluencePointClosed_(Int i) {
         // Note: in the closed case, we have sculptPoints.first() == sculptPoints.last()
         const Int n = sculptPoints_.length() - 1;
-        Int j = (n + (i % n)) % n;
+        Int j = core::moduloUnchecked(i, n);
         return sculptPoints_.getUnchecked(j);
     }
 
@@ -1755,7 +1754,7 @@ public:
             outKnotWidths.reserve(n);
         }
 
-        newStartKnotIndex_ = newStartKnotIndex_ % newKnotPositions_.length();
+        newStartKnotIndex_ = core::modulo(newStartKnotIndex_, newKnotPositions_.length());
         if (newStartKnotIndex_ == 0) { // Simple case: no knot rotation needed
 
             // Copy the unmodified knots before
@@ -2135,7 +2134,7 @@ private:
             Int n = numKnots_ - numSculptedKnots_;
             for (Int i = 0; i < n; ++i) {
                 Int j = sculptedKnotsEnd_ + i;
-                j = (numKnots_ + (j % numKnots_)) % numKnots_;
+                j = core::modulo(j, numKnots_);
                 newKnotPositions_.emplaceLast(positions[j]);
                 if (hasWidths_) {
                     newKnotWidths_.emplaceLast(widths[j]);

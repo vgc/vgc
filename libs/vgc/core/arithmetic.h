@@ -774,6 +774,82 @@ constexpr Int8 sign(const T& x) {
     }
 }
 
+/// Same as `modulo()`, but without raising an exception when `n` is zero,
+/// and instead having undefined behavior.
+///
+/// \sa `modulo()`.
+///
+template<typename IntType, VGC_REQUIRES(std::is_integral_v<IntType>)>
+constexpr IntType moduloUnchecked(IntType i, TypeIdentity<IntType> n) {
+    if constexpr (std::is_unsigned_v<IntType>) {
+        return i % n;
+    }
+    else {
+        return (n + (i % n)) % n;
+    }
+}
+
+/// If `n > 0`, this returns the only integer in [0, n - 1] that has
+/// the same remainder as `i` when divided by `n`.
+///
+/// If `n < 0`, this returns the only integer in [n + 1, 0] that has
+/// the same remainder as `i` when divided by `n`.
+///
+/// If `n == 0`, raises `DivideByZeroError`.
+///
+/// This is the same as Python's built-in `i % n` operator, but not the same as
+/// C++'s built-in `i % n` operator.
+///
+/// For unsigned integer types, this is computed in C++ as:
+///
+/// ```cpp
+/// i % n;
+/// ```
+///
+/// For signed integer types, this is computed in C++ as:
+///
+/// ```cpp
+/// (n + (i % n)) % n;
+/// ```
+///
+/// Mathematically, this is equivalent to computing r such that i = n*q + r
+/// with q = floor(i/n).
+///
+/// While the C++ built-in `i % n` is equivalent to computing r such that i =
+/// n*q + r with q = trunc(i/n).
+///
+/// When both `i` and `n` are positive, the two are equivalent. However, using
+/// negative parameters may give you different results:
+///
+/// ```verbatim
+///    i  |  n  | i % n | modulo(i, n) |     decomposition
+///  -----+-----+-------+--------------+------------------------
+///    36 |  10 |   6   |     6        |  36 = ( 10 *  3) + 6
+///   -36 |  10 |  -6   |     4        | -36 = ( 10 * -4) + 4
+///    0  |  10 |   0   |     0        |   0 = ( 10 *  0) + 0
+///    36 | -10 |   6   |    -4        |  36 = (-10 * -4) + (-4)
+///   -36 | -10 |  -6   |    -6        | -36 = (-10 *  3) + (-6)
+///    0  | -10 |   0   |     0        |   0 = (-10 *  0) + 0
+///    36 |   0 |  UB   |   throws     |
+///   -36 |   0 |  UB   |   throws     |
+///    0  |   0 |  UB   |   throws     |
+/// ```
+///
+/// One easy way to remember is:
+/// - `modulo(i, n)` and Python built-in `i % n` takes the sign of the divisor `n`.
+/// - C++ built-in `i % n` takes the sign of the dividend `i`.
+///
+/// \sa `moduloUnchecked()`.
+///
+template<typename IntType, VGC_REQUIRES(std::is_integral_v<IntType>)>
+constexpr IntType modulo(IntType i, TypeIdentity<IntType> n) {
+    if (n == 0) {
+        throw DivideByZeroError(
+            core::format("Cannot call modulo(i={}, n={}): expects non-zero n.", i, n));
+    }
+    return moduloUnchecked(i, n);
+}
+
 namespace detail {
 
 // Computes the difference `a - b`, but where two infinities of the same sign
@@ -1484,8 +1560,7 @@ FloatType round(FloatType x, Precision precision) {
 /// formula: `(1 - t) * a + t * b`.
 ///
 template<typename FloatType, VGC_REQUIRES(std::is_floating_point_v<FloatType>)>
-FloatType
-fastLerp(core::TypeIdentity<FloatType> a, core::TypeIdentity<FloatType> b, FloatType t) {
+FloatType fastLerp(TypeIdentity<FloatType> a, TypeIdentity<FloatType> b, FloatType t) {
     return (1 - t) * a + t * b;
 }
 
