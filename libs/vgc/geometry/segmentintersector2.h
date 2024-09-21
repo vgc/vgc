@@ -31,8 +31,8 @@
 #include <vgc/geometry/segment2.h>
 #include <vgc/geometry/vec2.h>
 
-//#define VGC_DEBUG_TMP_INTER VGC_DEBUG_TMP
-#define VGC_DEBUG_TMP_INTER(...)
+#define VGC_DEBUG_TMP_INTER VGC_DEBUG_TMP
+//#define VGC_DEBUG_TMP_INTER(...)
 
 namespace vgc::geometry {
 
@@ -639,7 +639,8 @@ PartitionedSweepSegments partitionSweepSegments(
     std::tie(res.it2, res.it3) = std::equal_range(res.it1, res.it4, position, comp);
 
     // In theory, the segments in pEvents.intersection() are supposed to all be
-    // in res.contain(), but in practice may not be due to numerical errors.
+    // in res.contain(), but in practice, they are almost never due to
+    // numerical errors.
     //
     // We fix this here by extending the range of segments to make sure that it
     // includes all intersection events. At a side effect, this may add other
@@ -664,17 +665,10 @@ PartitionedSweepSegments partitionSweepSegments(
     //
     for (const Event<T>& event : pEvents.intersection()) {
         if (!res.contain().contains(event.segmentIndex)) {
-            // This frequently happens due to numerical errors. We only print
-            // them in debug builds as they can be useful to know, but are too
-            // noisy otherwise.
-#ifdef VGC_DEBUG_BUILD
-            VGC_DEBUG(
-                LogVgcGeometry,
-                "Segment {} from event {} was not partitioned as containing position {}.",
-                in.segments[event.segmentIndex],
-                event,
-                position);
-#endif
+            VGC_DEBUG_TMP_EXPR(alg.sweepSegments);
+            VGC_DEBUG_TMP_EXPR(alg.sweepEvents);
+            VGC_DEBUG_TMP_EXPR(res);
+
             // TODO: extend search from neighbor instead of using linear-time find
             auto it = alg.sweepSegments.find(event.segmentIndex);
             if (it != alg.sweepSegments.end()) {
@@ -684,6 +678,7 @@ PartitionedSweepSegments partitionSweepSegments(
                 else if (it < res.it2) {
                     res.it2 = it;
                 }
+                VGC_DEBUG_TMP_EXPR(res);
             }
             else {
                 // In theory this shouldn't happen. In practice, can it happen
@@ -975,6 +970,9 @@ void processNextEvent(InputData<T>& in, AlgorithmData<T>& alg, OutputData<T>& ou
 
 template<typename T>
 void computeIntersections(InputData<T>& in, AlgorithmData<T>& alg, OutputData<T>& out) {
+    VGC_DEBUG_TMP_INTER("Segments: {}", in.segments);
+    VGC_DEBUG_TMP_INTER("isReversed: {}", in.isReversed);
+    VGC_DEBUG_TMP_INTER("segmentSlopes: {}", in.segmentSlopes);
     initializeEventQueue(in, alg);
     initializeSweepSegments(alg);
     while (!alg.eventQueue.empty()) {
@@ -1086,6 +1084,28 @@ struct fmt::formatter<vgc::geometry::segmentintersector2::detail::Event<T>>
             event.type,
             event.position,
             event.segmentIndex);
+    }
+};
+
+template<>
+struct fmt::formatter<
+    vgc::geometry::segmentintersector2::detail::PartitionedSweepSegments>
+    : fmt::formatter<std::string_view> {
+
+    using PartitionedSweepSegments =
+        vgc::geometry::segmentintersector2::detail::PartitionedSweepSegments;
+
+    template<typename FormatContext>
+    auto format(const PartitionedSweepSegments& pSegments, FormatContext& ctx) {
+        return format_to(
+            ctx.out(),
+            "({{iterators=[0, {}, {}, {}], below={}, contain={}, above={}}}",
+            pSegments.it2 - pSegments.it1,
+            pSegments.it3 - pSegments.it1,
+            pSegments.it4 - pSegments.it1,
+            pSegments.below(),
+            pSegments.contain(),
+            pSegments.above());
     }
 };
 
