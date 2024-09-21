@@ -604,6 +604,17 @@ public:
     ///
     /// \sa `eval()`.
     ///
+    // XXX Shouldn't this return 0 instead of 1 if isClosed_ and numKnots_ == 1?
+    //     In other words, a closed curve cannot have just one segment:
+    //      0 knots => 0 segments
+    //      1 knot  => 0 segments
+    //      2 knots => 2 segments
+    //      3 knots => 3 segments
+    //
+    // But I suppose the case of 1 knot for closed curve could be considered
+    // a degenerate segment rather than no segments at all, like if we have
+    // an open curve with 2 knots that are equal.
+    //
     Int numSegments() const {
         Int n = numKnots_();
         return (isClosed_ || n == 0) ? n : n - 1;
@@ -611,7 +622,7 @@ public:
 
     /// Returns the curve parameter corresponding to the start of the stroke.
     ///
-    /// This is equivalent to `CurveParameter(0, 0)`.
+    /// This is equal to `CurveParameter(0, 0)`.
     ///
     /// \sa `endParameter()`.
     ///
@@ -621,19 +632,26 @@ public:
 
     /// Returns the curve parameter corresponding to the end of the stroke.
     ///
-    /// This is equal to `CurveParameter(numSegments() - 1, 1)` if
-    /// `numSegments()` is non-null, otherwise it is equal to
+    /// For closed curves, this is equal to `CurveParameter(0, 0)`.
+    ///
+    /// For open curves, this is equal to `CurveParameter(numSegments() - 1,
+    /// 1)` if `numSegments()` is non-null, otherwise it is equal to
     /// `CurveParameter(0, 0)`.
     ///
     /// \sa `startParameter()`.
     ///
     CurveParameter endParameter() const {
-        Int n = numSegments();
-        if (n > 0) {
-            return CurveParameter(n - 1, 1);
+        if (isClosed_) {
+            return CurveParameter(0, 0);
         }
         else {
-            return CurveParameter(0, 0);
+            Int numSegments = numKnots_() - 1;
+            if (numSegments > 0) {
+                return CurveParameter(numSegments - 1, 1);
+            }
+            else {
+                return CurveParameter(0, 0);
+            }
         }
     }
 
@@ -821,6 +839,21 @@ public:
     // - the canvas space for best rendering.
 
     StrokeSampling2d computeSampling(const CurveSamplingParameters& params) const;
+
+    /// Returns a parameter equivalent to the given `param = (i, u)`, but using
+    /// its "normalized" representation, such that two parameters `p1 = (i1,
+    /// u1)` and `p2 = (i2, u2)` represent the same point on the curve if and
+    /// only if `i1 == i2` and `u1 == u2`.
+    ///
+    /// More precisely, this means:
+    /// - clamping `i` to the [`0`, `numSegments() - 1`] range
+    /// - clamping `u` to the [`0`, `1`] range
+    /// - if the curve is open, converting `(i, 1)` to `(i+1, 0)`,
+    ///   except if `i == numSegments() - 1`
+    /// - if the curve is closed, converting `(i, 1)` to
+    ///   `(modulo(i + 1, numSegments()), 0)`
+    ///
+    CurveParameter normalizeParameter(const CurveParameter& param) const;
 
     /// Computes the `CurveParameter` that best corresponds to the given `SampledCurveParameter`.
     ///

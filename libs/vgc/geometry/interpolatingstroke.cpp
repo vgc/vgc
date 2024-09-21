@@ -263,132 +263,259 @@ void AbstractInterpolatingStroke2d::open_(bool keepJoinAsBestAsPossible) {
     }
 }
 
+namespace {
+
+enum class Order : Int8 {
+    Less = -1,  // First operand less than the second
+    Equal = 0,  // Both operands are equal
+    Greater = 1 // First operand greater than the second
+};
+
+Order compareCurveParameters(const CurveParameter& p1, const CurveParameter& p2) {
+    Int8 sign = static_cast<Int8>(p2 < p1) - static_cast<Int8>(p1 < p2);
+    return static_cast<Order>(sign);
+}
+
+} // namespace
+
+// Precondition: p1 and p2 are normalized (see AbstractStroke2d::normalizeParameter()).
+// This is automatically done by AbstractStroke2d::subStroke() calling this function.
 std::unique_ptr<AbstractStroke2d> AbstractInterpolatingStroke2d::subStroke_(
     const CurveParameter& p1,
     const CurveParameter& p2,
     Int numWraps) const {
 
+    Int numKnots = positions_.length();
+
+    if (numKnots <= 1) {
+        return clone();
+    }
+
+    // Create a new stroke, initialized to an empty open stroke.
     std::unique_ptr<AbstractStroke2d> result = cloneEmpty();
     AbstractInterpolatingStroke2d* newStroke =
         static_cast<AbstractInterpolatingStroke2d*>(result.get());
     newStroke->open(false);
 
-    StrokeSample2d s1 = eval(p1);
+    // Compare the parameter. This (and the rest of the code) assumes that the
+    // params were normalized, that is (i, 1) was converted to (i+1, 0), etc.
+    Order order = compareCurveParameters(p1, p2);
 
-    bool isStrictlyPositiveRange = p1 < p2;
-    bool isPositiveRange = !(p2 < p1);
-
-    Int numCrossOrigin = 0;
+    // Sanitize numWraps, and compute whether the substroke is reduced to a point.
+    // Open stroke:   this is when p1 == p2 or p1 > p2.
+    // Closed stroke: this is when p1 == p2 and numWraps == 0.
+    //
+    bool isReducedToPoint = false;
     if (isClosed()) {
-        if (isStrictlyPositiveRange) {
-            numCrossOrigin = numWraps;
-        }
-        else {
-            numCrossOrigin = numWraps + 1;
-        }
+        numWraps = std::max<Int>(numWraps, 0);
+        isReducedToPoint = (order == Order::Equal) && (numWraps == 0);
+    }
+    else {
+        numWraps = 0;
+        isReducedToPoint = (order != Order::Less);
     }
 
-    if (!isStrictlyPositiveRange && (numCrossOrigin == 0)) {
+    // Fast-return if the substroke is reduced to a point.
+    StrokeSample2d s1 = eval(p1);
+    if (isReducedToPoint) {
         std::array<Vec2d, 1> points = {s1.position()};
         newStroke->setPositions(points);
         newStroke->setConstantWidth(s1.width());
         return result;
     }
 
-    StrokeSample2d s2 = eval(p2);
+    // Alias for the segment index of each input parameter.
+    // Note that the segment index is also the index of the segment's start knot.
+    //
+    // Example:
+    //                          p1 = (1, u1)    p2 = (3, u2)
+    //                              |               |
+    //    knot index =  0       1   v   2       3   v   4     (numKnots = 5)
+    //                  o-------o-------o-------o-------o
+    // segment index =      0       1       2       3
+    //
+    Int i1 = p1.segmentIndex();
+    Int i2 = p2.segmentIndex();
 
-    const Int numKnots = positions_.length();
-    const Int numSegments = this->numSegments();
-    Int i1 = p1.segmentIndex(); // i1 is also the start knot index of the start segment
-    Int i2 = p2.segmentIndex(); // i2 is also the start knot index of the end segment
-
+    // Reserve memory
     Int reservedLength = 2 + numWraps * numKnots;
-    if (isPositiveRange) {
+    if (order == Order::Less) {
         reservedLength += (i2 - i1);
     }
-    else {
-        // Here, numWraps > 0.
-        reservedLength += numSegments - (i1 - i2);
+    else if (order == Order::Greater) {
+        // Note: Greater implies isClosed(), so numSegments == numKnots.
+        reservedLength += numKnots - (i1 - i2);
     }
-
     Vec2dArray positions;
     core::DoubleArray widths;
     positions.reserve(reservedLength);
-    if (!hasConstantWidth()) {
+    bool hasWidths = !hasConstantWidth();
+    if (hasWidths) {
         widths.reserve(reservedLength);
     }
 
-    // Compute index of first knot
-    Int iFirst = i1 + 1; // segment end knot
-    if (p1.u() == 1) {
-        // XXX: test if point is close from existing instead of equal ?
-        iFirst += 1; // next segment end knot
-    }
-    // We have: iFirst <= numSegments - 1 + 2
-    //                 <= numKnots + 1
-    if (iFirst > numKnots) {
-        iFirst = numKnots;
-    }
-
-    // Compute index of last knot (excluded)
-    Int iLast = i2 + 1; // segment end knot
-    if (p2.u() == 0) {
-        // XXX: test if point is close from existing instead of equal ?
-        iLast -= 1; // segment start knot
-    }
-    // We have: iLast <= numSegments - 1 + 1
-    //                <= numKnots
-
-    Int iEnd = numKnots;
-
-    const bool hasWidths = !hasConstantWidth();
-    auto extend = [&, hasWidths](Int first, Int last) {
-        positions.extend(positions_.begin() + first, positions_.begin() + last);
-        if (hasWidths) {
-            widths.extend(widths_.begin() + first, widths_.begin() + last);
-        }
-    };
-
+    // Add the first knot of the substroke.
+    //
+    //        0       1   p1  2       3   p2  4     (numKnots = 5)
+    // in:    o-------o---+---o-------o---+---o
+    //
+    // out:               o s1
+    //
     positions.append(s1.position());
     if (hasWidths) {
         widths.append(s1.width());
     }
 
-    if (isPositiveRange) {
-        if (numWraps > 0) {
-            // e.g.: closed  P0 -[- P1 --- P2 -]-(P0)
-            // ->                [- P1 --- P2 ---(P0)
-            //               P0 --- P1 --- P2 ---(P0) *(numWraps - 1)
-            //               P0 --- P1 --- P2 -]
-            //
-            extend(iFirst, iEnd);
-            for (Int j = 1; j < numWraps; ++j) {
-                extend(0, iEnd);
-            }
-            extend(0, iLast);
-        }
-        else {
-            // e.g.: closed  P0 -[- P1 --- P2 -]-(P0)
-            // ->                [- P1 --- P2 -]
-            // e.g.: open    P0 -[- P1 --- P2 -]- P3
-            // ->                [- P1 --- P2 -]
-            //
-            extend(iFirst, iLast);
-        }
-    }
-    else {
-        // e.g.: closed P0 -]- P1 --- P2 -[-(P0)
-        // ->                             [-(P0)
-        //              P0 --- P1 --- P2 ---(P0) *(numWraps)
-        //              P0 -]
-        //
-        extend(iFirst, iEnd);
-        for (Int j = 0; j < numWraps; ++j) {
-            extend(0, iEnd);
-        }
-        extend(0, iLast);
+    // Compute index of knot after p1, not including p1.
+    //
+    //        0       1   p1  2       3   p2  4
+    //        o-------o---+---o-------o---+---o
+    //                        ^
+    //                      iFirst
+    //
+    //        0       1 p1 p2 2       3       4
+    //        o-------o-+--+--o-------o-------o
+    //                        ^
+    //                      iFirst
+    //
+    // Note: thanks to normalization, p1.u() == 1 is impossible here since:
+    // - it is only possible for open curves, with p1 being the maximum possible param
+    // - therefore `p1 >= p2`
+    // - therefore `order != Order::Less`
+    // - therefore `isReducedToAPoint` is true (since `iClosed` is false)
+    // - therefore we would have already fast-returned.
+    //
+    Int iFirst = i1 + 1;
+    VGC_ASSERT(iFirst >= 0);
+    VGC_ASSERT(iFirst <= numKnots); // Equality possible for closed strokes
+
+    // Compute index of knot just before p2, not including p2.
+    //
+    //        0       1   p1  2       3   p2  4     (numKnots = 5)
+    //        o-------o---+---o-------o---+---o
+    //                        ^       ^
+    //                      iFirst  iLast
+    //
+    //        0       1   p1  2      3,p2     4
+    //        o-------o---+---o-------o-------o
+    //                        ^
+    //                  iFirst,iLast
+    //
+    //        0       1 p1 p2 2       3       4
+    //        o-------o-+--+--o-------o-------o
+    //                ^       ^
+    //              iLast   iFirst
+    //
+    //        0       1    2,p1,p2    3       4
+    //        o-------o-------o-------o-------o
+    //                ^               ^
+    //              iLast           iFirst
+    //
+    //  -1   0,p2     1       2   p1  3       4
+    //        o-------o-------o---+---o-------o
+    //   ^                        ^
+    // iLast                    iFirst
+    //
+    //  -1  0,p1,p2   1       2       3       4
+    //        o-------o-------o-------o-------o
+    //   ^            ^
+    // iLast         iFirst
+    //
+    // Note: iLast == -1 is only possible if p2 = (0, 0), which means:
+    // - p2 is the minimim possible param
+    // - therefore `p1 >= p2`
+    // - therefore `order != Order::Less`
+    // - therefore `iClosed` is true, otherwise `isReducedToAPoint` would
+    //   be true and we would have already fast-returned
+    //
+    Int iLast = i2;
+    if (p2.u() == 0) {
+        iLast -= 1;
     }
 
+    // Sets iPastLast = iLast + 1 to work on a semi-open range [iFirst, iPastLast).
+    //
+    // Note that the above range is only valid if iFirst <= iPastLast,
+    // which is not always the case for closed curves.
+    //
+    // If order == Less:
+    // - p1 < p2
+    // - so i1 <= i2
+    // - so i1 + 1 <= i2 + 1
+    // - so iFirst <= i2 + 1
+    // - with iPastLast = i2 + 1 if u2 != 0
+    //                  = i2     otherwise
+    // - so either iFirst <= iPastLast or u2 == 0
+    // - but u2 == 0 implies:
+    //   - i1 < i2 (since p1 < p2 and there is no possible u1 < u2)
+    //   - so i1 + 1 < i2 + 1
+    //   - so iFirst < i2 + 1
+    //   - so iFirst <= i2
+    //   - so iFirst <= iPastLast
+    //
+    // If order == Equal:
+    // - isClosed is true
+    // - we may have iFirst == iPastLast + 1:
+    //
+    //        0       1    2,p1,p2    3       4
+    //        o-------o-------o-------o-------o------  (numKnots == 5)
+    //                        ^       ^                (numSegments == 5)
+    //                   iPastLast  iFirst
+    //
+    Int iPastLast = iLast + 1;
+    VGC_ASSERT(iPastLast >= 0);
+    VGC_ASSERT(iPastLast <= numKnots); // Equality possible for closed strokes
+    VGC_ASSERT(iFirst <= iPastLast || order != Order::Less);
+
+    // Lambda that adds all knots in the range [first, pastLast) to the new stroke.
+    // Precondition: first <= last.
+    auto extend = [&, hasWidths](Int first, Int pastLast) {
+        positions.extend(positions_.begin() + first, positions_.begin() + pastLast);
+        if (hasWidths) {
+            widths.extend(widths_.begin() + first, widths_.begin() + pastLast);
+        }
+    };
+
+    // Add all knots between the first and last knot of the substroke.
+    switch (order) {
+    case Order::Less: {
+        if (numWraps == 0) {
+            // Open stroke or closed stroke with p1 < p2 and numWraps == 0
+            extend(iFirst, iPastLast);
+        }
+        else {
+            VGC_ASSERT(isClosed());
+            extend(iFirst, numKnots);
+            for (Int j = 1; j < numWraps; ++j) {
+                extend(0, numKnots);
+            }
+            extend(0, iPastLast);
+        }
+        break;
+    }
+    case Order::Equal: {
+        VGC_ASSERT(isClosed());
+        VGC_ASSERT(numWraps > 0);
+        extend(iFirst, numKnots);
+        for (Int j = 1; j < numWraps; ++j) {
+            extend(0, numKnots);
+        }
+        extend(0, iPastLast);
+        break;
+    }
+    case Order::Greater: {
+        VGC_ASSERT(isClosed());
+        extend(iFirst, numKnots);
+        for (Int j = 0; j < numWraps; ++j) {
+            extend(0, numKnots);
+        }
+        extend(0, iPastLast);
+        break;
+    }
+    }
+
+    // Add the last knot
+    StrokeSample2d s2 = eval(p2);
     positions.append(s2.position());
     if (hasWidths) {
         widths.append(s2.width());
