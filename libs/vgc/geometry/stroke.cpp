@@ -548,6 +548,49 @@ AbstractStroke2d::computeSampling(const geometry::CurveSamplingParameters& param
     return result;
 }
 
+CurveParameter AbstractStroke2d::normalizeParameter(const CurveParameter& p) const {
+    // XXX Take degenerate segments into account?
+    //     e.g., if i is a degenerate segment convert (i, u) to (i - k, 0),
+    //     where k is the largest integer such as all segments [i-k, i] are
+    //     degenerate.
+    //
+    Int i = 0;
+    double u = 0;
+    Int numKnots = numKnots_();
+    if (numKnots >= 2) {
+        i = p.segmentIndex();
+        u = core::clamp(p.u(), 0, 1);
+        if (isClosed_) {
+            if (u == 1) {
+                ++i;
+                u = 0;
+            }
+            i = core::modulo(i, numKnots);
+        }
+        else {
+            // Example: 5 knots means 4 segments whose indices are [0, 1, 2, 3]
+            Int firstSegmentIndex = 0;
+            Int lastSegmentIndex = numKnots - 2;
+            if (i < firstSegmentIndex) {
+                i = 0;
+                u = 0;
+            }
+            else if (i > lastSegmentIndex) {
+                i = lastSegmentIndex;
+                u = 1;
+            }
+            else {
+                bool hasNextSegment = i < lastSegmentIndex;
+                if (u == 1 && hasNextSegment) {
+                    ++i;
+                    u = 0;
+                }
+            }
+        }
+    }
+    return CurveParameter(i, u);
+}
+
 CurveParameter
 AbstractStroke2d::resolveParameter(const SampledCurveParameter& param) const {
     const Int numSegments = this->numSegments();
@@ -566,26 +609,9 @@ AbstractStroke2d::resolveParameter(const SampledCurveParameter& param) const {
             core::clamp(param.u1(), 0, 1),
             core::clamp(param.u2(), 0, 1),
             core::clamp(param.lerpParameter(), 0, 1));
-        return resolveParameter_(sanitizedParam);
+        return normalizeParameter(resolveParameter_(sanitizedParam));
     }
 }
-
-namespace {
-
-CurveParameter sanitizeCurveParameter(const CurveParameter& param, Int numSegments) {
-    Int segmentIndex = param.segmentIndex();
-    if (segmentIndex < 0) {
-        return CurveParameter(0, 0);
-    }
-    else if (segmentIndex > numSegments - 1) {
-        return CurveParameter(numSegments - 1, 1);
-    }
-    else {
-        return CurveParameter(segmentIndex, core::clamp(param.u(), 0, 1));
-    }
-}
-
-} // namespace
 
 std::unique_ptr<AbstractStroke2d> AbstractStroke2d::subStroke(
     const CurveParameter& p1,
@@ -602,9 +628,8 @@ std::unique_ptr<AbstractStroke2d> AbstractStroke2d::subStroke(
                                     "must be 0 if the stroke is open.");
     }
 
-    const Int numSegments = this->numSegments();
-    CurveParameter p1_ = sanitizeCurveParameter(p1, numSegments);
-    CurveParameter p2_ = sanitizeCurveParameter(p2, numSegments);
+    CurveParameter p1_ = normalizeParameter(p1);
+    CurveParameter p2_ = normalizeParameter(p2);
 
     std::unique_ptr<AbstractStroke2d> result = subStroke_(p1_, p2_, numWraps);
     if (!result->isClosed()) {
