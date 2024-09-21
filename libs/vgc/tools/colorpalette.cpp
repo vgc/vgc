@@ -1648,7 +1648,7 @@ void insertHuePie_(
     else {
         HueVec hv1 = hvFirst;
         for (Int i = i1; i < i2; ++i) {
-            Int j = i % n;
+            Int j = core::modulo(i, n);
             const HueVec& hv2 = hueVecs[j];
             insertHuePieSection_(a, hv1, hv2, color, startHeight, endHeight, hinting);
             hv1 = hv2;
@@ -2390,7 +2390,7 @@ void ColorPaletteSelector::updateStepsFromSelectedColor_() {
 
     // Set indices based on closest user-selectable color, regardless
     // of whether there is an exact match or not
-    selectedHueIndex_ = hueIndex % numHueSteps_;
+    selectedHueIndex_ = core::modulo(hueIndex, numHueSteps_);
     selectedSaturationIndex_ = core::clamp(saturationIndex, 0, numSaturationSteps_ - 1);
     selectedLightnessIndex_ = core::clamp(lightnessIndex, 0, numLightnessSteps_ - 1);
 }

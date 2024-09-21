@@ -764,10 +764,9 @@ private:
     }
 
     // Wraps the given integer to the [0, length()-1] range.
-    // See Array::wrap_().
+    // Undefined behavior if length() == 0.
     Int wrap_(Int i) const {
-        Int n = length();
-        return (n + (i % n)) % n;
+        return moduloUnchecked(i, length());
     }
 
     // Throws LogicError if (extent != dynamicExtent) and (len != extent) with an error message

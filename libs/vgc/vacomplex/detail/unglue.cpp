@@ -272,7 +272,7 @@ core::Array<KeyVertex*> Operations::unglueKeyVertices(
                 for (Int i = 0; i < numHalfedges; ++i) {
                     KeyHalfedge& khe1 = cycle.halfedges_[i];
                     if (khe1.startVertex() == targetKv) {
-                        Int previousKheIndex = (i - 1 + numHalfedges) % numHalfedges;
+                        Int previousKheIndex = core::modulo(i - 1, numHalfedges);
                         KeyHalfedge& khe0 = cycle.halfedges_[previousKheIndex];
 
                         // (?)---khe0-->(targetKv)---khe1-->(?)

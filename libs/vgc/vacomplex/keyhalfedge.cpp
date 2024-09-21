@@ -38,7 +38,7 @@ KeyHalfedge KeyHalfedge::next() const {
     }
 
     // first smaller angle is next halfedge
-    i = (i - 1 + n) % n;
+    i = core::modulo(i - 1, n);
 
     return ring[i];
 }
@@ -60,7 +60,7 @@ KeyHalfedge KeyHalfedge::previous() const {
     }
 
     // first bigger angle is opposite of previous halfedge
-    i = (i + 1) % n;
+    i = core::modulo(i + 1, n);
 
     return ring[i].halfedge().opposite();
 }

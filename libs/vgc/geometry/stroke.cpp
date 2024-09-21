@@ -221,9 +221,9 @@ OptionalInt indexOfFirstNonZeroLengthSegmentBeforeKnot_(
 
     if (stroke->isClosed()) {
         Int numSegments = stroke->numSegments();
-        Int start = knotIndex - 1 + numSegments; // Ensures `start - i >= 0`
+        Int start = knotIndex - 1;
         for (Int i = 0; i < numSegments; ++i) {
-            Int segmentIndex = (start - i) % numSegments;
+            Int segmentIndex = core::modulo(start - i, numSegments);
             if (!stroke->isZeroLengthSegment(segmentIndex)) {
                 return segmentIndex;
             }
@@ -251,7 +251,7 @@ OptionalInt indexOfFirstNonZeroLengthSegmentAfterKnot_(
     if (stroke->isClosed()) {
         Int numSegments = stroke->numSegments();
         for (Int i = 0; i < numSegments; ++i) {
-            Int segmentIndex = (knotIndex + i) % numSegments;
+            Int segmentIndex = core::modulo(knotIndex + i, numSegments);
             if (!stroke->isZeroLengthSegment(segmentIndex)) {
                 return segmentIndex;
             }
@@ -475,7 +475,7 @@ void AbstractStroke2d::sampleRange(
 
         // Iterate over all segments
         for (Int i = 0; i < numSegments; ++i) {
-            Int segmentIndex = (startKnotIndex + i) % numSegmentsInStroke;
+            Int segmentIndex = core::modulo(startKnotIndex + i, numSegmentsInStroke);
             if (i != 0) {
                 // Remove last sample of previous segment (recomputed below)
                 out.pop();

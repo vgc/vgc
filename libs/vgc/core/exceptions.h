@@ -66,8 +66,8 @@
 /// When compiling with Clang on macOS, if a virtual class is fully inline then
 /// we get the following warnings:
 ///
-///   warning: <classname> has no out-of-line virtual method definitions; its
-///   vtable will be emitted in every translation unit [-Wweak-vtables]
+/// > warning: <classname> has no out-of-line virtual method definitions; its
+/// > vtable will be emitted in every translation unit [-Wweak-vtables]
 ///
 /// Therefore, since our exception classes are indeed virtual and must be fully
 /// inline (in order to work without warnings on Windows), we need to "anchor"
@@ -85,7 +85,7 @@
 /// void FooError::anchor() {}
 /// ```
 ///
-/// VGC_CORE_EXCEPTIONS_DECLARE_ANCHOR and VGC_CORE_EXCEPTIONS_DEFINE_ANCHOR
+/// `VGC_CORE_EXCEPTIONS_DECLARE_ANCHOR` and `VGC_CORE_EXCEPTIONS_DEFINE_ANCHOR`
 /// are macros that declare and define such anchor functions, but
 /// only on some platforms/compilers. They must be used like so:
 ///
@@ -102,18 +102,18 @@
 /// ```
 ///
 /// References:
-/// https://github.com/vgc/vgc/issues/24
-/// https://github.com/vgc/vgc/issues/84
-/// https://github.com/pybind/pybind11/pull/1769
-/// https://github.com/facebook/folly/issues/834 (they choose to ignore the warning)
-/// https://stackoverflow.com/questions/23746941/what-is-the-meaning-of-clangs-wweak-vtables
-/// https://stackoverflow.com/questions/28786473/clang-no-out-of-line-virtual-method-definitions-pure-abstract-c-class
-/// https://reviews.llvm.org/D2068
-/// https://gitlab.tu-berlin.de/daniel-schuermann/clang/commit/f4a5e8f33e88cd065c3ac93b5304cba83fe36ef7
+/// - https://github.com/vgc/vgc/issues/24
+/// - https://github.com/vgc/vgc/issues/84
+/// - https://github.com/pybind/pybind11/pull/1769
+/// - https://github.com/facebook/folly/issues/834 (they choose to ignore the warning)
+/// - https://stackoverflow.com/questions/23746941/what-is-the-meaning-of-clangs-wweak-vtables
+/// - https://stackoverflow.com/questions/28786473/clang-no-out-of-line-virtual-method-definitions-pure-abstract-c-class
+/// - https://reviews.llvm.org/D2068
+/// - https://gitlab.tu-berlin.de/daniel-schuermann/clang/commit/f4a5e8f33e88cd065c3ac93b5304cba83fe36ef7
 ///
 /// \def VGC_CORE_EXCEPTIONS_DEFINE_ANCHOR
 ///
-/// See VGC_CORE_EXCEPTIONS_DECLARE_ANCHOR.
+/// See `VGC_CORE_EXCEPTIONS_DECLARE_ANCHOR`.
 ///
 #if defined(VGC_COMPILER_CLANG)
 #    define VGC_CORE_EXCEPTIONS_DECLARE_ANCHOR virtual void anchor();
@@ -147,13 +147,13 @@ namespace vgc::core {
 /// logic errors:
 ///
 /// 1. At a very high-level in the program architecture (for example, in
-///    main()), in order to log the error, tell the user that an error occured
+///    `main()`), in order to log the error, tell the user that an error occured
 ///    and how to recover automatically saved data, and close the program as
 ///    cleanly as possible.
 ///
 /// 2. At the interface between C++ and Python, to convert C++ exceptions into
 ///    Python exceptions. In most cases, this should be automatically done by
-///    pybind11 by registering the exception using pybind11::register_exception.
+///    pybind11 by registering the exception using `pybind11::register_exception`.
 ///
 /// 3. You are writing a one-off Python script never to be used again, you are
 ///    under a very tight deadline, and you are somehow able to get the job
@@ -176,17 +176,17 @@ namespace vgc::core {
 /// errors.
 ///
 /// If a function in your public API has preconditions (for example, calling
-/// pop() on an empty list makes no sense, therefore a precondition is that the
+/// `pop()` on an empty list makes no sense, therefore a precondition is that the
 /// list is not empty), then you should check for these preconditions at the
 /// beginning of the function, and raise a logic error if the preconditions are
 /// not met. Note that it is sometimes a tricky design decision to decide
 /// whether a given input is really non-sensical and should be documented as a
 /// precondition, or whether it is simply a special case that should be treated
 /// as valid input with documented behavior. For example, instead of raising an
-/// exception, calling pop() on an empty list might return a
-/// default-constructed element and keep the list empty. Use you best judgement
+/// exception, calling `pop()` on an empty list might return a
+/// default-constructed element and keep the list empty. Use your best judgement
 /// and take inspiration from existing libraries. For example, the built-in
-/// Python list raises IndexError when calling pop() on an empty list,
+/// Python list raises `IndexError` when calling `pop()` on an empty list,
 /// therefore keeping the same behavior for similar functions is preferred.
 /// Also, prefer using exceptions if you have good reasons to think that it may
 /// help upstream clients detect bugs in their code that would otherwise be
@@ -195,7 +195,7 @@ namespace vgc::core {
 /// simpler and more readable. Avoid exceptions if it would be hard for users
 /// to enforce these preconditions, or check whether they are met. Typically,
 /// preconditions are for quite obviously non-sensical operations, such as
-/// out-of-bound indices or well-known constraints (example: vgc::dom::Document
+/// out-of-bound indices or well-known constraints (example: `vgc::dom::Document`
 /// can only have one child Element, thus attempting to insert a second one
 /// raises an exception).
 ///
@@ -203,11 +203,11 @@ namespace vgc::core {
 /// internal invariants and postconditions if you are writing complex
 /// algorithms, for ease of debugging and/or documentation. Raising logic
 /// errors in case of failure is appropriate in this case, and is preferred
-/// over the use of assert(). However, checking invariants and post-conditions
+/// over the use of `assert()`. However, checking invariants and post-conditions
 /// is a double-edged sword: be mindful of false-negative! You definitely do
 /// not want to upset users by incorrectly raising an exception (e.g., a
 /// precondition is met, but the code checking for the precondition has a
-/// bug).Also, be mindful of performance: avoid checking for invariants if this
+/// bug). Also, be mindful of performance: avoid checking for invariants if this
 /// is an expensive operation. Here are some examples to provide guidance:
 ///
 /// ```cpp
@@ -285,12 +285,12 @@ namespace vgc::core {
 ///
 /// There is a commonly advocated guideline that using exceptions in C++ should
 /// only be for runtime errors (e.g., out of memory, file permission issues,
-/// etc.), and that using assert() instead should be preferred for logic errors
-/// (e.g., calling mySqrt(x) where x is negative, dereferencing a null handle,
+/// etc.), and that using `assert()` instead should be preferred for logic errors
+/// (e.g., calling `mySqrt(x)` where x is negative, dereferencing a null handle,
 /// attempting to make a non-sensical topological operation, etc.). The
 /// rationale is that these errors are in fact bugs in the code (while runtime
 /// errors are not), and these should be catched and fixed in unit tests or
-/// beta tests. If the bug is not fixed, then advocates of using assert() argue
+/// beta tests. If the bug is not fixed, then advocates of using `assert()` argue
 /// that it is anyway unclear how we could recover from a bug we didn't know
 /// about, and thus we might as well terminate the program and avoid
 /// potentially corrupting more data. However, this guideline is quite
@@ -315,9 +315,9 @@ namespace vgc::core {
 /// bug report automatically, so that we are aware of the problem and fix it in
 /// future versions. One may argue that this is possible without using
 /// exceptions: when the low-level library detect the error, it could itself
-/// send the bug report just before calling abort(). However, this is in fact
+/// send the bug report just before calling `abort()`. However, this is in fact
 /// not a good idea: first, there would be dependency issues (e.g., why should
-/// vgc::dom depend on an internet protocol?), and second, the bug report
+/// `vgc::dom` depend on an internet protocol?), and second, the bug report
 /// should only be sent if all the upstream code is VGC code and not user code,
 /// and if the user agrees to do so, etc... which is information that the
 /// low-level library detecting the error doesn't know about. And imagine a
@@ -337,13 +337,13 @@ private:
     VGC_CORE_EXCEPTIONS_DECLARE_ANCHOR
 
 public:
-    /// Constructs a LogicError with the given \p reason.
+    /// Constructs a LogicError with the given `reason`.
     ///
     explicit LogicError(const std::string& reason)
         : std::logic_error(reason) {
     }
 
-    /// Constructs a LogicError with the given \p reason.
+    /// Constructs a LogicError with the given `reason`.
     ///
     explicit LogicError(const char* reason)
         : std::logic_error(reason) {
@@ -355,7 +355,7 @@ public:
 ///
 /// This exception is raised when attempting to create a container of a
 /// negative size, when casting a negative integer to an unsigned integer type,
-/// or whenerver a function requires a non-negative integer as a precondition.
+/// or whenever a function requires a non-negative integer as a precondition.
 ///
 /// ```cpp
 /// vgc::core::DoubleArray a(-42, 1.0); // => NegativeIntegerError!
@@ -363,10 +363,10 @@ public:
 /// ```
 ///
 /// Note that attempting to parse an unsigned integer from a string containing
-/// a negative sign does not raise a NegativeIntegerError, but instead raises a
-/// ParseError. This is because such error is fundamentally a runtime syntax
+/// a negative sign does not raise a `NegativeIntegerError`, but instead raises a
+/// `ParseError`. This is because such error is fundamentally a runtime syntax
 /// error, not a logic error. In fact, even the presence of a positive sign
-/// raises a ParseError in this case.
+/// raises a `ParseError` in this case.
 ///
 /// ```cpp
 /// vgc::core::parse<vgc::UInt>("42");  // => ok
@@ -379,9 +379,32 @@ private:
     VGC_CORE_EXCEPTIONS_DECLARE_ANCHOR
 
 public:
-    /// Constructs a NegativeIntegerError with the given \p reason.
+    /// Constructs a `NegativeIntegerError` with the given `reason`.
     ///
     NegativeIntegerError(const std::string& reason)
+        : LogicError(reason) {
+    }
+};
+/// \class vgc::core::DivideByZeroError
+/// \brief Raised when an operation is impossible due to a division by zero.
+///
+/// This exception is raised when an operation is impossible for a reason
+/// related to a division by zero. This typically only applies to integer
+/// operations, since floating points handles division by zero by either
+/// returning infinity or NaN.
+///
+/// ```cpp
+/// int j = vgc::core::modulo(42, 0); // => DivideByZeroError!
+/// ```
+///
+class VGC_CORE_API_EXCEPTION DivideByZeroError : public LogicError {
+private:
+    VGC_CORE_EXCEPTIONS_DECLARE_ANCHOR
+
+public:
+    /// Constructs a `DivideByZeroError` with the given `reason`.
+    ///
+    DivideByZeroError(const std::string& reason)
         : LogicError(reason) {
     }
 };
@@ -402,7 +425,7 @@ private:
     VGC_CORE_EXCEPTIONS_DECLARE_ANCHOR
 
 public:
-    /// Constructs an IndexError with the given \p reason.
+    /// Constructs an `IndexError` with the given `reason`.
     ///
     IndexError(const std::string& reason)
         : LogicError(reason) {
@@ -424,7 +447,7 @@ private:
     VGC_CORE_EXCEPTIONS_DECLARE_ANCHOR
 
 public:
-    /// Constructs an LengthError with the given \p reason.
+    /// Constructs a `LengthError` with the given `reason`.
     ///
     LengthError(const std::string& reason)
         : LogicError(reason) {
@@ -442,8 +465,8 @@ private:
     VGC_CORE_EXCEPTIONS_DECLARE_ANCHOR
 
 public:
-    /// Constructs a NotAliveError informing that the Object \p object is not
-    /// alive.
+    /// Constructs a `NullError` informing that a null pointer was given
+    /// as parameter to a function expecting a non-null pointer.
     ///
     NullError()
         : LogicError("Null pointer encountered") {
@@ -460,19 +483,19 @@ VGC_CORE_API std::string notAChildMsg(const Object* object, const Object* expect
 } // namespace detail
 
 /// \class vgc::core::NotAliveError
-/// \brief Raised when attempting to use an Object which is not alive.
+/// \brief Raised when attempting to use an object which is not alive.
 ///
 /// This exception is raised whenever trying to perform an operation
-/// involving an Object that has already been destroyed.
+/// involving an `Object` that has already been destroyed.
 ///
-/// \sa Object::isAlive() and Object::destroy().
+/// \sa `Object::isAlive()`, `Object::destroy()`.
 ///
 class VGC_CORE_API_EXCEPTION NotAliveError : public LogicError {
 private:
     VGC_CORE_EXCEPTIONS_DECLARE_ANCHOR
 
 public:
-    /// Constructs a NotAliveError informing that the Object \p object is not
+    /// Constructs a `NotAliveError` informing that the given `object` is not
     /// alive.
     ///
     NotAliveError(const Object* object)
@@ -481,23 +504,23 @@ public:
 };
 
 /// \class vgc::core::NotAChildError
-/// \brief Raised when a given Object is expected to be a child of another
-///        Object, but isn't.
+/// \brief Raised when an object is expected to be a child of another
+///        object, but isn't.
 ///
-/// This exception is raised when a given Object is expected to be a child of
-/// another Object, but isn't. For example, it is raised when the `nextSibling`
+/// This exception is raised when an `Object` is expected to be a child of
+/// another `Object`, but isn't. For example, it is raised when the `nextSibling`
 /// argument of `obj->insertChildObject(nextSibling, node)` is non-null and
 /// isn't a child of `obj`.
 ///
-/// \sa Object::insertChildObject().
+/// \sa `Object::insertChildObject()`.
 ///
 class VGC_CORE_API_EXCEPTION NotAChildError : public LogicError {
 private:
     VGC_CORE_EXCEPTIONS_DECLARE_ANCHOR
 
 public:
-    /// Constructs a NotAChildError, informing that the given \p object is not a
-    /// child of the given \p expectedParent.
+    /// Constructs a `NotAChildError`, informing that the given `object` is not a
+    /// child of the given `expectedParent`.
     ///
     NotAChildError(const Object* object, const Object* expectedParent)
         : LogicError(detail::notAChildMsg(object, expectedParent)) {
@@ -511,8 +534,8 @@ public:
 /// that is, whenever a function cannot complete its task due to events that
 /// could not be easily predicted.
 ///
-/// For example, the function vgc::dom::Document::open() raises
-/// vgc::dom::ParseError if the input file is not a well-formed XML file. In
+/// For example, the function `vgc::dom::Document::open()` raises
+/// `vgc::dom::ParseError` if the input file is not a well-formed XML file. In
 /// theory, passing a well-formed XML file could be seen as a precondition of
 /// the function, but in practice, it would be hard and inefficient to ask
 /// client code to check this beforehand, which is why it is not considered a
@@ -520,28 +543,28 @@ public:
 ///
 /// # How to handle VGC runtime errors?
 ///
-/// Function calls that may throw a RuntimeError should typically be directly
+/// Function calls that may throw a `RuntimeError` should typically be directly
 /// surrounded by a try/catch block in C++ (or a try/except block in Python),
-/// and the error should be handled immediately. In a nutshell, RuntimeError
+/// and the error should be handled immediately. In a nutshell, `RuntimeError`
 /// exceptions should be treated as if the error was reported via an error
 /// code, with the advantages that exceptions cannot be ignored, and that
 /// exceptions are the preferred error handling mechanism in Python.
 ///
 /// If client code can guarantee that the conditions leading to a runtime error
-/// are not possible (for example, by calling open() on a file that we know is
+/// are not possible (for example, by calling `open()` on a file that we know is
 /// a valid file), then it is not required to surround the call by a try block.
 ///
 /// # When to raise VGC runtime errors?
 ///
 /// Whenever you are implementing a function which cannot complete its task for
 /// a reason that could not have been easily predicted by client code, you may
-/// raise a RuntimeError exception. For example, well-formedness of an XML file
+/// raise a `RuntimeError` exception. For example, well-formedness of an XML file
 /// cannot be easily predicted, therefore these types of syntax errors should
 /// be reported as runtime errors. However, checking that an index is within
 /// [0, size) can easily be done by client code, therefore these types of
 /// out-of-range errors should be reported as logic errors.
 ///
-/// If you are calling a function that may itself raise a RuntimeError, and you
+/// If you are calling a function that may itself raise a `RuntimeError`, and you
 /// are unable to handle this error yourself, then let it propagate upstream
 /// and document that your function may raise this unhandled exception.
 ///
@@ -550,13 +573,13 @@ private:
     VGC_CORE_EXCEPTIONS_DECLARE_ANCHOR
 
 public:
-    /// Constructs a RuntimeError with the given \p reason.
+    /// Constructs a `RuntimeError` with the given `reason`.
     ///
     explicit RuntimeError(const std::string& reason)
         : std::runtime_error(reason) {
     }
 
-    /// Constructs a RuntimeError with the given \p reason.
+    /// Constructs a `RuntimeError` with the given `reason`.
     ///
     explicit RuntimeError(const char* reason)
         : std::runtime_error(reason) {
@@ -566,8 +589,8 @@ public:
 /// \class vgc::core::ParseError
 /// \brief Raised whenever invalid input is found when parsing a string or stream.
 ///
-/// This exception is raised whenever one of the skip(), read(), readTo(), or
-/// parse() functions is called and the input string or stream does not contain
+/// This exception is raised whenever one of the `skip()`, `read()`, `readTo()`, or
+/// `parse()` functions is called and the input string or stream does not contain
 /// a valid sequence of characters for the requested operation.
 ///
 /// ```cpp
@@ -579,7 +602,7 @@ private:
     VGC_CORE_EXCEPTIONS_DECLARE_ANCHOR
 
 public:
-    /// Constructs a ParseError with the given \p reason.
+    /// Constructs a `ParseError` with the given `reason`.
     ///
     ParseError(const std::string& reason)
         : RuntimeError(reason) {
@@ -590,7 +613,7 @@ public:
 /// \brief Raised when an input file or string has an invalid XML syntax.
 ///
 /// This exception is raised when an input file or string is not a valid XML
-/// fragment. For example, <path></vertex> is not a valid XML fragment because
+/// fragment. For example, `<path></vertex>` is not a valid XML fragment because
 /// the end tag does not match the start tag.
 ///
 class VGC_CORE_API_EXCEPTION XmlSyntaxError : public ParseError {
@@ -598,7 +621,7 @@ private:
     VGC_CORE_EXCEPTIONS_DECLARE_ANCHOR
 
 public:
-    /// Constructs a XmlSyntaxError with the given \p reason.
+    /// Constructs an `XmlSyntaxError` with the given `reason`.
     ///
     XmlSyntaxError(const std::string& reason)
         : ParseError(reason) {
@@ -622,7 +645,7 @@ private:
     VGC_CORE_EXCEPTIONS_DECLARE_ANCHOR
 
 public:
-    /// Constructs a RangeError with the given \p reason.
+    /// Constructs a `RangeError` with the given `reason`.
     ///
     RangeError(const std::string& reason)
         : RuntimeError(reason) {
@@ -641,17 +664,17 @@ public:
 /// vgc::core::parse<vgc::Int8)("128"); // => IntegerOverflowError! (128 exceeds Int8 limits)
 /// ```
 ///
-/// \sa NegativeIntegerError
+/// \sa `NegativeIntegerError`.
 ///
-/// Note that NegativeIntegerError is a LogicError, while IntegerOverflowError
-/// is a RuntimeError. Indeed, while IntegerOverflowError may also in theory be
+/// Note that `NegativeIntegerError` is a `LogicError`, while `IntegerOverflowError`
+/// is a `RuntimeError`. Indeed, while `IntegerOverflowError` may also in theory be
 /// considered a logic error (= didn't check the maximum int range before
 /// casting), it is often impractical to always perform such checks, and can
 /// simply be considered a "limitation" of the program (akin to a crash because
-/// you ran out of memory). Also, RangeError may occur while parsing integers
+/// you ran out of memory). Also, `RangeError` may occur while parsing integers
 /// and floats of an input file, in which case it is indeed a runtime error.
 ///
-/// Some IntegerOverflowErrors may of course be caused by actual bugs, and
+/// Some `IntegerOverflowErrors` may of course be caused by actual bugs, and
 /// should be fixed. Some others may be common enough to warrant a custom user
 /// message (or prevent the user from performing the action) rather than the
 /// generic crash handler.
@@ -661,7 +684,7 @@ private:
     VGC_CORE_EXCEPTIONS_DECLARE_ANCHOR
 
 public:
-    /// Constructs a IntegerOverflowError with the given \p reason.
+    /// Constructs an `IntegerOverflowError` with the given `reason`.
     ///
     IntegerOverflowError(const std::string& reason)
         : RangeError(reason) {
@@ -671,7 +694,7 @@ public:
 /// \class vgc::core::FileError
 /// \brief Raised when failed to read a file.
 ///
-/// This exception is raised by vgc::core::readFile() if the input file cannot
+/// This exception is raised by `vgc::core::readFile()` if the input file cannot
 /// be read (for example, due to file permissions, or because the file does
 /// not exist).
 ///
@@ -680,7 +703,7 @@ private:
     VGC_CORE_EXCEPTIONS_DECLARE_ANCHOR
 
 public:
-    /// Constructs a FileError with the given \p reason.
+    /// Constructs a `FileError` with the given `reason`.
     ///
     FileError(const std::string& reason)
         : RuntimeError(reason) {

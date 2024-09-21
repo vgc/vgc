@@ -2881,19 +2881,9 @@ private:
     }
 
     // Wraps the given integer to the [0, length()-1] range.
-    // Precondition: length() > 0.
-    // In a nutshell, this is "i % n", but with a correction
-    // that handles negative input without introducing an "if".
+    // Undefined behavior if length() == 0.
     Int wrap_(Int i) const {
-        Int n = length();
-        return (n + (i % n)) % n;
-        // Examples:
-        // n = 10, i = 11:   (10 + (11%10))  % 10 = (10 + 1)  % 10 = 1
-        // n = 10, i = -11:  (10 + (-11%10)) % 10 = (10 + -1) % 10 = 9
-        // We could also do (i % n) + (i < 0 ? n : 0), but the above
-        // avoids the conditional and is more robust to pre-C++11
-        // implementations (the behavior for negative inputs wasn't
-        // clearly specified, and varied across implementations).
+        return moduloUnchecked(i, length());
     }
 };
 

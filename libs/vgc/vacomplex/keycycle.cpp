@@ -256,8 +256,8 @@ KeyPath KeyCycle::subPath(Int first, Int last, bool loopIfEmptyRange) const {
         return KeyPath(steinerVertex());
     }
     Int n = halfedges_.length();
-    first = ((first % n) + n) % n;
-    last = ((last % n) + n) % n;
+    first = core::modulo(first, n);
+    last = core::modulo(last, n);
     if (first == last) {
         if (loopIfEmptyRange) {
             return rotated(first);
@@ -269,7 +269,7 @@ KeyPath KeyCycle::subPath(Int first, Int last, bool loopIfEmptyRange) const {
     }
     else {
         core::Array<KeyHalfedge> newHalfedges;
-        for (Int i = first; i != last; i = (i + 1) % n) {
+        for (Int i = first; i != last; i = core::modulo(i + 1, n)) {
             newHalfedges.append(halfedges_[i]);
         }
         return KeyPath(std::move(newHalfedges));

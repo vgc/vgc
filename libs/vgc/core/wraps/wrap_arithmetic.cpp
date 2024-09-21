@@ -19,6 +19,9 @@
 #include <vgc/core/wraps/common.h>
 
 void wrap_arithmetic(py::module& m) {
+
+    // Note: we don't wrap `core::modulo(i, n)` as it is equivalent to Python's `i % n`.
+
     // Note: we do wrap isClose despite the existence of Python's math.isclose,
     // for consistency with isNear and the fact that we define it for Vec too.
 

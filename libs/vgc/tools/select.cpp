@@ -1261,7 +1261,7 @@ core::Id selectNewItem(
     if (isAlternativeMode && lastSelectedId != -1) {
         Int i = indexInCandidates(candidates, lastSelectedId);
         if (i != -1) {
-            j = (i + 1) % candidates.length();
+            j = core::modulo(i + 1, candidates.length());
         }
     }
     return candidates[j].id();
