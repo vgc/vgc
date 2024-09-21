@@ -271,8 +271,6 @@ enum class Order : Int8 {
     Greater = 1 // First operand greater than the second
 };
 
-// Note: this assumes that the parameters are normalized (see above).
-//
 Order compareCurveParameters(const CurveParameter& p1, const CurveParameter& p2) {
     Int8 sign = static_cast<Int8>(p2 < p1) - static_cast<Int8>(p1 < p2);
     return static_cast<Order>(sign);
@@ -280,7 +278,8 @@ Order compareCurveParameters(const CurveParameter& p1, const CurveParameter& p2)
 
 } // namespace
 
-// Precondition: p1 and p2 are normalized.
+// Precondition: p1 and p2 are normalized (see AbstractStroke2d::normalizeParameter()).
+// This is automatically done by AbstractStroke2d::subStroke() calling this function.
 std::unique_ptr<AbstractStroke2d> AbstractInterpolatingStroke2d::subStroke_(
     const CurveParameter& p1,
     const CurveParameter& p2,
@@ -298,7 +297,8 @@ std::unique_ptr<AbstractStroke2d> AbstractInterpolatingStroke2d::subStroke_(
         static_cast<AbstractInterpolatingStroke2d*>(result.get());
     newStroke->open(false);
 
-    // Normalize the parameters (convert (i, 1) to (i+1, 0)) and compare them.
+    // Compare the parameter. This (and the rest of the code) assumes that the
+    // params were normalized, that is (i, 1) was converted to (i+1, 0), etc.
     Order order = compareCurveParameters(p1, p2);
 
     // Sanitize numWraps, and compute whether the substroke is reduced to a point.
@@ -476,7 +476,7 @@ std::unique_ptr<AbstractStroke2d> AbstractInterpolatingStroke2d::subStroke_(
         }
     };
 
-    // TODO
+    // Add all knots between the first and last knot of the substroke.
     switch (order) {
     case Order::Less: {
         if (numWraps == 0) {

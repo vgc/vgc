@@ -851,7 +851,7 @@ public:
     /// - if the curve is open, converting `(i, 1)` to `(i+1, 0)`,
     ///   except if `i == numSegments() - 1`
     /// - if the curve is closed, converting `(i, 1)` to
-    ///   `((i + 1) % numSegments(), 0)`
+    ///   `(modulo(i + 1, numSegments()), 0)`
     ///
     CurveParameter normalizeParameter(const CurveParameter& param) const;
 
