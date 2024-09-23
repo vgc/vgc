@@ -607,23 +607,123 @@ struct PartitionedSweepSegments {
     }
 };
 
-// Find all segments in alg.sweepSegments that contain `position`
-// either in their interior or as an endpoint. Some of these may
-// already be in the events above (e.g., if there is an
-// Intersection event), but some may not, e.g., if there is a
-// T-junction at the `position`.
+// Extend pSegments.contain() to ensures that it contains all
+// segments in the given events. Indeed:
 //
-// This basically partition alg.sweepSegments into three spans:
-// - the segments that are below the position
-// - the segment that contain the position
-// - the segment that are above the position
+// 1. The segments in pEvents.intersection() are supposed to all be
+// in res.contain(), but in practice, they almost never are due to
+// numerical errors. Indeed, with p = intersection(seg1, seg2),
+// then most often orientation(seg1.a(), seg1.b(), p) != 0.
 //
-// Note that all segments in interEvents should in theory be found
-// in alg.sweepSegments as containing the position, but in practice
-// may not due to numerical errors. More precisely, after computing
-// the intersection p between two, because of rounding errors, it
-// is possible that p is not considered exactly on each of the
-// segments.
+// 2. The segments in pEvents.right() are also supposed to all be in
+// res.contain(), and in most cases they indeed are, since orientation(seg.a(),
+// seg.b(), seg.b()) == 0. However, due to numerical errors, it might be
+// possible (i.e., we haven't proven otherwise) that sweepEvents is not
+// perfectly "partitioned" according to the geometric predidate "is `position`
+// above or below the given segment", as required by the `equal_range` binary
+// search algorithm:
+//
+// https://en.cppreference.com/w/cpp/algorithm/equal_range
+// https://en.cppreference.com/w/cpp/algorithm#Requirements
+//
+// This means that `equal_range` could miss some segments, for example if the
+// values of `orientation(seg.a(), seg.b(), p)` along the sweep segments are:
+//
+//
+//                      middle   none of those
+//                      index    are evaluated
+//                         v  vvvvvvvvvvvvvvvvvvvvv
+// [-1, -1, -1, -1, 0, 0, +1, 0, +1, +1, +1, +1, +1]
+//                  ^^^^      ^
+//              result of     segment in pEvents.right(),
+//              equal_range   missed by equal_range
+//
+// In theory, the segments in pEvents.intersection() are supposed to all be
+// in res.contain(), but in practice, they are almost never due to
+// numerical errors.
+//
+// Note: this step makes the algorithm O(n²) if all segments intersect at the
+// same point. This should be rare, but we could make it (n+k)log(n) again by
+// first sorting pEvents.intersection(), pEvents.right(), and res.contain() by
+// segment index and using std::set_difference. But this is going to make the
+// algorithm slower in the typical case when there at most 2 intersection
+// events, or 2 left/right events. A solution might be to use sorting only if
+// we detect pEvents.length() > someThreshold.
+//
+template<typename T>
+void extendContainSegments(
+    PartitionedSweepSegments& pSegments,
+    core::ConstSpan<Event<T>> events) {
+
+    for (const Event<T>& event : events) {
+        if (!pSegments.contain().contains(event.segmentIndex)) {
+            auto it2 = pSegments.it2;
+            auto it3 = pSegments.it3;
+            bool found = false;
+            // While we haven't searched all segments [it1, it4)
+            while (it2 != pSegments.it1 || it3 != pSegments.it4) {
+                // Extend the search [it2, it3) by one segment to the left
+                if (it2 != pSegments.it1) {
+                    --it2;
+                    if (*it2 == event.segmentIndex) {
+                        pSegments.it2 = it2;
+                        found = true;
+                        break;
+                    }
+                }
+                // Extend the search [it2, it3) by one segment to the right
+                if (it3 != pSegments.it4) {
+                    Int segmentIndex = *it3; // before increment as range is semi-open
+                    ++it3;
+                    if (segmentIndex == event.segmentIndex) {
+                        pSegments.it3 = it3;
+                        found = true;
+                        break;
+                    }
+                }
+            }
+            if (!found) {
+                // We believe this to be impossible, even accounting for
+                // numerical errors. But since the proof is neither obvious nor
+                // local, we don't throw and consider this a recoverable error.
+                VGC_ERROR(
+                    LogVgcGeometry,
+                    "Segment from event {} not found in sweep segments.",
+                    event);
+            }
+        }
+    }
+}
+
+// Find all sweep segments that contain `position` (either in their interior or
+// as an endpoint), via a binary search on sweepSegments using the geometric
+// predicate "is `position` above or below the segment".
+//
+// In theory, all these segments are consecutive in sweepSegments, so the
+// output is a partition of sweepSegments into three spans:
+// - the segments that are below the position (res.below())
+// - the segment that contain the position (res.contain())
+// - the segment that are above the position (res.above())
+//
+// Also, in theory, all segments in pEvents.intersection() and pEvents.right()
+// contain `position`, so they should be in res.contain() after the binary
+// search.
+//
+// In practice, due to numerical errors, the binary search alone may not
+// guarantee all the above. Therefore, it is followed by an additional step
+// that extends res.contain() to at least enforce that it is a superset of
+// pEvents.intersection() and pEvents.right(). This allows to prove that even
+// with numerical errors, we have the following basic guarantees:
+//
+// 1. The algorithm terminates
+//
+// 2. No segment past the sweep line ever stays in sweepSegments.
+//
+// 3. All found intersections between segments are appropriately reported. This
+// relies on the fact that we use an intersection algorithm that guarantees
+// intersectionPoint <= segment.b(). Therefore Intersection events are always
+// popped from the event queue before (or at the same time) the Right events of
+// the intersecting segments.
 //
 template<typename T>
 PartitionedSweepSegments partitionSweepSegments(
@@ -637,60 +737,8 @@ PartitionedSweepSegments partitionSweepSegments(
     res.it1 = alg.sweepSegments.begin();
     res.it4 = alg.sweepSegments.end();
     std::tie(res.it2, res.it3) = std::equal_range(res.it1, res.it4, position, comp);
-
-    // In theory, the segments in pEvents.intersection() are supposed to all be
-    // in res.contain(), but in practice, they are almost never due to
-    // numerical errors.
-    //
-    // We fix this here by extending the range of segments to make sure that it
-    // includes all intersection events. At a side effect, this may add other
-    // segments, but this is fine since these segments where also within
-    // numerical errors of containing the position.
-    //
-    // Note that the segments in pEvents.right() are guaranteed to be in
-    // res.contain(), since their right endpoint is guaranteed to be exactly
-    // equal to position. Unless the segments were not truly "partitioned" as
-    // per the definition of equal_range, see:
-    //
-    // https://en.cppreference.com/w/cpp/algorithm/equal_range
-    // https://en.cppreference.com/w/cpp/algorithm#Requirements
-    //
-    // Note: the code below makes the algorithm O(n²) if all segments intersect
-    // at the same point. This should be rare, but we could make it (n+k)log(n)
-    // again by first sorting pEvents.intersection() and res.contain() by
-    // segment index and using std::set_difference. But this is going to make
-    // the algorithm slower in the typical case when there are just 2
-    // intersection events. A solution might be to use sorting only if we
-    // detect intersectionEvents.length() > SomeThreshold.
-    //
-    for (const Event<T>& event : pEvents.intersection()) {
-        if (!res.contain().contains(event.segmentIndex)) {
-            VGC_DEBUG_TMP_EXPR(alg.sweepSegments);
-            VGC_DEBUG_TMP_EXPR(alg.sweepEvents);
-            VGC_DEBUG_TMP_EXPR(res);
-
-            // TODO: extend search from neighbor instead of using linear-time find
-            auto it = alg.sweepSegments.find(event.segmentIndex);
-            if (it != alg.sweepSegments.end()) {
-                if (it >= res.it3) {
-                    res.it3 = it + 1;
-                }
-                else if (it < res.it2) {
-                    res.it2 = it;
-                }
-                VGC_DEBUG_TMP_EXPR(res);
-            }
-            else {
-                // In theory this shouldn't happen. In practice, can it happen
-                // due to numerical errors? More analysis needed. For now we
-                // consider this a recoverable error.
-                VGC_ERROR(
-                    LogVgcGeometry,
-                    "Segment from event {} not found in sweep segments.",
-                    event);
-            }
-        }
-    }
+    extendContainSegments(res, pEvents.intersection());
+    extendContainSegments(res, pEvents.right());
 
     VGC_DEBUG_TMP_INTER("Sweep segments below position:      {}", res.below());
     VGC_DEBUG_TMP_INTER("Sweep segments containing position: {}", res.contain());
