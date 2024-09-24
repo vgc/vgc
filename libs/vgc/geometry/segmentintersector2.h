@@ -54,15 +54,14 @@ namespace segmentintersector2 {
 
 using SegmentIndex = Int;
 using PointIntersectionIndex = Int;
-using SegmentIndexPair = std::pair<SegmentIndex, SegmentIndex>;
 
 /// When two or more segments intersect at a point, then for each involved
 /// segment we store its corresponding intersection parameter.
 ///
 template<typename T>
 struct PointIntersectionInfo {
-    Int pointIntersectionIndex;
-    Int segmentIndex;
+    PointIntersectionIndex pointIntersectionIndex;
+    SegmentIndex segmentIndex;
     T param;
 };
 
@@ -111,7 +110,6 @@ public:
     static constexpr Int dimension = 2;
 
     using SegmentIndex = segmentintersector2::SegmentIndex;
-    using SegmentIndexPair = segmentintersector2::SegmentIndexPair;
     using PointIntersectionIndex = segmentintersector2::PointIntersectionIndex;
 
     using PointIntersectionInfo = segmentintersector2::PointIntersectionInfo<T>;
@@ -139,17 +137,43 @@ public:
     ///
     void addSegment(const Vec2<T>& a, const Vec2<T>& b);
 
-    /// Adds a polyline.
+    /// Adds an open polyline.
     ///
-    template<typename Range, VGC_REQUIRES(core::isInputRange<Range>)>
-    void addPolyline(const Range& range) {
-        addPolyline(range.begin(), range.end(), core::identity);
+    /// With `n` being the length of the range, this does nothing if `n < 2`,
+    /// otherwise adds `n-1` segments.
+    ///
+    template<
+        typename Range,
+        typename UnaryOp = core::Identity,
+        VGC_REQUIRES(core::isInputRange<Range>)>
+    void addPolyline(const Range& range, UnaryOp vec2Getter = {}) {
+        addPolyline(false, false, range.begin(), range.end(), vec2Getter);
     }
 
-    /// Adds a polyline.
+    /// Adds a possibly closed polyline.
     ///
-    template<typename Range, typename UnaryOp, VGC_REQUIRES(core::isInputRange<Range>)>
-    void addPolyline(const Range& range, UnaryOp op);
+    /// With `n` being the length of the range:
+    ///
+    /// - If `isClosed == false`: this does nothing if `n < 2`, otherwise adds
+    /// `n-1` segments.
+    ///
+    /// - If `isClosed == true` and `hasDuplicateEndpoints == true`: this does
+    /// nothing if `n < 2`, otherwise adds `n-1` segments. Expects the first
+    /// and last points to be equal.
+    ///
+    /// - If `isClosed == true` and `hasDuplicateEndpoints == false`: this does
+    /// nothing if `n < 1`, otherwise adds `n` segments. If the first and last
+    /// points are equal, then the last segment is reduced to a point.
+    ///
+    template<
+        typename Range,
+        typename UnaryOp = core::Identity,
+        VGC_REQUIRES(core::isInputRange<Range>)>
+    void addPolyline(
+        bool isClosed,
+        bool hasDuplicateEndpoints,
+        const Range& range,
+        UnaryOp vec2Getter = {});
 
     /// Computes the intersections between the input segments and polylines.
     ///
@@ -214,18 +238,28 @@ struct Event {
     }
 };
 
+using PolylineIndex = Int;
+
+struct PolylineInfo {
+    SegmentIndex first;
+    SegmentIndex last;
+    bool isClosed;
+};
+
 template<typename T>
 struct InputData {
-    core::Array<SegmentIndexPair> polylines;
+    core::Array<PolylineInfo> polylines;
     core::Array<Segment2<T>> segments;
     core::Array<T> segmentSlopes;
     core::Array<bool> isReversed;
+    core::Array<PolylineIndex> segmentPolylines;
 
     void clear() {
         polylines.clear();
         segments.clear();
         segmentSlopes.clear();
         isReversed.clear();
+        segmentPolylines.clear();
     }
 };
 
@@ -295,7 +329,12 @@ T computeSlope(const Vec2<T>& a, const Vec2<T>& b) {
 
 // Add segment ensuring a <= b order.
 template<typename T>
-void addSegment(InputData<T>& in, const Vec2<T>& a, const Vec2<T>& b) {
+void addSegment(
+    InputData<T>& in,
+    const Vec2<T>& a,
+    const Vec2<T>& b,
+    PolylineIndex polylineIndex) {
+
     if (b < a) {
         in.segments.emplaceLast(b, a);
         in.segmentSlopes.append(computeSlope<T>(b, a));
@@ -306,6 +345,7 @@ void addSegment(InputData<T>& in, const Vec2<T>& a, const Vec2<T>& b) {
         in.segmentSlopes.append(computeSlope<T>(a, b));
         in.isReversed.append(false);
     }
+    in.segmentPolylines.append(polylineIndex);
 
     // [1] We need to fully qualify computeSlope<T> because otherwise the
     // template arg couldn't be deduced, since Vec2f/Vec2d are not actually
@@ -321,13 +361,19 @@ template<
     typename Range,
     typename UnaryOp,
     VGC_REQUIRES(core::isInputRange<Range>)>
-void addPolyline(InputData<T>& in, const Range& range, UnaryOp op) {
+void addPolyline(
+    InputData<T>& in,
+    const Range& range,
+    UnaryOp op,
+    bool isClosed,
+    bool hasDuplicateEndpoints) {
 
     // Do nothing if the range does not contain at least two elements.
     if (core::isEmpty(range)) {
         return;
     }
-    Vec2<T> startPosition = op(*range.begin());
+    Vec2<T> firstPosition = op(*range.begin());
+    Vec2<T> startPosition = firstPosition;
     auto endPositions = core::drop(range, 1);
     if (core::isEmpty(endPositions)) {
         return;
@@ -342,14 +388,19 @@ void addPolyline(InputData<T>& in, const Range& range, UnaryOp op) {
     }
 
     // Add the segments
+    PolylineIndex polylineIndex = in.polylines.length();
     SegmentIndex polylineBegin = in.segments.length();
     for (const auto& endPosition_ : endPositions) {
         Vec2<T> endPosition = op(endPosition_);
-        addSegment(in, startPosition, endPosition);
+        addSegment(in, startPosition, endPosition, polylineIndex);
         startPosition = endPosition;
     }
+    if (isClosed && !hasDuplicateEndpoints) {
+        addSegment(in, startPosition, firstPosition, polylineIndex);
+    }
+
     SegmentIndex polylineEnd = in.segments.length();
-    in.polylines.emplaceLast(polylineBegin, polylineEnd);
+    in.polylines.emplaceLast(PolylineInfo{polylineBegin, polylineEnd, isClosed});
 }
 
 template<typename T>
@@ -638,10 +689,6 @@ struct PartitionedSweepSegments {
 //              result of     segment in pEvents.right(),
 //              equal_range   missed by equal_range
 //
-// In theory, the segments in pEvents.intersection() are supposed to all be
-// in res.contain(), but in practice, they are almost never due to
-// numerical errors.
-//
 // Note: this step makes the algorithm O(n²) if all segments intersect at the
 // same point. This should be rare, but we could make it (n+k)log(n) again by
 // first sorting pEvents.intersection(), pEvents.right(), and res.contain() by
@@ -771,15 +818,6 @@ T computeParam(InputData<T>& in, SegmentIndex i, const Vec2<T>& position) {
     }
 }
 
-struct CompareSegmentIndexWithSecondInPair {
-    bool operator()(SegmentIndex i, const SegmentIndexPair& p) {
-        return i < p.second;
-    }
-    bool operator()(const SegmentIndexPair& p, SegmentIndex i) {
-        return p.second < i;
-    }
-};
-
 // Report intersections. This includes:
 // - Cases where two segments meet at their endpoint:
 //   - 2+ Left events, or
@@ -809,7 +847,7 @@ void reportIntersections(
     // now we initialize the param to 0 as there might no need to compute it
     // due to fast returns when n <= 2.
     //
-    Int interIndex = out.pointIntersections.length();
+    PointIntersectionIndex interIndex = out.pointIntersections.length();
     alg.infos.clear();
     for (SegmentIndex i : pSegments.contain()) {
         alg.infos.append(PointIntersectionInfo<T>{interIndex, i, 0});
@@ -826,7 +864,7 @@ void reportIntersections(
         return;
     }
 
-    // Discard the intersection if it only involve two segments, and they are
+    // Discard the intersection if it only involves two segments, and they are
     // consecutive segments of the same polyline, intersecting at their
     // expected shared endpoint.
     //
@@ -837,24 +875,17 @@ void reportIntersections(
         // TODO: what if consecutive segments overlap along a subsegment?
         SegmentIndex i1 = alg.infos.first().segmentIndex;
         SegmentIndex i2 = alg.infos.last().segmentIndex;
-        if (i2 < i1) {
-            std::swap(i1, i2);
-        }
-        if (i2 == i1 + 1) {
-            auto it = std::upper_bound(
-                in.polylines.begin(),
-                in.polylines.end(),
-                i2,
-                CompareSegmentIndexWithSecondInPair{});
-            if (it != in.polylines.end()) {
-                // => there is a pair (j1, j2) with i2 < j2, and
-                //    `it` points to the first of such pair.
-                SegmentIndex j1 = it->first;
-                if (j1 <= i1) {
-                    // This means j1 <= i1 < i2 (= i1+1) < j2.
-                    // So this intersection is part of the polyline.
-                    return;
-                }
+        PolylineIndex j = in.segmentPolylines[i1];
+        if (j >= 0 && in.segmentPolylines[i2] == j) {
+            if (i2 < i1) {
+                std::swap(i1, i2);
+            }
+            if (i2 == i1 + 1) {
+                return;
+            }
+            const PolylineInfo& info = in.polylines[j];
+            if (info.isClosed && i1 == info.first && i2 == info.last - 1) {
+                return;
             }
         }
     }
@@ -1045,13 +1076,20 @@ struct IsPointIntersectionInfo : std::false_type {};
 
 template<typename T>
 void SegmentIntersector2<T>::addSegment(const Vec2<T>& a, const Vec2<T>& b) {
-    segmentintersector2::detail::addSegment(input_, a, b);
+    segmentintersector2::detail::PolylineIndex polylineIndex = -1;
+    segmentintersector2::detail::addSegment(input_, a, b, polylineIndex);
 }
 
 template<typename T>
 template<typename Range, typename UnaryOp, VGC_REQUIRES_DEF(core::isInputRange<Range>)>
-void SegmentIntersector2<T>::addPolyline(const Range& range, UnaryOp op) {
-    segmentintersector2::detail::addPolyline(input_, range, op);
+void SegmentIntersector2<T>::addPolyline(
+    bool isClosed,
+    bool hasDuplicateEndpoints,
+    const Range& range,
+    UnaryOp op) {
+
+    segmentintersector2::detail::addPolyline(
+        input_, range, op, isClosed, hasDuplicateEndpoints);
 }
 
 template<typename T>

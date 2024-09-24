@@ -57,8 +57,13 @@ core::Array<IntersectionParameters> computeSelfIntersections(KeyEdge* edge) {
     {
         VGC_PROFILE_SCOPE("Bentley-Ottmann")
 
-        intersector.addPolyline(
-            samples, [](const auto& sample) { return sample.position(); });
+        bool isClosed = stroke->isClosed();
+        bool hasDuplicateEnpoints = true; // only used if isClosed is true
+        intersector.addPolyline(          //
+            isClosed,
+            hasDuplicateEnpoints,
+            samples,
+            [](const auto& sample) { return sample.position(); });
         intersector.computeIntersections();
         for (const auto& inter : intersector.pointIntersections()) {
 
