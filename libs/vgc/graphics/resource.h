@@ -500,9 +500,7 @@ public:
         T* p = Base::get();
         if (p) {
             p->decRef_();
-#ifdef VGC_DEBUG_BUILD
             Base::set_(nullptr);
-#endif
         }
     }
 
