@@ -31,8 +31,8 @@
 #include <vgc/geometry/segment2.h>
 #include <vgc/geometry/vec2.h>
 
-#define VGC_DEBUG_TMP_INTER VGC_DEBUG_TMP
-//#define VGC_DEBUG_TMP_INTER(...)
+//#define VGC_DEBUG_TMP_INTER VGC_DEBUG_TMP
+#define VGC_DEBUG_TMP_INTER(...)
 
 namespace vgc::geometry {
 

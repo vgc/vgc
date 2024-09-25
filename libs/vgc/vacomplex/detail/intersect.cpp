@@ -293,6 +293,106 @@ void computeEdgeIntersections(
     }
 }
 
+void addToIntersector(KeyEdge* edge, geometry::SegmentIntersector2d& intersector) {
+
+    VGC_PROFILE_FUNCTION
+
+    const geometry::AbstractStroke2d* stroke = edge->stroke();
+    const geometry::StrokeSampling2d& sampling = edge->strokeSampling();
+    const geometry::StrokeSample2dArray& samples = sampling.samples();
+
+    {
+        VGC_PROFILE_SCOPE("Add polyline");
+        bool isClosed = stroke->isClosed();
+        bool hasDuplicateEnpoints = true; // only used if isClosed is true
+        intersector.addPolyline(          //
+            isClosed,
+            hasDuplicateEnpoints,
+            samples,
+            [](const auto& sample) { return sample.position(); });
+    }
+}
+
+void computeEdgeIntersections_2(
+    core::ConstSpan<KeyEdge*> edges,
+    Group* group,
+    const IntersectSettings& settings,
+    IntersectCutInfoMap& cutInfos,
+    IntersectGlueInfoArray& glueInfos) {
+
+    Int numVertices = 0;
+    {
+
+        VGC_PROFILE_SCOPE("Bentley-Ottmann")
+
+        if (!settings.selfIntersect() && !settings.intersectEdges()) {
+            return;
+        }
+
+        core::Array<IntersectionParameters> res;
+        geometry::SegmentIntersector2d intersector;
+        for (KeyEdge* edge : edges) {
+            addToIntersector(edge, intersector);
+        }
+        if (settings.intersectEdges()) {
+            geometry::Rect2d bbox = geometry::Rect2d::empty;
+            for (const auto& edge : edges) {
+                bbox.uniteWith(edge->boundingBox());
+            }
+            for (Node* node : *group) {
+                if (Cell* cell = node->toCell()) {
+                    if (KeyEdge* edge = cell->toKeyEdge()) {
+                        if (!edges.contains(edge)
+                            && edge->boundingBox().intersects(bbox)) {
+                            addToIntersector(edge, intersector);
+                        }
+                    }
+                }
+            }
+        }
+
+        {
+            VGC_PROFILE_SCOPE("Compute intersections")
+            intersector.computeIntersections();
+        }
+
+        {
+            VGC_PROFILE_SCOPE("Count intersections")
+            for (const auto& inter : intersector.pointIntersections()) {
+
+                if (inter.infos.length() == 2) { // XXX What if > 2?
+
+                    ++numVertices;
+                    //ops::createKeyVertex(inter.position, group);
+                    /*
+            Int i1 = inter.infos.first().segmentIndex;
+            Int i2 = inter.infos.last().segmentIndex;
+            const geometry::CurveParameter& p1 = samples[i1].parameter();
+            const geometry::CurveParameter& q1 = samples[i1 + 1].parameter();
+            const geometry::CurveParameter& p2 = samples[i2].parameter();
+            const geometry::CurveParameter& q2 = samples[i2 + 1].parameter();
+            
+            double t1 = inter.infos.first().param;
+            double t2 = inter.infos.last().param;
+            geometry::SampledCurveParameter sParam1(p1, q1, t1);
+            geometry::SampledCurveParameter sParam2(p2, q2, t2);
+            geometry::CurveParameter param1 = stroke->resolveParameter(sParam1);
+            geometry::CurveParameter param2 = stroke->resolveParameter(sParam2);
+            
+            if (!(isStartOrEnd(edge, param1) || isStartOrEnd(edge, param2))) {
+                res.append(IntersectionParameters{param1, param2});
+            }
+            // TODO: handle special case when params are exactly equal to
+            // startParam/endParam for open edges? What if some params are
+            // exactly equal? Do we still want to cut twice?
+            */
+                }
+            }
+        }
+    }
+    VGC_DEBUG_TMP_EXPR(numVertices);
+}
+
 void cutEdges(IntersectCutInfoMap& cutInfos) {
     for (auto& [edge, cutInfo] : cutInfos) {
         cutInfo.res = ops::cutEdge(edge, cutInfo.params);
@@ -428,6 +528,9 @@ IntersectResult Operations::intersectWithGroup(
     IntersectResult res;
     IntersectCutInfoMap& cutInfos = res.cutInfos_;
     IntersectGlueInfoArray glueInfos = res.glueInfos_;
+
+    // OLD
+    /*
     if (settings.selfIntersect()) {
         for (KeyEdge* edge : edges) {
             computeSelfIntersections(edge, cutInfos, glueInfos);
@@ -439,6 +542,10 @@ IntersectResult Operations::intersectWithGroup(
             computeEdgeIntersections(edge, group, cutInfos, glueInfos);
         }
     }
+    */
+
+    // NEW
+    computeEdgeIntersections_2(edges, group, settings, cutInfos, glueInfos);
 
     // Cut edges at given CurveParameters and glue vertices two-by-two
     cutEdges(cutInfos);
