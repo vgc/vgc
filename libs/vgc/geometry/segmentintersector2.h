@@ -31,9 +31,6 @@
 #include <vgc/geometry/segment2.h>
 #include <vgc/geometry/vec2.h>
 
-//#define VGC_DEBUG_TMP_INTER VGC_DEBUG_TMP
-#define VGC_DEBUG_TMP_INTER(...)
-
 namespace vgc::geometry {
 
 // Note: we use the namespace `segmentintersector2` for defining public classes
@@ -623,11 +620,6 @@ Vec2<T> getNextEvent(AlgorithmData<T>& alg) {
         alg.sweepEvents.append(alg.eventQueue.top());
         alg.eventQueue.pop();
     }
-
-    VGC_DEBUG_TMP_INTER("----------------------------------");
-    VGC_DEBUG_TMP_INTER("Sweep segments before event: {}", alg.sweepSegments);
-    VGC_DEBUG_TMP_INTER("Handling position : {}", position);
-
     return position;
 }
 
@@ -681,12 +673,6 @@ PartitionedSweepEvents<T> partitionSweepEvents(AlgorithmData<T>& alg) {
     res.it3 = std::find_if(res.it2, res.it4, [](const Event<T>& event) {
         return event.type > EventType::Right; // find first event not Left or Right
     });
-
-    VGC_DEBUG_TMP_INTER("Sweep events: {}", alg.sweepEvents);
-    VGC_DEBUG_TMP_INTER("  Left events: {}", res.left());
-    VGC_DEBUG_TMP_INTER("  Right events: {}", res.right());
-    VGC_DEBUG_TMP_INTER("  Intersection events: {}", res.intersection());
-
     return res;
 }
 
@@ -811,13 +797,16 @@ void extendContainSegments(
                 }
             }
             if (!found) {
-                // We believe this to be impossible, even accounting for
-                // numerical errors. But since the proof is neither obvious nor
-                // local, we don't throw and consider this a recoverable error.
-                VGC_ERROR(
+                // In theory, this should not happen, but due to numerical
+                // errors it does happen occasionally.
+                // TODO: More analysis to understand why/when it happens.
+                //       Could it be happening because of an actual bug?
+#ifdef VGC_DEBUG_BUILD
+                VGC_WARNING(
                     LogVgcGeometry,
                     "Segment from event {} not found in sweep segments.",
                     event);
+#endif
             }
         }
     }
@@ -867,11 +856,6 @@ PartitionedSweepSegments partitionSweepSegments(
     std::tie(res.it2, res.it3) = std::equal_range(res.it1, res.it4, position, comp);
     extendContainSegments(res, pEvents.intersection());
     extendContainSegments(res, pEvents.right());
-
-    VGC_DEBUG_TMP_INTER("Sweep segments below position:      {}", res.below());
-    VGC_DEBUG_TMP_INTER("Sweep segments containing position: {}", res.contain());
-    VGC_DEBUG_TMP_INTER("Sweep segments above position:      {}", res.above());
-
     return res;
 }
 
@@ -1124,15 +1108,10 @@ void processNextEvent(InputData<T>& in, AlgorithmData<T>& alg, OutputData<T>& ou
 
     // Add intersections between newly-neighbor segments to the event queue.
     findNewIntersections(in, alg, position, it);
-
-    VGC_DEBUG_TMP_INTER("Sweep segments after event: {}", alg.sweepSegments);
 }
 
 template<typename T>
 void computeIntersections(InputData<T>& in, AlgorithmData<T>& alg, OutputData<T>& out) {
-    VGC_DEBUG_TMP_INTER("Segments: {}", in.segments);
-    VGC_DEBUG_TMP_INTER("isReversed: {}", in.isReversed);
-    VGC_DEBUG_TMP_INTER("segmentSlopes: {}", in.segmentSlopes);
     initializeEventQueue(in, alg);
     initializeSweepSegments(alg);
     while (!alg.eventQueue.empty()) {
