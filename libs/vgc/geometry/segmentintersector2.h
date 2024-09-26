@@ -143,7 +143,7 @@ struct PolylineInfo {
 /// \brief Computes all intersections between a set of line segments.
 ///
 template<typename T>
-class VGC_GEOMETRY_API SegmentIntersector2 {
+class SegmentIntersector2 {
 public:
     using ScalarType = T;
     static constexpr Int dimension = 2;
@@ -1159,10 +1159,10 @@ void SegmentIntersector2<T>::computeIntersections() {
 }
 
 using SegmentIntersector2f = SegmentIntersector2<float>;
-extern template class SegmentIntersector2<float>;
+extern template class VGC_GEOMETRY_API SegmentIntersector2<float>;
 
 using SegmentIntersector2d = SegmentIntersector2<double>;
-extern template class SegmentIntersector2<double>;
+extern template class VGC_GEOMETRY_API SegmentIntersector2<double>;
 
 } // namespace vgc::geometry
 
