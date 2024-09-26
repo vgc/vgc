@@ -20,7 +20,8 @@ namespace vgc::geometry {
 
 // Explicit template instanciations.
 // This avoids compiling them in each compilation unit that uses them.
-VGC_GEOMETRY_API_TEMPLATE_CLASS SegmentIntersector2<float>;
-VGC_GEOMETRY_API_TEMPLATE_CLASS SegmentIntersector2<double>;
+// TODO: this currently doesn't work on MSVC
+// template class SegmentIntersector2<float>;
+// template class SegmentIntersector2<double>;
 
 } // namespace vgc::geometry

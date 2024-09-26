@@ -177,17 +177,9 @@
 #        define VGC_DLL_EXPORT __attribute__((dllexport))
 #        define VGC_DLL_IMPORT __attribute__((dllimport))
 #        define VGC_DLL_HIDDEN
-#        define VGC_DLL_EXPORT_EXTERN_TEMPLATE_CLASS extern template class VGC_DLL_EXPORT
-#        define VGC_DLL_IMPORT_EXTERN_TEMPLATE_CLASS extern template class VGC_DLL_IMPORT
-#        define VGC_DLL_EXPORT_TEMPLATE_CLASS template class
-#        define VGC_DLL_IMPORT_TEMPLATE_CLASS template class
 #    else
 #        define VGC_DLL_EXPORT __declspec(dllexport)
 #        define VGC_DLL_IMPORT __declspec(dllimport)
-#        define VGC_DLL_EXPORT_EXTERN_TEMPLATE_CLASS extern template class
-#        define VGC_DLL_IMPORT_EXTERN_TEMPLATE_CLASS extern template class VGC_DLL_IMPORT
-#        define VGC_DLL_EXPORT_TEMPLATE_CLASS template class VGC_DLL_EXPORT
-#        define VGC_DLL_IMPORT_TEMPLATE_CLASS template class
 #        define VGC_DLL_HIDDEN
 #    endif
 #    define VGC_DLL_EXPORT_EXCEPTION
@@ -197,22 +189,12 @@
 #    define VGC_DLL_EXPORT __attribute__((visibility("default")))
 #    define VGC_DLL_IMPORT __attribute__((visibility("default")))
 #    define VGC_DLL_HIDDEN __attribute__((visibility("hidden")))
-#    define VGC_DLL_EXPORT_EXTERN_TEMPLATE_CLASS extern template class VGC_DLL_EXPORT
-#    define VGC_DLL_IMPORT_EXTERN_TEMPLATE_CLASS extern template class VGC_DLL_IMPORT
-#    define VGC_DLL_EXPORT_TEMPLATE_CLASS template class
-#    define VGC_DLL_IMPORT_TEMPLATE_CLASS template class
 #    define VGC_DLL_EXPORT_EXCEPTION VGC_DLL_EXPORT
 #    define VGC_DLL_IMPORT_EXCEPTION VGC_DLL_IMPORT
 #else
 #    define VGC_DLL_EXPORT
 #    define VGC_DLL_IMPORT
 #    define VGC_DLL_HIDDEN
-#    define VGC_DLL_EXPORT_EXTERN_TEMPLATE_CLASS extern template class
-#    define VGC_DLL_IMPORT_EXTERN_TEMPLATE_CLASS extern template class
-#    define VGC_DLL_EXPORT_TEMPLATE_CLASS template class
-#    define VGC_DLL_IMPORT_TEMPLATE_CLASS template class
-#    define VGC_DLL_EXPORT_TEMPLATE_CLASS template class
-#    define VGC_DLL_IMPORT_TEMPLATE_CLASS template class
 #    define VGC_DLL_EXPORT_EXCEPTION
 #    define VGC_DLL_IMPORT_EXCEPTION
 #endif

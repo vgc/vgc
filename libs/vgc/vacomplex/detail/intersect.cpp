@@ -18,8 +18,6 @@
 
 #include <vgc/geometry/segment2.h> // segmentIntersect
 
-#include <vgc/geometry/segmentintersector2.h>
-
 namespace vgc::vacomplex {
 
 namespace detail {
@@ -366,10 +364,6 @@ IntersectResult Operations::intersectWithGroup(
     core::ConstSpan<KeyEdge*> edges,
     Group* group,
     const IntersectSettings& settings) {
-
-    // XXX test
-    geometry::SegmentIntersector2d intersector;
-    intersector.computeIntersections();
 
     // Compute info about intersections
     IntersectResult res;

@@ -1158,8 +1158,9 @@ void SegmentIntersector2<T>::computeIntersections() {
     segmentintersector2::detail::computeIntersections(input_, algorithm_, output_);
 }
 
-VGC_GEOMETRY_API_EXTERN_TEMPLATE_CLASS SegmentIntersector2<float>;
-VGC_GEOMETRY_API_EXTERN_TEMPLATE_CLASS SegmentIntersector2<double>;
+// TODO: this currently doesn't work on MSVC
+// extern template class VGC_GEOMETRY_API SegmentIntersector2<float>;
+// extern template class VGC_GEOMETRY_API SegmentIntersector2<double>;
 
 using SegmentIntersector2f = SegmentIntersector2<float>;
 using SegmentIntersector2d = SegmentIntersector2<double>;
