@@ -52,6 +52,7 @@ namespace vgc::geometry {
 //
 namespace segmentintersector2 {
 
+using PolylineIndex = Int;
 using SegmentIndex = Int;
 using PointIntersectionIndex = Int;
 
@@ -79,6 +80,41 @@ struct PointIntersection {
     core::Array<PointIntersectionInfo<T>> infos;
 };
 
+template<typename T>
+class SegmentIndexRange {
+public:
+    /// Creates a `SegmentIndexRange`.
+    ///
+    SegmentIndexRange(SegmentIndex first, SegmentIndex pastTheLast)
+        : first_(first)
+        , pastTheLast_(pastTheLast) {
+    }
+
+    /// Returns the first index (included) of this range of indices.
+    ///
+    SegmentIndex first() const {
+        return first_;
+    }
+
+    /// Returns the last index (excluded) of this range of indices.
+    ///
+    SegmentIndex pastTheLast() const {
+        return pastTheLast_;
+    }
+
+    /// Returns whether this range of indices is empty.
+    ///
+    bool isEmpty() const {
+        return pastTheLast_ > first_;
+    }
+
+    // TODO: provide proxy iterators begin()/end() to make this iterable?
+
+private:
+    SegmentIndex first_;
+    SegmentIndex pastTheLast_;
+};
+
 namespace detail {
 
 enum class EventType : UInt8 {
@@ -96,6 +132,12 @@ struct AlgorithmData;
 template<typename T>
 struct OutputData;
 
+struct PolylineInfo {
+    SegmentIndex first;
+    SegmentIndex last;
+    bool isClosed;
+};
+
 } // namespace detail
 
 } // namespace segmentintersector2
@@ -110,7 +152,10 @@ public:
     static constexpr Int dimension = 2;
 
     using SegmentIndex = segmentintersector2::SegmentIndex;
+    using PolylineIndex = segmentintersector2::PolylineIndex;
     using PointIntersectionIndex = segmentintersector2::PointIntersectionIndex;
+
+    using SegmentIndexRange = segmentintersector2::SegmentIndexRange<T>;
 
     using PointIntersectionInfo = segmentintersector2::PointIntersectionInfo<T>;
     using PointIntersection = segmentintersector2::PointIntersection<T>;
@@ -133,49 +178,70 @@ public:
         output_.clear();
     }
 
-    /// Adds a segment.
+    /// Adds a segment to this intersector, and returns its index.
     ///
-    void addSegment(const Vec2<T>& a, const Vec2<T>& b);
+    SegmentIndex addSegment(const Vec2<T>& a, const Vec2<T>& b);
 
-    /// Adds an open polyline.
+    /// Adds an open polyline to this intersector, and returns its index.
     ///
-    /// With `n` being the length of the range, this does nothing if `n < 2`,
-    /// otherwise adds `n-1` segments.
+    /// The unary operator `getPoint` should take as argument an element of the
+    /// given `range`, and return a point of type `Vec2`.
+    ///
+    /// With `n` being the length of the range, then:
+    ///
+    /// - If `n < 2`, this does not add any segment.
+    ///
+    /// - If `n >= 2`, this adds `n-1` segments.
+    ///
+    /// All added segments have consecutive indices, which can be
+    /// retrieved via `segmentIndexRange(polylineIndex)`.
     ///
     template<
         typename Range,
         typename UnaryOp = core::Identity,
         VGC_REQUIRES(core::isInputRange<Range>)>
-    void addPolyline(const Range& range, UnaryOp vec2Getter = {}) {
-        addPolyline(false, false, range.begin(), range.end(), vec2Getter);
+    PolylineIndex addPolyline(const Range& range, UnaryOp getPoint = {}) {
+        return addPolyline(false, false, range.begin(), range.end(), getPoint);
     }
 
-    /// Adds a possibly closed polyline.
+    /// Adds a (possibly closed) polyline to this intersector, and returns its index.
     ///
-    /// With `n` being the length of the range:
+    /// The unary operator `getPoint` should take as argument an element of the
+    /// given `range`, and return a point of type `Vec2`.
     ///
-    /// - If `isClosed == false`: this does nothing if `n < 2`, otherwise adds
-    /// `n-1` segments.
+    /// With `n` being the length of the range, then:
     ///
-    /// - If `isClosed == true` and `hasDuplicateEndpoints == true`: this does
-    /// nothing if `n < 2`, otherwise adds `n-1` segments. Expects the first
-    /// and last points to be equal.
+    /// - If `isClosed == false` and `n < 2`, this does not add any segment.
     ///
-    /// - If `isClosed == true` and `hasDuplicateEndpoints == false`: this does
-    /// nothing if `n < 1`, otherwise adds `n` segments. If the first and last
-    /// points are equal, then the last segment is reduced to a point.
+    /// - If `isClosed == false` and `n >= 2`, this adds `n-1` segments.
+    ///
+    /// - If `isClosed == true`, `hasDuplicateEndpoints == true`, and `n < 2`,
+    ///   this does not add any segment.
+    ///
+    /// - If `isClosed == true`, `hasDuplicateEndpoints == true`, and `n >= 2`,
+    ///   this adds `n-1` segments and expects the first and last points to be equal.
+    ///
+    /// - If `isClosed == true`, `hasDuplicateEndpoints == false`, and `n < 1`,
+    ///   this does not add any segment.
+    ///
+    /// - If `isClosed == true`, `hasDuplicateEndpoints == false`, and `n >= 1`,
+    ///   this adds `n` segments. Note that if the first and last points are
+    ///   equal, then the last segment is reduced to a point.
+    ///
+    /// All added segments have consecutive indices, which can be
+    /// retrieved via `segmentIndexRange(polylineIndex)`.
     ///
     template<
         typename Range,
         typename UnaryOp = core::Identity,
         VGC_REQUIRES(core::isInputRange<Range>)>
-    void addPolyline(
+    PolylineIndex addPolyline(
         bool isClosed,
         bool hasDuplicateEndpoints,
         const Range& range,
-        UnaryOp vec2Getter = {});
+        UnaryOp getPoint = {});
 
-    /// Computes the intersections between the input segments and polylines.
+    /// Computes the intersections between all added segments and polylines.
     ///
     void computeIntersections();
 
@@ -184,6 +250,30 @@ public:
     const core::Array<PointIntersection>& pointIntersections() const {
         return output_.pointIntersections;
     };
+
+    /// Returns which polyline contains the given segment.
+    ///
+    /// Returns -1 if `i` corresponds to a segment that is not part of a
+    /// polyline, that is, was added directly via `addSegment()` instead of
+    /// via `addPolyline()`.
+    ///
+    /// Raises `IndexError` if `i` is not a valid segment index.
+    ///
+    PolylineIndex polylineIndex(SegmentIndex i) {
+        return input_.segmentPolylines[i];
+    }
+
+    /// Returns to which polyline corresponds the given segment.
+    ///
+    /// Returns -1 if `i` correspond to a segment that is not part of a polyline,
+    /// that is, was added via `addSegment()`.
+    ///
+    /// Raises `IndexError` if `i` does not correspond to a valid segment index.
+    ///
+    SegmentIndexRange segmentIndexRange(PolylineIndex i) {
+        const segmentintersector2::detail::PolylineInfo& info = input_.polylines[i];
+        return {info.first, info.last};
+    }
 
 private:
     segmentintersector2::detail::InputData<T> input_;
@@ -236,14 +326,6 @@ struct Event {
     friend bool operator>(const Event& e1, const Event& e2) {
         return e2 < e1;
     }
-};
-
-using PolylineIndex = Int;
-
-struct PolylineInfo {
-    SegmentIndex first;
-    SegmentIndex last;
-    bool isClosed;
 };
 
 template<typename T>
@@ -329,31 +411,25 @@ T computeSlope(const Vec2<T>& a, const Vec2<T>& b) {
 
 // Add segment ensuring a <= b order.
 template<typename T>
-void addSegment(
+SegmentIndex addSegment(
     InputData<T>& in,
     const Vec2<T>& a,
     const Vec2<T>& b,
     PolylineIndex polylineIndex) {
 
+    SegmentIndex res = in.segments.length();
     if (b < a) {
         in.segments.emplaceLast(b, a);
-        in.segmentSlopes.append(computeSlope<T>(b, a));
+        in.segmentSlopes.append(computeSlope(b, a));
         in.isReversed.append(true);
     }
     else {
         in.segments.emplaceLast(a, b);
-        in.segmentSlopes.append(computeSlope<T>(a, b));
+        in.segmentSlopes.append(computeSlope(a, b));
         in.isReversed.append(false);
     }
     in.segmentPolylines.append(polylineIndex);
-
-    // [1] We need to fully qualify computeSlope<T> because otherwise the
-    // template arg couldn't be deduced, since Vec2f/Vec2d are not actually
-    // template instanciations of Vec2. This might be reason enough to abandon
-    // the current python-generated Vec2f/Vec2d, and use proper C++ templates
-    // instead, despite longer symbol names. Also, we basically cannot have
-    // auto-completion for these types here: we can autocomplete on `in.<tab>`,
-    // but not on `a.<tab>`.
+    return res;
 }
 
 template<
@@ -361,35 +437,39 @@ template<
     typename Range,
     typename UnaryOp,
     VGC_REQUIRES(core::isInputRange<Range>)>
-void addPolyline(
+PolylineIndex addPolyline(
     InputData<T>& in,
     const Range& range,
     UnaryOp op,
     bool isClosed,
     bool hasDuplicateEndpoints) {
 
-    // Do nothing if the range does not contain at least two elements.
+    // Handle special case there the polyline has no segments
+    PolylineIndex polylineIndex = in.polylines.length();
+    SegmentIndex polylineBegin = in.segments.length();
     if (core::isEmpty(range)) {
-        return;
+        in.polylines.emplaceLast(PolylineInfo{polylineBegin, polylineBegin, isClosed});
+        return polylineIndex;
     }
+
     Vec2<T> firstPosition = op(*range.begin());
     Vec2<T> startPosition = firstPosition;
     auto endPositions = core::drop(range, 1);
-    if (core::isEmpty(endPositions)) {
-        return;
-    }
 
     // Reserve memory if the number of segments can be known in advance.
     if constexpr (core::isForwardRange<Range>) {
         auto numSegmentsInPolyline = endPositions.end() - endPositions.begin();
+        if (isClosed && !hasDuplicateEndpoints) {
+            numSegmentsInPolyline += 1;
+        }
         auto numSegments = in.segments.size() + numSegmentsInPolyline;
         in.segments.reserve(numSegments);
+        in.segmentSlopes.reserve(numSegments);
         in.isReversed.reserve(numSegments);
+        in.segmentPolylines.reserve(numSegments);
     }
 
     // Add the segments
-    PolylineIndex polylineIndex = in.polylines.length();
-    SegmentIndex polylineBegin = in.segments.length();
     for (const auto& endPosition_ : endPositions) {
         Vec2<T> endPosition = op(endPosition_);
         addSegment(in, startPosition, endPosition, polylineIndex);
@@ -401,6 +481,7 @@ void addPolyline(
 
     SegmentIndex polylineEnd = in.segments.length();
     in.polylines.emplaceLast(PolylineInfo{polylineBegin, polylineEnd, isClosed});
+    return polylineIndex;
 }
 
 template<typename T>
@@ -1075,20 +1156,21 @@ struct IsPointIntersectionInfo : std::false_type {};
 } // namespace segmentintersector2::detail
 
 template<typename T>
-void SegmentIntersector2<T>::addSegment(const Vec2<T>& a, const Vec2<T>& b) {
-    segmentintersector2::detail::PolylineIndex polylineIndex = -1;
-    segmentintersector2::detail::addSegment(input_, a, b, polylineIndex);
+segmentintersector2::SegmentIndex
+SegmentIntersector2<T>::addSegment(const Vec2<T>& a, const Vec2<T>& b) {
+    PolylineIndex polylineIndex = -1;
+    return segmentintersector2::detail::addSegment(input_, a, b, polylineIndex);
 }
 
 template<typename T>
 template<typename Range, typename UnaryOp, VGC_REQUIRES_DEF(core::isInputRange<Range>)>
-void SegmentIntersector2<T>::addPolyline(
+segmentintersector2::PolylineIndex SegmentIntersector2<T>::addPolyline(
     bool isClosed,
     bool hasDuplicateEndpoints,
     const Range& range,
     UnaryOp op) {
 
-    segmentintersector2::detail::addPolyline(
+    return segmentintersector2::detail::addPolyline(
         input_, range, op, isClosed, hasDuplicateEndpoints);
 }
 
