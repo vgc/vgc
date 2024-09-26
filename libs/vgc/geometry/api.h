@@ -33,9 +33,13 @@
 #    if defined(VGC_GEOMETRY_EXPORTS)
 #        define VGC_GEOMETRY_API VGC_DLL_EXPORT
 #        define VGC_GEOMETRY_API_EXCEPTION VGC_DLL_EXPORT_EXCEPTION
+#        define VGC_GEOMETRY_API_EXTERN_TEMPLATE_CLASS                                   \
+            VGC_DLL_EXPORT_EXTERN_TEMPLATE_CLASS
 #    else
 #        define VGC_GEOMETRY_API VGC_DLL_IMPORT
 #        define VGC_GEOMETRY_API_EXCEPTION VGC_DLL_IMPORT_EXCEPTION
+#        define VGC_GEOMETRY_API_EXTERN_TEMPLATE_CLASS                                   \
+            VGC_DLL_IMPORT_EXTERN_TEMPLATE_CLASS
 #    endif
 #    define VGC_GEOMETRY_API_HIDDEN VGC_DLL_HIDDEN
 #endif
