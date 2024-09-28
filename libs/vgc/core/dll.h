@@ -171,34 +171,29 @@
 
 #include <vgc/core/defs.h>
 
-#if defined(VGC_OS_WINDOWS)
-#    if defined(VGC_COMPILER_MSVC)
-#        define VGC_DLL_EXPORT __declspec(dllexport)
-#        define VGC_DLL_IMPORT __declspec(dllimport)
-#    elif defined(VGC_COMPILER_GCC) || defined(VGC_COMPILER_CLANG)
-#        define VGC_DLL_EXPORT __attribute__((dllexport))
-#        define VGC_DLL_IMPORT __attribute__((dllimport))
-#    endif
-#    if defined(VGC_DLL_EXPORT)
+// The outer ifndef VGC_DLL_EXPORT allows client code (or a build system) to
+// provide their own definition of VGC_DLL_EXPORT, VGC_DLL_IMPORT, etc., for
+// example for a compiler that we do not support.
+
+#ifndef VGC_DLL_EXPORT
+#    if defined(VGC_OS_WINDOWS)
+#        if defined(VGC_COMPILER_MSVC)
+#            define VGC_DLL_EXPORT __declspec(dllexport)
+#            define VGC_DLL_IMPORT __declspec(dllimport)
+#        else // GCC, Clang, and possibly others
+#            define VGC_DLL_EXPORT __attribute__((dllexport))
+#            define VGC_DLL_IMPORT __attribute__((dllimport))
+#        endif
 #        define VGC_DLL_HIDDEN
 #        define VGC_DLL_EXPORT_EXCEPTION
 #        define VGC_DLL_IMPORT_EXCEPTION
+#    else // Linux or macOS with GCC or Clang, and possibly others
+#        define VGC_DLL_EXPORT __attribute__((visibility("default")))
+#        define VGC_DLL_IMPORT __attribute__((visibility("default")))
+#        define VGC_DLL_HIDDEN __attribute__((visibility("hidden")))
+#        define VGC_DLL_EXPORT_EXCEPTION VGC_DLL_EXPORT
+#        define VGC_DLL_IMPORT_EXCEPTION VGC_DLL_IMPORT
 #    endif
-#elif defined(VGC_COMPILER_GCC) || defined(VGC_COMPILER_CLANG)
-#    define VGC_DLL_EXPORT __attribute__((visibility("default")))
-#    define VGC_DLL_IMPORT __attribute__((visibility("default")))
-#    define VGC_DLL_HIDDEN __attribute__((visibility("hidden")))
-#    define VGC_DLL_EXPORT_EXCEPTION VGC_DLL_EXPORT
-#    define VGC_DLL_IMPORT_EXCEPTION VGC_DLL_IMPORT
-#endif
-
-// Other cases
-#ifndef VGC_DLL_EXPORT
-#    define VGC_DLL_EXPORT
-#    define VGC_DLL_IMPORT
-#    define VGC_DLL_HIDDEN
-#    define VGC_DLL_EXPORT_EXCEPTION
-#    define VGC_DLL_IMPORT_EXCEPTION
 #endif
 
 #endif // VGC_CORE_DLL_H
