@@ -172,26 +172,28 @@
 #include <vgc/core/defs.h>
 
 #if defined(VGC_OS_WINDOWS)
-#    if defined(VGC_COMPILER_GCC) && VGC_COMPILER_GCC_MAJOR >= 4                         \
-        || defined(VGC_COMPILER_CLANG)
-#        define VGC_DLL_EXPORT __attribute__((dllexport))
-#        define VGC_DLL_IMPORT __attribute__((dllimport))
-#        define VGC_DLL_HIDDEN
-#    else
+#    if defined(VGC_COMPILER_MSVC)
 #        define VGC_DLL_EXPORT __declspec(dllexport)
 #        define VGC_DLL_IMPORT __declspec(dllimport)
-#        define VGC_DLL_HIDDEN
+#    elif defined(VGC_COMPILER_GCC) || defined(VGC_COMPILER_CLANG)
+#        define VGC_DLL_EXPORT __attribute__((dllexport))
+#        define VGC_DLL_IMPORT __attribute__((dllimport))
 #    endif
-#    define VGC_DLL_EXPORT_EXCEPTION
-#    define VGC_DLL_IMPORT_EXCEPTION
-#elif defined(VGC_COMPILER_GCC) && VGC_COMPILER_GCC_MAJOR >= 4                           \
-    || defined(VGC_COMPILER_CLANG)
+#    if defined(VGC_DLL_EXPORT)
+#        define VGC_DLL_HIDDEN
+#        define VGC_DLL_EXPORT_EXCEPTION
+#        define VGC_DLL_IMPORT_EXCEPTION
+#    endif
+#elif defined(VGC_COMPILER_GCC) || defined(VGC_COMPILER_CLANG)
 #    define VGC_DLL_EXPORT __attribute__((visibility("default")))
 #    define VGC_DLL_IMPORT __attribute__((visibility("default")))
 #    define VGC_DLL_HIDDEN __attribute__((visibility("hidden")))
 #    define VGC_DLL_EXPORT_EXCEPTION VGC_DLL_EXPORT
 #    define VGC_DLL_IMPORT_EXCEPTION VGC_DLL_IMPORT
-#else
+#endif
+
+// Other cases
+#ifndef VGC_DLL_EXPORT
 #    define VGC_DLL_EXPORT
 #    define VGC_DLL_IMPORT
 #    define VGC_DLL_HIDDEN
