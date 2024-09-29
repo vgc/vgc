@@ -175,25 +175,51 @@
 // provide their own definition of VGC_DLL_EXPORT, VGC_DLL_IMPORT, etc., for
 // example for a compiler that we do not support.
 
+// Note: the `k` macro argument means "class-key". Can be `class`, `struct`, or `union`.
+// See:
+// - https://en.cppreference.com/w/cpp/language/class
+// - https://en.cppreference.com/w/cpp/language/class_template
+
+// clang-format off
+
 #ifndef VGC_DLL_EXPORT
-#    if defined(VGC_OS_WINDOWS)
-#        if defined(VGC_COMPILER_MSVC)
-#            define VGC_DLL_EXPORT __declspec(dllexport)
-#            define VGC_DLL_IMPORT __declspec(dllimport)
-#        else // GCC, Clang, and possibly others
-#            define VGC_DLL_EXPORT __attribute__((dllexport))
-#            define VGC_DLL_IMPORT __attribute__((dllimport))
-#        endif
-#        define VGC_DLL_HIDDEN
-#        define VGC_DLL_EXPORT_EXCEPTION
-#        define VGC_DLL_IMPORT_EXCEPTION
-#    else // Linux or macOS with GCC or Clang, and possibly others
-#        define VGC_DLL_EXPORT __attribute__((visibility("default")))
-#        define VGC_DLL_IMPORT __attribute__((visibility("default")))
-#        define VGC_DLL_HIDDEN __attribute__((visibility("hidden")))
-#        define VGC_DLL_EXPORT_EXCEPTION VGC_DLL_EXPORT
-#        define VGC_DLL_IMPORT_EXCEPTION VGC_DLL_IMPORT
+#  if defined(VGC_OS_WINDOWS)
+#    if defined(VGC_COMPILER_MSVC)
+#      define VGC_DLL_EXPORT                          __declspec(dllexport)
+#      define VGC_DLL_IMPORT                          __declspec(dllimport)
+#      define VGC_DLL_EXPORT_DECLARE_TEMPLATE(k, ...) extern template k __VA_ARGS__
+#      define VGC_DLL_IMPORT_DECLARE_TEMPLATE(k, ...) extern template k VGC_DLL_IMPORT __VA_ARGS__
+#      define VGC_DLL_EXPORT_DEFINE_TEMPLATE(k, ...)  template k VGC_DLL_EXPORT __VA_ARGS__
+#      define VGC_DLL_IMPORT_DEFINE_TEMPLATE(k, ...)  template k __VA_ARGS__
+#    else // GCC, Clang, and possibly others
+#      define VGC_DLL_EXPORT                          __attribute__((dllexport))
+#      define VGC_DLL_IMPORT                          __attribute__((dllimport))
+#      define VGC_DLL_EXPORT_DECLARE_TEMPLATE(k, ...) extern template k VGC_DLL_EXPORT __VA_ARGS__
+#      define VGC_DLL_IMPORT_DECLARE_TEMPLATE(k, ...) extern template k VGC_DLL_IMPORT __VA_ARGS__
+#      define VGC_DLL_EXPORT_DEFINE_TEMPLATE(k, ...)  template k __VA_ARGS__
+#      define VGC_DLL_IMPORT_DEFINE_TEMPLATE(k, ...)  template k __VA_ARGS__
 #    endif
+#    define VGC_DLL_EXPORT_HIDDEN
+#    define VGC_DLL_IMPORT_HIDDEN
+#    define VGC_DLL_EXPORT_EXCEPTION
+#    define VGC_DLL_IMPORT_EXCEPTION
+#  else // Linux or macOS with GCC or Clang, and possibly others
+#    define VGC_DLL_EXPORT                          __attribute__((visibility("default")))
+#    define VGC_DLL_IMPORT                          __attribute__((visibility("default")))
+#    define VGC_DLL_EXPORT_HIDDEN                   __attribute__((visibility("hidden")))
+#    define VGC_DLL_IMPORT_HIDDEN                   __attribute__((visibility("hidden")))
+#    define VGC_DLL_EXPORT_DECLARE_TEMPLATE(k, ...) extern template k VGC_DLL_EXPORT __VA_ARGS__
+#    define VGC_DLL_IMPORT_DECLARE_TEMPLATE(k, ...) extern template k VGC_DLL_IMPORT __VA_ARGS__
+#    define VGC_DLL_EXPORT_DEFINE_TEMPLATE(k, ...)  template k __VA_ARGS__
+#    define VGC_DLL_IMPORT_DEFINE_TEMPLATE(k, ...)  template k __VA_ARGS__
+#    define VGC_DLL_EXPORT_EXCEPTION                VGC_DLL_EXPORT
+#    define VGC_DLL_IMPORT_EXCEPTION                VGC_DLL_IMPORT
+#  endif
+#  define VGC_DLL_STATIC
+#  define VGC_DLL_STATIC_DECLARE_TEMPLATE(k, ...) extern template k __VA_ARGS__
+#  define VGC_DLL_STATIC_DEFINE_TEMPLATE(k, ...)  template k __VA_ARGS__
+#  define VGC_DLL_STATIC_EXCEPTION
+#  define VGC_DLL_STATIC_HIDDEN
 #endif
 
 #endif // VGC_CORE_DLL_H
