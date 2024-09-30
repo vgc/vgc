@@ -243,11 +243,13 @@ SegmentIntersection2<T> segmentIntersect(
 // include and compile detail/segmentintersect.h in all translation units that
 // include segment2.h.
 //
-extern template VGC_GEOMETRY_API SegmentIntersection2f
-segmentIntersect(const Vec2f&, const Vec2f&, const Vec2f&, const Vec2f&);
+VGC_GEOMETRY_API_DECLARE_TEMPLATE_FUNCTION( //
+    SegmentIntersection2f
+        segmentIntersect(const Vec2f&, const Vec2f&, const Vec2f&, const Vec2f&));
 
-extern template VGC_GEOMETRY_API SegmentIntersection2d
-segmentIntersect(const Vec2d&, const Vec2d&, const Vec2d&, const Vec2d&);
+VGC_GEOMETRY_API_DECLARE_TEMPLATE_FUNCTION( //
+    SegmentIntersection2d
+        segmentIntersect(const Vec2d&, const Vec2d&, const Vec2d&, const Vec2d&));
 
 /// \class vgc::geometry::Segment2
 /// \brief Represents a 2D line segment.

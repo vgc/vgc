@@ -30,10 +30,12 @@ SegmentIntersection2<T> segmentIntersect(
     return detail::segmentintersect::intersect(a1, b1, a2, b2);
 }
 
-template SegmentIntersection2f
-segmentIntersect(const Vec2f&, const Vec2f&, const Vec2f&, const Vec2f&);
+VGC_GEOMETRY_API_DEFINE_TEMPLATE_FUNCTION( //
+    SegmentIntersection2f
+        segmentIntersect(const Vec2f&, const Vec2f&, const Vec2f&, const Vec2f&));
 
-template SegmentIntersection2d
-segmentIntersect(const Vec2d&, const Vec2d&, const Vec2d&, const Vec2d&);
+VGC_GEOMETRY_API_DEFINE_TEMPLATE_FUNCTION( //
+    SegmentIntersection2d
+        segmentIntersect(const Vec2d&, const Vec2d&, const Vec2d&, const Vec2d&));
 
 } // namespace vgc::geometry

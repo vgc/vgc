@@ -42,13 +42,15 @@
 /// - `VGC_FOO_API_EXCEPTION`: same as `VGC_FOO_API` but for exception classes
 ///
 /// In addition, the file `vgc/foo/api.h` provides macros to declare and define
-/// explicit class/struct/union template instantiations that should be
+/// explicit function/class/struct/union template instantiations that should be
 /// exported:
 ///
+/// - `VGC_FOO_API_DECLARE_TEMPLATE_FUNCTION`
 /// - `VGC_FOO_API_DECLARE_TEMPLATE_CLASS`
 /// - `VGC_FOO_API_DECLARE_TEMPLATE_STRUCT`
 /// - `VGC_FOO_API_DECLARE_TEMPLATE_UNION`
 ///
+/// - `VGC_FOO_API_DEFINE_TEMPLATE_FUNCTION`
 /// - `VGC_FOO_API_DEFINE_TEMPLATE_CLASS`
 /// - `VGC_FOO_API_DEFINE_TEMPLATE_STRUCT`
 /// - `VGC_FOO_API_DEFINE_TEMPLATE_UNION`
@@ -88,8 +90,8 @@
 /// };
 /// ```
 ///
-/// Importantly, this also export type info (RTTI), which is typically required
-/// to be able to wrap abstract classes in Python.
+/// Importantly, this also exports type info (RTTI), which is typically
+/// required to be able to wrap abstract classes in Python.
 ///
 /// If for some reason you desire not to export a specific method, you can use
 /// `VGC_FOO_HIDDEN`:
@@ -135,13 +137,11 @@
 ///    // ...
 /// }
 ///
-/// extern template VGC_FOO_API
-/// float foo<float>();
+/// VGC_FOO_API_DECLARE_TEMPLATE_FUNCTION(float foo<float>());
 ///
 /// // In foo.cpp
 ///
-/// template
-/// float foo<float>();
+/// VGC_FOO_API_DEFINE_TEMPLATE_FUNCTION(float foo<float>());
 /// ```
 ///
 /// Note that the template arguments can be omitted if they can be deduced from
@@ -155,50 +155,78 @@
 ///    // ...
 /// }
 ///
-/// extern template VGC_FOO_API
-/// float foo(float);
+/// VGC_FOO_API_DECLARE_TEMPLATE_FUNCTION(float foo(float));
 ///
 /// // In foo.cpp
 ///
-/// template
-/// float foo(float);
+/// VGC_FOO_API_DEFINE_TEMPLATE_FUNCTION(float foo(float));
 /// ```
 ///
-/// For more info on explicit function template instantiation, see:
+/// For more info on explicit function template instantiations, see:
 /// - https://en.cppreference.com/w/cpp/language/function_template
 ///
-/// # Exporting class templates
+/// # Exporting class/struct/union templates
 ///
 /// Similarly to function templates, class templates (or struct templates, or
 /// union templates) do not need to be exported to be usable in other libraries
 /// or applications.
 ///
 /// However, if desired (for example to speed up compilation or reduce object
-/// size), it is possible to define explicit class template instantiations and
-/// export these, using the following syntax:
+/// size), it is possible to define explicit class/struct/union template
+/// instantiations and export these, using the following syntax:
 ///
 /// ```cpp
 /// // In foo.h
 ///
 /// template<typename T>
-/// class Foo {
-///    // ...
-/// }
+/// class Foo { /* ... */ };
+///
+/// template<typename T>
+/// struct Bar { /* ... */ };
+///
+/// template<typename T>
+/// union Baz { /* ... */ };
 ///
 /// VGC_FOO_API_DECLARE_TEMPLATE_CLASS(Foo<float>);
+/// VGC_FOO_API_DECLARE_TEMPLATE_STRUCT(Bar<float>);
+/// VGC_FOO_API_DECLARE_TEMPLATE_UNION(Baz<float>);
 ///
 /// // In foo.cpp
 ///
 /// VGC_FOO_API_DEFINE_TEMPLATE_CLASS(Foo<float>);
+/// VGC_FOO_API_DEFINE_TEMPLATE_STRUCT(Bar<float>);
+/// VGC_FOO_API_DEFINE_TEMPLATE_UNION(Baz<float>);
 /// ```
 ///
-/// For more info on explicit class template instantiation, see:
+/// For more info on explicit class/struct/union template instantiations, see:
 /// - https://en.cppreference.com/w/cpp/language/class_template
+///
+/// # Exporting enums
+///
+/// Enums (either `enum` or `enum class`) do not need to be exported to be
+/// usable in other libraries or applications. No special markup should be
+/// used.
+///
+/// However, enum meta-data provided by `VGC_DECLARE_ENUM` and
+/// `VGC_DEFINE_ENUM` should be exported by marking it like this:
+///
+/// ```cpp
+/// // In foo.h
+///
+/// enum class MyEnum { /* ... */ };
+///
+/// VGC_FOO_API
+/// VGC_DECLARE_ENUM(MyEnum)
+///
+/// // In foo.cpp
+///
+/// VGC_DEFINE_ENUM(MyEnum, /* ... */)
+/// ```
 ///
 /// # How to create a new library?
 ///
-/// When creating a new library `foo`, you should create a `vgc/foo/api.h` file
-/// with the following content:
+/// When creating a new library `vgc/foo`, you should create a `vgc/foo/api.h`
+/// file with the following content:
 ///
 /// ```cpp
 /// #ifndef VGC_FOO_API_H
@@ -209,23 +237,29 @@
 /// // clang-format off
 ///
 /// #if defined(VGC_FOO_STATIC)
-/// #  define VGC_FOO_API                          VGC_DLL_STATIC
-/// #  define VGC_FOO_API_HIDDEN                   VGC_DLL_STATIC_HIDDEN
-/// #  define VGC_FOO_API_DECLARE_TEMPLATE(k, ...) VGC_DLL_STATIC_DECLARE_TEMPLATE(k, __VA_ARGS__)
-/// #  define VGC_FOO_API_DEFINE_TEMPLATE(k, ...)  VGC_DLL_STATIC_DEFINE_TEMPLATE(k, __VA_ARGS__)
-/// #  define VGC_FOO_API_EXCEPTION                VGC_DLL_STATIC_EXCEPTION
+/// #  define VGC_FOO_API                                VGC_DLL_STATIC
+/// #  define VGC_FOO_API_HIDDEN                         VGC_DLL_STATIC_HIDDEN
+/// #  define VGC_FOO_API_DECLARE_TEMPLATE(k, ...)       VGC_DLL_STATIC_DECLARE_TEMPLATE(k, __VA_ARGS__)
+/// #  define VGC_FOO_API_DEFINE_TEMPLATE(k, ...)        VGC_DLL_STATIC_DEFINE_TEMPLATE(k, __VA_ARGS__)
+/// #  define VGC_FOO_API_DECLARE_TEMPLATE_FUNCTION(...) VGC_DLL_STATIC_DECLARE_TEMPLATE_FUNCTION(__VA_ARGS__)
+/// #  define VGC_FOO_API_DEFINE_TEMPLATE_FUNCTION(...)  VGC_DLL_STATIC_DEFINE_TEMPLATE_FUNCTION(__VA_ARGS__)
+/// #  define VGC_FOO_API_EXCEPTION                      VGC_DLL_STATIC_EXCEPTION
 /// #elif defined(VGC_FOO_EXPORTS)
-/// #  define VGC_FOO_API                          VGC_DLL_EXPORT
-/// #  define VGC_FOO_API_HIDDEN                   VGC_DLL_EXPORT_HIDDEN
-/// #  define VGC_FOO_API_DECLARE_TEMPLATE(k, ...) VGC_DLL_EXPORT_DECLARE_TEMPLATE(k, __VA_ARGS__)
-/// #  define VGC_FOO_API_DEFINE_TEMPLATE(k, ...)  VGC_DLL_EXPORT_DEFINE_TEMPLATE(k, __VA_ARGS__)
-/// #  define VGC_FOO_API_EXCEPTION                VGC_DLL_EXPORT_EXCEPTION
+/// #  define VGC_FOO_API                                VGC_DLL_EXPORT
+/// #  define VGC_FOO_API_HIDDEN                         VGC_DLL_EXPORT_HIDDEN
+/// #  define VGC_FOO_API_DECLARE_TEMPLATE(k, ...)       VGC_DLL_EXPORT_DECLARE_TEMPLATE(k, __VA_ARGS__)
+/// #  define VGC_FOO_API_DEFINE_TEMPLATE(k, ...)        VGC_DLL_EXPORT_DEFINE_TEMPLATE(k, __VA_ARGS__)
+/// #  define VGC_FOO_API_DECLARE_TEMPLATE_FUNCTION(...) VGC_DLL_EXPORT_DECLARE_TEMPLATE_FUNCTION(__VA_ARGS__)
+/// #  define VGC_FOO_API_DEFINE_TEMPLATE_FUNCTION(...)  VGC_DLL_EXPORT_DEFINE_TEMPLATE_FUNCTION(__VA_ARGS__)
+/// #  define VGC_FOO_API_EXCEPTION                      VGC_DLL_EXPORT_EXCEPTION
 /// #else
-/// #  define VGC_FOO_API                          VGC_DLL_IMPORT
-/// #  define VGC_FOO_API_HIDDEN                   VGC_DLL_IMPORT_HIDDEN
-/// #  define VGC_FOO_API_DECLARE_TEMPLATE(k, ...) VGC_DLL_IMPORT_DECLARE_TEMPLATE(k, __VA_ARGS__)
-/// #  define VGC_FOO_API_DEFINE_TEMPLATE(k, ...)  VGC_DLL_IMPORT_DEFINE_TEMPLATE(k, __VA_ARGS__)
-/// #  define VGC_FOO_API_EXCEPTION                VGC_DLL_IMPORT_EXCEPTION
+/// #  define VGC_FOO_API                                VGC_DLL_IMPORT
+/// #  define VGC_FOO_API_HIDDEN                         VGC_DLL_IMPORT_HIDDEN
+/// #  define VGC_FOO_API_DECLARE_TEMPLATE(k, ...)       VGC_DLL_IMPORT_DECLARE_TEMPLATE(k, __VA_ARGS__)
+/// #  define VGC_FOO_API_DEFINE_TEMPLATE(k, ...)        VGC_DLL_IMPORT_DEFINE_TEMPLATE(k, __VA_ARGS__)
+/// #  define VGC_FOO_API_DECLARE_TEMPLATE_FUNCTION(...) VGC_DLL_IMPORT_DECLARE_TEMPLATE_FUNCTION(__VA_ARGS__)
+/// #  define VGC_FOO_API_DEFINE_TEMPLATE_FUNCTION(...)  VGC_DLL_IMPORT_DEFINE_TEMPLATE_FUNCTION(__VA_ARGS__)
+/// #  define VGC_FOO_API_EXCEPTION                      VGC_DLL_IMPORT_EXCEPTION
 /// #endif
 /// #define VGC_FOO_API_DECLARE_TEMPLATE_CLASS(...)  VGC_FOO_API_DECLARE_TEMPLATE(class, __VA_ARGS__)
 /// #define VGC_FOO_API_DECLARE_TEMPLATE_STRUCT(...) VGC_FOO_API_DECLARE_TEMPLATE(struct, __VA_ARGS__)
@@ -239,27 +273,15 @@
 ///
 /// # How does it work?
 ///
-/// On Windows, when compiling a DLL with the Microsoft Visual C++ Compiler
-/// (MSVC), no symbols are exported by default. The symbols which we want to be
-/// part of the public API should be explicitly marked with
-/// `__declspec(dllexport)` when compiling the library, and marked with
-/// `__declspec(dllimport)` when using the library.
+/// Essentially, the macro `VGC_FOO_API` expands to the appropriate
+/// compiler-dependent symbol visibility attribute (such as
+/// `__declspec(dllexport)`, `__declspec(dllimport)`, and
+/// `__attribute__((visibility("default")))`), based on whether the library is
+/// being compiled or is being used by another library.
 ///
-/// However, we don't want to use different C++ header files when compiling
-/// versus using the library! In order to solve this problem, the provided
-/// CMake builds system defines `VGC_FOO_EXPORTS` when compiling the `foo`
-/// library, but does not define it when simply using the library. This allows
-/// us to define the following macros:
-///
-/// ```cpp
-/// #if defined(VGC_FOO_EXPORTS)
-/// #    define VGC_FOO_API __declspec(dllexport)
-/// #else
-/// #    define VGC_FOO_API __declspec(dllimport)
-/// #endif
-/// ```
-///
-/// Then simply use the following in our header files:
+/// For example, on Windows, when compiling the `foo` library as a shared
+/// library (DLL) with the Microsoft Visual C++ Compiler (MSVC), the following
+/// code:
 ///
 /// ```cpp
 /// class VGC_FOO_API Foo {
@@ -267,7 +289,7 @@
 /// };
 /// ```
 ///
-/// When you are compiling the module `foo`, the above code expands to:
+/// expands to:
 ///
 /// ```cpp
 /// class __declspec(dllexport) Foo {
@@ -275,8 +297,8 @@
 /// };
 /// ```
 ///
-/// But when you are compiling another module `bar` which includes a
-/// header file from `foo`, it expands to the following instead:
+/// But when compiling another library or application that uses the `foo`
+/// library, it instead expands to:
 ///
 /// ```cpp
 /// class __declspec(dllimport) Foo {
@@ -284,54 +306,66 @@
 /// };
 /// ```
 ///
-/// However, things are slightly more complex. For example, still on Windows,
-/// but compiling with GCC or Clang, the syntax is different: we should use
-/// `__attribute__((dllexport))` instead of `__declspec(dllexport)` (same for
-/// `dllimport`). The syntax is also different when compiling on Linux or
-/// MacOS. This is why, instead of defining the following:
+/// And if compiling the `foo` library as a static library, it expands to:
 ///
 /// ```cpp
-/// #if defined(VGC_FOO_EXPORTS)
+/// class Foo {
+///     // ...
+/// };
+/// ```
+///
+/// This behavior is made possible by the provided CMake build system that
+/// defines `VGC_FOO_EXPORTS` when compiling `foo` as a shared library, defines
+/// `VGC_FOO_STATIC` when compiling `foo` as a static library, but defines none
+/// of them when simply using the library. This allows `VGC_FOO_API` to be
+/// defined differently in these three scenarios. A simplified implementation
+/// that only works for MSVC would look like this:
+///
+/// ```cpp
+/// #if defined(VGC_FOO_STATIC)
+/// #    define VGC_FOO_API
+/// #elif defined(VGC_FOO_EXPORTS)
 /// #    define VGC_FOO_API __declspec(dllexport)
 /// #else
 /// #    define VGC_FOO_API __declspec(dllimport)
 /// #endif
 /// ```
 ///
-/// You should instead use `VGC_DLL_EXPORT` and `VGC_DLL_IMPORT`
-/// provided in this file, like so:
+/// In practice, different compilers and/or target platforms require the use of
+/// different attributes and possibly at different places (e.g., for template
+/// classes).
+///
+/// This is why in `vgc/foo/api.h`, we prefer not to explicitly use
+/// compiler-dependent attributes such as `__declspec(dllexport)`, but instead
+/// use the intermediate macros `VGC_DLL_...` (defined in `vgc/core/dll.h`),
+/// like so:
 ///
 /// ```cpp
-/// #if defined(VGC_FOO_EXPORTS)
+/// #if defined(VGC_FOO_STATIC)
+/// #    define VGC_FOO_API VGC_DLL_STATIC
+/// #elif defined(VGC_FOO_EXPORTS)
 /// #    define VGC_FOO_API VGC_DLL_EXPORT
 /// #else
 /// #    define VGC_FOO_API VGC_DLL_IMPORT
 /// #endif
 /// ```
 ///
-/// In addition, what if a client desires to compile `foo` as a static library
-/// instead of a shared library? In this case, `VGC_FOO_API` should expands to
-/// nothing instead, and we allow clients to switch to this mode by defining
-/// `VGC_FOO_STATIC` using their build system:
+/// For example, on Windows, `VGC_DLL_EXPORT` expands to
+/// `__declspec(dllexport)` when compiling with MSVC, but it expands to
+/// `__attribute__((dllexport))` when compiling with Clang or GCC. And it
+/// expands to `__attribute__((visibility("default")))` when compiling on macOS
+/// or Linux with Clang or GCC.
 ///
-/// ```cpp
-/// #if defined(VGC_FOO_STATIC)
-/// #    define VGC_FOO_API VGC_DLL_STATIC
-/// #else
-/// #    if defined(VGC_FOO_EXPORTS)
-/// #        define VGC_FOO_API VGC_DLL_EXPORT
-/// #    else
-/// #        define VGC_FOO_API VGC_DLL_IMPORT
-/// #    endif
-/// #endif
-/// ```
+/// This design makes it possible to easily add support for different compilers
+/// or platforms by only updating `vgc/core/dll.h`, without having to change all
+/// the `vgc/foo/api.h` files.
 ///
-/// The macro `VGC_FOO_API_HIDDEN` is defined following the same idea.
-///
-/// Unfortunately, compiler are inconsistent with respect to how class
-/// templates instantiations should be annotated in order to be exported. This
-/// is why we also define special macros for these. For more details, see:
-/// https://github.com/vgc/vgc/pull/1896.
+/// All the other macros (`VGC_FOO_API_DECLARE_TEMPLATE_CLASS`, etc.) are
+/// defined following the same idea. They take care of adding the appropriate
+/// keywords (e.g., `extern template`) and attributes (e.g.,
+/// `__declspec(dllexport)`) at the appropriate places, depending on whether
+/// the library is being compiled or being used, and depending on the current
+/// compiler and target platform.
 ///
 
 #include <vgc/core/defs.h>
@@ -385,6 +419,12 @@
 #  define VGC_DLL_STATIC_DEFINE_TEMPLATE(k, ...)  template k __VA_ARGS__
 #  define VGC_DLL_STATIC_EXCEPTION
 #  define VGC_DLL_STATIC_HIDDEN
+#  define VGC_DLL_EXPORT_DECLARE_TEMPLATE_FUNCTION(...) extern template VGC_DLL_EXPORT __VA_ARGS__
+#  define VGC_DLL_IMPORT_DECLARE_TEMPLATE_FUNCTION(...) extern template VGC_DLL_IMPORT __VA_ARGS__
+#  define VGC_DLL_STATIC_DECLARE_TEMPLATE_FUNCTION(...) extern template VGC_DLL_STATIC __VA_ARGS__
+#  define VGC_DLL_EXPORT_DEFINE_TEMPLATE_FUNCTION(...)  template __VA_ARGS__
+#  define VGC_DLL_IMPORT_DEFINE_TEMPLATE_FUNCTION(...)  template __VA_ARGS__
+#  define VGC_DLL_STATIC_DEFINE_TEMPLATE_FUNCTION(...)  template __VA_ARGS__
 #endif
 
 #endif // VGC_CORE_DLL_H
