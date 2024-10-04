@@ -78,7 +78,9 @@ bool isEmpty(TRange&& range) {
 ///
 template<typename TRange, typename TSize>
 auto drop(TRange&& range, TSize n) -> Range<decltype(std::declval<TRange>().begin())> {
-    return {range.begin() + n, range.end()};
+    auto it = range.begin();
+    std::advance(it, n);
+    return {it, range.end()};
 }
 
 } // namespace vgc::core
