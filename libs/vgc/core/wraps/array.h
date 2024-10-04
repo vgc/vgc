@@ -121,7 +121,7 @@ bool operator<(py::sequence s, const Array<T>& a) {
 
 // Defines most methods required to wrap a given Array<T> type.
 //
-template<typename T, bool isParseable>
+template<typename T>
 void defineArrayCommonMethods(Class<core::Array<T>>& c, std::string fullName) {
     using ArrayType = core::Array<T>;
     using It = typename ArrayType::iterator;
@@ -132,7 +132,7 @@ void defineArrayCommonMethods(Class<core::Array<T>>& c, std::string fullName) {
     c.def(py::init<Int>());
     c.def(py::init<Int, const T&>());
 
-    if constexpr (isParseable) {
+    if constexpr (isParsable<T>) {
         c.def(py::init([](const std::string& s) { return parse<ArrayType>(s); }));
     }
 
@@ -156,10 +156,6 @@ void defineArrayCommonMethods(Class<core::Array<T>>& c, std::string fullName) {
         },
         py::keep_alive<0, 1>());
 
-    c.def("__contains__", [](ArrayType& a, const T& value) { return a.contains(value); });
-
-    c.def("index", static_cast<Int (ArrayType::*)(const T&) const>(&ArrayType::index));
-
     c.def("prepend", py::overload_cast<const T&>(&ArrayType::prepend));
     c.def("append", py::overload_cast<const T&>(&ArrayType::append));
     c.def("insert", [](ArrayType& a, vgc::Int i, const T& x) {
@@ -173,64 +169,74 @@ void defineArrayCommonMethods(Class<core::Array<T>>& c, std::string fullName) {
         return a.pop(j);
     });
 
-    c.def(py::self == py::self);
-    c.def(py::self != py::self);
-    c.def(py::self < py::self);
-    c.def(py::self > py::self);
-    c.def(py::self <= py::self);
-    c.def(py::self >= py::self);
+    if constexpr (isEqualityComparable<T>) {
+        using detail::operator==;
+        c.def(py::self == py::self);
+        c.def(py::self != py::self);
+        c.def(
+            "__eq__",
+            [](const ArrayType& a, const py::sequence& s) { return a == s; },
+            py::is_operator());
+        c.def(
+            "__eq__",
+            [](const py::sequence& s, const ArrayType& a) { return a == s; },
+            py::is_operator());
+        c.def(
+            "__neq__",
+            [](const ArrayType& a, const py::sequence& s) { return !(a == s); },
+            py::is_operator());
+        c.def(
+            "__neq__",
+            [](const py::sequence& s, const ArrayType& a) { return !(a == s); },
+            py::is_operator());
+        c.def("__contains__", [](ArrayType& a, const T& value) {
+            return a.contains(value);
+        });
+        c.def(
+            "index", static_cast<Int (ArrayType::*)(const T&) const>(&ArrayType::index));
+    }
 
-    using detail::operator==;
-    using detail::operator<;
+    if constexpr (isComparable<T>) {
+        using detail::operator<;
+        c.def(py::self < py::self);
+        c.def(py::self > py::self);
+        c.def(py::self <= py::self);
+        c.def(py::self >= py::self);
+        c.def(
+            "__lt__",
+            [](const ArrayType& a, const py::sequence& s) { return a < s; },
+            py::is_operator());
+        c.def(
+            "__lt__",
+            [](const py::sequence& s, const ArrayType& a) { return s < a; },
+            py::is_operator());
+        c.def(
+            "__gt__",
+            [](const ArrayType& a, const py::sequence& s) { return s < a; },
+            py::is_operator());
+        c.def(
+            "__gt__",
+            [](const py::sequence& s, const ArrayType& a) { return a < s; },
+            py::is_operator());
+        c.def(
+            "__le__",
+            [](const ArrayType& a, py::sequence s) { return !(s < a); },
+            py::is_operator());
+        c.def(
+            "__le__",
+            [](py::sequence s, const ArrayType& a) { return !(a < s); },
+            py::is_operator());
+        c.def(
+            "__ge__",
+            [](const ArrayType& a, py::sequence s) { return !(a < s); },
+            py::is_operator());
+        c.def(
+            "__ge__",
+            [](py::sequence s, const ArrayType& a) { return !(s < a); },
+            py::is_operator());
+    }
 
-    c.def(
-        "__eq__",
-        [](const ArrayType& a, const py::sequence& s) { return a == s; },
-        py::is_operator());
-    c.def(
-        "__eq__",
-        [](const py::sequence& s, const ArrayType& a) { return a == s; },
-        py::is_operator());
-    c.def(
-        "__neq__",
-        [](const ArrayType& a, const py::sequence& s) { return !(a == s); },
-        py::is_operator());
-    c.def(
-        "__neq__",
-        [](const py::sequence& s, const ArrayType& a) { return !(a == s); },
-        py::is_operator());
-    c.def(
-        "__lt__",
-        [](const ArrayType& a, const py::sequence& s) { return a < s; },
-        py::is_operator());
-    c.def(
-        "__lt__",
-        [](const py::sequence& s, const ArrayType& a) { return s < a; },
-        py::is_operator());
-    c.def(
-        "__gt__",
-        [](const ArrayType& a, const py::sequence& s) { return s < a; },
-        py::is_operator());
-    c.def(
-        "__gt__",
-        [](const py::sequence& s, const ArrayType& a) { return a < s; },
-        py::is_operator());
-    c.def(
-        "__le__",
-        [](const ArrayType& a, py::sequence s) { return !(s < a); },
-        py::is_operator());
-    c.def(
-        "__le__",
-        [](py::sequence s, const ArrayType& a) { return !(a < s); },
-        py::is_operator());
-    c.def(
-        "__ge__",
-        [](const ArrayType& a, py::sequence s) { return !(a < s); },
-        py::is_operator());
-    c.def(
-        "__ge__",
-        [](py::sequence s, const ArrayType& a) { return !(s < a); },
-        py::is_operator());
+    // Note: there is no need to test for `isWritable<T>`: all Array<T> are writable
 
     c.def("__str__", [](const ArrayType& a) { return toString(a); });
 
@@ -243,7 +249,7 @@ void defineArrayCommonMethods(Class<core::Array<T>>& c, std::string fullName) {
 
 // Defines most methods required to wrap a given SharedConstArray<T> type.
 //
-template<typename T, bool isParseable>
+template<typename T>
 void defineSharedConstArrayCommonMethods(
     Class<core::SharedConstArray<T>>& c,
     std::string fullName) {
@@ -258,7 +264,7 @@ void defineSharedConstArrayCommonMethods(
     c.def(py::init<const ArrayType&>());
     c.def(py::init<Int, const T&>());
 
-    if constexpr (isParseable) {
+    if constexpr (isParsable<T>) {
         c.def(py::init([](const std::string& s) {
             return SharedConstArrayType(vgc::core::parse<ArrayType>(s));
         }));
@@ -280,89 +286,92 @@ void defineSharedConstArrayCommonMethods(
         // Keep object alive while iterator exists.
         py::keep_alive<0, 1>());
 
-    c.def("__contains__", [](const SharedConstArrayType& a, const T& value) {
-        return a.get().contains(value);
-    });
+    if constexpr (isEqualityComparable<T>) {
+        using detail::operator==;
+        ArrayType array = {};
+        c.def(py::self == py::self);
+        c.def(py::self != py::self);
+        c.def(py::self == array);
+        c.def(array == py::self);
+        c.def(py::self != array);
+        c.def(array != py::self);
+        c.def(
+            "__eq__",
+            [](const SharedConstArrayType& a, py::sequence s) { return a.get() == s; },
+            py::is_operator());
+        c.def(
+            "__eq__",
+            [](py::sequence s, const SharedConstArrayType& a) { return a.get() == s; },
+            py::is_operator());
+        c.def(
+            "__neq__",
+            [](const SharedConstArrayType& a, py::sequence s) { return !(a.get() == s); },
+            py::is_operator());
+        c.def(
+            "__neq__",
+            [](py::sequence s, const SharedConstArrayType& a) { return !(a.get() == s); },
+            py::is_operator());
+        c.def("__contains__", [](const SharedConstArrayType& a, const T& value) {
+            return a.get().contains(value);
+        });
 
-    c.def("index", [](const SharedConstArrayType& a, const T& v) {
-        return a.get().index(v);
-    });
+        c.def("index", [](const SharedConstArrayType& a, const T& v) {
+            return a.get().index(v);
+        });
+    }
 
-    c.def(py::self == py::self);
-    c.def(py::self != py::self);
-    c.def(py::self < py::self);
-    c.def(py::self > py::self);
-    c.def(py::self <= py::self);
-    c.def(py::self >= py::self);
+    if constexpr (isComparable<T>) {
+        using detail::operator<;
+        ArrayType array = {};
+        c.def(py::self < py::self);
+        c.def(py::self > py::self);
+        c.def(py::self <= py::self);
+        c.def(py::self >= py::self);
+        c.def(py::self < array);
+        c.def(array < py::self);
+        c.def(py::self > array);
+        c.def(array > py::self);
+        c.def(py::self <= array);
+        c.def(array <= py::self);
+        c.def(py::self >= array);
+        c.def(array >= py::self);
+        c.def(
+            "__lt__",
+            [](const SharedConstArrayType& a, py::sequence s) { return a.get() < s; },
+            py::is_operator());
+        c.def(
+            "__lt__",
+            [](py::sequence s, const SharedConstArrayType& a) { return s < a.get(); },
+            py::is_operator());
+        c.def(
+            "__gt__",
+            [](const SharedConstArrayType& a, py::sequence s) { return s < a.get(); },
+            py::is_operator());
+        c.def(
+            "__gt__",
+            [](py::sequence s, const SharedConstArrayType& a) { return a.get() < s; },
+            py::is_operator());
+        c.def(
+            "__le__",
+            [](const SharedConstArrayType& a, py::sequence s) { return !(s < a.get()); },
+            py::is_operator());
+        c.def(
+            "__le__",
+            [](py::sequence s, const SharedConstArrayType& a) { return !(a.get() < s); },
+            py::is_operator());
+        c.def(
+            "__ge__",
+            [](const SharedConstArrayType& a, py::sequence s) { return !(a.get() < s); },
+            py::is_operator());
+        c.def(
+            "__ge__",
+            [](py::sequence s, const SharedConstArrayType& a) { return !(s < a.get()); },
+            py::is_operator());
+    }
 
-    ArrayType array = {};
-    c.def(py::self == array);
-    c.def(array == py::self);
-    c.def(py::self != array);
-    c.def(array != py::self);
-    c.def(py::self < array);
-    c.def(array < py::self);
-    c.def(py::self > array);
-    c.def(array > py::self);
-    c.def(py::self <= array);
-    c.def(array <= py::self);
-    c.def(py::self >= array);
-    c.def(array >= py::self);
-
-    using detail::operator==;
-    using detail::operator<;
-
-    c.def(
-        "__eq__",
-        [](const SharedConstArrayType& a, py::sequence s) { return a.get() == s; },
-        py::is_operator());
-    c.def(
-        "__eq__",
-        [](py::sequence s, const SharedConstArrayType& a) { return a.get() == s; },
-        py::is_operator());
-    c.def(
-        "__neq__",
-        [](const SharedConstArrayType& a, py::sequence s) { return !(a.get() == s); },
-        py::is_operator());
-    c.def(
-        "__neq__",
-        [](py::sequence s, const SharedConstArrayType& a) { return !(a.get() == s); },
-        py::is_operator());
-    c.def(
-        "__lt__",
-        [](const SharedConstArrayType& a, py::sequence s) { return a.get() < s; },
-        py::is_operator());
-    c.def(
-        "__lt__",
-        [](py::sequence s, const SharedConstArrayType& a) { return s < a.get(); },
-        py::is_operator());
-    c.def(
-        "__gt__",
-        [](const SharedConstArrayType& a, py::sequence s) { return s < a.get(); },
-        py::is_operator());
-    c.def(
-        "__gt__",
-        [](py::sequence s, const SharedConstArrayType& a) { return a.get() < s; },
-        py::is_operator());
-    c.def(
-        "__le__",
-        [](const SharedConstArrayType& a, py::sequence s) { return !(s < a.get()); },
-        py::is_operator());
-    c.def(
-        "__le__",
-        [](py::sequence s, const SharedConstArrayType& a) { return !(a.get() < s); },
-        py::is_operator());
-    c.def(
-        "__ge__",
-        [](const SharedConstArrayType& a, py::sequence s) { return !(a.get() < s); },
-        py::is_operator());
-    c.def(
-        "__ge__",
-        [](py::sequence s, const SharedConstArrayType& a) { return !(s < a.get()); },
-        py::is_operator());
+    // Note: there is no need to test for `isWritable<T>`: all Array<T> are writable
 
     c.def("__str__", [](const SharedConstArrayType& a) { return toString(a.get()); });
-
     c.def("__repr__", [fullName = fullName](const SharedConstArrayType& a) {
         py::object pyStr = py::cast(toString(a.get()));
         std::string pyStrRepr = py::cast<std::string>(pyStr.attr("__repr__")());
@@ -370,17 +379,22 @@ void defineSharedConstArrayCommonMethods(
     });
 }
 
-template<typename T, bool isParseable = true>
-void wrap_array(py::module& m, const std::string& valueTypeName) {
+template<typename T>
+void wrapArray(py::handle scope, const std::string& valueTypeName) {
+
+    std::string scopeFullName = getScopeFullName(scope);
+
+    std::string arrayName = valueTypeName + "Array";
+    std::string arrayFullName = vgc::core::format("{}.{}", scopeFullName, arrayName);
+
+    std::string scArrayName = std::string("SharedConst") + arrayName;
+    std::string scArrayFullName = vgc::core::format("{}.{}", scopeFullName, scArrayName);
+
     using ArrayType = core::Array<T>;
     using SharedConstArrayType = core::SharedConstArray<T>;
 
-    std::string moduleFullName = py::cast<std::string>(m.attr("__name__"));
-
-    std::string arrayTypeName = valueTypeName + "Array";
-    Class<ArrayType> c1(m, arrayTypeName.c_str());
-    vgc::core::wraps::defineArrayCommonMethods<T, isParseable>(
-        c1, vgc::core::format("{}.{}", moduleFullName, arrayTypeName));
+    Class<ArrayType> c1(scope, arrayName.c_str());
+    vgc::core::wraps::defineArrayCommonMethods<T>(c1, arrayFullName);
     c1.def(py::init([](py::sequence s) {
         ArrayType res;
         for (auto x : s) {
@@ -392,10 +406,8 @@ void wrap_array(py::module& m, const std::string& valueTypeName) {
     py::implicitly_convertible<py::tuple, ArrayType>();
     py::implicitly_convertible<py::list, ArrayType>();
 
-    std::string sharedConstArrayTypeName = std::string("SharedConst") + arrayTypeName;
-    Class<SharedConstArrayType> c2(m, sharedConstArrayTypeName.c_str());
-    vgc::core::wraps::defineSharedConstArrayCommonMethods<T, isParseable>(
-        c2, vgc::core::format("{}.{}", moduleFullName, sharedConstArrayTypeName));
+    Class<SharedConstArrayType> c2(scope, scArrayName.c_str());
+    vgc::core::wraps::defineSharedConstArrayCommonMethods<T>(c2, scArrayFullName);
 }
 
 } // namespace vgc::core::wraps

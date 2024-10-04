@@ -122,7 +122,7 @@ OutputIt writeAttributesRepr(OutputIt out, const This& self) {
 void wrap_element(py::module& m) {
 
     vgc::core::wraps::wrapObjectCommon<This>(m, "Element");
-    vgc::core::wraps::wrap_array<This*, false>(m, "Element");
+    vgc::core::wraps::wrapArray<This*>(m, "Element");
 
     vgc::core::wraps::ObjClass<This>(m, "Element")
         .def_create<This*, Document*, std::string_view>("parent"_a, "tagName"_a)

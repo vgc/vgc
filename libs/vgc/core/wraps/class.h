@@ -61,6 +61,11 @@ public:
 
 #undef VGC_CORE_WRAPS_CLASS_FWD_PYCLASS_METHOD
 
+    // Allow implicit conversion to handle, like py::class_ does.
+    operator py::handle() const {
+        return c_;
+    }
+
 private:
     PyClass c_;
 };

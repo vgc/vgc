@@ -72,5 +72,5 @@ void wrap_color(py::module& m) {
 
         ;
 
-    vgc::core::wraps::wrap_array<vgc::core::Color>(m, "Color");
+    vgc::core::wraps::wrapArray<vgc::core::Color>(m, "Color");
 }

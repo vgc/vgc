@@ -37,4 +37,38 @@ using namespace py::literals;
 //
 PYBIND11_DECLARE_HOLDER_TYPE(T, vgc::core::ObjPtr<T>, true)
 
+namespace vgc::core::wraps {
+
+/// Returns the fully-qualified name of the given scope, which is excepted
+/// to be a handle to either a class or a module.
+///
+/// Examples:
+/// - `vgc.geometry`
+/// - `vgc.geometry.SegmentIntersector2d`
+/// - `vgc.geometry.SegmentIntersector2d.PointIntersection`
+///
+inline std::string getScopeFullName(py::handle scope) {
+
+    if (py::hasattr(scope, "__module__")) {
+
+        // scope is a class (i.e., T is a nested class)
+        // Example:
+        //   scope.__module__   == 'vgc.geometry'
+        //   scope.__qualname__ == 'SegmentIntersector2d'
+        //
+        std::string moduleName = py::cast<std::string>(scope.attr("__module__"));
+        std::string parentQualName = py::cast<std::string>(scope.attr("__qualname__"));
+        return vgc::core::format("{}.{}", moduleName, parentQualName);
+    }
+    else {
+        // scope is a module.
+        // Example:
+        //   scope.__name__ == 'vgc.geometry'
+        //
+        return py::cast<std::string>(scope.attr("__name__"));
+    }
+}
+
+} // namespace vgc::core::wraps
+
 #endif // VGC_CORE_WRAPS_COMMON_H

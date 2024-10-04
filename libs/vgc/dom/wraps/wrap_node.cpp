@@ -33,7 +33,7 @@ void wrap_node(py::module& m) {
         .value("Document", NodeType::Document);
 
     vgc::core::wraps::wrapObjectCommon<This>(m, "Node");
-    vgc::core::wraps::wrap_array<This*, false>(m, "Node");
+    vgc::core::wraps::wrapArray<This*>(m, "Node");
 
     vgc::core::wraps::ObjClass<This>(m, "Node")
         // Note: Node has no public constructor
