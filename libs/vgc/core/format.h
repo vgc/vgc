@@ -695,6 +695,38 @@ secondsToString(double t, TimeUnit unit = TimeUnit::Seconds, int decimals = 0);
 VGC_CORE_API
 std::string_view toHexPair(unsigned char x);
 
+/// Type trait for `isFormattable<T>`.
+///
+template<typename T>
+using IsFormattable = fmt::is_formattable<T>;
+
+/// Checks whether the expression `vgc::core::format("{}", t)` is valid where
+/// `t` is of type `T`.
+///
+/// \sa `IsFormattable<T>`.
+///
+template<typename T>
+inline constexpr bool isFormattable = IsFormattable<T>::value;
+
+/// Type trait for `isWritable<T>`.
+///
+template<typename T, typename SFINAE = void>
+struct IsWritable : std::false_type {};
+
+template<typename T>
+struct IsWritable<
+    T,
+    RequiresValid<decltype(write(std::declval<StringWriter&>(), std::declval<T&>()))>>
+    : std::true_type {};
+
+/// Checks whether the expression `write(out, t)` is valid where
+/// `out` is an output stream and `t` is of type `T`.
+///
+/// \sa `IsFormattable<T>`.
+///
+template<typename T>
+inline constexpr bool isWritable = IsWritable<T>::value;
+
 } // namespace vgc::core
 
 #endif // VGC_CORE_FORMAT_H
