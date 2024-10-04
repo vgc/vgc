@@ -20,9 +20,9 @@
 #include <vgc/core/wraps/common.h>
 
 void wrap_arrays(py::module& m) {
-    vgc::core::wraps::wrap_array<double>(m, "Double");
-    vgc::core::wraps::wrap_array<float>(m, "Float");
-    vgc::core::wraps::wrap_array<vgc::Int>(m, "Int");
+    vgc::core::wraps::wrapArray<double>(m, "Double");
+    vgc::core::wraps::wrapArray<float>(m, "Float");
+    vgc::core::wraps::wrapArray<vgc::Int>(m, "Int");
 }
 
 namespace vgc::core::wraps::detail {

@@ -45,7 +45,7 @@ void wrap_vecArray(py::module& m, const std::string& name) {
 
     std::string arrayTypeName = name + "Array";
     vgc::core::wraps::Class<ArrayType> c1(m, arrayTypeName.c_str());
-    vgc::core::wraps::defineArrayCommonMethods<TVec, true>(
+    vgc::core::wraps::defineArrayCommonMethods<TVec>(
         c1, vgc::core::format("{}.{}", moduleFullName, arrayTypeName));
     c1.def(py::init([name](py::sequence s) {
         ArrayType res;
@@ -58,7 +58,7 @@ void wrap_vecArray(py::module& m, const std::string& name) {
 
     std::string sharedConstArrayTypeName = std::string("SharedConst") + arrayTypeName;
     vgc::core::wraps::Class<SharedConstArrayType> c2(m, sharedConstArrayTypeName.c_str());
-    vgc::core::wraps::defineSharedConstArrayCommonMethods<TVec, true>(
+    vgc::core::wraps::defineSharedConstArrayCommonMethods<TVec>(
         c2, vgc::core::format("{}.{}", moduleFullName, sharedConstArrayTypeName));
 }
 

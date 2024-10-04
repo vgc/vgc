@@ -2962,11 +2962,17 @@ void write(OStream& out, const Array<T>& a) {
             std::string_view strv(b.begin(), static_cast<std::streamsize>(b.size()));
             write(out, strv);
         }
-        else {
+        else if constexpr (core::isWritable<T>) {
             write(out, *it);
             while (it != last) {
                 write(out, ", ", *++it);
             }
+        }
+        else {
+            fmt::memory_buffer b;
+            core::formatTo(std::back_inserter(b), "... {} elements ...", a.length());
+            std::string_view strv(b.begin(), static_cast<std::streamsize>(b.size()));
+            write(out, strv);
         }
         write(out, ']');
     }
@@ -3141,26 +3147,29 @@ template<typename T>
 struct fmt::formatter<vgc::core::Array<T>> : fmt::formatter<vgc::core::RemoveCVRef<T>> {
     template<typename FormatContext>
     auto format(const vgc::core::Array<T>& x, FormatContext& ctx) -> decltype(ctx.out()) {
-
-        using ElementFormatter = fmt::formatter<vgc::core::RemoveCVRef<T>>;
-
+        using T_ = vgc::core::RemoveCVRef<T>;
+        using ElementFormatter = fmt::formatter<T_>;
         auto out = ctx.out();
         if (x.isEmpty()) {
             out = vgc::core::copyStringTo(out, "[]");
         }
         else {
             *out++ = '[';
-            auto it = x.cbegin();
-            auto last = x.cend() - 1;
-            out = ElementFormatter::format(*it, ctx);
-            while (it != last) {
-                out = vgc::core::copyStringTo(out, ", ");
-                ctx.advance_to(out);
-                out = ElementFormatter::format(*++it, ctx);
+            if constexpr (vgc::core::isFormattable<T_>) {
+                auto it = x.cbegin();
+                auto last = x.cend() - 1;
+                out = ElementFormatter::format(*it, ctx);
+                while (it != last) {
+                    out = vgc::core::copyStringTo(out, ", ");
+                    ctx.advance_to(out);
+                    out = ElementFormatter::format(*++it, ctx);
+                }
+            }
+            else {
+                vgc::core::formatTo(out, "... {} elements ...", x.length());
             }
             *out++ = ']';
         }
-
         ctx.advance_to(out);
         return out;
     }
