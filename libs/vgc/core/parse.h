@@ -1034,6 +1034,24 @@ T parse(std::string_view s, Int off, Int count) {
     return parse<T>(s.substr(off, count));
 }
 
+/// Type trait for `isParsable<T>`.
+///
+template<typename T, typename SFINAE = void>
+struct IsParsable : std::false_type {};
+
+template<typename T>
+struct IsParsable<
+    T,
+    RequiresValid<decltype(readTo(std::declval<T&>(), std::declval<StringReader&>()))>>
+    : std::true_type {};
+
+/// Checks whether the expression `vgc::core::parse<T>("")` is valid.
+///
+/// \sa `IsParsable<T>`, `isFormattable<T>`, `isWrittable<T>`.
+///
+template<typename T>
+inline constexpr bool isParsable = IsParsable<T>::value;
+
 } // namespace vgc::core
 
 #endif // VGC_CORE_PARSE_H
