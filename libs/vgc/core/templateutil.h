@@ -1016,6 +1016,68 @@ struct IsForwardRange<T, Requires<
 template<typename T>
 inline constexpr bool isForwardRange = IsForwardRange<T>::value;
 
+/// Type trait for `isEqualityComparableWith<T, U>`.
+///
+template<typename T, typename U, typename SFINAE = void>
+struct IsEqualityComparableWith : std::false_type {};
+
+template<typename T, typename U>
+struct IsEqualityComparableWith<T, U, RequiresValid<
+        decltype(std::declval<T>() == std::declval<U>())>>
+    : std::true_type {};
+
+/// Type trait for `isEqualityComparable<T>`.
+///
+template<typename T>
+struct IsEqualityComparable : IsEqualityComparableWith<T, T> {};
+
+/// Checks whether the expression `t == u` is valid where `t`
+/// is of type `T` and `u` is of type `U`.
+///
+/// \sa `IsEqualityComparableWith<T, U>`, `isEqualityComparable<T>`.
+///
+template<typename T, typename U>
+inline constexpr bool isEqualityComparableWith = IsEqualityComparableWith<T, U>::value;
+
+/// Checks whether the expression `t1 == t2` is valid where `t1`
+/// and `t2` are of type `T`.
+///
+/// \sa `IsEqualityComparable<T>`, `isEqualityComparableWith<T, U>`.
+///
+template<typename T>
+inline constexpr bool isEqualityComparable = IsEqualityComparable<T>::value;
+
+/// Type trait for `isComparableWith<T, U>`.
+///
+template<typename T, typename U, typename SFINAE = void>
+struct IsComparableWith : std::false_type {};
+
+template<typename T, typename U>
+struct IsComparableWith<T, U, RequiresValid<
+        decltype(std::declval<T>() < std::declval<U>())>>
+    : std::true_type {};
+
+/// Type trait for `isComparable<T>`.
+///
+template<typename T>
+struct IsComparable : IsComparableWith<T, T> {};
+
+/// Checks whether the expression `t < u` is valid where `t`
+/// is of type `T` and `u` is of type `U`.
+///
+/// \sa `IsComparableWith<T, U>`, `isComparable<T>`.
+///
+template<typename T, typename U>
+inline constexpr bool isComparableWith = IsComparableWith<T, U>::value;
+
+/// Checks whether the expression `t1 < t2` is valid where `t1`
+/// and `t2` are of type `T`.
+///
+/// \sa `IsComparable<T>`, `isComparableWith<T, U>`.
+///
+template<typename T>
+inline constexpr bool isComparable = IsComparable<T>::value;
+
 } // namespace vgc::core
 
 // clang-format on
