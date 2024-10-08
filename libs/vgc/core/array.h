@@ -2948,8 +2948,8 @@ void write(OStream& out, const Array<T>& a) {
     }
     else {
         write(out, '[');
-        auto it = a.cbegin();
-        auto last = a.cend() - 1;
+        [[maybe_unused]] auto it = a.cbegin();
+        [[maybe_unused]] auto last = a.cend() - 1;
         if constexpr (std::is_pointer_v<T>) {
             // TODO: avoid copy
             using fmt::ptr;
