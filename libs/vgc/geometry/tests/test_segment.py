@@ -17,6 +17,9 @@
 # limitations under the License.
 
 import unittest
+
+import os, sys
+sys.path.append(os.path.dirname(__file__))
 import segment2data
 
 from vgc.geometry import (
