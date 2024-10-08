@@ -42,7 +42,7 @@ namespace vgc::geometry {
 // For example, it would be impossible to specialize fmt::formatter for
 // PointIntersection if the latter was defined as a nested class of
 // SegmentIntersector2<T> rather than at namespace scope, because nested
-// classes of class templates are non-deductible in partial template
+// classes of class templates are non-deducible in partial template
 // specializations.
 //
 // See: https://open-std.org/jtc1/sc22/wg21/docs/papers/2016/p0293r0.pdf
@@ -57,10 +57,68 @@ using PointIntersectionIndex = Int;
 /// segment we store its corresponding intersection parameter.
 ///
 template<typename T>
-struct PointIntersectionInfo {
-    PointIntersectionIndex pointIntersectionIndex;
-    SegmentIndex segmentIndex;
-    T param;
+class PointIntersectionInfo {
+public:
+    /// Constructs a `PointIntersection` with zero-initialized
+    /// `pointIntersectionIndex()` and `segmentIndex()`, and `parameter`.
+    ///
+    PointIntersectionInfo() {
+    }
+
+    /// Contructs a `PointIntersectionInfo`.
+    ///
+    PointIntersectionInfo(
+        PointIntersectionIndex pointIntersectionIndex,
+        SegmentIndex segmentIndex,
+        T parameter)
+
+        : pointIntersectionIndex_(pointIntersectionIndex)
+        , segmentIndex_(segmentIndex)
+        , parameter_(parameter) {
+    }
+
+    /// Returns the index of the PointInteresection this
+    /// PointIntersectionInfo belongs to.
+    ///
+    PointIntersectionIndex pointIntersectionIndex() const {
+        return pointIntersectionIndex_;
+    }
+
+    /// Modifies `pointIntersectionIndex()`.
+    ///
+    void setPointIntersectionIndex(PointIntersectionIndex pointIntersectionIndex) {
+        pointIntersectionIndex_ = pointIntersectionIndex;
+    }
+
+    /// Returns the index of the segment that intersects at the `PointIntersection`.
+    ///
+    SegmentIndex segmentIndex() const {
+        return segmentIndex_;
+    }
+
+    /// Modifies `pointIntersectionIndex()`.
+    ///
+    void setSegmentIndex(SegmentIndex segmentIndex) {
+        segmentIndex_ = segmentIndex;
+    }
+
+    /// Returns the parameter along the segment corresponding to where
+    /// the segment intersects at the `PointIntersection`.
+    ///
+    T parameter() const {
+        return parameter_;
+    }
+
+    /// Modifies `parameter()`.
+    ///
+    void setParameter(T parameter) {
+        parameter_ = parameter;
+    }
+
+private:
+    PointIntersectionIndex pointIntersectionIndex_;
+    SegmentIndex segmentIndex_;
+    T parameter_;
 };
 
 /// Stores the position of an intersection point, together with the
@@ -72,9 +130,65 @@ struct PointIntersectionInfo {
 // into another array.
 //
 template<typename T>
-struct PointIntersection {
-    Vec2<T> position;
-    core::Array<PointIntersectionInfo<T>> infos;
+class PointIntersection {
+public:
+    /// Constructs a `PointIntersection` with a default constructed `position` and
+    /// `infos()`.
+    ///
+    PointIntersection() noexcept {
+    }
+
+    /// Constructs a `PointIntersection` with the given `position` and empty
+    /// `infos()`.
+    ///
+    explicit PointIntersection(const Vec2<T>& position) noexcept
+        : position_(position) {
+    }
+
+    /// Constructs a `PointIntersection` with the given `position` and `infos`.
+    ///
+    PointIntersection(
+        const Vec2<T>& position,
+        const core::Array<PointIntersectionInfo<T>>& infos)
+
+        : position_(position)
+        , infos_(infos) {
+    }
+
+    /// Returns the 2D position of this point intersection.
+    ///
+    Vec2<T> position() const {
+        return position_;
+    }
+
+    /// Modifies the 2D position of this point intersection.
+    ///
+    void setPosition(const Vec2<T>& position) {
+        position_ = position;
+    }
+
+    /// Returns information about the segments that intersect
+    /// at this point intersection.
+    ///
+    const core::Array<PointIntersectionInfo<T>>& infos() const {
+        return infos_;
+    }
+
+    /// Sets the `infos` of this point intersection.
+    ///
+    void setInfos(core::Array<PointIntersectionInfo<T>> infos) {
+        infos_ = std::move(infos);
+    }
+
+    /// Adds a `PointIntersectionInfo` to this point intersection.
+    ///
+    void addInfo(const PointIntersectionInfo<T>& info) {
+        infos_.append(info);
+    }
+
+private:
+    Vec2<T> position_;
+    core::Array<PointIntersectionInfo<T>> infos_;
 };
 
 template<typename T>
@@ -938,8 +1052,8 @@ void reportIntersections(
     //
     if (alg.infos.length() == 2) {
         // TODO: what if consecutive segments overlap along a subsegment?
-        SegmentIndex i1 = alg.infos.first().segmentIndex;
-        SegmentIndex i2 = alg.infos.last().segmentIndex;
+        SegmentIndex i1 = alg.infos.first().segmentIndex();
+        SegmentIndex i2 = alg.infos.last().segmentIndex();
         PolylineIndex j = in.segmentPolylines[i1];
         if (j >= 0 && in.segmentPolylines[i2] == j) {
             if (i2 < i1) {
@@ -957,9 +1071,9 @@ void reportIntersections(
 
     // Compute the parameters and report the intersection
     for (PointIntersectionInfo<T>& info : alg.infos) {
-        info.param = computeParam(in, info.segmentIndex, position);
+        info.setParameter(computeParam(in, info.segmentIndex(), position));
     }
-    out.pointIntersections.append({position, alg.infos});
+    out.pointIntersections.append(PointIntersection<T>(position, alg.infos));
 }
 
 // Find which segments are outgoing at the position. These will
@@ -1178,9 +1292,9 @@ struct fmt::formatter<vgc::geometry::segmentintersector2::PointIntersectionInfo<
         return format_to(
             ctx.out(),
             "{{pointIntersectionIndex={}, segmentIndex={}, param={}}}",
-            info.pointIntersectionIndex,
-            info.segmentIndex,
-            info.param);
+            info.pointIntersectionIndex(),
+            info.segmentIndex(),
+            info.parameter());
     }
 };
 
@@ -1193,7 +1307,7 @@ struct fmt::formatter<vgc::geometry::segmentintersector2::PointIntersection<T>>
     template<typename FormatContext>
     auto format(const PointIntersection& inter, FormatContext& ctx) {
         return format_to(
-            ctx.out(), "{{position={}, infos={}}}", inter.position, inter.infos);
+            ctx.out(), "{{position={}, infos={}}}", inter.position(), inter.infos());
     }
 };
 
