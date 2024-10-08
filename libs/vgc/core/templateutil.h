@@ -143,7 +143,7 @@ using TypeIdentity = typename detail::TypeIdentity_<U>::type;
 struct Identity {
     template<typename U>
     constexpr U&& operator()(U&& x) const noexcept {
-        std::forward<U>(x);
+        return std::forward<U>(x);
     }
 };
 
