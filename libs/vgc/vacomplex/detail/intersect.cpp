@@ -118,13 +118,14 @@ void computeIntersections(
     for (const auto& inter : intersector.pointIntersections()) {
 
         // For now, we only handle intersections between two segments
-        if (inter.infos.length() != 2) {
+        const auto& infos = inter.infos();
+        if (infos.length() != 2) {
             continue;
         }
 
         // Get segments, polylines, and edges relative to this intersection
-        SegmentIndex i1 = inter.infos.first().segmentIndex;
-        SegmentIndex i2 = inter.infos.last().segmentIndex;
+        SegmentIndex i1 = infos.first().segmentIndex();
+        SegmentIndex i2 = infos.last().segmentIndex();
         PolylineIndex j1 = intersector.polylineIndex(i1);
         PolylineIndex j2 = intersector.polylineIndex(i2);
         KeyEdge* edge1 = getInputEdge(j1);
@@ -157,8 +158,8 @@ void computeIntersections(
         i2 -= intersector.segmentIndexRange(j2).first();
 
         // Get curve parameters
-        double t1 = inter.infos.first().param;
-        double t2 = inter.infos.last().param;
+        double t1 = infos.first().parameter();
+        double t2 = infos.last().parameter();
         geometry::CurveParameter param1 = getCurveParameter(edge1, i1, t1);
         geometry::CurveParameter param2 = getCurveParameter(edge2, i2, t2);
 

@@ -6,6 +6,7 @@ vgc_wrap_library(geometry
     wrap_range.cpp
     wrap_rect.cpp
     wrap_segment.cpp
+    wrap_segmentintersector2.cpp
     wrap_triangle.cpp
     wrap_vec.cpp
 )

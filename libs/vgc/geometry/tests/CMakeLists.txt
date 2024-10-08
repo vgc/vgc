@@ -8,6 +8,7 @@ vgc_test_library(geometry
         test_range.py
         test_rect.py
         test_segment.py
+        test_segmentintersector2.py
         test_triangle.py
         test_vec.py
 )

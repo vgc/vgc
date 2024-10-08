@@ -22,6 +22,7 @@ void wrap_range(py::module& m);
 void wrap_rect(py::module& m);
 void wrap_triangle(py::module& m);
 void wrap_segment(py::module& m);
+void wrap_segmentintersector2(py::module& m);
 void wrap_vec(py::module& m);
 
 PYBIND11_MODULE(geometry, m) {
@@ -35,5 +36,6 @@ PYBIND11_MODULE(geometry, m) {
     wrap_range(m);
     wrap_rect(m);
     wrap_segment(m);
+    wrap_segmentintersector2(m);
     wrap_triangle(m);
 }
