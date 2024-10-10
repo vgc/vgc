@@ -75,7 +75,6 @@ void wrap_SegmentIntersector2(py::module& m, const std::string& name) {
     using This = SegmentIntersector2<T>;
 
     using Vec2x = Vec2<T>;
-    using Vec2xArray = vgc::core::Array<Vec2x>;
 
     vgc::core::wraps::Class<This> c(m, name.c_str());
     c.def(py::init<>())
@@ -87,16 +86,10 @@ void wrap_SegmentIntersector2(py::module& m, const std::string& name) {
                py::iterable range,
                bool isClosed,
                bool hasDuplicateEndpoints) {
-                // Currently, py::iterable is broken, see:
-                // https://github.com/pybind/pybind11/issues/5399
-                // So drop(range, 1) in addPolyline() fails and we cannot do:
-                // self.addPolyline(
-                //     isClosed, hasDuplicateEndpoints, range, [](py::handle h) {
-                //         return py::cast<Vec2x>(h);
-                //     });
-                // So we instead first convert to a Vec2d array
-                Vec2xArray array(range, [](py::handle h) { return py::cast<Vec2x>(h); });
-                self.addPolyline(isClosed, hasDuplicateEndpoints, array);
+                self.addPolyline(
+                    isClosed, hasDuplicateEndpoints, range, [](py::handle h) {
+                        return py::cast<Vec2x>(h);
+                    });
             },
             "range"_a,
             py::kw_only(),

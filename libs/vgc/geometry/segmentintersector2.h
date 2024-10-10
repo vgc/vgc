@@ -558,18 +558,34 @@ PolylineIndex addPolyline(
     // Handle special case there the polyline has no segments
     PolylineIndex polylineIndex = in.polylines.length();
     SegmentIndex polylineBegin = in.segments.length();
-    if (core::isEmpty(range)) {
+    auto it = range.begin();
+    auto end = range.end();
+    bool isEmpty = (it == end);
+    if (isEmpty) {
         in.polylines.emplaceLast(PolylineInfo{polylineBegin, polylineBegin, isClosed});
         return polylineIndex;
     }
 
-    Vec2<T> firstPosition = op(*range.begin());
+    // Get the first element of the range.
+    //
+    // Note:
+    // - It's UB to call begin() more than once on input ranges
+    // - The input iterator might be non-copyable (i.e., move-only)
+    //
+    // So we cannot do `firstPosition = range.begin()`, then iterate on the
+    // rest of the range with `for (auto& p : range | std::views::drop(1))`,
+    // since to underlying `drop_view` would call `range.begin()` again.
+    //
+    // Note that C++23 introduces std::views::adjacent, but it requires a
+    // forward_range.
+    //
+    Vec2<T> firstPosition = op(*it);
     Vec2<T> startPosition = firstPosition;
-    auto endPositions = core::drop(range, 1);
+    ++it;
 
     // Reserve memory if the number of segments can be known in advance.
     if constexpr (core::isForwardRange<Range>) {
-        auto numSegmentsInPolyline = endPositions.end() - endPositions.begin();
+        auto numSegmentsInPolyline = std::distance(it, end);
         if (isClosed && !hasDuplicateEndpoints) {
             numSegmentsInPolyline += 1;
         }
@@ -581,8 +597,8 @@ PolylineIndex addPolyline(
     }
 
     // Add the segments
-    for (const auto& endPosition_ : endPositions) {
-        Vec2<T> endPosition = op(endPosition_);
+    for (; it != end; ++it) {
+        Vec2<T> endPosition = op(*it);
         addSegment(in, startPosition, endPosition, polylineIndex);
         startPosition = endPosition;
     }
