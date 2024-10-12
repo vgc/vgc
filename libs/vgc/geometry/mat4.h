@@ -317,7 +317,7 @@ public:
 
     /// The identity matrix `Mat4(1)`.
     ///
-    static const Mat4 identity;
+    static constexpr Mat4 identity = Mat4(1);
 
     /// Returns a pointer to the underlying (colum-major ordered) array of
     /// components.
