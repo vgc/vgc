@@ -3,6 +3,7 @@ vgc_add_library(core
         Python::Python
         pybind11::headers
         ${VGC_FMT}
+        range-v3
 
     VGC_DEPENDENCIES
 

@@ -30,12 +30,13 @@ more features for now.
 - **OpenGL Dev Tools**: Already installed on Windows, macOS, and many Linux distributions. On Ubuntu, you need `sudo apt install libglu1-mesa-dev`.
 
 VGC also depends on the following libraries, but these are already included in
-the `third` folder, so there is no need to pre-install them:
+the `third` folder as git submodules, so there is no need to pre-install them:
 - **Eigen**
 - **{fmt}**
 - **Google Test**
 - **libtess2**
 - **pybind11**
+- **range-v3**
 
 VGC follows the [VFX Reference Platform](http://www.vfxplatform.com/)
 recommendations for library versions.
