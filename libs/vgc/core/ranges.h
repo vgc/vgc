@@ -22,67 +22,23 @@
 ///
 /// This header contains functions and structures for creating, manipulating,
 /// and iterating over ranges.
+
+#include <range/v3/all.hpp>
+
+namespace vgc {
+
+/// Namespace where range concepts and algorithms are defined.
+/// For now, this is an alias of `ranges::cpp20` from range-v3.
+/// Once we require C++20, this should become an alias for `std::ranges`.
 ///
-/// Some of these are similar to utilities found in the <ranges> standard
-/// library header (C++20).
+namespace ranges = ::ranges::cpp20;
 
-#include <vgc/core/api.h>
-#include <vgc/core/arithmetic.h>
-
-namespace vgc::core {
-
-/// \class vgc::core::Range
-/// \brief Stores a begin/end iterator pair for range-based operations.
+/// Namespace where range views are defined.
+/// For now, this is an alias of `ranges::cpp20::views` from range-v3.
+/// Once we require C++20, this should become an alias for `std::ranges::view`.
 ///
-/// This is similar to `std::ranges::subrange`.
-///
-/// See: https://en.cppreference.com/w/cpp/ranges/subrange
-///
-template<typename TIterator>
-class Range {
-public:
-    /// Constructs a range from the given `begin` iterator (included) to the
-    /// given `end` iterator (excluded).
-    ///
-    Range(TIterator begin, TIterator end)
-        : begin_(begin)
-        , end_(end) {
-    }
+namespace views = ::ranges::cpp20::views;
 
-    /// Returns the `begin` iterator.
-    ///
-    TIterator begin() const {
-        return begin_;
-    }
-
-    /// Returns the `end` iterator.
-    ///
-    TIterator end() const {
-        return end_;
-    }
-
-private:
-    TIterator begin_;
-    TIterator end_;
-};
-
-/// Returns whether the given `range` is empty.
-///
-template<typename TRange>
-bool isEmpty(TRange&& range) {
-    return range.begin() == range.end();
-}
-
-/// Returns a subrange of the given `range` with the first `n` elements
-/// removed.
-///
-template<typename TRange, typename TSize>
-auto drop(TRange&& range, TSize n) -> Range<decltype(std::declval<TRange>().begin())> {
-    auto it = range.begin();
-    std::advance(it, n);
-    return {it, range.end()};
-}
-
-} // namespace vgc::core
+} // namespace vgc
 
 #endif // VGC_CORE_RANGES_H

@@ -396,6 +396,18 @@ else()
 endif()
 message(STATUS "") # newline
 
+# range-v3
+set(RANGE_V3_DIR ${CMAKE_CURRENT_LIST_DIR}/third/range-v3 CACHE FILEPATH "Path to the root of the range-v3 distribution")
+if(EXISTS ${RANGE_V3_DIR})
+    add_subdirectory(${RANGE_V3_DIR})
+    include(${RANGE_V3_DIR}/Version.cmake)
+    message(STATUS "Version: ${RANGE_V3_MAJOR}.${RANGE_V3_MINOR}.${RANGE_V3_PATCHLEVEL}")
+else()
+    message(STATUS "[range-v3]") # Note: also printed by add_subdirectory(${RANGE_V3_DIR})
+    message(SEND_ERROR "Can't find range-v3")
+endif()
+message(STATUS "") # newline
+
 # Eigen
 #
 # Note: we don't use add_subdirectory(${Eigen_DIR}) because:

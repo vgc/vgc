@@ -10,6 +10,7 @@ vgc_test_library(core
         test_object.cpp
         test_parse.cpp
         test_preprocessor.cpp
+        test_ranges.cpp
         test_signal.cpp
         test_span.cpp
         test_typeid.cpp
