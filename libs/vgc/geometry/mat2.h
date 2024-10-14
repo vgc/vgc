@@ -134,7 +134,7 @@ public:
 
     /// The identity matrix `Mat2(1)`.
     ///
-    static constexpr Mat2 identity = Mat2(1);
+    static const Mat2 identity;
 
     /// Returns a pointer to the underlying (colum-major ordered) array of
     /// components.
