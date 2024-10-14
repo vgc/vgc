@@ -956,12 +956,9 @@ private:
     }
 };
 
-// This definition must be out-of-class.
-// See: https://stackoverflow.com/questions/11928089/
-// static-constexpr-member-of-same-type-as-class-being-defined
-//
+// Why out-of-class? Why not constexpr? See: https://github.com/vgc/vgc/issues/1906
 template<typename T>
-inline constexpr Rect2<T> Rect2<T>::empty = //
+inline const Rect2<T> Rect2<T>::empty = //
     Rect2(core::infinity<T>, core::infinity<T>, -core::infinity<T>, -core::infinity<T>);
 
 /// Alias for `Rect2<float>`.

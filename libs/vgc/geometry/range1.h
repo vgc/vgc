@@ -418,12 +418,9 @@ private:
     T pMax_;
 };
 
-// This definition must be out-of-class.
-// See: https://stackoverflow.com/questions/11928089/
-// static-constexpr-member-of-same-type-as-class-being-defined
-//
+// Why out-of-class? Why not constexpr? See: https://github.com/vgc/vgc/issues/1906
 template<typename T>
-inline constexpr Range1<T> Range1<T>::empty = //
+inline const Range1<T> Range1<T>::empty = //
     Range1<T>(core::infinity<T>, -core::infinity<T>);
 
 /// Alias for `Range1<float>`.

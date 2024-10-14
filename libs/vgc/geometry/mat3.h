@@ -581,12 +581,9 @@ private:
     T data_[3][3];
 };
 
-// This definition must be out-of-class.
-// See: https://stackoverflow.com/questions/11928089/
-// static-constexpr-member-of-same-type-as-class-being-defined
-//
+// Why out-of-class? Why not constexpr? See: https://github.com/vgc/vgc/issues/1906
 template<typename T>
-inline constexpr Mat3<T> Mat3<T>::identity = Mat3<T>(1);
+inline const Mat3<T> Mat3<T>::identity = Mat3<T>(1);
 
 template<typename T>
 Mat3<T> Mat3<T>::inverse(bool* isInvertible, T epsilon_) const {
