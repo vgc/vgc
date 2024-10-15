@@ -23,6 +23,15 @@
 /// This header contains functions and structures for creating, manipulating,
 /// and iterating over ranges.
 
+// range-v3 uses un-parenthesized min/max, so we need this in case <windows.h>
+// was included before this header, otherwise inluding range-v3 fails to compile.
+#ifdef min
+#    undef min
+#endif
+#ifdef max
+#    undef max
+#endif
+
 #include <range/v3/all.hpp>
 
 #include <vgc/core/templateutil.h>
