@@ -50,7 +50,6 @@ vgc_add_library(core
         typeid.h
         xml.h
 
-        detail/containerutil.h
         detail/parsebits.h
         detail/signal.h
 

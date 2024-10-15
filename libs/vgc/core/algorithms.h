@@ -30,14 +30,13 @@
 
 #include <vgc/core/api.h>
 #include <vgc/core/logging.h>
+#include <vgc/core/ranges.h>
 
 // The following is not a dependency, but included for convenience: it defines
 // vgc::core::clamp, which some people may expect in <vgc/core/algorithms.h>,
 // since std::clamp is in <algorithm>
 //
 #include <vgc/core/arithmetic.h>
-
-#include <vgc/core/detail/containerutil.h> // IsCompatibleRange
 
 namespace vgc::core {
 
@@ -184,12 +183,9 @@ bool contains(const std::vector<T>& v, const T& x) {
 
 /// Returns whether the given container `c` contains the given value `x`.
 ///
-template<
-    typename Container,
-    typename T,
-    VGC_REQUIRES(detail::isCompatibleRange<Container, T>)>
-bool contains(const Container& c, const T& x) {
-    return std::find(c.begin(), c.end(), x) != c.end();
+template<typename R, typename T, VGC_REQUIRES(c20::ranges::input_range<R>)>
+bool contains(R&& range, const T& x) {
+    return c20::ranges::find(range, x) != range.end();
 }
 
 /// Removes from the given vector `v` the first element which is equal to

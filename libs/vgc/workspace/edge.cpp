@@ -182,7 +182,6 @@ bool VacEdgeCellFrameData::isSelectableAt(
 }
 
 bool VacEdgeCellFrameData::isSelectableInRect(const geometry::Rect2d& rect) const {
-    using Vec2d = geometry::Vec2d;
 
     if (rect.isEmpty()) {
         return false;
@@ -204,14 +203,8 @@ bool VacEdgeCellFrameData::isSelectableInRect(const geometry::Rect2d& rect) cons
 
     const geometry::StrokeSample2dArray& samples = sampling_->samples();
 
-    struct SamplePositionGetter {
-        Vec2d operator()(const geometry::StrokeSample2d& s) {
-            return s.position();
-        }
-    };
-
-    bool result =
-        rect.intersectsPolyline(samples.begin(), samples.end(), SamplePositionGetter());
+    bool result = rect.intersectsPolyline(
+        samples, [](const geometry::StrokeSample2d& s) { return s.position(); });
 
     // We only cache the result if it reaches the intersectsPolyline() test because
     // it seems better to only cache "costly" result.

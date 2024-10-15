@@ -427,10 +427,12 @@ public:
 
     SignalTransmitter() = delete;
 
-    template<typename TSlotWrapper, VGC_REQUIRES(isFunctor<RemoveCVRef<TSlotWrapper>>)>
+    template<
+        typename TSlotWrapper,
+        VGC_REQUIRES(isFunctor<c20::remove_cvref_t<TSlotWrapper>>)>
     SignalTransmitter(TSlotWrapper&& wrapper, bool isNative = false)
         : wrapper_(std::forward<TSlotWrapper>(wrapper))
-        , arity_(FunctorTraits<RemoveCVRef<TSlotWrapper>>::arity)
+        , arity_(FunctorTraits<c20::remove_cvref_t<TSlotWrapper>>::arity)
         , isNative_(isNative) {
     }
 
@@ -438,12 +440,12 @@ public:
         typename SignalArgRefsTuple,
         typename SlotCallable,
         typename... OptionalObj,
-        VGC_REQUIRES(isCallable<RemoveCVRef<SlotCallable>>)>
+        VGC_REQUIRES(isCallable<c20::remove_cvref_t<SlotCallable>>)>
     [[nodiscard]] static SignalTransmitter
     build(SlotCallable&& c, OptionalObj... methodObj) {
         static_assert(isSignalArgRefsTuple<SignalArgRefsTuple>);
 
-        using Traits = CallableTraits<RemoveCVRef<SlotCallable>>;
+        using Traits = CallableTraits<c20::remove_cvref_t<SlotCallable>>;
 
         static_assert(
             std::tuple_size_v<SignalArgRefsTuple> >= Traits::arity,
@@ -454,7 +456,7 @@ public:
             VGC_PP_STR(VGC_CORE_MAX_SIGNAL_ARGS) //
             " parameters.");
 
-        if constexpr (isMethod<RemoveCVRef<SlotCallable>>) {
+        if constexpr (isMethod<c20::remove_cvref_t<SlotCallable>>) {
             static_assert(
                 sizeof...(OptionalObj) == 1,
                 "Expecting one methodObj to bind the given method.");
@@ -1021,7 +1023,8 @@ public:
     // Connects to a signal-slot.
     template<typename USignalRef, VGC_REQUIRES(isSignal<USignalRef>)>
     ConnectionHandle connect(const USignalRef& signalRef) const {
-        using SignalSlotArgRefsTuple = typename RemoveCVRef<USignalRef>::ArgRefsTuple;
+        using SignalSlotArgRefsTuple =
+            typename c20::remove_cvref_t<USignalRef>::ArgRefsTuple;
         constexpr size_t signalSlotArity = std::tuple_size_v<SignalSlotArgRefsTuple>;
         static_assert(
             signalSlotArity <= arity,
@@ -1036,11 +1039,11 @@ public:
     // Connects to a free function.
     template<
         typename FreeFunction,
-        VGC_REQUIRES(isFreeFunction<RemoveCVRef<FreeFunction>>)>
+        VGC_REQUIRES(isFreeFunction<c20::remove_cvref_t<FreeFunction>>)>
     ConnectionHandle connect(FreeFunction&& callback) const {
         static_assert(
-            !hasRValueReferences<
-                typename FreeFunctionTraits<RemoveCVRef<FreeFunction>>::ArgsTuple>,
+            !hasRValueReferences<typename FreeFunctionTraits<
+                c20::remove_cvref_t<FreeFunction>>::ArgsTuple>,
             "Slot parameters are not allowed to have a rvalue reference type.");
         return connect_(std::forward<FreeFunction>(callback));
     }
@@ -1048,10 +1051,11 @@ public:
     // Connects to a functor.
     // Can only be disconnected using the returned handle.
     //
-    template<typename Functor, VGC_REQUIRES(isFunctor<RemoveCVRef<Functor>>)>
+    template<typename Functor, VGC_REQUIRES(isFunctor<c20::remove_cvref_t<Functor>>)>
     ConnectionHandle connect(Functor&& funcObj) const {
         static_assert(
-            !hasRValueReferences<typename FunctorTraits<RemoveCVRef<Functor>>::ArgsTuple>,
+            !hasRValueReferences<
+                typename FunctorTraits<c20::remove_cvref_t<Functor>>::ArgsTuple>,
             "Slot parameters are not allowed to have a rvalue reference type.");
         SignalTransmitter transmitter =
             SignalTransmitter::build<ArgRefsTuple>(std::forward<Functor>(funcObj));
@@ -1080,7 +1084,7 @@ public:
     // Disconnects the given slot `slotRef`.
     // Returns true if a disconnection happened.
     //
-    template<typename TSlotRef, VGC_REQUIRES(isSlot<RemoveCVRef<TSlotRef>>)>
+    template<typename TSlotRef, VGC_REQUIRES(isSlot<c20::remove_cvref_t<TSlotRef>>)>
     bool disconnect(TSlotRef&& slotRef) const {
         return SignalHub::disconnect(
             object_, id(), ObjectSlotId(slotRef.object(), slotRef.id()));
@@ -1089,7 +1093,7 @@ public:
     // Disconnects the given signal-slot `signalRef`.
     // Returns true if a disconnection happened.
     //
-    template<typename USignalRef, VGC_REQUIRES(isSignal<RemoveCVRef<USignalRef>>)>
+    template<typename USignalRef, VGC_REQUIRES(isSignal<c20::remove_cvref_t<USignalRef>>)>
     bool disconnect(USignalRef&& signalRef) const {
         return SignalHub::disconnect(
             object_, id(), ObjectSlotId(signalRef.object(), signalRef.id()));
@@ -1100,7 +1104,7 @@ public:
     //
     template<
         typename FreeFunction,
-        VGC_REQUIRES(isFreeFunction<RemoveCVRef<FreeFunction>>)>
+        VGC_REQUIRES(isFreeFunction<c20::remove_cvref_t<FreeFunction>>)>
     bool disconnect(FreeFunction&& callback) const {
         return disconnect_(std::forward<FreeFunction>(callback));
     }

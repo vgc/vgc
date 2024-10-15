@@ -1596,6 +1596,11 @@ ValueType fastLerp(const ValueType& a, const ValueType& b, FloatType t) {
 struct VGC_CORE_API NoInit {};
 inline constexpr NoInit noInit = {};
 
+/// Checks whether `T` is a type with a `NoInit` constructor.
+///
+template<typename T>
+inline constexpr bool isNoInitConstructible = std::is_constructible_v<T, NoInit>;
+
 /// \struct vgc::core::UncheckedInit
 /// \brief Tag to select a function overload that doesn't perform checks.
 ///

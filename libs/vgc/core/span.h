@@ -31,8 +31,6 @@
 #include <vgc/core/parse.h>
 #include <vgc/core/templateutil.h>
 
-#include <vgc/core/detail/containerutil.h>
-
 namespace vgc::core {
 
 inline constexpr Int dynamicExtent = -1;
@@ -947,7 +945,7 @@ inline constexpr bool isSpan = detail::IsSpan<T>::value;
 
 template<typename T, vgc::Int extent>
 struct fmt::formatter<vgc::core::Span<T, extent>>
-    : fmt::formatter<vgc::core::RemoveCVRef<T>> {
+    : fmt::formatter<vgc::c20::remove_cvref_t<T>> {
 
     template<typename FormatContext>
     auto format(const vgc::core::Span<T, extent>& x, FormatContext& ctx)
@@ -965,7 +963,7 @@ struct fmt::formatter<vgc::core::Span<T, extent>>
             while (it != last) {
                 out = vgc::core::copyStringTo(out, ", ");
                 ctx.advance_to(out);
-                out = fmt::formatter<vgc::core::RemoveCVRef<T>>::format(*++it, ctx);
+                out = fmt::formatter<vgc::c20::remove_cvref_t<T>>::format(*++it, ctx);
             }
             *out++ = ']';
         }

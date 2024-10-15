@@ -23,7 +23,7 @@ using namespace ranges;
 
 TEST(TestRanges, Drop) {
     std::vector<int> v{1, 2, 3};
-    vgc::core::Array<int> a1(v | vgc::views::drop(1));
+    vgc::core::Array<int> a1(v | vgc::c20::views::drop(1));
     vgc::core::Array<int> a2 = {2, 3};
     ASSERT_EQ(a1, a2);
 }

@@ -615,7 +615,7 @@ void Operations::softDelete(core::ConstSpan<Node*> nodes, bool deleteIsolatedVer
     // cells is updated to contain only cells that could not be uncut.
     auto uncutCells = [&](auto& cells) {
         using CellType = std::remove_pointer_t<
-            typename core::RemoveCVRef<decltype(cells)>::value_type>;
+            typename c20::remove_cvref_t<decltype(cells)>::value_type>;
         for (CellType*& cell : cells) {
             bool wasUncut = false;
             if constexpr (std::is_same_v<CellType, KeyVertex>) {

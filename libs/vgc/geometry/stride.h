@@ -35,6 +35,14 @@ public:
     using pointer = U*;
     using reference = U&;
 
+    // While meaningless, a default-constructor is required for the type to be
+    // semiregular and hence be a sentinel_for<> itself.
+    //
+    StrideIterator()
+        : p_(nullptr)
+        , stride_(0) {
+    }
+
     StrideIterator(T* p, Int stride)
         : p_(p)
         , stride_(core::int_cast<difference_type>(stride)) {
