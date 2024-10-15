@@ -134,8 +134,8 @@ struct IsCompatibleInputRange<
     Range,
     T,
     Proj,
-    Requires<
-        c20::ranges::input_range<Range>
+    Requires<                           //
+        c20::ranges::input_range<Range> //
         && isCompatibleIterator<c20::ranges::iterator_t<Range>, T, Proj>>>
     : std::true_type {};
 
