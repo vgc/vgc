@@ -23,6 +23,27 @@
 #include <type_traits>
 #include <utility>
 
+namespace vgc::c20 {
+
+// https://en.cppreference.com/w/cpp/utility/functional/identity
+struct identity {
+    template<typename T>
+    constexpr T&& operator()(T&& t) const noexcept {
+        return std::forward<T>(t);
+    }
+    using is_transparent = void;
+};
+
+// https://en.cppreference.com/w/cpp/types/remove_cvref
+template<typename T>
+struct remove_cvref {
+    using type = std::remove_cv_t<std::remove_reference_t<T>>;
+};
+template<typename T>
+using remove_cvref_t = typename remove_cvref<T>::type;
+
+} // namespace vgc::c20
+
 // clang-format off
 
 namespace vgc::core {
@@ -138,19 +159,6 @@ struct TypeIdentity_ {
 template<typename U>
 using TypeIdentity = typename detail::TypeIdentity_<U>::type;
 
-/// Function object type whose operator() returns its argument unchanged.
-///
-struct Identity {
-    template<typename U>
-    constexpr U&& operator()(U&& x) const noexcept {
-        return std::forward<U>(x);
-    }
-};
-
-/// Function object whose operator() returns its argument unchanged.
-///
-inline constexpr Identity identity = {};
-
 /// Casts a class enum value to its underlying type.
 /// Equivalent to `return static_cast<std::underlying_type_t<Enum>>(e);`.
 ///
@@ -158,27 +166,6 @@ template<typename Enum>
 constexpr std::underlying_type_t<Enum> toUnderlying(Enum e) noexcept {
     return static_cast<std::underlying_type_t<Enum>>(e);
 }
-
-/// Removes cv-qualifiers (const and volatile) and ref-qualifiers (lvalue and
-/// rvalue references) of the given type.
-///
-/// This is equivalent to `std::remove_cvref_t` (C++20).
-///
-/// ```cpp
-/// RemoveCVRef<int>;                 // => int
-/// RemoveCVRef<const int>;           // => int
-/// RemoveCVRef<int&>;                // => int
-/// RemoveCVRef<const int&>;          // => int
-/// RemoveCVRef<int&&>;               // => int
-/// RemoveCVRef<volatile int>;        // => int
-/// RemoveCVRef<const volatile int>;  // => int
-///
-/// RemoveCVRef<int*>;                // => int*
-/// RemoveCVRef<const int*>;          // => const int*
-/// ```
-///
-template<typename T>
-using RemoveCVRef = std::remove_cv_t<std::remove_reference_t<T>>;
 
 /// If the given expression `B` evaluates to `true`, then `Requires<B>`
 /// is an alias for `void`. Otherwise, `Requires<B>` is ill-formed.

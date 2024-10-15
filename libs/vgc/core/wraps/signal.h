@@ -240,7 +240,7 @@ class PyCppSlotRef : public PyAbstractCppSlotRef {
     using PyAbstractCppSlotRef::PyAbstractCppSlotRef;
 };
 
-template<typename Method, VGC_REQUIRES(isMethod<RemoveCVRef<Method>>)>
+template<typename Method, VGC_REQUIRES(isMethod<c20::remove_cvref_t<Method>>)>
 class PyCppSlotRefImpl : public PyCppSlotRef {
 private:
     // clang-format off

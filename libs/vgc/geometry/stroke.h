@@ -389,13 +389,13 @@ public:
     explicit StrokeSampling2d(const StrokeSample2dArray& samples)
         : samples_(samples) {
 
-        computeCenterlineBoundingBox();
+        computeCenterlineBoundingBox_();
     }
 
     explicit StrokeSampling2d(StrokeSample2dArray&& samples)
         : samples_(std::move(samples)) {
 
-        computeCenterlineBoundingBox();
+        computeCenterlineBoundingBox_();
     }
 
     const StrokeSample2dArray& samples() const {
@@ -427,7 +427,7 @@ private:
     StrokeBoundaryInfo boundaryInfo_;
     Rect2d centerlineBoundingBox_ = Rect2d::empty;
 
-    void computeCenterlineBoundingBox() {
+    void computeCenterlineBoundingBox_() {
         centerlineBoundingBox_ = Rect2d::computeBoundingBox(
             samples_, [](const StrokeSample2d& s) { return s.position(); });
     }

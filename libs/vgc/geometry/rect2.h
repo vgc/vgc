@@ -20,6 +20,7 @@
 #include <algorithm> // minmax
 
 #include <vgc/core/array.h>
+#include <vgc/core/ranges.h>
 #include <vgc/core/templateutil.h>
 #include <vgc/geometry/api.h>
 #include <vgc/geometry/vec2.h>
@@ -178,28 +179,17 @@ public:
         return Rect2(x, y, x + width, y + height);
     }
 
-    /// Computes the bounding box of the given `points`.
-    ///
-    /// This function can be called for any range type `Range` whose elements
-    /// are implicitly convertible to `Vec2`.
-    ///
-    template<typename Range, VGC_REQUIRES(core::isInputRange<Range>)>
-    static constexpr Rect2 computeBoundingBox(const Range& points) {
-        Rect2 res = Rect2::empty;
-        for (const auto& point : points) {
-            res.uniteWith(point);
-        }
-        return res;
-    }
-
     /// Computes the bounding box of the points obtained by applying the
-    /// `getPoint` unary operator to all the elements in the given `range`.
+    /// `proj` unary operator to all the elements in the given `range`.
     ///
-    template<typename Range, typename UnaryOp, VGC_REQUIRES(core::isInputRange<Range>)>
-    static constexpr Rect2 computeBoundingBox(const Range& range, UnaryOp getPoint) {
+    template<
+        typename R,
+        typename Proj = c20::identity,
+        VGC_REQUIRES(core::isCompatibleInputRange<R, Vec2<T>, Proj>)>
+    static constexpr Rect2 computeBoundingBox(R&& range, Proj proj = {}) {
         Rect2 res = Rect2::empty;
         for (const auto& element : range) {
-            res.uniteWith(getPoint(element));
+            res.uniteWith(proj(element));
         }
         return res;
     }
@@ -791,14 +781,23 @@ public:
     /// Returns whether this rectangle has a non-empty intersection with the
     /// polyline defined by the sequence of points from `first` to `last`.
     ///
-    template<typename PointIt, typename PointPositionGetter = core::Identity>
-    bool intersectsPolyline(
-        PointIt first,
-        PointIt last,
-        PointPositionGetter positionGetter = {}) const {
+    /// The unary operator `proj` should take as argument an element of the
+    /// given `range`, and return a point of type `Vec2`.
+    ///
+    template<
+        typename R,
+        typename Proj = c20::identity,
+        VGC_REQUIRES(core::isCompatibleInputRange<R, Vec2<T>, Proj>)>
+    bool intersectsPolyline(R&& range, Proj proj = {}) const {
 
-        auto it0 = first;
-        Vec2 p0 = positionGetter(*it0);
+        auto it = range.begin();
+        auto end = range.end();
+        if (it == end) {
+            return false;
+        }
+
+        Vec2 p0 = proj(*it);
+        ++it;
         int p0c = p0.x() > xMax() ? 2 : (p0.x() < xMin() ? 1 : 0);
         int p0r = p0.y() > yMax() ? 2 : (p0.y() < yMin() ? 1 : 0);
         if (!p0c && !p0r) {
@@ -806,9 +805,10 @@ public:
             return true;
         }
 
-        for (auto it1 = it0 + 1; it1 != last; it0 = it1++) {
+        while (it != end) {
             // in segment outline-mode-selection box?
-            Vec2 p1 = positionGetter(*it1);
+            Vec2 p1 = proj(*it);
+            ++it;
             int p1c = p1.x() > xMax() ? 2 : (p1.x() < xMin() ? 1 : 0);
             int p1r = p1.y() > yMax() ? 2 : (p1.y() < yMin() ? 1 : 0);
             if (!p1c && !p1r) {

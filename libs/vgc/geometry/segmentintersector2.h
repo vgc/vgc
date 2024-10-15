@@ -295,7 +295,7 @@ public:
 
     /// Adds an open polyline to this intersector, and returns its index.
     ///
-    /// The unary operator `getPoint` should take as argument an element of the
+    /// The unary operator `proj` should take as argument an element of the
     /// given `range`, and return a point of type `Vec2`.
     ///
     /// With `n` being the length of the range, then:
@@ -308,16 +308,16 @@ public:
     /// retrieved via `segmentIndexRange(polylineIndex)`.
     ///
     template<
-        typename Range,
-        typename UnaryOp = core::Identity,
-        VGC_REQUIRES(core::isInputRange<Range>)>
-    PolylineIndex addPolyline(const Range& range, UnaryOp getPoint = {}) {
-        return addPolyline(false, false, range.begin(), range.end(), getPoint);
+        typename R,
+        typename Proj = c20::identity,
+        VGC_REQUIRES(core::isCompatibleInputRange<R, Vec2<T>, Proj>)>
+    PolylineIndex addPolyline(R&& range, Proj proj = {}) {
+        return addPolyline(false, false, range, proj);
     }
 
     /// Adds a (possibly closed) polyline to this intersector, and returns its index.
     ///
-    /// The unary operator `getPoint` should take as argument an element of the
+    /// The unary operator `proj` should take as argument an element of the
     /// given `range`, and return a point of type `Vec2`.
     ///
     /// With `n` being the length of the range, then:
@@ -343,14 +343,11 @@ public:
     /// retrieved via `segmentIndexRange(polylineIndex)`.
     ///
     template<
-        typename Range,
-        typename UnaryOp = core::Identity,
-        VGC_REQUIRES(core::isInputRange<Range>)>
-    PolylineIndex addPolyline(
-        bool isClosed,
-        bool hasDuplicateEndpoints,
-        const Range& range,
-        UnaryOp getPoint = {});
+        typename R,
+        typename Proj = c20::identity,
+        VGC_REQUIRES(core::isCompatibleInputRange<R, Vec2<T>, Proj>)>
+    PolylineIndex
+    addPolyline(bool isClosed, bool hasDuplicateEndpoints, R&& range, Proj proj = {});
 
     /// Computes the intersections between all added segments and polylines.
     ///
@@ -543,15 +540,11 @@ SegmentIndex addSegment(
     return res;
 }
 
-template<
-    typename T,
-    typename Range,
-    typename UnaryOp,
-    VGC_REQUIRES(core::isInputRange<Range>)>
+template<typename T, typename R, typename Proj>
 PolylineIndex addPolyline(
     InputData<T>& in,
-    const Range& range,
-    UnaryOp op,
+    R&& range,
+    Proj proj,
     bool isClosed,
     bool hasDuplicateEndpoints) {
 
@@ -579,12 +572,12 @@ PolylineIndex addPolyline(
     // Note that C++23 introduces std::views::adjacent, but it requires a
     // forward_range.
     //
-    Vec2<T> firstPosition = op(*it);
+    Vec2<T> firstPosition = proj(*it);
     Vec2<T> startPosition = firstPosition;
     ++it;
 
     // Reserve memory if the number of segments can be known in advance.
-    if constexpr (core::isForwardRange<Range>) {
+    if constexpr (core::isForwardRange<R>) {
         auto numSegmentsInPolyline = std::distance(it, end);
         if (isClosed && !hasDuplicateEndpoints) {
             numSegmentsInPolyline += 1;
@@ -598,7 +591,7 @@ PolylineIndex addPolyline(
 
     // Add the segments
     for (; it != end; ++it) {
-        Vec2<T> endPosition = op(*it);
+        Vec2<T> endPosition = proj(*it);
         addSegment(in, startPosition, endPosition, polylineIndex);
         startPosition = endPosition;
     }
@@ -1272,15 +1265,18 @@ SegmentIntersector2<T>::addSegment(const Vec2<T>& a, const Vec2<T>& b) {
 }
 
 template<typename T>
-template<typename Range, typename UnaryOp, VGC_REQUIRES_DEF(core::isInputRange<Range>)>
+template<
+    typename R,
+    typename Proj,
+    VGC_REQUIRES_DEF(core::isCompatibleInputRange<R, Vec2<T>, Proj>)>
 segmentintersector2::PolylineIndex SegmentIntersector2<T>::addPolyline(
     bool isClosed,
     bool hasDuplicateEndpoints,
-    const Range& range,
-    UnaryOp op) {
+    R&& range,
+    Proj proj) {
 
     return segmentintersector2::detail::addPolyline(
-        input_, range, op, isClosed, hasDuplicateEndpoints);
+        input_, range, proj, isClosed, hasDuplicateEndpoints);
 }
 
 template<typename T>

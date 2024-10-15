@@ -22,7 +22,6 @@
 #include <initializer_list>
 #include <iterator>
 #include <memory>
-#include <stdexcept>
 #include <type_traits>
 #include <utility>
 
@@ -31,10 +30,9 @@
 #include <vgc/core/exceptions.h>
 #include <vgc/core/format.h>
 #include <vgc/core/parse.h>
+#include <vgc/core/ranges.h>
 #include <vgc/core/sharedconst.h>
 #include <vgc/core/templateutil.h>
-
-#include <vgc/core/detail/containerutil.h>
 
 namespace vgc::core {
 
@@ -385,7 +383,8 @@ public:
     }
 
     /// Creates an `Array` initialized from the elements in the range given by
-    /// the input iterators `first` (inclusive) and `last` (exclusive).
+    /// the input iterators `first` (inclusive) and `last` (exclusive), with
+    /// the unary operation `proj` applied to each input element.
     ///
     /// The behavior is undefined if [`first`, `last`) isn't a valid range.
     ///
@@ -395,54 +394,24 @@ public:
     /// ```
     /// std::list<double> l = {1, 2, 3};
     /// vgc::core::Array<double> a(l.begin(), l.end()); // Copy the list as an Array
-    /// ```
     ///
-    template<typename InputIt, VGC_REQUIRES(isInputIterator<InputIt>)>
-    Array(InputIt first, InputIt last) {
-        rangeConstruct_(first, last);
-    }
-
-    /// Creates an `Array` initialized from the elements in the range given by
-    /// the input iterators `first` (inclusive) and `last` (exclusive), with
-    /// the given unary operation `op` applied to each input element.
-    ///
-    /// The behavior is undefined if [`first`, `last`) isn't a valid range.
-    ///
-    /// Throws `LengthError` if the length of the given range is greater than
-    /// `maxLength()`.
-    ///
-    /// ```
     /// std::vector<double> v = {1.2, 2.8, 3.1};
-    /// vgc::core::Array<Int> a(v.begin(), v.end(), [](double x) {
+    /// vgc::core::Array<Int> b(v.begin(), v.end(), [](double x) {
     ///     return vgc::core::ifloor<Int>(x);
     /// });
     /// ```
     ///
-    template<typename InputIt, typename UnaryOp, VGC_REQUIRES(isInputIterator<InputIt>)>
-    Array(InputIt first, InputIt last, UnaryOp op) {
-        rangeConstruct_(first, last, op);
-    }
-
-    /// Creates an `Array` initialized from the elements in `range`.
-    ///
-    /// The behavior is undefined if [`range.begin()`, `range.end()`) isn't a
-    /// valid range.
-    ///
-    /// Throws `LengthError` if the length of `range` is greater than
-    /// `maxLength()`.
-    ///
-    /// ```
-    /// std::list<double> l = {1, 2, 3};
-    /// vgc::core::Array<double> a(l); // Copy the list as an Array
-    /// ```
-    ///
-    template<typename Range, VGC_REQUIRES(isInputRange<Range>)>
-    explicit Array(const Range& range) {
-        rangeConstruct_(range.begin(), range.end());
+    template<
+        typename I,
+        typename S,
+        typename Proj = c20::identity,
+        VGC_REQUIRES(isCompatibleInputIteratorPair<I, S, T, Proj>)>
+    Array(I first, S last, Proj proj = {}) {
+        rangeConstruct_(c20::ranges::subrange<I, S>(first, last), proj);
     }
 
     /// Creates an `Array` initialized from the elements in `range` with the
-    /// given unary operation `op` applied to each input element.
+    /// unary operation `proj` applied to each input element.
     ///
     /// The behavior is undefined if [`range.begin()`, `range.end()`) isn't a
     /// valid range.
@@ -455,9 +424,12 @@ public:
     /// vgc::core::Array<Int> a(v, [](double x) { return vgc::core::ifloor<Int>(x); });
     /// ```
     ///
-    template<typename Range, typename UnaryOp, VGC_REQUIRES(isInputRange<Range>)>
-    explicit Array(const Range& range, UnaryOp op) {
-        rangeConstruct_(range.begin(), range.end(), op);
+    template<
+        typename R,
+        typename Proj = c20::identity,
+        VGC_REQUIRES(isCompatibleInputRange<R, T, Proj>)>
+    explicit Array(R&& range, Proj proj = {}) {
+        rangeConstruct_(range, proj);
     }
 
     /// Creates an `Array` initialized by the values given in the initializer
@@ -472,7 +444,7 @@ public:
     /// ```
     ///
     Array(std::initializer_list<T> ilist) {
-        rangeConstruct_(ilist.begin(), ilist.end());
+        rangeConstruct_(ilist);
     }
 
     /// Copy-constructs from `other`.
@@ -653,8 +625,10 @@ public:
     /// a.assign(l.begin(), l.end()); // Make the existing array a copy of the list
     /// ```
     ///
-    template<typename InputIt, VGC_REQUIRES(isInputIterator<InputIt>)>
-    void assign(InputIt first, InputIt last) {
+    // TODO: proj
+    //
+    template<typename I, typename S, VGC_REQUIRES(isCompatibleInputIteratorPair<I, S, T>)>
+    void assign(I first, S last) {
         assignRange_(first, last);
     }
 
@@ -672,8 +646,10 @@ public:
     /// a.assign(l); // Make the existing array a copy of the list
     /// ```
     ///
-    template<typename Range, VGC_REQUIRES(isInputRange<Range>)>
-    void assign(const Range& range) {
+    // TODO: proj
+    //
+    template<typename R, VGC_REQUIRES(isCompatibleInputRange<R, T>)>
+    void assign(R&& range) {
         assignRange_(range.begin(), range.end());
     }
 
@@ -1331,8 +1307,10 @@ public:
     /// Throws `LengthError` if the resulting number of elements would exceed
     /// `maxLength()`.
     ///
-    template<typename InputIt, VGC_REQUIRES(isInputIterator<InputIt>)>
-    iterator insert(ConstIterator it, InputIt first, InputIt last) {
+    // TODO: proj
+    //
+    template<typename I, typename S, VGC_REQUIRES(isCompatibleInputIteratorPair<I, S, T>)>
+    iterator insert(ConstIterator it, I first, S last) {
         pointer pos = unwrapIterator(it);
         const Int i = static_cast<Int>(std::distance(data_, pos));
         return makeIterator(insertRange_(i, first, last));
@@ -1352,8 +1330,10 @@ public:
     /// Throws `LengthError` if the resulting number of elements would exceed
     /// `maxLength()`.
     ///
-    template<typename Range, VGC_REQUIRES(detail::isCompatibleRange<Range, T>)>
-    iterator insert(ConstIterator it, const Range& range) {
+    // TODO: proj
+    //
+    template<typename R, VGC_REQUIRES(isCompatibleInputRange<R, T>)>
+    iterator insert(ConstIterator it, R&& range) {
         pointer pos = unwrapIterator(it);
         const Int i = static_cast<Int>(std::distance(data_, pos));
         return makeIterator(insertRange_(i, range.begin(), range.end()));
@@ -1433,8 +1413,10 @@ public:
     /// Throws `LengthError` if the resulting number of elements would exceed
     /// maxLength().
     ///
-    template<typename InputIt, VGC_REQUIRES(isInputIterator<InputIt>)>
-    void insert(Int i, InputIt first, InputIt last) {
+    // TODO: proj
+    //
+    template<typename I, typename S, VGC_REQUIRES(isCompatibleInputIteratorPair<I, S, T>)>
+    void insert(Int i, I first, S last) {
         checkInRangeForInsert_(i);
         insertRange_(i, first, last);
     }
@@ -1449,8 +1431,10 @@ public:
     /// Throws `LengthError` if the resulting number of elements would exceed
     /// `maxLength()`.
     ///
-    template<typename Range, VGC_REQUIRES(detail::isCompatibleRange<Range, T>)>
-    void insert(Int i, const Range& range) {
+    // TODO: proj
+    //
+    template<typename R, VGC_REQUIRES(isCompatibleInputRange<R, T>)>
+    void insert(Int i, R&& range) {
         checkInRangeForInsert_(i);
         insertRange_(i, range.begin(), range.end());
     }
@@ -1600,8 +1584,10 @@ public:
     /// Throws `LengthError` if the resulting number of elements would exceed
     /// `maxLength()`.
     ///
-    template<typename InputIt, VGC_REQUIRES(isInputIterator<InputIt>)>
-    void extend(InputIt first, InputIt last) {
+    // TODO: proj
+    //
+    template<typename I, typename S, VGC_REQUIRES(isCompatibleInputIteratorPair<I, S, T>)>
+    void extend(I first, S last) {
         insertRange_(length(), first, last);
     }
 
@@ -1614,8 +1600,10 @@ public:
     /// Throws `LengthError` if the resulting number of elements would exceed
     /// `maxLength()`.
     ///
-    template<typename Range, VGC_REQUIRES(isInputRange<Range>)>
-    void extend(const Range& range) {
+    // TODO: proj
+    //
+    template<typename R, VGC_REQUIRES(isCompatibleInputRange<R, T>)>
+    void extend(R&& range) {
         insertRange_(length(), range.begin(), range.end());
     }
 
@@ -1657,8 +1645,10 @@ public:
     /// Throws `LengthError` if the resulting number of elements would exceed
     /// `maxLength()`.
     ///
-    template<typename InputIt, VGC_REQUIRES(isInputIterator<InputIt>)>
-    void preextend(InputIt first, InputIt last) {
+    // TODO: proj
+    //
+    template<typename I, typename S, VGC_REQUIRES(isCompatibleInputIteratorPair<I, S, T>)>
+    void preextend(I first, S last) {
         insertRange_(0, first, last);
     }
 
@@ -1672,8 +1662,10 @@ public:
     ///
     /// Throws `LengthError` if the resulting number of elements would exceed `maxLength()`.
     ///
-    template<typename Range, VGC_REQUIRES(isInputRange<Range>)>
-    void preextend(const Range& range) {
+    // TODO: proj
+    //
+    template<typename R, VGC_REQUIRES(isCompatibleInputRange<R, T>)>
+    void preextend(R&& range) {
         insertRange_(0, range.begin(), range.end());
     }
 
@@ -2089,46 +2081,58 @@ private:
     //
     // Throws LengthError if range size exceeds maxLength().
     //
-    template<typename InputIt>
-    void rangeConstruct_(InputIt first, InputIt last) {
-        using iterator_category =
-            typename std::iterator_traits<InputIt>::iterator_category;
-
-        if constexpr (std::is_base_of_v<std::forward_iterator_tag, iterator_category>) {
-            const auto dist = std::distance(first, last);
+    template<typename R>
+    void rangeConstruct_(R&& range) {
+        if constexpr (c20::ranges::forward_range<R>) {
+            const auto dist = c20::ranges::distance(range);
             if (dist != 0) {
                 checkLengthForInit_(dist);
                 const Int newLen = static_cast<Int>(dist);
                 allocateStorage_(newLen);
-                std::uninitialized_copy(first, last, data_);
+
+                // Similar to uninitialized_copy(first, last, d_first),
+                // but supports separate sentinel type
+                auto d_first = data_;
+                auto first = range.begin();
+                auto last = range.end();
+                for (; first != last; ++d_first, (void)++first) {
+                    ::new (static_cast<void*>(d_first)) T(*first);
+                }
+
                 length_ = newLen;
             }
         }
         else {
-            while (first != last) {
-                emplaceLast_(*first++);
+            for (auto&& v : range) {
+                emplaceLast_(v);
             }
         }
     }
 
-    template<typename InputIt, typename UnaryOp>
-    void rangeConstruct_(InputIt first, InputIt last, UnaryOp op) {
-        using iterator_category =
-            typename std::iterator_traits<InputIt>::iterator_category;
-
-        if constexpr (std::is_base_of_v<std::forward_iterator_tag, iterator_category>) {
-            const auto dist = std::distance(first, last);
+    template<typename R, typename Proj>
+    void rangeConstruct_(R&& range, Proj proj) {
+        if constexpr (c20::ranges::forward_range<R>) {
+            const auto dist = c20::ranges::distance(range);
             if (dist != 0) {
                 checkLengthForInit_(dist);
                 const Int newLen = static_cast<Int>(dist);
                 allocateStorage_(newLen);
-                std::transform(first, last, data_, op);
+
+                // Similar to uninitialized_copy(first, last, d_first),
+                // but supports separate sentinel type and projection
+                auto d_first = data_;
+                auto first = range.begin();
+                auto last = range.end();
+                for (; first != last; ++d_first, (void)++first) {
+                    ::new (static_cast<void*>(d_first)) T(proj(*first));
+                }
+
                 length_ = newLen;
             }
         }
         else {
-            while (first != last) {
-                emplaceLast_(op(*first++));
+            for (auto&& v : range) {
+                emplaceLast_(proj(v));
             }
         }
     }
@@ -2290,13 +2294,12 @@ private:
 
     // Throws LengthError if the resulting number of elements would exceed maxLength().
     //
-    template<typename InputIt>
-    void assignRange_(InputIt first, InputIt last) {
-        using iterator_category =
-            typename std::iterator_traits<InputIt>::iterator_category;
+    template<typename I, typename S>
+    void assignRange_(I first, S last) {
+
         const Int oldLen = length_;
 
-        if constexpr (std::is_base_of_v<std::forward_iterator_tag, iterator_category>) {
+        if constexpr (c20::forward_iterator<I>) {
             // Forward iterator case
             const auto dist = std::distance(first, last);
             checkLengthForInit_(dist);
@@ -2313,7 +2316,7 @@ private:
                 }
                 else {
                     // More elements in input range than this container
-                    const InputIt uBeg = std::next(first, oldLen); // not perfect
+                    const I uBeg = std::next(first, oldLen); // not perfect
                     std::copy(first, uBeg, data_);
                     std::uninitialized_copy(uBeg, last, data_ + oldLen);
                 }
@@ -2546,15 +2549,14 @@ private:
     //
     // Throws LengthError if the resulting number of elements would exceed maxLength().
     //
-    template<typename Iter>
-    pointer insertRange_(const Int i, Iter first, Iter last) {
-        using iterator_category = typename std::iterator_traits<Iter>::iterator_category;
+    template<typename I, typename S>
+    pointer insertRange_(const Int i, I first, S last) {
 
         if (first == last) {
             return data_ + i;
         }
 
-        if constexpr (std::is_base_of_v<std::forward_iterator_tag, iterator_category>) {
+        if constexpr (c20::forward_iterator<I>) {
             // Forward iterator implementation
             const auto dist = std::distance(first, last);
 
@@ -2568,7 +2570,7 @@ private:
             if (initCount > 0) {
                 std::copy_n(first, initCount, insertBeg);
                 if (initCount < n) {
-                    const Iter m = std::next(first, initCount);
+                    const I m = std::next(first, initCount);
                     std::uninitialized_copy(m, last, insertBeg + initCount);
                 }
             }
@@ -2625,7 +2627,7 @@ private:
     }
 
     iterator uninitializedFillN_(iterator first, const Int n, NoInit) {
-        if constexpr (detail::isNoInitConstructible<T>) {
+        if constexpr (isNoInitConstructible<T>) {
             // Method 1, potentially dangerous:
             //    std::advance(unwrapIterator(first), n)
             // Method 2, safer: (but does the compiler really optimize?)
@@ -3144,10 +3146,10 @@ using SharedConstDoubleArray = SharedConstArray<double>;
 //                to be of width 6.
 //
 template<typename T>
-struct fmt::formatter<vgc::core::Array<T>> : fmt::formatter<vgc::core::RemoveCVRef<T>> {
+struct fmt::formatter<vgc::core::Array<T>> : fmt::formatter<vgc::c20::remove_cvref_t<T>> {
     template<typename FormatContext>
     auto format(const vgc::core::Array<T>& x, FormatContext& ctx) -> decltype(ctx.out()) {
-        using T_ = vgc::core::RemoveCVRef<T>;
+        using T_ = vgc::c20::remove_cvref_t<T>;
         using ElementFormatter = fmt::formatter<T_>;
         auto out = ctx.out();
         if (x.isEmpty()) {
