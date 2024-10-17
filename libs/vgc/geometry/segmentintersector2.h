@@ -52,6 +52,7 @@ namespace segmentintersector2 {
 using PolylineIndex = Int;
 using SegmentIndex = Int;
 using PointIntersectionIndex = Int;
+using SegmentIntersectionIndex = Int;
 
 /// When two or more segments intersect at a point, then for each involved
 /// segment we store its corresponding intersection parameter.
@@ -59,8 +60,8 @@ using PointIntersectionIndex = Int;
 template<typename T>
 class PointIntersectionInfo {
 public:
-    /// Constructs a `PointIntersection` with zero-initialized
-    /// `pointIntersectionIndex()` and `segmentIndex()`, and `parameter`.
+    /// Constructs a `PointIntersectionInfo` with zero-initialized
+    /// `pointIntersectionIndex()`, `segmentIndex()`, and `parameter()`.
     ///
     PointIntersectionInfo() {
     }
@@ -77,8 +78,8 @@ public:
         , parameter_(parameter) {
     }
 
-    /// Returns the index of the PointInteresection this
-    /// PointIntersectionInfo belongs to.
+    /// Returns the index of the `PointInteresection` this
+    /// `PointIntersectionInfo` belongs to.
     ///
     PointIntersectionIndex pointIntersectionIndex() const {
         return pointIntersectionIndex_;
@@ -96,7 +97,7 @@ public:
         return segmentIndex_;
     }
 
-    /// Modifies `pointIntersectionIndex()`.
+    /// Modifies `segmentIndex()`.
     ///
     void setSegmentIndex(SegmentIndex segmentIndex) {
         segmentIndex_ = segmentIndex;
@@ -191,6 +192,157 @@ private:
     core::Array<PointIntersectionInfo<T>> infos_;
 };
 
+/// When two or more segments overlap along a shared subsegment, then for each
+/// involved segment we store its corresponding intersection parameters.
+///
+template<typename T>
+class SegmentIntersectionInfo {
+public:
+    /// Constructs a `SegmentIntersectionInfo` with zero-initialized
+    /// `segmentIntersectionIndex()`, `segmentIndex()`, `parameter1(), and `parameter2()`.
+    ///
+    SegmentIntersectionInfo() {
+    }
+
+    /// Contructs a `PointIntersectionInfo`.
+    ///
+    SegmentIntersectionInfo(
+        SegmentIntersectionIndex segmentIntersectionIndex,
+        SegmentIndex segmentIndex,
+        T parameter1,
+        T parameter2)
+
+        : segmentIntersectionIndex_(segmentIntersectionIndex)
+        , segmentIndex_(segmentIndex)
+        , parameter1_(parameter1)
+        , parameter2_(parameter2) {
+    }
+
+    /// Returns the index of the `SegmentInteresection` this
+    /// `SegmentIntersectionInfo` belongs to.
+    ///
+    SegmentIntersectionIndex segmentIntersectionIndex() const {
+        return segmentIntersectionIndex_;
+    }
+
+    /// Modifies `segmentIntersectionIndex()`.
+    ///
+    void setSegmentIntersectionIndex(SegmentIntersectionIndex segmentIntersectionIndex) {
+        segmentIntersectionIndex_ = segmentIntersectionIndex;
+    }
+
+    /// Returns the index of the segment that overlap the `SegmentIntersection`.
+    ///
+    SegmentIndex segmentIndex() const {
+        return segmentIndex_;
+    }
+
+    /// Modifies `segmentIndex()`.
+    ///
+    void setSegmentIndex(SegmentIndex segmentIndex) {
+        segmentIndex_ = segmentIndex;
+    }
+
+    /// Returns the parameter along the segment corresponding to where
+    /// the segment starts to overlap the `SegmentIntersection`.
+    ///
+    T parameter1() const {
+        return parameter1_;
+    }
+
+    /// Modifies `parameter1()`.
+    ///
+    void setParameter1(T parameter1) {
+        parameter1_ = parameter1;
+    }
+
+    /// Returns the parameter along the segment corresponding to where
+    /// the segment finishes to overlap the `SegmentIntersection`.
+    ///
+    T parameter2() const {
+        return parameter2_;
+    }
+
+    /// Modifies `parameter2()`.
+    ///
+    void setParameter2(T parameter2) {
+        parameter2_ = parameter2;
+    }
+
+private:
+    PointIntersectionIndex segmentIntersectionIndex_;
+    SegmentIndex segmentIndex_;
+    T parameter1_;
+    T parameter2_;
+};
+
+/// Stores a minimal subsegment of an intersection segment, together with the
+/// information of which segments are overlapping that subsegment.
+///
+template<typename T>
+class SegmentIntersection {
+public:
+    /// Constructs a `SegmentIntersection` with a default constructed `segment` and
+    /// `infos()`.
+    ///
+    SegmentIntersection() noexcept {
+    }
+
+    /// Constructs a `SegmentIntersection` with the given `segment` and empty
+    /// `infos()`.
+    ///
+    explicit SegmentIntersection(const Segment2<T>& segment) noexcept
+        : segment_(segment) {
+    }
+
+    /// Constructs a `SegmentIntersection` with the given `segment` and `infos`.
+    ///
+    SegmentIntersection(
+        const Segment2<T>& segment,
+        const core::Array<SegmentIntersectionInfo<T>>& infos)
+
+        : segment_(segment)
+        , infos_(infos) {
+    }
+
+    /// Returns the shared subsegment of this segment intersection.
+    ///
+    Vec2<T> segment() const {
+        return segment_;
+    }
+
+    /// Modifies the shared subsegment of this point intersection.
+    ///
+    void setSegment(const Segment2<T>& segment) {
+        segment_ = segment;
+    }
+
+    /// Returns information about the segments that intersect
+    /// at this point intersection.
+    ///
+    const core::Array<SegmentIntersectionInfo<T>>& infos() const {
+        return infos_;
+    }
+
+    /// Sets the `infos` of this point intersection.
+    ///
+    void setInfos(core::Array<SegmentIntersectionInfo<T>> infos) {
+        infos_ = std::move(infos);
+    }
+
+    /// Adds a `PointIntersectionInfo` to this point intersection.
+    ///
+    void addInfo(const SegmentIntersectionInfo<T>& info) {
+        infos_.append(info);
+    }
+
+private:
+    Segment2<T> segment_;
+    core::Array<SegmentIntersectionInfo<T>> infos_;
+};
+
+/// Represent a range of continuous segment indices.
+///
 template<typename T>
 class SegmentIndexRange {
 public:
@@ -270,6 +422,9 @@ public:
 
     using PointIntersectionInfo = segmentintersector2::PointIntersectionInfo<T>;
     using PointIntersection = segmentintersector2::PointIntersection<T>;
+
+    using SegmentIntersectionInfo = segmentintersector2::SegmentIntersectionInfo<T>;
+    using SegmentIntersection = segmentintersector2::SegmentIntersection<T>;
 
     /// Creates a `SegmentIntersector2`.
     ///
@@ -357,6 +512,12 @@ public:
     ///
     const core::Array<PointIntersection>& pointIntersections() const {
         return output_.pointIntersections;
+    };
+
+    /// Returns the computed segment intersections.
+    ///
+    const core::Array<SegmentIntersection>& segmentIntersections() const {
+        return output_.segmentIntersections;
     };
 
     /// Returns which polyline contains the given segment.
@@ -472,7 +633,8 @@ struct AlgorithmData {
     EventQueue eventQueue;
 
     // The segments that intersect the sweep line, ordered by increasing
-    // y-coords of their intersection with the sweep line.
+    // y-coords of their intersection with the sweep line, and ordered
+    // by slope in case of equality (vertical segments last).
     //
     core::Array<SegmentIndex> sweepSegments;
 
@@ -490,11 +652,26 @@ struct AlgorithmData {
     //
     core::Array<Event<T>> sweepEvents;
 
+    // During the plane sweep, we store overlap groups as a directed acyclic
+    // graph (DAG):
+    //
+    // - a segment that is not part of an overlap group stores -1
+    // - a segment that is part of an overlap group stores either:
+    //   - an index to itself, or
+    //   - an index to a greater segment index that it overlaps with
+    //
+    // This makes merging overlap group trivial and constant time during
+    // the plane sweep. We can then post-process them in O(n log n) after
+    // the plane sweep.
+    //
+    core::Array<SegmentIndex> overlapGroups;
+
     void clear() {
         VGC_ASSERT(eventQueue.empty()); // priority_queue has no clear() method
         sweepSegments.clear();
         outgoingSegments.clear();
         sweepEvents.clear();
+        overlapGroups.clear();
     }
 };
 
@@ -686,6 +863,12 @@ void initializeEventQueue(InputData<T>& in, AlgorithmData<T>& alg) {
 template<typename T>
 void initializeSweepSegments(AlgorithmData<T>& alg) {
     alg.sweepSegments.clear();
+}
+
+template<typename T>
+void initializeOverlapGroups(InputData<T>& in, AlgorithmData<T>& alg) {
+    Int n = in.segments.length();
+    alg.overlapGroups.assign(n, -1);
 }
 
 // Get the next event and all events sharing the same position. We call these
@@ -1136,6 +1319,137 @@ void computeOutgoingSegments(
         [&slopes = in.segmentSlopes](SegmentIndex i1, SegmentIndex i2) {
             return slopes.getUnchecked(i1) < slopes.getUnchecked(i2);
         });
+
+    // Find if there are overlapping segment among the outgoing segments. They
+    // are those with the same slope, but due to numerical errors, we do not
+    // rely on slope but on our robust intersection test for this. But since
+    // outgoingSegments are sorted by slopes, we still only have to test
+    // consecutive segment pairs.
+    //
+    for (Int j = 1; j < alg.outgoingSegments.length(); ++j) {
+        SegmentIndex i1 = alg.outgoingSegments.getUnchecked(j - 1);
+        SegmentIndex i2 = alg.outgoingSegments.getUnchecked(j);
+        const Segment2<T>& s1 = in.segments.getUnchecked(i1);
+        const Segment2<T>& s2 = in.segments.getUnchecked(i2);
+        SegmentIntersection2<T> inter = s1.intersect(s2);
+        if (inter.type() == SegmentIntersectionType::Segment) {
+
+            // Report the overlap
+            Int& g1 = alg.overlapGroups[i1];
+            Int& g2 = alg.overlapGroups[i2];
+            if (g1 == -1) {
+                if (g2 == -1) {
+                    Int g = alg.numOverlapGroups++;
+                    g1 = g;
+                    g2 = g;
+                }
+                else {
+                    g1 = g2;
+                }
+            }
+            else {
+                if (g2 == -1) {
+                    g2 = g1;
+                }
+                else {
+#ifdef VGC_DEBUG_BUILD
+                    // This is impossible in theory (due to the strong ordering
+                    // on segment.a()), but can happen due to numerical errors.
+                    //
+                    // For example assume the following, where segmentIntersect()
+                    // returns an overlap only for the pairs (1,2), (2,3), and (3,4):
+                    //
+                    //     A  B  C  D
+                    // (1) o-------------o
+                    // (2)       o--------o
+                    // (3)          o--------o
+                    // (4)    o-------------o
+                    //
+                    // Event A: add (1)
+                    // Event B: add (4)
+                    // Event C: add (2)
+                    //          (1, 2) overlap: rem (1), assign group index 0 to (1) and (2)
+                    // Event D: add (3)
+                    //          (3, 4) overlap: rem (4), assign group index 1 to (3) and (4)
+                    //          (2, 3) overlap: rem (2), group index clash!
+                    //
+                    VGC_WARNING(
+                        LogVgcGeometry,
+                        "Overlapping segments {} and {} both already have an overlap "
+                        "group assigned ({}, {}).",
+                        s1,
+                        s2,
+                        g1,
+                        g2);
+#endif
+                    // Merge groups. Unfortunately, this makes the algorithm not O(n log n)
+                    // anymore.
+                    //
+                    for (Int& g : alg.overlapGroups) {
+                        if (g == g2) {
+                            g = g1;
+                        }
+                    }
+                }
+            }
+
+            if (g == -1) {
+                g = alg.numOverlapGroups++;
+            }
+            g1 = g;
+
+            alg.overlapGroups[i1] = g;
+
+            Int overlapGroup = (std::max)(alg.overlapGroups[i1], )
+
+                // Only keep the segment that extend further to the right of the
+                // sweep line (or in case of vertical segments, the segment that
+                // extend further to the top along the sweep line).
+                //
+                if (s2.b() > s1.b()) {
+                alg.outgoingSegments.removeAt(i1);
+            }
+            else {
+                alg.outgoingSegments.removeAt(i2);
+            }
+            --j;
+
+            // TODO:
+            // - Report the intersection
+            // - Assign an overlap group
+            // - In the end, post process these to add all
+            //   skipped intersections, e.g.:
+            //
+            //   A  B  C  D  E  F  G  H
+            //   o--------o                (1)
+            //      o--------------o       (2)
+            //         o--------o          (3)
+            //               o--------o    (4)
+            //
+            // Event A: add (1)
+            // Event B: report (1,2), remove (1), add (2)
+            // Event C: report (2,3), keep (2), don't add (3)
+            // Event D: skip (TODO: what if there is another segment starting
+            //          exactly at D? Don't we want to handle that robustly, instead
+            //          of relying on the fact that D is geometrically on BE?)
+            // Event E: report (2, 4), remove (2), add (4)
+            // Event F: skip
+            // Event G: skip
+            // Event H: remove (4)
+            //
+            // Where:
+            // - "add (1)" means "add segment (1) to sweepSegments"
+            // - "rem (1)" means "remove segment (1) from sweepSegments"
+            // - "report (1,2)" means "report segment overlap between (1) and (2)"
+            //
+            // Intermediate output: (1,2), (2,3), (2,4)
+            // Final output:        (1,2), (1,3), (2,3), (2,4), (3,4)
+            //
+            // (Note that (1) and (4) do not intersect, while they all belong to the same
+            //  overlap group)
+            //
+        }
+    }
 }
 
 // Compute the intersection between the two given segments, and add it to the
@@ -1159,7 +1473,33 @@ void findNewIntersection(
             alg.eventQueue.push(Event<T>{EventType::Intersection, inter.p(), i2});
         }
     }
-    // TODO: SegmentIntersectionType::Segment
+    else if (inter.type() == SegmentIntersectionType::Segment) {
+
+        // In theory, it is impossible to get an intersection of type Segment,
+        // since one of the segment (say, s1) pass through the event position
+        // p, while the other (s2) does not. More precisely:
+        //
+        // - If they have different slopes:
+        //     They either don't intersect or intersect at a point
+        //
+        // - If both have the same slope:
+        //   - If they are non-vertical, then they are parallel non-intersecting
+        //   - If they are vertical, s2 is either entirely below p, in which case
+        //     it is not anymore in sweepSegments, or s2 is entirely above p, in
+        //     which case it is not yet in p
+        //
+        // In practice, due to numerical, it might possibly happen?
+        // For now we simply ignore this.
+        //
+#ifdef VGC_DEBUG_BUILD
+        VGC_WARNING(
+            LogVgcGeometry,
+            "Intersection of type Segment found between {} and {} at event position {}.",
+            s1,
+            s2,
+            position);
+#endif
+    }
 }
 
 // Compute intersection between segments that have just become neighbors in
@@ -1235,6 +1575,7 @@ template<typename T>
 void computeIntersections(InputData<T>& in, AlgorithmData<T>& alg, OutputData<T>& out) {
     initializeEventQueue(in, alg);
     initializeSweepSegments(alg);
+    initializeOverlapGroups(in, alg);
     while (!alg.eventQueue.empty()) {
         processNextEvent(in, alg, out);
     }
