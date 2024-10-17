@@ -371,12 +371,10 @@ public:
         return input_.segmentPolylines[i];
     }
 
-    /// Returns to which polyline corresponds the given segment.
+    /// Returns the range of segment indices [first, last) that
+    /// corresponds to the given polyline index.
     ///
-    /// Returns -1 if `i` correspond to a segment that is not part of a polyline,
-    /// that is, was added via `addSegment()`.
-    ///
-    /// Raises `IndexError` if `i` does not correspond to a valid segment index.
+    /// Raises `IndexError` if `i` is not a valid polyline index.
     ///
     SegmentIndexRange segmentIndexRange(PolylineIndex i) {
         const segmentintersector2::detail::PolylineInfo& info = input_.polylines[i];
@@ -1241,19 +1239,6 @@ void computeIntersections(InputData<T>& in, AlgorithmData<T>& alg, OutputData<T>
         processNextEvent(in, alg, out);
     }
 }
-
-// The following makes specialization of fmt::formatter possible for inner
-// types of template class. Indeed, the following wouldn't work:
-//
-//   template<typename T>
-//   struct fmt::formatter<typename Outer<T>::Inner> {...}
-//
-// See Clang -Wunusable-partial-specialization:
-// > class template partial specialization contains
-// > a template parameter that cannot be deduced
-//
-template<typename T, typename SFINAE = void>
-struct IsPointIntersectionInfo : std::false_type {};
 
 } // namespace segmentintersector2::detail
 
