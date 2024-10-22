@@ -144,11 +144,15 @@ class TestSegmentIntersector2(unittest.TestCase):
                                 if (expected.type == SegmentIntersectionType.Point):
                                     self.assertEqual(len(si.pointIntersections()), 1)
                                     self.assertEqual(si.pointIntersections()[0].position, expected.p)
+                                    self.assertEqual(len(si.segmentIntersections()), 0)
                                 elif (expected.type == SegmentIntersectionType.Segment):
-                                    # TODO
+                                    self.assertEqual(len(si.segmentIntersections()), 1)
+                                    self.assertEqual(si.segmentIntersections()[0].segment, expected.segment)
+                                    # TODO: test expected number of point-intersections
                                     pass
                                 elif (expected.type == SegmentIntersectionType.Empty):
                                     self.assertEqual(len(si.pointIntersections()), 0)
+                                    self.assertEqual(len(si.segmentIntersections()), 0)
 
 if __name__ == '__main__':
     unittest.main()

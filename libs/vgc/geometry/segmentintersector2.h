@@ -307,7 +307,7 @@ public:
 
     /// Returns the shared subsegment of this segment intersection.
     ///
-    Vec2<T> segment() const {
+    Segment2<T> segment() const {
         return segment_;
     }
 
@@ -417,6 +417,7 @@ public:
     using SegmentIndex = segmentintersector2::SegmentIndex;
     using PolylineIndex = segmentintersector2::PolylineIndex;
     using PointIntersectionIndex = segmentintersector2::PointIntersectionIndex;
+    using SegmentIntersectionIndex = segmentintersector2::SegmentIntersectionIndex;
 
     using SegmentIndexRange = segmentintersector2::SegmentIndexRange<T>;
 
@@ -615,9 +616,43 @@ struct InputData {
 template<typename T>
 struct OutputData {
     core::Array<PointIntersection<T>> pointIntersections;
+    core::Array<SegmentIntersection<T>> segmentIntersections;
 
     void clear() {
         pointIntersections.clear();
+        segmentIntersections.clear();
+    }
+};
+
+// When segments overlap along a shared subsegment,
+// we call them part of the same "overlap group".
+// The union of all the segments in the group is a bigger segment.
+//
+// Formally, an "overlap group" is a connected component of the graph G where
+// each segment is a node, and each pair of overlapping segments is an edge. We
+// compute the groups in O(n) by reporting each edge in O(1) during the plane
+// sweep, then computing its connected components in O(n) at the end of the
+// plane sweep.
+//
+struct OverlapGroups {
+    core::Array<std::pair<SegmentIndex, SegmentIndex>> pairs;
+    core::Array<bool> isRemoved;
+
+    void clear() {
+        pairs.clear();
+    }
+
+    void init(Int numSegments) {
+        clear();
+        isRemoved.assign(numSegments, false);
+    }
+
+    void addOverlappingSegments(SegmentIndex i1, SegmentIndex i2) {
+        pairs.append({i1, i2});
+    }
+
+    void setRemoved(SegmentIndex i1) {
+        isRemoved[i1] = true;
     }
 };
 
@@ -641,6 +676,7 @@ struct AlgorithmData {
     // All segments that are intersecting at the current event.
     //
     core::Array<PointIntersectionInfo<T>> infos;
+    core::Array<SegmentIntersectionInfo<T>> segInfos;
 
     // The new segments that must be added (or removed and re-added) to
     // sweepSegments_ when handling an event.
@@ -652,19 +688,9 @@ struct AlgorithmData {
     //
     core::Array<Event<T>> sweepEvents;
 
-    // During the plane sweep, we store overlap groups as a directed acyclic
-    // graph (DAG):
+    // Handling of segments that overlap along a subsegment.
     //
-    // - a segment that is not part of an overlap group stores -1
-    // - a segment that is part of an overlap group stores either:
-    //   - an index to itself, or
-    //   - an index to a greater segment index that it overlaps with
-    //
-    // This makes merging overlap group trivial and constant time during
-    // the plane sweep. We can then post-process them in O(n log n) after
-    // the plane sweep.
-    //
-    core::Array<SegmentIndex> overlapGroups;
+    OverlapGroups overlapGroups;
 
     void clear() {
         VGC_ASSERT(eventQueue.empty()); // priority_queue has no clear() method
@@ -867,8 +893,8 @@ void initializeSweepSegments(AlgorithmData<T>& alg) {
 
 template<typename T>
 void initializeOverlapGroups(InputData<T>& in, AlgorithmData<T>& alg) {
-    Int n = in.segments.length();
-    alg.overlapGroups.assign(n, -1);
+    Int numSegments = in.segments.length();
+    alg.overlapGroups.init(numSegments);
 }
 
 // Get the next event and all events sharing the same position. We call these
@@ -1334,120 +1360,25 @@ void computeOutgoingSegments(
         SegmentIntersection2<T> inter = s1.intersect(s2);
         if (inter.type() == SegmentIntersectionType::Segment) {
 
-            // Report the overlap
-            Int& g1 = alg.overlapGroups[i1];
-            Int& g2 = alg.overlapGroups[i2];
-            if (g1 == -1) {
-                if (g2 == -1) {
-                    Int g = alg.numOverlapGroups++;
-                    g1 = g;
-                    g2 = g;
-                }
-                else {
-                    g1 = g2;
-                }
+            // Report that s1 and s2 overlap. These are post-processed after
+            // the plane sweep to add all the relevant intersection to the
+            // output structures.
+            //
+            alg.overlapGroups.addOverlappingSegments(i1, i2);
+
+            // Only keep the segment that extend further to the right of the
+            // sweep line (or in case of vertical segments, the segment that
+            // extend further to the top along the sweep line).
+            //
+            if (s2.b() > s1.b()) {
+                alg.overlapGroups.setRemoved(i1);
+                alg.outgoingSegments.removeAt(j - 1);
             }
             else {
-                if (g2 == -1) {
-                    g2 = g1;
-                }
-                else {
-#ifdef VGC_DEBUG_BUILD
-                    // This is impossible in theory (due to the strong ordering
-                    // on segment.a()), but can happen due to numerical errors.
-                    //
-                    // For example assume the following, where segmentIntersect()
-                    // returns an overlap only for the pairs (1,2), (2,3), and (3,4):
-                    //
-                    //     A  B  C  D
-                    // (1) o-------------o
-                    // (2)       o--------o
-                    // (3)          o--------o
-                    // (4)    o-------------o
-                    //
-                    // Event A: add (1)
-                    // Event B: add (4)
-                    // Event C: add (2)
-                    //          (1, 2) overlap: rem (1), assign group index 0 to (1) and (2)
-                    // Event D: add (3)
-                    //          (3, 4) overlap: rem (4), assign group index 1 to (3) and (4)
-                    //          (2, 3) overlap: rem (2), group index clash!
-                    //
-                    VGC_WARNING(
-                        LogVgcGeometry,
-                        "Overlapping segments {} and {} both already have an overlap "
-                        "group assigned ({}, {}).",
-                        s1,
-                        s2,
-                        g1,
-                        g2);
-#endif
-                    // Merge groups. Unfortunately, this makes the algorithm not O(n log n)
-                    // anymore.
-                    //
-                    for (Int& g : alg.overlapGroups) {
-                        if (g == g2) {
-                            g = g1;
-                        }
-                    }
-                }
-            }
-
-            if (g == -1) {
-                g = alg.numOverlapGroups++;
-            }
-            g1 = g;
-
-            alg.overlapGroups[i1] = g;
-
-            Int overlapGroup = (std::max)(alg.overlapGroups[i1], )
-
-                // Only keep the segment that extend further to the right of the
-                // sweep line (or in case of vertical segments, the segment that
-                // extend further to the top along the sweep line).
-                //
-                if (s2.b() > s1.b()) {
-                alg.outgoingSegments.removeAt(i1);
-            }
-            else {
-                alg.outgoingSegments.removeAt(i2);
+                alg.overlapGroups.setRemoved(i2);
+                alg.outgoingSegments.removeAt(j);
             }
             --j;
-
-            // TODO:
-            // - Report the intersection
-            // - Assign an overlap group
-            // - In the end, post process these to add all
-            //   skipped intersections, e.g.:
-            //
-            //   A  B  C  D  E  F  G  H
-            //   o--------o                (1)
-            //      o--------------o       (2)
-            //         o--------o          (3)
-            //               o--------o    (4)
-            //
-            // Event A: add (1)
-            // Event B: report (1,2), remove (1), add (2)
-            // Event C: report (2,3), keep (2), don't add (3)
-            // Event D: skip (TODO: what if there is another segment starting
-            //          exactly at D? Don't we want to handle that robustly, instead
-            //          of relying on the fact that D is geometrically on BE?)
-            // Event E: report (2, 4), remove (2), add (4)
-            // Event F: skip
-            // Event G: skip
-            // Event H: remove (4)
-            //
-            // Where:
-            // - "add (1)" means "add segment (1) to sweepSegments"
-            // - "rem (1)" means "remove segment (1) from sweepSegments"
-            // - "report (1,2)" means "report segment overlap between (1) and (2)"
-            //
-            // Intermediate output: (1,2), (2,3), (2,4)
-            // Final output:        (1,2), (1,3), (2,3), (2,4), (3,4)
-            //
-            // (Note that (1) and (4) do not intersect, while they all belong to the same
-            //  overlap group)
-            //
         }
     }
 }
@@ -1537,6 +1468,68 @@ void findNewIntersections(
     }
 }
 
+// TODO:
+// - In the end, post process these to add all
+//   skipped intersections, e.g.:
+//
+//   A  B  C  D  E  F  G  H
+//   o--------o                (1)
+//      o--------------o       (2)
+//         o--------o          (3)
+//               o--------o    (4)
+//
+// Event A: add (1)
+// Event B: report (1,2), remove (1), add (2)
+// Event C: report (2,3), keep (2), don't add (3)
+// Event D: skip (TODO: what if there is another segment starting
+//          exactly at D? Don't we want to handle that robustly, instead
+//          of relying on the fact that D is geometrically on BE?)
+// Event E: report (2, 4), remove (2), add (4)
+// Event F: skip
+// Event G: skip
+// Event H: remove (4)
+//
+// Where:
+// - "add (1)" means "add segment (1) to sweepSegments"
+// - "rem (1)" means "remove segment (1) from sweepSegments"
+// - "report (1,2)" means "report segment overlap between (1) and (2)"
+//
+// Intermediate output: (1,2), (2,3), (2,4)
+// Final output:        (1,2), (1,3), (2,3), (2,4), (3,4)
+//
+// (Note that (1) and (4) do not intersect, while they all belong to the same
+//  overlap group)
+//
+
+template<typename T>
+void postProcessOverlappingSegments(
+    InputData<T>& in,
+    AlgorithmData<T>& alg,
+    OutputData<T>& out) {
+
+    // TODO: Actually compute the overlap groups and report all
+    // intersections. For now we just do some dummy reporting
+    // that only works when groups are made of two segments.
+    //
+    for (const auto& pair : alg.overlapGroups.pairs) {
+
+        SegmentIndex i1 = pair.first;
+        SegmentIndex i2 = pair.second;
+        const Segment2<T>& s1 = in.segments.getUnchecked(i1);
+        const Segment2<T>& s2 = in.segments.getUnchecked(i2);
+        SegmentIntersection2<T> inter = s1.intersect(s2);
+        VGC_ASSERT(inter.type() == SegmentIntersectionType::Segment);
+
+        SegmentIntersectionIndex interIndex = out.pointIntersections.length();
+        alg.segInfos.clear();
+        alg.segInfos.append(
+            SegmentIntersectionInfo<T>(interIndex, i1, inter.s1(), inter.t1()));
+        alg.segInfos.append(
+            SegmentIntersectionInfo<T>(interIndex, i2, inter.s2(), inter.t2()));
+        out.segmentIntersections.append({inter.segment(), alg.segInfos});
+    };
+}
+
 template<typename T>
 void processNextEvent(InputData<T>& in, AlgorithmData<T>& alg, OutputData<T>& out) {
 
@@ -1579,6 +1572,7 @@ void computeIntersections(InputData<T>& in, AlgorithmData<T>& alg, OutputData<T>
     while (!alg.eventQueue.empty()) {
         processNextEvent(in, alg, out);
     }
+    postProcessOverlappingSegments(in, alg, out);
 }
 
 } // namespace segmentintersector2::detail

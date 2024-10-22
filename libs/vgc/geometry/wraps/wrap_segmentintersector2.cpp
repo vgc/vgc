@@ -70,6 +70,44 @@ void wrap_PointIntersectionInfo(py::handle scope) {
 }
 
 template<typename T>
+void wrap_SegmentIntersection(py::handle scope) {
+    using This = typename SegmentIntersector2<T>::SegmentIntersection;
+    using SegmentIntersectionInfo =
+        typename SegmentIntersector2<T>::SegmentIntersectionInfo;
+    std::string name = "SegmentIntersection";
+    vgc::core::wraps::Class<This>(scope, name.c_str())
+        .def(py::init<>())
+        .def(py::init<const Segment2<T>&>())
+        .def(py::init<
+             const Segment2<T>&,
+             const vgc::core::Array<SegmentIntersectionInfo>&>())
+        .def_property("segment", &This::segment, &This::setSegment)
+        .def_property("infos", &This::infos, &This::setInfos)
+        .def("addInfo", &This::addInfo);
+    vgc::core::wraps::wrapArray<This>(scope, "SegmentIntersection");
+}
+
+template<typename T>
+void wrap_SegmentIntersectionInfo(py::handle scope) {
+    using This = typename SegmentIntersector2<T>::SegmentIntersectionInfo;
+    using SegmentIntersectionIndex =
+        typename SegmentIntersector2<T>::SegmentIntersectionIndex;
+    using SegmentIndex = typename SegmentIntersector2<T>::SegmentIndex;
+    std::string name = "SegmentIntersectionInfo";
+    vgc::core::wraps::Class<This>(scope, name.c_str())
+        .def(py::init<>())
+        .def(py::init<SegmentIntersectionIndex, SegmentIndex, T, T>())
+        .def_property(
+            "segmentIntersectionIndex",
+            &This::segmentIntersectionIndex,
+            &This::setSegmentIntersectionIndex)
+        .def_property("segmentIndex", &This::segmentIndex, &This::setSegmentIndex)
+        .def_property("parameter1", &This::parameter1, &This::setParameter1)
+        .def_property("parameter2", &This::parameter2, &This::setParameter2);
+    vgc::core::wraps::wrapArray<This>(scope, "SegmentIntersectionInfo");
+}
+
+template<typename T>
 void wrap_SegmentIntersector2(py::module& m, const std::string& name) {
 
     using This = SegmentIntersector2<T>;
@@ -96,10 +134,13 @@ void wrap_SegmentIntersector2(py::module& m, const std::string& name) {
             "isClosed"_a = false,
             "hasDuplicateEndpoints"_a = false)
         .def("computeIntersections", &This::computeIntersections)
-        .def("pointIntersections", &This::pointIntersections);
+        .def("pointIntersections", &This::pointIntersections)
+        .def("segmentIntersections", &This::segmentIntersections);
 
     wrap_PointIntersection<T>(c);
     wrap_PointIntersectionInfo<T>(c);
+    wrap_SegmentIntersection<T>(c);
+    wrap_SegmentIntersectionInfo<T>(c);
 }
 
 } // namespace
