@@ -941,7 +941,7 @@ void initializeOverlapGroups(InputData<T>& in, AlgorithmData<T>& alg) {
 //
 template<typename T>
 Vec2<T> getNextEvent(AlgorithmData<T>& alg) {
-    Event firstEvent = alg.eventQueue.top();
+    Event<T> firstEvent = alg.eventQueue.top();
     alg.eventQueue.pop();
     Vec2<T> position = firstEvent.position;
     alg.sweepEvents.clear();
@@ -950,6 +950,15 @@ Vec2<T> getNextEvent(AlgorithmData<T>& alg) {
         alg.sweepEvents.append(alg.eventQueue.top());
         alg.eventQueue.pop();
     }
+
+    // Ignore all events from segments that have been removed as
+    // part of an overlap group. Conceptually, these are not part
+    // of the event queue anymore, but our implementation does not
+    // support removing events so we simply ignore them.
+    //
+    alg.sweepEvents.removeIf([&](const Event<T>& event) {
+        return alg.overlapGroups.isRemoved[event.segmentIndex];
+    });
     return position;
 }
 
@@ -1245,9 +1254,12 @@ void reportIntersections(
     PointIntersectionIndex interIndex = out.pointIntersections.length();
     alg.infos.clear();
     for (SegmentIndex i : pSegments.contain()) {
-        alg.infos.append(PointIntersectionInfo<T>{interIndex, i, 0});
+        if (!alg.overlapGroups.isRemoved[i]) {
+            alg.infos.append(PointIntersectionInfo<T>{interIndex, i, 0});
+        }
     }
     for (const Event<T>& event : pEvents.left()) {
+        // Note: Left events cannot be in the removed set
         alg.infos.append(PointIntersectionInfo<T>{interIndex, event.segmentIndex, 0});
     }
 
@@ -1536,21 +1548,39 @@ void processNextEvent(InputData<T>& in, AlgorithmData<T>& alg, OutputData<T>& ou
     // Pop the next event from the event queue, as well as all subsequent
     // events sharing the same position. Store them in alg.sweepEvents.
     Vec2<T> position = getNextEvent(alg);
+    if (alg.sweepEvents.isEmpty()) {
+        // This can happen due to events related to a segment that is removed
+        // as being part of an overlap group. We just ignore them and move on
+        // to the next event.
+        return;
+    }
 
     // Partition the events into Left, Right, and Intersection events.
     PartitionedSweepEvents pEvents = partitionSweepEvents(alg);
 
     // Partition the sweep segments into those that are below, above, or
-    // contain the event position. We guarantee that segments corresponding
-    // to Intersection events are within pSegments.contain().
+    // contain the event position. We guarantee that segments corresponding to
+    // Intersection and Right events are within pSegments.contain(), unless the
+    // segment is not in sweepSegments at all (which is in theory impossible,
+    // but can happen due to numerical errors).
+    //
     PartitionedSweepSegments pSegments =
         partitionSweepSegments(in, alg, position, pEvents);
 
-    // Report intersections
-    reportIntersections(in, alg, out, position, pEvents, pSegments);
-
-    // Compute which segments are outgoing at the given position
+    // Compute which segments are outgoing at the given position.
+    //
+    // This also computes which segments overlap and only keep
+    // one representative per overlap group (the one that extends
+    // further to the right). This is why this must be called
+    // before `reportIntersections`, as we do not want to report
+    // intersections between segments part of the same overlap
+    // group during the plane sweep (these intersections are added
+    // as a post-process step).
+    //
     computeOutgoingSegments(in, alg, position, pEvents, pSegments);
+
+    // Report point-intersections
+    reportIntersections(in, alg, out, position, pEvents, pSegments);
 
     // Remove ingoing segments and add outgoing segments.
     // This invalidates previous iterators and spans stored in pSegments.
