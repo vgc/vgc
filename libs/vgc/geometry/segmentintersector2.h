@@ -1480,66 +1480,117 @@ void findNewIntersections(
     }
 }
 
-// TODO:
-// - In the end, post process these to add all
-//   skipped intersections, e.g.:
+// During the plane sweep, each time we detect two segments that overlap, we
+// add their indices (i1, i2) to overlapGroups.pairs, and only keep one of them
+// (the one that extend further to the right) in sweepSegments and eventQueue.
 //
-//   A  B  C  D  E  F  G  H
-//   o--------o                (1)
-//      o--------------o       (2)
-//         o--------o          (3)
-//               o--------o    (4)
+// These pairs (i1, i2) form an undirect graph between segments, where each connected
+// component of size >= 2 is what we call an "overlap group".
 //
-// Event A: add (1)
-// Event B: report (1,2), remove (1), add (2)
-// Event C: report (2,3), keep (2), don't add (3)
-// Event D: skip (TODO: what if there is another segment starting
-//          exactly at D? Don't we want to handle that robustly, instead
-//          of relying on the fact that D is geometrically on BE?)
-// Event E: report (2, 4), remove (2), add (4)
-// Event F: skip
-// Event G: skip
-// Event H: remove (4)
+// In this function, we compute these overlap group, and process them to report
+// all pairwise overlaps between segments, as well as all point intersections
+// that were not reported couldn't be reported the plane sweep due to the
+// overlapping segments being removed from the data structure.
 //
-// Where:
-// - "add (1)" means "add segment (1) to sweepSegments"
-// - "rem (1)" means "remove segment (1) from sweepSegments"
-// - "report (1,2)" means "report segment overlap between (1) and (2)"
-//
-// Intermediate output: (1,2), (2,3), (2,4)
-// Final output:        (1,2), (1,3), (2,3), (2,4), (3,4)
-//
-// (Note that (1) and (4) do not intersect, while they all belong to the same
-//  overlap group)
-//
-
 template<typename T>
 void postProcessOverlappingSegments(
     InputData<T>& in,
     AlgorithmData<T>& alg,
     OutputData<T>& out) {
 
-    // TODO: Actually compute the overlap groups and report all
-    // intersections. For now we just do some dummy reporting
-    // that only works when groups are made of two segments.
+    // Fast return if there are no overlapping segments
+    if (alg.overlapGroups.pairs.isEmpty()) {
+        return;
+    }
+
+    // Convert the graph representation from edge pairs to adjacency lists. We
+    // store all adjacency lists in a single contiguous array to minimize
+    // allocations.
+    Int numSegments = in.segments.length();
+    core::Array<Int> numEdges(numSegments, 0);
+    for (const auto& [i1, i2] : alg.overlapGroups.pairs) {
+        ++numEdges[i1];
+        ++numEdges[i2];
+    }
+    core::Array<Int> adjBuffer;
+    adjBuffer.resize(alg.overlapGroups.pairs.length() * 2);
+    core::Array<core::Span<Int>> adj;
+    Int* adjBegin = adjBuffer.data();
+    for (SegmentIndex i = 0; i < numSegments; ++i) {
+        Int* adjEnd = adjBegin + numEdges[i];
+        adj.append(core::Span<Int>(adjBegin, adjEnd));
+        adjBegin = adjEnd;
+    }
+    for (const auto& [i1, i2] : alg.overlapGroups.pairs) {
+        Int k1 = --numEdges[i1];
+        Int k2 = --numEdges[i2];
+        adj[i1][k1] = i2;
+        adj[i2][k2] = i1;
+    }
+
+    // Compute groups as connected components of the graph.
+    // Isolated segments (not part of an overlap group) are assigned group -1.
+    core::Array<Int> segmentGroup(numSegments, -1); // SegmentIndex -> GroupIndex
+    core::Array<Int> stack;                         // For depth-first visit
+    Int numGroups = 0;
+    core::Array<Int> groupBuffer; // Contiguously store all segments of a group
+    core::Array<core::Span<Int>> groups;
+    groupBuffer.reserve(numSegments); // Mandatory for span pointer stability
+    for (SegmentIndex i = 0; i < numSegments; ++i) {
+
+        // If segment i is not yet assigned a group but has segment overlaps,
+        // then find all segments in the overlap group and assign them a group
+        // index.
+        //
+        if (segmentGroup[i] == -1 && !adj[i].isEmpty()) {
+            Int* groupBegin = groupBuffer.data() + groupBuffer.length();
+            Int groupIndex = numGroups++;
+            stack.append(i);
+            while (!stack.isEmpty()) {
+                Int j = stack.pop();
+                segmentGroup[j] = groupIndex;
+                groupBuffer.append(j);
+                for (Int k : adj[j]) {
+                    if (segmentGroup[k] == -1) {
+                        stack.append(k);
+                    }
+                }
+            }
+            Int* groupEnd = groupBuffer.data() + groupBuffer.length();
+            groups.append(core::Span<Int>(groupBegin, groupEnd));
+        }
+    }
+
+    // Report segment intersections.
     //
-    for (const auto& pair : alg.overlapGroups.pairs) {
-
-        SegmentIndex i1 = pair.first;
-        SegmentIndex i2 = pair.second;
-        const Segment2<T>& s1 = in.segments.getUnchecked(i1);
-        const Segment2<T>& s2 = in.segments.getUnchecked(i2);
-        SegmentIntersection2<T> inter = s1.intersect(s2);
-        VGC_ASSERT(inter.type() == SegmentIntersectionType::Segment);
-
-        SegmentIntersectionIndex interIndex = out.pointIntersections.length();
-        alg.segInfos.clear();
-        alg.segInfos.append(
-            SegmentIntersectionInfo<T>(interIndex, i1, inter.s1(), inter.t1()));
-        alg.segInfos.append(
-            SegmentIntersectionInfo<T>(interIndex, i2, inter.s2(), inter.t2()));
-        out.segmentIntersections.append({inter.segment(), alg.segInfos});
-    };
+    // TODO: Report missing point intersections.
+    //
+    // TODO: If two segment intersections are equal, merge them into one
+    // SegmentIntersection, instead of having all SegmentIntersection only
+    // involve two segments. Or perhaps, change the output structure completely
+    // towards something more like a planar map decomposition.
+    //
+    // TODO: take isReversed into account.
+    //
+    for (const auto& group : groups) {
+        Int numSegmentsInGroup = group.length();
+        for (SegmentIndex i1 = 0; i1 < numSegmentsInGroup; ++i1) {
+            for (SegmentIndex i2 = i1 + 1; i2 < numSegmentsInGroup; ++i2) {
+                const Segment2<T>& s1 = in.segments[i1];
+                const Segment2<T>& s2 = in.segments[i2];
+                SegmentIntersection2<T> inter = s1.intersect(s2);
+                if (inter.type() == SegmentIntersectionType::Segment) {
+                    SegmentIntersectionIndex interIndex = out.pointIntersections.length();
+                    alg.segInfos.clear();
+                    alg.segInfos.append(SegmentIntersectionInfo<T>(
+                        interIndex, i1, inter.s1(), inter.t1()));
+                    alg.segInfos.append(SegmentIntersectionInfo<T>(
+                        interIndex, i2, inter.s2(), inter.t2()));
+                    out.segmentIntersections.append({inter.segment(), alg.segInfos});
+                }
+            }
+        }
+    }
 }
 
 template<typename T>

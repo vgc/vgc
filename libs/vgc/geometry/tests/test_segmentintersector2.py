@@ -154,5 +154,24 @@ class TestSegmentIntersector2(unittest.TestCase):
                                     self.assertEqual(len(si.pointIntersections()), 0)
                                     self.assertEqual(len(si.segmentIntersections()), 0)
 
+    def testThreeOverlapSegments(self):
+        for Segment2, SegmentIntersector2, Segment2Intersection in (
+                Segment2SegmentIntersector2Segment2IntersectionTypes):
+
+            # Case without other segments
+            # TODO: make the test order-independent?
+            si = SegmentIntersector2()
+            si.addSegment((1, 0), (4, 0)) # A = o--------o
+            si.addSegment((2, 0), (5, 0)) # B =    o--------o
+            si.addSegment((3, 0), (6, 0)) # C =       o--------o
+            si.computeIntersections()
+            self.assertEqual(len(si.pointIntersections()), 0)
+            self.assertEqual(len(si.segmentIntersections()), 3) # (A, B), (A, C), (B, C)
+            self.assertEqual(si.segmentIntersections()[0].segment, Segment2((2, 0), (4, 0)))
+            self.assertEqual(si.segmentIntersections()[1].segment, Segment2((3, 0), (4, 0)))
+            self.assertEqual(si.segmentIntersections()[2].segment, Segment2((3, 0), (5, 0)))
+
+
+
 if __name__ == '__main__':
     unittest.main()
