@@ -375,6 +375,7 @@ enum class EventType : UInt8 {
     Left = 0,
     Right = 1,
     Intersection = 2,
+    Degenerate = 3,
 };
 
 template<typename T>
@@ -850,8 +851,13 @@ void initializeEventQueue(InputData<T>& in, AlgorithmData<T>& alg) {
     Int numSegments = in.segments.length();
     for (Int i = 0; i < numSegments; ++i) {
         const Segment2<T>& segment = in.segments.getUnchecked(i);
-        alg.eventQueue.push(Event<T>{EventType::Left, segment.a(), i});
-        alg.eventQueue.push(Event<T>{EventType::Right, segment.b(), i});
+        if (segment.isDegenerate()) {
+            alg.eventQueue.push(Event<T>{EventType::Degenerate, segment.a(), i});
+        }
+        else {
+            alg.eventQueue.push(Event<T>{EventType::Left, segment.a(), i});
+            alg.eventQueue.push(Event<T>{EventType::Right, segment.b(), i});
+        }
     }
 }
 
@@ -961,6 +967,7 @@ struct PartitionedSweepEvents {
     Iterator it2;
     Iterator it3;
     Iterator it4;
+    Iterator it5;
 
     // Left events
     core::ConstSpan<Event<T>> left() const {
@@ -975,6 +982,11 @@ struct PartitionedSweepEvents {
     // Intersection events
     core::ConstSpan<Event<T>> intersection() const {
         return {it3, it4};
+    }
+
+    // Degenerate events
+    core::ConstSpan<Event<T>> degenerate() const {
+        return {it4, it5};
     }
 };
 
@@ -996,12 +1008,15 @@ template<typename T>
 PartitionedSweepEvents<T> partitionSweepEvents(AlgorithmData<T>& alg) {
     PartitionedSweepEvents<T> res;
     res.it1 = alg.sweepEvents.begin();
-    res.it4 = alg.sweepEvents.end();
-    res.it2 = std::find_if(res.it1, res.it4, [](const Event<T>& event) {
+    res.it5 = alg.sweepEvents.end();
+    res.it2 = std::find_if(res.it1, res.it5, [](const Event<T>& event) {
         return event.type > EventType::Left; // find first event not Left
     });
-    res.it3 = std::find_if(res.it2, res.it4, [](const Event<T>& event) {
-        return event.type > EventType::Right; // find first event not Left or Right
+    res.it3 = std::find_if(res.it2, res.it5, [](const Event<T>& event) {
+        return event.type > EventType::Right; // find first event not Left/Right
+    });
+    res.it4 = std::find_if(res.it3, res.it5, [](const Event<T>& event) {
+        return event.type > EventType::Intersection; // not Left/Right/Intersection
     });
     return res;
 }
@@ -1253,6 +1268,10 @@ void reportIntersections(
         // Note: Left events cannot be in the removed set
         alg.vertexSegments.append(VertexSegment<T>{vertexIndex, event.segmentIndex, 0});
     }
+    for (const Event<T>& event : pEvents.degenerate()) {
+        // Note: Degenerate events cannot be in the removed set
+        alg.vertexSegments.append(VertexSegment<T>{vertexIndex, event.segmentIndex, 0});
+    }
 
     // There is no intersection if there is only one segment at the event
     // position. This means we are at an isolated left endpoint or right
@@ -1306,10 +1325,12 @@ void computeOutgoingSegments(
     const PartitionedSweepEvents<T>& pEvents,
     const PartitionedSweepSegments& pSegments) {
 
-    // It is guaranteed to have no duplicates since alg.sweepSegments does
-    // not have duplicates (hence its subspan containSegments does not
-    // have duplicate either) and all the segments in pEvents.left() have
-    // never been added to the event queue yet.
+    // Add to outgoingSegments all segments in pSegments.contain()
+    // which are not ending at the position.
+    //
+    // This is guaranteed to have no duplicates since alg.sweepSegments does
+    // not have duplicates and pSegments.contain() is a subspan of
+    // alg.sweepSegments.
     //
     alg.outgoingSegments.clear();
     for (SegmentIndex i : pSegments.contain()) {
@@ -1322,21 +1343,16 @@ void computeOutgoingSegments(
             // and we will therefore remove it from alg.sweepSegments
         }
     }
+
+    // Add to outgoingSegments all segments in Left events.
+    //
+    // This is guaranteed to not create duplicate since all the segments in
+    // pEvents.left() have never been added to the event queue yet.
+    //
+    // Note that we do not add to outgoingSegments any Degenerate segment.
+    //
     for (const Event<T>& event : pEvents.left()) {
-        SegmentIndex i = event.segmentIndex;
-        const Segment2<T>& segment = in.segments.getUnchecked(i);
-        if (!segment.isDegenerate()) {
-            alg.outgoingSegments.append(i);
-        }
-        else {
-            // This means the segment was reduced to a point
-            // and was both a Left
-            // and Right event. We never add it to alg.sweepSegments.
-            //
-            // TODO: correcly report intersections between degenerate
-            // segments and other segments, including when two degenerate
-            // segments are equal, we should report them as intersecting.
-        }
+        alg.outgoingSegments.append(event.segmentIndex);
     }
 
     // Sort outgoing segments by increasing slope, which correspond to their
@@ -1733,6 +1749,8 @@ struct fmt::formatter<vgc::geometry::segmentintersector2::detail::EventType>
             return format_to(ctx.out(), "Right");
         case EventType::Intersection:
             return format_to(ctx.out(), "Intersection");
+        case EventType::Degenerate:
+            return format_to(ctx.out(), "Degenerate");
         }
         return ctx.out();
     }
