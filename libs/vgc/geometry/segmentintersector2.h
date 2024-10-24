@@ -40,7 +40,7 @@ namespace vgc::geometry {
 // to know (or cannot know) the template parameter `T`.
 //
 // For example, it would be impossible to specialize fmt::formatter for
-// PointIntersection if the latter was defined as a nested class of
+// Vertex if the latter was defined as a nested class of
 // SegmentIntersector2<T> rather than at namespace scope, because nested
 // classes of class templates are non-deducible in partial template
 // specializations.
@@ -51,47 +51,44 @@ namespace segmentintersector2 {
 
 using PolylineIndex = Int;
 using SegmentIndex = Int;
-using PointIntersectionIndex = Int;
-using SegmentIntersectionIndex = Int;
+using VertexIndex = Int;
+using EdgeIndex = Int;
 
-/// When two or more segments intersect at a point, then for each involved
-/// segment we store its corresponding intersection parameter.
+/// For each vertex, we store a list of `VertexSegment` objects, one per input
+/// segment that is incident to the vertex or intersects at the vertex. Each
+/// `VertexSegment` object stores the linear parametric value that corresponds
+/// to the position of the vertex along the segment.
 ///
 template<typename T>
-class PointIntersectionInfo {
+class VertexSegment {
 public:
-    /// Constructs a `PointIntersectionInfo` with zero-initialized
-    /// `pointIntersectionIndex()`, `segmentIndex()`, and `parameter()`.
+    /// Constructs an `VertexSegment` with zero-initialized
+    /// `vertexIndex()`, `segmentIndex()`, and `parameter()`.
     ///
-    PointIntersectionInfo() {
+    VertexSegment() {
     }
 
-    /// Contructs a `PointIntersectionInfo`.
+    /// Contructs an `VertexSegment`.
     ///
-    PointIntersectionInfo(
-        PointIntersectionIndex pointIntersectionIndex,
-        SegmentIndex segmentIndex,
-        T parameter)
-
-        : pointIntersectionIndex_(pointIntersectionIndex)
+    VertexSegment(VertexIndex vertexIndex, SegmentIndex segmentIndex, T parameter)
+        : vertexIndex_(vertexIndex)
         , segmentIndex_(segmentIndex)
         , parameter_(parameter) {
     }
 
-    /// Returns the index of the `PointInteresection` this
-    /// `PointIntersectionInfo` belongs to.
+    /// Returns the index of the `Vertex` this `VertexSegment` refers to.
     ///
-    PointIntersectionIndex pointIntersectionIndex() const {
-        return pointIntersectionIndex_;
+    VertexIndex vertexIndex() const {
+        return vertexIndex_;
     }
 
-    /// Modifies `pointIntersectionIndex()`.
+    /// Modifies `vertexIndex()`.
     ///
-    void setPointIntersectionIndex(PointIntersectionIndex pointIntersectionIndex) {
-        pointIntersectionIndex_ = pointIntersectionIndex;
+    void setVertexIndex(VertexIndex vertexIndex) {
+        vertexIndex_ = vertexIndex;
     }
 
-    /// Returns the index of the segment that intersects at the `PointIntersection`.
+    /// Returns the index of the segment that intersects at the `Vertex`.
     ///
     SegmentIndex segmentIndex() const {
         return segmentIndex_;
@@ -103,8 +100,8 @@ public:
         segmentIndex_ = segmentIndex;
     }
 
-    /// Returns the parameter along the segment corresponding to where
-    /// the segment intersects at the `PointIntersection`.
+    /// Returns the linear parametric value corresponding to where the `Vertex`
+    /// is located along the segment.
     ///
     T parameter() const {
         return parameter_;
@@ -117,121 +114,118 @@ public:
     }
 
 private:
-    PointIntersectionIndex pointIntersectionIndex_;
+    VertexIndex vertexIndex_;
     SegmentIndex segmentIndex_;
     T parameter_;
 };
 
-/// Stores the position of an intersection point, together with the
-/// information of which segments are intersecting at that position.
+/// A `Vertex` corresponds either to the endpoint of a segment or an intersection
+/// point between two segments.
 ///
-// TODO: Minimize memory allocations via SmallArray<2, Info>?
-// Indeed, most intersections are expected to only involve 2 segments.
+// TODO: Minimize memory allocations via SmallArray<2, VertexSegment>?
+// Indeed, most vertices are expected to only involve 2 segments or fewer.
 // Alternatively, we could use a custom allocator or pairs of indices
 // into another array.
 //
 template<typename T>
-class PointIntersection {
+class Vertex {
 public:
-    /// Constructs a `PointIntersection` with a default constructed `position` and
-    /// `infos()`.
+    /// Constructs a `Vertex` with a default constructed `position` and
+    /// `segments()`.
     ///
-    PointIntersection() noexcept {
+    Vertex() noexcept {
     }
 
-    /// Constructs a `PointIntersection` with the given `position` and empty
-    /// `infos()`.
+    /// Constructs a `Vertex` with the given `position` and empty
+    /// `segments()`.
     ///
-    explicit PointIntersection(const Vec2<T>& position) noexcept
+    explicit Vertex(const Vec2<T>& position) noexcept
         : position_(position) {
     }
 
-    /// Constructs a `PointIntersection` with the given `position` and `infos`.
+    /// Constructs a `Vertex` with the given `position` and `segments`.
     ///
-    PointIntersection(
-        const Vec2<T>& position,
-        const core::Array<PointIntersectionInfo<T>>& infos)
-
+    Vertex(const Vec2<T>& position, const core::Array<VertexSegment<T>>& segments)
         : position_(position)
-        , infos_(infos) {
+        , segments_(segments) {
     }
 
-    /// Returns the 2D position of this point intersection.
+    /// Returns the 2D position of this vertex.
     ///
     Vec2<T> position() const {
         return position_;
     }
 
-    /// Modifies the 2D position of this point intersection.
+    /// Modifies the 2D position of this vertex.
     ///
     void setPosition(const Vec2<T>& position) {
         position_ = position;
     }
 
-    /// Returns information about the segments that intersect
-    /// at this point intersection.
+    /// Returns the list of all segments that have this vertex as endpoint or
+    /// that intersect another segment at this vertex.
     ///
-    const core::Array<PointIntersectionInfo<T>>& infos() const {
-        return infos_;
+    const core::Array<VertexSegment<T>>& segments() const {
+        return segments_;
     }
 
-    /// Sets the `infos` of this point intersection.
+    /// Sets the `segments` of this point intersection.
     ///
-    void setInfos(core::Array<PointIntersectionInfo<T>> infos) {
-        infos_ = std::move(infos);
+    void setSegments(core::Array<VertexSegment<T>> segments) {
+        segments_ = std::move(segments);
     }
 
-    /// Adds a `PointIntersectionInfo` to this point intersection.
+    /// Adds a `VertexSegment` to this point intersection.
     ///
-    void addInfo(const PointIntersectionInfo<T>& info) {
-        infos_.append(info);
+    void addSegment(const VertexSegment<T>& segment) {
+        segments_.append(segment);
     }
 
 private:
     Vec2<T> position_;
-    core::Array<PointIntersectionInfo<T>> infos_;
+    core::Array<VertexSegment<T>> segments_;
 };
 
 /// When two or more segments overlap along a shared subsegment, then for each
-/// involved segment we store its corresponding intersection parameters.
+/// involved segment we store the corresponding parametric values of the edge
+/// along the segment.
 ///
 template<typename T>
-class SegmentIntersectionInfo {
+class EdgeSegment {
 public:
-    /// Constructs a `SegmentIntersectionInfo` with zero-initialized
-    /// `segmentIntersectionIndex()`, `segmentIndex()`, `parameter1(), and `parameter2()`.
+    /// Constructs an `EdgeSegment` with zero-initialized
+    /// `edgeIndex()`, `segmentIndex()`, `parameter1(), and `parameter2()`.
     ///
-    SegmentIntersectionInfo() {
+    EdgeSegment() {
     }
 
-    /// Contructs a `PointIntersectionInfo`.
+    /// Contructs an `EdgeSegment`
     ///
-    SegmentIntersectionInfo(
-        SegmentIntersectionIndex segmentIntersectionIndex,
+    EdgeSegment(
+        EdgeIndex edgeIndex,
         SegmentIndex segmentIndex,
         T parameter1,
         T parameter2)
 
-        : segmentIntersectionIndex_(segmentIntersectionIndex)
+        : edgeIndex_(edgeIndex)
         , segmentIndex_(segmentIndex)
         , parameter1_(parameter1)
         , parameter2_(parameter2) {
     }
 
-    /// Returns the index of the `SegmentInteresection` this
-    /// `SegmentIntersectionInfo` belongs to.
+    /// Returns the index of the `Edge` this `EdgeSegment` refers to.
     ///
-    SegmentIntersectionIndex segmentIntersectionIndex() const {
-        return segmentIntersectionIndex_;
+    EdgeIndex edgeIndex() const {
+        return edgeIndex_;
     }
 
-    /// Modifies `segmentIntersectionIndex()`.
+    /// Modifies `edgeIndex()`.
     ///
-    void setSegmentIntersectionIndex(SegmentIntersectionIndex segmentIntersectionIndex) {
-        segmentIntersectionIndex_ = segmentIntersectionIndex;
+    void setEdgeIndex(EdgeIndex edgeIndex) {
+        edgeIndex_ = edgeIndex;
     }
 
-    /// Returns the index of the segment that overlap the `SegmentIntersection`.
+    /// Returns the index of the segment that overlap the `Edge`.
     ///
     SegmentIndex segmentIndex() const {
         return segmentIndex_;
@@ -243,8 +237,8 @@ public:
         segmentIndex_ = segmentIndex;
     }
 
-    /// Returns the parameter along the segment corresponding to where
-    /// the segment starts to overlap the `SegmentIntersection`.
+    /// Returns the linear parametric value corresponding to where the `Edge`
+    /// starts along the segment.
     ///
     T parameter1() const {
         return parameter1_;
@@ -256,8 +250,8 @@ public:
         parameter1_ = parameter1;
     }
 
-    /// Returns the parameter along the segment corresponding to where
-    /// the segment finishes to overlap the `SegmentIntersection`.
+    /// Returns the linear parametric value corresponding to where the `Edge`
+    /// ends along the segment.
     ///
     T parameter2() const {
         return parameter2_;
@@ -270,75 +264,72 @@ public:
     }
 
 private:
-    PointIntersectionIndex segmentIntersectionIndex_;
+    VertexIndex edgeIndex_;
     SegmentIndex segmentIndex_;
     T parameter1_;
     T parameter2_;
 };
 
-/// Stores a minimal subsegment of an intersection segment, together with the
-/// information of which segments are overlapping that subsegment.
+/// After intersections are computed, the input segments are decomposed into
+/// interior-disjoint subsegments called `Edge`, that start and end at a
+/// `Vertex`.
 ///
 template<typename T>
-class SegmentIntersection {
+class Edge {
 public:
-    /// Constructs a `SegmentIntersection` with a default constructed `segment` and
-    /// `infos()`.
+    /// Constructs an `Edge` with a default constructed `subsegment` and
+    /// `segments()`.
     ///
-    SegmentIntersection() noexcept {
+    Edge() noexcept {
     }
 
-    /// Constructs a `SegmentIntersection` with the given `segment` and empty
-    /// `infos()`.
+    /// Constructs a `Edge` with the given `subsegment` and empty `segments()`.
     ///
-    explicit SegmentIntersection(const Segment2<T>& segment) noexcept
-        : segment_(segment) {
+    explicit Edge(const Segment2<T>& subsegment) noexcept
+        : subsegment_(subsegment) {
     }
 
-    /// Constructs a `SegmentIntersection` with the given `segment` and `infos`.
+    /// Constructs a `Edge` with the given `subsegment` and `segments`.
     ///
-    SegmentIntersection(
-        const Segment2<T>& segment,
-        const core::Array<SegmentIntersectionInfo<T>>& infos)
-
-        : segment_(segment)
-        , infos_(infos) {
+    Edge(const Segment2<T>& subsegment, const core::Array<EdgeSegment<T>>& segments)
+        : subsegment_(subsegment)
+        , segments_(segments) {
     }
 
-    /// Returns the shared subsegment of this segment intersection.
+    /// Returns the geometry of this edge, that is, a shared subsegment between
+    /// overlapping input segments.
     ///
-    Segment2<T> segment() const {
-        return segment_;
+    Segment2<T> subsegment() const {
+        return subsegment_;
     }
 
     /// Modifies the shared subsegment of this point intersection.
     ///
-    void setSegment(const Segment2<T>& segment) {
-        segment_ = segment;
+    void setSubsegment(const Segment2<T>& subsegment) {
+        subsegment_ = subsegment;
     }
 
-    /// Returns information about the segments that intersect
-    /// at this point intersection.
+    /// Returns information about the segments that overlap this edge.
     ///
-    const core::Array<SegmentIntersectionInfo<T>>& infos() const {
-        return infos_;
+    const core::Array<EdgeSegment<T>>& segments() const {
+        return segments_;
     }
 
-    /// Sets the `infos` of this point intersection.
+    /// Sets the `segments()` of this edge.
     ///
-    void setInfos(core::Array<SegmentIntersectionInfo<T>> infos) {
-        infos_ = std::move(infos);
+    void setSegments(core::Array<EdgeSegment<T>> segments) {
+        segments_ = std::move(segments);
     }
 
-    /// Adds a `PointIntersectionInfo` to this point intersection.
+    /// Adds an `EdgeSegment` to this edge.
     ///
-    void addInfo(const SegmentIntersectionInfo<T>& info) {
-        infos_.append(info);
+    void addSegment(const EdgeSegment<T>& segment) {
+        segments_.append(segment);
     }
 
 private:
-    Segment2<T> segment_;
-    core::Array<SegmentIntersectionInfo<T>> infos_;
+    Segment2<T> subsegment_;
+    core::Array<EdgeSegment<T>> segments_;
 };
 
 /// Represent a range of continuous segment indices.
@@ -416,16 +407,16 @@ public:
 
     using SegmentIndex = segmentintersector2::SegmentIndex;
     using PolylineIndex = segmentintersector2::PolylineIndex;
-    using PointIntersectionIndex = segmentintersector2::PointIntersectionIndex;
-    using SegmentIntersectionIndex = segmentintersector2::SegmentIntersectionIndex;
+    using VertexIndex = segmentintersector2::VertexIndex;
+    using EdgeIndex = segmentintersector2::EdgeIndex;
 
     using SegmentIndexRange = segmentintersector2::SegmentIndexRange<T>;
 
-    using PointIntersectionInfo = segmentintersector2::PointIntersectionInfo<T>;
-    using PointIntersection = segmentintersector2::PointIntersection<T>;
+    using VertexSegment = segmentintersector2::VertexSegment<T>;
+    using Vertex = segmentintersector2::Vertex<T>;
 
-    using SegmentIntersectionInfo = segmentintersector2::SegmentIntersectionInfo<T>;
-    using SegmentIntersection = segmentintersector2::SegmentIntersection<T>;
+    using EdgeSegment = segmentintersector2::EdgeSegment<T>;
+    using Edge = segmentintersector2::Edge<T>;
 
     /// Creates a `SegmentIntersector2`.
     ///
@@ -509,16 +500,16 @@ public:
     ///
     void computeIntersections();
 
-    /// Returns the computed point intersections.
+    /// Returns the computed intersection points.
     ///
-    const core::Array<PointIntersection>& pointIntersections() const {
-        return output_.pointIntersections;
+    const core::Array<Vertex>& intersectionPoints() const {
+        return output_.intersectionPoints;
     };
 
-    /// Returns the computed segment intersections.
+    /// Returns the computed intersection subsegments.
     ///
-    const core::Array<SegmentIntersection>& segmentIntersections() const {
-        return output_.segmentIntersections;
+    const core::Array<Edge>& intersectionSubsegments() const {
+        return output_.intersectionSubsegments;
     };
 
     /// Returns which polyline contains the given segment.
@@ -615,12 +606,12 @@ struct InputData {
 
 template<typename T>
 struct OutputData {
-    core::Array<PointIntersection<T>> pointIntersections;
-    core::Array<SegmentIntersection<T>> segmentIntersections;
+    core::Array<Vertex<T>> intersectionPoints;
+    core::Array<Edge<T>> intersectionSubsegments;
 
     void clear() {
-        pointIntersections.clear();
-        segmentIntersections.clear();
+        intersectionPoints.clear();
+        intersectionSubsegments.clear();
     }
 };
 
@@ -675,8 +666,8 @@ struct AlgorithmData {
 
     // All segments that are intersecting at the current event.
     //
-    core::Array<PointIntersectionInfo<T>> infos;
-    core::Array<SegmentIntersectionInfo<T>> segInfos;
+    core::Array<VertexSegment<T>> vertexSegments;
+    core::Array<EdgeSegment<T>> edgeSegments;
 
     // The new segments that must be added (or removed and re-added) to
     // sweepSegments_ when handling an event.
@@ -1251,23 +1242,23 @@ void reportIntersections(
     // now we initialize the param to 0 as there might no need to compute it
     // due to fast returns when n <= 2.
     //
-    PointIntersectionIndex interIndex = out.pointIntersections.length();
-    alg.infos.clear();
+    VertexIndex vertexIndex = out.intersectionPoints.length();
+    alg.vertexSegments.clear();
     for (SegmentIndex i : pSegments.contain()) {
         if (!alg.overlapGroups.isRemoved[i]) {
-            alg.infos.append(PointIntersectionInfo<T>{interIndex, i, 0});
+            alg.vertexSegments.append(VertexSegment<T>{vertexIndex, i, 0});
         }
     }
     for (const Event<T>& event : pEvents.left()) {
         // Note: Left events cannot be in the removed set
-        alg.infos.append(PointIntersectionInfo<T>{interIndex, event.segmentIndex, 0});
+        alg.vertexSegments.append(VertexSegment<T>{vertexIndex, event.segmentIndex, 0});
     }
 
     // There is no intersection if there is only one segment at the event
     // position. This means we are at an isolated left endpoint or right
     // endpoint of a segment.
     //
-    if (alg.infos.length() <= 1) {
+    if (alg.vertexSegments.length() <= 1) {
         return;
     }
 
@@ -1278,10 +1269,10 @@ void reportIntersections(
     // Note that if there is another segment intersecting there as well,
     // we do want to report the intersection.
     //
-    if (alg.infos.length() == 2) {
+    if (alg.vertexSegments.length() == 2) {
         // TODO: what if consecutive segments overlap along a subsegment?
-        SegmentIndex i1 = alg.infos.first().segmentIndex();
-        SegmentIndex i2 = alg.infos.last().segmentIndex();
+        SegmentIndex i1 = alg.vertexSegments.first().segmentIndex();
+        SegmentIndex i2 = alg.vertexSegments.last().segmentIndex();
         PolylineIndex j = in.segmentPolylines[i1];
         if (j >= 0 && in.segmentPolylines[i2] == j) {
             if (i2 < i1) {
@@ -1298,10 +1289,10 @@ void reportIntersections(
     }
 
     // Compute the parameters and report the intersection
-    for (PointIntersectionInfo<T>& info : alg.infos) {
-        info.setParameter(computeParam(in, info.segmentIndex(), position));
+    for (VertexSegment<T>& vs : alg.vertexSegments) {
+        vs.setParameter(computeParam(in, vs.segmentIndex(), position));
     }
-    out.pointIntersections.append(PointIntersection<T>(position, alg.infos));
+    out.intersectionPoints.append(Vertex<T>(position, alg.vertexSegments));
 }
 
 // Find which segments are outgoing at the position. These will
@@ -1566,7 +1557,7 @@ void postProcessOverlappingSegments(
     // TODO: Report missing point intersections.
     //
     // TODO: If two segment intersections are equal, merge them into one
-    // SegmentIntersection, instead of having all SegmentIntersection only
+    // Edge, instead of having all Edge only
     // involve two segments. Or perhaps, change the output structure completely
     // towards something more like a planar map decomposition.
     //
@@ -1580,13 +1571,14 @@ void postProcessOverlappingSegments(
                 const Segment2<T>& s2 = in.segments[i2];
                 SegmentIntersection2<T> inter = s1.intersect(s2);
                 if (inter.type() == SegmentIntersectionType::Segment) {
-                    SegmentIntersectionIndex interIndex = out.pointIntersections.length();
-                    alg.segInfos.clear();
-                    alg.segInfos.append(SegmentIntersectionInfo<T>(
-                        interIndex, i1, inter.s1(), inter.t1()));
-                    alg.segInfos.append(SegmentIntersectionInfo<T>(
-                        interIndex, i2, inter.s2(), inter.t2()));
-                    out.segmentIntersections.append({inter.segment(), alg.segInfos});
+                    EdgeIndex edgeIndex = out.intersectionSubsegments.length();
+                    alg.edgeSegments.clear();
+                    alg.edgeSegments.append(
+                        EdgeSegment<T>(edgeIndex, i1, inter.s1(), inter.t1()));
+                    alg.edgeSegments.append(
+                        EdgeSegment<T>(edgeIndex, i2, inter.s2(), inter.t2()));
+                    out.intersectionSubsegments.append(
+                        {inter.segment(), alg.edgeSegments});
                 }
             }
         }
@@ -1694,33 +1686,35 @@ using SegmentIntersector2d = SegmentIntersector2<double>;
 } // namespace vgc::geometry
 
 template<typename T>
-struct fmt::formatter<vgc::geometry::segmentintersector2::PointIntersectionInfo<T>>
+struct fmt::formatter<vgc::geometry::segmentintersector2::VertexSegment<T>>
     : fmt::formatter<std::string_view> {
 
-    using PointIntersectionInfo =
-        vgc::geometry::segmentintersector2::PointIntersectionInfo<T>;
+    using VertexSegment = vgc::geometry::segmentintersector2::VertexSegment<T>;
 
     template<typename FormatContext>
-    auto format(const PointIntersectionInfo& info, FormatContext& ctx) {
+    auto format(const VertexSegment& vs, FormatContext& ctx) {
         return format_to(
             ctx.out(),
-            "{{pointIntersectionIndex={}, segmentIndex={}, param={}}}",
-            info.pointIntersectionIndex(),
-            info.segmentIndex(),
-            info.parameter());
+            "{{vertexIndex={}, segmentIndex={}, param={}}}",
+            vs.vertexIndex(),
+            vs.segmentIndex(),
+            vs.parameter());
     }
 };
 
 template<typename T>
-struct fmt::formatter<vgc::geometry::segmentintersector2::PointIntersection<T>>
+struct fmt::formatter<vgc::geometry::segmentintersector2::Vertex<T>>
     : fmt::formatter<std::string_view> {
 
-    using PointIntersection = vgc::geometry::segmentintersector2::PointIntersection<T>;
+    using Vertex = vgc::geometry::segmentintersector2::Vertex<T>;
 
     template<typename FormatContext>
-    auto format(const PointIntersection& inter, FormatContext& ctx) {
+    auto format(const Vertex& vertex, FormatContext& ctx) {
         return format_to(
-            ctx.out(), "{{position={}, infos={}}}", inter.position(), inter.infos());
+            ctx.out(),
+            "{{position={}, segments={}}}",
+            vertex.position(),
+            vertex.segments());
     }
 };
 

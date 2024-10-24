@@ -28,83 +28,72 @@ using vgc::geometry::Vec2;
 
 namespace {
 
-// Note: In C++, SegmentIntersector2d::PointIntersection is an alias of
-// segmentintersector2::PointIntersection<double>, which is defined at
+// Note: In C++, SegmentIntersector2d::Vertex is an alias of
+// segmentintersector2::Vertex<double>, which is defined at
 // namespace scope to make it deducible in partial template
 // specializations. In Python, none of this is relevant, so we can more
 // simply define it directly as a nested type of SegmentIntersector2d.
-// Same for PointIntersectionInfo.
+// Same for VertexSegment.
 
 template<typename T>
-void wrap_PointIntersection(py::handle scope) {
-    using This = typename SegmentIntersector2<T>::PointIntersection;
-    using PointIntersectionInfo = typename SegmentIntersector2<T>::PointIntersectionInfo;
-    std::string name = "PointIntersection";
+void wrap_Vertex(py::handle scope) {
+    using This = typename SegmentIntersector2<T>::Vertex;
+    using VertexSegment = typename SegmentIntersector2<T>::VertexSegment;
+    std::string name = "Vertex";
     vgc::core::wraps::Class<This>(scope, name.c_str())
         .def(py::init<>())
         .def(py::init<const Vec2<T>&>())
-        .def(py::init<const Vec2<T>&, const vgc::core::Array<PointIntersectionInfo>&>())
+        .def(py::init<const Vec2<T>&, const vgc::core::Array<VertexSegment>&>())
         .def_property("position", &This::position, &This::setPosition)
-        .def_property("infos", &This::infos, &This::setInfos)
-        .def("addInfo", &This::addInfo);
-    vgc::core::wraps::wrapArray<This>(scope, "PointIntersection");
+        .def_property("segments", &This::segments, &This::setSegments)
+        .def("addSegment", &This::addSegment);
+    vgc::core::wraps::wrapArray<This>(scope, "Vertex");
 }
 
 template<typename T>
-void wrap_PointIntersectionInfo(py::handle scope) {
-    using This = typename SegmentIntersector2<T>::PointIntersectionInfo;
-    using PointIntersectionIndex =
-        typename SegmentIntersector2<T>::PointIntersectionIndex;
+void wrap_VertexSegment(py::handle scope) {
+    using This = typename SegmentIntersector2<T>::VertexSegment;
+    using VertexIndex = typename SegmentIntersector2<T>::VertexIndex;
     using SegmentIndex = typename SegmentIntersector2<T>::SegmentIndex;
-    std::string name = "PointIntersectionInfo";
+    std::string name = "VertexSegment";
     vgc::core::wraps::Class<This>(scope, name.c_str())
         .def(py::init<>())
-        .def(py::init<PointIntersectionIndex, SegmentIndex, T>())
-        .def_property(
-            "pointIntersectionIndex",
-            &This::pointIntersectionIndex,
-            &This::setPointIntersectionIndex)
+        .def(py::init<VertexIndex, SegmentIndex, T>())
+        .def_property("vertexIndex", &This::vertexIndex, &This::setVertexIndex)
         .def_property("segmentIndex", &This::segmentIndex, &This::setSegmentIndex)
         .def_property("parameter", &This::parameter, &This::setParameter);
-    vgc::core::wraps::wrapArray<This>(scope, "PointIntersectionInfo");
+    vgc::core::wraps::wrapArray<This>(scope, "VertexSegment");
 }
 
 template<typename T>
-void wrap_SegmentIntersection(py::handle scope) {
-    using This = typename SegmentIntersector2<T>::SegmentIntersection;
-    using SegmentIntersectionInfo =
-        typename SegmentIntersector2<T>::SegmentIntersectionInfo;
-    std::string name = "SegmentIntersection";
+void wrap_Edge(py::handle scope) {
+    using This = typename SegmentIntersector2<T>::Edge;
+    using EdgeSegment = typename SegmentIntersector2<T>::EdgeSegment;
+    std::string name = "Edge";
     vgc::core::wraps::Class<This>(scope, name.c_str())
         .def(py::init<>())
         .def(py::init<const Segment2<T>&>())
-        .def(py::init<
-             const Segment2<T>&,
-             const vgc::core::Array<SegmentIntersectionInfo>&>())
-        .def_property("segment", &This::segment, &This::setSegment)
-        .def_property("infos", &This::infos, &This::setInfos)
-        .def("addInfo", &This::addInfo);
-    vgc::core::wraps::wrapArray<This>(scope, "SegmentIntersection");
+        .def(py::init<const Segment2<T>&, const vgc::core::Array<EdgeSegment>&>())
+        .def_property("subsegment", &This::subsegment, &This::setSubsegment)
+        .def_property("segments", &This::segments, &This::setSegments)
+        .def("addSegment", &This::addSegment);
+    vgc::core::wraps::wrapArray<This>(scope, "Edge");
 }
 
 template<typename T>
-void wrap_SegmentIntersectionInfo(py::handle scope) {
-    using This = typename SegmentIntersector2<T>::SegmentIntersectionInfo;
-    using SegmentIntersectionIndex =
-        typename SegmentIntersector2<T>::SegmentIntersectionIndex;
+void wrap_EdgeSegment(py::handle scope) {
+    using This = typename SegmentIntersector2<T>::EdgeSegment;
+    using EdgeIndex = typename SegmentIntersector2<T>::EdgeIndex;
     using SegmentIndex = typename SegmentIntersector2<T>::SegmentIndex;
-    std::string name = "SegmentIntersectionInfo";
+    std::string name = "EdgeSegment";
     vgc::core::wraps::Class<This>(scope, name.c_str())
         .def(py::init<>())
-        .def(py::init<SegmentIntersectionIndex, SegmentIndex, T, T>())
-        .def_property(
-            "segmentIntersectionIndex",
-            &This::segmentIntersectionIndex,
-            &This::setSegmentIntersectionIndex)
+        .def(py::init<EdgeIndex, SegmentIndex, T, T>())
+        .def_property("edgeIndex", &This::edgeIndex, &This::setEdgeIndex)
         .def_property("segmentIndex", &This::segmentIndex, &This::setSegmentIndex)
         .def_property("parameter1", &This::parameter1, &This::setParameter1)
         .def_property("parameter2", &This::parameter2, &This::setParameter2);
-    vgc::core::wraps::wrapArray<This>(scope, "SegmentIntersectionInfo");
+    vgc::core::wraps::wrapArray<This>(scope, "EdgeSegment");
 }
 
 template<typename T>
@@ -134,13 +123,13 @@ void wrap_SegmentIntersector2(py::module& m, const std::string& name) {
             "isClosed"_a = false,
             "hasDuplicateEndpoints"_a = false)
         .def("computeIntersections", &This::computeIntersections)
-        .def("pointIntersections", &This::pointIntersections)
-        .def("segmentIntersections", &This::segmentIntersections);
+        .def("intersectionPoints", &This::intersectionPoints)
+        .def("intersectionSubsegments", &This::intersectionSubsegments);
 
-    wrap_PointIntersection<T>(c);
-    wrap_PointIntersectionInfo<T>(c);
-    wrap_SegmentIntersection<T>(c);
-    wrap_SegmentIntersectionInfo<T>(c);
+    wrap_Vertex<T>(c);
+    wrap_VertexSegment<T>(c);
+    wrap_Edge<T>(c);
+    wrap_EdgeSegment<T>(c);
 }
 
 } // namespace

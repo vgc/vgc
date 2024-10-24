@@ -50,7 +50,7 @@ class TestSegmentIntersector2(unittest.TestCase):
     def testConstructor(self):
         for SegmentIntersector2 in SegmentIntersector2Types:
             si = SegmentIntersector2()
-            self.assertEqual(len(si.pointIntersections()), 0)
+            self.assertEqual(len(si.intersectionPoints()), 0)
 
     def testAddSegment(self):
         for SegmentIntersector2 in SegmentIntersector2Types:
@@ -58,21 +58,21 @@ class TestSegmentIntersector2(unittest.TestCase):
             si.addSegment((0, 0), (1, 1))
             si.addSegment((0, 1), (1, 0))
             si.computeIntersections()
-            self.assertEqual(len(si.pointIntersections()), 1)
+            self.assertEqual(len(si.intersectionPoints()), 1)
 
     def testAddOpenPolyline(self):
         for SegmentIntersector2 in SegmentIntersector2Types:
             si = SegmentIntersector2()
             si.addPolyline([(0, 0), (1, 1), (0, 1), (1, 0)])
             si.computeIntersections()
-            self.assertEqual(len(si.pointIntersections()), 1)
+            self.assertEqual(len(si.intersectionPoints()), 1)
 
     def testAddOpenPolylineWithCommonEndpoints(self):
         for SegmentIntersector2 in SegmentIntersector2Types:
             si = SegmentIntersector2()
             si.addPolyline([(0, 0), (1, 1), (0, 1), (1, 0), (0, 0)])
             si.computeIntersections()
-            self.assertEqual(len(si.pointIntersections()), 2)
+            self.assertEqual(len(si.intersectionPoints()), 2)
 
     def testAddClosedPolyline(self):
         for SegmentIntersector2 in SegmentIntersector2Types:
@@ -80,7 +80,7 @@ class TestSegmentIntersector2(unittest.TestCase):
             si.addPolyline([(0, 0), (1, 1), (0, 1), (1, 0)],
                            isClosed=True)
             si.computeIntersections()
-            self.assertEqual(len(si.pointIntersections()), 1)
+            self.assertEqual(len(si.intersectionPoints()), 1)
 
     def testAddClosedPolylineWithDuplicateEndpoints(self):
         for SegmentIntersector2 in SegmentIntersector2Types:
@@ -88,7 +88,7 @@ class TestSegmentIntersector2(unittest.TestCase):
             si.addPolyline([(0, 0), (1, 1), (0, 1), (1, 0), (0, 0)],
                            isClosed=True, hasDuplicateEndpoints=True)
             si.computeIntersections()
-            self.assertEqual(len(si.pointIntersections()), 1)
+            self.assertEqual(len(si.intersectionPoints()), 1)
 
     def testTwoSegments(self):
 
@@ -141,18 +141,34 @@ class TestSegmentIntersector2(unittest.TestCase):
                                 si.addSegment(s1.a, s1.b)
                                 si.addSegment(s2.a, s2.b)
                                 si.computeIntersections()
+
                                 if (expected.type == SegmentIntersectionType.Point):
-                                    self.assertEqual(len(si.pointIntersections()), 1)
-                                    self.assertEqual(si.pointIntersections()[0].position, expected.p)
-                                    self.assertEqual(len(si.segmentIntersections()), 0)
+                                    self.assertEqual(len(si.intersectionPoints()), 1)
+                                    self.assertEqual(len(si.intersectionSubsegments()), 0)
+                                    self.assertEqual(si.intersectionPoints()[0].position, expected.p)
+                                    self.assertEqual(len(si.intersectionPoints()[0].segments), 2)
+                                    foundS1 = False
+                                    foundS2 = False
+                                    for vertseg in si.intersectionPoints()[0].segments:
+                                        self.assertEqual(vertseg.vertexIndex, 0)
+                                        if vertseg.segmentIndex == 0:
+                                            self.assertEqual(vertseg.parameter, expected.t1)
+                                            foundS1 = True
+                                        if vertseg.segmentIndex == 1:
+                                            self.assertEqual(vertseg.parameter, expected.t2)
+                                            foundS2 = True
+                                    self.assertTrue(foundS1)
+                                    self.assertTrue(foundS2)
+
                                 elif (expected.type == SegmentIntersectionType.Segment):
-                                    self.assertEqual(len(si.segmentIntersections()), 1)
-                                    self.assertEqual(si.segmentIntersections()[0].segment, expected.segment)
+                                    self.assertEqual(len(si.intersectionSubsegments()), 1)
+                                    self.assertEqual(si.intersectionSubsegments()[0].subsegment, expected.segment)
                                     # TODO: test expected number of point-intersections
+                                    #self.assertEqual(len(si.intersectionPoints()), 1)
                                     pass
                                 elif (expected.type == SegmentIntersectionType.Empty):
-                                    self.assertEqual(len(si.pointIntersections()), 0)
-                                    self.assertEqual(len(si.segmentIntersections()), 0)
+                                    self.assertEqual(len(si.intersectionPoints()), 0)
+                                    self.assertEqual(len(si.intersectionSubsegments()), 0)
 
     def testThreeOverlapSegments(self):
         for Segment2, SegmentIntersector2, Segment2Intersection in (
@@ -165,11 +181,11 @@ class TestSegmentIntersector2(unittest.TestCase):
             si.addSegment((2, 0), (5, 0)) # B =    o--------o
             si.addSegment((3, 0), (6, 0)) # C =       o--------o
             si.computeIntersections()
-            self.assertEqual(len(si.pointIntersections()), 0)
-            self.assertEqual(len(si.segmentIntersections()), 3) # (A, B), (A, C), (B, C)
-            self.assertEqual(si.segmentIntersections()[0].segment, Segment2((2, 0), (4, 0)))
-            self.assertEqual(si.segmentIntersections()[1].segment, Segment2((3, 0), (4, 0)))
-            self.assertEqual(si.segmentIntersections()[2].segment, Segment2((3, 0), (5, 0)))
+            self.assertEqual(len(si.intersectionPoints()), 0)
+            self.assertEqual(len(si.intersectionSubsegments()), 3) # (A, B), (A, C), (B, C)
+            self.assertEqual(si.intersectionSubsegments()[0].subsegment, Segment2((2, 0), (4, 0)))
+            self.assertEqual(si.intersectionSubsegments()[1].subsegment, Segment2((3, 0), (4, 0)))
+            self.assertEqual(si.intersectionSubsegments()[2].subsegment, Segment2((3, 0), (5, 0)))
 
 
 
