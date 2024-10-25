@@ -680,6 +680,11 @@ struct AlgorithmData {
     //
     core::Array<Event<T>> sweepEvents;
 
+    // Contains the events that should normally be in `sweepEvents`, but have
+    // been removed due to the segment being part of an overlap group.
+    //
+    core::Array<Event<T>> removedSweepEvents;
+
     // Handling of segments that overlap along a subsegment.
     //
     OverlapGroups overlapGroups;
@@ -938,6 +943,8 @@ void initializeOverlapGroups(InputData<T>& in, AlgorithmData<T>& alg) {
 //
 template<typename T>
 Vec2<T> getNextEvent(AlgorithmData<T>& alg) {
+
+    // Get the next event and all events sharing the same position
     Event<T> firstEvent = alg.eventQueue.top();
     alg.eventQueue.pop();
     Vec2<T> position = firstEvent.position;
@@ -948,14 +955,13 @@ Vec2<T> getNextEvent(AlgorithmData<T>& alg) {
         alg.eventQueue.pop();
     }
 
-    // Ignore all events from segments that have been removed as
-    // part of an overlap group. Conceptually, these are not part
-    // of the event queue anymore, but our implementation does not
-    // support removing events so we simply ignore them.
-    //
-    alg.sweepEvents.removeIf([&](const Event<T>& event) {
+    // Move events that are conceptually removed to a separate array
+    auto isRemoved = [&](const Event<T>& event) {
         return alg.overlapGroups.isRemoved[event.segmentIndex];
-    });
+    };
+    alg.removedSweepEvents.assign(alg.sweepEvents | c20::views::filter(isRemoved));
+    alg.sweepEvents.removeIf(isRemoved);
+
     return position;
 }
 
@@ -1606,13 +1612,13 @@ void processNextEvent(InputData<T>& in, AlgorithmData<T>& alg, OutputData<T>& ou
 
     // Pop the next event from the event queue, as well as all subsequent
     // events sharing the same position. Store them in alg.sweepEvents.
+    //
+    // Note that alg.sweepEvents might be empty to segments that are removed
+    // as being part of an overlap group. We do not fast-return in this case
+    // since most sub-steps would simply be trivial and do nothing, but some
+    // sub-steps use alg.removedSweepEvents and need to process them.
+    //
     Vec2<T> position = getNextEvent(alg);
-    if (alg.sweepEvents.isEmpty()) {
-        // This can happen due to events related to a segment that is removed
-        // as being part of an overlap group. We just ignore them and move on
-        // to the next event.
-        return;
-    }
 
     // Partition the events into Left, Right, and Intersection events.
     PartitionedSweepEvents pEvents = partitionSweepEvents(alg);
