@@ -150,7 +150,6 @@ class TestSegmentIntersector2(unittest.TestCase):
                                     foundS1 = False
                                     foundS2 = False
                                     for vertseg in si.intersectionPoints()[0].segments:
-                                        self.assertEqual(vertseg.vertexIndex, 0)
                                         if vertseg.segmentIndex == 0:
                                             self.assertEqual(vertseg.parameter, expected.t1)
                                             foundS1 = True
@@ -161,10 +160,9 @@ class TestSegmentIntersector2(unittest.TestCase):
                                     self.assertTrue(foundS2)
 
                                 elif (expected.type == SegmentIntersectionType.Segment):
+                                    self.assertEqual(len(si.intersectionPoints()), 2)
                                     self.assertEqual(len(si.intersectionSubsegments()), 1)
                                     self.assertEqual(si.intersectionSubsegments()[0].subsegment, expected.segment)
-                                    # TODO: test expected number of point-intersections
-                                    #self.assertEqual(len(si.intersectionPoints()), 1)
                                     pass
                                 elif (expected.type == SegmentIntersectionType.Empty):
                                     self.assertEqual(len(si.intersectionPoints()), 0)
@@ -181,7 +179,7 @@ class TestSegmentIntersector2(unittest.TestCase):
             si.addSegment((2, 0), (5, 0)) # B =    o--------o
             si.addSegment((3, 0), (6, 0)) # C =       o--------o
             si.computeIntersections()
-            self.assertEqual(len(si.intersectionPoints()), 0)
+            self.assertEqual(len(si.intersectionPoints()), 4)
             self.assertEqual(len(si.intersectionSubsegments()), 3) # (A, B), (A, C), (B, C)
             self.assertEqual(si.intersectionSubsegments()[0].subsegment, Segment2((2, 0), (4, 0)))
             self.assertEqual(si.intersectionSubsegments()[1].subsegment, Segment2((3, 0), (4, 0)))
