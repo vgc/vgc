@@ -628,6 +628,7 @@ struct InputData {
 template<typename T>
 struct OutputData {
     core::Array<Vertex<T>> vertices;
+    core::Array<Edge<T>> edges;
 
     // Subset of vertices with more than one vertex-segment
     // (where consecutive segments in a polyline are counted as one)
@@ -641,6 +642,7 @@ struct OutputData {
 
     void clear() {
         vertices.clear();
+        edges.clear();
         intersectionPoints.clear();
         intersectionSubsegments.clear();
     }
@@ -760,18 +762,19 @@ struct AlgorithmData {
     //
     core::Array<SegmentIndex> sweepSegments;
 
-    // All segments that are intersecting at the current event.
-    //
-    core::Array<VertexSegment<T>> vertexSegments;
-    core::Array<EdgeSegment<T>> edgeSegments;
-
     // The new segments that must be added (or removed and re-added) to
     // sweepSegments_ when handling an event.
+    //
+    // This is only used as a buffer to minimize memory allocations.
+    // Could be a function-local variable.
     //
     core::Array<SegmentIndex> outgoingSegments;
 
     // The list of all events that correspond to the same position while
     // processing the next event.
+    //
+    // This is only used as a buffer to minimize memory allocations.
+    // Could be a function-local variable.
     //
     SweepEvents sweepEvents;
 
@@ -1292,10 +1295,10 @@ void createVertex(
     //   o----------o
     //         o----------o
     //
-    alg.vertexSegments.clear();
+    core::Array<VertexSegment<T>> vertexSegments; // TODO: minimize allocations
     auto appendAll = [&](const auto& range) {
         for (SegmentIndex i : range) {
-            alg.vertexSegments.append(VertexSegment<T>{vertexIndex, i, 0});
+            vertexSegments.append(VertexSegment<T>{vertexIndex, i, 0});
         }
     };
     appendAll(pSegments.contain());
@@ -1304,10 +1307,10 @@ void createVertex(
     appendAll(alg.sweepEvents.intersection);
     appendAll(alg.sweepEvents.degenerate);
     appendAll(alg.sweepEvents.removed);
-    sortAndRemoveDuplicates(alg.vertexSegments, [](auto& v) { return v.segmentIndex(); });
+    sortAndRemoveDuplicates(vertexSegments, [](auto& v) { return v.segmentIndex(); });
 
     // Create the vertex
-    out.vertices.append(Vertex<T>(position, alg.vertexSegments));
+    out.vertices.append(Vertex<T>(position, std::move(vertexSegments)));
 }
 
 // Find which segments are outgoing at the position. These will
@@ -1482,128 +1485,17 @@ void findNewIntersections(
     }
 }
 
-// During the plane sweep, each time we detect two segments that overlap, we
-// add their indices (i1, i2) to overlapGroups.pairs, and only keep one of them
-// (the one that extend further to the right) in sweepSegments and eventQueue.
-//
-// These pairs (i1, i2) form an undirect graph between segments, where each connected
-// component of size >= 2 is what we call an "overlap group".
-//
-// In this function, we compute these overlap group, and process them to report
-// all pairwise overlaps between segments, as well as all point intersections
-// that were not reported couldn't be reported the plane sweep due to the
-// overlapping segments being removed from the data structure.
-//
-template<typename T>
-void postProcessOverlappingSegments(
-    InputData<T>& in,
-    AlgorithmData<T>& alg,
-    OutputData<T>& out) {
-
-    // Fast return if there are no overlapping segments
-    if (alg.overlapGroups.pairs.isEmpty()) {
-        return;
-    }
-
-    // Convert the graph representation from edge pairs to adjacency lists. We
-    // store all adjacency lists in a single contiguous array to minimize
-    // allocations.
-    Int numSegments = in.segments.length();
-    core::Array<Int> numEdges(numSegments, 0);
-    for (const auto& [i1, i2] : alg.overlapGroups.pairs) {
-        ++numEdges[i1];
-        ++numEdges[i2];
-    }
-    core::Array<Int> adjBuffer;
-    adjBuffer.resize(alg.overlapGroups.pairs.length() * 2);
-    core::Array<core::Span<Int>> adj;
-    Int* adjBegin = adjBuffer.data();
-    for (SegmentIndex i = 0; i < numSegments; ++i) {
-        Int* adjEnd = adjBegin + numEdges[i];
-        adj.append(core::Span<Int>(adjBegin, adjEnd));
-        adjBegin = adjEnd;
-    }
-    for (const auto& [i1, i2] : alg.overlapGroups.pairs) {
-        Int k1 = --numEdges[i1];
-        Int k2 = --numEdges[i2];
-        adj[i1][k1] = i2;
-        adj[i2][k2] = i1;
-    }
-
-    // Compute groups as connected components of the graph.
-    // Isolated segments (not part of an overlap group) are assigned group -1.
-    core::Array<Int> segmentGroup(numSegments, -1); // SegmentIndex -> GroupIndex
-    core::Array<Int> stack;                         // For depth-first visit
-    Int numGroups = 0;
-    core::Array<Int> groupBuffer; // Contiguously store all segments of a group
-    core::Array<core::Span<Int>> groups;
-    groupBuffer.reserve(numSegments); // Mandatory for span pointer stability
-    for (SegmentIndex i = 0; i < numSegments; ++i) {
-
-        // If segment i is not yet assigned a group but has segment overlaps,
-        // then find all segments in the overlap group and assign them a group
-        // index.
-        //
-        if (segmentGroup[i] == -1 && !adj[i].isEmpty()) {
-            Int* groupBegin = groupBuffer.data() + groupBuffer.length();
-            Int groupIndex = numGroups++;
-            stack.append(i);
-            while (!stack.isEmpty()) {
-                Int j = stack.pop();
-                segmentGroup[j] = groupIndex;
-                groupBuffer.append(j);
-                for (Int k : adj[j]) {
-                    if (segmentGroup[k] == -1) {
-                        stack.append(k);
-                    }
-                }
-            }
-            Int* groupEnd = groupBuffer.data() + groupBuffer.length();
-            groups.append(core::Span<Int>(groupBegin, groupEnd));
-        }
-    }
-
-    // Report segment intersections.
-    //
-    // TODO: Report missing point intersections.
-    //
-    // TODO: Properly create interior-disjoint edges instead
-    // of having one edge per overlapping segment pair.
-    //
-    // TODO: take isReversed into account.
-    //
-    for (const auto& group : groups) {
-        Int numSegmentsInGroup = group.length();
-        for (SegmentIndex i1 = 0; i1 < numSegmentsInGroup; ++i1) {
-            for (SegmentIndex i2 = i1 + 1; i2 < numSegmentsInGroup; ++i2) {
-                const Segment2<T>& s1 = in.segments[i1];
-                const Segment2<T>& s2 = in.segments[i2];
-                SegmentIntersection2<T> inter = s1.intersect(s2);
-                if (inter.type() == SegmentIntersectionType::Segment) {
-                    EdgeIndex edgeIndex = out.intersectionSubsegments.length();
-                    alg.edgeSegments.clear();
-                    alg.edgeSegments.append(
-                        EdgeSegment<T>(edgeIndex, i1, inter.s1(), inter.t1()));
-                    alg.edgeSegments.append(
-                        EdgeSegment<T>(edgeIndex, i2, inter.s2(), inter.t2()));
-                    out.intersectionSubsegments.append(
-                        {inter.segment(), alg.edgeSegments});
-                }
-            }
-        }
-    }
-}
-
 template<typename T>
 void processNextEvent(InputData<T>& in, AlgorithmData<T>& alg, OutputData<T>& out) {
 
     // Pop the next event from the event queue, as well as all subsequent
     // events sharing the same position. Store them in alg.sweepEvents.
     //
-    // Note that alg.sweepEvents may only contain removed segments. We do not
-    // fast-return in this case since some of the following steps need to
-    // process these removed segments, and other steps are basically no-op in
-    // this case anyway.
+    // Note that it's possible that all segments in alg.sweepEvents are
+    // `removed`. In this case, once might be tempted to fast-return here, but
+    // we should not do it since some of the following steps actually need to
+    // process these removed segments (and other steps are basically no-op in
+    // this case, so they're fast).
     //
     Vec2<T> position = getNextEvent(alg);
 
@@ -1636,6 +1528,343 @@ void processNextEvent(InputData<T>& in, AlgorithmData<T>& alg, OutputData<T>& ou
 
     // Add intersections between newly-neighbor segments to the event queue.
     findNewIntersections(in, alg, position, it);
+}
+
+template<typename T>
+class FlatMultiList;
+
+template<typename T>
+class FlatMultiListInnerView;
+
+template<typename T>
+class FlatMultiListInnerIterator {
+public:
+    using difference_type = std::ptrdiff_t;
+    using value_type = T;
+    using pointer = T*;
+    using reference = T&;
+    using iterator_category = std::forward_iterator_tag;
+
+    // Constructs a sentinel.
+    FlatMultiListInnerIterator() {
+    }
+
+    pointer operator->() const {
+        return &(f_->data_[i_]);
+    }
+
+    reference operator*() const {
+        return f_->data_[i_];
+    }
+
+    bool operator==(const FlatMultiListInnerIterator& other) const {
+        return other.i_ == i_;
+    }
+
+    bool operator!=(const FlatMultiListInnerIterator& other) const {
+        return other.i_ != i_;
+    }
+
+    FlatMultiListInnerIterator& operator++() {
+        i_ = f_->next_[i_];
+        return *this;
+    }
+
+    FlatMultiListInnerIterator operator++(int) {
+        FlatMultiListInnerIterator copy = *this;
+        i_ = f_->next_[i_];
+        return copy;
+    }
+
+private:
+    friend FlatMultiList<std::remove_cv_t<T>>;
+    friend FlatMultiListInnerView<T>;
+
+    FlatMultiList<T>* f_ = nullptr;
+    Int i_ = -1;
+
+    FlatMultiListInnerIterator(FlatMultiList<T>* f, Int i)
+        : f_(f)
+        , i_(i) {
+    }
+};
+
+static_assert(c20::forward_iterator<FlatMultiListInnerIterator<Int>>);
+
+template<typename T>
+class FlatMultiListInnerView
+    : public c20::ranges::view_interface<FlatMultiListInnerView<T>> {
+
+public:
+    FlatMultiListInnerIterator<T> begin() const {
+        return begin_;
+    }
+
+    FlatMultiListInnerIterator<T> end() const {
+        return FlatMultiListInnerIterator<T>{};
+    }
+
+    bool isEmpty() const {
+        return begin_.i_ == -1;
+    }
+
+private:
+    friend FlatMultiList<std::remove_cv_t<T>>;
+
+    FlatMultiListInnerIterator<T> begin_;
+
+    explicit FlatMultiListInnerView(FlatMultiListInnerIterator<T> begin)
+        : begin_(begin) {
+    }
+};
+
+// Alternative to Array<Array<T>> that minimizes allocations by storing
+// all elements contiguously in memory.
+//
+template<typename T>
+class FlatMultiList {
+public:
+    FlatMultiList(Int outerLength = 0) {
+        outerResize(outerLength);
+    }
+
+    // Returns the number of lists in this multi-list.
+    //
+    Int outerLength() {
+        return lists_.length();
+    }
+
+    // Removes all data.
+    // After calling this function, outerLength() is zero.
+    //
+    void outerClear() {
+        data_.clear();
+        next_.clear();
+        lists_.clear();
+    }
+
+    // Changes the number of lists in this multi-list to the equal
+    // to the given `outerLength`.
+    //
+    void outerResize(Int outerLength) {
+        lists_.resize(outerLength);
+    }
+
+    // Adds an empty list to this multi-list.
+    //
+    void outerAppend() {
+        lists_.append({});
+    }
+
+    // Removes all data in the inner lists.
+    // This keeps outerLength() unchanged.
+    //
+    void clearInner() {
+        data_.clear();
+        next_.clear();
+        lists_.assign(outerLength(), {});
+    }
+
+    // Appends an element to the end of the list at index `outerIndex`.
+    //
+    void innerAppend(Int outerIndex, T x) {
+        List& list = lists_[outerIndex];
+        Int index = data_.length();
+        data_.append(std::move(x));
+        next_.append(-1);
+        if (list.last == -1) {
+            list.first = index;
+        }
+        else {
+            next_[list.last] = index;
+        }
+        list.last = index;
+    }
+
+    // Returns a view to the list at index `outerIndex`.
+    //
+    FlatMultiListInnerView<T> operator[](Int outerIndex) {
+        auto begin = FlatMultiListInnerIterator<T>(this, lists_[outerIndex].first);
+        return FlatMultiListInnerView<T>(begin);
+    }
+
+private:
+    friend FlatMultiListInnerIterator<T>;
+
+    struct List {
+        Int first = -1; // index to first item, or -1 if the list is empty
+        Int last = -1;  // index to last item, or -1 if the list is empty
+    };
+
+    core::Array<T> data_;
+    core::Array<Int> next_;
+    core::Array<List> lists_;
+};
+
+// During the plane sweep, each time we detect two segments that overlap, we
+// add their indices (i1, i2) to overlapGroups.pairs, and only keep one of them
+// (the one that extend further to the right) in sweepSegments and eventQueue.
+//
+// These pairs (i1, i2) form an undirect graph between segments, where each connected
+// component of size >= 2 is what we call an "overlap group".
+//
+// In this function, we compute these overlap group, and process them to report
+// all pairwise overlaps between segments, as well as all point intersections
+// that were not reported couldn't be reported the plane sweep due to the
+// overlapping segments being removed from the data structure.
+//
+template<typename T>
+void postProcessOverlappingSegments(
+    InputData<T>& in,
+    AlgorithmData<T>& alg,
+    OutputData<T>& out) {
+
+    // Fast return if there are no overlapping segments
+    if (alg.overlapGroups.pairs.isEmpty()) {
+        return;
+    }
+
+    // Convert the graph representation from edge pairs to adjacency lists.
+    //
+    Int numSegments = in.segments.length();
+    FlatMultiList<SegmentIndex> adj(numSegments);
+    for (const auto& [i1, i2] : alg.overlapGroups.pairs) {
+        adj.innerAppend(i1, i2);
+        adj.innerAppend(i2, i1);
+    }
+
+    // Compute groups as connected components of the graph.
+    // Isolated segments (not part of an overlap group) are assigned group -1.
+    //
+    using GroupIndex = Int;
+    core::Array<GroupIndex> segmentGroup(numSegments, -1); // SegmentIndex -> GroupIndex
+    core::Array<SegmentIndex> stack;                       // For depth-first visit
+    FlatMultiList<SegmentIndex> groupSegments(numSegments);
+    for (SegmentIndex i = 0; i < numSegments; ++i) {
+
+        // If segment i is not yet assigned a group but has segment overlaps,
+        // then find all segments in the overlap group and assign them a group.
+        //
+        if (segmentGroup[i] == -1 && !adj[i].isEmpty()) {
+            GroupIndex groupIndex = groupSegments.outerLength();
+            groupSegments.outerAppend();
+            segmentGroup[i] = groupIndex;
+            stack.append(i);
+            while (!stack.isEmpty()) {
+                SegmentIndex j = stack.pop();
+                groupSegments.innerAppend(groupIndex, j);
+                for (SegmentIndex k : adj[j]) {
+                    if (segmentGroup[k] == -1) {
+                        segmentGroup[k] = groupIndex;
+                        stack.append(k);
+                    }
+                }
+            }
+        }
+    }
+    Int numGroups = groupSegments.outerLength();
+
+    // Compute which vertices are contained in each overlap group.
+    //
+    FlatMultiList<SegmentIndex> groupVertices(numGroups);
+    for (const Vertex<T>& v : out.vertices) {
+        for (const VertexSegment<T>& vs : v.segments()) {
+            SegmentIndex segmentIndex = vs.segmentIndex();
+            GroupIndex groupIndex = segmentGroup[segmentIndex];
+            if (groupIndex != -1) {
+                VertexIndex vertexIndex = vs.vertexIndex();
+                if (!core::contains(groupVertices[groupIndex], vertexIndex)) {
+                    groupVertices.innerAppend(groupIndex, vertexIndex);
+                }
+            }
+        }
+    }
+
+    // For each overlap group, add remaining VertexSegments that were not
+    // added during the plane sweep due to overlapping segments being removed.
+    //
+    // TODO: Improve time complexity by sorting the groupVertices and
+    // groupSegments in xy-lexicographical order. This is why this
+    // loop is kept separate from the one above.
+    //
+    for (Int groupIndex = 0; groupIndex < numGroups; ++groupIndex) {
+        for (SegmentIndex segmentIndex : groupSegments[groupIndex]) {
+            const Segment2<T>& segment = in.segments[segmentIndex];
+            for (VertexIndex vertexIndex : groupVertices[groupIndex]) {
+                Vertex<T>& vertex = out.vertices[vertexIndex];
+                const Vec2<T>& position = vertex.position();
+                if (segment.a() <= position && position < segment.b()) {
+                    auto proj = [](const auto& vs) { return vs.segmentIndex(); };
+                    if (!c26::ranges::contains(vertex.segments(), segmentIndex, proj)) {
+                        VertexAccess<T>::segments(vertex).append(
+                            VertexSegment<T>{vertexIndex, segmentIndex, 0});
+                    }
+                }
+            }
+        }
+    }
+
+    // Compute which vertices are contained in each segment.
+    //
+    // Note 1: we might actually want to expose that in the output structure.
+    //
+    // Note 2: all vertices are already xy-lex-ordered, since they are index-ordered
+    // and created at events during the plane sweep.
+    //
+    FlatMultiList<VertexIndex> segmentVertices(numSegments);
+    for (const Vertex<T>& v : out.vertices) {
+        for (const VertexSegment<T>& vs : v.segments()) {
+            segmentVertices.innerAppend(vs.segmentIndex(), vs.vertexIndex());
+        }
+    }
+
+    // TODO: create all edges by iterating over all segments,
+    // and splitting them along their contained vertices.
+    using VertexIndexPair = std::pair<VertexIndex, VertexIndex>;
+    using VertexIndexPairHash = core::hashStdPair<VertexIndex, VertexIndex>;
+    std::unordered_map<VertexIndexPair, EdgeIndex, VertexIndexPairHash> pmap;
+    for (SegmentIndex segmentIndex = 0; segmentIndex < numSegments; ++segmentIndex) {
+        VertexIndex i1 = -1;
+        for (VertexIndex i2 : segmentVertices[segmentIndex]) {
+            if (i1 == -1) {
+                i1 = i2;
+                continue;
+            }
+            // TODO: if (i1, i2) not in pmap, then create (i1, i2) map and add to pmap.
+        }
+    }
+
+    /*
+    // Report segment intersections.
+    //
+    // TODO: Report missing point intersections.
+    //
+    // TODO: Properly create interior-disjoint edges instead
+    // of having one edge per overlapping segment pair.
+    //
+    // TODO: take isReversed into account.
+    //
+    for (const auto& group : groups) {
+        Int numSegmentsInGroup = group.length();
+        for (SegmentIndex i1 = 0; i1 < numSegmentsInGroup; ++i1) {
+            for (SegmentIndex i2 = i1 + 1; i2 < numSegmentsInGroup; ++i2) {
+                const Segment2<T>& s1 = in.segments[i1];
+                const Segment2<T>& s2 = in.segments[i2];
+                SegmentIntersection2<T> inter = s1.intersect(s2);
+                if (inter.type() == SegmentIntersectionType::Segment) {
+                    EdgeIndex edgeIndex = out.intersectionSubsegments.length();
+                    alg.edgeSegments.clear();
+                    alg.edgeSegments.append(
+                        EdgeSegment<T>(edgeIndex, i1, inter.s1(), inter.t1()));
+                    alg.edgeSegments.append(
+                        EdgeSegment<T>(edgeIndex, i2, inter.s2(), inter.t2()));
+                    out.intersectionSubsegments.append(
+                        {inter.segment(), alg.edgeSegments});
+                }
+            }
+        }
+    }
+ */
 }
 
 // Returns whether the given vertex should be considered as an intersection
