@@ -173,18 +173,17 @@ class TestSegmentIntersector2(unittest.TestCase):
                 Segment2SegmentIntersector2Segment2IntersectionTypes):
 
             # Case without other segments
-            # TODO: make the test order-independent?
             si = SegmentIntersector2()
             si.addSegment((1, 0), (4, 0)) # A = o--------o
             si.addSegment((2, 0), (5, 0)) # B =    o--------o
             si.addSegment((3, 0), (6, 0)) # C =       o--------o
-            si.computeIntersections()
+            si.computeIntersections()     #     x--x--x--x--x--x     < output vertices/edges
+                                          #     0  1  2  3  4  5
             self.assertEqual(len(si.intersectionPoints()), 4)
             self.assertEqual(len(si.intersectionSubsegments()), 3) # (A, B), (A, C), (B, C)
-            self.assertEqual(si.intersectionSubsegments()[0].subsegment, Segment2((2, 0), (4, 0)))
+            self.assertEqual(si.intersectionSubsegments()[0].subsegment, Segment2((2, 0), (3, 0)))
             self.assertEqual(si.intersectionSubsegments()[1].subsegment, Segment2((3, 0), (4, 0)))
-            self.assertEqual(si.intersectionSubsegments()[2].subsegment, Segment2((3, 0), (5, 0)))
-
+            self.assertEqual(si.intersectionSubsegments()[2].subsegment, Segment2((4, 0), (5, 0)))
 
 
 if __name__ == '__main__':

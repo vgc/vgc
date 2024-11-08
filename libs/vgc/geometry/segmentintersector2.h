@@ -124,7 +124,7 @@ namespace detail {
 template<typename T>
 struct VertexAccess;
 
-}
+} // namespace detail
 
 /// A `Vertex` corresponds either to the endpoint of a segment or an intersection
 /// point between two segments.
@@ -163,12 +163,6 @@ public:
         return position_;
     }
 
-    /// Modifies the 2D position of this vertex.
-    ///
-    void setPosition(const Vec2<T>& position) {
-        position_ = position;
-    }
-
     /// Returns the list of all segments that have this vertex as endpoint or
     /// that intersect another segment at this vertex.
     ///
@@ -176,17 +170,7 @@ public:
         return segments_;
     }
 
-    /// Sets the `segments` of this point intersection.
-    ///
-    void setSegments(core::Array<VertexSegment<T>> segments) {
-        segments_ = std::move(segments);
-    }
-
-    /// Adds a `VertexSegment` to this point intersection.
-    ///
-    void addSegment(const VertexSegment<T>& segment) {
-        segments_.append(segment);
-    }
+    // TODO: incident edges
 
 private:
     Vec2<T> position_;
@@ -290,6 +274,13 @@ private:
     T parameter2_;
 };
 
+namespace detail {
+
+template<typename T>
+struct EdgeAccess;
+
+} // namespace detail
+
 /// After intersections are computed, the input segments are decomposed into
 /// interior-disjoint subsegments called `Edge`, that start and end at a
 /// `Vertex`.
@@ -303,17 +294,28 @@ public:
     Edge() noexcept {
     }
 
-    /// Constructs a `Edge` with the given `subsegment` and empty `segments()`.
+    /// Constructs a `Edge` with the given vertex indices and `subsegment` and `segments`.
     ///
-    explicit Edge(const Segment2<T>& subsegment) noexcept
-        : subsegment_(subsegment) {
+    Edge(
+        VertexIndex startVertexIndex,
+        VertexIndex endVertexIndex,
+        const Segment2<T>& subsegment)
+
+        : startVertexIndex_(startVertexIndex)
+        , endVertexIndex_(endVertexIndex)
+        , subsegment_(subsegment) {
     }
 
-    /// Constructs a `Edge` with the given `subsegment` and `segments`.
+    /// Returns the index of the start vertex of this edge.
     ///
-    Edge(const Segment2<T>& subsegment, const core::Array<EdgeSegment<T>>& segments)
-        : subsegment_(subsegment)
-        , segments_(segments) {
+    VertexIndex startVertexIndex() const {
+        return startVertexIndex_;
+    }
+
+    /// Returns the index of the end vertex of this edge.
+    ///
+    VertexIndex endVertexIndex() const {
+        return endVertexIndex_;
     }
 
     /// Returns the geometry of this edge, that is, a shared subsegment between
@@ -348,9 +350,29 @@ public:
     }
 
 private:
+    VertexIndex startVertexIndex_ = 0;
+    VertexIndex endVertexIndex_ = 0;
     Segment2<T> subsegment_;
     core::Array<EdgeSegment<T>> segments_;
+
+    friend detail::EdgeAccess<T>;
+
+    // TODO: don't store the subsegment_in the Edge, but instead retrieve it
+    // via the vertex indices. This requires to make the Vertex/Edge API more
+    // "handle-like", that stores a backpointer to the SegmentIntersector and
+    // keep it alive.
 };
+
+namespace detail {
+
+template<typename T>
+struct EdgeAccess {
+    static core::Array<EdgeSegment<T>>& segments(Edge<T>& e) {
+        return e.segments_;
+    }
+};
+
+} // namespace detail
 
 /// Represent a range of continuous segment indices.
 ///
@@ -1705,13 +1727,12 @@ private:
 // add their indices (i1, i2) to overlapGroups.pairs, and only keep one of them
 // (the one that extend further to the right) in sweepSegments and eventQueue.
 //
-// These pairs (i1, i2) form an undirect graph between segments, where each connected
-// component of size >= 2 is what we call an "overlap group".
+// These pairs (i1, i2) form an undirected graph between segments, where each
+// connected component of size >= 2 is what we call an "overlap group".
 //
-// In this function, we compute these overlap group, and process them to report
-// all pairwise overlaps between segments, as well as all point intersections
-// that were not reported couldn't be reported the plane sweep due to the
-// overlapping segments being removed from the data structure.
+// In this function, we compute these overlap groups, and process them to
+// create all remaining VertexSegment that were not created during the plane
+// sweep due to the overlapping segments being removed from the data structure.
 //
 template<typename T>
 void postProcessOverlappingSegments(
@@ -1739,7 +1760,7 @@ void postProcessOverlappingSegments(
     using GroupIndex = Int;
     core::Array<GroupIndex> segmentGroup(numSegments, -1); // SegmentIndex -> GroupIndex
     core::Array<SegmentIndex> stack;                       // For depth-first visit
-    FlatMultiList<SegmentIndex> groupSegments(numSegments);
+    FlatMultiList<SegmentIndex> groupSegments;
     for (SegmentIndex i = 0; i < numSegments; ++i) {
 
         // If segment i is not yet assigned a group but has segment overlaps,
@@ -1780,8 +1801,12 @@ void postProcessOverlappingSegments(
         }
     }
 
-    // For each overlap group, add remaining VertexSegments that were not
-    // added during the plane sweep due to overlapping segments being removed.
+    // For each segment part of an overlap group and each vertex in this group,
+    // create a VertexSegment if the vertex is geometrically contained in the
+    // segment.
+    //
+    // This corresponds to incidence relationships that were "missed" during
+    // the plane sweep due to overlapping segments being removed.
     //
     // TODO: Improve time complexity by sorting the groupVertices and
     // groupSegments in xy-lexicographical order. This is why this
@@ -1803,6 +1828,10 @@ void postProcessOverlappingSegments(
             }
         }
     }
+}
+
+template<typename T>
+void createEdges(InputData<T>& in, OutputData<T>& out) {
 
     // Compute which vertices are contained in each segment.
     //
@@ -1811,6 +1840,7 @@ void postProcessOverlappingSegments(
     // Note 2: all vertices are already xy-lex-ordered, since they are index-ordered
     // and created at events during the plane sweep.
     //
+    Int numSegments = in.segments.length();
     FlatMultiList<VertexIndex> segmentVertices(numSegments);
     for (const Vertex<T>& v : out.vertices) {
         for (const VertexSegment<T>& vs : v.segments()) {
@@ -1818,53 +1848,48 @@ void postProcessOverlappingSegments(
         }
     }
 
-    // TODO: create all edges by iterating over all segments,
-    // and splitting them along their contained vertices.
+    // Create all edges by iterating over all segments, and splitting them
+    // along their contained vertices.
+    //
     using VertexIndexPair = std::pair<VertexIndex, VertexIndex>;
     using VertexIndexPairHash = core::hashStdPair<VertexIndex, VertexIndex>;
     std::unordered_map<VertexIndexPair, EdgeIndex, VertexIndexPairHash> pmap;
     for (SegmentIndex segmentIndex = 0; segmentIndex < numSegments; ++segmentIndex) {
         VertexIndex i1 = -1;
         for (VertexIndex i2 : segmentVertices[segmentIndex]) {
-            if (i1 == -1) {
-                i1 = i2;
-                continue;
+            if (i1 != -1) {
+                const Vec2<T>& v1 = out.vertices[i1].position();
+                const Vec2<T>& v2 = out.vertices[i2].position();
+                EdgeIndex edgeIndex = out.edges.length();
+                auto [it, inserted] =
+                    pmap.try_emplace(VertexIndexPair(i1, i2), edgeIndex);
+                if (inserted) {
+                    // Create the edge if it's the first occurence of (i1, i2)
+                    out.edges.append(Edge<T>(i1, i2, Segment2<T>(v1, v2)));
+                }
+                else {
+                    edgeIndex = it->second;
+                }
+                Edge<T>& edge = out.edges[edgeIndex];
+
+                // Add the EdgeSegment incidence relationship to the edge
+                T p1 = computeParam(in, segmentIndex, v1);
+                T p2 = computeParam(in, segmentIndex, v2);
+                core::Array<EdgeSegment<T>>& edgeSegments = EdgeAccess<T>::segments(edge);
+                edgeSegments.append(EdgeSegment<T>{edgeIndex, segmentIndex, p1, p2});
             }
-            // TODO: if (i1, i2) not in pmap, then create (i1, i2) map and add to pmap.
+            i1 = i2;
         }
     }
 
-    /*
-    // Report segment intersections.
+    // Create intersectionSubsegments as the subset of edges that are
+    // contained in two or more segments.
     //
-    // TODO: Report missing point intersections.
-    //
-    // TODO: Properly create interior-disjoint edges instead
-    // of having one edge per overlapping segment pair.
-    //
-    // TODO: take isReversed into account.
-    //
-    for (const auto& group : groups) {
-        Int numSegmentsInGroup = group.length();
-        for (SegmentIndex i1 = 0; i1 < numSegmentsInGroup; ++i1) {
-            for (SegmentIndex i2 = i1 + 1; i2 < numSegmentsInGroup; ++i2) {
-                const Segment2<T>& s1 = in.segments[i1];
-                const Segment2<T>& s2 = in.segments[i2];
-                SegmentIntersection2<T> inter = s1.intersect(s2);
-                if (inter.type() == SegmentIntersectionType::Segment) {
-                    EdgeIndex edgeIndex = out.intersectionSubsegments.length();
-                    alg.edgeSegments.clear();
-                    alg.edgeSegments.append(
-                        EdgeSegment<T>(edgeIndex, i1, inter.s1(), inter.t1()));
-                    alg.edgeSegments.append(
-                        EdgeSegment<T>(edgeIndex, i2, inter.s2(), inter.t2()));
-                    out.intersectionSubsegments.append(
-                        {inter.segment(), alg.edgeSegments});
-                }
-            }
+    for (const Edge<T>& e : out.edges) {
+        if (e.segments().length() > 1) {
+            out.intersectionSubsegments.append(e);
         }
     }
- */
 }
 
 // Returns whether the given vertex should be considered as an intersection
@@ -1936,6 +1961,7 @@ void computeIntersections(InputData<T>& in, AlgorithmData<T>& alg, OutputData<T>
         processNextEvent(in, alg, out);
     }
     postProcessOverlappingSegments(in, alg, out);
+    createEdges(in, out);
     postProcessVertices(in, out);
 }
 

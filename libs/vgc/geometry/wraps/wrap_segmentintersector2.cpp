@@ -38,27 +38,20 @@ namespace {
 template<typename T>
 void wrap_Vertex(py::handle scope) {
     using This = typename SegmentIntersector2<T>::Vertex;
-    using VertexSegment = typename SegmentIntersector2<T>::VertexSegment;
     std::string name = "Vertex";
     vgc::core::wraps::Class<This>(scope, name.c_str())
         .def(py::init<>())
-        .def(py::init<const Vec2<T>&>())
-        .def(py::init<const Vec2<T>&, const vgc::core::Array<VertexSegment>&>())
-        .def_property("position", &This::position, &This::setPosition)
-        .def_property("segments", &This::segments, &This::setSegments)
-        .def("addSegment", &This::addSegment);
+        .def_property_readonly("position", &This::position)
+        .def_property_readonly("segments", &This::segments);
     vgc::core::wraps::wrapArray<This>(scope, "Vertex");
 }
 
 template<typename T>
 void wrap_VertexSegment(py::handle scope) {
     using This = typename SegmentIntersector2<T>::VertexSegment;
-    using VertexIndex = typename SegmentIntersector2<T>::VertexIndex;
-    using SegmentIndex = typename SegmentIntersector2<T>::SegmentIndex;
     std::string name = "VertexSegment";
     vgc::core::wraps::Class<This>(scope, name.c_str())
         .def(py::init<>())
-        .def(py::init<VertexIndex, SegmentIndex, T>())
         .def_property("vertexIndex", &This::vertexIndex, &This::setVertexIndex)
         .def_property("segmentIndex", &This::segmentIndex, &This::setSegmentIndex)
         .def_property("parameter", &This::parameter, &This::setParameter);
@@ -68,15 +61,13 @@ void wrap_VertexSegment(py::handle scope) {
 template<typename T>
 void wrap_Edge(py::handle scope) {
     using This = typename SegmentIntersector2<T>::Edge;
-    using EdgeSegment = typename SegmentIntersector2<T>::EdgeSegment;
     std::string name = "Edge";
     vgc::core::wraps::Class<This>(scope, name.c_str())
         .def(py::init<>())
-        .def(py::init<const Segment2<T>&>())
-        .def(py::init<const Segment2<T>&, const vgc::core::Array<EdgeSegment>&>())
-        .def_property("subsegment", &This::subsegment, &This::setSubsegment)
-        .def_property("segments", &This::segments, &This::setSegments)
-        .def("addSegment", &This::addSegment);
+        .def_property_readonly("startVertexIndex", &This::startVertexIndex)
+        .def_property_readonly("endVertexIndex", &This::endVertexIndex)
+        .def_property_readonly("subsegment", &This::subsegment)
+        .def_property_readonly("segments", &This::segments);
     vgc::core::wraps::wrapArray<This>(scope, "Edge");
 }
 
