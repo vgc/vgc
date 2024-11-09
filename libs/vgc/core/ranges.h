@@ -106,6 +106,55 @@ template<
 using projected_value_t =
     c20::remove_cvref_t<std::invoke_result_t<Proj&, c20::iter_value_t<I>&>>;
 
+namespace ranges {
+
+// https://en.cppreference.com/w/cpp/algorithm/ranges/contains
+struct __contains_fn {
+
+    // TODO: Uncomment concept requirements once we can use C++20
+
+    //template<
+    //    std::input_iterator I,
+    //    std::sentinel_for<I> S,
+    //    class Proj = std::identity,
+    //    class T = std::projected_value_t<I, Proj>>
+    //requires std::indirect_binary_predicate<
+    //    ranges::equal_to,
+    //    std::projected<I, Proj>,
+    //    const T*>
+    template<
+        typename I,
+        typename S,
+        typename Proj = c20::identity,
+        typename T = projected_value_t<I, Proj>,
+        VGC_REQUIRES(c20::input_iterator<I>&& c20::sentinel_for<I, S>)>
+    constexpr bool operator()(I first, S last, const T& value, Proj proj = {}) const {
+        return c20::ranges::find(std::move(first), last, value, proj) != last;
+    }
+
+    //template<
+    //    ranges::input_range R,
+    //    class Proj = std::identity,
+    //    class T = std::projected_value_t<ranges::iterator_t<R>, Proj>>
+    //requires std::indirect_binary_predicate<
+    //    ranges::equal_to,
+    //    std::projected<ranges::iterator_t<R>, Proj>,
+    //    const T*>
+    template<
+        typename R,
+        typename Proj = c20::identity,
+        typename T = projected_value_t<c20::ranges::iterator_t<R>, Proj>,
+        VGC_REQUIRES(c20::ranges::input_range<R>)>
+    constexpr bool operator()(R&& r, const T& value, Proj proj = {}) const {
+        return (*this)(
+            c20::ranges::begin(r), c20::ranges::end(r), std::move(value), proj);
+    }
+};
+
+inline constexpr __contains_fn contains{};
+
+} // namespace ranges
+
 } // namespace c26
 
 namespace core {
