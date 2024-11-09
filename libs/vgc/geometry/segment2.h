@@ -100,6 +100,16 @@ public:
         return q_;
     }
 
+    /// Returns the intersection as a segment.
+    ///
+    /// This is the same as `Segment2(p(), q())`.
+    ///
+    /// If `type()` is `Empty`, this value is undefined.
+    ///
+    constexpr Segment2<T> segment() const {
+        return Segment2<T>(p_, q_);
+    }
+
     /// Returns the parameter `t` along the first segment `(a1, b1)` such that
     /// `p()` is approximately equal to `lerp(a1, b1, t)`.
     ///

@@ -370,6 +370,7 @@ class TestSegment2(unittest.TestCase):
                                         args[1] = swapTupleXY(args[1])
                                 expected = Segment2Intersection(*args)
                                 self.assertIntersectEqual(s1, s2, expected)
+                                self.assertEqual(expected.segment, Segment2(expected.p, expected.q))
 
 
 if __name__ == '__main__':
