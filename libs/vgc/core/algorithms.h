@@ -261,6 +261,23 @@ hashCombine(std::size_t& res, const Ts&... values) {
     (hashCombine(res, values), ...);
 }
 
+/// A hash function for std::pair, since it's not provided by default.
+///
+/// Example:
+///
+/// ```
+/// std::unordered_set<std::pair<int, float>, core::hashStdPair<int, float>> set;
+/// ```
+///
+template<typename T, typename U>
+struct hashStdPair {
+    std::size_t operator()(const std::pair<T, U>& p) const {
+        std::size_t res = 0;
+        hashCombine(res, p.first, p.second);
+        return res;
+    }
+};
+
 /// \class vgc::core::AppendIterator
 /// \brief An output iterator for adding to containers via append() method.
 ///
