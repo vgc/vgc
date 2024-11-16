@@ -40,7 +40,7 @@ namespace vgc::geometry {
 // to know (or cannot know) the template parameter `T`.
 //
 // For example, it would be impossible to specialize fmt::formatter for
-// PointIntersection if the latter was defined as a nested class of
+// Vertex if the latter was defined as a nested class of
 // SegmentIntersector2<T> rather than at namespace scope, because nested
 // classes of class templates are non-deducible in partial template
 // specializations.
@@ -51,59 +51,57 @@ namespace segmentintersector2 {
 
 using PolylineIndex = Int;
 using SegmentIndex = Int;
-using PointIntersectionIndex = Int;
+using VertexIndex = Int;
+using EdgeIndex = Int;
 
-/// When two or more segments intersect at a point, then for each involved
-/// segment we store its corresponding intersection parameter.
+/// For each vertex, we store a list of `VertexSegment` objects, one per input
+/// segment that is incident to the vertex or intersects at the vertex. Each
+/// `VertexSegment` object stores the linear parametric value that corresponds
+/// to the position of the vertex along the segment.
 ///
 template<typename T>
-class PointIntersectionInfo {
+class VertexSegment {
 public:
-    /// Constructs a `PointIntersection` with zero-initialized
-    /// `pointIntersectionIndex()` and `segmentIndex()`, and `parameter`.
+    /// Constructs an `VertexSegment` with zero-initialized
+    /// `vertexIndex()`, `segmentIndex()`, and `parameter()`.
     ///
-    PointIntersectionInfo() {
+    VertexSegment() {
     }
 
-    /// Contructs a `PointIntersectionInfo`.
+    /// Contructs an `VertexSegment`.
     ///
-    PointIntersectionInfo(
-        PointIntersectionIndex pointIntersectionIndex,
-        SegmentIndex segmentIndex,
-        T parameter)
-
-        : pointIntersectionIndex_(pointIntersectionIndex)
+    VertexSegment(VertexIndex vertexIndex, SegmentIndex segmentIndex, T parameter)
+        : vertexIndex_(vertexIndex)
         , segmentIndex_(segmentIndex)
         , parameter_(parameter) {
     }
 
-    /// Returns the index of the PointInteresection this
-    /// PointIntersectionInfo belongs to.
+    /// Returns the index of the `Vertex` this `VertexSegment` refers to.
     ///
-    PointIntersectionIndex pointIntersectionIndex() const {
-        return pointIntersectionIndex_;
+    VertexIndex vertexIndex() const {
+        return vertexIndex_;
     }
 
-    /// Modifies `pointIntersectionIndex()`.
+    /// Modifies `vertexIndex()`.
     ///
-    void setPointIntersectionIndex(PointIntersectionIndex pointIntersectionIndex) {
-        pointIntersectionIndex_ = pointIntersectionIndex;
+    void setVertexIndex(VertexIndex vertexIndex) {
+        vertexIndex_ = vertexIndex;
     }
 
-    /// Returns the index of the segment that intersects at the `PointIntersection`.
+    /// Returns the index of the segment that intersects at the `Vertex`.
     ///
     SegmentIndex segmentIndex() const {
         return segmentIndex_;
     }
 
-    /// Modifies `pointIntersectionIndex()`.
+    /// Modifies `segmentIndex()`.
     ///
     void setSegmentIndex(SegmentIndex segmentIndex) {
         segmentIndex_ = segmentIndex;
     }
 
-    /// Returns the parameter along the segment corresponding to where
-    /// the segment intersects at the `PointIntersection`.
+    /// Returns the linear parametric value corresponding to where the `Vertex`
+    /// is located along the segment.
     ///
     T parameter() const {
         return parameter_;
@@ -116,81 +114,268 @@ public:
     }
 
 private:
-    PointIntersectionIndex pointIntersectionIndex_;
+    VertexIndex vertexIndex_;
     SegmentIndex segmentIndex_;
     T parameter_;
 };
 
-/// Stores the position of an intersection point, together with the
-/// information of which segments are intersecting at that position.
+namespace detail {
+
+template<typename T>
+struct VertexAccess;
+
+} // namespace detail
+
+/// A `Vertex` corresponds either to the endpoint of a segment or an intersection
+/// point between two segments.
 ///
-// TODO: Minimize memory allocations via SmallArray<2, Info>?
-// Indeed, most intersections are expected to only involve 2 segments.
+// TODO: Minimize memory allocations via SmallArray<2, VertexSegment>?
+// Indeed, most vertices are expected to only involve 2 segments or fewer.
 // Alternatively, we could use a custom allocator or pairs of indices
 // into another array.
 //
 template<typename T>
-class PointIntersection {
+class Vertex {
 public:
-    /// Constructs a `PointIntersection` with a default constructed `position` and
-    /// `infos()`.
+    /// Constructs a `Vertex` with a default constructed `position` and
+    /// `segments()`.
     ///
-    PointIntersection() noexcept {
+    Vertex() noexcept {
     }
 
-    /// Constructs a `PointIntersection` with the given `position` and empty
-    /// `infos()`.
+    /// Constructs a `Vertex` with the given `position` and empty
+    /// `segments()`.
     ///
-    explicit PointIntersection(const Vec2<T>& position) noexcept
+    explicit Vertex(const Vec2<T>& position) noexcept
         : position_(position) {
     }
 
-    /// Constructs a `PointIntersection` with the given `position` and `infos`.
+    /// Constructs a `Vertex` with the given `position` and `segments`.
     ///
-    PointIntersection(
-        const Vec2<T>& position,
-        const core::Array<PointIntersectionInfo<T>>& infos)
-
+    Vertex(const Vec2<T>& position, const core::Array<VertexSegment<T>>& segments)
         : position_(position)
-        , infos_(infos) {
+        , segments_(segments) {
     }
 
-    /// Returns the 2D position of this point intersection.
+    /// Returns the 2D position of this vertex.
     ///
     Vec2<T> position() const {
         return position_;
     }
 
-    /// Modifies the 2D position of this point intersection.
+    /// Returns the list of all segments that have this vertex as endpoint or
+    /// that intersect another segment at this vertex.
     ///
-    void setPosition(const Vec2<T>& position) {
-        position_ = position;
+    const core::Array<VertexSegment<T>>& segments() const {
+        return segments_;
     }
 
-    /// Returns information about the segments that intersect
-    /// at this point intersection.
-    ///
-    const core::Array<PointIntersectionInfo<T>>& infos() const {
-        return infos_;
-    }
-
-    /// Sets the `infos` of this point intersection.
-    ///
-    void setInfos(core::Array<PointIntersectionInfo<T>> infos) {
-        infos_ = std::move(infos);
-    }
-
-    /// Adds a `PointIntersectionInfo` to this point intersection.
-    ///
-    void addInfo(const PointIntersectionInfo<T>& info) {
-        infos_.append(info);
-    }
+    // TODO: incident edges
 
 private:
     Vec2<T> position_;
-    core::Array<PointIntersectionInfo<T>> infos_;
+    core::Array<VertexSegment<T>> segments_;
+
+    friend detail::VertexAccess<T>;
 };
 
+namespace detail {
+
+template<typename T>
+struct VertexAccess {
+    static core::Array<VertexSegment<T>>& segments(Vertex<T>& v) {
+        return v.segments_;
+    }
+};
+
+} // namespace detail
+
+/// When two or more segments overlap along a shared subsegment, then for each
+/// involved segment we store the corresponding parametric values of the edge
+/// along the segment.
+///
+template<typename T>
+class EdgeSegment {
+public:
+    /// Constructs an `EdgeSegment` with zero-initialized
+    /// `edgeIndex()`, `segmentIndex()`, `parameter1(), and `parameter2()`.
+    ///
+    EdgeSegment() {
+    }
+
+    /// Contructs an `EdgeSegment`
+    ///
+    EdgeSegment(
+        EdgeIndex edgeIndex,
+        SegmentIndex segmentIndex,
+        T parameter1,
+        T parameter2)
+
+        : edgeIndex_(edgeIndex)
+        , segmentIndex_(segmentIndex)
+        , parameter1_(parameter1)
+        , parameter2_(parameter2) {
+    }
+
+    /// Returns the index of the `Edge` this `EdgeSegment` refers to.
+    ///
+    EdgeIndex edgeIndex() const {
+        return edgeIndex_;
+    }
+
+    /// Modifies `edgeIndex()`.
+    ///
+    void setEdgeIndex(EdgeIndex edgeIndex) {
+        edgeIndex_ = edgeIndex;
+    }
+
+    /// Returns the index of the segment that overlap the `Edge`.
+    ///
+    SegmentIndex segmentIndex() const {
+        return segmentIndex_;
+    }
+
+    /// Modifies `segmentIndex()`.
+    ///
+    void setSegmentIndex(SegmentIndex segmentIndex) {
+        segmentIndex_ = segmentIndex;
+    }
+
+    /// Returns the linear parametric value corresponding to where the `Edge`
+    /// starts along the segment.
+    ///
+    T parameter1() const {
+        return parameter1_;
+    }
+
+    /// Modifies `parameter1()`.
+    ///
+    void setParameter1(T parameter1) {
+        parameter1_ = parameter1;
+    }
+
+    /// Returns the linear parametric value corresponding to where the `Edge`
+    /// ends along the segment.
+    ///
+    T parameter2() const {
+        return parameter2_;
+    }
+
+    /// Modifies `parameter2()`.
+    ///
+    void setParameter2(T parameter2) {
+        parameter2_ = parameter2;
+    }
+
+private:
+    VertexIndex edgeIndex_;
+    SegmentIndex segmentIndex_;
+    T parameter1_;
+    T parameter2_;
+};
+
+namespace detail {
+
+template<typename T>
+struct EdgeAccess;
+
+} // namespace detail
+
+/// After intersections are computed, the input segments are decomposed into
+/// interior-disjoint subsegments called `Edge`, that start and end at a
+/// `Vertex`.
+///
+template<typename T>
+class Edge {
+public:
+    /// Constructs an `Edge` with a default constructed `subsegment` and
+    /// `segments()`.
+    ///
+    Edge() noexcept {
+    }
+
+    /// Constructs a `Edge` with the given vertex indices and `subsegment` and `segments`.
+    ///
+    Edge(
+        VertexIndex startVertexIndex,
+        VertexIndex endVertexIndex,
+        const Segment2<T>& subsegment)
+
+        : startVertexIndex_(startVertexIndex)
+        , endVertexIndex_(endVertexIndex)
+        , subsegment_(subsegment) {
+    }
+
+    /// Returns the index of the start vertex of this edge.
+    ///
+    VertexIndex startVertexIndex() const {
+        return startVertexIndex_;
+    }
+
+    /// Returns the index of the end vertex of this edge.
+    ///
+    VertexIndex endVertexIndex() const {
+        return endVertexIndex_;
+    }
+
+    /// Returns the geometry of this edge, that is, a shared subsegment between
+    /// overlapping input segments.
+    ///
+    Segment2<T> subsegment() const {
+        return subsegment_;
+    }
+
+    /// Modifies the shared subsegment of this point intersection.
+    ///
+    void setSubsegment(const Segment2<T>& subsegment) {
+        subsegment_ = subsegment;
+    }
+
+    /// Returns information about the segments that overlap this edge.
+    ///
+    const core::Array<EdgeSegment<T>>& segments() const {
+        return segments_;
+    }
+
+    /// Sets the `segments()` of this edge.
+    ///
+    void setSegments(core::Array<EdgeSegment<T>> segments) {
+        segments_ = std::move(segments);
+    }
+
+    /// Adds an `EdgeSegment` to this edge.
+    ///
+    void addSegment(const EdgeSegment<T>& segment) {
+        segments_.append(segment);
+    }
+
+private:
+    VertexIndex startVertexIndex_ = 0;
+    VertexIndex endVertexIndex_ = 0;
+    Segment2<T> subsegment_;
+    core::Array<EdgeSegment<T>> segments_;
+
+    friend detail::EdgeAccess<T>;
+
+    // TODO: don't store the subsegment_in the Edge, but instead retrieve it
+    // via the vertex indices. This requires to make the Vertex/Edge API more
+    // "handle-like", that stores a backpointer to the SegmentIntersector and
+    // keep it alive.
+};
+
+namespace detail {
+
+template<typename T>
+struct EdgeAccess {
+    static core::Array<EdgeSegment<T>>& segments(Edge<T>& e) {
+        return e.segments_;
+    }
+};
+
+} // namespace detail
+
+/// Represent a range of continuous segment indices.
+///
 template<typename T>
 class SegmentIndexRange {
 public:
@@ -232,6 +417,7 @@ enum class EventType : UInt8 {
     Left = 0,
     Right = 1,
     Intersection = 2,
+    Degenerate = 3,
 };
 
 template<typename T>
@@ -264,12 +450,16 @@ public:
 
     using SegmentIndex = segmentintersector2::SegmentIndex;
     using PolylineIndex = segmentintersector2::PolylineIndex;
-    using PointIntersectionIndex = segmentintersector2::PointIntersectionIndex;
+    using VertexIndex = segmentintersector2::VertexIndex;
+    using EdgeIndex = segmentintersector2::EdgeIndex;
 
     using SegmentIndexRange = segmentintersector2::SegmentIndexRange<T>;
 
-    using PointIntersectionInfo = segmentintersector2::PointIntersectionInfo<T>;
-    using PointIntersection = segmentintersector2::PointIntersection<T>;
+    using VertexSegment = segmentintersector2::VertexSegment<T>;
+    using Vertex = segmentintersector2::Vertex<T>;
+
+    using EdgeSegment = segmentintersector2::EdgeSegment<T>;
+    using Edge = segmentintersector2::Edge<T>;
 
     /// Creates a `SegmentIntersector2`.
     ///
@@ -353,10 +543,16 @@ public:
     ///
     void computeIntersections();
 
-    /// Returns the computed point intersections.
+    /// Returns the computed intersection points.
     ///
-    const core::Array<PointIntersection>& pointIntersections() const {
-        return output_.pointIntersections;
+    const core::Array<Vertex>& intersectionPoints() const {
+        return output_.intersectionPoints;
+    };
+
+    /// Returns the computed intersection subsegments.
+    ///
+    const core::Array<Edge>& intersectionSubsegments() const {
+        return output_.intersectionSubsegments;
     };
 
     /// Returns which polyline contains the given segment.
@@ -453,10 +649,121 @@ struct InputData {
 
 template<typename T>
 struct OutputData {
-    core::Array<PointIntersection<T>> pointIntersections;
+    core::Array<Vertex<T>> vertices;
+    core::Array<Edge<T>> edges;
+
+    // Subset of vertices with more than one vertex-segment
+    // (where consecutive segments in a polyline are counted as one)
+    //
+    // TODO: reference vertex data instead of making a copy?
+    //
+    core::Array<Vertex<T>> intersectionPoints;
+
+    // Subset of edges with more than one edge-segment
+    core::Array<Edge<T>> intersectionSubsegments;
 
     void clear() {
-        pointIntersections.clear();
+        vertices.clear();
+        edges.clear();
+        intersectionPoints.clear();
+        intersectionSubsegments.clear();
+    }
+};
+
+// When segments overlap along a shared subsegment,
+// we call them part of the same "overlap group".
+// The union of all the segments in the group is a bigger segment.
+//
+// Formally, an "overlap group" is a connected component of the graph G where
+// each segment is a node, and each pair of overlapping segments is an edge. We
+// compute the groups in O(n) by reporting each edge in O(1) during the plane
+// sweep, then computing its connected components in O(n) at the end of the
+// plane sweep.
+//
+struct OverlapGroups {
+    core::Array<std::pair<SegmentIndex, SegmentIndex>> pairs;
+    core::Array<bool> isRemoved;
+
+    void clear() {
+        pairs.clear();
+    }
+
+    void init(Int numSegments) {
+        clear();
+        isRemoved.assign(numSegments, false);
+    }
+
+    void addOverlappingSegments(SegmentIndex i1, SegmentIndex i2) {
+        pairs.append({i1, i2});
+    }
+
+    void setRemoved(SegmentIndex i1) {
+        isRemoved[i1] = true;
+    }
+};
+
+template<typename Container, typename Proj = c20::identity>
+void sortAndRemoveDuplicates(Container& c, Proj proj = {}) {
+    core::sort(c, [&](const auto& v1, const auto& v2) { return proj(v1) < proj(v2); });
+    core::removeConsecutiveDuplicates(
+        c, [&](const auto& v1, const auto& v2) { return proj(v1) == proj(v2); });
+}
+
+struct SweepEvents {
+    core::Array<SegmentIndex> left;
+    core::Array<SegmentIndex> right;
+    core::Array<SegmentIndex> intersection;
+    core::Array<SegmentIndex> degenerate;
+    core::Array<SegmentIndex> removed;
+
+    void clear() {
+        left.clear();
+        right.clear();
+        intersection.clear();
+        degenerate.clear();
+        removed.clear();
+    }
+
+    template<typename T>
+    void append(const Event<T>& event, const OverlapGroups& groups) {
+        Int segmentIndex = event.segmentIndex;
+        if (groups.isRemoved[segmentIndex]) {
+            removed.append(segmentIndex);
+        }
+        else {
+            switch (event.type) {
+            case EventType::Left:
+                left.append(segmentIndex);
+                break;
+            case EventType::Right:
+                right.append(segmentIndex);
+                break;
+            case EventType::Intersection:
+                intersection.append(segmentIndex);
+                break;
+            case EventType::Degenerate:
+                degenerate.append(segmentIndex);
+                break;
+            }
+        }
+    }
+
+    void sortAndRemoveDuplicates() {
+        detail::sortAndRemoveDuplicates(left);
+        detail::sortAndRemoveDuplicates(right);
+        detail::sortAndRemoveDuplicates(intersection);
+        detail::sortAndRemoveDuplicates(degenerate);
+        detail::sortAndRemoveDuplicates(removed);
+
+        // Note: for simplicy and safety, we remove duplicates for all the
+        // above arrays, although we should be able to prove that `left`,
+        // `right`, and `degenerate` cannot have duplicates.
+        //
+        // However, note that `intersection` (and therefore also `removed`) may
+        // indeed contain duplicates, since two segments s1 and s2 may become
+        // neighbors in sweepSegments (adding their intersection to the queue),
+        // then not neighbor anymore, then neighbor again (re-adding their
+        // intersection to the queue). See [Mount, p26, Fig23].
     }
 };
 
@@ -472,29 +779,37 @@ struct AlgorithmData {
     EventQueue eventQueue;
 
     // The segments that intersect the sweep line, ordered by increasing
-    // y-coords of their intersection with the sweep line.
+    // y-coords of their intersection with the sweep line, and ordered
+    // by slope in case of equality (vertical segments last).
     //
     core::Array<SegmentIndex> sweepSegments;
 
-    // All segments that are intersecting at the current event.
-    //
-    core::Array<PointIntersectionInfo<T>> infos;
-
     // The new segments that must be added (or removed and re-added) to
     // sweepSegments_ when handling an event.
+    //
+    // This is only used as a buffer to minimize memory allocations.
+    // Could be a function-local variable.
     //
     core::Array<SegmentIndex> outgoingSegments;
 
     // The list of all events that correspond to the same position while
     // processing the next event.
     //
-    core::Array<Event<T>> sweepEvents;
+    // This is only used as a buffer to minimize memory allocations.
+    // Could be a function-local variable.
+    //
+    SweepEvents sweepEvents;
+
+    // Handling of segments that overlap along a subsegment.
+    //
+    OverlapGroups overlapGroups;
 
     void clear() {
         VGC_ASSERT(eventQueue.empty()); // priority_queue has no clear() method
         sweepSegments.clear();
         outgoingSegments.clear();
         sweepEvents.clear();
+        overlapGroups.clear();
     }
 };
 
@@ -656,8 +971,13 @@ void initializeEventQueue(InputData<T>& in, AlgorithmData<T>& alg) {
     Int numSegments = in.segments.length();
     for (Int i = 0; i < numSegments; ++i) {
         const Segment2<T>& segment = in.segments.getUnchecked(i);
-        alg.eventQueue.push(Event<T>{EventType::Left, segment.a(), i});
-        alg.eventQueue.push(Event<T>{EventType::Right, segment.b(), i});
+        if (segment.isDegenerate()) {
+            alg.eventQueue.push(Event<T>{EventType::Degenerate, segment.a(), i});
+        }
+        else {
+            alg.eventQueue.push(Event<T>{EventType::Left, segment.a(), i});
+            alg.eventQueue.push(Event<T>{EventType::Right, segment.b(), i});
+        }
     }
 }
 
@@ -686,6 +1006,12 @@ void initializeEventQueue(InputData<T>& in, AlgorithmData<T>& alg) {
 template<typename T>
 void initializeSweepSegments(AlgorithmData<T>& alg) {
     alg.sweepSegments.clear();
+}
+
+template<typename T>
+void initializeOverlapGroups(InputData<T>& in, AlgorithmData<T>& alg) {
+    Int numSegments = in.segments.length();
+    alg.overlapGroups.init(numSegments);
 }
 
 // Get the next event and all events sharing the same position. We call these
@@ -732,69 +1058,17 @@ void initializeSweepSegments(AlgorithmData<T>& alg) {
 //
 template<typename T>
 Vec2<T> getNextEvent(AlgorithmData<T>& alg) {
-    Event firstEvent = alg.eventQueue.top();
+    Event<T> firstEvent = alg.eventQueue.top();
     alg.eventQueue.pop();
     Vec2<T> position = firstEvent.position;
     alg.sweepEvents.clear();
-    alg.sweepEvents.append(firstEvent);
+    alg.sweepEvents.append(firstEvent, alg.overlapGroups);
     while (!alg.eventQueue.empty() && alg.eventQueue.top().position == position) {
-        alg.sweepEvents.append(alg.eventQueue.top());
+        alg.sweepEvents.append(alg.eventQueue.top(), alg.overlapGroups);
         alg.eventQueue.pop();
     }
+    alg.sweepEvents.sortAndRemoveDuplicates();
     return position;
-}
-
-template<typename T>
-struct PartitionedSweepEvents {
-    using Iterator = typename core::Array<Event<T>>::iterator;
-
-    Iterator it1;
-    Iterator it2;
-    Iterator it3;
-    Iterator it4;
-
-    // Left events
-    core::ConstSpan<Event<T>> left() const {
-        return {it1, it2};
-    }
-
-    // Right events
-    core::ConstSpan<Event<T>> right() const {
-        return {it2, it3};
-    }
-
-    // Intersection events
-    core::ConstSpan<Event<T>> intersection() const {
-        return {it3, it4};
-    }
-};
-
-// Classify events into Left, Right, Intersection.
-//
-// This implementation works because the event type is part of the priority,
-// with Left < Right < Intersection.
-//
-// Invariants:
-// - res.left() does not contain duplicates
-// - res.right() does not contain duplicates
-//
-// However, res.intersection() may contain duplicates, since two segments s1
-// and s2 may become neighbors in alg.sweepSegments (adding their intersection
-// to the queue), then not neighbor anymore, then neighbor again (re-adding
-// their intersection to the queue). See [Mount, p26, Fig23].
-//
-template<typename T>
-PartitionedSweepEvents<T> partitionSweepEvents(AlgorithmData<T>& alg) {
-    PartitionedSweepEvents<T> res;
-    res.it1 = alg.sweepEvents.begin();
-    res.it4 = alg.sweepEvents.end();
-    res.it2 = std::find_if(res.it1, res.it4, [](const Event<T>& event) {
-        return event.type > EventType::Left; // find first event not Left
-    });
-    res.it3 = std::find_if(res.it2, res.it4, [](const Event<T>& event) {
-        return event.type > EventType::Right; // find first event not Left or Right
-    });
-    return res;
 }
 
 // Function object that determines whether a position is above or below a given
@@ -849,15 +1123,15 @@ struct PartitionedSweepSegments {
 // Extend pSegments.contain() to ensures that it contains all
 // segments in the given events. Indeed:
 //
-// 1. The segments in pEvents.intersection() are supposed to all be
+// 1. The segments in sweepEvents.intersection are supposed to all be
 // in res.contain(), but in practice, they almost never are due to
 // numerical errors. Indeed, with p = intersection(seg1, seg2),
 // then most often orientation(seg1.a(), seg1.b(), p) != 0.
 //
-// 2. The segments in pEvents.right() are also supposed to all be in
+// 2. The segments in sweepEvents.right are also supposed to all be in
 // res.contain(), and in most cases they indeed are, since orientation(seg.a(),
 // seg.b(), seg.b()) == 0. However, due to numerical errors, it might be
-// possible (i.e., we haven't proven otherwise) that sweepEvents is not
+// possible (i.e., we haven't proven otherwise) that sweepSegments is not
 // perfectly "partitioned" according to the geometric predidate "is `position`
 // above or below the given segment", as required by the `equal_range` binary
 // search algorithm:
@@ -874,24 +1148,23 @@ struct PartitionedSweepSegments {
 //                         v  vvvvvvvvvvvvvvvvvvvvv
 // [-1, -1, -1, -1, 0, 0, +1, 0, +1, +1, +1, +1, +1]
 //                  ^^^^      ^
-//              result of     segment in pEvents.right(),
+//              result of     segment in sweepEvents.right(),
 //              equal_range   missed by equal_range
 //
 // Note: this step makes the algorithm O(n²) if all segments intersect at the
 // same point. This should be rare, but we could make it (n+k)log(n) again by
-// first sorting pEvents.intersection(), pEvents.right(), and res.contain() by
+// first sorting sweepEvents.intersection, sweepEvents.right, and res.contain() by
 // segment index and using std::set_difference. But this is going to make the
 // algorithm slower in the typical case when there at most 2 intersection
 // events, or 2 left/right events. A solution might be to use sorting only if
-// we detect pEvents.length() > someThreshold.
+// we detect sweepEvents.numEvents() > someThreshold.
 //
-template<typename T>
 void extendContainSegments(
     PartitionedSweepSegments& pSegments,
-    core::ConstSpan<Event<T>> events) {
+    core::ConstSpan<SegmentIndex> eventSegments) {
 
-    for (const Event<T>& event : events) {
-        if (!pSegments.contain().contains(event.segmentIndex)) {
+    for (SegmentIndex segmentIndex : eventSegments) {
+        if (!pSegments.contain().contains(segmentIndex)) {
             auto it2 = pSegments.it2;
             auto it3 = pSegments.it3;
             bool found = false;
@@ -900,7 +1173,7 @@ void extendContainSegments(
                 // Extend the search [it2, it3) by one segment to the left
                 if (it2 != pSegments.it1) {
                     --it2;
-                    if (*it2 == event.segmentIndex) {
+                    if (*it2 == segmentIndex) {
                         pSegments.it2 = it2;
                         found = true;
                         break;
@@ -908,9 +1181,9 @@ void extendContainSegments(
                 }
                 // Extend the search [it2, it3) by one segment to the right
                 if (it3 != pSegments.it4) {
-                    Int segmentIndex = *it3; // before increment as range is semi-open
+                    Int it3_ = *it3; // before increment as range is semi-open
                     ++it3;
-                    if (segmentIndex == event.segmentIndex) {
+                    if (it3_ == segmentIndex) {
                         pSegments.it3 = it3;
                         found = true;
                         break;
@@ -925,8 +1198,8 @@ void extendContainSegments(
 #ifdef VGC_DEBUG_BUILD
                 VGC_WARNING(
                     LogVgcGeometry,
-                    "Segment from event {} not found in sweep segments.",
-                    event);
+                    "Segment {} not found in sweep segments.",
+                    segmentIndex);
 #endif
             }
         }
@@ -943,14 +1216,14 @@ void extendContainSegments(
 // - the segment that contain the position (res.contain())
 // - the segment that are above the position (res.above())
 //
-// Also, in theory, all segments in pEvents.intersection() and pEvents.right()
+// Also, in theory, all segments in sweepEvents.intersection and sweepEvents.right
 // contain `position`, so they should be in res.contain() after the binary
 // search.
 //
 // In practice, due to numerical errors, the binary search alone may not
 // guarantee all the above. Therefore, it is followed by an additional step
 // that extends res.contain() to at least enforce that it is a superset of
-// pEvents.intersection() and pEvents.right(). This allows to prove that even
+// sweepEvents.intersection and sweepEvents.right. This allows to prove that even
 // with numerical errors, we have the following basic guarantees:
 //
 // 1. The algorithm terminates
@@ -964,32 +1237,28 @@ void extendContainSegments(
 // the intersecting segments.
 //
 template<typename T>
-PartitionedSweepSegments partitionSweepSegments(
-    InputData<T>& in,
-    AlgorithmData<T>& alg,
-    const Vec2<T>& position,
-    const PartitionedSweepEvents<T>& pEvents) {
-
+PartitionedSweepSegments
+partitionSweepSegments(InputData<T>& in, AlgorithmData<T>& alg, const Vec2<T>& position) {
     ComparePositionWithSegment<T> comp{in.segments};
     PartitionedSweepSegments res;
     res.it1 = alg.sweepSegments.begin();
     res.it4 = alg.sweepSegments.end();
     std::tie(res.it2, res.it3) = std::equal_range(res.it1, res.it4, position, comp);
-    extendContainSegments(res, pEvents.intersection());
-    extendContainSegments(res, pEvents.right());
+    extendContainSegments(res, alg.sweepEvents.intersection);
+    extendContainSegments(res, alg.sweepEvents.right);
     return res;
 }
 
 // Returns `1 - t` if the segment is reversed, otherwise returns `t`.
 template<typename T>
-T maybeReverseParam(InputData<T>& in, SegmentIndex i, core::TypeIdentity<T> t) {
+T maybeReverseParam(const InputData<T>& in, SegmentIndex i, core::TypeIdentity<T> t) {
     return in.isReversed[i] ? (1 - t) : t;
 }
 
 // Computes the parameter in [0, 1] that corresponds to the given
 // position along the given segment
 template<typename T>
-T computeParam(InputData<T>& in, SegmentIndex i, const Vec2<T>& position) {
+T computeParam(const InputData<T>& in, SegmentIndex i, const Vec2<T>& position) {
     const Segment2<T>& segment = in.segments[i];
     T dx = segment.bx() - segment.ax(); // >= 0
     T dy = segment.by() - segment.ay();
@@ -1016,71 +1285,54 @@ T computeParam(InputData<T>& in, SegmentIndex i, const Vec2<T>& position) {
 //   - 1+ Left events or 1+ Right events, and
 //   - 2+ segments in pSegments.contain()
 //
-// Note that the segments in pEvents.right() and pEvents.intersection()
-// are all in pSegments.contain(), but the segments in pEvents.left()
+// Note that the segments in sweepEvents.right and sweepEvents.intersection
+// are all in pSegments.contain(), but the segments in sweepEvents.left
 // are not, since they have not yet been added to the sweep segments.
 //
+
 template<typename T>
-void reportIntersections(
-    InputData<T>& in,
+void createVertex(
     AlgorithmData<T>& alg,
     OutputData<T>& out,
     const Vec2<T>& position,
-    const PartitionedSweepEvents<T>& pEvents,
     const PartitionedSweepSegments& pSegments) {
 
-    // Retrieve the list of segments that intersect at the event position. For
-    // now we initialize the param to 0 as there might no need to compute it
-    // due to fast returns when n <= 2.
-    //
-    PointIntersectionIndex interIndex = out.pointIntersections.length();
-    alg.infos.clear();
-    for (SegmentIndex i : pSegments.contain()) {
-        alg.infos.append(PointIntersectionInfo<T>{interIndex, i, 0});
-    }
-    for (const Event<T>& event : pEvents.left()) {
-        alg.infos.append(PointIntersectionInfo<T>{interIndex, event.segmentIndex, 0});
-    }
+    VertexIndex vertexIndex = out.vertices.length();
 
-    // There is no intersection if there is only one segment at the event
-    // position. This means we are at an isolated left endpoint or right
-    // endpoint of a segment.
+    // Retrieve the list of segments that are incident to or intersect at the
+    // event position. For now we initialize the param to 0, since we compute
+    // it as a post-processing step.
     //
-    if (alg.infos.length() <= 1) {
-        return;
-    }
-
-    // Discard the intersection if it only involves two segments, and they are
-    // consecutive segments of the same polyline, intersecting at their
-    // expected shared endpoint.
+    // Note that it is important to add the segments in alg.sweepEvents.removed
+    // too. It makes sure that we create a vertex for all segment endpoints and
+    // it provides a strong guarantee (even in the presence of numerical
+    // errors) that segments that share their endpoints are reported as sharing
+    // the same vertex. Example configurations where this is relevant:
     //
-    // Note that if there is another segment intersecting there as well,
-    // we do want to report the intersection.
+    //   o----------o
+    //         o----------o
     //
-    if (alg.infos.length() == 2) {
-        // TODO: what if consecutive segments overlap along a subsegment?
-        SegmentIndex i1 = alg.infos.first().segmentIndex();
-        SegmentIndex i2 = alg.infos.last().segmentIndex();
-        PolylineIndex j = in.segmentPolylines[i1];
-        if (j >= 0 && in.segmentPolylines[i2] == j) {
-            if (i2 < i1) {
-                std::swap(i1, i2);
-            }
-            if (i2 == i1 + 1) {
-                return;
-            }
-            const PolylineInfo& info = in.polylines[j];
-            if (info.isClosed && i1 == info.first && i2 == info.last - 1) {
-                return;
-            }
+    //                o
+    //               /
+    //   o----------o
+    //         o----------o
+    //
+    core::Array<VertexSegment<T>> vertexSegments; // TODO: minimize allocations
+    auto appendAll = [&](const auto& range) {
+        for (SegmentIndex i : range) {
+            vertexSegments.append(VertexSegment<T>{vertexIndex, i, 0});
         }
-    }
+    };
+    appendAll(pSegments.contain());
+    appendAll(alg.sweepEvents.left);
+    appendAll(alg.sweepEvents.right);
+    appendAll(alg.sweepEvents.intersection);
+    appendAll(alg.sweepEvents.degenerate);
+    appendAll(alg.sweepEvents.removed);
+    sortAndRemoveDuplicates(vertexSegments, [](auto& v) { return v.segmentIndex(); });
 
-    // Compute the parameters and report the intersection
-    for (PointIntersectionInfo<T>& info : alg.infos) {
-        info.setParameter(computeParam(in, info.segmentIndex(), position));
-    }
-    out.pointIntersections.append(PointIntersection<T>(position, alg.infos));
+    // Create the vertex
+    out.vertices.append(Vertex<T>(position, std::move(vertexSegments)));
 }
 
 // Find which segments are outgoing at the position. These will
@@ -1091,13 +1343,14 @@ void computeOutgoingSegments(
     InputData<T>& in,
     AlgorithmData<T>& alg,
     const Vec2<T>& position,
-    const PartitionedSweepEvents<T>& pEvents,
     const PartitionedSweepSegments& pSegments) {
 
-    // It is guaranteed to have no duplicates since alg.sweepSegments does
-    // not have duplicates (hence its subspan containSegments does not
-    // have duplicate either) and all the segments in pEvents.left() have
-    // never been added to the event queue yet.
+    // Add to outgoingSegments all segments in pSegments.contain()
+    // which are not ending at the position.
+    //
+    // This is guaranteed to have no duplicates since alg.sweepSegments does
+    // not have duplicates and pSegments.contain() is a subspan of
+    // alg.sweepSegments.
     //
     alg.outgoingSegments.clear();
     for (SegmentIndex i : pSegments.contain()) {
@@ -1110,21 +1363,16 @@ void computeOutgoingSegments(
             // and we will therefore remove it from alg.sweepSegments
         }
     }
-    for (const Event<T>& event : pEvents.left()) {
-        SegmentIndex i = event.segmentIndex;
-        const Segment2<T>& segment = in.segments.getUnchecked(i);
-        if (!segment.isDegenerate()) {
-            alg.outgoingSegments.append(i);
-        }
-        else {
-            // This means the segment was reduced to a point
-            // and was both a Left
-            // and Right event. We never add it to alg.sweepSegments.
-            //
-            // TODO: correcly report intersections between degenerate
-            // segments and other segments, including when two degenerate
-            // segments are equal, we should report them as intersecting.
-        }
+
+    // Add to outgoingSegments all segments in Left events.
+    //
+    // This is guaranteed to not create duplicates since all the segments in
+    // pEvents.left() have never been added to the event queue yet.
+    //
+    // Note: it is important not to add degenerate segments to outgoingSegments.
+    //
+    for (SegmentIndex i : alg.sweepEvents.left) {
+        alg.outgoingSegments.append(i);
     }
 
     // Sort outgoing segments by increasing slope, which correspond to their
@@ -1136,6 +1384,42 @@ void computeOutgoingSegments(
         [&slopes = in.segmentSlopes](SegmentIndex i1, SegmentIndex i2) {
             return slopes.getUnchecked(i1) < slopes.getUnchecked(i2);
         });
+
+    // Find if there are overlapping segment among the outgoing segments. They
+    // are those with the same slope, but due to numerical errors, we do not
+    // rely on slope but on our robust intersection test for this. However, we
+    // do rely on them being sorted by slope so that we only have to test
+    // consecutive segment pairs.
+    //
+    for (Int j = 1; j < alg.outgoingSegments.length(); ++j) {
+        SegmentIndex i1 = alg.outgoingSegments.getUnchecked(j - 1);
+        SegmentIndex i2 = alg.outgoingSegments.getUnchecked(j);
+        const Segment2<T>& s1 = in.segments.getUnchecked(i1);
+        const Segment2<T>& s2 = in.segments.getUnchecked(i2);
+        SegmentIntersection2<T> inter = s1.intersect(s2);
+        if (inter.type() == SegmentIntersectionType::Segment) {
+
+            // Report that s1 and s2 overlap. These are post-processed after
+            // the plane sweep to add all the relevant intersection to the
+            // output structures.
+            //
+            alg.overlapGroups.addOverlappingSegments(i1, i2);
+
+            // Only keep the segment that extend further to the right of the
+            // sweep line (or in case of vertical segments, the segment that
+            // extend further to the top along the sweep line).
+            //
+            if (s2.b() > s1.b()) {
+                alg.overlapGroups.setRemoved(i1);
+                alg.outgoingSegments.removeAt(j - 1);
+            }
+            else {
+                alg.overlapGroups.setRemoved(i2);
+                alg.outgoingSegments.removeAt(j);
+            }
+            --j;
+        }
+    }
 }
 
 // Compute the intersection between the two given segments, and add it to the
@@ -1159,7 +1443,33 @@ void findNewIntersection(
             alg.eventQueue.push(Event<T>{EventType::Intersection, inter.p(), i2});
         }
     }
-    // TODO: SegmentIntersectionType::Segment
+    else if (inter.type() == SegmentIntersectionType::Segment) {
+
+        // In theory, it is impossible to get an intersection of type Segment,
+        // since one of the segment (say, s1) pass through the event position
+        // p, while the other (s2) does not. More precisely:
+        //
+        // - If they have different slopes:
+        //     They either don't intersect or intersect at a point
+        //
+        // - If both have the same slope:
+        //   - If they are non-vertical, then they are parallel non-intersecting
+        //   - If they are vertical, s2 is either entirely below p, in which case
+        //     it is not anymore in sweepSegments, or s2 is entirely above p, in
+        //     which case it is not yet in p
+        //
+        // In practice, due to numerical, it might possibly happen?
+        // For now we simply ignore this.
+        //
+#ifdef VGC_DEBUG_BUILD
+        VGC_WARNING(
+            LogVgcGeometry,
+            "Intersection of type Segment found between {} and {} at event position {}.",
+            s1,
+            s2,
+            position);
+#endif
+    }
 }
 
 // Compute intersection between segments that have just become neighbors in
@@ -1202,22 +1512,33 @@ void processNextEvent(InputData<T>& in, AlgorithmData<T>& alg, OutputData<T>& ou
 
     // Pop the next event from the event queue, as well as all subsequent
     // events sharing the same position. Store them in alg.sweepEvents.
+    //
+    // Note that it's possible that all segments in alg.sweepEvents are
+    // `removed`. In this case, once might be tempted to fast-return here, but
+    // we should not do it since some of the following steps actually need to
+    // process these removed segments (and other steps are basically no-op in
+    // this case, so they're fast).
+    //
     Vec2<T> position = getNextEvent(alg);
 
-    // Partition the events into Left, Right, and Intersection events.
-    PartitionedSweepEvents pEvents = partitionSweepEvents(alg);
-
     // Partition the sweep segments into those that are below, above, or
-    // contain the event position. We guarantee that segments corresponding
-    // to Intersection events are within pSegments.contain().
-    PartitionedSweepSegments pSegments =
-        partitionSweepSegments(in, alg, position, pEvents);
+    // contain the event position. We guarantee that segments corresponding to
+    // Intersection and Right events are within pSegments.contain(), unless the
+    // segment is not in sweepSegments at all (which is in theory impossible,
+    // but can happen due to numerical errors).
+    //
+    PartitionedSweepSegments pSegments = partitionSweepSegments(in, alg, position);
 
-    // Report intersections
-    reportIntersections(in, alg, out, position, pEvents, pSegments);
+    // Compute which segments are outgoing at the given position.
+    //
+    // This also computes which segments overlap and only keep
+    // one representative per overlap group (the one that extends
+    // further to the right).
+    //
+    computeOutgoingSegments(in, alg, position, pSegments);
 
-    // Compute which segments are outgoing at the given position
-    computeOutgoingSegments(in, alg, position, pEvents, pSegments);
+    // Create the vertex corresponding to this event's position
+    createVertex(alg, out, position, pSegments);
 
     // Remove ingoing segments and add outgoing segments.
     // This invalidates previous iterators and spans stored in pSegments.
@@ -1232,12 +1553,416 @@ void processNextEvent(InputData<T>& in, AlgorithmData<T>& alg, OutputData<T>& ou
 }
 
 template<typename T>
+class FlatMultiList;
+
+template<typename T>
+class FlatMultiListInnerView;
+
+template<typename T>
+class FlatMultiListInnerIterator {
+public:
+    using difference_type = std::ptrdiff_t;
+    using value_type = T;
+    using pointer = T*;
+    using reference = T&;
+    using iterator_category = std::forward_iterator_tag;
+
+    // Constructs a sentinel.
+    FlatMultiListInnerIterator() {
+    }
+
+    pointer operator->() const {
+        return &(f_->data_[i_]);
+    }
+
+    reference operator*() const {
+        return f_->data_[i_];
+    }
+
+    bool operator==(const FlatMultiListInnerIterator& other) const {
+        return other.i_ == i_;
+    }
+
+    bool operator!=(const FlatMultiListInnerIterator& other) const {
+        return other.i_ != i_;
+    }
+
+    FlatMultiListInnerIterator& operator++() {
+        i_ = f_->next_[i_];
+        return *this;
+    }
+
+    FlatMultiListInnerIterator operator++(int) {
+        FlatMultiListInnerIterator copy = *this;
+        i_ = f_->next_[i_];
+        return copy;
+    }
+
+private:
+    friend FlatMultiList<std::remove_cv_t<T>>;
+    friend FlatMultiListInnerView<T>;
+
+    FlatMultiList<T>* f_ = nullptr;
+    Int i_ = -1;
+
+    FlatMultiListInnerIterator(FlatMultiList<T>* f, Int i)
+        : f_(f)
+        , i_(i) {
+    }
+};
+
+static_assert(c20::forward_iterator<FlatMultiListInnerIterator<Int>>);
+
+template<typename T>
+class FlatMultiListInnerView
+    : public c20::ranges::view_interface<FlatMultiListInnerView<T>> {
+
+public:
+    FlatMultiListInnerIterator<T> begin() const {
+        return begin_;
+    }
+
+    FlatMultiListInnerIterator<T> end() const {
+        return FlatMultiListInnerIterator<T>{};
+    }
+
+    bool isEmpty() const {
+        return begin_.i_ == -1;
+    }
+
+private:
+    friend FlatMultiList<std::remove_cv_t<T>>;
+
+    FlatMultiListInnerIterator<T> begin_;
+
+    explicit FlatMultiListInnerView(FlatMultiListInnerIterator<T> begin)
+        : begin_(begin) {
+    }
+};
+
+// Alternative to Array<Array<T>> that minimizes allocations by storing
+// all elements contiguously in memory.
+//
+template<typename T>
+class FlatMultiList {
+public:
+    FlatMultiList(Int outerLength = 0) {
+        outerResize(outerLength);
+    }
+
+    // Returns the number of lists in this multi-list.
+    //
+    Int outerLength() {
+        return lists_.length();
+    }
+
+    // Removes all data.
+    // After calling this function, outerLength() is zero.
+    //
+    void outerClear() {
+        data_.clear();
+        next_.clear();
+        lists_.clear();
+    }
+
+    // Changes the number of lists in this multi-list to the equal
+    // to the given `outerLength`.
+    //
+    void outerResize(Int outerLength) {
+        lists_.resize(outerLength);
+    }
+
+    // Adds an empty list to this multi-list.
+    //
+    void outerAppend() {
+        lists_.append({});
+    }
+
+    // Removes all data in the inner lists.
+    // This keeps outerLength() unchanged.
+    //
+    void clearInner() {
+        data_.clear();
+        next_.clear();
+        lists_.assign(outerLength(), {});
+    }
+
+    // Appends an element to the end of the list at index `outerIndex`.
+    //
+    void innerAppend(Int outerIndex, T x) {
+        List& list = lists_[outerIndex];
+        Int index = data_.length();
+        data_.append(std::move(x));
+        next_.append(-1);
+        if (list.last == -1) {
+            list.first = index;
+        }
+        else {
+            next_[list.last] = index;
+        }
+        list.last = index;
+    }
+
+    // Returns a view to the list at index `outerIndex`.
+    //
+    FlatMultiListInnerView<T> operator[](Int outerIndex) {
+        auto begin = FlatMultiListInnerIterator<T>(this, lists_[outerIndex].first);
+        return FlatMultiListInnerView<T>(begin);
+    }
+
+private:
+    friend FlatMultiListInnerIterator<T>;
+
+    struct List {
+        Int first = -1; // index to first item, or -1 if the list is empty
+        Int last = -1;  // index to last item, or -1 if the list is empty
+    };
+
+    core::Array<T> data_;
+    core::Array<Int> next_;
+    core::Array<List> lists_;
+};
+
+// During the plane sweep, each time we detect two segments that overlap, we
+// add their indices (i1, i2) to overlapGroups.pairs, and only keep one of them
+// (the one that extend further to the right) in sweepSegments and eventQueue.
+//
+// These pairs (i1, i2) form an undirected graph between segments, where each
+// connected component of size >= 2 is what we call an "overlap group".
+//
+// In this function, we compute these overlap groups, and process them to
+// create all remaining VertexSegment that were not created during the plane
+// sweep due to the overlapping segments being removed from the data structure.
+//
+template<typename T>
+void postProcessOverlappingSegments(
+    InputData<T>& in,
+    AlgorithmData<T>& alg,
+    OutputData<T>& out) {
+
+    // Fast return if there are no overlapping segments
+    if (alg.overlapGroups.pairs.isEmpty()) {
+        return;
+    }
+
+    // Convert the graph representation from edge pairs to adjacency lists.
+    //
+    Int numSegments = in.segments.length();
+    FlatMultiList<SegmentIndex> adj(numSegments);
+    for (const auto& [i1, i2] : alg.overlapGroups.pairs) {
+        adj.innerAppend(i1, i2);
+        adj.innerAppend(i2, i1);
+    }
+
+    // Compute groups as connected components of the graph.
+    // Isolated segments (not part of an overlap group) are assigned group -1.
+    //
+    using GroupIndex = Int;
+    core::Array<GroupIndex> segmentGroup(numSegments, -1); // SegmentIndex -> GroupIndex
+    core::Array<SegmentIndex> stack;                       // For depth-first visit
+    FlatMultiList<SegmentIndex> groupSegments;
+    for (SegmentIndex i = 0; i < numSegments; ++i) {
+
+        // If segment i is not yet assigned a group but has segment overlaps,
+        // then find all segments in the overlap group and assign them a group.
+        //
+        if (segmentGroup[i] == -1 && !adj[i].isEmpty()) {
+            GroupIndex groupIndex = groupSegments.outerLength();
+            groupSegments.outerAppend();
+            segmentGroup[i] = groupIndex;
+            stack.append(i);
+            while (!stack.isEmpty()) {
+                SegmentIndex j = stack.pop();
+                groupSegments.innerAppend(groupIndex, j);
+                for (SegmentIndex k : adj[j]) {
+                    if (segmentGroup[k] == -1) {
+                        segmentGroup[k] = groupIndex;
+                        stack.append(k);
+                    }
+                }
+            }
+        }
+    }
+    Int numGroups = groupSegments.outerLength();
+
+    // Compute which vertices are contained in each overlap group.
+    //
+    FlatMultiList<SegmentIndex> groupVertices(numGroups);
+    for (const Vertex<T>& v : out.vertices) {
+        for (const VertexSegment<T>& vs : v.segments()) {
+            SegmentIndex segmentIndex = vs.segmentIndex();
+            GroupIndex groupIndex = segmentGroup[segmentIndex];
+            if (groupIndex != -1) {
+                VertexIndex vertexIndex = vs.vertexIndex();
+                if (!core::contains(groupVertices[groupIndex], vertexIndex)) {
+                    groupVertices.innerAppend(groupIndex, vertexIndex);
+                }
+            }
+        }
+    }
+
+    // For each segment part of an overlap group and each vertex in this group,
+    // create a VertexSegment if the vertex is geometrically contained in the
+    // segment.
+    //
+    // This corresponds to incidence relationships that were "missed" during
+    // the plane sweep due to overlapping segments being removed.
+    //
+    // TODO: Improve time complexity by sorting the groupVertices and
+    // groupSegments in xy-lexicographical order. This is why this
+    // loop is kept separate from the one above.
+    //
+    for (Int groupIndex = 0; groupIndex < numGroups; ++groupIndex) {
+        for (SegmentIndex segmentIndex : groupSegments[groupIndex]) {
+            const Segment2<T>& segment = in.segments[segmentIndex];
+            for (VertexIndex vertexIndex : groupVertices[groupIndex]) {
+                Vertex<T>& vertex = out.vertices[vertexIndex];
+                const Vec2<T>& position = vertex.position();
+                if (segment.a() <= position && position < segment.b()) {
+                    auto proj = [](const auto& vs) { return vs.segmentIndex(); };
+                    if (!c26::ranges::contains(vertex.segments(), segmentIndex, proj)) {
+                        VertexAccess<T>::segments(vertex).append(
+                            VertexSegment<T>{vertexIndex, segmentIndex, 0});
+                    }
+                }
+            }
+        }
+    }
+}
+
+template<typename T>
+void createEdges(InputData<T>& in, OutputData<T>& out) {
+
+    // Compute which vertices are contained in each segment.
+    //
+    // Note 1: we might actually want to expose that in the output structure.
+    //
+    // Note 2: all vertices are already xy-lex-ordered, since they are index-ordered
+    // and created at events during the plane sweep.
+    //
+    Int numSegments = in.segments.length();
+    FlatMultiList<VertexIndex> segmentVertices(numSegments);
+    for (const Vertex<T>& v : out.vertices) {
+        for (const VertexSegment<T>& vs : v.segments()) {
+            segmentVertices.innerAppend(vs.segmentIndex(), vs.vertexIndex());
+        }
+    }
+
+    // Create all edges by iterating over all segments, and splitting them
+    // along their contained vertices.
+    //
+    using VertexIndexPair = std::pair<VertexIndex, VertexIndex>;
+    using VertexIndexPairHash = core::hashStdPair<VertexIndex, VertexIndex>;
+    std::unordered_map<VertexIndexPair, EdgeIndex, VertexIndexPairHash> pmap;
+    for (SegmentIndex segmentIndex = 0; segmentIndex < numSegments; ++segmentIndex) {
+        VertexIndex i1 = -1;
+        for (VertexIndex i2 : segmentVertices[segmentIndex]) {
+            if (i1 != -1) {
+                const Vec2<T>& v1 = out.vertices[i1].position();
+                const Vec2<T>& v2 = out.vertices[i2].position();
+                EdgeIndex edgeIndex = out.edges.length();
+                auto [it, inserted] =
+                    pmap.try_emplace(VertexIndexPair(i1, i2), edgeIndex);
+                if (inserted) {
+                    // Create the edge if it's the first occurence of (i1, i2)
+                    out.edges.append(Edge<T>(i1, i2, Segment2<T>(v1, v2)));
+                }
+                else {
+                    edgeIndex = it->second;
+                }
+                Edge<T>& edge = out.edges[edgeIndex];
+
+                // Add the EdgeSegment incidence relationship to the edge
+                T p1 = computeParam(in, segmentIndex, v1);
+                T p2 = computeParam(in, segmentIndex, v2);
+                core::Array<EdgeSegment<T>>& edgeSegments = EdgeAccess<T>::segments(edge);
+                edgeSegments.append(EdgeSegment<T>{edgeIndex, segmentIndex, p1, p2});
+            }
+            i1 = i2;
+        }
+    }
+
+    // Create intersectionSubsegments as the subset of edges that are
+    // contained in two or more segments.
+    //
+    for (const Edge<T>& e : out.edges) {
+        if (e.segments().length() > 1) {
+            out.intersectionSubsegments.append(e);
+        }
+    }
+}
+
+// Returns whether the given vertex should be considered as an intersection
+// point, which means that it has two or more VertexSegments, where consecutive
+// segments in a polyline count as one.
+//
+// Note that if two consecutive segments of a polyline overlap along a
+// subsegment, the overlap should be reported as an intersection subsegment,
+// but the shared endpoint itself should not be reported as an intersection
+// point.
+//
+// Example:
+//
+//            o p3
+//           /             p0p1 and p1p2 should be reported as overlapping, but
+//       p2 o------.       p1 should not be reported as an intersection point
+//    o-------------o
+//    p0            p1
+//
+template<typename T>
+bool isIntersectionPoint(const InputData<T>& in, const Vertex<T>& v) {
+    if (v.segments().length() <= 1) {
+        return false;
+    }
+    else if (v.segments().length() == 2) {
+        SegmentIndex i1 = v.segments().first().segmentIndex();
+        SegmentIndex i2 = v.segments().last().segmentIndex();
+        PolylineIndex j = in.segmentPolylines[i1];
+        if (j >= 0 && in.segmentPolylines[i2] == j) {
+            if (i2 < i1) {
+                std::swap(i1, i2);
+            }
+            if (i2 == i1 + 1) {
+                return false;
+            }
+            const PolylineInfo& info = in.polylines[j];
+            if (info.isClosed && i1 == info.first && i2 == info.last - 1) {
+                return false;
+            }
+        }
+    }
+    return true;
+}
+
+template<typename T>
+void postProcessVertices(const InputData<T>& in, OutputData<T>& out) {
+
+    for (Vertex<T>& v : out.vertices) {
+
+        // Compute the VertexSegment parameter
+        Vec2<T> position = v.position();
+        for (VertexSegment<T>& vs : detail::VertexAccess<T>::segments(v)) {
+            vs.setParameter(computeParam(in, vs.segmentIndex(), position));
+        }
+
+        // Maybe add as intersection point
+        if (isIntersectionPoint(in, v)) {
+            out.intersectionPoints.append(v);
+        }
+    }
+}
+
+template<typename T>
 void computeIntersections(InputData<T>& in, AlgorithmData<T>& alg, OutputData<T>& out) {
     initializeEventQueue(in, alg);
     initializeSweepSegments(alg);
+    initializeOverlapGroups(in, alg);
     while (!alg.eventQueue.empty()) {
         processNextEvent(in, alg, out);
     }
+    postProcessOverlappingSegments(in, alg, out);
+    createEdges(in, out);
+    postProcessVertices(in, out);
 }
 
 } // namespace segmentintersector2::detail
@@ -1278,33 +2003,35 @@ using SegmentIntersector2d = SegmentIntersector2<double>;
 } // namespace vgc::geometry
 
 template<typename T>
-struct fmt::formatter<vgc::geometry::segmentintersector2::PointIntersectionInfo<T>>
+struct fmt::formatter<vgc::geometry::segmentintersector2::VertexSegment<T>>
     : fmt::formatter<std::string_view> {
 
-    using PointIntersectionInfo =
-        vgc::geometry::segmentintersector2::PointIntersectionInfo<T>;
+    using VertexSegment = vgc::geometry::segmentintersector2::VertexSegment<T>;
 
     template<typename FormatContext>
-    auto format(const PointIntersectionInfo& info, FormatContext& ctx) {
+    auto format(const VertexSegment& vs, FormatContext& ctx) {
         return format_to(
             ctx.out(),
-            "{{pointIntersectionIndex={}, segmentIndex={}, param={}}}",
-            info.pointIntersectionIndex(),
-            info.segmentIndex(),
-            info.parameter());
+            "{{vertexIndex={}, segmentIndex={}, param={}}}",
+            vs.vertexIndex(),
+            vs.segmentIndex(),
+            vs.parameter());
     }
 };
 
 template<typename T>
-struct fmt::formatter<vgc::geometry::segmentintersector2::PointIntersection<T>>
+struct fmt::formatter<vgc::geometry::segmentintersector2::Vertex<T>>
     : fmt::formatter<std::string_view> {
 
-    using PointIntersection = vgc::geometry::segmentintersector2::PointIntersection<T>;
+    using Vertex = vgc::geometry::segmentintersector2::Vertex<T>;
 
     template<typename FormatContext>
-    auto format(const PointIntersection& inter, FormatContext& ctx) {
+    auto format(const Vertex& vertex, FormatContext& ctx) {
         return format_to(
-            ctx.out(), "{{position={}, infos={}}}", inter.position(), inter.infos());
+            ctx.out(),
+            "{{position={}, segments={}}}",
+            vertex.position(),
+            vertex.segments());
     }
 };
 
@@ -1323,6 +2050,8 @@ struct fmt::formatter<vgc::geometry::segmentintersector2::detail::EventType>
             return format_to(ctx.out(), "Right");
         case EventType::Intersection:
             return format_to(ctx.out(), "Intersection");
+        case EventType::Degenerate:
+            return format_to(ctx.out(), "Degenerate");
         }
         return ctx.out();
     }
