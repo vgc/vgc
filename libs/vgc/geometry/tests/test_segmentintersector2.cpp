@@ -798,7 +798,7 @@ TEST(TestSegmentIntersector2, Benchmark1k) {
 TEST(TestSegmentIntersector2, Benchmark10k) {
     Vec2dArray polyline10k;
     for (Int i = 0; i < 10; ++i) {
-        Vec2d offset(i * 10, 0);
+        Vec2d offset(vgc::core::narrow_cast<double>(i) * 10, 0);
         for (Vec2d p : polyline1k) {
             polyline10k.append(p + offset);
         }
