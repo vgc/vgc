@@ -79,6 +79,18 @@ ui::BoolSetting* snapping() {
     return setting.get();
 }
 
+ui::BoolSetting* snapVertices() {
+    static ui::BoolSettingPtr setting = ui::BoolSetting::create(
+        ui::settings::session(), "tools.sketch.snapVertices", "Snap Vertices", true);
+    return setting.get();
+}
+
+ui::BoolSetting* snapEdges() {
+    static ui::BoolSettingPtr setting = ui::BoolSetting::create(
+        ui::settings::session(), "tools.sketch.snapEdges", "Snap Edges", true);
+    return setting.get();
+}
+
 ui::NumberSetting* snapDistance() {
     static ui::NumberSettingPtr setting = createDecimalNumberSetting(
         ui::settings::session(),
@@ -200,6 +212,14 @@ bool isAutoIntersectEnabled() {
 
 bool isAutoFillEnabled() {
     return options_::autoFill()->value();
+}
+
+bool isSnapVerticesEnabled() {
+    return options_::snapVertices()->value();
+}
+
+bool isSnapEdgesEnabled() {
+    return options_::snapEdges()->value();
 }
 
 SketchPreprocessing defaultPreprocessing = SketchPreprocessing::QuadraticBlend;
@@ -599,15 +619,50 @@ void Sketch::setSnappingEnabled(bool enabled) {
     options_::snapping()->setValue(enabled);
 }
 
+namespace {
+
+void setVisibility(const ui::WidgetWeakPtr& w, ui::Visibility visibility) {
+    if (auto wl = w.lock()) {
+        wl->setVisibility(visibility);
+    }
+}
+
+struct SnappingSubWidgets {
+    ui::WidgetWeakPtr snapVertices;
+    ui::WidgetWeakPtr snapEdges;
+    ui::WidgetWeakPtr snapDistance;
+    ui::WidgetWeakPtr snapFalloff;
+
+    void setVisibility(bool isVisible) const {
+        ui::Visibility visibility =
+            isVisible ? ui::Visibility::Inherit : ui::Visibility::Invisible;
+        tools::setVisibility(snapVertices, visibility);
+        tools::setVisibility(snapEdges, visibility);
+        tools::setVisibility(snapDistance, visibility);
+        tools::setVisibility(snapFalloff, visibility);
+    }
+};
+
+} // namespace
+
 ui::WidgetPtr Sketch::doCreateOptionsWidget() const {
     ui::WidgetPtr res = ui::Column::create();
     res->createChild<ui::NumberSettingEdit>(options_::penWidth());
     res->createChild<ui::NumberSettingEdit>(options_::widthSmoothing());
+
     res->createChild<ui::BoolSettingEdit>(options_::snapping());
-    res->createChild<ui::NumberSettingEdit>(options_::snapDistance());
-    res->createChild<ui::NumberSettingEdit>(options_::snapFalloff());
+    SnappingSubWidgets ssw;
+    ssw.snapVertices = res->createChild<ui::BoolSettingEdit>(options_::snapVertices());
+    ssw.snapEdges = res->createChild<ui::BoolSettingEdit>(options_::snapEdges());
+    ssw.snapDistance = res->createChild<ui::NumberSettingEdit>(options_::snapDistance());
+    ssw.snapFalloff = res->createChild<ui::NumberSettingEdit>(options_::snapFalloff());
+    ssw.setVisibility(options_::snapping()->value());
+    options_::snapping()->valueChanged().connect(
+        [ssw](bool value) { ssw.setVisibility(value); });
+
     res->createChild<ui::BoolSettingEdit>(options_::autoIntersect());
     res->createChild<ui::BoolSettingEdit>(options_::autoFill());
+
     return res;
 }
 
@@ -669,10 +724,6 @@ bool Sketch::onMousePress(ui::MousePressEvent* event) {
     auto workspaceSelection = context.workspaceSelection();
 
     workspaceSelection->clear();
-
-    // XXX: could be done when not sketching yet but we need to
-    //      do it on undo/redo too. use workspace signal ?
-    initCellInfoArrays_();
 
     isSketching_ = true;
     hasPressure_ = event->hasPressure();
@@ -1065,6 +1116,50 @@ void Sketch::endSnapStartSnappedCleanInputPositions_(geometry::Vec2dArray& resul
 // Note: in the future we may want to have the snapping candidates implemented
 // in canvas to be shared by all tools.
 
+namespace {
+
+bool computeIsSelectable(
+    const canvas::Canvas& canvas,
+    core::Id itemId,
+    const geometry::Vec2d& position,
+    double snapDistance) {
+
+    auto workspace = canvas.workspace().lock();
+    if (!workspace) {
+        return false;
+    }
+
+    core::Array<canvas::SelectionCandidate> occluders =
+        canvas.computeSelectionCandidatesAboveOrAt(
+            itemId,
+            position,
+            snapDistance * core::epsilon,
+            canvas::CoordinateSpace::Workspace);
+
+    for (const canvas::SelectionCandidate& occluder : occluders) {
+        if (occluder.id() == itemId) {
+            return true;
+        }
+        if (workspace::Element* occluderItem = workspace->find(occluder.id())) {
+            if (workspace::VacElement* occluderVacItem = occluderItem->toVacElement()) {
+                if (vacomplex::Cell* occluderCell = occluderVacItem->vacCell()) {
+                    if (occluderCell->spatialType() == vacomplex::CellSpatialType::Face) {
+                        // face are occluders
+                        return false;
+                    }
+                }
+            }
+            else {
+                // not a vac element, let's consider it prevents snapping.
+                return false;
+            }
+        }
+    }
+    return false;
+}
+
+} // namespace
+
 workspace::Element*
 Sketch::computeSnapVertex_(const geometry::Vec2d& position, core::Id tmpVertexItemId) {
 
@@ -1081,75 +1176,128 @@ Sketch::computeSnapVertex_(const geometry::Vec2d& position, core::Id tmpVertexIt
     double zoom = canvas ? canvas->camera().zoom() : 1.0;
     double snapDistance = snapDistanceLength.toPx(styleMetrics()) / zoom;
 
+    // Define data structure to store candidate vertices/edges for snapping
     struct SnapCandidate {
         Int infoIdx;
+        Int dimension;
         double dist;
+        geometry::SampledCurveProjection proj;
 
         bool operator<(const SnapCandidate& rhs) const {
-            return dist < rhs.dist;
+            return std::pair(dimension, dist) < std::pair(rhs.dimension, rhs.dist);
         }
     };
-
     core::Array<SnapCandidate> candidates;
-    for (Int i = 0; i < vertexInfos_.length(); ++i) {
-        const VertexInfo& info = vertexInfos_[i];
-        if (info.itemId == tmpVertexItemId) {
-            continue;
-        }
-        double d = (info.position - position).length();
-        if (d < snapDistance) {
-            SnapCandidate& candidate = candidates.emplaceLast();
-            candidate.infoIdx = i;
-            candidate.dist = d;
-        }
-    }
-    std::sort(candidates.begin(), candidates.end());
 
-    for (const SnapCandidate& candidate : candidates) {
-        VertexInfo& info = vertexInfos_[candidate.infoIdx];
-        auto vertexItem =
-            dynamic_cast<workspace::VacVertexCell*>(workspace->find(info.itemId));
-        if (!vertexItem) {
-            continue;
-        }
-        if (!info.isSelectable.has_value()) {
-            core::Array<canvas::SelectionCandidate> occluders =
-                canvas->computeSelectionCandidatesAboveOrAt(
-                    info.itemId,
-                    info.position,
-                    snapDistance * core::epsilon,
-                    canvas::CoordinateSpace::Workspace);
-            bool isSelectable = false;
-            for (const canvas::SelectionCandidate& occluder : occluders) {
-                if (occluder.id() == info.itemId) {
-                    isSelectable = true;
-                    break;
-                }
-                if (workspace::Element* occluderItem = workspace->find(occluder.id())) {
-                    if (workspace::VacElement* occluderVacItem =
-                            occluderItem->toVacElement()) {
-                        if (vacomplex::Cell* occluderCell = occluderVacItem->vacCell()) {
-                            if (occluderCell->spatialType()
-                                == vacomplex::CellSpatialType::Face) {
-                                // face are occluders
-                                break;
-                            }
-                        }
-                    }
-                    else {
-                        // not a vac element, let's consider it prevents snapping.
-                        break;
-                    }
-                }
+    // Find all candidate vertices
+    if (isSnapVerticesEnabled()) {
+        for (Int i = 0; i < vertexInfos_.length(); ++i) {
+            const VertexInfo& info = vertexInfos_[i];
+            if (info.itemId == tmpVertexItemId) {
+                continue;
             }
-            info.isSelectable = isSelectable;
-        }
-        if (info.isSelectable.value()) {
-            return vertexItem;
+            double d = (info.position - position).length();
+            if (d < snapDistance) {
+                SnapCandidate& candidate = candidates.emplaceLast();
+                candidate.infoIdx = i;
+                candidate.dimension = 0;
+                candidate.dist = d;
+            }
         }
     }
 
-    return nullptr;
+    // Find all candidate edges
+    //
+
+    if (isSnapEdgesEnabled()) {
+        for (Int i = 0; i < edgeInfos_.length(); ++i) {
+            const EdgeInfo& info = edgeInfos_[i];
+            if (info.itemId == edgeItemId_) {
+                // For now, we don't allow snapping to the currently
+                // sketched edge
+                continue;
+            }
+            geometry::SampledCurveProjection proj =
+                projectToCenterline(info.sampling->samples(), position);
+            double d = (proj.position() - position).length();
+            if (d < snapDistance) {
+                SnapCandidate& candidate = candidates.emplaceLast();
+                candidate.infoIdx = i;
+                candidate.dimension = 1;
+                candidate.dist = d;
+                candidate.proj = proj;
+            }
+        }
+    }
+
+    // Choose the best candidate vertex or edge:
+    // 1. It should not be occluded at the projected position
+    // 2. We prioritize vertices rather than edges
+    // 3. Otherwise we prioritize the closest candidate
+    std::sort(candidates.begin(), candidates.end());
+    const SnapCandidate* bestCandidate = nullptr;
+    workspace::VacKeyVertex* vertex = nullptr;
+    workspace::VacKeyEdge* edge = nullptr;
+    for (const SnapCandidate& candidate : candidates) {
+        if (candidate.dimension == 0) {
+            VertexInfo& info = vertexInfos_[candidate.infoIdx];
+            auto vertexItem =
+                dynamic_cast<workspace::VacKeyVertex*>(workspace->find(info.itemId));
+            if (!vertexItem) {
+                continue;
+            }
+            if (!info.isSelectable.has_value()) {
+                info.isSelectable = computeIsSelectable(
+                    *canvas, info.itemId, info.position, snapDistance);
+            }
+            if (info.isSelectable.value()) {
+                bestCandidate = &candidate;
+                vertex = vertexItem;
+                break;
+            }
+        }
+        else if (candidate.dimension == 1) {
+            EdgeInfo& info = edgeInfos_[candidate.infoIdx];
+            auto edgeItem =
+                dynamic_cast<workspace::VacKeyEdge*>(workspace->find(info.itemId));
+            if (!edgeItem) {
+                continue;
+            }
+            bool isSelectable = computeIsSelectable(
+                *canvas, info.itemId, candidate.proj.position(), snapDistance);
+            if (isSelectable) {
+                bestCandidate = &candidate;
+                edge = edgeItem;
+                break;
+            }
+        }
+    }
+
+    // If the best candidate is an edge, cut it.
+    if (edge) {
+        if (vacomplex::KeyEdge* ke = edge->vacKeyEdgeNode()) {
+            geometry::SampledCurveParameter sParam = bestCandidate->proj.parameter();
+            geometry::CurveParameter param = ke->stroke()->resolveParameter(sParam);
+            auto result = vacomplex::ops::cutEdge(ke, param);
+            workspace::Element* element = workspace->findVacElement(result.vertex());
+            vertex = dynamic_cast<workspace::VacKeyVertex*>(element);
+
+            // Cutting removes and creates new edges, so we need to update
+            // the cached geometry. Example:
+            // 1. Start drawing in the middle of e1 => gets cut into e2 and e3
+            // 2. End drawing in the middle of e2
+            //
+            // For better performance, especially if/when we implement autocut
+            // "while drawing" (instead of "at the end of drawing"), we could
+            // implement appendEdgeInfo_() and removeEdgeInfo_() to avoid
+            // recomputing everything and instead just update the cache in a
+            // more fine-grained way.
+            //
+            initCellInfoArrays_();
+        }
+    }
+
+    return vertex;
 }
 
 double Sketch::snapFalloff_() const {
@@ -1346,6 +1494,9 @@ void Sketch::startCurve_(ui::MouseEvent* event) {
     // Transform: Save inverse view matrix
     pipeline_.setTransformMatrix(canvas->camera().viewMatrix().inverse());
 
+    // Cache geometry of existing vertices/edges.
+    initCellInfoArrays_();
+
     // Snapping: Compute start vertex to snap to
     workspace::Element* snapVertex = nullptr;
     geometry::Vec2d startPosition = pipeline_.transformAffine(eventPos2d);
@@ -1508,8 +1659,6 @@ void Sketch::continueCurve_(ui::MouseEvent* event) {
 
     updatePendingPositions_();
     updatePendingWidths_();
-
-    // TODO: auto cut algorithm
 
     // Update DOM and workspace
     //

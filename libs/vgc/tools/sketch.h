@@ -150,8 +150,8 @@ public:
     ///
     void setPenWidth(double width);
 
-    /// Returns whether sketched strokes are automatically snapped to end
-    /// points of existing strokes.
+    /// Returns whether the end vertices of the sketched stroke
+    /// are automatically snapped to existing vertices or edges.
     ///
     bool isSnappingEnabled() const;
 
@@ -260,7 +260,7 @@ protected:
     core::Array<VertexInfo> vertexInfos_;
 
     struct EdgeInfo {
-        // fast access to geometry to do cut tests
+        // fast access to geometry to do snap/cut tests
         std::shared_ptr<const geometry::StrokeSampling2d> sampling;
         core::Id itemId;
     };
