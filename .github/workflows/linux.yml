@@ -13,7 +13,7 @@ env:
 jobs:
   build:
     name: Build
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     container: vgcsoftware/vgc-ci-ubuntu-18.04:2023-03-08.0
     outputs:
       version-name: ${{steps.deploy.outputs.version-name}}
