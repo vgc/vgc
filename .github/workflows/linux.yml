@@ -34,7 +34,7 @@ jobs:
     # Getting more commits can also be helpful for computing human-readable
     # commit ID, such as 2020-12-16.3 for the 4th commit of the day.
     #
-    - uses: actions/checkout@v3 # Cannot use v4 (requires Node20/GLIBC_2.28 not available on Ubuntu 18.04)
+    - uses: actions/checkout@v2 # Cannot use v3/v4 (requires Node20/GLIBC_2.28 not available on Ubuntu 18.04)
       with:
         fetch-depth: 100
         submodules: 'recursive'
