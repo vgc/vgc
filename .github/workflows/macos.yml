@@ -83,6 +83,15 @@ jobs:
         python-version: ${{env.PYTHON_VERSION}}
         architecture: 'x64'
 
+    # See: https://github.com/actions/runner-images/issues/11074
+    - name: Adding Tcl/Tk Symlink
+      run: ln -sf /usr/local/opt/tcl-tk@8 /usr/local/opt/tcl-tk
+
+    - name: Test Tcl/Tk Symlink
+      run: |
+        cp /usr/local/opt/tcl-tk/lib/libtcl8.6.dylib libtcl8.6.copy.dylib
+        ls -al
+
     - name: Install Qt
       uses: jurplel/install-qt-action@v3
       with:
