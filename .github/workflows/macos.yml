@@ -5,7 +5,7 @@ on: [push, pull_request]
 env:
   BUILD_TYPE: Release
   QT_VERSION: 5.15.2
-  PYTHON_VERSION: 3.7
+  PYTHON_VERSION: 3.8
   PARALLEL_JOBS: 5
   MACOSX_DEPLOYMENT_TARGET: 10.13
 
@@ -16,7 +16,7 @@ defaults:
 jobs:
   build:
     name: Build
-    runs-on: macos-12
+    runs-on: macos-13
     outputs:
       version-name: ${{steps.deploy.outputs.version-name}}
       artifacts-name: ${{steps.artifacts.outputs.name}}
@@ -82,6 +82,10 @@ jobs:
       with:
         python-version: ${{env.PYTHON_VERSION}}
         architecture: 'x64'
+
+    # See: https://github.com/actions/runner-images/issues/11074
+    - name: Adding Tcl/Tk Symlink
+      run: ln -sf /usr/local/opt/tcl-tk@8 /usr/local/opt/tcl-tk
 
     - name: Install Qt
       uses: jurplel/install-qt-action@v3
