@@ -91,7 +91,7 @@ jobs:
     - name: Start Docker Container
       run: |
         docker pull $CONTAINER
-        docker run --name build-container -d -v ${{ github.workspace }}:/workspace $CONTAINER tail -f /dev/null
+        docker run --name build-container -d -e COMMIT_MESSAGE -v ${{ github.workspace }}:/workspace $CONTAINER tail -f /dev/null
 
     - name: Configure
       env:
