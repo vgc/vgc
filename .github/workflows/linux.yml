@@ -99,9 +99,9 @@ jobs:
           cd /workspace && mkdir build && cd build
           cmake --version
           cmake .. \
-            -DCMAKE_BUILD_TYPE="$BUILD_TYPE" \
-            -DVGC_COMMIT_BRANCH="$COMMIT_BRANCH" \
-            -DQt5_DIR="/opt/qt/$QT_VERSION/gcc_64/lib/cmake/Qt5" \
+            -DCMAKE_BUILD_TYPE="${{env.BUILD_TYPE}}" \
+            -DVGC_COMMIT_BRANCH="${{env.COMMIT_BRANCH}}" \
+            -DQt5_DIR="/opt/qt/${{env.QT_VERSION}}/gcc_64/lib/cmake/Qt5" \
             -DVGC_PEDANTIC=ON \
             -DVGC_WERROR=ON
       run: docker exec build-container bash -c "$SCRIPT"
