@@ -22,6 +22,7 @@ using vgc::core::Array;
 using vgc::geometry::Vec2d;
 using vgc::geometry::Vec2dArray;
 namespace polyline = vgc::geometry::polyline;
+namespace c20 = vgc::c20;
 
 namespace {
 
@@ -54,10 +55,11 @@ TEST(TestPolyline, Length) {
     }
     {
         Array<Data> p = {{{0, 0}}, {{0, 1}}, {{1, 1}}};
+        EXPECT_EQ(polyline::length(p, proj), 2);
+        EXPECT_EQ(polyline::length(p | c20::views::transform(proj)), 2);
         EXPECT_EQ(polyline::length(p, [](auto d) { return d.point; }), 2);
         EXPECT_EQ(
-            polyline::length(
-                p | vgc::c20::views::transform([](auto d) { return d.point; })),
+            polyline::length(p | c20::views::transform([](auto d) { return d.point; })),
             2);
     }
 }
