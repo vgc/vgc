@@ -1002,23 +1002,6 @@ Int Sketch::numStableCleanInputPoints_() const {
     return allCleanInputPoints.numStablePoints() - cleanInputStartIndex_;
 }
 
-namespace {
-
-geometry::Vec2d getSnapPosition(workspace::Element* snapVertex) {
-    if (vacomplex::Cell* cell = snapVertex->vacCell()) {
-        vacomplex::KeyVertex* keyVertex = cell->toKeyVertex();
-        if (keyVertex) {
-            return keyVertex->position();
-        }
-    }
-    VGC_WARNING(
-        LogVgcToolsSketch,
-        "Snap vertex didn't have an associated KeyVertex: using (0, 0) as position.");
-    return geometry::Vec2d();
-}
-
-} // namespace
-
 void Sketch::updateStartSnappedCleanInputPositions_() {
 
     core::ConstSpan<SketchPoint> cleanInputPoints = cleanInputPoints_();
@@ -1069,50 +1052,6 @@ void Sketch::updateStartSnappedCleanInputPositions_() {
     numStableStartSnappedCleanInputPositions_ = numStableCleanInputPoints;
 }
 
-void Sketch::endSnapStartSnappedCleanInputPositions_(geometry::Vec2dArray& result) {
-
-    updateStartSnappedCleanInputPositions_();
-
-    result.assign(startSnappedCleanInputPositions_);
-    if (snapEndVertexItemId_ == 0 || result.length() < 2) {
-        return;
-    }
-
-    auto workspace = this->workspace().lock();
-    if (!workspace) {
-        return;
-    }
-
-    workspace::Element* snapEndVertexItem = workspace->find(snapEndVertexItemId_);
-    if (!snapEndVertexItem) {
-        return;
-    }
-
-    geometry::Vec2d snapEndPosition = getSnapPosition(snapEndVertexItem);
-    result.last() = snapEndPosition;
-
-    core::ConstSpan<SketchPoint> cleanInputPoints = cleanInputPoints_();
-    VGC_ASSERT(cleanInputPoints.length() == startSnappedCleanInputPositions_.length());
-
-    SketchPoint firstCleanInputPoint =
-        cleanInputStartPointOverride_.value_or(cleanInputPoints[0]);
-    const SketchPoint& lastCleanInputPoint = cleanInputPoints.last();
-    double maxS = lastCleanInputPoint.s();
-    double totalS = maxS - firstCleanInputPoint.s();
-    double falloff = (std::min)(snapFalloff_(), totalS);
-    geometry::Vec2d delta = snapEndPosition - lastCleanInputPoint.position();
-    for (Int i = result.length() - 2; i >= 0; --i) {
-        const SketchPoint& p = cleanInputPoints[i];
-        double reversedS = maxS - p.s();
-        if (reversedS < falloff) {
-            result[i] = applySnapFalloff(result[i], delta, reversedS, falloff);
-        }
-        else {
-            break;
-        }
-    }
-}
-
 // Note: in the future we may want to have the snapping candidates implemented
 // in canvas to be shared by all tools.
 
@@ -1160,15 +1099,36 @@ bool computeIsSelectable(
 
 } // namespace
 
-workspace::Element*
-Sketch::computeSnapVertex_(const geometry::Vec2d& position, core::Id tmpVertexItemId) {
+// Compute which vertex or edge to snap to.
+//
+// If snapping to an edge, this performs a topological cut and returns the new
+// vertex as well as the new edges and the ID of the old cut edge.
+//
+// If `vertexItemId` is non-zero, then we ignore snapping to the given vertex.
+//
+// If `edgeItemId` is non-zero, then it is assumed that we are snapping the end
+// position of the given edge (and that `vertexItemId` is the end vertex), and
+// therefore we prevent snapping not only to the end vertex, but also to the
+// "tip" of the edge within the snap tolerance.
+//
+Sketch::SnapVertexResult Sketch::computeSnapVertex_(
+    const geometry::Vec2d& position,
+    core::Id vertexItemId,
+    core::Id edgeItemId) {
+
+    SnapVertexResult res;
 
     auto context = contextLock();
     if (!context) {
-        return nullptr;
+        return res;
     }
     auto workspace = context.workspace();
     auto canvas = context.canvas();
+
+    // For simplicy, we recompute the cache each time for now.
+    // In the future, we want to optimize this by keeping the cache
+    // up to date progressively instead of recomputing it from scratch.
+    initCellInfoArrays_();
 
     float snapDistanceFloat = static_cast<float>(options_::snapDistance()->value());
     style::Length snapDistanceLength(snapDistanceFloat, style::LengthUnit::Dp);
@@ -1193,7 +1153,7 @@ Sketch::computeSnapVertex_(const geometry::Vec2d& position, core::Id tmpVertexIt
     if (isSnapVerticesEnabled()) {
         for (Int i = 0; i < vertexInfos_.length(); ++i) {
             const VertexInfo& info = vertexInfos_[i];
-            if (info.itemId == tmpVertexItemId) {
+            if (info.itemId == vertexItemId) {
                 continue;
             }
             double d = (info.position - position).length();
@@ -1208,17 +1168,32 @@ Sketch::computeSnapVertex_(const geometry::Vec2d& position, core::Id tmpVertexIt
 
     // Find all candidate edges
     //
-
     if (isSnapEdgesEnabled()) {
         for (Int i = 0; i < edgeInfos_.length(); ++i) {
             const EdgeInfo& info = edgeInfos_[i];
-            if (info.itemId == edgeItemId_) {
-                // For now, we don't allow snapping to the currently
-                // sketched edge
+            geometry::StrokeSample2dConstSpan samples = info.sampling->samples();
+            if (info.itemId == edgeItemId) {
+                // When snapping the end vertex of a stroke, the closest point
+                // to the stroke is always the end position itself.
+                //
+                // Therefore, we need to exclude the tip of the stroke from
+                // candidate projections. We do this by removing all end
+                // samples within a given radius of the end position.
+                //
+                double tipRadius = snapDistance * 1.2;
+                Int j = samples.length() - 1; // index of last non-tip sample
+                while (j >= 0
+                       && (samples[j].position() - position).length() < tipRadius) {
+                    --j;
+                }
+                Int numNonTipSamples = j + 1;
+                samples = samples.subspan(0, numNonTipSamples);
+            }
+            if (samples.isEmpty()) {
                 continue;
             }
             geometry::SampledCurveProjection proj =
-                projectToCenterline(info.sampling->samples(), position);
+                projectToCenterline(samples, position);
             double d = (proj.position() - position).length();
             if (d < snapDistance) {
                 SnapCandidate& candidate = candidates.emplaceLast();
@@ -1236,14 +1211,13 @@ Sketch::computeSnapVertex_(const geometry::Vec2d& position, core::Id tmpVertexIt
     // 3. Otherwise we prioritize the closest candidate
     std::sort(candidates.begin(), candidates.end());
     const SnapCandidate* bestCandidate = nullptr;
-    workspace::VacKeyVertex* vertex = nullptr;
-    workspace::VacKeyEdge* edge = nullptr;
+    vacomplex::KeyEdge* bestEdge = nullptr;
+    core::Id bestEdgeItemId = 0;
     for (const SnapCandidate& candidate : candidates) {
         if (candidate.dimension == 0) {
             VertexInfo& info = vertexInfos_[candidate.infoIdx];
-            auto vertexItem =
-                dynamic_cast<workspace::VacKeyVertex*>(workspace->find(info.itemId));
-            if (!vertexItem) {
+            auto vertex = workspace->findCellByItemId<vacomplex::KeyVertex>(info.itemId);
+            if (!vertex) {
                 continue;
             }
             if (!info.isSelectable.has_value()) {
@@ -1252,52 +1226,41 @@ Sketch::computeSnapVertex_(const geometry::Vec2d& position, core::Id tmpVertexIt
             }
             if (info.isSelectable.value()) {
                 bestCandidate = &candidate;
-                vertex = vertexItem;
+                res.vertex = vertex;
                 break;
             }
         }
         else if (candidate.dimension == 1) {
             EdgeInfo& info = edgeInfos_[candidate.infoIdx];
-            auto edgeItem =
-                dynamic_cast<workspace::VacKeyEdge*>(workspace->find(info.itemId));
-            if (!edgeItem) {
+            auto edge = workspace->findCellByItemId<vacomplex::KeyEdge>(info.itemId);
+            if (!edge) {
                 continue;
             }
             bool isSelectable = computeIsSelectable(
                 *canvas, info.itemId, candidate.proj.position(), snapDistance);
             if (isSelectable) {
                 bestCandidate = &candidate;
-                edge = edgeItem;
+                bestEdge = edge;
+                bestEdgeItemId = info.itemId;
                 break;
             }
         }
     }
 
     // If the best candidate is an edge, cut it.
-    if (edge) {
-        if (vacomplex::KeyEdge* ke = edge->vacKeyEdgeNode()) {
-            geometry::SampledCurveParameter sParam = bestCandidate->proj.parameter();
-            geometry::CurveParameter param = ke->stroke()->resolveParameter(sParam);
-            auto result = vacomplex::ops::cutEdge(ke, param);
-            workspace::Element* element = workspace->findVacElement(result.vertex());
-            vertex = dynamic_cast<workspace::VacKeyVertex*>(element);
+    if (bestEdge) {
+        geometry::SampledCurveParameter sParam = bestCandidate->proj.parameter();
+        geometry::CurveParameter param = bestEdge->stroke()->resolveParameter(sParam);
+        auto result = vacomplex::ops::cutEdge(bestEdge, param);
+        res.vertex = result.vertex();
+        res.cutEdgeItemId = bestEdgeItemId;
+        res.newEdges = result.edges();
 
-            // Cutting removes and creates new edges, so we need to update
-            // the cached geometry. Example:
-            // 1. Start drawing in the middle of e1 => gets cut into e2 and e3
-            // 2. End drawing in the middle of e2
-            //
-            // For better performance, especially if/when we implement autocut
-            // "while drawing" (instead of "at the end of drawing"), we could
-            // implement appendEdgeInfo_() and removeEdgeInfo_() to avoid
-            // recomputing everything and instead just update the cache in a
-            // more fine-grained way.
-            //
-            initCellInfoArrays_();
-        }
+        // TODO: cutting removes and creates new edges, so we need to update
+        // the cached geometry.
     }
 
-    return vertex;
+    return res;
 }
 
 double Sketch::snapFalloff_() const {
@@ -1314,7 +1277,8 @@ double Sketch::snapFalloff_() const {
 }
 
 void Sketch::updatePendingPositions_() {
-    endSnapStartSnappedCleanInputPositions_(pendingPositions_);
+    updateStartSnappedCleanInputPositions_();
+    pendingPositions_.assign(startSnappedCleanInputPositions_);
 }
 
 void Sketch::updatePendingWidths_() {
@@ -1382,65 +1346,39 @@ void Sketch::initCellInfoArrays_() {
     }
 }
 
-Sketch::VertexInfo* Sketch::searchVertexInfo_(core::Id itemId) {
-    for (Sketch::VertexInfo& vi : vertexInfos_) {
-        if (vi.itemId == itemId) {
-            return &vi;
-        }
-    }
-    return nullptr;
-}
+// Sketch::VertexInfo* Sketch::searchVertexInfo_(core::Id itemId) {
+//     for (Sketch::VertexInfo& vi : vertexInfos_) {
+//         if (vi.itemId == itemId) {
+//             return &vi;
+//         }
+//     }
+//     return nullptr;
+// }
 
-void Sketch::appendVertexInfo_(const geometry::Vec2d& position, core::Id itemId) {
-    VertexInfo& vi = vertexInfos_.emplaceLast();
-    vi.position = position;
-    vi.itemId = itemId;
-}
+// void Sketch::appendVertexInfo_(const geometry::Vec2d& position, core::Id itemId) {
+//     VertexInfo& vi = vertexInfos_.emplaceLast();
+//     vi.position = position;
+//     vi.itemId = itemId;
+// }
 
-void Sketch::updateVertexInfo_(const geometry::Vec2d& position, core::Id itemId) {
-    // Reverse iteration because currently, the updated itemId is always last
-    for (auto it = vertexInfos_.rbegin(); it != vertexInfos_.rend(); ++it) {
-        if (it->itemId == itemId) {
-            it->position = position;
-            break;
-        }
-    }
-}
+// void Sketch::updateVertexInfo_(const geometry::Vec2d& position, core::Id itemId) {
+//     // Reverse iteration because currently, the updated itemId is always last
+//     for (auto it = vertexInfos_.rbegin(); it != vertexInfos_.rend(); ++it) {
+//         if (it->itemId == itemId) {
+//             it->position = position;
+//             break;
+//         }
+//     }
+// }
 
-Sketch::EdgeInfo* Sketch::searchEdgeInfo_(core::Id itemId) {
-    for (Sketch::EdgeInfo& ei : edgeInfos_) {
-        if (ei.itemId == itemId) {
-            return &ei;
-        }
-    }
-    return nullptr;
-}
-
-namespace {
-
-workspace::VacKeyEdge* toKeyEdgeItem(workspace::Workspace* workspace, core::Id itemId) {
-    if (workspace) {
-        if (workspace::Element* item = workspace->find(itemId)) {
-            return dynamic_cast<workspace::VacKeyEdge*>(item);
-        }
-    }
-    return nullptr;
-}
-
-vacomplex::KeyEdge* toKeyEdge(workspace::VacKeyEdge* keyEdgeItem) {
-    if (keyEdgeItem) {
-        if (vacomplex::Cell* cell = keyEdgeItem->vacCell()) {
-            return cell->toKeyEdge();
-        }
-    }
-    return nullptr;
-}
-
-vacomplex::KeyEdge* toKeyEdge(workspace::Workspace* workspace, core::Id itemId) {
-    return toKeyEdge(toKeyEdgeItem(workspace, itemId));
-}
-
-} // namespace
+// Sketch::EdgeInfo* Sketch::searchEdgeInfo_(core::Id itemId) {
+//     for (Sketch::EdgeInfo& ei : edgeInfos_) {
+//         if (ei.itemId == itemId) {
+//             return &ei;
+//         }
+//     }
+//     return nullptr;
+// }
 
 void Sketch::startCurve_(ui::MouseEvent* event) {
 
@@ -1495,15 +1433,16 @@ void Sketch::startCurve_(ui::MouseEvent* event) {
     pipeline_.setTransformMatrix(canvas->camera().viewMatrix().inverse());
 
     // Cache geometry of existing vertices/edges.
-    initCellInfoArrays_();
+    // TODO: Improve cache management. See computeSnapVertex_().
+    //initCellInfoArrays_();
 
     // Snapping: Compute start vertex to snap to
-    workspace::Element* snapVertex = nullptr;
+    vacomplex::KeyVertex* snapVertex = nullptr;
     geometry::Vec2d startPosition = pipeline_.transformAffine(eventPos2d);
     if (isSnappingEnabled()) {
-        snapVertex = computeSnapVertex_(startPosition, 0);
+        snapVertex = computeSnapVertex_(startPosition).vertex;
         if (snapVertex) {
-            startPosition = getSnapPosition(snapVertex);
+            startPosition = snapVertex->position();
             snapStartPosition_ = startPosition;
         }
     }
@@ -1513,14 +1452,10 @@ void Sketch::startCurve_(ui::MouseEvent* event) {
     // XXX What to do if snapVertex is non-null, but if there is no DOM element
     // corresponding to this workspace element, e.g., due to composite shapes?
     //
-    // For now, computeSnapVertex_() ensures that snapVertex->domElement() is
-    // never null, but we do not rely on it here. If snapVertex->domElement()
-    // is null, we create a new DOM vertex but keep hasStartSnap to true.
-    //
     namespace ds = dom::strings;
     dom::Element* domStartVertex = nullptr;
     if (snapVertex) {
-        domStartVertex = snapVertex->domElement();
+        domStartVertex = workspace->findDomElement(snapVertex);
     }
     if (!domStartVertex) {
         domStartVertex = dom::Element::create(parentDomElement, ds::vertex);
@@ -1556,11 +1491,11 @@ void Sketch::startCurve_(ui::MouseEvent* event) {
     workspace->sync(); // required for toKeyEdge() below
 
     // Append new start vertex (if any) to snap/cut info
-    if (!snapStartPosition_) {
-        appendVertexInfo_(startPosition, startVertexItemId_);
-    }
+    //if (!snapStartPosition_) {
+    //    appendVertexInfo_(startPosition, startVertexItemId_);
+    //}
 
-    if (vacomplex::KeyEdge* keyEdge = toKeyEdge(workspace.get(), edgeItemId_)) {
+    if (auto edge = workspace->findCellByItemId<vacomplex::KeyEdge>(edgeItemId_)) {
 
         // Use low sampling quality override to minimize lag, unless current quality
         // is already even lower.
@@ -1571,11 +1506,11 @@ void Sketch::startCurve_(ui::MouseEvent* event) {
             Int8 level = geometry::getSamplingQualityLevel(quality);
             Int8 newLevel = std::min<Int8>(level, 2); // 2 = Low
             quality = geometry::getSamplingQuality(newLevel, isAdaptive);
-            keyEdge->data().setSamplingQualityOverride(quality);
+            edge->data().setSamplingQualityOverride(quality);
         }
 
         // Move edge to proper depth location.
-        vacomplex::ops::moveBelowBoundary(keyEdge);
+        vacomplex::ops::moveBelowBoundary(edge);
     }
 
     // Update stroke tip
@@ -1638,7 +1573,7 @@ void Sketch::continueCurve_(ui::MouseEvent* event) {
 
     // Append the input point
     //
-    // XXX: it might to interesting to also record the current time (now) as
+    // XXX: it might be interesting to also record the current time (now) as
     // useful log info for performance analysis, so that we can answer
     // questions such as: which points where processed at the same time? Is
     // there significant delay between the event time and the processing time?
@@ -1666,7 +1601,7 @@ void Sketch::continueCurve_(ui::MouseEvent* event) {
     if (!snapStartPosition_) {
         // Unless start-snapped, processing passes may have modified the start point
         domStartVertex->setAttribute(ds::position, pendingPositions_.first());
-        updateVertexInfo_(pendingPositions_.first(), startVertexItemId_);
+        //updateVertexInfo_(pendingPositions_.first(), startVertexItemId_);
     }
     domEndVertex->setAttribute(ds::position, pendingPositions_.last());
     domEdge->setAttribute(ds::positions, pendingPositions_);
@@ -1679,17 +1614,11 @@ void Sketch::continueCurve_(ui::MouseEvent* event) {
 
 namespace {
 
-void autoFill(vacomplex::Node* keNode) {
-    vacomplex::Cell* keCell = keNode->toCell();
-    if (!keCell) {
-        return;
-    }
-    vacomplex::KeyEdge* ke = keCell->toKeyEdge();
+void autoFill(vacomplex::KeyEdge* ke) {
     if (!ke) {
         return;
     }
-    // Note: test works if closed too.
-    if (ke->startVertex() == ke->endVertex()) {
+    if (ke->startVertex() == ke->endVertex()) { // closed or pseudo-closed
         vacomplex::KeyCycle cycle({vacomplex::KeyHalfedge(ke, true)});
         vacomplex::KeyFace* kf = vacomplex::ops::createKeyFace(
             std::move(cycle), ke->parentGroup(), ke, ke->time());
@@ -1709,96 +1638,98 @@ void Sketch::finishCurve_(ui::MouseEvent* event) {
 
     namespace ds = dom::strings;
 
+    auto cleanup = [this]() {
+        resetData_();
+        requestRepaint();
+    };
+
     // Fast return if missing required context
     auto workspace = this->workspace().lock();
     if (!workspace) {
+        cleanup();
         return;
     }
     auto document = workspace->document().lock();
     if (!document) {
+        cleanup();
         return;
     }
 
-    dom::Element* domEndVertex = document->elementFromInternalId(endVertexItemId_);
-    dom::Element* domEdge = document->elementFromInternalId(edgeItemId_);
-    if (!domEndVertex || !domEdge) {
+    // Get the sequence of edges corresponding to the sketched stroke.
+    //
+    // At this point in the code, there is only one edge, but after end vertex
+    // snapping (see below) there may be multiple edges.
+    //
+    core::Array<vacomplex::KeyEdge*> edges;
+    if (auto edge = workspace->findCellByItemId<vacomplex::KeyEdge>(edgeItemId_)) {
+        edges.append(edge);
+    }
+    else {
+        cleanup();
         return;
     }
 
-    // Clear sampling quality override to use default sampling
-    if (vacomplex::KeyEdge* keyEdge = toKeyEdge(workspace.get(), edgeItemId_)) {
-        keyEdge->data().clearSamplingQualityOverride();
-    }
-
-    // Compute end vertex snapping
+    // Compute end vertex snapping.
+    //
     if (isSnappingEnabled() && startSnappedCleanInputPositions_.length() > 1
         && snapEndVertexItemId_ == 0) {
 
-        // Compute end vertex to snap to
+        // Compute which vertex to snap the end vertex to, if any
         geometry::Vec2d endPosition = startSnappedCleanInputPositions_.last();
-        workspace::Element* snapEndVertexItem =
-            computeSnapVertex_(endPosition, endVertexItemId_);
+        SnapVertexResult sr =
+            computeSnapVertex_(endPosition, endVertexItemId_, edgeItemId_);
+        vacomplex::KeyVertex* snapVertex = sr.vertex;
+
+        if (sr.cutEdgeItemId == edgeItemId_) {
+            // Handle self-snapping.
+            edgeItemId_ = 0;
+            edges = sr.newEdges;
+        }
+        VGC_ASSERT(!edges.isEmpty());
 
         // If found, do the snapping
-        if (snapEndVertexItem) {
+        if (snapVertex) {
+            // TODO:
+            // - avoid creating new vertex(e.g., `glueKeyVerticesInto(kvs, snapVertex)`
+            // - use snap falloff instead of the default snap done by glue
+            core::Array<vacomplex::KeyVertex*> kvs = {
+                snapVertex, edges.last()->endVertex()};
+            vacomplex::ops::glueKeyVertices(kvs, snapVertex->position());
 
-            // Compute end-snapped positions
-            snapEndVertexItemId_ = snapEndVertexItem->id();
-            updatePendingPositions_();
-
-            // Update DOM and workspace
-            domEndVertex->remove();
-            domEndVertex = snapEndVertexItem->domElement();
-
-            bool canClose = false;
-            auto snapKvItem = dynamic_cast<workspace::VacKeyVertex*>(snapEndVertexItem);
-            workspace::VacKeyEdge* keItem = toKeyEdgeItem(workspace.get(), edgeItemId_);
-            if (snapKvItem && keItem) {
-                vacomplex::KeyVertex* kv = snapKvItem->vacKeyVertexNode();
-                vacomplex::KeyEdge* ke = keItem->vacKeyEdgeNode();
-                vacomplex::CellRangeView kvStar = kv->star();
-                canClose = (kvStar.length() == 1) && (*kvStar.begin() == ke);
-            }
-            if (canClose) {
-                domEndVertex->remove();
-                domEndVertex = nullptr;
-                domEdge->clearAttribute(ds::startvertex);
-                domEdge->clearAttribute(ds::endvertex);
-                if (pendingPositions_.length() > 1) {
-                    pendingPositions_.removeLast();
-                    pendingWidths_.removeLast();
-                    --numStablePendingWidths_;
+            // Note: snapVertex and the old edges.last()->endVertex() are now invalid
+            // Create a close edge if possible
+            vacomplex::KeyVertex* kv = edges.last()->endVertex();
+            vacomplex::CellRangeView kvStar = kv->star();
+            if (kvStar.length() == 1) {
+                bool smoothJoin = true;
+                if (vacomplex::Cell* cell =
+                        vacomplex::ops::uncutAtKeyVertex(kv, smoothJoin)) {
+                    edges.last() = cell->toKeyEdgeUnchecked();
                 }
             }
-            else {
-                domEdge->setAttribute(ds::endvertex, domEndVertex->getPathFromId());
-            }
-            domEdge->setAttribute(ds::positions, std::move(pendingPositions_));
-            domEdge->setAttribute(ds::widths, std::move(pendingWidths_));
 
-            workspace->sync();
+            // Ensure edge is below its end-snap vertex
+            vacomplex::ops::moveBelowBoundary(edges.last());
 
-            if (keItem) {
-                auto ke = keItem->vacNode();
-                if (ke) {
-                    vacomplex::ops::moveBelowBoundary(ke);
-                    if (isAutoFillEnabled()) {
-                        autoFill(ke);
-                    }
-                }
+            // Auto-fill
+            if (isAutoFillEnabled()) {
+                autoFill(edges.last());
             }
         }
+    }
+
+    // Clear sampling quality override to use default sampling
+    for (auto edge : edges) {
+        edge->data().clearSamplingQualityOverride();
     }
 
     if (isAutoIntersectEnabled()) {
-        workspace->sync();
-        if (vacomplex::KeyEdge* keyEdge = toKeyEdge(workspace.get(), edgeItemId_)) {
-            vacomplex::ops::intersectWithGroup(keyEdge);
+        if (auto edge = workspace->findCellByItemId<vacomplex::KeyEdge>(edgeItemId_)) {
+            vacomplex::ops::intersectWithGroup(edge);
         }
     }
 
-    resetData_();
-    requestRepaint();
+    cleanup();
 }
 
 void Sketch::resetData_() {

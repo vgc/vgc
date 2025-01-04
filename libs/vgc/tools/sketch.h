@@ -229,10 +229,21 @@ protected:
     core::Id snapEndVertexItemId_ = 0;
 
     void updateStartSnappedCleanInputPositions_();
-    void endSnapStartSnappedCleanInputPositions_(geometry::Vec2dArray& result);
 
-    workspace::Element*
-    computeSnapVertex_(const geometry::Vec2d& position, core::Id tmpVertexItemId);
+    struct SnapVertexResult {
+        // The vertex to snap to, if any
+        vacomplex::KeyVertex* vertex = nullptr;
+
+        // When snapping to an edge, the edge is cut with a
+        // new vertex into new edges.
+        core::Id cutEdgeItemId = 0;
+        core::Array<vacomplex::KeyEdge*> newEdges = {};
+    };
+
+    SnapVertexResult computeSnapVertex_(
+        const geometry::Vec2d& position,
+        core::Id vertexItemId = 0,
+        core::Id edgeItemId = 0);
 
     // The length of curve that snapping is allowed to deform
     double snapFalloff_() const;
@@ -250,6 +261,16 @@ protected:
     void updatePendingWidths_();
 
     // Snapping/Cutting Cache
+    //
+    // This is an acceleration structure for realtime computation of snapping
+    // and auto-cut. Unfortunately, keeping the cache up to date with the
+    // current scene is not fully implemented, so most of this code is
+    // commented, and instead the cache is computed from scratch in
+    // computeSnapVertex_() which is the only function that needs the cache for
+    // now.
+    //
+    // TODO: move this to a separate class (e.g., SketchCache), or provide the
+    // acceleration structure directly part of vacomplex.
 
     struct VertexInfo {
         // fast access to position to do snap tests
@@ -268,11 +289,11 @@ protected:
 
     void initCellInfoArrays_();
 
-    VertexInfo* searchVertexInfo_(core::Id itemId);
-    void appendVertexInfo_(const geometry::Vec2d& position, core::Id itemId);
-    void updateVertexInfo_(const geometry::Vec2d& position, core::Id itemId);
+    // VertexInfo* searchVertexInfo_(core::Id itemId);
+    // void appendVertexInfo_(const geometry::Vec2d& position, core::Id itemId);
+    // void updateVertexInfo_(const geometry::Vec2d& position, core::Id itemId);
 
-    EdgeInfo* searchEdgeInfo_(core::Id itemId);
+    // EdgeInfo* searchEdgeInfo_(core::Id itemId);
     // void appendEdgeInfo_(); when adding a vertex on cut.
     // void removeEdgeInfo_(); when adding a vertex on cut.
     // void invalidateVertexSelectability_(); // after face cut winding can change.
