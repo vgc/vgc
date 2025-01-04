@@ -1665,6 +1665,7 @@ void Sketch::finishCurve_(ui::MouseEvent* event) {
         edges.append(edge);
     }
     else {
+        cleanup();
         return;
     }
 
