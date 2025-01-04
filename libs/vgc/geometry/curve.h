@@ -158,8 +158,7 @@ private:
 namespace detail {
 
 template<typename TSample>
-DistanceToCurve
-distanceToCurve(core::ConstSpan<TSample> samples, const Vec2d& position) {
+DistanceToCurve distanceToCurve(core::ConstSpan<TSample> samples, const Vec2d& position) {
 
     DistanceToCurve result(core::DoubleInfinity, 0, 0, 0);
     constexpr double hpi = core::pi / 2;

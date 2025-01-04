@@ -308,8 +308,7 @@ using StrokeSample2dConstSpan = core::ConstSpan<StrokeSample2d>;
 using SharedConstStrokeSample2dArray = core::SharedConstArray<StrokeSample2d>;
 
 VGC_GEOMETRY_API
-DistanceToCurve
-distanceToCurve(StrokeSample2dConstSpan samples, const Vec2d& position);
+DistanceToCurve distanceToCurve(StrokeSample2dConstSpan samples, const Vec2d& position);
 
 /// \class vgc::geometry::WidthProfile
 /// \brief A widths profile to apply on curves.

@@ -29,8 +29,7 @@
 
 namespace vgc::geometry {
 
-DistanceToCurve
-distanceToCurve(StrokeSample2dConstSpan samples, const Vec2d& position) {
+DistanceToCurve distanceToCurve(StrokeSample2dConstSpan samples, const Vec2d& position) {
     return detail::distanceToCurve<StrokeSample2d>(samples, position);
 }
 
