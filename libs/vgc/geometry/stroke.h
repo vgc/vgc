@@ -295,13 +295,20 @@ inline StrokeSample2d nlerp(const StrokeSample2d& a, const StrokeSample2d& b, do
 ///
 using StrokeSample2dArray = core::Array<StrokeSample2d>;
 
+/// Alias for `vgc::core::Span<vgc::geometry::StrokeSample2d>`.
+///
+using StrokeSample2dSpan = core::Span<StrokeSample2d>;
+
+/// Alias for `vgc::core::ConstSpan<vgc::geometry::StrokeSample2d>`.
+///
+using StrokeSample2dConstSpan = core::ConstSpan<StrokeSample2d>;
+
 /// Alias for `vgc::core::SharedConstArray<vgc::geometry::StrokeSample2d>`.
 ///
 using SharedConstStrokeSample2dArray = core::SharedConstArray<StrokeSample2d>;
 
 VGC_GEOMETRY_API
-DistanceToCurve
-distanceToCurve(const StrokeSample2dArray& samples, const Vec2d& position);
+DistanceToCurve distanceToCurve(StrokeSample2dConstSpan samples, const Vec2d& position);
 
 /// \class vgc::geometry::WidthProfile
 /// \brief A widths profile to apply on curves.
@@ -1175,9 +1182,11 @@ private:
 /// given `position`, including all the points that are in the
 /// segment between two consecutive samples.
 ///
+// XXX: Combine implementation with distanceToCurve?
+//
 VGC_GEOMETRY_API
 SampledCurveProjection
-projectToCenterline(const StrokeSample2dArray& samples, const Vec2d& position);
+projectToCenterline(StrokeSample2dConstSpan samples, const Vec2d& position);
 
 } // namespace vgc::geometry
 
