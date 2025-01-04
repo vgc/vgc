@@ -43,7 +43,7 @@ public:
     /// Returns the new vertices that the cut produced, in the same order as the
     /// sequence of `CurveParameter` given to `cutEdge()`.
     ///
-    const core::Array<KeyVertex*> vertices() const {
+    const core::Array<KeyVertex*>& vertices() const {
         return vertices_;
     }
 
@@ -54,7 +54,7 @@ public:
     /// `CurveParameter` given to `cutEdge()` was already sorted in increasing
     /// order.
     ///
-    const core::Array<KeyEdge*> edges() const {
+    const core::Array<KeyEdge*>& edges() const {
         return edges_;
     }
 
