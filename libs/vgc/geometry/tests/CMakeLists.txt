@@ -1,6 +1,7 @@
 vgc_test_library(geometry
     CPP_TESTS
         test_arrays.cpp
+        test_polyline.cpp
         test_segmentintersector2.cpp
         test_traits.cpp
 
