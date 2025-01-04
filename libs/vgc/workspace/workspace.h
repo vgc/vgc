@@ -187,11 +187,14 @@ public:
 
     /// Returns the workspace element corresponding to the given ID, if any.
     ///
-    /// Returns `nullptr` if no element corresponds to this ID.
+    /// Returns `nullptr` if no element corresponds to this ID, or if the element
+    /// is not of the given `ElementType`.
     ///
-    Element* find(core::Id elementId) const {
+    template<typename ElementType = Element>
+    ElementType* find(core::Id elementId) const {
         auto it = elements_.find(elementId);
-        return it != elements_.end() ? it->second.get() : nullptr;
+        return it != elements_.end() ? dynamic_cast<ElementType*>(it->second.get())
+                                     : nullptr;
     }
 
     /// Returns the workspace element corresponding to the given DOM element, if
@@ -236,6 +239,33 @@ public:
     VacElement* findVacElement(const vacomplex::Node* node) const {
         // XXX: warning if returns nullptr despite `node` being non-null?
         return node ? findVacElement(node->id()) : nullptr;
+    }
+
+    /// Returns the vacomplex cell corresponding to the given item ID, if any.
+    ///
+    /// Returns `nullptr` if no cell corresponds to this ID, or if the cell is
+    /// not of the given `CellType`.
+    ///
+    template<typename CellType = vacomplex::Cell>
+    CellType* findCellByItemId(core::Id itemId) const {
+        Element* element = find(itemId);
+        if (!element) {
+            return nullptr;
+        }
+        vacomplex::Cell* cell = element->vacCell();
+        if (!cell) {
+            return nullptr;
+        }
+        return vacomplex::dynamic_cell_cast<CellType>(cell);
+    }
+
+    /// Returns the DOM element corresponding to the given vacomplex node, if any.
+    ///
+    /// Returns `nullptr` if no DOM element corresponds to this node.
+    ///
+    dom::Element* findDomElement(const vacomplex::Node* node) const {
+        workspace::Element* item = findVacElement(node);
+        return item ? item->domElement() : nullptr;
     }
 
     /// Explicitly synchronizes the DOM, workspace tree, and topological complex
