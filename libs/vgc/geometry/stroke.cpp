@@ -30,7 +30,7 @@
 namespace vgc::geometry {
 
 DistanceToCurve
-distanceToCurve(const StrokeSample2dArray& samples, const Vec2d& position) {
+distanceToCurve(StrokeSample2dConstSpan samples, const Vec2d& position) {
     return detail::distanceToCurve<StrokeSample2d>(samples, position);
 }
 
@@ -706,7 +706,7 @@ bool AbstractStroke2d::fixEvalParameter_(Int& segmentIndex, double& u) const {
 }
 
 SampledCurveProjection
-projectToCenterline(const StrokeSample2dArray& samples, const Vec2d& position) {
+projectToCenterline(StrokeSample2dConstSpan samples, const Vec2d& position) {
 
     SampledCurveProjection result;
 
