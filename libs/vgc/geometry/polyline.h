@@ -87,7 +87,6 @@ scalarType<R, Proj> length(
         p = q;
     }
     if (isClosed && !hasDuplicateEndpoints) {
-        auto q = proj(*it);
         res += (firstPosition - p).length();
     }
     return res;
