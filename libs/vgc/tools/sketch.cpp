@@ -1724,9 +1724,7 @@ void Sketch::finishCurve_(ui::MouseEvent* event) {
     }
 
     if (isAutoIntersectEnabled()) {
-        if (auto edge = workspace->findCellByItemId<vacomplex::KeyEdge>(edgeItemId_)) {
-            vacomplex::ops::intersectWithGroup(edge);
-        }
+        vacomplex::ops::intersectWithGroup(edges);
     }
 
     cleanup();
