@@ -1057,11 +1057,31 @@ void Sketch::updateStartSnappedCleanInputPositions_() {
 
 namespace {
 
-bool computeIsSelectable(
+// Retuns whether there is a selectable item at the given position that is
+// above the given position.
+//
+// Note that this takes the current display mode into account. For example, if
+// `itemId` is an edge and if there is a face above the edge at the given
+// position, then:
+//
+// - In "Normal" display mode: the edge is considered occluded.
+//
+// - In "Outline Overlay" or "Outline Only" mode: the edge is not considered
+//   occluded, since users can see the edge through the face, and therefore it
+//   is expected that users may want to snap to that edge.
+//
+// Due to numerical errors, it's important to use a non-zero tolerance so
+// that in "Outline Overlay" mode, the outline of `itemID` can be in the
+// list of occluders, above faces.
+//
+// However, we cannot use a tolerance too large, otherwise a vertex near a face
+// (but not occluded by it) might be considered occluded.
+//
+bool computeIsOccludedAt(
     const canvas::Canvas& canvas,
     core::Id itemId,
     const geometry::Vec2d& position,
-    double snapDistance) {
+    double tolerance) {
 
     auto workspace = canvas.workspace().lock();
     if (!workspace) {
@@ -1070,27 +1090,24 @@ bool computeIsSelectable(
 
     core::Array<canvas::SelectionCandidate> occluders =
         canvas.computeSelectionCandidatesAboveOrAt(
-            itemId,
-            position,
-            snapDistance * core::epsilon,
-            canvas::CoordinateSpace::Workspace);
+            itemId, position, tolerance, canvas::CoordinateSpace::Workspace);
 
     for (const canvas::SelectionCandidate& occluder : occluders) {
         if (occluder.id() == itemId) {
-            return true;
+            return false;
         }
         if (workspace::Element* occluderItem = workspace->find(occluder.id())) {
             if (workspace::VacElement* occluderVacItem = occluderItem->toVacElement()) {
                 if (vacomplex::Cell* occluderCell = occluderVacItem->vacCell()) {
                     if (occluderCell->spatialType() == vacomplex::CellSpatialType::Face) {
                         // face are occluders
-                        return false;
+                        return true;
                     }
                 }
             }
             else {
                 // not a vac element, let's consider it prevents snapping.
-                return false;
+                return true;
             }
         }
     }
@@ -1135,6 +1152,7 @@ Sketch::SnapVertexResult Sketch::computeSnapVertex_(
 
     double zoom = canvas ? canvas->camera().zoom() : 1.0;
     double snapDistance = snapDistanceLength.toPx(styleMetrics()) / zoom;
+    double tolerance = snapDistance * 0.01;
 
     // Define data structure to store candidate vertices/edges for snapping
     struct SnapCandidate {
@@ -1220,11 +1238,9 @@ Sketch::SnapVertexResult Sketch::computeSnapVertex_(
             if (!vertex) {
                 continue;
             }
-            if (!info.isSelectable.has_value()) {
-                info.isSelectable = computeIsSelectable(
-                    *canvas, info.itemId, info.position, snapDistance);
-            }
-            if (info.isSelectable.value()) {
+            bool isOccluded =
+                computeIsOccludedAt(*canvas, info.itemId, info.position, tolerance);
+            if (!isOccluded) {
                 bestCandidate = &candidate;
                 res.vertex = vertex;
                 break;
@@ -1236,9 +1252,9 @@ Sketch::SnapVertexResult Sketch::computeSnapVertex_(
             if (!edge) {
                 continue;
             }
-            bool isSelectable = computeIsSelectable(
-                *canvas, info.itemId, candidate.proj.position(), snapDistance);
-            if (isSelectable) {
+            bool isOccluded = computeIsOccludedAt(
+                *canvas, info.itemId, candidate.proj.position(), tolerance);
+            if (!isOccluded) {
                 bestCandidate = &candidate;
                 bestEdge = edge;
                 bestEdgeItemId = info.itemId;
@@ -1671,8 +1687,7 @@ void Sketch::finishCurve_(ui::MouseEvent* event) {
 
     // Compute end vertex snapping.
     //
-    if (isSnappingEnabled() && startSnappedCleanInputPositions_.length() > 1
-        && snapEndVertexItemId_ == 0) {
+    if (isSnappingEnabled() && startSnappedCleanInputPositions_.length() > 1) {
 
         // Compute which vertex to snap the end vertex to, if any
         geometry::Vec2d endPosition = startSnappedCleanInputPositions_.last();
@@ -1752,7 +1767,6 @@ void Sketch::resetData_() {
     snapStartPosition_ = std::nullopt;
     startSnappedCleanInputPositions_.clear();
     numStableStartSnappedCleanInputPositions_ = 0;
-    snapEndVertexItemId_ = 0;
 
     // pending edge
     startVertexItemId_ = 0;
