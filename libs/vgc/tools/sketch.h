@@ -226,7 +226,6 @@ protected:
     std::optional<geometry::Vec2d> snapStartPosition_;
     geometry::Vec2dArray startSnappedCleanInputPositions_;
     Int numStableStartSnappedCleanInputPositions_ = 0;
-    core::Id snapEndVertexItemId_ = 0;
 
     void updateStartSnappedCleanInputPositions_();
 
@@ -276,7 +275,6 @@ protected:
         // fast access to position to do snap tests
         geometry::Vec2d position;
         core::Id itemId;
-        std::optional<bool> isSelectable;
     };
     core::Array<VertexInfo> vertexInfos_;
 
