@@ -14,6 +14,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#include <vgc/vacomplex/complex.h>
 #include <vgc/vacomplex/keyedge.h>
 #include <vgc/vacomplex/keyvertex.h>
 
@@ -39,7 +40,8 @@ bool KeyEdge::snapGeometry() {
         // todo: set snapStartPosition
         snapEndPosition = snapStartPosition;
     }
-    data_.snapGeometry(snapStartPosition, snapEndPosition);
+    geometry::CurveSnapSettings snapSettings = complex()->snapSettings();
+    data_.snapGeometry(snapStartPosition, snapEndPosition, snapSettings);
     return true;
 }
 

@@ -183,19 +183,21 @@ public:
 
     void closeStroke(bool smoothJoin);
 
-    /// Expects positions in object space.
+    /// Modifies the geometry of the edge such that its start and end
+    /// positions become the given positions (in object space).
     ///
     void snapGeometry(
         const geometry::Vec2d& snapStartPosition,
         const geometry::Vec2d& snapEndPosition,
-        geometry::CurveSnapTransformationMode mode =
-            geometry::CurveSnapTransformationMode::LinearInArclength);
+        geometry::CurveSnapSettings settings = {});
 
-    /// Expects delta in object space.
+    /// Modifies the geometry of the edge by translating it by the given
+    /// `delta` (in object space).
     ///
     void translate(const geometry::Vec2d& delta);
 
-    /// Expects transformation in object space.
+    /// Modifies the geometry of the edge by transforming it by the given
+    /// `transformation` (in object space).
     ///
     void transform(const geometry::Mat3d& transformation);
 

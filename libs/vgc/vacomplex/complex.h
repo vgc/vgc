@@ -99,7 +99,28 @@ public:
     /// `KeyEdgeData::setSamplingQualityOverride()` and
     /// `KeyEdgeData::clearSamplingQualityOverride()`.
     ///
+    /// \sa `samplingQuality()`.
+    ///
     void setSamplingQuality(geometry::CurveSamplingQuality quality);
+
+    /// Returns the settings used to snap the geometry of edges whenever their
+    /// end vertices move.
+    ///
+    /// This snapping is automatically performed at the end of each operation
+    /// (more precisely, at the end of the outer-most operation group).
+    ///
+    /// \sa `setSnapSettings()`.
+    ///
+    geometry::CurveSnapSettings snapSettings() const {
+        return snapSettings_;
+    }
+
+    /// Sets the settings used to snap the geometry of edges whenever their end
+    /// vertices move.
+    ///
+    /// \sa `snapSettings()`.
+    ///
+    void setSnapSettings(const geometry::CurveSnapSettings& settings);
 
     /// This signal is emitted when the sampling quality of a Cell changes.
     ///
@@ -137,6 +158,9 @@ private:
     // Sampling quality
     geometry::CurveSamplingQuality samplingQuality_ =
         geometry::CurveSamplingQuality::AdaptiveHigh;
+
+    // Snap settings
+    geometry::CurveSnapSettings snapSettings_ = {};
 
     // Guard against recursion when calling clear() / resetRoot()
     bool isBeingCleared_ = false;

@@ -949,18 +949,29 @@ public:
         assignFromAverage_(strokes, directions, uOffsets, true);
     }
 
-    /// Expects positions in object space.
-    /// Returns whether a snap actually happened.
+    /// Modifies the geometry of the stroke such that its start and end
+    /// positions become the given positions.
+    ///
+    /// Returns whether the geometry was actually modified, that is, whether
+    /// the stroke wasn't already snapped.
+    ///
+    /// \sa `isSnapped()`.
     ///
     bool snap(
         const Vec2d& snapStartPosition,
         const Vec2d& snapEndPosition,
-        CurveSnapTransformationMode mode =
-            CurveSnapTransformationMode::LinearInArclength) {
+        CurveSnapSettings settings = {}) {
 
-        return snap_(snapStartPosition, snapEndPosition, mode);
+        if (isSnapped(snapStartPosition, snapEndPosition)) {
+            return false;
+        }
+        snap_(snapStartPosition, snapEndPosition, settings);
+        return true;
     }
 
+    /// Returns whether the end positions of the stroke are equal to the given
+    /// positions.
+    ///
     bool isSnapped(const Vec2d& startPosition, const Vec2d& endPosition) const {
         std::array<Vec2d, 2> endPositions = this->endPositions();
         return endPositions[0] == startPosition && endPositions[1] == endPosition;
@@ -1093,10 +1104,10 @@ protected:
         core::ConstSpan<double> uOffsets,
         bool areClosed) = 0;
 
-    virtual bool snap_(
+    virtual void snap_(
         const Vec2d& snapStartPosition,
         const Vec2d& snapEndPosition,
-        CurveSnapTransformationMode mode) = 0;
+        CurveSnapSettings settings) = 0;
 
     virtual Vec2d sculptGrab_(
         const Vec2d& startPosition,

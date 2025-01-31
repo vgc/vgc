@@ -212,10 +212,10 @@ protected:
         core::ConstSpan<double> uOffsets,
         bool areClosed) override;
 
-    bool snap_(
+    void snap_(
         const geometry::Vec2d& snapStartPosition,
         const geometry::Vec2d& snapEndPosition,
-        CurveSnapTransformationMode mode) override;
+        CurveSnapSettings settings) override;
 
     Vec2d sculptGrab_(
         const Vec2d& startPosition,
@@ -257,7 +257,7 @@ private:
 
     mutable bool isCacheDirty_ = true;
 
-    void computePositionsS_(core::DoubleArray& positionsS) const;
+    void computeArclengths_(core::DoubleArray& positionsS) const;
 
     void onPositionsChanged_();
     void onWidthsChanged_();
