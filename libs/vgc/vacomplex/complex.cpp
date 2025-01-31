@@ -186,6 +186,10 @@ void Complex::setSamplingQuality(geometry::CurveSamplingQuality quality) {
     // TODO: emit something?
 }
 
+void Complex::setSnapSettings(const geometry::CurveSnapSettings& settings) {
+    snapSettings_ = settings;
+}
+
 namespace {
 
 void debugPrintRec(core::StringWriter& out, Node* node, Int indent) {

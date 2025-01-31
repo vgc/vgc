@@ -78,12 +78,52 @@ inline Int8 getSamplingQualityLevel(CurveSamplingQuality quality) {
 VGC_GEOMETRY_API
 CurveSamplingQuality getSamplingQuality(Int8 level, bool adaptiveSampling);
 
-enum class CurveSnapTransformationMode {
+enum class CurveSnapType : UInt8 {
     LinearInArclength,
+    Falloff
 };
 
 VGC_GEOMETRY_API
-VGC_DECLARE_ENUM(CurveSnapTransformationMode)
+VGC_DECLARE_ENUM(CurveSnapType)
+
+class CurveSnapSettings {
+public:
+    /// Creates a default `CurveSnapSettings`.
+    ///
+    CurveSnapSettings() {
+    }
+
+    /// Creates a `CurveSnapSettings` of type `LinearInArcLength`.
+    ///
+    static CurveSnapSettings linearInArcLength() {
+        return CurveSnapSettings();
+    }
+
+    /// Creates a `CurveSnapSettings` of type `Falloff`.
+    ///
+    static CurveSnapSettings falloff(double falloff) {
+        CurveSnapSettings res;
+        res.type_ = CurveSnapType::Falloff;
+        res.falloff_ = falloff;
+        return res;
+    }
+
+    /// Returns the type of curve snap to apply.
+    ///
+    CurveSnapType type() const {
+        return type_;
+    }
+
+    /// Returns the falloff value when `type()` is `Falloff`.
+    ///
+    double falloff() const {
+        return falloff_;
+    }
+
+private:
+    double falloff_ = 0;
+    CurveSnapType type_ = CurveSnapType::LinearInArclength;
+};
 
 /// Specifies the type of a variable attribute along the curve, that is,
 /// how it is represented.

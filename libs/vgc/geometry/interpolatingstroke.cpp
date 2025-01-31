@@ -1045,53 +1045,128 @@ void AbstractInterpolatingStroke2d::assignFromAverage_(
 
 namespace {
 
-void snapLinearS_(
+void snapLinearInArclength_(
     Vec2dArray& positions,
-    core::DoubleArray& positionsS,
+    core::DoubleArray& arclengths,
     const Vec2d& snapStartPosition,
     const Vec2d& snapEndPosition) {
 
-    Int numPositions = positions.length();
+    Int n = positions.length();
+    VGC_ASSERT(n > 0);
+    VGC_ASSERT(arclengths.length() == n);
 
-    const Vec2d& a = snapStartPosition;
-    const Vec2d& b = snapEndPosition;
+    Vec2d d1 = snapStartPosition - positions.first();
+    positions.first() = snapStartPosition;
 
-    if (numPositions == 1) {
-        // We would have to deal with "widths" if we want
-        // to change the number of points.
-        positions[0] = (a + b) * 0.5;
-    }
-    else if (numPositions == 2) {
-        // We would have to deal with "widths" if we want
-        // to change the number of points.
-        positions[0] = a;
-        positions[1] = b;
+    Vec2d d2 = snapEndPosition - positions.last();
+    positions.last() = snapEndPosition;
+
+    double l = arclengths.last();
+    if (d1 == d2 || l <= 0) {
+        for (Int i = 1; i < n - 1; ++i) {
+            geometry::Vec2d& p = positions.getUnchecked(i);
+            p += d1;
+        }
     }
     else {
-        Vec2d d1 = a - positions.first();
-        Vec2d d2 = b - positions.last();
-        double l = positionsS.last();
-        if (d1 == d2 || l <= 0) {
-            for (Vec2d& p : positions) {
-                p += d1;
+        double invL = 1 / l;
+        for (Int i = 1; i < n - 1; ++i) {
+            double s = arclengths.getUnchecked(i);
+            double t = s * invL;
+            geometry::Vec2d& p = positions.getUnchecked(i);
+            p += core::fastLerp(d1, d2, t);
+        }
+    }
+}
+
+geometry::Vec2d cubicEaseOut(const geometry::Vec2d& value, double t) {
+    double x = 1 - t;
+    return value * x * x * x;
+}
+
+void snapFalloff_(
+    Vec2dArray& positions,
+    core::DoubleArray& arclengths,
+    const Vec2d& snapStartPosition,
+    const Vec2d& snapEndPosition,
+    double falloff) {
+
+    Int n = positions.length();
+    VGC_ASSERT(n > 0);
+    VGC_ASSERT(arclengths.length() == n);
+
+    Vec2d d1 = snapStartPosition - positions.first();
+    positions.first() = snapStartPosition;
+
+    Vec2d d2 = snapEndPosition - positions.last();
+    positions.last() = snapEndPosition;
+
+    if (falloff <= 0) {
+        return;
+    }
+    double invFalloff = 1 / falloff;
+    double l = arclengths.last();
+
+    if (2 * falloff < l) {
+        // In this case, the start and end snap falloffs do not overlap and can
+        // therefore be performed independently.
+
+        // Start snap
+        if (d1 != Vec2d(0, 0)) {
+            for (Int i = 1; i <= n - 2; ++i) {
+                double s = arclengths.getUnchecked(i);
+                double t1 = s * invFalloff;
+                if (t1 < 1) {
+                    geometry::Vec2d& p = positions.getUnchecked(i);
+                    p += cubicEaseOut(d1, t1);
+                }
+                else {
+                    break;
+                }
             }
         }
-        else {
-            // linear deformation in rough "s"
-            for (Int i = 0; i < numPositions; ++i) {
-                double t = positionsS[i] / l;
-                positions[i] += (d1 + t * (d2 - d1));
+
+        // End snap
+        if (d2 != Vec2d(0, 0)) {
+            for (Int i = n - 2; i >= 1; --i) {
+                double s = arclengths.getUnchecked(i);
+                double t2 = (l - s) * invFalloff;
+                if (t2 < 1) {
+                    geometry::Vec2d& p = positions.getUnchecked(i);
+                    p += cubicEaseOut(d2, t2);
+                }
+                else {
+                    break;
+                }
             }
+        }
+    }
+    else {
+        // In this case, the start and end snap falloffs overlap, and we
+        // perform an arclength-linear interpolation between the two. When
+        // falloff tends to infinity, this method becomes equivalent to the
+        // LinearInArclength snap type.
+
+        double invL = 1 / l;
+        for (Int i = 1; i <= n - 2; ++i) {
+            double s = arclengths.getUnchecked(i);
+            double t = s * invL;
+            double t1 = s * invFalloff;
+            double t2 = (l - s) * invFalloff;
+            geometry::Vec2d& p = positions.getUnchecked(i);
+            geometry::Vec2d d1_ = t1 < 1 ? cubicEaseOut(d1, t1) : Vec2d(0, 0);
+            geometry::Vec2d d2_ = t2 < 1 ? cubicEaseOut(d2, t2) : Vec2d(0, 0);
+            p += core::fastLerp(d1_, d2_, t);
         }
     }
 }
 
 } // namespace
 
-bool AbstractInterpolatingStroke2d::snap_(
+void AbstractInterpolatingStroke2d::snap_(
     const Vec2d& snapStartPosition,
     const Vec2d& snapEndPosition,
-    CurveSnapTransformationMode mode) {
+    CurveSnapSettings settings) {
 
     // Nothing to do if the stroke is already snapped.
     //
@@ -1099,7 +1174,7 @@ bool AbstractInterpolatingStroke2d::snap_(
         && positions_.first() == snapStartPosition //
         && positions_.last() == snapEndPosition) {
 
-        return false;
+        return;
     }
 
     if (positions_.length() < 2) {
@@ -1128,21 +1203,33 @@ bool AbstractInterpolatingStroke2d::snap_(
     }
     else {
         // Otherwise, if the stroke already has at least two knots, we perform
-        // the linear transformation.
+        // the snapping.
+
+        // Compute arclengths.
+        // XXX: should this be cached?
         //
-        switch (mode) {
-        case CurveSnapTransformationMode::LinearInArclength: {
-            // XXX: should this be cached too somehow ?
-            core::DoubleArray positionsS;
-            computePositionsS_(positionsS);
-            snapLinearS_(positions_, positionsS, snapStartPosition, snapEndPosition);
+        core::DoubleArray arclengths;
+        computeArclengths_(arclengths);
+
+        switch (settings.type()) {
+        case CurveSnapType::LinearInArclength: {
+            snapLinearInArclength_(
+                positions_, arclengths, snapStartPosition, snapEndPosition);
+            break;
+        }
+        case CurveSnapType::Falloff: {
+            snapFalloff_(
+                positions_,
+                arclengths,
+                snapStartPosition,
+                snapEndPosition,
+                settings.falloff());
             break;
         }
         }
     }
 
     onPositionsChanged_();
-    return true;
 }
 
 namespace {
@@ -3036,23 +3123,23 @@ Vec2d AbstractInterpolatingStroke2d::sculptSmooth_(
     return sculptCursorPosition;
 }
 
-void AbstractInterpolatingStroke2d::computePositionsS_(
-    core::DoubleArray& positionsS) const {
+void AbstractInterpolatingStroke2d::computeArclengths_(
+    core::DoubleArray& arclengths) const {
 
     Int numPositions = positions_.length();
-    positionsS.resize(numPositions);
+    arclengths.resize(numPositions);
     if (numPositions == 0) {
         return;
     }
 
-    positionsS[0] = 0;
+    arclengths[0] = 0;
     StrokeSample2dArray sampling;
     CurveSamplingParameters sParams(CurveSamplingQuality::AdaptiveLow);
     double s = 0;
     for (Int i = 1; i < numPositions; ++i) {
         sampleRange(sampling, sParams, i - 1, 1, true);
         s += sampling.last().s();
-        positionsS[i] = s;
+        arclengths[i] = s;
         sampling.clear();
     }
 }

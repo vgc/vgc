@@ -108,9 +108,9 @@ void KeyEdgeData::transform(const geometry::Mat3d& transformation) {
 void KeyEdgeData::snapGeometry(
     const geometry::Vec2d& snapStartPosition,
     const geometry::Vec2d& snapEndPosition,
-    geometry::CurveSnapTransformationMode mode) {
+    geometry::CurveSnapSettings settings) {
 
-    if (stroke_ && stroke_->snap(snapStartPosition, snapEndPosition, mode)) {
+    if (stroke_ && stroke_->snap(snapStartPosition, snapEndPosition, settings)) {
         dirtyStrokeSampling_();
         emitGeometryChanged();
         properties_.onUpdateGeometry(stroke_.get());

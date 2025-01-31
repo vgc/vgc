@@ -1704,12 +1704,28 @@ void Sketch::finishCurve_(ui::MouseEvent* event) {
 
         // If found, do the snapping
         if (snapVertex) {
-            // TODO:
-            // - avoid creating new vertex(e.g., `glueKeyVerticesInto(kvs, snapVertex)`
-            // - use snap falloff instead of the default snap done by glue
-            core::Array<vacomplex::KeyVertex*> kvs = {
-                snapVertex, edges.last()->endVertex()};
-            vacomplex::ops::glueKeyVertices(kvs, snapVertex->position());
+            // Get position to snap to
+            vacomplex::KeyEdge* edge = edges.last();
+            vacomplex::KeyVertex* endVertex = edge->endVertex();
+            geometry::Vec2d snapPosition = snapVertex->position();
+
+            // Set snap settings
+            auto oldSettings = edge->complex()->snapSettings();
+            auto settings = geometry::CurveSnapSettings::falloff(snapFalloff_());
+            edge->complex()->setSnapSettings(settings);
+
+            // Modify vertex position and apply snapping now (otherwise, it could
+            // be deferred in case we are within an operation group)
+            vacomplex::ops::setKeyVertexPosition(endVertex, snapPosition);
+            edge->snapGeometry();
+
+            // Restore snap settings
+            edge->complex()->setSnapSettings(oldSettings);
+
+            // Glue current end vertex to snap vertex.
+            // TODO: avoid creating a new vertex (e.g., `glueKeyVerticesInto(kvs, snapVertex)`
+            std::array kvs = {endVertex, snapVertex};
+            vacomplex::ops::glueKeyVertices(kvs, snapPosition);
 
             // Note: snapVertex and the old edges.last()->endVertex() are now invalid
             // Create a close edge if possible

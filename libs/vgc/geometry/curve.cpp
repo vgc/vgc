@@ -69,7 +69,10 @@ CurveSamplingQuality getSamplingQuality(Int8 level, bool adaptiveSampling) {
     return static_cast<CurveSamplingQuality>(adaptiveBit | levelBits);
 }
 
-VGC_DEFINE_ENUM(CurveSnapTransformationMode, (LinearInArclength, "LinearInArclength"))
+VGC_DEFINE_ENUM(
+    CurveSnapType,
+    (LinearInArclength, "LinearInArclength"),
+    (Falloff, "Falloff"))
 
 CurveSamplingParameters::CurveSamplingParameters(CurveSamplingQuality quality)
     : maxAngle_(1)
